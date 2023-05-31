@@ -12,11 +12,17 @@ from sqlalchemy import (
 def get_engine(
     db="/gpfs/exfel/exp/SCS/202301/p003360/usr/Shared/amore/runs.sqlite",
 ) -> Engine:
+    """
+    Returns a SQLAlchemy engine instance for the specified database file.
+    """
     engine = create_engine(f"sqlite:///{db}")
     return engine
 
 
 def get_conn(engine: Engine = Depends(get_engine)):
+    """
+    Returns a SQLAlchemy connection instance for the specified engine.
+    """
     with engine.connect() as conn:
         yield conn
 
@@ -24,6 +30,9 @@ def get_conn(engine: Engine = Depends(get_engine)):
 def get_base_selection(
     engine: Engine = Depends(get_engine), table_name: str = "runs"
 ) -> Select:
+    """
+    Returns a base SQLAlchemy select statement for the specified table name and engine.
+    """
     return select(Table(table_name, MetaData(), autoload_with=engine))
 
 
@@ -33,6 +42,9 @@ def get_selection(
     page_size: int = 100,
     offset: int = 0,
 ):
+    """
+    Returns a SQLAlchemy select statement with optional filters and pagination.
+    """
     if run_number:
         selection = selection.filter_by(runnr=run_number)
 
