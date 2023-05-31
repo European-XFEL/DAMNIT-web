@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "cammille-api"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "cammille_api", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pandas = "^2.0.1"
+sqlalchemy = "^2.0.15"
+uvicorn = "^0.22.0"
+fastapi = "^0.95.2"
+orjson = "^3.8.13"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
