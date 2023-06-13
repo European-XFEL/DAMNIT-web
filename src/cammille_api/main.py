@@ -10,7 +10,7 @@ app = FastAPI()
 @app.router.get("/db")
 def index(
     selection: Select = Depends(get_selection), conn: Connection = Depends(get_conn)
-) -> list[dict]:
+) -> dict:
     """
     Returns a list of dictionaries representing the rows in the specified database table.
 
@@ -37,5 +37,5 @@ def index(
     # Fill any NaN values in the DataFrame with the string 'None'
     df.fillna("None", inplace=True)
 
-    # Convert the DataFrame to a list of dictionaries and return it
-    return df.to_dict(orient="records")
+    # Convert the DataFrame to a dictionary with run number as key
+    return df.set_index("runnr", drop=False).to_dict(orient="index")

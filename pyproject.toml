@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "cammille_api", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.9"
 pandas = "^2.0.1"
 sqlalchemy = "^2.0.15"
 uvicorn = "^0.22.0"
