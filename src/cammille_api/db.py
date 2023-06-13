@@ -10,7 +10,7 @@ from sqlalchemy import (
 
 
 def get_engine(
-    db="/gpfs/exfel/exp/SCS/202301/p003360/usr/Shared/amore/runs.sqlite",
+    db="/gpfs/exfel/exp/SCS/202202/p002956/usr/Shared/amore/runs.sqlite",
 ) -> Engine:
     """
     Returns a SQLAlchemy engine instance for the specified database file.
@@ -38,7 +38,7 @@ def get_base_selection(
 
 def get_selection(
     selection: Select = Depends(get_base_selection),
-    run_number: int | None = None,
+    run_number: int = None,
     page_size: int = 100,
     offset: int = 0,
 ):
