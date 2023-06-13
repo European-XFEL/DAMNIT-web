@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { connect } from "react-redux";
+import Table from "./Table";
 import { sharedActions } from "../actions/shared";
 
 const App = ({ dispatch }) => {
@@ -8,7 +9,11 @@ const App = ({ dispatch }) => {
     dispatch(sharedActions.getInitialData());
   }, []);
 
-  return <div>App</div>;
+  return (
+    <div>
+      <Table />
+    </div>
+  );
 };
 
 export default connect()(App);
