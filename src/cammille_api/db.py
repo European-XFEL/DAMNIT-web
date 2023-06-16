@@ -5,6 +5,7 @@ from sqlalchemy import (
     Select,
     Table,
     create_engine,
+    inspect,
     select,
 )
 
@@ -27,13 +28,19 @@ def get_conn(engine: Engine = Depends(get_engine)):
         yield conn
 
 
-def get_base_selection(
-    engine: Engine = Depends(get_engine), table_name: str = "runs"
-) -> Select:
+def get_table(
+    engine: Engine = Depends(get_engine),
+    table_name: str = "runs"
+) -> Table:
+    """Returns a SQLAlchemy table for the specified table name and engine."""
+    return Table(table_name, MetaData(), autoload_with=engine)
+
+
+def get_base_selection(table: Table = Depends(get_table)) -> Select:
     """
     Returns a base SQLAlchemy select statement for the specified table name and engine.
     """
-    return select(Table(table_name, MetaData(), autoload_with=engine))
+    return select(table)
 
 
 def get_selection(
@@ -49,3 +56,21 @@ def get_selection(
         selection = selection.filter_by(runnr=run_number)
 
     return selection.offset(offset).limit(page_size)
+
+
+def get_column_names(
+    engine: Engine = Depends(get_engine),
+    table_name: str = "runs"
+):
+    """Returns a list of the column names for the specified table name and engine"""
+    return [column['name'] for column in inspect(engine).get_columns(table_name)]
+
+
+def get_column_datum(table: Table = Depends(get_table)):
+    """Returns a function which generates a SQLAlchemy select statement
+       that fetches one non-null value from the specified column"""
+    def inner(column_name):
+        column = table.c[column_name]
+        return select(column).where(column.is_not(None)).limit(1)
+
+    return inner
