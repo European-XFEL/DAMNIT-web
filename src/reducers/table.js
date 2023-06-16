@@ -5,7 +5,7 @@ export default function table(state = {}, action) {
     case tableConstants.RECEIVE_TABLE:
       return {
         ...state,
-        data: action.payload,
+        ...action.payload,
       };
     default:
       return state;

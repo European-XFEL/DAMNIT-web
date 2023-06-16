@@ -3,17 +3,19 @@ import { connect } from "react-redux";
 import Table from "./Table";
 import { sharedActions } from "../actions/shared";
 
-const App = ({ dispatch }) => {
+const App = ({ dispatch, loading }) => {
   // Get initial data
   useEffect(() => {
     dispatch(sharedActions.getInitialData());
   }, []);
 
-  return (
-    <div>
-      <Table />
-    </div>
-  );
+  return <div>{loading ? null : <Table />}</div>;
 };
 
-export default connect()(App);
+const mapStateToProps = ({ table }) => {
+  return {
+    loading: !table.data,
+  };
+};
+
+export default connect(mapStateToProps)(App);
