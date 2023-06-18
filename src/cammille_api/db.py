@@ -11,12 +11,13 @@ from sqlalchemy import (
     select,
 )
 
+from .const import DEFAULT_PROPOSAL
 from .utils import find_proposal
 
 DAMNIT_PATH = 'usr/Shared/amore/'
 
 
-def get_damnit_path(proposal_number: str = '2956') -> str:
+def get_damnit_path(proposal_number: str = DEFAULT_PROPOSAL) -> str:
     """Returns the directory of the given proposal."""
     path = find_proposal(proposal_number)
     if not path:
