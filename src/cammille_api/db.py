@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import Depends
 from sqlalchemy import (
     Engine,
@@ -9,14 +11,27 @@ from sqlalchemy import (
     select,
 )
 
+from .utils import find_proposal
+
+DAMNIT_PATH = 'usr/Shared/amore/'
+
+
+def get_damnit_path(proposal_number: str = '2956') -> str:
+    """Returns the directory of the given proposal."""
+    path = find_proposal(proposal_number)
+    if not path:
+        raise RuntimeError(f"Proposal '{proposal_number}' is not found.")
+    return str(Path(path) / DAMNIT_PATH)
+
 
 def get_engine(
-    db="/gpfs/exfel/exp/SCS/202202/p002956/usr/Shared/amore/runs.sqlite",
+    damnit_path: str = Depends(get_damnit_path),
 ) -> Engine:
     """
     Returns a SQLAlchemy engine instance for the specified database file.
     """
-    engine = create_engine(f"sqlite:///{db}")
+    db_path = str(Path(damnit_path) / 'runs.sqlite')
+    engine = create_engine(f"sqlite:///{db_path}")
     return engine
 
 

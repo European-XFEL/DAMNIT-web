@@ -1,7 +1,10 @@
 from base64 import b64encode
+from glob import iglob
 import io
+import os.path as osp
 import pickle
 
+import h5py
 import numpy as np
 from matplotlib.figure import Figure
 
@@ -28,7 +31,7 @@ def b64image(bytes_, format='png'):
     array = pickle.loads(bytes_)
 
     # Do matplotlib drawing
-    # This is based on the DAMNIT GUI code generateThumbnail()
+    # This is based on the DAMNIT GUI code Table.generateThumbnail()
     fig = Figure(figsize=(1, 1))
     ax = fig.add_subplot()
     fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
@@ -59,3 +62,53 @@ def convert(data, dtype=Type.STRING):
 CONVERSION_FUNCTIONS = {
     Type.IMAGE: b64image
 }
+
+# -----------------------------------------------------------------------------
+# Proposal and runs
+
+DATA_ROOT_DIR = '/gpfs/exfel/exp'
+
+
+def format_proposal_number(proposal):
+    """ Format a given unformatted proposal number."
+
+    Lifted and modified from extra_data.reader.py
+    https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/reader.py
+    """
+    if not proposal.startswith('p'):
+        proposal = 'p' + proposal.rjust(6, '0')
+
+    return proposal
+
+
+def find_proposal(propno):
+    """Find the proposal directory for a given proposal on Maxwell
+
+    Lifted and modified from extra_data.read_machinery.py
+    https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/read_machinery.py
+    """
+
+    if '/' in propno:
+        # Already passed a proposal directory
+        return propno
+    
+    propno = format_proposal_number(propno)
+    for d in iglob(osp.join(DATA_ROOT_DIR, '*/*/{}'.format(propno))):
+        return d
+
+    return ''
+
+
+def get_run_data(path, variable):
+    try:
+        file = h5py.File(path)
+    except FileNotFoundError as e:
+        # TODO: manage the error XD
+        raise e
+    data = file[variable]['data'][:]
+
+    # REMOVE: Drop NaNs if data is 1D array (and also scale down a bit XD)
+    # I do this temporarily as I know the signature of this data.
+    data = data[np.argwhere(np.isfinite(data)).flatten()] / 1e5 
+
+    return data
