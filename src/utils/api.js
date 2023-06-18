@@ -1,6 +1,5 @@
 const API = "";
-const DATABASE =
-  "%2Fgpfs%2Fexfel%2Fexp%2FSCS%2F202202%2Fp002956%2Fusr%2FShared%2Famore%2Fruns.sqlite";
+const PROPOSAL_NUMBER = 2956;
 const TABLE = "runs";
 
 const headers = {
@@ -30,12 +29,16 @@ function getTable({ pageSize = 1 } = {}) {
     `${API}/db?`,
     `page_size=${pageSize}`,
     `&table_name=${TABLE}`,
-    `&db=${DATABASE}`,
+    `&proposal_number=${PROPOSAL_NUMBER}`,
   ];
   return fetch(url.join(""), { headers }).then((res) => res.json());
 }
 
 function getSchema() {
-  const url = [`${API}/db/schema?`, `table_name=${TABLE}`, `&db=${DATABASE}`];
+  const url = [
+    `${API}/db/schema?`,
+    `table_name=${TABLE}`,
+    `&proposal_number=${PROPOSAL_NUMBER}`,
+  ];
   return fetch(url.join(""), { headers }).then((res) => res.json());
 }
