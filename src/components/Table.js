@@ -63,7 +63,7 @@ const Table = ({ data, columns, schema }) => {
   const getContent = useCallback(([col, row]) => {
     const column = columns[col].id;
     const rowData = data[row];
-    return gridCellFactory[schema[column]](rowData[column]);
+    return gridCellFactory[schema[column].dtype](rowData[column]);
   }, []);
 
   return (
