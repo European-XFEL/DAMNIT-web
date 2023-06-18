@@ -1,5 +1,7 @@
 from enum import Enum
 
+DEFAULT_PROPOSAL = '2956'
+
 FILL_VALUE = 'None'
 
 class Type(Enum):

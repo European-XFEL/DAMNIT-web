@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import Depends, FastAPI
 from sqlalchemy import Connection, Select
 
-from .const import FILL_VALUE, Type
+from .const import DEFAULT_PROPOSAL, FILL_VALUE, Type
 from .db import (
     get_column_datum, get_column_names, get_conn, get_damnit_path,
     get_selection)
@@ -34,16 +34,19 @@ def get_column_schema(
         return (map_dtype(type(series[0]), default).value
                 if not series.empty else default)
     
-    schema = {column: get_dtype(column) for column in column_names}
-    # return schema
+    schema = {column: {'id': column, 'dtype': get_dtype(column)}
+              for column in column_names}
 
     # REMOVEME: Get array from hardcoded column names
     arrays = ['hrixs_spectrum']
-    return {**schema, **{col: Type.ARRAY for col in arrays}}
+    for col in arrays:
+        schema[col]['dtype'] = Type.ARRAY
+    
+    return schema
 
 
 def get_extracted_path(
-        proposal_number: str,
+        proposal_number: str = DEFAULT_PROPOSAL,
         damnit_path: str = Depends(get_damnit_path),
         ) -> str:
     """Returns a function that generates the extracted data path"""
@@ -76,7 +79,7 @@ def index(
 
     # Convert columns according to some rules
     for k, v in df.dtypes.to_dict().items():
-        dtype = Type(schema[k])
+        dtype = Type(schema[k]['dtype'])
         # Attempt to convert any columns with dtype 'object' according to schema
         if v == "object":
             df[k] = df[k].apply(lambda x: convert(x, dtype))
