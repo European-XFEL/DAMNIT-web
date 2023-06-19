@@ -2,13 +2,12 @@ import React, { useEffect } from "react";
 import { connect } from "react-redux";
 
 import Drawer from "../common/drawer";
-import Table from "./Table";
-import { sharedActions } from "../actions/shared";
+import Table, { getTable } from "../features/table";
 
 const App = ({ dispatch, loading }) => {
   // Get initial data
   useEffect(() => {
-    dispatch(sharedActions.getInitialData());
+    dispatch(getTable());
   }, []);
 
   return (
