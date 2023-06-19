@@ -5,6 +5,7 @@ import { connect } from "react-redux";
 import { DataEditor, GridCellKind } from "@glideapps/glide-data-grid";
 import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 
+import { tableActions } from "../actions/table";
 import { imageBytesToURL } from "../utils/helpers";
 
 const EMPTY_VALUE = "None";
@@ -43,7 +44,7 @@ const arrayCell = (data, params = {}) => {
     data: {
       kind: "sparkline-cell",
       values: data,
-      // displayValues: data.map((x) => Math.round(x).toString()), // TODO: Round in server?
+      // displayValues: TODO: Round in server?
       color: "#77c4c4",
       yAxis: [Math.min(...data), Math.max(...data)],
     },
@@ -57,14 +58,27 @@ const gridCellFactory = {
   array: arrayCell,
 };
 
-const Table = ({ data, columns, schema }) => {
+const Table = ({ data, columns, schema, selection, dispatch }) => {
+  // Initialization: Use custom cells
   const cellProps = useExtraCells();
 
+  // Data: Populate grid
   const getContent = useCallback(([col, row]) => {
     const column = columns[col].id;
     const rowData = data[row];
     return gridCellFactory[schema[column].dtype](rowData[column]);
   }, []);
+
+  // Cell: Click event
+  const handleCellClicked = ([col, row], params) => {
+    // Only handle handles click on the row markers (col = -1)
+    if (col !== -1) {
+      return;
+    }
+
+    // Inform that the row has been (de)selected
+    dispatch(tableActions.selectRow(row === selection.row ? null : row));
+  };
 
   return (
     <div>
@@ -72,6 +86,9 @@ const Table = ({ data, columns, schema }) => {
         columns={columns}
         getCellContent={getContent}
         rows={data.length}
+        rowSelect="single"
+        rowMarkers="clickable-number"
+        onCellClicked={handleCellClicked}
         {...cellProps}
       />
       <div id="portal"></div>
@@ -87,7 +104,12 @@ const mapStateToProps = ({ table }) => {
     ? Object.keys(table.schema).map((id) => ({ id, title: id }))
     : [];
 
-  return { data, columns, schema: table.schema };
+  return {
+    data,
+    columns,
+    schema: table.schema,
+    selection: table.selection ? table.selection : {},
+  };
 };
 
 export default connect(mapStateToProps)(Table);

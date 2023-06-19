@@ -24,7 +24,7 @@ export const tableService = {
   getSchema,
 };
 
-function getTable({ pageSize = 1 } = {}) {
+function getTable({ pageSize = 100 } = {}) {
   const url = [
     `${API}/db?`,
     `page_size=${pageSize}`,
