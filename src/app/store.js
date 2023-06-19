@@ -1,8 +1,8 @@
 import { combineReducers } from "redux";
 import { configureStore } from "@reduxjs/toolkit";
 
-import { drawerReducer as drawer } from "./common/drawer";
-import table from "./reducers/table";
+import { tableReducer as table } from "../features/table";
+import { drawerReducer as drawer } from "../common/drawer";
 
 const reducer = combineReducers({ table, drawer });
 

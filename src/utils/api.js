@@ -6,25 +6,13 @@ const headers = {
   Accept: "application/json",
 };
 
-export const sharedService = {
-  getInitialData,
-};
-
-function getInitialData() {
-  return Promise.all([getTable(), getSchema()]).then(([table, schema]) => ({
-    table: {
-      data: table,
-      schema,
-    },
-  }));
-}
-
 export const tableService = {
+  getTableData,
+  getTableSchema,
   getTable,
-  getSchema,
 };
 
-function getTable({ pageSize = 100 } = {}) {
+function getTableData({ pageSize = 100 } = {}) {
   const url = [
     `${API}/db?`,
     `page_size=${pageSize}`,
@@ -34,11 +22,20 @@ function getTable({ pageSize = 100 } = {}) {
   return fetch(url.join(""), { headers }).then((res) => res.json());
 }
 
-function getSchema() {
+function getTableSchema() {
   const url = [
     `${API}/db/schema?`,
     `table_name=${TABLE}`,
     `&proposal_number=${PROPOSAL_NUMBER}`,
   ];
   return fetch(url.join(""), { headers }).then((res) => res.json());
+}
+
+function getTable() {
+  return Promise.all([getTableData(), getTableSchema()]).then(
+    ([data, schema]) => ({
+      data,
+      schema,
+    })
+  );
 }

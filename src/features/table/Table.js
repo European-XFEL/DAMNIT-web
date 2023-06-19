@@ -5,8 +5,8 @@ import { connect } from "react-redux";
 import { DataEditor, GridCellKind } from "@glideapps/glide-data-grid";
 import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 
-import { tableActions } from "../actions/table";
-import { imageBytesToURL } from "../utils/helpers";
+import { selectRow } from "./tableSlice";
+import { imageBytesToURL } from "../../utils/helpers";
 
 const EMPTY_VALUE = "None";
 
@@ -63,11 +63,14 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
   const cellProps = useExtraCells();
 
   // Data: Populate grid
-  const getContent = useCallback(([col, row]) => {
-    const column = columns[col].id;
-    const rowData = data[row];
-    return gridCellFactory[schema[column].dtype](rowData[column]);
-  }, []);
+  const getContent = useCallback(
+    ([col, row]) => {
+      const column = columns[col].id;
+      const rowData = data[row];
+      return gridCellFactory[schema[column].dtype](rowData[column]);
+    },
+    [columns, data]
+  );
 
   // Cell: Click event
   const handleCellClicked = ([col, row], params) => {
@@ -77,21 +80,25 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
     }
 
     // Inform that the row has been (de)selected
-    dispatch(tableActions.selectRow(row === selection.row ? null : row));
+    dispatch(selectRow(row === selection.row ? null : row));
   };
 
   return (
     <div>
-      <DataEditor
-        columns={columns}
-        getCellContent={getContent}
-        rows={data.length}
-        rowSelect="single"
-        rowMarkers="clickable-number"
-        onCellClicked={handleCellClicked}
-        {...cellProps}
-      />
-      <div id="portal"></div>
+      {columns.length && (
+        <>
+          <DataEditor
+            columns={columns}
+            getCellContent={getContent}
+            rows={data.length}
+            rowSelect="single"
+            rowMarkers="clickable-number"
+            onCellClicked={handleCellClicked}
+            {...cellProps}
+          />
+          <div id="portal"></div>
+        </>
+      )}
     </div>
   );
 };
@@ -100,9 +107,7 @@ const mapStateToProps = ({ table }) => {
   const data = table.data ? Object.values(table.data) : [];
 
   // TODO: Get the column list from the user settings (reordered columns)
-  const columns = table.schema
-    ? Object.keys(table.schema).map((id) => ({ id, title: id }))
-    : [];
+  const columns = Object.keys(table.schema).map((id) => ({ id, title: id }));
 
   return {
     data,
