@@ -5,10 +5,11 @@ import { connect } from "react-redux";
 import { DataEditor, GridCellKind } from "@glideapps/glide-data-grid";
 import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 
-import { selectRow } from "./tableSlice";
+import { selectRun } from "./tableSlice";
+import { EMPTY_VALUE } from "../../common/constants";
 import { imageBytesToURL } from "../../utils/helpers";
 
-const EMPTY_VALUE = "None";
+const RUN_NUMBER = "runnr";
 
 const imageCell = (data, params = {}) => {
   return {
@@ -79,8 +80,9 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
       return;
     }
 
-    // Inform that the row has been (de)selected
-    dispatch(selectRow(row === selection.row ? null : row));
+    // Inform that the run has been (de)selected
+    const run = data[row][RUN_NUMBER];
+    dispatch(selectRun(run === selection.run ? null : run));
   };
 
   return (

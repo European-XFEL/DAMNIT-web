@@ -1,17 +1,14 @@
 import React from "react";
 import { connect } from "react-redux";
-import { Drawer as MantineDrawer, Button, Group } from "@mantine/core";
+import { Drawer as MantineDrawer } from "@mantine/core";
 
 import { open as openDrawer, close as closeDrawer } from "./drawerSlice";
+import Run from "../../features/run/Run";
+import Tabs from "../tabs/Tabs";
 
-const Drawer = ({ dispatch, isOpened }) => {
+const Drawer = ({ dispatch, isOpened, contents }) => {
   const handleClose = () => {
     dispatch(closeDrawer());
-  };
-
-  // REMOVEME: Button is just for checking :P
-  const handleClick = () => {
-    dispatch(openDrawer());
   };
 
   return (
@@ -21,16 +18,23 @@ const Drawer = ({ dispatch, isOpened }) => {
         onClose={handleClose}
         position="right"
         withOverlay={false}
-      ></MantineDrawer>
-      <Group position="center">
-        <Button onClick={handleClick}>Open Drawer</Button>
-      </Group>
+      >
+        <Tabs contents={contents}></Tabs>
+      </MantineDrawer>
     </div>
   );
 };
 
 const mapStateToProps = ({ drawer }) => {
-  return { isOpened: drawer.isOpened };
+  return {
+    isOpened: drawer.isOpened,
+    contents: {
+      run: {
+        element: <Run />,
+        title: "Run",
+      },
+    },
+  };
 };
 
 export default connect(mapStateToProps)(Drawer);
