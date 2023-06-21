@@ -2,7 +2,11 @@ import "@glideapps/glide-data-grid/dist/index.css";
 
 import React, { useCallback } from "react";
 import { connect } from "react-redux";
-import { DataEditor, GridCellKind } from "@glideapps/glide-data-grid";
+import {
+  DataEditor,
+  GridCellKind,
+  GridSelection,
+} from "@glideapps/glide-data-grid";
 import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 
 import { selectRun } from "./tableSlice";
