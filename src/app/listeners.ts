@@ -1,16 +1,26 @@
 import { createListenerMiddleware } from "@reduxjs/toolkit";
 
 import { openDrawer, closeDrawer } from "../common/drawer/";
-import { selectRun } from "../features/table";
+import { selectRow } from "../features/table";
 
 export const listenerMiddleware = createListenerMiddleware();
 
 listenerMiddleware.startListening({
-  actionCreator: selectRun,
+  actionCreator: selectRow,
   effect: (action, { dispatch }) => {
-    const run = action.payload;
+    const row = action.payload;
 
-    const sideEffect = run !== null ? openDrawer : closeDrawer;
+    const sideEffect = row !== null ? openDrawer : closeDrawer;
     dispatch(sideEffect());
+  },
+});
+
+listenerMiddleware.startListening({
+  actionCreator: closeDrawer,
+  effect: (action, { dispatch, getState }) => {
+    const { table } = getState();
+    if (table.selection.row !== null) {
+      dispatch(selectRow(null));
+    }
   },
 });

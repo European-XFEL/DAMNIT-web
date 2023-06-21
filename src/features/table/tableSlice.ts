@@ -16,8 +16,8 @@ const slice = createSlice({
   name: "table",
   initialState,
   reducers: {
-    selectRun: ({ selection }, action) => {
-      selection.run = action.payload;
+    selectRow: ({ selection }, action) => {
+      selection.row = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -31,4 +31,4 @@ const slice = createSlice({
 });
 
 export default slice.reducer;
-export const { selectRun } = slice.actions;
+export const { selectRow } = slice.actions;

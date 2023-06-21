@@ -1,17 +1,18 @@
 import "@glideapps/glide-data-grid/dist/index.css";
 
-import React, { useCallback } from "react";
-import { connect } from "react-redux";
+import { useCallback, useState } from "react";
+import React, { connect } from "react-redux";
 import {
+  CompactSelection,
   DataEditor,
   GridCellKind,
   GridSelection,
 } from "@glideapps/glide-data-grid";
 import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 
-import { selectRun } from "./tableSlice";
+import { selectRow } from "./tableSlice";
 import { EMPTY_VALUE } from "../../common/constants";
-import { imageBytesToURL } from "../../utils/helpers";
+import { imageBytesToURL, isEmpty } from "../../utils/helpers";
 
 const RUN_NUMBER = "runnr";
 
@@ -78,15 +79,12 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
   );
 
   // Cell: Click event
-  const handleCellClicked = ([col, row], params) => {
-    // Only handle handles click on the row markers (col = -1)
-    if (col !== -1) {
-      return;
-    }
+  const onGridSelectionChange = (newSelection: GridSelection) => {
+    const { current, columns, rows } = newSelection;
 
     // Inform that the run has been (de)selected
-    const run = data[row][RUN_NUMBER];
-    dispatch(selectRun(run === selection.run ? null : run));
+    const row = rows.last();
+    dispatch(selectRow(isEmpty(row) ? null : row));
   };
 
   return (
@@ -99,7 +97,8 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
             rows={data.length}
             rowSelect="single"
             rowMarkers="clickable-number"
-            onCellClicked={handleCellClicked}
+            gridSelection={selection}
+            onGridSelectionChange={onGridSelectionChange}
             {...cellProps}
           />
           <div id="portal"></div>
@@ -119,7 +118,12 @@ const mapStateToProps = ({ table }) => {
     data,
     columns,
     schema: table.schema,
-    selection: table.selection ? table.selection : {},
+    selection: {
+      columns: CompactSelection.empty(),
+      rows: isEmpty(table.selection.row)
+        ? CompactSelection.empty()
+        : CompactSelection.fromSingleSelection(table.selection.row),
+    },
   };
 };
 

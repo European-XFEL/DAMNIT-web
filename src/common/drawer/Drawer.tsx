@@ -2,7 +2,7 @@ import React from "react";
 import { connect } from "react-redux";
 import { Drawer as MantineDrawer } from "@mantine/core";
 
-import { open as openDrawer, close as closeDrawer } from "./drawerSlice";
+import { close as closeDrawer } from "./drawerSlice";
 import Run from "../../features/run/Run";
 import Tabs from "../tabs/Tabs";
 
