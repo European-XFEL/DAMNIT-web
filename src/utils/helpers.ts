@@ -6,6 +6,6 @@ export function isEmpty(value) {
   return (
     value === undefined ||
     value == null ||
-    (Array.isArray(Array) && value.length <= 0)
+    (Array.isArray(value) && value.length <= 0)
   );
 }
