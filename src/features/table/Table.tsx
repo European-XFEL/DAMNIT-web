@@ -10,11 +10,11 @@ import {
 } from "@glideapps/glide-data-grid";
 import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 
+import ContextMenu from "./ContextMenu";
+
 import { selectRow } from "./tableSlice";
 import { EMPTY_VALUE } from "../../common/constants";
 import { imageBytesToURL, isEmpty } from "../../utils/helpers";
-
-const RUN_NUMBER = "runnr";
 
 const imageCell = (data, params = {}) => {
   return {
@@ -79,12 +79,44 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
   );
 
   // Cell: Click event
+  const [gridSelection, setGridSelection] = useState({
+    columns: CompactSelection.empty(),
+    rows: CompactSelection.empty(),
+  });
+
   const onGridSelectionChange = (newSelection: GridSelection) => {
     const { current, columns, rows } = newSelection;
 
-    // Inform that the run has been (de)selected
+    // Inform that a row has been (de)selected
     const row = rows.last();
     dispatch(selectRow(isEmpty(row) ? null : row));
+
+    // Clear range stack if cells from the other column are currently selected
+    if (!isEmpty(current?.cell) && !isEmpty(current?.rangeStack)) {
+      if (current.cell[0] != current.rangeStack[0].x) {
+        newSelection = {
+          columns,
+          rows,
+          current: {
+            ...current,
+            rangeStack: [],
+          },
+        };
+      }
+    }
+
+    // Finalize
+    setGridSelection(newSelection);
+  };
+
+  // Cell: Right click event
+  const [cellContextMenu, setCellContextMenu] = useState();
+  const handleCellContextMenu = (_, event) => {
+    event.preventDefault();
+    setCellContextMenu({
+      localPosition: { x: event.localEventX, y: event.localEventY },
+      bounds: event.bounds,
+    });
   };
 
   return (
@@ -97,10 +129,18 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
             rows={data.length}
             rowSelect="single"
             rowMarkers="clickable-number"
-            gridSelection={selection}
+            gridSelection={gridSelection}
             onGridSelectionChange={onGridSelectionChange}
+            rangeSelect="multi-cell"
+            onCellContextMenu={handleCellContextMenu}
             {...cellProps}
           />
+          {cellContextMenu && (
+            <ContextMenu
+              {...cellContextMenu}
+              onOutsideClick={() => setCellContextMenu(null)}
+            />
+          )}
           <div id="portal"></div>
         </>
       )}
@@ -118,12 +158,7 @@ const mapStateToProps = ({ table }) => {
     data,
     columns,
     schema: table.schema,
-    selection: {
-      columns: CompactSelection.empty(),
-      rows: isEmpty(table.selection.row)
-        ? CompactSelection.empty()
-        : CompactSelection.fromSingleSelection(table.selection.row),
-    },
+    selection: table.selection,
   };
 };
 
