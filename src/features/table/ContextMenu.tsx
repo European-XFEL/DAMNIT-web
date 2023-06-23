@@ -1,7 +1,7 @@
 import React from "react";
 import { useDispatch } from "react-redux";
 import { useLayer } from "react-laag";
-import { ContextMenu as MantineContextMenu } from "../../extern/mantine-contextmenu/ContextMenu";
+import { ContextMenu as MantineContextMenu } from "mantine-contextmenu";
 import { addTab } from "../dashboard";
 
 const ContextMenu = ({ localPosition, bounds, onOutsideClick }) => {
