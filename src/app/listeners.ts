@@ -1,6 +1,6 @@
 import { createListenerMiddleware } from "@reduxjs/toolkit";
 
-import { openDrawer, closeDrawer } from "../common/drawer/";
+import { openDrawer, closeDrawer } from "../features/drawer/";
 import { selectRow } from "../features/table";
 
 export const listenerMiddleware = createListenerMiddleware();

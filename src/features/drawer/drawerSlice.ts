@@ -1,8 +1,13 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const initialState = {
+  isOpened: false,
+  tabs: { run: { title: "Run", isClosable: false } },
+};
+
 const slice = createSlice({
   name: "drawer",
-  initialState: { isOpened: false },
+  initialState,
   reducers: {
     open: (state, action) => {
       state.isOpened = true;

@@ -1,11 +1,12 @@
 import { combineReducers } from "redux";
 import { configureStore } from "@reduxjs/toolkit";
 
+import { drawerReducer as dashboard } from "../features/dashboard";
+import { drawerReducer as drawer } from "../features/drawer";
 import { tableReducer as table } from "../features/table";
-import { drawerReducer as drawer } from "../common/drawer";
 import { listenerMiddleware } from "./listeners";
 
-const reducer = combineReducers({ table, drawer });
+const reducer = combineReducers({ dashboard, drawer, table });
 
 export const store = configureStore({
   reducer,
