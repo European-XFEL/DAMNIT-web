@@ -1,20 +1,29 @@
 import React from "react";
 import { Tabs as MantineTabs } from "@mantine/core";
+import { IconX } from "@tabler/icons-react";
 
-const Tabs = ({ contents }) => {
-  const tabs = Object.keys(contents);
+const Tabs = ({ contents, active }) => {
+  const entries = Object.entries(contents);
   return (
-    <MantineTabs radius="xl" defaultValue={tabs.length ? tabs[0] : ""}>
+    <MantineTabs radius="xl" value={active}>
       <MantineTabs.List>
-        {tabs.map((tab) => (
-          <MantineTabs.Tab value={tab} key={`tabs-tab-${tab}`}>
-            {contents[tab].title}
+        {entries.map(([id, tab]) => (
+          <MantineTabs.Tab
+            value={id}
+            key={`tabs-tab-${id}`}
+            {...(tab.isClosable && tab.onClose
+              ? {
+                  rightSection: <IconX size={16} onClick={tab.onClose} />,
+                }
+              : {})}
+          >
+            {tab.title}
           </MantineTabs.Tab>
         ))}
       </MantineTabs.List>
-      {tabs.map((tab) => (
-        <MantineTabs.Panel value={tab} key={`tabs-panel-${tab}`} pt="xs">
-          {contents[tab].element}
+      {entries.map(([id, { element }]) => (
+        <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
+          {element}
         </MantineTabs.Panel>
       ))}
     </MantineTabs>

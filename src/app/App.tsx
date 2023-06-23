@@ -1,8 +1,9 @@
 import React, { useEffect } from "react";
 import { connect } from "react-redux";
 
-import Drawer from "../common/drawer";
-import Table, { getTable } from "../features/table";
+import Dashboard from "../features/dashboard";
+import Drawer from "../features/drawer";
+import { getTable } from "../features/table";
 
 const App = ({ dispatch, loading }) => {
   // Get initial data
@@ -15,7 +16,7 @@ const App = ({ dispatch, loading }) => {
       {loading ? null : (
         <>
           <Drawer />
-          <Table />
+          <Dashboard />
         </>
       )}
     </div>
