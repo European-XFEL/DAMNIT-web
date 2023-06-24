@@ -10,20 +10,23 @@ const slice = createSlice({
   initialState,
   reducers: {
     setCurrentTab: (state, action) => {
-      state.currentTab = action.payload;
+      const id = action.payload;
+      if (state.tabs.hasOwnProperty(id)) {
+        state.currentTab = id;
+      }
     },
     addTab: (state, action) => {
       const { id, ...rest } = action.payload;
-      state.tabs = Object.assign(state.tabs || {}, { [id]: rest });
       state.currentTab = id;
+      state.tabs = Object.assign(state.tabs || {}, { [id]: rest });
     },
     removeTab: (state, action) => {
       const { [action.payload]: _ = {}, ...rest } = state.tabs;
-      state.tabs = rest;
       state.currentTab = Object.keys(rest).slice(-1)[0];
+      state.tabs = rest;
     },
   },
 });
 
 export default slice.reducer;
-export const { addTab, removeTab } = slice.actions;
+export const { addTab, removeTab, setCurrentTab } = slice.actions;
