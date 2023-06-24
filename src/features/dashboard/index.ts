@@ -1,2 +1,7 @@
 export { default } from "./Dashboard";
-export { default as drawerReducer, addTab, removeTab } from "./dashboardSlice";
+export {
+  default as drawerReducer,
+  addTab,
+  removeTab,
+  setCurrentTab,
+} from "./dashboardSlice";

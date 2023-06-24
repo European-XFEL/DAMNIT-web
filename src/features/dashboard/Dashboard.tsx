@@ -3,13 +3,13 @@ import { connect } from "react-redux";
 
 import Table from "../table";
 import Tabs from "../../common/tabs/Tabs";
-import { removeTab } from "./dashboardSlice";
+import { removeTab, setCurrentTab } from "./dashboardSlice";
 
 const COMPONENTS_MAP = {
   table: <Table />,
 };
 
-const Dashboard = ({ contents, currentTab, removeTab }) => {
+const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
   const populated = Object.entries(contents).map(([id, tab]) => [
     id,
     {
@@ -21,7 +21,11 @@ const Dashboard = ({ contents, currentTab, removeTab }) => {
 
   return (
     <div>
-      <Tabs contents={Object.fromEntries(populated)} active={currentTab} />
+      <Tabs
+        contents={Object.fromEntries(populated)}
+        active={currentTab}
+        setActive={setCurrentTab}
+      />
     </div>
   );
 };
@@ -36,6 +40,9 @@ const mapStateToProps = ({ dashboard }) => {
 const mapDispatchToProps = (dispatch) => {
   return {
     removeTab: (id) => dispatch(removeTab(id)),
+    setCurrentTab: (id) => {
+      dispatch(setCurrentTab(id));
+    },
     dispatch,
   };
 };
