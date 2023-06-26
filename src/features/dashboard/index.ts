@@ -1,6 +1,6 @@
 export { default } from "./Dashboard";
 export {
-  default as drawerReducer,
+  default as dashboardReducer,
   addTab,
   removeTab,
   setCurrentTab,

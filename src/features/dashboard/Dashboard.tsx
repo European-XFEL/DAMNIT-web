@@ -2,11 +2,13 @@ import React from "react";
 import { connect } from "react-redux";
 
 import Table from "../table";
+import Plots from "../plots";
 import Tabs from "../../common/tabs/Tabs";
 import { removeTab, setCurrentTab } from "./dashboardSlice";
 
 const COMPONENTS_MAP = {
   table: <Table />,
+  plots: <Plots />,
 };
 
 const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {

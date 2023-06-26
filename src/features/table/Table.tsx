@@ -1,7 +1,7 @@
 import "@glideapps/glide-data-grid/dist/index.css";
 
-import { useCallback, useState } from "react";
-import React, { connect } from "react-redux";
+import React, { useCallback, useState } from "react";
+import { connect } from "react-redux";
 import {
   CompactSelection,
   DataEditor,
@@ -13,8 +13,11 @@ import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 import ContextMenu from "./ContextMenu";
 
 import { selectRow } from "./tableSlice";
-import { EMPTY_VALUE } from "../../common/constants";
+import { addPlot } from "../plots";
+
+import { EMPTY_VALUE, RUN_NUMBER } from "../../common/constants";
 import { imageBytesToURL, isEmpty } from "../../utils/helpers";
+import { formatPlot } from "../plots/utils";
 
 const imageCell = (data, params = {}) => {
   return {
@@ -64,7 +67,7 @@ const gridCellFactory = {
   array: arrayCell,
 };
 
-const Table = ({ data, columns, schema, selection, dispatch }) => {
+const Table = ({ data, columns, schema, dispatch, addPlot }) => {
   // Initialization: Use custom cells
   const cellProps = useExtraCells();
 
@@ -118,6 +121,27 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
       bounds: event.bounds,
     });
   };
+  const handleAddPlot = () => {
+    const { cell, rangeStack } = gridSelection.current;
+    const rows = [cell[1], ...rangeStack.map((stack) => stack.y)];
+
+    addPlot({
+      variable: columns[cell[0]].id,
+      runs: rows.map((row) => data[row][RUN_NUMBER]).toSorted(),
+    });
+  };
+  const cellContextContents = [
+    {
+      key: "plot",
+      title: "Plot",
+      onClick: handleAddPlot,
+    },
+    {
+      key: "option2",
+      title: "Option 2",
+      onClick: () => console.log("OPTION 2"),
+    },
+  ];
 
   return (
     <div>
@@ -139,6 +163,7 @@ const Table = ({ data, columns, schema, selection, dispatch }) => {
             <ContextMenu
               {...cellContextMenu}
               onOutsideClick={() => setCellContextMenu(null)}
+              contents={cellContextContents}
             />
           )}
           <div id="portal"></div>
@@ -158,8 +183,14 @@ const mapStateToProps = ({ table }) => {
     data,
     columns,
     schema: table.schema,
-    selection: table.selection,
   };
 };
 
-export default connect(mapStateToProps)(Table);
+const mapDispatchToProps = (dispatch) => {
+  return {
+    addPlot: (props) => dispatch(addPlot(formatPlot(props))),
+    dispatch,
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Table);
