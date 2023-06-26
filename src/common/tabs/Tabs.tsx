@@ -2,13 +2,14 @@ import React from "react";
 import { Tabs as MantineTabs } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 
-const Tabs = ({ contents, active, setActive }) => {
+const Tabs = ({ contents, active, setActive, ...props }) => {
   const entries = Object.entries(contents);
   return (
     <MantineTabs
       radius="xl"
       value={active || entries[0][0]}
       onTabChange={setActive}
+      {...props}
     >
       <MantineTabs.List>
         {entries.map(([id, tab]) => (

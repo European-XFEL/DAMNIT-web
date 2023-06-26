@@ -2,26 +2,69 @@ import React from "react";
 import { connect } from "react-redux";
 import ReactEcharts from "echarts-for-react";
 
-const Plots = ({ option }) => {
-  return (
-    <div>
-      <ReactEcharts option={option} />
-    </div>
+import { removePlot, setCurrentPlot } from "./plotsSlice";
+import Tabs from "../../common/tabs/Tabs";
+
+const scatterPlot = ({ xAxis = {}, yAxis = [] }) => {
+  return {
+    xAxis: { ...xAxis, type: "category" },
+    yAxis: { scale: true },
+    series: yAxis.map((y) => ({ ...y, type: "scatter" })),
+  };
+};
+
+const Plots = (props) => {
+  const populated = Object.entries(props.contents).map(([id, plot]) => [
+    id,
+    {
+      element: (
+        <ReactEcharts
+          option={scatterPlot({
+            xAxis: {
+              name: "Runs",
+              data: plot.runs,
+            },
+            yAxis: plot.variables.map((variable) => ({
+              data: plot.runs.map((run) => props.data[run][variable]),
+            })),
+          })}
+        />
+      ),
+      title: `${plot.variables.join(", ")} (runs ${plot.runs[0]}-${
+        plot.runs[plot.runs.length - 1]
+      })`,
+      isClosable: true,
+      onClose: () => props.removePlot(id),
+    },
+  ]);
+
+  return !populated.length ? null : (
+    <Tabs
+      orientation="vertical"
+      keepMounted="false"
+      contents={Object.fromEntries(populated)}
+      active={props.currentPlot}
+      setActive={props.setCurrentPlot}
+    />
   );
 };
 
 const mapStateToProps = ({ table, plots }) => {
-  const plot = plots.data[plots.currentPlot];
   return {
-    option: {
-      xAxis: { data: plot.runs, type: "category" },
-      yAxis: { scale: true },
-      series: {
-        type: plot.type,
-        data: plot.runs.map((run) => table.data[run][plot.variable]),
-      },
-    },
+    data: table.data,
+    contents: plots.data,
+    currentPlot: plots.currentPlot,
   };
 };
 
-export default connect(mapStateToProps)(Plots);
+const mapDispatchToProps = (dispatch) => {
+  return {
+    removePlot: (id) => dispatch(removePlot(id)),
+    setCurrentPlot: (id) => {
+      dispatch(setCurrentPlot(id));
+    },
+    dispatch,
+  };
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Plots);

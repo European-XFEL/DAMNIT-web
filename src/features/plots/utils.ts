@@ -5,10 +5,10 @@ function generateUID() {
   );
 }
 
-export function formatPlot({ variable, runs, type = "scatter" }) {
+export function formatPlot({ variables, runs, type = "scatter" }) {
   return {
     id: generateUID(),
-    variable,
+    variables,
     runs,
     type,
   };
