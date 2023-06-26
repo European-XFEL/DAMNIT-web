@@ -27,7 +27,7 @@ const Run = ({ data }) => {
 };
 
 const mapStateToProps = ({ table }) => {
-  const data = Object.values(table.data)[table.selection.row];
+  const data = table.data[table.selection.run];
   const filtered = !data
     ? []
     : Object.entries(data).filter(
