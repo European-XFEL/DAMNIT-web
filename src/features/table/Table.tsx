@@ -15,8 +15,8 @@ import ContextMenu from "./ContextMenu";
 import { selectRun } from "./tableSlice";
 import { addPlot } from "../plots";
 
-import { EMPTY_VALUE, RUN_NUMBER } from "../../common/constants";
-import { imageBytesToURL, isEmpty } from "../../utils/helpers";
+import { DTYPES, EMPTY_VALUE, RUN_NUMBER } from "../../common/constants";
+import { arrayEqual, imageBytesToURL, isEmpty } from "../../utils/helpers";
 
 const imageCell = (data, params = {}) => {
   return {
@@ -66,18 +66,18 @@ const gridCellFactory = {
   array: arrayCell,
 };
 
-const Table = ({ data, columns, schema, addPlot, selectRun }) => {
+const Table = (props) => {
   // Initialization: Use custom cells
   const cellProps = useExtraCells();
 
   // Data: Populate grid
   const getContent = useCallback(
     ([col, row]) => {
-      const column = columns[col].id;
-      const rowData = data[row];
-      return gridCellFactory[schema[column].dtype](rowData[column]);
+      const column = props.columns[col].id;
+      const rowData = props.data[row];
+      return gridCellFactory[props.schema[column].dtype](rowData[column]);
     },
-    [columns, data]
+    [props.columns, props.data]
   );
 
   // Cell: Click event
@@ -85,49 +85,92 @@ const Table = ({ data, columns, schema, addPlot, selectRun }) => {
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
   });
-
   const onGridSelectionChange = (newSelection: GridSelection) => {
-    const { current, columns, rows } = newSelection;
+    const { columns, rows, current } = newSelection;
 
     // Inform that a row has been (de)selected
     const row = rows.last();
-    selectRun(isEmpty(row) ? null : data[row][RUN_NUMBER]);
+    props.dispatch(
+      selectRun(isEmpty(row) ? null : props.data[row][RUN_NUMBER])
+    );
 
     // Clear range stack if cells from the other column are currently selected
+    let rangeStack;
     if (!isEmpty(current?.cell) && !isEmpty(current?.rangeStack)) {
-      if (current.cell[0] != current.rangeStack[0].x) {
-        newSelection = {
-          columns,
-          rows,
-          current: {
-            ...current,
-            rangeStack: [],
-          },
-        };
-      }
+      rangeStack =
+        current.cell[0] != current.rangeStack[0].x
+          ? []
+          : current?.rangeStack.filter(
+              (range) => !arrayEqual(current.cell, [range.x, range.y])
+            );
     }
 
     // Finalize
-    setGridSelection(newSelection);
+    setGridSelection({
+      columns,
+      rows,
+      ...(current && {
+        current: { ...current, ...(rangeStack && { rangeStack }) },
+      }),
+    });
   };
 
-  // Cell: Right click event
-  const [cellContextMenu, setCellContextMenu] = useState();
-  const handleCellContextMenu = (_, event) => {
+  // Context menus
+  const [contextMenu, setContextMenu] = useState();
+  const handleCellContextMenu = ([col, row], event) => {
     event.preventDefault();
-    setCellContextMenu({
-      localPosition: { x: event.localEventX, y: event.localEventY },
-      bounds: event.bounds,
-    });
+    const cells = [
+      gridSelection.current.cell,
+      ...gridSelection.current.rangeStack.map((range) => [range.x, range.y]),
+    ];
+
+    if (
+      col !== -1 &&
+      cells.length > 1 &&
+      cells.some((cell) => arrayEqual(cell, [col, row])) &&
+      props.schema[props.columns[col].id].dtype === DTYPES.number
+    ) {
+      setContextMenu({
+        localPosition: { x: event.localEventX, y: event.localEventY },
+        bounds: event.bounds,
+      });
+    }
+  };
+  const handleHeaderContextMenu = (col, event) => {
+    event.preventDefault();
+    if (col !== -1) {
+      setGridSelection({
+        columns: CompactSelection.fromSingleSelection(col),
+        rows: CompactSelection.empty(),
+      });
+
+      if (props.schema[props.columns[col].id].dtype === DTYPES.number) {
+        setContextMenu({
+          localPosition: { x: event.localEventX, y: event.localEventY },
+          bounds: event.bounds,
+        });
+      }
+    }
   };
   const handleAddPlot = () => {
-    const { cell, rangeStack } = gridSelection.current;
-    const rows = [cell[1], ...rangeStack.map((stack) => stack.y)];
-
-    addPlot({
-      variables: [columns[cell[0]].id],
-      runs: rows.map((row) => data[row][RUN_NUMBER]).toSorted(),
-    });
+    if (gridSelection.current) {
+      const { cell, rangeStack } = gridSelection.current;
+      const rows = [cell[1], ...rangeStack.map((stack) => stack.y)];
+      props.dispatch(
+        addPlot({
+          variables: [props.columns[cell[0]].id],
+          runs: rows.map((row) => props.data[row][RUN_NUMBER]).toSorted(),
+        })
+      );
+    } else {
+      const col = gridSelection.columns.last();
+      props.dispatch(
+        addPlot({
+          variables: [props.columns[col].id],
+          runs: props.data.map((rowData) => rowData[RUN_NUMBER]).toSorted(),
+        })
+      );
+    }
   };
   const cellContextContents = [
     {
@@ -139,24 +182,25 @@ const Table = ({ data, columns, schema, addPlot, selectRun }) => {
 
   return (
     <div>
-      {columns.length && (
+      {!props.columns.length ? null : (
         <>
           <DataEditor
-            columns={columns}
+            columns={props.columns}
             getCellContent={getContent}
-            rows={data.length}
+            rows={props.data.length}
             rowSelect="single"
             rowMarkers="clickable-number"
             gridSelection={gridSelection}
             onGridSelectionChange={onGridSelectionChange}
             rangeSelect="multi-cell"
             onCellContextMenu={handleCellContextMenu}
+            onHeaderContextMenu={handleHeaderContextMenu}
             {...cellProps}
           />
-          {cellContextMenu && (
+          {contextMenu && (
             <ContextMenu
-              {...cellContextMenu}
-              onOutsideClick={() => setCellContextMenu(null)}
+              {...contextMenu}
+              onOutsideClick={() => setContextMenu(null)}
               contents={cellContextContents}
             />
           )}
@@ -180,12 +224,4 @@ const mapStateToProps = ({ table }) => {
   };
 };
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    addPlot: (props) => dispatch(addPlot(props)),
-    selectRun: (run) => dispatch(selectRun(run)),
-    dispatch,
-  };
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(Table);
+export default connect(mapStateToProps)(Table);

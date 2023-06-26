@@ -9,3 +9,9 @@ export function isEmpty(value) {
     (Array.isArray(value) && value.length <= 0)
   );
 }
+
+export function arrayEqual(arr1, arr2) {
+  return (
+    arr1.length == arr2.length && arr1.every((x, index) => x == arr2[index])
+  );
+}

@@ -3,9 +3,9 @@ import { connect } from "react-redux";
 import { Text } from "@mantine/core";
 
 import useStyles from "./Run.styles";
-import { EMPTY_VALUE } from "../../common/constants";
+import { DTYPES, EMPTY_VALUE } from "../../common/constants";
 
-const HIDDEN_DTYPES = ["image", "array"];
+const HIDDEN_DTYPES = [DTYPES.image, DTYPES.array];
 
 const Run = ({ data }) => {
   const { classes } = useStyles();
