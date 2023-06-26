@@ -12,12 +12,11 @@ import { useExtraCells } from "@glideapps/glide-data-grid-cells";
 
 import ContextMenu from "./ContextMenu";
 
-import { selectRow } from "./tableSlice";
+import { selectRun } from "./tableSlice";
 import { addPlot } from "../plots";
 
 import { EMPTY_VALUE, RUN_NUMBER } from "../../common/constants";
 import { imageBytesToURL, isEmpty } from "../../utils/helpers";
-import { formatPlot } from "../plots/utils";
 
 const imageCell = (data, params = {}) => {
   return {
@@ -67,7 +66,7 @@ const gridCellFactory = {
   array: arrayCell,
 };
 
-const Table = ({ data, columns, schema, dispatch, addPlot }) => {
+const Table = ({ data, columns, schema, addPlot, selectRun }) => {
   // Initialization: Use custom cells
   const cellProps = useExtraCells();
 
@@ -92,7 +91,7 @@ const Table = ({ data, columns, schema, dispatch, addPlot }) => {
 
     // Inform that a row has been (de)selected
     const row = rows.last();
-    dispatch(selectRow(isEmpty(row) ? null : row));
+    selectRun(isEmpty(row) ? null : data[row][RUN_NUMBER]);
 
     // Clear range stack if cells from the other column are currently selected
     if (!isEmpty(current?.cell) && !isEmpty(current?.rangeStack)) {
@@ -188,7 +187,8 @@ const mapStateToProps = ({ table }) => {
 
 const mapDispatchToProps = (dispatch) => {
   return {
-    addPlot: (props) => dispatch(addPlot(formatPlot(props))),
+    addPlot: (props) => dispatch(addPlot(props)),
+    selectRun: (run) => dispatch(selectRun(run)),
     dispatch,
   };
 };

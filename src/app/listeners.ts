@@ -3,16 +3,16 @@ import { createListenerMiddleware } from "@reduxjs/toolkit";
 import { addTab } from "../features/dashboard";
 import { openDrawer, closeDrawer } from "../features/drawer/";
 import { addPlot } from "../features/plots/";
-import { selectRow } from "../features/table";
+import { selectRun } from "../features/table";
 
 export const listenerMiddleware = createListenerMiddleware();
 
 listenerMiddleware.startListening({
-  actionCreator: selectRow,
+  actionCreator: selectRun,
   effect: (action, { dispatch }) => {
-    const row = action.payload;
+    const run = action.payload;
 
-    const sideEffect = row !== null ? openDrawer : closeDrawer;
+    const sideEffect = run !== null ? openDrawer : closeDrawer;
     dispatch(sideEffect());
   },
 });
@@ -21,8 +21,8 @@ listenerMiddleware.startListening({
   actionCreator: closeDrawer,
   effect: (action, { dispatch, getState }) => {
     const { table } = getState();
-    if (table.selection.row !== null) {
-      dispatch(selectRow(null));
+    if (table.selection.run !== null) {
+      dispatch(selectRun(null));
     }
   },
 });
