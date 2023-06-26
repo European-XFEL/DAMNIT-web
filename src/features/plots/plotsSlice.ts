@@ -2,17 +2,17 @@ import { createSlice } from "@reduxjs/toolkit";
 import { formatPlot } from "./utils";
 
 const initialState = {
-  data: {},
-  currentPlot: "",
+  data: null,
+  currentPlot: null,
 };
 
 const slice = createSlice({
   name: "plots",
   initialState,
   reducers: {
-    seCurrentPlot: (state, action) => {
+    setCurrentPlot: (state, action) => {
       const id = action.payload;
-      if (state.data.hasOwnProperty(id)) {
+      if (state.data && state.data.hasOwnProperty(id)) {
         state.currentPlot = id;
       }
     },
@@ -23,11 +23,17 @@ const slice = createSlice({
     },
     removePlot: (state, action) => {
       const { [action.payload]: _ = {}, ...rest } = state.data;
-      state.currentPlot = Object.keys(rest).slice(-1)[0];
-      state.data = rest;
+      const plots = Object.keys(rest);
+      state.currentPlot = plots.length ? plots.slice(-1)[0] : null;
+      state.data = plots.length ? rest : null;
+    },
+    clearPlots: (state) => {
+      state.currentPlot = null;
+      state.data = null;
     },
   },
 });
 
 export default slice.reducer;
-export const { addPlot, removePlot, seCurrentPlot } = slice.actions;
+export const { addPlot, clearPlots, removePlot, setCurrentPlot } =
+  slice.actions;

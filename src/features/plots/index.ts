@@ -2,6 +2,7 @@ export { default } from "./Plots";
 export {
   default as plotsReducer,
   addPlot,
+  clearPlots,
   removePlot,
-  seCurrentPlot,
+  setCurrentPlot,
 } from "./plotsSlice";

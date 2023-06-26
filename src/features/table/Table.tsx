@@ -125,7 +125,7 @@ const Table = ({ data, columns, schema, addPlot, selectRun }) => {
     const rows = [cell[1], ...rangeStack.map((stack) => stack.y)];
 
     addPlot({
-      variable: columns[cell[0]].id,
+      variables: [columns[cell[0]].id],
       runs: rows.map((row) => data[row][RUN_NUMBER]).toSorted(),
     });
   };
@@ -134,11 +134,6 @@ const Table = ({ data, columns, schema, addPlot, selectRun }) => {
       key: "plot",
       title: "Plot",
       onClick: handleAddPlot,
-    },
-    {
-      key: "option2",
-      title: "Option 2",
-      onClick: () => console.log("OPTION 2"),
     },
   ];
 
