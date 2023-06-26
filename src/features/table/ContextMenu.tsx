@@ -1,12 +1,8 @@
 import React from "react";
-import { useDispatch } from "react-redux";
 import { useLayer } from "react-laag";
 import { ContextMenu as MantineContextMenu } from "mantine-contextmenu";
-import { addTab } from "../dashboard";
 
-const ContextMenu = ({ localPosition, bounds, onOutsideClick }) => {
-  const dispatch = useDispatch();
-
+const ContextMenu = ({ localPosition, bounds, onOutsideClick, contents }) => {
   const { layerProps, renderLayer } = useLayer({
     isOpen: true,
     auto: true,
@@ -31,21 +27,7 @@ const ContextMenu = ({ localPosition, bounds, onOutsideClick }) => {
         x={localPosition.x + bounds.x}
         y={localPosition.y + bounds.y}
         onHide={onOutsideClick}
-        content={[
-          {
-            key: "option1",
-            title: "Option 1",
-            onClick: () =>
-              dispatch(
-                addTab({ id: "plots", title: "Plots", isClosable: true })
-              ),
-          },
-          {
-            key: "option2",
-            title: "Option 2",
-            onClick: () => console.log("OPTION 2"),
-          },
-        ]}
+        content={contents}
       ></MantineContextMenu>
     </div>
   );
