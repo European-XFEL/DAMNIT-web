@@ -37,10 +37,14 @@ def get_column_schema(
     schema = {column: {'id': column, 'dtype': get_dtype(column)}
               for column in column_names}
 
-    # REMOVEME: Get array from hardcoded column names
-    arrays = ['hrixs_spectrum']
-    for col in arrays:
-        schema[col]['dtype'] = Type.ARRAY
+    # REMOVEME: Get dtype from hardcoded column names
+    known_dtypes = {
+        'start_time': Type.TIMESTAMP,
+        'added_at': Type.TIMESTAMP,
+        'hrixs_spectrum': Type.ARRAY,
+    }
+    for name, dtype in known_dtypes.items():
+        schema[name]['dtype'] = dtype
     
     return schema
 
@@ -88,6 +92,9 @@ def index(
             df[k] = df.apply(lambda row:
                              get_run_data(extracted_path(row.runnr), k).tolist(),
                              axis=1)
+        elif dtype == Type.TIMESTAMP:
+            # Convert from UNIX to EPOCH timestamp
+            df[k] = df[k].apply(lambda t: t * 1000)
 
     # Fill any NaN values in the DataFrame with the string 'None'
     df.fillna(FILL_VALUE, inplace=True)
