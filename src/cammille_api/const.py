@@ -10,3 +10,4 @@ class Type(Enum):
     BOOLEAN = 'boolean'
     ARRAY = 'array'
     IMAGE = 'image'
+    TIMESTAMP = 'timestamp'
