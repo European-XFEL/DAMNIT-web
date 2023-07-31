@@ -2,7 +2,7 @@ import React from "react"
 import Table from "@/features/table/Table"
 
 import { renderWithProviders, screen } from "../../test-utils/extensions"
-import { gridProps, validTable } from "../../test-utils/builders/table"
+import { gridProps, validTableData } from "../../test-utils/builders/table"
 
 beforeEach(() => {
   Element.prototype.scrollTo = vi.fn()
@@ -32,13 +32,12 @@ describe("Table", () => {
     expect(screen.queryByTestId("data-grid-canvas")).not.toBeInTheDocument()
   })
 
-  it("renders canvas with valid input", async () => {
+  it("renders canvas with valid input", () => {
     renderWithProviders(<Table grid={gridProps} />, {
       preloadedState: {
-        table: validTable,
+        table: validTableData,
       },
     })
-
     expect(screen.getByTestId("data-grid-canvas")).toBeInTheDocument()
   })
 })
