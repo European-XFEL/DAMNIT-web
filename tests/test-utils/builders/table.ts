@@ -2,7 +2,7 @@ export const gridProps = {
   initialSize: [500, 500],
 }
 
-export const validTable = {
+export const validTableData = {
   data: {
     "448": {
       proposal: 2956,
@@ -65,3 +65,23 @@ export const validTable = {
   },
   selection: {},
 }
+
+export const validTableColumns = [
+  {
+    id: "runnr",
+    themeOverride: { fontFamily: "monospace", headerFontStyle: "" },
+    title: "runnr",
+    width: 100,
+  },
+  { id: "start_time", title: "start_time" },
+  { id: "comment", title: "comment" },
+  {
+    id: "rep_rate_laser",
+    themeOverride: { fontFamily: "monospace", headerFontStyle: "" },
+    title: "rep_rate_laser",
+    width: 100,
+  },
+  { id: "hrixs_preview", title: "hrixs_preview" },
+  { id: "hrixs_spectrum", title: "hrixs_spectrum" },
+  { id: "test_variable", title: "test_variable" },
+]

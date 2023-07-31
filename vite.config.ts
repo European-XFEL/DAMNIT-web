@@ -23,6 +23,7 @@ export default defineConfig(() => {
       environment: "jsdom",
       setupFiles: ["./tests/setup.ts"],
       testMatch: ["./tests/**/*.test.tsx"],
+      threads: false,
     },
     resolve: {
       alias: {

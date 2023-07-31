@@ -142,26 +142,13 @@ const Table = (props) => {
     },
   ]
 
-  // Format columns
-  const formattedColumns = props.columns.map((column) => ({
-    ...column,
-    ...(props.schema[column.id].dtype === DTYPES.number && {
-      width: 100,
-      themeOverride: {
-        fontFamily: "monospace",
-        headerFontStyle: "",
-      },
-    }),
-  }))
-
   return (
     <div>
       {!props.columns.length ? null : (
         <>
           <DataEditor
             {...(props.grid || {})}
-            id="main-table"
-            columns={formattedColumns}
+            columns={formatColumns(props.columns, props.schema)}
             getCellContent={getContent}
             rows={props.data.length}
             rowSelect="single"
@@ -204,3 +191,16 @@ const mapStateToProps = ({ table }) => {
 }
 
 export default connect(mapStateToProps)(Table)
+
+const formatColumns = (columns, schema) => {
+  return columns.map((column) => ({
+    ...column,
+    ...(schema[column.id].dtype === DTYPES.number && {
+      width: 100,
+      themeOverride: {
+        fontFamily: "monospace",
+        headerFontStyle: "",
+      },
+    }),
+  }))
+}
