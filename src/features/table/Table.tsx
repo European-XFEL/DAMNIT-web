@@ -1,60 +1,60 @@
-import "@glideapps/glide-data-grid/dist/index.css";
+import "@glideapps/glide-data-grid/dist/index.css"
 
-import React, { useCallback, useState } from "react";
-import { connect } from "react-redux";
+import React, { useCallback, useState } from "react"
+import { connect } from "react-redux"
 import {
   CompactSelection,
   DataEditor,
   GridSelection,
-} from "@glideapps/glide-data-grid";
-import { useExtraCells } from "@glideapps/glide-data-grid-cells";
+} from "@glideapps/glide-data-grid"
+import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 
-import { gridCellFactory } from "./cells";
-import ContextMenu from "./ContextMenu";
+import { gridCellFactory } from "./cells"
+import ContextMenu from "./ContextMenu"
 
-import { selectRun } from "./tableSlice";
-import { addPlot } from "../plots";
+import { selectRun } from "./tableSlice"
+import { addPlot } from "../plots"
 
-import { DTYPES, VARIABLES } from "../../common/constants";
-import { arrayEqual, isEmpty } from "../../utils/helpers";
+import { DTYPES, VARIABLES } from "../../common/constants"
+import { arrayEqual, isEmpty } from "../../utils/helpers"
 
 const Table = (props) => {
   // Initialization: Use custom cells
-  const cellProps = useExtraCells();
+  const cellProps = useExtraCells()
 
   // Data: Populate grid
   const getContent = useCallback(
     ([col, row]) => {
-      const column = props.columns[col].id;
-      const rowData = props.data[row];
-      return gridCellFactory[props.schema[column].dtype](rowData[column]);
+      const column = props.columns[col].id
+      const rowData = props.data[row]
+      return gridCellFactory[props.schema[column].dtype](rowData[column])
     },
-    [props.columns, props.data]
-  );
+    [props.columns, props.data],
+  )
 
   // Cell: Click event
   const [gridSelection, setGridSelection] = useState({
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
-  });
+  })
   const onGridSelectionChange = (newSelection: GridSelection) => {
-    const { columns, rows, current } = newSelection;
+    const { columns, rows, current } = newSelection
 
     // Inform that a row has been (de)selected
-    const row = rows.last();
+    const row = rows.last()
     props.dispatch(
-      selectRun(isEmpty(row) ? null : props.data[row][VARIABLES.run_number])
-    );
+      selectRun(isEmpty(row) ? null : props.data[row][VARIABLES.run_number]),
+    )
 
     // Clear range stack if cells from the other column are currently selected
-    let rangeStack;
+    let rangeStack
     if (!isEmpty(current?.cell) && !isEmpty(current?.rangeStack)) {
       rangeStack =
         current.cell[0] != current.rangeStack[0].x
           ? []
           : current?.rangeStack.filter(
-              (range) => !arrayEqual(current.cell, [range.x, range.y])
-            );
+              (range) => !arrayEqual(current.cell, [range.x, range.y]),
+            )
     }
 
     // Finalize
@@ -64,23 +64,23 @@ const Table = (props) => {
       ...(current && {
         current: { ...current, ...(rangeStack && { rangeStack }) },
       }),
-    });
-  };
+    })
+  }
 
   // Context menus
-  const [contextMenu, setContextMenu] = useState();
+  const [contextMenu, setContextMenu] = useState()
   const handleCellContextMenu = ([col, row], event) => {
-    event.preventDefault();
+    event.preventDefault()
 
     // Ignore no selection for the meantime
     if (!gridSelection.current) {
-      return;
+      return
     }
 
     const cells = [
       gridSelection.current.cell,
       ...gridSelection.current.rangeStack.map((range) => [range.x, range.y]),
-    ];
+    ]
 
     if (
       col !== -1 &&
@@ -91,56 +91,56 @@ const Table = (props) => {
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
-      });
+      })
     }
-  };
+  }
   const handleHeaderContextMenu = (col, event) => {
-    event.preventDefault();
+    event.preventDefault()
     if (col !== -1) {
       setGridSelection({
         columns: CompactSelection.fromSingleSelection(col),
         rows: CompactSelection.empty(),
-      });
+      })
 
       if (props.schema[props.columns[col].id].dtype === DTYPES.number) {
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
-        });
+        })
       }
     }
-  };
+  }
   const handleAddPlot = () => {
     if (gridSelection.current) {
-      const { cell, rangeStack } = gridSelection.current;
-      const rows = [cell[1], ...rangeStack.map((stack) => stack.y)];
+      const { cell, rangeStack } = gridSelection.current
+      const rows = [cell[1], ...rangeStack.map((stack) => stack.y)]
       props.dispatch(
         addPlot({
           variables: [props.columns[cell[0]].id],
           runs: rows
             .map((row) => props.data[row][VARIABLES.run_number])
             .toSorted(),
-        })
-      );
+        }),
+      )
     } else {
-      const col = gridSelection.columns.last();
+      const col = gridSelection.columns.last()
       props.dispatch(
         addPlot({
           variables: [props.columns[col].id],
           runs: props.data
             .map((rowData) => rowData[VARIABLES.run_number])
             .toSorted(),
-        })
-      );
+        }),
+      )
     }
-  };
+  }
   const cellContextContents = [
     {
       key: "plot",
       title: "Plot",
       onClick: handleAddPlot,
     },
-  ];
+  ]
 
   // Format columns
   const formattedColumns = props.columns.map((column) => ({
@@ -152,13 +152,15 @@ const Table = (props) => {
         headerFontStyle: "",
       },
     }),
-  }));
+  }))
 
   return (
     <div>
       {!props.columns.length ? null : (
         <>
           <DataEditor
+            {...(props.grid || {})}
+            id="main-table"
             columns={formattedColumns}
             getCellContent={getContent}
             rows={props.data.length}
@@ -183,22 +185,22 @@ const Table = (props) => {
         </>
       )}
     </div>
-  );
-};
+  )
+}
 
 const mapStateToProps = ({ table }) => {
-  const data = table.data ? Object.values(table.data) : [];
+  const data = table.data ? Object.values(table.data) : []
 
   // TODO: Get the column list from the user settings (reordered columns)
   const columns = Object.keys(table.schema)
     .filter((id) => id !== VARIABLES.proposal)
-    .map((id) => ({ id, title: id }));
+    .map((id) => ({ id, title: id }))
 
   return {
     data,
     columns,
     schema: table.schema,
-  };
-};
+  }
+}
 
-export default connect(mapStateToProps)(Table);
+export default connect(mapStateToProps)(Table)
