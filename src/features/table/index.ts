@@ -1,2 +1,2 @@
-export { default } from "./Table";
-export { default as tableReducer, getTable, selectRun } from "./tableSlice";
+export { default } from "./Table"
+export { default as tableReducer, getTable, selectRun } from "./tableSlice"

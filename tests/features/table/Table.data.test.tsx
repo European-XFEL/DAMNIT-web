@@ -6,7 +6,7 @@ import { size } from "@/utils/helpers"
 import { renderWithProviders } from "../../test-utils/extensions"
 import {
   gridProps,
-  validTableData as validTableState,
+  validTableState,
   validTableColumns,
 } from "../../test-utils/builders/table"
 

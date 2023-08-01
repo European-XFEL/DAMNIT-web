@@ -16,6 +16,12 @@ afterEach(() => {
   cleanup()
 })
 
+// replace jest with vi
+Object.defineProperty(global, "jest", {
+  writable: true,
+  value: vi,
+})
+
 // mock `window.matchMedia` to be compatible with `mantine`
 Object.defineProperty(window, "matchMedia", {
   writable: true,

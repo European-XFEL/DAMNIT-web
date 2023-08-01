@@ -2,7 +2,7 @@ import React from "react"
 import Table from "@/features/table/Table"
 
 import { renderWithProviders, screen } from "../../test-utils/extensions"
-import { gridProps, validTableData } from "../../test-utils/builders/table"
+import { gridProps, validTableState } from "../../test-utils/builders/table"
 
 beforeEach(() => {
   Element.prototype.scrollTo = vi.fn()
@@ -26,7 +26,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("Table", () => {
+describe("Table component", () => {
   it("does not render canvas with invalid input", () => {
     renderWithProviders(<Table grid={gridProps} />)
     expect(screen.queryByTestId("data-grid-canvas")).not.toBeInTheDocument()
@@ -35,7 +35,7 @@ describe("Table", () => {
   it("renders canvas with valid input", () => {
     renderWithProviders(<Table grid={gridProps} />, {
       preloadedState: {
-        table: validTableData,
+        table: validTableState,
       },
     })
     expect(screen.getByTestId("data-grid-canvas")).toBeInTheDocument()

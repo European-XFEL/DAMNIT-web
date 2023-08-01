@@ -1,25 +1,26 @@
-const API = "";
-const PROPOSAL_NUMBER = 2956;
-const TABLE = "runs";
+const API =
+  import.meta.env.MODE === "test" ? import.meta.env.VITE_BACKEND_API : ""
+const PROPOSAL_NUMBER = 2956
+const TABLE = "runs"
 
 const headers = {
   Accept: "application/json",
-};
+}
 
 export const tableService = {
   getTableData,
   getTableSchema,
   getTable,
-};
+}
 
 function getTableData({ pageSize = 100 } = {}) {
   const url = [
     `${API}/db?`,
-    `page_size=${pageSize}`,
-    `&table_name=${TABLE}`,
-    `&proposal_number=${PROPOSAL_NUMBER}`,
-  ];
-  return fetch(url.join(""), { headers }).then((res) => res.json());
+    // `page_size=${pageSize}`,
+    // `&table_name=${TABLE}`,
+    // `&proposal_number=${PROPOSAL_NUMBER}`,
+  ]
+  return fetch(url.join(""), { headers }).then((res) => res.json())
 }
 
 function getTableSchema() {
@@ -27,8 +28,8 @@ function getTableSchema() {
     `${API}/db/schema?`,
     `table_name=${TABLE}`,
     `&proposal_number=${PROPOSAL_NUMBER}`,
-  ];
-  return fetch(url.join(""), { headers }).then((res) => res.json());
+  ]
+  return fetch(url.join(""), { headers }).then((res) => res.json())
 }
 
 function getTable() {
@@ -36,6 +37,6 @@ function getTable() {
     ([data, schema]) => ({
       data,
       schema,
-    })
-  );
+    }),
+  )
 }
