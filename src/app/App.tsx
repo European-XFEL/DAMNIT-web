@@ -1,15 +1,15 @@
-import React, { useEffect } from "react";
-import { connect } from "react-redux";
+import React, { useEffect } from "react"
+import { connect } from "react-redux"
 
-import Dashboard from "../features/dashboard";
-import Drawer from "../features/drawer";
-import { getTable } from "../features/table";
+import Dashboard from "../features/dashboard"
+import Drawer from "../features/drawer"
+import { getTable } from "../features/table"
 
 const App = ({ dispatch, loading }) => {
   // Get initial data
   useEffect(() => {
-    dispatch(getTable());
-  }, []);
+    dispatch(getTable())
+  }, [])
 
   return (
     <div>
@@ -20,13 +20,13 @@ const App = ({ dispatch, loading }) => {
         </>
       )}
     </div>
-  );
-};
+  )
+}
 
 const mapStateToProps = ({ table }) => {
   return {
     loading: !table.data,
-  };
-};
+  }
+}
 
-export default connect(mapStateToProps)(App);
+export default connect(mapStateToProps)(App)
