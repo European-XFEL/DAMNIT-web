@@ -2,7 +2,7 @@ import { setupServer } from "msw/node"
 
 import { setupStore } from "@/app/store"
 import { getTable } from "@/features/table"
-import { tableService } from "@/utils/api"
+import { tableService } from "@/utils/api/rest"
 
 import {
   validTableData,

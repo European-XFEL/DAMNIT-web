@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
-import { tableService } from "../../utils/api"
+import { tableService } from "../../utils/api/graphql"
 
 const initialState = {
   data: {},

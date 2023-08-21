@@ -1,9 +1,11 @@
-import { GridCellKind } from "@glideapps/glide-data-grid";
-import { DTYPES, EMPTY_VALUE } from "../../common/constants";
-import { formatDate, formatFloat, imageBytesToURL } from "../../utils/helpers";
+import { GridCellKind } from "@glideapps/glide-data-grid"
+import { DTYPES } from "../../common/constants"
+import { formatDate, formatFloat, imageBytesToURL } from "../../utils/helpers"
+
+// TODO: Handle nonconforming data type
 
 const imageCell = (data, params = {}) => {
-  const image = imageBytesToURL(data);
+  const image = imageBytesToURL(data)
   return {
     kind: GridCellKind.Image,
     // displayData: [image],
@@ -11,30 +13,31 @@ const imageCell = (data, params = {}) => {
     allowOverlay: true,
     allowAdd: false,
     readonly: true,
-  };
-};
+  }
+}
 
 const textCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Text,
-    displayData: data !== EMPTY_VALUE ? data : "",
+    displayData: data || "",
     data,
     allowOverlay: false,
-  };
-};
+  }
+}
 
 const numberCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Number,
-    displayData:
-      data !== EMPTY_VALUE
-        ? String(Number.isInteger(data) ? data : formatFloat(data))
-        : "",
+    displayData: Number.isFinite(data)
+      ? String(Number.isInteger(data) ? data : formatFloat(data))
+      : data
+      ? String(data)
+      : "",
     data,
     allowOverlay: false,
     contentAlign: "right",
-  };
-};
+  }
+}
 
 const arrayCell = (data, params = {}) => {
   return {
@@ -48,8 +51,8 @@ const arrayCell = (data, params = {}) => {
       color: "#77c4c4",
       yAxis: [Math.min(...data), Math.max(...data)],
     },
-  };
-};
+  }
+}
 
 const dateCell = (data, params = {}) => {
   return {
@@ -57,8 +60,8 @@ const dateCell = (data, params = {}) => {
     allowOverlay: false,
     displayData: formatDate(data),
     data,
-  };
-};
+  }
+}
 
 export const gridCellFactory = {
   [DTYPES.image]: imageCell,
@@ -66,4 +69,4 @@ export const gridCellFactory = {
   [DTYPES.number]: numberCell,
   [DTYPES.array]: arrayCell,
   [DTYPES.timestamp]: dateCell,
-};
+}
