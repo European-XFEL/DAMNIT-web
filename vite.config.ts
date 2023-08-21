@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        "/graphql": {
+          target: env.VITE_BACKEND_API,
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
     test: {
