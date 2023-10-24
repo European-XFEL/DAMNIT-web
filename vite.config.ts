@@ -14,12 +14,12 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         "/db": {
-          target: env.VITE_BACKEND_API,
+          target: `http://${env.VITE_BACKEND_API}`,
           changeOrigin: true,
           secure: false,
         },
         "/graphql": {
-          target: env.VITE_BACKEND_API,
+          target: `http://${env.VITE_BACKEND_API}`,
           changeOrigin: true,
           secure: false,
         },

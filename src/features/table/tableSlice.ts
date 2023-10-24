@@ -5,6 +5,7 @@ const initialState = {
   data: {},
   schema: {},
   selection: {},
+  lastUpdate: {},
 }
 
 export const getTable = createAsyncThunk("table/getTable", async () => {
@@ -19,6 +20,12 @@ const slice = createSlice({
     selectRun: ({ selection }, action) => {
       selection.run = action.payload
     },
+    updateTable: (state, action) => {
+      const { run, schema } = action.payload
+      state.data[run.runnr] = run
+      state.schema = schema
+      state.lastUpdate[run.runnr] = performance.now()
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(getTable.fulfilled, (state, action) => {
@@ -31,4 +38,4 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { selectRun } = slice.actions
+export const { selectRun, updateTable } = slice.actions
