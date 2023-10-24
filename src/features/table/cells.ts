@@ -13,15 +13,17 @@ const imageCell = (data, params = {}) => {
     allowOverlay: true,
     allowAdd: false,
     readonly: true,
+    ...params,
   }
 }
 
 const textCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Text,
-    displayData: data || "",
+    displayData: data ? String(data) : "",
     data,
     allowOverlay: false,
+    ...params,
   }
 }
 
@@ -36,6 +38,7 @@ const numberCell = (data, params = {}) => {
     data,
     allowOverlay: false,
     contentAlign: "right",
+    ...params,
   }
 }
 
@@ -51,6 +54,7 @@ const arrayCell = (data, params = {}) => {
       color: "#77c4c4",
       yAxis: [Math.min(...data), Math.max(...data)],
     },
+    ...params,
   }
 }
 
@@ -60,6 +64,7 @@ const dateCell = (data, params = {}) => {
     allowOverlay: false,
     displayData: formatDate(data),
     data,
+    ...params,
   }
 }
 

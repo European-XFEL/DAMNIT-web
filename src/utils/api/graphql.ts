@@ -1,7 +1,12 @@
-import { gql } from "@apollo/client"
 import { stripTypename } from "@apollo/client/utilities"
 
 import { client } from "../../app/apollo"
+import {
+  INITIALIZE_MUTATION,
+  TABLE_SCHEMA_QUERY,
+  get_table_data_query,
+} from "../../graphql/queries"
+import { PROPOSAL_NUMBER } from "../../constants"
 
 export const tableService = {
   initialize,
@@ -10,16 +15,10 @@ export const tableService = {
   getTable,
 }
 
-const PROPOSAL_NUMBER = 2956
-
 function initialize({ proposal = PROPOSAL_NUMBER } = {}) {
   return client
     .mutate({
-      mutation: gql`
-        mutation InitializeMutation($proposal: String) {
-          initialize(database: { proposal: $proposal })
-        }
-      `,
+      mutation: INITIALIZE_MUTATION,
       variables: {
         proposal: String(proposal),
       },
@@ -31,22 +30,12 @@ function getTableData(
   schema,
   { proposal = PROPOSAL_NUMBER, pageSize = 2 } = {},
 ) {
-  const model = `p${proposal}`
-  const query = gql`
-    query p2956_query($proposal: String = "${proposal}") {
-      runs(database: { proposal: $proposal }, per_page: ${pageSize}) {
-        ... on ${model} {
-          ${Object.keys(schema).join(" ")}
-        }
-      }
-    }
-  `
-
   return client
     .query({
-      query,
+      query: get_table_data_query(`p${proposal}`, Object.keys(schema)),
       variables: {
         proposal: String(proposal),
+        per_page: pageSize,
       },
     })
     .then(({ data }) => {
@@ -60,11 +49,7 @@ function getTableData(
 function getTableSchema({ proposal = PROPOSAL_NUMBER } = {}) {
   return client
     .query({
-      query: gql`
-        query TableSchemaQuery($proposal: String) {
-          schema(database: { proposal: $proposal })
-        }
-      `,
+      query: TABLE_SCHEMA_QUERY,
       variables: {
         proposal: String(proposal),
       },

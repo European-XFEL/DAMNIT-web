@@ -2,23 +2,36 @@ import "@glideapps/glide-data-grid/dist/index.css"
 
 import React, { useCallback, useState } from "react"
 import { connect } from "react-redux"
+import { useSubscription } from "@apollo/client"
 import {
   CompactSelection,
   DataEditor,
   GridSelection,
+  GridColumnIcon,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 
 import { gridCellFactory } from "./cells"
 import ContextMenu from "./ContextMenu"
 
-import { selectRun } from "./tableSlice"
+import { selectRun, updateTable } from "./tableSlice"
 import { addPlot } from "../plots"
 
 import { DTYPES, VARIABLES } from "../../common/constants"
 import { arrayEqual, isEmpty } from "../../utils/helpers"
+import { LATEST_RUN, LATEST_RUN_SUBSCRIPTION } from "../../graphql/queries"
+import { PROPOSAL_NUMBER } from "../../constants"
 
 const Table = (props) => {
+  // Initialization: Subscribe to new updates
+  useSubscription(LATEST_RUN_SUBSCRIPTION, {
+    variables: { proposal: String(PROPOSAL_NUMBER) },
+    onData: ({ data }) => {
+      const { data: run, schema } = data.data[LATEST_RUN]
+      props.dispatch(updateTable({ run, schema }))
+    },
+  })
+
   // Initialization: Use custom cells
   const cellProps = useExtraCells()
 
@@ -27,7 +40,10 @@ const Table = (props) => {
     ([col, row]) => {
       const column = props.columns[col].id
       const rowData = props.data[row]
-      return gridCellFactory[props.schema[column].dtype](rowData[column])
+      const cell = gridCellFactory[props.schema[column].dtype]
+      return cell(rowData[column], {
+        lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
+      })
     },
     [props.columns, props.data],
   )
@@ -187,6 +203,7 @@ const mapStateToProps = ({ table }) => {
     data,
     columns,
     schema: table.schema,
+    lastUpdate: table.lastUpdate,
   }
 }
 
@@ -195,6 +212,7 @@ export default connect(mapStateToProps)(Table)
 const formatColumns = (columns, schema) => {
   return columns.map((column) => ({
     ...column,
+    icon: COLUMN_ICONS[schema[column.id].dtype] || GridColumnIcon.HeaderString,
     ...(schema[column.id].dtype === DTYPES.number && {
       width: 100,
       themeOverride: {
@@ -203,4 +221,12 @@ const formatColumns = (columns, schema) => {
       },
     }),
   }))
+}
+
+const COLUMN_ICONS = {
+  image: GridColumnIcon.HeaderImage,
+  array: GridColumnIcon.HeaderArray,
+  string: GridColumnIcon.HeaderString,
+  number: GridColumnIcon.HeaderNumber,
+  timestamp: GridColumnIcon.HeaderDate,
 }

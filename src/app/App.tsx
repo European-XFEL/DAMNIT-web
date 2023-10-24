@@ -1,14 +1,24 @@
 import React, { useEffect } from "react"
 import { connect } from "react-redux"
+import { useMutation } from "@apollo/client"
 
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
 import { getTable } from "../features/table"
+import { INITIALIZE_MUTATION } from "../graphql/queries"
+import { PROPOSAL_NUMBER } from "../constants"
 
 const App = ({ dispatch, loading }) => {
-  // Get initial data
+  // Initialize GraphQL server connection and get initial data
+  const [initialize, _] = useMutation(INITIALIZE_MUTATION, {
+    onCompleted: (_) => {
+      dispatch(getTable())
+    },
+  })
   useEffect(() => {
-    dispatch(getTable())
+    initialize({
+      variables: { proposal: String(PROPOSAL_NUMBER) },
+    })
   }, [])
 
   return (

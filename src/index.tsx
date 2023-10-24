@@ -1,8 +1,10 @@
 import React from "react"
 import { createRoot } from "react-dom/client"
-import { Provider } from "react-redux"
+import { Provider as ReduxProvider } from "react-redux"
 import { BrowserRouter } from "react-router-dom"
+import { ApolloProvider } from "@apollo/client"
 
+import { client } from "./app/apollo"
 import { setupStore } from "./app/store"
 import App from "./app/App"
 
@@ -11,10 +13,12 @@ const root = createRoot(container)
 
 root.render(
   <React.StrictMode>
-    <Provider store={setupStore()}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </Provider>
+    <ApolloProvider client={client}>
+      <ReduxProvider store={setupStore()}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </ReduxProvider>
+    </ApolloProvider>
   </React.StrictMode>,
 )
