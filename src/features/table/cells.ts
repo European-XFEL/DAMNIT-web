@@ -10,7 +10,7 @@ const imageCell = (data, params = {}) => {
     kind: GridCellKind.Image,
     // displayData: [image],
     data: [image],
-    allowOverlay: true,
+    allowOverlay: false,
     allowAdd: false,
     readonly: true,
     ...params,
