@@ -1,50 +1,40 @@
-import { createListenerMiddleware } from "@reduxjs/toolkit";
+import { createListenerMiddleware } from "@reduxjs/toolkit"
 
-import { addTab, removeTab } from "../features/dashboard";
-import { openDrawer, closeDrawer } from "../features/drawer/";
-import { addPlot, clearPlots, removePlot } from "../features/plots/";
-import { selectRun } from "../features/table";
+import { addTab, removeTab } from "../features/dashboard"
+import { openDrawer, closeDrawer } from "../features/drawer/"
+import { addPlot, clearPlots, removePlot } from "../features/plots/"
+import { selectRun } from "../features/table"
 
-export const listenerMiddleware = createListenerMiddleware();
+export const listenerMiddleware = createListenerMiddleware()
 
 listenerMiddleware.startListening({
   actionCreator: selectRun,
   effect: (action, { dispatch }) => {
-    const run = action.payload;
+    const { run } = action.payload
 
-    const sideEffect = run !== null ? openDrawer : closeDrawer;
-    dispatch(sideEffect());
+    const sideEffect = run !== null ? openDrawer : closeDrawer
+    dispatch(sideEffect())
   },
-});
-
-listenerMiddleware.startListening({
-  actionCreator: closeDrawer,
-  effect: (action, { dispatch, getState }) => {
-    const { table } = getState();
-    if (table.selection.run !== null) {
-      dispatch(selectRun(null));
-    }
-  },
-});
+})
 
 listenerMiddleware.startListening({
   actionCreator: addPlot,
   effect: (action, { dispatch }) => {
-    dispatch(addTab({ id: "plots", title: "Plots", isClosable: true }));
+    dispatch(addTab({ id: "plots", title: "Plots", isClosable: true }))
   },
-});
+})
 
 listenerMiddleware.startListening({
   actionCreator: removePlot,
   effect: (action, { dispatch, getState }) => {
-    const { plots } = getState();
-    !plots.data && dispatch(removeTab("plots"));
+    const { plots } = getState()
+    !plots.data && dispatch(removeTab("plots"))
   },
-});
+})
 
 listenerMiddleware.startListening({
   actionCreator: removeTab,
   effect: (action, { dispatch }) => {
-    dispatch(clearPlots());
+    dispatch(clearPlots())
   },
-});
+})

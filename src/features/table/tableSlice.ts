@@ -4,7 +4,7 @@ import { tableService } from "../../utils/api/graphql"
 const initialState = {
   data: {},
   schema: {},
-  selection: {},
+  selection: { run: null, variables: null },
   lastUpdate: {},
 }
 
@@ -18,8 +18,11 @@ const slice = createSlice({
   initialState,
   reducers: {
     selectRun: ({ selection }, action) => {
-      selection.run = action.payload
+      const { run, variables } = action.payload
+      selection.run = run
+      selection.variables = variables
     },
+    displayData: ({ selection }, action) => {},
     updateTable: (state, action) => {
       const { run, schema } = action.payload
       state.data[run.runnr] = run

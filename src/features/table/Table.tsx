@@ -8,6 +8,7 @@ import {
   DataEditor,
   GridSelection,
   GridColumnIcon,
+  Item,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
 
@@ -53,13 +54,15 @@ const Table = (props) => {
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
   })
-  const onGridSelectionChange = (newSelection: GridSelection) => {
+  const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
 
     // Inform that a row has been (de)selected
     const row = rows.last()
     props.dispatch(
-      selectRun(isEmpty(row) ? null : props.data[row][VARIABLES.run_number]),
+      selectRun({
+        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number],
+      }),
     )
 
     // Clear range stack if cells from the other column are currently selected
@@ -81,6 +84,15 @@ const Table = (props) => {
         current: { ...current, ...(rangeStack && { rangeStack }) },
       }),
     })
+  }
+  const handleCellActivated = (cell: Item) => {
+    const [col, row] = cell
+    props.dispatch(
+      selectRun({
+        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number],
+        variables: isEmpty(col) ? null : [props.columns[col].id],
+      }),
+    )
   }
 
   // Context menus
@@ -170,7 +182,8 @@ const Table = (props) => {
             rowSelect="single"
             rowMarkers="clickable-number"
             gridSelection={gridSelection}
-            onGridSelectionChange={onGridSelectionChange}
+            onGridSelectionChange={handleGridSelectionChange}
+            onCellActivated={handleCellActivated}
             rangeSelect="multi-cell"
             onCellContextMenu={handleCellContextMenu}
             onHeaderContextMenu={handleHeaderContextMenu}
