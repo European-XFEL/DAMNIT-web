@@ -1,14 +1,14 @@
-import React from "react";
-import { Tabs as MantineTabs } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
+import React from "react"
+import { Tabs as MantineTabs } from "@mantine/core"
+import { IconX } from "@tabler/icons-react"
 
 const Tabs = ({ contents, active, setActive, ...props }) => {
-  const entries = Object.entries(contents);
+  const entries = Object.entries(contents)
   return (
     <MantineTabs
       radius="xl"
       value={active || entries[0][0]}
-      onTabChange={setActive}
+      onChange={setActive}
       {...props}
     >
       <MantineTabs.List>
@@ -32,7 +32,7 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
         </MantineTabs.Panel>
       ))}
     </MantineTabs>
-  );
-};
+  )
+}
 
-export default Tabs;
+export default Tabs

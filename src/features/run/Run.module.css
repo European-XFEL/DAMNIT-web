@@ -1,0 +1,44 @@
+/* TODO: Create `item` interface */
+
+.scalarItem {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  max-height: rem(20px);
+  overflow-x: auto;
+  gap: rem(20px);
+  margin-top: var(--mantine-spacing-xs);
+}
+
+.objectItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-height: rem(500px);
+  margin-top: var(--mantine-spacing-xs);
+  gap: rem(5px);
+}
+
+.label {
+  color: var(--mantine-color-gray-6);
+  min-width: rem(100px);
+  max-width: rem(200px);
+  height: rem(20px);
+  line-height: rem(20px);
+}
+
+.scalarvalue {
+  color: var(--mantine-color-dark-9);
+  min-width: rem(100px);
+  height: rem(20px);
+  line-height: rem(20px);
+}
+
+.objectValue {
+  margin-left: rem(20px);
+  margin-right: rem(20px);
+  /* TODO: Manage `maxWidth` to fit drawer (parent) width */
+  max-width: rem(95%);
+  max-height: rem(300px);
+  object-position: left top;
+}
