@@ -28,7 +28,7 @@ function initialize({ proposal = PROPOSAL_NUMBER } = {}) {
 
 function getTableData(
   schema,
-  { proposal = PROPOSAL_NUMBER, pageSize = 2 } = {},
+  { proposal = PROPOSAL_NUMBER, pageSize = 10 } = {},
 ) {
   return client
     .query({

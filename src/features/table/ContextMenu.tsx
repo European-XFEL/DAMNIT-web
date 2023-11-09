@@ -1,12 +1,13 @@
-import React from "react";
-import { useLayer } from "react-laag";
-import { ContextMenu as MantineContextMenu } from "mantine-contextmenu";
+import React from "react"
+import { useLayer } from "react-laag"
+import { ContextMenuPortal as MantineContextMenu } from "mantine-contextmenu"
 
 const ContextMenu = ({ localPosition, bounds, onOutsideClick, contents }) => {
   const { layerProps, renderLayer } = useLayer({
     isOpen: true,
     auto: true,
-    placement: "bottom-end",
+    placement: "bottom-start",
+    possiblePlacements: ["bottom-start", "bottom-end"],
     triggerOffset: 2,
     onOutsideClick,
     trigger: {
@@ -19,7 +20,7 @@ const ContextMenu = ({ localPosition, bounds, onOutsideClick, contents }) => {
         bottom: (bounds.y ?? 0) + (bounds.height ?? 0),
       }),
     },
-  });
+  })
 
   return renderLayer(
     <div ref={layerProps.ref}>
@@ -28,9 +29,9 @@ const ContextMenu = ({ localPosition, bounds, onOutsideClick, contents }) => {
         y={localPosition.y + bounds.y}
         onHide={onOutsideClick}
         content={contents}
-      ></MantineContextMenu>
-    </div>
-  );
-};
+      />
+    </div>,
+  )
+}
 
-export default ContextMenu;
+export default ContextMenu

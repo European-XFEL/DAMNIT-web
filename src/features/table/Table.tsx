@@ -193,7 +193,7 @@ const Table = (props) => {
           {contextMenu && (
             <ContextMenu
               {...contextMenu}
-              onOutsideClick={() => setContextMenu(null)}
+              onOutsideClick={() => setTimeout(() => setContextMenu(null), 1)}
               contents={cellContextContents}
             />
           )}

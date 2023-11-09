@@ -2,7 +2,7 @@ import React from "react"
 import { connect } from "react-redux"
 import { Image, Text } from "@mantine/core"
 
-import useStyles from "./Run.styles"
+import classes from "./Run.module.css"
 import { DTYPES, EMPTY_VALUE } from "../../common/constants"
 import { formatDate, imageBytesToURL, isEmpty } from "../../utils/helpers"
 
@@ -12,9 +12,6 @@ const HIDDEN_DTYPES = [DTYPES.array]
 const TEXT_FIELD = [DTYPES.number, DTYPES.string, DTYPES.timestamp]
 
 const Run = (props) => {
-  // Variables
-  const { classes } = useStyles()
-
   // Conditions
   const isScalar = (key) => TEXT_FIELD.includes(props.schema[key].dtype)
   const isImage = (key) => props.schema[key].dtype === DTYPES.image
@@ -29,7 +26,7 @@ const Run = (props) => {
         {renderLabel(key)}
         <Text
           size="sm"
-          className={classes.value}
+          className={classes.scalarValue}
           key={`run-value-${key}`}
           {...(dtype === DTYPES.number && {
             sx: { fontFamily: "monospace" },

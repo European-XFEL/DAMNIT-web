@@ -4,6 +4,10 @@ import { Provider as ReduxProvider } from "react-redux"
 import { BrowserRouter } from "react-router-dom"
 import { ApolloProvider } from "@apollo/client"
 
+import { MantineProvider } from "@mantine/core"
+import "@mantine/core/styles.css"
+import "mantine-contextmenu/styles.css"
+
 import { client } from "./app/apollo"
 import { setupStore } from "./app/store"
 import App from "./app/App"
@@ -16,7 +20,9 @@ root.render(
     <ApolloProvider client={client}>
       <ReduxProvider store={setupStore()}>
         <BrowserRouter>
-          <App />
+          <MantineProvider>
+            <App />
+          </MantineProvider>
         </BrowserRouter>
       </ReduxProvider>
     </ApolloProvider>
