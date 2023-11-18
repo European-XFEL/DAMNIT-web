@@ -27,8 +27,8 @@ export const LATEST_RUN_SUBSCRIPTION = gql`
 
 export const get_table_data_query = (type, fields = []) => {
   return gql`
-    query TableDataQuery($proposal: String, $per_page: Int) {
-      runs(database: { proposal: $proposal }, per_page: $per_page) {
+    query TableDataQuery($proposal: String, $page: Int, $per_page: Int) {
+      runs(database: { proposal: $proposal }, page: $page, per_page: $per_page) {
         ... on ${type} {
           ${fields.join(" ")}
         }

@@ -8,8 +8,9 @@ const initialState = {
   lastUpdate: {},
 }
 
-export const getTable = createAsyncThunk("table/getTable", async () => {
-  const result = await tableService.getTable()
+export const getTable = createAsyncThunk("table/getTable", async (page) => {
+  // TODO: Create an object that contains `page` and `pageSize`
+  const result = await tableService.getTable({ page })
   return result
 })
 
@@ -33,8 +34,11 @@ const slice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(getTable.fulfilled, (state, action) => {
       const { data, schema } = action.payload
-      state.data = data
-      state.schema = schema
+      // Only do something if data has contents
+      if (Object.keys(data).length) {
+        state.data = { ...state.data, ...data }
+        state.schema = schema
+      }
     })
     // TODO: Add getTable.pending and getTable.rejected
   },
