@@ -1,6 +1,6 @@
 import "@glideapps/glide-data-grid/dist/index.css"
 
-import React, { useCallback, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { connect } from "react-redux"
 import { useSubscription } from "@apollo/client"
 import {
@@ -11,17 +11,80 @@ import {
   Item,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
+import { range } from "@mantine/hooks"
 
 import { gridCellFactory } from "./cells"
 import ContextMenu from "./ContextMenu"
 
-import { selectRun, updateTable } from "./tableSlice"
+import { getTable, selectRun } from "./tableSlice"
 import { addPlot } from "../plots"
 
 import { DTYPES, VARIABLES } from "../../common/constants"
-import { arrayEqual, isEmpty } from "../../utils/helpers"
+import { sortedInsert, sortedSearch } from "../../utils/array"
+import { isEmpty } from "../../utils/helpers"
 import { LATEST_RUN, LATEST_RUN_SUBSCRIPTION } from "../../graphql/queries"
 import { PROPOSAL_NUMBER } from "../../constants"
+
+class Pages {
+  constructor() {
+    this.value = []
+  }
+
+  add(page) {
+    sortedInsert(this.value, page)
+  }
+
+  isAdded(page) {
+    return sortedSearch(this.value, page)
+  }
+}
+
+const usePagination = (onNewPage, pageSize = 5) => {
+  // Reference: Loaded pages
+  const loadedPagesRef = useRef(new Pages())
+
+  // State: Visible pages
+  const [visibleRegion, setVisibleRegion] = useState({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  })
+
+  // Callback: On visible region changed
+  const onVisibleRegionChanged = useCallback((rect) => {
+    setVisibleRegion((cv) => {
+      return rect
+    })
+  }, [])
+
+  const loadPage = useCallback(async (page: number) => {
+    await onNewPage(page, pageSize)
+    loadedPagesRef.current.add(page)
+  }, [])
+
+  // Effect: Trigger load page when visible region changes
+  useEffect(() => {
+    if (visibleRegion.width === 0 || visibleRegion.height === 0) {
+      return
+    }
+
+    const firstPage = Math.max(
+      0,
+      Math.floor((visibleRegion.y - pageSize / 2) / pageSize),
+    )
+    const lastPage = Math.floor(
+      (visibleRegion.y + visibleRegion.height + pageSize / 2) / pageSize,
+    )
+    range(firstPage, lastPage + 1).map((page) => {
+      if (!loadedPagesRef.current.isAdded(page)) {
+        loadPage(page)
+      }
+    })
+  }, [loadPage, pageSize, visibleRegion])
+
+  return { onVisibleRegionChanged }
+}
 
 const Table = (props) => {
   // Initialization: Subscribe to new updates
@@ -42,11 +105,13 @@ const Table = (props) => {
       const column = props.columns[col].id
       const rowData = props.data[row]
       const cell = gridCellFactory[props.schema[column].dtype]
-      return cell(rowData[column], {
-        lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
-      })
+      return rowData
+        ? cell(rowData[column], {
+            lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
+          })
+        : gridCellFactory[DTYPES.string]("")
     },
-    [props.columns, props.data],
+    [props.columns, props.data, props.schema, props.lastUpdate],
   )
 
   // Cell: Click event
@@ -170,6 +235,18 @@ const Table = (props) => {
     },
   ]
 
+  // Pagination
+  const handleNewPage = useCallback(async (page, pageSize) => {
+    // REMOVEME: Use timeout to better visualize incoming data
+    await new Promise((res) => setTimeout(res, 1000))
+
+    if (page > 0) {
+      // TODO: Create an object that contains `page` and `pageSize`
+      props.dispatch(getTable(page))
+    }
+  }, [])
+  const paginationProps = usePagination(handleNewPage)
+
   return (
     <div>
       {!props.columns.length ? null : (
@@ -178,7 +255,8 @@ const Table = (props) => {
             {...(props.grid || {})}
             columns={formatColumns(props.columns, props.schema)}
             getCellContent={getContent}
-            rows={props.data.length}
+            height={300}
+            rows={500}
             rowSelect="single"
             rowMarkers="clickable-number"
             gridSelection={gridSelection}
@@ -189,6 +267,7 @@ const Table = (props) => {
             onHeaderContextMenu={handleHeaderContextMenu}
             freezeColumns={1}
             {...cellProps}
+            {...paginationProps}
           />
           {contextMenu && (
             <ContextMenu

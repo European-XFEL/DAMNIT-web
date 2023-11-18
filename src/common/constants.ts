@@ -1,7 +1,7 @@
 export const EMPTY_VALUE = "None"
 export const VARIABLES = {
   proposal: "proposal",
-  run_number: "runnr",
+  run_number: "run",
 }
 export const DTYPES = {
   image: "image",

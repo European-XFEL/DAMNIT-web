@@ -28,20 +28,21 @@ function initialize({ proposal = PROPOSAL_NUMBER } = {}) {
 
 function getTableData(
   schema,
-  { proposal = PROPOSAL_NUMBER, pageSize = 10 } = {},
+  { proposal = PROPOSAL_NUMBER, page = 1, pageSize = 10 } = {},
 ) {
   return client
     .query({
       query: get_table_data_query(`p${proposal}`, Object.keys(schema)),
       variables: {
         proposal: String(proposal),
+        page,
         per_page: pageSize,
       },
     })
     .then(({ data }) => {
       // TODO: Filter out empty values
       return Object.fromEntries(
-        data.runs.map((run) => [run.runnr, stripTypename(run)]),
+        data.runs.map((run) => [run.run, stripTypename(run)]),
       )
     })
 }
@@ -57,13 +58,13 @@ function getTableSchema({ proposal = PROPOSAL_NUMBER } = {}) {
     .then((result) => result.data.schema)
 }
 
-function getTable() {
+function getTable({ proposal = PROPOSAL_NUMBER, page = 1, pageSize = 5 } = {}) {
   let schema
 
-  return getTableSchema()
+  return getTableSchema({ proposal })
     .then((result) => {
       schema = result
-      return getTableData(schema)
+      return getTableData(schema, { proposal, page, pageSize })
     })
     .then((data) => ({ data, schema }))
 }
