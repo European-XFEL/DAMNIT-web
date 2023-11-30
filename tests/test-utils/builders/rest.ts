@@ -6,13 +6,15 @@ const createHandler = (path, { body = "", status = 200, delay = 150 } = {}) => {
   )
 }
 
-export const tableDataHandler = (response) => {
+const tableDataHandler = (response) => {
   return createHandler(`${import.meta.env.VITE_BACKEND_API}/db`, response)
 }
 
-export const tableSchemaHandler = (response) => {
+const tableSchemaHandler = (response) => {
   return createHandler(
     `${import.meta.env.VITE_BACKEND_API}/db/schema`,
     response,
   )
 }
+
+export const handlers = [tableDataHandler, tableSchemaHandler]

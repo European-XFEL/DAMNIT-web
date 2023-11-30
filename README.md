@@ -1,46 +1,61 @@
-# Getting Started with Create React App and Redux
+# DAMNIT - Web client
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app), using the [Redux](https://redux.js.org/) and [Redux Toolkit](https://redux-toolkit.js.org/) template.
+This is a prototype web client for DAMNIT.
 
-## Available Scripts
+## Description
 
-In the project directory, you can run:
+The application enables visualization and interaction with the DAMNIT table.
 
-### `npm start`
+### Technologies
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- React (web framework)
+- Redux (global storage)
+- Mantine UI (styled components)
+- Glide Data Grid (table component)
+- Vite (build tool)
+- Vitest (testing)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Installation
 
-### `npm test`
+Clone the project and run the following:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```sh
+npm install
+```
 
-### `npm run build`
+## Usage
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+After the installation, start the project:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```sh
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+and navigate to `localhost:5173` on your favorite browser.
 
-### `npm run eject`
+You might need to supply a couple of environment variables to connect to a
+running web server. Add an `.env` file on the project root with the following:
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```ini
+# .env
+VITE_BACKEND_API = "127.0.0.1:30200"
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+One can also run the tests with the following:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```sh
+npm test
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## To-dos
 
-## Learn More
+There's much work needed to be done! The following is on my top of my mind:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- Plot the values of a variable for all runs, which needs a query to get the values of a column in the run table.
+- Plot the values of a variable for each run, which requires a query to fetch
+  data from the saved H5 files.
+- Support user-editable variables
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Caveats
+
+While TypeScript (files) is used, the overall flavor is still in JavaScript. We plan to continue as such; refactoring and adding types could be done in the next iterations.

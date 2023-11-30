@@ -3,15 +3,16 @@ import { stripTypename } from "@apollo/client/utilities"
 import { client } from "../../app/apollo"
 import {
   INITIALIZE_MUTATION,
-  TABLE_SCHEMA_QUERY,
+  TABLE_METADATA_QUERY,
   get_table_data_query,
 } from "../../graphql/queries"
 import { PROPOSAL_NUMBER } from "../../constants"
+import { size } from "../helpers"
 
 export const tableService = {
   initialize,
   getTableData,
-  getTableSchema,
+  getTableMetadata,
   getTable,
 }
 
@@ -41,30 +42,42 @@ function getTableData(
     })
     .then(({ data }) => {
       // TODO: Filter out empty values
-      return Object.fromEntries(
-        data.runs.map((run) => [run.run, stripTypename(run)]),
-      )
+      return size(data.runs)
+        ? Object.fromEntries(
+            data.runs.map((run) => {
+              return [run.run.value, getRunValue(stripTypename(run))]
+            }),
+          )
+        : null
     })
 }
 
-function getTableSchema({ proposal = PROPOSAL_NUMBER } = {}) {
+function getTableMetadata({ proposal = PROPOSAL_NUMBER } = {}) {
   return client
     .query({
-      query: TABLE_SCHEMA_QUERY,
+      query: TABLE_METADATA_QUERY,
       variables: {
         proposal: String(proposal),
       },
     })
-    .then((result) => result.data.schema)
+    .then((result) => result.data.metadata)
 }
 
 function getTable({ proposal = PROPOSAL_NUMBER, page = 1, pageSize = 5 } = {}) {
-  let schema
+  let metadata
 
-  return getTableSchema({ proposal })
+  return getTableMetadata({ proposal })
     .then((result) => {
-      schema = result
-      return getTableData(schema, { proposal, page, pageSize })
+      metadata = result
+      return getTableData(result.schema, { proposal, page, pageSize })
     })
-    .then((data) => ({ data, schema }))
+    .then((data) => ({ data, metadata }))
+}
+
+// Helpers --------------------------------------------------------------------
+
+const getRunValue = (run) => {
+  return Object.fromEntries(
+    Object.entries(run).map(([variable, data]) => [variable, data.value]),
+  )
 }

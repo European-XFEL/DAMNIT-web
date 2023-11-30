@@ -2,10 +2,10 @@ import React from "react"
 import { DataEditor } from "@glideapps/glide-data-grid"
 
 import Table from "@/features/table/Table"
-import { size } from "@/utils/helpers"
 import { renderWithProviders } from "../../test-utils/extensions"
 import {
   gridProps,
+  validTableMetadata,
   validTableState,
   validTableColumns,
 } from "../../test-utils/builders/table"
@@ -25,7 +25,7 @@ describe("Table DataEditor", () => {
 
     expect(DataEditor).toBeRenderedWithProps({
       columns: validTableColumns,
-      rows: size(validTableState.data),
+      rows: validTableMetadata.rows,
     })
   })
 })

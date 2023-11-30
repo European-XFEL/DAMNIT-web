@@ -62,7 +62,7 @@ const dateCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Text,
     allowOverlay: false,
-    displayData: formatDate(data),
+    displayData: data ? formatDate(data) : "",
     data,
     ...params,
   }
