@@ -1,3 +1,5 @@
+import { GridColumnIcon } from "@glideapps/glide-data-grid"
+
 export const gridProps = {
   initialSize: [500, 500],
 }
@@ -5,7 +7,7 @@ export const gridProps = {
 export const validTableData = {
   "448": {
     proposal: 2956,
-    runnr: 448,
+    run: 448,
     start_time: 1665264546765.0981,
     added_at: 1682887864430.31,
     comment: "None",
@@ -38,8 +40,8 @@ export const validTableSchema = {
     id: "proposal",
     dtype: "number",
   },
-  runnr: {
-    id: "runnr",
+  run: {
+    id: "run",
     dtype: "number",
   },
   start_time: {
@@ -124,9 +126,15 @@ export const validTableSchema = {
   },
 }
 
+export const validTableMetadata = {
+  schema: validTableSchema,
+  rows: 10,
+  timestamp: Date.now(),
+}
+
 export const validTableState = {
   data: validTableData,
-  schema: validTableSchema,
+  metadata: validTableMetadata,
   selection: {},
 }
 
@@ -134,99 +142,126 @@ const numberTheme = { fontFamily: "monospace", headerFontStyle: "" }
 
 export const validTableColumns = [
   {
-    id: "runnr",
-    title: "runnr",
+    id: "run",
+    title: "run",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
-  { id: "start_time", title: "start_time" },
-  { id: "added_at", title: "added_at" },
-  { id: "comment", title: "comment" },
+  { id: "start_time", title: "start_time", icon: GridColumnIcon.HeaderDate },
+  { id: "added_at", title: "added_at", icon: GridColumnIcon.HeaderDate },
+  { id: "comment", title: "comment", icon: GridColumnIcon.HeaderString },
   {
     id: "rep_rate_laser",
     title: "rep_rate_laser",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "t0_from_bam",
     title: "t0_from_bam",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "delay_mean",
     title: "delay_mean",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "motor_stx",
     title: "motor_stx",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "n_trains",
     title: "n_trains",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "energy_min",
     title: "energy_min",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "energy_max",
     title: "energy_max",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "rep_rate_fel",
     title: "rep_rate_fel",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
-  { id: "hrixs_preview", title: "hrixs_preview" },
+  {
+    id: "hrixs_preview",
+    title: "hrixs_preview",
+    icon: GridColumnIcon.HeaderImage,
+  },
   {
     id: "motor_sry",
     title: "motor_sry",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "delay_max",
     title: "delay_max",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "delay_min",
     title: "delay_min",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "motor_sty",
     title: "motor_sty",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
   {
     id: "transmission",
     title: "transmission",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
-  { id: "hrixs_spectrum", title: "hrixs_spectrum" },
+  {
+    id: "hrixs_spectrum",
+    title: "hrixs_spectrum",
+    icon: GridColumnIcon.HeaderArray,
+  },
   {
     id: "energy_mean",
     title: "energy_mean",
     width: 100,
     themeOverride: numberTheme,
+    icon: GridColumnIcon.HeaderNumber,
   },
-  { id: "test_variable", title: "test_variable" },
+  {
+    id: "test_variable",
+    title: "test_variable",
+    icon: GridColumnIcon.HeaderString,
+  },
 ]

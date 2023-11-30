@@ -6,22 +6,17 @@ export const INITIALIZE_MUTATION = gql`
   }
 `
 
-export const TABLE_SCHEMA_QUERY = gql`
-  query TableSchemaQuery($proposal: String) {
-    schema(database: { proposal: $proposal })
+export const TABLE_METADATA_QUERY = gql`
+  query TableMetadataQuery($proposal: String) {
+    metadata(database: { proposal: $proposal })
   }
 `
 
-export const LATEST_RUN = "latest_run"
+export const LATEST_DATA = "latest_data"
 
-export const LATEST_RUN_SUBSCRIPTION = gql`
-  subscription LatestRunSubcription($proposal: String) {
-    ${LATEST_RUN}(database: { proposal: $proposal }) {
-      runnr
-      ... on p2956 {
-        energy_min
-      }
-    }
+export const LATEST_DATA_SUBSCRIPTION = gql`
+  subscription LatestRunSubcription($proposal: String, $timestamp: Timestamp!) {
+    ${LATEST_DATA}(database: { proposal: $proposal }, timestamp: $timestamp) 
   }
 `
 
@@ -30,7 +25,7 @@ export const get_table_data_query = (type, fields = []) => {
     query TableDataQuery($proposal: String, $page: Int, $per_page: Int) {
       runs(database: { proposal: $proposal }, page: $page, per_page: $per_page) {
         ... on ${type} {
-          ${fields.join(" ")}
+          ${fields.map((field) => `${field} { value }`).join(" ")}
         }
       }
     }

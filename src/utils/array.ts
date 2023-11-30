@@ -4,6 +4,10 @@ export function arrayEqual(arr1, arr2) {
   )
 }
 
+export function sorted(array) {
+  return array.slice().sort((a, b) => a - b)
+}
+
 export function sortedInsert(array, element) {
   let left = 0
   let right = array.length - 1

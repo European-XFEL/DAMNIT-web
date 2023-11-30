@@ -17,7 +17,7 @@ export function isEmpty(value) {
   return (
     value === undefined ||
     value == null ||
-    (Array.isArray(value) && value.length <= 0)
+    size(value) === 0
   );
 }
 

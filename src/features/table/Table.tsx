@@ -2,7 +2,6 @@ import "@glideapps/glide-data-grid/dist/index.css"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { connect } from "react-redux"
-import { useSubscription } from "@apollo/client"
 import {
   CompactSelection,
   DataEditor,
@@ -20,10 +19,8 @@ import { getTable, selectRun } from "./tableSlice"
 import { addPlot } from "../plots"
 
 import { DTYPES, VARIABLES } from "../../common/constants"
-import { sortedInsert, sortedSearch } from "../../utils/array"
+import { sorted, sortedInsert, sortedSearch } from "../../utils/array"
 import { isEmpty } from "../../utils/helpers"
-import { LATEST_RUN, LATEST_RUN_SUBSCRIPTION } from "../../graphql/queries"
-import { PROPOSAL_NUMBER } from "../../constants"
 
 class Pages {
   constructor() {
@@ -87,15 +84,6 @@ const usePagination = (onNewPage, pageSize = 5) => {
 }
 
 const Table = (props) => {
-  // Initialization: Subscribe to new updates
-  useSubscription(LATEST_RUN_SUBSCRIPTION, {
-    variables: { proposal: String(PROPOSAL_NUMBER) },
-    onData: ({ data }) => {
-      const { data: run, schema } = data.data[LATEST_RUN]
-      props.dispatch(updateTable({ run, schema }))
-    },
-  })
-
   // Initialization: Use custom cells
   const cellProps = useExtraCells()
 
@@ -126,7 +114,10 @@ const Table = (props) => {
     const row = rows.last()
     props.dispatch(
       selectRun({
-        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number],
+        run:
+          isEmpty(row) || !props.data[row]
+            ? null
+            : props.data[row][VARIABLES.run_number],
       }),
     )
 
@@ -210,9 +201,9 @@ const Table = (props) => {
       props.dispatch(
         addPlot({
           variables: [props.columns[cell[0]].id],
-          runs: rows
-            .map((row) => props.data[row][VARIABLES.run_number])
-            .toSorted(),
+          runs: sorted(
+            rows.map((row) => props.data[row][VARIABLES.run_number]),
+          ),
         }),
       )
     } else {
@@ -220,9 +211,9 @@ const Table = (props) => {
       props.dispatch(
         addPlot({
           variables: [props.columns[col].id],
-          runs: props.data
-            .map((rowData) => rowData[VARIABLES.run_number])
-            .toSorted(),
+          runs: sorted(
+            props.data.map((rowData) => rowData[VARIABLES.run_number]),
+          ),
         }),
       )
     }
@@ -256,7 +247,7 @@ const Table = (props) => {
             columns={formatColumns(props.columns, props.schema)}
             getCellContent={getContent}
             height={300}
-            rows={500}
+            rows={props.rows}
             rowSelect="single"
             rowMarkers="clickable-number"
             gridSelection={gridSelection}
@@ -287,14 +278,15 @@ const mapStateToProps = ({ table }) => {
   const data = table.data ? Object.values(table.data) : []
 
   // TODO: Get the column list from the user settings (reordered columns)
-  const columns = Object.keys(table.schema)
+  const columns = Object.keys(table.metadata.schema)
     .filter((id) => id !== VARIABLES.proposal)
     .map((id) => ({ id, title: id }))
 
   return {
     data,
     columns,
-    schema: table.schema,
+    schema: table.metadata.schema,
+    rows: table.metadata.rows,
     lastUpdate: table.lastUpdate,
   }
 }

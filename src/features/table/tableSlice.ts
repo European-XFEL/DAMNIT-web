@@ -1,9 +1,10 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { tableService } from "../../utils/api/graphql"
+import { isEmpty } from "../../utils/helpers"
 
 const initialState = {
   data: {},
-  schema: {},
+  metadata: { schema: {}, rows: 0, timestamp: 0 },
   selection: { run: null, variables: null },
   lastUpdate: {},
 }
@@ -25,19 +26,31 @@ const slice = createSlice({
     },
     displayData: ({ selection }, action) => {},
     updateTable: (state, action) => {
-      const { run, schema } = action.payload
-      state.data[run.runnr] = run
-      state.schema = schema
-      state.lastUpdate[run.runnr] = performance.now()
+      const { runs, metadata } = action.payload
+      if (isEmpty(runs)) {
+        return
+      }
+
+      const timestamp = performance.now()
+      const updatedData = { ...state.data }
+      const updatedTimestamp = { ...state.lastUpdate }
+
+      Object.entries(runs).forEach(([run, variables]) => {
+        updatedData[run] = { ...(updatedData[run] || { run }), ...variables }
+        updatedTimestamp[run] = timestamp
+      })
+
+      state.data = updatedData
+      state.lastUpdate = updatedTimestamp
+      state.metadata = metadata
     },
   },
   extraReducers: (builder) => {
     builder.addCase(getTable.fulfilled, (state, action) => {
-      const { data, schema } = action.payload
-      // Only do something if data has contents
-      if (Object.keys(data).length) {
+      const { data, metadata } = action.payload
+      if (!isEmpty(data)) {
         state.data = { ...state.data, ...data }
-        state.schema = schema
+        state.metadata = metadata
       }
     })
     // TODO: Add getTable.pending and getTable.rejected
