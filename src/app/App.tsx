@@ -5,20 +5,19 @@ import { useSubscription } from "@apollo/client"
 
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
-import { getTable, updateTable } from "../features/table"
+import { updateTable } from "../features/table"
 import {
-  INITIALIZE_MUTATION,
+  REFRESH_MUTATION,
   LATEST_DATA,
   LATEST_DATA_SUBSCRIPTION,
 } from "../graphql/queries"
 import { PROPOSAL_NUMBER } from "../constants"
-import { isEmpty } from "../utils/helpers"
 
 const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === "test")
 
 const useInitialize = ({ isLoading, timestamp }) => {
   // Initialize GraphQL hooks
-  const [initialize, _] = useMutation(INITIALIZE_MUTATION)
+  const [refresh, _] = useMutation(REFRESH_MUTATION)
   useSubscription(LATEST_DATA_SUBSCRIPTION, {
     variables: { proposal: String(PROPOSAL_NUMBER), timestamp },
     onData: ({ data }) => {
@@ -33,10 +32,10 @@ const useInitialize = ({ isLoading, timestamp }) => {
 
   // Finalize
   useEffect(() => {
-    initialize({
+    refresh({
       variables: { proposal: String(PROPOSAL_NUMBER) },
-      onCompleted: (_) => {
-        dispatch(getTable())
+      onCompleted: ({ refresh }) => {
+        dispatch(updateTable({ metadata: refresh.metadata }))
       },
     })
   }, [])
@@ -59,7 +58,7 @@ const App = ({ isLoading, timestamp }) => {
 
 const mapStateToProps = ({ table }) => {
   return {
-    isLoading: isEmpty(table.data),
+    isLoading: table.metadata.rows === 0,
     timestamp: table.metadata.timestamp,
   }
 }

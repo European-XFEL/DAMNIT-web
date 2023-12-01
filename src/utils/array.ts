@@ -8,7 +8,7 @@ export function sorted(array) {
   return array.slice().sort((a, b) => a - b)
 }
 
-export function sortedInsert(array, element) {
+export function sortedInsert(array, element, unique = true) {
   let left = 0
   let right = array.length - 1
 
@@ -17,7 +17,9 @@ export function sortedInsert(array, element) {
 
     if (array[mid] === element) {
       // If the element is already in the array, insert it after the existing one
-      array.splice(mid + 1, 0, element)
+      if (!unique) {
+        array.splice(mid + 1, 0, element)
+      }
       return
     } else if (array[mid] < element) {
       left = mid + 1
@@ -40,7 +42,7 @@ export function sortedSearch(array, target) {
 
     // Check if the middle element is the target
     if (array[mid] === target) {
-      return true
+      return mid
     } else if (array[mid] < target) {
       // If the target is greater, narrow the search to the right half
       left = mid + 1
@@ -51,5 +53,5 @@ export function sortedSearch(array, target) {
   }
 
   // If the loop exits, the target is not in the array
-  return false
+  return -1
 }
