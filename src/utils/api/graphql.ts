@@ -28,12 +28,12 @@ function refresh({ proposal = PROPOSAL_NUMBER } = {}) {
 }
 
 function getTableData(
-  schema,
+  fields,
   { proposal = PROPOSAL_NUMBER, page = 1, pageSize = 10 } = {},
 ) {
   return client
     .query({
-      query: get_table_data_query(`p${proposal}`, Object.keys(schema)),
+      query: get_table_data_query(`p${proposal}`, fields),
       variables: {
         proposal: String(proposal),
         page,
@@ -69,7 +69,11 @@ function getTable({ proposal = PROPOSAL_NUMBER, page = 1, pageSize = 5 } = {}) {
   return getTableMetadata({ proposal })
     .then((result) => {
       metadata = result
-      return getTableData(result.schema, { proposal, page, pageSize })
+      return getTableData(Object.keys(result.schema), {
+        proposal,
+        page,
+        pageSize,
+      })
     })
     .then((data) => ({ data, metadata }))
 }

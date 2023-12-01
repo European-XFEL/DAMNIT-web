@@ -4,6 +4,7 @@ import { addTab, removeTab } from "../features/dashboard"
 import { openDrawer, closeDrawer } from "../features/drawer/"
 import { addPlot, clearPlots, removePlot } from "../features/plots/"
 import { selectRun } from "../features/table"
+import { isEmpty } from "../utils/helpers"
 
 export const listenerMiddleware = createListenerMiddleware()
 
@@ -28,7 +29,7 @@ listenerMiddleware.startListening({
   actionCreator: removePlot,
   effect: (action, { dispatch, getState }) => {
     const { plots } = getState()
-    !plots.data && dispatch(removeTab("plots"))
+    isEmpty(plots.data) && dispatch(removeTab("plots"))
   },
 })
 
