@@ -52,7 +52,9 @@ describe("Table slice", () => {
     })
 
     it("gets the data", async () => {
-      const data = await tableService.getTableData(validTableSchema)
+      const data = await tableService.getTableData(
+        Object.keys(validTableSchema),
+      )
       expect(data).toEqual(validTableData)
     })
 

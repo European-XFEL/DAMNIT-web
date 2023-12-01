@@ -15,11 +15,16 @@ import { range } from "@mantine/hooks"
 import { gridCellFactory } from "./cells"
 import ContextMenu from "./ContextMenu"
 
-import { getTable, selectRun } from "./tableSlice"
+import { getTable, getVariableTableData, selectRun } from "./tableSlice"
 import { addPlot } from "../plots"
 
 import { DTYPES, VARIABLES } from "../../common/constants"
-import { sorted, sortedInsert, sortedSearch } from "../../utils/array"
+import {
+  arrayEqual,
+  sorted,
+  sortedInsert,
+  sortedSearch,
+} from "../../utils/array"
 import { isEmpty } from "../../utils/helpers"
 
 class Pages {
@@ -253,11 +258,9 @@ const Table = (props) => {
       props.dispatch(
         addPlot({
           variables: [props.columns[col].id],
-          runs: sorted(
-            props.data.map((rowData) => rowData[VARIABLES.run_number]),
-          ),
         }),
       )
+      props.dispatch(getVariableTableData([props.columns[col].id]))
     }
   }
   const cellContextContents = [

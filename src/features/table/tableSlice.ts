@@ -15,6 +15,16 @@ export const getTable = createAsyncThunk("table/getTable", async (page) => {
   return result
 })
 
+export const getVariableTableData = createAsyncThunk(
+  "table/getVariableTableData",
+  async (variable) => {
+    const result = await tableService.getTableData(["run", variable], {
+      pageSize: 10000, // get everything
+    })
+    return { data: result }
+  },
+)
+
 const slice = createSlice({
   name: "table",
   initialState,
@@ -49,13 +59,24 @@ const slice = createSlice({
   },
   extraReducers: (builder) => {
     builder.addCase(getTable.fulfilled, (state, action) => {
+      // TODO: Add pending and rejected
       const { data, metadata } = action.payload
       if (!isEmpty(data)) {
         state.data = { ...state.data, ...data }
         state.metadata = metadata
       }
     })
-    // TODO: Add getTable.pending and getTable.rejected
+    builder.addCase(getVariableTableData.fulfilled, (state, action) => {
+      // TODO: Add pending and rejected
+      const { data } = action.payload
+      const updatedData = { ...state.data }
+
+      Object.entries(data).forEach(([run, variables]) => {
+        updatedData[run] = { ...(updatedData[run] || { run }), ...variables }
+      })
+
+      state.data = updatedData
+    })
   },
 })
 

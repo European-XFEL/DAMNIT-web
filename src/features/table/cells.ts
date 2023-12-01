@@ -5,11 +5,11 @@ import { formatDate, formatFloat, imageBytesToURL } from "../../utils/helpers"
 // TODO: Handle nonconforming data type
 
 const imageCell = (data, params = {}) => {
-  const image = imageBytesToURL(data)
+  const image = data ? [imageBytesToURL(data)] : []
   return {
     kind: GridCellKind.Image,
     // displayData: [image],
-    data: [image],
+    data: image,
     allowOverlay: false,
     allowAdd: false,
     readonly: true,

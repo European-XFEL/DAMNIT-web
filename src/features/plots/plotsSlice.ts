@@ -2,7 +2,7 @@ import { createSlice } from "@reduxjs/toolkit"
 import { formatPlot } from "./utils"
 
 const initialState = {
-  data: null,
+  data: {},
   currentPlot: null,
 }
 
@@ -25,11 +25,11 @@ const slice = createSlice({
       const { [action.payload]: _ = {}, ...rest } = state.data
       const plots = Object.keys(rest)
       state.currentPlot = plots.length ? plots.slice(-1)[0] : null
-      state.data = plots.length ? rest : null
+      state.data = plots.length ? rest : {}
     },
     clearPlots: (state) => {
       state.currentPlot = null
-      state.data = null
+      state.data = {}
     },
   },
 })

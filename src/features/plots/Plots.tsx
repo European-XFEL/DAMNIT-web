@@ -50,9 +50,14 @@ const Plots = (props) => {
 }
 
 const mapStateToProps = ({ table, plots }) => {
+  const contents = Object.entries(plots.data).map(([id, content]) => {
+    const updates = plots.data.runs ? {} : { runs: Object.keys(table.data) }
+    return [id, { ...content, ...updates }]
+  })
+
   return {
+    contents: Object.fromEntries(contents),
     data: table.data,
-    contents: plots.data,
     currentPlot: plots.currentPlot,
   }
 }
