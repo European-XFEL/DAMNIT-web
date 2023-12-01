@@ -91,13 +91,13 @@ const mapStateToProps = ({ table }) => {
     ? []
     : Object.entries(data).filter(
         ([key, value]) =>
-          !HIDDEN_DTYPES.includes(table.schema[key].dtype) &&
+          !HIDDEN_DTYPES.includes(table.metadata.schema[key].dtype) &&
           value !== EMPTY_VALUE,
       )
 
   return {
     data: Object.fromEntries(filtered),
-    schema: table.schema,
+    schema: table.metadata.schema,
   }
 }
 

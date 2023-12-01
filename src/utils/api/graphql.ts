@@ -2,7 +2,7 @@ import { stripTypename } from "@apollo/client/utilities"
 
 import { client } from "../../app/apollo"
 import {
-  INITIALIZE_MUTATION,
+  REFRESH_MUTATION,
   TABLE_METADATA_QUERY,
   get_table_data_query,
 } from "../../graphql/queries"
@@ -10,21 +10,21 @@ import { PROPOSAL_NUMBER } from "../../constants"
 import { size } from "../helpers"
 
 export const tableService = {
-  initialize,
+  refresh,
   getTableData,
   getTableMetadata,
   getTable,
 }
 
-function initialize({ proposal = PROPOSAL_NUMBER } = {}) {
+function refresh({ proposal = PROPOSAL_NUMBER } = {}) {
   return client
     .mutate({
-      mutation: INITIALIZE_MUTATION,
+      mutation: REFRESH_MUTATION,
       variables: {
         proposal: String(proposal),
       },
     })
-    .then((result) => result.data.schema)
+    .then((result) => result.data)
 }
 
 function getTableData(

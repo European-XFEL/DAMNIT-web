@@ -27,21 +27,23 @@ const slice = createSlice({
     displayData: ({ selection }, action) => {},
     updateTable: (state, action) => {
       const { runs, metadata } = action.payload
-      if (isEmpty(runs)) {
-        return
+
+      // Update runs
+      if (!isEmpty(runs)) {
+        const timestamp = performance.now()
+        const updatedData = { ...state.data }
+        const updatedTimestamp = { ...state.lastUpdate }
+
+        Object.entries(runs).forEach(([run, variables]) => {
+          updatedData[run] = { ...(updatedData[run] || { run }), ...variables }
+          updatedTimestamp[run] = timestamp
+        })
+
+        state.data = updatedData
+        state.lastUpdate = updatedTimestamp
       }
 
-      const timestamp = performance.now()
-      const updatedData = { ...state.data }
-      const updatedTimestamp = { ...state.lastUpdate }
-
-      Object.entries(runs).forEach(([run, variables]) => {
-        updatedData[run] = { ...(updatedData[run] || { run }), ...variables }
-        updatedTimestamp[run] = timestamp
-      })
-
-      state.data = updatedData
-      state.lastUpdate = updatedTimestamp
+      // Update metadata
       state.metadata = metadata
     },
   },

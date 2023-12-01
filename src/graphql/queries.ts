@@ -1,8 +1,8 @@
 import { gql } from "@apollo/client"
 
-export const INITIALIZE_MUTATION = gql`
-  mutation InitializeMutation($proposal: String) {
-    initialize(database: { proposal: $proposal })
+export const REFRESH_MUTATION = gql`
+  mutation RefreshMutation($proposal: String) {
+    refresh(database: { proposal: $proposal })
   }
 `
 

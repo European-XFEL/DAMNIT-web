@@ -1,7 +1,7 @@
 import "@glideapps/glide-data-grid/dist/index.css"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { connect } from "react-redux"
+import { connect, useDispatch } from "react-redux"
 import {
   CompactSelection,
   DataEditor,
@@ -24,21 +24,38 @@ import { isEmpty } from "../../utils/helpers"
 
 class Pages {
   constructor() {
-    this.value = []
+    this.loading = []
+    this.loaded = []
   }
 
-  add(page) {
-    sortedInsert(this.value, page)
+  addToLoading(page) {
+    sortedInsert(this.loading, page)
   }
 
-  isAdded(page) {
-    return sortedSearch(this.value, page)
+  isLoading(page) {
+    return sortedSearch(this.loading, page) !== -1
+  }
+
+  addToLoaded(page) {
+    // Remove from loading
+    const index = sortedSearch(this.loading, page)
+    if (index !== -1) {
+      this.loading.splice(index, 1)
+    }
+
+    sortedInsert(this.loaded, page)
+  }
+
+  isLoaded(page) {
+    return sortedSearch(this.loaded, page) !== -1
   }
 }
 
-const usePagination = (onNewPage, pageSize = 5) => {
+const usePagination = (pageSize = 5) => {
+  const dispatch = useDispatch()
+
   // Reference: Loaded pages
-  const loadedPagesRef = useRef(new Pages())
+  const pagesRef = useRef(new Pages())
 
   // State: Visible pages
   const [visibleRegion, setVisibleRegion] = useState({
@@ -48,6 +65,21 @@ const usePagination = (onNewPage, pageSize = 5) => {
     height: 0,
   })
 
+  // Callback: Handle new page
+  const handleNewPage = useCallback(async (page, pageSize) => {
+    // REMOVEME: Use timeout to better visualize incoming data
+    await new Promise((res) => setTimeout(res, 1000))
+
+    let loaded = false
+
+    if (page > 0) {
+      // TODO: Create an object that contains `page` and `pageSize`
+      loaded = dispatch(getTable(page)).then(() => true)
+    }
+
+    return loaded
+  }, [])
+
   // Callback: On visible region changed
   const onVisibleRegionChanged = useCallback((rect) => {
     setVisibleRegion((cv) => {
@@ -56,8 +88,18 @@ const usePagination = (onNewPage, pageSize = 5) => {
   }, [])
 
   const loadPage = useCallback(async (page: number) => {
-    await onNewPage(page, pageSize)
-    loadedPagesRef.current.add(page)
+    // TODO: Add a retry when loading pages are stuck for quite some time
+    const pages = pagesRef.current
+
+    if (pages.isLoading(page) || pages.isLoaded(page)) {
+      return
+    }
+
+    pages.addToLoading(page)
+    const loaded = await handleNewPage(page, pageSize)
+    if (loaded) {
+      pages.addToLoaded(page)
+    }
   }, [])
 
   // Effect: Trigger load page when visible region changes
@@ -73,8 +115,8 @@ const usePagination = (onNewPage, pageSize = 5) => {
     const lastPage = Math.floor(
       (visibleRegion.y + visibleRegion.height + pageSize / 2) / pageSize,
     )
-    range(firstPage, lastPage + 1).map((page) => {
-      if (!loadedPagesRef.current.isAdded(page)) {
+    range(firstPage + 1, lastPage + 2).map((page) => {
+      if (!pagesRef.current.isLoaded(page)) {
         loadPage(page)
       }
     })
@@ -226,17 +268,7 @@ const Table = (props) => {
     },
   ]
 
-  // Pagination
-  const handleNewPage = useCallback(async (page, pageSize) => {
-    // REMOVEME: Use timeout to better visualize incoming data
-    await new Promise((res) => setTimeout(res, 1000))
-
-    if (page > 0) {
-      // TODO: Create an object that contains `page` and `pageSize`
-      props.dispatch(getTable(page))
-    }
-  }, [])
-  const paginationProps = usePagination(handleNewPage)
+  const paginationProps = usePagination()
 
   return (
     <div>
