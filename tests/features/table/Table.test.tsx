@@ -35,7 +35,7 @@ describe("Table component", () => {
   it("renders canvas with valid input", () => {
     renderWithProviders(<Table grid={gridProps} />, {
       preloadedState: {
-        table: validTableState,
+        tableData: validTableState,
       },
     })
     expect(screen.getByTestId("data-grid-canvas")).toBeInTheDocument()

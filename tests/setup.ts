@@ -46,3 +46,9 @@ Object.defineProperty(global, "ResizeObserver", {
     disconnect: vi.fn(),
   })),
 })
+
+// mock `window.URL.createObjectURL` to be compatible with `react-plotly`
+Object.defineProperty(window.URL, "createObjectURL", {
+  writable: true,
+  value: vi.fn(),
+})

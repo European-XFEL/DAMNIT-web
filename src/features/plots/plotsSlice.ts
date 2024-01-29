@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit"
-import { formatPlot } from "./utils"
+import { generateUID } from "./utils"
 
 const initialState = {
   data: {},
@@ -17,9 +17,12 @@ const slice = createSlice({
       }
     },
     addPlot: (state, action) => {
-      const { id, ...rest } = formatPlot(action.payload)
+      const { variables, runs, source } = action.payload
+      const id = generateUID()
       state.currentPlot = id
-      state.data = Object.assign(state.data || {}, { [id]: rest })
+      state.data = Object.assign(state.data || {}, {
+        [id]: { variables, runs, source },
+      })
     },
     removePlot: (state, action) => {
       const { [action.payload]: _ = {}, ...rest } = state.data

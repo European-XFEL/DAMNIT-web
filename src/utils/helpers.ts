@@ -24,3 +24,9 @@ export function isEmpty(value) {
 export function size(item) {
   return item.constructor === Object ? Object.keys(item).length : item.length
 }
+
+export function createMap(array, by) {
+  const map = new Map()
+  array.forEach(obj => {map.set(obj[by], obj)})
+  return map
+}

@@ -15,8 +15,13 @@ import { range } from "@mantine/hooks"
 import { gridCellFactory } from "./cells"
 import ContextMenu from "./ContextMenu"
 
-import { getTable, getVariableTableData, selectRun } from "./tableSlice"
+import { selectRun } from "./tableSlice"
 import { addPlot } from "../plots"
+import {
+  getExtractedVariable,
+  getTableData,
+  getTableVariable,
+} from "../../shared"
 
 import { DTYPES, VARIABLES } from "../../common/constants"
 import {
@@ -25,7 +30,7 @@ import {
   sortedInsert,
   sortedSearch,
 } from "../../utils/array"
-import { isEmpty } from "../../utils/helpers"
+import { createMap, isEmpty } from "../../utils/helpers"
 
 class Pages {
   constructor() {
@@ -79,7 +84,7 @@ const usePagination = (pageSize = 5) => {
 
     if (page > 0) {
       // TODO: Create an object that contains `page` and `pageSize`
-      loaded = dispatch(getTable(page)).then(() => true)
+      loaded = dispatch(getTableData(page)).then(() => true)
     }
 
     return loaded
@@ -128,6 +133,27 @@ const usePagination = (pageSize = 5) => {
   }, [loadPage, pageSize, visibleRegion])
 
   return { onVisibleRegionChanged }
+}
+
+const useContextMenu = () => {
+  const closedProps = {
+    localPosition: { x: 0, y: 0 },
+    bounds: {},
+    isOpen: false,
+    contents: [],
+  }
+  const [props, setProps] = useState(closedProps)
+
+  const handleOutsideClick = () => {
+    setProps(closedProps)
+  }
+
+  const updateProps = (newProps) => {
+    const updated = newProps ? { ...newProps, isOpen: true } : closedProps
+    setProps(updated)
+  }
+
+  return [{ ...props, onOutsideClick: handleOutsideClick }, updateProps]
 }
 
 const Table = (props) => {
@@ -199,29 +225,19 @@ const Table = (props) => {
   }
 
   // Context menus
-  const [contextMenu, setContextMenu] = useState()
+  const [contextMenu, setContextMenu] = useContextMenu()
   const handleCellContextMenu = ([col, row], event) => {
     event.preventDefault()
-
-    // Ignore no selection for the meantime
-    if (!gridSelection.current) {
-      return
-    }
-
-    const cells = [
-      gridSelection.current.cell,
-      ...gridSelection.current.rangeStack.map((range) => [range.x, range.y]),
-    ]
+    const VALID_TYPES = [DTYPES.number, DTYPES.image]
 
     if (
       col !== -1 &&
-      cells.length > 1 &&
-      cells.some((cell) => arrayEqual(cell, [col, row])) &&
-      props.schema[props.columns[col].id].dtype === DTYPES.number
+      VALID_TYPES.includes(props.schema[props.columns[col].id].dtype)
     ) {
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
+        contents: ["plot"],
       })
     }
   }
@@ -237,6 +253,7 @@ const Table = (props) => {
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
+          contents: ["plot"],
         })
       }
     }
@@ -245,31 +262,42 @@ const Table = (props) => {
     if (gridSelection.current) {
       const { cell, rangeStack } = gridSelection.current
       const rows = [cell[1], ...rangeStack.map((stack) => stack.y)]
+
+      const variable = props.columns[cell[0]].id
+      const runs = sorted(
+        rows.map((row) => props.data[row][VARIABLES.run_number]),
+      )
       props.dispatch(
         addPlot({
-          variables: [props.columns[cell[0]].id],
-          runs: sorted(
-            rows.map((row) => props.data[row][VARIABLES.run_number]),
-          ),
+          runs,
+          variables: [variable],
+          source: "extracted",
         }),
       )
+      runs.forEach((run) => {
+        props.dispatch(getExtractedVariable({ run, variable }))
+      })
     } else {
       const col = gridSelection.columns.last()
       props.dispatch(
         addPlot({
           variables: [props.columns[col].id],
+          source: "table",
         }),
       )
-      props.dispatch(getVariableTableData([props.columns[col].id]))
+      props.dispatch(getTableVariable([props.columns[col].id]))
     }
   }
-  const cellContextContents = [
-    {
-      key: "plot",
-      title: "Plot",
-      onClick: handleAddPlot,
-    },
-  ]
+  const cellContextContents = createMap(
+    [
+      {
+        key: "plot",
+        title: "Plot",
+        onClick: handleAddPlot,
+      },
+    ],
+    "key",
+  )
 
   const paginationProps = usePagination()
 
@@ -281,7 +309,7 @@ const Table = (props) => {
             {...(props.grid || {})}
             columns={formatColumns(props.columns, props.schema)}
             getCellContent={getContent}
-            height={300}
+            height={800}
             rows={props.rows}
             rowSelect="single"
             rowMarkers="clickable-number"
@@ -295,13 +323,12 @@ const Table = (props) => {
             {...cellProps}
             {...paginationProps}
           />
-          {contextMenu && (
-            <ContextMenu
-              {...contextMenu}
-              onOutsideClick={() => setTimeout(() => setContextMenu(null), 1)}
-              contents={cellContextContents}
-            />
-          )}
+          <ContextMenu
+            {...contextMenu}
+            contents={contextMenu.contents.map((key) =>
+              cellContextContents.get(key),
+            )}
+          />
           <div id="portal"></div>
         </>
       )}
@@ -309,7 +336,7 @@ const Table = (props) => {
   )
 }
 
-const mapStateToProps = ({ table }) => {
+const mapStateToProps = ({ tableData: table }) => {
   const data = table.data ? Object.values(table.data) : []
 
   // TODO: Get the column list from the user settings (reordered columns)

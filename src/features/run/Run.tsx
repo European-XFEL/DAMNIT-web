@@ -78,9 +78,9 @@ const Run = (props) => {
   )
 }
 
-const mapStateToProps = ({ table }) => {
+const mapStateToProps = ({ tableData, table }) => {
   const { run, variables } = table.selection
-  let data = table.data[run]
+  let data = tableData.data[run]
   if (!isEmpty(variables)) {
     data = Object.fromEntries(
       Object.entries(data).filter(([key, value]) => variables.includes(key)),
@@ -91,13 +91,13 @@ const mapStateToProps = ({ table }) => {
     ? []
     : Object.entries(data).filter(
         ([key, value]) =>
-          !HIDDEN_DTYPES.includes(table.metadata.schema[key].dtype) &&
+          !HIDDEN_DTYPES.includes(tableData.metadata.schema[key].dtype) &&
           value !== EMPTY_VALUE,
       )
 
   return {
     data: Object.fromEntries(filtered),
-    schema: table.metadata.schema,
+    schema: tableData.metadata.schema,
   }
 }
 

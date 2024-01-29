@@ -19,7 +19,7 @@ describe("Table DataEditor", () => {
   it("is called with something", () => {
     renderWithProviders(<Table grid={gridProps} />, {
       preloadedState: {
-        table: validTableState,
+        tableData: validTableState,
       },
     })
 

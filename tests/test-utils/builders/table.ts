@@ -135,7 +135,6 @@ export const validTableMetadata = {
 export const validTableState = {
   data: validTableData,
   metadata: validTableMetadata,
-  selection: {},
 }
 
 const numberTheme = { fontFamily: "monospace", headerFontStyle: "" }

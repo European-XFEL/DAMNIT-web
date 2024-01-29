@@ -12,6 +12,18 @@ export const TABLE_METADATA_QUERY = gql`
   }
 `
 
+export const EXTRACTED_DATA = "extracted_data"
+
+export const EXTRACTED_DATA_QUERY = gql`
+  query ExtractedDataQuery($proposal: String, $run: Int!, $variable: String!) {
+    ${EXTRACTED_DATA}(
+      database: { proposal: $proposal }
+      run: $run
+      variable: $variable
+    )
+  }
+`
+
 export const LATEST_DATA = "latest_data"
 
 export const LATEST_DATA_SUBSCRIPTION = gql`
