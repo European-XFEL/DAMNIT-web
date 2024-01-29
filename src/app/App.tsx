@@ -5,7 +5,7 @@ import { useSubscription } from "@apollo/client"
 
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
-import { updateTable } from "../features/table"
+import { updateTable } from "../shared"
 import {
   REFRESH_MUTATION,
   LATEST_DATA,
@@ -56,7 +56,8 @@ const App = ({ isLoading, timestamp }) => {
   )
 }
 
-const mapStateToProps = ({ table }) => {
+const mapStateToProps = (state) => {
+  const table = state.tableData
   return {
     isLoading: table.metadata.rows === 0,
     timestamp: table.metadata.timestamp,

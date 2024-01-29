@@ -1,7 +1,7 @@
 import { setupServer } from "msw/node"
 
 import { setupStore } from "@/app/store"
-import { getTable, updateTable } from "@/features/table"
+import { getTableData, updateTable } from "@/shared"
 import { tableService } from "@/utils/api/graphql"
 
 import {
@@ -9,8 +9,8 @@ import {
   validTableMetadata,
   validTableSchema,
   validTableState,
-} from "../../test-utils/builders/table"
-import { handlers } from "../../test-utils/builders/graphql"
+} from "../test-utils/builders/table"
+import { handlers } from "../test-utils/builders/graphql"
 
 let server
 
@@ -22,12 +22,11 @@ describe("Table slice", () => {
   // We check for each Redux children states for now.
 
   it("should return the initial state", () => {
-    const { table: state } = setupStore().getState()
+    const { tableData: state } = setupStore().getState()
     expect(state.data).toEqual({})
     expect(state.metadata.schema).toEqual({})
     expect(state.metadata.rows).toEqual(0)
     expect(state.metadata.timestamp).toEqual(0)
-    expect(state.selection).toEqual({ run: null, variables: null })
     expect(state.lastUpdate).toEqual({})
   })
 
@@ -41,12 +40,11 @@ describe("Table slice", () => {
     it("sets table data and schema state when successful", () => {
       const { dispatch, getState } = setupStore()
       // eslint-disable-next-line jest/valid-expect-in-promise
-      dispatch(getTable()).then(() => {
-        const { table: state } = getState()
+      dispatch(getTableData()).then(() => {
+        const { tableData: state } = getState()
         expect(state.data).toEqual(validTableData)
         expect(state.metadata.schema).toEqual(validTableSchema)
         expect(state.metadata.rows).toEqual(validTableMetadata.rows)
-        expect(state.selection).toEqual({ run: null, variables: null })
         expect(state.lastUpdate).toEqual({})
       })
     })
@@ -75,7 +73,7 @@ describe("Table slice", () => {
   describe("updateTable action", () => {
     it("sets table data and schema state when successful", () => {
       const { dispatch, getState } = setupStore({
-        table: validTableState,
+        tableData: validTableState,
       })
 
       const newData = {
@@ -94,7 +92,7 @@ describe("Table slice", () => {
       }
 
       dispatch(updateTable({ runs: newData, metadata: newMetadata }))
-      const { table: state } = getState()
+      const { tableData: state } = getState()
       expect(state.data).toEqual({
         "448": { ...validTableData["448"], ...newData["448"] },
         "449": newData["449"],

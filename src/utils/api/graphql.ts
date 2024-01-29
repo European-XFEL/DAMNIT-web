@@ -2,6 +2,8 @@ import { stripTypename } from "@apollo/client/utilities"
 
 import { client } from "../../app/apollo"
 import {
+  EXTRACTED_DATA,
+  EXTRACTED_DATA_QUERY,
   REFRESH_MUTATION,
   TABLE_METADATA_QUERY,
   get_table_data_query,
@@ -11,6 +13,7 @@ import { size } from "../helpers"
 
 export const tableService = {
   refresh,
+  getExtractedData,
   getTableData,
   getTableMetadata,
   getTable,
@@ -76,6 +79,19 @@ function getTable({ proposal = PROPOSAL_NUMBER, page = 1, pageSize = 5 } = {}) {
       })
     })
     .then((data) => ({ data, metadata }))
+}
+
+function getExtractedData({ proposal = PROPOSAL_NUMBER, run, variable } = {}) {
+  return client
+    .query({
+      query: EXTRACTED_DATA_QUERY,
+      variables: {
+        proposal: String(proposal),
+        run,
+        variable,
+      },
+    })
+    .then((result) => result.data[EXTRACTED_DATA])
 }
 
 // Helpers --------------------------------------------------------------------
