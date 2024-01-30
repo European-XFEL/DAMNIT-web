@@ -1,4 +1,4 @@
-from cammille_api.graphql.models import DamnitType
+from damnit_api.graphql.models import DamnitType
 
 
 NUM_ROWS = 10

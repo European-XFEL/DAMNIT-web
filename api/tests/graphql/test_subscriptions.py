@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 import pytest_asyncio
 
-from cammille_api.graphql.models import get_model
+from damnit_api.graphql.models import get_model
 
 from .const import (
     EXAMPLE_DTYPES, KNOWN_DTYPES, KNOWN_VALUES, NEW_DTYPES, NEW_VALUES,
@@ -29,13 +29,13 @@ async def mocked_latest_rows(mocker, current_timestamp):
         elif table == 'run_info':
             return [create_run_info(**KNOWN_VALUES)]
 
-    mocker.patch('cammille_api.graphql.subscriptions.async_latest_rows',
+    mocker.patch('damnit_api.graphql.subscriptions.async_latest_rows',
                  side_effect=mocked_returns)
 
 
 @pytest.fixture
 def mocked_new_count(mocker):
-    mocker.patch('cammille_api.graphql.subscriptions.async_count',
+    mocker.patch('damnit_api.graphql.subscriptions.async_count',
                  return_value=NUM_ROWS + 1)
 
 

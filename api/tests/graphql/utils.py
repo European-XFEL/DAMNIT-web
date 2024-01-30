@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, Mock
 from typing import get_origin, Union
 
-from cammille_api.graphql.models import (
+from damnit_api.graphql.models import (
     DamnitRun, DamnitType, DamnitVariable, KnownVariable)
 
 from .const import KNOWN_DTYPES

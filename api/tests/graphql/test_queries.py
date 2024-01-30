@@ -1,7 +1,7 @@
 import pytest
 import pytest_asyncio
 
-from cammille_api.graphql.models import DamnitType
+from damnit_api.graphql.models import DamnitType
 
 from .const import EXAMPLE_VALUES, KNOWN_VALUES, NUM_ROWS
 from .utils import create_schema, session_mock
@@ -9,7 +9,7 @@ from .utils import create_schema, session_mock
 
 @pytest_asyncio.fixture
 async def mocked_session(mocker):
-    mocker.patch('cammille_api.graphql.queries.get_session',
+    mocker.patch('damnit_api.graphql.queries.get_session',
                  return_value=session_mock([{**KNOWN_VALUES, **EXAMPLE_VALUES}]))
 
 

@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine
 )
 
-from cammille_api.utils import get_run_data
+from damnit_api.utils import get_run_data
 from .const import DEFAULT_PROPOSAL
 from .utils import Registry, find_proposal
 

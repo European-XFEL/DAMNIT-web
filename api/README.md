@@ -6,7 +6,7 @@
 ```sh
 poetry install
 poetry shell
-uvicorn cammille_api.main:app
+uvicorn damnit_api.main:app
 ```
 
 If port `8000` is not free change the port with the `--port NNNN` flag on the `uvicorn` command.

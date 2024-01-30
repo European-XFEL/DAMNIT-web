@@ -1,9 +1,9 @@
 import pytest
 import pytest_asyncio
 
-from cammille_api.graphql.bootstrap import bootstrap
-from cammille_api.graphql.models import DamnitTable, get_stype
-from cammille_api.graphql.schema import Schema
+from damnit_api.graphql.bootstrap import bootstrap
+from damnit_api.graphql.models import DamnitTable, get_stype
+from damnit_api.graphql.schema import Schema
 
 from .const import EXAMPLE_DTYPES, KNOWN_DTYPES, NUM_ROWS
 
@@ -16,13 +16,13 @@ def lifespan():
 
 @pytest.fixture
 def mocked_dtypes(mocker):
-    mocker.patch('cammille_api.graphql.bootstrap.get_dtypes',
+    mocker.patch('damnit_api.graphql.bootstrap.get_dtypes',
                  return_value={**KNOWN_DTYPES, **EXAMPLE_DTYPES})
 
 
 @pytest.fixture
 def mocked_count(mocker):
-    mocker.patch('cammille_api.graphql.bootstrap.db.async_count',
+    mocker.patch('damnit_api.graphql.bootstrap.db.async_count',
                  return_value=NUM_ROWS)
 
 

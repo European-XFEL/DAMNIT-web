@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from cammille_api.graphql.models import (
+from damnit_api.graphql.models import (
     DamnitTable, DamnitType, get_model, update_model)
 
 from .utils import assert_model

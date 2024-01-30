@@ -1,8 +1,8 @@
 import pytest
 import pytest_asyncio
 
-from cammille_api.graphql.models import DamnitType, get_model
-from cammille_api.graphql.schema import Schema
+from damnit_api.graphql.models import DamnitType, get_model
+from damnit_api.graphql.schema import Schema
 
 from .const import EXAMPLE_DTYPES, KNOWN_VALUES, NEW_VALUES, NUM_ROWS
 from .utils import create_schema, assert_model
@@ -11,7 +11,7 @@ from .utils import create_schema, assert_model
 @pytest_asyncio.fixture
 async def mocked_latest_rows(mocker):
     latest_rows = [{**KNOWN_VALUES, **NEW_VALUES}]
-    mocker.patch('cammille_api.graphql.mutations.async_latest_rows',
+    mocker.patch('damnit_api.graphql.mutations.async_latest_rows',
                  return_value=latest_rows)
 
 

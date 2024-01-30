@@ -1,4 +1,4 @@
-from cammille_api.graphql.utils import LatestData
+from damnit_api.graphql.utils import LatestData
 
 from .const import EXAMPLE_DTYPES, EXAMPLE_VALUES, NEW_DTYPES, NEW_VALUES
 
