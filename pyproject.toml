@@ -4,19 +4,28 @@ version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "cammille_api", from = "src"}]
+packages = [{ include = "cammille_api", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.9"
 pandas = "^2.0.1"
-sqlalchemy = "^2.0.15"
-uvicorn = "^0.22.0"
+sqlalchemy = {extras = ["asyncio"], version = "^2.0.19"}
 fastapi = "^0.95.2"
 orjson = "^3.8.13"
 numpy = "^1.25.0"
 matplotlib = "^3.7.1"
 h5py = "^3.9.0"
+strawberry-graphql = { extras = ["fastapi"], version = "^0.195.2" }
+uvicorn = ">=0.11.6,<0.22.0"
+aiosqlite = "^0.19.0"
+pytest = "^7.4.2"
+pytest-asyncio = "^0.21.1"
+pytest-mock = "^3.11.1"
+scipy = "^1.11.4"
 
+
+[tool.poetry.group.dev.dependencies]
+strawberry-graphql = { extras = ["debug-server", "fastapi"], version = "^0.195.2" }
 
 [build-system]
 requires = ["poetry-core"]
