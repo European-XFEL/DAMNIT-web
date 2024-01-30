@@ -1,3 +1,4 @@
+from abc import ABCMeta
 from base64 import b64encode
 from glob import iglob
 import io
@@ -7,8 +8,12 @@ import pickle
 import h5py
 import numpy as np
 from matplotlib.figure import Figure
+from scipy.ndimage import zoom
 
 from .const import Type
+
+
+DEFAULT_ARRAY_NAME = '__xarray_dataarray_variable__'
 
 
 DTYPE_MAP = {
@@ -16,6 +21,7 @@ DTYPE_MAP = {
     'str': Type.STRING,
     'bool_': Type.BOOLEAN,
 }
+
 
 def map_dtype(dtype, default=Type.STRING):
     dtype = DTYPE_MAP.get(dtype.__name__)
@@ -26,31 +32,10 @@ def map_dtype(dtype, default=Type.STRING):
 # -----------------------------------------------------------------------------
 # Conversion
 
-def b64image(bytes_, format='png'):
-    # Get the numpy array from the bytearray
-    array = pickle.loads(bytes_)
 
-    # Do matplotlib drawing
-    # This is based on the DAMNIT GUI code Table.generateThumbnail()
-    fig = Figure(figsize=(1, 1))
-    ax = fig.add_subplot()
-    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-    vmin = np.nanquantile(array, 0.01, interpolation='nearest')
-    vmax = np.nanquantile(array, 0.99, interpolation='nearest')
-    ax.imshow(array, vmin=vmin, vmax=vmax, extent=(0, 1, 1, 0))
-    ax.axis('tight')
-    ax.axis('off')
-    ax.margins(0, 0)
+def b64image(bytes_):
+    return b64encode(bytes_).decode('utf-8')
 
-    # Convert to base64 image with the supplied format
-    with io.BytesIO() as buffer:
-        # Save figure
-        fig.savefig(buffer, format=format)
-        
-        # Get the encoded base64 string
-        b64string = b64encode(buffer.getvalue()).decode()
-        
-    return b64string
 
 def convert(data, dtype=Type.STRING):
     # Don't convert if None
@@ -58,6 +43,7 @@ def convert(data, dtype=Type.STRING):
         return
 
     return CONVERSION_FUNCTIONS.get(dtype, str)(data)
+
 
 CONVERSION_FUNCTIONS = {
     Type.IMAGE: b64image
@@ -91,7 +77,7 @@ def find_proposal(propno):
     if '/' in propno:
         # Already passed a proposal directory
         return propno
-    
+
     propno = format_proposal_number(propno)
     for d in iglob(osp.join(DATA_ROOT_DIR, '*/*/{}'.format(propno))):
         return d
@@ -101,14 +87,82 @@ def find_proposal(propno):
 
 def get_run_data(path, variable):
     try:
-        file = h5py.File(path)
+        with h5py.File(path) as file:
+            group = file[variable]
+            dataset = {key if key != DEFAULT_ARRAY_NAME else 'data': group[key][:]
+                       for key in group.keys()}
     except FileNotFoundError as e:
         # TODO: manage the error XD
         raise e
-    data = file[variable]['data'][:]
 
-    # REMOVE: Drop NaNs if data is 1D array (and also scale down a bit XD)
-    # I do this temporarily as I know the signature of this data.
-    data = data[np.argwhere(np.isfinite(data)).flatten()] / 1e5 
+    # Correct the data
+    primary_name = next(iter(dataset))
+    primary_data = dataset[primary_name]
+    if primary_data.ndim == 1:
+        # Most likely a vector
+        if len(dataset) == 1:
+            dataset['index'] = np.arange(primary_data.size)
+        valid_index = np.isfinite(primary_data)
+        for key in dataset:
+            dataset[key] = dataset[key][valid_index]
+    elif primary_data.ndim == 2:
+        # Most likely a 2D image
+        dataset[primary_name] = downsample_image(primary_data)
 
-    return data
+    return dataset
+
+
+# -----------------------------------------------------------------------------
+# Metaclasses
+
+class Singleton(ABCMeta):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        instance = cls._instances.get(cls)
+        if not instance:
+            instance = super(type(cls), cls).__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return instance
+
+
+class Registry(ABCMeta):
+
+    def __call__(cls, proposal, *args, **kwargs):
+        instance = cls.registry.get(proposal)
+        if instance is None:
+            instance = super().__call__(proposal, *args, **kwargs)
+            cls.registry[proposal] = instance
+        return instance
+
+    def __new__(cls, name, bases, attrs):
+        new_class = super().__new__(cls, name, bases, attrs)
+        new_class.registry = {}
+        return new_class
+
+
+# -----------------------------------------------------------------------------
+# Etc.
+
+def create_map(lst, *, key):
+    return {obj[key]: obj for obj in lst}
+
+
+def downsample_image(image, order=2):
+    DIMENSION_DOWNSAMPLE = [
+        (500, 1.5),
+        (1000, 2)
+    ]  # [(dimension, min downsample)]
+
+    Ny, Nx = image.shape
+    x_min_ds, y_min_ds = (1, 1)
+    for dim, min_ds in DIMENSION_DOWNSAMPLE:
+        if Nx > dim:
+            x_min_ds = min_ds
+        if Ny > dim:
+            y_min_ds = min_ds
+
+    if (x_min_ds, y_min_ds) != (1, 1):
+        image = zoom(image, [1 / x_min_ds, 1 / y_min_ds], order=order)
+
+    return image

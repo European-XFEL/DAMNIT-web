@@ -1,22 +1,30 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pandas as pd
 from fastapi import Depends, FastAPI
 from sqlalchemy import Connection, Select
 
+
 from .const import DEFAULT_PROPOSAL, FILL_VALUE, Type
 from .db import (
     get_column_datum, get_column_names, get_conn, get_damnit_path,
     get_selection)
 from .utils import convert, get_run_data, map_dtype
+from .graphql import add_graphql_router
 
-app = FastAPI()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    add_graphql_router(app)
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 def get_column_schema(
     column_names: list = Depends(get_column_names),
     column_data = Depends(get_column_datum),
-    conn: Connection = Depends(get_conn)) -> dict: 
+    conn: Connection = Depends(get_conn)) -> dict:
     """
     Returns a dictionary of the column names of the specified table and their data type.
 
@@ -33,7 +41,7 @@ def get_column_schema(
         series =  pd.read_sql(column_data(column), conn)[column]
         return (map_dtype(type(series[0]), default).value
                 if not series.empty else default)
-    
+
     schema = {column: {'id': column, 'dtype': get_dtype(column)}
               for column in column_names}
 
@@ -45,7 +53,7 @@ def get_column_schema(
     }
     for name, dtype in known_dtypes.items():
         schema[name]['dtype'] = dtype
-    
+
     return schema
 
 
