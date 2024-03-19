@@ -1,0 +1,30 @@
+services:
+    frontend:
+        image: damnit-web/webapp
+        build: ./frontend
+        ports:
+            - "${VITE_PORT}:${VITE_PORT}"
+        environment:
+            - VITE_BACKEND_API=${UVICORN_HOST}:${UVICORN_PORT}
+            - VITE_PROPOSAL_NUMBER
+            - VITE_PORT
+        networks:
+            damnit-web:
+
+    backend:
+        image: damnit-web/backend
+        build: ./api
+        expose:
+            - UVICORN_PORT
+        volumes:
+            - /gpfs:/gpfs
+        environment:
+            - UVICORN_HOST
+            - UVICORN_PORT
+        networks:
+            damnit-web:
+                aliases:
+                    - UVICORN_HOST
+
+networks:
+    damnit-web:
