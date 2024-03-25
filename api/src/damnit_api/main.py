@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import fastapi
+from starlette.middleware.sessions import SessionMiddleware
 from pathlib import Path
 
 import pandas as pd
@@ -12,6 +14,8 @@ from .db import (
     get_selection)
 from .utils import convert, get_run_data, map_dtype
 from .graphql import add_graphql_router
+from . import auth
+from .settings import settings
 
 
 @asynccontextmanager
@@ -120,3 +124,9 @@ def index(
 @db_router.get("/db/schema")
 def db_schema(schema: dict = Depends(get_column_schema)) -> dict:
     return schema
+
+
+app.add_middleware(
+    SessionMiddleware, secret_key=settings.session_secret.get_secret_value()
+)
+
