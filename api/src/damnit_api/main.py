@@ -132,3 +132,7 @@ app.add_middleware(
     SessionMiddleware, secret_key=settings.session_secret.get_secret_value()
 )
 
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("damnit_api.main:app", reload=True)
