@@ -12,6 +12,8 @@ export default defineConfig(({ mode }) => {
     },
     // REMOVEME: Use proxy to handle CORS for the meantime
     server: {
+      host: true,
+      port: Number(env.VITE_PORT) || 5173,
       proxy: {
         "/db": {
           target: `http://${env.VITE_BACKEND_API}`,
