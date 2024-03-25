@@ -16,6 +16,7 @@ from .graphql import add_graphql_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    auth.configure()
     add_graphql_router(app)
     yield
 
@@ -68,7 +69,12 @@ def get_extracted_path(
     return inner
 
 
-@app.router.get("/db")
+db_router = fastapi.APIRouter(
+    prefix="/db", dependencies=[fastapi.Depends(auth.check_auth)]
+)
+
+
+@db_router.get("/db")
 def index(
     selection: Select = Depends(get_selection),
     schema: dict = Depends(get_column_schema),
@@ -111,6 +117,6 @@ def index(
     return df.set_index("runnr", drop=False).to_dict(orient="index")
 
 
-@app.router.get("/db/schema")
+@db_router.get("/db/schema")
 def db_schema(schema: dict = Depends(get_column_schema)) -> dict:
     return schema
