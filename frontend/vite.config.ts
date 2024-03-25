@@ -23,6 +23,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        "/oauth": {
+          target: `http://${env.VITE_BACKEND_API}`,
+          changeOrigin: false,
+          secure: false,
+        },
       },
     },
     test: {
