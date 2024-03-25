@@ -21,7 +21,9 @@ from .settings import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     auth.configure()
-    add_graphql_router(app)
+    add_graphql_router(app, dependencies=[Depends(auth.check_auth)])
+    app.router.include_router(db_router)
+    app.router.include_router(auth.router)
     yield
 
 app = FastAPI(lifespan=lifespan)

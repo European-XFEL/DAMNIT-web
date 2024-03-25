@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from . import router
 
 
-def add_graphql_router(app: FastAPI):
+def add_graphql_router(app: FastAPI, dependencies: list | None = None):
     """
     Adds a GraphQL router to the provided FastAPI instance.
 
@@ -11,4 +11,6 @@ def add_graphql_router(app: FastAPI):
         app (FastAPI): The FastAPI instance to add the GraphQL router to.
     """
 
-    app.include_router(router.Router(), prefix="/graphql")
+    app.include_router(
+        router.Router(), prefix="/graphql", dependencies=dependencies or []
+    )
