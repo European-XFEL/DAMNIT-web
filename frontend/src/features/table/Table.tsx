@@ -77,9 +77,6 @@ const usePagination = (pageSize = 5) => {
 
   // Callback: Handle new page
   const handleNewPage = useCallback(async (page, pageSize) => {
-    // REMOVEME: Use timeout to better visualize incoming data
-    await new Promise((res) => setTimeout(res, 1000))
-
     let loaded = false
 
     if (page > 0) {
