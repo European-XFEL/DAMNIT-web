@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     auth: AuthSettings
 
     frontend_redirect_url: Annotated[
-        HttpUrl, Field("http://max-display003.desy.de:5173")
+        HttpUrl, Field("http://max-exfl462.desy.de:30000")
     ]
 
     session_secret: SecretStr
