@@ -1,10 +1,13 @@
 import React, { useEffect } from "react"
 import { connect, useDispatch } from "react-redux"
+import { Route, Routes, useNavigate, useLocation } from "react-router-dom"
 import { useMutation } from "@apollo/client"
 import { useSubscription } from "@apollo/client"
 
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
+import HeroPage from "../features/hero"
+import { LoginRoute, history } from "../routes"
 import { updateTable } from "../shared"
 import {
   REFRESH_MUTATION,
@@ -13,9 +16,13 @@ import {
 } from "../graphql/queries"
 import { PROPOSAL_NUMBER } from "../constants"
 
-const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === "test")
+const SHOULD_SUBSCRIBE = false // !(import.meta.env.MODE === "test")
 
 const useInitialize = ({ isLoading, timestamp }) => {
+  // Initialize routers
+  history.navigate = useNavigate()
+  history.location = useLocation()
+
   // Initialize GraphQL hooks
   const [refresh, _] = useMutation(REFRESH_MUTATION)
   useSubscription(LATEST_DATA_SUBSCRIPTION, {
@@ -46,12 +53,16 @@ const App = ({ isLoading, timestamp }) => {
 
   return (
     <div>
-      {isLoading ? null : (
+      <Routes>
+        <Route path="/" exact element={<HeroPage />} />
+        <Route path="/login" element={<LoginRoute />} />
+        {/* {isLoading ? null : (
         <>
           <Drawer />
           <Dashboard />
         </>
-      )}
+      )} */}
+      </Routes>
     </div>
   )
 }
