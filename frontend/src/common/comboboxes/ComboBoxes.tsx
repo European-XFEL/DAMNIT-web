@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Combobox, useCombobox, ComboboxTarget, TextInput } from "@mantine/core";
+import { useState } from "react"
+import { Combobox, useCombobox, ComboboxTarget, TextInput } from "@mantine/core"
 
 //Common component for comboboxes
 function TextCombobox(props: {
@@ -12,19 +12,19 @@ function TextCombobox(props: {
   error?: string}){
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
-  });
+  })
 
   const checkVariable = (item) => (item.toLowerCase().includes(props.value.toLowerCase()))
-  const shouldFilterOptions = !props.columns.some((item) => item === props.value);
-  const filteredOptions = shouldFilterOptions
+  const shouldFilterOptions = !props.columns.some((item) => item === props.value)
+  const optionsToRender = shouldFilterOptions
     ? props.columns.filter(checkVariable)
-    : props.columns;
+    : props.columns
 
-  const options = filteredOptions.map((item) => (
+  const options = optionsToRender.map((item) => (
     <Combobox.Option value={item} key={item}>
       {item}
     </Combobox.Option>
-  ));
+  ))
 
   return(
     <div className={props.costumeclass}>
@@ -32,8 +32,8 @@ function TextCombobox(props: {
         store={combobox}
         withinPortal={false}
         onOptionSubmit={(val) => {
-          props.setValue(val);
-          combobox.closeDropdown();
+          props.setValue(val)
+          combobox.closeDropdown()
         }}
       >
         <ComboboxTarget>
@@ -42,19 +42,15 @@ function TextCombobox(props: {
             placeholder={props.placeholder}
             value={props.value}
             onChange={(event) => {
-              props.setValue(event.currentTarget.value);
-              combobox.openDropdown();
-              combobox.updateSelectedOptionIndex();
+              props.setValue(event.currentTarget.value)
+              combobox.openDropdown()
+              combobox.updateSelectedOptionIndex()
             }}
             onClick={() => combobox.openDropdown()}
             onFocus={() => combobox.openDropdown()}
             onBlur={() => {
-              if (!props.columns.some(checkVariable)) {
-                props.setValue('');
-                combobox.closeDropdown()
-              } else {
-                combobox.closeDropdown()
-                }
+              !props.columns.some(checkVariable) && props.setValue('')
+              combobox.closeDropdown()
               }
             }
             error={props.error}
@@ -68,7 +64,7 @@ function TextCombobox(props: {
         </Combobox.Dropdown>
       </Combobox>
     </div>
-  );
+  )
 }
 
-export default TextCombobox;
+export default TextCombobox
