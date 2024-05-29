@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { Modal, Button, InputWrapper, Switch, Group, Stack, SegmentedControl } from '@mantine/core'
 import { TextInput } from "@mantine/core"
+import { useForm } from "@mantine/form"
 import { addPlot } from "../plots"
 import TextCombobox from "../../common/comboboxes/ComboBoxes"
 import classes from "./PlotDialog.module.css"
@@ -57,22 +58,38 @@ function UniVariableOptions(props) {
   )
 }
 
-
 const PlotDialog = (props) => {
   //Sets various states. Mind that some must be set accordanly to the
   //grid selection. This is done with the useEffect hook
   const [plotType, setPloType] = useState('summary')
   const [isUniVariable, setPlotAsUniVariable] = useState(true)
   const [runSelectionType, setRunSelectionType] = useState('allSelection')
-  const [runSelection, setRunSelection] = useState('')
-  const [xVariable, setXVariable] = useState('')
-  const [yVariable, setYVariable] = useState('')
-  const [formValidation, setFormValidation] = useState({selectionError:false,
-                                                        xVariableError:false,
-                                                        yVariableError:false,})
 
+  const dialogForm = useForm({
+    mode: 'uncontrolled',
+    initialValues: {
+      runSelection: '',
+      xVariable: '',
+      yVariable: '',
+    },
 
-  //Gets columns (only numerical) and gridselection (of columns)
+    validate:{
+      runSelection: (value) => {
+        const runs = parseRunSelection(value)
+
+        return (
+        (runSelectionType === "manualSelection") &&
+        (runs.some(x => !x) ||
+        runs.length > props.tableMetadata.rows ||
+        !runs.length) ? 'Please enter a valid selection':
+        null
+        )
+      },
+      xVariable: (value) => (value === '' ? 'Please enter a valid variable' : null),
+      yVariable: (value) => (value === '' ? 'Please enter a valid variable' : null),
+    }
+  })
+
   const columns = Object.keys(props.tableMetadata.schema).filter((e) =>
     props.tableMetadata.schema[e].dtype === 'number')
   const gridSelectionCol = props.gridSelection.columns.toArray()
@@ -84,40 +101,29 @@ const PlotDialog = (props) => {
     if (gridSelectionCol.length === 1) {
       if (gridSelectionCol[0] !== -1) {
         setPlotAsUniVariable(true)
-        setXVariable(cleanColumns[gridSelectionCol[0]])
+        dialogForm.setFieldValue('xVariable', cleanColumns[gridSelectionCol[0]])
       }
     } else if (gridSelectionCol.length === 2) {
         setPlotAsUniVariable(false)
-        setXVariable(cleanColumns[gridSelectionCol[0]])
-        setYVariable(cleanColumns[gridSelectionCol[1]])
+        dialogForm.setFieldValue('xVariable', cleanColumns[gridSelectionCol[0]])
+        dialogForm.setFieldValue('yVariable', cleanColumns[gridSelectionCol[1]])
     }
-  })
+  }, [props.opened])
 
   // Clear states on close
   const handleClose = () => {
     setPloType("summary")
     setPlotAsUniVariable(false)
     setRunSelectionType('allSelection')
-    setRunSelection([])
-    setFormValidation({
-      selectionError:false,
-      xVariableError:false,
-      yVariableError:false,})
-    setXVariable('')
-    setYVariable('')
     props.close()
+    dialogForm.reset()
   }
 
   // Plots upon form sending
   const handlePlot = () => {
-    const runs = runSelectionType === "manualSelection" ? parseRunSelection(runSelection) : []
-    const errors = validateForm(runs)
-    setFormValidation({...errors})
-
-    if (Object.values(errors).some(x => x)){
-      return
-    }
-
+    // runSelection must be parsed again in this case
+    const runs = parseRunSelection(dialogForm.getValues().runSelection)
+    const { xVariable, yVariable } = dialogForm.getValues()
     props.dispatch(
         addPlot({
           variables: isUniVariable ? [xVariable]
@@ -193,83 +199,88 @@ const PlotDialog = (props) => {
         keepMounted = {false}
         centered
         >
-        <Stack m = "5px">
-          <Switch
-            checked={ isUniVariable }
-            label="Single variable plot"
-            onChange={(event) => {setPlotAsUniVariable(event.currentTarget.checked)}}
-            disabled={plotType !== "summary"}
-          />
-        </Stack>
+        <form onSubmit={dialogForm.onSubmit((values) => handlePlot())}>
+          <Stack m = "5px">
+            <Switch
+              checked={ isUniVariable }
+              label="Single variable plot"
+              onChange={(event) => {setPlotAsUniVariable(event.currentTarget.checked)}}
+              disabled={plotType !== "summary"}
+            />
+          </Stack>
 
-        {isUniVariable ?
-          <UniVariableOptions
-            columns = {columns}
-            xVariable={xVariable}
-            setXVariable = {setXVariable}
-            xError = {formValidation.xVariableError ? "Please select a variable" : ""}
-          />
-          :<TwoVariableOptions columns = {columns}
-            xVariable={xVariable}
-            yVariable={yVariable}
-            setXVariable = {setXVariable}
-            setYVariable = {setYVariable}
-            yError = {formValidation.yVariableError ? "Please select the missing variables" : ""}
-            xError = {formValidation.xVariableError ? "Please select the missing variables" : ""}
-          />
-        }
-
-        <SegmentedControl
-            id="plotType"
-            value={ plotType }
-            onChange={ (event) => { setPloType(event);
-              setPlotAsUniVariable(event !== "summary" || isUniVariable)
-              setRunSelectionType(event === "summary" ?  runSelectionType : "manualSelection")
-            }}
-            data={[
-              { label: 'Plot for summary data', value: 'summary' },
-              { label: 'Plot for extracted data', value: 'extracted' },
-            ]}
-            orientation="horizontal"
-            mt="3px"
-            mb="3px"
-            fullWidth={true}
-          />
+          <InputWrapper style={[{display:"flex", justifyContent:"space-between"}]}>
+            <TextCombobox
+              columns={columns}
+              value={dialogForm.getValues().xVariable}
+              setValue={(value) => dialogForm.setFieldValue('xVariable',value)}
+              label="X-axis"
+              placeholder="Choose a variable"
+              costumeclass={classes.damnit__plotdialog_axis_combobox}
+              {... dialogForm.getInputProps('xVariable')}
+            />
+            <TextCombobox
+              columns={columns}
+              value={dialogForm.getValues().yVariable}
+              setValue={(value) => dialogForm.setFieldValue('yVariable',value)}
+              label="Y-axis"
+              placeholder="Choose a variable"
+              costumeclass={classes.damnit__plotdialog_axis_combobox}
+              {... dialogForm.getInputProps('yVariable')}
+            />
+        </InputWrapper>
 
           <SegmentedControl
-            id="selectionType"
-            value={ plotType !== "summary" ? 'manualSelection' : runSelectionType }
-            onChange={ setRunSelectionType }
-            data={[
-              { label: 'Plot for all runs', value: 'allSelection' },
-              { label: 'Manual selection', value: 'manualSelection' },
-            ]}
-            orientation="horizontal"
-            mt="3px"
-            mb="3px"
-            fullWidth={true}
-            disabled={ plotType !== "summary" }
-          />
+              id="plotType"
+              value={ plotType }
+              onChange={ (event) => { setPloType(event);
+                setPlotAsUniVariable(event !== "summary" || isUniVariable)
+                setRunSelectionType(event === "summary" ?  runSelectionType : "manualSelection")
+              }}
+              data={[
+                { label: 'Plot for summary data', value: 'summary' },
+                { label: 'Plot for extracted data', value: 'extracted' },
+              ]}
+              orientation="horizontal"
+              mt="3px"
+              mb="3px"
+              fullWidth={true}
+            />
 
-          <TextInput
-            value={runSelection}
-            onChange={(event) => setRunSelection(event.currentTarget.value)}
-            label="Run selection:"
-            placeholder={
-              runSelectionType === "allSelection" ?
-              "Run selection:" + 0 + "-" + props.tableMetadata.rows :
-              "e.g. 1,2,3,6-20,22"
-             }
-            mr="2px"
-            h="100%"
-            disabled={ runSelectionType !== "manualSelection" }
-            error = { formValidation.selectionError ? "Please enter a valid selection" : "" }
-          />
+            <SegmentedControl
+              id="selectionType"
+              value={ plotType !== "summary" ? 'manualSelection' : runSelectionType }
+              onChange={ setRunSelectionType }
+              data={[
+                { label: 'Plot for all runs', value: 'allSelection' },
+                { label: 'Manual selection', value: 'manualSelection' },
+              ]}
+              orientation="horizontal"
+              mt="3px"
+              mb="3px"
+              fullWidth={true}
+              disabled={ plotType !== "summary" }
+            />
 
-        <Group wrap="wrap">
-          <Button onClick={handleClose}> Cancel </Button>
-          <Button onClick={handlePlot}> Plot </Button>
-        </Group>
+            <TextInput
+              label="Run selection:"
+              placeholder={
+                runSelectionType === "allSelection" ?
+                "Run selection:" + 0 + "-" + props.tableMetadata.rows :
+                "e.g. 1,2,3,6-20,22"
+              }
+              mr="2px"
+              h="100%"
+              disabled={ runSelectionType !== "manualSelection" }
+              key={ dialogForm.key('runSelection') }
+              { ...dialogForm.getInputProps('runSelection') }
+            />
+
+          <Group wrap="wrap">
+            <Button onClick={handleClose}> Cancel </Button>
+            <Button type="submit"> Plot </Button>
+          </Group>
+        </form>
       </Modal>
     </>
   );
