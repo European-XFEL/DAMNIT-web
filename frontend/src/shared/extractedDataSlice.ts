@@ -6,6 +6,8 @@ Apollo Client store
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
 import { isEmpty } from "../utils/helpers"
 import { tableService } from "../utils/api/graphql"
+import { getTableVariable } from "."
+import { ac } from "vitest/dist/types-e3c9754d.js"
 
 const initialState = {
   data: {},
@@ -20,6 +22,26 @@ export const getExtractedVariable = createAsyncThunk(
     return { run, variable, ...result }
   },
 )
+
+export const getAllExtracted = createAsyncThunk(
+  "extractedData/getAll",
+  async (variable) => {
+    const _runs = await tableService.getTableData(["run"], {
+      pageSize: 10000, // get everything
+    })
+
+    const result = []
+    const runs = Object.keys(_runs).map(run => Number(run))
+
+    for (const run of runs) {
+      const partialResult = await tableService.getExtractedData({ run, variable })
+      result.push({ run, variable, ...partialResult })
+    };
+
+    return result
+  },
+)
+
 
 const slice = createSlice({
   name: "extractedData",
@@ -39,6 +61,23 @@ const slice = createSlice({
           [run]: { ...(state.metadata[run] || {}), [variable]: metadata },
         }
       }
+    })
+    builder.addCase(getAllExtracted.pending, (state, action) => {
+      //TODO: indicate processing to user
+    })
+    builder.addCase(getAllExtracted.fulfilled, (state, action) => {
+      action.payload.forEach(({ run, variable, data, metadata}) => {
+        if (!isEmpty(data)) {
+          state.data = {
+            ...state.data,
+            [run]: { ...(state.data[run] || {}), [variable]: data },
+          }
+          state.metadata = {
+            ...state.metadata,
+            [run]: { ...(state.metadata[run] || {}), [variable]: metadata },
+          }
+        }
+      })
     })
   },
 })

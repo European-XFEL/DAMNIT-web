@@ -80,8 +80,8 @@ const Plot = ({ plotId }) => {
         if (!acc[variable]) {
           acc[variable] = []
         }
-        // Store the value to the array
-        acc[variable].push(table.data[run][variable])
+        // Store the value to the array (only if run is there)
+        table.data[run] && acc[variable].push(table.data[run][variable])
       })
       return acc
     }, {})
@@ -115,8 +115,10 @@ const Plot = ({ plotId }) => {
     // TODO: Intersect common coordinates
     const coordIndex = 0
     const data = []
+    const runs = sorted(plot.runs || Object.keys(extracted.metadata))
 
-    sorted(plot.runs).forEach((run) => {
+
+    runs.forEach((run) => {
       if (!extracted.data[run]?.[variable]) {
         return
       }
@@ -145,7 +147,7 @@ const Plot = ({ plotId }) => {
     })
 
     // TODO: Get latest run
-    const latestRun = plot.runs[0]
+    const latestRun = runs[0]
     const metadata = {}
     switch (extracted.metadata[latestRun]?.[variable]?.dtype) {
       case "array":
