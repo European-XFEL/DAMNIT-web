@@ -8,7 +8,6 @@ import {
   TABLE_METADATA_QUERY,
   get_table_data_query,
 } from "../../graphql/queries"
-import { PROPOSAL_NUMBER } from "../../constants"
 import { size } from "../helpers"
 
 export const tableService = {
@@ -19,7 +18,7 @@ export const tableService = {
   getTable,
 }
 
-function refresh({ proposal = PROPOSAL_NUMBER } = {}) {
+function refresh({ proposal }) {
   return client
     .mutate({
       mutation: REFRESH_MUTATION,
@@ -30,10 +29,7 @@ function refresh({ proposal = PROPOSAL_NUMBER } = {}) {
     .then((result) => result.data)
 }
 
-function getTableData(
-  fields,
-  { proposal = PROPOSAL_NUMBER, page = 1, pageSize = 10 } = {},
-) {
+function getTableData(fields, { proposal, page = 1, pageSize = 10 } = {}) {
   return client
     .query({
       query: get_table_data_query(`p${proposal}`, fields),
@@ -55,7 +51,7 @@ function getTableData(
     })
 }
 
-function getTableMetadata({ proposal = PROPOSAL_NUMBER } = {}) {
+function getTableMetadata({ proposal }) {
   return client
     .query({
       query: TABLE_METADATA_QUERY,
@@ -66,7 +62,7 @@ function getTableMetadata({ proposal = PROPOSAL_NUMBER } = {}) {
     .then((result) => result.data.metadata)
 }
 
-function getTable({ proposal = PROPOSAL_NUMBER, page = 1, pageSize = 5 } = {}) {
+function getTable({ proposal, page = 1, pageSize = 5 } = {}) {
   let metadata
 
   return getTableMetadata({ proposal })
@@ -81,7 +77,7 @@ function getTable({ proposal = PROPOSAL_NUMBER, page = 1, pageSize = 5 } = {}) {
     .then((data) => ({ data, metadata }))
 }
 
-function getExtractedData({ proposal = PROPOSAL_NUMBER, run, variable } = {}) {
+function getExtractedData({ proposal, run, variable }) {
   return client
     .query({
       query: EXTRACTED_DATA_QUERY,

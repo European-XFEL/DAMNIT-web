@@ -6,15 +6,20 @@ import { drawerReducer as drawer } from "../features/drawer"
 import { plotsReducer as plots } from "../features/plots"
 import { tableReducer as table } from "../features/table"
 import { listenerMiddleware } from "./listeners"
-import { extractedDataReducer, tableDataReducer } from "../shared"
+import {
+  extractedDataReducer as extractedData,
+  proposalReducer as proposal,
+  tableDataReducer as tableData,
+} from "../shared"
 
 const reducer = combineReducers({
   dashboard,
   drawer,
   plots,
+  proposal,
   table,
-  tableData: tableDataReducer,
-  extractedData: extractedDataReducer,
+  tableData,
+  extractedData,
 })
 
 export const setupStore = (preloadedState) => {

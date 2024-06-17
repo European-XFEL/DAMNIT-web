@@ -11,7 +11,9 @@ import { useSelector } from "react-redux"
 import { history } from "./history"
 
 function PrivateRoute({ children }) {
-  const { user: authUser } = useSelector((state) => state.auth)
+  // TODO: Check session cookies
+  // const { user: authUser } = useSelector((state) => state.auth)
+  const authUser = "xfel"
 
   if (!authUser) {
     // not logged in so redirect to login page with the return url

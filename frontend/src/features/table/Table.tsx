@@ -1,7 +1,7 @@
 import "@glideapps/glide-data-grid/dist/index.css"
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { connect, useDispatch } from "react-redux"
+import { connect, useDispatch, useSelector } from "react-redux"
 import {
   CompactSelection,
   DataEditor,
@@ -63,7 +63,7 @@ class Pages {
   }
 }
 
-const usePagination = (pageSize = 5) => {
+const usePagination = (proposal, pageSize = 5) => {
   const dispatch = useDispatch()
 
   // Reference: Loaded pages
@@ -78,19 +78,23 @@ const usePagination = (pageSize = 5) => {
   })
 
   // Callback: Handle new page
-  const handleNewPage = useCallback(async (page, pageSize) => {
-    // REMOVEME: Use timeout to better visualize incoming data
-    await new Promise((res) => setTimeout(res, 1000))
+  const handleNewPage = useCallback(
+    async (page, pageSize) => {
+      if (!proposal) {
+        return
+      }
 
-    let loaded = false
+      let loaded = false
 
-    if (page > 0) {
-      // TODO: Create an object that contains `page` and `pageSize`
-      loaded = dispatch(getTableData(page)).then(() => true)
-    }
+      if (page > 0) {
+        // TODO: Create an object that contains `page` and `pageSize`
+        loaded = dispatch(getTableData({ proposal, page })).then(() => true)
+      }
 
-    return loaded
-  }, [])
+      return loaded
+    },
+    [proposal, dispatch],
+  )
 
   // Callback: On visible region changed
   const onVisibleRegionChanged = useCallback((rect) => {
@@ -99,20 +103,23 @@ const usePagination = (pageSize = 5) => {
     })
   }, [])
 
-  const loadPage = useCallback(async (page: number) => {
-    // TODO: Add a retry when loading pages are stuck for quite some time
-    const pages = pagesRef.current
+  const loadPage = useCallback(
+    async (page: number) => {
+      // TODO: Add a retry when loading pages are stuck for quite some time
+      const pages = pagesRef.current
 
-    if (pages.isLoading(page) || pages.isLoaded(page)) {
-      return
-    }
+      if (pages.isLoading(page) || pages.isLoaded(page)) {
+        return
+      }
 
-    pages.addToLoading(page)
-    const loaded = await handleNewPage(page, pageSize)
-    if (loaded) {
-      pages.addToLoaded(page)
-    }
-  }, [])
+      pages.addToLoading(page)
+      const loaded = await handleNewPage(page, pageSize)
+      if (loaded) {
+        pages.addToLoaded(page)
+      }
+    },
+    [handleNewPage, pageSize],
+  )
 
   // Effect: Trigger load page when visible region changes
   useEffect(() => {
@@ -159,8 +166,10 @@ const useContextMenu = () => {
 }
 
 const Table = (props) => {
-  // Initialization: Use custom cells
+  // Initialization
   const cellProps = useExtraCells()
+  const proposal = useSelector((state) => state.proposal.current)
+  const paginationProps = usePagination(proposal)
 
   // Data: Populate grid
   const getContent = useCallback(
@@ -257,8 +266,12 @@ const Table = (props) => {
         }
       }
     } else if (columnSelection.length === 2) {
-      if (props.schema[props.columns[columnSelection[0]].id].dtype === DTYPES.number &&
-        props.schema[props.columns[columnSelection[1]].id].dtype === DTYPES.number) {
+      if (
+        props.schema[props.columns[columnSelection[0]].id].dtype ===
+          DTYPES.number &&
+        props.schema[props.columns[columnSelection[1]].id].dtype ===
+          DTYPES.number
+      ) {
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
@@ -291,7 +304,7 @@ const Table = (props) => {
         }),
       )
       runs.forEach((run) => {
-        props.dispatch(getExtractedVariable({ run, variable }))
+        props.dispatch(getExtractedVariable({ proposal, run, variable }))
       })
     } else {
       const col = gridSelection.columns.last()
@@ -301,7 +314,12 @@ const Table = (props) => {
           source: "table",
         }),
       )
-      props.dispatch(getTableVariable([props.columns[col].id]))
+      props.dispatch(
+        getTableVariable({
+          proposal,
+          variable: props.columns[col].id,
+        }),
+      )
     }
   }
 
@@ -311,7 +329,7 @@ const Table = (props) => {
       addPlot({
         variables: [props.columns[cols[0]].id, props.columns[cols[1]].id],
         source: "table",
-      })
+      }),
     )
   }
 
@@ -342,15 +360,13 @@ const Table = (props) => {
     "key",
   )
 
-  const paginationProps = usePagination()
-
-  const [openedPlotDialog, handlersPlotDialog] =  useDisclosure(false)
+  const [openedPlotDialog, handlersPlotDialog] = useDisclosure(false)
 
   return (
     <div>
       {!props.columns.length ? null : (
         <>
-        <Button onClick = {handlersPlotDialog.open}> Plot </Button>
+          <Button onClick={handlersPlotDialog.open}> Plot </Button>
           <DataEditor
             {...(props.grid || {})}
             columns={formatColumns(props.columns, props.schema)}
@@ -375,15 +391,16 @@ const Table = (props) => {
               cellContextContents.get(key),
             )}
           />
-          { openedPlotDialog &&
-          <PlotDialog
-            opened={openedPlotDialog}
-            open={handlersPlotDialog.open}
-            close={handlersPlotDialog.close}
-            selectedColumns={Object.keys(props.schema).filter((el, id) => (
-              gridSelection.columns.toArray().includes(id-1)))}
-          />
-          }
+          {openedPlotDialog && (
+            <PlotDialog
+              opened={openedPlotDialog}
+              open={handlersPlotDialog.open}
+              close={handlersPlotDialog.close}
+              selectedColumns={Object.keys(props.schema).filter((el, id) =>
+                gridSelection.columns.toArray().includes(id - 1),
+              )}
+            />
+          )}
           <div id="portal"></div>
         </>
       )}

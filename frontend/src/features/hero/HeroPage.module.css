@@ -8,12 +8,12 @@
 }
 
 .container {
-  height: rem(700px);
+  height: rem(500px);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   align-items: flex-start;
-  padding-top: calc(var(--mantine-spacing-xl) * 6);
+  padding-top: calc(var(--mantine-spacing-xl) * 5);
   margin-left: calc(var(--mantine-spacing-md) * 2);
   z-index: 1;
   position: relative;

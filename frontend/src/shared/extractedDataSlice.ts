@@ -15,8 +15,12 @@ const initialState = {
 
 export const getExtractedVariable = createAsyncThunk(
   "extractedData/getVariable",
-  async ({ run, variable }) => {
-    const result = await tableService.getExtractedData({ run, variable })
+  async ({ proposal, run, variable }) => {
+    const result = await tableService.getExtractedData({
+      proposal,
+      run,
+      variable,
+    })
     return { run, variable, ...result }
   },
 )
@@ -46,7 +50,9 @@ export const getAllExtracted = createAsyncThunk(
 const slice = createSlice({
   name: "extractedData",
   initialState,
-  reducers: {},
+  reducers: {
+    reset: () => initialState,
+  },
   extraReducers: (builder) => {
     builder.addCase(getExtractedVariable.fulfilled, (state, action) => {
       // TODO: Add pending and rejected
@@ -83,3 +89,4 @@ const slice = createSlice({
 })
 
 export default slice.reducer
+export const { reset: resetExtractedData } = slice.actions

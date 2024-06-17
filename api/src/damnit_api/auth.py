@@ -32,7 +32,7 @@ def configure() -> None:
 @router.get("/")
 async def auth(request: Request):
     if request.session.get("user"):
-        return RedirectResponse(url="/")
+        return RedirectResponse(url="/home")
     return await OAUTH.authorize_redirect(request, request.url_for("callback"))
 
 
@@ -46,7 +46,7 @@ async def callback(request: Request):
 
     request.session["user"] = dict(user)
 
-    return RedirectResponse(url="/")
+    return RedirectResponse(url="/home")
 
 
 @router.get("/logout")
