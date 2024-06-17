@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react"
+import React, { useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import {
   Route,
@@ -9,6 +9,7 @@ import {
 } from "react-router-dom"
 import { useMutation } from "@apollo/client"
 import { useSubscription } from "@apollo/client"
+import LoadingBar, { showLoading, hideLoading } from "react-redux-loading-bar"
 
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
@@ -16,7 +17,9 @@ import HeroPage from "../features/hero"
 import HomePage from "../features/home/"
 import { LoginRoute, PrivateRoute, history } from "../routes"
 import {
-  setCurrentProposal,
+  setProposalPending,
+  setProposalSuccess,
+  setProposalNotFound,
   resetExtractedData,
   resetTable,
   updateTable,
@@ -29,69 +32,70 @@ import {
 
 const SHOULD_SUBSCRIBE = false // !(import.meta.env.MODE === "test")
 
-const useProposal = ({ monitor, timestamp }) => {
-  // Initialize states
-  const proposal = useSelector((state) => state.proposal.current)
-
+const useProposal = () => {
   // Initialize Redux things
+  const proposal = useSelector((state) => state.proposal.current)
+  const { timestamp } = useSelector((state) => state.tableData.metadata)
   const dispatch = useDispatch()
 
   // Initialize GraphQL hooks
   useSubscription(LATEST_DATA_SUBSCRIPTION, {
-    variables: { proposal: String(proposal), timestamp },
+    variables: { proposal: proposal.value, timestamp },
     onData: ({ data }) => {
       const { runs, metadata } = data.data[LATEST_DATA]
       dispatch(updateTable({ runs, metadata }))
     },
-    skip: !SHOULD_SUBSCRIBE || !monitor,
+    skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
   })
 
   // Synchronize the server and the client table data
   const [refresh, _] = useMutation(REFRESH_MUTATION)
   useEffect(() => {
-    if (!proposal) {
+    if (!proposal.value) {
       return
     }
 
     refresh({
-      variables: { proposal },
+      variables: { proposal: proposal.value },
       onCompleted: ({ refresh }) => {
+        dispatch(setProposalSuccess())
         dispatch(updateTable({ metadata: refresh.metadata }))
+        dispatch(hideLoading())
+      },
+      onError: (error) => {
+        dispatch(setProposalNotFound())
+        dispatch(hideLoading())
       },
     })
   }, [proposal, refresh, dispatch])
+
+  return proposal
 }
 
 function ProposalWrapper({ children }) {
-  const { rows, timestamp } = useSelector((state) => state.tableData.metadata)
-  useProposal({ timestamp, monitor: rows !== 0 })
-
+  const proposal = useProposal()
   const dispatch = useDispatch()
-  const { proposal } = useParams()
-
-  const setProposal = useCallback(
-    (proposal: string) => {
-      dispatch(setCurrentProposal(proposal))
-    },
-    [dispatch],
-  )
-
-  const reset = useCallback(() => {
-    dispatch(resetTable())
-    dispatch(resetExtractedData())
-  }, [dispatch])
+  const { proposal_number } = useParams()
 
   useEffect(() => {
-    if (proposal) {
-      setProposal(proposal)
+    if (proposal_number) {
+      dispatch(showLoading())
+      dispatch(setProposalPending(proposal_number))
     }
 
     return () => {
-      reset()
+      dispatch(resetTable())
+      dispatch(resetExtractedData())
     }
-  }, [proposal, setProposal, reset])
+  }, [proposal_number, dispatch])
 
-  return children
+  return proposal.loading || !proposal_number ? (
+    <div></div>
+  ) : proposal.notFound ? (
+    <div>Not found</div>
+  ) : (
+    children
+  )
 }
 
 const App = () => {
@@ -113,10 +117,11 @@ const App = () => {
           }
         />
         <Route
-          path="/proposal/:proposal"
+          path="/proposal/:proposal_number"
           element={
             <PrivateRoute>
               <ProposalWrapper>
+                <LoadingBar style={{ backgroundColor: "#1864AB" }} />
                 <Drawer />
                 <Dashboard />
               </ProposalWrapper>

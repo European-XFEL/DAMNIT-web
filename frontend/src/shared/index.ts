@@ -11,4 +11,9 @@ export {
   getAllExtracted,
   resetExtractedData,
 } from "./extractedDataSlice"
-export { default as proposalReducer, setCurrentProposal } from "./proposalSlice"
+export {
+  default as proposalReducer,
+  setProposalPending,
+  setProposalSuccess,
+  setProposalNotFound,
+} from "./proposalSlice"

@@ -168,7 +168,7 @@ const useContextMenu = () => {
 const Table = (props) => {
   // Initialization
   const cellProps = useExtraCells()
-  const proposal = useSelector((state) => state.proposal.current)
+  const proposal = useSelector((state) => state.proposal.current.value)
   const paginationProps = usePagination(proposal)
 
   // Data: Populate grid

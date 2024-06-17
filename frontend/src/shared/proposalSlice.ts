@@ -1,12 +1,22 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit"
 
+interface Proposal {
+  value: string
+  loading: boolean
+  notFound: boolean
+}
+
 interface State {
-  current: string
+  current: Proposal
   proposals: Record<string, any>
 }
 
 const initialState: State = {
-  current: "",
+  current: {
+    value: "",
+    loading: false,
+    notFound: false,
+  },
   proposals: {},
 }
 
@@ -14,16 +24,23 @@ const slice = createSlice({
   name: "proposal",
   initialState,
   reducers: {
-    setCurrent(state, action: PayloadAction<string>) {
-      state.current = action.payload
+    setProposalPending(state, action: PayloadAction<string>) {
+      state.current = {
+        ...initialState.current,
+        loading: true,
+        value: action.payload,
+      }
     },
-    setProposals(state, action: PayloadAction<Record<string, any>>) {
-      state.proposals = action.payload
+    setProposalSuccess(state) {
+      state.current.loading = false
+    },
+    setProposalNotFound(state) {
+      state.current.loading = false
+      state.current.notFound = true
     },
   },
 })
 
-export const { setCurrent, setProposals } = slice.actions
-
 export default slice.reducer
-export const { setCurrent: setCurrentProposal } = slice.actions
+export const { setProposalPending, setProposalSuccess, setProposalNotFound } =
+  slice.actions

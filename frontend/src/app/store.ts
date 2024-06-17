@@ -1,5 +1,6 @@
 import { combineReducers } from "redux"
 import { configureStore } from "@reduxjs/toolkit"
+import { loadingBarReducer as loadingBar } from "react-redux-loading-bar"
 
 import { dashboardReducer as dashboard } from "../features/dashboard"
 import { drawerReducer as drawer } from "../features/drawer"
@@ -20,6 +21,7 @@ const reducer = combineReducers({
   table,
   tableData,
   extractedData,
+  loadingBar,
 })
 
 export const setupStore = (preloadedState) => {
