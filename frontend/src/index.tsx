@@ -5,8 +5,10 @@ import { BrowserRouter } from "react-router-dom"
 import { ApolloProvider } from "@apollo/client"
 
 import { MantineProvider } from "@mantine/core"
-import "@mantine/core/styles.css"
-import "mantine-contextmenu/styles.css"
+
+import "@mantine/core/styles.layer.css"
+import "mantine-contextmenu/styles.layer.css"
+import "mantine-datatable/styles.layer.css"
 
 import { client } from "./app/apollo"
 import { setupStore } from "./app/store"
