@@ -6,7 +6,7 @@ import {
   IconChevronRight,
   IconPlus,
 } from "@tabler/icons-react"
-import clsx from "clsx"
+import cx from "clsx"
 import dayjs from "dayjs"
 import { DataTable } from "mantine-datatable"
 
@@ -26,7 +26,7 @@ const isShallowEqual = (array1, array2) => {
 const ExpandedCell = memo(({ Component, isExpanded }) => {
   return (
     <Component
-      className={clsx(classes.icon, classes.expandIcon, {
+      className={cx(classes.icon, classes.expandIcon, {
         [classes.expandIconRotated]: isExpanded,
       })}
     />
@@ -38,7 +38,7 @@ const CycleCell = memo(({ cycle, isExpanded }) => {
     <Group gap={0}>
       <ExpandedCell Component={IconChevronRight} isExpanded={isExpanded} />
       <Group component="span" ml={10} gap={6}>
-        <IconCalendarEvent className={clsx(classes.icon)} />
+        <IconCalendarEvent className={cx(classes.icon)} />
         <span>{cycle}</span>
       </Group>
     </Group>
@@ -127,7 +127,7 @@ const ProposalSubTable = memo(({ cycle }) => {
           noWrap: true,
           textAlign: "right",
           render: ({ proposal }) => (
-            <TextCell text={proposal} link={`/proposal/${proposal}`} />
+            <TextCell text={`p${proposal}`} link={`/proposal/${proposal}`} />
           ),
         },
         {

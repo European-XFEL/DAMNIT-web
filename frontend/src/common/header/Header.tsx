@@ -7,21 +7,19 @@ import {
   Menu,
   Burger,
   rem,
-  useMantineTheme,
 } from "@mantine/core"
 import { useDisclosure } from "@mantine/hooks"
 import { IconLogout, IconChevronDown } from "@tabler/icons-react"
 import cx from "clsx"
 
-import classes from "./Header.module.css"
+import styles from "./Header.module.css"
+import headerStyles from "../../styles/header.module.css"
 
 const user = {
   name: "Cammille Carinan",
-  email: "janspoon@fighter.dev",
 }
 
 const UserMenu = () => {
-  const theme = useMantineTheme()
   const [userMenuOpened, setUserMenuOpened] = useState(false)
 
   return (
@@ -35,8 +33,8 @@ const UserMenu = () => {
     >
       <Menu.Target>
         <UnstyledButton
-          className={cx(classes.user, {
-            [classes.userActive]: userMenuOpened,
+          className={cx(styles.user, {
+            [styles.userActive]: userMenuOpened,
           })}
         >
           <Group gap={7}>
@@ -68,24 +66,26 @@ const UserMenu = () => {
   )
 }
 
-const Header = ({ standalone = false }) => {
+const Header = ({ standalone = false, size = "xl", children }) => {
   const [opened, { toggle }] = useDisclosure(false)
   const component = (
-    <Container className={classes.mainSection} size="lg">
+    <Container className={styles.mainSection} size={size}>
       <Group justify="space-between">
-        <Text size="xl" fw={700}>
-          DAMNIT!
-        </Text>
+        {children}
         <Burger opened={opened} onClick={toggle} hiddenFrom="xs" size="sm" />
         <UserMenu />
       </Group>
     </Container>
   )
 
-  return standalone ? (
-    <div className={classes.header}>{component}</div>
-  ) : (
-    component
+  return (
+    <div
+      className={cx(headerStyles.body, headerStyles.top, {
+        [headerStyles.bottom]: standalone,
+      })}
+    >
+      {component}
+    </div>
   )
 }
 
