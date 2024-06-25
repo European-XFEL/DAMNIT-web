@@ -85,7 +85,7 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
       <Header standalone={false} size="xxl">
         <Group gap="md">
           <Logo />
-          <Stack gap={3}>
+          <Stack gap={0}>
             <Flex gap={10} align="center">
               <InstrumentBadge instrument={proposal.instrument} />
               <Title order={5}>
