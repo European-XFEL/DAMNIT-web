@@ -1,16 +1,19 @@
 import React from "react"
-import { connect } from "react-redux"
-import { Group, Stack, Tabs, Text, rem } from "@mantine/core"
+import { connect, useSelector } from "react-redux"
+import { Flex, Group, Stack, Tabs, Text, Title, rem } from "@mantine/core"
 import { IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
-import Header from "../../common/header"
+import { Header, Logo } from "../../common/header"
+import { InstrumentBadge } from "../../common/badges"
 import Table from "../table"
 import { PlotsTab } from "../plots"
 import { removeTab, setCurrentTab } from "./dashboardSlice"
 
 import styles from "./Dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
+
+import { getProposal } from "../../utils/api/proposals"
 
 const COMPONENTS_MAP = {
   table: <Table />,
@@ -61,6 +64,13 @@ const getTabs = ({ contents, active, setActive, ...props }) => {
 }
 
 const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
+  const proposal_number = useSelector((state) => state.proposal.current.value)
+  const proposal = getProposal(proposal_number)
+
+  if (!proposal) {
+    return
+  }
+
   const populated = Object.entries(contents).map(([id, tab]) => [
     id,
     {
@@ -74,9 +84,18 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
     <>
       <Header standalone={false} size="xxl">
         <Group gap="md">
-          <Text size={rem(28)} fw={700}>
-            DAMNIT!
-          </Text>
+          <Logo />
+          <Stack gap={3}>
+            <Flex gap={10} align="center">
+              <InstrumentBadge instrument={proposal.instrument} />
+              <Title order={5}>
+                {`p${proposal.number} - ${proposal.principal_investigator}`}
+              </Title>
+            </Flex>
+            <Text size={rem(10)} c="dimmed" fs="italic">
+              {proposal.title}
+            </Text>
+          </Stack>
         </Group>
       </Header>
       {getTabs({

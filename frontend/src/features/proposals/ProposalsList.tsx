@@ -11,7 +11,7 @@ import dayjs from "dayjs"
 import { DataTable } from "mantine-datatable"
 
 import { InstrumentBadge } from "../../common/badges"
-import { getCycles, getProposal, getProposals } from "../../utils/api/user"
+import { getCycles, getProposal, getProposals } from "../../utils/api/proposals"
 import classes from "./ProposalsList.module.css"
 
 const cycles = getCycles()
@@ -45,10 +45,6 @@ const CycleCell = memo(({ cycle, isExpanded }) => {
     </Group>
   )
 })
-
-const INSTRUMENT_COLORS = {
-  scs: "blue",
-}
 
 const InstrumentCell = memo(({ instrument }) => {
   return <InstrumentBadge instrument={instrument} />
