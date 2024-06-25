@@ -195,8 +195,8 @@ const PlotDialog = (props) => {
                 setPloType(event)
               }}
               data={[
-                { label: "Plot for summary data", value: "summary" },
-                { label: "Plot for extracted data", value: "extracted" },
+                { label: "Plot summary", value: "summary" },
+                { label: "Plot data", value: "extracted" },
               ]}
               orientation="horizontal"
               mt="3px"
@@ -233,8 +233,8 @@ const PlotDialog = (props) => {
               />
             )}
             {plotType !== "summary" && runSelectionType === "allSelection" && (
-              <Blockquote color="blue" p="5">
-                You are about to plot extracted data for all the runs
+              <Blockquote color="blue" p="10" w="100%">
+                You are about to plot data for all the runs
               </Blockquote>
             )}
 
