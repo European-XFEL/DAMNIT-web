@@ -31,17 +31,19 @@ export const getAllExtracted = createAsyncThunk(
     })
 
     const result = []
-    const runs = Object.keys(_runs).map(run => Number(run))
+    const runs = Object.keys(_runs).map((run) => Number(run))
 
     for (const run of runs) {
-      const partialResult = await tableService.getExtractedData({ run, variable })
+      const partialResult = await tableService.getExtractedData({
+        run,
+        variable,
+      })
       result.push({ run, variable, ...partialResult })
-    };
+    }
 
     return result
   },
 )
-
 
 const slice = createSlice({
   name: "extractedData",
@@ -66,7 +68,7 @@ const slice = createSlice({
       //TODO: indicate processing to user
     })
     builder.addCase(getAllExtracted.fulfilled, (state, action) => {
-      action.payload.forEach(({ run, variable, data, metadata}) => {
+      action.payload.forEach(({ run, variable, data, metadata }) => {
         if (!isEmpty(data)) {
           state.data = {
             ...state.data,
