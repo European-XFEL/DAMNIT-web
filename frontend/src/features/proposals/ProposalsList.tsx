@@ -1,6 +1,6 @@
 import { memo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Badge, Box, Code, Group, Stack } from "@mantine/core"
+import { Box, Code, Group, Stack } from "@mantine/core"
 import {
   IconCalendarEvent,
   IconChevronRight,
@@ -10,6 +10,7 @@ import cx from "clsx"
 import dayjs from "dayjs"
 import { DataTable } from "mantine-datatable"
 
+import { InstrumentBadge } from "../../common/badges"
 import { getCycles, getProposal, getProposals } from "../../utils/api/user"
 import classes from "./ProposalsList.module.css"
 
@@ -50,11 +51,7 @@ const INSTRUMENT_COLORS = {
 }
 
 const InstrumentCell = memo(({ instrument }) => {
-  return (
-    <Badge color={INSTRUMENT_COLORS["instrument"]} size="md" radius="md">
-      {instrument}
-    </Badge>
-  )
+  return <InstrumentBadge instrument={instrument} />
 })
 
 const TextCell = memo(({ text, link }) => {

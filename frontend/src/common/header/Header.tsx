@@ -49,8 +49,6 @@ const UserMenu = () => {
         </UnstyledButton>
       </Menu.Target>
       <Menu.Dropdown>
-        <Menu.Label>Settings</Menu.Label>
-
         <Menu.Item
           leftSection={
             <IconLogout
