@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { useSelector } from "react-redux"
 import {
   Container,
   UnstyledButton,
@@ -15,12 +16,9 @@ import cx from "clsx"
 import styles from "./Header.module.css"
 import headerStyles from "../../styles/header.module.css"
 
-const user = {
-  name: "Cammille Carinan",
-}
-
 const UserMenu = () => {
   const [userMenuOpened, setUserMenuOpened] = useState(false)
+  const { user: authUser } = useSelector((state) => state.auth)
 
   return (
     <Menu
@@ -39,7 +37,7 @@ const UserMenu = () => {
         >
           <Group gap={7}>
             <Text fw={500} size="sm" lh={1} mr={3}>
-              {user.name}
+              {authUser.name}
             </Text>
             <IconChevronDown
               style={{ width: rem(12), height: rem(12) }}

@@ -6,7 +6,7 @@ import classes from "./HeroPage.module.css"
 const HeroPage = () => {
   useEffect(() => {
     setTimeout(() => {
-      history.navigate("/login")
+      history.navigate("/home")
     }, 2000)
   }, [])
 

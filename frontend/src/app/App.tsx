@@ -11,6 +11,8 @@ import { useMutation } from "@apollo/client"
 import { useSubscription } from "@apollo/client"
 import LoadingBar, { showLoading, hideLoading } from "react-redux-loading-bar"
 
+import { initialize } from "./appSlice"
+import { login } from "../features/auth"
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
 import HeroPage from "../features/hero"
@@ -102,6 +104,13 @@ const App = () => {
   // Initialize routers
   history.navigate = useNavigate()
   history.location = useLocation()
+
+  // Initialize application
+  const dispatch = useDispatch()
+  useEffect(() => {
+    dispatch(login())
+    dispatch(initialize())
+  }, [])
 
   return (
     <div>
