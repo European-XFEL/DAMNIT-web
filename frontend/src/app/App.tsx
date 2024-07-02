@@ -11,20 +11,23 @@ import { useMutation } from "@apollo/client"
 import { useSubscription } from "@apollo/client"
 import LoadingBar, { showLoading, hideLoading } from "react-redux-loading-bar"
 
-import { initialize } from "./appSlice"
-import { login } from "../features/auth"
+import { initialize as initializeApp } from "./appSlice"
+import { initializeAuth } from "../features/auth"
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
 import HeroPage from "../features/hero"
 import HomePage from "../features/home/"
+import { LogoutPage } from "../features/pages"
+import { resetPlots } from "../features/plots"
+import { resetTable } from "../features/table"
 import { LoginRoute, PrivateRoute, history } from "../routes"
 import {
   setProposalPending,
   setProposalSuccess,
   setProposalNotFound,
   resetExtractedData,
-  resetTable,
-  updateTable,
+  resetTableData,
+  updateTableData,
 } from "../shared"
 import {
   REFRESH_MUTATION,
@@ -45,7 +48,7 @@ const useProposal = () => {
     variables: { proposal: proposal.value, timestamp },
     onData: ({ data }) => {
       const { runs, metadata } = data.data[LATEST_DATA]
-      dispatch(updateTable({ runs, metadata }))
+      dispatch(updateTableData({ runs, metadata }))
     },
     skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
   })
@@ -61,7 +64,7 @@ const useProposal = () => {
       variables: { proposal: proposal.value },
       onCompleted: ({ refresh }) => {
         dispatch(setProposalSuccess())
-        dispatch(updateTable({ metadata: refresh.metadata }))
+        dispatch(updateTableData({ metadata: refresh.metadata }))
         dispatch(hideLoading())
       },
       onError: (error) => {
@@ -86,8 +89,10 @@ function ProposalWrapper({ children }) {
     }
 
     return () => {
+      dispatch(resetTableData())
       dispatch(resetTable())
       dispatch(resetExtractedData())
+      dispatch(resetPlots())
     }
   }, [proposal_number, dispatch])
 
@@ -108,8 +113,8 @@ const App = () => {
   // Initialize application
   const dispatch = useDispatch()
   useEffect(() => {
-    dispatch(login())
-    dispatch(initialize())
+    dispatch(initializeAuth())
+    dispatch(initializeApp())
   }, [])
 
   return (
@@ -117,6 +122,7 @@ const App = () => {
       <Routes>
         <Route path="/" exact element={<HeroPage />} />
         <Route path="/login" element={<LoginRoute />} />
+        <Route path="/logout" element={<LogoutPage />} />
         <Route
           path="/home"
           element={

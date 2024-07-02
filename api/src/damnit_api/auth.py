@@ -5,8 +5,8 @@ from authlib.integrations.starlette_client import (  # type: ignore[import-untyp
 )
 from authlib.jose import jwt, JoseError
 from dotenv import dotenv_values
-from fastapi import APIRouter, HTTPException, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import RedirectResponse, JSONResponse
 
 from .settings import settings
 
@@ -34,7 +34,7 @@ def configure() -> None:
 
 @router.get("/")
 async def auth(request: Request):
-    if request.session.get("user"):
+    if request.cookies.get("DAMNIT_AUTH_USER"):
         return RedirectResponse(url="/home")
     return await OAUTH.authorize_redirect(request, request.url_for("callback"))
 
@@ -54,8 +54,8 @@ async def callback(request: Request):
 
 
 @router.get("/logout")
-async def logout(request: Request):
-    response = RedirectResponse(url=request.base_url)
+async def logout():
+    response = JSONResponse(content={"success": True})
     response.delete_cookie(key="DAMNIT_AUTH_USER")
     return response
 

@@ -12,7 +12,7 @@ export const decodeToken = (token) => {
   }
 }
 
-export const login = () => (dispatch) => {
+export const initializeAuth = () => (dispatch) => {
   const token = Cookies.get("DAMNIT_AUTH_USER")
 
   if (token) {
@@ -35,7 +35,24 @@ export const login = () => (dispatch) => {
   }
 }
 
+export const login = () => (dispatch) => {
+  window.location.href = "/oauth"
+}
+
 export const logout = () => (dispatch) => {
-  Cookies.remove("DAMNIT_AUTH_USER")
-  dispatch(reset())
+  // window.location.href = "/oauth/logout"
+  // dispatch(reset())
+
+  fetch("/oauth/logout", {
+    method: "GET",
+    credentials: "include", // Include cookies in the request
+  })
+    .then((response) => {
+      if (response.ok) {
+        dispatch(reset())
+      }
+    })
+    .catch((error) => {
+      console.error("Error logging out:", error)
+    })
 }

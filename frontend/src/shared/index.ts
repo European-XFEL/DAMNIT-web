@@ -2,8 +2,8 @@ export {
   default as tableDataReducer,
   getTableData,
   getTableVariable,
-  resetTable,
-  updateTable,
+  resetTableData,
+  updateTableData,
 } from "./tableDataSlice"
 export {
   default as extractedDataReducer,

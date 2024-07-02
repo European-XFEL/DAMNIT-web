@@ -1,8 +1,13 @@
 import React, { useEffect } from "react"
+import { useDispatch } from "react-redux"
+
+import { login } from "../features/auth"
 
 const LoginRoute = () => {
+  const dispatch = useDispatch()
+
   useEffect(() => {
-    window.location.href = `/oauth`
+    dispatch(login())
   }, [])
 
   return <div />

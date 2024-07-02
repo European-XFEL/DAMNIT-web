@@ -84,4 +84,4 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { update: updateTable, reset: resetTable } = slice.actions
+export const { update: updateTableData, reset: resetTableData } = slice.actions

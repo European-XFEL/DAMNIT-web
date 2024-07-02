@@ -13,8 +13,11 @@ const slice = createSlice({
       selection.run = run
       selection.variables = variables
     },
+    reset: (state) => {
+      state.selection = { ...initialState.selection }
+    },
   },
 })
 
 export default slice.reducer
-export const { selectRun } = slice.actions
+export const { selectRun, reset } = slice.actions

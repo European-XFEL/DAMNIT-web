@@ -19,7 +19,10 @@ class Settings(BaseSettings):
     session_secret: SecretStr
 
     model_config = SettingsConfigDict(
-        env_prefix="DW_API_", env_file=[".env"], env_nested_delimiter="__"
+        env_prefix="DW_API_",
+        env_file=[".env"],
+        env_nested_delimiter="__",
+        extra='ignore',
     )
 
 
