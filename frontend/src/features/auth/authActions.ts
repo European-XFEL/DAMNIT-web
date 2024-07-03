@@ -1,3 +1,4 @@
+import { authApi } from "../api"
 import { resetTable } from "../table"
 import { resetPlots } from "../plots"
 import { resetExtractedData, resetTableData } from "../../shared"
@@ -20,6 +21,9 @@ export const logout = () => (dispatch) => {
         dispatch(resetExtractedData())
         dispatch(resetPlots())
       }
+
+      // Reset the API state
+      dispatch(authApi.util.resetApiState())
 
       // Handle the redirect
       if (response.redirected && response.url) {

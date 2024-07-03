@@ -1,14 +1,10 @@
-import React, { useEffect } from "react"
+import React from "react"
 import { Container, Text, Title } from "@mantine/core"
 
 import { useSession } from "../../hooks"
 
-const LogoutPage = () => {
-  const { session, isLoading, isError, invalidate } = useSession()
-
-  useEffect(() => {
-    invalidate()
-  }, [])
+const LoggedOutPage = () => {
+  const { session, isLoading, isError } = useSession()
 
   if (isLoading) {
     return <div />
@@ -44,4 +40,4 @@ const LogoutPage = () => {
   )
 }
 
-export default LogoutPage
+export default LoggedOutPage

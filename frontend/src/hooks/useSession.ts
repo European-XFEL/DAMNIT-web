@@ -1,28 +1,13 @@
-import { useDispatch } from "react-redux"
-import { useGetSessionQuery, authApi } from "../features/api/"
+import { useGetSessionQuery } from "../features/api/"
 
 const useSession = () => {
-  const dispatch = useDispatch()
-  const {
-    data: session,
-    isLoading,
-    isUninitialized,
-    isError,
-    refetch,
-    isFetching,
-  } = useGetSessionQuery()
-
-  const invalidate = () => {
-    dispatch(authApi.util.invalidateTags(["Session"]))
-    // dispatch(authApi.util.resetApiState())
-    refetch()
-  }
+  const { data, isLoading, isUninitialized, isError, isFetching } =
+    useGetSessionQuery()
 
   return {
-    session,
+    session: data,
     isLoading: isLoading || isUninitialized || isFetching,
     isError,
-    invalidate,
   }
 }
 
