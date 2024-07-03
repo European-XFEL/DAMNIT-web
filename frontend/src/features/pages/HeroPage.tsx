@@ -11,11 +11,9 @@ const HeroPage = () => {
   }, [])
 
   return (
-    <div className={classes.wrapper}>
-      <Container className={classes.container} size="md">
-        <Title className={classes.title}>DAMNIT!</Title>
-      </Container>
-    </div>
+    <Container className={classes.container} size="md">
+      <Title className={classes.title}>DAMNIT!</Title>
+    </Container>
   )
 }
 

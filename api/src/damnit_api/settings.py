@@ -12,10 +12,6 @@ class AuthSettings(BaseModel):
 class Settings(BaseSettings):
     auth: AuthSettings
 
-    frontend_redirect_url: Annotated[
-        HttpUrl, Field("http://max-exfl462.desy.de:30000/home")
-    ]
-
     session_secret: SecretStr
 
     model_config = SettingsConfigDict(

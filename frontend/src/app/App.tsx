@@ -11,16 +11,13 @@ import { useMutation } from "@apollo/client"
 import { useSubscription } from "@apollo/client"
 import LoadingBar, { showLoading, hideLoading } from "react-redux-loading-bar"
 
-import { initialize as initializeApp } from "./appSlice"
-import { initializeAuth } from "../features/auth"
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
-import HeroPage from "../features/hero"
 import HomePage from "../features/home/"
-import { LogoutPage } from "../features/pages"
+import { HeroPage, LoggedOutPage } from "../features/pages"
 import { resetPlots } from "../features/plots"
 import { resetTable } from "../features/table"
-import { LoginRoute, PrivateRoute, history } from "../routes"
+import { LoginRoute, LogoutRoute, PrivateRoute, history } from "../routes"
 import {
   setProposalPending,
   setProposalSuccess,
@@ -110,19 +107,19 @@ const App = () => {
   history.navigate = useNavigate()
   history.location = useLocation()
 
-  // Initialize application
-  const dispatch = useDispatch()
-  useEffect(() => {
-    dispatch(initializeAuth())
-    dispatch(initializeApp())
-  }, [])
+  // // Initialize application
+  // const dispatch = useDispatch()
+  // useEffect(() => {
+  //   dispatch(initializeApp())
+  // }, [])
 
   return (
     <div>
       <Routes>
         <Route path="/" exact element={<HeroPage />} />
         <Route path="/login" element={<LoginRoute />} />
-        <Route path="/logout" element={<LogoutPage />} />
+        <Route path="/logout" element={<LogoutRoute />} />
+        <Route path="/logged-out" element={<LoggedOutPage />} />
         <Route
           path="/home"
           element={

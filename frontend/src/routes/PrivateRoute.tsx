@@ -1,18 +1,17 @@
 import React from "react"
 import { Navigate } from "react-router-dom"
-import { useSelector } from "react-redux"
 
 import { history } from "./history"
+import { useSession } from "../hooks"
 
 function PrivateRoute({ children }) {
-  const { initialized } = useSelector((state) => state.app)
-  const { user: authUser } = useSelector((state) => state.auth)
+  const { session, isLoading, isError } = useSession()
 
-  if (!initialized) {
-    return
+  if (isLoading) {
+    return <div />
   }
 
-  if (!authUser) {
+  if (!session || isError) {
     return <Navigate to="/login" state={{ from: history.location }} />
   }
 

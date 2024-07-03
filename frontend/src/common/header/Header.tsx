@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import { useSelector } from "react-redux"
 import {
   Container,
   UnstyledButton,
@@ -13,14 +13,15 @@ import { useDisclosure } from "@mantine/hooks"
 import { IconLogout, IconChevronDown } from "@tabler/icons-react"
 import cx from "clsx"
 
-import { logout } from "../../features/auth"
+import { selectUser } from "../../features/auth"
+import { history } from "../../routes"
+
 import styles from "./Header.module.css"
 import headerStyles from "../../styles/header.module.css"
 
 const UserMenu = () => {
-  const dispatch = useDispatch()
   const [userMenuOpened, setUserMenuOpened] = useState(false)
-  const { user: authUser } = useSelector((state) => state.auth)
+  const authUser = useSelector(selectUser)
 
   return (
     <Menu
@@ -50,7 +51,7 @@ const UserMenu = () => {
       </Menu.Target>
       <Menu.Dropdown>
         <Menu.Item
-          onClick={() => dispatch(logout())}
+          onClick={() => history.navigate("/logout")}
           leftSection={
             <IconLogout
               style={{ width: rem(16), height: rem(16) }}

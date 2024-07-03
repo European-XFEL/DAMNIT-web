@@ -1,23 +1,9 @@
-import { createSlice } from "@reduxjs/toolkit"
+import { createSelector } from "@reduxjs/toolkit"
+import { authApi } from "../api"
 
-const initialState = {
-  user: null,
-  isAuthenticated: false,
-}
+export const selectSessionResult = authApi.endpoints.getSession.select()
 
-const slice = createSlice({
-  name: "auth",
-  initialState,
-  reducers: {
-    setUser: (state, action) => {
-      state.user = action.payload
-    },
-    reset: (state) => {
-      state.user = initialState.user
-      state.isAuthenticated = initialState.isAuthenticated
-    },
-  },
-})
-
-export default slice.reducer
-export const { setUser, reset } = slice.actions
+export const selectUser = createSelector(
+  selectSessionResult,
+  (sessionResult) => sessionResult?.data?.user,
+)
