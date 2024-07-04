@@ -31,6 +31,10 @@ class Schema(strawberry.Schema):
                                                        interfaces=[])
             implementations_map[interface] = implementations
 
+        # Invalidate the subtypes
+        graphql_schema._sub_type_map.pop(interface, None)
+
+        # Update the implementations objects
         for type_ in types:
             name = self._get_stype_name(type_)
 
