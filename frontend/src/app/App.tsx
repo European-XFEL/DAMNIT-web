@@ -1,6 +1,7 @@
 import React, { useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import {
+  Navigate,
   Route,
   Routes,
   useNavigate,
@@ -14,7 +15,7 @@ import LoadingBar, { showLoading, hideLoading } from "react-redux-loading-bar"
 import Dashboard from "../features/dashboard"
 import Drawer from "../features/drawer"
 import HomePage from "../features/home/"
-import { HeroPage, LoggedOutPage } from "../features/pages"
+import { HeroPage, LoggedOutPage, NotFoundPage } from "../features/pages"
 import { resetPlots } from "../features/plots"
 import { resetTable } from "../features/table"
 import { LoginRoute, LogoutRoute, PrivateRoute, history } from "../routes"
@@ -96,7 +97,7 @@ function ProposalWrapper({ children }) {
   return proposal.loading || !proposal_number ? (
     <div></div>
   ) : proposal.notFound ? (
-    <div>Not found</div>
+    <Navigate to="/not-found" />
   ) : (
     children
   )
@@ -106,12 +107,6 @@ const App = () => {
   // Initialize routers
   history.navigate = useNavigate()
   history.location = useLocation()
-
-  // // Initialize application
-  // const dispatch = useDispatch()
-  // useEffect(() => {
-  //   dispatch(initializeApp())
-  // }, [])
 
   return (
     <div>
@@ -140,6 +135,8 @@ const App = () => {
             </PrivateRoute>
           }
         />
+        <Route path="/not-found" element={<NotFoundPage />} />
+        <Route path="*" element={<Navigate to="/not-found" />} />
       </Routes>
     </div>
   )
