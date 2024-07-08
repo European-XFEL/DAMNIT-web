@@ -35,12 +35,18 @@ const ExpandedCell = memo(({ Component, isExpanded }) => {
 })
 
 const CycleCell = memo(({ cycle, isExpanded }) => {
+  // TODO: Better run (cycle) mapping
+  const RUN_MAP = {
+    202401: "2024 - I",
+    202202: "2022 - II",
+  }
+
   return (
     <Group gap={0}>
       <ExpandedCell Component={IconChevronRight} isExpanded={isExpanded} />
       <Group component="span" ml={10} gap={6}>
         <IconCalendarEvent className={cx(classes.icon)} />
-        <span>{cycle}</span>
+        <span>{RUN_MAP[cycle]}</span>
       </Group>
     </Group>
   )
@@ -66,7 +72,7 @@ const ProposalContent = memo(({ proposal: proposal_number }) => {
 
   return (
     <Stack className={classes.details} p="xs" gap={6} pl={65} pr={65}>
-      <Group gap={9}>
+      <Group gap={6}>
         <div className={classes.label}>Title:</div>
         <div>{proposal.title}</div>
       </Group>
@@ -163,7 +169,9 @@ const ProposalHeader = () => {
 }
 
 const ProposalsList = () => {
-  const [expandedCycles, setExpandedCycles] = useState<number[]>([])
+  const [expandedCycles, setExpandedCycles] = useState<number[]>([
+    cycles[0].cycle,
+  ])
 
   const handleExpandedCycles = (newCycles) => {
     setExpandedCycles((currentCycles) => {

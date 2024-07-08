@@ -9,6 +9,7 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
       radius="xl"
       value={active || entries[0][0]}
       onChange={setActive}
+      color="indigo"
       {...props}
     >
       <MantineTabs.List>
@@ -18,7 +19,7 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
             key={`tabs-tab-${id}`}
             {...(tab.isClosable && tab.onClose
               ? {
-                  rightSection: <IconX size={16} onClick={tab.onClose} />,
+                  leftSection: <IconX size={16} onClick={tab.onClose} />,
                 }
               : {})}
           >

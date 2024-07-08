@@ -10,7 +10,7 @@ const Button = (props) => {
     <MantineButton
       className={styles.control}
       size="lg"
-      color="gray"
+      color="indigo"
       {...props}
     ></MantineButton>
   )
@@ -48,7 +48,7 @@ const LoggedOutPage = () => {
         <div style={{ textAlign: "center" }}>
           <Title order={2}>
             Nope, you're still logged in,{" "}
-            <Text span c="gray" inherit>
+            <Text span c="indigo" inherit>
               {session.user.name}
             </Text>
             ...

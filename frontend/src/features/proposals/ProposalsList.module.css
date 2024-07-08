@@ -1,7 +1,7 @@
 .icon {
-    width: rem(13px);
-    height: auto;
-    vertical-align: rem(-1px);
+  width: rem(13px);
+  height: auto;
+  vertical-align: rem(-1px);
 }
 
 .expandIcon {
@@ -14,9 +14,12 @@
 
 .details {
   font-size: var(--mantine-font-size-sm);
-  background: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+  background: light-dark(
+    var(--mantine-color-gray-0),
+    var(--mantine-color-dark-6)
+  );
 }
 
 .label {
-  width: rem(130px);
+  width: rem(80px);
 }

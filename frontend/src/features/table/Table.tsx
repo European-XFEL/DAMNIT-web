@@ -363,7 +363,7 @@ const Table = (props) => {
   const [openedPlotDialog, handlersPlotDialog] = useDisclosure(false)
 
   return (
-    <div>
+    <div style={{ width: "100%", height: "100%" }}>
       {!props.columns.length ? null : (
         <>
           <Button onClick={handlersPlotDialog.open}> Plot </Button>
@@ -371,7 +371,6 @@ const Table = (props) => {
             {...(props.grid || {})}
             columns={formatColumns(props.columns, props.schema)}
             getCellContent={getContent}
-            height={800}
             rows={props.rows}
             rowSelect="single"
             rowMarkers="clickable-number"
@@ -401,7 +400,7 @@ const Table = (props) => {
               )}
             />
           )}
-          <div id="portal"></div>
+          <div id="portal" />
         </>
       )}
     </div>

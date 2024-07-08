@@ -56,7 +56,11 @@ const getTabs = ({ contents, active, setActive, ...props }) => {
       </Tabs.List>
       {entries.map(([id, { element }]) => (
         <Tabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
-          <Stack>{element}</Stack>
+          <Flex direction="column" h="80vh">
+            <div style={{ width: "100%", height: "100%", flexGrow: 1 }}>
+              {element}
+            </div>
+          </Flex>
         </Tabs.Panel>
       ))}
     </Tabs>
@@ -81,7 +85,7 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
   ])
 
   return (
-    <>
+    <Flex direction="column" h="100vh">
       <Header standalone={false} size="xxl">
         <Group gap="md">
           <Logo />
@@ -103,7 +107,7 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
         active: currentTab,
         setActive: setCurrentTab,
       })}
-    </>
+    </Flex>
   )
 }
 
