@@ -380,7 +380,8 @@ const Table = (props) => {
             opened={openedPlotDialog}
             open={handlersPlotDialog.open}
             close={handlersPlotDialog.close}
-            gridSelection={gridSelection}
+            selectedColumns={Object.keys(props.schema).filter((el, id) => (
+              gridSelection.columns.toArray().includes(id-1)))}
           />
           }
           <div id="portal"></div>

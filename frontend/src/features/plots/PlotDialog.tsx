@@ -56,20 +56,16 @@ const PlotDialog = (props) => {
   const columns = Object.keys(props.tableMetadata.schema).filter(
     (e) => props.tableMetadata.schema[e].dtype === "number",
   )
-  const gridSelectionCol = props.gridSelection.columns.toArray()
 
   useEffect(() => {
-    const cleanColumns = Object.keys(props.tableMetadata.schema).filter(
-      (id) => id !== VARIABLES.proposal,
-    )
-
-    if (gridSelectionCol.length === 1) {
-      if (gridSelectionCol[0] !== -1) {
-        dialogForm.setFieldValue("xVariable", cleanColumns[gridSelectionCol[0]])
+    if (props.selectedColumns.length === 1) {
+      if (true) {
+        dialogForm.setFieldValue("xVariable", "run")
+        dialogForm.setFieldValue("yVariable", props.selectedColumns[0])
       }
-    } else if (gridSelectionCol.length === 2) {
-      dialogForm.setFieldValue("xVariable", cleanColumns[gridSelectionCol[0]])
-      dialogForm.setFieldValue("yVariable", cleanColumns[gridSelectionCol[1]])
+    } else if (props.selectedColumns.length === 2) {
+      dialogForm.setFieldValue("xVariable", props.selectedColumns[0])
+      dialogForm.setFieldValue("yVariable", props.selectedColumns[1])
     }
   }, [props.opened])
 
