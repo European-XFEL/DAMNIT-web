@@ -211,6 +211,7 @@ const PlotDialog = (props) => {
                 defaultValue="allSelection"
                 value={runSelectionType}
                 onChange={(value, option) => setRunSelectionType(value)}
+                allowDeselect={false}
               ></Select>
             </Flex>
 
