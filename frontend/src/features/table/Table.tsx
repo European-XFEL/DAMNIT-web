@@ -375,12 +375,14 @@ const Table = (props) => {
               cellContextContents.get(key),
             )}
           />
+          { openedPlotDialog &&
           <PlotDialog
             opened={openedPlotDialog}
             open={handlersPlotDialog.open}
             close={handlersPlotDialog.close}
             gridSelection={gridSelection}
           />
+          }
           <div id="portal"></div>
         </>
       )}
