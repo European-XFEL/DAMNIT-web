@@ -31,7 +31,7 @@ import {
   sortedSearch,
 } from "../../utils/array"
 import { createMap, isEmpty } from "../../utils/helpers"
-import PlotDialog from "../plotdialog/PlotDialog"
+import PlotDialog from "../plots/PlotDialog"
 import { Button } from "@mantine/core"
 
 class Pages {

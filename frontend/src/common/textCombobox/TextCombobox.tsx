@@ -1,4 +1,3 @@
-import { useState } from "react"
 import { Combobox, useCombobox, ComboboxTarget, TextInput } from "@mantine/core"
 
 //Common component for comboboxes
@@ -8,7 +7,6 @@ function TextCombobox(props: {
   setValue: object,
   label?: string,
   placeholder?: string,
-  costumeclass?: string
   error?: string}){
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
@@ -27,7 +25,7 @@ function TextCombobox(props: {
   ))
 
   return(
-    <div className={props.costumeclass}>
+    <div style={{margin:"5px 2px"}}>
       <Combobox
         store={combobox}
         withinPortal={false}

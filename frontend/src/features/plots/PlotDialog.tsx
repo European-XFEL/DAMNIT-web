@@ -10,9 +10,8 @@ import {
 } from "@mantine/core"
 import { TextInput, Text, Blockquote } from "@mantine/core"
 import { useForm } from "@mantine/form"
-import { addPlot } from "../plots"
-import TextCombobox from "../../common/comboboxes/ComboBoxes"
-import classes from "./PlotDialog.module.css"
+import { addPlot } from "."
+import TextCombobox from "../../common/textCombobox/TextCombobox"
 import { connect } from "react-redux"
 import { VARIABLES, DTYPES } from "../../common/constants"
 import {
@@ -171,7 +170,6 @@ const PlotDialog = (props) => {
                   }
                   label="X-axis"
                   placeholder="Choose a variable"
-                  costumeclass={classes.damnit__plotdialog_axis_combobox}
                   {...dialogForm.getInputProps("xVariable")}
                 />
               )}
@@ -183,7 +181,6 @@ const PlotDialog = (props) => {
                 }
                 label={plotType === "summary" ? "Y-axis" : "Variable"}
                 placeholder="Choose a variable"
-                costumeclass={classes.damnit__plotdialog_axis_combobox}
                 {...dialogForm.getInputProps("yVariable")}
               />
             </InputWrapper>
