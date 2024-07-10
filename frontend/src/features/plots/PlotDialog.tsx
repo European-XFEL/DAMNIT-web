@@ -22,8 +22,6 @@ import {
 } from "../../shared"
 
 const PlotDialog = (props) => {
-  const [plotType, setPloType] = useState("summary")
-  const [runSelectionType, setRunSelectionType] = useState("allSelection")
 
   const dialogForm = useForm({
     mode: "uncontrolled",
@@ -31,13 +29,15 @@ const PlotDialog = (props) => {
       runSelection: "",
       xVariable: "run",
       yVariable: "",
+      plotType:"summary",
+      runSelectionType: "allSelection"
     },
 
     validate: {
       runSelection: (value) => {
         const runs = parseRunSelection(value)
 
-        return runSelectionType === "manualSelection" &&
+        return dialogForm.getValues().runSelectionType === "manualSelection" &&
           (runs.some((x) => !x) ||
             runs.length > props.tableMetadata.rows ||
             !runs.length)
@@ -45,7 +45,7 @@ const PlotDialog = (props) => {
           : null
       },
       xVariable: (value) =>
-        value === "" && plotType === "summary"
+        value === "" && dialogForm.getValues().plotType === "summary"
           ? "Please enter a valid variable"
           : null,
       yVariable: (value) =>
@@ -71,8 +71,6 @@ const PlotDialog = (props) => {
 
   // Clear states on close
   const handleClose = () => {
-    setPloType("summary")
-    setRunSelectionType("allSelection")
     props.close()
     dialogForm.reset()
   }
@@ -81,13 +79,13 @@ const PlotDialog = (props) => {
   const handlePlot = () => {
     // runSelection must be parsed again in this case
     const runs =
-      runSelectionType === "manualSelection"
+    dialogForm.getValues().runSelectionType === "manualSelection"
         ? parseRunSelection(dialogForm.getValues().runSelection)
         : null
 
     const { xVariable, yVariable } = dialogForm.getValues()
 
-    if (plotType !== "summary") {
+    if (dialogForm.getValues().plotType !== "summary") {
       runs
         ? runs.forEach((run) => {
             props.dispatch(
@@ -100,13 +98,13 @@ const PlotDialog = (props) => {
     props.dispatch(
       addPlot({
         variables:
-          plotType === "extracted" ? [yVariable] : [xVariable, yVariable],
-        source: plotType === "summary" ? "table" : "extracted",
+          dialogForm.getValues().plotType === "extracted" ? [yVariable] : [xVariable, yVariable],
+        source: dialogForm.getValues().plotType === "summary" ? "table" : "extracted",
         runs: runs,
       }),
     )
 
-    if (plotType === "summary") {
+    if (dialogForm.getValues().plotType === "summary") {
       props.dispatch(getTableVariable([xVariable]))
       props.dispatch(getTableVariable([yVariable]))
     }
@@ -152,12 +150,12 @@ const PlotDialog = (props) => {
           >
             <InputWrapper
               style={
-                plotType === "summary"
+                dialogForm.getValues().plotType === "summary"
                   ? [{ display: "flex", justifyContent: "space-between" }]
                   : [{ display: "block", width: "100%" }]
               }
             >
-              {plotType === "summary" && (
+              {dialogForm.getValues().plotType === "summary" && (
                 <TextCombobox
                   columns={columns}
                   value={dialogForm.getValues().xVariable}
@@ -175,7 +173,7 @@ const PlotDialog = (props) => {
                 setValue={(value) =>
                   dialogForm.setFieldValue("yVariable", value)
                 }
-                label={plotType === "summary" ? "Y-axis" : "Variable"}
+                label={dialogForm.getValues().plotType === "summary" ? "Y-axis" : "Variable"}
                 placeholder="Choose a variable"
                 {...dialogForm.getInputProps("yVariable")}
               />
@@ -183,9 +181,9 @@ const PlotDialog = (props) => {
 
             <SegmentedControl
               id="plotType"
-              value={plotType}
+              value={dialogForm.getValues().plotType}
               onChange={(event) => {
-                setPloType(event)
+                dialogForm.setFieldValue("plotType",event)
               }}
               data={[
                 { label: "Plot summary", value: "summary" },
@@ -205,28 +203,28 @@ const PlotDialog = (props) => {
                   { value: "manualSelection", label: "Custom" },
                 ]}
                 defaultValue="allSelection"
-                value={runSelectionType}
-                onChange={(value, option) => setRunSelectionType(value)}
+                value={dialogForm.getValues().runSelectionType}
+                onChange={(value, option) => dialogForm.setFieldValue("runSelectionType",value)}
                 allowDeselect={false}
               ></Select>
             </Flex>
 
-            {runSelectionType === "manualSelection" && (
+            {dialogForm.getValues().runSelectionType === "manualSelection" && (
               <TextInput
                 w="100%"
                 placeholder={
-                  runSelectionType === "allSelection"
+                  dialogForm.getValues().runSelectionType === "allSelection"
                     ? "Run selection:" + +"-" + props.tableMetadata.rows
                     : "e.g. 1,2,3,6-20,22"
                 }
                 mr="2px"
                 h="100%"
-                disabled={runSelectionType !== "manualSelection"}
+                disabled={dialogForm.getValues().runSelectionType !== "manualSelection"}
                 key={dialogForm.key("runSelection")}
                 {...dialogForm.getInputProps("runSelection")}
               />
             )}
-            {plotType !== "summary" && runSelectionType === "allSelection" && (
+            {dialogForm.getValues().plotType !== "summary" && dialogForm.getValues().runSelectionType === "allSelection" && (
               <Blockquote color="blue" p="10" w="100%">
                 You are about to plot data for all the runs
               </Blockquote>
