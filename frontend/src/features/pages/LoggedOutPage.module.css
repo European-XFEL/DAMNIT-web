@@ -9,19 +9,3 @@
     flex-direction: column;
   }
 }
-
-.control {
-  height: rem(42px);
-  font-size: var(--mantine-font-size-md);
-
-  &:not(:first-of-type) {
-    margin-left: var(--mantine-spacing-md);
-  }
-
-  @media (max-width: $mantine-breakpoint-xs) {
-    &:not(:first-of-type) {
-      margin-top: var(--mantine-spacing-md);
-      margin-left: 0;
-    }
-  }
-}

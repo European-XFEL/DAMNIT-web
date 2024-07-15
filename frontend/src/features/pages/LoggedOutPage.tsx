@@ -1,20 +1,11 @@
 import React from "react"
-import { Button as MantineButton, Container, Text, Title } from "@mantine/core"
+import { Container, Text, Title } from "@mantine/core"
 
 import { useSession } from "../../hooks"
 import { history } from "../../routes"
-import styles from "./LoggedOutPage.module.css"
+import { MainNavButton } from "../../common/buttons"
 
-const Button = (props) => {
-  return (
-    <MantineButton
-      className={styles.control}
-      size="lg"
-      color="indigo"
-      {...props}
-    ></MantineButton>
-  )
-}
+import styles from "./LoggedOutPage.module.css"
 
 const LoggedOutPage = () => {
   const { session, isLoading, isError } = useSession()
@@ -39,9 +30,12 @@ const LoggedOutPage = () => {
             Thanks for using DAMNIT!
           </Text>
           <div className={styles.controls}>
-            <Button variant="filled" onClick={() => history.navigate("/login")}>
+            <MainNavButton
+              variant="filled"
+              onClick={() => history.navigate("/login")}
+            >
               Log back in
-            </Button>
+            </MainNavButton>
           </div>
         </div>
       ) : (
@@ -54,15 +48,18 @@ const LoggedOutPage = () => {
             ...
           </Title>
           <div className={styles.controls}>
-            <Button
+            <MainNavButton
               variant="filled"
               onClick={() => history.navigate("/logout")}
             >
               Logout
-            </Button>
-            <Button variant="outline" onClick={() => history.navigate(-1)}>
+            </MainNavButton>
+            <MainNavButton
+              variant="outline"
+              onClick={() => history.navigate(-1)}
+            >
               Go back
-            </Button>
+            </MainNavButton>
           </div>
         </div>
       )}

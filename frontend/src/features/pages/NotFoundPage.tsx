@@ -1,19 +1,10 @@
 import React from "react"
-import { Button as MantineButton, Container, Title } from "@mantine/core"
+import { Container, Title } from "@mantine/core"
 
 import { history } from "../../routes"
-import styles from "./NotFoundPage.module.css"
+import { MainNavButton } from "../../common/buttons"
 
-const Button = (props) => {
-  return (
-    <MantineButton
-      className={styles.control}
-      size="lg"
-      color="indigo"
-      {...props}
-    ></MantineButton>
-  )
-}
+import styles from "./NotFoundPage.module.css"
 
 const NotFoundPage = () => {
   return (
@@ -28,9 +19,12 @@ const NotFoundPage = () => {
       <div style={{ textAlign: "center" }}>
         <Title order={2}>DAMNIT! Page not found.</Title>
         <div className={styles.controls}>
-          <Button variant="filled" onClick={() => history.navigate("/home")}>
+          <MainNavButton
+            variant="filled"
+            onClick={() => history.navigate("/home")}
+          >
             Return home
-          </Button>
+          </MainNavButton>
         </div>
       </div>
     </Container>
