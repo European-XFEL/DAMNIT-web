@@ -70,11 +70,11 @@ const slice = createSlice({
         if (!isEmpty(data)) {
           state.data = {
             ...state.data,
-            [run]: { ...(state.data[run] || {}), [variable]: data },
+            [run]: { ...(state.data[run] ?? {}), [variable]: data },
           }
           state.metadata = {
             ...state.metadata,
-            [run]: { ...(state.metadata[run] || {}), [variable]: metadata },
+            [run]: { ...(state.metadata[run] ?? {}), [variable]: metadata },
           }
         }
       })
