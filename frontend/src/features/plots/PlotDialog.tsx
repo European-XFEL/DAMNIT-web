@@ -126,8 +126,8 @@ const PlotDialog = (props) => {
         result.push(Number(str))
         return result
       }
-      const [bottom, top] = str.split("-")
-      for (let i = Number(bottom); i <= Number(top); i++) {
+      const [bottom, top] = str.split("-").map((i)=>(Number(i))).sort()
+      for (let i = bottom; i <= top; i++) {
         result.push(i)
       }
       return result
