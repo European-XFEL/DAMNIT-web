@@ -60,13 +60,20 @@ const PlotDialog = (props) => {
   )
 
   useEffect(() => {
-    if (props.selectedColumns.length === 1) {
-      dialogForm.setFieldValue("xVariable", "run")
-      dialogForm.setFieldValue("yVariable", props.selectedColumns[0])
-    } else if (props.selectedColumns.length === 2) {
-      dialogForm.setFieldValue("xVariable", props.selectedColumns[0])
-      dialogForm.setFieldValue("yVariable", props.selectedColumns[1])
+    if (!props.selectedColumns[0]){
+      return
     }
+
+    let xVar = "run"
+    let yVar = props.selectedColumns[0]
+
+    if (props.selectedColumns.length === 2) {
+      xVar = props.selectedColumns[0]
+      yVar = props.selectedColumns[1]
+    }
+
+    dialogForm.setFieldValue("xVariable", xVar)
+    dialogForm.setFieldValue("yVariable", yVar)
   }, [props.opened])
 
   // Clear states on close
