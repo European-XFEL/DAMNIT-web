@@ -10,7 +10,7 @@ import {
   Item,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
-import { range } from "@mantine/hooks"
+import { range, useDisclosure } from "@mantine/hooks"
 
 import { gridCellFactory } from "./cells"
 import ContextMenu from "./ContextMenu"
@@ -31,6 +31,8 @@ import {
   sortedSearch,
 } from "../../utils/array"
 import { createMap, isEmpty } from "../../utils/helpers"
+import PlotDialog from "../plots/PlotDialog"
+import { Button } from "@mantine/core"
 
 class Pages {
   constructor() {
@@ -77,6 +79,9 @@ const usePagination = (pageSize = 5) => {
 
   // Callback: Handle new page
   const handleNewPage = useCallback(async (page, pageSize) => {
+    // REMOVEME: Use timeout to better visualize incoming data
+    await new Promise((res) => setTimeout(res, 1000))
+
     let loaded = false
 
     if (page > 0) {
@@ -240,21 +245,35 @@ const Table = (props) => {
   }
   const handleHeaderContextMenu = (col, event) => {
     event.preventDefault()
-    if (col !== -1) {
-      setGridSelection({
-        columns: CompactSelection.fromSingleSelection(col),
-        rows: CompactSelection.empty(),
-      })
-
-      if (props.schema[props.columns[col].id].dtype === DTYPES.number) {
+    const columnSelection = gridSelection.columns.toArray()
+    if (columnSelection.length === 1) {
+      if (col !== -1) {
+        if (props.schema[props.columns[col].id].dtype === DTYPES.number) {
+          setContextMenu({
+            localPosition: { x: event.localEventX, y: event.localEventY },
+            bounds: event.bounds,
+            contents: ["plot", "advPlot"],
+          })
+        }
+      }
+    } else if (columnSelection.length === 2) {
+      if (props.schema[props.columns[columnSelection[0]].id].dtype === DTYPES.number &&
+        props.schema[props.columns[columnSelection[1]].id].dtype === DTYPES.number) {
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
-          contents: ["plot"],
+          contents: ["plot", "corrPlot", "advPlot"],
         })
       }
+    } else {
+      setContextMenu({
+        localPosition: { x: event.localEventX, y: event.localEventY },
+        bounds: event.bounds,
+        contents: ["advPlot"],
+      })
     }
   }
+
   const handleAddPlot = () => {
     if (gridSelection.current) {
       const { cell, rangeStack } = gridSelection.current
@@ -285,6 +304,23 @@ const Table = (props) => {
       props.dispatch(getTableVariable([props.columns[col].id]))
     }
   }
+
+  const handleAddCorrPlot = () => {
+    const cols = gridSelection.columns.toArray()
+    props.dispatch(
+      addPlot({
+        variables: [props.columns[cols[0]].id, props.columns[cols[1]].id],
+        source: "table",
+      })
+    )
+  }
+
+  const handlePlotOptions = () => {
+    // set states for pre configurable plotting settings here
+    // Pass they as props to the modal
+    handlersPlotDialog.open()
+  }
+
   const cellContextContents = createMap(
     [
       {
@@ -292,16 +328,29 @@ const Table = (props) => {
         title: "Plot",
         onClick: handleAddPlot,
       },
+      {
+        key: "corrPlot",
+        title: "Correlation plot",
+        onClick: handleAddCorrPlot,
+      },
+      {
+        key: "advPlot",
+        title: "Plot options",
+        onClick: handlePlotOptions,
+      },
     ],
     "key",
   )
 
   const paginationProps = usePagination()
 
+  const [openedPlotDialog, handlersPlotDialog] =  useDisclosure(false)
+
   return (
     <div>
       {!props.columns.length ? null : (
         <>
+        <Button onClick = {handlersPlotDialog.open}> Plot </Button>
           <DataEditor
             {...(props.grid || {})}
             columns={formatColumns(props.columns, props.schema)}
@@ -326,6 +375,15 @@ const Table = (props) => {
               cellContextContents.get(key),
             )}
           />
+          { openedPlotDialog &&
+          <PlotDialog
+            opened={openedPlotDialog}
+            open={handlersPlotDialog.open}
+            close={handlersPlotDialog.close}
+            selectedColumns={Object.keys(props.schema).filter((el, id) => (
+              gridSelection.columns.toArray().includes(id-1)))}
+          />
+          }
           <div id="portal"></div>
         </>
       )}

@@ -7,4 +7,5 @@ export {
 export {
   default as extractedDataReducer,
   getExtractedVariable,
+  getAllExtracted,
 } from "./extractedDataSlice"
