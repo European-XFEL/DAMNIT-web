@@ -4,9 +4,13 @@ from authlib.integrations.starlette_client import (  # type: ignore[import-untyp
     StarletteOAuth2App,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
+from typing_extensions import Annotated
 
-from .settings import settings
+from ..settings import settings
+from . import services
+from .models import User
+
 
 router = APIRouter(prefix="/oauth", include_in_schema=False)
 
@@ -58,27 +62,6 @@ async def logout(request: Request):
     return RedirectResponse(url="/logged-out")
 
 
-async def check_auth(request: Request):
-    user = request.session.get("user")
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail=(
-                "Unauthorized - no authentication provided"
-                if request.url.path.rstrip("/") != request.scope.get("root_path", "")
-                else ""
-            ),
-        )
-
-    if "da" not in user.get("groups", []):
-        raise HTTPException(
-            status_code=403,
-            detail=f"Forbidden - `{user.get('preferred_username')}` not allowed access",
-        )
-
+@router.get("/userinfo")
+async def userinfo(user: Annotated[User, Depends(services.user_from_session)]):
     return user
-
-
-@router.get("/session")
-async def get_session(user: dict = Depends(check_auth)):
-    return JSONResponse(content={"user": user})

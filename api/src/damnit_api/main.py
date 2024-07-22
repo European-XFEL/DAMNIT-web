@@ -22,7 +22,13 @@ async def lifespan(app: FastAPI):
     app.router.include_router(auth.router)
     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    swagger_ui_init_oauth = {
+        "usePkceWithAuthorizationCodeGrant": True,
+        "clientId": settings.auth.client_id,
+    }
+)
 
 
 @app.exception_handler(HTTPException)
