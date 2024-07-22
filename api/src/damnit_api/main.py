@@ -21,12 +21,18 @@ from .settings import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     auth.configure()
-    add_graphql_router(app, dependencies=[Depends(auth.check_auth)])
+    # add_graphql_router(app, dependencies=[Depends(auth.check_auth)])
     app.router.include_router(db_router)
     app.router.include_router(auth.router)
     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    swagger_ui_init_oauth = {
+        "usePkceWithAuthorizationCodeGrant": True,
+        "clientId": settings.auth.client_id,
+    }
+)
 
 def get_column_schema(
     column_names: list = Depends(get_column_names),
@@ -76,7 +82,7 @@ def get_extracted_path(
 
 
 db_router = fastapi.APIRouter(
-    prefix="/db", dependencies=[fastapi.Depends(auth.check_auth)]
+    prefix="/db"  #, dependencies=[fastapi.Depends(auth.check_auth)]
 )
 
 
