@@ -1,5 +1,6 @@
 import React from "react"
 import { Provider } from "react-redux"
+import { MantineProvider } from "@mantine/core"
 import { render, screen, act } from "@testing-library/react"
 import { setupStore } from "@/redux"
 
@@ -15,7 +16,11 @@ export function renderWithProviders(
   } = {},
 ) {
   function Wrapper({ children }) {
-    return <Provider store={store}>{children}</Provider>
+    return (
+      <Provider store={store}>
+        <MantineProvider>{children}</MantineProvider>
+      </Provider>
+    )
   }
   return { store, ...render(ui, { wrapper: Wrapper, ...renderOptions }) }
 }
