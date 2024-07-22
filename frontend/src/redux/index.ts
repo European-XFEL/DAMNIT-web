@@ -4,16 +4,17 @@ export {
   getTableVariable,
   resetTableData,
   updateTableData,
-} from "./tableDataSlice"
+} from "./slices/tableData"
 export {
   default as extractedDataReducer,
   getExtractedVariable,
-  getAllExtracted,
   resetExtractedData,
-} from "./extractedDataSlice"
+} from "./slices/extractedData"
 export {
   default as proposalReducer,
   setProposalPending,
   setProposalSuccess,
   setProposalNotFound,
-} from "./proposalSlice"
+} from "./slices/proposal"
+export { setupStore } from "./store"
+export { getAllExtractedVariables } from "./thunks"

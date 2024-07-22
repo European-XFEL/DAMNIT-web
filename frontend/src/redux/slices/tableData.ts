@@ -4,8 +4,8 @@ Apollo Client store
 */
 
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
-import { isEmpty } from "../utils/helpers"
-import { tableService } from "../utils/api/graphql"
+import { isEmpty } from "../../utils/helpers"
+import { tableService } from "../../utils/api/graphql"
 
 const initialState = {
   data: {},

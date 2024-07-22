@@ -26,7 +26,7 @@ import {
   resetExtractedData,
   resetTableData,
   updateTableData,
-} from "../shared"
+} from "../redux"
 import {
   REFRESH_MUTATION,
   LATEST_DATA,

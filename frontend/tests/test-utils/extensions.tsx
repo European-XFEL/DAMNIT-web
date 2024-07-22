@@ -1,7 +1,7 @@
 import React from "react"
 import { Provider } from "react-redux"
 import { render, screen, act } from "@testing-library/react"
-import { setupStore } from "@/app/store"
+import { setupStore } from "@/redux"
 
 export { screen, act }
 

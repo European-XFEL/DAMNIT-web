@@ -7,12 +7,11 @@ import { dashboardReducer as dashboard } from "../features/dashboard"
 import { drawerReducer as drawer } from "../features/drawer"
 import { plotsReducer as plots } from "../features/plots"
 import { tableReducer as table } from "../features/table"
+
 import { listenerMiddleware } from "./listeners"
-import {
-  extractedDataReducer as extractedData,
-  proposalReducer as proposal,
-  tableDataReducer as tableData,
-} from "../shared"
+import extractedData from "./slices/extractedData"
+import proposal from "./slices/proposal"
+import tableData from "./slices/tableData"
 
 const reducer = combineReducers({
   dashboard,

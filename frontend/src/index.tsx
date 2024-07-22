@@ -11,7 +11,7 @@ import "mantine-contextmenu/styles.layer.css"
 import "mantine-datatable/styles.layer.css"
 
 import { client } from "./app/apollo"
-import { setupStore } from "./app/store"
+import { setupStore } from "./redux"
 import App from "./app/App"
 
 const container = document.getElementById("root")

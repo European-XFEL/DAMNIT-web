@@ -21,7 +21,7 @@ import {
   getExtractedVariable,
   getTableData,
   getTableVariable,
-} from "../../shared"
+} from "../../redux"
 
 import { DTYPES, VARIABLES } from "../../common/constants"
 import {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect } from "react"
 import {
   Modal,
   Button,
@@ -12,16 +12,15 @@ import { TextInput, Text, Blockquote } from "@mantine/core"
 import { useForm } from "@mantine/form"
 import { addPlot } from "."
 import TextCombobox from "../../common/textCombobox/TextCombobox"
-import { connect } from "react-redux"
-import { VARIABLES, DTYPES } from "../../common/constants"
+import { connect, useSelector } from "react-redux"
 import {
   getExtractedVariable,
-  getTableData,
   getTableVariable,
-  getAllExtracted,
-} from "../../shared"
+  getAllExtractedVariables,
+} from "../../redux"
 
 const PlotDialog = (props) => {
+  const proposal = useSelector((state) => state.proposal.current.value)
 
   const dialogForm = useForm({
     mode: "uncontrolled",
@@ -29,8 +28,8 @@ const PlotDialog = (props) => {
       runSelection: "",
       xVariable: "run",
       yVariable: "",
-      plotType:"summary",
-      runSelectionType: "allSelection"
+      plotType: "summary",
+      runSelectionType: "allSelection",
     },
 
     validate: {
@@ -53,14 +52,14 @@ const PlotDialog = (props) => {
     },
   })
 
-  const formValues =dialogForm.getValues()
+  const formValues = dialogForm.getValues()
 
   const columns = Object.keys(props.tableMetadata.schema).filter(
     (e) => props.tableMetadata.schema[e].dtype === "number",
   )
 
   useEffect(() => {
-    if (!props.selectedColumns[0]){
+    if (!props.selectedColumns[0]) {
       return
     }
 
@@ -85,7 +84,7 @@ const PlotDialog = (props) => {
   // Plots upon form sending
   const handlePlot = (submitedFormValues) => {
     const runs =
-    submitedFormValues.runSelectionType === "manualSelection"
+      submitedFormValues.runSelectionType === "manualSelection"
         ? parseRunSelection(submitedFormValues.runSelection)
         : null
 
@@ -95,24 +94,29 @@ const PlotDialog = (props) => {
       runs
         ? runs.forEach((run) => {
             props.dispatch(
-              getExtractedVariable({ run: run, variable: yVariable }),
+              getExtractedVariable({ proposal, run, variable: yVariable }),
             )
           })
-        : props.dispatch(getAllExtracted(yVariable))
+        : props.dispatch(
+            getAllExtractedVariables({ proposal, variable: yVariable }),
+          )
     }
 
     props.dispatch(
       addPlot({
         variables:
-        submitedFormValues.plotType === "extracted" ? [yVariable] : [xVariable, yVariable],
-        source: submitedFormValues.plotType === "summary" ? "table" : "extracted",
+          submitedFormValues.plotType === "extracted"
+            ? [yVariable]
+            : [xVariable, yVariable],
+        source:
+          submitedFormValues.plotType === "summary" ? "table" : "extracted",
         runs: runs,
       }),
     )
 
     if (submitedFormValues.plotType === "summary") {
-      props.dispatch(getTableVariable([xVariable]))
-      props.dispatch(getTableVariable([yVariable]))
+      props.dispatch(getTableVariable({ proposal, variable: xVariable }))
+      props.dispatch(getTableVariable({ proposal, variable: yVariable }))
     }
 
     handleClose()
@@ -126,7 +130,10 @@ const PlotDialog = (props) => {
         result.push(Number(str))
         return result
       }
-      const [bottom, top] = str.split("-").map((i)=>(Number(i))).sort()
+      const [bottom, top] = str
+        .split("-")
+        .map((i) => Number(i))
+        .sort()
       for (let i = bottom; i <= top; i++) {
         result.push(i)
       }
@@ -136,110 +143,113 @@ const PlotDialog = (props) => {
   }
 
   return (
-    <>
-      <Modal
-        opened={props.opened}
-        onClose={handleClose}
-        title="Plot settings"
-        size="400px"
-        keepMounted={false}
-        centered
+    <Modal
+      opened={props.opened}
+      onClose={handleClose}
+      title="Plot settings"
+      size="400px"
+      keepMounted={false}
+      centered
+    >
+      <form
+        onSubmit={dialogForm.onSubmit((values) => {
+          handlePlot(values)
+        })}
       >
-        <form onSubmit={dialogForm.onSubmit((values) => {handlePlot(values)})}>
-          <Flex
-            id="hGroup"
-            mih={50}
-            gap="md"
-            justify="flex-start"
-            align="center"
-            direction="column"
+        <Flex
+          id="hGroup"
+          mih={50}
+          gap="md"
+          justify="flex-start"
+          align="center"
+          direction="column"
+        >
+          <InputWrapper
+            style={
+              formValues.plotType === "summary"
+                ? [{ display: "flex", justifyContent: "space-between" }]
+                : [{ display: "block", width: "100%" }]
+            }
           >
-            <InputWrapper
-              style={
-                formValues.plotType === "summary"
-                  ? [{ display: "flex", justifyContent: "space-between" }]
-                  : [{ display: "block", width: "100%" }]
-              }
-            >
-              {formValues.plotType === "summary" && (
-                <TextCombobox
-                  columns={columns}
-                  value={formValues.xVariable}
-                  setValue={(value) =>
-                    dialogForm.setFieldValue("xVariable", value)
-                  }
-                  label="X-axis"
-                  placeholder="Choose a variable"
-                  {...dialogForm.getInputProps("xVariable")}
-                />
-              )}
+            {formValues.plotType === "summary" && (
               <TextCombobox
                 columns={columns}
-                value={formValues.yVariable}
+                value={formValues.xVariable}
                 setValue={(value) =>
-                  dialogForm.setFieldValue("yVariable", value)
+                  dialogForm.setFieldValue("xVariable", value)
                 }
-                label={formValues.plotType === "summary" ? "Y-axis" : "Variable"}
+                label="X-axis"
                 placeholder="Choose a variable"
-                {...dialogForm.getInputProps("yVariable")}
-              />
-            </InputWrapper>
-
-            <SegmentedControl
-              id="plotType"
-              value={formValues.plotType}
-              onChange={(event) => {
-                dialogForm.setFieldValue("plotType",event)
-              }}
-              data={[
-                { label: "Plot summary", value: "summary" },
-                { label: "Plot data", value: "extracted" },
-              ]}
-              orientation="horizontal"
-              mt="3px"
-              mb="3px"
-              w="100%"
-            />
-
-            <Flex justify="space-between" align="center" w="100%">
-              <Text size="sd">Run selection:</Text>
-              <Select
-                data={[
-                  { value: "allSelection", label: "All runs" },
-                  { value: "manualSelection", label: "Custom" },
-                ]}
-                defaultValue="allSelection"
-                value={formValues.runSelectionType}
-                onChange={(value) => dialogForm.setFieldValue("runSelectionType", value)}
-                allowDeselect={false}
-              ></Select>
-            </Flex>
-
-            {formValues.runSelectionType === "manualSelection" && (
-              <TextInput
-                w="100%"
-                placeholder="e.g. 1,2,3,6-20,22"
-                mr="2px"
-                h="100%"
-                disabled={formValues.runSelectionType !== "manualSelection"}
-                key={dialogForm.key("runSelection")}
-                {...dialogForm.getInputProps("runSelection")}
+                {...dialogForm.getInputProps("xVariable")}
               />
             )}
-            {formValues.plotType !== "summary" && formValues.runSelectionType === "allSelection" && (
+            <TextCombobox
+              columns={columns}
+              value={formValues.yVariable}
+              setValue={(value) => dialogForm.setFieldValue("yVariable", value)}
+              label={formValues.plotType === "summary" ? "Y-axis" : "Variable"}
+              placeholder="Choose a variable"
+              {...dialogForm.getInputProps("yVariable")}
+            />
+          </InputWrapper>
+
+          <SegmentedControl
+            id="plotType"
+            value={formValues.plotType}
+            onChange={(event) => {
+              dialogForm.setFieldValue("plotType", event)
+            }}
+            data={[
+              { label: "Plot summary", value: "summary" },
+              { label: "Plot data", value: "extracted" },
+            ]}
+            orientation="horizontal"
+            mt="3px"
+            mb="3px"
+            w="100%"
+          />
+
+          <Flex justify="space-between" align="center" w="100%">
+            <Text size="sd">Run selection:</Text>
+            <Select
+              data={[
+                { value: "allSelection", label: "All runs" },
+                { value: "manualSelection", label: "Custom" },
+              ]}
+              defaultValue="allSelection"
+              value={formValues.runSelectionType}
+              onChange={(value) =>
+                dialogForm.setFieldValue("runSelectionType", value)
+              }
+              allowDeselect={false}
+            ></Select>
+          </Flex>
+
+          {formValues.runSelectionType === "manualSelection" && (
+            <TextInput
+              w="100%"
+              placeholder="e.g. 1,2,3,6-20,22"
+              mr="2px"
+              h="100%"
+              disabled={formValues.runSelectionType !== "manualSelection"}
+              key={dialogForm.key("runSelection")}
+              {...dialogForm.getInputProps("runSelection")}
+            />
+          )}
+          {formValues.plotType !== "summary" &&
+            formValues.runSelectionType === "allSelection" && (
               <Blockquote color="blue" p="10" w="100%">
                 You are about to plot data for all the runs
               </Blockquote>
             )}
 
-            <Group wrap="wrap" justify="space-between" w="100%">
-              <Button onClick={handleClose}> Cancel </Button>
-              <Button type="submit"> Plot </Button>
-            </Group>
-          </Flex>
-        </form>
-      </Modal>
-    </>
+          <Group wrap="wrap" justify="space-between" w="100%">
+            <Button onClick={handleClose}> Cancel </Button>
+            <Button type="submit"> Plot </Button>
+          </Group>
+        </Flex>
+      </form>
+    </Modal>
   )
 }
 

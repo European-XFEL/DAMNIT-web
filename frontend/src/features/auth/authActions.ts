@@ -1,7 +1,7 @@
 import { authApi } from "../api"
 import { resetTable } from "../table"
 import { resetPlots } from "../plots"
-import { resetExtractedData, resetTableData } from "../../shared"
+import { resetExtractedData, resetTableData } from "../../redux"
 import { history } from "../../routes"
 
 export const login = () => (dispatch) => {
