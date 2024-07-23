@@ -40,7 +40,6 @@ running web server. Add an `.env` file on the project root with the following:
 ```ini
 # .env
 VITE_BACKEND_API = "127.0.0.1:30200"
-VITE_PROPOSAL_NUMBER = <PROPOSAL_NUMBER>
 ```
 
 One can also run the tests with the following:

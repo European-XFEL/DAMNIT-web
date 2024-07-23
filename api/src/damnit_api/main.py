@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+from starlette.middleware.sessions import SessionMiddleware
 from pathlib import Path
 
 import pandas as pd
-from fastapi import Depends, FastAPI
+from fastapi import (
+    APIRouter, Depends, FastAPI, HTTPException, Request, status)
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import Connection, Select
-
 
 from .const import DEFAULT_PROPOSAL, FILL_VALUE, Type
 from .db import (
@@ -12,14 +14,37 @@ from .db import (
     get_selection)
 from .utils import convert, get_run_data, map_dtype
 from .graphql import add_graphql_router
+from . import auth
+from .settings import settings
+
+
+# Known paths are redirected to the login page and
+# then back after successful authentication.
+KNOWN_PATHS = ['/graphql']
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    add_graphql_router(app)
+    auth.configure()
+    add_graphql_router(app, dependencies=[Depends(auth.check_auth)])
+    app.router.include_router(db_router)
+    app.router.include_router(auth.router)
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    request_path = request.url.path
+    if (exc.status_code == status.HTTP_401_UNAUTHORIZED
+            and request_path in KNOWN_PATHS):
+        return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")  # noqa
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
 
 def get_column_schema(
     column_names: list = Depends(get_column_names),
@@ -68,7 +93,12 @@ def get_extracted_path(
     return inner
 
 
-@app.router.get("/db")
+db_router = APIRouter(
+    prefix="/db", dependencies=[Depends(auth.check_auth)]
+)
+
+
+@db_router.get("/db")
 def index(
     selection: Select = Depends(get_selection),
     schema: dict = Depends(get_column_schema),
@@ -111,6 +141,16 @@ def index(
     return df.set_index("runnr", drop=False).to_dict(orient="index")
 
 
-@app.router.get("/db/schema")
+@db_router.get("/db/schema")
 def db_schema(schema: dict = Depends(get_column_schema)) -> dict:
     return schema
+
+
+app.add_middleware(
+    SessionMiddleware, secret_key=settings.session_secret.get_secret_value()
+)
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("damnit_api.main:app", reload=True)

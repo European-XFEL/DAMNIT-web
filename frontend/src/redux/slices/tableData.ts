@@ -4,8 +4,8 @@ Apollo Client store
 */
 
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
-import { isEmpty } from "../utils/helpers"
-import { tableService } from "../utils/api/graphql"
+import { isEmpty } from "../../utils/helpers"
+import { tableService } from "../../utils/api/graphql"
 
 const initialState = {
   data: {},
@@ -13,16 +13,20 @@ const initialState = {
   lastUpdate: {},
 }
 
-export const getTableData = createAsyncThunk("tableData/get", async (page) => {
-  // TODO: Create an object that contains `page` and `pageSize`
-  const result = await tableService.getTable({ page })
-  return result
-})
+export const getTableData = createAsyncThunk(
+  "tableData/get",
+  async ({ proposal, page }) => {
+    // TODO: Create an object that contains `page` and `pageSize`
+    const result = await tableService.getTable({ proposal, page })
+    return result
+  },
+)
 
 export const getTableVariable = createAsyncThunk(
   "tableData/getVariable",
-  async (variable) => {
+  async ({ proposal, variable }) => {
     const result = await tableService.getTableData(["run", variable], {
+      proposal,
       pageSize: 10000, // get everything
     })
     return { data: result }
@@ -33,6 +37,7 @@ const slice = createSlice({
   name: "tableData",
   initialState,
   reducers: {
+    reset: () => initialState,
     update: (state, action) => {
       const { runs, metadata } = action.payload
 
@@ -79,4 +84,4 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { update: updateTable } = slice.actions
+export const { update: updateTableData, reset: resetTableData } = slice.actions

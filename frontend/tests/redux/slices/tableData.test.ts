@@ -1,7 +1,6 @@
 import { setupServer } from "msw/node"
 
-import { setupStore } from "@/app/store"
-import { getTableData, updateTable } from "@/shared"
+import { getTableData, setupStore, updateTableData } from "@/redux"
 import { tableService } from "@/utils/api/graphql"
 
 import {
@@ -9,8 +8,8 @@ import {
   validTableMetadata,
   validTableSchema,
   validTableState,
-} from "../test-utils/builders/table"
-import { handlers } from "../test-utils/builders/graphql"
+} from "../../test-utils/builders/table"
+import { handlers } from "../../test-utils/builders/graphql"
 
 let server
 
@@ -30,7 +29,7 @@ describe("Table slice", () => {
     expect(state.lastUpdate).toEqual({})
   })
 
-  describe("getTable action", () => {
+  describe("getTableData action", () => {
     server = setupServer(...handlers)
 
     beforeAll(() => server.listen())
@@ -40,7 +39,7 @@ describe("Table slice", () => {
     it("sets table data and schema state when successful", () => {
       const { dispatch, getState } = setupStore()
       // eslint-disable-next-line jest/valid-expect-in-promise
-      dispatch(getTableData()).then(() => {
+      dispatch(getTableData({ proposal: 2956, page: 1 })).then(() => {
         const { tableData: state } = getState()
         expect(state.data).toEqual(validTableData)
         expect(state.metadata.schema).toEqual(validTableSchema)
@@ -52,25 +51,26 @@ describe("Table slice", () => {
     it("gets the data", async () => {
       const data = await tableService.getTableData(
         Object.keys(validTableSchema),
+        { proposal: "2956" },
       )
       expect(data).toEqual(validTableData)
     })
 
     it("gets the metadata", async () => {
-      const metadata = await tableService.getTableMetadata()
+      const metadata = await tableService.getTableMetadata({ proposal: "2956" })
       expect(metadata.schema).toEqual(validTableSchema)
       expect(metadata.rows).toEqual(validTableMetadata.rows)
       expect(metadata.timestamp).toEqual(validTableMetadata.timestamp)
     })
 
     it("gets the table", async () => {
-      const table = await tableService.getTable()
+      const table = await tableService.getTable({ proposal: "2956" })
       expect(table.data).toEqual(validTableData)
       expect(table.metadata.schema).toEqual(validTableSchema)
     })
   })
 
-  describe("updateTable action", () => {
+  describe("updateTableData action", () => {
     it("sets table data and schema state when successful", () => {
       const { dispatch, getState } = setupStore({
         tableData: validTableState,
@@ -91,7 +91,7 @@ describe("Table slice", () => {
         timestamp: Date.now(),
       }
 
-      dispatch(updateTable({ runs: newData, metadata: newMetadata }))
+      dispatch(updateTableData({ runs: newData, metadata: newMetadata }))
       const { tableData: state } = getState()
       expect(state.data).toEqual({
         "448": { ...validTableData["448"], ...newData["448"] },

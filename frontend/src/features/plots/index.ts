@@ -3,7 +3,7 @@ export { default as PlotsTab } from "./PlotsTab"
 export {
   default as plotsReducer,
   addPlot,
-  clearPlots,
   removePlot,
+  reset as resetPlots,
   setCurrentPlot,
 } from "./plotsSlice"

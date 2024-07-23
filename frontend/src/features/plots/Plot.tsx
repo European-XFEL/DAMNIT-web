@@ -1,6 +1,7 @@
 import React from "react"
 import Plotly from "react-plotly.js"
 import { useSelector } from "react-redux"
+import { Skeleton } from "@mantine/core"
 
 import { sorted } from "../../utils/array"
 
@@ -187,13 +188,15 @@ const Plot = ({ plotId }) => {
 
   return (
     <>
-      {data.length && (
+      {data.length ? (
         <Plotly
           data={plotData}
           layout={{ ...defaultLayout, ...(plotLayout || {}) }}
           config={defaultConfig}
           data-testid="js-plotly-plot"
         />
+      ) : (
+        <Skeleton height={430} width={740} my={20} mx={10} radius="xl" />
       )}
     </>
   )

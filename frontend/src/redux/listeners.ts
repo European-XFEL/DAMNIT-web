@@ -2,7 +2,7 @@ import { createListenerMiddleware } from "@reduxjs/toolkit"
 
 import { addTab, removeTab } from "../features/dashboard"
 import { openDrawer, closeDrawer } from "../features/drawer/"
-import { addPlot, clearPlots, removePlot } from "../features/plots/"
+import { addPlot, removePlot, resetPlots } from "../features/plots/"
 import { selectRun } from "../features/table"
 import { isEmpty } from "../utils/helpers"
 
@@ -36,6 +36,6 @@ listenerMiddleware.startListening({
 listenerMiddleware.startListening({
   actionCreator: removeTab,
   effect: (action, { dispatch }) => {
-    dispatch(clearPlots())
+    dispatch(resetPlots())
   },
 })

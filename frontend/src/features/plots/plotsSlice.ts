@@ -30,12 +30,12 @@ const slice = createSlice({
       state.currentPlot = plots.length ? plots.slice(-1)[0] : null
       state.data = plots.length ? rest : {}
     },
-    clearPlots: (state) => {
-      state.currentPlot = null
-      state.data = {}
+    reset: (state) => {
+      state.currentPlot = initialState.currentPlot
+      state.data = initialState.data
     },
   },
 })
 
 export default slice.reducer
-export const { addPlot, clearPlots, removePlot, setCurrentPlot } = slice.actions
+export const { addPlot, reset, removePlot, setCurrentPlot } = slice.actions
