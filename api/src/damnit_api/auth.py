@@ -14,6 +14,8 @@ _OAUTH = OAuth()
 
 OAUTH: StarletteOAuth2App = None  # type: ignore[assignment]
 
+DEFAULT_REDIRECT_URI = "/home"
+
 
 def configure() -> None:
     global OAUTH
@@ -29,14 +31,17 @@ def configure() -> None:
 
 
 @router.get("/login")
-async def auth(request: Request):
+async def auth(request: Request, redirect_uri: str = DEFAULT_REDIRECT_URI):
     if request.session.get("user"):
-        return RedirectResponse(url="/home")
-    return await OAUTH.authorize_redirect(request, request.url_for("callback"))
+        return RedirectResponse(url=redirect_uri)
+
+    callback_uri = (request.url_for("callback")
+                    .include_query_params(redirect_uri=redirect_uri))
+    return await OAUTH.authorize_redirect(request, callback_uri)
 
 
 @router.get("/callback")
-async def callback(request: Request):
+async def callback(request: Request, redirect_uri: str = DEFAULT_REDIRECT_URI):
     try:
         token = await OAUTH.authorize_access_token(request)
         user = await OAUTH.userinfo(token=token)
@@ -44,7 +49,7 @@ async def callback(request: Request):
         raise HTTPException(status_code=401, detail=str(e)) from e
 
     request.session["user"] = dict(user)
-    return RedirectResponse(url="/home")
+    return RedirectResponse(url=redirect_uri)
 
 
 @router.get("/logout")

@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
-import fastapi
 from starlette.middleware.sessions import SessionMiddleware
 from pathlib import Path
 
 import pandas as pd
-from fastapi import Depends, FastAPI
+from fastapi import (
+    APIRouter, Depends, FastAPI, HTTPException, Request, status)
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import Connection, Select
 
 
@@ -18,6 +19,11 @@ from . import auth
 from .settings import settings
 
 
+# Known paths are redirected to the login page and
+# then back after successful authentication.
+KNOWN_PATHS = ['/graphql']
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     auth.configure()
@@ -27,6 +33,19 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    request_path = request.url.path
+    if (exc.status_code == status.HTTP_401_UNAUTHORIZED
+            and request_path in KNOWN_PATHS):
+        return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")  # noqa
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+    )
+
 
 def get_column_schema(
     column_names: list = Depends(get_column_names),
@@ -75,8 +94,8 @@ def get_extracted_path(
     return inner
 
 
-db_router = fastapi.APIRouter(
-    prefix="/db", dependencies=[fastapi.Depends(auth.check_auth)]
+db_router = APIRouter(
+    prefix="/db", dependencies=[Depends(auth.check_auth)]
 )
 
 
