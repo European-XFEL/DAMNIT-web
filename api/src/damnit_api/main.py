@@ -8,7 +8,6 @@ from fastapi import (
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import Connection, Select
 
-
 from .const import DEFAULT_PROPOSAL, FILL_VALUE, Type
 from .db import (
     get_column_datum, get_column_names, get_conn, get_damnit_path,

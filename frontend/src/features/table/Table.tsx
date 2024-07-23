@@ -32,7 +32,6 @@ import {
 } from "../../utils/array"
 import { createMap, isEmpty } from "../../utils/helpers"
 import PlotDialog from "../plots/PlotDialog"
-import { Button } from "@mantine/core"
 
 class Pages {
   constructor() {
@@ -366,7 +365,6 @@ const Table = (props) => {
     <div style={{ width: "100%", height: "100%" }}>
       {!props.columns.length ? null : (
         <>
-          <Button onClick={handlersPlotDialog.open}> Plot </Button>
           <DataEditor
             {...(props.grid || {})}
             columns={formatColumns(props.columns, props.schema)}
