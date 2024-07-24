@@ -20,6 +20,7 @@ class User(BaseModel):
     name: str | None
     email: str | None
 
+    proposals: list[str]
     groups: list[Group]
 
     @property

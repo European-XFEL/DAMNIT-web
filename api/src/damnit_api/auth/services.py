@@ -8,6 +8,7 @@ from ldap3 import Server, Connection, ALL, SUBTREE
 
 from ..acl.models import ACL
 from .models import Group, Resource, User
+from .proposals import get_available_proposals
 
 _LDAP_SERVER = "ldap://ldap.desy.de"  # TODO: put in config
 _LDAP_BASE = "ou=people,ou=rgy,o=DESY,c=DE"  # TODO: put in config
@@ -41,15 +42,21 @@ async def user_from_ldap(username: str) -> User:
     name = entry.cn.value
     email = entry.mail.value
     uid = entry.uidNumber.value
-    groups = [Group(gid=None, name=_GROUP_NAME_RE.search(g).group(1))
+
+    # CC: Prolly we shouldn't use return the actual groups,
+    # but the proposals and the r/w access.
+    groups = [_GROUP_NAME_RE.search(g).group(1)
               for g in entry.isMemberOf.value if _GROUP_NAME_RE.search(g)]
+    # For now, let's also include the list of proposals.
+    proposals = get_available_proposals(groups)
 
     return User(
         uid=uid,
         username=username,
         name=name,
         email=email,
-        groups=groups,
+        proposals=proposals,
+        groups=[Group(gid=None, name=group) for group in groups],
     )
 
 
