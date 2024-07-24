@@ -2,14 +2,14 @@ import asyncio
 import re
 from pathlib import Path
 
-from fastapi import Request
-import ldap
 from async_lru import alru_cache
+from fastapi import Request
+from ldap3 import Server, Connection, ALL, SUBTREE
 
 from ..acl.models import ACL
 from .models import Group, Resource, User
 
-_LDAP = ldap.initialize("ldap://ldap.desy.de")  # TODO: put in config
+_LDAP_SERVER = "ldap://ldap.desy.de"  # TODO: put in config
 _LDAP_BASE = "ou=people,ou=rgy,o=DESY,c=DE"  # TODO: put in config
 _GROUP_NAME_RE = re.compile(r"cn=([^,]+)")
 
@@ -17,27 +17,32 @@ _GROUP_NAME_RE = re.compile(r"cn=([^,]+)")
 @alru_cache(ttl=60)
 async def user_from_ldap(username: str) -> User:
     """Get user information from LDAP."""
+    server = Server(_LDAP_SERVER, get_info=ALL)
+    conn = Connection(server, auto_bind=True)
+
+    search_filter = f"(uid={username})"
+    search_attributes = ["uidNumber", "cn", "mail", "isMemberOf"]
+
     loop = asyncio.get_event_loop()
-    res = await loop.run_in_executor(
+    await loop.run_in_executor(
         None,
-        lambda: _LDAP.search_s(
+        lambda: conn.search(
             _LDAP_BASE,
-            2,
-            f"(uid={username})",
-            ["uidNumber", "cn", "mail", "isMemberOf"],
-        ),
+            search_filter,
+            search_scope=SUBTREE,
+            attributes=search_attributes
+        )
     )
 
-    if not res:
-        raise Exception  # TODO: better exception
+    if not conn.entries:
+        raise Exception("User not found")  # TODO: better exception
 
-    res = res[0][1]
-
-    name = res["cn"][0]
-    email = res["mail"][0]
-    uid = res["uidNumber"][0]
-    _groups = [_GROUP_NAME_RE.search(g.decode()) for g in res["isMemberOf"]]
-    groups = [Group(gid=None, name=m.group(1)) for m in _groups if m]
+    entry = conn.entries[0]
+    name = entry.cn.value
+    email = entry.mail.value
+    uid = entry.uidNumber.value
+    groups = [Group(gid=None, name=_GROUP_NAME_RE.search(g).group(1))
+              for g in entry.isMemberOf.value if _GROUP_NAME_RE.search(g)]
 
     return User(
         uid=uid,

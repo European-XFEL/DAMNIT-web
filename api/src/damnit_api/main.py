@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import (
-    Depends, FastAPI, HTTPException, Request, status)
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -18,13 +17,13 @@ KNOWN_PATHS = ['/graphql']
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     auth.configure()
-    add_graphql_router(app, dependencies=[Depends(auth.check_auth)])
+    add_graphql_router(app)
     app.router.include_router(auth.router)
     yield
 
 app = FastAPI(
     lifespan=lifespan,
-    swagger_ui_init_oauth = {
+    swagger_ui_init_oauth={
         "usePkceWithAuthorizationCodeGrant": True,
         "clientId": settings.auth.client_id,
     }
