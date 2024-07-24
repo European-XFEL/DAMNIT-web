@@ -1,13 +1,10 @@
 from abc import ABCMeta
 from base64 import b64encode
 from glob import iglob
-import io
 import os.path as osp
-import pickle
 
 import h5py
 import numpy as np
-from matplotlib.figure import Figure
 from scipy.ndimage import zoom
 
 from .const import Type
@@ -36,18 +33,6 @@ def map_dtype(dtype, default=Type.STRING):
 def b64image(bytes_):
     return b64encode(bytes_).decode('utf-8')
 
-
-def convert(data, dtype=Type.STRING):
-    # Don't convert if None
-    if data is None:
-        return
-
-    return CONVERSION_FUNCTIONS.get(dtype, str)(data)
-
-
-CONVERSION_FUNCTIONS = {
-    Type.IMAGE: b64image
-}
 
 # -----------------------------------------------------------------------------
 # Proposal and runs
