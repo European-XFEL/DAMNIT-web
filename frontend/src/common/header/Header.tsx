@@ -13,7 +13,7 @@ import { useDisclosure } from "@mantine/hooks"
 import { IconLogout, IconChevronDown } from "@tabler/icons-react"
 import cx from "clsx"
 
-import { selectUser } from "../../features/auth"
+import { selectUserFullName } from "../../features/auth"
 import { history } from "../../routes"
 
 import styles from "./Header.module.css"
@@ -21,7 +21,7 @@ import headerStyles from "../../styles/header.module.css"
 
 const UserMenu = () => {
   const [userMenuOpened, setUserMenuOpened] = useState(false)
-  const authUser = useSelector(selectUser)
+  const userFullName = useSelector(selectUserFullName)
 
   return (
     <Menu
@@ -40,7 +40,7 @@ const UserMenu = () => {
         >
           <Group gap={7}>
             <Text fw={500} size="sm" lh={1} mr={3}>
-              {authUser.name}
+              {userFullName}
             </Text>
             <IconChevronDown
               style={{ width: rem(12), height: rem(12) }}

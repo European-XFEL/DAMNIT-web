@@ -1,14 +1,14 @@
-import { useGetSessionQuery } from "../features/api/"
+import { useGetUserInfoQuery } from "../features/api"
 
-const useSession = () => {
+const useUserInfo = () => {
   const { data, isLoading, isUninitialized, isError, isFetching } =
-    useGetSessionQuery()
+    useGetUserInfoQuery()
 
   return {
-    session: data,
+    userInfo: data,
     isLoading: isLoading || isUninitialized || isFetching,
     isError,
   }
 }
 
-export default useSession
+export default useUserInfo

@@ -1,14 +1,14 @@
 import React from "react"
 import { Container, Text, Title } from "@mantine/core"
 
-import { useSession } from "../../hooks"
+import { useUserInfo } from "../../hooks"
 import { history } from "../../routes"
 import { MainNavButton } from "../../common/buttons"
 
 import styles from "./LoggedOutPage.module.css"
 
 const LoggedOutPage = () => {
-  const { session, isLoading, isError } = useSession()
+  const { userInfo, isLoading, isError } = useUserInfo()
 
   if (isLoading) {
     return <div />
@@ -23,7 +23,7 @@ const LoggedOutPage = () => {
         justifyContent: "center",
       }}
     >
-      {!session || isError ? (
+      {!userInfo || isError ? (
         <div style={{ textAlign: "center" }}>
           <Title order={2}>You have been logged out.</Title>
           <Text size="md" style={{ marginBottom: "20px" }}>
@@ -43,7 +43,7 @@ const LoggedOutPage = () => {
           <Title order={2}>
             Nope, you're still logged in,{" "}
             <Text span c="indigo" inherit>
-              {session.user.name}
+              {userInfo.name}
             </Text>
             ...
           </Title>
