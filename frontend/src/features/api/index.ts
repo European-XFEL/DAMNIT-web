@@ -1,1 +1,1 @@
-export { authApi, useGetSessionQuery } from "./authApi"
+export { authApi, useGetUserInfoQuery } from "./authApi"

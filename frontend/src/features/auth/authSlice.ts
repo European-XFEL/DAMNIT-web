@@ -1,9 +1,9 @@
 import { createSelector } from "@reduxjs/toolkit"
 import { authApi } from "../api"
 
-export const selectSessionResult = authApi.endpoints.getSession.select()
+export const selectUserInfoResult = authApi.endpoints.getUserInfo.select()
 
-export const selectUser = createSelector(
-  selectSessionResult,
-  (sessionResult) => sessionResult?.data?.user,
+export const selectUserFullName = createSelector(
+  selectUserInfoResult,
+  (result) => result?.data?.name,
 )

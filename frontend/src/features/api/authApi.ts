@@ -4,10 +4,10 @@ export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: fetchBaseQuery({ baseUrl: "/oauth" }),
   endpoints: (builder) => ({
-    getSession: builder.query({
-      query: () => "session",
+    getUserInfo: builder.query({
+      query: () => "userinfo",
     }),
   }),
 })
 
-export const { useGetSessionQuery } = authApi
+export const { useGetUserInfoQuery } = authApi
