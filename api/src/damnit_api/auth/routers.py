@@ -64,4 +64,4 @@ async def logout(request: Request):
 
 @router.get("/userinfo")
 async def userinfo(user: Annotated[User, Depends(services.user_from_session)]):
-    return user
+    return user.model_dump(exclude={"groups"})
