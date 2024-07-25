@@ -7,8 +7,8 @@ from fastapi import Request
 from ldap3 import Server, Connection, ALL, SUBTREE
 
 from ..acl.models import ACL
+from ..metadata.proposals import get_available_proposals
 from .models import Group, Resource, User
-from .proposals import get_available_proposals
 
 _LDAP_SERVER = "ldap://ldap.desy.de"  # TODO: put in config
 _LDAP_BASE = "ou=people,ou=rgy,o=DESY,c=DE"  # TODO: put in config
@@ -55,7 +55,7 @@ async def user_from_ldap(username: str) -> User:
         username=username,
         name=name,
         email=email,
-        proposals=proposals,
+        proposals=proposals.keys(),
         groups=[Group(gid=None, name=group) for group in groups],
     )
 
