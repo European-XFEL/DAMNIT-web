@@ -31,7 +31,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
 
     # Check if it has a DAMNIT folder
     root_path = format_proposal_path(info["def_proposal_path"])
-    damnit_path = get_damnit_path(root_path)
+    damnit_path = get_damnit_path(root_path, suffix="usr/Shared")
     if not damnit_path:
         return
 
@@ -56,7 +56,11 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
 
     # Update the cache
     with open(DAMNIT_PROPOSALS_CACHE, "w") as file:
-        json.dump(proposals, file)
+        json.dump(
+            proposals,
+            file,
+            indent=4,
+        )
 
     return info
 
@@ -130,17 +134,22 @@ def get_damnit_proposals(use_cache: bool) -> dict:
         info = mymdc.fetch_proposal_info(proposal_num)
         principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
 
-        info = format_proposal_info(
+        proposals[proposal_num] = format_proposal_info(
             info,
             damnit_path=damnit_path,
             principal_investigator=principal_investigator["name"],
         )
+
     # Sort by proposal number
     proposals = dict(sorted(proposals.items()))
 
     # Write to file
     with open(DAMNIT_PROPOSALS_CACHE, "w") as file:
-        json.dump(proposals, file)
+        json.dump(
+            proposals,
+            file,
+            indent=4,
+        )
 
     return proposals
 
@@ -148,15 +157,18 @@ def get_damnit_proposals(use_cache: bool) -> dict:
 def get_damnit_paths() -> list[str]:
     paths = []
     exp = Path("/gpfs/exfel/exp/")
-    for proposal in exp.glob("*/202401/*"):
-        if damnit := get_damnit_path(proposal):
+    for ush in exp.glob("**/usr/Shared"):
+        if damnit := get_damnit_path(ush):
             paths.append(damnit)
 
     return paths
 
 
-def get_damnit_path(path: str | Path) -> str:
-    ush = Path(path) / "usr/Shared"
+def get_damnit_path(path: str | Path, suffix: str | None = None) -> str:
+    """Try to check for existing DAMNIT folder
+    under `<PROPOSAL_FOLDER>/usr/Shared` path"""
+
+    ush = Path(path) / (suffix or "")
 
     with suppress(PermissionError):
         # We prioritize vanilla `amore` over `amore-online`
