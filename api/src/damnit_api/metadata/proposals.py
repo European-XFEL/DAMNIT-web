@@ -4,10 +4,49 @@ import json
 from pathlib import Path
 import re
 
+from async_lru import alru_cache
+
 from .mymdc import MyMDC
 
 
 DAMNIT_PROPOSALS_CACHE = "/tmp/damnit_proposals.json"
+
+
+@alru_cache(ttl=60)
+async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
+    cache = Path(DAMNIT_PROPOSALS_CACHE)
+    proposals = None
+
+    # Check from cache if existing
+    if use_cache and cache.exists():
+        with open(DAMNIT_PROPOSALS_CACHE, "r") as file:
+            # TODO: Update cache for new proposals
+            proposals = json.load(file)
+            if info := proposals.get(proposal_num):
+                return info
+
+    # Fetch information from MyMDC
+    mymdc = MyMDC()
+    info = mymdc.fetch_proposal_info(proposal_num)
+    info = format_proposal_info(info)
+
+    if proposals is None:
+        if cache.exists():
+            with open(DAMNIT_PROPOSALS_CACHE, "r") as file:
+                # TODO: Update cache for new proposals
+                proposals = json.load(file)
+        else:
+            proposals = {}
+
+    # Update the cache
+    proposals[proposal_num] = info
+    proposals = dict(sorted(proposals.items()))
+
+    # Update the cache
+    with open(DAMNIT_PROPOSALS_CACHE, "w") as file:
+        json.dump(proposals, file)
+
+    return info
 
 
 def get_available_proposals(user_groups, use_cache=True) -> list[str]:
@@ -77,17 +116,7 @@ def get_damnit_proposals(use_cache: bool) -> dict:
     for path in get_damnit_paths():
         proposal_num = get_proposal_number_from_path(path)
         info = mymdc.fetch_proposal_info(proposal_num)
-        proposals[proposal_num] = {
-            "proposal_path": info["def_proposal_path"],
-            "damnit_path": path,
-            "number": info["number"],
-            "instrument": info["instrument_identifier"],
-            "title": info["title"],
-            "start_date": info["begin_at"],
-            "end_date": info["end_at"],
-            "run_cycle": get_run_cycle(info["end_at"]),
-        }
-
+        proposals[proposal_num] = format_proposal_info(info, damnit_path=path)
     # Sort by proposal number
     proposals = dict(sorted(proposals.items()))
 
@@ -116,6 +145,19 @@ def get_damnit_paths() -> list[str]:
 
 def get_proposal_number_from_path(path: str) -> str:
     return path.split("/")[6].lstrip("p0")
+
+
+def format_proposal_info(info, **kwargs):
+    return {
+        "proposal_path": info["def_proposal_path"],
+        "number": info["number"],
+        "instrument": info["instrument_identifier"],
+        "title": info["title"],
+        "start_date": info["begin_at"],
+        "end_date": info["end_at"],
+        "run_cycle": get_run_cycle(info["end_at"]),
+        **kwargs,
+    }
 
 
 def get_run_cycle(date) -> str:
