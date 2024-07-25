@@ -40,8 +40,17 @@ class MyMDC:
 
     def fetch_proposal_info(self, proposal_num):
         url = f"{self.SERVER_URL}/api/proposals/by_number/{proposal_num}"
-        headers = {**self.HEADERS, "Authorization": f"Bearer {self.token}"}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=self.headers)
         response.raise_for_status()
 
         return response.json()
+
+    def fetch_user(self, user_id):
+        url = f"{self.SERVER_URL}/api/users/{user_id}"
+        response = requests.get(url, headers=self.headers)
+        response.raise_for_status()
+        return response.json()
+
+    @property
+    def headers(self):
+        return {**self.HEADERS, "Authorization": f"Bearer {self.token}"}

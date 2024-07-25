@@ -28,7 +28,19 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
     # Fetch information from MyMDC
     mymdc = MyMDC()
     info = mymdc.fetch_proposal_info(proposal_num)
-    info = format_proposal_info(info)
+
+    # Check if it has a DAMNIT folder
+    root_path = format_proposal_path(info["def_proposal_path"])
+    damnit_path = get_damnit_path(root_path)
+    if not damnit_path:
+        return
+
+    principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
+    info = format_proposal_info(
+        info,
+        damnit_path=damnit_path,
+        principal_investigator=principal_investigator["name"],
+    )
 
     if proposals is None:
         if cache.exists():
@@ -113,10 +125,16 @@ def get_damnit_proposals(use_cache: bool) -> dict:
 
     mymdc = MyMDC()
     proposals = {}
-    for path in get_damnit_paths():
-        proposal_num = get_proposal_number_from_path(path)
+    for damnit_path in get_damnit_paths():
+        proposal_num = get_proposal_number_from_path(damnit_path)
         info = mymdc.fetch_proposal_info(proposal_num)
-        proposals[proposal_num] = format_proposal_info(info, damnit_path=path)
+        principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
+
+        info = format_proposal_info(
+            info,
+            damnit_path=damnit_path,
+            principal_investigator=principal_investigator["name"],
+        )
     # Sort by proposal number
     proposals = dict(sorted(proposals.items()))
 
@@ -130,17 +148,24 @@ def get_damnit_proposals(use_cache: bool) -> dict:
 def get_damnit_paths() -> list[str]:
     paths = []
     exp = Path("/gpfs/exfel/exp/")
-    for path in exp.glob("*/202401/*"):
-        ush = path / "usr/Shared"
+    for proposal in exp.glob("*/202401/*"):
+        if damnit := get_damnit_path(proposal):
+            paths.append(damnit)
 
-        with suppress(PermissionError):
-            for p in ush.glob("amore"):
-                if p.is_dir():
-                    paths.append(str(p))
-            for p in ush.glob("amore-online"):
-                if p.is_dir():
-                    paths.append(str(p))
     return paths
+
+
+def get_damnit_path(path: str | Path) -> str:
+    ush = Path(path) / "usr/Shared"
+
+    with suppress(PermissionError):
+        # We prioritize vanilla `amore` over `amore-online`
+        for p in ush.glob("amore"):
+            if p.is_dir():
+                return str(p)
+        for p in ush.glob("amore-online"):
+            if p.is_dir():
+                return str(p)
 
 
 def get_proposal_number_from_path(path: str) -> str:
@@ -158,6 +183,10 @@ def format_proposal_info(info, **kwargs):
         "run_cycle": get_run_cycle(info["end_at"]),
         **kwargs,
     }
+
+
+def format_proposal_path(path: str | Path) -> str:
+    return "/".join(str(path).split("/")[:7])
 
 
 def get_run_cycle(date) -> str:
