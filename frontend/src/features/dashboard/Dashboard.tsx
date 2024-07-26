@@ -1,19 +1,18 @@
 import React from "react"
-import { connect, useSelector } from "react-redux"
+import { connect } from "react-redux"
 import { Flex, Group, Stack, Tabs, Text, Title, rem } from "@mantine/core"
 import { IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
 import { Header, Logo } from "../../common/header"
 import { InstrumentBadge } from "../../common/badges"
+import { useCurrentProposal } from "../../hooks"
 import Table from "../table"
 import { PlotsTab } from "../plots"
 import { removeTab, setCurrentTab } from "./dashboardSlice"
 
 import styles from "./Dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
-
-import { getProposal } from "../../utils/api/proposals"
 
 const COMPONENTS_MAP = {
   table: <Table />,
@@ -68,10 +67,9 @@ const getTabs = ({ contents, active, setActive, ...props }) => {
 }
 
 const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
-  const proposal_number = useSelector((state) => state.proposal.current.value)
-  const proposal = getProposal(proposal_number)
+  const { proposal, isLoading } = useCurrentProposal()
 
-  if (!proposal) {
+  if (isLoading) {
     return
   }
 
