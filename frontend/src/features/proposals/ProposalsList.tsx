@@ -12,9 +12,8 @@ import { DataTable } from "mantine-datatable"
 
 import { InstrumentBadge } from "../../common/badges"
 import { useProposals } from "../../hooks"
-import { getProposal } from "../../utils/api/proposals"
 import { isArrayEqual } from "../../utils/array"
-import classes from "./ProposalsList.module.css"
+import styles from "./ProposalsList.module.css"
 
 const formatRunCycle = (date: string) => {
   const year = date.slice(0, 4)
@@ -26,8 +25,8 @@ const formatRunCycle = (date: string) => {
 const ExpandedCell = memo(({ Component, isExpanded }) => {
   return (
     <Component
-      className={cx(classes.icon, classes.expandIcon, {
-        [classes.expandIconRotated]: isExpanded,
+      className={cx(styles.icon, styles.expandIcon, {
+        [styles.expandIconRotated]: isExpanded,
       })}
     />
   )
@@ -38,7 +37,7 @@ const CycleCell = memo(({ cycle, isExpanded }) => {
     <Group gap={0}>
       <ExpandedCell Component={IconChevronRight} isExpanded={isExpanded} />
       <Group component="span" ml={10} gap={6}>
-        <IconCalendarEvent className={cx(classes.icon)} />
+        <IconCalendarEvent className={cx(styles.icon)} />
         <span>{formatRunCycle(cycle)}</span>
       </Group>
     </Group>
@@ -60,18 +59,16 @@ const DateCell = memo(({ datetime }) => {
   return <TextCell text={date.format("DD-MM-YYYY")} />
 })
 
-const ProposalContent = memo(({ proposal: proposal_number }) => {
-  const proposal = getProposal(proposal_number)
-
+const ProposalContent = memo(({ title, damnit_path }) => {
   return (
-    <Stack className={classes.details} p="xs" gap={6} pl={65} pr={65}>
+    <Stack className={styles.details} p="xs" gap={6} pl={65} pr={65}>
       <Group gap={6}>
-        <div className={classes.label}>Title:</div>
-        <div>{proposal.title}</div>
+        <div className={styles.label}>Title:</div>
+        <div>{title}</div>
       </Group>
       <Group gap={6}>
-        <div className={classes.label}>Path:</div>
-        <Code>{proposal.path}</Code>
+        <div className={styles.label}>Path:</div>
+        <Code>{damnit_path}</Code>
       </Group>
     </Stack>
   )
@@ -149,7 +146,7 @@ const ProposalSubTable = memo(({ proposals }) => {
           recordIds: expandedProposals,
           onRecordIdsChange: handleExpandedProposals,
         },
-        content: ({ record }) => <ProposalContent proposal={record.number} />,
+        content: ({ record }) => <ProposalContent {...record} />,
       }}
     />
   )
