@@ -23,3 +23,7 @@
 .label {
   width: rem(80px);
 }
+
+.date {
+  width: rem(112px);
+}

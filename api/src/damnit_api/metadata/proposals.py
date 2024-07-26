@@ -1,3 +1,4 @@
+from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
 import json
@@ -35,7 +36,9 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
     if not damnit_path:
         return
 
-    principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
+    principal_investigator = mymdc.fetch_user(
+        info["principal_investigator_id"]
+    )
     info = format_proposal_info(
         info,
         damnit_path=damnit_path,
@@ -69,18 +72,30 @@ def get_available_proposals(user_groups, use_cache=True) -> list[str]:
     all_proposals = get_damnit_proposals(use_cache)
     read_permissions = get_read_permissions(user_groups)
     read_permissions = [
-        re.compile(permission.replace("*", ".*")) for permission in read_permissions
+        re.compile(permission.replace("*", ".*"))
+        for permission in read_permissions
     ]
 
     proposals = {}
     for prop_num, info in all_proposals.items():
         if not any(
-            permission.match(info["proposal_path"]) for permission in read_permissions
+            permission.match(info["proposal_path"])
+            for permission in read_permissions
         ):
             continue
         proposals[prop_num] = info
 
     return proposals
+
+
+def sort_proposals_by_run_cycle(proposals, full=False):
+    cycles = defaultdict(list)
+
+    for num, info in proposals.items():
+        run_cycle = info.get("run_cycle")
+        cycles[run_cycle].append(info if full else num)
+
+    return dict(sorted(cycles.items(), reverse=True))
 
 
 def get_read_permissions(current_user_groups: list[str]) -> list[str]:
@@ -132,7 +147,9 @@ def get_damnit_proposals(use_cache: bool) -> dict:
     for damnit_path in get_damnit_paths():
         proposal_num = get_proposal_number_from_path(damnit_path)
         info = mymdc.fetch_proposal_info(proposal_num)
-        principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
+        principal_investigator = mymdc.fetch_user(
+            info["principal_investigator_id"]
+        )
 
         proposals[proposal_num] = format_proposal_info(
             info,

@@ -1,11 +1,20 @@
 import React from "react"
-import { connect, useSelector } from "react-redux"
-import { Flex, Group, Stack, Tabs, Text, Title, rem } from "@mantine/core"
+import { connect } from "react-redux"
+import {
+  Flex,
+  Group,
+  Stack,
+  Tabs as MantineTabs,
+  Text,
+  Title,
+  rem,
+} from "@mantine/core"
 import { IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
 import { Header, Logo } from "../../common/header"
 import { InstrumentBadge } from "../../common/badges"
+import { useCurrentProposal } from "../../hooks"
 import Table from "../table"
 import { PlotsTab } from "../plots"
 import { removeTab, setCurrentTab } from "./dashboardSlice"
@@ -13,17 +22,15 @@ import { removeTab, setCurrentTab } from "./dashboardSlice"
 import styles from "./Dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
 
-import { getProposal } from "../../utils/api/proposals"
-
 const COMPONENTS_MAP = {
   table: <Table />,
   plots: <PlotsTab />,
 }
 
-const getTabs = ({ contents, active, setActive, ...props }) => {
+const Tabs = ({ contents, active, setActive, ...props }) => {
   const entries = Object.entries(contents)
   return (
-    <Tabs
+    <MantineTabs
       value={active || entries[0][0]}
       onChange={setActive}
       classNames={{
@@ -35,13 +42,13 @@ const getTabs = ({ contents, active, setActive, ...props }) => {
       visibleFrom="sm"
       {...props}
     >
-      <Tabs.List
+      <MantineTabs.List
         className={cx(headerStyles.body, headerStyles.bottom, styles.tabsList)}
         pl={30}
         pr={30}
       >
         {entries.map(([id, tab]) => (
-          <Tabs.Tab
+          <MantineTabs.Tab
             value={id}
             key={`tabs-tab-${id}`}
             {...(tab.isClosable && tab.onClose
@@ -51,27 +58,26 @@ const getTabs = ({ contents, active, setActive, ...props }) => {
               : {})}
           >
             {tab.title}
-          </Tabs.Tab>
+          </MantineTabs.Tab>
         ))}
-      </Tabs.List>
+      </MantineTabs.List>
       {entries.map(([id, { element }]) => (
-        <Tabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
+        <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
           <Flex direction="column" h="80vh">
             <div style={{ width: "100%", height: "100%", flexGrow: 1 }}>
               {element}
             </div>
           </Flex>
-        </Tabs.Panel>
+        </MantineTabs.Panel>
       ))}
-    </Tabs>
+    </MantineTabs>
   )
 }
 
 const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
-  const proposal_number = useSelector((state) => state.proposal.current.value)
-  const proposal = getProposal(proposal_number)
+  const { proposal, isLoading } = useCurrentProposal()
 
-  if (!proposal) {
+  if (isLoading) {
     return
   }
 
@@ -102,11 +108,11 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
           </Stack>
         </Group>
       </Header>
-      {getTabs({
-        contents: Object.fromEntries(populated),
-        active: currentTab,
-        setActive: setCurrentTab,
-      })}
+      <Tabs
+        contents={Object.fromEntries(populated)}
+        active={currentTab}
+        setActive={setCurrentTab}
+      />
     </Flex>
   )
 }

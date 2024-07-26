@@ -7,7 +7,10 @@ from fastapi import Request
 from ldap3 import Server, Connection, ALL, SUBTREE
 
 from ..acl.models import ACL
-from ..metadata.proposals import get_available_proposals
+from ..metadata.proposals import (
+    get_available_proposals,
+    sort_proposals_by_run_cycle,
+)
 from .models import Group, Resource, User
 
 _LDAP_SERVER = "ldap://ldap.desy.de"  # TODO: put in config
@@ -31,8 +34,8 @@ async def user_from_ldap(username: str) -> User:
             _LDAP_BASE,
             search_filter,
             search_scope=SUBTREE,
-            attributes=search_attributes
-        )
+            attributes=search_attributes,
+        ),
     )
 
     if not conn.entries:
@@ -45,8 +48,11 @@ async def user_from_ldap(username: str) -> User:
 
     # CC: Prolly we shouldn't use return the actual groups,
     # but the proposals and the r/w access.
-    groups = [_GROUP_NAME_RE.search(g).group(1)
-              for g in entry.isMemberOf.value if _GROUP_NAME_RE.search(g)]
+    groups = [
+        _GROUP_NAME_RE.search(g).group(1)
+        for g in entry.isMemberOf.value
+        if _GROUP_NAME_RE.search(g)
+    ]
     # For now, let's also include the list of proposals.
     proposals = get_available_proposals(groups)
 
@@ -55,7 +61,7 @@ async def user_from_ldap(username: str) -> User:
         username=username,
         name=name,
         email=email,
-        proposals=proposals.keys(),
+        proposals=sort_proposals_by_run_cycle(proposals),
         groups=[Group(gid=None, name=group) for group in groups],
     )
 

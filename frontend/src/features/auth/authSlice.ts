@@ -7,3 +7,8 @@ export const selectUserFullName = createSelector(
   selectUserInfoResult,
   (result) => result?.data?.name,
 )
+
+export const selectAvailableProposals = createSelector(
+  selectUserInfoResult,
+  (result) => result?.data?.proposals,
+)
