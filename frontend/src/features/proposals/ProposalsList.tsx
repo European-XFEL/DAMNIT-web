@@ -1,6 +1,6 @@
 import { memo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Box, Code, Group, Stack } from "@mantine/core"
+import { Box, Code, Group, Stack, Text } from "@mantine/core"
 import {
   IconCalendarEvent,
   IconChevronRight,
@@ -48,15 +48,21 @@ const InstrumentCell = memo(({ instrument }) => {
   return <InstrumentBadge instrument={instrument} />
 })
 
-const TextCell = memo(({ text, link }) => {
-  const component = <span>{text}</span>
+const TextCell = memo(({ text, link, ...props }) => {
+  const component = <Text {...props}>{text}</Text>
 
   return link ? <Link to={link}>{component}</Link> : component
 })
 
 const DateCell = memo(({ datetime }) => {
   const date = dayjs(datetime)
-  return <TextCell text={date.format("DD-MM-YYYY")} />
+  return (
+    <TextCell
+      text={date.format("MMMM DD, YYYY")}
+      className={styles.date}
+      size="xs"
+    />
+  )
 })
 
 const ProposalContent = memo(({ title, damnit_path }) => {
@@ -156,7 +162,7 @@ const ProposalHeader = () => {
   return (
     <Group justify="space-between">
       <span>Proposal</span>
-      <span>Beamtime date</span>
+      <span className={styles.date}>Beamtime date</span>
     </Group>
   )
 }
