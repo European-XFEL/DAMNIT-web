@@ -13,6 +13,7 @@ import { DataTable } from "mantine-datatable"
 import { InstrumentBadge } from "../../common/badges"
 import { useProposals } from "../../hooks"
 import { isArrayEqual } from "../../utils/array"
+import { orderBy } from "../../utils/objects"
 import styles from "./ProposalsList.module.css"
 
 const formatRunCycle = (date: string) => {
@@ -144,7 +145,13 @@ const ProposalSubTable = memo(({ proposals }) => {
           render: ({ start_date }) => <DateCell datetime={start_date} />,
         },
       ]}
-      records={proposalInfo}
+      records={
+        isLoading
+          ? []
+          : proposalInfo
+              .concat()
+              .sort(orderBy(["start_date", "instrument"], ["desc", "asc"]))
+      }
       fetching={isLoading}
       rowExpansion={{
         allowMultiple: true,
@@ -168,9 +175,8 @@ const ProposalHeader = () => {
 }
 
 const ProposalsList = ({ proposals }) => {
-  const cycles = Object.keys(proposals)
-    .sort((a, b) => Number(b) - Number(a))
-    .slice(0, 2) // REMOVEME
+  const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
+  //.slice(0, 2) // REMOVEME
 
   const [expandedCycles, setExpandedCycles] = useState<number[]>(
     cycles.slice(0, 1), // Expand the most recent cycle by default
