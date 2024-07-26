@@ -2,7 +2,7 @@ import { combineReducers } from "redux"
 import { configureStore } from "@reduxjs/toolkit"
 import { loadingBarReducer as loadingBar } from "react-redux-loading-bar"
 
-import { authApi } from "../features/api"
+import { authApi, metadataApi } from "../features/api"
 import { dashboardReducer as dashboard } from "../features/dashboard"
 import { drawerReducer as drawer } from "../features/drawer"
 import { plotsReducer as plots } from "../features/plots"
@@ -24,6 +24,7 @@ const reducer = combineReducers({
   loadingBar,
 
   [authApi.reducerPath]: authApi.reducer,
+  [metadataApi.reducerPath]: metadataApi.reducer,
 })
 
 export const setupStore = (preloadedState) => {
@@ -32,7 +33,7 @@ export const setupStore = (preloadedState) => {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware()
         .prepend(listenerMiddleware.middleware)
-        .concat(authApi.middleware),
+        .concat(authApi.middleware, metadataApi.middleware),
     preloadedState,
   })
 }

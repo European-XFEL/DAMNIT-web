@@ -25,7 +25,7 @@ import {
 
 import { DTYPES, VARIABLES } from "../../common/constants"
 import {
-  arrayEqual,
+  isArrayEqual,
   sorted,
   sortedInsert,
   sortedSearch,
@@ -211,7 +211,7 @@ const Table = (props) => {
         current.cell[0] != current.rangeStack[0].x
           ? []
           : current?.rangeStack.filter(
-              (range) => !arrayEqual(current.cell, [range.x, range.y]),
+              (range) => !isArrayEqual(current.cell, [range.x, range.y]),
             )
     }
 

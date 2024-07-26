@@ -1,4 +1,4 @@
-import { memo, useState } from "react"
+import { memo, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { Box, Code, Group, Stack } from "@mantine/core"
 import {
@@ -11,17 +11,16 @@ import dayjs from "dayjs"
 import { DataTable } from "mantine-datatable"
 
 import { InstrumentBadge } from "../../common/badges"
-import { getCycles, getProposal, getProposals } from "../../utils/api/proposals"
+import { useProposals } from "../../hooks"
+import { getProposal } from "../../utils/api/proposals"
+import { isArrayEqual } from "../../utils/array"
 import classes from "./ProposalsList.module.css"
 
-const cycles = getCycles()
-
-const isShallowEqual = (array1, array2) => {
-  if (array1.length !== array2.length) {
-    return false
-  }
-
-  return array1.every((elem, index) => elem === array2[index])
+const formatRunCycle = (date: string) => {
+  const year = date.slice(0, 4)
+  const month = date.slice(4, 6)
+  const period = month === "01" ? "I" : "II"
+  return `${year} - ${period}`
 }
 
 const ExpandedCell = memo(({ Component, isExpanded }) => {
@@ -35,18 +34,12 @@ const ExpandedCell = memo(({ Component, isExpanded }) => {
 })
 
 const CycleCell = memo(({ cycle, isExpanded }) => {
-  // TODO: Better run (cycle) mapping
-  const RUN_MAP = {
-    202401: "2024 - I",
-    202202: "2022 - II",
-  }
-
   return (
     <Group gap={0}>
       <ExpandedCell Component={IconChevronRight} isExpanded={isExpanded} />
       <Group component="span" ml={10} gap={6}>
         <IconCalendarEvent className={cx(classes.icon)} />
-        <span>{RUN_MAP[cycle]}</span>
+        <span>{formatRunCycle(cycle)}</span>
       </Group>
     </Group>
   )
@@ -84,12 +77,13 @@ const ProposalContent = memo(({ proposal: proposal_number }) => {
   )
 })
 
-const ProposalSubTable = memo(({ cycle }) => {
+const ProposalSubTable = memo(({ proposals }) => {
   const [expandedProposals, setExpandedProposals] = useState<number[]>([])
+  const { proposals: proposalInfo, isLoading } = useProposals(proposals)
 
   const handleExpandedProposals = (newProposals) => {
     setExpandedProposals((currentProposals) => {
-      return isShallowEqual(currentProposals, newProposals)
+      return isArrayEqual(currentProposals, newProposals)
         ? currentProposals
         : newProposals
     })
@@ -99,16 +93,17 @@ const ProposalSubTable = memo(({ cycle }) => {
     <DataTable
       noHeader
       striped
-      idAccessor="proposal"
+      idAccessor="number"
+      minHeight={100}
       columns={[
         {
           accessor: "id",
           noWrap: true,
-          render: ({ proposal }) => (
+          render: ({ number }) => (
             <Box component="span" ml={23} mr={5}>
               <ExpandedCell
                 Component={IconPlus}
-                isExpanded={expandedProposals.includes(proposal)}
+                isExpanded={expandedProposals.includes(number)}
               />
             </Box>
           ),
@@ -125,18 +120,18 @@ const ProposalSubTable = memo(({ cycle }) => {
           accessor: "proposal",
           noWrap: true,
           textAlign: "right",
-          render: ({ proposal }) => (
-            <TextCell text={`p${proposal}`} link={`/proposal/${proposal}`} />
+          render: ({ number }) => (
+            <TextCell text={number} link={`/proposal/${number}`} />
           ),
         },
         {
           accessor: "principal_investigator",
           noWrap: true,
           width: "100%",
-          render: ({ principal_investigator, proposal }) => (
+          render: ({ principal_investigator, number }) => (
             <TextCell
               text={principal_investigator}
-              link={`/proposal/${proposal}`}
+              link={`/proposal/${number}`}
             />
           ),
         },
@@ -146,14 +141,15 @@ const ProposalSubTable = memo(({ cycle }) => {
           render: ({ start_date }) => <DateCell datetime={start_date} />,
         },
       ]}
-      records={getProposals(cycle)}
+      records={proposalInfo}
+      fetching={isLoading}
       rowExpansion={{
         allowMultiple: true,
         expanded: {
           recordIds: expandedProposals,
           onRecordIdsChange: handleExpandedProposals,
         },
-        content: ({ record }) => <ProposalContent proposal={record.proposal} />,
+        content: ({ record }) => <ProposalContent proposal={record.number} />,
       }}
     />
   )
@@ -168,16 +164,18 @@ const ProposalHeader = () => {
   )
 }
 
-const ProposalsList = () => {
-  const [expandedCycles, setExpandedCycles] = useState<number[]>([
-    cycles[0].cycle,
-  ])
+const ProposalsList = ({ proposals }) => {
+  const cycles = Object.keys(proposals)
+    .sort((a, b) => Number(b) - Number(a))
+    .slice(0, 2) // REMOVEME
+
+  const [expandedCycles, setExpandedCycles] = useState<number[]>(
+    cycles.slice(0, 1), // Expand the most recent cycle by default
+  )
 
   const handleExpandedCycles = (newCycles) => {
     setExpandedCycles((currentCycles) => {
-      return isShallowEqual(currentCycles, newCycles)
-        ? currentCycles
-        : newCycles
+      return isArrayEqual(currentCycles, newCycles) ? currentCycles : newCycles
     })
   }
 
@@ -200,14 +198,18 @@ const ProposalsList = () => {
           ),
         },
       ]}
-      records={cycles}
+      records={cycles.map((cycle) => ({
+        cycle,
+      }))}
       rowExpansion={{
         allowMultiple: true,
         expanded: {
           recordIds: expandedCycles,
           onRecordIdsChange: handleExpandedCycles,
         },
-        content: ({ record }) => <ProposalSubTable cycle={record.cycle} />,
+        content: ({ record }) => (
+          <ProposalSubTable proposals={proposals[record.cycle]} />
+        ),
       }}
     />
   )

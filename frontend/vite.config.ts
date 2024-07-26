@@ -15,17 +15,17 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
-        "/db": {
-          target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: true,
-          secure: false,
-        },
         "/graphql": {
           target: `http://${env.VITE_BACKEND_API}`,
           changeOrigin: true,
           secure: false,
         },
         "/oauth": {
+          target: `http://${env.VITE_BACKEND_API}`,
+          changeOrigin: false,
+          secure: false,
+        },
+        "/metadata": {
           target: `http://${env.VITE_BACKEND_API}`,
           changeOrigin: false,
           secure: false,

@@ -1,7 +1,9 @@
-export function arrayEqual(arr1, arr2) {
-  return (
-    arr1.length === arr2.length && arr1.every((x, index) => x === arr2[index])
-  )
+export function isArrayEqual(arr1, arr2) {
+  if (arr1.length !== arr2.length) {
+    return false
+  }
+
+  return arr1.every((elem, index) => elem === arr2[index])
 }
 
 export function sorted(array) {
