@@ -13,30 +13,34 @@ from ..utils import create_map
 
 @strawberry.type
 class Subscription:
+    """CC: Subscription is currently broken.
+    I will revisit again once I come back from vacation"""
 
     @strawberry.subscription
-    async def latest_data(self,
-                          info: Info,
-                          database: DatabaseInput,
-                          timestamp: Timestamp,
-        ) -> AsyncGenerator[JSON, None]:
+    async def latest_data(
+        self,
+        info: Info,
+        database: DatabaseInput,
+        timestamp: Timestamp,
+    ) -> AsyncGenerator[JSON, None]:
         proposal = database.proposal
         model = get_model(proposal)
 
         while True:
             # Get latest data
-            latest_data = await async_latest_rows(proposal,
-                                                  table="run_variables",
-                                                  by="timestamp",
-                                                  start_at=timestamp)
+            latest_data = await async_latest_rows(
+                proposal,
+                table="run_variables",
+                by="timestamp",
+                start_at=timestamp,
+            )
             latest_data = LatestData.from_list(latest_data)
 
             # Get latest runs
-            latest_runs = await async_latest_rows(proposal,
-                                                  table="run_info",
-                                                  by="added_at",
-                                                  start_at=timestamp)
-            latest_runs = create_map(latest_runs, key='run')
+            latest_runs = await async_latest_rows(
+                proposal, table="run_info", by="added_at", start_at=timestamp
+            )
+            latest_runs = create_map(latest_runs, key="run")
 
             # Update model
             # TODO: Only update the model when there are actual changes
@@ -47,19 +51,19 @@ class Subscription:
             # Aggregate run values from latest data and runs
             runs = {}
             for run, variables in latest_data.runs.items():
-                run_values = {name: data.value
-                              for name, data in variables.items()}
+                run_values = {
+                    name: data.value for name, data in variables.items()
+                }
                 if run_info := latest_runs.get(run):
                     run_values.update(run_info)
 
-                runs[run] = (model.as_dict(**run_values))
+                runs[run] = model.as_dict(**run_values)
 
             # Return the latest values if any
             if len(runs):
                 metadata = {
-                    "schema": model.schema,
                     "rows": model.num_rows,
-                    "timestamp": model.timestamp * 1000  # deserialize to JS
+                    "timestamp": model.timestamp * 1000,  # deserialize to JS
                 }
 
                 yield {"runs": runs, "metadata": metadata}

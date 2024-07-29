@@ -1,33 +1,35 @@
 from unittest.mock import AsyncMock, Mock
-from typing import get_origin, Union
 
 from damnit_api.graphql.models import (
-    DamnitRun, DamnitType, DamnitVariable, KnownVariable)
+    DamnitRun,
+    DamnitType,
+    DamnitVariable,
+    KnownVariable,
+)
 
 from .const import KNOWN_DTYPES
 
 
-def create_schema(damnit_types):
-    return {prop: {'id': prop, 'dtype': dtype.value}
-            for prop, dtype in damnit_types.items()}
-
-
 def create_run_variables(values, proposal=1234, run=1, timestamp=1000):
-    return [{
-        'proposal': proposal,
-        'run': run,
-        'timestamp': timestamp,
-        'name': name,
-        'value': value}
-        for name, value in values.items()]
+    return [
+        {
+            "proposal": proposal,
+            "run": run,
+            "timestamp": timestamp,
+            "name": name,
+            "value": value,
+        }
+        for name, value in values.items()
+    ]
 
 
 def create_run_info(proposal=1234, run=1, start_time=500, added_at=1000):
     return {
-        'proposal': proposal,
-        'run': run,
-        'start_time': start_time,
-        'added_at': added_at}
+        "proposal": proposal,
+        "run": run,
+        "start_time": start_time,
+        "added_at": added_at,
+    }
 
 
 def serialize_data(data, dtypes):
@@ -70,12 +72,7 @@ def assert_model(model, proposal=None, dtypes=None):
         dtypes = {}
 
     assert model.proposal == proposal
-    assert_schema(model.schema, dtypes)
     assert_stype(model.stype, dtypes)
-
-
-def assert_schema(schema, dtypes):
-    assert schema == create_schema({**KNOWN_DTYPES, **dtypes})
 
 
 def assert_stype(stype, dtypes):
