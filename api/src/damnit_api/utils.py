@@ -10,13 +10,13 @@ from scipy.ndimage import zoom
 from .const import Type
 
 
-DEFAULT_ARRAY_NAME = '__xarray_dataarray_variable__'
+DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
 
 DTYPE_MAP = {
-    'bytes': Type.IMAGE,
-    'str': Type.STRING,
-    'bool_': Type.BOOLEAN,
+    "bytes": Type.IMAGE,
+    "str": Type.STRING,
+    "bool_": Type.BOOLEAN,
 }
 
 
@@ -26,28 +26,29 @@ def map_dtype(dtype, default=Type.STRING):
         dtype = Type.NUMBER if np.issubdtype(dtype, np.number) else default
     return dtype
 
+
 # -----------------------------------------------------------------------------
 # Conversion
 
 
 def b64image(bytes_):
-    return b64encode(bytes_).decode('utf-8')
+    return b64encode(bytes_).decode("utf-8")
 
 
 # -----------------------------------------------------------------------------
 # Proposal and runs
 
-DATA_ROOT_DIR = '/gpfs/exfel/exp'
+DATA_ROOT_DIR = "/gpfs/exfel/exp"
 
 
 def format_proposal_number(proposal):
-    """ Format a given unformatted proposal number."
+    """Format a given unformatted proposal number."
 
     Lifted and modified from extra_data.reader.py
     https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/reader.py
     """
-    if not proposal.startswith('p'):
-        proposal = 'p' + proposal.rjust(6, '0')
+    if not proposal.startswith("p"):
+        proposal = "p" + proposal.rjust(6, "0")
 
     return proposal
 
@@ -59,23 +60,25 @@ def find_proposal(propno):
     https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/read_machinery.py
     """
 
-    if '/' in propno:
+    if "/" in propno:
         # Already passed a proposal directory
         return propno
 
     propno = format_proposal_number(propno)
-    for d in iglob(osp.join(DATA_ROOT_DIR, '*/*/{}'.format(propno))):
+    for d in iglob(osp.join(DATA_ROOT_DIR, "*/*/{}".format(propno))):
         return d
 
-    return ''
+    return ""
 
 
 def get_run_data(path, variable):
     try:
         with h5py.File(path) as file:
             group = file[variable]
-            dataset = {key if key != DEFAULT_ARRAY_NAME else 'data': group[key][:]
-                       for key in group.keys()}
+            dataset = {
+                key if key != DEFAULT_ARRAY_NAME else "data": group[key][:]
+                for key in group.keys()
+            }
     except FileNotFoundError as e:
         # TODO: manage the error XD
         raise e
@@ -86,7 +89,7 @@ def get_run_data(path, variable):
     if primary_data.ndim == 1:
         # Most likely a vector
         if len(dataset) == 1:
-            dataset['index'] = np.arange(primary_data.size)
+            dataset["index"] = np.arange(primary_data.size)
         valid_index = np.isfinite(primary_data)
         for key in dataset:
             dataset[key] = dataset[key][valid_index]
@@ -99,6 +102,7 @@ def get_run_data(path, variable):
 
 # -----------------------------------------------------------------------------
 # Metaclasses
+
 
 class Singleton(ABCMeta):
     _instances = {}
@@ -129,14 +133,15 @@ class Registry(ABCMeta):
 # -----------------------------------------------------------------------------
 # Etc.
 
+
 def create_map(lst, *, key):
-    return {obj[key]: obj for obj in lst}
+    return {str(obj[key]): {str(k): v for k, v in obj.items()} for obj in lst}
 
 
 def downsample_image(image, order=2):
     DIMENSION_DOWNSAMPLE = [
         (500, 1.5),
-        (1000, 2)
+        (1000, 2),
     ]  # [(dimension, min downsample)]
 
     Ny, Nx = image.shape

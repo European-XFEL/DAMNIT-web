@@ -1,6 +1,7 @@
+import orjson
 from strawberry.fastapi import GraphQLRouter
-from strawberry.subscriptions import (
-    GRAPHQL_TRANSPORT_WS_PROTOCOL)
+from strawberry.http import GraphQLHTTPResponse
+from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL
 
 from .schema import Schema
 from ..utils import Singleton
@@ -14,9 +15,14 @@ SUBSCRIPTION_PROTOCOLS = [
 class Router(GraphQLRouter, metaclass=Singleton):
 
     def __init__(self):
-        super().__init__(schema=Schema(),
-                         context_getter=get_context,
-                         subscription_protocols=SUBSCRIPTION_PROTOCOLS)
+        super().__init__(
+            schema=Schema(),
+            context_getter=get_context,
+            subscription_protocols=SUBSCRIPTION_PROTOCOLS,
+        )
+
+    def encode_json(self, data: GraphQLHTTPResponse) -> bytes:
+        return orjson.dumps(data)
 
 
 async def get_context():
