@@ -37,7 +37,7 @@ export const get_table_data_query = (type, fields = []) => {
     query TableDataQuery($proposal: String, $page: Int, $per_page: Int) {
       runs(database: { proposal: $proposal }, page: $page, per_page: $per_page) {
         ... on ${type} {
-          ${fields.map((field) => `${field} { value }`).join(" ")}
+          ${fields.map((field) => `${field} { value dtype }`).join(" ")}
         }
       }
     }

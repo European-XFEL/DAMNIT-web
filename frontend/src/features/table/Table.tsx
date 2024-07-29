@@ -6,7 +6,6 @@ import {
   CompactSelection,
   DataEditor,
   GridSelection,
-  GridColumnIcon,
   Item,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
@@ -175,14 +174,17 @@ const Table = (props) => {
     ([col, row]) => {
       const column = props.columns[col].id
       const rowData = props.data[row]
-      const cell = gridCellFactory[props.schema[column].dtype]
-      return rowData
-        ? cell(rowData[column], {
-            lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
-          })
-        : gridCellFactory[DTYPES.string]("")
+
+      if (!rowData) {
+        return gridCellFactory[DTYPES.string]("")
+      }
+
+      const cell = gridCellFactory[rowData[column].dtype]
+      return cell(rowData[column].value, {
+        lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
+      })
     },
-    [props.columns, props.data, props.schema, props.lastUpdate],
+    [props.columns, props.data, props.lastUpdate],
   )
 
   // Cell: Click event
@@ -367,7 +369,7 @@ const Table = (props) => {
         <>
           <DataEditor
             {...(props.grid || {})}
-            columns={formatColumns(props.columns, props.schema)}
+            columns={formatColumns(props.columns)}
             getCellContent={getContent}
             rows={props.rows}
             rowSelect="single"
@@ -407,16 +409,14 @@ const Table = (props) => {
 
 const mapStateToProps = ({ tableData: table }) => {
   const data = table.data ? Object.values(table.data) : []
-
   // TODO: Get the column list from the user settings (reordered columns)
-  const columns = Object.keys(table.metadata.schema)
+  const columns = Object.keys(table.metadata.variables)
     .filter((id) => id !== VARIABLES.proposal)
     .map((id) => ({ id, title: id }))
 
   return {
     data,
     columns,
-    schema: table.metadata.schema,
     rows: table.metadata.rows,
     lastUpdate: table.lastUpdate,
   }
@@ -424,24 +424,9 @@ const mapStateToProps = ({ tableData: table }) => {
 
 export default connect(mapStateToProps)(Table)
 
-const formatColumns = (columns, schema) => {
+const formatColumns = (columns) => {
   return columns.map((column) => ({
     ...column,
-    icon: COLUMN_ICONS[schema[column.id].dtype] || GridColumnIcon.HeaderString,
-    ...(schema[column.id].dtype === DTYPES.number && {
-      width: 100,
-      themeOverride: {
-        fontFamily: "monospace",
-        headerFontStyle: "",
-      },
-    }),
+    width: 100,
   }))
-}
-
-const COLUMN_ICONS = {
-  image: GridColumnIcon.HeaderImage,
-  array: GridColumnIcon.HeaderArray,
-  string: GridColumnIcon.HeaderString,
-  number: GridColumnIcon.HeaderNumber,
-  timestamp: GridColumnIcon.HeaderDate,
 }
