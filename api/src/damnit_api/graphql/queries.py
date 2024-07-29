@@ -56,20 +56,12 @@ class Query:
             runs = [table_model.as_stype(**res)
                     for res in result.mappings().all()]  # type: ignore
 
-        # REMOVEME: Replace scalar to array from run data
-        for variable, properties in table_model.schema.items():
-            if properties['dtype'] == DamnitType.ARRAY.value:
-                for run in runs:
-                    array = get_extracted_data(proposal, run.run, variable)
-                    setattr(run, variable, array.tolist())
-
         return runs
 
     @strawberry.field
     def metadata(self, database: DatabaseInput) -> JSON:
         model = get_model(database.proposal)
         return {
-            "schema": model.schema,
             "rows": model.num_rows,
             "timestamp": model.timestamp * 1000,  # deserialize to JS
         }

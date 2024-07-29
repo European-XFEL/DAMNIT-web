@@ -57,7 +57,6 @@ class Subscription:
             # Return the latest values if any
             if len(runs):
                 metadata = {
-                    "schema": model.schema,
                     "rows": model.num_rows,
                     "timestamp": model.timestamp * 1000  # deserialize to JS
                 }
