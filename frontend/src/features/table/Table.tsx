@@ -203,7 +203,7 @@ const Table = (props) => {
         run:
           isEmpty(row) || !props.data[row]
             ? null
-            : props.data[row][VARIABLES.run_number],
+            : props.data[row][VARIABLES.run_number].value,
       }),
     )
 
@@ -231,7 +231,7 @@ const Table = (props) => {
     const [col, row] = cell
     props.dispatch(
       selectRun({
-        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number],
+        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number].value,
         variables: isEmpty(col) ? null : [props.columns[col].id],
       }),
     )

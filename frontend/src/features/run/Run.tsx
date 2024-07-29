@@ -13,13 +13,12 @@ const TEXT_FIELD = [DTYPES.number, DTYPES.string, DTYPES.timestamp]
 
 const Run = (props) => {
   // Conditions
-  const isScalar = (key) => TEXT_FIELD.includes(props.schema[key].dtype)
-  const isImage = (key) => props.schema[key].dtype === DTYPES.image
+  const isScalar = (key) => TEXT_FIELD.includes(props.data[key].dtype)
+  const isImage = (key) => props.data[key].dtype === DTYPES.image
 
   // Renders
   const renderScalar = (key) => {
-    const value = props.data[key]
-    const dtype = props.schema[key].dtype
+    const { value, dtype } = props.data[key]
 
     return (
       <div className={classes.scalarItem} key={`run-div-${key}`}>
@@ -43,7 +42,6 @@ const Run = (props) => {
   }
 
   const renderImage = (key) => {
-    const value = props.data[key]
     return (
       <div className={classes.objectItem} key={`run-div-${key}`}>
         {renderLabel(key)}
@@ -51,7 +49,7 @@ const Run = (props) => {
           className={classes.objectValue}
           key={`run-value-${key}`}
           fit="contain"
-          src={imageBytesToURL(value)}
+          src={imageBytesToURL(props.data[key].value)}
         />
       </div>
     )
@@ -79,25 +77,28 @@ const Run = (props) => {
 }
 
 const mapStateToProps = ({ tableData, table }) => {
-  const { run, variables } = table.selection
-  let data = tableData.data[run]
-  if (!isEmpty(variables)) {
-    data = Object.fromEntries(
-      Object.entries(data).filter(([key, value]) => variables.includes(key)),
+  const { run, variables: selectedVariables } = table.selection
+
+  let variables = tableData.data[run]
+
+  if (!isEmpty(selectedVariables)) {
+    variables = Object.fromEntries(
+      Object.entries(variables).filter(([name, _]) =>
+        selectedVariables.includes(name),
+      ),
     )
   }
 
-  const filtered = !data
+  const filtered = !variables
     ? []
-    : Object.entries(data).filter(
-        ([key, value]) =>
-          !HIDDEN_DTYPES.includes(tableData.metadata.schema[key].dtype) &&
-          value !== EMPTY_VALUE,
+    : Object.entries(variables).filter(
+        ([_, variable]) =>
+          !HIDDEN_DTYPES.includes(variable.dtype) &&
+          variable.value !== EMPTY_VALUE,
       )
 
   return {
     data: Object.fromEntries(filtered),
-    schema: tableData.metadata.schema,
   }
 }
 
