@@ -1,7 +1,6 @@
 from typing import List
 
-import numpy as np
-from sqlalchemy import Column, MetaData, Table, desc, select
+from sqlalchemy import Column, MetaData, Table, select
 import strawberry
 from strawberry.scalars import JSON
 
@@ -18,10 +17,7 @@ class Query:
 
     @strawberry.field
     async def runs(
-        self,
-        database: DatabaseInput,
-        page: int = 1,
-        per_page: int = 10
+        self, database: DatabaseInput, page: int = 1, per_page: int = 10
     ) -> List[DamnitRun]:
         """
         Returns a list of Damnit runs, with pagination support.
@@ -37,14 +33,16 @@ class Query:
 
         table_model = get_model(proposal)
         if table_model is None:
-            raise RuntimeError(f"Table model for proposal {proposal} "
-                               "is not found.")
+            raise RuntimeError(
+                f"Table model for proposal {proposal} " "is not found."
+            )
 
         columns = [Column(variable) for variable in table_model.variables]
         table = Table("runs", MetaData(), *columns)
         async with get_session(proposal) as session:
             selection = (
-                select(table).order_by("run")  # desc("run")
+                select(table)
+                .order_by("run")  # desc("run")
                 .limit(per_page)
                 .offset((page - 1) * per_page)
             )
@@ -53,8 +51,9 @@ class Query:
             if not result:
                 raise ValueError()
 
-            runs = [table_model.as_stype(**res)
-                    for res in result.mappings().all()]  # type: ignore
+            runs = [
+                table_model.as_stype(**res) for res in result.mappings().all()
+            ]  # type: ignore
 
         return runs
 
@@ -67,7 +66,9 @@ class Query:
         }
 
     @strawberry.field
-    def extracted_data(database: DatabaseInput, run: int, variable: str) -> JSON:
+    def extracted_data(
+        database: DatabaseInput, run: int, variable: str
+    ) -> JSON:
         dataset = get_extracted_data(database.proposal, run, variable)
         array_name = next(iter(dataset))
         coords = [name for name in dataset.keys() if name != array_name]
@@ -78,10 +79,10 @@ class Query:
         }
 
         return {
-            'data': {key: data.tolist() for key, data in dataset.items()},
-            'metadata': {
-                'name': array_name,
-                'coords': coords,
-                'dtype': array_dtypes[dataset[array_name].ndim].value
-            }
+            "data": {key: data.tolist() for key, data in dataset.items()},
+            "metadata": {
+                "name": array_name,
+                "coords": coords,
+                "dtype": array_dtypes[dataset[array_name].ndim].value,
+            },
         }

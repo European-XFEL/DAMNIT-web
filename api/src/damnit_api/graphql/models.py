@@ -1,10 +1,13 @@
-from datetime import datetime, timezone
-import inspect
+from datetime import datetime
 from typing import (
-    Dict, Generic, NewType, Optional, Type, TypeVar, Union,
-    get_args, get_origin)
+    Generic,
+    NewType,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
-import numpy as np
 import strawberry
 
 from ..const import DEFAULT_PROPOSAL, Type as DamnitType
@@ -18,8 +21,9 @@ def serialize(value, *, dtype=DamnitType.STRING):
     if dtype is DamnitType.IMAGE:
         value = b64image(value)
     elif dtype is DamnitType.TIMESTAMP:
-        value = int(value.timestamp() if isinstance(value, datetime)
-                    else value * 1000)
+        value = int(
+            value.timestamp() if isinstance(value, datetime) else value * 1000
+        )
 
     return value
 
@@ -33,7 +37,7 @@ Timestamp = strawberry.scalar(
     Union[int, float],
     serialize=lambda value: serialize(value, dtype=DamnitType.TIMESTAMP),
     parse_value=lambda value: value / 1000,
-    name='Timestamp'
+    name="Timestamp",
 )
 
 
@@ -63,21 +67,23 @@ class KnownVariable(Generic[T], BaseVariable):
 
     @classmethod
     def from_db(cls, entry):
-        return cls(name=entry['name'], value=entry['value'])
+        return cls(name=entry["name"], value=entry["value"])
 
 
 @strawberry.type
 class DamnitVariable(BaseVariable):
     value: Optional[Any]
-    metadata: Optional[DamnitMetaData] = strawberry.field(default=strawberry.UNSET)
+    metadata: Optional[DamnitMetaData] = strawberry.field(
+        default=strawberry.UNSET
+    )
 
     @classmethod
     def from_db(cls, entry):
-        dtype = map_dtype(type(entry['value']))
-        value = serialize(entry['value'], dtype=dtype)
+        dtype = map_dtype(type(entry["value"]))
+        value = serialize(entry["value"], dtype=dtype)
 
         # Database v0
-        return cls(name=entry['name'], value=value, dtype=dtype)
+        return cls(name=entry["name"], value=value, dtype=dtype)
 
         # # Database v1
         # meta = DamnitMetaData(timestamp=entry.timestamp,
@@ -97,24 +103,18 @@ class DamnitRun:
 
     @classmethod
     def from_db(cls, entry):
-        # Database v0
-        variables = {name: klass.from_db({'name': name, 'value': entry[name]})
-                     for name, klass in cls.__annotations__.items()}
-
-        # # Database v1
-        # pass
+        variables = {
+            name: klass.from_db({"name": name, "value": entry[name]})
+            for name, klass in cls.__annotations__.items()
+        }
 
         return cls(**variables)
 
     @classmethod
-    def known_dtypes(cls):
+    def known_variables(cls):
         dtypes = {}
-        for name, annotation in cls.__annotations__.items():
-            type_ = annotation.__args__[0]
-            dtype = (map_dtype(type_) if inspect.isclass(type_) else
-                     DamnitType(type_._scalar_definition.name.lower()))
-
-            dtypes[name] = dtype
+        for name in cls.__annotations__:
+            dtypes[name] = None
         return dtypes
 
     @classmethod
@@ -123,107 +123,55 @@ class DamnitRun:
 
 
 class DamnitTable(metaclass=Registry):
-    proposal = ''
-    path = ''  # TODO: handle dynamic database path
-    schema = {}  # dict of {prop: type}, used by the frontend
+    proposal = ""
+    path = ""  # TODO: handle dynamic database path
     stype = None  # strawberry type
     timestamp = datetime.now().timestamp()  # timestamp of the latest model
     num_rows = 0
 
     def __init__(self, proposal: str = DEFAULT_PROPOSAL):
         self.proposal = proposal
-        self.dtypes = {**DamnitRun.known_dtypes()}
+        self.variables = DamnitRun.known_variables()
         self.update()
 
-    def update(self,
-               dtypes: Union[Dict[str, DamnitType], None] = None,
-               timestamp: Union[float, None] = None):
+    def update(self, variables=None, timestamp: Union[float, None] = None):
         """We update the strawberry type and the schema here"""
-        if dtypes is not None:
-            self.dtypes.update(dtypes)
+        if variables is not None:
+            self.variables = {**self.variables, **variables}
 
         self.stype = self._create_stype()
-        self.schema = self._create_schema()
         if timestamp is not None:
             self.timestamp = timestamp
-
-    def as_dict(self, **fields):
-        schema = self.schema
-        return {name: serialize(value, dtype=DamnitType(schema[name]['dtype']))
-                for name, value in fields.items()}
 
     def as_stype(self, **fields):
         """Converts the database entry to Damnit type"""
         # TODO: Handle missing variables
         return self.stype.from_db(fields)
 
-    @property
-    def variables(self):
-        return list(self.schema.keys())
-
     def _create_stype(self) -> Type[DamnitRun]:
         # Map annotations as (dynamic) DAMNIT variable
         annotations = {
             name: DamnitRun.known_annotations().get(name, DamnitVariable)
-            for name in self.dtypes}
+            for name in self.variables
+        }
 
         # Create class
-        new_class = type(f"p{self.proposal}",
-                         (DamnitRun,),
-                         {"__annotations__": annotations})
+        new_class = type(
+            f"p{self.proposal}", (DamnitRun,), {"__annotations__": annotations}
+        )
         return strawberry.type(new_class)
-
-    def _create_schema(self) -> dict:
-        # TODO: Replace annnotations with mapped schema
-        schema = {}
-        for name, dtype in self.dtypes.items():
-            schema[name] = {
-                'id': name,
-                'dtype': dtype.value}
-
-        # REMOVEME: Redefine variables with known data types
-        known_dtypes = {
-            'sample_flow_rate_meas': DamnitType.ARRAY,
-        }
-        for name, dtype in known_dtypes.items():
-            if sch := schema.get(name):
-                sch['dtype'] = dtype.value
-
-        return schema
-
-    @staticmethod
-    def _map_dtype(dtype, default=DamnitType.STRING):
-        # TODO: Deprecate and use type enums from database entries
-        DTYPE_MAP = {
-            bytes: DamnitType.IMAGE,
-            str: DamnitType.STRING,
-            bool: DamnitType.BOOLEAN,
-            type(None): default,
-        }
-
-        origin = get_origin(dtype)
-        if origin is Union:
-            # Optional type hint
-            dtype = get_args(dtype)[0]
-        if not inspect.isclass(dtype):
-            # Strawberry scalar object
-            return DamnitType(dtype._scalar_definition.name.lower())
-
-        mapped = DTYPE_MAP.get(dtype)
-        if not mapped:
-            mapped = (DamnitType.NUMBER if np.issubdtype(dtype, np.number)
-                      else default)
-        return mapped
 
 
 def get_model(proposal: str):
     return DamnitTable(proposal)
 
 
-def update_model(proposal: str,
-                 dtypes: dict,
-                 timestamp: Union[float, None] = None,
-                 num_rows: int = 0):
+def update_model(
+    proposal: str,
+    dtypes: dict,
+    timestamp: Union[float, None] = None,
+    num_rows: int = 0,
+):
     model = DamnitTable(proposal)
     model.update(dtypes, timestamp)
     model.num_rows = num_rows

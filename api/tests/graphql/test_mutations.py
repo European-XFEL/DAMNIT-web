@@ -18,19 +18,19 @@ async def mocked_latest_rows(mocker):
 
 
 @pytest.mark.asyncio
-async def test_refresh(mocked_dtypes, mocked_count):
+async def test_refresh(graphql_schema, mocked_count):
     model = get_model(proposal="1234")
     assert_model(model, proposal="1234", dtypes=None)
 
-    gql_schema = Schema()
-    result = await gql_schema.execute(
+    graphql_schema = Schema()
+    result = await graphql_schema.execute(
         """
         mutation RefreshMutation($proposal: String) {
           refresh(database: { proposal: $proposal })
         }
         """,
         variable_values={"proposal": "1234"},
-        context_value={"schema": gql_schema},
+        context_value={"schema": graphql_schema},
     )
 
     assert result.errors is None

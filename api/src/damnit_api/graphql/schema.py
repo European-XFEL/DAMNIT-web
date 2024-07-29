@@ -14,7 +14,6 @@ class Schema(strawberry.Schema):
         super().__init__(
             query=queries.Query,
             mutation=mutations.Mutation,
-            subscription=subscriptions.Subscription,
             types=[models.DamnitVariable],
             config=StrawberryConfig(auto_camel_case=False),
         )
@@ -27,8 +26,9 @@ class Schema(strawberry.Schema):
         implementations_map = graphql_schema._implementations_map
         implementations = implementations_map.get(interface)
         if implementations is None:
-            implementations = InterfaceImplementations(objects=[],
-                                                       interfaces=[])
+            implementations = InterfaceImplementations(
+                objects=[], interfaces=[]
+            )
             implementations_map[interface] = implementations
 
         # Invalidate the subtypes

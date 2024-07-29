@@ -15,14 +15,14 @@ from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
     async_sessionmaker,
-    create_async_engine
+    create_async_engine,
 )
 
 from damnit_api.utils import get_run_data
 from .const import DEFAULT_PROPOSAL
-from .utils import Registry, find_proposal
+from .utils import Registry, create_map, find_proposal
 
-DAMNIT_PATH = 'usr/Shared/amore/'
+DAMNIT_PATH = "usr/Shared/amore/"
 
 
 # -----------------------------------------------------------------------------
@@ -35,12 +35,13 @@ class DatabaseSessionManager(metaclass=Registry):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
         self._engine = create_async_engine(self.db_path)
-        self._sessionmaker = async_sessionmaker(autocommit=False,
-                                                bind=self._engine)
+        self._sessionmaker = async_sessionmaker(
+            autocommit=False, bind=self._engine
+        )
 
     @property
     def db_path(self):
-        path = Path(self.root_path) / 'runs.sqlite'
+        path = Path(self.root_path) / "runs.sqlite"
         return f"sqlite+aiosqlite:///{path}"
 
     async def close(self):
@@ -85,19 +86,31 @@ def get_connection(proposal) -> AsyncConnection:
     return DatabaseSessionManager(proposal).connect()
 
 
-async def async_table(proposal, name: str = 'runs') -> Table:
+async def async_table(proposal, name: str = "runs") -> Table:
     async with get_connection(proposal) as conn:
         return await conn.run_sync(
-            lambda conn: Table(name, MetaData(), autoload_with=conn))
+            lambda conn: Table(name, MetaData(), autoload_with=conn)
+        )
+
+
+async def async_variables(proposal):
+    variables = await async_table(proposal, name="variables")
+    selection = select(variables.c.name, variables.c.title)
+
+    async with get_session(proposal) as session:
+        result = await session.execute(selection)
+
+    return create_map(result.mappings().all(), key="name")
 
 
 async def async_latest_rows(
-        proposal,
-        *,
-        table: Union[str, Table],
-        by: str,
-        start_at=None,
-        descending=True) -> dict:
+    proposal,
+    *,
+    table: Union[str, Table],
+    by: str,
+    start_at=None,
+    descending=True,
+) -> dict:
     if start_at is None:
         start_at = datetime.now().timestamp()
     order_by = desc(by) if descending else by
@@ -105,16 +118,16 @@ async def async_latest_rows(
     if isinstance(table, str):
         table = await async_table(proposal, name=table)
 
-    selection = (select(table)
-                 .where(table.c.get(by) > start_at)
-                 .order_by(order_by))
+    selection = (
+        select(table).where(table.c.get(by) > start_at).order_by(order_by)
+    )
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)
     return result.mappings().all()
 
 
-async def async_count(proposal, *, table: str, by='run'):
+async def async_count(proposal, *, table: str, by="run"):
     table = await async_table(proposal, name=table)
     selection = select(func.count(table.c.get(by)))
 
@@ -127,10 +140,12 @@ async def async_count(proposal, *, table: str, by='run'):
 # -----------------------------------------------------------------------------
 # Run data
 
+
 def get_extracted_data(proposal, run, variable):
     root_path = DatabaseSessionManager(proposal).root_path
-    data_path = str(Path(root_path) / "extracted_data"
-                    / f"p{proposal}_r{run}.h5")
+    data_path = str(
+        Path(root_path) / "extracted_data" / f"p{proposal}_r{run}.h5"
+    )
     return get_run_data(data_path, variable)
 
 
