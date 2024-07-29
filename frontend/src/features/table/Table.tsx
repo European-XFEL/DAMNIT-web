@@ -33,6 +33,8 @@ import { isDataPlottable } from "../../utils/plots"
 import { createMap, isEmpty } from "../../utils/helpers"
 import PlotDialog from "../plots/PlotDialog"
 
+const EXCLUDED_VARIABLES = ["proposal", "start_time"]
+
 class Pages {
   constructor() {
     this.loading = []
@@ -397,9 +399,9 @@ const Table = (props) => {
 const mapStateToProps = ({ tableData: table }) => {
   const data = table.data ? Object.values(table.data) : []
   // TODO: Get the column list from the user settings (reordered columns)
-  const columns = Object.keys(table.metadata.variables)
-    .filter((id) => id !== VARIABLES.proposal)
-    .map((id) => ({ id, title: id }))
+  const columns = Object.values(table.metadata.variables)
+    .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name))
+    .map(({ name, title }) => ({ id: name, title }))
 
   return {
     data,

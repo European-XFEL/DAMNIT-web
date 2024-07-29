@@ -1,5 +1,5 @@
 import React from "react"
-import { connect } from "react-redux"
+import { connect, useSelector } from "react-redux"
 import { Image, Text } from "@mantine/core"
 
 import classes from "./Run.module.css"
@@ -12,6 +12,8 @@ const HIDDEN_DTYPES = [DTYPES.array]
 const TEXT_FIELD = [DTYPES.number, DTYPES.string, DTYPES.timestamp]
 
 const Run = (props) => {
+  const variables = useSelector((state) => state.tableData.metadata.variables)
+
   // Conditions
   const isScalar = (key) => TEXT_FIELD.includes(props.data[key].dtype)
   const isImage = (key) => props.data[key].dtype === DTYPES.image
@@ -58,7 +60,7 @@ const Run = (props) => {
   const renderLabel = (key) => {
     return (
       <Text size="sm" className={classes.label} key={`run-label-${key}`}>
-        {key}
+        {variables[key].title}
       </Text>
     )
   }
