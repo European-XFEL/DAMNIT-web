@@ -9,7 +9,7 @@ import { tableService } from "../../utils/api/graphql"
 
 const initialState = {
   data: {},
-  metadata: { schema: {}, rows: 0, timestamp: 0 },
+  metadata: { variables: {}, rows: 0, timestamp: 0 },
   lastUpdate: {},
 }
 
