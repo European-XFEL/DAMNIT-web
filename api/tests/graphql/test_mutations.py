@@ -1,10 +1,16 @@
 import pytest
 import pytest_asyncio
 
-from damnit_api.graphql.models import get_model
+from damnit_api.graphql.models import DamnitRun, get_model
 from damnit_api.graphql.schema import Schema
 
-from .const import EXAMPLE_DTYPES, KNOWN_VALUES, NEW_VALUES, NUM_ROWS
+from .const import (
+    EXAMPLE_DTYPES,
+    KNOWN_VALUES,
+    NEW_VALUES,
+    NUM_ROWS,
+    EXAMPLE_VARIABLES,
+)
 from .utils import assert_model
 
 
@@ -37,7 +43,11 @@ async def test_refresh(graphql_schema, mocked_count):
     assert set(result.data["refresh"].keys()) == {"metadata"}
 
     metadata = result.data["refresh"]["metadata"]
-    assert set(metadata.keys()) == {"rows", "timestamp"}
+    assert set(metadata.keys()) == {"rows", "timestamp", "variables"}
     assert metadata["rows"] == NUM_ROWS
+    assert metadata["variables"] == {
+        **DamnitRun.known_variables(),
+        **EXAMPLE_VARIABLES,
+    }
 
     assert_model(model, proposal="1234", dtypes=EXAMPLE_DTYPES)

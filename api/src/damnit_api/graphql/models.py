@@ -11,7 +11,7 @@ from typing import (
 import strawberry
 
 from ..const import DEFAULT_PROPOSAL, Type as DamnitType
-from ..utils import Registry, b64image, map_dtype
+from ..utils import Registry, b64image, create_map, map_dtype
 
 
 T = TypeVar("T")
@@ -41,12 +41,6 @@ Timestamp = strawberry.scalar(
 )
 
 
-@strawberry.type
-class DamnitMetaData:
-    timestamp: Timestamp
-    version: int
-
-
 @strawberry.interface
 class BaseVariable:
     name: str
@@ -73,24 +67,13 @@ class KnownVariable(Generic[T], BaseVariable):
 @strawberry.type
 class DamnitVariable(BaseVariable):
     value: Optional[Any]
-    metadata: Optional[DamnitMetaData] = strawberry.field(
-        default=strawberry.UNSET
-    )
 
     @classmethod
     def from_db(cls, entry):
         dtype = map_dtype(type(entry["value"]))
         value = serialize(entry["value"], dtype=dtype)
 
-        # Database v0
         return cls(name=entry["name"], value=value, dtype=dtype)
-
-        # # Database v1
-        # meta = DamnitMetaData(timestamp=entry.timestamp,
-        #                       version=entry.version,
-        #                       dtype=dtype or map_dtype(entry.value))
-
-        # return cls(name=entry.name, value=entry.value, metadata=meta)
 
 
 @strawberry.interface
@@ -112,10 +95,28 @@ class DamnitRun:
 
     @classmethod
     def known_variables(cls):
-        dtypes = {}
-        for name in cls.__annotations__:
-            dtypes[name] = None
-        return dtypes
+        # TODO: Make this more streamlined
+        return create_map(
+            [
+                {
+                    "name": "proposal",
+                    "title": "Proposal",
+                },
+                {
+                    "name": "run",
+                    "title": "Run",
+                },
+                {
+                    "name": "start_time",
+                    "title": "Run time",
+                },
+                {
+                    "name": "added_at",
+                    "title": "Timestamp",
+                },
+            ],
+            key="name",
+        )
 
     @classmethod
     def known_annotations(cls):
