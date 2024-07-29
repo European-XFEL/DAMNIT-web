@@ -1,4 +1,5 @@
 from datetime import datetime
+import inspect
 from typing import (
     Generic,
     NewType,
@@ -55,14 +56,6 @@ class BaseVariable:
 class KnownVariable(Generic[T], BaseVariable):
     value: T
 
-    @strawberry.field
-    def dtype(self) -> str:
-        return map_dtype(type(self.value)).value
-
-    @classmethod
-    def from_db(cls, entry):
-        return cls(name=entry["name"], value=entry["value"])
-
 
 @strawberry.type
 class DamnitVariable(BaseVariable):
@@ -86,10 +79,20 @@ class DamnitRun:
 
     @classmethod
     def from_db(cls, entry):
-        variables = {
-            name: klass.from_db({"name": name, "value": entry[name]})
-            for name, klass in cls.__annotations__.items()
-        }
+        variables = {}
+        for name, klass in cls.__annotations__.items():
+            if hasattr(klass, "__args__"):
+                type_ = klass.__args__[0]
+                dtype = (
+                    map_dtype(type_)
+                    if inspect.isclass(type_)
+                    else DamnitType(type_._scalar_definition.name.lower())
+                )
+            else:
+                dtype = map_dtype(type(entry[name]))
+
+            value = serialize(entry[name], dtype=dtype)
+            variables[name] = klass(name=name, value=value, dtype=dtype.value)
 
         return cls(**variables)
 

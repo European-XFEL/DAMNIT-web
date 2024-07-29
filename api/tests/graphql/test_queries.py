@@ -1,7 +1,9 @@
 import pytest
 import pytest_asyncio
 
-from .const import EXAMPLE_VALUES, KNOWN_VALUES, NUM_ROWS
+from damnit_api.graphql.models import DamnitRun
+
+from .const import EXAMPLE_VALUES, EXAMPLE_VARIABLES, KNOWN_VALUES, NUM_ROWS
 from .utils import session_mock
 
 
@@ -54,5 +56,9 @@ def test_metadata_query(graphql_schema):
     assert result.errors is None
 
     metadata = result.data["metadata"]
-    assert set(metadata.keys()) == {"rows", "timestamp"}
+    assert set(metadata.keys()) == {"rows", "variables", "timestamp"}
     assert metadata["rows"] == NUM_ROWS
+    assert metadata["variables"] == {
+        **DamnitRun.known_variables(),
+        **EXAMPLE_VARIABLES,
+    }
