@@ -1,5 +1,5 @@
 import { GridCellKind } from "@glideapps/glide-data-grid"
-import { DTYPES } from "../../common/constants"
+import { DTYPES } from "../../constants"
 import { formatDate, formatFloat, imageBytesToURL } from "../../utils/helpers"
 
 // TODO: Handle nonconforming data type

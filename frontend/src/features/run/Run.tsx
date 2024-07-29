@@ -3,7 +3,7 @@ import { connect } from "react-redux"
 import { Image, Text } from "@mantine/core"
 
 import classes from "./Run.module.css"
-import { DTYPES, EMPTY_VALUE } from "../../common/constants"
+import { DTYPES, EMPTY_VALUE } from "../../constants"
 import { formatDate, imageBytesToURL, isEmpty } from "../../utils/helpers"
 
 const HIDDEN_DTYPES = [DTYPES.array]
