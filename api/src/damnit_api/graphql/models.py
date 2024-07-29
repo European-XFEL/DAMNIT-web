@@ -73,7 +73,7 @@ class DamnitVariable(BaseVariable):
         dtype = map_dtype(type(entry["value"]))
         value = serialize(entry["value"], dtype=dtype)
 
-        return cls(name=entry["name"], value=value, dtype=dtype)
+        return cls(name=entry["name"], value=value, dtype=dtype.value)
 
 
 @strawberry.interface
