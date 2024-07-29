@@ -248,7 +248,6 @@ const PlotDialog = (props) => {
 }
 
 const mapStateToProps = ({ tableData }) => {
-  // Passing the whole schema for dtypes will be useful later
   return {
     runs: Object.keys(tableData.data),
     variables: Object.keys(tableData.metadata.variables),
