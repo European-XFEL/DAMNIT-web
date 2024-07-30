@@ -31,7 +31,6 @@ import {
 } from "../../utils/array"
 import { isDataPlottable } from "../../utils/plots"
 import { createMap, isEmpty } from "../../utils/helpers"
-import PlotDialog from "../plots/PlotDialog"
 
 export const EXCLUDED_VARIABLES = ["proposal", "added_at"]
 
@@ -175,7 +174,7 @@ const Table = (props) => {
   // Data: Populate grid
   const getContent = useCallback(
     ([col, row]) => {
-      const column = props.columns[col].id
+      const column = props.columns[col]?.id
       const rowData = props.data[row]
 
       if (!rowData || !rowData[column]) {
