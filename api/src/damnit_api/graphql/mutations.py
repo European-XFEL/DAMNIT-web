@@ -10,9 +10,7 @@ from .utils import DatabaseInput
 class Mutation:
 
     @strawberry.mutation
-    async def refresh(self,
-                      info: Info,
-                      database: DatabaseInput) -> JSON:
+    async def refresh(self, info: Info, database: DatabaseInput) -> JSON:
         proposal = database.proposal
 
         # Bootstrap
@@ -21,6 +19,7 @@ class Mutation:
 
         metadata = {
             "rows": model.num_rows,
-            "timestamp": model.timestamp * 1000  # deserialize to JS
+            "variables": model.variables,
+            "timestamp": model.timestamp * 1000,  # deserialize to JS
         }
-        return {'metadata': metadata}
+        return {"metadata": metadata}

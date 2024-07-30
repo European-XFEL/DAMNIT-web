@@ -5,7 +5,7 @@ from damnit_api.graphql.bootstrap import bootstrap
 from damnit_api.graphql.models import DamnitTable, get_stype
 from damnit_api.graphql.schema import Schema
 
-from .const import NUM_ROWS, VARIABLES
+from .const import NUM_ROWS, EXAMPLE_VARIABLES
 
 
 @pytest.fixture(autouse=True)
@@ -18,7 +18,7 @@ def lifespan():
 def mocked_variables(mocker):
     mocker.patch(
         "damnit_api.graphql.bootstrap.db.async_variables",
-        return_value=VARIABLES,
+        return_value=EXAMPLE_VARIABLES,
     )
 
 

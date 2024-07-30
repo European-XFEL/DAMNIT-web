@@ -1,4 +1,5 @@
 from damnit_api.graphql.models import DamnitType
+from damnit_api.utils import create_map
 
 
 NUM_ROWS = 10
@@ -6,12 +7,14 @@ NUM_ROWS = 10
 # TODO: Create dataclass for test values
 
 
-VARIABLES = {
-    "integer": {"title": "Integer"},
-    "float": {"title": "Float"},
-    "string": {"title": "String"},
-}
-
+EXAMPLE_VARIABLES = create_map(
+    [
+        {"name": "integer", "title": "Integer"},
+        {"name": "float", "title": "Float"},
+        {"name": "string", "title": "String"},
+    ],
+    key="name",
+)
 
 KNOWN_ANNOTATIONS = {
     "proposal": int,

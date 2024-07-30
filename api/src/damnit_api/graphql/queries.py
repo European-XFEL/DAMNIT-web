@@ -62,6 +62,7 @@ class Query:
         model = get_model(database.proposal)
         return {
             "rows": model.num_rows,
+            "variables": model.variables,
             "timestamp": model.timestamp * 1000,  # deserialize to JS
         }
 

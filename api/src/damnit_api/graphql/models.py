@@ -1,4 +1,5 @@
 from datetime import datetime
+import inspect
 from typing import (
     Generic,
     NewType,
@@ -11,7 +12,7 @@ from typing import (
 import strawberry
 
 from ..const import DEFAULT_PROPOSAL, Type as DamnitType
-from ..utils import Registry, b64image, map_dtype
+from ..utils import Registry, b64image, create_map, map_dtype
 
 
 T = TypeVar("T")
@@ -41,12 +42,6 @@ Timestamp = strawberry.scalar(
 )
 
 
-@strawberry.type
-class DamnitMetaData:
-    timestamp: Timestamp
-    version: int
-
-
 @strawberry.interface
 class BaseVariable:
     name: str
@@ -61,36 +56,17 @@ class BaseVariable:
 class KnownVariable(Generic[T], BaseVariable):
     value: T
 
-    @strawberry.field
-    def dtype(self) -> str:
-        return map_dtype(type(self.value)).value
-
-    @classmethod
-    def from_db(cls, entry):
-        return cls(name=entry["name"], value=entry["value"])
-
 
 @strawberry.type
 class DamnitVariable(BaseVariable):
     value: Optional[Any]
-    metadata: Optional[DamnitMetaData] = strawberry.field(
-        default=strawberry.UNSET
-    )
 
     @classmethod
     def from_db(cls, entry):
         dtype = map_dtype(type(entry["value"]))
         value = serialize(entry["value"], dtype=dtype)
 
-        # Database v0
-        return cls(name=entry["name"], value=value, dtype=dtype)
-
-        # # Database v1
-        # meta = DamnitMetaData(timestamp=entry.timestamp,
-        #                       version=entry.version,
-        #                       dtype=dtype or map_dtype(entry.value))
-
-        # return cls(name=entry.name, value=entry.value, metadata=meta)
+        return cls(name=entry["name"], value=value, dtype=dtype.value)
 
 
 @strawberry.interface
@@ -103,19 +79,47 @@ class DamnitRun:
 
     @classmethod
     def from_db(cls, entry):
-        variables = {
-            name: klass.from_db({"name": name, "value": entry[name]})
-            for name, klass in cls.__annotations__.items()
-        }
+        variables = {}
+        for name, klass in cls.__annotations__.items():
+            if hasattr(klass, "__args__"):
+                type_ = klass.__args__[0]
+                dtype = (
+                    map_dtype(type_)
+                    if inspect.isclass(type_)
+                    else DamnitType(type_._scalar_definition.name.lower())
+                )
+            else:
+                dtype = map_dtype(type(entry[name]))
+
+            value = serialize(entry[name], dtype=dtype)
+            variables[name] = klass(name=name, value=value, dtype=dtype.value)
 
         return cls(**variables)
 
     @classmethod
     def known_variables(cls):
-        dtypes = {}
-        for name in cls.__annotations__:
-            dtypes[name] = None
-        return dtypes
+        # TODO: Make this more streamlined
+        return create_map(
+            [
+                {
+                    "name": "proposal",
+                    "title": "Proposal",
+                },
+                {
+                    "name": "run",
+                    "title": "Run",
+                },
+                {
+                    "name": "start_time",
+                    "title": "Timestamp",
+                },
+                {
+                    "name": "added_at",
+                    "title": "Added at",
+                },
+            ],
+            key="name",
+        )
 
     @classmethod
     def known_annotations(cls):
