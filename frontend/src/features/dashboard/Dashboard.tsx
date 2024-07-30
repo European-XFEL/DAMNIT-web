@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux"
 import {
   AppShell,
   Burger,
+  Button as MantineButton,
   CloseButton,
   Flex,
   Group,
@@ -15,7 +16,7 @@ import {
 } from "@mantine/core"
 import { useDisclosure } from "@mantine/hooks"
 
-import { IconX } from "@tabler/icons-react"
+import { IconGraph, IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
 import { Header, Logo } from "../../components/header"
@@ -23,54 +24,84 @@ import { InstrumentBadge } from "../../components/badges"
 import { Tabs } from "../../components/tabs/"
 import { useCurrentProposal } from "../../hooks"
 import Table from "../table"
-import { PlotsTab } from "../plots"
+import { PlotsTab, PlotDialog } from "../plots"
 import { removeTab, setCurrentTab, closeAside } from "./dashboardSlice"
 import Run from "./Run"
 
 import styles from "./Dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
 
+const Button = ({ label, icon, ...props }) => {
+  return (
+    <MantineButton color="indigo" variant="white" size="xs" {...props}>
+      <Group gap={6} px={0}>
+        {icon}
+        <Text fw={500} size={rem(12)} lh={1} ml={3}>
+          {label}
+        </Text>
+      </Group>
+    </MantineButton>
+  )
+}
+
 const MainTabs = ({ contents, active, setActive, ...props }) => {
+  const [openedDialog, { open: openDialog, close: closeDialog }] =
+    useDisclosure()
+
   const entries = Object.entries(contents)
   return (
-    <MantineTabs
-      value={active || entries[0][0]}
-      onChange={setActive}
-      classNames={{
-        root: styles.tabs,
-        list: cx(headerStyles.bottom, styles.tabsList),
-        tab: styles.tab,
-      }}
-      variant="outline"
-      visibleFrom="sm"
-      {...props}
-    >
-      <MantineTabs.List pl={30} pr={30}>
-        {entries.map(([id, tab]) => (
-          <MantineTabs.Tab
-            value={id}
-            key={`tabs-tab-${id}`}
-            {...(tab.isClosable && tab.onClose
-              ? {
-                  rightSection: <IconX size={16} onClick={tab.onClose} />,
-                }
-              : {})}
-          >
-            {tab.title}
-          </MantineTabs.Tab>
+    <>
+      <MantineTabs
+        value={active || entries[0][0]}
+        onChange={setActive}
+        classNames={{
+          root: styles.tabs,
+          list: cx(headerStyles.bottom, styles.tabsList),
+          tab: styles.tab,
+        }}
+        variant="outline"
+        visibleFrom="sm"
+        {...props}
+      >
+        <MantineTabs.List px={8}>
+          {entries.map(([id, tab]) => (
+            <MantineTabs.Tab
+              value={id}
+              key={`tabs-tab-${id}`}
+              {...(tab.isClosable && tab.onClose
+                ? {
+                    rightSection: <IconX size={16} onClick={tab.onClose} />,
+                  }
+                : {})}
+            >
+              {tab.title}
+            </MantineTabs.Tab>
+          ))}
+          <Button
+            label="Display Plot"
+            icon={
+              <IconGraph
+                style={{ width: rem(14), height: rem(14) }}
+                stroke={1.5}
+              />
+            }
+            ml="auto"
+            onClick={openDialog}
+          />
+        </MantineTabs.List>
+        {entries.map(([id, { Component, props }]) => (
+          <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
+            <Flex
+              direction="column"
+              h="calc(100vh - 56px - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))"
+            >
+              <Component {...props} />
+            </Flex>
+          </MantineTabs.Panel>
         ))}
-      </MantineTabs.List>
-      {entries.map(([id, { Component, props }]) => (
-        <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
-          <Flex
-            direction="column"
-            h="calc(100vh - 56px - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))"
-          >
-            <Component {...props} />
-          </Flex>
-        </MantineTabs.Panel>
-      ))}
-    </MantineTabs>
+      </MantineTabs>
+      <PlotDialog opened={openedDialog} close={closeDialog} />
+    </>
   )
 }
 

@@ -1,5 +1,5 @@
 import React from "react"
-import { Button, Tabs as MantineTabs } from "@mantine/core"
+import { Tabs as MantineTabs } from "@mantine/core"
 import { IconX } from "@tabler/icons-react"
 
 const Tabs = ({ contents, active, setActive, lastElement, ...props }) => {

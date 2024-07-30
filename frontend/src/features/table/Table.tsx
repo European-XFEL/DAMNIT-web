@@ -9,7 +9,7 @@ import {
   Item,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
-import { range, useDisclosure } from "@mantine/hooks"
+import { range } from "@mantine/hooks"
 
 import { gridCellFactory } from "./cells"
 import ContextMenu from "./ContextMenu"
@@ -321,12 +321,6 @@ const Table = (props) => {
     )
   }
 
-  const handlePlotOptions = () => {
-    // set states for pre configurable plotting settings here
-    // Pass they as props to the modal
-    handlersPlotDialog.open()
-  }
-
   const cellContextContents = createMap(
     [
       {
@@ -339,16 +333,9 @@ const Table = (props) => {
         title: "Correlation plot",
         onClick: handleAddCorrPlot,
       },
-      {
-        key: "advPlot",
-        title: "Plot options",
-        onClick: handlePlotOptions,
-      },
     ],
     "key",
   )
-
-  const [openedPlotDialog, handlersPlotDialog] = useDisclosure(false)
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
@@ -377,18 +364,6 @@ const Table = (props) => {
               cellContextContents.get(key),
             )}
           />
-          {openedPlotDialog && (
-            <PlotDialog
-              opened={openedPlotDialog}
-              open={handlersPlotDialog.open}
-              close={handlersPlotDialog.close}
-              selectedColumns={props.columns
-                .filter((_, index) =>
-                  gridSelection.columns.toArray().includes(index),
-                )
-                .map((col) => col.id)}
-            />
-          )}
           <div id="portal" />
         </>
       )}

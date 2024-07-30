@@ -53,7 +53,7 @@ const PlotDialog = (props) => {
   const formValues = dialogForm.getValues()
 
   useEffect(() => {
-    if (!props.selectedColumns[0]) {
+    if (!props.selectedColumns?.[0]) {
       return
     }
 
