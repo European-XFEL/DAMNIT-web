@@ -2,7 +2,7 @@ import React from "react"
 import { Container, Title } from "@mantine/core"
 
 import { history } from "../../routes"
-import { MainNavButton } from "../../common/buttons"
+import { MainNavButton } from "../../components/buttons"
 
 import styles from "./NotFoundPage.module.css"
 

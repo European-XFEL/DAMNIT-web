@@ -13,7 +13,6 @@ import { useSubscription } from "@apollo/client"
 import LoadingBar, { showLoading, hideLoading } from "react-redux-loading-bar"
 
 import Dashboard from "../features/dashboard"
-import Drawer from "../features/drawer"
 import HomePage from "../features/home/"
 import { HeroPage, LoggedOutPage, NotFoundPage } from "../features/pages"
 import { resetPlots } from "../features/plots"
@@ -129,7 +128,6 @@ const App = () => {
             <PrivateRoute>
               <ProposalWrapper>
                 <LoadingBar style={{ backgroundColor: "#1864AB" }} />
-                <Drawer />
                 <Dashboard />
               </ProposalWrapper>
             </PrivateRoute>

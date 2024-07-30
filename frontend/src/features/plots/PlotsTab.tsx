@@ -3,7 +3,7 @@ import { connect } from "react-redux"
 
 import { removePlot, setCurrentPlot } from "./plotsSlice"
 import Plot from "./Plot"
-import Tabs from "../../common/tabs/Tabs"
+import Tabs from "../../components/tabs/Tabs"
 import { sorted } from "../../utils/array"
 
 const Plots = (props) => {

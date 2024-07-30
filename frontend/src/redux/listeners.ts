@@ -1,7 +1,6 @@
 import { createListenerMiddleware } from "@reduxjs/toolkit"
 
-import { addTab, removeTab } from "../features/dashboard"
-import { openDrawer, closeDrawer } from "../features/drawer/"
+import { addTab, removeTab, openAside, closeAside } from "../features/dashboard"
 import { addPlot, removePlot, resetPlots } from "../features/plots/"
 import { selectRun } from "../features/table"
 import { isEmpty } from "../utils/helpers"
@@ -13,7 +12,7 @@ listenerMiddleware.startListening({
   effect: (action, { dispatch }) => {
     const { run } = action.payload
 
-    const sideEffect = run !== null ? openDrawer : closeDrawer
+    const sideEffect = run !== null ? openAside : closeAside
     dispatch(sideEffect())
   },
 })

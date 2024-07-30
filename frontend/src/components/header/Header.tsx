@@ -1,14 +1,6 @@
 import React, { useState } from "react"
 import { useSelector } from "react-redux"
-import {
-  Container,
-  UnstyledButton,
-  Group,
-  Text,
-  Menu,
-  Burger,
-  rem,
-} from "@mantine/core"
+import { UnstyledButton, Group, Text, Menu, Burger, rem } from "@mantine/core"
 import { useDisclosure } from "@mantine/hooks"
 import { IconLogout, IconChevronDown } from "@tabler/icons-react"
 import cx from "clsx"
@@ -37,8 +29,9 @@ const UserMenu = () => {
           className={cx(styles.user, {
             [styles.userActive]: userMenuOpened,
           })}
+          p={5}
         >
-          <Group gap={7}>
+          <Group gap={8} px={0}>
             <Text fw={500} size="sm" lh={1} mr={3}>
               {userFullName}
             </Text>
@@ -66,26 +59,21 @@ const UserMenu = () => {
   )
 }
 
-const Header = ({ standalone = false, size = "xl", children }) => {
+const Header = ({ children, ...props }) => {
   const [opened, { toggle }] = useDisclosure(false)
-  const component = (
-    <Container className={styles.mainSection} size={size}>
-      <Group justify="space-between">
-        {children}
-        <Burger opened={opened} onClick={toggle} hiddenFrom="xs" size="sm" />
-        <UserMenu />
-      </Group>
-    </Container>
-  )
-
   return (
-    <div
-      className={cx(headerStyles.body, headerStyles.top, {
-        [headerStyles.bottom]: standalone,
-      })}
+    <Group
+      h="100%"
+      w="100%"
+      className={headerStyles.body}
+      justify="space-between"
+      align="center"
+      {...props}
     >
-      {component}
-    </div>
+      {children}
+      <Burger opened={opened} onClick={toggle} hiddenFrom="xs" size="sm" />
+      <UserMenu />
+    </Group>
   )
 }
 

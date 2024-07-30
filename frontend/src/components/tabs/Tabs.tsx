@@ -2,7 +2,7 @@ import React from "react"
 import { Tabs as MantineTabs } from "@mantine/core"
 import { IconX } from "@tabler/icons-react"
 
-const Tabs = ({ contents, active, setActive, ...props }) => {
+const Tabs = ({ contents, active, setActive, lastElement, ...props }) => {
   const entries = Object.entries(contents)
   return (
     <MantineTabs
@@ -26,6 +26,8 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
             {tab.title}
           </MantineTabs.Tab>
         ))}
+
+        {lastElement}
       </MantineTabs.List>
       {entries.map(([id, { element }]) => (
         <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">

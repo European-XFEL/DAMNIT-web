@@ -1,23 +1,28 @@
 import React from "react"
 import { useSelector } from "react-redux"
-import { Container, Space } from "@mantine/core"
+import { AppShell, Container, Group, Space } from "@mantine/core"
 
-import { Header, Logo } from "../../common/header/"
+import { Header, Logo } from "../../components/header"
 import { selectAvailableProposals } from "../auth/authSlice"
 import { ProposalsList } from "../proposals/"
 
 const HomePage = () => {
   const proposals = useSelector(selectAvailableProposals)
+
   return (
-    <>
-      <Header standalone={true} size="lg">
-        <Logo />
-      </Header>
-      <Space h="md" />
-      <Container>
-        <ProposalsList proposals={proposals} />
-      </Container>
-    </>
+    <AppShell header={{ height: 60 }} padding="md">
+      <AppShell.Header>
+        <Header px={20}>
+          <Logo />
+        </Header>
+      </AppShell.Header>
+
+      <AppShell.Main>
+        <Container>
+          <ProposalsList proposals={proposals} />
+        </Container>
+      </AppShell.Main>
+    </AppShell>
   )
 }
 
