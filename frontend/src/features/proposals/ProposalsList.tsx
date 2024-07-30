@@ -10,7 +10,7 @@ import cx from "clsx"
 import dayjs from "dayjs"
 import { DataTable } from "mantine-datatable"
 
-import { InstrumentBadge } from "../../common/badges"
+import { InstrumentBadge } from "../../components/badges"
 import { useProposals } from "../../hooks"
 import { isArrayEqual } from "../../utils/array"
 import { orderBy } from "../../utils/objects"

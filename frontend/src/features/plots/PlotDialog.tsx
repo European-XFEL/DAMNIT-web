@@ -11,7 +11,7 @@ import {
 import { TextInput, Text, Blockquote } from "@mantine/core"
 import { useForm } from "@mantine/form"
 import { addPlot } from "."
-import TextCombobox from "../../common/textCombobox/TextCombobox"
+import TextCombobox from "../../components/textCombobox/TextCombobox"
 import { connect, useSelector } from "react-redux"
 import {
   getExtractedVariable,

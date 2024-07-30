@@ -3,7 +3,7 @@ import { Container, Text, Title } from "@mantine/core"
 
 import { useUserInfo } from "../../hooks"
 import { history } from "../../routes"
-import { MainNavButton } from "../../common/buttons"
+import { MainNavButton } from "../../components/buttons"
 
 import styles from "./LoggedOutPage.module.css"
 

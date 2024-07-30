@@ -12,8 +12,8 @@ import {
 import { IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
-import { Header, Logo } from "../../common/header"
-import { InstrumentBadge } from "../../common/badges"
+import { Header, Logo } from "../../components/header"
+import { InstrumentBadge } from "../../components/badges"
 import { useCurrentProposal } from "../../hooks"
 import Table from "../table"
 import { PlotsTab } from "../plots"
