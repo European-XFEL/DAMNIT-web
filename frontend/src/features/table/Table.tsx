@@ -33,7 +33,7 @@ import { isDataPlottable } from "../../utils/plots"
 import { createMap, isEmpty } from "../../utils/helpers"
 import PlotDialog from "../plots/PlotDialog"
 
-export const EXCLUDED_VARIABLES = ["proposal", "start_time"]
+export const EXCLUDED_VARIABLES = ["proposal", "added_at"]
 
 class Pages {
   constructor() {
