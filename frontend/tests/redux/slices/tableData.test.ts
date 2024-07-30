@@ -6,7 +6,7 @@ import { tableService } from "@/utils/api/graphql"
 import {
   validTableData,
   validTableMetadata,
-  validTableSchema,
+  validTableVariables,
   validTableState,
 } from "../../test-utils/builders/table"
 import { handlers } from "../../test-utils/builders/graphql"
@@ -23,7 +23,7 @@ describe("Table slice", () => {
   it("should return the initial state", () => {
     const { tableData: state } = setupStore().getState()
     expect(state.data).toEqual({})
-    expect(state.metadata.schema).toEqual({})
+    expect(state.metadata.variables).toEqual({})
     expect(state.metadata.rows).toEqual(0)
     expect(state.metadata.timestamp).toEqual(0)
     expect(state.lastUpdate).toEqual({})
@@ -36,13 +36,13 @@ describe("Table slice", () => {
     afterAll(() => server.close())
     afterEach(() => server.resetHandlers())
 
-    it("sets table data and schema state when successful", () => {
+    it("sets table data and metadata state when successful", () => {
       const { dispatch, getState } = setupStore()
       // eslint-disable-next-line jest/valid-expect-in-promise
       dispatch(getTableData({ proposal: 2956, page: 1 })).then(() => {
         const { tableData: state } = getState()
         expect(state.data).toEqual(validTableData)
-        expect(state.metadata.schema).toEqual(validTableSchema)
+        expect(state.metadata.variables).toEqual(validTableMetadata.variables)
         expect(state.metadata.rows).toEqual(validTableMetadata.rows)
         expect(state.lastUpdate).toEqual({})
       })
@@ -50,7 +50,7 @@ describe("Table slice", () => {
 
     it("gets the data", async () => {
       const data = await tableService.getTableData(
-        Object.keys(validTableSchema),
+        Object.keys(validTableVariables),
         { proposal: "2956" },
       )
       expect(data).toEqual(validTableData)
@@ -58,7 +58,7 @@ describe("Table slice", () => {
 
     it("gets the metadata", async () => {
       const metadata = await tableService.getTableMetadata({ proposal: "2956" })
-      expect(metadata.schema).toEqual(validTableSchema)
+      expect(metadata.variables).toEqual(validTableVariables)
       expect(metadata.rows).toEqual(validTableMetadata.rows)
       expect(metadata.timestamp).toEqual(validTableMetadata.timestamp)
     })
@@ -66,27 +66,41 @@ describe("Table slice", () => {
     it("gets the table", async () => {
       const table = await tableService.getTable({ proposal: "2956" })
       expect(table.data).toEqual(validTableData)
-      expect(table.metadata.schema).toEqual(validTableSchema)
+      expect(table.metadata.variables).toEqual(validTableVariables)
     })
   })
 
   describe("updateTableData action", () => {
-    it("sets table data and schema state when successful", () => {
+    it("sets table data and metadata state when successful", () => {
       const { dispatch, getState } = setupStore({
         tableData: validTableState,
       })
 
       const newData = {
-        "448": { energy_mean: "New value", new_variable: "New variable" },
-        "449": { run: 449, new_variable: "Another new variable" },
+        "448": {
+          energy_mean: { value: "New value", dtype: "string" },
+          new_variable: { value: "New variable", dtype: "string" },
+        },
+        "449": {
+          run: { value: 449, dtype: "number" },
+          new_variable: { value: "Another new variable", dtype: "string" },
+        },
       }
-      const newSchema = {
-        ...validTableSchema,
-        energy_mean: "string",
-        new_variable: "string",
+
+      const newVariables = {
+        ...validTableVariables,
+        energy_mean: {
+          name: "energy_mean",
+          title: "Energy new (mean)",
+        },
+        new_variable: {
+          name: "new_variable",
+          title: "New Variable",
+        },
       }
+
       const newMetadata = {
-        schema: newSchema,
+        variables: newVariables,
         rows: 10,
         timestamp: Date.now(),
       }
@@ -97,7 +111,7 @@ describe("Table slice", () => {
         "448": { ...validTableData["448"], ...newData["448"] },
         "449": newData["449"],
       })
-      expect(state.metadata.schema).toEqual(newSchema)
+      expect(state.metadata.variables).toEqual(newVariables)
       expect(state.metadata.rows).toEqual(newMetadata.rows)
       expect(state.metadata.timestamp).toEqual(newMetadata.timestamp)
     })

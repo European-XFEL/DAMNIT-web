@@ -11,9 +11,9 @@ const tableDataQueryHandler = damnit.query("TableDataQuery", () => {
       runs: Object.values(validTableData).map((variables) => {
         const nested = Object.entries(variables).map(([variable, value]) => [
           variable,
-          { value: value },
+          { ...value },
         ])
-        nested.push(["__typename", `p${variables.proposal}`])
+        nested.push(["__typename", `p${variables.proposal.value}`])
         return Object.fromEntries(nested)
       }),
     },
