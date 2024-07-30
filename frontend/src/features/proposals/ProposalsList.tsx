@@ -1,6 +1,6 @@
 import { memo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Box, Code, Group, Stack, Text } from "@mantine/core"
+import { Box, Code, Group, rem, Stack, Text } from "@mantine/core"
 import {
   IconCalendarEvent,
   IconChevronRight,
@@ -45,37 +45,41 @@ const CycleCell = memo(({ cycle, isExpanded }) => {
   )
 })
 
-const InstrumentCell = memo(({ instrument }) => {
-  return <InstrumentBadge instrument={instrument} />
+const InstrumentCell = memo((props) => {
+  return <InstrumentBadge {...props} />
 })
 
 const TextCell = memo(({ text, link, ...props }) => {
   const component = <Text {...props}>{text}</Text>
 
-  return link ? <Link to={link}>{component}</Link> : component
+  return <Group>{link ? <Link to={link}>{component}</Link> : component}</Group>
 })
 
-const DateCell = memo(({ datetime }) => {
+const DateCell = memo(({ datetime, ...props }) => {
   const date = dayjs(datetime)
   return (
     <TextCell
       text={date.format("MMMM DD, YYYY")}
-      className={styles.date}
-      size="xs"
+      className={styles.proposalDate}
+      {...props}
     />
   )
 })
 
 const ProposalContent = memo(({ title, damnit_path }) => {
   return (
-    <Stack className={styles.details} p="xs" gap={6} pl={65} pr={65}>
+    <Stack className={styles.content} p="xs" gap={6} pl={65} pr={65}>
       <Group gap={6}>
-        <div className={styles.label}>Title:</div>
-        <div>{title}</div>
+        <Text size="xs" className={styles.contentLabel} c="dark.4">
+          Title:
+        </Text>
+        <Text size="xs">{title}</Text>
       </Group>
       <Group gap={6}>
-        <div className={styles.label}>Path:</div>
-        <Code>{damnit_path}</Code>
+        <Text size="xs" className={styles.contentLabel} c="dark.4">
+          Path:
+        </Text>
+        <Code style={{ fontSize: rem(11) }}>{damnit_path}</Code>
       </Group>
     </Stack>
   )
@@ -116,7 +120,7 @@ const ProposalSubTable = memo(({ proposals }) => {
           accessor: "instrument",
           noWrap: true,
           render: ({ instrument }) => (
-            <InstrumentCell instrument={instrument} />
+            <InstrumentCell instrument={instrument} size="sm" />
           ),
           cellsStyle: () => (theme) => ({ paddingLeft: 0 }),
         },
@@ -125,7 +129,7 @@ const ProposalSubTable = memo(({ proposals }) => {
           noWrap: true,
           textAlign: "right",
           render: ({ number }) => (
-            <TextCell text={number} link={`/proposal/${number}`} />
+            <TextCell text={number} link={`/proposal/${number}`} size="sm" />
           ),
         },
         {
@@ -136,13 +140,16 @@ const ProposalSubTable = memo(({ proposals }) => {
             <TextCell
               text={principal_investigator}
               link={`/proposal/${number}`}
+              size="sm"
             />
           ),
         },
         {
           accessor: "start_date",
           noWrap: true,
-          render: ({ start_date }) => <DateCell datetime={start_date} />,
+          render: ({ start_date }) => (
+            <DateCell datetime={start_date} size="xs" />
+          ),
         },
       ]}
       records={
@@ -169,7 +176,7 @@ const ProposalHeader = () => {
   return (
     <Group justify="space-between">
       <span>Proposal</span>
-      <span className={styles.date}>Beamtime date</span>
+      <span className={styles.proposalDate}>Beamtime date</span>
     </Group>
   )
 }
