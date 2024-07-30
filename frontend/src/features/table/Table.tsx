@@ -244,7 +244,7 @@ const Table = (props) => {
   const handleCellContextMenu = ([col, row], event) => {
     event.preventDefault()
 
-    const column = props.columns[col].id
+    const column = props.columns[col]?.id
     const rowData = props.data[row]
 
     if (col !== -1 && isDataPlottable(rowData[column].dtype)) {

@@ -1,8 +1,9 @@
 import React from "react"
-import { connect, useSelector } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
 import {
   AppShell,
   Burger,
+  CloseButton,
   Flex,
   Group,
   Skeleton,
@@ -23,7 +24,7 @@ import { Tabs } from "../../components/tabs/"
 import { useCurrentProposal } from "../../hooks"
 import Table from "../table"
 import { PlotsTab } from "../plots"
-import { removeTab, setCurrentTab } from "./dashboardSlice"
+import { removeTab, setCurrentTab, closeAside } from "./dashboardSlice"
 import Run from "./Run"
 
 import styles from "./Dashboard.module.css"
@@ -73,7 +74,8 @@ const MainTabs = ({ contents, active, setActive, ...props }) => {
   )
 }
 
-const Dashboard = ({ removeTab, setCurrentTab }) => {
+const Dashboard = () => {
+  const dispatch = useDispatch()
   const { main, aside } = useSelector((state) => state.dashboard)
 
   const [openedNavBar, { toggle: toggleNavBar }] = useDisclosure()
@@ -101,22 +103,16 @@ const Dashboard = ({ removeTab, setCurrentTab }) => {
     {
       ...tab,
       ...mainTabs[id],
-      ...(tab.isClosable ? { onClose: () => removeTab(id) } : {}),
+      ...(tab.isClosable ? { onClose: () => dispatch(removeTab(id)) } : {}),
     },
   ])
 
   // Aside tabs
-  const asideTabs = {
-    run: {
-      Component: Run,
-      props: {},
-    },
-  }
   const populatedAsideTabs = Object.entries(aside.tabs).map(([id, tab]) => [
     id,
     {
       ...tab,
-      ...asideTabs[id],
+      element: <Run />,
     },
   ])
 
@@ -170,24 +166,19 @@ const Dashboard = ({ removeTab, setCurrentTab }) => {
           py={8}
           contents={Object.fromEntries(populatedMainTabs)}
           active={main.currentTab}
-          setActive={setCurrentTab}
+          setActive={(id) => dispatch(setCurrentTab(id))}
         />
       </AppShell.Main>
       <AppShell.Aside p="md">
-        <Tabs contents={Object.fromEntries(populatedAsideTabs)} />
+        <Tabs
+          contents={Object.fromEntries(populatedAsideTabs)}
+          lastElement={
+            <CloseButton ml="auto" onClick={() => dispatch(closeAside())} />
+          }
+        />
       </AppShell.Aside>
     </AppShell>
   )
 }
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    removeTab: (id) => dispatch(removeTab(id)),
-    setCurrentTab: (id) => {
-      dispatch(setCurrentTab(id))
-    },
-    dispatch,
-  }
-}
-
-export default connect(null, mapDispatchToProps)(Dashboard)
+export default Dashboard
