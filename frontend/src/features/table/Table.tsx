@@ -6,7 +6,6 @@ import {
   CompactSelection,
   DataEditor,
   GridSelection,
-  GridColumnIcon,
   Item,
 } from "@glideapps/glide-data-grid"
 import { useExtraCells } from "@glideapps/glide-data-grid-cells"
@@ -23,15 +22,18 @@ import {
   getTableVariable,
 } from "../../redux"
 
-import { DTYPES, VARIABLES } from "../../common/constants"
+import { DTYPES, VARIABLES } from "../../constants"
 import {
   isArrayEqual,
   sorted,
   sortedInsert,
   sortedSearch,
 } from "../../utils/array"
+import { isDataPlottable } from "../../utils/plots"
 import { createMap, isEmpty } from "../../utils/helpers"
 import PlotDialog from "../plots/PlotDialog"
+
+export const EXCLUDED_VARIABLES = ["proposal", "added_at"]
 
 class Pages {
   constructor() {
@@ -175,14 +177,17 @@ const Table = (props) => {
     ([col, row]) => {
       const column = props.columns[col].id
       const rowData = props.data[row]
-      const cell = gridCellFactory[props.schema[column].dtype]
-      return rowData
-        ? cell(rowData[column], {
-            lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
-          })
-        : gridCellFactory[DTYPES.string]("")
+
+      if (!rowData || !rowData[column]) {
+        return gridCellFactory[DTYPES.string]("")
+      }
+
+      const cell = gridCellFactory[rowData[column]?.dtype]
+      return cell(rowData[column].value, {
+        lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
+      })
     },
-    [props.columns, props.data, props.schema, props.lastUpdate],
+    [props.columns, props.data, props.lastUpdate],
   )
 
   // Cell: Click event
@@ -200,7 +205,7 @@ const Table = (props) => {
         run:
           isEmpty(row) || !props.data[row]
             ? null
-            : props.data[row][VARIABLES.run_number],
+            : props.data[row][VARIABLES.run_number].value,
       }),
     )
 
@@ -228,7 +233,7 @@ const Table = (props) => {
     const [col, row] = cell
     props.dispatch(
       selectRun({
-        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number],
+        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number].value,
         variables: isEmpty(col) ? null : [props.columns[col].id],
       }),
     )
@@ -238,12 +243,11 @@ const Table = (props) => {
   const [contextMenu, setContextMenu] = useContextMenu()
   const handleCellContextMenu = ([col, row], event) => {
     event.preventDefault()
-    const VALID_TYPES = [DTYPES.number, DTYPES.image]
 
-    if (
-      col !== -1 &&
-      VALID_TYPES.includes(props.schema[props.columns[col].id].dtype)
-    ) {
+    const column = props.columns[col].id
+    const rowData = props.data[row]
+
+    if (col !== -1 && isDataPlottable(rowData[column].dtype)) {
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
@@ -256,32 +260,17 @@ const Table = (props) => {
     const columnSelection = gridSelection.columns.toArray()
     if (columnSelection.length === 1) {
       if (col !== -1) {
-        if (props.schema[props.columns[col].id].dtype === DTYPES.number) {
-          setContextMenu({
-            localPosition: { x: event.localEventX, y: event.localEventY },
-            bounds: event.bounds,
-            contents: ["plot", "advPlot"],
-          })
-        }
-      }
-    } else if (columnSelection.length === 2) {
-      if (
-        props.schema[props.columns[columnSelection[0]].id].dtype ===
-          DTYPES.number &&
-        props.schema[props.columns[columnSelection[1]].id].dtype ===
-          DTYPES.number
-      ) {
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
-          contents: ["plot", "corrPlot", "advPlot"],
+          contents: ["plot"],
         })
       }
-    } else {
+    } else if (columnSelection.length === 2) {
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
-        contents: ["advPlot"],
+        contents: ["corrPlot"],
       })
     }
   }
@@ -293,7 +282,7 @@ const Table = (props) => {
 
       const variable = props.columns[cell[0]].id
       const runs = sorted(
-        rows.map((row) => props.data[row][VARIABLES.run_number]),
+        rows.map((row) => props.data[row][VARIABLES.run_number].value),
       )
       props.dispatch(
         addPlot({
@@ -367,7 +356,7 @@ const Table = (props) => {
         <>
           <DataEditor
             {...(props.grid || {})}
-            columns={formatColumns(props.columns, props.schema)}
+            columns={formatColumns(props.columns)}
             getCellContent={getContent}
             rows={props.rows}
             rowSelect="single"
@@ -393,9 +382,11 @@ const Table = (props) => {
               opened={openedPlotDialog}
               open={handlersPlotDialog.open}
               close={handlersPlotDialog.close}
-              selectedColumns={Object.keys(props.schema).filter((el, id) =>
-                gridSelection.columns.toArray().includes(id - 1),
-              )}
+              selectedColumns={props.columns
+                .filter((_, index) =>
+                  gridSelection.columns.toArray().includes(index),
+                )
+                .map((col) => col.id)}
             />
           )}
           <div id="portal" />
@@ -407,16 +398,14 @@ const Table = (props) => {
 
 const mapStateToProps = ({ tableData: table }) => {
   const data = table.data ? Object.values(table.data) : []
-
   // TODO: Get the column list from the user settings (reordered columns)
-  const columns = Object.keys(table.metadata.schema)
-    .filter((id) => id !== VARIABLES.proposal)
-    .map((id) => ({ id, title: id }))
+  const columns = Object.values(table.metadata.variables)
+    .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name))
+    .map(({ name, title }) => ({ id: name, title }))
 
   return {
     data,
     columns,
-    schema: table.metadata.schema,
     rows: table.metadata.rows,
     lastUpdate: table.lastUpdate,
   }
@@ -424,24 +413,9 @@ const mapStateToProps = ({ tableData: table }) => {
 
 export default connect(mapStateToProps)(Table)
 
-const formatColumns = (columns, schema) => {
+const formatColumns = (columns) => {
   return columns.map((column) => ({
     ...column,
-    icon: COLUMN_ICONS[schema[column.id].dtype] || GridColumnIcon.HeaderString,
-    ...(schema[column.id].dtype === DTYPES.number && {
-      width: 100,
-      themeOverride: {
-        fontFamily: "monospace",
-        headerFontStyle: "",
-      },
-    }),
+    width: 100,
   }))
-}
-
-const COLUMN_ICONS = {
-  image: GridColumnIcon.HeaderImage,
-  array: GridColumnIcon.HeaderArray,
-  string: GridColumnIcon.HeaderString,
-  number: GridColumnIcon.HeaderNumber,
-  timestamp: GridColumnIcon.HeaderDate,
 }

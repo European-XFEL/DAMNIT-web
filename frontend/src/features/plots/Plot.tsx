@@ -4,6 +4,7 @@ import { useSelector } from "react-redux"
 import { Skeleton } from "@mantine/core"
 
 import { sorted } from "../../utils/array"
+import { isSummaryPlottable } from "../../utils/plots"
 
 const scatterPlot = (data) => {
   return {
@@ -82,7 +83,11 @@ const Plot = ({ plotId }) => {
           acc[variable] = []
         }
         // Store the value to the array (only if run is there)
-        table.data[run] && acc[variable].push(table.data[run][variable])
+        const data = table.data[run]?.[variable]
+
+        isSummaryPlottable(data?.dtype) &&
+          data?.value &&
+          acc[variable].push(data?.value)
       })
       return acc
     }, {})
@@ -117,7 +122,6 @@ const Plot = ({ plotId }) => {
     const coordIndex = 0
     const data = []
     const runs = sorted(plot.runs || Object.keys(extracted.metadata))
-
 
     runs.forEach((run) => {
       if (!extracted.data[run]?.[variable]) {

@@ -37,9 +37,7 @@ const PlotDialog = (props) => {
         const runs = parseRunSelection(value)
 
         return values.runSelectionType === "manualSelection" &&
-          (runs.some((x) => !x) ||
-            runs.length > props.tableMetadata.rows ||
-            !runs.length)
+          (runs.some((x) => !x) || runs.length > props.rows || !runs.length)
           ? "Please enter a valid selection"
           : null
       },
@@ -53,10 +51,6 @@ const PlotDialog = (props) => {
   })
 
   const formValues = dialogForm.getValues()
-
-  const columns = Object.keys(props.tableMetadata.schema).filter(
-    (e) => props.tableMetadata.schema[e].dtype === "number",
-  )
 
   useEffect(() => {
     if (!props.selectedColumns[0]) {
@@ -173,7 +167,7 @@ const PlotDialog = (props) => {
           >
             {formValues.plotType === "summary" && (
               <TextCombobox
-                columns={columns}
+                columns={props.variables}
                 value={formValues.xVariable}
                 setValue={(value) =>
                   dialogForm.setFieldValue("xVariable", value)
@@ -184,7 +178,7 @@ const PlotDialog = (props) => {
               />
             )}
             <TextCombobox
-              columns={columns}
+              columns={props.variables}
               value={formValues.yVariable}
               setValue={(value) => dialogForm.setFieldValue("yVariable", value)}
               label={formValues.plotType === "summary" ? "Y-axis" : "Variable"}
@@ -254,11 +248,10 @@ const PlotDialog = (props) => {
 }
 
 const mapStateToProps = ({ tableData }) => {
-  // Passing the whole schema for dtypes will be useful later
-  const tableMetadata = tableData.metadata
   return {
-    tableMetadata: tableMetadata,
     runs: Object.keys(tableData.data),
+    variables: Object.keys(tableData.metadata.variables),
+    rows: tableData.metadata.rows,
   }
 }
 

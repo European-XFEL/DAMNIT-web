@@ -1,133 +1,137 @@
-import { GridColumnIcon } from "@glideapps/glide-data-grid"
-
 export const gridProps = {
   initialSize: [500, 500],
 }
 
 export const validTableData = {
   "448": {
-    proposal: 2956,
-    run: 448,
-    start_time: 1665264546765.0981,
-    added_at: 1682887864430.31,
-    comment: "None",
-    rep_rate_laser: 1.14,
-    t0_from_bam: 264.1849670410156,
-    delay_mean: 291.1703103718005,
-    motor_stx: -3.978009999999813,
-    n_trains: 3078,
-    energy_min: 928.0038686403836,
-    energy_max: 937.9920297832026,
-    rep_rate_fel: 1.14,
-    hrixs_preview:
-      "iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjcuMSwgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy/bCgiHAAAACXBIWXMAAA9hAAAPYQGoP6dp...",
-    motor_sry: 93.50408817699997,
-    delay_max: "None",
-    delay_min: "None",
-    motor_sty: 4.3682550000003175,
-    transmission: 20.182795201148114,
-    hrixs_spectrum: [
-      12.333243333333336, 12.332315555555555, 12.33223, 12.33347777777778,
-      12.336, 12.333567777777777,
-    ],
-    energy_mean: "None",
-    test_variable: "None",
+    proposal: { value: 2956, dtype: "number" },
+    run: { value: 448, dtype: "number" },
+    start_time: { value: 1665264546765.0981, dtype: "timestamp" },
+    added_at: { value: 1682887864430.31, dtype: "timestamp" },
+    comment: { value: "None", dtype: "string" },
+    rep_rate_laser: { value: 1.14, dtype: "number" },
+    t0_from_bam: { value: 264.1849670410156, dtype: "number" },
+    delay_mean: { value: 291.1703103718005, dtype: "number" },
+    motor_stx: { value: -3.978009999999813, dtype: "number" },
+    n_trains: { value: 3078, dtype: "number" },
+    energy_min: { value: 928.0038686403836, dtype: "number" },
+    energy_max: { value: 937.9920297832026, dtype: "number" },
+    rep_rate_fel: { value: 1.14, dtype: "number" },
+    hrixs_preview: {
+      value:
+        "iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAOXRFWHRTb2Z0d2FyZQBNYXRwbG90bGliIHZlcnNpb24zLjcuMSwgaHR0cHM6Ly9tYXRwbG90bGliLm9yZy/bCgiHAAAACXBIWXMAAA9hAAAPYQGoP6dp...",
+      dtype: "image",
+    },
+    motor_sry: { value: 93.50408817699997, dtype: "number" },
+    delay_max: { value: "None", dtype: "number" },
+    delay_min: { value: "None", dtype: "number" },
+    motor_sty: { value: 4.3682550000003175, dtype: "number" },
+    transmission: { value: 20.182795201148114, dtype: "number" },
+    hrixs_spectrum: {
+      value: [
+        12.333243333333336, 12.332315555555555, 12.33223, 12.33347777777778,
+        12.336, 12.333567777777777,
+      ],
+      dtype: "array",
+    },
+    energy_mean: { value: "None", dtype: "number" },
+    test_variable: { value: "None", dtype: "string" },
   },
 }
 
-export const validTableSchema = {
+export const validTableVariables = {
   proposal: {
-    id: "proposal",
-    dtype: "number",
+    name: "proposal",
+    title: "Proposal",
   },
   run: {
-    id: "run",
-    dtype: "number",
+    name: "run",
+    title: "Run",
   },
   start_time: {
-    id: "start_time",
-    dtype: "timestamp",
+    name: "start_time",
+    title: "Timestamp",
   },
   added_at: {
-    id: "added_at",
-    dtype: "timestamp",
+    name: "added_at",
+    title: "Added At",
   },
   comment: {
-    id: "comment",
-    dtype: "string",
+    name: "comment",
+    title: "Comment",
   },
   rep_rate_laser: {
-    id: "rep_rate_laser",
-    dtype: "number",
+    name: "rep_rate_laser",
+    title: "Laser Rep. Rate",
   },
   t0_from_bam: {
-    id: "t0_from_bam",
-    dtype: "number",
+    name: "t0_from_bam",
+    title: "T0 From BAM",
   },
   delay_mean: {
-    id: "delay_mean",
-    dtype: "number",
+    name: "delay_mean",
+    title: "Delay (mean)",
   },
   motor_stx: {
-    id: "motor_stx",
-    dtype: "number",
+    name: "motor_stx",
+    title: "Motor STX",
   },
   n_trains: {
-    id: "n_trains",
-    dtype: "number",
+    name: "n_trains",
+    title: "Number of Trains",
   },
   energy_min: {
-    id: "energy_min",
-    dtype: "number",
+    name: "energy_min",
+    title: "Energy (min)",
   },
   energy_max: {
-    id: "energy_max",
-    dtype: "number",
+    name: "energy_max",
+    title: "Energy (max)",
   },
   rep_rate_fel: {
-    id: "rep_rate_fel",
-    dtype: "number",
+    name: "rep_rate_fel",
+    title: "FEL Rep. Rate",
   },
   hrixs_preview: {
-    id: "hrixs_preview",
-    dtype: "image",
+    name: "hrixs_preview",
+    title: "HRIXS Preview",
   },
   motor_sry: {
-    id: "motor_sry",
-    dtype: "number",
+    name: "motor_sry",
+    title: "Motor SRY",
   },
   delay_max: {
-    id: "delay_max",
-    dtype: "number",
+    name: "delay_max",
+    title: "Delay (max)",
   },
   delay_min: {
-    id: "delay_min",
-    dtype: "number",
+    name: "delay_min",
+    title: "Delay (min)",
   },
   motor_sty: {
-    id: "motor_sty",
-    dtype: "number",
+    name: "motor_sty",
+    title: "Motor STY",
   },
   transmission: {
-    id: "transmission",
-    dtype: "number",
+    name: "transmission",
+    title: "Transmission",
   },
   hrixs_spectrum: {
-    id: "hrixs_spectrum",
-    dtype: "array",
+    name: "hrixs_spectrum",
+    title: "HRIXS Spectrum",
   },
   energy_mean: {
-    id: "energy_mean",
-    dtype: "number",
+    name: "energy_mean",
+    title: "Energy (mean)",
   },
   test_variable: {
-    id: "test_variable",
-    dtype: "string",
+    name: "test_variable",
+    title: "Test Variable",
   },
 }
 
 export const validTableMetadata = {
-  schema: validTableSchema,
+  variables: validTableVariables,
   rows: 10,
   timestamp: Date.now(),
 }
@@ -136,131 +140,3 @@ export const validTableState = {
   data: validTableData,
   metadata: validTableMetadata,
 }
-
-const numberTheme = { fontFamily: "monospace", headerFontStyle: "" }
-
-export const validTableColumns = [
-  {
-    id: "run",
-    title: "run",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  { id: "start_time", title: "start_time", icon: GridColumnIcon.HeaderDate },
-  { id: "added_at", title: "added_at", icon: GridColumnIcon.HeaderDate },
-  { id: "comment", title: "comment", icon: GridColumnIcon.HeaderString },
-  {
-    id: "rep_rate_laser",
-    title: "rep_rate_laser",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "t0_from_bam",
-    title: "t0_from_bam",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "delay_mean",
-    title: "delay_mean",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "motor_stx",
-    title: "motor_stx",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "n_trains",
-    title: "n_trains",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "energy_min",
-    title: "energy_min",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "energy_max",
-    title: "energy_max",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "rep_rate_fel",
-    title: "rep_rate_fel",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "hrixs_preview",
-    title: "hrixs_preview",
-    icon: GridColumnIcon.HeaderImage,
-  },
-  {
-    id: "motor_sry",
-    title: "motor_sry",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "delay_max",
-    title: "delay_max",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "delay_min",
-    title: "delay_min",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "motor_sty",
-    title: "motor_sty",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "transmission",
-    title: "transmission",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "hrixs_spectrum",
-    title: "hrixs_spectrum",
-    icon: GridColumnIcon.HeaderArray,
-  },
-  {
-    id: "energy_mean",
-    title: "energy_mean",
-    width: 100,
-    themeOverride: numberTheme,
-    icon: GridColumnIcon.HeaderNumber,
-  },
-  {
-    id: "test_variable",
-    title: "test_variable",
-    icon: GridColumnIcon.HeaderString,
-  },
-]

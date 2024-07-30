@@ -41,15 +41,15 @@ const useProposal = () => {
   const { timestamp } = useSelector((state) => state.tableData.metadata)
   const dispatch = useDispatch()
 
-  // Initialize GraphQL hooks
-  useSubscription(LATEST_DATA_SUBSCRIPTION, {
-    variables: { proposal: proposal.value, timestamp },
-    onData: ({ data }) => {
-      const { runs, metadata } = data.data[LATEST_DATA]
-      dispatch(updateTableData({ runs, metadata }))
-    },
-    skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
-  })
+  // // CC: Deprecate subscriptions for now as it is currently broken
+  // useSubscription(LATEST_DATA_SUBSCRIPTION, {
+  //   variables: { proposal: proposal.value, timestamp },
+  //   onData: ({ data }) => {
+  //     const { runs, metadata } = data.data[LATEST_DATA]
+  //     dispatch(updateTableData({ runs, metadata }))
+  //   },
+  //   skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
+  // })
 
   // Synchronize the server and the client table data
   const [refresh, _] = useMutation(REFRESH_MUTATION)

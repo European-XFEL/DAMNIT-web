@@ -41,10 +41,11 @@ function getTableData(fields, { proposal, page = 1, pageSize = 10 } = {}) {
     })
     .then(({ data }) => {
       // TODO: Filter out empty values
+
       return size(data.runs)
         ? Object.fromEntries(
             data.runs.map((run) => {
-              return [run.run.value, getRunValue(stripTypename(run))]
+              return [run.run.value, stripTypename(run)]
             }),
           )
         : null
@@ -68,7 +69,7 @@ function getTable({ proposal, page = 1, pageSize = 5 } = {}) {
   return getTableMetadata({ proposal })
     .then((result) => {
       metadata = result
-      return getTableData(Object.keys(result.schema), {
+      return getTableData(Object.keys(result.variables), {
         proposal,
         page,
         pageSize,
@@ -88,12 +89,4 @@ function getExtractedData({ proposal, run, variable }) {
       },
     })
     .then((result) => result.data[EXTRACTED_DATA])
-}
-
-// Helpers --------------------------------------------------------------------
-
-const getRunValue = (run) => {
-  return Object.fromEntries(
-    Object.entries(run).map(([variable, data]) => [variable, data.value]),
-  )
 }
