@@ -33,7 +33,7 @@ import { isDataPlottable } from "../../utils/plots"
 import { createMap, isEmpty } from "../../utils/helpers"
 import PlotDialog from "../plots/PlotDialog"
 
-const EXCLUDED_VARIABLES = ["proposal", "start_time"]
+export const EXCLUDED_VARIABLES = ["proposal", "start_time"]
 
 class Pages {
   constructor() {
@@ -178,7 +178,7 @@ const Table = (props) => {
       const column = props.columns[col].id
       const rowData = props.data[row]
 
-      if (!rowData) {
+      if (!rowData || !rowData[column]) {
         return gridCellFactory[DTYPES.string]("")
       }
 
