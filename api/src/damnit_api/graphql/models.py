@@ -111,11 +111,11 @@ class DamnitRun:
                 },
                 {
                     "name": "start_time",
-                    "title": "Run time",
+                    "title": "Timestamp",
                 },
                 {
                     "name": "added_at",
-                    "title": "Timestamp",
+                    "title": "Added at",
                 },
             ],
             key="name",
