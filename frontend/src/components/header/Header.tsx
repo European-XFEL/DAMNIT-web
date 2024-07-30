@@ -29,8 +29,9 @@ const UserMenu = () => {
           className={cx(styles.user, {
             [styles.userActive]: userMenuOpened,
           })}
+          p={5}
         >
-          <Group gap={7}>
+          <Group gap={8} px={0}>
             <Text fw={500} size="sm" lh={1} mr={3}>
               {userFullName}
             </Text>
@@ -58,7 +59,7 @@ const UserMenu = () => {
   )
 }
 
-const Header = ({ children }) => {
+const Header = ({ children, ...props }) => {
   const [opened, { toggle }] = useDisclosure(false)
   return (
     <Group
@@ -67,7 +68,7 @@ const Header = ({ children }) => {
       className={headerStyles.body}
       justify="space-between"
       align="center"
-      px={20}
+      {...props}
     >
       {children}
       <Burger opened={opened} onClick={toggle} hiddenFrom="xs" size="sm" />

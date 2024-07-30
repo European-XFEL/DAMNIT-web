@@ -12,7 +12,7 @@ const HomePage = () => {
   return (
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>
-        <Header standalone={false} size="lg">
+        <Header px={20}>
           <Logo />
         </Header>
       </AppShell.Header>

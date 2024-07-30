@@ -1,14 +1,20 @@
 import React from "react"
 import { connect } from "react-redux"
 import {
+  AppShell,
+  Burger,
   Flex,
   Group,
+  ScrollArea,
+  Skeleton,
   Stack,
   Tabs as MantineTabs,
   Text,
   Title,
   rem,
 } from "@mantine/core"
+import { useDisclosure } from "@mantine/hooks"
+
 import { IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
@@ -35,18 +41,14 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
       onChange={setActive}
       classNames={{
         root: styles.tabs,
-        list: styles.tabsList,
+        list: cx(headerStyles.bottom, styles.tabsList),
         tab: styles.tab,
       }}
       variant="outline"
       visibleFrom="sm"
       {...props}
     >
-      <MantineTabs.List
-        className={cx(headerStyles.body, headerStyles.bottom, styles.tabsList)}
-        pl={30}
-        pr={30}
-      >
+      <MantineTabs.List pl={30} pr={30}>
         {entries.map(([id, tab]) => (
           <MantineTabs.Tab
             value={id}
@@ -75,6 +77,10 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
 }
 
 const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
+  const [openedNavBar, { toggle: toggleNavBar }] = useDisclosure()
+  const [openedAside, { toggle: toggleAside }] = useDisclosure()
+  const [disabled, { toggle: toggleDisabled }] = useDisclosure()
+
   const { proposal, isLoading } = useCurrentProposal()
 
   if (isLoading) {
@@ -91,29 +97,61 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
   ])
 
   return (
-    <Flex direction="column" h="100vh">
-      <Header standalone={false} size="xxl">
-        <Group gap="md">
-          <Logo />
-          <Stack gap={0}>
-            <Flex gap={10} align="center">
-              <InstrumentBadge instrument={proposal.instrument} />
-              <Title order={5}>
-                {`p${proposal.number} - ${proposal.principal_investigator}`}
-              </Title>
-            </Flex>
-            <Text size={rem(10)} c="dimmed" fs="italic">
-              {proposal.title}
-            </Text>
-          </Stack>
-        </Group>
-      </Header>
-      <Tabs
-        contents={Object.fromEntries(populated)}
-        active={currentTab}
-        setActive={setCurrentTab}
-      />
-    </Flex>
+    <AppShell
+      header={{ height: 60 }}
+      navbar={{
+        width: 300,
+        breakpoint: "sm",
+        collapsed: { desktop: !openedNavBar },
+      }}
+      aside={{
+        width: 300,
+        breakpoint: "md",
+        collapsed: { desktop: !openedAside },
+      }}
+    >
+      <AppShell.Header>
+        <Header px={8}>
+          <Group gap="sm">
+            <Burger
+              opened={openedNavBar}
+              onClick={toggleNavBar}
+              visibleFrom="sm"
+              size="sm"
+            />
+            <Logo />
+            <Stack gap={0}>
+              <Flex gap={10} align="center">
+                <InstrumentBadge instrument={proposal.instrument} />
+                <Title order={5}>
+                  {`p${proposal.number} - ${proposal.principal_investigator}`}
+                </Title>
+              </Flex>
+              <Text size={rem(10)} c="dimmed" fs="italic">
+                {proposal.title}
+              </Text>
+            </Stack>
+          </Group>
+        </Header>
+      </AppShell.Header>
+      <AppShell.Navbar p="md">
+        {Array(15)
+          .fill(0)
+          .map((_, index) => (
+            <Skeleton key={index} h={28} mt="sm" animate={false} />
+          ))}
+      </AppShell.Navbar>
+      <AppShell.Main>
+        <ScrollArea h="calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))">
+          <Tabs
+            py={8}
+            contents={Object.fromEntries(populated)}
+            active={currentTab}
+            setActive={setCurrentTab}
+          />
+        </ScrollArea>
+      </AppShell.Main>
+    </AppShell>
   )
 }
 
