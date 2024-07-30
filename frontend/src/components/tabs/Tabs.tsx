@@ -27,9 +27,9 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
           </MantineTabs.Tab>
         ))}
       </MantineTabs.List>
-      {entries.map(([id, { element }]) => (
+      {entries.map(([id, { Component, props }]) => (
         <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
-          {element}
+          <Component {...props} />
         </MantineTabs.Panel>
       ))}
     </MantineTabs>

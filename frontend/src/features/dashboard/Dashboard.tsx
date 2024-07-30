@@ -1,11 +1,10 @@
 import React from "react"
-import { connect } from "react-redux"
+import { connect, useSelector } from "react-redux"
 import {
   AppShell,
   Burger,
   Flex,
   Group,
-  ScrollArea,
   Skeleton,
   Stack,
   Tabs as MantineTabs,
@@ -20,20 +19,17 @@ import cx from "clsx"
 
 import { Header, Logo } from "../../components/header"
 import { InstrumentBadge } from "../../components/badges"
+import { Tabs } from "../../components/tabs/"
 import { useCurrentProposal } from "../../hooks"
 import Table from "../table"
 import { PlotsTab } from "../plots"
 import { removeTab, setCurrentTab } from "./dashboardSlice"
+import Run from "./Run"
 
 import styles from "./Dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
 
-const COMPONENTS_MAP = {
-  table: <Table />,
-  plots: <PlotsTab />,
-}
-
-const Tabs = ({ contents, active, setActive, ...props }) => {
+const MainTabs = ({ contents, active, setActive, ...props }) => {
   const entries = Object.entries(contents)
   return (
     <MantineTabs
@@ -63,12 +59,13 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
           </MantineTabs.Tab>
         ))}
       </MantineTabs.List>
-      {entries.map(([id, { element }]) => (
+      {entries.map(([id, { Component, props }]) => (
         <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
-          <Flex direction="column" h="80vh">
-            <div style={{ width: "100%", height: "100%", flexGrow: 1 }}>
-              {element}
-            </div>
+          <Flex
+            direction="column"
+            h="calc(100vh - 56px - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))"
+          >
+            <Component {...props} />
           </Flex>
         </MantineTabs.Panel>
       ))}
@@ -76,23 +73,50 @@ const Tabs = ({ contents, active, setActive, ...props }) => {
   )
 }
 
-const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
+const Dashboard = ({ removeTab, setCurrentTab }) => {
+  const { main, aside } = useSelector((state) => state.dashboard)
+
   const [openedNavBar, { toggle: toggleNavBar }] = useDisclosure()
-  const [openedAside, { toggle: toggleAside }] = useDisclosure()
   const [disabled, { toggle: toggleDisabled }] = useDisclosure()
 
+  // Proposal: Check if it is fully loaded (at least the metadata)
   const { proposal, isLoading } = useCurrentProposal()
-
   if (isLoading) {
     return
   }
 
-  const populated = Object.entries(contents).map(([id, tab]) => [
+  // Main tabs
+  const mainTabs = {
+    table: {
+      Component: Table,
+      props: {},
+    },
+    plots: {
+      Component: PlotsTab,
+      props: {},
+    },
+  }
+  const populatedMainTabs = Object.entries(main.tabs).map(([id, tab]) => [
     id,
     {
       ...tab,
-      element: COMPONENTS_MAP[id] || <div>{tab.title}</div>,
+      ...mainTabs[id],
       ...(tab.isClosable ? { onClose: () => removeTab(id) } : {}),
+    },
+  ])
+
+  // Aside tabs
+  const asideTabs = {
+    run: {
+      Component: Run,
+      props: {},
+    },
+  }
+  const populatedAsideTabs = Object.entries(aside.tabs).map(([id, tab]) => [
+    id,
+    {
+      ...tab,
+      ...asideTabs[id],
     },
   ])
 
@@ -105,9 +129,9 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
         collapsed: { desktop: !openedNavBar },
       }}
       aside={{
-        width: 300,
+        width: 360,
         breakpoint: "md",
-        collapsed: { desktop: !openedAside },
+        collapsed: { desktop: !aside.isOpened },
       }}
     >
       <AppShell.Header>
@@ -142,24 +166,18 @@ const Dashboard = ({ contents, currentTab, removeTab, setCurrentTab }) => {
           ))}
       </AppShell.Navbar>
       <AppShell.Main>
-        <ScrollArea h="calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))">
-          <Tabs
-            py={8}
-            contents={Object.fromEntries(populated)}
-            active={currentTab}
-            setActive={setCurrentTab}
-          />
-        </ScrollArea>
+        <MainTabs
+          py={8}
+          contents={Object.fromEntries(populatedMainTabs)}
+          active={main.currentTab}
+          setActive={setCurrentTab}
+        />
       </AppShell.Main>
+      <AppShell.Aside p="md">
+        <Tabs contents={Object.fromEntries(populatedAsideTabs)} />
+      </AppShell.Aside>
     </AppShell>
   )
-}
-
-const mapStateToProps = ({ dashboard }) => {
-  return {
-    contents: dashboard.tabs,
-    currentTab: dashboard.currentTab,
-  }
 }
 
 const mapDispatchToProps = (dispatch) => {
@@ -172,4 +190,4 @@ const mapDispatchToProps = (dispatch) => {
   }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(Dashboard)
+export default connect(null, mapDispatchToProps)(Dashboard)
