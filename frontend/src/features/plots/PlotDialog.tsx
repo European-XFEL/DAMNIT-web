@@ -232,14 +232,18 @@ const PlotDialog = (props) => {
           )}
           {formValues.plotType !== "summary" &&
             formValues.runSelectionType === "allSelection" && (
-              <Blockquote color="blue" p="10" w="100%">
+              <Blockquote color="indigo" p="10" w="100%">
                 You are about to plot data for all the runs
               </Blockquote>
             )}
 
           <Group wrap="wrap" justify="space-between" w="100%">
-            <Button onClick={handleClose}> Cancel </Button>
-            <Button type="submit"> Plot </Button>
+            <Button color="indigo" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button color="indigo" variant="filled" type="submit">
+              Plot
+            </Button>
           </Group>
         </Flex>
       </form>
