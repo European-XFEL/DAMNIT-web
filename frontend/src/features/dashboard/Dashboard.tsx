@@ -93,7 +93,7 @@ const MainTabs = ({ contents, active, setActive, ...props }) => {
           <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
             <Flex
               direction="column"
-              h="calc(100vh - 56px - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))"
+              h="calc(100vh - 52px - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))"
             >
               <Component {...props} />
             </Flex>
@@ -108,6 +108,7 @@ const MainTabs = ({ contents, active, setActive, ...props }) => {
 const Dashboard = () => {
   const dispatch = useDispatch()
   const { main, aside } = useSelector((state) => state.dashboard)
+  const { run: selectedRun } = useSelector((state) => state.table.selection)
 
   const [openedNavBar, { toggle: toggleNavBar }] = useDisclosure()
   const [disabled, { toggle: toggleDisabled }] = useDisclosure()
@@ -143,6 +144,7 @@ const Dashboard = () => {
     id,
     {
       ...tab,
+      ...(selectedRun && { title: `${tab.title}: ${selectedRun}` }),
       element: <Run />,
     },
   ])
@@ -157,7 +159,7 @@ const Dashboard = () => {
       }}
       aside={{
         width: 360,
-        breakpoint: "md",
+        breakpoint: "sm",
         collapsed: { desktop: !aside.isOpened },
       }}
     >
@@ -194,13 +196,13 @@ const Dashboard = () => {
       </AppShell.Navbar>
       <AppShell.Main>
         <MainTabs
-          py={8}
+          pt={8}
           contents={Object.fromEntries(populatedMainTabs)}
           active={main.currentTab}
           setActive={(id) => dispatch(setCurrentTab(id))}
         />
       </AppShell.Main>
-      <AppShell.Aside p="md">
+      <AppShell.Aside p="xs">
         <Tabs
           contents={Object.fromEntries(populatedAsideTabs)}
           lastElement={

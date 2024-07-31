@@ -3,8 +3,8 @@
 .scalarItem {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  max-height: rem(20px);
+  align-items: start;
+  /* max-height: rem(20px); */
   overflow-x: auto;
   gap: rem(20px);
   margin-top: var(--mantine-spacing-xs);
@@ -19,19 +19,22 @@
   gap: rem(5px);
 }
 
-.label {
+.scalarLabel {
   color: var(--mantine-color-gray-6);
-  min-width: rem(100px);
-  max-width: rem(200px);
-  height: rem(20px);
-  line-height: rem(20px);
+  width: rem(100px);
 }
 
 .scalarvalue {
   color: var(--mantine-color-dark-9);
   min-width: rem(100px);
+  max-width: rem(160px);
   height: rem(20px);
   line-height: rem(20px);
+}
+
+.objectLabel {
+  color: var(--mantine-color-gray-6);
+  width: rem(300px);
 }
 
 .objectValue {

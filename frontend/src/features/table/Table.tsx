@@ -375,7 +375,7 @@ const mapStateToProps = ({ tableData: table }) => {
   // TODO: Get the column list from the user settings (reordered columns)
   const columns = Object.values(table.metadata.variables)
     .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name))
-    .map(({ name, title }) => ({ id: name, title }))
+    .map(({ name, title }) => ({ id: name, title: title || name }))
 
   return {
     data,
