@@ -1,5 +1,6 @@
 import React from "react"
 import { connect } from "react-redux"
+import { Stack, Text } from "@mantine/core"
 
 import { removePlot, setCurrentPlot } from "./plotsSlice"
 import Plot from "./Plot"
@@ -11,7 +12,22 @@ const Plots = (props) => {
     id,
     {
       element: <Plot plotId={id} />,
-      title: plot.title,
+      title: (
+        <Stack gap={0} w={160}>
+          <Text
+            size="sm"
+            style={{
+              wordWrap: "break-word",
+              whiteSpace: "normal",
+            }}
+          >
+            {plot.title}
+          </Text>
+          <Text size="xs" c="light.9">
+            {plot.subtitle}
+          </Text>
+        </Stack>
+      ),
       isClosable: true,
       onClose: () => props.removePlot(id),
     },
@@ -31,7 +47,7 @@ const Plots = (props) => {
 const mapStateToProps = ({ tableData: table, plots }) => {
   const contents = Object.entries(plots.data).map(([id, plot]) => {
     const runs = sorted(plot.runs || Object.keys(table.data))
-    return [id, { title: formatTitle(plot.variables, runs) }]
+    return [id, { title: plot.title, subtitle: formatSubtitle(runs) }]
   })
 
   return {
@@ -52,22 +68,10 @@ const mapDispatchToProps = (dispatch) => {
 
 export default connect(mapStateToProps, mapDispatchToProps)(Plots)
 
-const formatTitle = (variables, runs) => {
-  let prefix = "",
-    suffix = ""
-
-  if (variables.length === 2) {
-    // Most likely correlation
-    prefix = `${variables[1]} vs ${variables[0]}`
-  } else {
-    prefix = variables[0]
-  }
-
+const formatSubtitle = (runs) => {
   if (runs.length === 1) {
-    suffix = `(run ${runs[0]})`
+    return `(run ${runs[0]})`
   } else {
-    suffix = `(runs ${runs[0]}-${runs[runs.length - 1]})`
+    return `(runs ${runs[0]}-${runs[runs.length - 1]})`
   }
-
-  return `${prefix} ${suffix}`
 }

@@ -6,7 +6,7 @@ const Tabs = ({ contents, active, setActive, lastElement, ...props }) => {
   const entries = Object.entries(contents)
   return (
     <MantineTabs
-      radius="xl"
+      radius="lg"
       value={active || entries[0][0]}
       onChange={setActive}
       color="indigo"

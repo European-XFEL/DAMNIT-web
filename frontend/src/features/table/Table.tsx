@@ -30,7 +30,7 @@ import {
   sortedSearch,
 } from "../../utils/array"
 import { isDataPlottable } from "../../utils/plots"
-import { createMap, isEmpty } from "../../utils/helpers"
+import { isEmpty } from "../../utils/helpers"
 
 export const EXCLUDED_VARIABLES = ["proposal", "added_at"]
 
@@ -247,7 +247,8 @@ const Table = (props) => {
     const rowData = props.data[row]
 
     if (col !== -1 && isDataPlottable(rowData[column].dtype)) {
-      const variable = props.columns[col].id
+      const variable = props.columns[col]
+      const subtitle = `${variable.title}`
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
@@ -255,8 +256,9 @@ const Table = (props) => {
           {
             key: "plot",
             title: "Plot: data",
-            subtitle: `${variable}`,
-            onClick: () => addDataPlot({ variable }),
+            subtitle,
+            onClick: () =>
+              addDataPlot({ variable: variable.id, label: subtitle }),
           },
         ],
       })
@@ -265,9 +267,23 @@ const Table = (props) => {
   const handleHeaderContextMenu = (col, event) => {
     event.preventDefault()
     const columnSelection = gridSelection.columns.toArray()
+
+    if (!columnSelection.includes(col)) {
+      if (!columnSelection.length) {
+        columnSelection.push(col)
+      }
+
+      setGridSelection({
+        columns: CompactSelection.fromSingleSelection(col),
+        rows: CompactSelection.empty(),
+      })
+    }
+
     if (columnSelection.length === 1) {
       if (col !== -1) {
-        const variable = props.columns[col].id
+        const variable = props.columns[col]
+        const subtitle = `${variable.title} vs. Run`
+
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
@@ -275,16 +291,20 @@ const Table = (props) => {
             {
               key: "plot",
               title: "Plot: summary",
-              subtitle: `${variable} vs. run`,
-              onClick: () => addSummaryPlot({ variables: [variable] }),
+              subtitle,
+              onClick: () =>
+                addSummaryPlot({ variables: [variable.id], label: subtitle }),
             },
           ],
         })
       }
     } else if (columnSelection.length === 2) {
       const col0 = columnSelection.filter((c) => c !== col)[0]
-      const y = props.columns[col].id // the latest selection
-      const x = props.columns[col0].id // the first selection
+      const y = props.columns[col] // the latest selection
+      const x = props.columns[col0] // the first selection
+
+      const subtitle = `${y.title} vs. ${x.title}`
+
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
@@ -292,19 +312,21 @@ const Table = (props) => {
           {
             key: "plot",
             title: "Plot: summary",
-            subtitle: `${y} vs. ${x}`,
-            onClick: () => addSummaryPlot({ variables: [x, y] }),
+            subtitle,
+            onClick: () =>
+              addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
           },
         ],
       })
     }
   }
 
-  const addSummaryPlot = ({ variables }) => {
+  const addSummaryPlot = ({ variables, label }) => {
     props.dispatch(
       addPlot({
         variables,
         source: "table",
+        title: `Summary: ${label}`,
       }),
     )
 
@@ -318,7 +340,7 @@ const Table = (props) => {
     })
   }
 
-  const addDataPlot = ({ variable }) => {
+  const addDataPlot = ({ variable, label }) => {
     const { cell, rangeStack } = gridSelection.current
     const rows = [cell[1], ...rangeStack.map((stack) => stack.y)]
 
@@ -331,6 +353,7 @@ const Table = (props) => {
         runs,
         variables: [variable],
         source: "extracted",
+        title: `Data: ${label}`,
       }),
     )
     runs.forEach((run) => {
