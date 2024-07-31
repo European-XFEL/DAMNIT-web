@@ -247,10 +247,18 @@ const Table = (props) => {
     const rowData = props.data[row]
 
     if (col !== -1 && isDataPlottable(rowData[column].dtype)) {
+      const variable = props.columns[col].id
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
-        contents: ["plot"],
+        contents: [
+          {
+            key: "plot",
+            title: "Plot: data",
+            subtitle: `${variable}`,
+            onClick: () => addDataPlot({ variable }),
+          },
+        ],
       })
     }
   }
@@ -259,82 +267,76 @@ const Table = (props) => {
     const columnSelection = gridSelection.columns.toArray()
     if (columnSelection.length === 1) {
       if (col !== -1) {
+        const variable = props.columns[col].id
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
-          contents: ["plot"],
+          contents: [
+            {
+              key: "plot",
+              title: "Plot: summary",
+              subtitle: `${variable} vs. run`,
+              onClick: () => addSummaryPlot({ variables: [variable] }),
+            },
+          ],
         })
       }
     } else if (columnSelection.length === 2) {
+      const col0 = columnSelection.filter((c) => c !== col)[0]
+      const y = props.columns[col].id // the latest selection
+      const x = props.columns[col0].id // the first selection
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
-        contents: ["corrPlot"],
+        contents: [
+          {
+            key: "plot",
+            title: "Plot: summary",
+            subtitle: `${y} vs. ${x}`,
+            onClick: () => addSummaryPlot({ variables: [x, y] }),
+          },
+        ],
       })
     }
   }
 
-  const handleAddPlot = () => {
-    if (gridSelection.current) {
-      const { cell, rangeStack } = gridSelection.current
-      const rows = [cell[1], ...rangeStack.map((stack) => stack.y)]
-
-      const variable = props.columns[cell[0]].id
-      const runs = sorted(
-        rows.map((row) => props.data[row][VARIABLES.run_number].value),
-      )
-      props.dispatch(
-        addPlot({
-          runs,
-          variables: [variable],
-          source: "extracted",
-        }),
-      )
-      runs.forEach((run) => {
-        props.dispatch(getExtractedVariable({ proposal, run, variable }))
-      })
-    } else {
-      const col = gridSelection.columns.last()
-      props.dispatch(
-        addPlot({
-          variables: [props.columns[col].id],
-          source: "table",
-        }),
-      )
-      props.dispatch(
-        getTableVariable({
-          proposal,
-          variable: props.columns[col].id,
-        }),
-      )
-    }
-  }
-
-  const handleAddCorrPlot = () => {
-    const cols = gridSelection.columns.toArray()
+  const addSummaryPlot = ({ variables }) => {
     props.dispatch(
       addPlot({
-        variables: [props.columns[cols[0]].id, props.columns[cols[1]].id],
+        variables,
         source: "table",
       }),
     )
+
+    variables.forEach((variable) => {
+      props.dispatch(
+        getTableVariable({
+          proposal,
+          variable,
+        }),
+      )
+    })
   }
 
-  const cellContextContents = createMap(
-    [
-      {
-        key: "plot",
-        title: "Plot",
-        onClick: handleAddPlot,
-      },
-      {
-        key: "corrPlot",
-        title: "Correlation plot",
-        onClick: handleAddCorrPlot,
-      },
-    ],
-    "key",
-  )
+  const addDataPlot = ({ variable }) => {
+    const { cell, rangeStack } = gridSelection.current
+    const rows = [cell[1], ...rangeStack.map((stack) => stack.y)]
+
+    const runs = sorted(
+      rows.map((row) => props.data[row][VARIABLES.run_number].value),
+    )
+
+    props.dispatch(
+      addPlot({
+        runs,
+        variables: [variable],
+        source: "extracted",
+      }),
+    )
+    runs.forEach((run) => {
+      props.dispatch(getExtractedVariable({ proposal, run, variable }))
+    })
+  }
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
@@ -357,12 +359,7 @@ const Table = (props) => {
             {...cellProps}
             {...paginationProps}
           />
-          <ContextMenu
-            {...contextMenu}
-            contents={contextMenu.contents.map((key) =>
-              cellContextContents.get(key),
-            )}
-          />
+          <ContextMenu {...contextMenu} />
           <div id="portal" />
         </>
       )}

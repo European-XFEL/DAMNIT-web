@@ -1,6 +1,9 @@
 import React from "react"
 import { useLayer } from "react-laag"
+import { Stack } from "@mantine/core"
 import { ContextMenuPortal as MantineContextMenu } from "mantine-contextmenu"
+
+import ContextMenuItem from "./ContextMenuItem"
 
 const ContextMenu = ({
   localPosition,
@@ -36,7 +39,13 @@ const ContextMenu = ({
           x={localPosition.x + bounds.x}
           y={localPosition.y + bounds.y}
           onHide={onOutsideClick}
-          content={contents}
+          content={(close) => (
+            <Stack>
+              {contents.map(({ key, ...props }) => (
+                <ContextMenuItem key={key} {...props} />
+              ))}
+            </Stack>
+          )}
         />
       </div>,
     )

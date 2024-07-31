@@ -15,10 +15,7 @@ function TextCombobox(props: {
 
   const checkVariable = (item) =>
     item.toLowerCase().includes(props.value.toLowerCase())
-  const shouldFilterOptions = !props.columns.some(
-    (item) => item === props.value,
-  )
-  const optionsToRender = shouldFilterOptions
+  const optionsToRender = props.value
     ? props.columns.filter(checkVariable)
     : props.columns
 

@@ -18,6 +18,7 @@ import {
   getTableVariable,
   getAllExtractedVariables,
 } from "../../redux"
+import { EXCLUDED_VARIABLES } from "../table/Table"
 
 const PlotDialog = (props) => {
   const proposal = useSelector((state) => state.proposal.current.value)
@@ -254,7 +255,9 @@ const PlotDialog = (props) => {
 const mapStateToProps = ({ tableData }) => {
   return {
     runs: Object.keys(tableData.data),
-    variables: Object.keys(tableData.metadata.variables),
+    variables: Object.keys(tableData.metadata.variables).filter(
+      (variable) => !EXCLUDED_VARIABLES.includes(variable),
+    ),
     rows: tableData.metadata.rows,
   }
 }

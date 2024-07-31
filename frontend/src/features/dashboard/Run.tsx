@@ -93,7 +93,7 @@ const Run = (props) => {
           return null
         }
 
-        return render({ name, label: variables[name].title, value })
+        return render({ name, label: variables[name].title || name, value })
       })}
     </ScrollArea>
   )
