@@ -7,7 +7,9 @@ import styles from "./Logo.module.css"
 const Logo = () => {
   return (
     <Link to="/home" className={styles.link}>
-      <Title order={1}>DAMNIT!</Title>
+      <Title order={1} style={{ fontFamily: "Arial" }}>
+        DAMNIT!
+      </Title>
     </Link>
   )
 }

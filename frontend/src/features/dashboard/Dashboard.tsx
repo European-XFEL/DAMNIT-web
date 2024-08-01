@@ -165,7 +165,7 @@ const Dashboard = () => {
     >
       <AppShell.Header>
         <Header px={8}>
-          <Group gap="sm">
+          <Group gap="sm" align="center">
             <Burger
               opened={openedNavBar}
               onClick={toggleNavBar}
