@@ -193,6 +193,7 @@ const Table = (props) => {
   const [gridSelection, setGridSelection] = useState({
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
+    current: undefined,
   })
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
@@ -223,9 +224,10 @@ const Table = (props) => {
     setGridSelection({
       columns,
       rows,
-      ...(current && {
-        current: { ...current, ...(rangeStack && { rangeStack }) },
-      }),
+
+      current: current
+        ? { ...current, ...(rangeStack && { rangeStack }) }
+        : undefined,
     })
   }
   const handleCellActivated = (cell: Item) => {
@@ -243,12 +245,40 @@ const Table = (props) => {
   const handleCellContextMenu = ([col, row], event) => {
     event.preventDefault()
 
+    let selectedCell = gridSelection.current?.cell ?? []
+    let selectedRange = gridSelection.current?.rangeStack ?? []
+
+    if (
+      !isArrayEqual(selectedCell, [col, row]) &&
+      !selectedRange.some((rect) => rect.x === col && rect.y === row)
+    ) {
+      selectedCell = [col, row]
+      selectedRange = []
+
+      setGridSelection({
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.empty(),
+        current: {
+          cell: selectedCell,
+          rangeStack: selectedRange,
+
+          range: { x: col, y: row, width: 1, height: 1 },
+        },
+      })
+    }
+
     const column = props.columns[col]?.id
     const rowData = props.data[row]
 
     if (col !== -1 && isDataPlottable(rowData[column].dtype)) {
       const variable = props.columns[col]
       const subtitle = `${variable.title}`
+
+      const rows = [selectedCell[1], ...selectedRange.map((rect) => rect.y)]
+      const runs = sorted(
+        rows.map((row) => props.data[row][VARIABLES.run_number].value),
+      )
+
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
@@ -258,7 +288,7 @@ const Table = (props) => {
             title: "Plot: data",
             subtitle,
             onClick: () =>
-              addDataPlot({ variable: variable.id, label: subtitle }),
+              addDataPlot({ variable: variable.id, label: subtitle, runs }),
           },
         ],
       })
@@ -276,6 +306,7 @@ const Table = (props) => {
       setGridSelection({
         columns: CompactSelection.fromSingleSelection(col),
         rows: CompactSelection.empty(),
+        current: undefined,
       })
     }
 
@@ -340,14 +371,7 @@ const Table = (props) => {
     })
   }
 
-  const addDataPlot = ({ variable, label }) => {
-    const { cell, rangeStack } = gridSelection.current
-    const rows = [cell[1], ...rangeStack.map((stack) => stack.y)]
-
-    const runs = sorted(
-      rows.map((row) => props.data[row][VARIABLES.run_number].value),
-    )
-
+  const addDataPlot = ({ variable, label, runs }) => {
     props.dispatch(
       addPlot({
         runs,
