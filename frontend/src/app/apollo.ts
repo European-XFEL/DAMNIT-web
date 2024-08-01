@@ -9,6 +9,7 @@ import {
   removeTypenameFromVariables,
   KEEP,
 } from "@apollo/client/link/remove-typename"
+import { RetryLink } from "@apollo/client/link/retry"
 import { GraphQLWsLink } from "@apollo/client/link/subscriptions"
 import { getMainDefinition } from "@apollo/client/utilities"
 
@@ -21,6 +22,13 @@ const HTTP_API = import.meta.env.MODE === "test" ? `http://${BACKEND_API}` : ""
 const removeTypenameLink = removeTypenameFromVariables({
   except: {
     JSON: KEEP,
+  },
+})
+
+const retryLink = new RetryLink({
+  delay: {
+    initial: 1000,
+    max: 1000,
   },
 })
 
@@ -52,5 +60,5 @@ export const cache = new InMemoryCache({
 
 export const client = new ApolloClient({
   cache,
-  link: from([removeTypenameLink, splitLink]),
+  link: from([retryLink, removeTypenameLink, splitLink]),
 })
