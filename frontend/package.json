@@ -1,10 +1,10 @@
 {
   "name": "damnit-frontend",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": {
-    "name": "Cammille Carinan",
-    "email": "cammille.carinan@xfel.eu"
+    "name": "European XFEL",
+    "email": "da@xfel.eu"
   },
   "scripts": {
     "dev": "vite",
