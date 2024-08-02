@@ -6,7 +6,7 @@ authors = ["European XFEL <da@xfel.eu>"]
 maintainers = [
   "Cammille Carinan <cammille.carinan@xfel.eu>",
   "Robert Rosca <robert.rosca@xfel.eu>"
-
+]
 readme = "README.md"
 packages = [{ include = "damnit_api", from = "src" }]
 
