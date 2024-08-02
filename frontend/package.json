@@ -1,7 +1,11 @@
 {
   "name": "damnit-frontend",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.0.1",
+  "author": {
+    "name": "Cammille Carinan",
+    "email": "cammille.carinan@xfel.eu"
+  },
   "scripts": {
     "dev": "vite",
     "start": "vite",

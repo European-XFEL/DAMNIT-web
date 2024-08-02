@@ -1,8 +1,11 @@
 [tool.poetry]
-name = "cammille-api"
-version = "0.1.0"
+name = "DAMNIT-web API"
+version = "0.0.1"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = [
+  "Cammille Carinan <cammille.carinan@xfel.eu>",
+  "Robert Rosca <robert.rosca@xfel.eu>"
+]
 readme = "README.md"
 packages = [{ include = "damnit_api", from = "src" }]
 
