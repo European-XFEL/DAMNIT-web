@@ -8,7 +8,6 @@ const imageCell = (data, params = {}) => {
   const image = data ? [imageBytesToURL(data)] : []
   return {
     kind: GridCellKind.Image,
-    // displayData: [image],
     data: image,
     allowOverlay: false,
     allowAdd: false,
@@ -38,6 +37,10 @@ const numberCell = (data, params = {}) => {
     data,
     allowOverlay: false,
     contentAlign: "right",
+    themeOverride: {
+      fontFamily: "monospace",
+      textDark: "#4A4A4A",
+    },
     ...params,
   }
 }
@@ -64,6 +67,9 @@ const dateCell = (data, params = {}) => {
     allowOverlay: false,
     displayData: data ? formatDate(data) : "",
     data,
+    themeOverride: {
+      fontFamily: "monospace",
+    },
     ...params,
   }
 }

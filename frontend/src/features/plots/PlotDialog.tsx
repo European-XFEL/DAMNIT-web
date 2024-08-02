@@ -18,6 +18,7 @@ import {
   getTableVariable,
   getAllExtractedVariables,
 } from "../../redux"
+import { EXCLUDED_VARIABLES } from "../table/Table"
 
 const PlotDialog = (props) => {
   const proposal = useSelector((state) => state.proposal.current.value)
@@ -232,14 +233,18 @@ const PlotDialog = (props) => {
           )}
           {formValues.plotType !== "summary" &&
             formValues.runSelectionType === "allSelection" && (
-              <Blockquote color="blue" p="10" w="100%">
+              <Blockquote color="indigo" p="10" w="100%">
                 You are about to plot data for all the runs
               </Blockquote>
             )}
 
           <Group wrap="wrap" justify="space-between" w="100%">
-            <Button onClick={handleClose}> Cancel </Button>
-            <Button type="submit"> Plot </Button>
+            <Button color="indigo" variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button color="indigo" variant="filled" type="submit">
+              Plot
+            </Button>
           </Group>
         </Flex>
       </form>
@@ -250,7 +255,9 @@ const PlotDialog = (props) => {
 const mapStateToProps = ({ tableData }) => {
   return {
     runs: Object.keys(tableData.data),
-    variables: Object.keys(tableData.metadata.variables),
+    variables: Object.keys(tableData.metadata.variables).filter(
+      (variable) => !EXCLUDED_VARIABLES.includes(variable),
+    ),
     rows: tableData.metadata.rows,
   }
 }

@@ -1,80 +1,101 @@
 import React from "react"
 import { connect, useSelector } from "react-redux"
-import { Image, Text } from "@mantine/core"
+import { Image, ScrollArea, Text } from "@mantine/core"
 
-import classes from "./Run.module.css"
-import { DTYPES, EMPTY_VALUE } from "../../constants"
+import styles from "./Run.module.css"
+import { DTYPES } from "../../constants"
 import { formatDate, imageBytesToURL, isEmpty } from "../../utils/helpers"
 
-const HIDDEN_DTYPES = [DTYPES.array]
+const EXCLUDED_VARIABLES = ["proposal", "run", "added_at"]
 
-// TODO: Support additional display types
-const TEXT_FIELD = [DTYPES.number, DTYPES.string, DTYPES.timestamp]
+// Renders
+const renderString = ({ name, label, value }) => {
+  return (
+    <div className={styles.scalarItem} key={`run-div-${name}`}>
+      <Text size="xs" className={styles.scalarLabel} key={`run-label-${name}`}>
+        {label}
+      </Text>{" "}
+      <Text size="sm" className={styles.scalarValue} key={`run-value-${name}`}>
+        {value}
+      </Text>
+    </div>
+  )
+}
+
+const renderDate = ({ name, label, value }) => {
+  return (
+    <div className={styles.scalarItem} key={`run-div-${name}`}>
+      <Text size="xs" className={styles.scalarLabel} key={`run-label-${name}`}>
+        {label}
+      </Text>{" "}
+      <Text
+        size="sm"
+        className={styles.scalarValue}
+        key={`run-value-${name}`}
+        style={{ fontFamily: "monospace" }}
+        c="dark.5"
+      >
+        {formatDate(value)}
+      </Text>
+    </div>
+  )
+}
+
+const renderNumber = ({ name, label, value }) => {
+  return (
+    <div className={styles.scalarItem} key={`run-div-${name}`}>
+      <Text size="xs" className={styles.scalarLabel} key={`run-label-${name}`}>
+        {label}
+      </Text>
+      <Text
+        size="sm"
+        className={styles.scalarValue}
+        key={`run-value-${name}`}
+        style={{ fontFamily: "monospace" }}
+        c="dark.5"
+      >
+        {value}
+      </Text>
+    </div>
+  )
+}
+const renderImage = ({ name, label, value }) => {
+  return (
+    <div className={styles.objectItem} key={`run-div-${name}`}>
+      <Text size="xs" className={styles.objectLabel} key={`run-label-${name}`}>
+        {label}
+      </Text>
+      <Image
+        className={styles.objectValue}
+        key={`run-value-${name}`}
+        fit="contain"
+        src={imageBytesToURL(value)}
+      />
+    </div>
+  )
+}
+
+const renderFactory = {
+  [DTYPES.image]: renderImage,
+  [DTYPES.string]: renderString,
+  [DTYPES.number]: renderNumber,
+  [DTYPES.timestamp]: renderDate,
+}
 
 const Run = (props) => {
   const variables = useSelector((state) => state.tableData.metadata.variables)
 
-  // Conditions
-  const isScalar = (key) => TEXT_FIELD.includes(props.data[key].dtype)
-  const isImage = (key) => props.data[key].dtype === DTYPES.image
-
-  // Renders
-  const renderScalar = (key) => {
-    const { value, dtype } = props.data[key]
-
-    return (
-      <div className={classes.scalarItem} key={`run-div-${key}`}>
-        {renderLabel(key)}
-        <Text
-          size="sm"
-          className={classes.scalarValue}
-          key={`run-value-${key}`}
-          {...(dtype === DTYPES.number && {
-            sx: { fontFamily: "monospace" },
-          })}
-        >
-          {value !== null ? (
-            <>{dtype === DTYPES.timestamp ? formatDate(value) : value}</>
-          ) : (
-            ""
-          )}
-        </Text>
-      </div>
-    )
-  }
-
-  const renderImage = (key) => {
-    return (
-      <div className={classes.objectItem} key={`run-div-${key}`}>
-        {renderLabel(key)}
-        <Image
-          className={classes.objectValue}
-          key={`run-value-${key}`}
-          fit="contain"
-          src={imageBytesToURL(props.data[key].value)}
-        />
-      </div>
-    )
-  }
-
-  const renderLabel = (key) => {
-    return (
-      <Text size="sm" className={classes.label} key={`run-label-${key}`}>
-        {variables[key].title}
-      </Text>
-    )
-  }
-
   return (
-    <div>
-      {Object.keys(props.data).map((key) =>
-        isScalar(key)
-          ? renderScalar(key)
-          : isImage(key)
-          ? renderImage(key)
-          : null,
-      )}
-    </div>
+    <ScrollArea h="100vh" offsetScrollbars>
+      {Object.entries(props.data).map(([name, { value, dtype }]) => {
+        const render = renderFactory[dtype]
+        if (!value || !render || EXCLUDED_VARIABLES.includes(name)) {
+          return null
+        }
+
+        return render({ name, label: variables[name].title || name, value })
+      })}
+    </ScrollArea>
   )
 }
 
@@ -91,16 +112,8 @@ const mapStateToProps = ({ tableData, table }) => {
     )
   }
 
-  const filtered = !variables
-    ? []
-    : Object.entries(variables).filter(
-        ([_, variable]) =>
-          !HIDDEN_DTYPES.includes(variable.dtype) &&
-          variable.value !== EMPTY_VALUE,
-      )
-
   return {
-    data: Object.fromEntries(filtered),
+    data: variables ?? {},
   }
 }
 

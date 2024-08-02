@@ -2,19 +2,20 @@ import { Combobox, useCombobox, ComboboxTarget, TextInput } from "@mantine/core"
 
 //Common component for comboboxes
 function TextCombobox(props: {
-  columns: string[],
-  value: string,
-  setValue: object,
-  label?: string,
-  placeholder?: string,
-  error?: string}){
+  columns: string[]
+  value: string
+  setValue: object
+  label?: string
+  placeholder?: string
+  error?: string
+}) {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   })
 
-  const checkVariable = (item) => (item.toLowerCase().includes(props.value.toLowerCase()))
-  const shouldFilterOptions = !props.columns.some((item) => item === props.value)
-  const optionsToRender = shouldFilterOptions
+  const checkVariable = (item) =>
+    item.toLowerCase().includes(props.value.toLowerCase())
+  const optionsToRender = props.value
     ? props.columns.filter(checkVariable)
     : props.columns
 
@@ -24,8 +25,8 @@ function TextCombobox(props: {
     </Combobox.Option>
   ))
 
-  return(
-    <div style={{margin:"5px 2px"}}>
+  return (
+    <div style={{ margin: "5px 2px" }}>
       <Combobox
         store={combobox}
         withinPortal={false}
@@ -47,17 +48,20 @@ function TextCombobox(props: {
             onClick={() => combobox.openDropdown()}
             onFocus={() => combobox.openDropdown()}
             onBlur={() => {
-              !props.columns.some(checkVariable) && props.setValue('')
+              !props.columns.some(checkVariable) && props.setValue("")
               combobox.closeDropdown()
-              }
-            }
+            }}
             error={props.error}
           />
         </ComboboxTarget>
 
         <Combobox.Dropdown>
-          <Combobox.Options mah={200} style={{ overflowY: 'auto' }}>
-            {options.length === 0 ? <Combobox.Empty>Variable not found</Combobox.Empty> : options}
+          <Combobox.Options mah={160} style={{ overflowY: "auto" }}>
+            {options.length === 0 ? (
+              <Combobox.Empty>Variable not found</Combobox.Empty>
+            ) : (
+              options
+            )}
           </Combobox.Options>
         </Combobox.Dropdown>
       </Combobox>

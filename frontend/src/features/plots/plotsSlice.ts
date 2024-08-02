@@ -17,11 +17,11 @@ const slice = createSlice({
       }
     },
     addPlot: (state, action) => {
-      const { variables, runs, source } = action.payload
+      const { variables, runs, source, title } = action.payload
       const id = generateUID()
       state.currentPlot = id
       state.data = Object.assign(state.data || {}, {
-        [id]: { variables, runs, source },
+        [id]: { variables, runs, source, title },
       })
     },
     removePlot: (state, action) => {

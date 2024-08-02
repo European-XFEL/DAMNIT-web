@@ -36,7 +36,6 @@ Any = strawberry.scalar(
 
 Timestamp = strawberry.scalar(
     Union[int, float],
-    serialize=lambda value: serialize(value, dtype=DamnitType.TIMESTAMP),
     parse_value=lambda value: value / 1000,
     name="Timestamp",
 )
@@ -47,10 +46,6 @@ class BaseVariable:
     name: str
     dtype: str
 
-    @classmethod
-    def from_db(cls, entry):
-        raise NotImplementedError("Needs to be subclassed.")
-
 
 @strawberry.type
 class KnownVariable(Generic[T], BaseVariable):
@@ -60,13 +55,6 @@ class KnownVariable(Generic[T], BaseVariable):
 @strawberry.type
 class DamnitVariable(BaseVariable):
     value: Optional[Any]
-
-    @classmethod
-    def from_db(cls, entry):
-        dtype = map_dtype(type(entry["value"]))
-        value = serialize(entry["value"], dtype=dtype)
-
-        return cls(name=entry["name"], value=value, dtype=dtype.value)
 
 
 @strawberry.interface

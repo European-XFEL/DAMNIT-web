@@ -31,13 +31,14 @@ function getInstrumentColor(instrument: string): string {
   return InstrumentColors[as_enum] || DEFAULT_COLOR
 }
 
-const InstrumentBadge = ({ instrument }) => {
+const InstrumentBadge = ({ instrument, ...props }) => {
   return (
     <Badge
       autoContrast
       color={getInstrumentColor(instrument)}
       size="md"
       radius="md"
+      {...props}
     >
       {instrument}
     </Badge>

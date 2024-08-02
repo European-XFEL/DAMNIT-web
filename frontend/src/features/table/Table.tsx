@@ -30,8 +30,7 @@ import {
   sortedSearch,
 } from "../../utils/array"
 import { isDataPlottable } from "../../utils/plots"
-import { createMap, isEmpty } from "../../utils/helpers"
-import PlotDialog from "../plots/PlotDialog"
+import { isEmpty } from "../../utils/helpers"
 
 export const EXCLUDED_VARIABLES = ["proposal", "added_at"]
 
@@ -175,7 +174,7 @@ const Table = (props) => {
   // Data: Populate grid
   const getContent = useCallback(
     ([col, row]) => {
-      const column = props.columns[col].id
+      const column = props.columns[col]?.id
       const rowData = props.data[row]
 
       if (!rowData || !rowData[column]) {
@@ -194,6 +193,7 @@ const Table = (props) => {
   const [gridSelection, setGridSelection] = useState({
     columns: CompactSelection.empty(),
     rows: CompactSelection.empty(),
+    current: undefined,
   })
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
@@ -224,9 +224,10 @@ const Table = (props) => {
     setGridSelection({
       columns,
       rows,
-      ...(current && {
-        current: { ...current, ...(rangeStack && { rangeStack }) },
-      }),
+
+      current: current
+        ? { ...current, ...(rangeStack && { rangeStack }) }
+        : undefined,
     })
   }
   const handleCellActivated = (cell: Item) => {
@@ -244,98 +245,145 @@ const Table = (props) => {
   const handleCellContextMenu = ([col, row], event) => {
     event.preventDefault()
 
+    let selectedCell = gridSelection.current?.cell ?? []
+    let selectedRange = gridSelection.current?.rangeStack ?? []
+
+    if (
+      !isArrayEqual(selectedCell, [col, row]) &&
+      !selectedRange.some((rect) => rect.x === col && rect.y === row)
+    ) {
+      selectedCell = [col, row]
+      selectedRange = []
+
+      setGridSelection({
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.empty(),
+        current: {
+          cell: selectedCell,
+          rangeStack: selectedRange,
+
+          range: { x: col, y: row, width: 1, height: 1 },
+        },
+      })
+    }
+
     const column = props.columns[col]?.id
     const rowData = props.data[row]
 
     if (col !== -1 && isDataPlottable(rowData[column].dtype)) {
+      const variable = props.columns[col]
+      const subtitle = `${variable.title}`
+
+      const rows = [selectedCell[1], ...selectedRange.map((rect) => rect.y)]
+      const runs = sorted(
+        rows.map((row) => props.data[row][VARIABLES.run_number].value),
+      )
+
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
-        contents: ["plot"],
+        contents: [
+          {
+            key: "plot",
+            title: "Plot: data",
+            subtitle,
+            onClick: () =>
+              addDataPlot({ variable: variable.id, label: subtitle, runs }),
+          },
+        ],
       })
     }
   }
   const handleHeaderContextMenu = (col, event) => {
     event.preventDefault()
     const columnSelection = gridSelection.columns.toArray()
+
+    if (!columnSelection.includes(col)) {
+      if (!columnSelection.length) {
+        columnSelection.push(col)
+      }
+
+      setGridSelection({
+        columns: CompactSelection.fromSingleSelection(col),
+        rows: CompactSelection.empty(),
+        current: undefined,
+      })
+    }
+
     if (columnSelection.length === 1) {
       if (col !== -1) {
+        const variable = props.columns[col]
+        const subtitle = `${variable.title} vs. Run`
+
         setContextMenu({
           localPosition: { x: event.localEventX, y: event.localEventY },
           bounds: event.bounds,
-          contents: ["plot"],
+          contents: [
+            {
+              key: "plot",
+              title: "Plot: summary",
+              subtitle,
+              onClick: () =>
+                addSummaryPlot({ variables: [variable.id], label: subtitle }),
+            },
+          ],
         })
       }
     } else if (columnSelection.length === 2) {
+      const col0 = columnSelection.filter((c) => c !== col)[0]
+      const y = props.columns[col] // the latest selection
+      const x = props.columns[col0] // the first selection
+
+      const subtitle = `${y.title} vs. ${x.title}`
+
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
         bounds: event.bounds,
-        contents: ["corrPlot"],
+        contents: [
+          {
+            key: "plot",
+            title: "Plot: summary",
+            subtitle,
+            onClick: () =>
+              addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
+          },
+        ],
       })
     }
   }
 
-  const handleAddPlot = () => {
-    if (gridSelection.current) {
-      const { cell, rangeStack } = gridSelection.current
-      const rows = [cell[1], ...rangeStack.map((stack) => stack.y)]
+  const addSummaryPlot = ({ variables, label }) => {
+    props.dispatch(
+      addPlot({
+        variables,
+        source: "table",
+        title: `Summary: ${label}`,
+      }),
+    )
 
-      const variable = props.columns[cell[0]].id
-      const runs = sorted(
-        rows.map((row) => props.data[row][VARIABLES.run_number].value),
-      )
-      props.dispatch(
-        addPlot({
-          runs,
-          variables: [variable],
-          source: "extracted",
-        }),
-      )
-      runs.forEach((run) => {
-        props.dispatch(getExtractedVariable({ proposal, run, variable }))
-      })
-    } else {
-      const col = gridSelection.columns.last()
-      props.dispatch(
-        addPlot({
-          variables: [props.columns[col].id],
-          source: "table",
-        }),
-      )
+    variables.forEach((variable) => {
       props.dispatch(
         getTableVariable({
           proposal,
-          variable: props.columns[col].id,
+          variable,
         }),
       )
-    }
+    })
   }
 
-  const handleAddCorrPlot = () => {
-    const cols = gridSelection.columns.toArray()
+  const addDataPlot = ({ variable, label, runs }) => {
     props.dispatch(
       addPlot({
-        variables: [props.columns[cols[0]].id, props.columns[cols[1]].id],
-        source: "table",
+        runs,
+        variables: [variable],
+        source: "extracted",
+        title: `Data: ${label}`,
       }),
     )
+    runs.forEach((run) => {
+      props.dispatch(getExtractedVariable({ proposal, run, variable }))
+    })
   }
-
-  const cellContextContents = createMap(
-    [
-      {
-        key: "plot",
-        title: "Plot",
-        onClick: handleAddPlot,
-      },
-      {
-        key: "corrPlot",
-        title: "Correlation plot",
-        onClick: handleAddCorrPlot,
-      },
-    ],
-    "key",
-  )
 
   return (
     <div style={{ width: "100%", height: "100%" }}>
@@ -358,12 +406,7 @@ const Table = (props) => {
             {...cellProps}
             {...paginationProps}
           />
-          <ContextMenu
-            {...contextMenu}
-            contents={contextMenu.contents.map((key) =>
-              cellContextContents.get(key),
-            )}
-          />
+          <ContextMenu {...contextMenu} />
           <div id="portal" />
         </>
       )}
@@ -376,7 +419,7 @@ const mapStateToProps = ({ tableData: table }) => {
   // TODO: Get the column list from the user settings (reordered columns)
   const columns = Object.values(table.metadata.variables)
     .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name))
-    .map(({ name, title }) => ({ id: name, title }))
+    .map(({ name, title }) => ({ id: name, title: title || name }))
 
   return {
     data,

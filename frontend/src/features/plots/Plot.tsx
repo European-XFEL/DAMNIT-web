@@ -69,6 +69,8 @@ const Plot = ({ plotId }) => {
   const table = useSelector((state) => state.tableData)
   const extracted = useSelector((state) => state.extractedData)
 
+  const variables = table.metadata.variables
+
   if (!plot) {
     // TODO: Return a better not-found indicator
     return <div />
@@ -105,10 +107,10 @@ const Plot = ({ plotId }) => {
       const xVar = plot.variables[0]
       const yVar = plot.variables[1]
 
-      data.x = { name: xVar, data: values[xVar] }
+      data.x = { name: variables[xVar].title || xVar, data: values[xVar] }
       metadata.x = { name: data.x.name }
 
-      data.y = { name: yVar, data: values[yVar] }
+      data.y = { name: variables[yVar].title || yVar, data: values[yVar] }
       metadata.y = { name: data.y.name }
     }
 
