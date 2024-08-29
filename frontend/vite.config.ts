@@ -4,8 +4,10 @@ import react from "@vitejs/plugin-react"
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
+  const baseUrl = (env.VITE_BASE_URL || "/").replace(/\/?$/, "/")
 
   return {
+    base: baseUrl,
     plugins: [react()],
     build: {
       outDir: "build",
@@ -15,20 +17,26 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
-        "/graphql": {
+        [`${baseUrl}graphql`]: {
           target: `http://${env.VITE_BACKEND_API}`,
           changeOrigin: true,
           secure: false,
+          // REMOVEME: The API will have a base path similar to the frontend at some point
+          rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
-        "/oauth": {
+        [`${baseUrl}oauth`]: {
           target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: false,
+          changeOrigin: true,
           secure: false,
+          // REMOVEME: The API will have a base path similar to the frontend at some point
+          rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
-        "/metadata": {
+        [`${baseUrl}metadata`]: {
           target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: false,
+          changeOrigin: true,
           secure: false,
+          // REMOVEME: The API will have a base path similar to the frontend at some point
+          rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
       },
     },

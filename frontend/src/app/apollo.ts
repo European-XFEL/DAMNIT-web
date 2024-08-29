@@ -15,8 +15,9 @@ import { getMainDefinition } from "@apollo/client/utilities"
 
 import { createClient } from "graphql-ws"
 
-const BACKEND_API = import.meta.env.VITE_BACKEND_API
+import { BASE_URL } from "../constants"
 
+const BACKEND_API = import.meta.env.VITE_BACKEND_API
 const HTTP_API = import.meta.env.MODE === "test" ? `http://${BACKEND_API}` : ""
 
 const removeTypenameLink = removeTypenameFromVariables({
@@ -32,8 +33,9 @@ const retryLink = new RetryLink({
   },
 })
 
-const httpLink = new HttpLink({ uri: `${HTTP_API}/graphql` })
+const httpLink = new HttpLink({ uri: `${HTTP_API}${BASE_URL}graphql` })
 
+// TODO: Use base URL on the web socket
 const wsLink = new GraphQLWsLink(
   createClient({
     url: `ws://${BACKEND_API}/graphql`,
