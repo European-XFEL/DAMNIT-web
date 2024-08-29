@@ -1,16 +1,19 @@
 import { authApi } from "../api"
 import { resetTable } from "../table"
 import { resetPlots } from "../plots"
-import { BASE_URL } from "../../constants"
+import { BASE_URL, CURRENT_HOST } from "../../constants"
 import { resetExtractedData, resetTableData } from "../../redux"
 import { history } from "../../routes"
 
 export const login = () => (dispatch) => {
-  window.location.href = `${BASE_URL}oauth/login`
+  const basePath = `${CURRENT_HOST}${BASE_URL}`
+  window.location.href = `${BASE_URL}oauth/login?redirect_uri=${basePath}home`
 }
 
 export const logout = () => (dispatch) => {
-  fetch(`${BASE_URL}oauth/logout`, {
+  const basePath = `${CURRENT_HOST}${BASE_URL}`
+
+  fetch(`${BASE_URL}oauth/logout?redirect_uri=${basePath}logged-out`, {
     method: "GET",
     credentials: "include", // Include cookies in the request
   })
