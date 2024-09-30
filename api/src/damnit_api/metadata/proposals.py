@@ -10,7 +10,7 @@ from async_lru import alru_cache
 from .mymdc import MyMDC
 
 
-DAMNIT_PROPOSALS_CACHE = "/tmp/damnit_proposals.json"
+DAMNIT_PROPOSALS_CACHE = "/tmp/damnit-web/damnit_proposals.json"
 
 
 @alru_cache(ttl=60)
