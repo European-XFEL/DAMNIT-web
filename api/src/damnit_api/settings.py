@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import BaseModel, HttpUrl, SecretStr, UrlConstraints
+from pydantic import AnyUrl, BaseModel, HttpUrl, SecretStr, UrlConstraints
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     auth: AuthSettings
 
     session_secret: SecretStr
+
+    address: AnyUrl = AnyUrl("http://127.0.0.1:8000")
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",

@@ -51,4 +51,15 @@ def create_app():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("damnit_api.main:create_app", reload=True, factory=True)
+    from .settings import settings
+
+    host = settings.address.host or "127.0.0.1"
+    port = settings.address.port or 8000
+
+    uvicorn.run(
+        "damnit_api.main:create_app",
+        host=host,
+        port=port,
+        reload=True,
+        factory=True,
+    )
