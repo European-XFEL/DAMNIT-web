@@ -1,6 +1,10 @@
 import requests
 from dotenv import dotenv_values
 
+from .. import get_logger
+
+logger = get_logger()
+
 ENV_VARS = dotenv_values()
 
 
@@ -18,10 +22,12 @@ class MyMDC:
     token: str
 
     def __init__(self):
+        logger.info("Initializing MyMDC client")
         self.fetch_token()
 
     def fetch_token(self):
         url = f"{self.SERVER_URL}/api/../oauth/token"
+        logger.debug("Fetching MyMDC token", url=url)
         body = {
             "grant_type": "client_credentials",
             "client_id": self.CLIENT_ID,
