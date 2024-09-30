@@ -3,9 +3,13 @@
 # NOTE: bullseye instead of alpine as h5py not built for musl :(
 FROM python:3.12-slim-bullseye
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONOPTIMIZE 2
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1 \
+  PYTHONOPTIMIZE=2
+
+ENV POETRY_NO_INTERACTION=1 \
+  POETRY_VIRTUALENVS_IN_PROJECT=1 \
+  POETRY_VIRTUALENVS_CREATE=1
 
 WORKDIR /src/damnit-web/api
 
@@ -16,13 +20,12 @@ COPY ./pyproject.toml ./poetry.lock ./
 
 RUN --mount=type=cache,target=/root/.cache \
   touch README.md && \
-  poetry lock --no-update && \
-  poetry install --no-root --no-directory --no-interaction --only main
+  poetry install --no-root --no-directory --only main
 
 COPY ./src ./src
 
 RUN --mount=type=cache,target=/root/.cache \
-  poetry install --no-interaction --only main
+  poetry install --only main
 
 COPY ./README.md ./README.md
 
