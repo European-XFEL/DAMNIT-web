@@ -13,6 +13,10 @@ class AuthSettings(BaseModel):
 class Settings(BaseSettings):
     auth: AuthSettings
 
+    debug: bool = True
+
+    log_level: str = "DEBUG"
+
     session_secret: SecretStr
 
     address: AnyUrl = AnyUrl("http://127.0.0.1:8000")
