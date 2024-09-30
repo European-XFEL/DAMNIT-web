@@ -10,13 +10,20 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import auth, metadata
+    from . import auth, logging, metadata
     from .graphql import add_graphql_router
     from .settings import settings
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        logging.configure(
+            level=settings.log_level,
+            debug=settings.debug,
+            add_call_site_parameters=True,
+        )
+
         auth.configure()
+
         add_graphql_router(app)
         app.router.include_router(auth.router)
         app.router.include_router(metadata.router)
@@ -51,15 +58,29 @@ def create_app():
 if __name__ == "__main__":
     import uvicorn
 
+    from . import get_logger, logging
     from .settings import settings
+
+    logging.configure(
+        level=settings.log_level,
+        debug=settings.debug,
+        add_call_site_parameters=True,
+    )
+
+    logger = get_logger()
 
     host = settings.address.host or "127.0.0.1"
     port = settings.address.port or 8000
+
+    if settings.address.host == "127.0.0.1":
+        logger.critical(
+            "Running on localhost, not accessible from outside the local machine"
+        )
 
     uvicorn.run(
         "damnit_api.main:create_app",
         host=host,
         port=port,
-        reload=True,
+        reload=settings.debug,
         factory=True,
     )
