@@ -1,0 +1,9 @@
+name: dampi-web-local
+
+services:
+  frontend:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - 5173

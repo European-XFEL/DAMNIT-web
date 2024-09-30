@@ -1,0 +1,11 @@
+name: damnit-web-dev
+
+services:
+  api:
+    userns_mode: keep-id
+    ports:
+      - 8123:8000
+    volumes:
+      - /gpfs/exfel/data/scratch/xdana/tmp/damnit-web:/var/tmp
+      - /gpfs:/gpfs
+      - /pnfs:/pnfs

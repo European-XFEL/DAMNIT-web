@@ -1,0 +1,11 @@
+name: damnit-web-local
+
+services:
+  api:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - 8000
+    volumes:
+      - ./tmp-damnit-web/:/tmp/damnit-web/
