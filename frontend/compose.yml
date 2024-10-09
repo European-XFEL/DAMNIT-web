@@ -1,4 +1,4 @@
-name: dampi-web-local
+name: damnit-web-local
 
 services:
   frontend:
