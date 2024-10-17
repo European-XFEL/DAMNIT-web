@@ -11,6 +11,7 @@ import "mantine-contextmenu/styles.layer.css"
 import "mantine-datatable/styles.layer.css"
 
 import { client } from "./app/apollo"
+import { BASE_URL } from "./constants"
 import { setupStore } from "./redux"
 import App from "./app/App"
 
@@ -21,7 +22,7 @@ root.render(
   <React.StrictMode>
     <ApolloProvider client={client}>
       <ReduxProvider store={setupStore()}>
-        <BrowserRouter>
+        <BrowserRouter basename={BASE_URL}>
           <MantineProvider>
             <App />
           </MantineProvider>
