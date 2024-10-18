@@ -6,7 +6,7 @@ from async_lru import alru_cache
 
 
 class AmoreDirRepo:
-    data: dict[str, list[str]]  # cycle paths to list of amore dirs
+    data: dict[str, list[str | Path]]  # cycle paths to list of amore dirs
     on_resync: list[str]  # list of paths to glob through on resync
 
     @alru_cache

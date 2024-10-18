@@ -76,11 +76,11 @@ class ACE(BaseModel):
 
 
 class UserACE(ACE):
-    identity: Literal["user"] = "user"
+    identity: Literal["user"] = "user"  # type: ignore[assignment]
 
 
 class GroupACE(ACE):
-    identity: Literal["group"] = "group"
+    identity: Literal["group"] = "group"  # type: ignore[assignment]
 
 
 _GPFS_NFSV4_ACL = re.compile(
@@ -113,7 +113,7 @@ class ACL(RootModel[list[ACE]]):
     def __getitem__(self, i: int) -> ACE:
         return self.root[i]
 
-    def __iter__(self):
+    def __iter__(self):  # type: ignore[override]
         return iter(self.root)
 
     @classmethod
@@ -138,7 +138,7 @@ class ACL(RootModel[list[ACE]]):
         (X)READ/LIST (X)WRITE/CREATE (X)APPEND/MKDIR (-)SYNCHRONIZE (X)READ_ACL  (X)READ_ATTR  (-)READ_NAMED
         (X)DELETE    (X)DELETE_CHILD (X)CHOWN (X)EXEC/SEARCH (X)WRITE_ACL (-)WRITE_ATTR (-)WRITE_NAMED
         ```
-        """
+        """  # noqa: E501
         match = _GPFS_NFSV4_ACL.match(text)
         if not match:
             raise Exception  # TODO: better exception
@@ -171,7 +171,7 @@ class ACL(RootModel[list[ACE]]):
             )
 
             ace = ACE(
-                identity=ace_identity,  # type: ignore
+                identity=ace_identity,  # type: ignore[assignment]
                 who=ace_name,
                 mask=mask,
             )

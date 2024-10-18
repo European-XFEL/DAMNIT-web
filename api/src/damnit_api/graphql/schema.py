@@ -51,7 +51,7 @@ class Schema(strawberry.Schema):
         """Lifted from strawberry.Schema.__init__"""
         if has_object_definition(type_):
             if type_.__strawberry_definition__.is_generic:
-                type_ = StrawberryAnnotation(type_).resolve()  # noqa: PLW2901
+                type_ = StrawberryAnnotation(type_).resolve()
         graphql_type = self.schema_converter.from_maybe_optional(type_)
         if isinstance(graphql_type, GraphQLNonNull):
             graphql_type = graphql_type.of_type

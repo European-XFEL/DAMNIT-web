@@ -35,7 +35,7 @@ app = FastAPI(
 async def http_exception_handler(request: Request, exc: HTTPException):
     request_path = request.url.path
     if exc.status_code == status.HTTP_401_UNAUTHORIZED and request_path in KNOWN_PATHS:
-        return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")  # noqa
+        return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},

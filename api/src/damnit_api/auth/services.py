@@ -49,7 +49,7 @@ async def user_from_ldap(username: str) -> User:
     # CC: Prolly we shouldn't use return the actual groups,
     # but the proposals and the r/w access.
     groups = [
-        _GROUP_NAME_RE.search(g).group(1)
+        _GROUP_NAME_RE.search(g).group(1)  # type: ignore[reportOptionalMemberAccess]
         for g in entry.isMemberOf.value
         if _GROUP_NAME_RE.search(g)
     ]
