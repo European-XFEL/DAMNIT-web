@@ -103,7 +103,7 @@ async def async_variables(proposal):
 async def async_latest_rows(
     proposal,
     *,
-    table: Union[str, Table],
+    table: str | Table,
     by: str,
     start_at=None,
     descending=True,

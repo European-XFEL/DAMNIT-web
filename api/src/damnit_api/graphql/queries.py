@@ -16,7 +16,7 @@ class Query:
     @strawberry.field
     async def runs(
         self, database: DatabaseInput, page: int = 1, per_page: int = 10
-    ) -> List[DamnitRun]:
+    ) -> list[DamnitRun]:
         """
         Returns a list of Damnit runs, with pagination support.
 
@@ -45,7 +45,7 @@ class Query:
 
             result = await session.execute(selection)
             if not result:
-                raise ValueError()
+                raise ValueError
 
             runs = [table_model.as_stype(**res) for res in result.mappings().all()]  # type: ignore
 

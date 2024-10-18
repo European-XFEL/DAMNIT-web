@@ -22,7 +22,7 @@ class Subscription:
         info: Info,
         database: DatabaseInput,
         timestamp: Timestamp,
-    ) -> AsyncGenerator[JSON, None]:
+    ) -> AsyncGenerator[JSON]:
         proposal = database.proposal
         model = get_model(proposal)
 

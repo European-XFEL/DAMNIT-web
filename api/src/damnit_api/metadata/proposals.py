@@ -19,7 +19,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
 
     # Check from cache if existing
     if use_cache and cache.exists():
-        with open(DAMNIT_PROPOSALS_CACHE, "r") as file:
+        with open(DAMNIT_PROPOSALS_CACHE) as file:
             # TODO: Update cache for new proposals
             proposals = json.load(file)
             if info := proposals.get(proposal_num):
@@ -33,7 +33,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
     root_path = format_proposal_path(info["def_proposal_path"])
     damnit_path = get_damnit_path(root_path, suffix="usr/Shared")
     if not damnit_path:
-        return
+        return None
 
     principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
     info = format_proposal_info(
@@ -44,7 +44,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
 
     if proposals is None:
         if cache.exists():
-            with open(DAMNIT_PROPOSALS_CACHE, "r") as file:
+            with open(DAMNIT_PROPOSALS_CACHE) as file:
                 # TODO: Update cache for new proposals
                 proposals = json.load(file)
         else:
@@ -133,7 +133,7 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
 def get_damnit_proposals(use_cache: bool) -> dict:
     cache = Path(DAMNIT_PROPOSALS_CACHE)
     if use_cache and cache.exists():
-        with open(DAMNIT_PROPOSALS_CACHE, "r") as file:
+        with open(DAMNIT_PROPOSALS_CACHE) as file:
             # TODO: Update cache for new proposals
             return json.load(file)
 

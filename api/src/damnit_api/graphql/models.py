@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import (
     Generic,
     NewType,
-        TypeVar,
+    TypeVar,
     Union,
 )
 
@@ -50,7 +50,7 @@ class KnownVariable(Generic[T], BaseVariable):
 
 @strawberry.type
 class DamnitVariable(BaseVariable):
-    value: Optional[Any]
+    value: Any | None
 
 
 @strawberry.interface
@@ -121,7 +121,7 @@ class DamnitTable(metaclass=Registry):
         self.variables = DamnitRun.known_variables()
         self.update()
 
-    def update(self, variables=None, timestamp: Union[float, None] = None):
+    def update(self, variables=None, timestamp: float | None = None):
         """We update the strawberry type and the schema here"""
         if variables is not None:
             self.variables = {**self.variables, **variables}
@@ -135,7 +135,7 @@ class DamnitTable(metaclass=Registry):
         # TODO: Handle missing variables
         return self.stype.from_db(fields)
 
-    def _create_stype(self) -> Type[DamnitRun]:
+    def _create_stype(self) -> type[DamnitRun]:
         # Map annotations as (dynamic) DAMNIT variable
         annotations = {
             name: DamnitRun.known_annotations().get(name, DamnitVariable)
@@ -156,7 +156,7 @@ def get_model(proposal: str):
 def update_model(
     proposal: str,
     dtypes: dict,
-    timestamp: Union[float, None] = None,
+    timestamp: float | None = None,
     num_rows: int = 0,
 ):
     model = DamnitTable(proposal)
