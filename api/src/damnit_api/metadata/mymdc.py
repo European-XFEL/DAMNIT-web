@@ -1,5 +1,4 @@
 import requests
-
 from dotenv import dotenv_values
 
 ENV_VARS = dotenv_values()

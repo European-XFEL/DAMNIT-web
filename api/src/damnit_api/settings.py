@@ -1,5 +1,6 @@
 from typing import Annotated
-from pydantic import BaseModel, Field, SecretStr, UrlConstraints, HttpUrl
+
+from pydantic import BaseModel, HttpUrl, SecretStr, UrlConstraints
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

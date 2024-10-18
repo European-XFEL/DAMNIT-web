@@ -5,7 +5,7 @@ from damnit_api.graphql.bootstrap import bootstrap
 from damnit_api.graphql.models import DamnitTable, get_stype
 from damnit_api.graphql.schema import Schema
 
-from .const import NUM_ROWS, EXAMPLE_VARIABLES
+from .const import EXAMPLE_VARIABLES, NUM_ROWS
 
 
 @pytest.fixture(autouse=True)

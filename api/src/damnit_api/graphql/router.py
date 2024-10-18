@@ -3,9 +3,8 @@ from strawberry.fastapi import GraphQLRouter
 from strawberry.http import GraphQLHTTPResponse
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL
 
-from .schema import Schema
 from ..utils import Singleton
-
+from .schema import Schema
 
 SUBSCRIPTION_PROTOCOLS = [
     GRAPHQL_TRANSPORT_WS_PROTOCOL,

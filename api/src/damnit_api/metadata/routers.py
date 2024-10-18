@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from .proposals import get_proposal_info
 
+from .proposals import get_proposal_info
 
 router = APIRouter(prefix="/metadata", include_in_schema=False)
 

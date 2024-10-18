@@ -4,10 +4,9 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from .graphql import add_graphql_router
 from . import auth, metadata
+from .graphql import add_graphql_router
 from .settings import settings
-
 
 # Known paths are redirected to the login page and
 # then back after successful authentication.

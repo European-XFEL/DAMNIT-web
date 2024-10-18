@@ -4,7 +4,7 @@ from pathlib import Path
 
 from async_lru import alru_cache
 from fastapi import Request
-from ldap3 import Server, Connection, ALL, SUBTREE
+from ldap3 import ALL, SUBTREE, Connection, Server
 
 from ..acl.models import ACL
 from ..metadata.proposals import (
