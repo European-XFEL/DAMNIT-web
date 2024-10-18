@@ -52,7 +52,7 @@ class ACE(BaseModel):
             ACE(identity='user', who='foo', mask=<Mask.rwx: 35>)
         """
 
-        identity, who, mask_str, type, *flags = ace.split(":")
+        identity, who, mask_str, _type, *_flags = ace.split(":")
 
         # ace mask string is "rwxc" with "-" used to indicate no permission, this
         # gets a mask for each present value and ORs them together to get the final mask
@@ -287,4 +287,6 @@ class Mask(Flag):
     rwx = r | w | x
 
     def __str__(self) -> str:
-        return "".join(l if self & getattr(self, l) else "-" for l in ["r", "w", "x"])
+        return "".join(
+            flg if self & getattr(self, flg) else "-" for flg in ["r", "w", "x"]
+        )
