@@ -9,7 +9,6 @@ from xmlrpc.client import ServerProxy
 
 from pydantic import BaseModel, DirectoryPath
 
-
 _PNFS_SUB_RE = re.compile(
     r"/pnfs/xfel\.eu/exfel/archive/XFEL/(?:proc|raw)"
     r"/(?P<inst>[^/]+)/(?P<cycle>[^/]+)/p(?P<prop>[^/]+)"

@@ -1,14 +1,14 @@
 import asyncio
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import strawberry
-from strawberry.types import Info
 from strawberry.scalars import JSON
+from strawberry.types import Info
 
-from .models import Timestamp, get_stype, get_model
-from .utils import DatabaseInput, LatestData
 from ..db import async_count, async_latest_rows
 from ..utils import create_map
+from .models import Timestamp, get_model, get_stype
+from .utils import DatabaseInput, LatestData
 
 
 @strawberry.type

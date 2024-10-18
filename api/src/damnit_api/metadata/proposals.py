@@ -1,14 +1,13 @@
+import json
+import re
 from collections import defaultdict
 from contextlib import suppress
 from datetime import datetime
-import json
 from pathlib import Path
-import re
 
 from async_lru import alru_cache
 
 from .mymdc import MyMDC
-
 
 DAMNIT_PROPOSALS_CACHE = "/tmp/damnit-web/damnit_proposals.json"
 

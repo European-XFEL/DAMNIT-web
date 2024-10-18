@@ -1,14 +1,13 @@
+import os.path as osp
 from abc import ABCMeta
 from base64 import b64encode
 from glob import iglob
-import os.path as osp
 
 import h5py
 import numpy as np
 from scipy.ndimage import zoom
 
 from .const import Type
-
 
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 

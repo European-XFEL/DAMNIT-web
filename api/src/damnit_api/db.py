@@ -1,8 +1,7 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncIterator
 from pathlib import Path
-from typing import Union
 
 from sqlalchemy import (
     MetaData,
@@ -19,6 +18,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from damnit_api.utils import get_run_data
+
 from .const import DEFAULT_PROPOSAL
 from .utils import Registry, create_map, find_proposal
 

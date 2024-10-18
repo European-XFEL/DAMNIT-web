@@ -1,11 +1,11 @@
+import strawberry
 from graphql import GraphQLNamedType, GraphQLNonNull
 from graphql.type.schema import InterfaceImplementations, remap_named_type
-import strawberry
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.type import has_object_definition
 from strawberry.schema.config import StrawberryConfig
+from strawberry.type import has_object_definition
 
-from . import models, mutations, queries, subscriptions
+from . import models, mutations, queries
 
 
 class Schema(strawberry.Schema):

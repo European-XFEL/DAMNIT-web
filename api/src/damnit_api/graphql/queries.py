@@ -1,7 +1,5 @@
-from typing import List
-
-from sqlalchemy import Column, MetaData, Table, select
 import strawberry
+from sqlalchemy import Column, MetaData, Table, select
 from strawberry.scalars import JSON
 
 from ..db import get_extracted_data, get_session

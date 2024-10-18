@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from authlib.integrations.starlette_client import (  # type: ignore[import-untyped]
     OAuth,
     OAuthError,
@@ -5,12 +7,10 @@ from authlib.integrations.starlette_client import (  # type: ignore[import-untyp
 )
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
-from typing_extensions import Annotated
 
 from ..settings import settings
 from . import services
 from .models import User
-
 
 router = APIRouter(prefix="/oauth", include_in_schema=False)
 

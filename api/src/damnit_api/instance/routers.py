@@ -1,13 +1,11 @@
 from datetime import datetime
 from typing import TypeAlias
+
 import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
-from . import models
-
-from ..auth.services import user_from_ldap, resource_from_path
-
-from . import services
+from ..auth.services import resource_from_path, user_from_ldap
+from . import models, services
 
 
 @st_pydantic.type(models.Proposal, fields=["no", "cycle", "instrument"])

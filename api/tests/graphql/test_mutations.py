@@ -6,10 +6,10 @@ from damnit_api.graphql.schema import Schema
 
 from .const import (
     EXAMPLE_DTYPES,
+    EXAMPLE_VARIABLES,
     KNOWN_VALUES,
     NEW_VALUES,
     NUM_ROWS,
-    EXAMPLE_VARIABLES,
 )
 from .utils import assert_model
 
