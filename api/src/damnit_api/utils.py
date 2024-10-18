@@ -64,7 +64,7 @@ def find_proposal(propno):
         return propno
 
     propno = format_proposal_number(propno)
-    for d in iglob(osp.join(DATA_ROOT_DIR, "*/*/{}".format(propno))):
+    for d in iglob(osp.join(DATA_ROOT_DIR, f"*/*/{propno}")):
         return d
 
     return ""
