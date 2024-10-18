@@ -33,9 +33,7 @@ class Query:
 
         table_model = get_model(proposal)
         if table_model is None:
-            raise RuntimeError(
-                f"Table model for proposal {proposal} " "is not found."
-            )
+            raise RuntimeError(f"Table model for proposal {proposal} " "is not found.")
 
         columns = [Column(variable) for variable in table_model.variables]
         table = Table("runs", MetaData(), *columns)
@@ -51,9 +49,7 @@ class Query:
             if not result:
                 raise ValueError()
 
-            runs = [
-                table_model.as_stype(**res) for res in result.mappings().all()
-            ]  # type: ignore
+            runs = [table_model.as_stype(**res) for res in result.mappings().all()]  # type: ignore
 
         return runs
 
@@ -67,9 +63,7 @@ class Query:
         }
 
     @strawberry.field
-    def extracted_data(
-        database: DatabaseInput, run: int, variable: str
-    ) -> JSON:
+    def extracted_data(database: DatabaseInput, run: int, variable: str) -> JSON:
         dataset = get_extracted_data(database.proposal, run, variable)
         array_name = next(iter(dataset))
         coords = [name for name in dataset.keys() if name != array_name]

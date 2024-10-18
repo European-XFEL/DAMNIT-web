@@ -36,9 +36,7 @@ def configure() -> None:
 
 
 @router.get("/login")
-async def auth(
-    request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI
-):
+async def auth(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
     if request.session.get("user"):
         return RedirectResponse(url=redirect_uri)
 
@@ -49,9 +47,7 @@ async def auth(
 
 
 @router.get("/callback")
-async def callback(
-    request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI
-):
+async def callback(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
     try:
         token = await OAUTH.authorize_access_token(request)
         user = await OAUTH.userinfo(token=token)
@@ -63,9 +59,7 @@ async def callback(
 
 
 @router.get("/logout")
-async def logout(
-    request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI
-):
+async def logout(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
     request.session.pop("user", None)
     return RedirectResponse(url=redirect_uri)
 

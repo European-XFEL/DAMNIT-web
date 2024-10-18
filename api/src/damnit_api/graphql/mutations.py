@@ -8,7 +8,6 @@ from .utils import DatabaseInput
 
 @strawberry.type
 class Mutation:
-
     @strawberry.mutation
     async def refresh(self, info: Info, database: DatabaseInput) -> JSON:
         proposal = database.proposal

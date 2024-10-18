@@ -68,7 +68,8 @@ class ACE(BaseModel):
         )
 
     def __and__(self, other: "ACE") -> "Mask":
-        """Return the intersection of two ACEs if they have the same identity and name."""
+        """Return the intersection of two ACEs if they have the same identity and
+        name."""
         if self.identity == other.identity and self.who == other.who:
             return self.mask & other.mask
         return Mask(0)

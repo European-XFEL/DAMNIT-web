@@ -13,7 +13,6 @@ SUBSCRIPTION_PROTOCOLS = [
 
 
 class Router(GraphQLRouter, metaclass=Singleton):
-
     def __init__(self):
         super().__init__(
             schema=Schema(),

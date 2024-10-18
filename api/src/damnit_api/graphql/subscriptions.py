@@ -51,9 +51,7 @@ class Subscription:
             # Aggregate run values from latest data and runs
             runs = {}
             for run, variables in latest_data.runs.items():
-                run_values = {
-                    name: data.value for name, data in variables.items()
-                }
+                run_values = {name: data.value for name, data in variables.items()}
                 if run_info := latest_runs.get(run):
                     run_values.update(run_info)
 

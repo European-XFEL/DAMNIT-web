@@ -27,33 +27,30 @@ class Data(MetaData):
 
 
 class LatestData:
-
     def __init__(self):
         self.runs = defaultdict(lambda: defaultdict(Data))
         self.variables = defaultdict(MetaData)
 
     def add(self, data):
-        timestamp = data['timestamp']
-        dtype = map_dtype(type(data['value']))
+        timestamp = data["timestamp"]
+        dtype = map_dtype(type(data["value"]))
 
         # Bookkeep by runs
-        run = self.runs[data['run']]
-        if run[data['name']].timestamp < timestamp:
-            run[data['name']] = Data(
-                value=data['value'],
-                dtype=dtype,
-                timestamp=timestamp)
+        run = self.runs[data["run"]]
+        if run[data["name"]].timestamp < timestamp:
+            run[data["name"]] = Data(
+                value=data["value"], dtype=dtype, timestamp=timestamp
+            )
 
         # Bookkeep by variables
-        variable = self.variables[data['name']]
+        variable = self.variables[data["name"]]
         if variable.timestamp < timestamp:
             variable.dtype = dtype
             variable.timestamp = timestamp
 
     @property
     def dtypes(self):
-        return {variable: data.dtype
-                for variable, data in self.variables.items()}
+        return {variable: data.dtype for variable, data in self.variables.items()}
 
     @property
     def timestamp(self):

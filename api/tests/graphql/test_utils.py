@@ -4,8 +4,10 @@ from .const import EXAMPLE_DTYPES, EXAMPLE_VALUES, NEW_DTYPES, NEW_VALUES
 
 
 def to_row(values, run=1, timestamp=1):
-    return [{'run': run, 'name': name, 'value': value, 'timestamp': timestamp}
-            for name, value in values.items()]
+    return [
+        {"run": run, "name": name, "value": value, "timestamp": timestamp}
+        for name, value in values.items()
+    ]
 
 
 def test_latest_data_update_run():

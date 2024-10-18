@@ -19,8 +19,7 @@ class AmoreDirRepo:
 
         for cycle in cycles:
             self.data[str(cycle)] = await loop.run_in_executor(
-                None,
-                lambda: list(cycle.glob("*/usr/Shared/amore"))
+                None, lambda: list(cycle.glob("*/usr/Shared/amore"))
             )
 
     async def write(self):
