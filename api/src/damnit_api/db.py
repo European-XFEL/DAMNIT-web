@@ -43,7 +43,8 @@ class DatabaseSessionManager(metaclass=Registry):
 
     async def close(self):
         if self._engine is None:
-            raise Exception("DatabaseSessionManager is not initialized")
+            msg = "DatabaseSessionManager is not initialized"
+            raise Exception(msg)
         await self._engine.dispose()
         self._engine = None
         self._sessionmaker = None
@@ -51,7 +52,8 @@ class DatabaseSessionManager(metaclass=Registry):
     @asynccontextmanager
     async def connect(self) -> AsyncIterator[AsyncConnection]:
         if self._engine is None:
-            raise Exception("DatabaseSessionManager is not initialized")
+            msg = "DatabaseSessionManager is not initialized"
+            raise Exception(msg)
 
         async with self._engine.begin() as connection:
             try:
@@ -63,7 +65,8 @@ class DatabaseSessionManager(metaclass=Registry):
     @asynccontextmanager
     async def session(self) -> AsyncIterator[AsyncSession]:
         if self._sessionmaker is None:
-            raise Exception("DatabaseSessionManager is not initialized")
+            msg = "DatabaseSessionManager is not initialized"
+            raise Exception(msg)
 
         session = self._sessionmaker()
         try:
@@ -150,5 +153,6 @@ def get_damnit_path(proposal_number: str = DEFAULT_PROPOSAL) -> str:
     """Returns the directory of the given proposal."""
     path = find_proposal(proposal_number)
     if not path:
-        raise RuntimeError(f"Proposal '{proposal_number}' is not found.")
+        msg = f"Proposal '{proposal_number}' is not found."
+        raise RuntimeError(msg)
     return str(Path(path) / DAMNIT_PATH)

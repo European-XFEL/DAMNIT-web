@@ -31,7 +31,8 @@ class Query:
 
         table_model = get_model(proposal)
         if table_model is None:
-            raise RuntimeError(f"Table model for proposal {proposal} " "is not found.")
+            msg = f"Table model for proposal {proposal} is not found."
+            raise RuntimeError(msg)
 
         columns = [Column(variable) for variable in table_model.variables]
         table = Table("runs", MetaData(), *columns)
