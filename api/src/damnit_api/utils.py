@@ -116,7 +116,6 @@ class Singleton(ABCMeta):
 
 
 class Registry(ABCMeta):
-
     def __call__(cls, proposal, *args, **kwargs):
         instance = cls.registry.get(proposal)
         if instance is None:

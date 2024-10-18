@@ -9,7 +9,6 @@ from . import models, mutations, queries, subscriptions
 
 
 class Schema(strawberry.Schema):
-
     def __init__(self):
         super().__init__(
             query=queries.Query,
@@ -26,9 +25,7 @@ class Schema(strawberry.Schema):
         implementations_map = graphql_schema._implementations_map
         implementations = implementations_map.get(interface)
         if implementations is None:
-            implementations = InterfaceImplementations(
-                objects=[], interfaces=[]
-            )
+            implementations = InterfaceImplementations(objects=[], interfaces=[])
             implementations_map[interface] = implementations
 
         # Invalidate the subtypes

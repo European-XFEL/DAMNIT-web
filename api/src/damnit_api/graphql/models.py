@@ -22,9 +22,7 @@ def serialize(value, *, dtype=DamnitType.STRING):
     if dtype is DamnitType.IMAGE:
         value = b64image(value)
     elif dtype is DamnitType.TIMESTAMP:
-        value = int(
-            value.timestamp() if isinstance(value, datetime) else value * 1000
-        )
+        value = int(value.timestamp() if isinstance(value, datetime) else value * 1000)
 
     return value
 
@@ -59,7 +57,6 @@ class DamnitVariable(BaseVariable):
 
 @strawberry.interface
 class DamnitRun:
-
     proposal: KnownVariable[int]
     run: KnownVariable[int]
     start_time: KnownVariable[Timestamp]

@@ -6,7 +6,6 @@ ENV_VARS = dotenv_values()
 
 
 class MyMDC:
-
     HEADERS = {
         "accept": "application/json; version=1",
         "Content-Type": "application/json",

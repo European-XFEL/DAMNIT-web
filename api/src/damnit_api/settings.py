@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         env_prefix="DW_API_",
         env_file=[".env"],
         env_nested_delimiter="__",
-        extra='ignore',
+        extra="ignore",
     )
 
 
