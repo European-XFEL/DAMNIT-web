@@ -36,8 +36,9 @@ async def mocked_latest_rows(mocker, current_timestamp):
                 run=KNOWN_VALUES["run"],
                 timestamp=current_timestamp,
             )
-        elif table == "run_info":
+        if table == "run_info":
             return [create_run_info(**KNOWN_VALUES)]
+        return None
 
     mocker.patch(
         "damnit_api.graphql.subscriptions.async_latest_rows",

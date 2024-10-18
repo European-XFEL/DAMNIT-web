@@ -11,7 +11,7 @@ from .const import EXAMPLE_VARIABLES, NUM_ROWS
 @pytest.fixture(autouse=True)
 def lifespan():
     DamnitTable.registry.clear()
-    yield
+    return
 
 
 @pytest.fixture
