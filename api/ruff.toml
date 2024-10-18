@@ -1,0 +1,48 @@
+output-format = "grouped"
+
+preview = true
+
+target-version = "py313"
+
+src = ["src", "test"]
+
+[lint]
+select = [
+    "E",     # pycodestyle
+    "F",     # flake8
+    "I",     # isort
+    "PGH",   # pygrep-hooks
+    "RUF",   # ruff
+    "W",     # pycodestyle
+    "UP",    # pyupgrade
+    "C90",   # mccabe complexity
+    "N",     # pep8 naming
+    "PERF",  # perflint
+    "FURB",  # refurb
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "YTT",   # flake8-2020
+    "SIM",   # flake8-simplify
+    "ASYNC", # flake8-async
+    "S",     # flake8-bandit
+    "DTZ",   # flake8-datetime
+    "EM",    # flake8-errmsg
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "G",     # flake8-logging-format
+    "PIE",   # flake8-pie
+    "PT",    # flake8-pytest-style
+    "Q",     # flake8-quotes
+    "RSE",   # flake8-raise
+    "RET",   # flake8-return
+    "TCH",   # flake8-type-checking
+    "PTH",   # flake8-use-pathlib
+    "LOG",   # flake8-logging
+]
+extend-ignore = ["B018", "B019"]
+
+[lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[lint.isort]
+known-local-folder = ["src"]
