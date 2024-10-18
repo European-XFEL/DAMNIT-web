@@ -11,8 +11,8 @@ from .models import DamnitType
 
 @strawberry.input
 class DatabaseInput:
-    proposal: Optional[str] = strawberry.field(default=DEFAULT_PROPOSAL)
-    path: Optional[str] = strawberry.field(default=strawberry.UNSET)
+    proposal: str | None = strawberry.field(default=DEFAULT_PROPOSAL)
+    path: str | None = strawberry.field(default=strawberry.UNSET)
 
 
 @dataclass
