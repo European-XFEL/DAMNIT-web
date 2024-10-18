@@ -216,9 +216,11 @@ class ACL(RootModel[list[ACE]]):
                 matches = [other & entry for entry in self]
                 return Mask(reduce(operator.or_, matches) if matches else 0)
             case _:
-                raise TypeError(
-                    f"unsupported operand type(s) for &: 'ACL' and '{type(other).__name__}'"
+                msg = (
+                    "unsupported operand type(s) for &: "
+                    f"ACL' and '{type(other).__name__}'"
                 )
+                raise TypeError(msg)
 
 
 # Mask class as defined in the GPFS ACL documentation:

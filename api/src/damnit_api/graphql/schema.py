@@ -56,7 +56,8 @@ class Schema(strawberry.Schema):
         if isinstance(graphql_type, GraphQLNonNull):
             graphql_type = graphql_type.of_type
         if not isinstance(graphql_type, GraphQLNamedType):
-            raise TypeError(f"{graphql_type} is not a named GraphQL Type")
+            msg = f"{graphql_type} is not a named GraphQL Type"
+            raise TypeError(msg)
 
         return graphql_type
 

@@ -39,7 +39,8 @@ async def user_from_ldap(username: str) -> User:
     )
 
     if not conn.entries:
-        raise Exception("User not found")  # TODO: better exception
+        msg = "User not found"
+        raise Exception(msg)  # TODO: better exception
 
     entry = conn.entries[0]
     name = entry.cn.value
