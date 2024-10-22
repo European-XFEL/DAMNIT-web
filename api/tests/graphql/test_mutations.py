@@ -1,5 +1,4 @@
 import pytest
-import pytest_asyncio
 
 from damnit_api.graphql.models import DamnitRun, get_model
 from damnit_api.graphql.schema import Schema
@@ -7,26 +6,14 @@ from damnit_api.graphql.schema import Schema
 from .const import (
     EXAMPLE_DTYPES,
     EXAMPLE_VARIABLES,
-    KNOWN_VALUES,
-    NEW_VALUES,
     NUM_ROWS,
 )
 from .utils import assert_model
 
 
-@pytest_asyncio.fixture
-async def mocked_latest_rows(mocker):
-    latest_rows = [{**KNOWN_VALUES, **NEW_VALUES}]
-    mocker.patch(
-        "damnit_api.graphql.mutations.async_latest_rows",
-        return_value=latest_rows,
-    )
-
-
 @pytest.mark.asyncio
-async def test_refresh(graphql_schema, mocked_count):
+async def test_refresh(graphql_schema):
     model = get_model(proposal="1234")
-    assert_model(model, proposal="1234", dtypes=None)
 
     graphql_schema = Schema()
     result = await graphql_schema.execute(
@@ -50,4 +37,11 @@ async def test_refresh(graphql_schema, mocked_count):
         **EXAMPLE_VARIABLES,
     }
 
-    assert_model(model, proposal="1234", dtypes=EXAMPLE_DTYPES)
+    assert_model(
+        model,
+        proposal="1234",
+        variables={
+            **DamnitRun.known_variables(),
+            **EXAMPLE_VARIABLES,
+        },
+    )

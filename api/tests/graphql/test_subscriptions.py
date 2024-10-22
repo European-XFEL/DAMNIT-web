@@ -3,10 +3,10 @@ from datetime import datetime
 import pytest
 import pytest_asyncio
 
-from damnit_api.graphql.models import get_model
+from damnit_api.graphql.models import DamnitRun, serialize
 
 from .const import (
-    EXAMPLE_DTYPES,
+    EXAMPLE_VARIABLES,
     KNOWN_DTYPES,
     KNOWN_VALUES,
     NEW_DTYPES,
@@ -17,7 +17,6 @@ from .utils import (
     assert_model,
     create_run_info,
     create_run_variables,
-    serialize_data,
 )
 
 
@@ -47,6 +46,14 @@ async def mocked_latest_rows(mocker, current_timestamp):
 
 
 @pytest.fixture
+def mocked_variables(mocker):
+    mocker.patch(
+        "damnit_api.graphql.subscriptions.async_variables",
+        return_value=EXAMPLE_VARIABLES,
+    )
+
+
+@pytest.fixture
 def mocked_new_count(mocker):
     mocker.patch(
         "damnit_api.graphql.subscriptions.async_count",
@@ -54,13 +61,14 @@ def mocked_new_count(mocker):
     )
 
 
-@pytest.mark.skip(reason="Subscription is currently broken.")
+@pytest.mark.asyncio
 async def test_latest_data(
-    graphql_schema, current_timestamp, mocked_latest_rows, mocked_new_count
+    graphql_schema,
+    current_timestamp,
+    mocked_latest_rows,
+    mocked_new_count,
+    mocked_variables,
 ):
-    model = get_model(proposal="1234")
-    assert_model(model, proposal="1234", dtypes=EXAMPLE_DTYPES)
-
     subscription = await graphql_schema.subscribe(
         """
         subscription LatestDataSubcription(
@@ -85,14 +93,24 @@ async def test_latest_data(
 
         latest_data = result.data["latest_data"]
         assert set(latest_data.keys()) == {"runs", "metadata"}
-        assert latest_data["runs"] == {1: serialize_data(data, dtypes)}
+        assert latest_data["runs"] == {
+            1: {
+                name: {
+                    "value": serialize(value, dtype=dtypes[name]),
+                    "dtype": dtypes[name].value,
+                }
+                for name, value in data.items()
+            }
+        }
 
         metadata = latest_data["metadata"]
-        assert set(metadata.keys()) == {"rows", "timestamp"}
-        assert metadata["timestamp"] == current_timestamp * 1000
+        assert set(metadata.keys()) == {"rows", "timestamp", "variables"}
         assert metadata["rows"] == NUM_ROWS + 1
-
-        assert_model(model, proposal="1234", dtypes=NEW_DTYPES)
+        assert metadata["timestamp"] == current_timestamp * 1000
+        assert metadata["variables"] == {
+            **DamnitRun.known_variables(),
+            **EXAMPLE_VARIABLES,
+        }
 
         # Don't forget to break!
         break

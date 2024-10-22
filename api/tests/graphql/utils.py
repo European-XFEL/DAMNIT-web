@@ -32,17 +32,6 @@ def create_run_info(proposal=1234, run=1, start_time=500, added_at=1000):
     }
 
 
-def serialize_data(data, dtypes):
-    serialized = {}
-
-    for prop, value in data.items():
-        if dtypes.get(prop) is DamnitType.TIMESTAMP:
-            value = int(value * 1000)
-        serialized[prop] = value
-
-    return serialized
-
-
 # -----------------------------------------------------------------------------
 # Mocks
 
@@ -67,23 +56,17 @@ def session_mock(return_value):
 # Assertions
 
 
-def assert_model(model, proposal=None, dtypes=None):
-    if dtypes is None:
-        dtypes = {}
-
+def assert_model(model, proposal=None, variables=None):
     assert model.proposal == proposal
-    assert_stype(model.stype, dtypes)
+    assert_stype(model.stype, variables or {})
 
 
-def assert_stype(stype, dtypes):
-    if dtypes is None:
-        assert stype is None
-        return
-
+def assert_stype(stype, variables):
     # TODO: Change stype class name ('p1234')
     assert issubclass(stype, DamnitRun)
     for prop, type_ in stype.__annotations__.items():
         if prop in KNOWN_DTYPES:
             assert type_.__origin__ is KnownVariable
         else:
+            assert prop in variables
             assert type_ is DamnitVariable
