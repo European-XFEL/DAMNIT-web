@@ -1,4 +1,3 @@
-import { combineReducers } from "redux"
 import { configureStore } from "@reduxjs/toolkit"
 import { loadingBarReducer as loadingBar } from "react-redux-loading-bar"
 
@@ -12,7 +11,7 @@ import extractedData from "./slices/extractedData"
 import proposal from "./slices/proposal"
 import tableData from "./slices/tableData"
 
-const reducer = combineReducers({
+const reducer = {
   dashboard,
   plots,
   proposal,
@@ -23,7 +22,7 @@ const reducer = combineReducers({
 
   [authApi.reducerPath]: authApi.reducer,
   [metadataApi.reducerPath]: metadataApi.reducer,
-})
+}
 
 export const setupStore = (preloadedState) => {
   return configureStore({

@@ -13,3 +13,5 @@ export const DTYPES = {
   number: "number",
   timestamp: "timestamp",
 }
+
+export const EXCLUDED_VARIABLES = ["proposal", "added_at"]

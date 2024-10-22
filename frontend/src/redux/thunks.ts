@@ -1,5 +1,4 @@
-import { getExtractedVariable } from "./slices/extractedData"
-import { getTableVariable } from "./slices/tableData"
+import { getExtractedVariable, getTableVariable } from "./slices"
 
 export const getAllExtractedVariables =
   ({ proposal, variable }) =>
