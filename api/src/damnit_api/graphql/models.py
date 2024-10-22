@@ -62,22 +62,26 @@ class DamnitRun:
 
     @classmethod
     def from_db(cls, entry):
+        return cls(**cls.resolve(entry, as_dict=False))
+
+    @classmethod
+    def resolve(cls, entry, as_dict=True):
         variables = {}
         for name, klass in cls.__annotations__.items():
-            if hasattr(klass, "__args__"):
-                type_ = klass.__args__[0]
-                dtype = (
-                    map_dtype(type_)
-                    if inspect.isclass(type_)
-                    else DamnitType(type_._scalar_definition.name.lower())
-                )
-            else:
-                dtype = map_dtype(type(entry[name]))
+            if name not in entry:
+                continue
 
+            dtype = cls.get_dtype(value=entry[name], klass=klass)
             value = serialize(entry[name], dtype=dtype)
-            variables[name] = klass(name=name, value=value, dtype=dtype.value)
 
-        return cls(**variables)
+            if as_dict:
+                result = {"value": value, "dtype": dtype.value}
+            else:
+                result = klass(name=name, value=value, dtype=dtype.value)
+
+            variables[name] = result
+
+        return variables
 
     @classmethod
     def known_variables(cls):
@@ -108,6 +112,19 @@ class DamnitRun:
     def known_annotations(cls):
         return cls.__annotations__
 
+    @staticmethod
+    def get_dtype(value, klass=None):
+        if klass is not None and hasattr(klass, "__args__"):
+            type_ = klass.__args__[0]
+            dtype = (
+                map_dtype(type_)
+                if inspect.isclass(type_)
+                else DamnitType(type_._scalar_definition.name.lower())
+            )
+        else:
+            dtype = map_dtype(type(value))
+        return dtype
+
 
 class DamnitTable(metaclass=Registry):
     proposal = ""
@@ -119,20 +136,23 @@ class DamnitTable(metaclass=Registry):
     def __init__(self, proposal: str = DEFAULT_PROPOSAL):
         self.proposal = proposal
         self.variables = DamnitRun.known_variables()
-        self.update()
+        self.stype = self._create_stype()
 
     def update(self, variables=None, timestamp: float | None = None):
         """We update the strawberry type and the schema here"""
-        if variables is not None:
-            self.variables = {**self.variables, **variables}
+        new_variables = {**self.variables, **variables}
+        has_changed = self.variables != new_variables
+        if has_changed:
+            self.variables = new_variables
+            self.stype = self._create_stype()
 
-        self.stype = self._create_stype()
         if timestamp is not None:
             self.timestamp = timestamp
 
+        return has_changed
+
     def as_stype(self, **fields):
         """Converts the database entry to Damnit type"""
-        # TODO: Handle missing variables
         return self.stype.from_db(fields)
 
     def _create_stype(self) -> type[DamnitRun]:
@@ -148,6 +168,9 @@ class DamnitTable(metaclass=Registry):
         )
         return strawberry.type(new_class)
 
+    def resolve(self, **fields):
+        return self.stype.resolve(fields)
+
 
 def get_model(proposal: str):
     return DamnitTable(proposal)
@@ -155,12 +178,12 @@ def get_model(proposal: str):
 
 def update_model(
     proposal: str,
-    dtypes: dict,
+    variables: dict,
     timestamp: float | None = None,
     num_rows: int = 0,
 ):
     model = DamnitTable(proposal)
-    model.update(dtypes, timestamp)
+    model.update(variables, timestamp)
     model.num_rows = num_rows
     return model
 

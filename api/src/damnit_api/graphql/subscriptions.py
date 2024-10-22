@@ -5,16 +5,14 @@ import strawberry
 from strawberry.scalars import JSON
 from strawberry.types import Info
 
-from ..db import async_count, async_latest_rows
+from ..db import async_count, async_latest_rows, async_variables
 from ..utils import create_map
-from .models import Timestamp, get_model, get_stype
+from .models import Timestamp, get_model
 from .utils import DatabaseInput, LatestData
 
 
 @strawberry.type
 class Subscription:
-    """CC: Subscription is currently broken.
-    I will revisit again once I come back from vacation"""
 
     @strawberry.subscription
     async def latest_data(
@@ -27,6 +25,9 @@ class Subscription:
         model = get_model(proposal)
 
         while True:
+            # Sleep first :)
+            await asyncio.sleep(1)
+
             # Get latest data
             latest_data = await async_latest_rows(
                 proposal,
@@ -34,6 +35,8 @@ class Subscription:
                 by="timestamp",
                 start_at=timestamp,
             )
+            if not len(latest_data):
+                continue
             latest_data = LatestData.from_list(latest_data)
 
             # Get latest runs
@@ -43,10 +46,14 @@ class Subscription:
             latest_runs = create_map(latest_runs, key="run")
 
             # Update model
-            # TODO: Only update the model when there are actual changes
-            model.update(latest_data.dtypes, latest_data.timestamp)
+            model_changed = model.update(
+                await async_variables(proposal),
+                timestamp=latest_data.timestamp,
+            )
+            if model_changed:
+                # Update GraphQL schema
+                info.context["schema"].update(model.stype)
             model.num_rows = await async_count(proposal, table="run_info")
-            info.context["schema"].update(get_stype(proposal))
 
             # Aggregate run values from latest data and runs
             runs = {}
@@ -55,15 +62,14 @@ class Subscription:
                 if run_info := latest_runs.get(run):
                     run_values.update(run_info)
 
-                runs[run] = model.as_dict(**run_values)
+                runs[run] = model.resolve(**run_values)
 
             # Return the latest values if any
             if len(runs):
                 metadata = {
                     "rows": model.num_rows,
+                    "variables": model.variables,
                     "timestamp": model.timestamp * 1000,  # deserialize to JS
                 }
 
                 yield {"runs": runs, "metadata": metadata}
-
-            await asyncio.sleep(1)

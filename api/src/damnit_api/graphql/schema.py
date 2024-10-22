@@ -13,6 +13,7 @@ class Schema(strawberry.Schema):
         super().__init__(
             query=queries.Query,
             mutation=mutations.Mutation,
+            subscription=subscriptions.Subscription,
             types=[models.DamnitVariable],
             config=StrawberryConfig(auto_camel_case=False),
         )
