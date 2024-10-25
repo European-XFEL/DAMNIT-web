@@ -18,22 +18,24 @@ export default defineConfig(({ mode }) => {
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
         [`${baseUrl}graphql`]: {
-          target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: true,
+          target: `ws://${env.VITE_BACKEND_API}`,
+          changeOrigin: false,
           secure: false,
+          ws: true,
+          rewriteWsOrigin: false,
           // REMOVEME: The API will have a base path similar to the frontend at some point
           rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
         [`${baseUrl}oauth`]: {
           target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: true,
+          changeOrigin: false,
           secure: false,
           // REMOVEME: The API will have a base path similar to the frontend at some point
           rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
         [`${baseUrl}metadata`]: {
           target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: true,
+          changeOrigin: false,
           secure: false,
           // REMOVEME: The API will have a base path similar to the frontend at some point
           rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),

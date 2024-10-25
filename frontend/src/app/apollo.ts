@@ -18,7 +18,8 @@ import { createClient } from "graphql-ws"
 import { BASE_URL } from "../constants"
 
 const BACKEND_API = import.meta.env.VITE_BACKEND_API
-const HTTP_API = import.meta.env.MODE === "test" ? `http://${BACKEND_API}` : ""
+const HTTP_API =
+  import.meta.env.MODE === "test" ? `http://${BACKEND_API}${BASE_URL}` : "/"
 
 const removeTypenameLink = removeTypenameFromVariables({
   except: {
@@ -33,12 +34,12 @@ const retryLink = new RetryLink({
   },
 })
 
-const httpLink = new HttpLink({ uri: `${HTTP_API}${BASE_URL}graphql` })
+const httpLink = new HttpLink({ uri: `${HTTP_API}graphql` })
 
 // TODO: Use base URL on the web socket
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: `ws://${BACKEND_API}/graphql`,
+    url: `ws://${window.location.host}/graphql`,
   }),
 )
 
