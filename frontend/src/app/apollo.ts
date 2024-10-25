@@ -36,10 +36,12 @@ const retryLink = new RetryLink({
 
 const httpLink = new HttpLink({ uri: `${HTTP_API}graphql` })
 
-// TODO: Use base URL on the web socket
+const wsProtocol = window.location.origin.startsWith("https") ? "wss" : "ws"
+const wsUri = `${wsProtocol}://${window.location.host}/graphql`
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: `ws://${window.location.host}/graphql`,
+    url: wsUri,
+    shouldRetry: () => true,
   }),
 )
 
