@@ -1,9 +1,12 @@
+import asyncio
 from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 
 from damnit_api.graphql.models import DamnitRun, serialize
+from damnit_api.graphql.subscriptions import LATEST_DATA, POLLING_INTERVAL
 
 from .const import (
     EXAMPLE_VARIABLES,
@@ -14,10 +17,12 @@ from .const import (
     NUM_ROWS,
 )
 from .utils import (
-    assert_model,
     create_run_info,
     create_run_variables,
 )
+
+
+patched_sleep = patch.object(asyncio, "sleep", return_value=asyncio.sleep(0))
 
 
 @pytest.fixture(scope="module")
@@ -39,7 +44,7 @@ async def mocked_latest_rows(mocker, current_timestamp):
             return [create_run_info(**KNOWN_VALUES)]
         return None
 
-    mocker.patch(
+    return mocker.patch(
         "damnit_api.graphql.subscriptions.async_latest_rows",
         side_effect=mocked_returns,
     )
@@ -47,7 +52,7 @@ async def mocked_latest_rows(mocker, current_timestamp):
 
 @pytest.fixture
 def mocked_variables(mocker):
-    mocker.patch(
+    return mocker.patch(
         "damnit_api.graphql.subscriptions.async_variables",
         return_value=EXAMPLE_VARIABLES,
     )
@@ -55,10 +60,16 @@ def mocked_variables(mocker):
 
 @pytest.fixture
 def mocked_new_count(mocker):
-    mocker.patch(
+    return mocker.patch(
         "damnit_api.graphql.subscriptions.async_count",
         return_value=NUM_ROWS + 1,
     )
+
+
+@pytest.fixture(autouse=True)
+def clear_latest_data():
+    """Automatically clears the latest data cache before every test."""
+    LATEST_DATA.clear()
 
 
 @pytest.mark.asyncio
@@ -71,7 +82,7 @@ async def test_latest_data(
 ):
     subscription = await graphql_schema.subscribe(
         """
-        subscription LatestDataSubcription(
+        subscription LatestDataSubscription(
           $proposal: String,
           $timestamp: Timestamp!) {
           latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
@@ -81,7 +92,9 @@ async def test_latest_data(
             "proposal": "1234",
             "timestamp": current_timestamp * 1000,  # some arbitrary timestamp
         },
-        context_value={"schema": graphql_schema},
+        context_value={
+            "schema": graphql_schema,
+        },
     )
 
     # Only test the first update
@@ -114,3 +127,108 @@ async def test_latest_data(
 
         # Don't forget to break!
         break
+
+
+@pytest.mark.asyncio
+async def test_latest_data_with_concurrent_subscriptions(
+    graphql_schema,
+    current_timestamp,
+    mocked_latest_rows,
+    mocked_new_count,
+    mocked_variables,
+):
+    query = """
+        subscription LatestDataSubscription(
+          $proposal: String,
+          $timestamp: Timestamp!) {
+          latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
+        }
+        """
+    variables = {
+        "proposal": "1234",
+        "timestamp": current_timestamp * 1000,  # some arbitrary timestamp
+    }
+    context = {
+        "schema": graphql_schema,
+    }
+
+    first_sub = await graphql_schema.subscribe(
+        query,
+        variable_values=variables,
+        context_value=context,
+    )
+    second_sub = await graphql_schema.subscribe(
+        query,
+        variable_values=variables,
+        context_value=context,
+    )
+
+    with patched_sleep:
+        async for result in first_sub:
+            # Only test the first update
+            assert not result.errors
+            mocked_latest_rows.assert_called()
+            break
+
+    mocked_latest_rows.reset_mock()
+
+    with patched_sleep:
+        async for result in second_sub:
+            # Only test the first update
+            assert not result.errors
+            mocked_latest_rows.assert_not_called()
+            break
+
+
+@pytest.mark.asyncio
+async def test_latest_data_with_nonconcurrent_subscriptions(
+    graphql_schema,
+    current_timestamp,
+    mocked_latest_rows,
+    mocked_new_count,
+    mocked_variables,
+):
+    query = """
+        subscription LatestDataSubscription(
+          $proposal: String,
+          $timestamp: Timestamp!) {
+          latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
+        }
+        """
+    variables = {
+        "proposal": "1234",
+        "timestamp": current_timestamp * 1000,  # some arbitrary timestamp
+    }
+    context = {
+        "schema": graphql_schema,
+    }
+
+    first_sub = await graphql_schema.subscribe(
+        query,
+        variable_values=variables,
+        context_value=context,
+    )
+    second_sub = await graphql_schema.subscribe(
+        query,
+        variable_values=variables,
+        context_value=context,
+    )
+
+    with patched_sleep:
+        async for result in first_sub:
+            # Only test the first update
+            assert not result.errors
+            mocked_latest_rows.assert_called()
+            break
+
+    await asyncio.sleep(
+        POLLING_INTERVAL * 3
+    )  # give enough time to clear the cache
+    mocked_latest_rows.reset_mock()
+
+    with patched_sleep:
+        async for result in second_sub:
+            # Only test the first update
+            assert not result.errors
+            mocked_latest_rows.assert_called()
+            break

@@ -1,6 +1,8 @@
 import asyncio
+from collections import defaultdict
 from collections.abc import AsyncGenerator
 
+from cachetools import TTLCache
 import strawberry
 from strawberry.scalars import JSON
 from strawberry.types import Info
@@ -9,6 +11,13 @@ from ..db import async_count, async_latest_rows, async_variables
 from ..utils import create_map
 from .models import Timestamp, get_model
 from .utils import DatabaseInput, LatestData
+
+
+POLLING_INTERVAL = 1  # seconds
+
+LATEST_DATA: dict[int, TTLCache] = defaultdict(
+    lambda: TTLCache(maxsize=3, ttl=POLLING_INTERVAL)
+)
 
 
 @strawberry.type
@@ -26,7 +35,10 @@ class Subscription:
 
         while True:
             # Sleep first :)
-            await asyncio.sleep(1)
+            await asyncio.sleep(POLLING_INTERVAL)
+
+            if cached := LATEST_DATA[proposal].get(timestamp):
+                yield cached
 
             # Get latest data
             latest_data = await async_latest_rows(
@@ -72,4 +84,7 @@ class Subscription:
                     "timestamp": model.timestamp * 1000,  # deserialize to JS
                 }
 
-                yield {"runs": runs, "metadata": metadata}
+                result = {"runs": runs, "metadata": metadata}
+                LATEST_DATA[proposal][timestamp] = result
+
+                yield result
