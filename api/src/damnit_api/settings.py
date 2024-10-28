@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import (
@@ -56,6 +57,8 @@ class MyMdCCredentials(BaseSettings):
 
 class Settings(BaseSettings):
     auth: AuthSettings
+
+    proposal_cache: Path = Path("/tmp/damnit-web/damnit_proposals.json")
 
     debug: bool = True
 

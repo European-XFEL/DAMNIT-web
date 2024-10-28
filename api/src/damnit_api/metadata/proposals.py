@@ -7,19 +7,18 @@ from pathlib import Path
 
 from async_lru import alru_cache
 
+from ..settings import settings
 from .mymdc import MyMDC
-
-DAMNIT_PROPOSALS_CACHE = "/tmp/damnit-web/damnit_proposals.json"
 
 
 @alru_cache(ttl=60)
 async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
-    cache = Path(DAMNIT_PROPOSALS_CACHE)
+    cache = Path(settings.proposal_cache)
     proposals = None
 
     # Check from cache if existing
     if use_cache and cache.exists():
-        with open(DAMNIT_PROPOSALS_CACHE) as file:
+        with open(settings.proposal_cache) as file:
             # TODO: Update cache for new proposals
             proposals = json.load(file)
             if info := proposals.get(proposal_num):
@@ -44,7 +43,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
 
     if proposals is None:
         if cache.exists():
-            with open(DAMNIT_PROPOSALS_CACHE) as file:
+            with open(settings.proposal_cache) as file:
                 # TODO: Update cache for new proposals
                 proposals = json.load(file)
         else:
@@ -55,7 +54,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
     proposals = dict(sorted(proposals.items()))
 
     # Update the cache
-    with open(DAMNIT_PROPOSALS_CACHE, "w") as file:
+    with open(settings.proposal_cache, "w") as file:
         json.dump(
             proposals,
             file,
@@ -131,9 +130,9 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
 
 
 def get_damnit_proposals(use_cache: bool) -> dict:
-    cache = Path(DAMNIT_PROPOSALS_CACHE)
+    cache = Path(settings.proposal_cache)
     if use_cache and cache.exists():
-        with open(DAMNIT_PROPOSALS_CACHE) as file:
+        with open(settings.proposal_cache) as file:
             # TODO: Update cache for new proposals
             return json.load(file)
 
@@ -154,7 +153,7 @@ def get_damnit_proposals(use_cache: bool) -> dict:
     proposals = dict(sorted(proposals.items()))
 
     # Write to file
-    with open(DAMNIT_PROPOSALS_CACHE, "w") as file:
+    with open(settings.proposal_cache, "w") as file:
         json.dump(
             proposals,
             file,
@@ -188,6 +187,8 @@ def get_damnit_path(path: str | Path, suffix: str | None = None) -> str:
         for p in ush.glob("amore-online"):
             if p.is_dir():
                 return str(p)
+
+    return None
 
 
 def get_proposal_number_from_path(path: str) -> str:
