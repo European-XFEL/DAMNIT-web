@@ -59,4 +59,11 @@ class Settings(BaseSettings):
 settings = Settings()  # type: ignore[assignment]
 
 if __name__ == "__main__":
-    print(settings.model_dump_json(indent=2))
+    try:
+        from rich import print as pprint
+    except ImportError:
+
+        def pprint(*args, **kwargs):
+            print(args[0].model_dump_json(indent=2))
+
+    pprint(settings)
