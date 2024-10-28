@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from pydantic import (
@@ -37,6 +38,22 @@ class UvicornSettings(BaseModel):
     model_config = SettingsConfigDict(extra="allow")
 
 
+class MyMdCCredentials(BaseSettings):
+    """MyMdC client settings.
+
+    Get from from <https://in.xfel.eu/metadata/oauth/applications>.
+    """
+
+    client_id: str
+    client_secret: SecretStr
+    email: str
+    token_url: HttpUrl
+    base_url: HttpUrl
+
+    _access_token: str = ""
+    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(UTC)
+
+
 class Settings(BaseSettings):
     auth: AuthSettings
 
@@ -47,6 +64,8 @@ class Settings(BaseSettings):
     session_secret: SecretStr
 
     uvicorn: UvicornSettings = UvicornSettings()
+
+    mymdc: MyMdCCredentials
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",
