@@ -73,6 +73,7 @@ class MyMdCCredentials(BaseSettings):
     email: str
     token_url: HttpUrl
     base_url: HttpUrl
+    scope: str | None = "public"
 
     _access_token: str = ""
     _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(
