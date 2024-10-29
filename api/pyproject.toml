@@ -40,9 +40,6 @@ pytest-mock = "^3.11.1"
 [tool.poetry.group.dev.dependencies]
 strawberry-graphql = { extras = ["debug-server", "fastapi"], version = "^0.195.2" }
 
-[tool.black]
-line-length = 79
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
