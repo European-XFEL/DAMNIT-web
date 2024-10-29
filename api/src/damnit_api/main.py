@@ -54,6 +54,8 @@ def create_app():
         SessionMiddleware, secret_key=settings.session_secret.get_secret_value()
     )
 
+    return app
+
 
 if __name__ == "__main__":
     import uvicorn
