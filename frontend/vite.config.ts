@@ -47,9 +47,9 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
-        [`${baseUrl}graphql`]: createProxyConfig('graphql'),
-        [`${baseUrl}oauth`]: createProxyConfig('oauth'),
-        [`${baseUrl}metadata`]: createProxyConfig('metadata'),
+        [`${baseUrl}graphql`]: createProxyConfig({ws: true}),
+        [`${baseUrl}oauth`]: createProxyConfig(),
+        [`${baseUrl}metadata`]: createProxyConfig(),
       },
     },
     test: {
