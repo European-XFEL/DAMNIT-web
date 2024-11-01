@@ -6,6 +6,12 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
   const baseUrl = (env.VITE_BASE_URL || "/").replace(/\/?$/, "/")
 
+  const createProxyConfig = (endpoint) => ({
+    target: `https://${env.VITE_BACKEND_API}`,
+    changeOrigin: false,
+    rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
+  })
+
   return {
     base: baseUrl,
     plugins: [react()],
@@ -17,29 +23,9 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
-        [`${baseUrl}graphql`]: {
-          target: `ws://${env.VITE_BACKEND_API}`,
-          changeOrigin: false,
-          secure: false,
-          ws: true,
-          rewriteWsOrigin: false,
-          // REMOVEME: The API will have a base path similar to the frontend at some point
-          rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
-        },
-        [`${baseUrl}oauth`]: {
-          target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: false,
-          secure: false,
-          // REMOVEME: The API will have a base path similar to the frontend at some point
-          rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
-        },
-        [`${baseUrl}metadata`]: {
-          target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: false,
-          secure: false,
-          // REMOVEME: The API will have a base path similar to the frontend at some point
-          rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
-        },
+        [`${baseUrl}graphql`]: createProxyConfig('graphql'),
+        [`${baseUrl}oauth`]: createProxyConfig('oauth'),
+        [`${baseUrl}metadata`]: createProxyConfig('metadata'),
       },
     },
     test: {
