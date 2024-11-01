@@ -7,5 +7,10 @@ services:
       - .env
     ports:
       - 8000
+    environment:
+      DW_API_MTLS__CLIENT_CERT: /certs/server.crt
+      DW_API_MTLS__CLIENT_KEY: /certs/server.key
+      DW_API_MTLS__ROOT_CERT: /certs/root_ca.crt
     volumes:
       - ./tmp-damnit-web/:/tmp/damnit-web/
+      - ./certs:/certs
