@@ -1,7 +1,9 @@
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import ValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
 # Known paths are redirected to the login page and
@@ -78,6 +80,27 @@ if __name__ == "__main__":
         logger.critical(
             "Running on localhost, not accessible from outside the local machine"
         )
+
+    from .settings import MTLSSettings, settings
+
+    if settings.mtls is None:
+        with suppress(ValidationError):
+            settings.mtls = MTLSSettings()  # type: ignore[assignment]
+
+    extra_args = {}
+    if settings.mtls:
+        extra_args |= {
+            "ssl_keyfile": Path(settings.mtls.client_key),
+            "ssl_certfile": Path(settings.mtls.client_cert),
+            "ssl_ca_certs": str(settings.mtls.root_cert),
+            "ssl_cert_reqs": 2,
+        }
+    else:
+        logger.critical("No MTLS settings provided, running without MTLS")
+        if host not in {"127.0.0.1", "localhost"}:
+            msg = "Refusing to run without MTLS on a public interface."
+            logger.critical(msg)
+            raise Exception(msg)
 
     uvicorn.run(
         "damnit_api.main:create_app",

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import AnyUrl, BaseModel, HttpUrl, SecretStr, UrlConstraints
@@ -10,6 +11,12 @@ class AuthSettings(BaseModel):
     server_metadata_url: Annotated[HttpUrl, UrlConstraints(allowed_schemes=["https"])]
 
 
+class MTLSSettings(BaseModel):
+    client_cert: Path
+    client_key: Path
+    root_cert: Path
+
+
 class Settings(BaseSettings):
     auth: AuthSettings
 
@@ -20,6 +27,8 @@ class Settings(BaseSettings):
     session_secret: SecretStr
 
     address: AnyUrl = AnyUrl("http://127.0.0.1:8000")
+
+    mtls: MTLSSettings | None = None
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",
