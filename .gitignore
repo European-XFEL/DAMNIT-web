@@ -1,1 +1,7 @@
 .vscode
+client.crt
+client.key
+server.crt
+server.key
+root_ca.crt
+certs/
