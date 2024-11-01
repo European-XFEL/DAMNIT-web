@@ -1,14 +1,32 @@
 import { defineConfig, loadEnv } from "vite"
 import path from "path"
 import react from "@vitejs/plugin-react"
+import fs from "fs"
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
   const baseUrl = (env.VITE_BASE_URL || "/").replace(/\/?$/, "/")
 
+  let sslConfig = null
+  if (env.VITE_MTLS_KEY && env.VITE_MTLS_CLIENT && env.VITE_MTLS_CA) {
+    const keyPath = path.resolve(__dirname, env.VITE_MTLS_KEY)
+    const certPath = path.resolve(__dirname, env.VITE_MTLS_CLIENT)
+    const caPath = path.resolve(__dirname, env.VITE_MTLS_CA)
+
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath) && fs.existsSync(caPath)) {
+      sslConfig = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath),
+        ca: fs.readFileSync(caPath),
+      }
+    }
+  }
+
   const createProxyConfig = (endpoint) => ({
     target: `https://${env.VITE_BACKEND_API}`,
     changeOrigin: false,
+    secure: sslConfig ? true : false,
+    ssl: sslConfig,
     rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
   })
 
