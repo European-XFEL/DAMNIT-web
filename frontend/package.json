@@ -30,6 +30,7 @@
     "dayjs": "^1.11.11",
     "graphql": "^16.7.1",
     "graphql-ws": "^5.14.0",
+    "https-proxy-agent": "^7.0.5",
     "mantine-contextmenu": "^7.11.2",
     "mantine-datatable": "^7.11.2",
     "plotly.js": "^2.27.1",
