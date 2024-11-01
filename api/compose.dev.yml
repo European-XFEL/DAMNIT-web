@@ -2,7 +2,7 @@ name: damnit-web-dev
 
 services:
   api:
-    userns_mode: keep-id
+    userns_mode: host
     ports:
       - 8123:8000
     volumes:
