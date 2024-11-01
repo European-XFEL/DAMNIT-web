@@ -13,27 +13,28 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     // REMOVEME: Use proxy to handle CORS for the meantime
+    // TODO: check if secure can be set to true once the API is served over HTTPS
     server: {
       host: true,
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
         [`${baseUrl}graphql`]: {
           target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: true,
+          changeOrigin: false,
           secure: false,
           // REMOVEME: The API will have a base path similar to the frontend at some point
           rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
         [`${baseUrl}oauth`]: {
           target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: true,
+          changeOrigin: false,
           secure: false,
           // REMOVEME: The API will have a base path similar to the frontend at some point
           rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
         [`${baseUrl}metadata`]: {
           target: `http://${env.VITE_BACKEND_API}`,
-          changeOrigin: true,
+          changeOrigin: false,
           secure: false,
           // REMOVEME: The API will have a base path similar to the frontend at some point
           rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
