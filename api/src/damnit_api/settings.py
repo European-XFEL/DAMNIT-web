@@ -8,6 +8,7 @@ from pydantic import (
     SecretStr,
     UrlConstraints,
     field_validator,
+    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,6 +26,25 @@ class UvicornSettings(BaseModel):
     port: int = 8000
     reload: bool = True
     factory: bool = True
+
+    ssl_keyfile: Path | None = None
+    ssl_certfile: Path | None = None
+    ssl_ca_certs: Path | None = None
+    ssl_cert_reqs: int | None = None
+
+    @model_validator(mode="after")
+    def ssl_all_if_one(self):
+        """Ensure all SSL settings are set if one is set."""
+        files = [self.ssl_keyfile, self.ssl_certfile, self.ssl_ca_certs]
+        if any(files) and not all(files):
+            msg = "ssl_keyfile, ssl_certfile, and ssl_ca_certs must all be set"
+            raise ValueError(msg)
+
+        if all(files):
+            # Default to 2 (require mTLS) if any SSL settings are set
+            self.ssl_cert_reqs = self.ssl_cert_reqs or 2
+
+        return self
 
     @field_validator("factory", mode="after")
     @classmethod
