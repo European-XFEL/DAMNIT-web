@@ -74,7 +74,7 @@ if __name__ == "__main__":
     host = settings.address.host or "127.0.0.1"
     port = settings.address.port or 8000
 
-    if settings.address.host == "127.0.0.1":
+    if host == "127.0.0.1":
         logger.critical(
             "Running on localhost, not accessible from outside the local machine"
         )
