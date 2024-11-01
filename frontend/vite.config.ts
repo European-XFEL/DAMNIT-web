@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite"
 import path from "path"
 import react from "@vitejs/plugin-react"
 import fs from "fs"
+import https from 'https';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
@@ -25,9 +26,14 @@ export default defineConfig(({ mode }) => {
   const createProxyConfig = (endpoint) => ({
     target: `https://${env.VITE_BACKEND_API}`,
     changeOrigin: false,
-    secure: sslConfig ? true : false,
-    ssl: sslConfig,
     rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
+    secure: sslConfig ? true : false,
+    configure: (proxy, _options) => {
+      if (sslConfig) {
+        const httpsAgent = new https.Agent(sslConfig);
+        _options.agent = httpsAgent;
+      }
+    },
   })
 
   return {
