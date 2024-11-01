@@ -6,7 +6,7 @@ services:
     env_file:
       - .env
     ports:
-      - 8000
+      - 8000:8000
     environment:
       DW_API_MTLS__CLIENT_CERT: /certs/server.crt
       DW_API_MTLS__CLIENT_KEY: /certs/server.key
