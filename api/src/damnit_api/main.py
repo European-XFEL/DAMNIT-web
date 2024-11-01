@@ -73,8 +73,8 @@ if __name__ == "__main__":
 
     logger = get_logger()
 
-    host = settings.address.host or "127.0.0.1"
-    port = settings.address.port or 8000
+    host = settings.address.host
+    port = settings.address.port
 
     if host == "127.0.0.1":
         logger.critical(
