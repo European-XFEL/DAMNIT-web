@@ -33,7 +33,6 @@ ldap3 = "^2.9.1"
 requests = "^2.32.3"
 structlog = "^24.4.0"
 colorama = "^0.4.6"
-cachetools = "^5.5.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
