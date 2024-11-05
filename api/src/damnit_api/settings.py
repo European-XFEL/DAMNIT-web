@@ -58,7 +58,7 @@ class MyMdCCredentials(BaseSettings):
 class Settings(BaseSettings):
     auth: AuthSettings
 
-    proposal_cache: Path = Path("/tmp/damnit-web/damnit_proposals.json")
+    proposal_cache: Path = Path(__file__).parents[2] / "damnit_proposals.json"
 
     debug: bool = True
 
