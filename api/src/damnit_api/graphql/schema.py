@@ -5,7 +5,7 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.schema.config import StrawberryConfig
 from strawberry.type import has_object_definition
 
-from . import models, mutations, queries
+from . import models, mutations, queries, subscriptions
 
 
 class Schema(strawberry.Schema):

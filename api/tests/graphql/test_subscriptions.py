@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 
 from damnit_api.graphql.models import DamnitRun, serialize
-from damnit_api.graphql.subscriptions import LATEST_DATA, POLLING_INTERVAL
+from damnit_api.graphql.subscriptions import POLLING_INTERVAL
 
 from .const import (
     EXAMPLE_VARIABLES,
@@ -64,12 +64,6 @@ def mocked_new_count(mocker):
         "damnit_api.graphql.subscriptions.async_count",
         return_value=NUM_ROWS + 1,
     )
-
-
-@pytest.fixture(autouse=True)
-def clear_latest_data():
-    """Automatically clears the latest data cache before every test."""
-    LATEST_DATA.clear()
 
 
 @pytest.mark.asyncio
@@ -221,9 +215,7 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
             mocked_latest_rows.assert_called()
             break
 
-    await asyncio.sleep(
-        POLLING_INTERVAL * 3
-    )  # give enough time to clear the cache
+    await asyncio.sleep(POLLING_INTERVAL * 3)  # give enough time to clear the cache
     mocked_latest_rows.reset_mock()
 
     with patched_sleep:
