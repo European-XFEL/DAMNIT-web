@@ -71,16 +71,12 @@ if __name__ == "__main__":
 
     logger = get_logger()
 
-    host = settings.address.host or "127.0.0.1"
-    port = settings.address.port or 8000
-
     # TODO: warning/logging for address bind to localhost only which is aware of
     # running in container/in front of reverse proxy?
 
+    logger.info("Starting uvicorn with settings", **settings.uvicorn.model_dump())
+
     uvicorn.run(
         "damnit_api.main:create_app",
-        host=host,
-        port=port,
-        reload=settings.debug,
-        factory=True,
+        **settings.uvicorn.model_dump(),
     )
