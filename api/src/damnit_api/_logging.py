@@ -15,7 +15,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def logger_name_callsite(logger, method_name, event_dict):
     if not event_dict.get("logger_name"):
-        logger_name = f"{event_dict.pop("module")}.{event_dict.pop("func_name")}"
+        logger_name = f"{event_dict.pop('module')}.{event_dict.pop('func_name')}"
         if not event_dict.pop("disable_name", False):
             event_dict["logger_name"] = logger_name.strip(".")  # pyright: ignore[reportInvalidTypeForm]
 
@@ -23,6 +23,14 @@ def logger_name_callsite(logger, method_name, event_dict):
 
 
 def configure(
+    level: str | int | None = None,
+    debug: bool | None = None,
+    add_call_site_parameters: bool = False,
+):
+    configure_structlog(level, debug, add_call_site_parameters)
+
+
+def configure_structlog(
     level: str | int | None = None,
     debug: bool | None = None,
     add_call_site_parameters: bool = False,
@@ -61,17 +69,13 @@ def configure(
     ]
 
     if add_call_site_parameters:
-        shared_processors.extend(
-            [
-                structlog.processors.CallsiteParameterAdder(
-                    {
-                        structlog.processors.CallsiteParameter.MODULE,
-                        structlog.processors.CallsiteParameter.FUNC_NAME,
-                    }
-                ),  # type: ignore[arg-type]
-                logger_name_callsite,
-            ]
-        )
+        shared_processors.extend([
+            structlog.processors.CallsiteParameterAdder({
+                structlog.processors.CallsiteParameter.MODULE,
+                structlog.processors.CallsiteParameter.FUNC_NAME,
+            }),  # type: ignore[arg-type]
+            logger_name_callsite,
+        ])
 
     structlog_processors = [*shared_processors, renderer]
     logging_processors = [ProcessorFormatter.remove_processors_meta, renderer]
