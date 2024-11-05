@@ -1,3 +1,4 @@
+from getpass import getuser
 from typing import Annotated
 
 from pydantic import (
@@ -37,6 +38,15 @@ class UvicornSettings(BaseModel):
     model_config = SettingsConfigDict(extra="allow")
 
 
+class SentrySettings(BaseModel):
+    dsn: HttpUrl
+    traces_sample_rate: float = 0.0
+    profiles_sample_rate: float = 0.0
+    environment: str = f"local-dev-{getuser()}"
+
+    model_config = SettingsConfigDict(extra="allow")
+
+
 class Settings(BaseSettings):
     auth: AuthSettings
 
@@ -47,6 +57,8 @@ class Settings(BaseSettings):
     session_secret: SecretStr
 
     uvicorn: UvicornSettings = UvicornSettings()
+
+    sentry: SentrySettings | None = None
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",
