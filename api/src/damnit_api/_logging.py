@@ -3,14 +3,18 @@ import sys
 from typing import TYPE_CHECKING
 
 import colorama
+import sentry_sdk
 import structlog
 import structlog.typing
 from starlette.middleware.base import BaseHTTPMiddleware
 from structlog.stdlib import ProcessorFormatter
+from structlog_sentry import SentryProcessor
 
 if TYPE_CHECKING:  # pragma: no cover
     from starlette.requests import Request
     from starlette.responses import Response
+
+    from .settings import SentrySettings
 
 
 def logger_name_callsite(logger, method_name, event_dict):
@@ -22,18 +26,31 @@ def logger_name_callsite(logger, method_name, event_dict):
     return event_dict
 
 
-def configure(
-    level: str | int | None = None,
-    debug: bool | None = None,
-    add_call_site_parameters: bool = False,
-):
-    configure_structlog(level, debug, add_call_site_parameters)
+def configure(level, debug, add_call_site_parameters):
+    from .settings import settings
+
+    configure_structlog(
+        level,
+        debug,
+        add_call_site_parameters,
+        sentry_enabled=bool(settings.sentry),
+    )
+
+    if settings.sentry:
+        configure_sentry(settings.sentry)
+        log = structlog.get_logger()
+        log.info("Sentry enabled")
+
+
+def configure_sentry(sentry_settings: "SentrySettings"):
+    sentry_sdk.init(**sentry_settings.model_dump())
 
 
 def configure_structlog(
     level: str | int | None = None,
     debug: bool | None = None,
     add_call_site_parameters: bool = False,
+    sentry_enabled: bool = False,
 ) -> None:
     """
     Configures logging and sets up Uvicorn to use Structlog.
@@ -58,8 +75,6 @@ def configure_structlog(
         else structlog.processors.JSONRenderer(indent=1)
     )
 
-    # sentry_processor = sentry.SentryProcessor(level=level)
-
     shared_processors: list[structlog.typing.Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
@@ -77,11 +92,12 @@ def configure_structlog(
             logger_name_callsite,
         ])
 
+    if sentry_enabled:
+        sentry_processor = SentryProcessor(level=level)
+        shared_processors.append(sentry_processor)
+
     structlog_processors = [*shared_processors, renderer]
     logging_processors = [ProcessorFormatter.remove_processors_meta, renderer]
-
-    # if sentry.SENTRY_ENABLED:
-    #     processors.append(sentry_processor)
 
     formatter = ProcessorFormatter(
         foreign_pre_chain=shared_processors,
@@ -107,6 +123,8 @@ def configure_structlog(
         "Configured Logging",
         call_site_parameters=add_call_site_parameters,
         log_level=logging.getLevelName(level),
+        debug=debug,
+        sentry_enabled=sentry_enabled,
     )
 
 
