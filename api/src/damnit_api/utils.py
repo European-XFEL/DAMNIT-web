@@ -132,8 +132,12 @@ class Registry(ABCMeta):
 # Etc.
 
 
-def create_map(lst, *, key):
-    return {str(obj[key]): {str(k): v for k, v in obj.items()} for obj in lst}
+def create_map(
+    lst,
+    *,
+    key,
+):
+    return {obj[key]: {str(k): v for k, v in obj.items()} for obj in lst}
 
 
 def downsample_image(image, order=2):

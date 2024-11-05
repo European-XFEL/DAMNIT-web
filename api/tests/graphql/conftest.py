@@ -15,7 +15,7 @@ def lifespan():
 
 
 @pytest.fixture
-def mocked_variables(mocker):
+def mocked_bootstrap_variables(mocker):
     mocker.patch(
         "damnit_api.graphql.bootstrap.db.async_variables",
         return_value=EXAMPLE_VARIABLES,
@@ -23,7 +23,7 @@ def mocked_variables(mocker):
 
 
 @pytest.fixture
-def mocked_count(mocker):
+def mocked_bootstrap_count(mocker):
     mocker.patch(
         "damnit_api.graphql.bootstrap.db.async_count",
         return_value=NUM_ROWS,
@@ -31,7 +31,7 @@ def mocked_count(mocker):
 
 
 @pytest_asyncio.fixture
-async def graphql_schema(mocked_variables, mocked_count):
+async def graphql_schema(mocked_bootstrap_variables, mocked_bootstrap_count):
     schema = Schema()
 
     # Initialize

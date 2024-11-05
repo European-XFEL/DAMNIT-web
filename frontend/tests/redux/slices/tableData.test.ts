@@ -1,6 +1,8 @@
 import { setupServer } from "msw/node"
 
-import { getTableData, setupStore, updateTableData } from "@/redux"
+import { setupStore } from "@/redux"
+import { getTableData, updateTableData } from "@/redux/slices"
+
 import { tableService } from "@/utils/api/graphql"
 
 import {

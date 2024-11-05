@@ -1,11 +1,12 @@
-
 from damnit_api.graphql.models import (
     DamnitTable,
     DamnitType,
     get_model,
     update_model,
 )
+from damnit_api.utils import create_map
 
+from .const import EXAMPLE_VARIABLES
 from .utils import assert_model
 
 
@@ -15,8 +16,8 @@ def test_get_model():
 
 
 def test_update_model():
-    model = update_model("foo", dtypes={"bar": DamnitType.STRING})
-    assert_model(model, proposal="foo", dtypes={"bar": DamnitType.STRING})
+    model = update_model("foo", EXAMPLE_VARIABLES)
+    assert_model(model, proposal="foo", variables=EXAMPLE_VARIABLES)
 
 
 # -----------------------------------------------------------------------------
@@ -48,30 +49,40 @@ def test_damnit_table_second_registered():
 
 
 def test_damnit_table_valid_update():
+    variables = create_map([{"name": "foo", "title": "Foo"}], key="name")
     model = DamnitTable("foo")
-    model.update({"bar": DamnitType.STRING})
-    assert_model(model, proposal="foo", dtypes={"bar": DamnitType.STRING})
+    model.update(variables)
+    assert_model(
+        model,
+        proposal="foo",
+        variables=variables,
+    )
 
 
 def test_damnit_table_multiple_update():
     model = DamnitTable("foo")
-    model.update({"bar": DamnitType.STRING, "baz": DamnitType.STRING})
+    first = create_map(
+        [{"name": "bar", "title": "Bar"}, {"name": "baz", "title": "Baz"}],
+        key="name",
+    )
+    model.update(first)
     assert_model(
         model,
         proposal="foo",
-        dtypes={"bar": DamnitType.STRING, "baz": DamnitType.STRING},
+        variables=first,
     )
 
     # Update incompletely
-    model.update({"bar": DamnitType.NUMBER})
+    second = {"bar": {"name": "bar", "title": "Barbar"}}
+    model.update(second)
     assert_model(
         model,
         proposal="foo",
-        dtypes={"bar": DamnitType.NUMBER, "baz": DamnitType.STRING},
+        variables={**first, **second},
     )
 
 
 def test_damnit_table_empty_update():
     model = DamnitTable("foo")
     model.update({})
-    assert_model(model, proposal="foo", dtypes={})
+    assert_model(model, proposal="foo", variables={})

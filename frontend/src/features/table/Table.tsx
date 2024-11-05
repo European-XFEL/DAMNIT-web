@@ -20,9 +20,9 @@ import {
   getExtractedVariable,
   getTableData,
   getTableVariable,
-} from "../../redux"
+} from "../../redux/slices"
 
-import { DTYPES, VARIABLES } from "../../constants"
+import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from "../../constants"
 import {
   isArrayEqual,
   sorted,
@@ -31,8 +31,6 @@ import {
 } from "../../utils/array"
 import { isDataPlottable } from "../../utils/plots"
 import { isEmpty } from "../../utils/helpers"
-
-export const EXCLUDED_VARIABLES = ["proposal", "added_at"]
 
 class Pages {
   constructor() {
@@ -183,7 +181,7 @@ const Table = (props) => {
 
       const cell = gridCellFactory[rowData[column]?.dtype]
       return cell(rowData[column].value, {
-        lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]],
+        lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]?.value],
       })
     },
     [props.columns, props.data, props.lastUpdate],

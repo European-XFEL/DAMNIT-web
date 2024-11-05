@@ -25,14 +25,14 @@ import {
   resetExtractedData,
   resetTableData,
   updateTableData,
-} from "../redux"
+} from "../redux/slices"
 import {
   REFRESH_MUTATION,
   LATEST_DATA,
   LATEST_DATA_SUBSCRIPTION,
 } from "../graphql/queries"
 
-const SHOULD_SUBSCRIBE = false // !(import.meta.env.MODE === "test")
+const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === "test")
 
 const useProposal = () => {
   // Initialize Redux things
@@ -40,15 +40,14 @@ const useProposal = () => {
   const { timestamp } = useSelector((state) => state.tableData.metadata)
   const dispatch = useDispatch()
 
-  // // CC: Deprecate subscriptions for now as it is currently broken
-  // useSubscription(LATEST_DATA_SUBSCRIPTION, {
-  //   variables: { proposal: proposal.value, timestamp },
-  //   onData: ({ data }) => {
-  //     const { runs, metadata } = data.data[LATEST_DATA]
-  //     dispatch(updateTableData({ runs, metadata }))
-  //   },
-  //   skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
-  // })
+  useSubscription(LATEST_DATA_SUBSCRIPTION, {
+    variables: { proposal: proposal.value, timestamp },
+    onData: ({ data }) => {
+      const { runs, metadata } = data.data[LATEST_DATA]
+      dispatch(updateTableData({ runs, metadata }))
+    },
+    skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
+  })
 
   // Synchronize the server and the client table data
   const [refresh, _] = useMutation(REFRESH_MUTATION)

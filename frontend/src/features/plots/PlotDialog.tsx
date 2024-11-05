@@ -8,17 +8,15 @@ import {
   Select,
   Flex,
 } from "@mantine/core"
+import { connect, useSelector } from "react-redux"
 import { TextInput, Text, Blockquote } from "@mantine/core"
 import { useForm } from "@mantine/form"
-import { addPlot } from "."
+
+import { addPlot } from "./plotsSlice"
 import TextCombobox from "../../components/textCombobox/TextCombobox"
-import { connect, useSelector } from "react-redux"
-import {
-  getExtractedVariable,
-  getTableVariable,
-  getAllExtractedVariables,
-} from "../../redux"
-import { EXCLUDED_VARIABLES } from "../table/Table"
+import { EXCLUDED_VARIABLES } from "../../constants"
+import { getExtractedVariable, getTableVariable } from "../../redux/slices"
+import { getAllExtractedVariables } from "../../redux/thunks"
 
 const PlotDialog = (props) => {
   const proposal = useSelector((state) => state.proposal.current.value)

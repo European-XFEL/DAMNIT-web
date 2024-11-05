@@ -1,7 +1,9 @@
 import React from "react"
 import { DataEditor } from "@glideapps/glide-data-grid"
 
-import Table, { EXCLUDED_VARIABLES } from "@/features/table/Table"
+import Table from "@/features/table"
+import { EXCLUDED_VARIABLES } from "@/constants"
+
 import { renderWithProviders } from "../../test-utils/extensions"
 import {
   gridProps,
