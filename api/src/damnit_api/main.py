@@ -10,13 +10,13 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import auth, logging, metadata
+    from . import _logging, auth, metadata
     from .graphql import add_graphql_router
     from .settings import settings
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        logging.configure(
+        _logging.configure(
             level=settings.log_level,
             debug=settings.debug,
             add_call_site_parameters=True,
@@ -60,10 +60,10 @@ def create_app():
 if __name__ == "__main__":
     import uvicorn
 
-    from . import get_logger, logging
+    from . import _logging, get_logger
     from .settings import settings
 
-    logging.configure(
+    _logging.configure(
         level=settings.log_level,
         debug=settings.debug,
         add_call_site_parameters=True,
