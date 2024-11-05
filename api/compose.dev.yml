@@ -6,7 +6,7 @@ services:
     ports:
       - 8123:8000
     volumes:
-      - ./certs:./certs
+      - ./certs:/certs
       - /gpfs/exfel/data/scratch/xdana/tmp/damnit-web:/var/tmp
       - /gpfs:/gpfs
       - /pnfs:/pnfs
