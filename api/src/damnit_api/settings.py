@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     session_secret: SecretStr
 
-    uvicorn: UvicornSettings
+    uvicorn: UvicornSettings | None = None
 
     address: AnyUrl = AnyUrl("http://127.0.0.1:8000")
 
@@ -64,6 +64,7 @@ class Settings(BaseSettings):
         """Set uvicorn host and port from main address if not separately provided."""
         address = values.data.get("address", AnyUrl("http://127.0.0.1:8000"))
 
+        v = v or {}
         v["host"] = v.get("host", address.host)
         v["port"] = v.get("port", address.port)
 
