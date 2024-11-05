@@ -23,18 +23,22 @@ export default defineConfig(({ mode }) => {
     }
   }
 
-  const createProxyConfig = (endpoint) => ({
-    target: `https://${env.VITE_BACKEND_API}`,
-    changeOrigin: false,
-    rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
-    secure: sslConfig ? true : false,
-    configure: (proxy, _options) => {
-      if (sslConfig) {
-        const httpsAgent = new https.Agent(sslConfig);
-        _options.agent = httpsAgent;
-      }
-    },
-  })
+  function createProxyConfig(overrides){
+    const defaults = {
+      target: `https://${env.VITE_BACKEND_API}`,
+      changeOrigin: false,
+      rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
+      secure: sslConfig ? true : false,
+      configure: (proxy, _options) => {
+        if (sslConfig) {
+          const httpsAgent = new https.Agent(sslConfig);
+          _options.agent = httpsAgent;
+        }
+      },
+    }
+
+    return {...defaults, ...overrides}
+  }
 
   return {
     base: baseUrl,
@@ -48,8 +52,8 @@ export default defineConfig(({ mode }) => {
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
         [`${baseUrl}graphql`]: createProxyConfig({ws: true}),
-        [`${baseUrl}oauth`]: createProxyConfig(),
-        [`${baseUrl}metadata`]: createProxyConfig(),
+        [`${baseUrl}oauth`]: createProxyConfig({}),
+        [`${baseUrl}metadata`]: createProxyConfig({}),
       },
     },
     test: {
