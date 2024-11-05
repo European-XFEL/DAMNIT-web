@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from pydantic import (
-    AnyUrl,
     BaseModel,
     HttpUrl,
     SecretStr,
@@ -18,8 +17,8 @@ class AuthSettings(BaseModel):
 
 
 class UvicornSettings(BaseModel):
-    host: str
-    port: int
+    host: str = "localhost"
+    port: int = 8000
     reload: bool = True
     factory: bool = True
 
@@ -45,11 +44,9 @@ class Settings(BaseSettings):
 
     log_level: str = "DEBUG"
 
-    address: AnyUrl = AnyUrl("http://127.0.0.1:8000")
-
     session_secret: SecretStr
 
-    uvicorn: UvicornSettings | None = None
+    uvicorn: UvicornSettings = UvicornSettings()
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",
@@ -57,24 +54,6 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
         extra="ignore",
     )
-
-    @field_validator("uvicorn", mode="before")
-    @classmethod
-    def uvicorn_defaults_from_address(cls, v, values):
-        """Set uvicorn host and port from main address if not separately provided."""
-        address = values.data.get("address", AnyUrl("http://127.0.0.1:8000"))
-
-        v = v or {}
-        v["host"] = v.get("host", address.host)
-        v["port"] = v.get("port", address.port)
-
-        # Ensure top level address matches uvicorn address
-        uvicorn_address = AnyUrl(f"http://{v['host']}:{v['port']}")
-        if address != uvicorn_address:
-            msg = f"address {address} does not match uvicorn address {uvicorn_address}"
-            raise ValueError(msg)
-
-        return v
 
 
 settings = Settings()  # type: ignore[assignment]
