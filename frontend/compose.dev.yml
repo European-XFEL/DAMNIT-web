@@ -6,6 +6,10 @@ networks:
 
 services:
   frontend:
+    environment:
+      - NODE_EXTRA_CA_CERTS=/certs/root_ca.crt
+    volumes:
+      - ./certs:/certs
     networks:
       - proxy
     labels:
