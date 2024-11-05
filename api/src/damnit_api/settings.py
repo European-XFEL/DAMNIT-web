@@ -45,11 +45,11 @@ class Settings(BaseSettings):
 
     log_level: str = "DEBUG"
 
+    address: AnyUrl = AnyUrl("http://127.0.0.1:8000")
+
     session_secret: SecretStr
 
     uvicorn: UvicornSettings | None = None
-
-    address: AnyUrl = AnyUrl("http://127.0.0.1:8000")
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",
