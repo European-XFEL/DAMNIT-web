@@ -11,7 +11,7 @@ readme = "README.md"
 packages = [{ include = "damnit_api", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.12"
 pandas = "^2.0.1"
 sqlalchemy = { extras = ["asyncio"], version = "^2.0.19" }
 fastapi = "^0.104"
