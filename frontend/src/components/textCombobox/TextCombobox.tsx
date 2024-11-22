@@ -1,27 +1,33 @@
+import { useState } from "react"
 import { Combobox, useCombobox, ComboboxTarget, TextInput } from "@mantine/core"
 
 //Common component for comboboxes
 function TextCombobox(props: {
-  columns: string[]
+  options: { name: string; title: string }[]
   value: string
   setValue: object
   label?: string
   placeholder?: string
   error?: string
 }) {
+  const selectedOpt = props.options.find((item) => item.name === props.value)
+  const haveSelection = selectedOpt !== undefined
+  const [search, setSearch] = useState(haveSelection ? selectedOpt.title : "")
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   })
 
-  const checkVariable = (item) =>
-    item.toLowerCase().includes(props.value.toLowerCase())
-  const optionsToRender = props.value
-    ? props.columns.filter(checkVariable)
-    : props.columns
+  // const checkVariable = (item) =>
+  //   item.name.toLowerCase().includes(props.value.toLowerCase())
+  const optionsToRender = search
+    ? props.options.filter((item) =>
+        (item.title || item.name).toLowerCase().includes(search.toLowerCase()),
+      )
+    : props.options
 
   const options = optionsToRender.map((item) => (
-    <Combobox.Option value={item} key={item}>
-      {item}
+    <Combobox.Option value={item.name} key={item.name}>
+      {item.title}
     </Combobox.Option>
   ))
 
@@ -32,6 +38,8 @@ function TextCombobox(props: {
         withinPortal={false}
         onOptionSubmit={(val) => {
           props.setValue(val)
+          const new_opt = props.options.find((item) => item.name === val)
+          new_opt && setSearch(new_opt.title || new_opt.name)
           combobox.closeDropdown()
         }}
       >
@@ -39,16 +47,16 @@ function TextCombobox(props: {
           <TextInput
             label={props.label}
             placeholder={props.placeholder}
-            value={props.value}
+            value={search}
             onChange={(event) => {
-              props.setValue(event.currentTarget.value)
+              setSearch(event.currentTarget.value)
               combobox.openDropdown()
               combobox.updateSelectedOptionIndex()
             }}
             onClick={() => combobox.openDropdown()}
             onFocus={() => combobox.openDropdown()}
             onBlur={() => {
-              !props.columns.some(checkVariable) && props.setValue("")
+              setSearch(haveSelection ? selectedOpt.title : "")
               combobox.closeDropdown()
             }}
             error={props.error}

@@ -166,7 +166,7 @@ const PlotDialog = (props) => {
           >
             {formValues.plotType === "summary" && (
               <TextCombobox
-                columns={props.variables}
+                options={props.variables}
                 value={formValues.xVariable}
                 setValue={(value) =>
                   dialogForm.setFieldValue("xVariable", value)
@@ -177,7 +177,7 @@ const PlotDialog = (props) => {
               />
             )}
             <TextCombobox
-              columns={props.variables}
+              options={props.variables}
               value={formValues.yVariable}
               setValue={(value) => dialogForm.setFieldValue("yVariable", value)}
               label={formValues.plotType === "summary" ? "Y-axis" : "Variable"}
@@ -253,8 +253,8 @@ const PlotDialog = (props) => {
 const mapStateToProps = ({ tableData }) => {
   return {
     runs: Object.keys(tableData.data),
-    variables: Object.keys(tableData.metadata.variables).filter(
-      (variable) => !EXCLUDED_VARIABLES.includes(variable),
+    variables: Object.values(tableData.metadata.variables).filter(
+      (variable) => !EXCLUDED_VARIABLES.includes(variable.name),
     ),
     rows: tableData.metadata.rows,
   }
