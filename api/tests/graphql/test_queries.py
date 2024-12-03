@@ -4,19 +4,29 @@ import pytest_asyncio
 from damnit_api.graphql.models import DamnitRun
 
 from .const import EXAMPLE_VALUES, EXAMPLE_VARIABLES, KNOWN_VALUES, NUM_ROWS
-from .utils import session_mock
+
+
+# TODO: Test with actual values without mocking the fetch functions
 
 
 @pytest_asyncio.fixture
-async def mocked_session(mocker):
+async def mocked_fetch_variables(mocker):
     mocker.patch(
-        "damnit_api.graphql.queries.get_session",
-        return_value=session_mock([{**KNOWN_VALUES, **EXAMPLE_VALUES}]),
+        "damnit_api.graphql.queries.fetch_variables",
+        return_value=[EXAMPLE_VALUES],
+    )
+
+
+@pytest_asyncio.fixture
+async def mocked_fetch_info(mocker):
+    mocker.patch(
+        "damnit_api.graphql.queries.fetch_info",
+        return_value=[KNOWN_VALUES],
     )
 
 
 @pytest.mark.asyncio
-async def test_runs_query(graphql_schema, mocked_session):
+async def test_runs_query(graphql_schema, mocked_fetch_variables, mocked_fetch_info):
     query = """
         query TableDataQuery($per_page: Int = 2) {
           runs(database: {proposal: "1234"}, per_page: $per_page) {
