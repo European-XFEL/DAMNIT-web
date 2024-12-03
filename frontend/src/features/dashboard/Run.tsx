@@ -87,13 +87,21 @@ const Run = (props) => {
 
   return (
     <ScrollArea h="100vh" offsetScrollbars>
-      {Object.entries(props.data).map(([name, { value, dtype }]) => {
-        const render = renderFactory[dtype]
-        if (!value || !render || EXCLUDED_VARIABLES.includes(name)) {
+      {Object.entries(props.data).map(([name, data]) => {
+        if (!data) {
           return null
         }
 
-        return render({ name, label: variables[name].title || name, value })
+        const render = renderFactory[data.dtype]
+        if (!data.value || !render || EXCLUDED_VARIABLES.includes(name)) {
+          return null
+        }
+
+        return render({
+          name,
+          label: variables[name].title || name,
+          value: data.value,
+        })
       })}
     </ScrollArea>
   )

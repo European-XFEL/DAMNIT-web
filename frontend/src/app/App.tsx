@@ -44,7 +44,7 @@ const useProposal = () => {
     variables: { proposal: proposal.value, timestamp },
     onData: ({ data }) => {
       const { runs, metadata } = data.data[LATEST_DATA]
-      dispatch(updateTableData({ runs, metadata }))
+      dispatch(updateTableData({ runs, metadata, notify: true }))
     },
     skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
   })

@@ -1,5 +1,3 @@
-import "@glideapps/glide-data-grid/dist/index.css"
-
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { connect, useDispatch, useSelector } from "react-redux"
 import {
@@ -8,21 +6,21 @@ import {
   GridSelection,
   Item,
 } from "@glideapps/glide-data-grid"
-import { useExtraCells } from "@glideapps/glide-data-grid-cells"
+import { allCells } from "@glideapps/glide-data-grid-cells"
 import { range } from "@mantine/hooks"
 
-import { gridCellFactory } from "./cells"
+import { getCell, textCell } from "./cells"
 import ContextMenu from "./ContextMenu"
 
 import { selectRun } from "./tableSlice"
 import { addPlot } from "../plots"
 import {
+  getDeferredTableData,
   getExtractedVariable,
-  getTableData,
-  getTableVariable,
+  getTableVariables,
 } from "../../redux/slices"
 
-import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from "../../constants"
+import { EXCLUDED_VARIABLES, VARIABLES } from "../../constants"
 import {
   isArrayEqual,
   sorted,
@@ -61,7 +59,7 @@ class Pages {
   }
 }
 
-const usePagination = (proposal, pageSize = 5) => {
+const usePagination = (proposal, pageSize = 10) => {
   const dispatch = useDispatch()
 
   // Reference: Loaded pages
@@ -77,7 +75,7 @@ const usePagination = (proposal, pageSize = 5) => {
 
   // Callback: Handle new page
   const handleNewPage = useCallback(
-    async (page, pageSize) => {
+    async (page) => {
       if (!proposal) {
         return
       }
@@ -85,8 +83,9 @@ const usePagination = (proposal, pageSize = 5) => {
       let loaded = false
 
       if (page > 0) {
-        // TODO: Create an object that contains `page` and `pageSize`
-        loaded = dispatch(getTableData({ proposal, page })).then(() => true)
+        loaded = dispatch(
+          getDeferredTableData({ proposal, page, pageSize }),
+        ).then(() => true)
       }
 
       return loaded
@@ -165,7 +164,6 @@ const useContextMenu = () => {
 
 const Table = (props) => {
   // Initialization
-  const cellProps = useExtraCells()
   const proposal = useSelector((state) => state.proposal.current.value)
   const paginationProps = usePagination(proposal)
 
@@ -176,12 +174,13 @@ const Table = (props) => {
       const rowData = props.data[row]
 
       if (!rowData || !rowData[column]) {
-        return gridCellFactory[DTYPES.string]("")
+        return textCell("")
       }
 
-      const cell = gridCellFactory[rowData[column]?.dtype]
+      const cell = getCell(rowData[column].value, rowData[column].dtype)
       return cell(rowData[column].value, {
         lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]?.value],
+        name: column,
       })
     },
     [props.columns, props.data, props.lastUpdate],
@@ -359,14 +358,12 @@ const Table = (props) => {
       }),
     )
 
-    variables.forEach((variable) => {
-      props.dispatch(
-        getTableVariable({
-          proposal,
-          variable,
-        }),
-      )
-    })
+    props.dispatch(
+      getTableVariables({
+        proposal,
+        variables,
+      }),
+    )
   }
 
   const addDataPlot = ({ variable, label, runs }) => {
@@ -401,7 +398,7 @@ const Table = (props) => {
             onCellContextMenu={handleCellContextMenu}
             onHeaderContextMenu={handleHeaderContextMenu}
             freezeColumns={1}
-            {...cellProps}
+            customRenderers={allCells}
             {...paginationProps}
           />
           <ContextMenu {...contextMenu} />

@@ -18,11 +18,7 @@ export function formatFloat(number, {offset=2, default=1} = {}) {
 }
 
 export function isEmpty(value) {
-  return (
-    value === undefined ||
-    value == null ||
-    size(value) === 0
-  );
+  return value == null || size(value) === 0
 }
 
 export function size(item) {

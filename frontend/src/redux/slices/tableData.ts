@@ -15,19 +15,26 @@ const initialState = {
 
 export const getTableData = createAsyncThunk(
   "tableData/get",
-  async ({ proposal, page }) => {
+  async ({ proposal, page, pageSize, lightweight }) => {
     // TODO: Create an object that contains `page` and `pageSize`
-    const result = await tableService.getTable({ proposal, page })
+    const result = await tableService.getTable({
+      proposal,
+      page,
+      pageSize,
+      lightweight,
+    })
     return result
   },
 )
 
-export const getTableVariable = createAsyncThunk(
-  "tableData/getVariable",
-  async ({ proposal, variable }) => {
-    const result = await tableService.getTableData(["run", variable], {
+export const getTableVariables = createAsyncThunk(
+  "tableData/getVariables",
+  async ({ proposal, variables, page = 1, pageSize = 10000, deferred }) => {
+    const result = await tableService.getTableData(["run", ...variables], {
       proposal,
-      pageSize: 10000, // get everything
+      page,
+      pageSize,
+      deferred,
     })
     return { data: result }
   },
@@ -69,7 +76,7 @@ const slice = createSlice({
         state.metadata = metadata
       }
     })
-    builder.addCase(getTableVariable.fulfilled, (state, action) => {
+    builder.addCase(getTableVariables.fulfilled, (state, action) => {
       // TODO: Add pending and rejected
       const { data } = action.payload
       const updatedData = { ...state.data }
@@ -85,3 +92,35 @@ const slice = createSlice({
 
 export default slice.reducer
 export const { update: updateTableData, reset: resetTableData } = slice.actions
+
+export const getDeferredTableData =
+  ({ proposal, page = 1, pageSize = 5 }) =>
+  async (dispatch) => {
+    const { data } = await dispatch(
+      getTableData({ proposal, page, pageSize, lightweight: true }),
+    ).then((action) => action.payload)
+
+    if (!data) {
+      return
+    }
+
+    const heavyVariables = [
+      ...new Set(
+        Object.values(data).flatMap((run) =>
+          Object.entries(run)
+            .filter(([_, variables]) => variables?.value === null)
+            .map(([variable]) => variable),
+        ),
+      ),
+    ]
+
+    dispatch(
+      getTableVariables({
+        proposal,
+        variables: heavyVariables,
+        page,
+        pageSize,
+        deferred: true,
+      }),
+    )
+  }

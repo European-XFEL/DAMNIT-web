@@ -1,7 +1,8 @@
 export {
   default as tableDataReducer,
+  getDeferredTableData,
   getTableData,
-  getTableVariable,
+  getTableVariables,
   resetTableData,
   updateTableData,
 } from "./tableData"
