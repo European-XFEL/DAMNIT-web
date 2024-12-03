@@ -5,7 +5,7 @@ from strawberry.annotation import StrawberryAnnotation
 from strawberry.schema.config import StrawberryConfig
 from strawberry.type import has_object_definition
 
-from . import models, mutations, queries, subscriptions
+from . import directives, models, mutations, queries, subscriptions
 
 
 class Schema(strawberry.Schema):
@@ -15,6 +15,7 @@ class Schema(strawberry.Schema):
             mutation=mutations.Mutation,
             subscription=subscriptions.Subscription,
             types=[models.DamnitVariable],
+            directives=[directives.lightweight],
             config=StrawberryConfig(auto_camel_case=False),
         )
 
