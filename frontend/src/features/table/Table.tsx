@@ -76,19 +76,17 @@ const usePagination = (proposal, pageSize = 10) => {
   // Callback: Handle new page
   const handleNewPage = useCallback(
     async (page) => {
-      if (!proposal) {
-        return
+      if (!proposal || page <= 0) {
+        return false
       }
 
-      let loaded = false
-
-      if (page > 0) {
-        loaded = dispatch(
-          getDeferredTableData({ proposal, page, pageSize }),
-        ).then(() => true)
+      try {
+        await dispatch(getDeferredTableData({ proposal, page, pageSize }))
+        return true
+      } catch (error) {
+        console.error("Failed to load data:", error)
+        return false
       }
-
-      return loaded
     },
     [proposal, dispatch],
   )
