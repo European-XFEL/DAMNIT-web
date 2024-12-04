@@ -22,7 +22,7 @@ from .utils import (
 )
 
 
-patched_sleep = patch.object(asyncio, "sleep", return_value=asyncio.sleep(0))
+patched_sleep = patch.object(asyncio, "sleep", return_value=None)
 
 
 @pytest.fixture(scope="module")
