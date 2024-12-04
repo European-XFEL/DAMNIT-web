@@ -94,7 +94,9 @@ class DamnitRun:
             dtype = cls.get_dtype(value=entry[name], klass=klass)
             value = serialize(entry[name], dtype=dtype)
 
-            if as_dict:
+            if value is None:
+                result = None
+            elif as_dict:
                 result = {"value": value, "dtype": dtype.value}
             else:
                 result = klass(name=name, value=value, dtype=dtype.value)
