@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from "vite"
 import path from "path"
 import react from "@vitejs/plugin-react"
 import fs from "fs"
-import https from 'https';
+import https from "https"
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
@@ -14,7 +14,11 @@ export default defineConfig(({ mode }) => {
     const certPath = path.resolve(__dirname, env.VITE_MTLS_CLIENT)
     const caPath = path.resolve(__dirname, env.VITE_MTLS_CA)
 
-    if (fs.existsSync(keyPath) && fs.existsSync(certPath) && fs.existsSync(caPath)) {
+    if (
+      fs.existsSync(keyPath) &&
+      fs.existsSync(certPath) &&
+      fs.existsSync(caPath)
+    ) {
       sslConfig = {
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certPath),
@@ -23,7 +27,7 @@ export default defineConfig(({ mode }) => {
     }
   }
 
-  function createProxyConfig(overrides){
+  function createProxyConfig(overrides) {
     const defaults = {
       target: `https://${env.VITE_BACKEND_API}`,
       changeOrigin: false,
@@ -31,13 +35,13 @@ export default defineConfig(({ mode }) => {
       secure: sslConfig ? true : false,
       configure: (proxy, _options) => {
         if (sslConfig) {
-          const httpsAgent = new https.Agent(sslConfig);
-          _options.agent = httpsAgent;
+          const httpsAgent = new https.Agent(sslConfig)
+          _options.agent = httpsAgent
         }
       },
     }
 
-    return {...defaults, ...overrides}
+    return { ...defaults, ...overrides }
   }
 
   return {
@@ -51,7 +55,7 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: Number(env.VITE_PORT) || 5173,
       proxy: {
-        [`${baseUrl}graphql`]: createProxyConfig({ws: true}),
+        [`${baseUrl}graphql`]: createProxyConfig({ ws: true }),
         [`${baseUrl}oauth`]: createProxyConfig({}),
         [`${baseUrl}metadata`]: createProxyConfig({}),
       },
