@@ -11,8 +11,9 @@ function TextCombobox(props: {
   error?: string
 }) {
   const selectedOpt = props.options.find((item) => item.name === props.value)
-  const haveSelection = selectedOpt !== undefined
-  const [search, setSearch] = useState(haveSelection ? selectedOpt.title : "")
+  const defaultText =
+    selectedOpt !== undefined ? selectedOpt.title || selectedOpt.name : ""
+  const [search, setSearch] = useState(defaultText)
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   })
@@ -38,8 +39,8 @@ function TextCombobox(props: {
         withinPortal={false}
         onOptionSubmit={(val) => {
           props.setValue(val)
-          const new_opt = props.options.find((item) => item.name === val)
-          new_opt && setSearch(new_opt.title || new_opt.name)
+          const newOpt = props.options.find((item) => item.name === val)
+          newOpt && setSearch(newOpt.title || newOpt.name)
           combobox.closeDropdown()
         }}
       >
@@ -56,7 +57,7 @@ function TextCombobox(props: {
             onClick={() => combobox.openDropdown()}
             onFocus={() => combobox.openDropdown()}
             onBlur={() => {
-              setSearch(haveSelection ? selectedOpt.title : "")
+              setSearch(defaultText)
               combobox.closeDropdown()
             }}
             error={props.error}
