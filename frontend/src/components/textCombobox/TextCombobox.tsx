@@ -27,7 +27,7 @@ function TextCombobox(props: {
 
   const options = optionsToRender.map((item) => (
     <Combobox.Option value={item.name} key={item.name}>
-      {item.title}
+      {item.title || item.name}
     </Combobox.Option>
   ))
 
