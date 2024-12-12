@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv } from "vite"
-import path from "path"
 import react from "@vitejs/plugin-react"
+import path from "path"
 import fs from "fs"
 import https from "https"
 
@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
 
   const baseUrl = (VITE_BASE_URL || "/").replace(/\/?$/, "/")
 
-  let sslConfig = null
+  let sslConfig
   if (VITE_MTLS_KEY && VITE_MTLS_CERT && VITE_MTLS_CA) {
     sslConfig = {
       key: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_KEY)),
@@ -31,7 +31,10 @@ export default defineConfig(({ mode }) => {
       ca: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CA)),
     }
   } else if (VITE_MTLS_KEY || VITE_MTLS_CERT || VITE_MTLS_CA) {
-    throw new Error("mTLS configuration requires all of key, cert, and ca")
+    // If partial mTLS variables are set, that's invalid.
+    throw new Error(
+      "mTLS configuration is incomplete. Please provide all three: key, cert, and ca.",
+    )
   }
 
   const httpsAgent = sslConfig ? new https.Agent(sslConfig) : undefined
@@ -45,7 +48,7 @@ export default defineConfig(({ mode }) => {
     target: VITE_BACKEND_API,
     secure: !!sslConfig,
     changeOrigin: false,
-    configure: (proxy: any, options: { agent?: https.Agent }) => {
+    configure: (proxy, options) => {
       if (sslConfig) {
         options.agent = httpsAgent
       }
@@ -58,7 +61,6 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: "build",
     },
-    // REMOVEME: Use proxy to handle CORS for the meantime
     server: {
       host: true,
       port: Number(VITE_PORT) || 5173,
