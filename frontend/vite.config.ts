@@ -6,13 +6,20 @@ import https from "https"
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
-  const baseUrl = (env.VITE_BASE_URL || "/").replace(/\/?$/, "/")
+  const {
+    VITE_BACKEND_API,
+    VITE_BASE_URL,
+    VITE_MTLS_CA,
+    VITE_MTLS_CLIENT,
+    VITE_MTLS_KEY,
+    VITE_PORT,
+  } = env
 
   let sslConfig = null
-  if (env.VITE_MTLS_KEY && env.VITE_MTLS_CLIENT && env.VITE_MTLS_CA) {
-    const keyPath = path.resolve(__dirname, env.VITE_MTLS_KEY)
-    const certPath = path.resolve(__dirname, env.VITE_MTLS_CLIENT)
-    const caPath = path.resolve(__dirname, env.VITE_MTLS_CA)
+  if (VITE_MTLS_KEY && VITE_MTLS_CLIENT && VITE_MTLS_CA) {
+    const keyPath = path.resolve(__dirname, VITE_MTLS_KEY)
+    const certPath = path.resolve(__dirname, VITE_MTLS_CLIENT)
+    const caPath = path.resolve(__dirname, VITE_MTLS_CA)
 
     if (
       fs.existsSync(keyPath) &&
@@ -27,9 +34,11 @@ export default defineConfig(({ mode }) => {
     }
   }
 
+  const baseUrl = (VITE_BASE_URL || "/").replace(/\/?$/, "/")
+
   function createProxyConfig(overrides) {
     const defaults = {
-      target: `https://${env.VITE_BACKEND_API}`,
+      target: `https://${VITE_BACKEND_API}`,
       changeOrigin: false,
       rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
       secure: sslConfig ? true : false,
@@ -53,7 +62,7 @@ export default defineConfig(({ mode }) => {
     // REMOVEME: Use proxy to handle CORS for the meantime
     server: {
       host: true,
-      port: Number(env.VITE_PORT) || 5173,
+      port: Number(VITE_PORT) || 5173,
       proxy: {
         [`${baseUrl}graphql`]: createProxyConfig({ ws: true }),
         [`${baseUrl}oauth`]: createProxyConfig({}),
