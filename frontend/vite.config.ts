@@ -10,31 +10,36 @@ export default defineConfig(({ mode }) => {
     VITE_BACKEND_API,
     VITE_BASE_URL,
     VITE_MTLS_CA,
-    VITE_MTLS_CLIENT,
+    VITE_MTLS_CERT,
     VITE_MTLS_KEY,
     VITE_PORT,
   } = env
 
-  let sslConfig = null
-  if (VITE_MTLS_KEY && VITE_MTLS_CLIENT && VITE_MTLS_CA) {
-    const keyPath = path.resolve(__dirname, VITE_MTLS_KEY)
-    const certPath = path.resolve(__dirname, VITE_MTLS_CLIENT)
-    const caPath = path.resolve(__dirname, VITE_MTLS_CA)
+  const baseUrl = (VITE_BASE_URL || "/").replace(/\/?$/, "/")
 
-    if (
-      fs.existsSync(keyPath) &&
-      fs.existsSync(certPath) &&
-      fs.existsSync(caPath)
-    ) {
-      sslConfig = {
-        key: fs.readFileSync(keyPath),
-        cert: fs.readFileSync(certPath),
-        ca: fs.readFileSync(caPath),
-      }
-    }
+  const mtlsAll = Boolean(VITE_MTLS_KEY && VITE_MTLS_CERT && VITE_MTLS_CA)
+  const mtlsAny = Boolean(VITE_MTLS_KEY || VITE_MTLS_CERT || VITE_MTLS_CA)
+
+  if (mtlsAny && !mtlsAll) {
+    throw new Error("mTLS configuration requires all of key, cert, and ca")
   }
 
-  const baseUrl = (VITE_BASE_URL || "/").replace(/\/?$/, "/")
+  const mtlsEnabled = mtlsAll
+
+  const sslConfig = mtlsEnabled
+    ? {
+        key: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_KEY)),
+        cert: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CERT)),
+        ca: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CA)),
+      }
+    : null
+
+  const httpsAgent = sslConfig ? new https.Agent(sslConfig) : null
+
+  // If the API server is HTTPS, mTLS configuration is required
+  if (VITE_BACKEND_API.startsWith("https:") && !sslConfig) {
+    throw new Error("HTTPS API requires mTLS configuration")
+  }
 
   function createProxyConfig(overrides) {
     const defaults = {
@@ -44,7 +49,6 @@ export default defineConfig(({ mode }) => {
       secure: sslConfig ? true : false,
       configure: (proxy, _options) => {
         if (sslConfig) {
-          const httpsAgent = new https.Agent(sslConfig)
           _options.agent = httpsAgent
         }
       },
