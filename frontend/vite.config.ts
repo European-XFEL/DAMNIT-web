@@ -15,6 +15,12 @@ export default defineConfig(({ mode }) => {
     VITE_PORT,
   } = env
 
+  if (!VITE_BASE_URL || !VITE_BACKEND_API) {
+    throw new Error(
+      "Missing required environment variables: VITE_URL and/or VITE_API",
+    )
+  }
+
   const baseUrl = (VITE_BASE_URL || "/").replace(/\/?$/, "/")
 
   let sslConfig = null
