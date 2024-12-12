@@ -17,22 +17,16 @@ export default defineConfig(({ mode }) => {
 
   const baseUrl = (VITE_BASE_URL || "/").replace(/\/?$/, "/")
 
-  const mtlsAll = Boolean(VITE_MTLS_KEY && VITE_MTLS_CERT && VITE_MTLS_CA)
-  const mtlsAny = Boolean(VITE_MTLS_KEY || VITE_MTLS_CERT || VITE_MTLS_CA)
-
-  if (mtlsAny && !mtlsAll) {
+  let sslConfig = null
+  if (VITE_MTLS_KEY && VITE_MTLS_CERT && VITE_MTLS_CA) {
+    sslConfig = {
+      key: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_KEY)),
+      cert: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CERT)),
+      ca: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CA)),
+    }
+  } else if (VITE_MTLS_KEY || VITE_MTLS_CERT || VITE_MTLS_CA) {
     throw new Error("mTLS configuration requires all of key, cert, and ca")
   }
-
-  const mtlsEnabled = mtlsAll
-
-  const sslConfig = mtlsEnabled
-    ? {
-        key: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_KEY)),
-        cert: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CERT)),
-        ca: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CA)),
-      }
-    : null
 
   const httpsAgent = sslConfig ? new https.Agent(sslConfig) : null
 
