@@ -35,20 +35,15 @@ export default defineConfig(({ mode }) => {
     throw new Error("HTTPS API requires mTLS configuration")
   }
 
-  function createProxyConfig(overrides) {
-    const defaults = {
-      target: `https://${VITE_BACKEND_API}`,
-      changeOrigin: false,
-      rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
-      secure: sslConfig ? true : false,
-      configure: (proxy, _options) => {
-        if (sslConfig) {
-          _options.agent = httpsAgent
-        }
-      },
-    }
-
-    return { ...defaults, ...overrides }
+  const defaultProxyConfig = {
+    target: VITE_BACKEND_API,
+    secure: !!sslConfig,
+    changeOrigin: false,
+    configure: (proxy: any, options: { agent?: https.Agent }) => {
+      if (sslConfig) {
+        options.agent = httpsAgent
+      }
+    },
   }
 
   return {
@@ -62,9 +57,9 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: Number(VITE_PORT) || 5173,
       proxy: {
-        [`${baseUrl}graphql`]: createProxyConfig({ ws: true }),
-        [`${baseUrl}oauth`]: createProxyConfig({}),
-        [`${baseUrl}metadata`]: createProxyConfig({}),
+        [`${baseUrl}graphql`]: { ...defaultProxyConfig, ws: true },
+        [`${baseUrl}oauth`]: { ...defaultProxyConfig },
+        [`${baseUrl}metadata`]: { ...defaultProxyConfig },
       },
     },
     test: {
