@@ -65,6 +65,7 @@ export default defineConfig(({ mode }) => {
         "/oauth": { ...defaultProxyConfig },
         "/metadata": { ...defaultProxyConfig },
       },
+      https: sslConfig,
     },
     test: {
       globals: true,
