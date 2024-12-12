@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
     throw new Error("mTLS configuration requires all of key, cert, and ca")
   }
 
-  const httpsAgent = sslConfig ? new https.Agent(sslConfig) : null
+  const httpsAgent = sslConfig ? new https.Agent(sslConfig) : undefined
 
   // If the API server is HTTPS, mTLS configuration is required
   if (VITE_BACKEND_API.startsWith("https:") && !sslConfig) {
