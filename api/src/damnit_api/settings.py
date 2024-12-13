@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -74,7 +74,9 @@ class MyMdCCredentials(BaseSettings):
     base_url: HttpUrl
 
     _access_token: str = ""
-    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone()
+    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(
+        UTC
+    )
 
 
 class Settings(BaseSettings):
