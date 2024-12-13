@@ -4,6 +4,7 @@ from typing import Annotated
 
 from pydantic import (
     BaseModel,
+    FilePath,
     HttpUrl,
     SecretStr,
     UrlConstraints,
@@ -27,9 +28,9 @@ class UvicornSettings(BaseModel):
     reload: bool = True
     factory: bool = True
 
-    ssl_keyfile: Path | None = None
-    ssl_certfile: Path | None = None
-    ssl_ca_certs: Path | None = None
+    ssl_keyfile: FilePath | None = None
+    ssl_certfile: FilePath | None = None
+    ssl_ca_certs: FilePath | None = None
     ssl_cert_reqs: int | None = None
 
     @model_validator(mode="after")
