@@ -1,7 +1,7 @@
 from damnit_api.graphql.models import DamnitType
 from damnit_api.utils import create_map
 
-NUM_ROWS = 10
+RUNS = list(range(10))
 
 # TODO: Create dataclass for test values
 
@@ -48,6 +48,8 @@ EXAMPLE_ANNOTATIONS = {
 
 
 EXAMPLE_VALUES = {
+    "proposal": 1234,
+    "run": 1,
     "integer": 1,
     "float": 0.1,
     "string": "one",

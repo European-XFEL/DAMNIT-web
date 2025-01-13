@@ -2,9 +2,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy import or_, select
+
 import strawberry
 
 from ..const import DEFAULT_PROPOSAL
+from ..db import async_table, get_session
 from ..utils import map_dtype
 from .models import DamnitType
 
@@ -64,3 +67,18 @@ class LatestData:
             instance.add(seq)
 
         return instance
+
+
+async def fetch_info(proposal, *, runs):
+    table = await async_table(proposal, name="run_info")
+    conditions = [table.c.run == run for run in runs]
+    query = select(table).where(or_(*conditions))
+
+    async with get_session(proposal) as session:
+        result = await session.execute(query)
+        if not result:
+            raise ValueError  # TODO: Better error handling
+
+        entries = result.mappings().all()
+
+    return entries

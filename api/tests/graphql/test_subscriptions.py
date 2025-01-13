@@ -14,12 +14,12 @@ from .const import (
     KNOWN_VALUES,
     NEW_DTYPES,
     NEW_VALUES,
-    NUM_ROWS,
+    RUNS,
 )
-from .utils import (
-    create_run_info,
-    create_run_variables,
+from .utils import create_run_variables
 )
+
+NEW_RUN = 100
 
 
 patched_sleep = patch.object(asyncio, "sleep", return_value=None)
@@ -37,11 +37,9 @@ async def mocked_latest_rows(mocker, current_timestamp):
             return create_run_variables(
                 NEW_VALUES,
                 proposal=KNOWN_VALUES["proposal"],
-                run=KNOWN_VALUES["run"],
+                run=NEW_RUN,
                 timestamp=current_timestamp,
             )
-        if table == "run_info":
-            return [create_run_info(**KNOWN_VALUES)]
         return None
 
     return mocker.patch(
@@ -58,11 +56,11 @@ def mocked_variables(mocker):
     )
 
 
-@pytest.fixture
-def mocked_new_count(mocker):
-    return mocker.patch(
-        "damnit_api.graphql.subscriptions.async_count",
-        return_value=NUM_ROWS + 1,
+@pytest_asyncio.fixture
+async def mocked_fetch_info(mocker):
+    mocker.patch(
+        "damnit_api.graphql.subscriptions.fetch_info",
+        return_value=[{**KNOWN_VALUES, "run": NEW_RUN}],
     )
 
 
@@ -71,7 +69,7 @@ async def test_latest_data(
     graphql_schema,
     current_timestamp,
     mocked_latest_rows,
-    mocked_new_count,
+    mocked_fetch_info,
     mocked_variables,
 ):
     subscription = await graphql_schema.subscribe(
@@ -95,13 +93,13 @@ async def test_latest_data(
     async for result in subscription:
         assert not result.errors
 
-        data = {**KNOWN_VALUES, **NEW_VALUES}
+        data = {**KNOWN_VALUES, **NEW_VALUES, "run": NEW_RUN}
         dtypes = {**KNOWN_DTYPES, **NEW_DTYPES}
 
         latest_data = result.data["latest_data"]
         assert set(latest_data.keys()) == {"runs", "metadata"}
         assert latest_data["runs"] == {
-            1: {
+            NEW_RUN: {
                 name: {
                     "value": serialize(value, dtype=dtypes[name]),
                     "dtype": dtypes[name].value,
@@ -111,8 +109,8 @@ async def test_latest_data(
         }
 
         metadata = latest_data["metadata"]
-        assert set(metadata.keys()) == {"rows", "timestamp", "variables"}
-        assert metadata["rows"] == NUM_ROWS + 1
+        assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
+        assert metadata["runs"] == RUNS + [NEW_RUN]
         assert metadata["timestamp"] == current_timestamp * 1000
         assert metadata["variables"] == {
             **DamnitRun.known_variables(),
@@ -128,7 +126,7 @@ async def test_latest_data_with_concurrent_subscriptions(
     graphql_schema,
     current_timestamp,
     mocked_latest_rows,
-    mocked_new_count,
+    mocked_fetch_info,
     mocked_variables,
 ):
     query = """
@@ -179,7 +177,7 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
     graphql_schema,
     current_timestamp,
     mocked_latest_rows,
-    mocked_new_count,
+    mocked_fetch_info,
     mocked_variables,
 ):
     query = """

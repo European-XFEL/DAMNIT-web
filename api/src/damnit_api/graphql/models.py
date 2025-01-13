@@ -161,12 +161,12 @@ class DamnitTable(metaclass=Registry):
     path = ""  # TODO: handle dynamic database path
     stype = None  # strawberry type
     timestamp = datetime.now().timestamp()  # timestamp of the latest model
-    num_rows = 0
 
     def __init__(self, proposal: str = DEFAULT_PROPOSAL):
         self.proposal = proposal
         self.variables = DamnitRun.known_variables()
         self.stype = self._create_stype()
+        self.runs = []
 
     def update(self, variables=None, timestamp: float | None = None):
         """We update the strawberry type and the schema here"""
@@ -210,11 +210,9 @@ def update_model(
     proposal: str,
     variables: dict,
     timestamp: float | None = None,
-    num_rows: int = 0,
 ):
     model = DamnitTable(proposal)
     model.update(variables, timestamp)
-    model.num_rows = num_rows
     return model
 
 

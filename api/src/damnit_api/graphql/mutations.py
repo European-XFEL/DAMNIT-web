@@ -17,7 +17,7 @@ class Mutation:
         info.context["schema"].update(model.stype)
 
         metadata = {
-            "rows": model.num_rows,
+            "runs": model.runs,
             "variables": model.variables,
             "timestamp": model.timestamp * 1000,  # deserialize to JS
         }

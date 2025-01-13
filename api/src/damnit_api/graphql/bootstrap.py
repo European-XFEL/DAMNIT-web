@@ -15,7 +15,6 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
     variables = await db.async_variables(proposal)
     model.update(variables)
 
-    num_rows = await db.async_count(proposal, table="run_info")
-    model.num_rows = num_rows or 0
+    model.runs = await db.async_column(proposal, table="run_info", name="run") or []
 
     return model

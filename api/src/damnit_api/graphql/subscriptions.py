@@ -6,10 +6,10 @@ import strawberry
 from strawberry.scalars import JSON
 from strawberry.types import Info
 
-from ..db import async_count, async_latest_rows, async_variables
+from ..db import async_latest_rows, async_variables
 from ..utils import create_map
 from .models import Timestamp, get_model
-from .utils import DatabaseInput, LatestData
+from .utils import DatabaseInput, LatestData, fetch_info
 
 
 POLLING_INTERVAL = 1  # seconds
@@ -30,12 +30,7 @@ async def get_latest_data(proposal, timestamp, schema):
     latest_data = LatestData.from_list(latest_data)
 
     # Get latest runs
-    latest_runs = await async_latest_rows(
-        proposal,
-        table="run_info",
-        by="added_at",
-        start_at=timestamp,
-    )
+    latest_runs = await fetch_info(proposal, runs=list(latest_data.runs.keys()))
     latest_runs = create_map(latest_runs, key="run")
 
     # Update model
@@ -48,9 +43,6 @@ async def get_latest_data(proposal, timestamp, schema):
     if model_changed:
         # Update GraphQL schema
         schema.update(model.stype)
-
-    latest_counts = await async_count(proposal, table="run_info")
-    model.num_rows = latest_counts
 
     # Aggregate run values from latest data and runs
     runs = {}
@@ -65,8 +57,11 @@ async def get_latest_data(proposal, timestamp, schema):
 
     # Return the latest values if any
     if len(runs):
+        # Update the model with new runs
+        model.runs = sorted(set(model.runs + list(runs.keys())))
+
         metadata = {
-            "rows": model.num_rows,
+            "runs": model.runs,
             "variables": model.variables,
             "timestamp": model.timestamp * 1000,  # deserialize to JS
         }
