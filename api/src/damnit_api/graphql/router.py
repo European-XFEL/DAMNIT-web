@@ -1,3 +1,4 @@
+import numpy as np
 import orjson
 from strawberry.fastapi import GraphQLRouter
 from strawberry.http import GraphQLHTTPResponse
@@ -20,7 +21,11 @@ class Router(GraphQLRouter, metaclass=Singleton):
         )
 
     def encode_json(self, data: GraphQLHTTPResponse) -> bytes:
-        return orjson.dumps(data)
+        return orjson.dumps(
+            data,
+            default=lambda x: None if isinstance(x, float) and np.isnan(x) else x,
+            option=orjson.OPT_SERIALIZE_NUMPY,
+        )
 
 
 async def get_context():

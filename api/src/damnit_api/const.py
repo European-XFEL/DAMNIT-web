@@ -5,11 +5,15 @@ DEFAULT_PROPOSAL = "2956"
 FILL_VALUE = "None"
 
 
-class Type(Enum):
+class DamnitType(Enum):
     NUMBER = "number"
     STRING = "string"
     BOOLEAN = "boolean"
+    TIMESTAMP = "timestamp"
+
     ARRAY = "array"
     IMAGE = "image"
     RGBA = "rgba"
-    TIMESTAMP = "timestamp"
+
+    PNG = "png"
+    DATASET = "dataset"
