@@ -72,7 +72,7 @@ class LatestData:
 async def fetch_info(proposal, *, runs):
     table = await async_table(proposal, name="run_info")
     conditions = [table.c.run == run for run in runs]
-    query = select(table).where(or_(*conditions))
+    query = select(table).where(or_(*conditions)).order_by(table.c.run)
 
     async with get_session(proposal) as session:
         result = await session.execute(query)

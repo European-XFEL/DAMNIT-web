@@ -15,6 +15,7 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
     variables = await db.async_variables(proposal)
     model.update(variables)
 
-    model.runs = await db.async_column(proposal, table="run_info", name="run") or []
+    runs = await db.async_column(proposal, table="run_info", name="run")
+    model.runs = sorted(runs or [])
 
     return model
