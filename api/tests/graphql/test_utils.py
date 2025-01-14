@@ -19,11 +19,14 @@ def test_latest_data_update_run():
 
     run, variables = next(iter(latest_data.runs.items()))
     assert run == 1
-    assert variables.keys() == NEW_VALUES.keys()
+
+    updated_values = {**EXAMPLE_VALUES, **NEW_VALUES}
+    updated_dtypes = {**EXAMPLE_DTYPES, **NEW_DTYPES}
+    assert variables.keys() == updated_values.keys()
     for name, data in variables.items():
-        assert data.value == NEW_VALUES[name]
-        assert data.dtype == NEW_DTYPES[name]
-        assert data.timestamp == 2
+        assert data.value == updated_values[name]
+        assert data.dtype == updated_dtypes[name]
+        assert data.timestamp == (2 if name in NEW_VALUES else 1)
 
 
 def test_latest_data_multiple_runs():

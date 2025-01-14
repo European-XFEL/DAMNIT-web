@@ -57,6 +57,8 @@ EXAMPLE_VALUES = {
 
 
 EXAMPLE_DTYPES = {
+    "proposal": DamnitType.NUMBER,
+    "run": DamnitType.NUMBER,
     "integer": DamnitType.NUMBER,
     "float": DamnitType.NUMBER,
     "string": DamnitType.STRING,
