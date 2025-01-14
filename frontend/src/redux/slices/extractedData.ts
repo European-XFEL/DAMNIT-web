@@ -34,7 +34,7 @@ const slice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(getExtractedVariable.fulfilled, (state, action) => {
       // TODO: Add pending and rejected
-      const { run, variable, data, metadata } = action.payload
+      const { run, variable, data, ...metadata } = action.payload
       if (!isEmpty(data)) {
         state.data = {
           ...state.data,

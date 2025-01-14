@@ -34,7 +34,7 @@ describe("Table DataEditor", () => {
 
     expect(DataEditor).toBeRenderedWithProps({
       columns: validTableColumns,
-      rows: validTableMetadata.rows,
+      rows: validTableMetadata.runs.length,
     })
   })
 })

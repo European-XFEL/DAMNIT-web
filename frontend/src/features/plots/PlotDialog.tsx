@@ -36,7 +36,7 @@ const PlotDialog = (props) => {
         const runs = parseRunSelection(value)
 
         return values.runSelectionType === "manualSelection" &&
-          (runs.some((x) => !x) || runs.length > props.rows || !runs.length)
+          (runs.some((x) => !x) || !runs.length)
           ? "Please enter a valid selection"
           : null
       },
@@ -257,7 +257,6 @@ const mapStateToProps = ({ tableData }) => {
     variables: Object.values(tableData.metadata.variables).filter(
       (variable) => !EXCLUDED_VARIABLES.includes(variable.name),
     ),
-    rows: tableData.metadata.rows,
   }
 }
 

@@ -4,7 +4,7 @@ import { Image, ScrollArea, Text } from "@mantine/core"
 
 import styles from "./Run.module.css"
 import { DTYPES } from "../../constants"
-import { formatDate, imageBytesToURL, isEmpty } from "../../utils/helpers"
+import { formatDate, isEmpty } from "../../utils/helpers"
 
 const EXCLUDED_VARIABLES = ["proposal", "run", "added_at"]
 
@@ -69,7 +69,7 @@ const renderImage = ({ name, label, value }) => {
         className={styles.objectValue}
         key={`run-value-${name}`}
         fit="contain"
-        src={imageBytesToURL(value)}
+        src={value}
       />
     </div>
   )
@@ -93,7 +93,11 @@ const Run = (props) => {
         }
 
         const render = renderFactory[data.dtype]
-        if (!data.value || !render || EXCLUDED_VARIABLES.includes(name)) {
+        if (
+          data.value == null ||
+          !render ||
+          EXCLUDED_VARIABLES.includes(name)
+        ) {
           return null
         }
 

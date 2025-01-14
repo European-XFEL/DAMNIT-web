@@ -26,7 +26,7 @@ describe("Table slice", () => {
     const { tableData: state } = setupStore().getState()
     expect(state.data).toEqual({})
     expect(state.metadata.variables).toEqual({})
-    expect(state.metadata.rows).toEqual(0)
+    expect(state.metadata.runs).toEqual([])
     expect(state.metadata.timestamp).toEqual(0)
     expect(state.lastUpdate).toEqual({})
   })

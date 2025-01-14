@@ -4,7 +4,7 @@ export const CURRENT_HOST = `${window.location.protocol}//${window.location.host
 export const EMPTY_VALUE = "None"
 export const VARIABLES = {
   proposal: "proposal",
-  run_number: "run",
+  run: "run",
 }
 export const DTYPES = {
   image: "image",

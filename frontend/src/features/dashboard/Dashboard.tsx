@@ -61,6 +61,8 @@ const MainTabs = ({ contents, active, setActive, ...props }) => {
         }}
         variant="outline"
         visibleFrom="sm"
+        pt={8}
+        keepMounted={false}
         {...props}
       >
         <MantineTabs.List px={8}>
@@ -111,7 +113,6 @@ const Dashboard = () => {
   const { run: selectedRun } = useSelector((state) => state.table.selection)
 
   const [openedNavBar, { toggle: toggleNavBar }] = useDisclosure()
-  const [disabled, { toggle: toggleDisabled }] = useDisclosure()
 
   // Proposal: Check if it is fully loaded (at least the metadata)
   const { proposal, isLoading } = useCurrentProposal()
@@ -196,7 +197,6 @@ const Dashboard = () => {
       </AppShell.Navbar>
       <AppShell.Main>
         <MainTabs
-          pt={8}
           contents={Object.fromEntries(populatedMainTabs)}
           active={main.currentTab}
           setActive={(id) => dispatch(setCurrentTab(id))}

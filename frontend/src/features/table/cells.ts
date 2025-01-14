@@ -1,11 +1,11 @@
 import { GridCellKind } from "@glideapps/glide-data-grid"
 import { DTYPES } from "../../constants"
-import { formatDate, formatFloat, imageBytesToURL } from "../../utils/helpers"
+import { formatDate, formatFloat } from "../../utils/helpers"
 
 // TODO: Handle nonconforming data type
 
 export const imageCell = (data, params = {}) => {
-  const image = data ? [imageBytesToURL(data)] : []
+  const image = data ? [data] : []
   return {
     kind: GridCellKind.Image,
     data: image,

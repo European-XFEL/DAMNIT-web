@@ -1,17 +1,38 @@
 import React from "react"
-import { connect } from "react-redux"
-import { Stack, Text } from "@mantine/core"
+import { useDispatch, useSelector } from "react-redux"
+import { Box, Stack, Text } from "@mantine/core"
 
 import { removePlot, setCurrentPlot } from "./plotsSlice"
-import Plot from "./Plot"
+import PlotContainer from "./PlotContainer"
 import Tabs from "../../components/tabs/Tabs"
 import { sorted } from "../../utils/array"
+import { formatRunsSubtitle } from "../../utils/helpers"
 
-const Plots = (props) => {
-  const contents = Object.entries(props.contents).map(([id, plot]) => [
+const PlotsTab = () => {
+  const dispatch = useDispatch()
+
+  const plots = useSelector((state) => state.plots)
+  const runs = useSelector((state) => state.tableData.metadata.runs)
+
+  // Get plot contents
+  const plotContents = Object.entries(plots.data).map(([id, plot]) => {
+    return [
+      id,
+      {
+        title: plot.title,
+        subtitle: formatRunsSubtitle(sorted(plot.runs || runs)),
+      },
+    ]
+  })
+
+  const tabContents = plotContents.map(([id, plot]) => [
     id,
     {
-      element: <Plot plotId={id} />,
+      element: (
+        <Box mx={20}>
+          <PlotContainer plotId={id} />
+        </Box>
+      ),
       title: (
         <Stack gap={0} w={160}>
           <Text
@@ -23,55 +44,25 @@ const Plots = (props) => {
           >
             {plot.title}
           </Text>
-          <Text size="xs" c="light.9">
+          <Text size="xs" c="dark.5">
             {plot.subtitle}
           </Text>
         </Stack>
       ),
       isClosable: true,
-      onClose: () => props.removePlot(id),
+      onClose: () => dispatch(removePlot(id)),
     },
   ])
 
-  return !contents.length ? null : (
+  return !tabContents.length ? null : (
     <Tabs
       orientation="vertical"
-      keepMounted="false"
-      contents={Object.fromEntries(contents)}
-      active={props.currentPlot}
-      setActive={props.setCurrentPlot}
+      contents={Object.fromEntries(tabContents)}
+      active={plots.currentPlot}
+      setActive={(id) => dispatch(setCurrentPlot(id))}
+      keepMounted={false}
     />
   )
 }
 
-const mapStateToProps = ({ tableData: table, plots }) => {
-  const contents = Object.entries(plots.data).map(([id, plot]) => {
-    const runs = sorted(plot.runs || Object.keys(table.data))
-    return [id, { title: plot.title, subtitle: formatSubtitle(runs) }]
-  })
-
-  return {
-    currentPlot: plots.currentPlot,
-    contents: Object.fromEntries(contents),
-  }
-}
-
-const mapDispatchToProps = (dispatch) => {
-  return {
-    removePlot: (id) => dispatch(removePlot(id)),
-    setCurrentPlot: (id) => {
-      dispatch(setCurrentPlot(id))
-    },
-    dispatch,
-  }
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(Plots)
-
-const formatSubtitle = (runs) => {
-  if (runs.length === 1) {
-    return `(run ${runs[0]})`
-  } else {
-    return `(runs ${runs[0]}-${runs[runs.length - 1]})`
-  }
-}
+export default PlotsTab

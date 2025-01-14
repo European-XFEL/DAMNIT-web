@@ -1,7 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit"
 
+import { isArrayEqual } from "../../utils/array"
+
 const initialState = {
-  selection: { run: null, variables: null },
+  selection: { run: undefined, variables: undefined },
 }
 
 const slice = createSlice({
@@ -10,8 +12,12 @@ const slice = createSlice({
   reducers: {
     selectRun: ({ selection }, action) => {
       const { run, variables } = action.payload
-      selection.run = run
-      selection.variables = variables
+      if (selection.run !== run) {
+        selection.run = run
+      }
+      if (!isArrayEqual(selection.variables, variables)) {
+        selection.variables = variables
+      }
     },
     reset: (state) => {
       state.selection = { ...initialState.selection }
