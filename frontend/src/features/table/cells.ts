@@ -4,7 +4,7 @@ import { formatDate, formatFloat, imageBytesToURL } from "../../utils/helpers"
 
 // TODO: Handle nonconforming data type
 
-const imageCell = (data, params = {}) => {
+export const imageCell = (data, params = {}) => {
   const image = data ? [imageBytesToURL(data)] : []
   return {
     kind: GridCellKind.Image,
@@ -16,7 +16,7 @@ const imageCell = (data, params = {}) => {
   }
 }
 
-const textCell = (data, params = {}) => {
+export const textCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Text,
     displayData: data ? String(data) : "",
@@ -26,12 +26,12 @@ const textCell = (data, params = {}) => {
   }
 }
 
-const numberCell = (data, params = {}) => {
+export const numberCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Number,
     displayData: Number.isFinite(data)
       ? String(Number.isInteger(data) ? data : formatFloat(data))
-      : data
+      : data !== null
       ? String(data)
       : "",
     data,
@@ -45,7 +45,7 @@ const numberCell = (data, params = {}) => {
   }
 }
 
-const arrayCell = (data, params = {}) => {
+export const arrayCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Custom,
     allowOverlay: false,
@@ -61,7 +61,7 @@ const arrayCell = (data, params = {}) => {
   }
 }
 
-const dateCell = (data, params = {}) => {
+export const dateCell = (data, params = {}) => {
   return {
     kind: GridCellKind.Text,
     allowOverlay: false,
@@ -74,10 +74,24 @@ const dateCell = (data, params = {}) => {
   }
 }
 
-export const gridCellFactory = {
+export const loadingCell = (data, params = {}) => {
+  return {
+    kind: GridCellKind.Loading,
+    allowOverlay: false,
+    skeletonWidth: 30,
+    skeletonHeight: 30,
+    ...params,
+  }
+}
+
+const gridCellFactory = {
   [DTYPES.image]: imageCell,
   [DTYPES.string]: textCell,
   [DTYPES.number]: numberCell,
   [DTYPES.array]: arrayCell,
   [DTYPES.timestamp]: dateCell,
+}
+
+export const getCell = (value, dtype) => {
+  return value !== null ? gridCellFactory[dtype] ?? textCell("") : loadingCell
 }

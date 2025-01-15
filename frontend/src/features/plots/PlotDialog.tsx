@@ -15,7 +15,7 @@ import { useForm } from "@mantine/form"
 import { addPlot } from "./plotsSlice"
 import TextCombobox from "../../components/textCombobox/TextCombobox"
 import { EXCLUDED_VARIABLES } from "../../constants"
-import { getExtractedVariable, getTableVariable } from "../../redux/slices"
+import { getExtractedVariable, getTableVariables } from "../../redux/slices"
 import { getAllExtractedVariables } from "../../redux/thunks"
 
 const PlotDialog = (props) => {
@@ -108,8 +108,9 @@ const PlotDialog = (props) => {
     )
 
     if (submitedFormValues.plotType === "summary") {
-      props.dispatch(getTableVariable({ proposal, variable: xVariable }))
-      props.dispatch(getTableVariable({ proposal, variable: yVariable }))
+      props.dispatch(
+        getTableVariables({ proposal, variables: [xVariable, yVariable] }),
+      )
     }
 
     handleClose()

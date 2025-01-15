@@ -32,10 +32,22 @@ export const LATEST_DATA_SUBSCRIPTION = gql`
   }
 `
 
-export const get_table_data_query = (type, fields = []) => {
+const TABLE_DATA_QUERY_NAME = "TableDataQuery"
+export const DEFERRED_TABLE_DATA_QUERY_NAME = `Deferred${TABLE_DATA_QUERY_NAME}`
+
+export const get_table_data_query = (
+  type,
+  fields = [],
+  lightweight = false,
+  deferred = false,
+) => {
   return gql`
-    query TableDataQuery($proposal: String, $page: Int, $per_page: Int) {
-      runs(database: { proposal: $proposal }, page: $page, per_page: $per_page) {
+    query ${
+      deferred ? DEFERRED_TABLE_DATA_QUERY_NAME : TABLE_DATA_QUERY_NAME
+    }($proposal: String, $page: Int, $per_page: Int) {
+      runs(database: { proposal: $proposal }, page: $page, per_page: $per_page) ${
+        lightweight ? "@lightweight" : ""
+      } {
         ... on ${type} {
           ${fields.map((field) => `${field} { value dtype }`).join(" ")}
         }

@@ -1,6 +1,6 @@
 import { stripTypename } from "@apollo/client/utilities"
 
-import { client } from "../../app/apollo"
+import { client } from "../../graphql/apollo"
 import {
   EXTRACTED_DATA,
   EXTRACTED_DATA_QUERY,
@@ -29,10 +29,24 @@ function refresh({ proposal }) {
     .then((result) => result.data)
 }
 
-function getTableData(fields, { proposal, page = 1, pageSize = 10 } = {}) {
+function getTableData(
+  fields,
+  {
+    proposal,
+    page = 1,
+    pageSize = 10,
+    lightweight = false,
+    deferred = false,
+  } = {},
+) {
   return client
     .query({
-      query: get_table_data_query(`p${proposal}`, fields),
+      query: get_table_data_query(
+        `p${proposal}`,
+        fields,
+        lightweight,
+        deferred,
+      ),
       variables: {
         proposal: String(proposal),
         page,
@@ -63,7 +77,12 @@ function getTableMetadata({ proposal }) {
     .then((result) => result.data.metadata)
 }
 
-function getTable({ proposal, page = 1, pageSize = 5 } = {}) {
+function getTable({
+  proposal,
+  page = 1,
+  pageSize = 5,
+  lightweight = false,
+} = {}) {
   let metadata
 
   return getTableMetadata({ proposal })
@@ -73,6 +92,7 @@ function getTable({ proposal, page = 1, pageSize = 5 } = {}) {
         proposal,
         page,
         pageSize,
+        lightweight,
       })
     })
     .then((data) => ({ data, metadata }))

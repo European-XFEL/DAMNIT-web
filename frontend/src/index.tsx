@@ -10,7 +10,9 @@ import "@mantine/core/styles.layer.css"
 import "mantine-contextmenu/styles.layer.css"
 import "mantine-datatable/styles.layer.css"
 
-import { client } from "./app/apollo"
+import "@glideapps/glide-data-grid/dist/index.css"
+
+import { client } from "./graphql/apollo"
 import { BASE_URL } from "./constants"
 import { setupStore } from "./redux"
 import App from "./app/App"

@@ -1,11 +1,11 @@
-import { getExtractedVariable, getTableVariable } from "./slices"
+import { getExtractedVariable, getTableVariables } from "./slices"
 
 export const getAllExtractedVariables =
   ({ proposal, variable }) =>
   async (dispatch, getState) => {
     // 1. Get the tables values of all runs
     // TODO: Optimize this (e.g., by avoiding this step)
-    await dispatch(getTableVariable({ proposal, variable }))
+    await dispatch(getTableVariables({ proposal, variables: [variable] }))
 
     // 2. Get the extracted values of all run of that variable
     const state = getState()
