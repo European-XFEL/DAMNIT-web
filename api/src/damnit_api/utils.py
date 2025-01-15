@@ -7,22 +7,22 @@ import h5py
 import numpy as np
 from scipy.ndimage import zoom
 
-from .const import Type
+from .const import DamnitType
 
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
 
 DTYPE_MAP = {
-    "bytes": Type.IMAGE,
-    "str": Type.STRING,
-    "bool_": Type.BOOLEAN,
+    "bytes": DamnitType.IMAGE,
+    "str": DamnitType.STRING,
+    "bool_": DamnitType.BOOLEAN,
 }
 
 
-def map_dtype(dtype, default=Type.STRING):
+def map_dtype(dtype, default=DamnitType.STRING):
     dtype = DTYPE_MAP.get(dtype.__name__)
     if not dtype:
-        dtype = Type.NUMBER if np.issubdtype(dtype, np.number) else default
+        dtype = DamnitType.NUMBER if np.issubdtype(dtype, np.number) else default
     return dtype
 
 
@@ -31,7 +31,7 @@ def map_dtype(dtype, default=Type.STRING):
 
 
 def b64image(bytes_):
-    return b64encode(bytes_).decode("utf-8")
+    return f"data:image/png;base64,{b64encode(bytes_).decode("utf-8")}"
 
 
 # -----------------------------------------------------------------------------

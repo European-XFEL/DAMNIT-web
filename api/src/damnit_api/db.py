@@ -17,8 +17,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from damnit_api.utils import get_run_data
-
 from .const import DEFAULT_PROPOSAL
 from .utils import Registry, create_map, find_proposal
 
@@ -125,24 +123,14 @@ async def async_latest_rows(
     return result.mappings().all()
 
 
-async def async_count(proposal, *, table: str, by="run"):
+async def async_column(proposal, *, table: str, name: str):
     table = await async_table(proposal, name=table)
-    selection = select(func.count(table.c.get(by)))
+    selection = select(table.c.get(name))
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)
 
-    return result.scalar()
-
-
-# -----------------------------------------------------------------------------
-# Run data
-
-
-def get_extracted_data(proposal, run, variable):
-    root_path = DatabaseSessionManager(proposal).root_path
-    data_path = str(Path(root_path) / "extracted_data" / f"p{proposal}_r{run}.h5")
-    return get_run_data(data_path, variable)
+    return result.scalars().all()
 
 
 # -----------------------------------------------------------------------------

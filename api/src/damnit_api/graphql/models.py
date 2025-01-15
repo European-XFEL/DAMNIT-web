@@ -14,7 +14,7 @@ import numpy as np
 import strawberry
 
 from ..const import DEFAULT_PROPOSAL
-from ..const import Type as DamnitType
+from ..const import DamnitType
 from ..utils import Registry, b64image, create_map, map_dtype
 
 T = TypeVar("T")
