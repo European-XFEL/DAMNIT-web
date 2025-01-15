@@ -9,7 +9,7 @@ import {
 import { allCells } from "@glideapps/glide-data-grid-cells"
 import { range } from "@mantine/hooks"
 
-import { getCell, textCell } from "./cells"
+import { getCell, numberCell, textCell } from "./cells"
 import ContextMenu from "./ContextMenu"
 
 import { selectRun } from "./tableSlice"
@@ -27,7 +27,7 @@ import {
   sortedInsert,
   sortedSearch,
 } from "../../utils/array"
-import { isDataPlottable } from "../../utils/plots"
+import { canPlotData } from "../../utils/plots"
 import { isEmpty } from "../../utils/helpers"
 
 class Pages {
@@ -168,20 +168,25 @@ const Table = (props) => {
   // Data: Populate grid
   const getContent = useCallback(
     ([col, row]) => {
-      const column = props.columns[col]?.id
-      const rowData = props.data[row]
+      const run = props.runs[row]
+      const variable = props.columns[col]?.id
 
-      if (!rowData || !rowData[column]) {
+      if (variable === VARIABLES.run) {
+        return numberCell(run)
+      }
+
+      const rowData = props.data[run]
+      if (!rowData || !rowData[variable]) {
         return textCell("")
       }
 
-      const cell = getCell(rowData[column].value, rowData[column].dtype)
-      return cell(rowData[column].value, {
-        lastUpdated: props.lastUpdate[rowData[VARIABLES.run_number]?.value],
-        name: column,
+      const cell = getCell(rowData[variable].value, rowData[variable].dtype)
+      return cell(rowData[variable].value, {
+        lastUpdated: props.lastUpdate[run],
+        name: variable,
       })
     },
-    [props.columns, props.data, props.lastUpdate],
+    [props.columns, props.runs, props.data, props.lastUpdate],
   )
 
   // Cell: Click event
@@ -195,12 +200,11 @@ const Table = (props) => {
 
     // Inform that a row has been (de)selected
     const row = rows.last()
+    const run = props.runs[row]
+
     props.dispatch(
       selectRun({
-        run:
-          isEmpty(row) || !props.data[row]
-            ? null
-            : props.data[row][VARIABLES.run_number].value,
+        run,
       }),
     )
 
@@ -227,9 +231,11 @@ const Table = (props) => {
   }
   const handleCellActivated = (cell: Item) => {
     const [col, row] = cell
+    const run = props.runs[row]
+
     props.dispatch(
       selectRun({
-        run: isEmpty(row) ? null : props.data[row][VARIABLES.run_number].value,
+        run: run,
         variables: isEmpty(col) ? null : [props.columns[col].id],
       }),
     )
@@ -263,16 +269,17 @@ const Table = (props) => {
     }
 
     const column = props.columns[col]?.id
-    const rowData = props.data[row]
+    const rowData = props.data[props.runs[row]]
 
-    if (col !== -1 && isDataPlottable(rowData[column].dtype)) {
+    if (
+      col !== -1 &&
+      canPlotData(rowData[column]?.value, rowData[column]?.dtype)
+    ) {
       const variable = props.columns[col]
       const subtitle = `${variable.title}`
 
       const rows = [selectedCell[1], ...selectedRange.map((rect) => rect.y)]
-      const runs = sorted(
-        rows.map((row) => props.data[row][VARIABLES.run_number].value),
-      )
+      const runs = sorted(rows.map((row) => props.runs[row]))
 
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
@@ -319,7 +326,10 @@ const Table = (props) => {
               title: "Plot: summary",
               subtitle,
               onClick: () =>
-                addSummaryPlot({ variables: [variable.id], label: subtitle }),
+                addSummaryPlot({
+                  variables: [VARIABLES.run, variable.id],
+                  label: subtitle,
+                }),
             },
           ],
         })
@@ -386,7 +396,7 @@ const Table = (props) => {
             {...(props.grid || {})}
             columns={formatColumns(props.columns)}
             getCellContent={getContent}
-            rows={props.rows}
+            rows={props.runs.length}
             rowSelect="single"
             rowMarkers="clickable-number"
             gridSelection={gridSelection}
@@ -408,16 +418,15 @@ const Table = (props) => {
 }
 
 const mapStateToProps = ({ tableData: table }) => {
-  const data = table.data ? Object.values(table.data) : []
   // TODO: Get the column list from the user settings (reordered columns)
   const columns = Object.values(table.metadata.variables)
     .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name))
     .map(({ name, title }) => ({ id: name, title: title || name }))
 
   return {
-    data,
+    data: table.data,
     columns,
-    rows: table.metadata.rows,
+    runs: table.metadata.runs,
     lastUpdate: table.lastUpdate,
   }
 }

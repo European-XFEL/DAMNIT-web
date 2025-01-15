@@ -1,15 +1,19 @@
 import dayjs from "dayjs"
 
 
-export function imageBytesToURL(bytes) {
-  return "data:image/png;base64," + bytes;
-}
-
 export function formatDate(timestamp) {
   const formattedDate = dayjs(timestamp).format('DD MMMM YYYY');
   const formattedTime = dayjs(timestamp).format('HH:mm:ss');
 
   return `${formattedTime} | ${formattedDate}`
+}
+
+export const formatRunsSubtitle = (runs) => {
+  if (!runs || !runs.length) {
+    return ''
+  }
+
+  return `(run ${runs[0]}${runs.length > 1 ? `-${runs[runs.length - 1]}` : ''})`
 }
 
 export function formatFloat(number, {offset=2, default=1} = {}) {

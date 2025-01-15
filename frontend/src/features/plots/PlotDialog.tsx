@@ -18,6 +18,9 @@ import { EXCLUDED_VARIABLES } from "../../constants"
 import { getExtractedVariable, getTableVariables } from "../../redux/slices"
 import { getAllExtractedVariables } from "../../redux/thunks"
 
+// TODO: Reuse this function on the Table component
+const getVariableTitle = (variable) => variable.title || variable.name
+
 const PlotDialog = (props) => {
   const proposal = useSelector((state) => state.proposal.current.value)
 
@@ -36,7 +39,7 @@ const PlotDialog = (props) => {
         const runs = parseRunSelection(value)
 
         return values.runSelectionType === "manualSelection" &&
-          (runs.some((x) => !x) || runs.length > props.rows || !runs.length)
+          (runs.some((x) => !x) || !runs.length)
           ? "Please enter a valid selection"
           : null
       },
@@ -83,7 +86,34 @@ const PlotDialog = (props) => {
 
     const { xVariable, yVariable } = submitedFormValues
 
-    if (submitedFormValues.plotType !== "summary") {
+    const xMetadata = props.variables.find(
+      (variable) => variable.name === xVariable,
+    )
+    const yMetadata = props.variables.find(
+      (variable) => variable.name === yVariable,
+    )
+    const plotOptions =
+      submitedFormValues.plotType === "summary"
+        ? {
+            variables: [xVariable, yVariable],
+            source: "table",
+            title: `Summary: ${getVariableTitle(
+              yMetadata,
+            )} vs. ${getVariableTitle(xMetadata)}`,
+          }
+        : {
+            variable: [yVariable],
+            source: "extracted",
+            title: `Data: ${getVariableTitle(yMetadata)}`,
+          }
+
+    props.dispatch(addPlot({ ...plotOptions, runs: runs }))
+
+    if (submitedFormValues.plotType === "summary") {
+      props.dispatch(
+        getTableVariables({ proposal, variables: [xVariable, yVariable] }),
+      )
+    } else {
       runs
         ? runs.forEach((run) => {
             props.dispatch(
@@ -93,24 +123,6 @@ const PlotDialog = (props) => {
         : props.dispatch(
             getAllExtractedVariables({ proposal, variable: yVariable }),
           )
-    }
-
-    props.dispatch(
-      addPlot({
-        variables:
-          submitedFormValues.plotType === "extracted"
-            ? [yVariable]
-            : [xVariable, yVariable],
-        source:
-          submitedFormValues.plotType === "summary" ? "table" : "extracted",
-        runs: runs,
-      }),
-    )
-
-    if (submitedFormValues.plotType === "summary") {
-      props.dispatch(
-        getTableVariables({ proposal, variables: [xVariable, yVariable] }),
-      )
     }
 
     handleClose()
@@ -257,7 +269,6 @@ const mapStateToProps = ({ tableData }) => {
     variables: Object.values(tableData.metadata.variables).filter(
       (variable) => !EXCLUDED_VARIABLES.includes(variable.name),
     ),
-    rows: tableData.metadata.rows,
   }
 }
 

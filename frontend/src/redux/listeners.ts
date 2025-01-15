@@ -12,7 +12,7 @@ listenerMiddleware.startListening({
   effect: (action, { dispatch }) => {
     const { run } = action.payload
 
-    const sideEffect = run !== null ? openAside : closeAside
+    const sideEffect = run != null ? openAside : closeAside
     dispatch(sideEffect())
   },
 })
