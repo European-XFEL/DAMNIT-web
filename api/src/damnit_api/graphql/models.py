@@ -3,10 +3,14 @@ from datetime import datetime
 from typing import (
     Generic,
     NewType,
+    Optional,
     TypeVar,
     Union,
+    get_args,
+    get_origin,
 )
 
+import numpy as np
 import strawberry
 
 from ..const import DEFAULT_PROPOSAL
@@ -16,11 +20,25 @@ from ..utils import Registry, b64image, create_map, map_dtype
 T = TypeVar("T")
 
 
+def to_js_string(value):
+    if np.isnan(value):
+        return "NaN"
+    elif value == np.inf:
+        return "Infinity"
+    elif value == -np.inf:
+        return "-Infinity"
+
+
 def serialize(value, *, dtype=DamnitType.STRING):
+    if value is None:
+        return value
+
     if dtype is DamnitType.IMAGE:
         value = b64image(value)
     elif dtype is DamnitType.TIMESTAMP:
         value = int(value.timestamp() if isinstance(value, datetime) else value * 1000)
+    elif dtype is DamnitType.NUMBER and not np.isfinite(value):
+        value = to_js_string(value)
 
     return value
 
@@ -69,12 +87,16 @@ class DamnitRun:
         variables = {}
         for name, klass in cls.__annotations__.items():
             if name not in entry:
+                variables[name] = None
                 continue
 
+            klass = cls.get_klass(klass)
             dtype = cls.get_dtype(value=entry[name], klass=klass)
             value = serialize(entry[name], dtype=dtype)
 
-            if as_dict:
+            if value is None:
+                result = None
+            elif as_dict:
                 result = {"value": value, "dtype": dtype.value}
             else:
                 result = klass(name=name, value=value, dtype=dtype.value)
@@ -125,6 +147,14 @@ class DamnitRun:
             dtype = map_dtype(type(value))
         return dtype
 
+    @staticmethod
+    def get_klass(klass):
+        if get_origin(klass) is Union:
+            # Optional type hint
+            return get_args(klass)[0]
+
+        return klass
+
 
 class DamnitTable(metaclass=Registry):
     proposal = ""
@@ -158,7 +188,7 @@ class DamnitTable(metaclass=Registry):
     def _create_stype(self) -> type[DamnitRun]:
         # Map annotations as (dynamic) DAMNIT variable
         annotations = {
-            name: DamnitRun.known_annotations().get(name, DamnitVariable)
+            name: DamnitRun.known_annotations().get(name, Optional[DamnitVariable])
             for name in self.variables
         }
 
