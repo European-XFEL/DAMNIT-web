@@ -5,5 +5,6 @@ export const canPlotSummary = (data, dtype) => {
 }
 
 export const canPlotData = (data, dtype) => {
-  return [DTYPES.number, DTYPES.image].includes(dtype)
+  // TODO: Use extracted data type from the database
+  return data != null
 }

@@ -35,15 +35,13 @@ const slice = createSlice({
     builder.addCase(getExtractedVariable.fulfilled, (state, action) => {
       // TODO: Add pending and rejected
       const { run, variable, data, ...metadata } = action.payload
-      if (!isEmpty(data)) {
-        state.data = {
-          ...state.data,
-          [run]: { ...(state.data[run] ?? {}), [variable]: data },
-        }
-        state.metadata = {
-          ...state.metadata,
-          [run]: { ...(state.metadata[run] ?? {}), [variable]: metadata },
-        }
+      state.data = {
+        ...state.data,
+        [run]: { ...(state.data[run] ?? {}), [variable]: data },
+      }
+      state.metadata = {
+        ...state.metadata,
+        [run]: { ...(state.metadata[run] ?? {}), [variable]: metadata },
       }
     })
   },
