@@ -5,7 +5,7 @@ from damnit_api.graphql.bootstrap import bootstrap
 from damnit_api.graphql.models import DamnitTable, get_stype
 from damnit_api.graphql.schema import Schema
 
-from .const import EXAMPLE_VARIABLES, NUM_ROWS
+from .const import EXAMPLE_VARIABLES, RUNS
 
 
 @pytest.fixture(autouse=True)
@@ -23,15 +23,15 @@ def mocked_bootstrap_variables(mocker):
 
 
 @pytest.fixture
-def mocked_bootstrap_count(mocker):
+def mocked_bootstrap_column(mocker):
     mocker.patch(
-        "damnit_api.graphql.bootstrap.db.async_count",
-        return_value=NUM_ROWS,
+        "damnit_api.graphql.bootstrap.db.async_column",
+        return_value=RUNS,
     )
 
 
 @pytest_asyncio.fixture
-async def graphql_schema(mocked_bootstrap_variables, mocked_bootstrap_count):
+async def graphql_schema(mocked_bootstrap_variables, mocked_bootstrap_column):
     schema = Schema()
 
     # Initialize

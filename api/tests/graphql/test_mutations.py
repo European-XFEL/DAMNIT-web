@@ -4,9 +4,8 @@ from damnit_api.graphql.models import DamnitRun, get_model
 from damnit_api.graphql.schema import Schema
 
 from .const import (
-    EXAMPLE_DTYPES,
     EXAMPLE_VARIABLES,
-    NUM_ROWS,
+    RUNS,
 )
 from .utils import assert_model
 
@@ -30,8 +29,8 @@ async def test_refresh(graphql_schema):
     assert set(result.data["refresh"].keys()) == {"metadata"}
 
     metadata = result.data["refresh"]["metadata"]
-    assert set(metadata.keys()) == {"rows", "timestamp", "variables"}
-    assert metadata["rows"] == NUM_ROWS
+    assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
+    assert metadata["runs"] == RUNS
     assert metadata["variables"] == {
         **DamnitRun.known_variables(),
         **EXAMPLE_VARIABLES,

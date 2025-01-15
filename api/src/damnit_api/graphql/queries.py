@@ -1,10 +1,11 @@
 import strawberry
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, select
 from strawberry.scalars import JSON
 
-from ..db import async_table, get_extracted_data, get_session
-from .models import DamnitRun, DamnitType, get_model
-from .utils import DatabaseInput
+from ..data import get_extracted_data
+from ..db import async_table, get_session
+from .models import DamnitRun, get_model
+from .utils import DatabaseInput, fetch_info
 
 
 def group_by_run(data):
@@ -71,26 +72,6 @@ async def fetch_variables(proposal, *, limit, offset):
     return entries
 
 
-async def fetch_info(proposal, variables):
-    table = await async_table(proposal, name="run_info")
-
-    conditions = [
-        and_(table.c.proposal == variable["proposal"], table.c.run == variable["run"])
-        for variable in variables
-    ]
-
-    query = select(table).where(or_(*conditions))
-
-    async with get_session(proposal) as session:
-        result = await session.execute(query)
-        if not result:
-            raise ValueError  # TODO: Better error handling
-
-        entries = result.mappings().all()
-
-    return entries
-
-
 @strawberry.type
 class Query:
     """
@@ -122,7 +103,9 @@ class Query:
             proposal, limit=per_page, offset=(page - 1) * per_page
         )
 
-        info = await fetch_info(proposal, variables)
+        info = await fetch_info(
+            proposal, runs=[variable["run"] for variable in variables]
+        )
 
         runs = [model.as_stype(**{**v, **i}) for v, i in zip(variables, info)]
         return runs
@@ -131,27 +114,15 @@ class Query:
     def metadata(self, database: DatabaseInput) -> JSON:
         model = get_model(database.proposal)
         return {
-            "rows": model.num_rows,
+            "runs": model.runs,
             "variables": model.variables,
             "timestamp": model.timestamp * 1000,  # deserialize to JS
         }
 
     @strawberry.field
     def extracted_data(database: DatabaseInput, run: int, variable: str) -> JSON:
-        dataset = get_extracted_data(database.proposal, run, variable)
-        array_name = next(iter(dataset))
-        coords = [name for name in dataset.keys() if name != array_name]
-        array_dtypes = {
-            1: DamnitType.ARRAY,
-            2: DamnitType.IMAGE,
-            3: DamnitType.RGBA,
-        }
-
-        return {
-            "data": {key: data.tolist() for key, data in dataset.items()},
-            "metadata": {
-                "name": array_name,
-                "coords": coords,
-                "dtype": array_dtypes[dataset[array_name].ndim].value,
-            },
-        }
+        # TODO: Convert to Strawberry type
+        # and make it analogous to DamitVariable; e.g. `data`
+        return get_extracted_data(
+            proposal=int(database.proposal), run=run, variable=variable
+        )
