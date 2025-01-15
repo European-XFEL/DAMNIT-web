@@ -1,10 +1,94 @@
 import strawberry
-from sqlalchemy import Column, MetaData, Table, select
+from sqlalchemy import and_, func, or_, select
 from strawberry.scalars import JSON
 
-from ..db import get_extracted_data, get_session
+from ..db import async_table, get_extracted_data, get_session
 from .models import DamnitRun, DamnitType, get_model
 from .utils import DatabaseInput
+
+
+def group_by_run(data):
+    grouped = {}
+
+    for entry in data:
+        key = (entry["proposal"], entry["run"])
+        if key not in grouped:
+            grouped[key] = {"proposal": entry["proposal"], "run": entry["run"]}
+        grouped[key][entry["name"]] = entry["value"]
+
+    return list(grouped.values())
+
+
+async def fetch_variables(proposal, *, limit, offset):
+    table = await async_table(proposal, name="run_variables")
+
+    runs_subquery = (
+        select(table.c.run)
+        .distinct()
+        .order_by(table.c.run)
+        .limit(limit)
+        .offset(offset)
+        .subquery()
+    )
+
+    latest_timestamp_subquery = (
+        select(
+            table.c.proposal,
+            table.c.run,
+            table.c.name,
+            func.max(table.c.timestamp).label("latest_timestamp"),
+        )
+        .where(
+            table.c.run.in_(select(runs_subquery.c.run))
+        )  # Only consider the paginated runs
+        .group_by(table.c.run, table.c.name)
+        .subquery()
+    )
+
+    query = select(
+        table.c.proposal,
+        table.c.run,
+        table.c.name,
+        table.c.value,
+        table.c.timestamp,
+    ).join(
+        latest_timestamp_subquery,
+        and_(
+            table.c.proposal == latest_timestamp_subquery.c.proposal,
+            table.c.run == latest_timestamp_subquery.c.run,
+            table.c.name == latest_timestamp_subquery.c.name,
+            table.c.timestamp == latest_timestamp_subquery.c.latest_timestamp,
+        ),
+    )
+
+    async with get_session(proposal) as session:
+        result = await session.execute(query)
+        if not result:
+            raise ValueError  # TODO: Better error handling
+
+        entries = group_by_run(result.mappings().all())  # type: ignore
+
+    return entries
+
+
+async def fetch_info(proposal, variables):
+    table = await async_table(proposal, name="run_info")
+
+    conditions = [
+        and_(table.c.proposal == variable["proposal"], table.c.run == variable["run"])
+        for variable in variables
+    ]
+
+    query = select(table).where(or_(*conditions))
+
+    async with get_session(proposal) as session:
+        result = await session.execute(query)
+        if not result:
+            raise ValueError  # TODO: Better error handling
+
+        entries = result.mappings().all()
+
+    return entries
 
 
 @strawberry.type
@@ -29,27 +113,18 @@ class Query:
         """
         proposal = database.proposal
 
-        table_model = get_model(proposal)
-        if table_model is None:
+        model = get_model(proposal)
+        if model is None:
             msg = f"Table model for proposal {proposal} is not found."
             raise RuntimeError(msg)
 
-        columns = [Column(variable) for variable in table_model.variables]
-        table = Table("runs", MetaData(), *columns)
-        async with get_session(proposal) as session:
-            selection = (
-                select(table)
-                .order_by("run")  # desc("run")
-                .limit(per_page)
-                .offset((page - 1) * per_page)
-            )
+        variables = await fetch_variables(
+            proposal, limit=per_page, offset=(page - 1) * per_page
+        )
 
-            result = await session.execute(selection)
-            if not result:
-                raise ValueError
+        info = await fetch_info(proposal, variables)
 
-            runs = [table_model.as_stype(**res) for res in result.mappings().all()]  # type: ignore
-
+        runs = [model.as_stype(**{**v, **i}) for v, i in zip(variables, info)]
         return runs
 
     @strawberry.field

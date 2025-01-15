@@ -1,8 +1,7 @@
-from unittest.mock import AsyncMock, Mock
+from typing import Optional
 
 from damnit_api.graphql.models import (
     DamnitRun,
-    DamnitType,
     DamnitVariable,
     KnownVariable,
 )
@@ -30,26 +29,6 @@ def create_run_info(proposal=1234, run=1, start_time=500, added_at=1000):
         "start_time": start_time,
         "added_at": added_at,
     }
-
-
-# -----------------------------------------------------------------------------
-# Mocks
-
-
-def session_mock(return_value):
-    mappings = Mock()
-    mappings.all.return_value = return_value
-
-    execute = Mock()
-    execute.mappings.return_value = mappings
-
-    session = Mock()
-    session.execute = AsyncMock(return_value=execute)
-
-    get_session = AsyncMock()
-    get_session.__aenter__.return_value = session
-
-    return get_session
 
 
 # -----------------------------------------------------------------------------
