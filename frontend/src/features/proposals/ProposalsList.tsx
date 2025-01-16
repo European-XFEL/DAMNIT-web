@@ -102,7 +102,7 @@ const ProposalSubTable = memo(({ proposals }) => {
       noHeader
       striped
       idAccessor="number"
-      minHeight={100}
+      minHeight={isLoading ? 100 : 0}
       columns={[
         {
           accessor: "id",
