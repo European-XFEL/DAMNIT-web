@@ -6,6 +6,7 @@ FILL_VALUE = "None"
 
 
 class DamnitType(Enum):
+    NONE = "none"
     NUMBER = "number"
     STRING = "string"
     BOOLEAN = "boolean"

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react"
 import { useSelector } from "react-redux"
 import { createSelector } from "@reduxjs/toolkit"
 
-import { Image, Skeleton, Stack, Text } from "@mantine/core"
+import { Alert, Code, Image, Skeleton, Stack, Text } from "@mantine/core"
+import { IconInfoCircle } from "@tabler/icons-react"
 
 import Plot from "./Plot"
 import { formatRunsSubtitle } from "../../utils/helpers"
@@ -106,9 +107,9 @@ const selectExtractedValues = createSelector(
   [selectExtractedData, selectExtractedMetadata, (_, runs) => runs],
   (extractedData, extractedMetadata, runs) => {
     return runs.reduce((result, run) => {
-      if (extractedData?.[run] && extractedMetadata?.[run]) {
+      if (extractedMetadata?.[run]) {
         result[run] = {
-          data: extractedData[run],
+          data: extractedData[run] ?? null,
           metadata: extractedMetadata[run],
         }
       }
@@ -146,6 +147,8 @@ const getPlotData = (extracted, { run, coord } = {}) => {
       return {
         src: varData,
       }
+    default:
+      return { value: varData }
   }
 }
 
@@ -165,6 +168,15 @@ const getPlotMetadata = (extracted, { coord } = {}) => {
       break
     case "png":
       metadata.type = "image"
+      break
+    case "number":
+    case "string":
+    case "boolean":
+    case "timestamp":
+      metadata.type = "scalar"
+      break
+    default:
+      metadata.type = "unsupported"
       break
   }
 
@@ -227,6 +239,19 @@ const selectRuns = createSelector(
   },
 )
 
+const UnableToDisplayAlert = ({ children }) => {
+  return (
+    <Alert
+      variant="light"
+      color="orange"
+      title="Unable to display the plot"
+      icon={<IconInfoCircle />}
+    >
+      {children}
+    </Alert>
+  )
+}
+
 const PlotContainer = ({ plotId }) => {
   const runs = useSelector((state) => selectRuns(state, plotId))
   const plot = useSelector((state) => state.plots.data[plotId])
@@ -261,6 +286,19 @@ const PlotContainer = ({ plotId }) => {
           w={metadata.shape[1]}
           fit="contain"
         />
+      ) : metadata.type === "scalar" ? (
+        <UnableToDisplayAlert>
+          <Text size="sm">
+            The plot can't be displayed because the value is a scalar{" "}
+            <Code>{data[0].value}</Code>.
+          </Text>
+        </UnableToDisplayAlert>
+      ) : metadata.type === "unsupported" ? (
+        <UnableToDisplayAlert>
+          <Text size="sm">
+            The plot can't be displayed because the value is unsupported.
+          </Text>
+        </UnableToDisplayAlert>
       ) : (
         <Plot data={data} metadata={metadata} />
       )}

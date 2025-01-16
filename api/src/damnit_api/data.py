@@ -11,25 +11,35 @@ from .utils import b64image
 
 
 def get_extracted_data(proposal, run, variable):
-    var_data = Damnit(proposal)[run, variable]
-    type_hint = var_data.type_hint()
+    try:
+        var_data = Damnit(proposal)[run, variable]
+    except KeyError:
+        return standardize(None, name=variable, dtype=DamnitType.NONE.value)
+
     data = var_data.read()
+    type_hint = var_data.type_hint()
 
-    # REMOVEME
-    if variable == "azimuthal_pump_diff_minus_ref":
-        data = np.random.randint(0, 255, size=data.shape)
+    match type(data):
+        case np.ndarray:
+            # We need to squeeze the data first to get the right Damnit type
+            # and to set the right dimension names
+            data = data.squeeze()
+        case xr.DataArray:
+            data = data.squeeze(drop=True)
 
-    dtype = get_damnit_type(data, type_hint=type_hint)
+    try:
+        dtype = get_damnit_type(data, type_hint=type_hint)
+    except ValueError:
+        return standardize(None, name=variable, dtype=DamnitType.NONE.value)
+
     attrs = None
-    match type_hint:
-        case DataType.DataArray | None:
+    match dtype:
+        case DamnitType.ARRAY | DamnitType.IMAGE:
             data = get_array(data)
-        case DataType.Image:
+        case DamnitType.RGBA:
             attrs = {"shape": list(data.shape[:2])}
             data = get_png(data)
             dtype = DamnitType.PNG
-        case _:
-            raise ValueError(f"Not supported: {type_hint}")
 
     return standardize(data, name=variable, dtype=dtype.value, attrs=attrs)
 
@@ -67,7 +77,7 @@ def get_damnit_type(data, *, type_hint=None):
                     return DamnitType.STRING
                 elif isinstance(data, bool):
                     return DamnitType.BOOLEAN
-                elif isinstance(data, (int, float)):
+                elif isinstance(data, (int, float, np.integer, np.floating)):
                     return DamnitType.NUMBER
                 else:
                     raise ValueError("Not supported.")
@@ -90,14 +100,12 @@ def get_damnit_type(data, *, type_hint=None):
 # DataArray
 
 
-def to_dataarray(data):
-    match type(data):
+def to_dataarray(array):
+    match type(array):
         case np.ndarray:
-            # We need to squeeze the data first
-            # to set the right dimension names
-            array = xr.DataArray(data.squeeze())
+            array = xr.DataArray(array)
         case xr.DataArray:
-            array = data.squeeze(drop=True)
+            pass  # Already in the desired data type
         case _:
             raise ValueError("Not supported")
 
