@@ -1,12 +1,23 @@
 # DAMNIT - Webserver
-`damnit_webserver` is a Python package that handles the integration of the Damnit database and web frontend. This utilizes FastAPI for the web framework, Strawberry for the GraphQL API, and SQLAlchemy for the database management.
+`damnit_api` is a Python package that handles the integration of the Damnit database and web frontend. This utilizes FastAPI for the web framework, Strawberry for the GraphQL API, and SQLAlchemy for the database management.
 
 ## Setup
 
+Get the environment variables for authentication from [TeamPass](https://passman.xfel.eu/), and put them in a `.env` file in this directory.
+
+If you don't already have the `poetry` command available, [install Poetry](https://python-poetry.org/docs/#installation).
+
+The API server requires Python 3.12 or above. You can load a module for this:
+
+```sh
+module load python/3.12
+```
+
+Then set up the dependencies and launch the server:
+
 ```sh
 poetry install
-poetry shell
-uvicorn damnit_api.main:create_app
+poetry run uvicorn damnit_api.main:create_app
 ```
 
 If port `8000` is not free change the port with the `--port NNNN` flag on the `uvicorn` command.
