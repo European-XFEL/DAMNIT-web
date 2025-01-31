@@ -23,12 +23,14 @@ class Router(GraphQLRouter, metaclass=Singleton):
     def encode_json(self, data: GraphQLHTTPResponse) -> bytes:
         return orjson.dumps(
             data,
-            default=lambda x: None if isinstance(x, float) and np.isnan(x) else x,
+            default=lambda x: None
+            if isinstance(x, float) and np.isnan(x)
+            else x,
             option=orjson.OPT_SERIALIZE_NUMPY,
         )
 
 
-async def get_context():
+async def get_context():  # noqa: RUF029
     return {
         "schema": Router().schema,
     }

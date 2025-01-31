@@ -1,8 +1,7 @@
 import strawberry
 from strawberry.directive import DirectiveLocation, DirectiveValue
 
-from .models import BaseVariable, DamnitType, DamnitRun
-
+from .models import BaseVariable, DamnitRun, DamnitType
 
 HEAVY_DATA = (
     DamnitType.IMAGE,
