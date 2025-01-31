@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import TypeAlias
 
 import strawberry
 import strawberry.experimental.pydantic as st_pydantic
@@ -18,7 +17,7 @@ class Metadata:
     pass
 
 
-ListenerStatus: TypeAlias = strawberry.enum(models.ListenerStatus)  # type: ignore
+type ListenerStatus = strawberry.enum(models.ListenerStatus)  # type: ignore[assignment]
 
 
 @strawberry.type
@@ -42,17 +41,19 @@ class Instance:
 
     @strawberry.field
     def proposal(self) -> Proposal:
-        return Proposal.from_pydantic(models.Proposal.from_path(path=self._dir))
+        return Proposal.from_pydantic(
+            models.Proposal.from_path(path=self._dir)
+        )
 
     @strawberry.field
     async def metadata(self) -> Metadata:
         return Metadata.from_pydantic(
-            await models.Metadata.from_mymdc(self.proposal.proposal_no)  # type: ignore
+            await models.Metadata.from_mymdc(self.proposal.proposal_no)  # type: ignore[call-arg]
         )
 
     @strawberry.field
     def listener(self) -> Listener:
-        return Listener(_listener=models.Listener(path=self._dir))  # type: ignore
+        return Listener(_listener=models.Listener(path=self._dir))  # type: ignore[call-arg]
 
 
 @strawberry.type

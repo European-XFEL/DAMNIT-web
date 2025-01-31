@@ -48,9 +48,9 @@ class Proposal(BaseModel):
 
         return cls(
             path=Path("/gpfs/exfel/exp") / inst / cycle / f"p{prop:06d}",
-            no=group["prop"],  # type: ignore
-            cycle=group["cycle"],  # type: ignore
-            instrument=group["inst"],  # type: ignore
+            no=group["prop"],  # type: ignore[attr-defined]
+            cycle=group["cycle"],  # type: ignore[attr-defined]
+            instrument=group["inst"],  # type: ignore[attr-defined]
         )
 
 
@@ -82,7 +82,8 @@ class Listener(BaseModel):
     def _get_last_modify(self) -> datetime.datetime | None:
         try:
             db_file = self.path / "runs.sqlite"
-            return datetime.datetime.fromtimestamp(db_file.stat().st_mtime)
+            mtime = db_file.stat().st_mtime
+            return datetime.datetime.fromtimestamp(mtime).astimezone()
         except FileNotFoundError:
             return None
 
@@ -97,7 +98,7 @@ class Listener(BaseModel):
             config.read(supervisor_config)
             serverurl = config["supervisorctl"]["serverurl"]
             server = ServerProxy(serverurl)
-            return ListenerStatus(server.supervisor.getState()["state"])  # type: ignore
+            return ListenerStatus(server.supervisor.getState()["state"])  # type: ignore[attr-defined]
         except (KeyError, ConnectionRefusedError):
             return None
 
