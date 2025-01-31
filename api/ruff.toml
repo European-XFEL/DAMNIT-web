@@ -1,3 +1,6 @@
+line-length = 79
+indent-width = 4
+
 output-format = "grouped"
 
 preview = true
@@ -39,7 +42,7 @@ select = [
     "PTH",   # flake8-use-pathlib
     "LOG",   # flake8-logging
 ]
-extend-ignore = ["B018", "B019"]
+ignore = ["B018", "B019", "ISC001"]
 
 [lint.per-file-ignores]
 "tests/*" = ["S101"]

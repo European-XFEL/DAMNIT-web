@@ -1,8 +1,8 @@
 """GPFS NFSv4 ACL models.
 
-Models for parsing and working with GPFS NFSv4 ACLs. The scope of this is to model
-enough of the ACL to be able to determine what (basic, rwx) permissions a user has given
-a path to a file or directory.
+Models for parsing and working with GPFS NFSv4 ACLs. The scope of this is to
+model enough of the ACL to be able to determine what (basic, rwx) permissions
+a user has given a path to a file or directory.
 
 For more information see the GPFS documentation:
 
@@ -24,22 +24,29 @@ from typing_extensions import Doc
 class ACE(BaseModel):
     """Access Control Entry.
 
-    Partial model of a GPFS Access Control Entry (ACE), does not include type or flags.
+    Partial model of a GPFS Access Control Entry (ACE), does not include type
+    or flags.
 
-    ACEs can be compared with the `&` operator, this will return the intersection of the
-    two ACEs if they have the same identity and name, otherwise it will return 0.
+    ACEs can be compared with the `&` operator, this will return the
+    intersection of the two ACEs if they have the same identity and name,
+    otherwise it will return 0.
     """
 
-    identity: Annotated[Literal["user", "group"], Doc("The identity type of the ACE.")]
-    who: Annotated[str, Doc("The name of the user or group the ACE applies to.")]
+    identity: Annotated[
+        Literal["user", "group"], Doc("The identity type of the ACE.")
+    ]
+    who: Annotated[
+        str, Doc("The name of the user or group the ACE applies to.")
+    ]
     mask: Annotated["Mask", Doc("The permissions granted by the ACE.")]
 
     @classmethod
     def from_str(cls, ace: str) -> Self:
         """Create an ACE from a string.
 
-        Input string format should match the ACE format returned by `mmgetacl`, namely a
-        colon-separated string of "{identity}:{name}:{mask}:{type}:[{flags}...].
+        Input string format should match the ACE format returned by `mmgetacl`,
+        namely a colon-separated string of
+        "{identity}:{name}:{mask}:{type}:[{flags}...]".
 
         Example:
             >>> ACE.from_str("user:foo:r---:some_type:some:extra:flags")
@@ -54,22 +61,23 @@ class ACE(BaseModel):
 
         identity, who, mask_str, _type, *_flags = ace.split(":")
 
-        # ace mask string is "rwxc" with "-" used to indicate no permission, this
-        # gets a mask for each present value and ORs them together to get the final mask
+        # ace mask string is "rwxc" with "-" used to indicate no permission
+        # this gets a mask for each present value and ORs them together to get
+        # the final mask
         mask = reduce(
             operator.or_,
             (getattr(Mask, m) for m in mask_str if m != "-"),
         )
 
         return cls(
-            identity=identity,  # type: ignore as pydantic will validate on init
+            identity=identity,  # type: ignore[assignment]
             who=who,
             mask=mask,
         )
 
     def __and__(self, other: "ACE") -> "Mask":
-        """Return the intersection of two ACEs if they have the same identity and
-        name."""
+        """Return the intersection of two ACEs if they have the same identity
+        and name."""
         if self.identity == other.identity and self.who == other.who:
             return self.mask & other.mask
         return Mask(0)
@@ -103,9 +111,9 @@ _GPFS_NFSV4_ACE = re.compile(
 class ACL(RootModel[list[ACE]]):
     """Access Control List.
 
-    ACLs can be compared to another ACL or a single ACE with the `&` operator, this will
-    return the intersection of the two by comparing all ACE(s) with each other and
-    returning the intersection of all matches.
+    ACLs can be compared to another ACL or a single ACE with the `&` operator,
+    this will return the intersection of the two by comparing all ACE(s) with
+    each other and returning the intersection of all matches.
     """
 
     root: list[ACE]
@@ -120,7 +128,8 @@ class ACL(RootModel[list[ACE]]):
     def from_str(cls, text: str) -> Self:
         """Create an ACL from a complete NFS v4 ACL string.
 
-        The string must be the output of `mmgetacl` for a file or directory, e.g:
+        The string must be the output of `mmgetacl` for a file or directory,
+        e.g:
 
         ```
         #NFSv4 ACL
@@ -184,11 +193,12 @@ class ACL(RootModel[list[ACE]]):
     async def from_path(cls, path: Path) -> Self:
         """Create an ACL from a file or directory path.
 
-        This is a convenience method which calls `mmgetacl` on the given path and then
-        parses the output to create an ACL object.
+        This is a convenience method which calls `mmgetacl` on the given path
+        and then parses the output to create an ACL object.
 
         See Also:
-            from_str: for more information on the expected format of the input string.
+            from_str: for more information on the expected format of the input
+            string.
         """
         proc = await asyncio.create_subprocess_exec(
             "mmgetacl",
@@ -288,5 +298,6 @@ class Mask(Flag):
 
     def __str__(self) -> str:
         return "".join(
-            flg if self & getattr(self, flg) else "-" for flg in ["r", "w", "x"]
+            flg if self & getattr(self, flg) else "-"
+            for flg in ["r", "w", "x"]
         )
