@@ -108,6 +108,8 @@ async def resource_from_path(path: Path) -> Resource:
     owner = path.owner()
     group = path.group()
 
-    logger.debug("Resource from path", path=path, acl=acl, owner=owner, group=group)
+    logger.debug(
+        "Resource from path", path=path, acl=acl, owner=owner, group=group
+    )
 
     return Resource(path=path, acl=acl, owner=owner, group=group)
