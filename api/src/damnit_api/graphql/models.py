@@ -1,9 +1,8 @@
 import inspect
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import (
     Generic,
     NewType,
-    Optional,
     TypeVar,
     Union,
     get_args,
@@ -13,8 +12,7 @@ from typing import (
 import numpy as np
 import strawberry
 
-from ..const import DEFAULT_PROPOSAL
-from ..const import DamnitType
+from ..const import DEFAULT_PROPOSAL, DamnitType
 from ..utils import Registry, b64image, create_map, map_dtype
 
 T = TypeVar("T")
@@ -23,10 +21,12 @@ T = TypeVar("T")
 def to_js_string(value):
     if np.isnan(value):
         return "NaN"
-    elif value == np.inf:
+    if value == np.inf:
         return "Infinity"
-    elif value == -np.inf:
+    if value == -np.inf:
         return "-Infinity"
+
+    return str(value)
 
 
 def serialize(value, *, dtype=DamnitType.STRING):
@@ -36,7 +36,9 @@ def serialize(value, *, dtype=DamnitType.STRING):
     if dtype is DamnitType.IMAGE:
         value = b64image(value)
     elif dtype is DamnitType.TIMESTAMP:
-        value = int(value.timestamp() if isinstance(value, datetime) else value * 1000)
+        value = int(
+            value.timestamp() if isinstance(value, datetime) else value * 1000
+        )
     elif dtype is DamnitType.NUMBER and not np.isfinite(value):
         value = to_js_string(value)
 
@@ -49,7 +51,7 @@ Any = strawberry.scalar(
 
 
 Timestamp = strawberry.scalar(
-    Union[int, float],
+    int | float,
     parse_value=lambda value: value / 1000,
     name="Timestamp",
 )
@@ -160,7 +162,9 @@ class DamnitTable(metaclass=Registry):
     proposal = ""
     path = ""  # TODO: handle dynamic database path
     stype = None  # strawberry type
-    timestamp = datetime.now().timestamp()  # timestamp of the latest model
+
+    # timestamp of the latest model
+    timestamp = datetime.now(tz=UTC).timestamp()
 
     def __init__(self, proposal: str = DEFAULT_PROPOSAL):
         self.proposal = proposal
@@ -188,7 +192,9 @@ class DamnitTable(metaclass=Registry):
     def _create_stype(self) -> type[DamnitRun]:
         # Map annotations as (dynamic) DAMNIT variable
         annotations = {
-            name: DamnitRun.known_annotations().get(name, Optional[DamnitVariable])
+            name: DamnitRun.known_annotations().get(
+                name, DamnitVariable | None
+            )
             for name in self.variables
         }
 

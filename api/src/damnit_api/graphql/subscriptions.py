@@ -1,8 +1,8 @@
 import asyncio
 from collections.abc import AsyncGenerator
 
-from async_lru import alru_cache
 import strawberry
+from async_lru import alru_cache
 from strawberry.scalars import JSON
 from strawberry.types import Info
 
@@ -10,7 +10,6 @@ from ..db import async_latest_rows, async_variables
 from ..utils import create_map
 from .models import Timestamp, get_model
 from .utils import DatabaseInput, LatestData, fetch_info
-
 
 POLLING_INTERVAL = 1  # seconds
 
@@ -25,12 +24,14 @@ async def get_latest_data(proposal, timestamp, schema):
         start_at=timestamp,
     )
     if not len(latest_data):
-        return
+        return None
 
     latest_data = LatestData.from_list(latest_data)
 
     # Get latest runs
-    latest_runs = await fetch_info(proposal, runs=list(latest_data.runs.keys()))
+    latest_runs = await fetch_info(
+        proposal, runs=list(latest_data.runs.keys())
+    )
     latest_runs = create_map(latest_runs, key="run")
 
     # Update model
@@ -66,22 +67,20 @@ async def get_latest_data(proposal, timestamp, schema):
             "timestamp": model.timestamp * 1000,  # deserialize to JS
         }
 
-        result = {"runs": runs, "metadata": metadata}
+        return {"runs": runs, "metadata": metadata}
 
-        return result
+    return None
 
 
 @strawberry.type
 class Subscription:
-
     @strawberry.subscription
     async def latest_data(
         self,
         info: Info,
         database: DatabaseInput,
         timestamp: Timestamp,
-    ) -> AsyncGenerator[JSON, None]:
-
+    ) -> AsyncGenerator[JSON, None]:  # noqa: UP043
         while True:
             # Sleep first :)
             await asyncio.sleep(POLLING_INTERVAL)

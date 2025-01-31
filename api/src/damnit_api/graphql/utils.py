@@ -2,9 +2,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import or_, select
-
 import strawberry
+from sqlalchemy import or_, select
 
 from ..const import DEFAULT_PROPOSAL
 from ..db import async_table, get_session
@@ -53,7 +52,9 @@ class LatestData:
 
     @property
     def dtypes(self):
-        return {variable: data.dtype for variable, data in self.variables.items()}
+        return {
+            variable: data.dtype for variable, data in self.variables.items()
+        }
 
     @property
     def timestamp(self):
@@ -79,6 +80,4 @@ async def fetch_info(proposal, *, runs):
         if not result:
             raise ValueError  # TODO: Better error handling
 
-        entries = result.mappings().all()
-
-    return entries
+        return result.mappings().all()

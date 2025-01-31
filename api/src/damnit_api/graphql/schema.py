@@ -27,7 +27,9 @@ class Schema(strawberry.Schema):
         implementations_map = graphql_schema._implementations_map
         implementations = implementations_map.get(interface)
         if implementations is None:
-            implementations = InterfaceImplementations(objects=[], interfaces=[])
+            implementations = InterfaceImplementations(
+                objects=[], interfaces=[]
+            )
             implementations_map[interface] = implementations
 
         # Invalidate the subtypes
@@ -51,9 +53,11 @@ class Schema(strawberry.Schema):
 
     def _get_graphql_type(self, type_):
         """Lifted from strawberry.Schema.__init__"""
-        if has_object_definition(type_):
-            if type_.__strawberry_definition__.is_generic:
-                type_ = StrawberryAnnotation(type_).resolve()
+        if (
+            has_object_definition(type_)
+            and type_.__strawberry_definition__.is_generic
+        ):
+            type_ = StrawberryAnnotation(type_).resolve()
         graphql_type = self.schema_converter.from_maybe_optional(type_)
         if isinstance(graphql_type, GraphQLNonNull):
             graphql_type = graphql_type.of_type

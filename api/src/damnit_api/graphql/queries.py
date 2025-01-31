@@ -67,9 +67,7 @@ async def fetch_variables(proposal, *, limit, offset):
         if not result:
             raise ValueError  # TODO: Better error handling
 
-        entries = group_by_run(result.mappings().all())  # type: ignore
-
-    return entries
+        return group_by_run(result.mappings().all())  # type: ignore[assignment]
 
 
 @strawberry.type
@@ -87,7 +85,8 @@ class Query:
 
         Args:
             page (int, optional): The page number to retrieve. Defaults to 1.
-            per_page (int, optional): The number of runs per page. Defaults to 10.
+            per_page (int, optional): The number of runs per page.
+                Defaults to 10.
 
         Returns:
             List[DamnitRun]: A list of Damnit runs.
@@ -107,8 +106,10 @@ class Query:
             proposal, runs=[variable["run"] for variable in variables]
         )
 
-        runs = [model.as_stype(**{**v, **i}) for v, i in zip(variables, info)]
-        return runs
+        return [
+            model.as_stype(**{**v, **i})
+            for v, i in zip(variables, info, strict=True)
+        ]
 
     @strawberry.field
     def metadata(self, database: DatabaseInput) -> JSON:
@@ -120,7 +121,9 @@ class Query:
         }
 
     @strawberry.field
-    def extracted_data(database: DatabaseInput, run: int, variable: str) -> JSON:
+    def extracted_data(
+        self, database: DatabaseInput, run: int, variable: str
+    ) -> JSON:
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
         return get_extracted_data(
