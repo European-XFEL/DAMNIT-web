@@ -7,7 +7,6 @@ from sqlalchemy import (
     MetaData,
     Table,
     desc,
-    func,
     select,
 )
 from sqlalchemy.ext.asyncio import (
@@ -32,7 +31,9 @@ class DatabaseSessionManager(metaclass=Registry):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
         self._engine = create_async_engine(self.db_path)
-        self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
+        self._sessionmaker = async_sessionmaker(
+            autocommit=False, bind=self._engine
+        )
 
     @property
     def db_path(self):
@@ -110,13 +111,15 @@ async def async_latest_rows(
     descending=True,
 ) -> dict:
     if start_at is None:
-        start_at = datetime.now().timestamp()
+        start_at = datetime.now().astimezone().timestamp()
     order_by = desc(by) if descending else by
 
     if isinstance(table, str):
         table = await async_table(proposal, name=table)
 
-    selection = select(table).where(table.c.get(by) > start_at).order_by(order_by)
+    selection = (
+        select(table).where(table.c.get(by) > start_at).order_by(order_by)
+    )
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)

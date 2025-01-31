@@ -102,6 +102,9 @@ class Query:
             proposal, limit=per_page, offset=(page - 1) * per_page
         )
 
+        if not len(variables):
+            return []
+
         info = await fetch_info(
             proposal, runs=[variable["run"] for variable in variables]
         )
