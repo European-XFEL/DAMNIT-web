@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import (
     Generic,
     NewType,
+    Optional,
     TypeVar,
     Union,
     get_args,
@@ -193,7 +194,8 @@ class DamnitTable(metaclass=Registry):
         # Map annotations as (dynamic) DAMNIT variable
         annotations = {
             name: DamnitRun.known_annotations().get(
-                name, DamnitVariable | None
+                name,
+                Optional[DamnitVariable],  # noqa: UP007
             )
             for name in self.variables
         }

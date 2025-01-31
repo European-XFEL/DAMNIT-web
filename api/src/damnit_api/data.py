@@ -1,13 +1,14 @@
 import io
 
 import numpy as np
-from PIL import Image
 import xarray as xr
-
 from damnit.api import Damnit, DataType
+from PIL import Image
 
 from .const import DamnitType
 from .utils import b64image
+
+NOT_SUPPORTED_MESSAGE = "Not supported."
 
 
 def get_extracted_data(proposal, run, variable):
@@ -49,9 +50,7 @@ def get_png(data):
 
     with io.BytesIO() as buffer:
         image_obj.save(buffer, format="PNG")
-        image_str = b64image(buffer.getvalue())
-
-    return image_str
+        return b64image(buffer.getvalue())
 
 
 def get_array(data):
@@ -65,7 +64,7 @@ def get_array(data):
 # Types
 
 
-def get_damnit_type(data, *, type_hint=None):
+def get_damnit_type(data, *, type_hint=None):  # noqa: C901
     match type_hint:
         case DataType.Image:
             return DamnitType.RGBA
@@ -75,17 +74,16 @@ def get_damnit_type(data, *, type_hint=None):
             if np.isscalar(data):
                 if isinstance(data, str):
                     return DamnitType.STRING
-                elif isinstance(data, bool):
+                if isinstance(data, bool):
                     return DamnitType.BOOLEAN
-                elif isinstance(data, (int, float, np.integer, np.floating)):
+                if isinstance(data, int | float | np.integer | np.floating):
                     return DamnitType.NUMBER
-                else:
-                    raise ValueError("Not supported.")
+                raise ValueError(NOT_SUPPORTED_MESSAGE)
         case DataType.Dataset | DataType.PlotlyFigure:
-            raise ValueError("Not supported.")
+            raise ValueError(NOT_SUPPORTED_MESSAGE)
 
-    if not isinstance(data, (xr.DataArray, np.ndarray)):
-        raise ValueError("Not supported.")
+    if not isinstance(data, xr.DataArray | np.ndarray):
+        raise ValueError(NOT_SUPPORTED_MESSAGE)
 
     match data.ndim:
         case 1:
@@ -93,7 +91,7 @@ def get_damnit_type(data, *, type_hint=None):
         case 2:
             return DamnitType.IMAGE
         case _:
-            raise ValueError("Not supported.")
+            raise ValueError(NOT_SUPPORTED_MESSAGE)
 
 
 # -----------------------------------------------------------------
@@ -107,11 +105,10 @@ def to_dataarray(array):
         case xr.DataArray:
             pass  # Already in the desired data type
         case _:
-            raise ValueError("Not supported")
+            raise ValueError(NOT_SUPPORTED_MESSAGE)
 
     array = rename_dims(array)
-    array = fill_coords(array)
-    return array
+    return fill_coords(array)
 
 
 def rename_dims(array):
@@ -121,9 +118,11 @@ def rename_dims(array):
         case 2:
             dims = ["y", "x"]
         case _:
-            raise ValueError("Not supported")
+            raise ValueError(NOT_SUPPORTED_MESSAGE)
 
-    renamed = {dim: dims[i] for i, dim in enumerate(array.dims) if dim == f"dim_{i}"}
+    renamed = {
+        dim: dims[i] for i, dim in enumerate(array.dims) if dim == f"dim_{i}"
+    }
     if renamed:
         array = array.rename(renamed)
     return array
@@ -157,7 +156,7 @@ def downsample(
             if bins[0] == data_array.size:
                 return data_array
         case 2:
-            Ny, Nx = data_array.shape
+            Ny, Nx = data_array.shape  # noqa: N806
 
             # Skip downsampling if the sizes are small
             if max(Ny, Nx) <= max_bins_2d:
@@ -172,13 +171,16 @@ def downsample(
             factor = max_bins_2d / denom
             bins = [max(1, int(Ny * factor)), max(1, int(Nx * factor))]
         case _:
-            raise RuntimeError("Downsampling is only supported for 1D or 2D arrays")
+            message = "Downsampling is only supported for 1D or 2D arrays"
+            raise RuntimeError(message)
 
     coords = {
         d: np.linspace(
-            np.nanmin(data_array.coords[d]), np.nanmax(data_array.coords[d]), num=b
+            np.nanmin(data_array.coords[d]),
+            np.nanmax(data_array.coords[d]),
+            num=b,
         )
-        for d, b in zip(data_array.dims, bins)
+        for d, b in zip(data_array.dims, bins, strict=True)
     }
 
     return data_array.interp(**coords, method="linear")

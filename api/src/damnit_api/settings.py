@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -15,7 +15,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AuthSettings(BaseModel):
     client_id: str
     client_secret: SecretStr
-    server_metadata_url: Annotated[HttpUrl, UrlConstraints(allowed_schemes=["https"])]
+    server_metadata_url: Annotated[
+        HttpUrl, UrlConstraints(allowed_schemes=["https"])
+    ]
 
 
 class UvicornSettings(BaseModel):
@@ -29,8 +31,8 @@ class UvicornSettings(BaseModel):
     def factory_must_be_true(cls, v, values):
         """Ensure factory is true.
 
-        Validator present as model is configured to allow extra so we want to ensure
-        that factory is always true."""
+        Validator present as model is configured to allow extra so we want to
+        ensure that factory is always true."""
         if not v:
             msg = "factory must be true"
             raise ValueError(msg)
@@ -52,7 +54,7 @@ class MyMdCCredentials(BaseSettings):
     base_url: HttpUrl
 
     _access_token: str = ""
-    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(timezone.utc)
+    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone()
 
 
 class Settings(BaseSettings):

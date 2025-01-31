@@ -2,10 +2,9 @@ import os.path as osp
 from abc import ABCMeta
 from base64 import b64encode
 from glob import iglob
+from typing import Any, ClassVar
 
-import h5py
 import numpy as np
-from scipy.ndimage import zoom
 
 from .const import DamnitType
 
@@ -22,7 +21,9 @@ DTYPE_MAP = {
 def map_dtype(dtype, default=DamnitType.STRING):
     dtype = DTYPE_MAP.get(dtype.__name__)
     if not dtype:
-        dtype = DamnitType.NUMBER if np.issubdtype(dtype, np.number) else default
+        dtype = (
+            DamnitType.NUMBER if np.issubdtype(dtype, np.number) else default
+        )
     return dtype
 
 
@@ -31,7 +32,7 @@ def map_dtype(dtype, default=DamnitType.STRING):
 
 
 def b64image(bytes_):
-    return f"data:image/png;base64,{b64encode(bytes_).decode("utf-8")}"
+    return f"data:image/png;base64,{b64encode(bytes_).decode('utf-8')}"
 
 
 # -----------------------------------------------------------------------------
@@ -64,39 +65,10 @@ def find_proposal(propno):
         return propno
 
     propno = format_proposal_number(propno)
-    for d in iglob(osp.join(DATA_ROOT_DIR, f"*/*/{propno}")):
+    for d in iglob(osp.join(DATA_ROOT_DIR, f"*/*/{propno}")):  # noqa: PTH118, PTH207
         return d
 
     return ""
-
-
-def get_run_data(path, variable):
-    try:
-        with h5py.File(path) as file:
-            group = file[variable]
-            dataset = {
-                key if key != DEFAULT_ARRAY_NAME else "data": group[key][:]
-                for key in group.keys()
-            }
-    except FileNotFoundError as e:
-        # TODO: manage the error XD
-        raise e
-
-    # Correct the data
-    primary_name = next(iter(dataset))
-    primary_data = dataset[primary_name]
-    if primary_data.ndim == 1:
-        # Most likely a vector
-        if len(dataset) == 1:
-            dataset["index"] = np.arange(primary_data.size)
-        valid_index = np.isfinite(primary_data)
-        for key in dataset:
-            dataset[key] = dataset[key][valid_index]
-    elif primary_data.ndim == 2:
-        # Most likely a 2D image
-        dataset[primary_name] = downsample_image(primary_data)
-
-    return dataset
 
 
 # -----------------------------------------------------------------------------
@@ -104,7 +76,7 @@ def get_run_data(path, variable):
 
 
 class Singleton(ABCMeta):
-    _instances = {}
+    _instances: ClassVar[dict[type, Any]] = {}
 
     def __call__(cls, *args, **kwargs):
         instance = cls._instances.get(cls)
@@ -138,23 +110,3 @@ def create_map(
     key,
 ):
     return {obj[key]: {str(k): v for k, v in obj.items()} for obj in lst}
-
-
-def downsample_image(image, order=2):
-    DIMENSION_DOWNSAMPLE = [
-        (500, 1.5),
-        (1000, 2),
-    ]  # [(dimension, min downsample)]
-
-    Ny, Nx = image.shape
-    x_min_ds, y_min_ds = (1, 1)
-    for dim, min_ds in DIMENSION_DOWNSAMPLE:
-        if Nx > dim:
-            x_min_ds = min_ds
-        if Ny > dim:
-            y_min_ds = min_ds
-
-    if (x_min_ds, y_min_ds) != (1, 1):
-        image = zoom(image, [1 / x_min_ds, 1 / y_min_ds], order=order)
-
-    return image

@@ -15,7 +15,7 @@ def create_app():
     from .settings import settings
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI):  # noqa: RUF029
         _logging.configure(
             level=settings.log_level,
             debug=settings.debug,
@@ -38,20 +38,23 @@ def create_app():
     )
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
+    async def http_exception_handler(request: Request, exc: HTTPException):  # noqa: RUF029
         request_path = request.url.path
         if (
             exc.status_code == status.HTTP_401_UNAUTHORIZED
             and request_path in KNOWN_PATHS
         ):
-            return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")
+            return RedirectResponse(
+                url=f"/oauth/login?redirect_uri={request_path}"
+            )
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
         )
 
     app.add_middleware(
-        SessionMiddleware, secret_key=settings.session_secret.get_secret_value()
+        SessionMiddleware,
+        secret_key=settings.session_secret.get_secret_value(),
     )
 
     return app
@@ -71,10 +74,12 @@ if __name__ == "__main__":
 
     logger = get_logger()
 
-    # TODO: warning/logging for address bind to localhost only which is aware of
-    # running in container/in front of reverse proxy?
+    # TODO: warning/logging for address bind to localhost only which is aware
+    # of running in container/in front of reverse proxy?
 
-    logger.info("Starting uvicorn with settings", **settings.uvicorn.model_dump())
+    logger.info(
+        "Starting uvicorn with settings", **settings.uvicorn.model_dump()
+    )
 
     uvicorn.run(
         "damnit_api.main:create_app",

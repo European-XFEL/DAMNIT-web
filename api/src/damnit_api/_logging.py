@@ -15,7 +15,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def logger_name_callsite(logger, method_name, event_dict):
     if not event_dict.get("logger_name"):
-        logger_name = f"{event_dict.pop('module')}.{event_dict.pop('func_name')}"
+        logger_name = (
+            f"{event_dict.pop('module')}.{event_dict.pop('func_name')}"
+        )
         if not event_dict.pop("disable_name", False):
             event_dict["logger_name"] = logger_name.strip(".")  # pyright: ignore[reportInvalidTypeForm]
 
@@ -61,17 +63,13 @@ def configure(
     ]
 
     if add_call_site_parameters:
-        shared_processors.extend(
-            [
-                structlog.processors.CallsiteParameterAdder(
-                    {
-                        structlog.processors.CallsiteParameter.MODULE,
-                        structlog.processors.CallsiteParameter.FUNC_NAME,
-                    }
-                ),  # type: ignore[arg-type]
-                logger_name_callsite,
-            ]
-        )
+        shared_processors.extend([
+            structlog.processors.CallsiteParameterAdder({
+                structlog.processors.CallsiteParameter.MODULE,
+                structlog.processors.CallsiteParameter.FUNC_NAME,
+            }),  # type: ignore[arg-type]
+            logger_name_callsite,
+        ])
 
     structlog_processors = [*shared_processors, renderer]
     logging_processors = [ProcessorFormatter.remove_processors_meta, renderer]
@@ -155,7 +153,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if request.path_params:
             info["path_params"] = str(request.path_params)
 
-        logger = self.logger.bind(path=request.scope["path"], method=request.method)
+        logger = self.logger.bind(
+            path=request.scope["path"], method=request.method
+        )
         logger.debug("Request", **info)
 
         response = await call_next(request)
