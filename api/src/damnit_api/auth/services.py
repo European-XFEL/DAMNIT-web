@@ -75,7 +75,7 @@ async def user_from_ldap(username: str) -> User:
         groups.append(res.group(1))
 
     # For now, let's also include the list of proposals.
-    proposals = get_available_proposals(groups)
+    proposals = await get_available_proposals(groups)
 
     user = User(
         uid=uid,

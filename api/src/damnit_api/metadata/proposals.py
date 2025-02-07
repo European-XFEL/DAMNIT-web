@@ -25,21 +25,23 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
                 return info
 
     # Fetch information from MyMDC
-    mymdc = MyMDC()
-    info = mymdc.fetch_proposal_info(proposal_num)
+    async with MyMDC() as mymdc:
+        info = await mymdc.fetch_proposal_info(proposal_num)
 
-    # Check if it has a DAMNIT folder
-    root_path = format_proposal_path(info["def_proposal_path"])
-    damnit_path = get_damnit_path(root_path, suffix="usr/Shared")
-    if not damnit_path:
-        return None
+        # Check if it has a DAMNIT folder
+        root_path = format_proposal_path(info["def_proposal_path"])
+        damnit_path = get_damnit_path(root_path, suffix="usr/Shared")
+        if not damnit_path:
+            return None
 
-    principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
-    info = format_proposal_info(
-        info,
-        damnit_path=damnit_path,
-        principal_investigator=principal_investigator["name"],
-    )
+        principal_investigator = await mymdc.fetch_user(
+            info["principal_investigator_id"]
+        )
+        info = format_proposal_info(
+            info,
+            damnit_path=damnit_path,
+            principal_investigator=principal_investigator["name"],
+        )
 
     if proposals is None:
         if cache.exists():
@@ -64,17 +66,19 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
     return info
 
 
-def get_available_proposals(user_groups, use_cache=True) -> list[str]:
-    all_proposals = get_damnit_proposals(use_cache)
+async def get_available_proposals(user_groups, use_cache=True) -> list[str]:
+    all_proposals = await get_damnit_proposals(use_cache)
     read_permissions = get_read_permissions(user_groups)
     read_permissions = [
-        re.compile(permission.replace("*", ".*")) for permission in read_permissions
+        re.compile(permission.replace("*", ".*"))
+        for permission in read_permissions
     ]
 
     proposals = {}
     for prop_num, info in all_proposals.items():
         if not any(
-            permission.match(info["proposal_path"]) for permission in read_permissions
+            permission.match(info["proposal_path"])
+            for permission in read_permissions
         ):
             continue
         proposals[prop_num] = info
@@ -129,36 +133,35 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
     return read_permissions
 
 
-def get_damnit_proposals(use_cache: bool) -> dict:
+async def get_damnit_proposals(use_cache: bool) -> dict:
     cache = Path(settings.proposal_cache)
     if use_cache and cache.exists():
         with open(settings.proposal_cache) as file:
             # TODO: Update cache for new proposals
             return json.load(file)
 
-    mymdc = MyMDC()
     proposals = {}
-    for damnit_path in get_damnit_paths():
-        proposal_num = get_proposal_number_from_path(damnit_path)
-        info = mymdc.fetch_proposal_info(proposal_num)
-        principal_investigator = mymdc.fetch_user(info["principal_investigator_id"])
+    async with MyMDC() as mymdc:
+        for damnit_path in get_damnit_paths():
+            proposal_num = get_proposal_number_from_path(damnit_path)
+            info = await mymdc.fetch_proposal_info(proposal_num)
+            principal_investigator = await mymdc.fetch_user(
+                info["principal_investigator_id"]
+            )
 
-        proposals[proposal_num] = format_proposal_info(
-            info,
-            damnit_path=damnit_path,
-            principal_investigator=principal_investigator["name"],
-        )
+            proposals[proposal_num] = format_proposal_info(
+                info,
+                damnit_path=damnit_path,
+                principal_investigator=principal_investigator["name"],
+            )
 
     # Sort by proposal number
     proposals = dict(sorted(proposals.items()))
 
     # Write to file
-    with open(settings.proposal_cache, "w") as file:
-        json.dump(
-            proposals,
-            file,
-            indent=4,
-        )
+    if use_cache:
+        with open(settings.proposal_cache, "w") as file:
+            json.dump(proposals, file, indent=4)
 
     return proposals
 
