@@ -5,6 +5,7 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
+import aiofiles
 from async_lru import alru_cache
 
 from ..settings import settings
@@ -18,9 +19,9 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
 
     # Check from cache if existing
     if use_cache and cache.exists():
-        with open(settings.proposal_cache) as file:
+        async with aiofiles.open(settings.proposal_cache) as file:
             # TODO: Update cache for new proposals
-            proposals = json.load(file)
+            proposals = json.loads(await file.read())
             if info := proposals.get(proposal_num):
                 return info
 
@@ -45,9 +46,9 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
 
     if proposals is None:
         if cache.exists():
-            with open(settings.proposal_cache) as file:
+            async with aiofiles.open(settings.proposal_cache) as file:
                 # TODO: Update cache for new proposals
-                proposals = json.load(file)
+                proposals = json.loads(await file.read())
         else:
             proposals = {}
 
@@ -56,12 +57,9 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
     proposals = dict(sorted(proposals.items()))
 
     # Update the cache
-    with open(settings.proposal_cache, "w") as file:
-        json.dump(
-            proposals,
-            file,
-            indent=4,
-        )
+    async with aiofiles.open(settings.proposal_cache, mode="w") as file:
+        json_str = json.dumps(proposals, indent=4)
+        await file.write(json_str)
 
     return info
 
@@ -136,9 +134,9 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
 async def get_damnit_proposals(use_cache: bool) -> dict:
     cache = Path(settings.proposal_cache)
     if use_cache and cache.exists():
-        with open(settings.proposal_cache) as file:
+        async with aiofiles.open(settings.proposal_cache) as file:
             # TODO: Update cache for new proposals
-            return json.load(file)
+            return json.loads(await file.read())
 
     proposals = {}
     async with MyMDC() as mymdc:
@@ -160,20 +158,20 @@ async def get_damnit_proposals(use_cache: bool) -> dict:
 
     # Write to file
     if use_cache:
-        with open(settings.proposal_cache, "w") as file:
-            json.dump(proposals, file, indent=4)
+        async with aiofiles.open(settings.proposal_cache, mode="w") as file:
+            json_str = json.dumps(proposals, indent=4)
+            await file.write(json_str)
 
     return proposals
 
 
 def get_damnit_paths() -> list[str]:
-    paths = []
     exp = Path("/gpfs/exfel/exp/")
-    for ush in exp.glob("**/usr/Shared"):
-        if damnit := get_damnit_path(ush):
-            paths.append(damnit)
-
-    return paths
+    return [
+        damnit
+        for ush in exp.glob("**/usr/Shared")
+        if (damnit := get_damnit_path(ush))
+    ]
 
 
 def get_damnit_path(path: str | Path, suffix: str | None = None) -> str:

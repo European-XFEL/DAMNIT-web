@@ -36,6 +36,7 @@ colorama = "^0.4.6"
 xarray = "^2024.11.0"
 damnit = "^0.1.4"
 aiohttp = "^3.11.11"
+aiofiles = "^24.1.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
