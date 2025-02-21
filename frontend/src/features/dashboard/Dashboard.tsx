@@ -19,7 +19,7 @@ import { useDisclosure } from "@mantine/hooks"
 import { IconGraph, IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
-import { Header, Logo } from "../../components/header"
+import { Header, Logo } from "../../components/headers"
 import { InstrumentBadge } from "../../components/badges"
 import { Tabs } from "../../components/tabs/"
 import { useCurrentProposal } from "../../hooks"

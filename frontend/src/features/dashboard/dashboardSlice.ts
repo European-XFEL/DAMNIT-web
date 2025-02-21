@@ -15,7 +15,7 @@ const slice = createSlice({
     // Main
     setCurrentTab: (state, action) => {
       const id = action.payload
-      if (state.main.tabs.hasOwnProperty(id)) {
+      if (id in state.main.tabs) {
         state.main.currentTab = id
       }
     },
@@ -31,10 +31,10 @@ const slice = createSlice({
     },
 
     // Aside
-    openAside: (state, action) => {
+    openAside: (state, _) => {
       state.aside.isOpened = true
     },
-    closeAside: (state, action) => {
+    closeAside: (state, _) => {
       state.aside.isOpened = false
     },
   },

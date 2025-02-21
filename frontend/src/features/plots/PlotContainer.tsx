@@ -133,7 +133,7 @@ const getPlotData = (extracted, { run, coord } = {}) => {
           data: varData,
         },
       }
-    case "image":
+    case "image": {
       const [y, x] = varMetadata.dims.map((ax) => ({
         name: ax,
         data: varMetadata.coords[ax],
@@ -143,6 +143,7 @@ const getPlotData = (extracted, { run, coord } = {}) => {
         y,
         z: { data: varData },
       }
+    }
     case "png":
       return {
         src: varData,
@@ -202,7 +203,7 @@ const useExtractedData = (
     }
 
     const newEntries = Object.entries(extracted)
-      .filter(([run]) => !plotData.hasOwnProperty(run))
+      .filter(([run]) => !(run in plotData))
       .map(([run, extracted]) => [run, getPlotData(extracted, { run })])
 
     if (newEntries.length) {
@@ -289,14 +290,14 @@ const PlotContainer = ({ plotId }) => {
       ) : metadata.type === "scalar" ? (
         <UnableToDisplayAlert>
           <Text size="sm">
-            The plot can't be displayed because the value is a scalar{" "}
+            {"The plot can't be displayed because the value is a scalar "}
             <Code>{data[0].value}</Code>.
           </Text>
         </UnableToDisplayAlert>
       ) : metadata.type === "unsupported" ? (
         <UnableToDisplayAlert>
           <Text size="sm">
-            The plot can't be displayed because the value is unsupported.
+            {"The plot can't be displayed because the value is unsupported."}
           </Text>
         </UnableToDisplayAlert>
       ) : (

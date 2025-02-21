@@ -41,7 +41,7 @@ const LoggedOutPage = () => {
       ) : (
         <div style={{ textAlign: "center" }}>
           <Title order={2}>
-            Nope, you're still logged in,{" "}
+            {"Nope, you're still logged in, "}
             <Text span c="indigo" inherit>
               {userInfo.name}
             </Text>

@@ -11,7 +11,7 @@ import {
 } from "./toBeRenderedWithProps"
 import { render } from "@testing-library/react"
 
-const stripTerminalColor = (text) => text.replace(/\x1B\[\d+m/g, "")
+const stripTerminalColor = (text) => text.replace(/\u001B\[\d+m/g, "") // eslint-disable-line no-control-regex
 
 describe("toBeFirstRenderedWithProps", () => {
   let Component

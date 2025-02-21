@@ -12,7 +12,7 @@ const slice = createSlice({
   reducers: {
     setCurrentPlot: (state, action) => {
       const id = action.payload
-      if (state.data && state.data.hasOwnProperty(id)) {
+      if (state.data && id in state.data) {
         state.currentPlot = id
       }
     },

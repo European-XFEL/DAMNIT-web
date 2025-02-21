@@ -1,7 +1,7 @@
 import React from "react"
 import Plotly from "react-plotly.js"
 
-const scatterPlot = (data, metadata) => {
+const scatterPlot = (data, _) => {
   return {
     data: data.map((d) => ({
       x: d.x.data,

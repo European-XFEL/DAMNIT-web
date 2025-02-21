@@ -13,7 +13,7 @@ enum Instrument {
   SXP = "SXP",
 }
 
-const DEFAULT_COLOR: string = "black"
+const DEFAULT_COLOR = "black"
 
 const InstrumentColors: Record<Instrument, string> = {
   [Instrument.SPB]: "#538DD5",
