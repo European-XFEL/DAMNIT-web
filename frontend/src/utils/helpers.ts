@@ -1,22 +1,21 @@
 import dayjs from "dayjs"
 
-
 export function formatDate(timestamp) {
-  const formattedDate = dayjs(timestamp).format('DD MMMM YYYY');
-  const formattedTime = dayjs(timestamp).format('HH:mm:ss');
+  const formattedDate = dayjs(timestamp).format("DD MMMM YYYY")
+  const formattedTime = dayjs(timestamp).format("HH:mm:ss")
 
   return `${formattedTime} | ${formattedDate}`
 }
 
 export const formatRunsSubtitle = (runs) => {
   if (!runs || !runs.length) {
-    return ''
+    return ""
   }
 
-  return `(run ${runs[0]}${runs.length > 1 ? `-${runs[runs.length - 1]}` : ''})`
+  return `(run ${runs[0]}${runs.length > 1 ? `-${runs[runs.length - 1]}` : ""})`
 }
 
-export function formatFloat(number, {offset=2, default=1} = {}) {
+export function formatFloat(number, { offset = 2 } = {}) {
   const decimal = -1 * Math.floor(Math.log10(Math.abs(number)))
   return number.toFixed(decimal >= 0 ? decimal + offset : 1)
 }
@@ -31,6 +30,8 @@ export function size(item) {
 
 export function createMap(array, by) {
   const map = new Map()
-  array.forEach(obj => {map.set(obj[by], obj)})
+  array.forEach((obj) => {
+    map.set(obj[by], obj)
+  })
   return map
 }
