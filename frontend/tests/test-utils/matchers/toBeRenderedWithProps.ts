@@ -12,9 +12,7 @@ const isSubset = (actual, expected) => {
     return false
   }
 
-  const subset = Object.entries(actual).filter(
-    ([key, value]) => key in expected,
-  )
+  const subset = Object.entries(actual).filter(([key, _]) => key in expected)
   return equals(Object.fromEntries(subset), expected)
 }
 

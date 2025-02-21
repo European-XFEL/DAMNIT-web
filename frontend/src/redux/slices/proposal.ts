@@ -8,7 +8,6 @@ interface Proposal {
 
 interface State {
   current: Proposal
-  records: Record<string, any>
 }
 
 const initialState: State = {
@@ -17,7 +16,6 @@ const initialState: State = {
     loading: false,
     notFound: false,
   },
-  records: {},
 }
 
 const slice = createSlice({

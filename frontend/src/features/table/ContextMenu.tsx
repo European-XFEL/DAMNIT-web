@@ -39,7 +39,7 @@ const ContextMenu = ({
           x={localPosition.x + bounds.x}
           y={localPosition.y + bounds.y}
           onHide={onOutsideClick}
-          content={(close) => (
+          content={(_) => (
             <Stack>
               {contents.map(({ key, ...props }) => (
                 <ContextMenuItem key={key} {...props} />

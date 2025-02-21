@@ -13,8 +13,12 @@ import { useSubscription } from "@apollo/client"
 import LoadingBar, { showLoading, hideLoading } from "react-redux-loading-bar"
 
 import Dashboard from "../features/dashboard"
-import HomePage from "../features/home/"
-import { HeroPage, LoggedOutPage, NotFoundPage } from "../features/pages"
+import {
+  HeroPage,
+  HomePage,
+  LoggedOutPage,
+  NotFoundPage,
+} from "../features/pages"
 import { resetPlots } from "../features/plots"
 import { resetTable } from "../features/table"
 import { LoginRoute, LogoutRoute, PrivateRoute, history } from "../routes"
@@ -63,7 +67,7 @@ const useProposal = () => {
         dispatch(updateTableData({ metadata: refresh.metadata }))
         dispatch(hideLoading())
       },
-      onError: (error) => {
+      onError: (_) => {
         dispatch(setProposalNotFound())
         dispatch(hideLoading())
       },

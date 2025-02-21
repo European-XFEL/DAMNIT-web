@@ -23,7 +23,7 @@ const formatRunCycle = (date: string) => {
   return `${year} - ${period}`
 }
 
-const ExpandedCell = memo(({ Component, isExpanded }) => {
+const ExpandedCell = memo(function ExpandedCell({ Component, isExpanded }) {
   return (
     <Component
       className={cx(styles.icon, styles.expandIcon, {
@@ -33,7 +33,7 @@ const ExpandedCell = memo(({ Component, isExpanded }) => {
   )
 })
 
-const CycleCell = memo(({ cycle, isExpanded }) => {
+const CycleCell = memo(function CycleCell({ cycle, isExpanded }) {
   return (
     <Group gap={0}>
       <ExpandedCell Component={IconChevronRight} isExpanded={isExpanded} />
@@ -45,17 +45,17 @@ const CycleCell = memo(({ cycle, isExpanded }) => {
   )
 })
 
-const InstrumentCell = memo((props) => {
+const InstrumentCell = memo(function InstrumentCell(props) {
   return <InstrumentBadge {...props} />
 })
 
-const TextCell = memo(({ text, link, ...props }) => {
+const TextCell = memo(function TextCell({ text, link, ...props }) {
   const component = <Text {...props}>{text}</Text>
 
   return <Group>{link ? <Link to={link}>{component}</Link> : component}</Group>
 })
 
-const DateCell = memo(({ datetime, ...props }) => {
+const DateCell = memo(function DateCell({ datetime, ...props }) {
   const date = dayjs(datetime)
   return (
     <TextCell
@@ -66,7 +66,7 @@ const DateCell = memo(({ datetime, ...props }) => {
   )
 })
 
-const ProposalContent = memo(({ title, damnit_path }) => {
+const ProposalContent = memo(function ProposalContent({ title, damnit_path }) {
   return (
     <Stack className={styles.content} p="xs" gap={6} pl={65} pr={65}>
       <Group gap={6}>
@@ -85,7 +85,7 @@ const ProposalContent = memo(({ title, damnit_path }) => {
   )
 })
 
-const ProposalSubTable = memo(({ proposals }) => {
+const ProposalSubTable = memo(function ProposalSubTable({ proposals }) {
   const [expandedProposals, setExpandedProposals] = useState<number[]>([])
   const { proposals: proposalInfo, isLoading } = useProposals(proposals)
 
@@ -119,10 +119,11 @@ const ProposalSubTable = memo(({ proposals }) => {
         {
           accessor: "instrument",
           noWrap: true,
+          width: 50,
           render: ({ instrument }) => (
             <InstrumentCell instrument={instrument} size="sm" />
           ),
-          cellsStyle: () => (theme) => ({ paddingLeft: 0 }),
+          cellsStyle: () => (_) => ({ paddingLeft: 0 }),
         },
         {
           accessor: "proposal",

@@ -18,7 +18,9 @@ const ContextMenuItem = ({ title, subtitle, ...props }) => {
           )}
         </Stack>
       }
-      onHide={() => {}}
+      onHide={() => {
+        /* override default onHide */
+      }} // eslint-disable-line @typescript-eslint/no-empty-function
       {...props}
     />
   )

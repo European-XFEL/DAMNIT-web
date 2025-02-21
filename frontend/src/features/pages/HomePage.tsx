@@ -1,10 +1,10 @@
 import React from "react"
 import { useSelector } from "react-redux"
-import { AppShell, Container, Group, Space } from "@mantine/core"
+import { AppShell, Container } from "@mantine/core"
 
-import { Header, Logo } from "../../components/header"
+import { Header, Logo } from "../../components/headers"
 import { selectAvailableProposals } from "../auth/authSlice"
-import { ProposalsList } from "../proposals/"
+import { ProposalsList } from "../proposals"
 
 const HomePage = () => {
   const proposals = useSelector(selectAvailableProposals)

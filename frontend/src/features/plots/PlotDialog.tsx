@@ -13,7 +13,7 @@ import { TextInput, Text, Blockquote } from "@mantine/core"
 import { useForm } from "@mantine/form"
 
 import { addPlot } from "./plotsSlice"
-import TextCombobox from "../../components/textCombobox/TextCombobox"
+import { TextCombobox } from "../../components/comboboxes/"
 import { EXCLUDED_VARIABLES } from "../../constants"
 import { getExtractedVariable, getTableVariables } from "../../redux/slices"
 import { getAllExtractedVariables } from "../../redux/thunks"
