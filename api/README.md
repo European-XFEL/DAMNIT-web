@@ -10,7 +10,7 @@ If you don't already have the `poetry` command available, [install Poetry](https
 The API server requires Python 3.12 or above. You can load a module for this:
 
 ```sh
-module load python/3.12
+module load maxwell python/3.12
 ```
 
 Then set up the dependencies and launch the server:
