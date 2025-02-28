@@ -5,7 +5,7 @@ import { BASE_URL, CURRENT_HOST } from "../../constants"
 import { resetExtractedData, resetTableData } from "../../redux/slices"
 import { history } from "../../routes"
 
-export const login = () => (dispatch) => {
+export const login = () => (_) => {
   const basePath = `${CURRENT_HOST}${BASE_URL}`
   window.location.href = `${BASE_URL}oauth/login?redirect_uri=${basePath}home`
 }

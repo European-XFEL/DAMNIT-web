@@ -40,7 +40,6 @@ describe("Table slice", () => {
 
     it("sets table data and metadata state when successful", () => {
       const { dispatch, getState } = setupStore()
-      // eslint-disable-next-line jest/valid-expect-in-promise
       dispatch(getTableData({ proposal: 2956, page: 1 })).then(() => {
         const { tableData: state } = getState()
         expect(state.data).toEqual(validTableData)

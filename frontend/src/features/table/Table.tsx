@@ -93,7 +93,7 @@ const usePagination = (proposal, pageSize = 10) => {
 
   // Callback: On visible region changed
   const onVisibleRegionChanged = useCallback((rect) => {
-    setVisibleRegion((cv) => {
+    setVisibleRegion((_) => {
       return rect
     })
   }, [])

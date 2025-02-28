@@ -18,7 +18,10 @@ const ContextMenuItem = ({ title, subtitle, ...props }) => {
           )}
         </Stack>
       }
-      onHide={() => {}}
+      onHide={() => {
+        /* override default onHide */
+        return
+      }}
       {...props}
     />
   )
