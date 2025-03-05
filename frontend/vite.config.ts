@@ -7,16 +7,20 @@ import https from "https"
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd())
 
-  const { VITE_MTLS_KEY, VITE_MTLS_CERT, VITE_MTLS_CA, VITE_URL, VITE_API } =
-    env
+  const {
+    VITE_API,
+    VITE_BASE_URL,
+    VITE_MTLS_CA,
+    VITE_MTLS_CERT,
+    VITE_MTLS_KEY,
+    VITE_PORT,
+  } = env
 
-  if (!VITE_URL || !VITE_API) {
-    throw new Error(
-      "Missing required environment variables: VITE_URL and/or VITE_API",
-    )
+  if (!VITE_API) {
+    throw new Error("Missing required environment variables: VITE_API")
   }
 
-  const baseURL = new URL(VITE_URL)
+  const basePath = (VITE_BASE_URL || "/").replace(/\/?$/, "/")
   const apiURL = new URL(VITE_API)
 
   let sslConfig
@@ -57,14 +61,14 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    base: baseURL.href,
+    base: basePath,
     plugins: [react()],
     build: {
       outDir: "build",
     },
     server: {
       host: true,
-      port: baseURL.port ? Number(baseURL.port) : 5173,
+      port: Number(VITE_PORT) || 5173,
       proxy: {
         "/graphql": { ...defaultProxyConfig, ws: true },
         "/oauth": { ...defaultProxyConfig },
