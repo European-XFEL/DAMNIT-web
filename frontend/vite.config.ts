@@ -25,6 +25,11 @@ export default defineConfig(({ mode }) => {
       key: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_KEY)),
       cert: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CERT)),
       ca: fs.readFileSync(path.resolve(__dirname, VITE_MTLS_CA)),
+      secureProtocol: "TLSv1_2_method",
+      ciphers: [
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+      ].join(":"),
     }
   } else if (VITE_MTLS_KEY || VITE_MTLS_CERT || VITE_MTLS_CA) {
     // If partial mTLS variables are set, that's invalid.
