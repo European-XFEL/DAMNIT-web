@@ -33,8 +33,8 @@ module.exports = {
   },
   plugins: ["@typescript-eslint", "react", "react-hooks"],
   rules: {
-    "react/react-in-jsx-scope": "off",
     "no-unused-vars": "off",
+    "react/react-in-jsx-scope": "off",
     "@typescript-eslint/no-unused-vars": [
       "warn",
       {
@@ -45,6 +45,14 @@ module.exports = {
         argsIgnorePattern: "^_+$",
       },
     ],
-    "react/prop-types": "off", // CC: Remove this when we convert to TypeScript
+    "@typescript-eslint/no-restricted-imports": [
+      "warn",
+      {
+        name: "react-redux",
+        importNames: ["useDispatch", "useSelector"],
+        message:
+          "Use typed hooks `useAppDispatch` and `useAppSelector` instead.",
+      },
+    ],
   },
 }
