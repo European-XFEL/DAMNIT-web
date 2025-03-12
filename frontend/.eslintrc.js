@@ -35,7 +35,6 @@ module.exports = {
   rules: {
     "no-unused-vars": "off",
     "react/react-in-jsx-scope": "off",
-    "react/prop-types": "off", // CC: Remove this when we convert to TypeScript
     "@typescript-eslint/no-unused-vars": [
       "warn",
       {
