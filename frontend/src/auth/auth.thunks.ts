@@ -1,16 +1,19 @@
-import { authApi } from "../api"
-import { resetTable } from "../table"
-import { resetPlots } from "../plots"
-import { BASE_URL, CURRENT_HOST } from "../../constants"
-import { resetExtractedData, resetTableData } from "../../redux/slices"
-import { history } from "../../routes"
+import { authApi } from "./auth.api"
 
-export const login = () => (_) => {
+import { BASE_URL, CURRENT_HOST } from "../constants"
+import { resetExtractedData } from "../data/extracted"
+import { resetTable as resetTableData } from "../data/table"
+import { resetTable as resetTableView } from "../features/table"
+import { resetPlots } from "../features/plots"
+import { AppThunk } from "../redux"
+import { history } from "../routes"
+
+export const login = (): AppThunk => (_) => {
   const basePath = `${CURRENT_HOST}${BASE_URL}`
   window.location.href = `${BASE_URL}oauth/login?redirect_uri=${basePath}home`
 }
 
-export const logout = () => (dispatch) => {
+export const logout = (): AppThunk => (dispatch) => {
   const basePath = `${CURRENT_HOST}${BASE_URL}`
 
   fetch(`${BASE_URL}oauth/logout?redirect_uri=${basePath}logged-out`, {
@@ -21,7 +24,7 @@ export const logout = () => (dispatch) => {
       if (response.ok) {
         // Reset the application
         dispatch(resetTableData())
-        dispatch(resetTable())
+        dispatch(resetTableView())
         dispatch(resetExtractedData())
         dispatch(resetPlots())
       }
