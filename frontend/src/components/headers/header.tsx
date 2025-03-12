@@ -1,19 +1,19 @@
-import React, { useState } from "react"
-import { useSelector } from "react-redux"
+import React, { PropsWithChildren, useState } from "react"
 import { UnstyledButton, Group, Text, Menu, Burger, rem } from "@mantine/core"
 import { useDisclosure } from "@mantine/hooks"
 import { IconLogout, IconChevronDown } from "@tabler/icons-react"
 import cx from "clsx"
 
-import { selectUserFullName } from "../../features/auth"
+import { selectUserFullName } from "../../auth"
+import { useAppSelector } from "../../redux"
 import { history } from "../../routes"
 
-import styles from "./Header.module.css"
-import headerStyles from "../../styles/header.module.css"
+import classes from "./header.module.css"
+import headerClasses from "../../styles/header.module.css"
 
 const UserMenu = () => {
   const [userMenuOpened, setUserMenuOpened] = useState(false)
-  const userFullName = useSelector(selectUserFullName)
+  const userFullName = useAppSelector(selectUserFullName)
 
   return (
     <Menu
@@ -26,8 +26,8 @@ const UserMenu = () => {
     >
       <Menu.Target>
         <UnstyledButton
-          className={cx(styles.user, {
-            [styles.userActive]: userMenuOpened,
+          className={cx(classes.user, {
+            [classes.userActive]: userMenuOpened,
           })}
           p={5}
         >
@@ -59,13 +59,17 @@ const UserMenu = () => {
   )
 }
 
-const Header = ({ children, ...props }) => {
+type HeaderProps = {
+  px: number
+}
+
+const Header = ({ children, ...props }: PropsWithChildren<HeaderProps>) => {
   const [opened, { toggle }] = useDisclosure(false)
   return (
     <Group
       h="100%"
       w="100%"
-      className={headerStyles.body}
+      className={headerClasses.body}
       justify="space-between"
       align="center"
       {...props}
