@@ -1,11 +1,11 @@
 import React from "react"
 import { Container, Text, Title } from "@mantine/core"
 
-import { useUserInfo } from "../../hooks"
+import { useUserInfo } from "../../auth"
 import { history } from "../../routes"
 import { MainNavButton } from "../../components/buttons"
 
-import styles from "./LoggedOutPage.module.css"
+import classes from "./logged-out-page.module.css"
 
 const LoggedOutPage = () => {
   const { userInfo, isLoading, isError } = useUserInfo()
@@ -29,7 +29,7 @@ const LoggedOutPage = () => {
           <Text size="md" style={{ marginBottom: "20px" }}>
             Thanks for using DAMNIT!
           </Text>
-          <div className={styles.controls}>
+          <div className={classes.controls}>
             <MainNavButton
               variant="filled"
               onClick={() => history.navigate("/login")}
@@ -47,7 +47,7 @@ const LoggedOutPage = () => {
             </Text>
             ...
           </Title>
-          <div className={styles.controls}>
+          <div className={classes.controls}>
             <MainNavButton
               variant="filled"
               onClick={() => history.navigate("/logout")}

@@ -4,7 +4,7 @@ import { Container, Title } from "@mantine/core"
 import { history } from "../../routes"
 import { MainNavButton } from "../../components/buttons"
 
-import styles from "./NotFoundPage.module.css"
+import styles from "./not-found-page.module.css"
 
 const NotFoundPage = () => {
   return (
