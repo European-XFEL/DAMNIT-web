@@ -2,8 +2,15 @@ import { createSlice } from "@reduxjs/toolkit"
 
 import { isArrayEqual } from "../../utils/array"
 
-const initialState = {
-  selection: { run: undefined, variables: undefined },
+type TableState = {
+  selection: {
+    run: number | null
+    variables: string[]
+  }
+}
+
+const initialState: TableState = {
+  selection: { run: null, variables: [] },
 }
 
 const slice = createSlice({
