@@ -284,7 +284,7 @@ const ProposalHeader = () => {
   )
 }
 
-const ProposalsList = () => {
+const Proposals = () => {
   const proposals = useAppSelector(selectAvailableProposals)
 
   const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
@@ -329,4 +329,4 @@ const ProposalsList = () => {
   )
 }
 
-export default ProposalsList
+export default Proposals
