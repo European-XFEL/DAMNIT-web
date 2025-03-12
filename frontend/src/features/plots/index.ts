@@ -1,10 +1,10 @@
-export { default } from "./Plot"
-export { default as PlotDialog } from "./PlotDialog"
-export { default as PlotsTab } from "./PlotsTab"
+export { default } from "./plot"
+export { default as PlotDialog } from "./plot-dialog"
+export { default as PlotsTab } from "./plots-tab"
 export {
   default as plotsReducer,
   addPlot,
   removePlot,
   reset as resetPlots,
   setCurrentPlot,
-} from "./plotsSlice"
+} from "./plots.slice"
