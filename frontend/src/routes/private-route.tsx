@@ -1,10 +1,10 @@
-import React from "react"
+import React, { PropsWithChildren } from "react"
 import { Navigate } from "react-router-dom"
 
 import { history } from "./history"
-import { useUserInfo } from "../hooks"
+import { useUserInfo } from "../auth"
 
-function PrivateRoute({ children }) {
+function PrivateRoute({ children }: PropsWithChildren) {
   const { userInfo, isLoading, isError } = useUserInfo()
 
   if (isLoading) {
@@ -12,7 +12,7 @@ function PrivateRoute({ children }) {
   }
 
   if (!userInfo || isError) {
-    return <Navigate to="/login" state={{ from: history.location }} />
+    return <Navigate to="/login" state={{ from: history.getLocation() }} />
   }
 
   return children
