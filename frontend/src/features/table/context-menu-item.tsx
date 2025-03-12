@@ -2,12 +2,23 @@ import React from "react"
 
 import { Stack, Text } from "@mantine/core"
 
-import { ContextMenuItem as MantineContextMenuItem } from "mantine-contextmenu"
+import {
+  ContextMenuItem as MantineContextMenuItem,
+  ContextMenuItemOptions as MantineContextMenuItemOptions,
+} from "mantine-contextmenu"
 
-const ContextMenuItem = ({ title, subtitle, ...props }) => {
+export type ContextMenuItemOptions = {
+  title: string
+  subtitle: string
+} & MantineContextMenuItemOptions
+
+const ContextMenuItem = ({
+  title,
+  subtitle,
+  ...props
+}: ContextMenuItemOptions) => {
   return (
     <MantineContextMenuItem
-      // key={key}
       title={
         <Stack gap={0}>
           <Text size="sm">{title}</Text>
