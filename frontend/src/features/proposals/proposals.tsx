@@ -1,6 +1,15 @@
-import { memo, useState } from "react"
+import { ComponentType, memo, useState } from "react"
 import { Link } from "react-router-dom"
-import { Box, Code, Group, rem, Stack, Text } from "@mantine/core"
+import {
+  Box,
+  Code,
+  ElementProps,
+  Group,
+  rem,
+  Stack,
+  Text,
+  TextProps,
+} from "@mantine/core"
 import {
   IconCalendarEvent,
   IconChevronRight,
@@ -10,11 +19,12 @@ import cx from "clsx"
 import dayjs from "dayjs"
 import { DataTable } from "mantine-datatable"
 
-import { InstrumentBadge } from "../../components/badges"
-import { useProposals } from "../../hooks"
-import { isArrayEqual } from "../../utils/array"
+import { selectAvailableProposals } from "../../auth/auth.slice"
+import { InstrumentBadge, InstrumentBadgeProps } from "../../components/badges"
+import { useProposals } from "../../data/metadata"
+import { useAppSelector } from "../../redux"
 import { orderBy } from "../../utils/objects"
-import styles from "./ProposalsList.module.css"
+import styles from "./proposals.module.css"
 
 const formatRunCycle = (date: string) => {
   const year = date.slice(0, 4)
@@ -23,7 +33,24 @@ const formatRunCycle = (date: string) => {
   return `${year} - ${period}`
 }
 
-const ExpandedCell = memo(function ExpandedCell({ Component, isExpanded }) {
+type CellProps = {
+  isExpanded: boolean
+}
+
+/*
+ * -----------------------------
+ *   ExpandedCell Component
+ * -----------------------------
+ */
+
+interface ExpandedCellProps extends CellProps {
+  Component: ComponentType<{ className: string }>
+}
+
+const ExpandedCell = memo(function ExpandedCell({
+  Component,
+  isExpanded,
+}: ExpandedCellProps) {
   return (
     <Component
       className={cx(styles.icon, styles.expandIcon, {
@@ -33,7 +60,20 @@ const ExpandedCell = memo(function ExpandedCell({ Component, isExpanded }) {
   )
 })
 
-const CycleCell = memo(function CycleCell({ cycle, isExpanded }) {
+/*
+ * -----------------------------
+ *   CycleCell Component
+ * -----------------------------
+ */
+
+interface CycleCellProps extends CellProps {
+  cycle: string
+}
+
+const CycleCell = memo(function CycleCell({
+  cycle,
+  isExpanded,
+}: CycleCellProps) {
   return (
     <Group gap={0}>
       <ExpandedCell Component={IconChevronRight} isExpanded={isExpanded} />
@@ -45,28 +85,77 @@ const CycleCell = memo(function CycleCell({ cycle, isExpanded }) {
   )
 })
 
-const InstrumentCell = memo(function InstrumentCell(props) {
+/*
+ * -----------------------------
+ *   InstrumentCell Component
+ * -----------------------------
+ */
+
+type InstrumentCellProps = InstrumentBadgeProps
+
+const InstrumentCell = memo(function InstrumentCell(
+  props: InstrumentCellProps,
+) {
   return <InstrumentBadge {...props} />
 })
 
-const TextCell = memo(function TextCell({ text, link, ...props }) {
+/*
+ * -----------------------------
+ *   TextCell Component
+ * -----------------------------
+ */
+
+interface TextCellProps extends TextProps, ElementProps<"p", keyof TextProps> {
+  text: string
+  link?: string
+}
+
+const TextCell = memo(function TextCell({
+  text,
+  link,
+  ...props
+}: TextCellProps) {
   const component = <Text {...props}>{text}</Text>
 
   return <Group>{link ? <Link to={link}>{component}</Link> : component}</Group>
 })
 
-const DateCell = memo(function DateCell({ datetime, ...props }) {
+/*
+ * -----------------------------
+ *   DateCell Component
+ * -----------------------------
+ */
+
+interface DateCellProps extends Omit<TextCellProps, "text"> {
+  datetime: string
+}
+
+const DateCell = memo(function DateCell({ datetime, ...props }: DateCellProps) {
   const date = dayjs(datetime)
   return (
     <TextCell
+      {...props}
       text={date.format("MMMM DD, YYYY")}
       className={styles.proposalDate}
-      {...props}
     />
   )
 })
 
-const ProposalContent = memo(function ProposalContent({ title, damnit_path }) {
+/*
+ * ---------------------------------
+ *   ProposalContentProps Component
+ * ---------------------------------
+ */
+
+type ProposalContentProps = {
+  title: string
+  damnit_path: string
+}
+
+const ProposalContent = memo(function ProposalContent({
+  title,
+  damnit_path,
+}: ProposalContentProps) {
   return (
     <Stack className={styles.content} p="xs" gap={6} pl={65} pr={65}>
       <Group gap={6}>
@@ -85,17 +174,21 @@ const ProposalContent = memo(function ProposalContent({ title, damnit_path }) {
   )
 })
 
-const ProposalSubTable = memo(function ProposalSubTable({ proposals }) {
-  const [expandedProposals, setExpandedProposals] = useState<number[]>([])
-  const { proposals: proposalInfo, isLoading } = useProposals(proposals)
+/*
+ * ---------------------------------
+ *   ProposalSubTable Component
+ * ---------------------------------
+ */
 
-  const handleExpandedProposals = (newProposals) => {
-    setExpandedProposals((currentProposals) => {
-      return isArrayEqual(currentProposals, newProposals)
-        ? currentProposals
-        : newProposals
-    })
-  }
+type ProposalSubTableProps = {
+  proposals: string[]
+}
+
+const ProposalSubTable = memo(function ProposalSubTable({
+  proposals,
+}: ProposalSubTableProps) {
+  const [expandedProposals, setExpandedProposals] = useState<string[]>([])
+  const { proposals: proposalInfo, isLoading } = useProposals(proposals)
 
   return (
     <DataTable
@@ -111,7 +204,7 @@ const ProposalSubTable = memo(function ProposalSubTable({ proposals }) {
             <Box component="span" ml={23} mr={5}>
               <ExpandedCell
                 Component={IconPlus}
-                isExpanded={expandedProposals.includes(number)}
+                isExpanded={expandedProposals.includes(String(number))}
               />
             </Box>
           ),
@@ -130,7 +223,11 @@ const ProposalSubTable = memo(function ProposalSubTable({ proposals }) {
           noWrap: true,
           textAlign: "right",
           render: ({ number }) => (
-            <TextCell text={number} link={`/proposal/${number}`} size="sm" />
+            <TextCell
+              text={String(number)}
+              link={`/proposal/${number}`}
+              size="sm"
+            />
           ),
         },
         {
@@ -165,9 +262,14 @@ const ProposalSubTable = memo(function ProposalSubTable({ proposals }) {
         allowMultiple: true,
         expanded: {
           recordIds: expandedProposals,
-          onRecordIdsChange: handleExpandedProposals,
+          onRecordIdsChange: setExpandedProposals,
         },
-        content: ({ record }) => <ProposalContent {...record} />,
+        content: ({ record }) => (
+          <ProposalContent
+            title={record.title}
+            damnit_path={record.damnit_path}
+          />
+        ),
       }}
     />
   )
@@ -182,19 +284,13 @@ const ProposalHeader = () => {
   )
 }
 
-const ProposalsList = ({ proposals }) => {
-  const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
-  //.slice(0, 2) // REMOVEME
+const Proposals = () => {
+  const proposals = useAppSelector(selectAvailableProposals)
 
-  const [expandedCycles, setExpandedCycles] = useState<number[]>(
+  const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
+  const [expandedCycles, setExpandedCycles] = useState<string[]>(
     cycles.slice(0, 1), // Expand the most recent cycle by default
   )
-
-  const handleExpandedCycles = (newCycles) => {
-    setExpandedCycles((currentCycles) => {
-      return isArrayEqual(currentCycles, newCycles) ? currentCycles : newCycles
-    })
-  }
 
   return (
     <DataTable
@@ -217,19 +313,20 @@ const ProposalsList = ({ proposals }) => {
       ]}
       records={cycles.map((cycle) => ({
         cycle,
+        proposals: proposals[cycle],
       }))}
       rowExpansion={{
         allowMultiple: true,
         expanded: {
           recordIds: expandedCycles,
-          onRecordIdsChange: handleExpandedCycles,
+          onRecordIdsChange: setExpandedCycles,
         },
-        content: ({ record }) => (
-          <ProposalSubTable proposals={proposals[record.cycle]} />
-        ),
+        content: ({ record }) => {
+          return <ProposalSubTable proposals={record.proposals} />
+        },
       }}
     />
   )
 }
 
-export default ProposalsList
+export default Proposals
