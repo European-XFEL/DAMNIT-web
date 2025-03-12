@@ -1,15 +1,18 @@
 import { useState } from "react"
 import { Combobox, useCombobox, ComboboxTarget, TextInput } from "@mantine/core"
 
-//Common component for comboboxes
-function TextCombobox(props: {
-  options: { name: string; title: string }[]
+export type TextComboboxOptions = { name: string; title: string }[]
+
+type TextComboboxProps = {
+  options: TextComboboxOptions
   value: string
-  setValue: object
+  setValue: (value: string) => void
   label?: string
   placeholder?: string
   error?: string
-}) {
+}
+
+function TextCombobox(props: TextComboboxProps) {
   const selectedOpt = props.options.find((item) => item.name === props.value)
   const defaultText =
     selectedOpt !== undefined ? selectedOpt.title || selectedOpt.name : ""
@@ -18,8 +21,6 @@ function TextCombobox(props: {
     onDropdownClose: () => combobox.resetSelectedOption(),
   })
 
-  // const checkVariable = (item) =>
-  //   item.name.toLowerCase().includes(props.value.toLowerCase())
   const optionsToRender = search
     ? props.options.filter((item) =>
         (item.title || item.name).toLowerCase().includes(search.toLowerCase()),
