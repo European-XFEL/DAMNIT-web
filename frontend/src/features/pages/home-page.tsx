@@ -2,7 +2,7 @@ import React from "react"
 import { AppShell, Container } from "@mantine/core"
 
 import { Header, Logo } from "../../components/headers"
-import { ProposalsList } from "../proposals"
+import { Proposals } from "../proposals"
 
 const HomePage = () => {
   return (
@@ -15,7 +15,7 @@ const HomePage = () => {
 
       <AppShell.Main>
         <Container>
-          <ProposalsList />
+          <Proposals />
         </Container>
       </AppShell.Main>
     </AppShell>
