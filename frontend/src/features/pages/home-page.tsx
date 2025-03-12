@@ -1,14 +1,10 @@
 import React from "react"
-import { useSelector } from "react-redux"
 import { AppShell, Container } from "@mantine/core"
 
 import { Header, Logo } from "../../components/headers"
-import { selectAvailableProposals } from "../auth/authSlice"
 import { ProposalsList } from "../proposals"
 
 const HomePage = () => {
-  const proposals = useSelector(selectAvailableProposals)
-
   return (
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>
@@ -19,7 +15,7 @@ const HomePage = () => {
 
       <AppShell.Main>
         <Container>
-          <ProposalsList proposals={proposals} />
+          <ProposalsList />
         </Container>
       </AppShell.Main>
     </AppShell>
