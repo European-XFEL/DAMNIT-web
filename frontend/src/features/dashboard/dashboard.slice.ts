@@ -1,6 +1,22 @@
-import { createSlice } from "@reduxjs/toolkit"
+import { createSlice, PayloadAction } from "@reduxjs/toolkit"
+import { TabItem } from "../../types"
 
-const initialState = {
+type MainState = {
+  tabs: Record<string, TabItem>
+  currentTab: string
+}
+
+type AsideState = {
+  tabs: Record<string, TabItem>
+  isOpened: boolean
+}
+
+type DasboardState = {
+  main: MainState
+  aside: AsideState
+}
+
+const initialState: DasboardState = {
   main: { tabs: { table: { title: "Table" } }, currentTab: "table" },
   aside: {
     isOpened: false,
@@ -24,17 +40,17 @@ const slice = createSlice({
       state.main.currentTab = id
       state.main.tabs = Object.assign(state.main.tabs || {}, { [id]: rest })
     },
-    removeTab: (state, action) => {
+    removeTab: (state, action: PayloadAction<string>) => {
       const { [action.payload]: _ = {}, ...rest } = state.main.tabs
       state.main.currentTab = Object.keys(rest).slice(-1)[0]
       state.main.tabs = rest
     },
 
     // Aside
-    openAside: (state, _) => {
+    openAside: (state) => {
       state.aside.isOpened = true
     },
-    closeAside: (state, _) => {
+    closeAside: (state) => {
       state.aside.isOpened = false
     },
   },
