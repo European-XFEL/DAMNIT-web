@@ -1,4 +1,7 @@
-export function isArrayEqual(arr1, arr2) {
+export function isArrayEqual<T>(
+  arr1: ReadonlyArray<T> | null | undefined,
+  arr2: ReadonlyArray<T> | null | undefined,
+) {
   if (arr1 == null && arr2 == null) {
     return true
   }
@@ -14,11 +17,11 @@ export function isArrayEqual(arr1, arr2) {
   return arr1.every((elem, index) => elem === arr2[index])
 }
 
-export function sorted(array) {
-  return array.slice().sort((a, b) => a - b)
+export function sorted<T>(array: T[]) {
+  return array.slice().sort((a, b) => Number(a) - Number(b))
 }
 
-export function sortedInsert(array, element, unique = true) {
+export function sortedInsert(array: number[], element: number, unique = true) {
   let left = 0
   let right = array.length - 1
 
@@ -42,7 +45,7 @@ export function sortedInsert(array, element, unique = true) {
   array.splice(left, 0, element)
 }
 
-export function sortedSearch(array, target) {
+export function sortedSearch(array: number[], target: number) {
   let left = 0
   let right = array.length - 1
 
