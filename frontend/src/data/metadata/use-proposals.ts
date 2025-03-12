@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 
 import { metadataApi } from "./metadata.api"
 import { isArrayEqual } from "../../utils/array"
-import useQueries from "../../hooks/useQueries"
+import useQueries from "../../hooks/use-queries"
 
 type ProposalInfo = {
   number: number

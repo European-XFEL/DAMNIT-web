@@ -1,11 +1,15 @@
 import {
   ApolloClient,
   ApolloLink,
-  InMemoryCache,
   HttpLink,
+  InMemoryCache,
+  NextLink,
   Observable,
+  Observer,
+  Operation,
   from,
   split,
+  FetchResult,
 } from "@apollo/client"
 import {
   removeTypenameFromVariables,
@@ -18,7 +22,7 @@ import { getMainDefinition } from "@apollo/client/utilities"
 import { createClient } from "graphql-ws"
 
 import { BASE_URL } from "../constants"
-import { DEFERRED_TABLE_DATA_QUERY_NAME } from "./queries"
+import { DEFERRED_TABLE_DATA_QUERY_NAME } from "../data/table"
 
 const BACKEND_API = import.meta.env.VITE_BACKEND_API
 const HTTP_API =
@@ -39,43 +43,54 @@ const retryLink = new RetryLink({
 
 const httpLink = new HttpLink({ uri: `${HTTP_API}graphql` })
 
+type PendingOperation = {
+  execute: () => Observable<FetchResult>
+  observer: Observer<FetchResult>
+}
+
 const createPriorityLink = (maxActive = 3) => {
-  const pendingQueue = []
-  const activeQueue = new Set()
+  const pendingOperations: PendingOperation[] = []
+  const activeOperations: Set<PendingOperation> = new Set()
 
   const processNextOperation = () => {
-    while (activeQueue.size < maxActive && pendingQueue.length > 0) {
-      const nextOperation = pendingQueue.shift()
-      activeQueue.add(nextOperation)
+    while (activeOperations.size < maxActive && pendingOperations.length > 0) {
+      const nextOperation = pendingOperations.shift()
+      if (!nextOperation) {
+        break
+      }
 
+      activeOperations.add(nextOperation)
       nextOperation.execute().subscribe({
         next: (response) => {
-          activeQueue.delete(nextOperation)
-          nextOperation.observer.next(response)
+          activeOperations.delete(nextOperation)
+          nextOperation.observer.next?.(response)
           processNextOperation()
         },
         error: (error) => {
-          activeQueue.delete(nextOperation)
-          nextOperation.observer.error(error)
+          activeOperations.delete(nextOperation)
+          nextOperation.observer.error?.(error)
           processNextOperation()
         },
         complete: () => {
-          activeQueue.delete(nextOperation)
-          nextOperation.observer.complete()
+          activeOperations.delete(nextOperation)
+          nextOperation.observer.complete?.()
         },
       })
     }
   }
 
-  return new ApolloLink((operation, forward) => {
+  return new ApolloLink((operation: Operation, forward: NextLink) => {
     const nonPriorityOperations = [DEFERRED_TABLE_DATA_QUERY_NAME]
+    const definition = getMainDefinition(operation.query)
     const operationName =
-      operation.operationName || operation.query.definitions[0]?.name?.value
+      operation.operationName ||
+      (definition.kind === "OperationDefinition" && definition.name?.value) ||
+      ""
 
     return new Observable((observer) => {
       if (nonPriorityOperations.includes(operationName)) {
-        pendingQueue.push({
-          execute: () => forward(operation),
+        pendingOperations.push({
+          execute: () => forward(operation) as Observable<FetchResult>,
           observer,
         })
 
