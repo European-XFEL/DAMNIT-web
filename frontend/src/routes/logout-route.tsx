@@ -1,10 +1,10 @@
 import React, { useEffect } from "react"
-import { useDispatch } from "react-redux"
 
-import { logout } from "../features/auth"
+import { logout } from "../auth"
+import { useAppDispatch } from "../redux"
 
 const LogoutRoute = () => {
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
 
   useEffect(() => {
     dispatch(logout())

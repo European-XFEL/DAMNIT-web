@@ -1,10 +1,10 @@
 import React, { useEffect } from "react"
-import { useDispatch } from "react-redux"
 
-import { login } from "../features/auth"
+import { login } from "../auth"
+import { useAppDispatch } from "../redux"
 
 const LoginRoute = () => {
-  const dispatch = useDispatch()
+  const dispatch = useAppDispatch()
 
   useEffect(() => {
     dispatch(login())
