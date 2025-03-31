@@ -15,9 +15,9 @@ import "@glideapps/glide-data-grid/dist/index.css"
 import { client } from "./graphql/apollo"
 import { BASE_URL } from "./constants"
 import { setupStore } from "./redux"
-import App from "./app/App"
+import App from "./app/app"
 
-const container = document.getElementById("root")
+const container = document.getElementById("root") as HTMLElement
 const root = createRoot(container)
 
 root.render(
