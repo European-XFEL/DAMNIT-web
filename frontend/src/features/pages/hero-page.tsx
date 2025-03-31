@@ -1,7 +1,8 @@
 import React, { useEffect } from "react"
 import { Container, Title } from "@mantine/core"
 import { history } from "../../routes"
-import classes from "./HeroPage.module.css"
+
+import classes from "./hero-page.module.css"
 
 const HeroPage = () => {
   useEffect(() => {
