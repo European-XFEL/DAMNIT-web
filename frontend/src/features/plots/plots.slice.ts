@@ -1,7 +1,19 @@
 import { createSlice } from "@reduxjs/toolkit"
 import { generateUID } from "./utils"
 
-const initialState = {
+type PlotItem = {
+  variables: string[]
+  runs: string[]
+  source: string
+  title?: string
+}
+
+type PlotsState = {
+  data: Record<string, PlotItem>
+  currentPlot: string | null
+}
+
+const initialState: PlotsState = {
   data: {},
   currentPlot: null,
 }
