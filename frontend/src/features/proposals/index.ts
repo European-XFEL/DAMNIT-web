@@ -1,1 +1,1 @@
-export { default as ProposalsList } from "./ProposalsList"
+export { default as Proposals } from "./proposals"
