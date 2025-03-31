@@ -1,4 +1,4 @@
-export { default } from "./Dashboard"
+export { default } from "./dashboard"
 export {
   default as dashboardReducer,
   addTab,
@@ -6,4 +6,4 @@ export {
   setCurrentTab,
   openAside,
   closeAside,
-} from "./dashboardSlice"
+} from "./dashboard.slice"

@@ -1,10 +1,11 @@
-import React from "react"
-import { useDispatch, useSelector } from "react-redux"
+import React, { lazy, Suspense } from "react"
 import {
   AppShell,
   Burger,
   Button as MantineButton,
+  ButtonProps as MantineButtonProps,
   CloseButton,
+  ElementProps,
   Flex,
   Group,
   Skeleton,
@@ -21,17 +22,29 @@ import cx from "clsx"
 
 import { Header, Logo } from "../../components/headers"
 import { InstrumentBadge } from "../../components/badges"
-import { Tabs } from "../../components/tabs/"
-import { useCurrentProposal } from "../../hooks"
-import Table from "../table"
-import { PlotsTab, PlotDialog } from "../plots"
-import { removeTab, setCurrentTab, closeAside } from "./dashboardSlice"
-import Run from "./Run"
+import { Tabs, TabsProps } from "../../components/tabs"
+import { useCurrentProposal } from "../../data/metadata"
+import { useAppDispatch, useAppSelector } from "../../redux"
+import { PlotDialog } from "../plots"
+import { removeTab, setCurrentTab, closeAside } from "./dashboard.slice"
+import Run from "./run"
 
-import styles from "./Dashboard.module.css"
+import styles from "./dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
 
-const Button = ({ label, icon, ...props }) => {
+const PlotsTab = lazy(() =>
+  import("../plots").then((module) => ({ default: module.PlotsTab })),
+)
+const Table = lazy(() => import("../table"))
+
+interface ButtonProps
+  extends MantineButtonProps,
+    ElementProps<"button", keyof MantineButtonProps> {
+  label: string
+  icon: React.ReactNode
+}
+
+const Button = ({ label, icon, ...props }: ButtonProps) => {
   return (
     <MantineButton color="indigo" variant="white" size="xs" {...props}>
       <Group gap={6} px={0}>
@@ -44,7 +57,7 @@ const Button = ({ label, icon, ...props }) => {
   )
 }
 
-const MainTabs = ({ contents, active, setActive, ...props }) => {
+const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
   const [openedDialog, { open: openDialog, close: closeDialog }] =
     useDisclosure()
 
@@ -91,13 +104,13 @@ const MainTabs = ({ contents, active, setActive, ...props }) => {
             onClick={openDialog}
           />
         </MantineTabs.List>
-        {entries.map(([id, { Component, props }]) => (
+        {entries.map(([id, { element }]) => (
           <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
             <Flex
               direction="column"
               h="calc(100vh - 52px - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px))"
             >
-              <Component {...props} />
+              {element}
             </Flex>
           </MantineTabs.Panel>
         ))}
@@ -108,9 +121,9 @@ const MainTabs = ({ contents, active, setActive, ...props }) => {
 }
 
 const Dashboard = () => {
-  const dispatch = useDispatch()
-  const { main, aside } = useSelector((state) => state.dashboard)
-  const { run: selectedRun } = useSelector((state) => state.table.selection)
+  const dispatch = useAppDispatch()
+  const { main, aside } = useAppSelector((state) => state.dashboard)
+  const { run: selectedRun } = useAppSelector((state) => state.table.selection)
 
   const [openedNavBar, { toggle: toggleNavBar }] = useDisclosure()
 
@@ -121,34 +134,45 @@ const Dashboard = () => {
   }
 
   // Main tabs
-  const mainTabs = {
-    table: {
-      Component: Table,
-      props: {},
-    },
-    plots: {
-      Component: PlotsTab,
-      props: {},
-    },
+  const mainTabElements = {
+    table: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <Table />
+      </Suspense>
+    ),
+    plots: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <PlotsTab />
+      </Suspense>
+    ),
   }
-  const populatedMainTabs = Object.entries(main.tabs).map(([id, tab]) => [
-    id,
-    {
-      ...tab,
-      ...mainTabs[id],
-      ...(tab.isClosable ? { onClose: () => dispatch(removeTab(id)) } : {}),
-    },
-  ])
+  const populatedMainTabs = Object.fromEntries(
+    Object.entries(main.tabs).map(([id, tab]) => [
+      id,
+      {
+        element: mainTabElements[id as keyof typeof mainTabElements],
+        ...tab,
+        ...(tab.isClosable ? { onClose: () => dispatch(removeTab(id)) } : {}),
+      },
+    ]),
+  )
 
   // Aside tabs
-  const populatedAsideTabs = Object.entries(aside.tabs).map(([id, tab]) => [
-    id,
-    {
-      ...tab,
-      ...(selectedRun && { title: `${tab.title}: ${selectedRun}` }),
-      element: <Run />,
-    },
-  ])
+  const populatedAsideTabs = Object.fromEntries(
+    Object.entries(aside.tabs).map(([id, tab]) => {
+      const extraProps = selectedRun
+        ? { title: `${tab.title}: ${selectedRun}` }
+        : {}
+      return [
+        id,
+        {
+          ...tab,
+          ...extraProps,
+          element: <Run />,
+        },
+      ]
+    }),
+  )
 
   return (
     <AppShell
@@ -197,14 +221,14 @@ const Dashboard = () => {
       </AppShell.Navbar>
       <AppShell.Main>
         <MainTabs
-          contents={Object.fromEntries(populatedMainTabs)}
+          contents={populatedMainTabs}
           active={main.currentTab}
           setActive={(id) => dispatch(setCurrentTab(id))}
         />
       </AppShell.Main>
       <AppShell.Aside p="xs">
         <Tabs
-          contents={Object.fromEntries(populatedAsideTabs)}
+          contents={populatedAsideTabs}
           lastElement={
             <CloseButton ml="auto" onClick={() => dispatch(closeAside())} />
           }
