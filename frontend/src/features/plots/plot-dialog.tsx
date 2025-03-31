@@ -8,23 +8,60 @@ import {
   Select,
   Flex,
 } from "@mantine/core"
-import { connect, useSelector } from "react-redux"
 import { TextInput, Text, Blockquote } from "@mantine/core"
 import { useForm } from "@mantine/form"
 
-import { addPlot } from "./plotsSlice"
-import { TextCombobox } from "../../components/comboboxes/"
-import { EXCLUDED_VARIABLES } from "../../constants"
-import { getExtractedVariable, getTableVariables } from "../../redux/slices"
-import { getAllExtractedVariables } from "../../redux/thunks"
+import { addPlot } from "./plots.slice"
+import { TextCombobox, TextComboboxOptions } from "../../components/comboboxes"
+import { getExtractedValue } from "../../data/extracted"
+import { getTableData } from "../../data/table"
+import { selectVariables } from "../../data/table"
+import { getAllExtractedValues } from "../../data/thunks"
+import { useAppDispatch, useAppSelector } from "../../redux"
+import { getVariableTitle } from "../../utils/variables"
 
-// TODO: Reuse this function on the Table component
-const getVariableTitle = (variable) => variable.title || variable.name
+type PlotDialogForm = {
+  runSelection: string
+  xVariable: string
+  yVariable: string
+  plotType: string
+  runSelectionType: string
+}
 
-const PlotDialog = (props) => {
-  const proposal = useSelector((state) => state.proposal.current.value)
+type PlotDialogProps = {
+  opened: boolean
+  close: () => void
+  selectedColumns?: string[]
+}
 
-  const dialogForm = useForm({
+// Parses manual selection from string to array
+const parseRunSelection = (strInput: string) => {
+  const input = String(strInput).split(",")
+  const parsed = input.reduce<string[]>((result, str) => {
+    if (!str.includes("-")) {
+      result.push(str)
+      return result
+    }
+    const [bottom, top] = str
+      .split("-")
+      .map((i) => Number(i))
+      .sort()
+    for (let i = bottom; i <= top; i++) {
+      result.push(String(i))
+    }
+    return result
+  }, [])
+
+  return parsed
+}
+
+const PlotDialog = (props: PlotDialogProps) => {
+  const dispatch = useAppDispatch()
+
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
+  const variables = useAppSelector(selectVariables)
+
+  const dialogForm = useForm<PlotDialogForm>({
     mode: "uncontrolled",
     initialValues: {
       runSelection: "",
@@ -36,10 +73,10 @@ const PlotDialog = (props) => {
 
     validate: {
       runSelection: (value, values) => {
-        const runs = parseRunSelection(value)
+        const selectedRuns = parseRunSelection(value)
 
         return values.runSelectionType === "manualSelection" &&
-          (runs.some((x) => !x) || !runs.length)
+          (selectedRuns.some((x) => !x) || !selectedRuns.length)
           ? "Please enter a valid selection"
           : null
       },
@@ -51,8 +88,6 @@ const PlotDialog = (props) => {
         value === "" ? "Please enter a valid variable" : null,
     },
   })
-
-  const formValues = dialogForm.getValues()
 
   useEffect(() => {
     if (!props.selectedColumns?.[0]) {
@@ -78,7 +113,7 @@ const PlotDialog = (props) => {
   }
 
   // Plots upon form sending
-  const handlePlot = (submitedFormValues) => {
+  const handlePlot = (submitedFormValues: PlotDialogForm) => {
     const runs =
       submitedFormValues.runSelectionType === "manualSelection"
         ? parseRunSelection(submitedFormValues.runSelection)
@@ -86,12 +121,12 @@ const PlotDialog = (props) => {
 
     const { xVariable, yVariable } = submitedFormValues
 
-    const xMetadata = props.variables.find(
-      (variable) => variable.name === xVariable,
-    )
-    const yMetadata = props.variables.find(
-      (variable) => variable.name === yVariable,
-    )
+    const xMetadata = variables.find((variable) => variable.name === xVariable)
+    const yMetadata = variables.find((variable) => variable.name === yVariable)
+    if (!xMetadata || !yMetadata) {
+      return
+    }
+
     const plotOptions =
       submitedFormValues.plotType === "summary"
         ? {
@@ -102,51 +137,27 @@ const PlotDialog = (props) => {
             )} vs. ${getVariableTitle(xMetadata)}`,
           }
         : {
-            variable: [yVariable],
+            variables: [yVariable],
             source: "extracted",
             title: `Data: ${getVariableTitle(yMetadata)}`,
           }
 
-    props.dispatch(addPlot({ ...plotOptions, runs: runs }))
+    dispatch(addPlot({ ...plotOptions, runs: runs }))
 
     if (submitedFormValues.plotType === "summary") {
-      props.dispatch(
-        getTableVariables({ proposal, variables: [xVariable, yVariable] }),
-      )
+      dispatch(getTableData({ proposal, variables: [xVariable, yVariable] }))
     } else {
       runs
         ? runs.forEach((run) => {
-            props.dispatch(
-              getExtractedVariable({ proposal, run, variable: yVariable }),
-            )
+            dispatch(getExtractedValue({ proposal, run, variable: yVariable }))
           })
-        : props.dispatch(
-            getAllExtractedVariables({ proposal, variable: yVariable }),
-          )
+        : dispatch(getAllExtractedValues({ proposal, variable: yVariable }))
     }
 
     handleClose()
   }
 
-  // Parses manual selection from string to array
-  const parseRunSelection = (strInput) => {
-    const input = String(strInput).split(",")
-    const parsed = input.reduce((result, str) => {
-      if (!str.includes("-")) {
-        result.push(Number(str))
-        return result
-      }
-      const [bottom, top] = str
-        .split("-")
-        .map((i) => Number(i))
-        .sort()
-      for (let i = bottom; i <= top; i++) {
-        result.push(i)
-      }
-      return result
-    }, [])
-    return parsed
-  }
+  const formValues = dialogForm.getValues()
 
   return (
     <Modal
@@ -179,7 +190,7 @@ const PlotDialog = (props) => {
           >
             {formValues.plotType === "summary" && (
               <TextCombobox
-                options={props.variables}
+                options={variables as TextComboboxOptions}
                 value={formValues.xVariable}
                 setValue={(value) =>
                   dialogForm.setFieldValue("xVariable", value)
@@ -190,7 +201,7 @@ const PlotDialog = (props) => {
               />
             )}
             <TextCombobox
-              options={props.variables}
+              options={variables as TextComboboxOptions}
               value={formValues.yVariable}
               setValue={(value) => dialogForm.setFieldValue("yVariable", value)}
               label={formValues.plotType === "summary" ? "Y-axis" : "Variable"}
@@ -225,7 +236,7 @@ const PlotDialog = (props) => {
               defaultValue="allSelection"
               value={formValues.runSelectionType}
               onChange={(value) =>
-                dialogForm.setFieldValue("runSelectionType", value)
+                value && dialogForm.setFieldValue("runSelectionType", value)
               }
               allowDeselect={false}
             ></Select>
@@ -263,13 +274,4 @@ const PlotDialog = (props) => {
   )
 }
 
-const mapStateToProps = ({ tableData }) => {
-  return {
-    runs: Object.keys(tableData.data),
-    variables: Object.values(tableData.metadata.variables).filter(
-      (variable) => !EXCLUDED_VARIABLES.includes(variable.name),
-    ),
-  }
-}
-
-export default connect(mapStateToProps)(PlotDialog)
+export default PlotDialog
