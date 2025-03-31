@@ -1,5 +1,5 @@
 import React from "react"
-import { Badge } from "@mantine/core"
+import { Badge, BadgeProps } from "@mantine/core"
 
 enum Instrument {
   SPB = "SPB",
@@ -31,7 +31,11 @@ function getInstrumentColor(instrument: string): string {
   return InstrumentColors[as_enum] || DEFAULT_COLOR
 }
 
-const InstrumentBadge = ({ instrument, ...props }) => {
+export interface InstrumentBadgeProps extends BadgeProps {
+  instrument: string
+}
+
+const InstrumentBadge = ({ instrument, ...props }: InstrumentBadgeProps) => {
   return (
     <Badge
       autoContrast

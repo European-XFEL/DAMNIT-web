@@ -1,9 +1,27 @@
 import React from "react"
-import { Tabs as MantineTabs } from "@mantine/core"
+import {
+  Tabs as MantineTabs,
+  TabsProps as MantineTabsProps,
+} from "@mantine/core"
 import { IconX } from "@tabler/icons-react"
+import { TabContents } from "./tabs.types"
 
-const Tabs = ({ contents, active, setActive, lastElement, ...props }) => {
+export interface TabsProps extends MantineTabsProps {
+  contents: TabContents
+  active?: string | null
+  setActive?: (value: string | null) => void
+  lastElement?: React.ReactNode | undefined
+}
+
+const Tabs = ({
+  contents,
+  active,
+  setActive,
+  lastElement,
+  ...props
+}: TabsProps) => {
   const entries = Object.entries(contents)
+
   return (
     <MantineTabs
       radius="lg"
