@@ -3,15 +3,25 @@ import { useLayer } from "react-laag"
 import { Stack } from "@mantine/core"
 import { ContextMenuPortal as MantineContextMenu } from "mantine-contextmenu"
 
-import ContextMenuItem from "./ContextMenuItem"
+import ContextMenuItem, { ContextMenuItemOptions } from "./context-menu-item"
+
+export type ContextMenuProps = {
+  localPosition: { x: number; y: number }
+  bounds: { x: number; y: number; width: number; height: number }
+  contents: ContextMenuItemOptions[]
+  isOpen?: boolean
+  onOutsideClick?: () => void
+}
 
 const ContextMenu = ({
   localPosition,
   bounds,
-  isOpen,
-  onOutsideClick,
   contents,
-}) => {
+  isOpen = false,
+  onOutsideClick = () => {
+    return
+  },
+}: ContextMenuProps) => {
   const { layerProps, renderLayer } = useLayer({
     isOpen,
     auto: true,
