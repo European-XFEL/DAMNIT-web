@@ -8,10 +8,10 @@
 import {
   TypedQueryStateSelector,
   TypedUseQueryStateOptions,
-} from "@reduxjs/toolkit/query/react"
-import { useEffect, useMemo, useReducer, useRef } from "react"
+} from '@reduxjs/toolkit/query/react'
+import { useEffect, useMemo, useReducer, useRef } from 'react'
 
-import { useAppDispatch } from "../redux"
+import { useAppDispatch } from '../redux'
 
 type State<Data, Argument> = {
   isUninitialized: boolean
@@ -27,7 +27,7 @@ type State<Data, Argument> = {
 
 const loadingReducer = <Data, Argument>(
   _state: State<Data, Argument> | undefined,
-  originalArgs: Argument[],
+  originalArgs: Argument[]
 ) => {
   return {
     isUninitialized: false,
@@ -44,7 +44,7 @@ const loadingReducer = <Data, Argument>(
 
 const fetchingReducer = <Data, Argument>(
   state: State<Data, Argument>,
-  originalArgs: Argument[],
+  originalArgs: Argument[]
 ) => {
   return {
     isUninitialized: false,
@@ -62,7 +62,7 @@ const fetchingReducer = <Data, Argument>(
 const successReducer = <Data, Argument>(
   state: State<Data, Argument>,
   data: Data[],
-  selectFromResult?: TypedQueryStateSelector<any, any, any>,
+  selectFromResult?: TypedQueryStateSelector<any, any, any>
 ) => {
   const result = {
     isUninitialized: false,
@@ -80,7 +80,7 @@ const successReducer = <Data, Argument>(
 
 const errorReducer = <Data, Argument>(
   state: State<Data, Argument>,
-  error: Data[],
+  error: Data[]
 ) => {
   return {
     isUninitialized: false,
@@ -100,22 +100,22 @@ type UseQueryResultReturn<Data, Argument> = [
   {
     success(
       data: Data[],
-      selectFromResult?: TypedQueryStateSelector<any, any, any>,
+      selectFromResult?: TypedQueryStateSelector<any, any, any>
     ): void
     fetching(originalArgs: Argument[]): void
     loading(originalArgs: Argument[]): void
     error(error: Data[]): void
-  },
+  }
 ]
 
 const useQueryResult = <Data, Argument>(
-  originalArgs: Argument[],
+  originalArgs: Argument[]
 ): UseQueryResultReturn<Data, Argument> => {
   const [state, setState] = useReducer(
     (state: State<Data, Argument>, [reducer, value, fn]: any) =>
       reducer(state, value, fn),
     undefined,
-    () => loadingReducer(undefined, originalArgs),
+    () => loadingReducer(undefined, originalArgs)
   )
 
   const setStateWrapper = useMemo(
@@ -128,7 +128,7 @@ const useQueryResult = <Data, Argument>(
       },
       success(
         data: Data[],
-        selectFromResult?: TypedQueryStateSelector<any, any, any>,
+        selectFromResult?: TypedQueryStateSelector<any, any, any>
       ) {
         setState([successReducer, data, selectFromResult])
       },
@@ -136,7 +136,7 @@ const useQueryResult = <Data, Argument>(
         setState([errorReducer, error])
       },
     }),
-    [],
+    []
   )
 
   return [state, setStateWrapper]
@@ -145,19 +145,19 @@ const useQueryResult = <Data, Argument>(
 const useQueries = <Endpoint, Data, Argument>(
   endpoint: Endpoint,
   originalArgs: Argument[] = [],
-  options: TypedUseQueryStateOptions<any, any, any> = {},
+  options: TypedUseQueryStateOptions<any, any, any> = {}
 ) => {
   const endpointRef = useRef<Endpoint>()
   const dispatch = useAppDispatch()
   const [queryResult, setQueryResult] = useQueryResult<Data, Argument>(
-    originalArgs,
+    originalArgs
   )
 
   useEffect(() => {
     if (options.skip) return
     let active = true
     const actions = originalArgs.map(
-      (originalArg) => (endpoint as any).initiate(originalArg), // cast endpoint to any
+      (originalArg) => (endpoint as any).initiate(originalArg) // cast endpoint to any
     )
     const results = actions.map((action) => dispatch(action))
     const unwrappedResults = results.map((result) => result.unwrap())
@@ -187,7 +187,14 @@ const useQueries = <Endpoint, Data, Argument>(
         result.unsubscribe()
       })
     }
-  }, [endpoint, originalArgs, dispatch, setQueryResult])
+  }, [
+    endpoint,
+    originalArgs,
+    dispatch,
+    setQueryResult,
+    options.skip,
+    options.selectFromResult,
+  ])
 
   return queryResult
 }

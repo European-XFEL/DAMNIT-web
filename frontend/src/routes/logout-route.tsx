@@ -1,14 +1,14 @@
-import React, { useEffect } from "react"
+import React, { useEffect } from 'react'
 
-import { logout } from "../auth"
-import { useAppDispatch } from "../redux"
+import { logout } from '../auth'
+import { useAppDispatch } from '../redux'
 
 const LogoutRoute = () => {
   const dispatch = useAppDispatch()
 
   useEffect(() => {
     dispatch(logout())
-  }, [])
+  })
 
   return <div />
 }

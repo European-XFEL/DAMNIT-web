@@ -1,19 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import dayjs from "dayjs"
+import dayjs from 'dayjs'
 
 export function formatDate(timestamp: number) {
-  const formattedDate = dayjs(timestamp).format("DD MMMM YYYY")
-  const formattedTime = dayjs(timestamp).format("HH:mm:ss")
+  const formattedDate = dayjs(timestamp).format('DD MMMM YYYY')
+  const formattedTime = dayjs(timestamp).format('HH:mm:ss')
 
   return `${formattedTime} | ${formattedDate}`
 }
 
 export const formatRunsSubtitle = (runs: string[]) => {
   if (!runs || !runs.length) {
-    return ""
+    return ''
   }
 
-  return `(run ${runs[0]}${runs.length > 1 ? `-${runs[runs.length - 1]}` : ""})`
+  return `(run ${runs[0]}${runs.length > 1 ? `-${runs[runs.length - 1]}` : ''})`
 }
 
 export function formatNumber(number: number, options = {}): number {
