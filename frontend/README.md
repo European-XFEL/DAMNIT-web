@@ -13,6 +13,7 @@ The application enables visualization and interaction with the DAMNIT table.
 - Apollo Client (GraphQL client)
 - Mantine UI (styled components)
 - Glide Data Grid (table component)
+- Plotly.js (plotting library)
 - Vite (build tool)
 - Vitest (testing)
 
@@ -29,7 +30,7 @@ npm install
 After the installation, start the project:
 
 ```sh
-npm start
+npm run dev
 ```
 
 and navigate to `localhost:5173` on your favorite browser.
@@ -47,16 +48,3 @@ One can also run the tests with the following:
 ```sh
 npm test
 ```
-
-## To-dos
-
-There's much work needed to be done! The following is on my top of my mind:
-
-- Plot the values of a variable for all runs, which needs a query to get the values of a column in the run table.
-- Plot the values of a variable for each run, which requires a query to fetch
-  data from the saved H5 files.
-- Support user-editable variables
-
-## Caveats
-
-While TypeScript (files) is used, the overall flavor is still in JavaScript. We plan to continue as such; refactoring and adding types could be done in the next iterations.
