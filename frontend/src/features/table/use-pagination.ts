@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { range } from "@mantine/hooks"
+import { range } from '@mantine/hooks'
 
-import { getDeferredTableValues } from "../../data/table/table-data.thunks"
-import { useAppDispatch } from "../../redux"
-import { sortedInsert, sortedSearch } from "../../utils/array"
+import { getDeferredTableValues } from '../../data/table/table-data.thunks'
+import { useAppDispatch } from '../../redux'
+import { sortedInsert, sortedSearch } from '../../utils/array'
 
 class Pages {
   private loading: number[]
@@ -70,11 +70,11 @@ export const usePagination = (proposal: string, pageSize = 10) => {
         await dispatch(getDeferredTableValues({ proposal, page, pageSize }))
         return true
       } catch (error) {
-        console.error("Failed to load data:", error)
+        console.error('Failed to load data:', error)
         return false
       }
     },
-    [proposal, dispatch],
+    [proposal, dispatch, pageSize]
   )
 
   // Callback: On visible region changed
@@ -99,7 +99,7 @@ export const usePagination = (proposal: string, pageSize = 10) => {
         pages.addToLoaded(page)
       }
     },
-    [handleNewPage, pageSize],
+    [handleNewPage]
   )
 
   // Effect: Trigger load page when visible region changes
@@ -110,10 +110,10 @@ export const usePagination = (proposal: string, pageSize = 10) => {
 
     const firstPage = Math.max(
       0,
-      Math.floor((visibleRegion.y - pageSize / 2) / pageSize),
+      Math.floor((visibleRegion.y - pageSize / 2) / pageSize)
     )
     const lastPage = Math.floor(
-      (visibleRegion.y + visibleRegion.height + pageSize / 2) / pageSize,
+      (visibleRegion.y + visibleRegion.height + pageSize / 2) / pageSize
     )
     range(firstPage + 1, lastPage + 2).map((page) => {
       if (!pagesRef.current.isLoaded(page)) {

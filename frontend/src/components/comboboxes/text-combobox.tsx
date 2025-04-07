@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Combobox, useCombobox, ComboboxTarget, TextInput } from "@mantine/core"
+import { useState } from 'react'
+import { Combobox, useCombobox, ComboboxTarget, TextInput } from '@mantine/core'
 
 export type TextComboboxOptions = { name: string; title: string }[]
 
@@ -15,7 +15,7 @@ type TextComboboxProps = {
 function TextCombobox(props: TextComboboxProps) {
   const selectedOpt = props.options.find((item) => item.name === props.value)
   const defaultText =
-    selectedOpt !== undefined ? selectedOpt.title || selectedOpt.name : ""
+    selectedOpt !== undefined ? selectedOpt.title || selectedOpt.name : ''
   const [search, setSearch] = useState(defaultText)
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
@@ -23,25 +23,30 @@ function TextCombobox(props: TextComboboxProps) {
 
   const optionsToRender = search
     ? props.options.filter((item) =>
-        (item.title || item.name).toLowerCase().includes(search.toLowerCase()),
+        (item.title || item.name).toLowerCase().includes(search.toLowerCase())
       )
     : props.options
 
   const options = optionsToRender.map((item) => (
-    <Combobox.Option value={item.name} key={item.name}>
+    <Combobox.Option
+      value={item.name}
+      key={item.name}
+    >
       {item.title || item.name}
     </Combobox.Option>
   ))
 
   return (
-    <div style={{ margin: "5px 2px" }}>
+    <div style={{ margin: '5px 2px' }}>
       <Combobox
         store={combobox}
         withinPortal={false}
         onOptionSubmit={(val) => {
           props.setValue(val)
           const newOpt = props.options.find((item) => item.name === val)
-          newOpt && setSearch(newOpt.title || newOpt.name)
+          if (newOpt) {
+            setSearch(newOpt.title || newOpt.name)
+          }
           combobox.closeDropdown()
         }}
       >
@@ -66,7 +71,10 @@ function TextCombobox(props: TextComboboxProps) {
         </ComboboxTarget>
 
         <Combobox.Dropdown>
-          <Combobox.Options mah={160} style={{ overflowY: "auto" }}>
+          <Combobox.Options
+            mah={160}
+            style={{ overflowY: 'auto' }}
+          >
             {options.length === 0 ? (
               <Combobox.Empty>Variable not found</Combobox.Empty>
             ) : (
