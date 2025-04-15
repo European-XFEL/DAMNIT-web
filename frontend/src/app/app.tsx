@@ -14,6 +14,8 @@ import { resetExtractedData } from "../data/extracted"
 import { setProposalPending } from "../data/metadata"
 import { resetTable as resetTableData } from "../data/table"
 import Dashboard from "../features/dashboard"
+import Editor from "../features/editor"
+
 import {
   HeroPage,
   HomePage,

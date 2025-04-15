@@ -40,6 +40,12 @@ export default defineConfig(({ mode }) => {
           // REMOVEME: The API will have a base path similar to the frontend at some point
           rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
         },
+        [`${baseUrl}file`]: {
+          target: `http://${env.VITE_BACKEND_API}`,
+          changeOrigin: false,
+          secure: false,
+          rewrite: (path) => path.replace(new RegExp(`^${baseUrl}`), "/"),
+        },
       },
     },
     test: {

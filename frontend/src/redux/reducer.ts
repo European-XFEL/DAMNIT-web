@@ -4,11 +4,13 @@ import { loadingBarReducer as loadingBar } from "react-redux-loading-bar"
 import { authApi } from "../auth"
 
 import { metadataApi } from "../data/metadata"
+import { fileApi } from "../features/editor/editor.api"
 import { extractedDataReducer as extractedData } from "../data/extracted"
 import { metadataReducer as metadata } from "../data/metadata"
 import { tableDataReducer as tableData } from "../data/table"
 
 import { dashboardReducer as dashboard } from "../features/dashboard"
+import { editorReducer as editor } from "../features/editor"
 import { plotsReducer as plots } from "../features/plots"
 import { tableReducer as table } from "../features/table"
 
@@ -20,7 +22,9 @@ const reducer = combineReducers({
   tableData,
   extractedData,
   loadingBar,
+  editor,
 
+  [fileApi.reducerPath]: fileApi.reducer,
   [authApi.reducerPath]: authApi.reducer,
   [metadataApi.reducerPath]: metadataApi.reducer,
 })

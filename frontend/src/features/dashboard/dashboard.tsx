@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react"
+import React, { lazy, Suspense, useEffect, useState } from "react"
 import {
   AppShell,
   Burger,
@@ -17,7 +17,7 @@ import {
 } from "@mantine/core"
 import { useDisclosure } from "@mantine/hooks"
 
-import { IconGraph, IconX } from "@tabler/icons-react"
+import { IconGraph, IconX, IconEyeClosed, IconEye } from "@tabler/icons-react"
 import cx from "clsx"
 
 import { Header, Logo } from "../../components/headers"
@@ -26,15 +26,23 @@ import { Tabs, TabsProps } from "../../components/tabs"
 import { useCurrentProposal } from "../../data/metadata"
 import { useAppDispatch, useAppSelector } from "../../redux"
 import { PlotDialog } from "../plots"
+import { openEditor } from "../editor"
+import { useCheckFileLastModifiedQuery } from "../editor/editor.api"
 import { removeTab, setCurrentTab, closeAside } from "./dashboard.slice"
 import Run from "./run"
 
 import styles from "./dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
+import { upadateLastModified } from "../editor/editor.slice"
+import { main } from "ts-node/dist/bin"
 
 const PlotsTab = lazy(() =>
   import("../plots").then((module) => ({ default: module.PlotsTab })),
 )
+const EditorTab = lazy(() =>
+  import("../editor").then((module) => ({ default: module.EditorTab })),
+)
+
 const Table = lazy(() => import("../table"))
 
 interface ButtonProps
@@ -42,11 +50,16 @@ interface ButtonProps
     ElementProps<"button", keyof MantineButtonProps> {
   label: string
   icon: React.ReactNode
+  color?: string
 }
 
-const Button = ({ label, icon, ...props }: ButtonProps) => {
+const Button = ({ label, icon, color = "indigo", ...props }: ButtonProps) => {
   return (
-    <MantineButton color="indigo" variant="white" size="xs" {...props}>
+    <MantineButton color={color} variant="white" size="xs"
+    style={{
+      transition: "color 0.5s ease, box-shadow 0.3s ease",
+    }}
+    {...props}>
       <Group gap={6} px={0}>
         {icon}
         <Text fw={500} size={rem(12)} lh={1} ml={3}>
@@ -57,9 +70,34 @@ const Button = ({ label, icon, ...props }: ButtonProps) => {
   )
 }
 
-const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
+const MainTabs = ({ contents, active, setActive, proposalNum, ...props }: TabsProps) => {
   const [openedDialog, { open: openDialog, close: closeDialog }] =
     useDisclosure()
+    const { main } = useAppSelector((state) => state.dashboard)
+    const { lastModified, unseenChanges, isOpen } = useAppSelector((state) => state.editor)
+    const dispatch = useAppDispatch()
+    const handleOpenEditor = () => {
+      dispatch(openEditor())
+    }
+    
+    const filename = "context.py"
+    const {
+        data,
+        error,
+        isLoading,
+        isFetching,
+        refetch
+      } = useCheckFileLastModifiedQuery({ proposalNum, filename } ,
+         { pollingInterval: 5000} )
+
+    useEffect(() => {
+      if (data?.lastModified && data?.lastModified !== lastModified) {
+        dispatch(upadateLastModified({lastModified: data.lastModified, 
+          isEditorVisible: main.currentTab === "editor"}))
+      }}, [data?.lastModified, lastModified, dispatch])
+   
+      const dateLastModified = lastModified ? 
+      new Date(lastModified * 1000).toLocaleString() : ""
 
   const entries = Object.entries(contents)
   return (
@@ -93,6 +131,21 @@ const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
             </MantineTabs.Tab>
           ))}
           <Button
+            label={`Context file ${dateLastModified}`}
+            icon={
+              !isOpen ? <IconEyeClosed
+                style={{ width: rem(14), height: rem(14) }}
+                stroke={1.5}
+              /> 
+              : <IconEye
+                style={{ width: rem(14), height: rem(14) }}
+                stroke={1.5} />
+            }
+            ml="auto"
+            color={unseenChanges ? "orange" : "indigo"}
+            onClick={handleOpenEditor}
+          />          
+          <Button
             label="Display Plot"
             icon={
               <IconGraph
@@ -100,7 +153,7 @@ const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
                 stroke={1.5}
               />
             }
-            ml="auto"
+            ml="0"
             onClick={openDialog}
           />
         </MantineTabs.List>
@@ -143,6 +196,11 @@ const Dashboard = () => {
     plots: (
       <Suspense fallback={<div>Loading...</div>}>
         <PlotsTab />
+      </Suspense>
+    ),
+    editor: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <EditorTab />
       </Suspense>
     ),
   }
@@ -224,6 +282,7 @@ const Dashboard = () => {
           contents={populatedMainTabs}
           active={main.currentTab}
           setActive={(id) => dispatch(setCurrentTab(id))}
+          proposalNum={proposal.number}
         />
       </AppShell.Main>
       <AppShell.Aside p="xs">
