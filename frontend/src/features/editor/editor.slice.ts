@@ -1,9 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit"
 
 type EditorState = {
-  isOpen: boolean,
-  lastModified: number | null,
-  unseenChanges: boolean,
+  isOpen: boolean
+  lastModified: number | null
+  unseenChanges: boolean
 }
 
 const initialState: EditorState = {
@@ -28,16 +28,26 @@ const slice = createSlice({
     resetEditor: (state) => {
       state.isOpen = false
     },
-    upadateLastModified: (state, action: PayloadAction<UpdateLastModifiedPayload>) => {
-      const { lastModified, isEditorVisible } = action.payload 
-      if (!isEditorVisible && state.lastModified) { state.unseenChanges = true}
+    upadateLastModified: (
+      state,
+      action: PayloadAction<UpdateLastModifiedPayload>,
+    ) => {
+      const { lastModified, isEditorVisible } = action.payload
+      if (!isEditorVisible && state.lastModified) {
+        state.unseenChanges = true
+      }
       state.lastModified = lastModified
     },
     clearUnseenChanges: (state) => {
       state.unseenChanges = false
-    }
+    },
   },
 })
 
 export default slice.reducer
-export const { openEditor, resetEditor, upadateLastModified, clearUnseenChanges } = slice.actions
+export const {
+  openEditor,
+  resetEditor,
+  upadateLastModified,
+  clearUnseenChanges,
+} = slice.actions
