@@ -11,6 +11,7 @@ export interface TabsProps extends MantineTabsProps {
   active?: string | null
   setActive?: (value: string | null) => void
   lastElement?: React.ReactNode | undefined
+  proposalNum?: string
 }
 
 const Tabs = ({
