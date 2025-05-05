@@ -26,6 +26,35 @@ listenerMiddleware.startListening({
 })
 
 listenerMiddleware.startListening({
+  actionCreator: openEditor,
+  effect: (action, { dispatch }) => {
+    dispatch(addTab({ id: "editor", title: "Context File", isClosable: true }))
+  },
+})
+
+listenerMiddleware.startListening({
+  actionCreator: removeTab,
+  effect: (action, { dispatch }) => {
+    const id = action.payload
+    if (id === "plots") {
+      dispatch(resetPlots())
+    } else if (id === "editor") {
+      dispatch(resetEditor())
+    }
+  },
+})
+
+listenerMiddleware.startListening({
+  actionCreator: setCurrentTab,
+  effect: (action, { dispatch, getState }) => {
+    const tabId = action.payload
+    if (tabId === 'editor') {
+      dispatch(clearUnseenChanges())
+    }
+  },
+})
+
+listenerMiddleware.startListening({
   actionCreator: removePlot,
   effect: (_, { dispatch, getState }) => {
     const { plots } = getState() as RootState
