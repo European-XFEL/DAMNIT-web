@@ -94,8 +94,6 @@ const MainTabs = ({ contents, active, setActive, proposalNum, ...props }: TabsPr
     }
   }, [data?.lastModified, lastModified, dispatch])
 
-  const dateLastModified = lastModified ?
-    new Date(lastModified * 1000).toLocaleString() : ""
 
   const entries = Object.entries(contents)
   return (
@@ -126,23 +124,24 @@ const MainTabs = ({ contents, active, setActive, proposalNum, ...props }: TabsPr
                 : {})}
             >
               {tab.title}
+              {id === "editor" && unseenChanges && (
+                <div
+                  style={{
+                    display: "inline-block",
+                    marginLeft: 8,
+                    width: 10,
+                    height: 10,
+                    marginBottom: 2,
+                    borderRadius: "50%",
+                    background: "orange",
+                    boxShadow: "0 0 8px 2px orange",
+                    animation: "blink 1s infinite alternate",
+                    verticalAlign: "middle",
+                  }}
+                />
+              )}
             </MantineTabs.Tab>
           ))}
-          <Button
-            label={`Context file ${dateLastModified}`}
-            icon={
-              !isOpen ? <IconEyeClosed
-                style={{ width: rem(14), height: rem(14) }}
-                stroke={1.5}
-              />
-                : <IconEye
-                  style={{ width: rem(14), height: rem(14) }}
-                  stroke={1.5} />
-            }
-            ml="auto"
-            color={unseenChanges ? "orange" : "indigo"}
-            onClick={handleOpenEditor}
-          />
           <Button
             label="Display Plot"
             icon={
@@ -151,10 +150,18 @@ const MainTabs = ({ contents, active, setActive, proposalNum, ...props }: TabsPr
                 stroke={1.5}
               />
             }
-            ml="0"
+            ml="auto"
             onClick={openDialog}
           />
         </MantineTabs.List>
+        <style>
+          {`
+            @keyframes blink {
+              0% { opacity: 1; }
+              100% { opacity: 0.3; }
+            }
+          `}
+        </style>
         {entries.map(([id, { element }]) => (
           <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
             <Flex
