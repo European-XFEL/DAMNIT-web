@@ -7,7 +7,6 @@ file_mtime_cache: dict[str, dict[str, float]] = {}
 
 
 def get(file_path: str) -> float:
-    print(file_mtime_cache)
     now = time.monotonic()
     entry = file_mtime_cache.get(file_path)
 
@@ -22,6 +21,6 @@ def get(file_path: str) -> float:
 
     for fp, e in list(file_mtime_cache.items()):
         if now - e["last_checked"] > TTL + 1:
-            del file_mtime_cache[fp]
+            del file_mtime_cacßhe[fp]
 
     return mtime
