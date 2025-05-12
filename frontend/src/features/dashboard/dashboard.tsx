@@ -54,11 +54,15 @@ interface ButtonProps
 
 const Button = ({ label, icon, color = "indigo", ...props }: ButtonProps) => {
   return (
-    <MantineButton color={color} variant="white" size="xs"
-    style={{
-      transition: "color 0.5s ease, box-shadow 0.3s ease",
-    }}
-    {...props}>
+    <MantineButton
+      color={color}
+      variant="white"
+      size="xs"
+      style={{
+        transition: "color 0.5s ease, box-shadow 0.3s ease",
+      }}
+      {...props}
+    >
       <Group gap={6} px={0}>
         {icon}
         <Text fw={500} size={rem(12)} lh={1} ml={3}>
@@ -69,31 +73,41 @@ const Button = ({ label, icon, color = "indigo", ...props }: ButtonProps) => {
   )
 }
 
-const MainTabs = ({ contents, active, setActive, proposalNum, ...props }: TabsProps & { proposalNum: number }) => {
+const MainTabs = ({
+  contents,
+  active,
+  setActive,
+  proposalNum,
+  ...props
+}: TabsProps & { proposalNum: number }) => {
   const [openedDialog, { open: openDialog, close: closeDialog }] =
     useDisclosure()
   const { main } = useAppSelector((state) => state.dashboard)
-  const { lastModified, unseenChanges, isOpen } = useAppSelector((state) => state.editor)
+  const { lastModified, unseenChanges, isOpen } = useAppSelector(
+    (state) => state.editor,
+  )
   const dispatch = useAppDispatch()
   const handleOpenEditor = () => {
-   !isOpen ? dispatch(openEditor()) : dispatch(dispatch(removeTab("editor")))
+    !isOpen ? dispatch(openEditor()) : dispatch(dispatch(removeTab("editor")))
   }
 
   const filename = "context.py"
-  const {
-    data,
-    error,
-    isLoading,
-    isFetching,
-    refetch
-  } = useCheckFileLastModifiedQuery({ proposalNum, filename }, { pollingInterval: 5000 })
+  const { data, error, isLoading, isFetching, refetch } =
+    useCheckFileLastModifiedQuery(
+      { proposalNum, filename },
+      { pollingInterval: 5000 },
+    )
 
   React.useEffect(() => {
     if (data?.lastModified && data?.lastModified !== lastModified) {
-      dispatch(upadateLastModified({ lastModified: data.lastModified, isEditorVisible: main.currentTab === "editor" }))
+      dispatch(
+        upadateLastModified({
+          lastModified: data.lastModified,
+          isEditorVisible: main.currentTab === "editor",
+        }),
+      )
     }
   }, [data?.lastModified, lastModified, dispatch])
-
 
   const entries = Object.entries(contents)
   return (
@@ -119,26 +133,21 @@ const MainTabs = ({ contents, active, setActive, proposalNum, ...props }: TabsPr
               key={`tabs-tab-${id}`}
               {...(tab.isClosable && tab.onClose
                 ? {
-                  rightSection: <IconX size={16} onClick={tab.onClose} />,
-                }
+                    rightSection: <IconX size={16} onClick={tab.onClose} />,
+                  }
                 : {})}
             >
-              {tab.title}
-              {id === "editor" && unseenChanges && (
-                <div
+              {unseenChanges && id === "editor" ? (
+                <span
                   style={{
-                    display: "inline-block",
-                    marginLeft: 8,
-                    width: 10,
-                    height: 10,
-                    marginBottom: 2,
-                    borderRadius: "50%",
-                    background: "orange",
-                    boxShadow: "0 0 8px 2px orange",
-                    animation: "blink 1s infinite alternate",
-                    verticalAlign: "middle",
+                    color: "orange",
+                    fontWeight: 700,
                   }}
-                />
+                >
+                  {tab.title}
+                </span>
+              ) : (
+                tab.title
               )}
             </MantineTabs.Tab>
           ))}
@@ -154,14 +163,6 @@ const MainTabs = ({ contents, active, setActive, proposalNum, ...props }: TabsPr
             onClick={openDialog}
           />
         </MantineTabs.List>
-        <style>
-          {`
-            @keyframes blink {
-              0% { opacity: 1; }
-              100% { opacity: 0.3; }
-            }
-          `}
-        </style>
         {entries.map(([id, { element }]) => (
           <MantineTabs.Panel value={id} key={`tabs-panel-${id}`} pt="xs">
             <Flex
