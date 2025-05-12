@@ -2,7 +2,6 @@ import os
 import time
 from pathlib import Path
 TTL = 5.0
-MAX_AGE = 60.0
 
 file_mtime_cache: dict[str, dict[str, float]] = {}
 
@@ -21,7 +20,7 @@ def get(file_path: str) -> float:
     }
 
     for fp, e in list(file_mtime_cache.items()):
-        if now - e["last_checked"] > MAX_AGE:
+        if now - e["last_checked"] > TTL + 1:
             del file_mtime_cache[fp]
 
     return mtime

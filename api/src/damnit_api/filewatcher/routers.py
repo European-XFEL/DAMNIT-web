@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from ..metadata.proposals import get_proposal_info
 from .utils import fetch_file_data
-from .cache import get
+from . import mtime_cache
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/file", include_in_schema=False)
@@ -41,5 +41,5 @@ async def last_modified(proposal_num: str,
                         ):
 
     file_path = await get_file_path(proposal_num, file_name)
-    last_modified = get(file_path)
+    last_modified = mtime_cache.get(file_path)
     return JSONResponse(content={"lastModified": last_modified})

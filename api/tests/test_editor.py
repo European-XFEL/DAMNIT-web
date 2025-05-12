@@ -8,7 +8,7 @@ from damnit_api.filewatcher import routers
 import pytest
 from fastapi.testclient import TestClient
 from damnit_api.main import create_app
-from damnit_api.filewatcher import cache
+from damnit_api.filewatcher import mtime_cache
 
 
 @pytest.fixture(scope="module")
@@ -28,10 +28,10 @@ def temp_file():
 
 @pytest.fixture(autouse=True)
 def fast_ttl(monkeypatch):
-    monkeypatch.setattr(cache, "TTL", 0.01)
-    cache.file_mtime_cache.clear()
+    monkeypatch.setattr(mtime_cache, "TTL", 0.01)
+    mtime_cache.file_mtime_cache.clear()
     yield
-    cache.file_mtime_cache.clear()
+    mtime_cache.file_mtime_cache.clear()
 
 
 @pytest.mark.asyncio
