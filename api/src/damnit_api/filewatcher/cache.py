@@ -7,7 +7,7 @@ MAX_AGE = 60.0
 file_mtime_cache: dict[str, dict[str, float]] = {}
 
 
-def get(file_path: str) -> tuple[float, float]:
+def get(file_path: str) -> float:
     now = time.time()
     entry = file_mtime_cache.get(file_path)
 
