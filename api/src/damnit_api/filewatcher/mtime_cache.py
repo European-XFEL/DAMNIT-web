@@ -21,6 +21,6 @@ def get(file_path: str) -> float:
 
     for fp, e in list(file_mtime_cache.items()):
         if now - e["last_checked"] > TTL + 1:
-            del file_mtime_cacßhe[fp]
+            del file_mtime_cache[fp]
 
     return mtime
