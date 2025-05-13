@@ -1,13 +1,55 @@
 import React from "react"
+import { useEffect, useState, useRef } from "react"
 import { Box, Paper } from "@mantine/core"
+import {
+  useCheckFileLastModifiedQuery,
+  useGetFileContentQuery,
+} from "../editor/editor.api"
 import { useAppSelector } from "../../redux"
 import Editor from "./editor"
 
 const EditorTab: React.FC = () => {
-  const { lastModified } = useAppSelector((state) => state.editor)
-  const date = lastModified
-    ? new Date(lastModified * 1000).toLocaleString()
+  const { proposal } = useAppSelector((state: any) => state.metadata)
+
+  const proposalNum = proposal.value
+  const filename = "context.py"
+  const [dateHighlight, setDateHighlight] = useState(false)
+  const lastValidLastUpdate = useRef<number | undefined>(undefined)
+
+  const { data, error, refetch } = useGetFileContentQuery({
+    proposalNum,
+    filename,
+  })
+
+  const { data: lastModifiedData } = useCheckFileLastModifiedQuery(
+    {
+      proposalNum,
+      filename,
+    },
+    {
+      pollingInterval: 5000,
+    },
+  )
+
+  const date = lastModifiedData?.lastModified
+    ? new Date(lastModifiedData.lastModified * 1000).toLocaleString()
     : "unknown"
+
+  useEffect(() => {
+    if (
+      lastValidLastUpdate.current &&
+      lastModifiedData?.lastModified !== lastValidLastUpdate.current
+    ) {
+      refetch()
+      if (lastValidLastUpdate.current) {
+        setDateHighlight(true)
+        setTimeout(() => {
+          setDateHighlight(false)
+        }, 2000)
+      }
+    }
+    lastValidLastUpdate.current = lastModifiedData?.lastModified
+  }, [lastModifiedData, refetch])
 
   return (
     <Box
@@ -41,16 +83,17 @@ const EditorTab: React.FC = () => {
             overflow: "hidden",
           }}
         >
-          <Editor />
+          <Editor fileContent={data?.fileContent} error={error} />
         </Paper>
       </Box>
       <Box
         style={{
           padding: "8px 16px",
-          backgroundColor: "#E9ECEF",
+          backgroundColor: dateHighlight ? "#c4c97f" : "#E9ECEF",
           textAlign: "center",
           fontSize: "14px",
-          color: "#6C757D",
+          color: dateHighlight ? "#212529" : "#6C757D",
+          transition: "all 0.7s ease-in-out",
         }}
       >
         Last updated: {date}

@@ -1,25 +1,13 @@
-import React, { useEffect } from "react"
+import React from "react"
 import { Editor as Monaco } from "@monaco-editor/react"
-import { useAppSelector } from "../../redux"
-import { useGetFileContentQuery } from "./editor.api"
 import { Alert, Center, Paper } from "@mantine/core"
 
-const Editor: React.FC = () => {
-  const { proposal } = useAppSelector((state: any) => state.metadata)
-  const { lastModified } = useAppSelector((state: any) => state.editor)
+interface EditorProps {
+  fileContent?: string
+  error?: { data?: { detail?: string } } | Error
+}
 
-  const proposalNum = proposal.value
-  const filename = "context.py"
-
-  const { data, error, refetch } = useGetFileContentQuery({
-    proposalNum,
-    filename,
-  })
-  useEffect(() => {
-    if (lastModified) {
-      refetch()
-    }
-  }, [lastModified, refetch])
+const Editor: React.FC<EditorProps> = ({ fileContent, error }) => {
 
   if (error) {
     return (
@@ -52,7 +40,7 @@ const Editor: React.FC = () => {
           readOnly: true,
         }}
         defaultLanguage="python"
-        value={data?.fileContent}
+        value={fileContent}
       />
     </div>
   )

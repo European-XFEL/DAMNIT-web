@@ -26,15 +26,11 @@ import { Tabs, TabsProps } from "../../components/tabs"
 import { useCurrentProposal } from "../../data/metadata"
 import { useAppDispatch, useAppSelector } from "../../redux"
 import { PlotDialog } from "../plots"
-import { openEditor } from "../editor"
-import { useCheckFileLastModifiedQuery } from "../editor/editor.api"
 import { removeTab, setCurrentTab, closeAside } from "./dashboard.slice"
 import Run from "./run"
 
 import styles from "./dashboard.module.css"
 import headerStyles from "../../styles/header.module.css"
-
-import { resetEditor, upadateLastModified } from "../editor/editor.slice"
 
 const PlotsTab = lazy(() =>
   import("../plots").then((module) => ({ default: module.PlotsTab })),
@@ -82,32 +78,7 @@ const MainTabs = ({
 }: TabsProps & { proposalNum: number }) => {
   const [openedDialog, { open: openDialog, close: closeDialog }] =
     useDisclosure()
-  const { main } = useAppSelector((state) => state.dashboard)
-  const { lastModified, unseenChanges, isOpen } = useAppSelector(
-    (state) => state.editor,
-  )
-  const dispatch = useAppDispatch()
-  const handleOpenEditor = () => {
-    !isOpen ? dispatch(openEditor()) : dispatch(dispatch(removeTab("editor")))
-  }
 
-  const filename = "context.py"
-  const { data, error, isLoading, isFetching, refetch } =
-    useCheckFileLastModifiedQuery(
-      { proposalNum, filename },
-      { pollingInterval: 5000 },
-    )
-
-  React.useEffect(() => {
-    if (data?.lastModified && data?.lastModified !== lastModified) {
-      dispatch(
-        upadateLastModified({
-          lastModified: data.lastModified,
-          isEditorVisible: main.currentTab === "editor",
-        }),
-      )
-    }
-  }, [data?.lastModified, lastModified, dispatch])
 
   const entries = Object.entries(contents)
   return (
@@ -137,18 +108,7 @@ const MainTabs = ({
                   }
                 : {})}
             >
-              {unseenChanges && id === "editor" ? (
-                <span
-                  style={{
-                    color: "orange",
-                    fontWeight: 700,
-                  }}
-                >
-                  {tab.title}
-                </span>
-              ) : (
-                tab.title
-              )}
+              {tab.title}
             </MantineTabs.Tab>
           ))}
           <Button

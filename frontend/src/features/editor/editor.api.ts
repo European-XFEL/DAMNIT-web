@@ -35,3 +35,5 @@ export const fileApi = createApi({
 })
 
 export const { useGetFileContentQuery, useCheckFileLastModifiedQuery } = fileApi
+
+export type { LastModifiedResponse }
