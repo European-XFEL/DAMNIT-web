@@ -12,7 +12,6 @@ import { tableDataReducer as tableData } from "../data/table"
 import { dashboardReducer as dashboard } from "../features/dashboard"
 import { plotsReducer as plots } from "../features/plots"
 import { tableReducer as table } from "../features/table"
-import { editorReducer as editor } from "../features/editor"
 
 const reducer = combineReducers({
   dashboard,
@@ -22,7 +21,6 @@ const reducer = combineReducers({
   tableData,
   extractedData,
   loadingBar,
-  editor,
 
   [authApi.reducerPath]: authApi.reducer,
   [metadataApi.reducerPath]: metadataApi.reducer,
