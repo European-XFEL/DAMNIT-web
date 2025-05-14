@@ -1,20 +1,19 @@
 from dataclasses import dataclass
 
 import numpy as np
-from numpy.testing import assert_array_equal
 import pytest
 import xarray as xr
-
 from damnit.api import DataType
+from numpy.testing import assert_array_equal
 
+from damnit_api.const import DamnitType
 from damnit_api.data import (
+    NOT_SUPPORTED_MESSAGE,
     get_damnit_type,
     get_extracted_data,
     standardize,
     to_dataarray,
 )
-from damnit_api.const import DamnitType
-
 
 # ---- get_damnit_type -------------------------------------------------------
 
@@ -76,7 +75,10 @@ datasets = [
     scalars + images + ndarrays + dataarrays,
 )
 def test_get_damnit_type_valid(data):
-    assert get_damnit_type(data.value, type_hint=data.type_hint) is data.expected_type
+    assert (
+        get_damnit_type(data.value, type_hint=data.type_hint)
+        is data.expected_type
+    )
 
 
 @pytest.mark.parametrize(
@@ -84,7 +86,7 @@ def test_get_damnit_type_valid(data):
     datasets,
 )
 def test_get_damnit_type_unsupported(data):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=NOT_SUPPORTED_MESSAGE):
         get_damnit_type(data.value, type_hint=data.type_hint)
 
 
@@ -94,7 +96,9 @@ def test_get_damnit_type_unsupported(data):
 def test_to_dataarray_1d_ndarray():
     data = np.random.rand(10)
     assert to_dataarray(data).equals(
-        xr.DataArray(data, dims=["index"], coords={"index": np.arange(data.shape[0])})
+        xr.DataArray(
+            data, dims=["index"], coords={"index": np.arange(data.shape[0])}
+        )
     )
 
 
@@ -104,7 +108,10 @@ def test_to_dataarray_2d_ndarray():
         xr.DataArray(
             data,
             dims=["y", "x"],
-            coords={"y": np.arange(data.shape[0]), "x": np.arange(data.shape[1])},
+            coords={
+                "y": np.arange(data.shape[0]),
+                "x": np.arange(data.shape[1]),
+            },
         )
     )
 
@@ -165,7 +172,7 @@ def test_to_dataarray_2d_dataarray_with_coords():
 
 @pytest.mark.parametrize("data", scalars + datasets)
 def test_to_data_array_unsupported(data):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=NOT_SUPPORTED_MESSAGE):
         to_dataarray(data)
 
 
@@ -204,7 +211,7 @@ def test_standardize_dataarray():
 def test_standardize_png():
     name = "some_png"
     dtype = DamnitType.PNG
-    data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAABQUlEQVR4nAE2Acn+ARvURClMomT2KO"
+    data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAABQUlEQVR4nAE2Acn+ARvURClMomT2KO"  # noqa: E501
 
     assert standardize(data, name=name, dtype=dtype.value) == {
         "data": data,
@@ -288,7 +295,7 @@ def test_get_extracted_data_png(mocker):
 def assert_coords(actual, expected):
     assert len(actual) == len(expected)
     for (actual_dim, actual_coord), (expected_dim, expected_coord) in zip(
-        actual.items(), expected.items()
+        actual.items(), expected.items(), strict=True
     ):
         assert actual_dim == expected_dim
         assert_array_equal(actual_coord, expected_coord)

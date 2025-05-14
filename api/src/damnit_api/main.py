@@ -83,7 +83,8 @@ if __name__ == "__main__":
 
     if settings.uvicorn.ssl_cert_reqs != 2:
         logger.warning(
-            "Not configured to require mTLS. This is not recommended for production."
+            "Not configured to require mTLS. "
+            "This is not recommended for production."
         )
 
     uvicorn.run(
