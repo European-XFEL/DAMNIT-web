@@ -69,6 +69,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: Number(VITE_PORT) || 5173,
+      allowedHosts: true, // TODO: This needs to be specified on .env.[development|production]
       proxy: {
         '/graphql': { ...defaultProxyConfig, ws: true },
         '/oauth': { ...defaultProxyConfig },
