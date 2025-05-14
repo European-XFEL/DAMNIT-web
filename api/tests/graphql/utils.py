@@ -48,4 +48,4 @@ def assert_stype(stype, variables):
             assert type_.__origin__ is KnownVariable
         else:
             assert prop in variables
-            assert type_ is Optional[DamnitVariable]
+            assert type_ is Optional[DamnitVariable]  # noqa: UP007

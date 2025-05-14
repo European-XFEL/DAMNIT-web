@@ -1,9 +1,8 @@
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
-import pytest_asyncio
 
 from damnit_api.graphql.models import DamnitRun, serialize
 from damnit_api.graphql.subscriptions import POLLING_INTERVAL
@@ -18,7 +17,6 @@ from .const import (
 )
 from .utils import create_run_variables
 
-
 NEW_RUN = 100
 
 
@@ -27,11 +25,11 @@ patched_sleep = patch.object(asyncio, "sleep", return_value=None)
 
 @pytest.fixture(scope="module")
 def current_timestamp():
-    return datetime.now().timestamp()
+    return datetime.now(tz=UTC).timestamp()
 
 
-@pytest_asyncio.fixture
-async def mocked_latest_rows(mocker, current_timestamp):
+@pytest.fixture
+def mocked_latest_rows(mocker, current_timestamp):
     def mocked_returns(*args, table, **kwargs):
         if table == "run_variables":
             return create_run_variables(
@@ -56,9 +54,9 @@ def mocked_variables(mocker):
     )
 
 
-@pytest_asyncio.fixture
-async def mocked_fetch_info(mocker):
-    mocker.patch(
+@pytest.fixture
+def mocked_fetch_info(mocker):
+    return mocker.patch(
         "damnit_api.graphql.subscriptions.fetch_info",
         return_value=[{**KNOWN_VALUES, "run": NEW_RUN}],
     )
@@ -110,7 +108,7 @@ async def test_latest_data(
 
         metadata = latest_data["metadata"]
         assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
-        assert metadata["runs"] == RUNS + [NEW_RUN]
+        assert metadata["runs"] == [*RUNS, NEW_RUN]
         assert metadata["timestamp"] == current_timestamp * 1000
         assert metadata["variables"] == {
             **DamnitRun.known_variables(),
@@ -213,7 +211,9 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
             mocked_latest_rows.assert_called()
             break
 
-    await asyncio.sleep(POLLING_INTERVAL * 3)  # give enough time to clear the cache
+    await asyncio.sleep(
+        POLLING_INTERVAL * 3
+    )  # give enough time to clear the cache
     mocked_latest_rows.reset_mock()
 
     with patched_sleep:

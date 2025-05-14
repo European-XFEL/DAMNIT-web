@@ -1,6 +1,5 @@
 from damnit_api.graphql.models import (
     DamnitTable,
-    DamnitType,
     get_model,
     update_model,
 )
