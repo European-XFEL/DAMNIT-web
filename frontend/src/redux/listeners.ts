@@ -1,10 +1,10 @@
-import { createListenerMiddleware } from "@reduxjs/toolkit"
+import { createListenerMiddleware } from '@reduxjs/toolkit'
 
-import { addTab, removeTab, openAside, closeAside } from "../features/dashboard"
-import { addPlot, removePlot, resetPlots } from "../features/plots/"
-import { selectRun } from "../features/table"
-import { RootState } from "../redux/reducer"
-import { isEmpty } from "../utils/helpers"
+import { addTab, removeTab, openAside, closeAside } from '../features/dashboard'
+import { addPlot, removePlot, resetPlots } from '../features/plots/'
+import { selectRun } from '../features/table'
+import { RootState } from '../redux/reducer'
+import { isEmpty } from '../utils/helpers'
 
 export const listenerMiddleware = createListenerMiddleware()
 
@@ -21,7 +21,7 @@ listenerMiddleware.startListening({
 listenerMiddleware.startListening({
   actionCreator: addPlot,
   effect: (action, { dispatch }) => {
-    dispatch(addTab({ id: "plots", title: "Plots", isClosable: true }))
+    dispatch(addTab({ id: 'plots', title: 'Plots', isClosable: true }))
   },
 })
 
@@ -29,7 +29,9 @@ listenerMiddleware.startListening({
   actionCreator: removePlot,
   effect: (action, { dispatch, getState }) => {
     const { plots } = getState() as RootState
-    isEmpty(plots.data) && dispatch(removeTab("plots"))
+    if (isEmpty(plots.data)) {
+      dispatch(removeTab('plots'))
+    }
   },
 })
 
