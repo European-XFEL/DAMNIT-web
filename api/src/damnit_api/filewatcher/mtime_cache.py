@@ -1,6 +1,6 @@
-import os
 import time
 from pathlib import Path
+
 TTL = 5.0
 
 file_mtime_cache: dict[str, dict[str, float]] = {}
@@ -13,7 +13,7 @@ def get(file_path: str) -> float:
     if entry and now - entry["last_checked"] <= TTL:
         return entry["last_modified"]
 
-    mtime = os.path.getmtime(file_path)
+    mtime = Path(file_path).stat().st_mtime
     file_mtime_cache[file_path] = {
         "last_modified": mtime,
         "last_checked": now,

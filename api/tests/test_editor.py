@@ -1,14 +1,13 @@
-import os
-import time
-import tempfile
 import asyncio
+import tempfile
+import time
 from pathlib import Path
-from damnit_api.filewatcher import routers
 
 import pytest
 from fastapi.testclient import TestClient
+
+from damnit_api.filewatcher import mtime_cache, routers
 from damnit_api.main import create_app
-from damnit_api.filewatcher import mtime_cache
 
 
 @pytest.fixture(scope="module")
@@ -24,7 +23,8 @@ def temp_file():
         f.write("initial content")
         f.flush()
         yield f.name
-    os.unlink(f.name)
+    Path(f.name).unlink()
+
 
 @pytest.fixture(autouse=True)
 def fast_ttl(monkeypatch):
@@ -36,12 +36,11 @@ def fast_ttl(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_watcher_detects_change(client, temp_file, monkeypatch):
-    from damnit_api.filewatcher import routers
+    temp_path = Path(temp_file)
+    temp_dir = str(temp_path.parent)
+    temp_filename = temp_path.name
 
-    temp_dir = os.path.dirname(temp_file)
-    temp_filename = os.path.basename(temp_file)
-
-    async def fake_get_proposal_info(proposal_num):
+    async def fake_get_proposal_info(proposal_num):  # noqa: RUF029
         return {"damnit_path": temp_dir}
 
     monkeypatch.setattr(routers, "get_proposal_info", fake_get_proposal_info)
@@ -49,23 +48,27 @@ async def test_watcher_detects_change(client, temp_file, monkeypatch):
     proposal_num = "1"
     filename = temp_filename
 
-    resp = client.get(f"/file/last_modified?proposal_num={proposal_num}&file_name={filename}")
+    resp = client.get(
+        f"/file/last_modified?proposal_num={proposal_num}&file_name={filename}"
+    )
     assert resp.status_code == 200
     initial_modified = resp.json()["lastModified"]
-         
-    with open(temp_file, "w") as f:
-        f.write("new content")
-        f.flush()
 
-    assert await wait_for_change(client, f"/file/last_modified?proposal_num={proposal_num}&file_name={filename}", initial_modified)    
+    await asyncio.to_thread(temp_path.write_text, "new content")
+
+    assert await wait_for_change(
+        client,
+        f"/file/last_modified?proposal_num={proposal_num}&file_name={filename}",
+        initial_modified,
+    )
 
 
-@pytest.mark.asyncio
-async def test_file_fetching(client, temp_file, monkeypatch):
-    temp_dir = os.path.dirname(temp_file)
-    temp_filename = os.path.basename(temp_file)
+def test_file_fetching(client, temp_file, monkeypatch):
+    temp_path = Path(temp_file)
+    temp_dir = str(temp_path.parent)
+    temp_filename = temp_path.name
 
-    async def fake_get_proposal_info(proposal_num):
+    async def fake_get_proposal_info(proposal_num):  # noqa: RUF029
         return {"damnit_path": temp_dir}
 
     monkeypatch.setattr(routers, "get_proposal_info", fake_get_proposal_info)
@@ -73,11 +76,16 @@ async def test_file_fetching(client, temp_file, monkeypatch):
     proposal_num = "1"
     filename = temp_filename
 
-    resp = client.get(f"/file/current?proposal_num={proposal_num}&filename={filename}")
+    resp = client.get(
+        f"/file/current?proposal_num={proposal_num}&filename={filename}"
+    )
     assert resp.status_code == 200
     assert resp.json()["fileContent"] == "initial content"
-        
-async def wait_for_change(client, url, initial_value, timeout=5):
+
+
+async def wait_for_change(
+    client, url, initial_value, timeout: float = 5.0  # noqa: ASYNC109
+):
     start = time.time()
     while time.time() - start < timeout:
         resp = client.get(url)

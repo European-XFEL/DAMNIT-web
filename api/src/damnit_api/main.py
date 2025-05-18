@@ -10,7 +10,7 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import _logging, auth, metadata, filewatcher
+    from . import _logging, auth, filewatcher, metadata
     from .graphql import add_graphql_router
     from .settings import settings
 
