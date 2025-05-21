@@ -12,19 +12,16 @@ const EditorTab: React.FC = () => {
   const { proposal } = useAppSelector((state: any) => state.metadata)
 
   const proposalNum = proposal.value
-  const filename = "context.py"
   const [dateHighlight, setDateHighlight] = useState(false)
   const lastValidLastUpdate = useRef<number | undefined>(undefined)
 
   const { data, error, refetch } = useGetFileContentQuery({
     proposalNum,
-    filename,
   })
 
   const { data: lastModifiedData } = useCheckFileLastModifiedQuery(
     {
       proposalNum,
-      filename,
     },
     {
       pollingInterval: 5000,
