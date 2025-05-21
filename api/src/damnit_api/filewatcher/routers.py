@@ -7,7 +7,7 @@ from ..metadata.proposals import get_proposal_info
 from . import mtime_cache
 from .utils import fetch_file_data
 
-router = APIRouter(prefix="/file", include_in_schema=True)
+router = APIRouter(prefix="/contextfile", include_in_schema=True)
 
 
 async def get_file_path(proposal_num, filename):
@@ -32,9 +32,9 @@ async def get_file_path(proposal_num, filename):
     return str(file_path)
 
 
-@router.get("/current")
-async def fetch_current_file(proposal_num, filename):
-    file_path = await get_file_path(proposal_num, filename)
+@router.get("/content")
+async def fetch_current_file(proposal_num):
+    file_path = await get_file_path(proposal_num, "context.py")
 
     file_data = await fetch_file_data(file_path, with_content=True)
 
@@ -44,8 +44,7 @@ async def fetch_current_file(proposal_num, filename):
 @router.get("/last_modified")
 async def last_modified(
     proposal_num: str,
-    file_name: str,
 ):
-    file_path = await get_file_path(proposal_num, file_name)
+    file_path = await get_file_path(proposal_num, "context.py")
     last_modified = mtime_cache.get(file_path)
     return JSONResponse(content={"lastModified": last_modified})
