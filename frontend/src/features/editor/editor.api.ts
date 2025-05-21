@@ -11,29 +11,28 @@ interface LastModifiedResponse {
 
 export const fileApi = createApi({
   reducerPath: "fileApi",
-  baseQuery: fetchBaseQuery({ baseUrl: `${BASE_URL}file` }),
+  baseQuery: fetchBaseQuery({ baseUrl: `${BASE_URL}contextfile` }),
   endpoints: (builder) => ({
     getFileContent: builder.query<
       FileContent,
-      { proposalNum: string; filename: string }
+      { proposalNum: string }
     >({
-      query: ({ proposalNum, filename }) => ({
-        url: "current",
-        params: { proposal_num: proposalNum, filename },
+      query: ({ proposalNum }) => ({
+        url: "content",
+        params: { proposal_num: proposalNum },
       }),
     }),
     checkFileLastModified: builder.query<
       LastModifiedResponse,
-      { proposalNum: string | undefined; filename: string }
+      { proposalNum: string }
     >({
-      query: ({ proposalNum, filename }) => ({
+      query: ({ proposalNum }) => ({
         url: "last_modified",
-        params: { proposal_num: proposalNum, file_name: filename },
+        params: { proposal_num: proposalNum },
       }),
     }),
   }),
 })
 
 export const { useGetFileContentQuery, useCheckFileLastModifiedQuery } = fileApi
-
 export type { LastModifiedResponse }

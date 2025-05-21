@@ -74,7 +74,7 @@ export default defineConfig(({ mode }) => {
         "/graphql": { ...defaultProxyConfig, ws: true },
         "/oauth": { ...defaultProxyConfig },
         "/metadata": { ...defaultProxyConfig },
-        "/file": { ...defaultProxyConfig },
+        "/contextfile": { ...defaultProxyConfig },
       },
       https: sslConfig,
     },
