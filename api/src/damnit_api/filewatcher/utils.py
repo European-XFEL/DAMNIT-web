@@ -2,7 +2,8 @@ import asyncio
 from pathlib import Path
 
 import aiofiles
-from structlog import get_logger
+
+from .. import get_logger
 
 logger = get_logger()
 
