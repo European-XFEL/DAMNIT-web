@@ -45,7 +45,7 @@ const EditorTab: React.FC = () => {
         }, 2000)
       }
     }
-    lastValidLastUpdate.current = lastModifiedData?.lastModified
+    lastValidLastUpdate.current = data?.lastModified
   }, [lastModifiedData, refetch])
 
   return (
