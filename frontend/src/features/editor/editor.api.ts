@@ -3,6 +3,7 @@ import { BASE_URL } from "../../constants"
 
 interface FileContent {
   fileContent: string
+  lastModified: number
 }
 
 interface LastModifiedResponse {
