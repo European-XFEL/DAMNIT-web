@@ -4,7 +4,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from damnit_api.filewatcher import mtime_cache, routers
+from damnit_api.contextfile import mtime_cache, routers
 from damnit_api.main import create_app
 
 

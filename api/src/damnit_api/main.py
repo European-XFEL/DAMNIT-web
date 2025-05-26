@@ -10,7 +10,7 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import _logging, auth, filewatcher, metadata
+    from . import _logging, auth, contextfile, metadata
     from .graphql import add_graphql_router
     from .settings import settings
 
@@ -27,7 +27,7 @@ def create_app():
         add_graphql_router(app)
         app.router.include_router(auth.router)
         app.router.include_router(metadata.router)
-        app.router.include_router(filewatcher.router)
+        app.router.include_router(contextfile.router)
         yield
 
     app = FastAPI(
