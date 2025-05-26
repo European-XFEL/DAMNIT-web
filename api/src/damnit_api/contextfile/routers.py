@@ -1,13 +1,18 @@
 from pathlib import Path
 
+import aiofiles
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from ..metadata.proposals import get_proposal_info
 from . import mtime_cache
-from .utils import fetch_file_data
 
 router = APIRouter(prefix="/contextfile", include_in_schema=True)
+
+
+async def fetch_file_data(file_path: Path) -> str:
+    async with aiofiles.open(file_path, encoding="utf-8") as f:
+        return await f.read()
 
 
 async def get_file_path(proposal_num, filename):
@@ -36,7 +41,7 @@ async def get_file_path(proposal_num, filename):
 async def fetch_current_file(proposal_num):
     file_path = await get_file_path(proposal_num, "context.py")
 
-    file_data = await fetch_file_data(file_path, with_content=True)
+    file_data = await fetch_file_data(file_path)
     last_modified = mtime_cache.get(file_path)
 
     return JSONResponse({"fileContent": file_data,
