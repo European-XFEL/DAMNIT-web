@@ -1,4 +1,3 @@
-import React from "react"
 import { Image, ScrollArea, Text } from "@mantine/core"
 
 import classes from "./run.module.css"

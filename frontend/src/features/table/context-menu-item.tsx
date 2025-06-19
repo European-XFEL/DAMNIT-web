@@ -1,5 +1,3 @@
-import React from "react"
-
 import { Stack, Text } from "@mantine/core"
 
 import {

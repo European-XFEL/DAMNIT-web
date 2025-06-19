@@ -1,4 +1,4 @@
-import React, { PropsWithChildren } from "react"
+import { PropsWithChildren } from "react"
 import { Navigate } from "react-router-dom"
 
 import { history } from "./history"

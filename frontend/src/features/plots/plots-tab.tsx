@@ -1,4 +1,3 @@
-import React from "react"
 import { Box, Stack, Text } from "@mantine/core"
 
 import { removePlot, setCurrentPlot } from "./plots.slice"

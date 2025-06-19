@@ -1,4 +1,3 @@
-import React from "react"
 import { Container, Title } from "@mantine/core"
 
 import { history } from "../../routes"

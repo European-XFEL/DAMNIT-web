@@ -1,4 +1,3 @@
-import React from "react"
 import { AppShell, Container } from "@mantine/core"
 
 import { Header, Logo } from "../../components/headers"
