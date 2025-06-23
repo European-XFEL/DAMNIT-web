@@ -17,7 +17,7 @@ import {
 } from "@mantine/core"
 import { useDisclosure } from "@mantine/hooks"
 
-import { IconGraph, IconX, IconEyeClosed, IconEye } from "@tabler/icons-react"
+import { IconGraph, IconX } from "@tabler/icons-react"
 import cx from "clsx"
 
 import { Header, Logo } from "../../components/headers"
@@ -35,8 +35,8 @@ import headerStyles from "../../styles/header.module.css"
 const PlotsTab = lazy(() =>
   import("../plots").then((module) => ({ default: module.PlotsTab })),
 )
-const EditorTab = lazy(() =>
-  import("../editor").then((module) => ({ default: module.EditorTab })),
+const ContextFileEditorTab = lazy(() =>
+  import("../contextfileeditor").then((module) => ({ default: module.ContextFileEditorTab })),
 )
 const Table = lazy(() => import("../table"))
 
@@ -166,7 +166,7 @@ const Dashboard = () => {
     ),
     editor: (
       <Suspense fallback={<div>Loading...</div>}>
-        <EditorTab />
+        <ContextFileEditorTab />
       </Suspense>
     ),
   }

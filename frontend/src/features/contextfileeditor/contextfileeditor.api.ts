@@ -1,5 +1,5 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import { BASE_URL } from "../../constants"
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { BASE_URL } from '../../constants'
 
 interface FileContent {
   fileContent: string
@@ -10,16 +10,13 @@ interface LastModifiedResponse {
   lastModified: number
 }
 
-export const fileApi = createApi({
-  reducerPath: "fileApi",
+export const contextfileApi = createApi({
+  reducerPath: 'fileApi',
   baseQuery: fetchBaseQuery({ baseUrl: `${BASE_URL}contextfile` }),
   endpoints: (builder) => ({
-    getFileContent: builder.query<
-      FileContent,
-      { proposalNum: string }
-    >({
+    getFileContent: builder.query<FileContent, { proposalNum: string }>({
       query: ({ proposalNum }) => ({
-        url: "content",
+        url: 'content',
         params: { proposal_num: proposalNum },
       }),
     }),
@@ -28,12 +25,13 @@ export const fileApi = createApi({
       { proposalNum: string }
     >({
       query: ({ proposalNum }) => ({
-        url: "last_modified",
+        url: 'last_modified',
         params: { proposal_num: proposalNum },
       }),
     }),
   }),
 })
 
-export const { useGetFileContentQuery, useCheckFileLastModifiedQuery } = fileApi
+export const { useGetFileContentQuery, useCheckFileLastModifiedQuery } =
+  contextfileApi
 export type { LastModifiedResponse }
