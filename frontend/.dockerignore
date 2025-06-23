@@ -2,20 +2,20 @@
 node_modules
 
 # Ignore env files
-.env
+.env*
 
 # Ignore local editor settings
 .vscode
 
 # Ignore Git repository files
 .git
+.gitignore
 
 # Ignore build folder
 dist
 build
 
 # Ignore configuration files
-.eslint*
-.prettier*
-.editorconfig
+eslint*
+prettier*
 .DS_Store
