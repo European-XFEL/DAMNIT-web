@@ -1,0 +1,12 @@
+name: damnit-web-prod
+
+services:
+  frontend:
+    build:
+      context: .
+      target: production
+    environment:
+      - NGINX_SERVER_NAME=localhost
+      - NGINX_API_URL=http://host.docker.internal:30030/
+    ports:
+      - 5173:80
