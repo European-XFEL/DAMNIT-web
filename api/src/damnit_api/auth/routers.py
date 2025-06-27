@@ -1,4 +1,5 @@
 from typing import Annotated
+from urllib.parse import parse_qs, unquote, urlencode
 
 from authlib.integrations.starlette_client import (  # type: ignore[import-untyped]
     OAuth,
@@ -26,13 +27,14 @@ def configure() -> None:
     global OAUTH
 
     _OAUTH.register(
-        name="dadev",
+        name="damnit_web",
         client_id=settings.auth.client_id,
         client_secret=settings.auth.client_secret.get_secret_value(),
         server_metadata_url=str(settings.auth.server_metadata_url),
+        client_kwargs={"scope": "openid email"},
     )
 
-    OAUTH = _OAUTH.dadev  # type: ignore[assignment, no-redef]
+    OAUTH = _OAUTH.damnit_web  # type: ignore[assignment, no-redef]
 
 
 @router.get("/login")
@@ -42,10 +44,14 @@ async def auth(
     if request.session.get("user"):
         return RedirectResponse(url=redirect_uri)
 
-    callback_uri = request.url_for("callback").include_query_params(
-        redirect_uri=redirect_uri
+    state = urlencode({"redirect_uri": redirect_uri})
+    callback_uri = request.url_for("callback")
+
+    return await OAUTH.authorize_redirect(
+        request,
+        str(callback_uri),
+        state=state
     )
-    return await OAUTH.authorize_redirect(request, callback_uri)
 
 
 @router.get("/callback")
@@ -58,8 +64,14 @@ async def callback(
     except OAuthError as e:
         raise HTTPException(status_code=401, detail=str(e)) from e
 
+    state = request.query_params.get("state", "")
+    state_params = parse_qs(state)
+    redirect_uri = state_params.get(
+        "redirect_uri",
+        [DEFAULT_LOGIN_REDIRECT_URI])[0]
+
     request.session["user"] = dict(user)
-    return RedirectResponse(url=redirect_uri)
+    return RedirectResponse(url=unquote(redirect_uri))
 
 
 @router.get("/logout")
