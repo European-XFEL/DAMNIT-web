@@ -78,8 +78,8 @@ class DamnitVariable(BaseVariable):
 class DamnitRun:
     proposal: KnownVariable[int]
     run: KnownVariable[int]
-    start_time: KnownVariable[Timestamp]
-    added_at: KnownVariable[Timestamp]
+    start_time: KnownVariable[Timestamp] | None
+    added_at: KnownVariable[Timestamp] | None
 
     @classmethod
     def from_db(cls, entry):
