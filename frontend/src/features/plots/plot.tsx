@@ -1,4 +1,3 @@
-import React from "react"
 import Plotly from "react-plotly.js"
 
 import { PlotInfo, PlotMetadata } from "./plots.types"

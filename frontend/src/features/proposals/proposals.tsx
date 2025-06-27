@@ -44,7 +44,7 @@ type CellProps = {
  */
 
 interface ExpandedCellProps extends CellProps {
-  Component: ComponentType<{ className: string }>
+  Component: ComponentType<{ className?: string }>
 }
 
 const ExpandedCell = memo(function ExpandedCell({

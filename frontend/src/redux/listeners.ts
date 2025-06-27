@@ -20,14 +20,14 @@ listenerMiddleware.startListening({
 
 listenerMiddleware.startListening({
   actionCreator: addPlot,
-  effect: (action, { dispatch }) => {
+  effect: (_, { dispatch }) => {
     dispatch(addTab({ id: 'plots', title: 'Plots', isClosable: true }))
   },
 })
 
 listenerMiddleware.startListening({
   actionCreator: removePlot,
-  effect: (action, { dispatch, getState }) => {
+  effect: (_, { dispatch, getState }) => {
     const { plots } = getState() as RootState
     if (isEmpty(plots.data)) {
       dispatch(removeTab('plots'))
@@ -37,7 +37,7 @@ listenerMiddleware.startListening({
 
 listenerMiddleware.startListening({
   actionCreator: removeTab,
-  effect: (action, { dispatch }) => {
+  effect: (_, { dispatch }) => {
     dispatch(resetPlots())
   },
 })

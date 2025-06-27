@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"
+import { useEffect } from "react"
 import { Container, Title } from "@mantine/core"
 import { history } from "../../routes"
 

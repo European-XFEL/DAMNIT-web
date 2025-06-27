@@ -1,4 +1,3 @@
-import React from "react"
 import { useLayer } from "react-laag"
 import { Stack } from "@mantine/core"
 import { ContextMenuPortal as MantineContextMenu } from "mantine-contextmenu"

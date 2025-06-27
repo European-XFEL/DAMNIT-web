@@ -1,4 +1,4 @@
-import React, { useEffect, useState, PropsWithChildren } from "react"
+import { useEffect, useState, PropsWithChildren } from "react"
 
 import { Alert, Code, Image, Skeleton, Stack, Text } from "@mantine/core"
 import { IconInfoCircle } from "@tabler/icons-react"

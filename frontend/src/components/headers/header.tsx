@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, useState } from "react"
+import { PropsWithChildren, useState } from "react"
 import { UnstyledButton, Group, Text, Menu, Burger, rem } from "@mantine/core"
 import { useDisclosure } from "@mantine/hooks"
 import { IconLogout, IconChevronDown } from "@tabler/icons-react"

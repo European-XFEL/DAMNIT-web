@@ -1,4 +1,3 @@
-import React from "react"
 import { Button, ButtonProps, ElementProps } from "@mantine/core"
 
 import classes from "./main-nav-button.module.css"
