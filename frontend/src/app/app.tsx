@@ -11,7 +11,7 @@ import LoadingBar, { showLoading } from "react-redux-loading-bar"
 
 import { useProposal } from "./use-proposal"
 import { resetExtractedData } from "../data/extracted"
-import { setProposalPending } from "../data/metadata"
+import { resetMetadata, setProposalPending } from "../data/metadata"
 import { resetTable as resetTableData } from "../data/table"
 import Dashboard from "../features/dashboard"
 import {
@@ -41,6 +41,7 @@ function ProposalWrapper({ children }: PropsWithChildren) {
       dispatch(resetTableView())
       dispatch(resetExtractedData())
       dispatch(resetPlots())
+      dispatch(resetMetadata())
     }
   }, [proposal_number, dispatch])
 

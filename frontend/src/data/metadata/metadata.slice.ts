@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit"
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 
 interface Proposal {
   value: string
@@ -12,16 +12,17 @@ interface State {
 
 const initialState: State = {
   proposal: {
-    value: "",
+    value: '',
     loading: false,
     notFound: false,
   },
 }
 
 const slice = createSlice({
-  name: "metadata",
+  name: 'metadata',
   initialState,
   reducers: {
+    reset: () => initialState,
     setProposalPending(state, action: PayloadAction<string>) {
       state.proposal = {
         ...initialState.proposal,
@@ -40,5 +41,9 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { setProposalPending, setProposalSuccess, setProposalNotFound } =
-  slice.actions
+export const {
+  setProposalPending,
+  setProposalSuccess,
+  setProposalNotFound,
+  reset: resetMetadata,
+} = slice.actions
