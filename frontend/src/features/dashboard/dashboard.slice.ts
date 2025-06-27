@@ -17,7 +17,10 @@ type DasboardState = {
 }
 
 const initialState: DasboardState = {
-  main: { tabs: { table: { title: "Table" } }, currentTab: "table" },
+  main: {
+    tabs: { table: { title: "Table" }, editor: { title: "Context File" } },
+    currentTab: "table",
+  },
   aside: {
     isOpened: false,
     tabs: { run: { title: "Run", isClosable: false } },
