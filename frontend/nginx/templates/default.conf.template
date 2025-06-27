@@ -1,33 +1,36 @@
 server {
-  listen 80;
-
+  listen 443 ssl;
   server_name ${NGINX_SERVER_NAME};
 
   root /usr/share/nginx/html;
   index index.html;
+
+  ssl_certificate /etc/ssl/certs/server.crt;
+  ssl_certificate_key /etc/ssl/certs/server.key;
+  ssl_client_certificate /etc/ssl/certs/root_ca.crt;
+  ssl_protocols TLSv1.2 TLSv1.3;
 
   location / {
     try_files $uri /index.html =404;
   }
 
   location /oauth {
-    proxy_pass ${NGINX_API_URL}oauth;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
+    proxy_pass ${NGINX_API_URL};
+    include /etc/nginx/proxy_api.conf;
   }
 
   location /metadata {
-    proxy_pass ${NGINX_API_URL}metadata;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
+    proxy_pass ${NGINX_API_URL};
+    include /etc/nginx/proxy_api.conf;
   }
 
   location /graphql {
-    proxy_pass ${NGINX_API_URL}graphql;
+    proxy_pass ${NGINX_API_URL};
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "Upgrade";
-    proxy_set_header Host $host;
     proxy_cache_bypass $http_upgrade;
+    include /etc/nginx/proxy_api.conf;
   }
 }
+

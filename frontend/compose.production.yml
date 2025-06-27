@@ -6,7 +6,8 @@ services:
       context: .
       target: production
     environment:
-      - NGINX_SERVER_NAME=localhost
-      - NGINX_API_URL=http://host.docker.internal:30030/
+      - NGINX_SERVER_NAME=exfldamnittest01.desy.de
+      - NGINX_API_URL=https://max-exfl458.desy.de:8123
     ports:
-      - 5173:80
+      - 443:443
+
