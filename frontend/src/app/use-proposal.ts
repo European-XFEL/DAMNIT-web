@@ -1,19 +1,19 @@
-import { useEffect } from "react"
+import { useEffect } from 'react'
 
-import { useMutation } from "@apollo/client"
-import { useSubscription } from "@apollo/client"
-import { hideLoading } from "react-redux-loading-bar"
+import { useMutation } from '@apollo/client'
+import { useSubscription } from '@apollo/client'
+import { hideLoading } from 'react-redux-loading-bar'
 
-import { updateTable } from "../data/table"
-import { setProposalNotFound, setProposalSuccess } from "../data/metadata"
+import { updateTable } from '../data/table'
+import { setProposalNotFound, setProposalSuccess } from '../data/metadata'
 import {
   REFRESH_MUTATION,
   LATEST_DATA_FIELD_NAME,
   LATEST_DATA_SUBSCRIPTION,
-} from "../data/table"
-import { useAppDispatch, useAppSelector } from "../redux"
+} from '../data/table'
+import { useAppDispatch, useAppSelector } from '../redux'
 
-const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === "test")
+const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === 'test')
 
 export const useProposal = () => {
   // Initialize Redux things
@@ -40,16 +40,19 @@ export const useProposal = () => {
     refresh({
       variables: { proposal: proposal.value },
       onCompleted: ({ refresh }) => {
-        dispatch(setProposalSuccess())
         dispatch(updateTable({ data: {}, metadata: refresh.metadata }))
+
+        // Finalize
         dispatch(hideLoading())
+        dispatch(setProposalSuccess())
       },
       onError: (_) => {
-        dispatch(setProposalNotFound())
+        // Finalize
         dispatch(hideLoading())
+        dispatch(setProposalNotFound())
       },
     })
-  }, [proposal, refresh, dispatch])
+  }, [proposal.value, refresh, dispatch])
 
   return proposal
 }
