@@ -35,6 +35,9 @@ import headerStyles from "../../styles/header.module.css"
 const PlotsTab = lazy(() =>
   import("../plots").then((module) => ({ default: module.PlotsTab })),
 )
+const ContextFileEditorTab = lazy(() =>
+  import("../contextfileeditor").then((module) => ({ default: module.ContextFileEditorTab })),
+)
 const Table = lazy(() => import("../table"))
 
 interface ButtonProps
@@ -42,11 +45,20 @@ interface ButtonProps
     ElementProps<"button", keyof MantineButtonProps> {
   label: string
   icon: React.ReactNode
+  color?: string
 }
 
-const Button = ({ label, icon, ...props }: ButtonProps) => {
+const Button = ({ label, icon, color = "indigo", ...props }: ButtonProps) => {
   return (
-    <MantineButton color="indigo" variant="white" size="xs" {...props}>
+    <MantineButton
+      color={color}
+      variant="white"
+      size="xs"
+      style={{
+        transition: "color 0.5s ease, box-shadow 0.3s ease",
+      }}
+      {...props}
+    >
       <Group gap={6} px={0}>
         {icon}
         <Text fw={500} size={rem(12)} lh={1} ml={3}>
@@ -57,7 +69,12 @@ const Button = ({ label, icon, ...props }: ButtonProps) => {
   )
 }
 
-const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
+const MainTabs = ({
+  contents,
+  active,
+  setActive,
+  ...props
+}: TabsProps) => {
   const [openedDialog, { open: openDialog, close: closeDialog }] =
     useDisclosure()
 
@@ -143,6 +160,11 @@ const Dashboard = () => {
     plots: (
       <Suspense fallback={<div>Loading...</div>}>
         <PlotsTab />
+      </Suspense>
+    ),
+    editor: (
+      <Suspense fallback={<div>Loading...</div>}>
+        <ContextFileEditorTab />
       </Suspense>
     ),
   }
