@@ -1,6 +1,10 @@
 import React from 'react'
 import { useEffect, useState, useRef } from 'react'
+
 import { Box, Paper } from '@mantine/core'
+import type { SerializedError } from '@reduxjs/toolkit'
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+
 import {
   useCheckFileLastModifiedQuery,
   useGetFileContentQuery,
@@ -42,7 +46,6 @@ const ContextFileEditorTab: React.FC = () => {
     lastValidLastUpdate.current = data?.lastModified
   }, [lastModifiedData, refetch, data?.lastModified])
 
-  console.log('ContextFileEditorTab rendered with data:', data)
   return (
     <Box
       style={{
@@ -88,7 +91,8 @@ const ContextFileEditorTab: React.FC = () => {
               }}
             >
               {isApiError(error)
-                ? error.data?.detail || 'Failed to load file content'
+                ? (error.data as { detail?: string })?.detail ||
+                  'Failed to load file content'
                 : 'An unexpected error occurred while loading the context file'}
             </Box>
           ) : (
@@ -104,8 +108,12 @@ const ContextFileEditorTab: React.FC = () => {
   )
 }
 
-const isApiError = (error): error is { data: { detail: string } } => {
-  return error && typeof error === 'object' && 'data' in error
+const isApiError = (
+  error: FetchBaseQueryError | SerializedError | undefined
+): error is FetchBaseQueryError => {
+  return (
+    !!error && typeof error === 'object' && 'status' in error && 'data' in error
+  )
 }
 
 export default ContextFileEditorTab

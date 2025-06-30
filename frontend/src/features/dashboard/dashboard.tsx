@@ -73,12 +73,10 @@ const MainTabs = ({
   contents,
   active,
   setActive,
-  proposalNum,
   ...props
-}: TabsProps & { proposalNum: number }) => {
+}: TabsProps) => {
   const [openedDialog, { open: openDialog, close: closeDialog }] =
     useDisclosure()
-
 
   const entries = Object.entries(contents)
   return (
@@ -248,7 +246,6 @@ const Dashboard = () => {
           contents={populatedMainTabs}
           active={main.currentTab}
           setActive={(id) => dispatch(setCurrentTab(id))}
-          proposalNum={proposal.number}
         />
       </AppShell.Main>
       <AppShell.Aside p="xs">
