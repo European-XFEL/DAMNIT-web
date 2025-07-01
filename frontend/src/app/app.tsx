@@ -1,4 +1,4 @@
-import { PropsWithChildren, useEffect } from "react"
+import { PropsWithChildren, useEffect } from 'react'
 import {
   Navigate,
   Route,
@@ -6,24 +6,24 @@ import {
   useNavigate,
   useLocation,
   useParams,
-} from "react-router-dom"
-import LoadingBar, { showLoading } from "react-redux-loading-bar"
+} from 'react-router-dom'
+import LoadingBar, { showLoading } from 'react-redux-loading-bar'
 
-import { useProposal } from "./use-proposal"
-import { resetExtractedData } from "../data/extracted"
-import { resetMetadata, setProposalPending } from "../data/metadata"
-import { resetTable as resetTableData } from "../data/table"
-import Dashboard from "../features/dashboard"
+import { useProposal } from './use-proposal'
+import { resetExtractedData } from '../data/extracted'
+import { resetMetadata, setProposalPending } from '../data/metadata'
+import { resetTable as resetTableData } from '../data/table'
+import Dashboard from '../features/dashboard'
 import {
   HeroPage,
   HomePage,
   LoggedOutPage,
   NotFoundPage,
-} from "../features/pages"
-import { resetPlots } from "../features/plots"
-import { resetTable as resetTableView } from "../features/table"
-import { useAppDispatch } from "../redux"
-import { LoginRoute, LogoutRoute, PrivateRoute, history } from "../routes"
+} from '../features/pages'
+import { resetPlots } from '../features/plots'
+import { resetTable as resetTableView } from '../features/table'
+import { useAppDispatch } from '../redux'
+import { LoginRoute, LogoutRoute, PrivateRoute, history } from '../routes'
 
 function ProposalWrapper({ children }: PropsWithChildren) {
   const proposal = useProposal()
@@ -79,7 +79,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <ProposalWrapper>
-                <LoadingBar style={{ backgroundColor: "#1864AB" }} />
+                <LoadingBar style={{ backgroundColor: '#1864AB' }} />
                 <Dashboard />
               </ProposalWrapper>
             </PrivateRoute>

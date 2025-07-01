@@ -1,23 +1,23 @@
-import React from "react"
-import { DataEditor } from "@glideapps/glide-data-grid"
+import React from 'react'
+import { DataEditor } from '@glideapps/glide-data-grid'
 
-import Table from "@/features/table"
-import { EXCLUDED_VARIABLES } from "@/constants"
+import Table from '@/features/table'
+import { EXCLUDED_VARIABLES } from '@/constants'
 
-import { renderWithProviders } from "../../test-utils/extensions"
+import { renderWithProviders } from '../../test-utils/extensions'
 import {
   gridProps,
   validTableMetadata,
   validTableState,
-} from "../../test-utils/builders/table"
+} from '../../test-utils/builders/table'
 
-vi.mock("@glideapps/glide-data-grid", async () => ({
-  ...(await vi.importActual("@glideapps/glide-data-grid")),
+vi.mock('@glideapps/glide-data-grid', async () => ({
+  ...(await vi.importActual('@glideapps/glide-data-grid')),
   DataEditor: vi.fn(() => <div id="DataEditor" />),
 }))
 
-describe("Table DataEditor", () => {
-  it("is called with something", () => {
+describe('Table DataEditor', () => {
+  it('is called with something', () => {
     renderWithProviders(<Table grid={gridProps} />, {
       preloadedState: {
         tableData: validTableState,

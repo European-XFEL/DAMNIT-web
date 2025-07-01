@@ -1,21 +1,21 @@
-import { gql } from "@apollo/client"
-import { stripTypename } from "@apollo/client/utilities"
+import { gql } from '@apollo/client'
+import { stripTypename } from '@apollo/client/utilities'
 
 import {
   DEFERRED_TABLE_DATA_QUERY_NAME,
   LATEST_DATA_FIELD_NAME,
   TABLE_DATA_QUERY_NAME,
-} from "./table-data.constants"
+} from './table-data.constants'
 import {
   TableData,
   TableDataOptions,
   TableInfo,
   TableMetadata,
   TableMetadataOptions,
-} from "./table-data.types"
-import { client } from "../../graphql/apollo"
-import { WithTypeName } from "../../types"
-import { isEmpty } from "../../utils/helpers"
+} from './table-data.types'
+import { client } from '../../graphql/apollo'
+import { WithTypeName } from '../../types'
+import { isEmpty } from '../../utils/helpers'
 
 /*
  * -----------------------------
@@ -27,17 +27,17 @@ const get_table_data_query = (
   type: string,
   fields: string[] = [],
   lightweight = false,
-  deferred = false,
+  deferred = false
 ) => {
   return gql`
     query ${
       deferred ? DEFERRED_TABLE_DATA_QUERY_NAME : TABLE_DATA_QUERY_NAME
     }($proposal: String, $page: Int, $per_page: Int) {
       runs(database: { proposal: $proposal }, page: $page, per_page: $per_page) ${
-        lightweight ? "@lightweight" : ""
+        lightweight ? '@lightweight' : ''
       } {
         ... on ${type} {
-          ${fields.map((field) => `${field} { value dtype }`).join(" ")}
+          ${fields.map((field) => `${field} { value dtype }`).join(' ')}
         }
       }
     }
@@ -46,7 +46,7 @@ const get_table_data_query = (
 
 async function getTableData(
   fields: string[],
-  options: TableDataOptions,
+  options: TableDataOptions
 ): Promise<TableData> {
   const {
     proposal,
@@ -72,7 +72,7 @@ async function getTableData(
   return Object.fromEntries(
     data.runs.map((run: WithTypeName<TableData>) => {
       return [run.run.value, stripTypename(run)]
-    }),
+    })
   )
 }
 

@@ -1,6 +1,6 @@
-import { TabItem } from "../../types"
+import { TabItem } from '../../types'
 
-interface TabContent extends Omit<TabItem, "title"> {
+interface TabContent extends Omit<TabItem, 'title'> {
   title: string | React.ReactNode // override type
   element: React.ReactNode
   onClose?: () => void

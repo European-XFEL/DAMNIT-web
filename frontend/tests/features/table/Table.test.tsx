@@ -1,8 +1,8 @@
-import React from "react"
-import Table from "@/features/table/Table"
+import React from 'react'
+import Table from '@/features/table/Table'
 
-import { renderWithProviders, screen } from "../../test-utils/extensions"
-import { gridProps, validTableState } from "../../test-utils/builders/table"
+import { renderWithProviders, screen } from '../../test-utils/extensions'
+import { gridProps, validTableState } from '../../test-utils/builders/table'
 
 beforeEach(() => {
   Element.prototype.scrollTo = vi.fn()
@@ -16,7 +16,7 @@ beforeEach(() => {
     width: 1000,
     x: 0,
     y: 0,
-    toJSON: () => "",
+    toJSON: () => '',
   })
   Image.prototype.decode = vi.fn()
 })
@@ -26,18 +26,18 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe("Table component", () => {
-  it("does not render canvas with invalid input", () => {
+describe('Table component', () => {
+  it('does not render canvas with invalid input', () => {
     renderWithProviders(<Table grid={gridProps} />)
-    expect(screen.queryByTestId("data-grid-canvas")).not.toBeInTheDocument()
+    expect(screen.queryByTestId('data-grid-canvas')).not.toBeInTheDocument()
   })
 
-  it("renders canvas with valid input", () => {
+  it('renders canvas with valid input', () => {
     renderWithProviders(<Table grid={gridProps} />, {
       preloadedState: {
         tableData: validTableState,
       },
     })
-    expect(screen.getByTestId("data-grid-canvas")).toBeInTheDocument()
+    expect(screen.getByTestId('data-grid-canvas')).toBeInTheDocument()
   })
 })

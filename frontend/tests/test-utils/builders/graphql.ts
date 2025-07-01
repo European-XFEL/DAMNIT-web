@@ -1,11 +1,11 @@
-import { graphql, HttpResponse } from "msw"
-import { validTableData, validTableMetadata } from "./table"
+import { graphql, HttpResponse } from 'msw'
+import { validTableData, validTableMetadata } from './table'
 
 const damnit = graphql.link(
-  `http://${import.meta.env.VITE_BACKEND_API}/graphql`,
+  `http://${import.meta.env.VITE_BACKEND_API}/graphql`
 )
 
-const tableDataQueryHandler = damnit.query("TableDataQuery", () => {
+const tableDataQueryHandler = damnit.query('TableDataQuery', () => {
   const response = {
     data: {
       runs: Object.values(validTableData).map((variables) => {
@@ -13,7 +13,7 @@ const tableDataQueryHandler = damnit.query("TableDataQuery", () => {
           variable,
           { ...value },
         ])
-        nested.push(["__typename", `p${variables.proposal.value}`])
+        nested.push(['__typename', `p${variables.proposal.value}`])
         return Object.fromEntries(nested)
       }),
     },
@@ -21,7 +21,7 @@ const tableDataQueryHandler = damnit.query("TableDataQuery", () => {
   return HttpResponse.json(response)
 })
 
-const tableSchemaQueryHandler = damnit.query("TableMetadataQuery", () => {
+const tableSchemaQueryHandler = damnit.query('TableMetadataQuery', () => {
   return HttpResponse.json({
     data: {
       metadata: validTableMetadata,

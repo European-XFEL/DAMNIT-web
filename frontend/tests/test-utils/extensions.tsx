@@ -1,8 +1,8 @@
-import React from "react"
-import { Provider } from "react-redux"
-import { MantineProvider } from "@mantine/core"
-import { render, screen, act } from "@testing-library/react"
-import { setupStore } from "@/redux"
+import React from 'react'
+import { Provider } from 'react-redux'
+import { MantineProvider } from '@mantine/core'
+import { render, screen, act } from '@testing-library/react'
+import { setupStore } from '@/redux'
 
 export { screen, act }
 
@@ -13,7 +13,7 @@ export function renderWithProviders(
     // Automatically create a store instance if no store was passed in
     store = setupStore(preloadedState),
     ...renderOptions
-  } = {},
+  } = {}
 ) {
   function Wrapper({ children }) {
     return (

@@ -1,4 +1,4 @@
-import { useGetUserInfoQuery } from "./auth.api"
+import { useGetUserInfoQuery } from './auth.api'
 
 const useUserInfo = () => {
   const { data, isLoading, isUninitialized, isError, isFetching } =

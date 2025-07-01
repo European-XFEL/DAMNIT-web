@@ -1,12 +1,13 @@
-import React from "react"
-import { Editor as Monaco } from "@monaco-editor/react"
+import React from 'react'
+import { Editor as Monaco } from '@monaco-editor/react'
 
 interface ContextFileEditorProps {
   fileContent?: string
 }
 
-const ContextFileEditor: React.FC<ContextFileEditorProps> = ({ fileContent }) => {
-
+const ContextFileEditor: React.FC<ContextFileEditorProps> = ({
+  fileContent,
+}) => {
   return (
     <div>
       <Monaco
@@ -17,7 +18,7 @@ const ContextFileEditor: React.FC<ContextFileEditorProps> = ({ fileContent }) =>
           fontSize: 14,
           minimap: { enabled: true },
           scrollBeyondLastLine: false,
-          wordWrap: "on",
+          wordWrap: 'on',
           smoothScrolling: true,
           tabSize: 4,
           disableLayerHinting: true,

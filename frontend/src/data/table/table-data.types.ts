@@ -1,4 +1,4 @@
-import { VariableDataItem, VariableMetadataItem } from "../../types"
+import { VariableDataItem, VariableMetadataItem } from '../../types'
 
 export type TableData = {
   [run: string]: { [variable: string]: VariableDataItem }

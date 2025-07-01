@@ -3,12 +3,12 @@ This is planned to be deprecated in favor of unified Redux and
 Apollo Client store
 */
 
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit"
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
 
-import TableDataServices from "./table-data.services"
-import { TableData, TableDataOptions, TableInfo } from "./table-data.types"
-import { Maybe } from "../../types"
-import { isEmpty } from "../../utils/helpers"
+import TableDataServices from './table-data.services'
+import { TableData, TableDataOptions, TableInfo } from './table-data.types'
+import { Maybe } from '../../types'
+import { isEmpty } from '../../utils/helpers'
 
 interface TableDataState extends TableInfo {
   lastUpdate: Record<string, Maybe<number>>
@@ -27,7 +27,7 @@ type TableDataQuery = {
 }
 
 export const getTable = createAsyncThunk(
-  "tableData/get",
+  'tableData/get',
   async ({
     proposal,
     page,
@@ -42,11 +42,11 @@ export const getTable = createAsyncThunk(
     })
 
     return result
-  },
+  }
 )
 
 export const getTableData = createAsyncThunk(
-  "tableData/getData",
+  'tableData/getData',
   async ({
     proposal,
     variables,
@@ -54,13 +54,13 @@ export const getTableData = createAsyncThunk(
     pageSize = 10000,
     deferred = false,
   }: TableDataOptions & { variables: string[] }) => {
-    return (await TableDataServices.getTableData(["run", ...variables], {
+    return (await TableDataServices.getTableData(['run', ...variables], {
       proposal,
       page,
       pageSize,
       deferred,
     })) as TableData
-  },
+  }
 )
 
 interface UpdateInfo extends TableInfo {
@@ -68,7 +68,7 @@ interface UpdateInfo extends TableInfo {
 }
 
 const slice = createSlice({
-  name: "tableData",
+  name: 'tableData',
   initialState,
   reducers: {
     reset: () => initialState,
@@ -104,7 +104,7 @@ const slice = createSlice({
           state.data = { ...state.data, ...data }
           state.metadata = metadata
         }
-      },
+      }
     )
     builder.addCase(getTableData.fulfilled, (state, action) => {
       // TODO: Add pending and rejected

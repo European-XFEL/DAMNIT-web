@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from 'react'
 import {
   CellClickedEventArgs,
   CompactSelection,
@@ -7,23 +7,23 @@ import {
   GridSelection,
   HeaderClickedEventArgs,
   Item,
-} from "@glideapps/glide-data-grid"
-import { allCells } from "@glideapps/glide-data-grid-cells"
+} from '@glideapps/glide-data-grid'
+import { allCells } from '@glideapps/glide-data-grid-cells'
 
-import { getCell, numberCell, textCell } from "./cells"
-import ContextMenu from "./context-menu"
-import { useContextMenu } from "./use-context-menu"
-import { usePagination } from "./use-pagination"
-import { selectRun } from "./table.slice"
-import { canPlotData } from "../plots/utils"
-import { addPlot } from "../plots/plots.slice"
+import { getCell, numberCell, textCell } from './cells'
+import ContextMenu from './context-menu'
+import { useContextMenu } from './use-context-menu'
+import { usePagination } from './use-pagination'
+import { selectRun } from './table.slice'
+import { canPlotData } from '../plots/utils'
+import { addPlot } from '../plots/plots.slice'
 
-import { EXCLUDED_VARIABLES, VARIABLES } from "../../constants"
-import { getExtractedValue } from "../../data/extracted"
-import { getTableData } from "../../data/table"
-import { useAppDispatch, useAppSelector } from "../../redux"
-import { isArrayEqual, sorted } from "../../utils/array"
-import { isEmpty } from "../../utils/helpers"
+import { EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
+import { getExtractedValue } from '../../data/extracted'
+import { getTableData } from '../../data/table'
+import { useAppDispatch, useAppSelector } from '../../redux'
+import { isArrayEqual, sorted } from '../../utils/array'
+import { isEmpty } from '../../utils/helpers'
 
 type Column = {
   id: string
@@ -61,7 +61,7 @@ const Table = ({ grid }: TableProps) => {
       Object.values(tableMetadata.variables)
         .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name))
         .map(({ name, title }) => ({ id: name, title: title || name })),
-    [tableMetadata.variables],
+    [tableMetadata.variables]
   )
 
   // Data: Populate grid
@@ -76,7 +76,7 @@ const Table = ({ grid }: TableProps) => {
 
       const rowData = tableData[run]
       if (!rowData || !rowData[variable]) {
-        return textCell("")
+        return textCell('')
       }
 
       return getCell({
@@ -85,7 +85,7 @@ const Table = ({ grid }: TableProps) => {
         options: { lastUpdated: tableLastUpdate[run] },
       })
     },
-    [tableColumns, tableMetadata.runs, tableData, tableLastUpdate],
+    [tableColumns, tableMetadata.runs, tableData, tableLastUpdate]
   )
 
   // Cell: Click event
@@ -104,7 +104,7 @@ const Table = ({ grid }: TableProps) => {
     dispatch(
       selectRun({
         run,
-      }),
+      })
     )
 
     // Clear range stack if cells from the other column are currently selected
@@ -113,7 +113,7 @@ const Table = ({ grid }: TableProps) => {
         ? current.cell[0] !== current.rangeStack[0].x
           ? []
           : current.rangeStack.filter(
-              (range) => !isArrayEqual(current.cell, [range.x, range.y]),
+              (range) => !isArrayEqual(current.cell, [range.x, range.y])
             )
         : undefined
 
@@ -135,14 +135,14 @@ const Table = ({ grid }: TableProps) => {
       selectRun({
         run: run,
         variables: col == null ? null : [tableColumns[col].id],
-      }),
+      })
     )
   }
 
   // Context menus
   const handleCellContextMenu = (
     [col, row]: Item,
-    event: CellClickedEventArgs,
+    event: CellClickedEventArgs
   ) => {
     event.preventDefault()
 
@@ -186,8 +186,8 @@ const Table = ({ grid }: TableProps) => {
         bounds: event.bounds,
         contents: [
           {
-            key: "plot",
-            title: "Plot: data",
+            key: 'plot',
+            title: 'Plot: data',
             subtitle,
             onClick: () =>
               addDataPlot({ variable: variable.id, label: subtitle, runs }),
@@ -198,7 +198,7 @@ const Table = ({ grid }: TableProps) => {
   }
   const handleHeaderContextMenu = (
     col: number,
-    event: HeaderClickedEventArgs,
+    event: HeaderClickedEventArgs
   ) => {
     event.preventDefault()
     const columnSelection = gridSelection.columns.toArray()
@@ -225,8 +225,8 @@ const Table = ({ grid }: TableProps) => {
           bounds: event.bounds,
           contents: [
             {
-              key: "plot",
-              title: "Plot: summary",
+              key: 'plot',
+              title: 'Plot: summary',
               subtitle,
               onClick: () =>
                 addSummaryPlot({
@@ -249,8 +249,8 @@ const Table = ({ grid }: TableProps) => {
         bounds: event.bounds,
         contents: [
           {
-            key: "plot",
-            title: "Plot: summary",
+            key: 'plot',
+            title: 'Plot: summary',
             subtitle,
             onClick: () =>
               addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
@@ -270,16 +270,16 @@ const Table = ({ grid }: TableProps) => {
     dispatch(
       addPlot({
         variables,
-        source: "table",
+        source: 'table',
         title: `Summary: ${label}`,
-      }),
+      })
     )
 
     dispatch(
       getTableData({
         proposal,
         variables,
-      }),
+      })
     )
   }
 
@@ -296,9 +296,9 @@ const Table = ({ grid }: TableProps) => {
       addPlot({
         runs,
         variables: [variable],
-        source: "extracted",
+        source: 'extracted',
         title: `Data: ${label}`,
-      }),
+      })
     )
     runs.forEach((run) => {
       dispatch(getExtractedValue({ proposal, run, variable }))
@@ -306,7 +306,7 @@ const Table = ({ grid }: TableProps) => {
   }
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: '100%', height: '100%' }}>
       {!tableColumns.length ? null : (
         <>
           <DataEditor

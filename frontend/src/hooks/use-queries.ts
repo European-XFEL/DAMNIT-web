@@ -105,7 +105,7 @@ type UseQueryResultReturn<Data, Argument> = [
     fetching(originalArgs: Argument[]): void
     loading(originalArgs: Argument[]): void
     error(error: Data[]): void
-  }
+  },
 ]
 
 const useQueryResult = <Data, Argument>(

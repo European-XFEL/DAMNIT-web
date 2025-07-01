@@ -1,2 +1,2 @@
-export { default } from "./contextfileeditor"
-export { default as ContextFileEditorTab } from "./contextfileeditor-tab"
+export { default } from './contextfileeditor'
+export { default as ContextFileEditorTab } from './contextfileeditor-tab'

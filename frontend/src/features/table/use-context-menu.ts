@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useState } from 'react'
 
-import { ContextMenuProps } from "./context-menu"
+import { ContextMenuProps } from './context-menu'
 
 export const useContextMenu = (): [
   ContextMenuProps,

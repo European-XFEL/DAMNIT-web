@@ -1,13 +1,13 @@
-import { useEffect } from "react"
-import { Container, Title } from "@mantine/core"
-import { history } from "../../routes"
+import { useEffect } from 'react'
+import { Container, Title } from '@mantine/core'
+import { history } from '../../routes'
 
-import classes from "./hero-page.module.css"
+import classes from './hero-page.module.css'
 
 const HeroPage = () => {
   useEffect(() => {
     setTimeout(() => {
-      history.navigate("/home")
+      history.navigate('/home')
     }, 2000)
   }, [])
 

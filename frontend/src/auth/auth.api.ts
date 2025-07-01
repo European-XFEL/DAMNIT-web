@@ -1,6 +1,6 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
-import { BASE_URL } from "../constants"
+import { BASE_URL } from '../constants'
 
 export type UserInfo = {
   uid: number
@@ -11,11 +11,11 @@ export type UserInfo = {
 }
 
 export const authApi = createApi({
-  reducerPath: "authApi",
+  reducerPath: 'authApi',
   baseQuery: fetchBaseQuery({ baseUrl: `${BASE_URL}oauth` }),
   endpoints: (builder) => ({
     getUserInfo: builder.query<UserInfo, void>({
-      query: () => "userinfo",
+      query: () => 'userinfo',
     }),
   }),
 })
