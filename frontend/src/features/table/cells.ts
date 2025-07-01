@@ -7,20 +7,20 @@ import {
   LoadingCell,
   NumberCell,
   TextCell,
-} from "@glideapps/glide-data-grid"
-import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
+} from '@glideapps/glide-data-grid'
+import { SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
-import { DTYPES } from "../../constants"
-import { VariableValue } from "../../types"
-import { formatDate, formatNumber } from "../../utils/helpers"
+import { DTYPES } from '../../constants'
+import { VariableValue } from '../../types'
+import { formatDate, formatNumber } from '../../utils/helpers'
 
 // TODO: Handle nonconforming data type
 
 export const imageCell = (
   value: VariableValue,
-  params: Partial<BaseGridCell> = {},
+  params: Partial<BaseGridCell> = {}
 ): ImageCell => {
-  const data = typeof value === "string" ? [value] : []
+  const data = typeof value === 'string' ? [value] : []
 
   return {
     kind: GridCellKind.Image,
@@ -34,9 +34,9 @@ export const imageCell = (
 
 export const textCell = (
   value: VariableValue,
-  params: Partial<BaseGridCell> = {},
+  params: Partial<BaseGridCell> = {}
 ): TextCell => {
-  const data = value ? String(value) : ""
+  const data = value ? String(value) : ''
   return {
     kind: GridCellKind.Text,
     displayData: data,
@@ -48,23 +48,23 @@ export const textCell = (
 
 export const numberCell = (
   value: VariableValue,
-  params: Partial<BaseGridCell> = {},
+  params: Partial<BaseGridCell> = {}
 ): NumberCell => {
   const data =
-    typeof value === "number" && Number.isFinite(value)
+    typeof value === 'number' && Number.isFinite(value)
       ? formatNumber(value)
       : undefined
 
   return {
     kind: GridCellKind.Number,
     displayData:
-      data != null ? String(data) : value != null ? String(value) : "",
+      data != null ? String(data) : value != null ? String(value) : '',
     data: data,
     allowOverlay: false,
-    contentAlign: "right",
+    contentAlign: 'right',
     themeOverride: {
-      fontFamily: "monospace",
-      textDark: "#4A4A4A",
+      fontFamily: 'monospace',
+      textDark: '#4A4A4A',
     },
     ...params,
   }
@@ -72,7 +72,7 @@ export const numberCell = (
 
 export const arrayCell = (
   value: VariableValue,
-  params: Partial<BaseGridCell> = {},
+  params: Partial<BaseGridCell> = {}
 ): SparklineCellType => {
   const values = Array.isArray(value) ? (value as number[]) : []
 
@@ -86,10 +86,10 @@ export const arrayCell = (
   return {
     kind: GridCellKind.Custom,
     allowOverlay: false,
-    copyData: "",
+    copyData: '',
     data: {
-      kind: "sparkline-cell",
-      color: "#77c4c4",
+      kind: 'sparkline-cell',
+      color: '#77c4c4',
       ...data,
     },
     ...params,
@@ -98,9 +98,9 @@ export const arrayCell = (
 
 export const dateCell = (
   value: VariableValue,
-  params: Partial<BaseGridCell> = {},
+  params: Partial<BaseGridCell> = {}
 ): TextCell => {
-  const data = value && typeof value === "number" ? formatDate(value) : ""
+  const data = value && typeof value === 'number' ? formatDate(value) : ''
 
   return {
     kind: GridCellKind.Text,
@@ -108,7 +108,7 @@ export const dateCell = (
     displayData: data,
     data,
     themeOverride: {
-      fontFamily: "monospace",
+      fontFamily: 'monospace',
     },
     ...params,
   }
@@ -116,7 +116,7 @@ export const dateCell = (
 
 export const loadingCell = (
   _: VariableValue,
-  params: Partial<BaseGridCell> = {},
+  params: Partial<BaseGridCell> = {}
 ): LoadingCell => {
   return {
     kind: GridCellKind.Loading,

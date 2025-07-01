@@ -1,9 +1,9 @@
-import { Stack, Text } from "@mantine/core"
+import { Stack, Text } from '@mantine/core'
 
 import {
   ContextMenuItem as MantineContextMenuItem,
   ContextMenuItemOptions as MantineContextMenuItemOptions,
-} from "mantine-contextmenu"
+} from 'mantine-contextmenu'
 
 export type ContextMenuItemOptions = {
   title: string

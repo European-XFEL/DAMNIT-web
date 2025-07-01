@@ -1,7 +1,7 @@
-import { UnknownAction } from "redux"
-import { ThunkAction } from "@reduxjs/toolkit"
+import { UnknownAction } from 'redux'
+import { ThunkAction } from '@reduxjs/toolkit'
 
-import { RootState } from "../redux/reducer"
+import { RootState } from '../redux/reducer'
 
 export type AppThunk<ReturnType = void> = ThunkAction<
   ReturnType,

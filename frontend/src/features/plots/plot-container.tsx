@@ -1,19 +1,19 @@
-import { useEffect, useState, PropsWithChildren } from "react"
+import { useEffect, useState, PropsWithChildren } from 'react'
 
-import { Alert, Code, Image, Skeleton, Stack, Text } from "@mantine/core"
-import { IconInfoCircle } from "@tabler/icons-react"
+import { Alert, Code, Image, Skeleton, Stack, Text } from '@mantine/core'
+import { IconInfoCircle } from '@tabler/icons-react'
 
-import Plot from "./plot"
-import { PlotDataItem, PlotMetadata, PlotInfo } from "./plots.types"
-import { DTYPES } from "../../constants"
-import { createTypedSelector, useAppSelector } from "../../redux"
+import Plot from './plot'
+import { PlotDataItem, PlotMetadata, PlotInfo } from './plots.types'
+import { DTYPES } from '../../constants'
+import { createTypedSelector, useAppSelector } from '../../redux'
 import {
   ExtractedDataItem,
   ExtractedMetadataItem,
   VariableDataItem,
   VariableMetadataItem,
-} from "../../types"
-import { formatRunsSubtitle } from "../../utils/helpers"
+} from '../../types'
+import { formatRunsSubtitle } from '../../utils/helpers'
 
 type Variable = {
   data: number[]
@@ -42,7 +42,7 @@ const selectTableData = createTypedSelector(
         }
         return acc
       },
-      {},
+      {}
     )
 
     for (const run of runs) {
@@ -52,8 +52,8 @@ const selectTableData = createTypedSelector(
         varData.every(
           (data): data is VariableDataItem =>
             data != null &&
-            typeof data.value === "number" &&
-            [DTYPES.number].includes(data.dtype),
+            typeof data.value === 'number' &&
+            [DTYPES.number].includes(data.dtype)
         )
       ) {
         variables.forEach((variable, i) => {
@@ -63,7 +63,7 @@ const selectTableData = createTypedSelector(
     }
 
     return result
-  },
+  }
 )
 
 type UseTableDataOptions = {
@@ -77,10 +77,10 @@ const useTableData = (
     runs: [],
     variables: [],
     enabled: true,
-  },
+  }
 ): PlotInfo | null => {
   const tableData = useAppSelector((state) =>
-    selectTableData(state, runs, variables),
+    selectTableData(state, runs, variables)
   )
 
   if (!enabled) {
@@ -88,7 +88,7 @@ const useTableData = (
   }
 
   const plotData: PlotDataItem = {}
-  const plotMetadata: PlotMetadata = { type: "scatter" }
+  const plotMetadata: PlotMetadata = { type: 'scatter' }
   const [xVar, yVar] = variables
 
   const xName = tableData[xVar].metadata.title || xVar
@@ -133,7 +133,7 @@ const selectExtractedData = createTypedSelector(
       }
       return result
     }, {})
-  },
+  }
 )
 
 const selectExtractedMetadata = createTypedSelector(
@@ -150,7 +150,7 @@ const selectExtractedMetadata = createTypedSelector(
       }
       return result
     }, {})
-  },
+  }
 )
 
 const selectExtractedValues = createTypedSelector(
@@ -165,7 +165,7 @@ const selectExtractedValues = createTypedSelector(
       }
       return result
     }, {})
-  },
+  }
 )
 
 type UseExtractedDataOptions = {
@@ -181,11 +181,11 @@ const useExtractedData = ({
 }: UseExtractedDataOptions): PlotInfo => {
   const [plotData, setPlotData] = useState<PlotDataItem[]>([])
   const [plotMetadata, setPlotMetadata] = useState<PlotMetadata>({
-    type: "unsupported",
+    type: 'unsupported',
   })
 
   const extracted = useAppSelector((state) =>
-    selectExtractedValues(state, runs, variable),
+    selectExtractedValues(state, runs, variable)
   )
 
   useEffect(() => {
@@ -227,13 +227,13 @@ type getPlotDataOptions = {
 
 const getPlotData = (
   extracted: ExtractedValue,
-  { run, coord }: getPlotDataOptions,
+  { run, coord }: getPlotDataOptions
 ) => {
   const varData = extracted.data
   const varMetadata = extracted.metadata
 
   switch (varMetadata?.dtype) {
-    case "array":
+    case 'array':
       coord = coord ?? extracted.metadata.dims[0]
 
       return {
@@ -243,7 +243,7 @@ const getPlotData = (
           value: varData,
         },
       }
-    case "image": {
+    case 'image': {
       const [y, x] = varMetadata.dims.map((ax) => ({
         name: ax,
         value: varMetadata.coords[ax],
@@ -254,7 +254,7 @@ const getPlotData = (
         z: { value: varData },
       }
     }
-    case "png":
+    case 'png':
     default:
       return {
         data: { value: varData },
@@ -274,29 +274,29 @@ type getPlotMetadataOptions = {
 
 const getPlotMetadata = (
   extracted: ExtractedValue,
-  { coord }: getPlotMetadataOptions = {},
+  { coord }: getPlotMetadataOptions = {}
 ) => {
-  const metadata: PlotMetadata = { type: "unsupported" }
+  const metadata: PlotMetadata = { type: 'unsupported' }
 
   switch (extracted.metadata.dtype) {
-    case "array":
+    case 'array':
       metadata.x = {
         name: coord ?? extracted.metadata.dims[0],
       }
       metadata.y = { name: extracted.metadata.name }
-      metadata.type = "scatter"
+      metadata.type = 'scatter'
       break
-    case "image":
-      metadata.type = "heatmap"
+    case 'image':
+      metadata.type = 'heatmap'
       break
-    case "png":
-      metadata.type = "image"
+    case 'png':
+      metadata.type = 'image'
       break
-    case "number":
-    case "string":
-    case "boolean":
-    case "timestamp":
-      metadata.type = "scalar"
+    case 'number':
+    case 'string':
+    case 'boolean':
+    case 'timestamp':
+      metadata.type = 'scalar'
       break
   }
 
@@ -326,7 +326,7 @@ const selectRuns = createTypedSelector(
     // Only get existing runs from `plot.runs`
     const runsSet = new Set(runsArr)
     return plot.runs.filter((run) => runsSet.has(run))
-  },
+  }
 )
 
 /*
@@ -365,12 +365,12 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
   const tableData = useTableData({
     runs,
     variables: plot.variables,
-    enabled: plot.source === "table",
+    enabled: plot.source === 'table',
   })
   const extractedData = useExtractedData({
     runs,
     variable: plot.variables[0],
-    enabled: plot.source === "extracted",
+    enabled: plot.source === 'extracted',
   })
 
   const { data, metadata } = tableData ?? extractedData
@@ -385,21 +385,21 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
       </Stack>
       {!data.length ? (
         <Skeleton height={430} width={740} radius="xl" />
-      ) : metadata.type === "image" ? (
+      ) : metadata.type === 'image' ? (
         <Image
           src={data[0].data?.value}
           h={metadata.shape?.[0]}
           w={metadata.shape?.[1]}
           fit="contain"
         />
-      ) : metadata.type === "scalar" ? (
+      ) : metadata.type === 'scalar' ? (
         <UnableToDisplayAlert>
           <Text size="sm">
             {"The plot can't be displayed because the value is a scalar "}
             <Code>{data[0].data?.value as string}</Code>.
           </Text>
         </UnableToDisplayAlert>
-      ) : metadata.type === "unsupported" ? (
+      ) : metadata.type === 'unsupported' ? (
         <UnableToDisplayAlert>
           <Text size="sm">
             {"The plot can't be displayed because the value is unsupported."}

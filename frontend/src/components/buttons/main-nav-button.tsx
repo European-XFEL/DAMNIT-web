@@ -1,10 +1,10 @@
-import { Button, ButtonProps, ElementProps } from "@mantine/core"
+import { Button, ButtonProps, ElementProps } from '@mantine/core'
 
-import classes from "./main-nav-button.module.css"
+import classes from './main-nav-button.module.css'
 
 interface MainNavButtonProps
   extends ButtonProps,
-    ElementProps<"button", keyof ButtonProps> {}
+    ElementProps<'button', keyof ButtonProps> {}
 
 const MainNavButton = (props: MainNavButtonProps) => {
   return (

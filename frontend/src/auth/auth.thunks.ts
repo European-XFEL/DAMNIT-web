@@ -1,12 +1,12 @@
-import { authApi } from "./auth.api"
+import { authApi } from './auth.api'
 
-import { BASE_URL, CURRENT_HOST } from "../constants"
-import { resetExtractedData } from "../data/extracted"
-import { resetTable as resetTableData } from "../data/table"
-import { resetTable as resetTableView } from "../features/table"
-import { resetPlots } from "../features/plots"
-import { AppThunk } from "../redux"
-import { history } from "../routes"
+import { BASE_URL, CURRENT_HOST } from '../constants'
+import { resetExtractedData } from '../data/extracted'
+import { resetTable as resetTableData } from '../data/table'
+import { resetTable as resetTableView } from '../features/table'
+import { resetPlots } from '../features/plots'
+import { AppThunk } from '../redux'
+import { history } from '../routes'
 
 export const login = (): AppThunk => (_) => {
   const basePath = `${CURRENT_HOST}${BASE_URL}`
@@ -17,8 +17,8 @@ export const logout = (): AppThunk => (dispatch) => {
   const basePath = `${CURRENT_HOST}${BASE_URL}`
 
   fetch(`${BASE_URL}oauth/logout?redirect_uri=${basePath}logged-out`, {
-    method: "GET",
-    credentials: "include", // Include cookies in the request
+    method: 'GET',
+    credentials: 'include', // Include cookies in the request
   })
     .then((response) => {
       if (response.ok) {
@@ -34,10 +34,10 @@ export const logout = (): AppThunk => (dispatch) => {
 
       // Handle the redirect
       if (response.redirected && response.url) {
-        history.navigate("/logged-out")
+        history.navigate('/logged-out')
       }
     })
     .catch((error) => {
-      console.error("Error logging out:", error)
+      console.error('Error logging out:', error)
     })
 }

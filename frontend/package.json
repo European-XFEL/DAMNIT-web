@@ -20,9 +20,9 @@
     "@mantine/core": "^7.17.3",
     "@mantine/form": "^7.17.3",
     "@mantine/hooks": "^7.17.3",
+    "@monaco-editor/react": "^4.7.0",
     "@reduxjs/toolkit": "^2.6.1",
     "@tabler/icons-react": "^3.31.0",
-    "@monaco-editor/react": "^4.7.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.13",
     "graphql": "^16.10.0",
@@ -51,6 +51,7 @@
     "postcss": "^8.5.3",
     "postcss-preset-mantine": "^1.17.0",
     "postcss-simple-vars": "^7.0.1",
+    "prettier": "3.6.2",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.26.1",
     "vite": "^6.2.2"

@@ -1,10 +1,10 @@
 import { createListenerMiddleware } from '@reduxjs/toolkit'
 
-import { addTab, removeTab, openAside, closeAside } from "../features/dashboard"
-import { addPlot, removePlot, resetPlots } from "../features/plots/"
-import { selectRun } from "../features/table"
-import { RootState } from "../redux/reducer"
-import { isEmpty } from "../utils/helpers"
+import { addTab, removeTab, openAside, closeAside } from '../features/dashboard'
+import { addPlot, removePlot, resetPlots } from '../features/plots/'
+import { selectRun } from '../features/table'
+import { RootState } from '../redux/reducer'
+import { isEmpty } from '../utils/helpers'
 
 export const listenerMiddleware = createListenerMiddleware()
 

@@ -1,6 +1,6 @@
 export function isArrayEqual<T>(
   arr1: ReadonlyArray<T> | null | undefined,
-  arr2: ReadonlyArray<T> | null | undefined,
+  arr2: ReadonlyArray<T> | null | undefined
 ) {
   if (arr1 == null && arr2 == null) {
     return true

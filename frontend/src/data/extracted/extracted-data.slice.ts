@@ -3,10 +3,10 @@ This is planned to be deprecated in favor of unified Redux and
 Apollo Client store
 */
 
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
-import ExtractedDataServices from "./extracted-data.services"
-import { ExtractedDataItem, ExtractedMetadataItem } from "../../types"
+import ExtractedDataServices from './extracted-data.services'
+import { ExtractedDataItem, ExtractedMetadataItem } from '../../types'
 
 type ExtractedDataState = {
   data: { [run: string]: { [variable: string]: ExtractedDataItem } }
@@ -25,7 +25,7 @@ type GetExtractedValueOptions = {
 }
 
 export const getExtractedValue = createAsyncThunk(
-  "extractedData/getValue",
+  'extractedData/getValue',
   async ({ proposal, run, variable }: GetExtractedValueOptions) => {
     const result = await ExtractedDataServices.getExtractedValue({
       proposal,
@@ -33,11 +33,11 @@ export const getExtractedValue = createAsyncThunk(
       variable,
     })
     return { run, variable, ...result }
-  },
+  }
 )
 
 const slice = createSlice({
-  name: "extractedData",
+  name: 'extractedData',
   initialState,
   reducers: {
     reset: () => initialState,

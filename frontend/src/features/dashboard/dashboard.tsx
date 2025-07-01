@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from "react"
+import React, { lazy, Suspense } from 'react'
 import {
   AppShell,
   Burger,
@@ -14,48 +14,50 @@ import {
   Text,
   Title,
   rem,
-} from "@mantine/core"
-import { useDisclosure } from "@mantine/hooks"
+} from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
 
-import { IconGraph, IconX } from "@tabler/icons-react"
-import cx from "clsx"
+import { IconGraph, IconX } from '@tabler/icons-react'
+import cx from 'clsx'
 
-import { Header, Logo } from "../../components/headers"
-import { InstrumentBadge } from "../../components/badges"
-import { Tabs, TabsProps } from "../../components/tabs"
-import { useCurrentProposal } from "../../data/metadata"
-import { useAppDispatch, useAppSelector } from "../../redux"
-import { PlotDialog } from "../plots"
-import { removeTab, setCurrentTab, closeAside } from "./dashboard.slice"
-import Run from "./run"
+import { Header, Logo } from '../../components/headers'
+import { InstrumentBadge } from '../../components/badges'
+import { Tabs, TabsProps } from '../../components/tabs'
+import { useCurrentProposal } from '../../data/metadata'
+import { useAppDispatch, useAppSelector } from '../../redux'
+import { PlotDialog } from '../plots'
+import { removeTab, setCurrentTab, closeAside } from './dashboard.slice'
+import Run from './run'
 
-import styles from "./dashboard.module.css"
-import headerStyles from "../../styles/header.module.css"
+import styles from './dashboard.module.css'
+import headerStyles from '../../styles/header.module.css'
 
 const PlotsTab = lazy(() =>
-  import("../plots").then((module) => ({ default: module.PlotsTab })),
+  import('../plots').then((module) => ({ default: module.PlotsTab }))
 )
 const ContextFileEditorTab = lazy(() =>
-  import("../contextfileeditor").then((module) => ({ default: module.ContextFileEditorTab })),
+  import('../contextfileeditor').then((module) => ({
+    default: module.ContextFileEditorTab,
+  }))
 )
-const Table = lazy(() => import("../table"))
+const Table = lazy(() => import('../table'))
 
 interface ButtonProps
   extends MantineButtonProps,
-    ElementProps<"button", keyof MantineButtonProps> {
+    ElementProps<'button', keyof MantineButtonProps> {
   label: string
   icon: React.ReactNode
   color?: string
 }
 
-const Button = ({ label, icon, color = "indigo", ...props }: ButtonProps) => {
+const Button = ({ label, icon, color = 'indigo', ...props }: ButtonProps) => {
   return (
     <MantineButton
       color={color}
       variant="white"
       size="xs"
       style={{
-        transition: "color 0.5s ease, box-shadow 0.3s ease",
+        transition: 'color 0.5s ease, box-shadow 0.3s ease',
       }}
       {...props}
     >
@@ -69,12 +71,7 @@ const Button = ({ label, icon, color = "indigo", ...props }: ButtonProps) => {
   )
 }
 
-const MainTabs = ({
-  contents,
-  active,
-  setActive,
-  ...props
-}: TabsProps) => {
+const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
   const [openedDialog, { open: openDialog, close: closeDialog }] =
     useDisclosure()
 
@@ -176,7 +173,7 @@ const Dashboard = () => {
         ...tab,
         ...(tab.isClosable ? { onClose: () => dispatch(removeTab(id)) } : {}),
       },
-    ]),
+    ])
   )
 
   // Aside tabs
@@ -193,7 +190,7 @@ const Dashboard = () => {
           element: <Run />,
         },
       ]
-    }),
+    })
   )
 
   return (
@@ -201,12 +198,12 @@ const Dashboard = () => {
       header={{ height: 60 }}
       navbar={{
         width: 300,
-        breakpoint: "sm",
+        breakpoint: 'sm',
         collapsed: { desktop: !openedNavBar },
       }}
       aside={{
         width: 360,
-        breakpoint: "sm",
+        breakpoint: 'sm',
         collapsed: { desktop: !aside.isOpened },
       }}
     >

@@ -1,4 +1,4 @@
-import { VariableValue } from "../../types"
+import { VariableValue } from '../../types'
 
 export function generateUID() {
   return (

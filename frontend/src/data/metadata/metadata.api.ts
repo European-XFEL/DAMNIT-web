@@ -1,8 +1,8 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react"
-import { BASE_URL } from "../../constants"
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { BASE_URL } from '../../constants'
 
 export const metadataApi = createApi({
-  reducerPath: "metadataApi",
+  reducerPath: 'metadataApi',
   baseQuery: fetchBaseQuery({ baseUrl: `${BASE_URL}metadata` }),
   endpoints: (builder) => ({
     getProposal: builder.query({

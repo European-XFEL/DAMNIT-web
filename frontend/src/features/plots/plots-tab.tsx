@@ -1,11 +1,11 @@
-import { Box, Stack, Text } from "@mantine/core"
+import { Box, Stack, Text } from '@mantine/core'
 
-import { removePlot, setCurrentPlot } from "./plots.slice"
-import PlotContainer from "./plot-container"
-import Tabs from "../../components/tabs/tabs"
-import { useAppDispatch, useAppSelector } from "../../redux"
-import { sorted } from "../../utils/array"
-import { formatRunsSubtitle, isEmpty } from "../../utils/helpers"
+import { removePlot, setCurrentPlot } from './plots.slice'
+import PlotContainer from './plot-container'
+import Tabs from '../../components/tabs/tabs'
+import { useAppDispatch, useAppSelector } from '../../redux'
+import { sorted } from '../../utils/array'
+import { formatRunsSubtitle, isEmpty } from '../../utils/helpers'
 
 const PlotsTab = () => {
   const dispatch = useAppDispatch()
@@ -31,8 +31,8 @@ const PlotsTab = () => {
               <Text
                 size="sm"
                 style={{
-                  wordWrap: "break-word",
-                  whiteSpace: "normal",
+                  wordWrap: 'break-word',
+                  whiteSpace: 'normal',
                 }}
               >
                 {title}
@@ -46,7 +46,7 @@ const PlotsTab = () => {
           onClose: () => dispatch(removePlot(id)),
         },
       ]
-    }),
+    })
   )
 
   return isEmpty(contents) ? null : (

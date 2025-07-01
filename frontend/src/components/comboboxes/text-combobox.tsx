@@ -28,10 +28,7 @@ function TextCombobox(props: TextComboboxProps) {
     : props.options
 
   const options = optionsToRender.map((item) => (
-    <Combobox.Option
-      value={item.name}
-      key={item.name}
-    >
+    <Combobox.Option value={item.name} key={item.name}>
       {item.title || item.name}
     </Combobox.Option>
   ))
@@ -71,10 +68,7 @@ function TextCombobox(props: TextComboboxProps) {
         </ComboboxTarget>
 
         <Combobox.Dropdown>
-          <Combobox.Options
-            mah={160}
-            style={{ overflowY: 'auto' }}
-          >
+          <Combobox.Options mah={160} style={{ overflowY: 'auto' }}>
             {options.length === 0 ? (
               <Combobox.Empty>Variable not found</Combobox.Empty>
             ) : (

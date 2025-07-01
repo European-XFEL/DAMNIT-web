@@ -1,8 +1,8 @@
-import { useLayer } from "react-laag"
-import { Stack } from "@mantine/core"
-import { ContextMenuPortal as MantineContextMenu } from "mantine-contextmenu"
+import { useLayer } from 'react-laag'
+import { Stack } from '@mantine/core'
+import { ContextMenuPortal as MantineContextMenu } from 'mantine-contextmenu'
 
-import ContextMenuItem, { ContextMenuItemOptions } from "./context-menu-item"
+import ContextMenuItem, { ContextMenuItemOptions } from './context-menu-item'
 
 export type ContextMenuProps = {
   localPosition: { x: number; y: number }
@@ -24,8 +24,8 @@ const ContextMenu = ({
   const { layerProps, renderLayer } = useLayer({
     isOpen,
     auto: true,
-    placement: "bottom-start",
-    possiblePlacements: ["bottom-start", "bottom-end"],
+    placement: 'bottom-start',
+    possiblePlacements: ['bottom-start', 'bottom-end'],
     triggerOffset: 2,
     // onOutsideClick,
     trigger: {
@@ -56,7 +56,7 @@ const ContextMenu = ({
             </Stack>
           )}
         />
-      </div>,
+      </div>
     )
   )
 }

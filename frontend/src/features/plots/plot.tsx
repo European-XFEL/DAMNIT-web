@@ -1,6 +1,6 @@
-import Plotly from "react-plotly.js"
+import Plotly from 'react-plotly.js'
 
-import { PlotInfo, PlotMetadata } from "./plots.types"
+import { PlotInfo, PlotMetadata } from './plots.types'
 
 type Plot = {
   data: Plotly.Data[]
@@ -22,8 +22,8 @@ const scatterPlot = ({ data }: PlotInfo): Plot => {
       x: d.x.value as number[],
       y: d.y.value as number[],
       name: d.y?.name,
-      mode: "markers",
-      type: "scatter",
+      mode: 'markers',
+      type: 'scatter',
     }
     acc.push(trace as Plotly.ScatterData)
     return acc
@@ -51,7 +51,7 @@ const heatmapPlot = ({ data, metadata }: PlotInfo): Plot => {
   const { x, y, z } = data[0]
 
   if (!x || !y || !z) {
-    throw new Error("Unable to plot heatmap: missing required data.")
+    throw new Error('Unable to plot heatmap: missing required data.')
   }
 
   return {
@@ -60,8 +60,8 @@ const heatmapPlot = ({ data, metadata }: PlotInfo): Plot => {
         x: x.value,
         y: y.value,
         z: z.value,
-        type: "heatmap",
-        colorscale: "Viridis",
+        type: 'heatmap',
+        colorscale: 'Viridis',
         zmin,
         zmax,
       },
@@ -75,7 +75,7 @@ const heatmapPlot = ({ data, metadata }: PlotInfo): Plot => {
       yaxis: {
         title: { text: y?.name, standoff: 20 },
         automargin: true,
-        autorange: "reversed",
+        autorange: 'reversed',
       },
     } as Plotly.Layout,
   }
@@ -95,11 +95,11 @@ const PLOTS = {
 type AllowedPlotTypes = keyof typeof PLOTS
 
 function isAllowedPlotType(type: unknown): type is AllowedPlotTypes {
-  return typeof type === "string" && Object.keys(PLOTS).includes(type)
+  return typeof type === 'string' && Object.keys(PLOTS).includes(type)
 }
 
 function getPlot<T extends AllowedPlotTypes>(
-  info: PlotInfo & { metadata: { type: T } },
+  info: PlotInfo & { metadata: { type: T } }
 ) {
   return PLOTS[info.metadata.type](info) as ReturnType<(typeof PLOTS)[T]>
 }
@@ -123,7 +123,7 @@ const Plot = ({ data, metadata }: PlotProps) => {
   const defaultConfig = {
     displaylogo: false,
     scrollZoom: true,
-    modeBarButtonsToRemove: ["select2d", "lasso2d", "autoscale"],
+    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoscale'],
   }
 
   if (!isAllowedPlotType(metadata.type)) {

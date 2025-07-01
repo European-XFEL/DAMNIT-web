@@ -1,6 +1,6 @@
-import { createSlice } from "@reduxjs/toolkit"
+import { createSlice } from '@reduxjs/toolkit'
 
-import { isArrayEqual } from "../../utils/array"
+import { isArrayEqual } from '../../utils/array'
 
 type TableState = {
   selection: {
@@ -14,7 +14,7 @@ const initialState: TableState = {
 }
 
 const slice = createSlice({
-  name: "table",
+  name: 'table',
   initialState,
   reducers: {
     selectRun: ({ selection }, action) => {

@@ -1,9 +1,9 @@
-import { PayloadAction } from "@reduxjs/toolkit"
+import { PayloadAction } from '@reduxjs/toolkit'
 
-import { getTable, getTableData } from "./table-data.slice"
-import { TableInfo } from "./table-data.types"
+import { getTable, getTableData } from './table-data.slice'
+import { TableInfo } from './table-data.types'
 
-import { AppDispatch } from "../../redux"
+import { AppDispatch } from '../../redux'
 
 export const getDeferredTableValues =
   ({
@@ -17,7 +17,7 @@ export const getDeferredTableValues =
   }) =>
   async (dispatch: AppDispatch) => {
     const action = (await dispatch(
-      getTable({ proposal, page, pageSize, lightweight: true }),
+      getTable({ proposal, page, pageSize, lightweight: true })
     )) as PayloadAction<TableInfo>
 
     const { data } = action.payload
@@ -30,8 +30,8 @@ export const getDeferredTableValues =
         Object.values(data).flatMap((run) =>
           Object.entries(run)
             .filter(([_, variables]) => variables?.value === null)
-            .map(([variable]) => variable),
-        ),
+            .map(([variable]) => variable)
+        )
       ),
     ]
 
@@ -42,6 +42,6 @@ export const getDeferredTableValues =
         page,
         pageSize,
         deferred: true,
-      }),
+      })
     )
   }

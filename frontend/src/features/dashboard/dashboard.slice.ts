@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit"
-import { TabItem } from "../../types"
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { TabItem } from '../../types'
 
 type MainState = {
   tabs: Record<string, TabItem>
@@ -18,17 +18,17 @@ type DasboardState = {
 
 const initialState: DasboardState = {
   main: {
-    tabs: { table: { title: "Table" }, editor: { title: "Context File" } },
-    currentTab: "table",
+    tabs: { table: { title: 'Table' }, editor: { title: 'Context File' } },
+    currentTab: 'table',
   },
   aside: {
     isOpened: false,
-    tabs: { run: { title: "Run", isClosable: false } },
+    tabs: { run: { title: 'Run', isClosable: false } },
   },
 }
 
 const slice = createSlice({
-  name: "dashboard",
+  name: 'dashboard',
   initialState,
   reducers: {
     // Main

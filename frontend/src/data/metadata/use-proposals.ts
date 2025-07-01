@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from 'react'
 
-import { metadataApi } from "./metadata.api"
-import { isArrayEqual } from "../../utils/array"
-import useQueries from "../../hooks/use-queries"
+import { metadataApi } from './metadata.api'
+import { isArrayEqual } from '../../utils/array'
+import useQueries from '../../hooks/use-queries'
 
 type ProposalInfo = {
   number: number
@@ -24,13 +24,13 @@ const useProposals = (proposals: string[]) => {
   useEffect(() => {
     // Get the new time series data from the attributes
     setQueries((current) =>
-      isArrayEqual(current, proposals) ? current : proposals,
+      isArrayEqual(current, proposals) ? current : proposals
     )
   }, [proposals])
 
   const { data, isLoading, isUninitialized, isFetching, isError } = useQueries(
     metadataApi.endpoints.getProposal,
-    queries,
+    queries
   )
 
   return {

@@ -5,7 +5,7 @@
 
 export function sortBy<T, K extends keyof T>(
   key: K,
-  cb?: (a: T, b: T) => number,
+  cb?: (a: T, b: T) => number
 ): (a: T, b: T) => number {
   return (a: T, b: T): number => {
     const aVal = a[key],
@@ -19,7 +19,7 @@ export function sortBy<T, K extends keyof T>(
 
 export function sortByDesc<T, K extends keyof T>(
   key: K,
-  cb?: (a: T, b: T) => number,
+  cb?: (a: T, b: T) => number
 ): (a: T, b: T) => number {
   return (a: T, b: T): number => {
     const aVal = a[key],
@@ -33,7 +33,7 @@ export function sortByDesc<T, K extends keyof T>(
 
 export function orderBy<T>(
   keys: (keyof T)[],
-  orders: ("asc" | "desc")[],
+  orders: ('asc' | 'desc')[]
 ): (a: T, b: T) => number {
   let cb: (a: T, b: T) => number = () => 0
 
@@ -42,9 +42,9 @@ export function orderBy<T>(
 
   for (const [i, key] of reversedKeys.entries()) {
     const order = reversedOrders[i]
-    if (order === "asc") {
+    if (order === 'asc') {
       cb = sortBy<T, typeof key>(key, cb)
-    } else if (order === "desc") {
+    } else if (order === 'desc') {
       cb = sortByDesc<T, typeof key>(key, cb)
     }
   }

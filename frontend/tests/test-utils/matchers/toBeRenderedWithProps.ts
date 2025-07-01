@@ -4,8 +4,8 @@
  *   Daniel Irvine (2022)
  */
 
-import { matcherHint, printExpected, printReceived } from "jest-matcher-utils"
-import { equals } from "@jest/expect-utils"
+import { matcherHint, printExpected, printReceived } from 'jest-matcher-utils'
+import { equals } from '@jest/expect-utils'
 
 const isSubset = (actual, expected) => {
   if (!actual) {
@@ -20,27 +20,27 @@ const toBeRenderedSpecificCall = (
   matcherName,
   mockedComponent,
   mockedCall,
-  expectedProps,
+  expectedProps
 ) => {
   const actualProps = mockedCall ? mockedCall[0] : null
   const pass = isSubset(actualProps, expectedProps)
 
   const sourceHint = () =>
-    matcherHint(matcherName, "mockedComponent", printExpected(expectedProps), {
+    matcherHint(matcherName, 'mockedComponent', printExpected(expectedProps), {
       isNot: pass,
     })
 
   const actualHint = () => {
     if (!mockedComponent || !mockedComponent.mock) {
-      return "mockedComponent is not a mock"
+      return 'mockedComponent is not a mock'
     }
     if (!mockedCall) {
-      return "mockedComponent was never rendered"
+      return 'mockedComponent was never rendered'
     }
     return `Rendered with props: ${printReceived(actualProps)}`
   }
 
-  const message = () => [sourceHint(), actualHint()].join("\n\n")
+  const message = () => [sourceHint(), actualHint()].join('\n\n')
 
   return {
     pass,
@@ -51,10 +51,10 @@ const toBeRenderedSpecificCall = (
 export const toBeFirstRenderedWithProps = (mockedComponent, expectedProps) => {
   const firstCall = mockedComponent?.mock?.calls[0]
   return toBeRenderedSpecificCall(
-    "toBeFirstRenderedWithProps",
+    'toBeFirstRenderedWithProps',
     mockedComponent,
     firstCall,
-    expectedProps,
+    expectedProps
   )
 }
 
@@ -63,9 +63,9 @@ export const toBeRenderedWithProps = (mockedComponent, expectedProps) => {
     mockedComponent?.mock?.calls[mockedComponent?.mock?.calls.length - 1]
 
   return toBeRenderedSpecificCall(
-    "toBeRenderedWithProps",
+    'toBeRenderedWithProps',
     mockedComponent,
     lastCall,
-    expectedProps,
+    expectedProps
   )
 }

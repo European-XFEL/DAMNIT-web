@@ -1,5 +1,5 @@
-import { ComponentType, memo, useState } from "react"
-import { Link } from "react-router-dom"
+import { ComponentType, memo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Box,
   Code,
@@ -9,27 +9,27 @@ import {
   Stack,
   Text,
   TextProps,
-} from "@mantine/core"
+} from '@mantine/core'
 import {
   IconCalendarEvent,
   IconChevronRight,
   IconPlus,
-} from "@tabler/icons-react"
-import cx from "clsx"
-import dayjs from "dayjs"
-import { DataTable } from "mantine-datatable"
+} from '@tabler/icons-react'
+import cx from 'clsx'
+import dayjs from 'dayjs'
+import { DataTable } from 'mantine-datatable'
 
-import { selectAvailableProposals } from "../../auth/auth.slice"
-import { InstrumentBadge, InstrumentBadgeProps } from "../../components/badges"
-import { useProposals } from "../../data/metadata"
-import { useAppSelector } from "../../redux"
-import { orderBy } from "../../utils/objects"
-import styles from "./proposals.module.css"
+import { selectAvailableProposals } from '../../auth/auth.slice'
+import { InstrumentBadge, InstrumentBadgeProps } from '../../components/badges'
+import { useProposals } from '../../data/metadata'
+import { useAppSelector } from '../../redux'
+import { orderBy } from '../../utils/objects'
+import styles from './proposals.module.css'
 
 const formatRunCycle = (date: string) => {
   const year = date.slice(0, 4)
   const month = date.slice(4, 6)
-  const period = month === "01" ? "I" : "II"
+  const period = month === '01' ? 'I' : 'II'
   return `${year} - ${period}`
 }
 
@@ -94,7 +94,7 @@ const CycleCell = memo(function CycleCell({
 type InstrumentCellProps = InstrumentBadgeProps
 
 const InstrumentCell = memo(function InstrumentCell(
-  props: InstrumentCellProps,
+  props: InstrumentCellProps
 ) {
   return <InstrumentBadge {...props} />
 })
@@ -105,7 +105,7 @@ const InstrumentCell = memo(function InstrumentCell(
  * -----------------------------
  */
 
-interface TextCellProps extends TextProps, ElementProps<"p", keyof TextProps> {
+interface TextCellProps extends TextProps, ElementProps<'p', keyof TextProps> {
   text: string
   link?: string
 }
@@ -126,7 +126,7 @@ const TextCell = memo(function TextCell({
  * -----------------------------
  */
 
-interface DateCellProps extends Omit<TextCellProps, "text"> {
+interface DateCellProps extends Omit<TextCellProps, 'text'> {
   datetime: string
 }
 
@@ -135,7 +135,7 @@ const DateCell = memo(function DateCell({ datetime, ...props }: DateCellProps) {
   return (
     <TextCell
       {...props}
-      text={date.format("MMMM DD, YYYY")}
+      text={date.format('MMMM DD, YYYY')}
       className={styles.proposalDate}
     />
   )
@@ -198,7 +198,7 @@ const ProposalSubTable = memo(function ProposalSubTable({
       minHeight={isLoading ? 100 : 0}
       columns={[
         {
-          accessor: "id",
+          accessor: 'id',
           noWrap: true,
           render: ({ number }) => (
             <Box component="span" ml={23} mr={5}>
@@ -210,7 +210,7 @@ const ProposalSubTable = memo(function ProposalSubTable({
           ),
         },
         {
-          accessor: "instrument",
+          accessor: 'instrument',
           noWrap: true,
           width: 50,
           render: ({ instrument }) => (
@@ -219,9 +219,9 @@ const ProposalSubTable = memo(function ProposalSubTable({
           cellsStyle: () => (_) => ({ paddingLeft: 0 }),
         },
         {
-          accessor: "proposal",
+          accessor: 'proposal',
           noWrap: true,
-          textAlign: "right",
+          textAlign: 'right',
           render: ({ number }) => (
             <TextCell
               text={String(number)}
@@ -231,9 +231,9 @@ const ProposalSubTable = memo(function ProposalSubTable({
           ),
         },
         {
-          accessor: "principal_investigator",
+          accessor: 'principal_investigator',
           noWrap: true,
-          width: "100%",
+          width: '100%',
           render: ({ principal_investigator, number }) => (
             <TextCell
               text={principal_investigator}
@@ -243,7 +243,7 @@ const ProposalSubTable = memo(function ProposalSubTable({
           ),
         },
         {
-          accessor: "start_date",
+          accessor: 'start_date',
           noWrap: true,
           render: ({ start_date }) => (
             <DateCell datetime={start_date} size="xs" />
@@ -255,7 +255,7 @@ const ProposalSubTable = memo(function ProposalSubTable({
           ? []
           : proposalInfo
               .concat()
-              .sort(orderBy(["start_date", "instrument"], ["desc", "asc"]))
+              .sort(orderBy(['start_date', 'instrument'], ['desc', 'asc']))
       }
       fetching={isLoading}
       rowExpansion={{
@@ -289,7 +289,7 @@ const Proposals = () => {
 
   const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
   const [expandedCycles, setExpandedCycles] = useState<string[]>(
-    cycles.slice(0, 1), // Expand the most recent cycle by default
+    cycles.slice(0, 1) // Expand the most recent cycle by default
   )
 
   return (
@@ -300,7 +300,7 @@ const Proposals = () => {
       idAccessor="cycle"
       columns={[
         {
-          accessor: "cycle",
+          accessor: 'cycle',
           title: <ProposalHeader />,
           noWrap: true,
           render: ({ cycle }) => (

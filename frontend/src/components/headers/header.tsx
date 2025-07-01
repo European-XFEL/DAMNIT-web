@@ -1,15 +1,15 @@
-import { PropsWithChildren, useState } from "react"
-import { UnstyledButton, Group, Text, Menu, Burger, rem } from "@mantine/core"
-import { useDisclosure } from "@mantine/hooks"
-import { IconLogout, IconChevronDown } from "@tabler/icons-react"
-import cx from "clsx"
+import { PropsWithChildren, useState } from 'react'
+import { UnstyledButton, Group, Text, Menu, Burger, rem } from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
+import { IconLogout, IconChevronDown } from '@tabler/icons-react'
+import cx from 'clsx'
 
-import { selectUserFullName } from "../../auth"
-import { useAppSelector } from "../../redux"
-import { history } from "../../routes"
+import { selectUserFullName } from '../../auth'
+import { useAppSelector } from '../../redux'
+import { history } from '../../routes'
 
-import classes from "./header.module.css"
-import headerClasses from "../../styles/header.module.css"
+import classes from './header.module.css'
+import headerClasses from '../../styles/header.module.css'
 
 const UserMenu = () => {
   const [userMenuOpened, setUserMenuOpened] = useState(false)
@@ -19,7 +19,7 @@ const UserMenu = () => {
     <Menu
       width={260}
       position="bottom-end"
-      transitionProps={{ transition: "pop-top-right" }}
+      transitionProps={{ transition: 'pop-top-right' }}
       onClose={() => setUserMenuOpened(false)}
       onOpen={() => setUserMenuOpened(true)}
       withinPortal
@@ -44,7 +44,7 @@ const UserMenu = () => {
       </Menu.Target>
       <Menu.Dropdown>
         <Menu.Item
-          onClick={() => history.navigate("/logout")}
+          onClick={() => history.navigate('/logout')}
           leftSection={
             <IconLogout
               style={{ width: rem(16), height: rem(16) }}

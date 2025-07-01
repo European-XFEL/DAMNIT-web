@@ -1,5 +1,5 @@
-import { createSlice } from "@reduxjs/toolkit"
-import { generateUID } from "./utils"
+import { createSlice } from '@reduxjs/toolkit'
+import { generateUID } from './utils'
 
 type PlotItem = {
   variables: string[]
@@ -19,7 +19,7 @@ const initialState: PlotsState = {
 }
 
 const slice = createSlice({
-  name: "plots",
+  name: 'plots',
   initialState,
   reducers: {
     setCurrentPlot: (state, action) => {

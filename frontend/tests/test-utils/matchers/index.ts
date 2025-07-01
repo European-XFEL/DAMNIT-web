@@ -1,4 +1,4 @@
-import { toBeRenderedWithProps } from "./toBeRenderedWithProps"
+import { toBeRenderedWithProps } from './toBeRenderedWithProps'
 
 const matchers = { toBeRenderedWithProps }
 

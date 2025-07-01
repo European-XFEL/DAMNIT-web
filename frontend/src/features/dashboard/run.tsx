@@ -1,12 +1,12 @@
-import { Image, ScrollArea, Text } from "@mantine/core"
+import { Image, ScrollArea, Text } from '@mantine/core'
 
-import classes from "./run.module.css"
-import { DTYPES } from "../../constants"
-import { useAppSelector } from "../../redux"
-import { VariableValue } from "../../types"
-import { formatDate, isEmpty } from "../../utils/helpers"
+import classes from './run.module.css'
+import { DTYPES } from '../../constants'
+import { useAppSelector } from '../../redux'
+import { VariableValue } from '../../types'
+import { formatDate, isEmpty } from '../../utils/helpers'
 
-const EXCLUDED_VARIABLES = ["proposal", "run", "added_at"]
+const EXCLUDED_VARIABLES = ['proposal', 'run', 'added_at']
 
 type ScalarProps = {
   label: string
@@ -22,8 +22,8 @@ const Scalar = ({ label, value, monospace = false }: ScalarProps) => (
     <Text
       size="sm"
       className={classes.scalarValue}
-      style={monospace ? { fontFamily: "monospace" } : undefined}
-      c={monospace ? "dark.5" : undefined}
+      style={monospace ? { fontFamily: 'monospace' } : undefined}
+      c={monospace ? 'dark.5' : undefined}
     >
       {value}
     </Text>
@@ -63,7 +63,7 @@ const renderImage = ({ name, label, value }: RenderProps) => (
 )
 
 const renderUnknown = ({ name, label }: RenderProps) => (
-  <Scalar key={name} label={label} value={"(no preview)"} />
+  <Scalar key={name} label={label} value={'(no preview)'} />
 )
 
 const renderFactory = {
@@ -77,10 +77,10 @@ const renderFactory = {
 const Run = () => {
   const tableData = useAppSelector((state) => state.tableData.data)
   const { run, variables: selectedVariables } = useAppSelector(
-    (state) => state.table.selection,
+    (state) => state.table.selection
   )
   const metadataVariables = useAppSelector(
-    (state) => state.tableData.metadata.variables,
+    (state) => state.tableData.metadata.variables
   )
 
   if (!run || !tableData[run]) {
@@ -91,8 +91,8 @@ const Run = () => {
     ? tableData[run]
     : Object.fromEntries(
         Object.entries(tableData[run]).filter(([name]) =>
-          selectedVariables.includes(name),
-        ),
+          selectedVariables.includes(name)
+        )
       )
 
   return (

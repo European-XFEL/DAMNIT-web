@@ -1,9 +1,9 @@
-import { gql } from "@apollo/client"
+import { gql } from '@apollo/client'
 
-import { ExtractedDataOptions } from "./extracted-data.types"
-import { client } from "../../graphql/apollo"
+import { ExtractedDataOptions } from './extracted-data.types'
+import { client } from '../../graphql/apollo'
 
-const EXTRACTED_DATA = "extracted_data"
+const EXTRACTED_DATA = 'extracted_data'
 
 const EXTRACTED_DATA_QUERY = gql`
   query ExtractedDataQuery($proposal: String, $run: Int!, $variable: String!) {
