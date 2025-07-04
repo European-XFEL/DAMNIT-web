@@ -1,6 +1,6 @@
 import { authApi } from './auth.api'
 
-import { BASE_URL, CURRENT_HOST } from '../constants'
+import { FULL_URL } from '../constants'
 import { resetExtractedData } from '../data/extracted'
 import { resetTable as resetTableData } from '../data/table'
 import { resetTable as resetTableView } from '../features/table'
@@ -9,14 +9,11 @@ import { AppThunk } from '../redux'
 import { history } from '../routes'
 
 export const login = (): AppThunk => (_) => {
-  const basePath = `${CURRENT_HOST}${BASE_URL}`
-  window.location.href = `${BASE_URL}oauth/login?redirect_uri=${basePath}home`
+  window.location.href = `${FULL_URL}oauth/login?redirect_uri=${FULL_URL}home`
 }
 
 export const logout = (): AppThunk => (dispatch) => {
-  const basePath = `${CURRENT_HOST}${BASE_URL}`
-
-  fetch(`${BASE_URL}oauth/logout?redirect_uri=${basePath}logged-out`, {
+  fetch(`${FULL_URL}oauth/logout?redirect_uri=${FULL_URL}logged-out`, {
     method: 'GET',
     credentials: 'include', // Include cookies in the request
   })

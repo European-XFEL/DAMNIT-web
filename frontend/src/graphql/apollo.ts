@@ -24,10 +24,6 @@ import { createClient } from 'graphql-ws'
 import { BASE_URL } from '../constants'
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from '../data/table'
 
-const BACKEND_API = import.meta.env.VITE_BACKEND_API
-const HTTP_API =
-  import.meta.env.MODE === 'test' ? `http://${BACKEND_API}${BASE_URL}` : '/'
-
 const removeTypenameLink = removeTypenameFromVariables({
   except: {
     JSON: KEEP,
@@ -41,7 +37,7 @@ const retryLink = new RetryLink({
   },
 })
 
-const httpLink = new HttpLink({ uri: `${HTTP_API}graphql` })
+const httpLink = new HttpLink({ uri: `${BASE_URL}graphql` })
 
 type PendingOperation = {
   execute: () => Observable<FetchResult>

@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 export const BASE_URL = import.meta.env.BASE_URL
-export const CURRENT_HOST = `${window.location.protocol}//${window.location.host}`
+export const FULL_URL = window.location.origin + BASE_URL
 
 export const EMPTY_VALUE = 'None'
 export const VARIABLES = {
