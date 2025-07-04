@@ -22,15 +22,24 @@ _GROUP_NAME_RE = re.compile(r"cn=([^,]+)")
 
 
 @alru_cache(ttl=60)
-async def user_from_ldap(username: str) -> User:
+async def user_from_ldap(uid: str = "", mail: str = "") -> User:
     """Get user information from LDAP."""
+    if not uid and not mail:
+        message = "Either a `uid` or `mail` must be supplied"
+        raise RuntimeError(message)
+
     server = Server(_LDAP_SERVER, get_info=ALL)
     conn = Connection(server, auto_bind=True)
 
-    search_filter = f"(uid={username})"
-    search_attributes = ["uidNumber", "cn", "mail", "isMemberOf"]
+    search_filter = ""  # This shouldn't happen
+    if uid:
+        search_filter = f"(uid={uid})"
+    elif mail:
+        search_filter = f"(mail={mail})"
 
-    _logger = logger.bind(username=username)
+    search_attributes = ["uid", "uidNumber", "cn", "mail", "isMemberOf"]
+
+    _logger = logger.bind(user=uid or mail)
 
     _logger.debug(
         "LDAP search for user",
@@ -58,6 +67,7 @@ async def user_from_ldap(username: str) -> User:
     _logger.debug("LDAP search result", entries=conn.entries)
 
     entry = conn.entries[0]
+    username = entry.uid.value
     name = entry.cn.value
     email = entry.mail.value
     uid = entry.uidNumber.value
@@ -99,7 +109,13 @@ async def user_from_session(request: Request) -> User:
     if not user:
         raise Exception  # TODO: better exception
 
-    return await user_from_ldap(user["preferred_username"])
+    if username := user.get("preferred_username"):
+        return await user_from_ldap(uid=username)
+    if email := user.get("email"):
+        return await user_from_ldap(mail=email)
+
+    message = "Unable to detect a user for the current session"
+    raise RuntimeError(message)
 
 
 @alru_cache(ttl=60)
