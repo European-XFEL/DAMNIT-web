@@ -1,4 +1,21 @@
-# .dockerignore
+# Ignore node_modules directory
 node_modules
-.env
 
+# Ignore env files
+.env*
+
+# Ignore local editor settings
+.vscode
+
+# Ignore Git repository files
+.git
+.gitignore
+
+# Ignore build folder
+dist
+build
+
+# Ignore configuration files
+eslint*
+prettier*
+.DS_Store
