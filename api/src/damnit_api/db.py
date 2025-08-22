@@ -136,6 +136,18 @@ async def async_column(proposal, *, table: str, name: str):
     return result.scalars().all()
 
 
+async def async_all_tags(proposal):
+    tags_table = await async_table(proposal, name="tags")
+    selection = select(
+        tags_table.c.id,
+        tags_table.c.name,
+    )
+    async with get_session(proposal) as session:
+        result = await session.execute(selection)
+
+    return result.mappings().all()
+
+
 # -----------------------------------------------------------------------------
 # Etc.
 

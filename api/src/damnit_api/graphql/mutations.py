@@ -20,5 +20,6 @@ class Mutation:
             "runs": model.runs,
             "variables": model.variables,
             "timestamp": model.timestamp * 1000,  # deserialize to JS
+            "tags": model.tags,
         }
         return {"metadata": metadata}
