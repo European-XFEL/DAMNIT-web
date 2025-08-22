@@ -1,5 +1,3 @@
-from sqlalchemy import select
-from sqlalchemy.exc import NoSuchTableError
 
 from .. import db
 from ..utils import create_map
@@ -22,22 +20,12 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
 
     variables_list = await db.async_variables(proposal)
 
-    try:
-        variable_tags = await db.async_table(proposal, name="variable_tags")
-        selection_tags = select(variable_tags.c.variable_name,
-                                variable_tags.c.tag_id)
-        async with db.get_session(proposal) as session:
-            tags_result = await session.execute(selection_tags)
-
-        tags_list = tags_result.mappings().all()
-        tags_map: dict[str, list[int]] = {}
-        for row in tags_list:
-            name = row["variable_name"]
-            tag_id = row["tag_id"]
-            tags_map.setdefault(name, []).append(tag_id)
-
-    except NoSuchTableError:
-        tags_map = {}
+    variable_tags_list = await db.async_variable_tags(proposal)
+    tags_map: dict[str, list[int]] = {}
+    for row in variable_tags_list:
+        name = row["variable_name"]
+        tag_id = row["tag_id"]
+        tags_map.setdefault(name, []).append(tag_id)
 
     for var in variables_list:
         var["tag_ids"] = tags_map.get(var["name"], [])
