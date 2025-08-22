@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from .const import DEFAULT_PROPOSAL
-from .utils import Registry, find_proposal
+from .utils import Registry, create_map, find_proposal
 
 DAMNIT_PATH = "usr/Shared/amore/"
 
@@ -146,7 +146,7 @@ async def async_all_tags(proposal):
     async with get_session(proposal) as session:
         result = await session.execute(selection)
 
-    return result.mappings().all()
+    return create_map(result.mappings().all(), key="id")
 
 
 # -----------------------------------------------------------------------------

@@ -109,4 +109,4 @@ def create_map(
     *,
     key,
 ):
-    return {obj[key]: {str(k): v for k, v in obj.items()} for obj in lst}
+    return {str(obj[key]): {str(k): v for k, v in obj.items()} for obj in lst}

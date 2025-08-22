@@ -58,12 +58,6 @@ Timestamp = strawberry.scalar(
 )
 
 
-@strawberry.type
-class DamnitTag:
-    id: int
-    name: Any | None
-
-
 @strawberry.interface
 class BaseVariable:
     name: str
@@ -179,7 +173,7 @@ class DamnitTable(metaclass=Registry):
         self.variables = DamnitRun.known_variables()
         self.stype = self._create_stype()
         self.runs = []
-        self.tags = []
+        self.tags = {}
 
     def update(self, variables=None, timestamp: float | None = None):
         """We update the strawberry type and the schema here"""
