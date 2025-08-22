@@ -9,7 +9,6 @@ from sqlalchemy import (
     desc,
     select,
 )
-from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
@@ -18,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from .const import DEFAULT_PROPOSAL
-from .utils import Registry, create_map, find_proposal
+from .utils import Registry, find_proposal
 
 DAMNIT_PATH = "usr/Shared/amore/"
 
@@ -100,27 +99,8 @@ async def async_variables(proposal):
         result = await session.execute(selection_variables)
 
     variable_rows = result.mappings().all()
-    variables_list = [dict(r) for r in variable_rows]
 
-    try:
-        variable_tags = await async_table(proposal, name="variable_tags")
-        selection_tags = select(variable_tags.c.variable_name, variable_tags.c.tag_id)
-        async with get_session(proposal) as session:
-            tags_result = await session.execute(selection_tags)
-
-        tags_list = tags_result.mappings().all()
-        tags_map: dict[str, list[int]] = {}
-        for row in tags_list:
-            name = row["variable_name"]
-            tag_id = row["tag_id"]
-            tags_map.setdefault(name, []).append(tag_id)
-    except NoSuchTableError:
-        tags_map = {}
-
-    for var in variables_list:
-        var["tag_ids"] = tags_map.get(var["name"], [])
-
-    return create_map(variables_list, key="name")
+    return [dict(r) for r in variable_rows]
 
 
 async def async_latest_rows(
