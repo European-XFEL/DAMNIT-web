@@ -18,7 +18,7 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
     model = models.get_model(proposal)
 
     tags = await db.async_all_tags(proposal)
-    model.tags = [models.DamnitTag(**tag) for tag in tags]
+    model.tags = tags
 
     variables_list = await db.async_variables(proposal)
 
