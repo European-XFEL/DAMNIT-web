@@ -55,10 +55,17 @@ Timestamp = strawberry.scalar(
 )
 
 
+@strawberry.type
+class DamnitTag:
+    id: int
+    name: Any | None
+
+
 @strawberry.interface
 class BaseVariable:
     name: str
     dtype: str
+    tag_ids: list[int] | None
 
 
 @strawberry.type
@@ -70,10 +77,6 @@ class KnownVariable(Generic[T], BaseVariable):
 class DamnitVariable(BaseVariable):
     value: Any | None
 
-@strawberry.type
-class DamnitTag:
-    id: int
-    name: Any | None
 
 @strawberry.interface
 class DamnitRun:

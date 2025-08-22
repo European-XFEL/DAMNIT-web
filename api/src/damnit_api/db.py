@@ -9,6 +9,7 @@ from sqlalchemy import (
     desc,
     select,
 )
+from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
@@ -94,12 +95,32 @@ async def async_table(proposal, name: str = "runs") -> Table:
 
 async def async_variables(proposal):
     variables = await async_table(proposal, name="variables")
-    selection = select(variables.c.name, variables.c.title)
-
+    selection_variables = select(variables.c.name, variables.c.title)
     async with get_session(proposal) as session:
-        result = await session.execute(selection)
+        result = await session.execute(selection_variables)
 
-    return create_map(result.mappings().all(), key="name")
+    variable_rows = result.mappings().all()
+    variables_list = [dict(r) for r in variable_rows]
+
+    try:
+        variable_tags = await async_table(proposal, name="variable_tags")
+        selection_tags = select(variable_tags.c.variable_name, variable_tags.c.tag_id)
+        async with get_session(proposal) as session:
+            tags_result = await session.execute(selection_tags)
+
+        tags_list = tags_result.mappings().all()
+        tags_map: dict[str, list[int]] = {}
+        for row in tags_list:
+            name = row["variable_name"]
+            tag_id = row["tag_id"]
+            tags_map.setdefault(name, []).append(tag_id)
+    except NoSuchTableError:
+        tags_map = {}
+
+    for var in variables_list:
+        var["tag_ids"] = tags_map.get(var["name"], [])
+
+    return create_map(variables_list, key="name")
 
 
 async def async_latest_rows(
