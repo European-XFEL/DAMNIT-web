@@ -1,4 +1,6 @@
+
 from .. import db
+from ..utils import create_map
 from . import models
 
 
@@ -13,7 +15,23 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
 
     model = models.get_model(proposal)
 
-    variables = await db.async_variables(proposal)
+    tags = await db.async_all_tags(proposal)
+    model.tags = tags
+
+    variables_list = await db.async_variables(proposal)
+
+    variable_tags_list = await db.async_variable_tags(proposal)
+    tags_map: dict[str, list[int]] = {}
+    for row in variable_tags_list:
+        name = row["variable_name"]
+        tag_id = row["tag_id"]
+        tags_map.setdefault(name, []).append(tag_id)
+
+    for var in variables_list:
+        var["tag_ids"] = tags_map.get(var["name"], [])
+
+    variables = create_map(variables_list, key="name")
+
     model.update(variables)
 
     runs = await db.async_column(proposal, table="run_info", name="run")
