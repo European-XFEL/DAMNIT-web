@@ -59,8 +59,6 @@ Timestamp = strawberry.scalar(
 class BaseVariable:
     name: str
     dtype: str
-    tag_ids: list[int]
-
 
 @strawberry.type
 class KnownVariable(Generic[T], BaseVariable):
@@ -98,10 +96,9 @@ class DamnitRun:
             if value is None:
                 result = None
             elif as_dict:
-                result = {"value": value, "dtype": dtype.value, "tag_ids": []}
+                result = {"value": value, "dtype": dtype.value}
             else:
-                result = klass(name=name, value=value, dtype=dtype.value,
-                               tag_ids=[])
+                result = klass(name=name, value=value, dtype=dtype.value)
 
             variables[name] = result
 
