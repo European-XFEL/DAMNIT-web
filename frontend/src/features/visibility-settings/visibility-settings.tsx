@@ -20,6 +20,7 @@ function VisibilitySettings() {
     <div>
       <h1>Visibility Settings</h1>
       <Accordion>
+          <SpoilerList key={"all"} toggleOne={toggleOne} toggleAll={toggleAll} />
         {Object.values(tags).map(tag => (
           <SpoilerList key={tag.id} tagId={tag.id} tagName={tag.name} toggleOne={toggleOne} toggleAll={toggleAll} />
         ))}

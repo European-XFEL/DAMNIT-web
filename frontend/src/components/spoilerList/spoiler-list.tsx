@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Checkbox, Stack, Group, Text, AccordionItem, AccordionControl, AccordionPanel } from '@mantine/core';
 import { useAppSelector } from '../../redux';
 
@@ -21,22 +20,22 @@ function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps)
     return varList;
   }
 
-  const varList = varListForTagId(tagId);
+  const varList = tagId ? varListForTagId(tagId) : Object.keys(variables);
 
   const allOn = varList.every(v => visibleColumns[v]);
   const anyOn = varList.some(v => visibleColumns[v]);
 
   return (
 
-      <AccordionItem value={tagId?.toString() ?? "All Variables"}>
+      <AccordionItem value={tagId?.toString() ?? "all-variables"}>
         <AccordionControl>
           <Group>
-        <Checkbox
-          checked={allOn && anyOn}
-          indeterminate={!allOn && anyOn}
-          onClick={(event) => {event.stopPropagation(); toggleAll(varList, !allOn)}}
-        />
-        <Text fw={600}>{tagName}</Text>
+      { tagId && <Checkbox
+        checked={allOn && anyOn}
+        indeterminate={!allOn && anyOn}
+        onClick={(event) => {event.stopPropagation(); toggleAll(varList, !allOn)}}
+      />}
+        <Text fw={600}>{tagName ?? "All Variables"}</Text>
         </Group>
         </AccordionControl>
       <AccordionPanel>      
