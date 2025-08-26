@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from '@mantine/core'
 import { useAppSelector } from '../../redux'
+import { EXCLUDED_VARIABLES } from '../../constants'
 
 export interface SpoilerListProps {
   tagId?: number
@@ -37,7 +38,9 @@ function SpoilerList({
     )
   }
 
-  const groupVarList = tagId ? varListForTagId(tagId) : Object.keys(variables)
+  const groupVarList = tagId
+    ? varListForTagId(tagId)
+    : Object.keys(variables).filter((v) => !EXCLUDED_VARIABLES.includes(v))
 
   const varList =
     filteredVars !== undefined

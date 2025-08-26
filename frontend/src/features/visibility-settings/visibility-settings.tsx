@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
-  Badge,
   Group,
   rem,
   ScrollArea,
@@ -17,12 +16,22 @@ import {
   setColumnGroupVisibility,
   toggleColumnVisibility,
 } from './visibility-settings.slice'
+import { EXCLUDED_VARIABLES } from '../../constants'
 
 function VisibilitySettings() {
   const dispatch = useAppDispatch()
-  const { tags, variables } = useAppSelector(
+  const { tags, variables: originalVariables } = useAppSelector(
     (state) => state.tableData.metadata
   )
+
+  const variables = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(originalVariables).filter(
+        ([key]) => !EXCLUDED_VARIABLES.includes(key)
+      )
+    )
+  }, [originalVariables])
+
   const [searchTerm, setSearchTerm] = useState('')
   const [openedAccordions, setOpenedAccordions] = useState(
     !Object.keys(tags).length ? ['all-variables'] : []
