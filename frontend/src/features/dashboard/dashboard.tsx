@@ -14,6 +14,7 @@ import {
   Text,
   Title,
   rem,
+  ScrollArea,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 
@@ -233,7 +234,9 @@ const Dashboard = () => {
         </Header>
       </AppShell.Header>
       <AppShell.Navbar p="md">
-        <VisibilitySettings />
+        <ScrollArea>
+          <VisibilitySettings />
+        </ScrollArea>
       </AppShell.Navbar>
       <AppShell.Main>
         <MainTabs

@@ -43,7 +43,7 @@ function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps)
         {varList.map(v => (
           <Checkbox
             key={v}
-            label={v}
+            label={variables[v].title}
             checked={visibleColumns[v]}
             onChange={() => toggleOne(v)}
             radius="sm"
