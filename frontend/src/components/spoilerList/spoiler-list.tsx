@@ -45,7 +45,7 @@ function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps)
           <Checkbox
             key={v}
             label={variables[v].title}
-            checked={visibleColumns[v]}
+            checked={visibleColumns[v] ?? false}
             onClick={() => toggleOne(v)}
             onChange={() => {}}
             radius="sm"
