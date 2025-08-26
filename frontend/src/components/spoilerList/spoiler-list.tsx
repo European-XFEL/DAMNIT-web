@@ -9,14 +9,16 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core'
-import { useAppSelector } from '../../redux'
+import { useAppDispatch, useAppSelector } from '../../redux'
 import { EXCLUDED_VARIABLES } from '../../constants'
+import {
+  setColumnGroupVisibility,
+  toggleColumnVisibility,
+} from '../../features/visibility-settings/visibility-settings.slice'
 
 export interface SpoilerListProps {
   tagId?: number
   tagName?: string
-  toggleOne: (varName: string) => void
-  toggleAll: (columnNames: string[], isVisible: boolean) => void
   variableCount?: number
   filteredVars?: string[]
 }
@@ -24,11 +26,10 @@ export interface SpoilerListProps {
 function SpoilerList({
   tagId,
   tagName,
-  toggleAll,
-  toggleOne,
   variableCount,
   filteredVars,
 }: SpoilerListProps) {
+  const dispatch = useAppDispatch()
   const { variables } = useAppSelector((state) => state.tableData.metadata)
   const { visibleColumns } = useAppSelector((state) => state.visibilitySettings)
 
@@ -77,7 +78,12 @@ function SpoilerList({
                   onChange={() => {}}
                   onClick={(event) => {
                     event.stopPropagation()
-                    toggleAll(varList, !anyOn)
+                    dispatch(
+                      setColumnGroupVisibility({
+                        columnNames: groupVarList,
+                        isVisible: !anyOn,
+                      })
+                    )
                   }}
                 />
               </Tooltip>
@@ -96,7 +102,7 @@ function SpoilerList({
               key={v}
               label={variables[v].title}
               checked={visibleColumns[v] !== false}
-              onClick={() => toggleOne(v)}
+              onClick={() => dispatch(toggleColumnVisibility(v))}
               onChange={() => {}}
               radius="sm"
             />

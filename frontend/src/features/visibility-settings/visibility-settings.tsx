@@ -37,14 +37,6 @@ function VisibilitySettings() {
     !Object.keys(tags).length ? ['all-variables'] : []
   )
 
-  function toggleOne(variableName: string) {
-    dispatch(toggleColumnVisibility(variableName))
-  }
-
-  function toggleAll(columnNames: string[], isVisible: boolean) {
-    dispatch(setColumnGroupVisibility({ columnNames, isVisible }))
-  }
-
   const filteredVariableNames = useMemo(() => {
     if (!searchTerm) {
       return undefined
@@ -123,8 +115,6 @@ function VisibilitySettings() {
         >
           <SpoilerList
             key={'all'}
-            toggleOne={toggleOne}
-            toggleAll={toggleAll}
             filteredVars={filteredVariableNames}
             variableCount={getVarCount()}
           />
@@ -134,8 +124,6 @@ function VisibilitySettings() {
               key={tag.id}
               tagId={tag.id}
               tagName={tag.name}
-              toggleOne={toggleOne}
-              toggleAll={toggleAll}
               variableCount={getVarCount(tag.id)}
               filteredVars={filteredVariableNames}
             />
