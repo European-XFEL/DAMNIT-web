@@ -33,6 +33,7 @@ function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps)
       { tagId && <Checkbox
         checked={allOn && anyOn}
         indeterminate={!allOn && anyOn}
+        onChange={() => {}}
         onClick={(event) => {event.stopPropagation(); toggleAll(varList, !allOn)}}
       />}
         <Text fw={600}>{tagName ?? "All Variables"}</Text>
@@ -45,7 +46,8 @@ function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps)
             key={v}
             label={variables[v].title}
             checked={visibleColumns[v]}
-            onChange={() => toggleOne(v)}
+            onClick={() => toggleOne(v)}
+            onChange={() => {}}
             radius="sm"
           />
         ))}
