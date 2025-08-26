@@ -14,11 +14,6 @@ const visibilitySettingsSlice = createSlice({
   name: 'visibilitySettings',
   initialState,
   reducers: {
-    initializeColumns: (state, action: PayloadAction<string[]>) => {
-      state.visibleColumns = Object.fromEntries(
-        action.payload.map((varName) => [varName, true])
-      )
-    },
     toggleColumnVisibility: (state, action: PayloadAction<string>) => {
       const varName = action.payload
       if (varName in state.visibleColumns) {
