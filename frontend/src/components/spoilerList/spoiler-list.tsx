@@ -22,8 +22,12 @@ function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps)
 
   const varList = tagId ? varListForTagId(tagId) : Object.keys(variables);
 
-  const allOn = varList.every(v => visibleColumns[v]);
+   const allOn = varList.every(v => visibleColumns[v]);
   const anyOn = varList.some(v => visibleColumns[v]);
+    const isIndeterminate = anyOn && !allOn;
+
+  console.log(tagName, allOn, anyOn);
+
 
   return (
 
@@ -31,8 +35,9 @@ function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps)
         <AccordionControl>
           <Group>
       { tagId && <Checkbox
-        checked={allOn && anyOn}
-        indeterminate={!allOn && anyOn}
+        indeterminate={isIndeterminate}
+        checked={allOn}
+        key={`${tagId}-${isIndeterminate}`}
         onChange={() => {}}
         onClick={(event) => {event.stopPropagation(); toggleAll(varList, !allOn)}}
       />}
