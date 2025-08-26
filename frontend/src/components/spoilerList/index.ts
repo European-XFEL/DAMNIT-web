@@ -1,1 +1,1 @@
-export {default as SpoilerList} from "./spoiler-list"
+export { default as SpoilerList } from './spoiler-list'

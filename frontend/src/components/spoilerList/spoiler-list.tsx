@@ -1,65 +1,83 @@
-import { Checkbox, Stack, Group, Text, AccordionItem, AccordionControl, AccordionPanel } from '@mantine/core';
-import { useAppSelector } from '../../redux';
+import {
+  Checkbox,
+  Stack,
+  Group,
+  Text,
+  AccordionItem,
+  AccordionControl,
+  AccordionPanel,
+} from '@mantine/core'
+import { useAppSelector } from '../../redux'
 
 export interface SpoilerListProps {
-  tagId?: number;
-  tagName?: string;
-  toggleOne: (varName: string) => void;
-  toggleAll: (columnNames: string[], isVisible: boolean) => void;
+  tagId?: number
+  tagName?: string
+  toggleOne: (varName: string) => void
+  toggleAll: (columnNames: string[], isVisible: boolean) => void
 }
 
-function SpoilerList({ tagId, tagName, toggleAll, toggleOne }: SpoilerListProps) {
-  const variables = useAppSelector(state => state.tableData.metadata.variables);
-  const visibleColumns = useAppSelector(state => state.visibilitySettings.visibleColumns);
+function SpoilerList({
+  tagId,
+  tagName,
+  toggleAll,
+  toggleOne,
+}: SpoilerListProps) {
+  const variables = useAppSelector(
+    (state) => state.tableData.metadata.variables
+  )
+  const visibleColumns = useAppSelector(
+    (state) => state.visibilitySettings.visibleColumns
+  )
 
   function varListForTagId(tagId: number): string[] {
     const varList = Object.keys(variables).filter((varName) => {
-      const varTags = variables[varName].tag_ids;
-      return varTags.includes(tagId);
-    });
-    return varList;
+      const varTags = variables[varName].tag_ids
+      return varTags.includes(tagId)
+    })
+    return varList
   }
 
-  const varList = tagId ? varListForTagId(tagId) : Object.keys(variables);
+  const varList = tagId ? varListForTagId(tagId) : Object.keys(variables)
 
-   const allOn = varList.every(v => visibleColumns[v]);
-  const anyOn = varList.some(v => visibleColumns[v]);
-    const isIndeterminate = anyOn && !allOn;
-
-  console.log(tagName, allOn, anyOn);
-
+  const allOn = varList.every((v) => visibleColumns[v])
+  const anyOn = varList.some((v) => visibleColumns[v])
+  const isIndeterminate = anyOn && !allOn
 
   return (
-
-      <AccordionItem value={tagId?.toString() ?? "all-variables"}>
-        <AccordionControl>
-          <Group>
-      { tagId && <Checkbox
-        indeterminate={isIndeterminate}
-        checked={allOn}
-        key={`${tagId}-${isIndeterminate}`}
-        onChange={() => {}}
-        onClick={(event) => {event.stopPropagation(); toggleAll(varList, !allOn)}}
-      />}
-        <Text fw={600}>{tagName ?? "All Variables"}</Text>
+    <AccordionItem value={tagId?.toString() ?? 'all-variables'}>
+      <AccordionControl>
+        <Group>
+          {tagId && (
+            <Checkbox
+              indeterminate={isIndeterminate}
+              checked={allOn}
+              key={`${tagId}-${isIndeterminate}`}
+              onChange={() => {}}
+              onClick={(event) => {
+                event.stopPropagation()
+                toggleAll(varList, !allOn)
+              }}
+            />
+          )}
+          <Text fw={600}>{tagName ?? 'All Variables'}</Text>
         </Group>
-        </AccordionControl>
-      <AccordionPanel>      
-      <Stack gap={4}>
-        {varList.map(v => (
-          <Checkbox
-            key={v}
-            label={variables[v].title}
-            checked={visibleColumns[v] ?? false}
-            onClick={() => toggleOne(v)}
-            onChange={() => {}}
-            radius="sm"
-          />
-        ))}
-      </Stack>
+      </AccordionControl>
+      <AccordionPanel>
+        <Stack gap={4}>
+          {varList.map((v) => (
+            <Checkbox
+              key={v}
+              label={variables[v].title}
+              checked={visibleColumns[v] ?? false}
+              onClick={() => toggleOne(v)}
+              onChange={() => {}}
+              radius="sm"
+            />
+          ))}
+        </Stack>
       </AccordionPanel>
     </AccordionItem>
-  );
+  )
 }
 
-export default SpoilerList;
+export default SpoilerList

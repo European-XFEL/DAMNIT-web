@@ -21,15 +21,15 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconGraph, IconX } from '@tabler/icons-react'
 import cx from 'clsx'
 
-import { Header, Logo } from "../../components/headers"
-import { InstrumentBadge } from "../../components/badges"
-import { Tabs, TabsProps } from "../../components/tabs"
-import { useCurrentProposal } from "../../data/metadata"
-import { VisibilitySettings } from "../visibility-settings"
-import { useAppDispatch, useAppSelector } from "../../redux"
-import { PlotDialog } from "../plots"
-import { removeTab, setCurrentTab, closeAside } from "./dashboard.slice"
-import Run from "./run"
+import { Header, Logo } from '../../components/headers'
+import { InstrumentBadge } from '../../components/badges'
+import { Tabs, TabsProps } from '../../components/tabs'
+import { useCurrentProposal } from '../../data/metadata'
+import { VisibilitySettings } from '../visibility-settings'
+import { useAppDispatch, useAppSelector } from '../../redux'
+import { PlotDialog } from '../plots'
+import { removeTab, setCurrentTab, closeAside } from './dashboard.slice'
+import Run from './run'
 
 import styles from './dashboard.module.css'
 import headerStyles from '../../styles/header.module.css'

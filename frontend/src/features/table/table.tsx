@@ -60,7 +60,10 @@ const Table = ({ grid }: TableProps) => {
   const tableColumns = useMemo(
     () =>
       Object.values(tableMetadata.variables)
-        .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name) && visibleColumns[name] !== false)
+        .filter(
+          ({ name }) =>
+            !EXCLUDED_VARIABLES.includes(name) && visibleColumns[name] !== false
+        )
         .map(({ name, title }) => ({ id: name, title: title || name })),
     [tableMetadata.variables, visibleColumns]
   )
