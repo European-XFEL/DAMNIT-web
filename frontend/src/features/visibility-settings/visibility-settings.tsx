@@ -19,7 +19,7 @@ function VisibilitySettings() {
   return (
     <div>
       <h1>Visibility Settings</h1>
-      <Accordion>
+      <Accordion defaultValue={Object.keys(tags).length ? undefined : "all-variables"}>
           <SpoilerList key={"all"} toggleOne={toggleOne} toggleAll={toggleAll} />
         {Object.values(tags).map(tag => (
           <SpoilerList key={tag.id} tagId={tag.id} tagName={tag.name} toggleOne={toggleOne} toggleAll={toggleAll} />
