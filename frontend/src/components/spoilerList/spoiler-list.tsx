@@ -56,7 +56,7 @@ function SpoilerList({
   if (allOn) {
     tooltipLabel = 'Deselect all variables in this group'
   } else if (isIndeterminate) {
-    tooltipLabel = 'Some variables are selected. Click to select all.'
+    tooltipLabel = 'Some variables are selected. Click to deselect all.'
   }
 
   if (filteredVars !== undefined && varList.length === 0) {
@@ -77,7 +77,7 @@ function SpoilerList({
                   onChange={() => {}}
                   onClick={(event) => {
                     event.stopPropagation()
-                    toggleAll(varList, !allOn)
+                    toggleAll(varList, !anyOn)
                   }}
                 />
               </Tooltip>
