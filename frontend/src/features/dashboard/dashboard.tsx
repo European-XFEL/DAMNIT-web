@@ -20,14 +20,15 @@ import { useDisclosure } from '@mantine/hooks'
 import { IconGraph, IconX } from '@tabler/icons-react'
 import cx from 'clsx'
 
-import { Header, Logo } from '../../components/headers'
-import { InstrumentBadge } from '../../components/badges'
-import { Tabs, TabsProps } from '../../components/tabs'
-import { useCurrentProposal } from '../../data/metadata'
-import { useAppDispatch, useAppSelector } from '../../redux'
-import { PlotDialog } from '../plots'
-import { removeTab, setCurrentTab, closeAside } from './dashboard.slice'
-import Run from './run'
+import { Header, Logo } from "../../components/headers"
+import { InstrumentBadge } from "../../components/badges"
+import { Tabs, TabsProps } from "../../components/tabs"
+import { useCurrentProposal } from "../../data/metadata"
+import { VisibilitySettings } from "../visibility-settings"
+import { useAppDispatch, useAppSelector } from "../../redux"
+import { PlotDialog } from "../plots"
+import { removeTab, setCurrentTab, closeAside } from "./dashboard.slice"
+import Run from "./run"
 
 import styles from './dashboard.module.css'
 import headerStyles from '../../styles/header.module.css'
@@ -232,11 +233,7 @@ const Dashboard = () => {
         </Header>
       </AppShell.Header>
       <AppShell.Navbar p="md">
-        {Array(15)
-          .fill(0)
-          .map((_, index) => (
-            <Skeleton key={index} h={28} mt="sm" animate={false} />
-          ))}
+        <VisibilitySettings />
       </AppShell.Navbar>
       <AppShell.Main>
         <MainTabs
