@@ -1,11 +1,13 @@
 import {
-  Checkbox,
-  Stack,
-  Group,
-  Text,
-  AccordionItem,
   AccordionControl,
+  AccordionItem,
   AccordionPanel,
+  Badge,
+  Checkbox,
+  Group,
+  Stack,
+  Text,
+  Tooltip,
 } from '@mantine/core'
 import { useAppSelector } from '../../redux'
 
@@ -14,6 +16,8 @@ export interface SpoilerListProps {
   tagName?: string
   toggleOne: (varName: string) => void
   toggleAll: (columnNames: string[], isVisible: boolean) => void
+  variableCount?: number
+  filteredVars?: string[]
 }
 
 function SpoilerList({
@@ -21,45 +25,65 @@ function SpoilerList({
   tagName,
   toggleAll,
   toggleOne,
+  variableCount,
+  filteredVars,
 }: SpoilerListProps) {
-  const variables = useAppSelector(
-    (state) => state.tableData.metadata.variables
-  )
-  const visibleColumns = useAppSelector(
-    (state) => state.visibilitySettings.visibleColumns
-  )
+  const { variables } = useAppSelector((state) => state.tableData.metadata)
+  const { visibleColumns } = useAppSelector((state) => state.visibilitySettings)
 
   function varListForTagId(tagId: number): string[] {
-    const varList = Object.keys(variables).filter((varName) => {
-      const varTags = variables[varName].tag_ids
-      return varTags.includes(tagId)
-    })
-    return varList
+    return Object.keys(variables).filter((varName) =>
+      variables[varName].tag_ids.includes(tagId)
+    )
   }
 
-  const varList = tagId ? varListForTagId(tagId) : Object.keys(variables)
+  const groupVarList = tagId ? varListForTagId(tagId) : Object.keys(variables)
 
-  const allOn = varList.every((v) => visibleColumns[v])
-  const anyOn = varList.some((v) => visibleColumns[v])
+  const varList =
+    filteredVars !== undefined
+      ? groupVarList.filter((v) => filteredVars.includes(v))
+      : groupVarList
+
+  const allOn =
+    varList.length > 0 && varList.every((v) => visibleColumns[v] !== false)
+  const anyOn = varList.some((v) => visibleColumns[v] !== false)
   const isIndeterminate = anyOn && !allOn
+
+  let tooltipLabel = 'Select all variables in this group'
+  if (allOn) {
+    tooltipLabel = 'Deselect all variables in this group'
+  } else if (isIndeterminate) {
+    tooltipLabel = 'Some variables are selected. Click to select all.'
+  }
+
+  if (filteredVars !== undefined && varList.length === 0) {
+    return null
+  }
 
   return (
     <AccordionItem value={tagId?.toString() ?? 'all-variables'}>
       <AccordionControl>
-        <Group>
-          {tagId && (
-            <Checkbox
-              indeterminate={isIndeterminate}
-              checked={allOn}
-              key={`${tagId}-${isIndeterminate}`}
-              onChange={() => {}}
-              onClick={(event) => {
-                event.stopPropagation()
-                toggleAll(varList, !allOn)
-              }}
-            />
+        <Group justify="space-between">
+          <Group>
+            {tagId && (
+              <Tooltip label={tooltipLabel} withArrow position="right">
+                <Checkbox
+                  key={`${tagId}-${isIndeterminate}`}
+                  checked={allOn}
+                  indeterminate={isIndeterminate}
+                  onChange={() => {}}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    toggleAll(varList, !allOn)
+                  }}
+                />
+              </Tooltip>
+            )}
+            <Text fw={600}>{tagName ?? 'All Variables'}</Text>
+          </Group>
+          {variableCount !== undefined && (
+            <Badge variant="light">{variableCount}</Badge>
           )}
-          <Text fw={600}>{tagName ?? 'All Variables'}</Text>
         </Group>
       </AccordionControl>
       <AccordionPanel>
@@ -68,7 +92,7 @@ function SpoilerList({
             <Checkbox
               key={v}
               label={variables[v].title}
-              checked={visibleColumns[v] ?? false}
+              checked={visibleColumns[v] !== false}
               onClick={() => toggleOne(v)}
               onChange={() => {}}
               radius="sm"
