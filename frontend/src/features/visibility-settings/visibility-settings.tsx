@@ -1,25 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
-  Group,
   rem,
   ScrollArea,
   Stack,
   TextInput,
-  Title,
+  Divider,
 } from '@mantine/core'
-import { IconEye, IconSearch } from '@tabler/icons-react'
+import { IconSearch } from '@tabler/icons-react'
 
 import { SpoilerList } from '../../components/spoilerList'
-import { useAppDispatch, useAppSelector } from '../../redux'
-import {
-  setColumnGroupVisibility,
-  toggleColumnVisibility,
-} from './visibility-settings.slice'
+import { useAppSelector } from '../../redux'
 import { EXCLUDED_VARIABLES } from '../../constants'
 
-function VisibilitySettings() {
-  const dispatch = useAppDispatch()
+export interface VisibilitySettingsProps {
+  variant: 'all-variables' | 'tag-variables'
+}
+
+function VisibilitySettings({
+  variant = 'tag-variables',
+}: VisibilitySettingsProps) {
   const { tags, variables: originalVariables } = useAppSelector(
     (state) => state.tableData.metadata
   )
@@ -89,11 +89,6 @@ function VisibilitySettings() {
 
   return (
     <Stack gap="md" h="100%">
-      <Group gap="xs">
-        <IconEye style={{ width: rem(24), height: rem(24) }} stroke={1.5} />
-        <Title order={4}>Column Visibility</Title>
-      </Group>
-
       <TextInput
         placeholder="Search variables..."
         leftSection={<IconSearch style={{ width: rem(16), height: rem(16) }} />}
@@ -110,7 +105,9 @@ function VisibilitySettings() {
         <Accordion
           variant="separated"
           multiple
-          value={openedAccordions}
+          value={
+            variant === 'all-variables' ? 'all-variables' : openedAccordions
+          }
           onChange={setOpenedAccordions}
         >
           <SpoilerList
@@ -119,15 +116,19 @@ function VisibilitySettings() {
             variableCount={getVarCount()}
           />
 
-          {visibleTags.map((tag) => (
-            <SpoilerList
-              key={tag.id}
-              tagId={tag.id}
-              tagName={tag.name}
-              variableCount={getVarCount(tag.id)}
-              filteredVars={filteredVariableNames}
-            />
-          ))}
+          {variant === 'tag-variables' && (
+            <>
+              <Divider my="sm" label="Tags" labelPosition="center" />
+              {visibleTags.map((tag) => (
+                <SpoilerList
+                  key={tag.id}
+                  tagId={tag.id}
+                  tagName={tag.name}
+                  variableCount={getVarCount(tag.id)}
+                />
+              ))}
+            </>
+          )}
         </Accordion>
       </ScrollArea>
     </Stack>

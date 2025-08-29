@@ -8,7 +8,6 @@ import {
   ElementProps,
   Flex,
   Group,
-  Skeleton,
   Stack,
   Tabs as MantineTabs,
   Text,
@@ -25,7 +24,6 @@ import { Header, Logo } from '../../components/headers'
 import { InstrumentBadge } from '../../components/badges'
 import { Tabs, TabsProps } from '../../components/tabs'
 import { useCurrentProposal } from '../../data/metadata'
-import { VisibilitySettings } from '../visibility-settings'
 import { useAppDispatch, useAppSelector } from '../../redux'
 import { PlotDialog } from '../plots'
 import { removeTab, setCurrentTab, closeAside } from './dashboard.slice'
@@ -33,6 +31,7 @@ import Run from './run'
 
 import styles from './dashboard.module.css'
 import headerStyles from '../../styles/header.module.css'
+import { UserSettings } from '../user-settings'
 
 const PlotsTab = lazy(() =>
   import('../plots').then((module) => ({ default: module.PlotsTab }))
@@ -235,7 +234,7 @@ const Dashboard = () => {
       </AppShell.Header>
       <AppShell.Navbar p="md">
         <ScrollArea>
-          <VisibilitySettings />
+          <UserSettings />
         </ScrollArea>
       </AppShell.Navbar>
       <AppShell.Main>
