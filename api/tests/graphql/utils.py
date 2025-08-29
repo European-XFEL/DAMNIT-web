@@ -1,10 +1,11 @@
-from typing import Optional
+from typing import Optional, get_origin
 
 from damnit_api.graphql.models import (
     DamnitRun,
     DamnitVariable,
     KnownVariable,
 )
+from damnit_api.utils import get_type
 
 from .const import KNOWN_DTYPES
 
@@ -45,7 +46,7 @@ def assert_stype(stype, variables):
     assert issubclass(stype, DamnitRun)
     for prop, type_ in stype.__annotations__.items():
         if prop in KNOWN_DTYPES:
-            assert type_.__origin__ is KnownVariable
+            assert get_origin(get_type(type_)) is KnownVariable
         else:
             assert prop in variables
             assert type_ is Optional[DamnitVariable]  # noqa: UP007

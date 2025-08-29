@@ -2,7 +2,7 @@ import os.path as osp
 from abc import ABCMeta
 from base64 import b64encode
 from glob import iglob
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Union, get_args, get_origin
 
 import numpy as np
 
@@ -110,3 +110,11 @@ def create_map(
     key,
 ):
     return {obj[key]: {str(k): v for k, v in obj.items()} for obj in lst}
+
+
+def get_type(type_):
+    if get_origin(type_) is Union:
+        # Optional type hint
+        return get_args(type_)[0]
+
+    return type_

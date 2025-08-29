@@ -5,16 +5,13 @@ from typing import (
     NewType,
     Optional,
     TypeVar,
-    Union,
-    get_args,
-    get_origin,
 )
 
 import numpy as np
 import strawberry
 
 from ..const import DEFAULT_PROPOSAL, DamnitType
-from ..utils import Registry, b64image, create_map, map_dtype
+from ..utils import Registry, b64image, create_map, get_type, map_dtype
 
 T = TypeVar("T")
 
@@ -93,7 +90,7 @@ class DamnitRun:
                 variables[name] = None
                 continue
 
-            klass = cls.get_klass(klass)
+            klass = get_type(klass)
             dtype = cls.get_dtype(value=entry[name], klass=klass)
             value = serialize(entry[name], dtype=dtype)
 
@@ -149,14 +146,6 @@ class DamnitRun:
         else:
             dtype = map_dtype(type(value))
         return dtype
-
-    @staticmethod
-    def get_klass(klass):
-        if get_origin(klass) is Union:
-            # Optional type hint
-            return get_args(klass)[0]
-
-        return klass
 
 
 class DamnitTable(metaclass=Registry):
