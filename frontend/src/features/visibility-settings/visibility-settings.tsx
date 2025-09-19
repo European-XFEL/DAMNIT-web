@@ -110,11 +110,13 @@ function VisibilitySettings({
           }
           onChange={setOpenedAccordions}
         >
-          <SpoilerList
-            key={'all'}
-            filteredVars={filteredVariableNames}
-            variableCount={getVarCount()}
-          />
+          {variant === 'all-variables' && (
+            <SpoilerList
+              key={'all'}
+              filteredVars={filteredVariableNames}
+              variableCount={getVarCount()}
+            />
+          )}
 
           {variant === 'tag-variables' && (
             <>
