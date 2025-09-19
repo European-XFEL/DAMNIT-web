@@ -110,6 +110,7 @@ def create_map(
     key,
 ):
     return {obj[key]: {str(k): v for k, v in obj.items()} for obj in lst}
+<<<<<<< HEAD
 
 
 def get_type(type_):
@@ -118,3 +119,5 @@ def get_type(type_):
         return get_args(type_)[0]
 
     return type_
+=======
+>>>>>>> e7498a6 (refactor: restores utils/create_map)

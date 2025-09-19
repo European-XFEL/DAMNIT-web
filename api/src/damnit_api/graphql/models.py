@@ -60,6 +60,7 @@ class BaseVariable:
     name: str
     dtype: str
 
+
 @strawberry.type
 class KnownVariable(Generic[T], BaseVariable):
     value: T
