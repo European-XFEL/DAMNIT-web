@@ -72,7 +72,6 @@ def test_metadata_query(graphql_schema):
     assert result.errors is None
 
     metadata = result.data["metadata"]
-    print(metadata["variables"])
     assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags"}
     assert metadata["runs"] == RUNS
     assert metadata["variables"] == {

@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from .const import DEFAULT_PROPOSAL
-from .utils import Registry, find_proposal
+from .utils import Registry, create_map, find_proposal
 
 DAMNIT_PATH = "usr/Shared/amore/"
 
@@ -101,7 +101,7 @@ async def async_variables(proposal):
 
     variable_rows = result.mappings().all()
 
-    return [dict(r) for r in variable_rows]
+    return create_map(variable_rows, key="name")
 
 
 async def async_latest_rows(
@@ -147,8 +147,7 @@ async def async_all_tags(proposal):
     async with get_session(proposal) as session:
         result = await session.execute(selection)
 
-    return {str(obj["id"]): {str(k): v for k, v in obj.items()}
-            for obj in result.mappings()}
+    return create_map(result.mappings().all(), key="id")
 
 
 async def async_variable_tags(proposal):
