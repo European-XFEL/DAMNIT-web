@@ -26,7 +26,7 @@ class Router(GraphQLRouter, metaclass=Singleton):
             default=lambda x: None
             if isinstance(x, float) and np.isnan(x)
             else x,
-            option=orjson.OPT_SERIALIZE_NUMPY,
+            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_NON_STR_KEYS,
         )
 
 
