@@ -78,14 +78,14 @@ NEW_DTYPES = {
 }
 
 EXAMPLE_TAGS = {
-            "1": {"id": 1, "name": "tag1"},
-            "2": {"id": 2, "name": "tag2"},
-            "3": {"id": 3, "name": "tag3"},
-        },
+    "1": {"id": 1, "name": "tag1"},
+    "2": {"id": 2, "name": "tag2"},
+    "3": {"id": 3, "name": "tag3"},
+}
 
 EXAMPLE_VARIABLE_TAGS = [
-            {"variable_name": "integer", "tag_id": 1},
-            {"variable_name": "integer", "tag_id": 2},
-            {"variable_name": "float", "tag_id": 2},
-            {"variable_name": "string", "tag_id": 3},
-        ]
+    {"variable_name": "integer", "tag_id": 1},
+    {"variable_name": "integer", "tag_id": 2},
+    {"variable_name": "float", "tag_id": 2},
+    {"variable_name": "string", "tag_id": 3},
+]

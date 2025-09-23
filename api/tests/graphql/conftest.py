@@ -18,7 +18,7 @@ def lifespan():
 def mocked_bootstrap_variables(mocker):
     mocker.patch(
         "damnit_api.graphql.bootstrap.db.async_variables",
-        return_value=[{**v} for v in EXAMPLE_VARIABLES.values()],
+        return_value=EXAMPLE_VARIABLES,
     )
 
 
