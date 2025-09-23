@@ -108,6 +108,7 @@ function VisibilitySettings({
           value={
             variant === 'all-variables' ? 'all-variables' : openedAccordions
           }
+          chevron={variant === 'all-variables' ? null : true}
           onChange={setOpenedAccordions}
         >
           {variant === 'all-variables' && (

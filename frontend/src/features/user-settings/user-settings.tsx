@@ -8,14 +8,19 @@ import {
   Title,
   Flex,
 } from '@mantine/core'
-import { IconEye, IconChevronRight, IconArrowLeft } from '@tabler/icons-react'
+import { IconChevronRight, IconArrowLeft } from '@tabler/icons-react'
 import { VisibilitySettings } from '../visibility-settings'
 import { useState } from 'react'
+import { useAppSelector } from '../../redux'
 
 function UserSettings() {
   type SettingsView = 'main' | 'visibility-all' | 'visibility-tags'
 
   const [currentView, setCurrentView] = useState<SettingsView>('main')
+
+  const hasTags = useAppSelector(
+    (state) => !!Object.keys(state.tableData.metadata.tags).length
+  )
 
   const SettingsHeader = ({
     title,
@@ -44,9 +49,6 @@ function UserSettings() {
         <SettingsHeader
           title="Visibility by Variables"
           onBack={() => setCurrentView('main')}
-          icon={
-            <IconEye style={{ width: rem(24), height: rem(24) }} stroke={1.5} />
-          }
         />
         <VisibilitySettings variant="all-variables" />
       </Stack>
@@ -60,12 +62,6 @@ function UserSettings() {
           <SettingsHeader
             title="Visibility by Tag"
             onBack={() => setCurrentView('main')}
-            icon={
-              <IconEye
-                style={{ width: rem(24), height: rem(24) }}
-                stroke={1.5}
-              />
-            }
           />
         </Flex>
         <VisibilitySettings variant="tag-variables" />
@@ -87,10 +83,15 @@ function UserSettings() {
           />
         </Group>
       </UnstyledButton>
-      <UnstyledButton onClick={() => setCurrentView('visibility-tags')}>
+      <UnstyledButton
+        disabled={!hasTags}
+        onClick={() => setCurrentView('visibility-tags')}
+      >
         <Group justify="space-between">
           <Group>
-            <Text size="md">Visibility by Tag</Text>
+            <Text size="md" c={!hasTags ? 'dimmed' : undefined}>
+              Visibility by Tag
+            </Text>
           </Group>
           <IconChevronRight
             style={{ width: rem(20), height: rem(20) }}
