@@ -11,6 +11,7 @@ from .const import EXAMPLE_TAGS, EXAMPLE_VARIABLE_TAGS, EXAMPLE_VARIABLES, RUNS
 @pytest.fixture(autouse=True)
 def lifespan():
     DamnitTable.registry.clear()
+    bootstrap.cache_clear()
     return
 
 
