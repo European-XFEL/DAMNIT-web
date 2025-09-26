@@ -10,6 +10,12 @@ export type VariableDataItem = {
 export type VariableMetadataItem = {
   name: string
   title?: string
+  tag_ids: number[]
+}
+
+export type TagMetadataItem = {
+  id: number
+  name: string
 }
 
 export type ExtractedDataItem = unknown
