@@ -1,5 +1,5 @@
 import { Breadcrumbs, Text, Anchor } from '@mantine/core'
-import { SettingsView } from './user-settings'
+import { SettingsView } from './settings'
 
 interface Props {
   currentView: SettingsView

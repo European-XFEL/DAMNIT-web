@@ -81,7 +81,7 @@ const viewRenderers: Record<
   ),
 }
 
-function UserSettings() {
+function Settings() {
   const [currentView, setCurrentView] = useState<SettingsView>('main')
   const hasTags = useAppSelector(
     (state) => !!Object.keys(state.tableData.metadata.tags).length
@@ -95,4 +95,4 @@ function UserSettings() {
   )
 }
 
-export default UserSettings
+export default Settings

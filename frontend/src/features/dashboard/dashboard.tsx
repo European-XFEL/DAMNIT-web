@@ -31,7 +31,7 @@ import Run from './run'
 
 import styles from './dashboard.module.css'
 import headerStyles from '../../styles/header.module.css'
-import { UserSettings } from '../user-settings'
+import { Settings } from '../settings'
 
 const PlotsTab = lazy(() =>
   import('../plots').then((module) => ({ default: module.PlotsTab }))
@@ -234,7 +234,7 @@ const Dashboard = () => {
       </AppShell.Header>
       <AppShell.Navbar p="md">
         <ScrollArea>
-          <UserSettings />
+          <Settings />
         </ScrollArea>
       </AppShell.Navbar>
       <AppShell.Main>
