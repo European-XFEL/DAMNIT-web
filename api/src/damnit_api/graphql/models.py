@@ -113,18 +113,22 @@ class DamnitRun:
                 {
                     "name": "proposal",
                     "title": "Proposal",
+                    "tag_ids": [],
                 },
                 {
                     "name": "run",
                     "title": "Run",
+                    "tag_ids": [],
                 },
                 {
                     "name": "start_time",
                     "title": "Timestamp",
+                    "tag_ids": [],
                 },
                 {
                     "name": "added_at",
                     "title": "Added at",
+                    "tag_ids": [],
                 },
             ],
             key="name",
@@ -161,6 +165,7 @@ class DamnitTable(metaclass=Registry):
         self.variables = DamnitRun.known_variables()
         self.stype = self._create_stype()
         self.runs = []
+        self.tags = {}
 
     def update(self, variables=None, timestamp: float | None = None):
         """We update the strawberry type and the schema here"""

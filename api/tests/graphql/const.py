@@ -8,9 +8,9 @@ RUNS = list(range(10))
 
 EXAMPLE_VARIABLES = create_map(
     [
-        {"name": "integer", "title": "Integer"},
-        {"name": "float", "title": "Float"},
-        {"name": "string", "title": "String"},
+        {"name": "integer", "title": "Integer", "tag_ids": [1, 2]},
+        {"name": "float", "title": "Float", "tag_ids": [2]},
+        {"name": "string", "title": "String", "tag_ids": [3]},
     ],
     key="name",
 )
@@ -76,3 +76,16 @@ NEW_DTYPES = {
     "float": DamnitType.STRING,
     "string": DamnitType.NUMBER,
 }
+
+EXAMPLE_TAGS = {
+    "1": {"id": 1, "name": "tag1"},
+    "2": {"id": 2, "name": "tag2"},
+    "3": {"id": 3, "name": "tag3"},
+}
+
+EXAMPLE_VARIABLE_TAGS = [
+    {"variable_name": "integer", "tag_id": 1},
+    {"variable_name": "integer", "tag_id": 2},
+    {"variable_name": "float", "tag_id": 2},
+    {"variable_name": "string", "tag_id": 3},
+]

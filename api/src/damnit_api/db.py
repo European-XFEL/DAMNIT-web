@@ -9,6 +9,7 @@ from sqlalchemy import (
     desc,
     select,
 )
+from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
@@ -94,12 +95,13 @@ async def async_table(proposal, name: str = "runs") -> Table:
 
 async def async_variables(proposal):
     variables = await async_table(proposal, name="variables")
-    selection = select(variables.c.name, variables.c.title)
-
+    selection_variables = select(variables.c.name, variables.c.title)
     async with get_session(proposal) as session:
-        result = await session.execute(selection)
+        result = await session.execute(selection_variables)
 
-    return create_map(result.mappings().all(), key="name")
+    variable_rows = result.mappings().all()
+
+    return create_map(variable_rows, key="name")
 
 
 async def async_latest_rows(
@@ -134,6 +136,31 @@ async def async_column(proposal, *, table: str, name: str):
         result = await session.execute(selection)
 
     return result.scalars().all()
+
+
+async def async_all_tags(proposal):
+    tags_table = await async_table(proposal, name="tags")
+    selection = select(
+        tags_table.c.id,
+        tags_table.c.name,
+    )
+    async with get_session(proposal) as session:
+        result = await session.execute(selection)
+
+    return create_map(result.mappings().all(), key="id")
+
+
+async def async_variable_tags(proposal):
+    try:
+        variable_tags_table = await async_table(proposal, name="variable_tags")
+        selection = select(
+            variable_tags_table.c.variable_name, variable_tags_table.c.tag_id
+        )
+        async with get_session(proposal) as session:
+            result = await session.execute(selection)
+        return result.mappings().all()
+    except NoSuchTableError:
+        return []
 
 
 # -----------------------------------------------------------------------------

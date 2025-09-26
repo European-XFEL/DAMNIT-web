@@ -2,7 +2,13 @@ import pytest
 
 from damnit_api.graphql.models import DamnitRun
 
-from .const import EXAMPLE_VALUES, EXAMPLE_VARIABLES, KNOWN_VALUES, RUNS
+from .const import (
+    EXAMPLE_TAGS,
+    EXAMPLE_VALUES,
+    EXAMPLE_VARIABLES,
+    KNOWN_VALUES,
+    RUNS,
+)
 
 # TODO: Test with actual values without mocking the fetch functions
 
@@ -66,9 +72,10 @@ def test_metadata_query(graphql_schema):
     assert result.errors is None
 
     metadata = result.data["metadata"]
-    assert set(metadata.keys()) == {"runs", "variables", "timestamp"}
+    assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags"}
     assert metadata["runs"] == RUNS
     assert metadata["variables"] == {
         **DamnitRun.known_variables(),
         **EXAMPLE_VARIABLES,
     }
+    assert metadata["tags"] == EXAMPLE_TAGS
