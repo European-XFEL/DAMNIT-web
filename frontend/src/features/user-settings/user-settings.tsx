@@ -5,12 +5,9 @@ import {
   UnstyledButton,
   Group,
   rem,
-  Title,
   Flex,
-  Breadcrumbs,
-  Anchor,
 } from '@mantine/core'
-import { IconChevronRight, IconArrowLeft } from '@tabler/icons-react'
+import { IconChevronRight } from '@tabler/icons-react'
 import { VisibilitySettings } from '../visibility-settings'
 import { useState } from 'react'
 import { useAppSelector } from '../../redux'
@@ -22,10 +19,13 @@ export type SettingsView =
   | 'visibility-all'
   | 'visibility-tags'
 
-const viewRenderers: Record<SettingsView, (ctx: {
-  setCurrentView: (v: SettingsView) => void
-  hasTags: boolean
-}) => React.ReactNode> = {
+const viewRenderers: Record<
+  SettingsView,
+  (ctx: {
+    setCurrentView: (v: SettingsView) => void
+    hasTags: boolean
+  }) => React.ReactNode
+> = {
   'visibility-all': () => <VisibilitySettings variant="all-variables" />,
   'visibility-tags': () => (
     <>
@@ -39,7 +39,10 @@ const viewRenderers: Record<SettingsView, (ctx: {
       <UnstyledButton onClick={() => setCurrentView('visibility-all')}>
         <Group justify="space-between">
           <Text>By Variables</Text>
-          <IconChevronRight style={{ width: rem(20), height: rem(20) }} stroke={1.5} />
+          <IconChevronRight
+            style={{ width: rem(20), height: rem(20) }}
+            stroke={1.5}
+          />
         </Group>
       </UnstyledButton>
       <UnstyledButton
@@ -48,9 +51,14 @@ const viewRenderers: Record<SettingsView, (ctx: {
       >
         <Group justify="space-between">
           <Group>
-            <Text size="md" c={!hasTags ? 'dimmed' : undefined}>By Tags</Text>
+            <Text size="md" c={!hasTags ? 'dimmed' : undefined}>
+              By Tags
+            </Text>
           </Group>
-          <IconChevronRight style={{ width: rem(20), height: rem(20) }} stroke={1.5} />
+          <IconChevronRight
+            style={{ width: rem(20), height: rem(20) }}
+            stroke={1.5}
+          />
         </Group>
       </UnstyledButton>
       <Divider />
@@ -62,7 +70,10 @@ const viewRenderers: Record<SettingsView, (ctx: {
       <UnstyledButton onClick={() => setCurrentView('visibility')}>
         <Group justify="space-between">
           <Text>Visibility</Text>
-          <IconChevronRight style={{ width: rem(20), height: rem(20) }} stroke={1.5} />
+          <IconChevronRight
+            style={{ width: rem(20), height: rem(20) }}
+            stroke={1.5}
+          />
         </Group>
       </UnstyledButton>
       <Divider />

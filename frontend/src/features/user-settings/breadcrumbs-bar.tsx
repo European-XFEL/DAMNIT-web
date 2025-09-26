@@ -18,12 +18,18 @@ export function BreadcrumbsBar({ currentView, onNavigate }: Props) {
         : currentView === 'visibility-all'
           ? [
               { label: 'User settings' as const, to: 'main' as SettingsView },
-              { label: 'Visibility' as const, to: 'visibility' as SettingsView },
+              {
+                label: 'Visibility' as const,
+                to: 'visibility' as SettingsView,
+              },
               { label: 'By variable' as const },
             ]
           : [
               { label: 'User settings' as const, to: 'main' as SettingsView },
-              { label: 'Visibility' as const, to: 'visibility' as SettingsView },
+              {
+                label: 'Visibility' as const,
+                to: 'visibility' as SettingsView,
+              },
               { label: 'By tag' as const },
             ]
 
