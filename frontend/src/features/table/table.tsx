@@ -49,7 +49,7 @@ const Table = ({ grid }: TableProps) => {
     metadata: tableMetadata,
     lastUpdate: tableLastUpdate,
   } = useAppSelector((state) => state.tableData)
-  const { visibleColumns } = useAppSelector((state) => state.visibilitySettings)
+  const { variableVisibility } = useAppSelector((state) => state.table)
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
@@ -62,10 +62,11 @@ const Table = ({ grid }: TableProps) => {
       Object.values(tableMetadata.variables)
         .filter(
           ({ name }) =>
-            !EXCLUDED_VARIABLES.includes(name) && visibleColumns[name] !== false
+            !EXCLUDED_VARIABLES.includes(name) &&
+            variableVisibility[name] !== false
         )
         .map(({ name, title }) => ({ id: name, title: title || name })),
-    [tableMetadata.variables, visibleColumns]
+    [tableMetadata.variables, variableVisibility]
   )
 
   // Data: Populate grid

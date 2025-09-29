@@ -12,9 +12,9 @@ import {
 import { useAppDispatch, useAppSelector } from '../../redux'
 import { EXCLUDED_VARIABLES } from '../../constants'
 import {
-  setColumnGroupVisibility,
-  toggleColumnVisibility,
-} from '../../features/visibility-settings/visibility-settings.slice'
+  setVariableGroupVisibility,
+  toggleVariableVisibility,
+} from '../../features/table/table.slice'
 
 export interface SpoilerListProps {
   tagId?: number
@@ -31,7 +31,7 @@ function SpoilerList({
 }: SpoilerListProps) {
   const dispatch = useAppDispatch()
   const { variables } = useAppSelector((state) => state.tableData.metadata)
-  const { visibleColumns } = useAppSelector((state) => state.visibilitySettings)
+  const { variableVisibility } = useAppSelector((state) => state.table)
 
   function varListForTagId(tagId: number): string[] {
     return Object.keys(variables).filter((varName) =>
@@ -49,8 +49,8 @@ function SpoilerList({
       : groupVarList
 
   const allOn =
-    varList.length > 0 && varList.every((v) => visibleColumns[v] !== false)
-  const anyOn = varList.some((v) => visibleColumns[v] !== false)
+    varList.length > 0 && varList.every((v) => variableVisibility[v] !== false)
+  const anyOn = varList.some((v) => variableVisibility[v] !== false)
   const isIndeterminate = anyOn && !allOn
 
   let tooltipLabel = 'Select all variables in this group'
@@ -79,8 +79,8 @@ function SpoilerList({
                   onClick={(event) => {
                     event.stopPropagation()
                     dispatch(
-                      setColumnGroupVisibility({
-                        columnNames: groupVarList,
+                      setVariableGroupVisibility({
+                        variableNames: groupVarList,
                         isVisible: !anyOn,
                       })
                     )
@@ -101,8 +101,8 @@ function SpoilerList({
             <Checkbox
               key={v}
               label={variables[v].title}
-              checked={visibleColumns[v] !== false}
-              onClick={() => dispatch(toggleColumnVisibility(v))}
+              checked={variableVisibility[v] !== false}
+              onClick={() => dispatch(toggleVariableVisibility(v))}
               onChange={() => {}}
               radius="sm"
             />
