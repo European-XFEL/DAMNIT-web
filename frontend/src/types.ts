@@ -13,7 +13,7 @@ export type VariableMetadataItem = {
   tag_ids: number[]
 }
 
-export type TagMetadataItem = {
+export type TagItem = {
   id: number
   name: string
 }
