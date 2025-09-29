@@ -9,7 +9,7 @@ import {
 } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 
-import { SpoilerList } from '../../components/spoiler-list'
+import SpoilerList from './spoiler-list'
 import { useAppSelector } from '../../redux'
 import { EXCLUDED_VARIABLES } from '../../constants'
 

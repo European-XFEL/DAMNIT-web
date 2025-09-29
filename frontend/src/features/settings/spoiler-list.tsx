@@ -14,7 +14,7 @@ import { EXCLUDED_VARIABLES } from '../../constants'
 import {
   setVariableGroupVisibility,
   toggleVariableVisibility,
-} from '../../features/table/table.slice'
+} from '../table/table.slice'
 
 export interface SpoilerListProps {
   tagId?: number
