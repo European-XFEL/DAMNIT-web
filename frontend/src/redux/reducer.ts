@@ -21,7 +21,6 @@ const reducer = combineReducers({
   tableData,
   extractedData,
   loadingBar,
-
   [authApi.reducerPath]: authApi.reducer,
   [metadataApi.reducerPath]: metadataApi.reducer,
   [contextfileApi.reducerPath]: contextfileApi.reducer,

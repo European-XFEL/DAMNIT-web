@@ -49,6 +49,7 @@ const Table = ({ grid }: TableProps) => {
     metadata: tableMetadata,
     lastUpdate: tableLastUpdate,
   } = useAppSelector((state) => state.tableData)
+  const { variableVisibility } = useAppSelector((state) => state.table)
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
@@ -59,9 +60,13 @@ const Table = ({ grid }: TableProps) => {
   const tableColumns = useMemo(
     () =>
       Object.values(tableMetadata.variables)
-        .filter(({ name }) => !EXCLUDED_VARIABLES.includes(name))
+        .filter(
+          ({ name }) =>
+            !EXCLUDED_VARIABLES.includes(name) &&
+            variableVisibility[name] !== false
+        )
         .map(({ name, title }) => ({ id: name, title: title || name })),
-    [tableMetadata.variables]
+    [tableMetadata.variables, variableVisibility]
   )
 
   // Data: Populate grid
