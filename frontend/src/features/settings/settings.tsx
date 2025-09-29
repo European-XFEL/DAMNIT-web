@@ -8,7 +8,7 @@ import {
   Flex,
 } from '@mantine/core'
 import { IconChevronRight } from '@tabler/icons-react'
-import { VisibilitySettings } from '../visibility-settings'
+import VisibilitySettings from './visibility-settings'
 import { useState } from 'react'
 import { useAppSelector } from '../../redux'
 import { BreadcrumbsBar } from './breadcrumbs-bar'
