@@ -112,7 +112,7 @@ const priorityLink = createPriorityLink(1)
 
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: WS_URL,
+    url: `${WS_URL}graphql`,
     shouldRetry: () => true,
   })
 )
