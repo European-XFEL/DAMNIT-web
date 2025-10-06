@@ -9,7 +9,7 @@ export type SettingsView =
   | 'visibility-tags'
 
 export type RenderCtx = {
-  setCurrentView: (v: SettingsView) => void
+  onNavegate: (v: SettingsView) => void
   hasTags: boolean
 }
 
@@ -23,10 +23,10 @@ export type NavNode = {
 export const settingsTree: NavNode = {
   label: 'Settings',
   view: 'main',
-  component: ({ setCurrentView }) => (
+  component: ({ onNavegate }) => (
     <>
       <Divider label="" labelPosition="center" size="lg" />
-      <UnstyledButton onClick={() => setCurrentView('visibility')}>
+      <UnstyledButton onClick={() => onNavegate('visibility')}>
         <Group justify="space-between">
           <Text>Visibility </Text>
           <IconChevronRight
@@ -42,14 +42,14 @@ export const settingsTree: NavNode = {
     {
       label: 'Column Visibility',
       view: 'visibility',
-      component: ({ setCurrentView, hasTags }) => (
+      component: ({ onNavegate, hasTags }) => (
         <>
           <Divider
             label=" Column Visibility"
             labelPosition="center"
             size="lg"
           />
-          <UnstyledButton onClick={() => setCurrentView('visibility-all')}>
+          <UnstyledButton onClick={() => onNavegate('visibility-all')}>
             <Group justify="space-between">
               <Text>By Variables </Text>
               <IconChevronRight
@@ -60,7 +60,7 @@ export const settingsTree: NavNode = {
           </UnstyledButton>
           <UnstyledButton
             disabled={!hasTags}
-            onClick={() => setCurrentView('visibility-tags')}
+            onClick={() => onNavegate('visibility-tags')}
           >
             <Group justify="space-between">
               <Group>

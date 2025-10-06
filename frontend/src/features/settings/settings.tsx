@@ -19,7 +19,10 @@ function Settings() {
   return (
     <Stack h="100%">
       <BreadcrumbsBar currentView={currentView} onNavigate={setCurrentView} />
-      {viewIndex[currentView].component({ setCurrentView, hasTags })}
+      {viewIndex[currentView].component({
+        onNavegate: setCurrentView,
+        hasTags,
+      })}
     </Stack>
   )
 }
