@@ -47,22 +47,19 @@ function VisibilitySettings({
       .map((v) => v.name)
   }, [variables, searchTerm])
 
-  const filteredVarsSet = useMemo(
-    () => (filteredVariableNames ? new Set(filteredVariableNames) : undefined),
-    [filteredVariableNames]
-  )
-
   const visibleTags = useMemo(
     () =>
       Object.values(tags).filter((tag) => {
-        if (!filteredVarsSet) {
+        if (!filteredVariableNames) {
           return true
         }
         return Object.values(variables).some(
-          (v) => v.tag_ids.includes(tag.id) && filteredVarsSet.has(v.name)
+          (v) =>
+            v.tag_ids.includes(tag.id) &&
+            filteredVariableNames.includes(v.name)
         )
       }),
-    [tags, variables, filteredVarsSet]
+    [tags, variables, filteredVariableNames]
   )
 
   useEffect(() => {
