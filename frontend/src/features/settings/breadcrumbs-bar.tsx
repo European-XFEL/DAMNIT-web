@@ -17,7 +17,7 @@ function Crumb({
 }) {
   if (active) {
     return (
-      <Text key={node.view} aria-current="page">
+      <Text key={node.view} aria-current="page" size="sm" fw={700}>
         {node.label}
       </Text>
     )
@@ -27,8 +27,7 @@ function Crumb({
     <Anchor
       key={node.view}
       href="#"
-      c="black"
-      fw={600}
+      size="sm"
       onClick={(e) => {
         e.preventDefault()
         onNavigate(node.view)
