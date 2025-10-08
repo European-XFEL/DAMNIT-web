@@ -1,17 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-  Accordion,
-  rem,
-  ScrollArea,
-  Stack,
-  TextInput,
-  Divider,
-} from '@mantine/core'
+import { Accordion, rem, ScrollArea, Stack, TextInput } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
+import { useEffect, useMemo, useState } from 'react'
 
-import SpoilerList from './spoiler-list'
-import { useAppSelector } from '../../redux'
 import { EXCLUDED_VARIABLES } from '../../constants'
+import { useAppSelector } from '../../redux'
+import VisibilitySettingsItem from './visibility-settings-item'
 
 export interface VisibilitySettingsProps {
   variant: 'all-variables' | 'tag-variables'
@@ -108,9 +101,9 @@ function VisibilitySettings({
           onChange={setOpenedAccordions}
         >
           {variant === 'all-variables' && (
-            <SpoilerList
+            <VisibilitySettingsItem
               key={'all'}
-              filteredVars={filteredVariableNames}
+              filteredVariableNames={filteredVariableNames}
               variableCount={getVarCount()}
             />
           )}
@@ -118,7 +111,7 @@ function VisibilitySettings({
           {variant === 'tag-variables' && (
             <>
               {visibleTags.map((tag) => (
-                <SpoilerList
+                <VisibilitySettingsItem
                   key={tag.id}
                   tagId={tag.id}
                   tagName={tag.name}

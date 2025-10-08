@@ -16,19 +16,19 @@ import {
   toggleVariableVisibility,
 } from '../table/table.slice'
 
-export interface SpoilerListProps {
+export interface VisibilitySettingsItemProps {
   tagId?: number
   tagName?: string
   variableCount?: number
-  filteredVars?: string[]
+  filteredVariableNames?: string[]
 }
 
-function SpoilerList({
+function VisibilitySettingsItem({
   tagId,
   tagName,
   variableCount,
-  filteredVars,
-}: SpoilerListProps) {
+  filteredVariableNames,
+}: VisibilitySettingsItemProps) {
   const dispatch = useAppDispatch()
   const { variables } = useAppSelector((state) => state.tableData.metadata)
   const { variableVisibility } = useAppSelector((state) => state.table)
@@ -44,8 +44,8 @@ function SpoilerList({
     : Object.keys(variables).filter((v) => !EXCLUDED_VARIABLES.includes(v))
 
   const varList =
-    filteredVars !== undefined
-      ? groupVarList.filter((v) => filteredVars.includes(v))
+    filteredVariableNames !== undefined
+      ? groupVarList.filter((v) => filteredVariableNames.includes(v))
       : groupVarList
 
   const allOn =
@@ -60,7 +60,7 @@ function SpoilerList({
     tooltipLabel = 'Some variables are selected. Click to deselect all.'
   }
 
-  if (filteredVars !== undefined && varList.length === 0) {
+  if (filteredVariableNames !== undefined && varList.length === 0) {
     return null
   }
 
@@ -113,4 +113,4 @@ function SpoilerList({
   )
 }
 
-export default SpoilerList
+export default VisibilitySettingsItem
