@@ -55,8 +55,7 @@ function VisibilitySettings({
         }
         return Object.values(variables).some(
           (v) =>
-            v.tag_ids.includes(tag.id) &&
-            filteredVariableNames.includes(v.name)
+            v.tag_ids.includes(tag.id) && filteredVariableNames.includes(v.name)
         )
       }),
     [tags, variables, filteredVariableNames]
@@ -118,7 +117,6 @@ function VisibilitySettings({
 
           {variant === 'tag-variables' && (
             <>
-              <Divider my="sm" label="Tags" labelPosition="center" />
               {visibleTags.map((tag) => (
                 <SpoilerList
                   key={tag.id}
