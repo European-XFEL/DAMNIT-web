@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { getTable } from '../../data/table'
 import { isArrayEqual } from '../../utils/array'
 
 type TableState = {
@@ -37,9 +36,8 @@ const slice = createSlice({
     },
     toggleVariableVisibility: (state, action: PayloadAction<string>) => {
       const varName = action.payload
-      if (varName in state.variableVisibility) {
-        state.variableVisibility[varName] = !state.variableVisibility[varName]
-      }
+      const current = state.variableVisibility[varName]
+      state.variableVisibility[varName] = !(current ?? true)
     },
     setVariableGroupVisibility: (
       state,
@@ -47,23 +45,9 @@ const slice = createSlice({
     ) => {
       const { variableNames, isVisible } = action.payload
       variableNames.forEach((name) => {
-        if (name in state.variableVisibility) {
-          state.variableVisibility[name] = isVisible
-        }
+        state.variableVisibility[name] = isVisible
       })
     },
-  },
-  extraReducers: (builder) => {
-    builder.addCase(getTable.fulfilled, (state, action) => {
-      const newVariables = action.payload.metadata?.variables
-      if (newVariables) {
-        const next: Record<string, boolean> = {}
-        for (const varName of Object.keys(newVariables)) {
-          next[varName] = state.variableVisibility[varName] ?? true
-        }
-        state.variableVisibility = next
-      }
-    })
   },
 })
 
