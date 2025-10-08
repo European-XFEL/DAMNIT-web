@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { EXCLUDED_VARIABLES } from '../../constants'
 import { useAppSelector } from '../../redux'
+import type { TagItem } from '../../types'
 import VisibilitySettingsItem from './visibility-settings-item'
 
 export interface VisibilitySettingsProps {
@@ -40,21 +41,19 @@ function VisibilitySettings({
       .map((v) => v.name)
   }, [variables, searchTerm])
 
-  const visibleTags = useMemo(
-    () =>
-      Object.values(tags).filter((tag) => {
-        if (!filteredVariableNames) {
-          return true
-        }
-        return Object.values(variables).some(
-          (v) =>
-            v.tag_ids.includes(tag.id) && filteredVariableNames.includes(v.name)
-        )
-      }),
-    [tags, variables, filteredVariableNames]
-  )
+  const visibleTags = useMemo<TagItem[]>(() => {
+    if (variant !== 'tag-variables') return []
+    return Object.values(tags).filter((tag) => {
+      if (!filteredVariableNames) return true
+      return Object.values(variables).some(
+        (v) =>
+          v.tag_ids.includes(tag.id) && filteredVariableNames.includes(v.name)
+      )
+    })
+  }, [variant, tags, variables, filteredVariableNames])
 
   useEffect(() => {
+    if (variant !== 'tag-variables') return
     if (searchTerm) {
       const idsToOpen = visibleTags.map((tag) => tag.id.toString())
       if (filteredVariableNames && filteredVariableNames.length > 0) {
@@ -65,7 +64,7 @@ function VisibilitySettings({
     } else {
       setOpenedAccordions(!Object.keys(tags).length ? ['all-variables'] : [])
     }
-  }, [searchTerm, visibleTags, filteredVariableNames, tags])
+  }, [variant, searchTerm, visibleTags, filteredVariableNames, tags])
 
   const getVarCount = (tagId?: number) => {
     if (tagId) {
