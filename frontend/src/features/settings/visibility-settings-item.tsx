@@ -72,7 +72,7 @@ function VisibilitySettingsItem({
             {tagId && (
               <Tooltip label={tooltipLabel} withArrow position="right">
                 <Checkbox
-                  key={`${tagId}-${isIndeterminate}`}
+                  key={`checkbox-${tagId}`}
                   checked={allOn}
                   indeterminate={isIndeterminate}
                   onChange={() => {}}
