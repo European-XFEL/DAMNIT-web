@@ -20,7 +20,7 @@ export type NavNode = {
   children?: NavNode[]
 }
 
-export const settingsTree: NavNode = {
+const settingsTree: NavNode = {
   label: 'Settings',
   view: 'main',
   component: ({ onNavegate }) => (
@@ -105,7 +105,7 @@ export const viewIndex: Record<SettingsView, NavNode> = {} as Record<
 export const parentByView: Record<SettingsView, SettingsView | null> =
   {} as Record<SettingsView, SettingsView | null>
 
-export function buildIndex(root: NavNode) {
+function buildIndex(root: NavNode) {
   const stack: Array<{ node: NavNode; parent: SettingsView | null }> = [
     { node: root, parent: null },
   ]
@@ -118,6 +118,8 @@ export function buildIndex(root: NavNode) {
     )
   }
 }
+
+buildIndex(settingsTree)
 
 export function pathFromIndex(view: SettingsView): NavNode[] {
   const path: NavNode[] = []
