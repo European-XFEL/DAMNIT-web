@@ -9,12 +9,9 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core'
-import { useAppDispatch, useAppSelector } from '../../redux'
 import { EXCLUDED_VARIABLES } from '../../constants'
-import {
-  setVariableGroupVisibility,
-  toggleVariableVisibility,
-} from '../table/table.slice'
+import { useAppDispatch, useAppSelector } from '../../redux'
+import { setVariablesVisibility } from '../table/table.slice'
 
 export interface VisibilitySettingsItemProps {
   tagId?: number
@@ -78,12 +75,10 @@ function VisibilitySettingsItem({
                   onChange={() => {}}
                   onClick={(event) => {
                     event.stopPropagation()
-                    dispatch(
-                      setVariableGroupVisibility({
-                        variableNames: groupVarList,
-                        isVisible: !anyOn,
-                      })
+                    const updates = Object.fromEntries(
+                      groupVarList.map((name) => [name, !anyOn])
                     )
+                    dispatch(setVariablesVisibility(updates))
                   }}
                 />
               </Tooltip>
@@ -102,7 +97,11 @@ function VisibilitySettingsItem({
               key={v}
               label={variables[v].title}
               checked={variableVisibility[v] !== false}
-              onClick={() => dispatch(toggleVariableVisibility(v))}
+              onClick={(event) =>
+                dispatch(
+                  setVariablesVisibility({ [v]: event.currentTarget.checked })
+                )
+              }
               onChange={() => {}}
               radius="sm"
             />

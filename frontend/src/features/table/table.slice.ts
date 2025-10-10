@@ -34,27 +34,16 @@ const slice = createSlice({
       state.selection = { ...initialState.selection }
       state.variableVisibility = {}
     },
-    toggleVariableVisibility: (state, action: PayloadAction<string>) => {
-      const varName = action.payload
-      const current = state.variableVisibility[varName]
-      state.variableVisibility[varName] = !(current ?? true)
-    },
-    setVariableGroupVisibility: (
+    setVariablesVisibility: (
       state,
-      action: PayloadAction<{ variableNames: string[]; isVisible: boolean }>
+      action: PayloadAction<Record<string, boolean>>
     ) => {
-      const { variableNames, isVisible } = action.payload
-      variableNames.forEach((name) => {
+      for (const [name, isVisible] of Object.entries(action.payload)) {
         state.variableVisibility[name] = isVisible
-      })
+      }
     },
   },
 })
 
 export default slice.reducer
-export const {
-  selectRun,
-  reset,
-  toggleVariableVisibility,
-  setVariableGroupVisibility,
-} = slice.actions
+export const { selectRun, reset, setVariablesVisibility } = slice.actions
