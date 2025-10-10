@@ -1,5 +1,5 @@
 import { Anchor, Breadcrumbs, Text } from '@mantine/core'
-import { NavNode, SettingsView, pathFromIndex } from './settings-config'
+import { NavNode, SettingsView, pathForView } from './settings-config'
 
 interface Props {
   currentView: SettingsView
@@ -39,8 +39,7 @@ function Crumb({
 }
 
 export function BreadcrumbsBar({ currentView, onNavigate }: Props) {
-  const path = pathFromIndex(currentView)
-
+  const path = pathForView(currentView)
   return (
     <Breadcrumbs separator="›">
       {path.map((node, i) => {

@@ -9,7 +9,7 @@ export type SettingsView =
   | 'visibility-tags'
 
 export type RenderCtx = {
-  onNavegate: (v: SettingsView) => void
+  onNavigate: (v: SettingsView) => void
   hasTags: boolean
 }
 
@@ -23,10 +23,10 @@ export type NavNode = {
 const settingsTree: NavNode = {
   label: 'Settings',
   view: 'main',
-  component: ({ onNavegate }) => (
+  component: ({ onNavigate }) => (
     <>
       <Divider label="" labelPosition="center" size="lg" />
-      <UnstyledButton onClick={() => onNavegate('visibility')}>
+      <UnstyledButton onClick={() => onNavigate('visibility')}>
         <Group justify="space-between">
           <Text>Visibility </Text>
           <IconChevronRight
@@ -42,14 +42,14 @@ const settingsTree: NavNode = {
     {
       label: 'Column Visibility',
       view: 'visibility',
-      component: ({ onNavegate, hasTags }) => (
+      component: ({ onNavigate, hasTags }) => (
         <>
           <Divider
             label=" Column Visibility"
             labelPosition="center"
             size="lg"
           />
-          <UnstyledButton onClick={() => onNavegate('visibility-all')}>
+          <UnstyledButton onClick={() => onNavigate('visibility-all')}>
             <Group justify="space-between">
               <Text>By Variables </Text>
               <IconChevronRight
@@ -60,7 +60,7 @@ const settingsTree: NavNode = {
           </UnstyledButton>
           <UnstyledButton
             disabled={!hasTags}
-            onClick={() => onNavegate('visibility-tags')}
+            onClick={() => onNavigate('visibility-tags')}
           >
             <Group justify="space-between">
               <Group>
@@ -98,7 +98,7 @@ const settingsTree: NavNode = {
   ],
 }
 
-export const viewIndex: Record<SettingsView, NavNode> = {} as Record<
+export const nodeByView: Record<SettingsView, NavNode> = {} as Record<
   SettingsView,
   NavNode
 >
@@ -111,7 +111,7 @@ function buildIndex(root: NavNode) {
   ]
   while (stack.length) {
     const { node, parent } = stack.pop()!
-    viewIndex[node.view] = node
+    nodeByView[node.view] = node
     parentByView[node.view] = parent
     node.children?.forEach((child) =>
       stack.push({ node: child, parent: node.view })
@@ -121,11 +121,11 @@ function buildIndex(root: NavNode) {
 
 buildIndex(settingsTree)
 
-export function pathFromIndex(view: SettingsView): NavNode[] {
+export function pathForView(view: SettingsView): NavNode[] {
   const path: NavNode[] = []
   let v: SettingsView | null = view
   while (v) {
-    path.push(viewIndex[v])
+    path.push(nodeByView[v])
     v = parentByView[v]
   }
   return path.reverse()
