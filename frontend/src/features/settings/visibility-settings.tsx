@@ -1,10 +1,10 @@
 import {
   Accordion,
-  Button,
+  Anchor,
   rem,
   ScrollArea,
   Stack,
-  TextInput,
+  TextInput
 } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -91,7 +91,9 @@ function VisibilitySettings({
     }
   }, [variant, searchTerm, visibleTags, filteredVariableNames])
 
-  const getVarCount = (options: { tagId?: number; untagged?: boolean } = {}) => {
+  const getVarCount = (
+    options: { tagId?: number; untagged?: boolean } = {}
+  ) => {
     const { tagId, untagged } = options
 
     if (tagId !== undefined) {
@@ -106,7 +108,7 @@ function VisibilitySettings({
   }
 
   return (
-    <Stack gap="md" h="100%">
+    <Stack gap="xs" h="100%">
       <TextInput
         placeholder="Search variables..."
         leftSection={<IconSearch style={{ width: rem(16), height: rem(16) }} />}
@@ -117,20 +119,21 @@ function VisibilitySettings({
             setSearchTerm('')
           }
         }}
+        style={{ flex: 1, minWidth: 0 }}
       />
-      <Button
-        variant="light"
+      <Anchor
+        size="sm"
         c="indigo"
+        style={{ marginLeft: 'auto', cursor: 'pointer' }}
         onClick={() => {
           const updates = Object.fromEntries(
             allVarNames.map((name) => [name, !allOn])
           )
           dispatch(setVariablesVisibility(updates))
         }}
-        disabled={allVarNames.length === 0}
       >
         {allOn ? 'Deselect all' : 'Select all'}
-      </Button>
+      </Anchor>
 
       <ScrollArea style={{ flex: 1 }}>
         <Accordion

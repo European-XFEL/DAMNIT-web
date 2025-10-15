@@ -42,14 +42,14 @@ function VisibilitySettingsItem({
   const groupVarList = tagId
     ? varListForTagId(tagId)
     : isUntagged
-    ? Object.keys(variables).filter(
-        (varName) =>
-          !VISIBILITY_EXCLUDED_VARIABLES.includes(varName) &&
-          variables[varName].tag_ids.length === 0
-      )
-    : Object.keys(variables).filter(
-        (v) => !VISIBILITY_EXCLUDED_VARIABLES.includes(v)
-      )
+      ? Object.keys(variables).filter(
+          (varName) =>
+            !VISIBILITY_EXCLUDED_VARIABLES.includes(varName) &&
+            variables[varName].tag_ids.length === 0
+        )
+      : Object.keys(variables).filter(
+          (v) => !VISIBILITY_EXCLUDED_VARIABLES.includes(v)
+        )
 
   const varList =
     filteredVariableNames !== undefined
@@ -98,7 +98,9 @@ function VisibilitySettingsItem({
         )}
         <AccordionControl pl={rem(42)}>
           <Group justify="space-between">
-            <Text fw={600}>{tagName ?? 'All Variables'}</Text>
+            <Text fw={600} size="sm">
+              {tagName ?? 'All Variables'}
+            </Text>
             {variableCount !== undefined && (
               <Badge variant="light" color="indigo">
                 {variableCount}
