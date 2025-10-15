@@ -105,6 +105,7 @@ function VisibilitySettings({
       />
       <Button
         variant="light"
+        c="indigo"
         onClick={() => {
           const updates = Object.fromEntries(
             allVarNames.map((name) => [name, !allOn])

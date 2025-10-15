@@ -32,6 +32,7 @@ function Crumb({
         e.preventDefault()
         onNavigate(node.view)
       }}
+      c="indigo"
     >
       {node.label}
     </Anchor>

@@ -76,6 +76,7 @@ function VisibilitySettingsItem({
               )
               dispatch(setVariablesVisibility(updates))
             }}
+            color="indigo"
             style={{
               position: 'absolute',
               left: rem(12),
@@ -89,7 +90,9 @@ function VisibilitySettingsItem({
           <Group justify="space-between">
             <Text fw={600}>{tagName ?? 'All Variables'}</Text>
             {variableCount !== undefined && (
-              <Badge variant="light">{variableCount}</Badge>
+              <Badge variant="light" color="indigo">
+                {variableCount}
+              </Badge>
             )}
           </Group>
         </AccordionControl>
@@ -108,6 +111,7 @@ function VisibilitySettingsItem({
               }
               onChange={() => {}}
               radius="sm"
+              color="indigo"
             />
           ))}
         </Stack>
