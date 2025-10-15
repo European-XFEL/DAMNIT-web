@@ -10,7 +10,7 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
-import { EXCLUDED_VARIABLES } from '../../constants'
+import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
 import { useAppDispatch, useAppSelector } from '../../redux'
 import { setVariablesVisibility } from '../table/table.slice'
 
@@ -39,7 +39,9 @@ function VisibilitySettingsItem({
 
   const groupVarList = tagId
     ? varListForTagId(tagId)
-    : Object.keys(variables).filter((v) => !EXCLUDED_VARIABLES.includes(v))
+    : Object.keys(variables).filter(
+        (v) => !VISIBILITY_EXCLUDED_VARIABLES.includes(v)
+      )
 
   const varList =
     filteredVariableNames !== undefined

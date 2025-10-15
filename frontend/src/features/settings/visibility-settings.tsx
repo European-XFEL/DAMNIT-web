@@ -2,7 +2,7 @@ import { Accordion, rem, ScrollArea, Stack, TextInput } from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 
-import { EXCLUDED_VARIABLES } from '../../constants'
+import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
 import { useAppSelector } from '../../redux'
 import type { TagItem } from '../../types'
 import VisibilitySettingsItem from './visibility-settings-item'
@@ -21,7 +21,7 @@ function VisibilitySettings({
   const variables = useMemo(() => {
     return Object.fromEntries(
       Object.entries(originalVariables).filter(
-        ([key]) => !EXCLUDED_VARIABLES.includes(key)
+        ([key]) => !VISIBILITY_EXCLUDED_VARIABLES.includes(key)
       )
     )
   }, [originalVariables])
