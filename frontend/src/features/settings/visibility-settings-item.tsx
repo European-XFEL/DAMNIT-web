@@ -3,11 +3,12 @@ import {
   AccordionItem,
   AccordionPanel,
   Badge,
+  Box,
   Checkbox,
   Group,
+  rem,
   Stack,
   Text,
-  Tooltip,
 } from '@mantine/core'
 import { EXCLUDED_VARIABLES } from '../../constants'
 import { useAppDispatch, useAppSelector } from '../../redux'
@@ -50,13 +51,6 @@ function VisibilitySettingsItem({
   const anyOn = varList.some((v) => variableVisibility[v] !== false)
   const isIndeterminate = anyOn && !allOn
 
-  let tooltipLabel = 'Select all variables in this group'
-  if (allOn) {
-    tooltipLabel = 'Deselect all variables in this group'
-  } else if (isIndeterminate) {
-    tooltipLabel = 'Some variables are selected. Click to deselect all.'
-  }
-
   if (filteredVariableNames !== undefined && varList.length === 0) {
     return null
   }
@@ -72,6 +66,7 @@ function VisibilitySettingsItem({
             key={`checkbox-${tagName}-all-${isIndeterminate}`}
             checked={allOn}
             indeterminate={isIndeterminate}
+            onChange={() => {}}
             onClick={(event) => {
               event.stopPropagation()
               const updates = Object.fromEntries(
