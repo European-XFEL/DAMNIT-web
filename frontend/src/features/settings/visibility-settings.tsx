@@ -30,6 +30,16 @@ function VisibilitySettings({
     (state) => state.table.variableVisibility
   )
 
+  const sortedTags = useMemo(
+    () =>
+      Object.values(tags)
+        .slice()
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+        ),
+    [tags]
+  )
+
   const variables = useMemo(() => {
     return Object.fromEntries(
       Object.entries(originalVariables).filter(
@@ -45,7 +55,7 @@ function VisibilitySettings({
 
   const [searchTerm, setSearchTerm] = useState('')
   const [openedAccordions, setOpenedAccordions] = useState(
-    !Object.keys(tags).length ? ['all-variables'] : []
+    !sortedTags.length ? ['all-variables'] : []
   )
 
   const filteredVariableNames = useMemo(() => {
@@ -60,14 +70,14 @@ function VisibilitySettings({
 
   const visibleTags = useMemo<TagItem[]>(() => {
     if (variant !== 'tag-variables') return []
-    return Object.values(tags).filter((tag) => {
+    return sortedTags.filter((tag) => {
       if (!filteredVariableNames) return true
       return Object.values(variables).some(
         (v) =>
           v.tag_ids.includes(tag.id) && filteredVariableNames.includes(v.name)
       )
     })
-  }, [variant, tags, variables, filteredVariableNames])
+  }, [variant, sortedTags, variables, filteredVariableNames])
 
   useEffect(() => {
     if (variant !== 'tag-variables') return
