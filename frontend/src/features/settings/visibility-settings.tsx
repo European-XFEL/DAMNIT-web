@@ -1,10 +1,18 @@
-import { Accordion, rem, ScrollArea, Stack, TextInput } from '@mantine/core'
+import {
+  Accordion,
+  Button,
+  rem,
+  ScrollArea,
+  Stack,
+  TextInput,
+} from '@mantine/core'
 import { IconSearch } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
-import { useAppSelector } from '../../redux'
+import { useAppDispatch, useAppSelector } from '../../redux'
 import type { TagItem } from '../../types'
+import { setVariablesVisibility } from '../table/table.slice'
 import VisibilitySettingsItem from './visibility-settings-item'
 
 export interface VisibilitySettingsProps {
@@ -14,8 +22,12 @@ export interface VisibilitySettingsProps {
 function VisibilitySettings({
   variant = 'tag-variables',
 }: VisibilitySettingsProps) {
+  const dispatch = useAppDispatch()
   const { tags, variables: originalVariables } = useAppSelector(
     (state) => state.tableData.metadata
+  )
+  const variableVisibility = useAppSelector(
+    (state) => state.table.variableVisibility
   )
 
   const variables = useMemo(() => {
@@ -25,6 +37,11 @@ function VisibilitySettings({
       )
     )
   }, [originalVariables])
+
+  const allVarNames = useMemo(() => Object.keys(variables), [variables])
+  const allOn =
+    allVarNames.length > 0 &&
+    allVarNames.every((v) => variableVisibility[v] !== false)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [openedAccordions, setOpenedAccordions] = useState(
@@ -86,6 +103,18 @@ function VisibilitySettings({
           }
         }}
       />
+      <Button
+        variant="light"
+        onClick={() => {
+          const updates = Object.fromEntries(
+            allVarNames.map((name) => [name, !allOn])
+          )
+          dispatch(setVariablesVisibility(updates))
+        }}
+        disabled={allVarNames.length === 0}
+      >
+        {allOn ? 'Deselect all' : 'Select all'}
+      </Button>
 
       <ScrollArea style={{ flex: 1 }}>
         <Accordion
