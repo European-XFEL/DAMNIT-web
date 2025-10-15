@@ -19,6 +19,7 @@ export interface VisibilitySettingsItemProps {
   tagName?: string
   variableCount?: number
   filteredVariableNames?: string[]
+  isUntagged?: boolean
 }
 
 function VisibilitySettingsItem({
@@ -26,6 +27,7 @@ function VisibilitySettingsItem({
   tagName,
   variableCount,
   filteredVariableNames,
+  isUntagged = false,
 }: VisibilitySettingsItemProps) {
   const dispatch = useAppDispatch()
   const { variables } = useAppSelector((state) => state.tableData.metadata)
@@ -39,6 +41,12 @@ function VisibilitySettingsItem({
 
   const groupVarList = tagId
     ? varListForTagId(tagId)
+    : isUntagged
+    ? Object.keys(variables).filter(
+        (varName) =>
+          !VISIBILITY_EXCLUDED_VARIABLES.includes(varName) &&
+          variables[varName].tag_ids.length === 0
+      )
     : Object.keys(variables).filter(
         (v) => !VISIBILITY_EXCLUDED_VARIABLES.includes(v)
       )
@@ -58,9 +66,11 @@ function VisibilitySettingsItem({
   }
 
   return (
-    <AccordionItem value={tagId?.toString() ?? 'all-variables'}>
+    <AccordionItem
+      value={tagId?.toString() ?? (isUntagged ? 'untagged' : 'all-variables')}
+    >
       <Box pos="relative">
-        {tagId && (
+        {(tagId || isUntagged) && (
           // We need to remount the checkbox when using the `indeterminate`
           // prop due to a Mantine bug: the `CheckboxIcon` child component
           // is falsely rendered with `indeterminate=false`

@@ -91,13 +91,18 @@ function VisibilitySettings({
     }
   }, [variant, searchTerm, visibleTags, filteredVariableNames])
 
-  const getVarCount = (tagId?: number) => {
-    if (tagId) {
+  const getVarCount = (options: { tagId?: number; untagged?: boolean } = {}) => {
+    const { tagId, untagged } = options
+
+    if (tagId !== undefined) {
       return Object.values(variables).filter((v) => v.tag_ids.includes(tagId))
         .length
-    } else {
-      return Object.keys(variables).length
     }
+    if (untagged) {
+      return Object.values(variables).filter((v) => v.tag_ids.length === 0)
+        .length
+    }
+    return Object.keys(variables).length
   }
 
   return (
@@ -147,13 +152,20 @@ function VisibilitySettings({
 
           {variant === 'tag-variables' && (
             <>
+              <VisibilitySettingsItem
+                key={'untagged'}
+                isUntagged={true}
+                tagName={'Untagged'}
+                variableCount={getVarCount({ untagged: true })}
+                filteredVariableNames={filteredVariableNames}
+              />
               {visibleTags.map((tag) => (
                 <VisibilitySettingsItem
                   key={tag.id}
                   tagId={tag.id}
                   tagName={tag.name}
                   filteredVariableNames={filteredVariableNames}
-                  variableCount={getVarCount(tag.id)}
+                  variableCount={getVarCount({ tagId: tag.id })}
                 />
               ))}
             </>
