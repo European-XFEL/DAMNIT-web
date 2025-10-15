@@ -57,14 +57,12 @@ function VisibilitySettings({
     if (searchTerm) {
       const idsToOpen = visibleTags.map((tag) => tag.id.toString())
       if (filteredVariableNames && filteredVariableNames.length > 0) {
-        setOpenedAccordions(['all-variables', ...idsToOpen])
-      } else {
         setOpenedAccordions(idsToOpen)
       }
     } else {
-      setOpenedAccordions(!Object.keys(tags).length ? ['all-variables'] : [])
+      setOpenedAccordions([])
     }
-  }, [variant, searchTerm, visibleTags, filteredVariableNames, tags])
+  }, [variant, searchTerm, visibleTags, filteredVariableNames])
 
   const getVarCount = (tagId?: number) => {
     if (tagId) {
@@ -114,6 +112,7 @@ function VisibilitySettings({
                   key={tag.id}
                   tagId={tag.id}
                   tagName={tag.name}
+                  filteredVariableNames={filteredVariableNames}
                   variableCount={getVarCount(tag.id)}
                 />
               ))}
