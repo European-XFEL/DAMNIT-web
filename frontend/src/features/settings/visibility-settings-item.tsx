@@ -63,33 +63,40 @@ function VisibilitySettingsItem({
 
   return (
     <AccordionItem value={tagId?.toString() ?? 'all-variables'}>
-      <AccordionControl>
-        <Group justify="space-between">
-          <Group>
-            {tagId && (
-              <Tooltip label={tooltipLabel} withArrow position="right">
-                <Checkbox
-                  key={`checkbox-${tagId}`}
-                  checked={allOn}
-                  indeterminate={isIndeterminate}
-                  onChange={() => {}}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    const updates = Object.fromEntries(
-                      groupVarList.map((name) => [name, !anyOn])
-                    )
-                    dispatch(setVariablesVisibility(updates))
-                  }}
-                />
-              </Tooltip>
-            )}
+      <Box pos="relative">
+        {tagId && (
+          // We need to remount the checkbox when using the `indeterminate`
+          // prop due to a Mantine bug: the `CheckboxIcon` child component
+          // is falsely rendered with `indeterminate=false`
+          <Checkbox
+            key={`checkbox-${tagName}-all-${isIndeterminate}`}
+            checked={allOn}
+            indeterminate={isIndeterminate}
+            onClick={(event) => {
+              event.stopPropagation()
+              const updates = Object.fromEntries(
+                groupVarList.map((name) => [name, event.currentTarget.checked])
+              )
+              dispatch(setVariablesVisibility(updates))
+            }}
+            style={{
+              position: 'absolute',
+              left: rem(12),
+              top: '50%',
+              transform: 'translateY(-50%)',
+              zIndex: 1,
+            }}
+          />
+        )}
+        <AccordionControl pl={rem(42)}>
+          <Group justify="space-between">
             <Text fw={600}>{tagName ?? 'All Variables'}</Text>
+            {variableCount !== undefined && (
+              <Badge variant="light">{variableCount}</Badge>
+            )}
           </Group>
-          {variableCount !== undefined && (
-            <Badge variant="light">{variableCount}</Badge>
-          )}
-        </Group>
-      </AccordionControl>
+        </AccordionControl>
+      </Box>
       <AccordionPanel>
         <Stack gap={4}>
           {varList.map((v) => (
