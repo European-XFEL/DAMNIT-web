@@ -18,10 +18,7 @@ const slice = createSlice({
   name: 'table',
   initialState,
   reducers: {
-    selectRun: (
-      { selection },
-      action: PayloadAction<{ run: number | null; variables: string[] }>
-    ) => {
+    selectRun: ({ selection }, action) => {
       const { run, variables } = action.payload
       if (selection.run !== run) {
         selection.run = run
