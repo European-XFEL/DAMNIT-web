@@ -158,7 +158,7 @@ function VisibilitySettings({
               <VisibilitySettingsItem
                 key={'untagged'}
                 isUntagged={true}
-                tagName={'Untagged'}
+                tagName={'(Untagged)'}
                 variableCount={getVarCount({ untagged: true })}
                 filteredVariableNames={filteredVariableNames}
               />
