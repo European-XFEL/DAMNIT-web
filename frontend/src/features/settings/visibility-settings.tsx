@@ -4,9 +4,9 @@ import {
   rem,
   ScrollArea,
   Stack,
-  TextInput
+  TextInput,
 } from '@mantine/core'
-import { IconSearch } from '@tabler/icons-react'
+import { IconChevronDown, IconSearch } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
@@ -137,11 +137,12 @@ function VisibilitySettings({
 
       <ScrollArea style={{ flex: 1 }}>
         <Accordion
+          variant="contained"
           multiple
           value={
             variant === 'all-variables' ? 'all-variables' : openedAccordions
           }
-          chevron={variant === 'all-variables' ? null : true}
+          chevron={variant === 'all-variables' ? null : <IconChevronDown />}
           onChange={setOpenedAccordions}
         >
           {variant === 'all-variables' && (

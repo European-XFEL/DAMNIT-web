@@ -102,7 +102,7 @@ function VisibilitySettingsItem({
               {tagName ?? 'All Variables'}
             </Text>
             {variableCount !== undefined && (
-              <Badge variant="light" color="indigo">
+              <Badge mx={rem(12)} variant="light" color="indigo">
                 {variableCount}
               </Badge>
             )}
