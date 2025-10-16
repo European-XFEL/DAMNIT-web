@@ -137,7 +137,6 @@ function VisibilitySettings({
 
       <ScrollArea style={{ flex: 1 }}>
         <Accordion
-          variant="separated"
           multiple
           value={
             variant === 'all-variables' ? 'all-variables' : openedAccordions
