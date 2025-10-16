@@ -140,7 +140,7 @@ function VisibilitySettings({
           variant="contained"
           multiple
           value={
-            variant === 'all-variables' ? 'all-variables' : openedAccordions
+            variant === 'all-variables' ? ['all-variables'] : openedAccordions
           }
           chevron={variant === 'all-variables' ? null : <IconChevronDown />}
           onChange={setOpenedAccordions}
