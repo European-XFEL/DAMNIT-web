@@ -16,3 +16,5 @@ export const DTYPES = {
 }
 
 export const EXCLUDED_VARIABLES = ['proposal', 'added_at']
+
+export const VISIBILITY_EXCLUDED_VARIABLES = [...EXCLUDED_VARIABLES, 'run']

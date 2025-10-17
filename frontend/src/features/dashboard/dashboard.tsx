@@ -8,12 +8,12 @@ import {
   ElementProps,
   Flex,
   Group,
-  Skeleton,
   Stack,
   Tabs as MantineTabs,
   Text,
   Title,
   rem,
+  ScrollArea,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 
@@ -31,6 +31,7 @@ import Run from './run'
 
 import styles from './dashboard.module.css'
 import headerStyles from '../../styles/header.module.css'
+import { Settings } from '../settings'
 
 const PlotsTab = lazy(() =>
   import('../plots').then((module) => ({ default: module.PlotsTab }))
@@ -232,11 +233,9 @@ const Dashboard = () => {
         </Header>
       </AppShell.Header>
       <AppShell.Navbar p="md">
-        {Array(15)
-          .fill(0)
-          .map((_, index) => (
-            <Skeleton key={index} h={28} mt="sm" animate={false} />
-          ))}
+        <ScrollArea>
+          <Settings />
+        </ScrollArea>
       </AppShell.Navbar>
       <AppShell.Main>
         <MainTabs

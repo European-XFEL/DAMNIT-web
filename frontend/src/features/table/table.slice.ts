@@ -1,5 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit'
-
+import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import { isArrayEqual } from '../../utils/array'
 
 type TableState = {
@@ -7,10 +6,12 @@ type TableState = {
     run: number | null
     variables: string[]
   }
+  variableVisibility: Record<string, boolean>
 }
 
 const initialState: TableState = {
   selection: { run: null, variables: [] },
+  variableVisibility: {},
 }
 
 const slice = createSlice({
@@ -28,9 +29,18 @@ const slice = createSlice({
     },
     reset: (state) => {
       state.selection = { ...initialState.selection }
+      state.variableVisibility = {}
+    },
+    setVariablesVisibility: (
+      state,
+      action: PayloadAction<Record<string, boolean>>
+    ) => {
+      for (const [name, isVisible] of Object.entries(action.payload)) {
+        state.variableVisibility[name] = isVisible
+      }
     },
   },
 })
 
 export default slice.reducer
-export const { selectRun, reset } = slice.actions
+export const { selectRun, reset, setVariablesVisibility } = slice.actions

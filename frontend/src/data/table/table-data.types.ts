@@ -1,4 +1,4 @@
-import { VariableDataItem, VariableMetadataItem } from '../../types'
+import { VariableDataItem, VariableMetadataItem, TagItem } from '../../types'
 
 export type TableData = {
   [run: string]: { [variable: string]: VariableDataItem }
@@ -8,6 +8,7 @@ export type TableMetadata = {
   variables: Record<string, VariableMetadataItem>
   runs: string[]
   timestamp: number
+  tags: Record<string, TagItem>
 }
 
 export type TableInfo = {

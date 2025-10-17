@@ -16,7 +16,7 @@ interface TableDataState extends TableInfo {
 
 const initialState: TableDataState = {
   data: {},
-  metadata: { variables: {}, runs: [], timestamp: 0 },
+  metadata: { variables: {}, runs: [], timestamp: 0, tags: {} },
   lastUpdate: {},
 }
 
