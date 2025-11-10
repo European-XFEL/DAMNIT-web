@@ -48,8 +48,7 @@ def test_damnit_table_second_registered():
 
 
 def test_damnit_table_valid_update():
-    variables = create_map([{"name": "foo", "title": "Foo", "tag_ids": []}],
-                           key="name")
+    variables = create_map([{"name": "foo", "title": "Foo", "tag_ids": []}], key="name")
     model = DamnitTable("foo")
     model.update(variables)
     assert_model(
@@ -62,8 +61,10 @@ def test_damnit_table_valid_update():
 def test_damnit_table_multiple_update():
     model = DamnitTable("foo")
     first = create_map(
-        [{"name": "bar", "title": "Bar", "tag_ids": []},
-         {"name": "baz", "title": "Baz", "tag_ids": []}],
+        [
+            {"name": "bar", "title": "Bar", "tag_ids": []},
+            {"name": "baz", "title": "Baz", "tag_ids": []},
+        ],
         key="name",
     )
     model.update(first)

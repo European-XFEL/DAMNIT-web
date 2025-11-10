@@ -211,9 +211,7 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
             mocked_latest_rows.assert_called()
             break
 
-    await asyncio.sleep(
-        POLLING_INTERVAL * 3
-    )  # give enough time to clear the cache
+    await asyncio.sleep(POLLING_INTERVAL * 3)  # give enough time to clear the cache
     mocked_latest_rows.reset_mock()
 
     with patched_sleep:

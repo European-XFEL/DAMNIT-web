@@ -32,9 +32,7 @@ class DatabaseSessionManager(metaclass=Registry):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
         self._engine = create_async_engine(self.db_path)
-        self._sessionmaker = async_sessionmaker(
-            autocommit=False, bind=self._engine
-        )
+        self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
     @property
     def db_path(self):
@@ -119,9 +117,7 @@ async def async_latest_rows(
     if isinstance(table, str):
         table = await async_table(proposal, name=table)
 
-    selection = (
-        select(table).where(table.c.get(by) > start_at).order_by(order_by)
-    )
+    selection = select(table).where(table.c.get(by) > start_at).order_by(order_by)
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)

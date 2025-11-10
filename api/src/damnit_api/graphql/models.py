@@ -34,9 +34,7 @@ def serialize(value, *, dtype=DamnitType.STRING):
     if dtype is DamnitType.IMAGE:
         value = b64image(value)
     elif dtype is DamnitType.TIMESTAMP:
-        value = int(
-            value.timestamp() if isinstance(value, datetime) else value * 1000
-        )
+        value = int(value.timestamp() if isinstance(value, datetime) else value * 1000)
     elif dtype is DamnitType.NUMBER and not np.isfinite(value):
         value = to_js_string(value)
 

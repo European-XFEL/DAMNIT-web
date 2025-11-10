@@ -21,9 +21,7 @@ DTYPE_MAP = {
 def map_dtype(dtype, default=DamnitType.STRING):
     dtype = DTYPE_MAP.get(dtype.__name__)
     if not dtype:
-        dtype = (
-            DamnitType.NUMBER if np.issubdtype(dtype, np.number) else default
-        )
+        dtype = DamnitType.NUMBER if np.issubdtype(dtype, np.number) else default
     return dtype
 
 

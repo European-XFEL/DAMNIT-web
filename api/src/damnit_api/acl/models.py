@@ -32,12 +32,8 @@ class ACE(BaseModel):
     otherwise it will return 0.
     """
 
-    identity: Annotated[
-        Literal["user", "group"], Doc("The identity type of the ACE.")
-    ]
-    who: Annotated[
-        str, Doc("The name of the user or group the ACE applies to.")
-    ]
+    identity: Annotated[Literal["user", "group"], Doc("The identity type of the ACE.")]
+    who: Annotated[str, Doc("The name of the user or group the ACE applies to.")]
     mask: Annotated["Mask", Doc("The permissions granted by the ACE.")]
 
     @classmethod
@@ -298,6 +294,5 @@ class Mask(Flag):
 
     def __str__(self) -> str:
         return "".join(
-            flg if self & getattr(self, flg) else "-"
-            for flg in ["r", "w", "x"]
+            flg if self & getattr(self, flg) else "-" for flg in ["r", "w", "x"]
         )

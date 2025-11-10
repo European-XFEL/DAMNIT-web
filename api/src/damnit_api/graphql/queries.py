@@ -110,8 +110,7 @@ class Query:
         )
 
         return [
-            model.as_stype(**{**v, **i})
-            for v, i in zip(variables, info, strict=True)
+            model.as_stype(**{**v, **i}) for v, i in zip(variables, info, strict=True)
         ]
 
     @strawberry.field
@@ -125,9 +124,7 @@ class Query:
         }
 
     @strawberry.field
-    def extracted_data(
-        self, database: DatabaseInput, run: int, variable: str
-    ) -> JSON:
+    def extracted_data(self, database: DatabaseInput, run: int, variable: str) -> JSON:
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
         return get_extracted_data(

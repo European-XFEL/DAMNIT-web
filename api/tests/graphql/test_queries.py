@@ -30,9 +30,7 @@ def mocked_fetch_info(mocker):
 
 
 @pytest.mark.asyncio
-async def test_runs_query(
-    graphql_schema, mocked_fetch_variables, mocked_fetch_info
-):
+async def test_runs_query(graphql_schema, mocked_fetch_variables, mocked_fetch_info):
     query = """
         query TableDataQuery($per_page: Int = 2) {
           runs(database: {proposal: "1234"}, per_page: $per_page) {
