@@ -68,15 +68,13 @@ async def get_available_proposals(user_groups, use_cache=True) -> list[str]:
     all_proposals = await get_damnit_proposals(use_cache)
     read_permissions = get_read_permissions(user_groups)
     read_permissions = [
-        re.compile(permission.replace("*", ".*"))
-        for permission in read_permissions
+        re.compile(permission.replace("*", ".*")) for permission in read_permissions
     ]
 
     proposals = {}
     for prop_num, info in all_proposals.items():
         if not any(
-            permission.match(info["proposal_path"])
-            for permission in read_permissions
+            permission.match(info["proposal_path"]) for permission in read_permissions
         ):
             continue
         proposals[prop_num] = info
@@ -168,9 +166,7 @@ async def get_damnit_proposals(use_cache: bool) -> dict:
 def get_damnit_paths() -> list[str]:
     exp = Path("/gpfs/exfel/exp/")
     return [
-        damnit
-        for ush in exp.glob("**/usr/Shared")
-        if (damnit := get_damnit_path(ush))
+        damnit for ush in exp.glob("**/usr/Shared") if (damnit := get_damnit_path(ush))
     ]
 
 

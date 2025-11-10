@@ -52,9 +52,7 @@ class LatestData:
 
     @property
     def dtypes(self):
-        return {
-            variable: data.dtype for variable, data in self.variables.items()
-        }
+        return {variable: data.dtype for variable, data in self.variables.items()}
 
     @property
     def timestamp(self):
