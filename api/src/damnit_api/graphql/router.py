@@ -23,9 +23,7 @@ class Router(GraphQLRouter, metaclass=Singleton):
     def encode_json(self, data: GraphQLHTTPResponse) -> bytes:
         return orjson.dumps(
             data,
-            default=lambda x: None
-            if isinstance(x, float) and np.isnan(x)
-            else x,
+            default=lambda x: None if isinstance(x, float) and np.isnan(x) else x,
             option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_NON_STR_KEYS,
         )
 

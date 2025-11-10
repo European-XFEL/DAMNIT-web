@@ -29,9 +29,7 @@ async def get_latest_data(proposal, timestamp, schema):
     latest_data = LatestData.from_list(latest_data)
 
     # Get latest runs
-    latest_runs = await fetch_info(
-        proposal, runs=list(latest_data.runs.keys())
-    )
+    latest_runs = await fetch_info(proposal, runs=list(latest_data.runs.keys()))
     latest_runs = create_map(latest_runs, key="run")
 
     # Update model

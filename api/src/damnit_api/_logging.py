@@ -15,9 +15,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def logger_name_callsite(logger, method_name, event_dict):
     if not event_dict.get("logger_name"):
-        logger_name = (
-            f"{event_dict.pop('module')}.{event_dict.pop('func_name')}"
-        )
+        logger_name = f"{event_dict.pop('module')}.{event_dict.pop('func_name')}"
         if not event_dict.pop("disable_name", False):
             event_dict["logger_name"] = logger_name.strip(".")  # pyright: ignore[reportInvalidTypeForm]
 
@@ -153,9 +151,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if request.path_params:
             info["path_params"] = str(request.path_params)
 
-        logger = self.logger.bind(
-            path=request.scope["path"], method=request.method
-        )
+        logger = self.logger.bind(path=request.scope["path"], method=request.method)
         logger.debug("Request", **info)
 
         response = await call_next(request)

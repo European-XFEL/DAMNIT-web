@@ -29,8 +29,7 @@ async def get_file_path(proposal_num, filename):
         raise HTTPException(
             status_code=404,
             detail=(
-                f"File {filename} not found in proposal path "
-                f"{info['damnit_path']}."
+                f"File {filename} not found in proposal path {info['damnit_path']}."
             ),
         )
 
@@ -44,8 +43,10 @@ async def fetch_current_file(proposal_num):
     file_data = await fetch_file_data(file_path)
     last_modified = mtime_cache.get(file_path)
 
-    return JSONResponse({"fileContent": file_data,
-                         "lastModified": last_modified})
+    return JSONResponse({
+        "fileContent": file_data,
+        "lastModified": last_modified,
+    })
 
 
 @router.get("/last_modified")

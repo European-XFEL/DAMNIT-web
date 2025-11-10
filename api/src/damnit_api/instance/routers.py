@@ -41,9 +41,7 @@ class Instance:
 
     @strawberry.field
     def proposal(self) -> Proposal:
-        return Proposal.from_pydantic(
-            models.Proposal.from_path(path=self._dir)
-        )
+        return Proposal.from_pydantic(models.Proposal.from_path(path=self._dir))
 
     @strawberry.field
     async def metadata(self) -> Metadata:

@@ -120,9 +120,7 @@ def rename_dims(array):
         case _:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 
-    renamed = {
-        dim: dims[i] for i, dim in enumerate(array.dims) if dim == f"dim_{i}"
-    }
+    renamed = {dim: dims[i] for i, dim in enumerate(array.dims) if dim == f"dim_{i}"}
     if renamed:
         array = array.rename(renamed)
     return array
