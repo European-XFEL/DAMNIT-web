@@ -39,9 +39,9 @@ async def user_from_ldap(uid: str = "", mail: str = "") -> User:
 
     search_attributes = ["uid", "uidNumber", "cn", "mail", "isMemberOf"]
 
-    _logger = logger.bind(user=uid or mail)
+    logger_ = logger.bind(user=uid or mail)
 
-    _logger.debug(
+    logger_.debug(
         "LDAP search for user",
         ldap_bash=_LDAP_BASE,
         search_filter=search_filter,
@@ -64,7 +64,7 @@ async def user_from_ldap(uid: str = "", mail: str = "") -> User:
         msg = "User not found"
         raise Exception(msg)  # TODO: better exception
 
-    _logger.debug("LDAP search result", entries=conn.entries)
+    logger_.debug("LDAP search result", entries=conn.entries)
 
     entry = conn.entries[0]
     username = entry.uid.value
@@ -79,7 +79,7 @@ async def user_from_ldap(uid: str = "", mail: str = "") -> User:
         res = _GROUP_NAME_RE.search(g)
 
         if not res:
-            _logger.debug("Group not found", group=g)
+            logger_.debug("Group not found", group=g)
             continue
 
         groups.append(res.group(1))

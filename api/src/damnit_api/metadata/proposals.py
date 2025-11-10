@@ -104,11 +104,11 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
     read_permissions = []
 
     # Instrument staff
-    _sase_groups = {"sa1", "sa2", "sa3"}
-    _las_groups = {"la1", "la2", "la3"}
-    _instrument_groups = {"spb", "fxe", "hed", "mid", "scs", "sqs", "sxp"}
+    sase_groups = {"sa1", "sa2", "sa3"}
+    las_groups = {"la1", "la2", "la3"}
+    instrument_groups_ = {"spb", "fxe", "hed", "mid", "scs", "sqs", "sxp"}
 
-    instrument_groups = _sase_groups | _las_groups | _instrument_groups
+    instrument_groups = sase_groups | las_groups | instrument_groups_
 
     for _group in instrument_groups:
         group = f"{_group}DATA".lower()
