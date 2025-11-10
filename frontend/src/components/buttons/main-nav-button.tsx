@@ -1,4 +1,4 @@
-import { Button, ButtonProps, ElementProps } from '@mantine/core'
+import { Button, type ButtonProps, type ElementProps } from '@mantine/core'
 
 import classes from './main-nav-button.module.css'
 

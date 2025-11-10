@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
-export const BASE_URL = import.meta.env.VITE_BASE_URL
+function normalizeBaseUrl(baseUrl: string) {
+  return (baseUrl || '/').replace(/\/?$/, '/')
+}
+export const BASE_URL = normalizeBaseUrl(import.meta.env.VITE_BASE_URL)
 export const HTTP_URL = window.location.origin + BASE_URL
 
 const wsProtocol = window.location.origin.startsWith('https') ? 'wss' : 'ws'

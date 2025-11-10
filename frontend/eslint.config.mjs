@@ -4,9 +4,10 @@ import eslintConfigPrettier from 'eslint-config-prettier/flat'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default tseslint.config(
-  { ignores: ['dist'] },
+export default defineConfig(
+  globalIgnores(['dist']),
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
@@ -20,6 +21,7 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      'react-hooks/set-state-in-effect': 'off', // TODO: Remove and fix things
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

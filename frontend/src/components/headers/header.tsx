@@ -1,11 +1,11 @@
-import { PropsWithChildren, useState } from 'react'
+import { type PropsWithChildren, useState } from 'react'
 import { UnstyledButton, Group, Text, Menu, Burger, rem } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import { IconLogout, IconChevronDown } from '@tabler/icons-react'
 import cx from 'clsx'
 
 import { selectUserFullName } from '../../auth'
-import { useAppSelector } from '../../redux'
+import { useAppSelector } from '../../redux/hooks'
 import { history } from '../../routes'
 
 import classes from './header.module.css'

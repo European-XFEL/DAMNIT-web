@@ -2,8 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { Provider as ReduxProvider } from 'react-redux'
 import { BrowserRouter } from 'react-router-dom'
-import { ApolloProvider } from '@apollo/client'
-
+import { ApolloProvider } from '@apollo/client/react'
 import { MantineProvider } from '@mantine/core'
 
 import '@mantine/core/styles.layer.css'
@@ -14,7 +13,7 @@ import '@glideapps/glide-data-grid/dist/index.css'
 
 import { client } from './graphql/apollo'
 import { BASE_URL } from './constants'
-import { setupStore } from './redux'
+import { setupStore } from './redux/store'
 import App from './app/app'
 
 const container = document.getElementById('root') as HTMLElement

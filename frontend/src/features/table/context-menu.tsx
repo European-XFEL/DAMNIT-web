@@ -2,7 +2,9 @@ import { useLayer } from 'react-laag'
 import { Stack } from '@mantine/core'
 import { ContextMenuPortal as MantineContextMenu } from 'mantine-contextmenu'
 
-import ContextMenuItem, { ContextMenuItemOptions } from './context-menu-item'
+import ContextMenuItem, {
+  type ContextMenuItemOptions,
+} from './context-menu-item'
 
 export type ContextMenuProps = {
   localPosition: { x: number; y: number }

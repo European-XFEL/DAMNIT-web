@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { TabItem } from '../../types'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { type TabItem } from '../../types'
 
 type MainState = {
   tabs: Record<string, TabItem>

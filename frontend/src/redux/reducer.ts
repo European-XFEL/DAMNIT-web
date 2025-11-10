@@ -4,7 +4,7 @@ import { loadingBarReducer as loadingBar } from 'react-redux-loading-bar'
 import { authApi } from '../auth'
 
 import { metadataApi } from '../data/metadata'
-import { contextfileApi } from '../features/contextfileeditor/contextfileeditor.api'
+import { contextfileApi } from '../features/context-file-editor/context-file-editor.api'
 import { extractedDataReducer as extractedData } from '../data/extracted'
 import { metadataReducer as metadata } from '../data/metadata'
 import { tableDataReducer as tableData } from '../data/table'

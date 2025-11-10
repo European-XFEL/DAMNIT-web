@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box } from '@mantine/core'
-import { LastModifiedResponse } from './contextfileeditor.api'
+import { type LastModifiedResponse } from './context-file-editor.api'
 
 interface LastModifiedIndicatorProps {
   lastModifiedData?: LastModifiedResponse

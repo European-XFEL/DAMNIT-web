@@ -1,17 +1,17 @@
 import {
-  BaseGridCell,
-  GridCell,
   GridCellKind,
-  ImageCell,
-  Item,
-  LoadingCell,
-  NumberCell,
-  TextCell,
+  type BaseGridCell,
+  type GridCell,
+  type ImageCell,
+  type Item,
+  type LoadingCell,
+  type NumberCell,
+  type TextCell,
 } from '@glideapps/glide-data-grid'
-import { SparklineCellType } from '@glideapps/glide-data-grid-cells'
+import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES } from '../../constants'
-import { VariableValue } from '../../types'
+import { type VariableValue } from '../../types'
 import { formatDate, formatNumber } from '../../utils/helpers'
 
 // TODO: Handle nonconforming data type

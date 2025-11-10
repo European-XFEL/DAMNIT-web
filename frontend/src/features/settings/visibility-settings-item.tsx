@@ -11,7 +11,7 @@ import {
   Text,
 } from '@mantine/core'
 import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
-import { useAppDispatch, useAppSelector } from '../../redux'
+import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { setVariablesVisibility } from '../table/table.slice'
 
 export interface VisibilitySettingsItemProps {

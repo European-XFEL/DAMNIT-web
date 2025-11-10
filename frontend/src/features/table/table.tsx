@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
-  CellClickedEventArgs,
   CompactSelection,
   DataEditor,
-  DataEditorProps,
-  GridSelection,
-  HeaderClickedEventArgs,
-  Item,
+  type CellClickedEventArgs,
+  type DataEditorProps,
+  type GridSelection,
+  type HeaderClickedEventArgs,
+  type Item,
 } from '@glideapps/glide-data-grid'
 import { allCells } from '@glideapps/glide-data-grid-cells'
 
@@ -21,7 +21,7 @@ import { addPlot } from '../plots/plots.slice'
 import { EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
 import { getExtractedValue } from '../../data/extracted'
 import { getTableData } from '../../data/table'
-import { useAppDispatch, useAppSelector } from '../../redux'
+import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { isArrayEqual, sorted } from '../../utils/array'
 import { isEmpty } from '../../utils/helpers'
 

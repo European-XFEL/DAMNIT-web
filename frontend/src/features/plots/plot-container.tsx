@@ -1,17 +1,22 @@
-import { useEffect, useState, PropsWithChildren } from 'react'
+import { useEffect, useState, type PropsWithChildren } from 'react'
 
 import { Alert, Code, Image, Skeleton, Stack, Text } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
 
 import Plot from './plot'
-import { PlotDataItem, PlotMetadata, PlotInfo } from './plots.types'
-import { DTYPES } from '../../constants'
-import { createTypedSelector, useAppSelector } from '../../redux'
 import {
-  ExtractedDataItem,
-  ExtractedMetadataItem,
-  VariableDataItem,
-  VariableMetadataItem,
+  type PlotDataItem,
+  type PlotMetadata,
+  type PlotInfo,
+} from './plots.types'
+import { DTYPES } from '../../constants'
+import { createTypedSelector } from '../../redux/selectors'
+import { useAppSelector } from '../../redux/hooks'
+import {
+  type ExtractedDataItem,
+  type ExtractedMetadataItem,
+  type VariableDataItem,
+  type VariableMetadataItem,
 } from '../../types'
 import { formatRunsSubtitle } from '../../utils/helpers'
 

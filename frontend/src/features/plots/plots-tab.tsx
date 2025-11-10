@@ -2,8 +2,9 @@ import { Box, Stack, Text } from '@mantine/core'
 
 import { removePlot, setCurrentPlot } from './plots.slice'
 import PlotContainer from './plot-container'
+
 import Tabs from '../../components/tabs/tabs'
-import { useAppDispatch, useAppSelector } from '../../redux'
+import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { sorted } from '../../utils/array'
 import { formatRunsSubtitle, isEmpty } from '../../utils/helpers'
 

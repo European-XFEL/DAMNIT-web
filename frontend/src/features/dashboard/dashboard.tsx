@@ -3,17 +3,17 @@ import {
   AppShell,
   Burger,
   Button as MantineButton,
-  ButtonProps as MantineButtonProps,
   CloseButton,
-  ElementProps,
   Flex,
   Group,
+  ScrollArea,
   Stack,
   Tabs as MantineTabs,
   Text,
   Title,
   rem,
-  ScrollArea,
+  type ButtonProps as MantineButtonProps,
+  type ElementProps,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 
@@ -22,9 +22,9 @@ import cx from 'clsx'
 
 import { Header, Logo } from '../../components/headers'
 import { InstrumentBadge } from '../../components/badges'
-import { Tabs, TabsProps } from '../../components/tabs'
+import { Tabs, type TabsProps } from '../../components/tabs'
 import { useCurrentProposal } from '../../data/metadata'
-import { useAppDispatch, useAppSelector } from '../../redux'
+import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { PlotDialog } from '../plots'
 import { removeTab, setCurrentTab, closeAside } from './dashboard.slice'
 import Run from './run'
@@ -37,7 +37,7 @@ const PlotsTab = lazy(() =>
   import('../plots').then((module) => ({ default: module.PlotsTab }))
 )
 const ContextFileEditorTab = lazy(() =>
-  import('../contextfileeditor').then((module) => ({
+  import('../context-file-editor').then((module) => ({
     default: module.ContextFileEditorTab,
   }))
 )

@@ -6,12 +6,12 @@
  */
 
 import {
-  TypedQueryStateSelector,
-  TypedUseQueryStateOptions,
+  type TypedQueryStateSelector,
+  type TypedUseQueryStateOptions,
 } from '@reduxjs/toolkit/query/react'
 import { useEffect, useMemo, useReducer, useRef } from 'react'
 
-import { useAppDispatch } from '../redux'
+import { useAppDispatch } from '../redux/hooks'
 
 type State<Data, Argument> = {
   isUninitialized: boolean

@@ -3,11 +3,19 @@ This is planned to be deprecated in favor of unified Redux and
 Apollo Client store
 */
 
-import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
+import {
+  createAsyncThunk,
+  createSlice,
+  type PayloadAction,
+} from '@reduxjs/toolkit'
 
 import TableDataServices from './table-data.services'
-import { TableData, TableDataOptions, TableInfo } from './table-data.types'
-import { Maybe } from '../../types'
+import {
+  type TableData,
+  type TableDataOptions,
+  type TableInfo,
+} from './table-data.types'
+import { type Maybe } from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
 interface TableDataState extends TableInfo {

@@ -1,16 +1,16 @@
-import { Badge, BadgeProps } from '@mantine/core'
+import { Badge, type BadgeProps } from '@mantine/core'
 
-enum Instrument {
-  SPB = 'SPB',
-  FXE = 'FXE',
+const Instrument = {
+  SPB: 'SPB',
+  FXE: 'FXE',
+  MID: 'MID',
+  HED: 'HED',
+  SCS: 'SCS',
+  SQS: 'SQS',
+  SXP: 'SXP',
+} as const
 
-  MID = 'MID',
-  HED = 'HED',
-
-  SCS = 'SCS',
-  SQS = 'SQS',
-  SXP = 'SXP',
-}
+type Instrument = (typeof Instrument)[keyof typeof Instrument]
 
 const DEFAULT_COLOR = 'black'
 
@@ -25,9 +25,8 @@ const InstrumentColors: Record<Instrument, string> = {
 }
 
 function getInstrumentColor(instrument: string): string {
-  const as_enum =
-    Instrument[instrument.toUpperCase() as keyof typeof Instrument]
-  return InstrumentColors[as_enum] || DEFAULT_COLOR
+  const key = Instrument[instrument.toUpperCase() as keyof typeof Instrument]
+  return InstrumentColors[key] || DEFAULT_COLOR
 }
 
 export interface InstrumentBadgeProps extends BadgeProps {

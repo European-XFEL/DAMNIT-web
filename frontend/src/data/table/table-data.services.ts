@@ -7,14 +7,14 @@ import {
   TABLE_DATA_QUERY_NAME,
 } from './table-data.constants'
 import {
-  TableData,
-  TableDataOptions,
-  TableInfo,
-  TableMetadata,
-  TableMetadataOptions,
+  type TableData,
+  type TableDataOptions,
+  type TableInfo,
+  type TableMetadata,
+  type TableMetadataOptions,
 } from './table-data.types'
 import { client } from '../../graphql/apollo'
-import { WithTypeName } from '../../types'
+import { type WithTypeName } from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
 /*
