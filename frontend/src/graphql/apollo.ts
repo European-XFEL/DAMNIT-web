@@ -21,7 +21,7 @@ import { getMainDefinition } from '@apollo/client/utilities'
 
 import { createClient } from 'graphql-ws'
 
-import { BASE_URL } from '../constants'
+import { BASE_URL, WS_URL } from '../constants'
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from '../data/table'
 
 const removeTypenameLink = removeTypenameFromVariables({
@@ -110,11 +110,9 @@ const createPriorityLink = (maxActive = 3) => {
 
 const priorityLink = createPriorityLink(1)
 
-const wsProtocol = window.location.origin.startsWith('https') ? 'wss' : 'ws'
-const wsUri = `${wsProtocol}://${window.location.host}/graphql`
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: wsUri,
+    url: `${WS_URL}graphql`,
     shouldRetry: () => true,
   })
 )

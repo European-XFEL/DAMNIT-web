@@ -5,8 +5,6 @@ import fs from 'fs'
 import https from 'https'
 
 export default defineConfig(({ command, mode }) => {
-  const env = loadEnv(mode, process.cwd())
-
   const {
     VITE_API,
     VITE_BASE_URL,
@@ -14,7 +12,12 @@ export default defineConfig(({ command, mode }) => {
     VITE_MTLS_CERT,
     VITE_MTLS_KEY,
     VITE_PORT,
-  } = env
+  } = loadEnv(mode, process.cwd())
+
+  // Resolve base URL
+  const BASE_URL = (VITE_BASE_URL || '/').replace(/\/?$/, '/')
+  const withBaseUrl = (path) => `${BASE_URL}${path}`
+  const withoutBaseUrl = (path) => path.replace(new RegExp('^' + BASE_URL), '/')
 
   const getSslConfig = () => {
     let sslConfig
@@ -56,12 +59,13 @@ export default defineConfig(({ command, mode }) => {
     const defaultProxyConfig = {
       target: apiURL.origin,
       secure: !!sslConfig,
-      changeOrigin: false,
+      changeOrigin: true,
       configure: (proxy, options) => {
         if (sslConfig) {
           options.agent = httpsAgent
         }
       },
+      rewrite: (path) => withoutBaseUrl(path),
     }
 
     return {
@@ -69,10 +73,10 @@ export default defineConfig(({ command, mode }) => {
       port: Number(VITE_PORT) || 5173,
       allowedHosts: true,
       proxy: {
-        '/graphql': { ...defaultProxyConfig, ws: true },
-        '/oauth': { ...defaultProxyConfig },
-        '/metadata': { ...defaultProxyConfig },
-        '/contextfile': { ...defaultProxyConfig },
+        [withBaseUrl('graphql')]: { ...defaultProxyConfig, ws: true },
+        [withBaseUrl('oauth')]: { ...defaultProxyConfig },
+        [withBaseUrl('metadata')]: { ...defaultProxyConfig },
+        [withBaseUrl('contextfile')]: { ...defaultProxyConfig },
       },
       https: sslConfig,
     }
@@ -89,7 +93,7 @@ export default defineConfig(({ command, mode }) => {
   }
 
   return {
-    base: (VITE_BASE_URL || '/').replace(/\/?$/, '/'),
+    base: BASE_URL,
     plugins: [react()],
     resolve: {
       alias: {

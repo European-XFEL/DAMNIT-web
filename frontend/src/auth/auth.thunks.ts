@@ -1,6 +1,6 @@
 import { authApi } from './auth.api'
 
-import { FULL_URL } from '../constants'
+import { HTTP_URL } from '../constants'
 import { resetExtractedData } from '../data/extracted'
 import { resetTable as resetTableData } from '../data/table'
 import { resetTable as resetTableView } from '../features/table'
@@ -9,11 +9,11 @@ import { AppThunk } from '../redux'
 import { history } from '../routes'
 
 export const login = (): AppThunk => (_) => {
-  window.location.href = `${FULL_URL}oauth/login?redirect_uri=${FULL_URL}home`
+  window.location.href = `${HTTP_URL}oauth/login?redirect_uri=${HTTP_URL}home`
 }
 
 export const logout = (): AppThunk => (dispatch) => {
-  fetch(`${FULL_URL}oauth/logout?redirect_uri=${FULL_URL}logged-out`, {
+  fetch(`${HTTP_URL}oauth/logout?redirect_uri=${HTTP_URL}logged-out`, {
     method: 'GET',
     credentials: 'include', // Include cookies in the request
   })
