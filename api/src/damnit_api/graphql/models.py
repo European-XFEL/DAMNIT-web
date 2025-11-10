@@ -187,7 +187,7 @@ class DamnitTable(metaclass=Registry):
         annotations = {
             name: DamnitRun.known_annotations().get(
                 name,
-                Optional[DamnitVariable],  # noqa: UP007
+                Optional[DamnitVariable],
             )
             for name in self.variables
         }
