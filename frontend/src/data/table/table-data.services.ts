@@ -140,7 +140,7 @@ export const REFRESH_MUTATION = gql`
 
 export const LATEST_DATA_SUBSCRIPTION = gql`
   subscription LatestRunSubcription($proposal: String, $timestamp: Timestamp!) {
-    ${LATEST_DATA_FIELD_NAME}(database: { proposal: $proposal }, timestamp: $timestamp) 
+    ${LATEST_DATA_FIELD_NAME}(database: { proposal: $proposal }, timestamp: $timestamp)
   }
 `
 
