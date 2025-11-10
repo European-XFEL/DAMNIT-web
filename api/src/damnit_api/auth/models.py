@@ -29,8 +29,7 @@ class User(BaseModel):
 
     @property
     def acl(self) -> ACL:
-        _groups = [group.ace for group in self.groups]
-        return ACL([self.ace, *_groups])
+        return ACL([self.ace, *[group.ace for group in self.groups]])
 
 
 class Resource(BaseModel):
