@@ -42,8 +42,7 @@ async def test_watcher_detects_change(client, temp_dir, monkeypatch):
 
     proposal_num = "1"
 
-    resp = client.get(f"/contextfile/last_modified?proposal_num={proposal_num}"
-                      )
+    resp = client.get(f"/contextfile/last_modified?proposal_num={proposal_num}")
     assert resp.status_code == 200
     initial_modified = resp.json()["lastModified"]
 
@@ -72,7 +71,10 @@ def test_file_fetching(client, temp_dir, monkeypatch):
 
 
 async def wait_for_change(
-    client, url, initial_value, timeout: float = 5.0  # noqa: ASYNC109
+    client,
+    url,
+    initial_value,
+    timeout: float = 5.0,  # noqa: ASYNC109
 ):
     start = time.time()
     while time.time() - start < timeout:

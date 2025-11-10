@@ -48,9 +48,12 @@ def mocked_bootstrap_column(mocker):
 
 
 @pytest_asyncio.fixture
-async def graphql_schema(mocked_bootstrap_variables, mocked_bootstrap_column,
-                         mocked_bootstrap_all_tags,
-                         mock_bootstrap_variable_tags):
+async def graphql_schema(
+    mocked_bootstrap_variables,
+    mocked_bootstrap_column,
+    mocked_bootstrap_all_tags,
+    mock_bootstrap_variable_tags,
+):
     schema = Schema()
 
     # Initialize
