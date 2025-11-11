@@ -14,9 +14,9 @@ import operator
 import re
 from enum import Flag
 from functools import reduce
-from pathlib import Path
 from typing import Annotated, Literal, Self
 
+from anyio import Path as APath
 from pydantic import BaseModel, RootModel
 from typing_extensions import Doc
 
@@ -186,7 +186,7 @@ class ACL(RootModel[list[ACE]]):
         return cls(aces)
 
     @classmethod
-    async def from_path(cls, path: Path) -> Self:
+    async def from_path(cls, path: APath) -> Self:
         """Create an ACL from a file or directory path.
 
         This is a convenience method which calls `mmgetacl` on the given path
