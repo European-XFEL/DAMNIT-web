@@ -13,7 +13,7 @@ class MyMDC:
     )
 
     def __init__(self):
-        self.session = None
+        self.session: aiohttp.ClientSession = None  # pyright: ignore[reportAttributeAccessIssue]
         self.token = None
 
     async def __aenter__(self):

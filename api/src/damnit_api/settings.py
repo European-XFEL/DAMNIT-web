@@ -103,7 +103,7 @@ settings = Settings()  # type: ignore[assignment]
 
 if __name__ == "__main__":
     try:
-        from rich import print as pprint
+        from rich import print as pprint  # pyright: ignore[reportMissingImports]
     except ImportError:
 
         def pprint(*args, **kwargs):
