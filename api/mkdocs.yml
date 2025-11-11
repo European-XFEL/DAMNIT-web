@@ -13,52 +13,51 @@ theme:
 repo_url: https://github.com/European-XFEL/DAMNIT-web.git
 
 nav:
-  - index.md
-  - Deployment: deployment.md
-  - Development:
-    - ./dev/setup.md
-    - ./dev/ci-cd.md
-    - ./dev/docs.md
-    - ./dev/architecture.md
+- index.md
+- Deployment: deployment.md
+- Development:
+  - ./dev/setup.md
+  - ./dev/ci-cd.md
+  - ./dev/docs.md
+  - ./dev/architecture.md
 
 markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.snippets
-  - pymdownx.superfences
+- admonition
+- pymdownx.details
+- pymdownx.snippets
+- pymdownx.superfences
 
 plugins:
-  - search
-  # - awesome-nav
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [src]
-          inventories:
-          # Load object inventories to enable cross-references to other projects.
-          - https://docs.python.org/3/objects.inv
-          options:
-            # See https://mkdocstrings.github.io/python/usage/#recommended-settings
-            docstring_section_style: list
-            docstring_style: "google"
-            heading_level: 1
-            inherited_members: true
-            merge_init_into_class: true
-            parameter_headings: true
-            separate_signature: true
-            show_bases: true
-            show_if_no_docstring: true
-            show_root_full_path: false
-            show_root_heading: true
-            show_signature_annotations: true
-            show_signature_type_parameters: true
-            show_symbol_type_heading: true
-            show_symbol_type_toc: true
-            signature_crossrefs: true
-            summary: true
-            type_parameter_headings: true
-            unwrap_annotated: true
-  - api-autonav:
-      modules: ['src/damnit_api']
-      exclude_private: false
-      nav_section_title: "Reference"
+- search
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [src]
+        inventories:
+        # Load object inventories to enable cross-references to other projects.
+        - https://docs.python.org/3/objects.inv
+        options:
+          # See https://mkdocstrings.github.io/python/usage/#recommended-settings
+          docstring_section_style: list
+          docstring_style: "google"
+          heading_level: 1
+          inherited_members: true
+          merge_init_into_class: true
+          parameter_headings: true
+          separate_signature: true
+          show_bases: true
+          show_if_no_docstring: true
+          show_root_full_path: false
+          show_root_heading: true
+          show_signature_annotations: true
+          show_signature_type_parameters: true
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+          signature_crossrefs: true
+          summary: true
+          type_parameter_headings: true
+          unwrap_annotated: true
+- api-autonav:
+    modules: ['src/damnit_api']
+    exclude_private: false
+    nav_section_title: "Reference"
