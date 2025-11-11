@@ -27,9 +27,13 @@ async def test_refresh(graphql_schema):
     )
 
     assert result.errors is None
-    assert set(result.data["refresh"].keys()) == {"metadata"}
+    assert set(
+        result.data["refresh"].keys()  # FIX: # pyright: ignore[reportOptionalSubscript]
+    ) == {"metadata"}
 
-    metadata = result.data["refresh"]["metadata"]
+    metadata = result.data[  # FIX: # pyright: ignore[reportOptionalSubscript]
+        "refresh"
+    ]["metadata"]
     assert set(metadata.keys()) == {"runs", "timestamp", "variables", "tags"}
     assert metadata["runs"] == RUNS
     assert metadata["variables"] == {

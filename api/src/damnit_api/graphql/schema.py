@@ -40,18 +40,25 @@ class Schema(strawberry.Schema):
             # Remove the current value from the type maps
             gtype = type_map.pop(name, None)
             if gtype in implementations.objects:
-                implementations.objects.remove(gtype)
+                implementations.objects.remove(
+                    gtype  # FIX: # pyright: ignore[reportArgumentType]
+                )
             self.schema_converter.type_map.pop(name, None)
 
             # Replace with the new GraphQL type
             gtype = self._get_graphql_type(type_)
             type_map[name] = gtype
             remap_named_type(gtype, type_map)
-            implementations.objects.append(gtype)
+            implementations.objects.append(
+                gtype  # FIX: # pyright: ignore[reportArgumentType]
+            )
 
     def _get_graphql_type(self, type_):
         """Lifted from strawberry.Schema.__init__"""
-        if has_object_definition(type_) and type_.__strawberry_definition__.is_generic:
+        if (
+            has_object_definition(type_)
+            and type_.__strawberry_definition__.is_generic  # FIX: # pyright: ignore[reportAttributeAccessIssue]  # noqa: E501
+        ):
             type_ = StrawberryAnnotation(type_).resolve()
         graphql_type = self.schema_converter.from_maybe_optional(type_)
         if isinstance(graphql_type, GraphQLNonNull):

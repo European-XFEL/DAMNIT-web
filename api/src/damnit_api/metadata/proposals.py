@@ -34,7 +34,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
         root_path = format_proposal_path(info["def_proposal_path"])
         damnit_path = get_damnit_path(root_path, suffix="usr/Shared")
         if not damnit_path:
-            return None
+            return None  # FIX: # pyright: ignore[reportReturnType]
 
         principal_investigator = await mymdc.fetch_user(
             info["principal_investigator_id"]
@@ -80,7 +80,7 @@ async def get_available_proposals(user_groups, use_cache=True) -> list[str]:
             continue
         proposals[prop_num] = info
 
-    return proposals
+    return proposals  # FIX: # pyright: ignore[reportReturnType]
 
 
 def sort_proposals_by_run_cycle(proposals, full=False):
@@ -186,7 +186,7 @@ def get_damnit_path(path: str | Path, suffix: str | None = None) -> str:
             if p.is_dir():
                 return str(p)
 
-    return None
+    return None  # FIX: # pyright: ignore[reportReturnType]
 
 
 def get_proposal_number_from_path(path: str) -> str:

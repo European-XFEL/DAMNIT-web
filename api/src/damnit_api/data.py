@@ -17,16 +17,20 @@ def get_extracted_data(proposal, run, variable):
     except KeyError:
         return standardize(None, name=variable, dtype=DamnitType.NONE.value)
 
-    data = var_data.read()
-    type_hint = var_data.type_hint()
+    data = var_data.read()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+    type_hint = (
+        var_data.type_hint()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+    )
 
     match type(data):
         case np.ndarray:
             # We need to squeeze the data first to get the right Damnit type
             # and to set the right dimension names
-            data = data.squeeze()
+            data = data.squeeze()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
         case xr.DataArray:
-            data = data.squeeze(drop=True)
+            data = data.squeeze(  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+                drop=True  # FIX: # pyright: ignore[reportCallIssue]
+            )
 
     try:
         dtype = get_damnit_type(data, type_hint=type_hint)
@@ -38,7 +42,11 @@ def get_extracted_data(proposal, run, variable):
         case DamnitType.ARRAY | DamnitType.IMAGE:
             data = get_array(data)
         case DamnitType.RGBA:
-            attrs = {"shape": list(data.shape[:2])}
+            attrs = {
+                "shape": list(
+                    data.shape[:2]  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+                )
+            }
             data = get_png(data)
             dtype = DamnitType.PNG
 

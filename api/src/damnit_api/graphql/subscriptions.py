@@ -77,8 +77,8 @@ class Subscription:
         self,
         info: Info,
         database: DatabaseInput,
-        timestamp: Timestamp,
-    ) -> AsyncGenerator[JSON, None]:  # noqa: UP043
+        timestamp: Timestamp,  # FIX: # pyright: ignore[reportInvalidTypeForm]
+    ) -> AsyncGenerator[JSON]:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         while True:
             # Sleep first :)
             await asyncio.sleep(POLLING_INTERVAL)
