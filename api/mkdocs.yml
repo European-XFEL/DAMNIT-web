@@ -6,6 +6,9 @@ theme:
   features:
     - content.code.annotate
     - navigation.instant
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.sections
 
 repo_url: https://github.com/European-XFEL/DAMNIT-web.git
 
@@ -19,8 +22,10 @@ nav:
     - ./dev/architecture.md
 
 markdown_extensions:
-  - pymdownx.snippets
   - admonition
+  - pymdownx.details
+  - pymdownx.snippets
+  - pymdownx.superfences
 
 plugins:
   - search
