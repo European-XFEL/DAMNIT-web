@@ -24,27 +24,39 @@ def test_update_model():
 
 
 def test_damnit_table_no_registered():
-    assert len(DamnitTable.registry) == 0
+    assert (
+        len(DamnitTable.registry)  # FIX:  # pyright: ignore[reportAttributeAccessIssue]
+        == 0
+    )
 
 
 def test_damnit_table_first_registered():
     model = DamnitTable("foo")
     assert_model(model, proposal="foo")
-    assert len(DamnitTable.registry) == 1
+    assert (
+        len(DamnitTable.registry)  # FIX:  # pyright: ignore[reportAttributeAccessIssue]
+        == 1
+    )
 
 
 def test_damnit_table_registered_once():
     first = DamnitTable("foo")
     second = DamnitTable("foo")
     assert first is second
-    assert len(DamnitTable.registry) == 1
+    assert (
+        len(DamnitTable.registry)  # FIX:  # pyright: ignore[reportAttributeAccessIssue]
+        == 1
+    )
 
 
 def test_damnit_table_second_registered():
     first = DamnitTable("first")
     second = DamnitTable("second")
     assert first is not second
-    assert len(DamnitTable.registry) == 2
+    assert (
+        len(DamnitTable.registry)  # FIX:  # pyright: ignore[reportAttributeAccessIssue]
+        == 2
+    )
 
 
 def test_damnit_table_valid_update():

@@ -93,7 +93,7 @@ class Query:
         """
         proposal = database.proposal
 
-        model = get_model(proposal)
+        model = get_model(proposal)  # FIX: # pyright: ignore[reportArgumentType]
         if model is None:
             msg = f"Table model for proposal {proposal} is not found."
             raise RuntimeError(msg)
@@ -114,8 +114,12 @@ class Query:
         ]
 
     @strawberry.field
-    def metadata(self, database: DatabaseInput) -> JSON:
-        model = get_model(database.proposal)
+    def metadata(
+        self, database: DatabaseInput
+    ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+        model = get_model(
+            database.proposal  # FIX: # pyright: ignore[reportArgumentType]
+        )
         return {
             "runs": model.runs,
             "variables": model.variables,
@@ -124,9 +128,15 @@ class Query:
         }
 
     @strawberry.field
-    def extracted_data(self, database: DatabaseInput, run: int, variable: str) -> JSON:
+    def extracted_data(
+        self, database: DatabaseInput, run: int, variable: str
+    ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
         return get_extracted_data(
-            proposal=int(database.proposal), run=run, variable=variable
+            proposal=int(
+                database.proposal  # FIX: # pyright: ignore[reportArgumentType]
+            ),
+            run=run,
+            variable=variable,  # FIX: # pyright: ignore[reportArgumentType]
         )
