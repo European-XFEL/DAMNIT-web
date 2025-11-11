@@ -9,8 +9,14 @@ theme:
 
 repo_url: https://github.com/European-XFEL/DAMNIT-web.git
 
-watch:
-  - ./README.md
+nav:
+  - index.md
+  - Deployment: deployment.md
+  - Development:
+    - ./dev/setup.md
+    - ./dev/ci-cd.md
+    - ./dev/docs.md
+    - ./dev/architecture.md
 
 markdown_extensions:
   - pymdownx.snippets
