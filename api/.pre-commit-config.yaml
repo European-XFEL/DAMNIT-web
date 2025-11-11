@@ -21,3 +21,13 @@ repos:
       rev: 0.9.8
       hooks:
           - id: uv-lock
+    # Pyright - static type checker
+    - repo: local
+      hooks:
+          - id: pyright
+            name: pyright
+            entry: uv
+            args: ["run", "pyright"]
+            language: system
+            exclude: frontend
+            types: [python]
