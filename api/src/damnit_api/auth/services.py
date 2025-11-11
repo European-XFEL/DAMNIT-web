@@ -1,7 +1,7 @@
 import asyncio
 import re
-from pathlib import Path
 
+from anyio import Path as APath
 from async_lru import alru_cache
 from fastapi import Request
 from ldap3 import ALL, SUBTREE, Connection, Server
@@ -119,10 +119,10 @@ async def user_from_session(request: Request) -> User:
 
 
 @alru_cache(ttl=60)
-async def resource_from_path(path: Path) -> Resource:
+async def resource_from_path(path: APath) -> Resource:
     acl = await ACL.from_path(path)
-    owner = path.owner()
-    group = path.group()
+    owner = await path.owner()
+    group = await path.group()
 
     logger.debug("Resource from path", path=path, acl=acl, owner=owner, group=group)
 

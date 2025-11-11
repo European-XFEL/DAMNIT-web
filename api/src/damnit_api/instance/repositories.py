@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 
 import yaml
+from anyio import Path as APath
 from async_lru import alru_cache
 
 
@@ -17,10 +18,7 @@ class AmoreDirRepo:
     async def sync_init(self):
         loop = asyncio.get_event_loop()
 
-        cycles = await loop.run_in_executor(
-            None,
-            lambda: set(Path("/gpfs/exfel/exp/").glob("*/*")),
-        )
+        cycles = {p async for p in APath("/gpfs/exfel/exp/").glob("*/*")}
 
         for cycle in cycles:
             self.data[str(cycle)] = await loop.run_in_executor(
