@@ -87,6 +87,10 @@ async def user_from_ldap(uid: str = "", mail: str = "") -> User:
     # For now, let's also include the list of proposals.
     proposals = await get_available_proposals(groups)
 
+    if not uid or not isinstance(uid, int):
+        msg = "Invalid UID from LDAP"
+        raise Exception(msg)  # TODO: better exception
+
     user = User(
         uid=uid,
         username=username,

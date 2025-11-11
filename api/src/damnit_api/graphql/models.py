@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from typing import (
     Generic,
     NewType,
-    Optional,
     TypeVar,
 )
 
@@ -60,7 +59,7 @@ class BaseVariable:
 
 
 @strawberry.type
-class KnownVariable(Generic[T], BaseVariable):
+class KnownVariable(Generic[T], BaseVariable):  # FIX: # noqa: UP046
     value: T
 
 
@@ -187,7 +186,7 @@ class DamnitTable(metaclass=Registry):
         annotations = {
             name: DamnitRun.known_annotations().get(
                 name,
-                Optional[DamnitVariable],
+                DamnitVariable | None,
             )
             for name in self.variables
         }
