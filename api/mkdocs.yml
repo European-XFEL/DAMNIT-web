@@ -1,0 +1,13 @@
+site_name: DAMNIT Web API
+site_description: DAMNIT Web API Documentation
+
+theme:
+  name: material
+  features:
+    - content.code.annotate
+    - navigation.instant
+
+repo_url: https://github.com/European-XFEL/DAMNIT-web.git
+
+plugins:
+  - search
