@@ -39,11 +39,12 @@ plugins:
         - https://docs.pydantic.dev/latest/objects.inv
         options:
           # See https://mkdocstrings.github.io/python/usage/#recommended-settings
-          docstring_section_style: list
+          docstring_section_style: spacy
           docstring_style: "google"
           heading_level: 1
           inherited_members: true
           merge_init_into_class: true
+          modernize_annotations: true
           parameter_headings: true
           separate_signature: true
           show_bases: true
