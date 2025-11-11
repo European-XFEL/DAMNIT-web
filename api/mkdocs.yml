@@ -36,6 +36,7 @@ plugins:
         inventories:
         # Load object inventories to enable cross-references to other projects.
         - https://docs.python.org/3/objects.inv
+        - https://docs.pydantic.dev/latest/objects.inv
         options:
           # See https://mkdocstrings.github.io/python/usage/#recommended-settings
           docstring_section_style: list
