@@ -1,5 +1,6 @@
 .vscode
 damnit_proposals.json
+dist/
 certs/
 *.crt
 *.key

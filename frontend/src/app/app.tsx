@@ -1,4 +1,4 @@
-import { PropsWithChildren, useEffect } from 'react'
+import { type PropsWithChildren, useEffect } from 'react'
 import {
   Navigate,
   Route,
@@ -22,7 +22,7 @@ import {
 } from '../features/pages'
 import { resetPlots } from '../features/plots'
 import { resetTable as resetTableView } from '../features/table'
-import { useAppDispatch } from '../redux'
+import { useAppDispatch } from '../redux/hooks'
 import { LoginRoute, LogoutRoute, PrivateRoute, history } from '../routes'
 
 function ProposalWrapper({ children }: PropsWithChildren) {

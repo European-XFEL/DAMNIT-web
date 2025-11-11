@@ -2,7 +2,7 @@ import { Stack, Text } from '@mantine/core'
 
 import {
   ContextMenuItem as MantineContextMenuItem,
-  ContextMenuItemOptions as MantineContextMenuItemOptions,
+  type ContextMenuItemOptions as MantineContextMenuItemOptions,
 } from 'mantine-contextmenu'
 
 export type ContextMenuItemOptions = {

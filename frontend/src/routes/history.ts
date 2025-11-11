@@ -1,4 +1,4 @@
-import { NavigateFunction, Location } from 'react-router-dom'
+import { type NavigateFunction, type Location } from 'react-router-dom'
 
 class HistoryService {
   private _navigate: NavigateFunction | null = null

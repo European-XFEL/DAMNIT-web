@@ -1,4 +1,4 @@
 import { createSelector } from '@reduxjs/toolkit'
-import { RootState } from './reducer'
+import { type RootState } from './reducer'
 
 export const createTypedSelector = createSelector.withTypes<RootState>()

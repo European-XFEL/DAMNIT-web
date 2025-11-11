@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { range } from '@mantine/hooks'
 
 import { getDeferredTableValues } from '../../data/table/table-data.thunks'
-import { useAppDispatch } from '../../redux'
+import { useAppDispatch } from '../../redux/hooks'
 import { sortedInsert, sortedSearch } from '../../utils/array'
 
 class Pages {

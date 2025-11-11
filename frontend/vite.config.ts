@@ -1,10 +1,11 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, type ProxyOptions, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
 import https from 'https'
 
-export default defineConfig(({ command, mode }) => {
+// https://vite.dev/config/
+export default defineConfig(({ command, mode }): UserConfig => {
   const {
     VITE_API,
     VITE_BASE_URL,
@@ -16,8 +17,9 @@ export default defineConfig(({ command, mode }) => {
 
   // Resolve base URL
   const BASE_URL = (VITE_BASE_URL || '/').replace(/\/?$/, '/')
-  const withBaseUrl = (path) => `${BASE_URL}${path}`
-  const withoutBaseUrl = (path) => path.replace(new RegExp('^' + BASE_URL), '/')
+  const withBaseUrl = (path: string) => `${BASE_URL}${path}`
+  const withoutBaseUrl = (path: string) =>
+    path.replace(new RegExp('^' + BASE_URL), '/')
 
   const getSslConfig = () => {
     let sslConfig
@@ -56,11 +58,11 @@ export default defineConfig(({ command, mode }) => {
       throw new Error('HTTPS API requires mTLS configuration')
     }
 
-    const defaultProxyConfig = {
+    const defaultProxyConfig: ProxyOptions = {
       target: apiURL.origin,
       secure: !!sslConfig,
       changeOrigin: true,
-      configure: (proxy, options) => {
+      configure: (_proxy, options) => {
         if (sslConfig) {
           options.agent = httpsAgent
         }
@@ -71,7 +73,7 @@ export default defineConfig(({ command, mode }) => {
     return {
       host: true,
       port: Number(VITE_PORT) || 5173,
-      allowedHosts: true,
+      allowedHosts: true as const,
       proxy: {
         [withBaseUrl('graphql')]: { ...defaultProxyConfig, ws: true },
         [withBaseUrl('oauth')]: { ...defaultProxyConfig },
@@ -82,25 +84,9 @@ export default defineConfig(({ command, mode }) => {
     }
   }
 
-  const getTestConfig = () => {
-    return {
-      globals: true,
-      environment: 'jsdom',
-      setupFiles: ['./tests/setup.ts'],
-      testMatch: ['./tests/**/*.test.tsx'],
-      threads: false,
-    }
-  }
-
   return {
     base: BASE_URL,
     plugins: [react()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './src'),
-      },
-    },
     server: command === 'serve' ? getServerConfig() : undefined,
-    test: mode === 'test' ? getTestConfig() : undefined,
   }
 })

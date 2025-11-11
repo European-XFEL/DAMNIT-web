@@ -1,6 +1,6 @@
 import Plotly from 'react-plotly.js'
 
-import { PlotInfo, PlotMetadata } from './plots.types'
+import { type PlotInfo, type PlotMetadata } from './plots.types'
 
 type Plot = {
   data: Plotly.Data[]

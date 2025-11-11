@@ -10,7 +10,7 @@ import { IconChevronDown, IconSearch } from '@tabler/icons-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
-import { useAppDispatch, useAppSelector } from '../../redux'
+import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import type { TagItem } from '../../types'
 import { setVariablesVisibility } from '../table/table.slice'
 import VisibilitySettingsItem from './visibility-settings-item'

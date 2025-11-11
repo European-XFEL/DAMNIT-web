@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 
-import { useMutation } from '@apollo/client'
-import { useSubscription } from '@apollo/client'
+import { useMutation, useSubscription } from '@apollo/client/react'
 import { hideLoading } from 'react-redux-loading-bar'
 
 import { updateTable } from '../data/table'
@@ -11,7 +10,7 @@ import {
   LATEST_DATA_FIELD_NAME,
   LATEST_DATA_SUBSCRIPTION,
 } from '../data/table'
-import { useAppDispatch, useAppSelector } from '../redux'
+import { useAppDispatch, useAppSelector } from '../redux/hooks'
 
 const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === 'test')
 

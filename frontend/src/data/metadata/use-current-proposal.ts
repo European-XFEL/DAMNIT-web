@@ -1,5 +1,5 @@
 import { useGetProposalQuery } from './metadata.api'
-import { useAppSelector } from '../../redux'
+import { useAppSelector } from '../../redux/hooks'
 
 const useCurrentProposal = () => {
   const proposal_num = useAppSelector((state) => state.metadata.proposal.value)

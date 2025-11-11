@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   printWidth: 80, // max 120 chars in line, code is easy to read
   useTabs: false, // use spaces instead of tabs
   tabWidth: 2, // "visual width" of of the "tab"

@@ -1,7 +1,8 @@
 import { getExtractedValue } from './extracted'
 import { getTableData } from './table'
 
-import type { AppDispatch, RootState } from '../redux/'
+import { type RootState } from '../redux/reducer'
+import { type AppDispatch } from '../redux/store'
 
 type GetAllExtractedValuesOptions = {
   proposal: string

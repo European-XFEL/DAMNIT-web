@@ -1,8 +1,8 @@
 import { Stack } from '@mantine/core'
 import { useState } from 'react'
-import { useAppSelector } from '../../redux'
+import { useAppSelector } from '../../redux/hooks'
 import { BreadcrumbsBar } from './breadcrumbs-bar'
-import { SettingsView, nodeByView } from './settings-config'
+import { type SettingsView, nodeByView } from './settings-config'
 
 function Settings() {
   const [currentView, setCurrentView] = useState<SettingsView>('main')

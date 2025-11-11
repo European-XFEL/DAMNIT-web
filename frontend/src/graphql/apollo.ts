@@ -3,13 +3,13 @@ import {
   ApolloLink,
   HttpLink,
   InMemoryCache,
-  NextLink,
   Observable,
-  Observer,
-  Operation,
   from,
   split,
-  FetchResult,
+  type NextLink,
+  type Observer,
+  type Operation,
+  type FetchResult,
 } from '@apollo/client'
 import {
   removeTypenameFromVariables,

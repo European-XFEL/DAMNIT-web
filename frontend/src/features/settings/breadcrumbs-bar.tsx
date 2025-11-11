@@ -1,5 +1,5 @@
 import { Anchor, Breadcrumbs, Text } from '@mantine/core'
-import { NavNode, SettingsView, pathForView } from './settings-config'
+import { type NavNode, type SettingsView, pathForView } from './settings-config'
 
 interface Props {
   currentView: SettingsView

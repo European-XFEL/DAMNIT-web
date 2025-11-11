@@ -1,9 +1,9 @@
-import { PayloadAction } from '@reduxjs/toolkit'
+import { type PayloadAction } from '@reduxjs/toolkit'
 
 import { getTable, getTableData } from './table-data.slice'
-import { TableInfo } from './table-data.types'
+import { type TableInfo } from './table-data.types'
 
-import { AppDispatch } from '../../redux'
+import { type AppDispatch } from '../../redux/store'
 
 export const getDeferredTableValues =
   ({

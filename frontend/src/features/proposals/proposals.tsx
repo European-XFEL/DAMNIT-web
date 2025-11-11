@@ -1,14 +1,14 @@
-import { ComponentType, memo, useState } from 'react'
+import { type ComponentType, memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Box,
   Code,
-  ElementProps,
   Group,
   rem,
   Stack,
   Text,
-  TextProps,
+  type ElementProps,
+  type TextProps,
 } from '@mantine/core'
 import {
   IconCalendarEvent,
@@ -20,9 +20,12 @@ import dayjs from 'dayjs'
 import { DataTable } from 'mantine-datatable'
 
 import { selectAvailableProposals } from '../../auth/auth.slice'
-import { InstrumentBadge, InstrumentBadgeProps } from '../../components/badges'
+import {
+  InstrumentBadge,
+  type InstrumentBadgeProps,
+} from '../../components/badges'
 import { useProposals } from '../../data/metadata'
-import { useAppSelector } from '../../redux'
+import { useAppSelector } from '../../redux/hooks'
 import { orderBy } from '../../utils/objects'
 import styles from './proposals.module.css'
 

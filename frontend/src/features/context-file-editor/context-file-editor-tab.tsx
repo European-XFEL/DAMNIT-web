@@ -8,10 +8,10 @@ import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 import {
   useCheckFileLastModifiedQuery,
   useGetFileContentQuery,
-} from './contextfileeditor.api'
-import { useAppSelector } from '../../redux'
-import ContextFileEditor from './contextfileeditor'
-import LastModifiedIndicator from './lastmodifiedindicator'
+} from './context-file-editor.api'
+import { useAppSelector } from '../../redux/hooks'
+import ContextFileEditor from './context-file-editor'
+import LastModifiedIndicator from './last-modified-indicator'
 
 const ContextFileEditorTab: React.FC = () => {
   const { proposal } = useAppSelector((state) => state.metadata)

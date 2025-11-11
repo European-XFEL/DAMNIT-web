@@ -6,7 +6,7 @@ Apollo Client store
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
 import ExtractedDataServices from './extracted-data.services'
-import { ExtractedDataItem, ExtractedMetadataItem } from '../../types'
+import { type ExtractedDataItem, type ExtractedMetadataItem } from '../../types'
 
 type ExtractedDataState = {
   data: { [run: string]: { [variable: string]: ExtractedDataItem } }

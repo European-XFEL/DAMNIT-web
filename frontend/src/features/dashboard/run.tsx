@@ -2,8 +2,8 @@ import { Image, ScrollArea, Text } from '@mantine/core'
 
 import classes from './run.module.css'
 import { DTYPES } from '../../constants'
-import { useAppSelector } from '../../redux'
-import { VariableValue } from '../../types'
+import { useAppSelector } from '../../redux/hooks'
+import { type VariableValue } from '../../types'
 import { formatDate, isEmpty } from '../../utils/helpers'
 
 const EXCLUDED_VARIABLES = ['proposal', 'run', 'added_at']
