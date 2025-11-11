@@ -10,6 +10,9 @@ theme:
     - navigation.tabs
     - navigation.sections
 
+extra_css:
+- stylesheets/mkdocstrings.css
+
 repo_url: https://github.com/European-XFEL/DAMNIT-web.git
 
 nav:
