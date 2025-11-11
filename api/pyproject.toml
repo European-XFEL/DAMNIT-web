@@ -47,6 +47,10 @@ dev = [
     { include-group = "test" },
     { include-group = "debug" },
 ]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.0",
+]
 
 [tool.uv]
 default-groups = []
