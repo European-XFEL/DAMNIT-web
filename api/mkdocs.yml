@@ -9,5 +9,11 @@ theme:
 
 repo_url: https://github.com/European-XFEL/DAMNIT-web.git
 
+watch:
+  - ./README.md
+
+markdown_extensions:
+  - pymdownx.snippets
+
 plugins:
   - search
