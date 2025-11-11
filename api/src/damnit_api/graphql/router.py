@@ -16,11 +16,13 @@ class Router(GraphQLRouter, metaclass=Singleton):
     def __init__(self):
         super().__init__(
             schema=Schema(),
-            context_getter=get_context,
+            context_getter=get_context,  # FIX: # pyright: ignore[reportArgumentType]
             subscription_protocols=SUBSCRIPTION_PROTOCOLS,
         )
 
-    def encode_json(self, data: GraphQLHTTPResponse) -> bytes:
+    def encode_json(  # FIX: # pyright: ignore[reportIncompatibleMethodOverride]
+        self, data: GraphQLHTTPResponse
+    ) -> bytes:
         return orjson.dumps(
             data,
             default=lambda x: None if isinstance(x, float) and np.isnan(x) else x,

@@ -86,15 +86,21 @@ class Singleton(ABCMeta):
 
 class Registry(ABCMeta):
     def __call__(cls, proposal, *args, **kwargs):
-        instance = cls.registry.get(proposal)
+        instance = (
+            cls.registry.get(  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+                proposal
+            )
+        )
         if instance is None:
             instance = super().__call__(proposal, *args, **kwargs)
-            cls.registry[proposal] = instance
+            cls.registry[  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+                proposal
+            ] = instance
         return instance
 
     def __new__(cls, name, bases, attrs):
         new_class = super().__new__(cls, name, bases, attrs)
-        new_class.registry = {}
+        new_class.registry = {}  # FIX: # pyright: ignore[reportAttributeAccessIssue]
         return new_class
 
 
