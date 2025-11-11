@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import aiofiles
+from anyio import Path as APath
 from async_lru import alru_cache
 
 from ..settings import settings
@@ -14,7 +15,7 @@ from .mymdc import MyMDC
 
 @alru_cache(ttl=60)
 async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
-    cache = Path(settings.proposal_cache)
+    cache = APath(settings.proposal_cache)
     proposals = None
 
     # Check from cache if existing
@@ -130,7 +131,7 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
 
 
 async def get_damnit_proposals(use_cache: bool) -> dict:
-    cache = Path(settings.proposal_cache)
+    cache = APath(settings.proposal_cache)
     if use_cache and cache.exists():
         async with aiofiles.open(settings.proposal_cache) as file:
             # TODO: Update cache for new proposals
