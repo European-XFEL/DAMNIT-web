@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@damnit-frontend/ui": "workspace:^",
     "@apollo/client": "^3.13.6",
+    "@damnit-frontend/ui": "workspace:^",
     "@glideapps/glide-data-grid": "^6.0.3",
     "@glideapps/glide-data-grid-cells": "^6.0.3",
     "@mantine/core": "^7.17.3",
