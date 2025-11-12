@@ -350,3 +350,16 @@ components:
           example: about instrument cycle description
       xml:
         name: Instrument_cycles
+    users_proposals:
+      type: array
+      items:
+        type: object
+        properties:
+          proposal_id:
+            type: integer
+            example: 1
+          proposal_number:
+            type: integer
+            example: 1
+      xml:
+        name: users_proposals
