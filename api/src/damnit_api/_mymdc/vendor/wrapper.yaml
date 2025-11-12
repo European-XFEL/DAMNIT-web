@@ -11,3 +11,5 @@ components:
       $ref: ./openapi.yaml#/components/schemas/users
     instrument_cycles:
       $ref: ./openapi.yaml#/components/schemas/instrument_cycles
+    users_proposals:
+      $ref: ./openapi.yaml#/components/schemas/users_proposals
