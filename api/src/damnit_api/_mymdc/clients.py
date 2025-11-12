@@ -118,6 +118,11 @@ class MyMdCClient(httpx.AsyncClient, ports.MyMdCPort):
         response.raise_for_status()
         return response.json()
 
+    async def _get_user_proposals(self, id: models.UserId):
+        response = await self.get(f"users/{id}/proposals")
+        response.raise_for_status()
+        return response.json()
+
 
 class MockMyMdCClient(MockMyMdCData, ports.MyMdCPort):
     """Mock MyMdC provider for testing and local development."""
@@ -135,3 +140,7 @@ class MockMyMdCClient(MockMyMdCData, ports.MyMdCPort):
     async def _get_cycle_by_id(self, id: int):
         """Mock method to get instrument cycles by ID."""
         return self.mock_cycles[id].model_dump()
+
+    async def _get_user_proposals(self, id: models.UserId):
+        """Mock method to get all proposals associated with a user ID."""
+        return self.mock_user_proposals[id].model_dump()

@@ -1,5 +1,5 @@
 from ..models import ProposalNo
-from .vendor.models import GetProposals, InstrumentCycles, Users
+from .vendor.models import GetProposals, InstrumentCycles, Users, UsersProposals
 
 User = Users
 """MyMdC User model."""
@@ -13,5 +13,16 @@ Proposal = GetProposals
 InstrumentCycle = InstrumentCycles
 """MyMdC Instrument Cycle model."""
 
-# Export the relevant models
-__all__ = ["InstrumentCycle", "Proposal", "ProposalNo", "User", "UserId"]
+
+UserProposals = UsersProposals
+"""MyMdC User Proposals model, list of all proposals a user has access to."""
+
+
+__all__ = [
+    "InstrumentCycle",
+    "Proposal",
+    "ProposalNo",
+    "User",
+    "UserId",
+    "UserProposals",
+]

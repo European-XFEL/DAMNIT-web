@@ -7,6 +7,8 @@ from pydantic_settings import BaseSettings
 
 from damnit_api._mymdc import models
 
+from .vendor.models import UsersProposal
+
 
 class MyMdCCredentials(BaseSettings):
     """MyMdC client settings.
@@ -53,6 +55,12 @@ class MockMyMdCData(BaseSettings):
             instrument_id=1234,
             begin_at="2020-01-01T00:00:00+00:00",
             end_at="2020-01-01T00:00:00+00:00",
+        )
+    }
+
+    mock_user_proposals: dict[str, models.UserProposals] = {
+        "foo": models.UserProposals(
+            root=[UsersProposal(proposal_id=1234, proposal_number=1234)],
         )
     }
 

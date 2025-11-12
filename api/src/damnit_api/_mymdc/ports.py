@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from .models import InstrumentCycle, Proposal, ProposalNo, User, UserId
+from .models import InstrumentCycle, Proposal, ProposalNo, User, UserId, UserProposals
 
 
 class MyMdCPort(ABC):
@@ -28,3 +28,10 @@ class MyMdCPort(ABC):
     async def get_cycle_by_id(self, id: int) -> InstrumentCycle:
         """Get a user by their (MyMdC) ID."""
         return InstrumentCycle.model_validate(await self._get_cycle_by_id(id))
+
+    @abstractmethod
+    async def _get_user_proposals(self, id: UserId) -> dict: ...
+
+    async def get_user_proposals(self, id: UserId) -> UserProposals:
+        """Get all proposals associated with a user ID."""
+        return UserProposals.model_validate(await self._get_user_proposals(id))
