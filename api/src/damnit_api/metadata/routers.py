@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 
 from .._mymdc import get_client_mymdc
 from .._mymdc.clients import MyMdCClient
-from ..models import ProposalNo
+from ..shared.models import ProposalNo
 from . import services
 from .models import ProposalMeta
 

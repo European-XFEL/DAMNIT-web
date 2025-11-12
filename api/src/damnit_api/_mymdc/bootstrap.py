@@ -7,7 +7,7 @@ from . import clients
 from .settings import MockMyMdCData, MyMdCCredentials
 
 if TYPE_CHECKING:
-    from ..settings import Settings
+    from ..shared.settings import Settings
 
 logger = get_logger(__name__)
 
