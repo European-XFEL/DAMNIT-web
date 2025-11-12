@@ -7,7 +7,7 @@ from anyio import Path as APath
 
 from .. import get_logger
 from .._mymdc.clients import MyMdCClient
-from ..models import Instrument, ProposalNo
+from ..shared.models import Instrument, ProposalNo
 from .models import ProposalMeta
 
 logger = get_logger(__name__)

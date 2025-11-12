@@ -5,8 +5,8 @@ from typing import Any
 import strawberry
 from sqlalchemy import or_, select
 
-from ..const import DEFAULT_PROPOSAL
 from ..db import async_table, get_session
+from ..shared.const import DEFAULT_PROPOSAL
 from ..utils import map_dtype
 from .models import DamnitType
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from ..models import Instrument, ProposalCycle, ProposalNo
+from ..shared.models import Instrument, ProposalCycle, ProposalNo
 
 
 class ProposalMeta(BaseModel):
