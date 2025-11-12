@@ -10,17 +10,22 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import _logging, auth, contextfile, metadata
+    from . import _logging, _mymdc, auth, contextfile, get_logger, metadata
     from .graphql import add_graphql_router
-    from .settings import settings
+    from .shared.settings import settings
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):  # noqa: RUF029
+    async def lifespan(app: FastAPI):
         _logging.configure(
             level=settings.log_level,
             debug=settings.debug,
             add_call_site_parameters=True,
         )
+
+        logger = get_logger("lifespan")
+        logger.info("Starting application lifespan")
+
+        await _mymdc.bootstrap(settings)
 
         auth.configure()
 
@@ -63,7 +68,7 @@ if __name__ == "__main__":
     import uvicorn
 
     from . import _logging, get_logger
-    from .settings import settings
+    from .shared.settings import settings
 
     _logging.configure(
         level=settings.log_level,
@@ -75,6 +80,8 @@ if __name__ == "__main__":
 
     # TODO: warning/logging for address bind to localhost only which is aware
     # of running in container/in front of reverse proxy?
+
+    logger.debug("Settings", **settings.model_dump())
 
     logger.info("Starting uvicorn with settings", **settings.uvicorn.model_dump())
 

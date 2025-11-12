@@ -6,7 +6,6 @@ import xarray as xr
 from damnit.api import DataType
 from numpy.testing import assert_array_equal
 
-from damnit_api.const import DamnitType
 from damnit_api.data import (
     NOT_SUPPORTED_MESSAGE,
     get_damnit_type,
@@ -14,6 +13,7 @@ from damnit_api.data import (
     standardize,
     to_dataarray,
 )
+from damnit_api.shared.const import DamnitType
 
 # ---- get_damnit_type -------------------------------------------------------
 

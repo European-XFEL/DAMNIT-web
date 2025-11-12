@@ -9,7 +9,7 @@ from authlib.integrations.starlette_client import (  # type: ignore[import-untyp
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from ..settings import settings
+from ..shared.settings import settings
 from . import services
 from .models import User
 

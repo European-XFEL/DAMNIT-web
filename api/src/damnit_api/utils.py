@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Union, get_args, get_origin
 
 import numpy as np
 
-from .const import DamnitType
+from .shared.const import DamnitType
 
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
