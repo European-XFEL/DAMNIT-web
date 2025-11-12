@@ -9,3 +9,5 @@ components:
       $ref: ./openapi.yaml#/components/schemas/get_proposals
     users:
       $ref: ./openapi.yaml#/components/schemas/users
+    instrument_cycles:
+      $ref: ./openapi.yaml#/components/schemas/instrument_cycles

@@ -28,17 +28,31 @@ class MyMdCCredentials(BaseSettings):
 class MockMyMdCData(BaseSettings):
     """Mock MyMdC data settings for testing and local development."""
 
-    mock_users: dict[int, models.User] = {
-        1: models.User(email="foo@bar.com", first_name="Foo", last_name="Bar"),
+    mock_users: dict[str, models.User] = {
+        "foo": models.User(email="foo@bar.com", first_name="Foo", last_name="Bar"),
     }
 
     mock_proposals: dict[int, models.Proposal] = {
         1234: models.Proposal(
+            number=1234,
+            def_proposal_path="/gpfs/exfel/exp/SCS/202131/p900212/raw",
+            beamtime_start_at="2020-01-01T00:00:00+00:00",
+            beamtime_end_at="2020-01-01T00:00:00+00:00",
+            instrument_identifier="SCS",
             title="Foo",
             instrument_id=1234,
             instrument_cycle_id=1234,
             principal_investigator_id=1234,
             main_proposer_id=1234,
+        )
+    }
+
+    mock_cycles: dict[int, models.InstrumentCycle] = {
+        1234: models.InstrumentCycle(
+            identifier="202020",
+            instrument_id=1234,
+            begin_at="2020-01-01T00:00:00+00:00",
+            end_at="2020-01-01T00:00:00+00:00",
         )
     }
 

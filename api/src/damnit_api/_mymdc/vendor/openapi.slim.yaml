@@ -306,3 +306,47 @@ components:
           example: 02-02-2021 18:09:44
       xml:
         name: Users
+    instrument_cycles:
+      required:
+        - begin_at
+        - end_at
+        - identifier
+        - instrument_id
+      type: object
+      properties:
+        identifier:
+          type: string
+          example: '202020'
+        instrument_id:
+          type: integer
+          example: 106
+        instrument_identifier:
+          type: string
+          example: SPB
+        begin_at:
+          type: string
+          example: '08-04-2020 18:09:44 '
+        end_at:
+          type: string
+          example: '07-05-2020 18:09:44 '
+        start_call_at:
+          type: string
+          example: '08-04-2020 18:09:44 '
+        close_call_at:
+          type: string
+          example: '07-05-2020 18:09:44 '
+        url:
+          type: string
+          example: https://www.google.de/
+        flg_available:
+          type: boolean
+          example: true
+          default: true
+        flg_proposal_system:
+          type: string
+          example: local
+        description:
+          type: string
+          example: about instrument cycle description
+      xml:
+        name: Instrument_cycles
