@@ -1,34 +1,17 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { Provider as ReduxProvider } from 'react-redux'
-import { BrowserRouter } from 'react-router-dom'
-import { ApolloProvider } from '@apollo/client/react'
-import { MantineProvider } from '@mantine/core'
 
-import '@mantine/core/styles.layer.css'
-import 'mantine-contextmenu/styles.layer.css'
-import 'mantine-datatable/styles.layer.css'
-
-import '@glideapps/glide-data-grid/dist/index.css'
-
-import { client } from '@damnit-frontend/ui/graphql/apollo'
-import { BASE_URL } from '@damnit-frontend/ui/constants'
-import { setupStore } from '@damnit-frontend/ui/redux/store'
-import App from '@damnit-frontend/ui/app/app'
+import '@damnit-frontend/ui/styles'
+import { Providers } from '@damnit-frontend/ui'
+import App from './app'
 
 const container = document.getElementById('root') as HTMLElement
 const root = createRoot(container)
 
 root.render(
   <React.StrictMode>
-    <ApolloProvider client={client}>
-      <ReduxProvider store={setupStore()}>
-        <BrowserRouter basename={BASE_URL}>
-          <MantineProvider>
-            <App />
-          </MantineProvider>
-        </BrowserRouter>
-      </ReduxProvider>
-    </ApolloProvider>
+    <Providers>
+      <App />
+    </Providers>
   </React.StrictMode>
 )

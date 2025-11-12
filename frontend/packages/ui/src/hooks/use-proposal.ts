@@ -14,7 +14,7 @@ import { useAppDispatch, useAppSelector } from '../redux/hooks'
 
 const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === 'test')
 
-export const useProposal = () => {
+const useProposal = () => {
   // Initialize Redux things
   const proposal = useAppSelector((state) => state.metadata.proposal)
   const { timestamp } = useAppSelector((state) => state.tableData.metadata)
@@ -55,3 +55,5 @@ export const useProposal = () => {
 
   return proposal
 }
+
+export default useProposal

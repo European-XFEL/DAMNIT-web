@@ -9,21 +9,25 @@ import {
 } from 'react-router-dom'
 import LoadingBar, { showLoading } from 'react-redux-loading-bar'
 
-import { useProposal } from './use-proposal'
-import { resetExtractedData } from '../data/extracted'
-import { resetMetadata, setProposalPending } from '../data/metadata'
-import { resetTable as resetTableData } from '../data/table'
-import Dashboard from '../features/dashboard'
 import {
+  Dashboard,
   HeroPage,
   HomePage,
   LoggedOutPage,
+  LoginRoute,
+  LogoutRoute,
   NotFoundPage,
-} from '../features/pages'
-import { resetPlots } from '../features/plots'
-import { resetTable as resetTableView } from '../features/table'
-import { useAppDispatch } from '../redux/hooks'
-import { LoginRoute, LogoutRoute, PrivateRoute, history } from '../routes'
+  PrivateRoute,
+  history,
+  resetExtractedData,
+  resetMetadata,
+  resetPlots,
+  resetTableData,
+  resetTableView,
+  setProposalPending,
+  useAppDispatch,
+  useProposal,
+} from '@damnit-frontend/ui'
 
 function ProposalWrapper({ children }: PropsWithChildren) {
   const proposal = useProposal()

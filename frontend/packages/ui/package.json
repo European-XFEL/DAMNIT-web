@@ -12,6 +12,13 @@
     "name": "European XFEL",
     "email": "da@xfel.eu"
   },
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles": "./src/styles.ts"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
