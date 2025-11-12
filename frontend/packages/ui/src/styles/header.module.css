@@ -1,0 +1,16 @@
+.body {
+  background-color: light-dark(
+    var(--mantine-color-gray-0),
+    var(--mantine-color-dark-6)
+  );
+}
+
+.top {
+  padding-top: var(--mantine-spacing-sm);
+}
+
+.bottom {
+  border-bottom: rem(1px) solid
+    light-dark(var(--mantine-color-gray-2), transparent);
+  /* margin-bottom: rem(120px); */
+}

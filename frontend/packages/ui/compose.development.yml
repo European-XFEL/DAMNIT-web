@@ -1,0 +1,20 @@
+name: damnit-web-dev
+
+networks:
+  proxy:
+    external: true
+
+services:
+  frontend:
+    environment:
+      - NODE_EXTRA_CA_CERTS=/certs/root_ca.crt
+    volumes:
+      - ./certs:/certs
+    networks:
+      - proxy
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=proxy'
+        #- "traefik.http.routers.damnit_web_dev.rule=(Host(`damnit-dev.exfldadev01.desy.de`) || Host(`damnit-dev.xfel.eu`)) && PathPrefix(`/feat/deployment`)"
+      - 'traefik.http.routers.damnit_web_dev.rule=(Host(`damnit-dev.exfldadev01.desy.de`) || Host(`damnit-dev.xfel.eu`))'
+      - 'traefik.http.services.damnit_web_dev.loadbalancer.server.port=5173'
