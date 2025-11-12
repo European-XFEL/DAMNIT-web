@@ -31,7 +31,7 @@ def configure(
     Configures logging and sets up Uvicorn to use Structlog.
     """
 
-    from .settings import settings
+    from .shared.settings import settings
 
     debug = settings.debug if debug is None else debug
     level = settings.log_level if level is None else level
