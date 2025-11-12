@@ -113,14 +113,25 @@ class MyMdCClient(httpx.AsyncClient, ports.MyMdCPort):
         response.raise_for_status()
         return response.json()
 
+    async def _get_cycle_by_id(self, id: int):
+        response = await self.get(f"instrument_cycles/{id}")
+        response.raise_for_status()
+        return response.json()
+
 
 class MockMyMdCClient(MockMyMdCData, ports.MyMdCPort):
     """Mock MyMdC provider for testing and local development."""
 
-    async def _get_user_by_id(self, id: models.UserId):
-        """Mock method to get user information."""
-        return self.mock_users[int(id)].model_dump()
-
     async def _get_proposal_by_number(self, no: models.ProposalNo):
         """Mock method to get proposals by number."""
-        return self.mock_proposals[int(no.root)].model_dump()
+        # FIX: strange pyright error saying `"ProposalNo" is not assignable to
+        # "int" (reportArgumentType)`
+        return self.mock_proposals[no].model_dump()  # pyright: ignore[reportArgumentType]
+
+    async def _get_user_by_id(self, id: models.UserId):
+        """Mock method to get user information."""
+        return self.mock_users[id].model_dump()
+
+    async def _get_cycle_by_id(self, id: int):
+        """Mock method to get instrument cycles by ID."""
+        return self.mock_cycles[id].model_dump()
