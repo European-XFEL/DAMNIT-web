@@ -8,12 +8,15 @@
 
 from typing import TYPE_CHECKING
 
-from .bootstrap import bootstrap
+from .bootstrap import bootstrap as bootstrap
 
 if TYPE_CHECKING:
     from . import clients
 
-global CLIENT
+global __CLIENT
+
+__CLIENT: "clients.MyMdCClient" = None  # pyright: ignore[reportAssignmentType]
+"""Global/singleton MyMdC client instance."""
 
 CLIENT: "clients.MyMdCClient" = None  # pyright: ignore[reportAssignmentType]
 

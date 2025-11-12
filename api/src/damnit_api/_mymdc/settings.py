@@ -11,7 +11,7 @@ from .vendor.models import UsersProposal
 
 
 class MyMdCCredentials(BaseSettings):
-    """MyMdC client settings.
+    """MyMdC client settings used for authentication.
 
     Get from from <https://in.xfel.eu/metadata/oauth/applications>.
     """
@@ -28,7 +28,7 @@ class MyMdCCredentials(BaseSettings):
 
 
 class MockMyMdCData(BaseSettings):
-    """Mock MyMdC data settings for testing and local development."""
+    """Mock MyMdC data for testing and local development."""
 
     mock_users: dict[str, models.User] = {
         "foo": models.User(email="foo@bar.com", first_name="Foo", last_name="Bar"),
