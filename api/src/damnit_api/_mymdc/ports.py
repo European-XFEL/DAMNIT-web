@@ -1,4 +1,4 @@
-"""MyMdC Ports (Interfaces)."""
+"""MyMdC Ports (Interfaces) definitions."""
 
 from abc import ABC, abstractmethod
 

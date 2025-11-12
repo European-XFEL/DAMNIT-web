@@ -29,7 +29,7 @@ class MyMdCAuth(httpx.Auth, MyMdCCredentials):
         """Acquires a new token if none is stored or if the existing token expired,
         otherwise reuses the existing token.
 
-        Token data stored under `_access_token` and `_expires_at`.
+        Token data stored under `._access_token` and `._expires_at`.
         """
         expired = self._expires_at <= dt.datetime.now(tz=dt.UTC)
         if self._access_token and not expired:
@@ -125,7 +125,9 @@ class MyMdCClient(httpx.AsyncClient, ports.MyMdCPort):
 
 
 class MockMyMdCClient(MockMyMdCData, ports.MyMdCPort):
-    """Mock MyMdC provider for testing and local development."""
+    """Mock MyMdC provider for testing and local development.
+
+    The mock data is provided via inheritance from [`MockMyMdCData`]."""
 
     async def _get_proposal_by_number(self, no: models.ProposalNo):
         """Mock method to get proposals by number."""
