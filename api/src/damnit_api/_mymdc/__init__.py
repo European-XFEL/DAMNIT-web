@@ -18,6 +18,17 @@ global __CLIENT
 __CLIENT: "clients.MyMdCClient" = None  # pyright: ignore[reportAssignmentType]
 """Global/singleton MyMdC client instance."""
 
-CLIENT: "clients.MyMdCClient" = None  # pyright: ignore[reportAssignmentType]
 
-__all__ = ["CLIENT", "bootstrap"]
+def get_client_mymdc() -> "clients.MyMdCClient":
+    """Get the global MyMdC client instance - for use with fastapi dependencies.
+
+    Returns:
+        The global MyMdC client.
+    """
+    if __CLIENT is None:
+        msg = "MyMdC client has not been initialized. Call bootstrap() first."
+        raise RuntimeError(msg)
+    return __CLIENT
+
+
+__all__ = ["bootstrap", "get_client_mymdc"]
