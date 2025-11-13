@@ -1,3 +1,4 @@
+from asyncio import TaskGroup
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -25,9 +26,10 @@ def create_app():
         logger = get_logger("lifespan")
         logger.info("Starting application lifespan")
 
-        await _mymdc.bootstrap(settings)
-
-        auth.configure()
+        bootstraps = [_mymdc.bootstrap, auth.bootstrap]
+        async with TaskGroup() as tg:
+            for bs in bootstraps:
+                tg.create_task(bs(settings))
 
         add_graphql_router(app)
         app.router.include_router(auth.router)
