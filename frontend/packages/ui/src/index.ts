@@ -1,7 +1,5 @@
-// Data
-export { resetExtractedData } from './data/extracted'
-export { resetMetadata, setProposalPending } from './data/metadata'
-export { resetTable as resetTableData } from './data/table'
+// Providers
+export { Providers } from './providers'
 
 // Features
 export { default as Dashboard } from './features/dashboard'
@@ -17,11 +15,13 @@ export { resetTable as resetTableView } from './features/table'
 // Hooks
 export { useProposal } from './hooks'
 
-// Providers
-export { Providers } from './providers'
-
 // Redux
 export { useAppDispatch } from './redux/hooks'
 
 // Routes
 export { LoginRoute, LogoutRoute, PrivateRoute, history } from './routes'
+
+// Data
+export { resetExtractedData } from './data/extracted'
+export { resetMetadata, setProposalPending } from './data/metadata'
+export { resetTable as resetTableData } from './data/table'
