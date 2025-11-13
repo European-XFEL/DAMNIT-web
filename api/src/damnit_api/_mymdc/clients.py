@@ -98,10 +98,9 @@ class MyMdCClient(httpx.AsyncClient, ports.MyMdCPort):
     def __init__(self, auth: MyMdCAuth) -> None:
         logger.debug("Creating MyMdC client", auth=auth)
 
-        super().__init__(
-            auth=auth,
-            base_url=str(auth.base_url),
-        )
+        api_url = str(auth.base_url).rstrip("/") + "/api/"
+
+        super().__init__(auth=auth, base_url=api_url)
 
     async def _get_proposal_by_number(self, no: models.ProposalNo):
         response = await self.get(f"proposals/by_number/{no}")
@@ -124,7 +123,7 @@ class MyMdCClient(httpx.AsyncClient, ports.MyMdCPort):
         return response.json()
 
 
-class MockMyMdCClient(MockMyMdCData, ports.MyMdCPort):
+class MyMdCClientMock(MockMyMdCData, ports.MyMdCPort):
     """Mock MyMdC provider for testing and local development.
 
     The mock data is provided via inheritance from [`MockMyMdCData`]."""

@@ -21,12 +21,13 @@ class MyMdCCredentials(BaseSettings):
     email: str
     token_url: HttpUrl
     base_url: HttpUrl
-    scope: str | None = "public"
+    scope: str | None = None
 
     _access_token: str = ""
     _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(UTC)
 
 
+# TODO: Allow loading mock data from files
 class MockMyMdCData(BaseSettings):
     """Mock MyMdC data for testing and local development."""
 
@@ -59,8 +60,10 @@ class MockMyMdCData(BaseSettings):
     }
 
     mock_user_proposals: dict[str, models.UserProposals] = {
-        "foo": models.UserProposals(
-            root=[UsersProposal(proposal_id=1234, proposal_number=1234)],
+        "roscar": models.UserProposals(
+            root=[
+                UsersProposal(proposal_id=1234, proposal_number=1234),
+            ],
         )
     }
 
