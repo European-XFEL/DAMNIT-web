@@ -13,22 +13,10 @@ from .bootstrap import bootstrap as bootstrap
 if TYPE_CHECKING:
     from . import clients
 
-global __CLIENT
+global CLIENT
 
-__CLIENT: "clients.MyMdCClient" = None  # pyright: ignore[reportAssignmentType]
-"""Global/singleton MyMdC client instance."""
-
-
-def get_client_mymdc() -> "clients.MyMdCClient":
-    """Get the global MyMdC client instance - for use with fastapi dependencies.
-
-    Returns:
-        The global MyMdC client.
-    """
-    if __CLIENT is None:
-        msg = "MyMdC client has not been initialized. Call bootstrap() first."
-        raise RuntimeError(msg)
-    return __CLIENT
+CLIENT: "clients.MyMdCClient" = None  # pyright: ignore[reportAssignmentType]
+"""Global/singleton MyMdC client instance, configured by [`.bootstrap`]"""
 
 
-__all__ = ["bootstrap", "get_client_mymdc"]
+__all__ = ["bootstrap"]
