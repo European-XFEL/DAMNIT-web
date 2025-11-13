@@ -11,18 +11,25 @@
     "./eslint": "./eslint.config.mjs",
     "./prettier": "./prettier.config.mjs",
     "./tsconfig/app": "./tsconfig/app.json",
-    "./tsconfig/node": "./tsconfig/node.json"
+    "./tsconfig/node": "./tsconfig/node.json",
+    "./postcss": "./postcss.config.cjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.21.0",
-  "devDependencies": {
-    "eslint": "catalog:linting",
+  "dependencies": {
     "@eslint/js": "catalog:linting",
     "eslint-config-prettier": "catalog:linting",
     "eslint-plugin-react-hooks": "catalog:linting",
     "eslint-plugin-react-refresh": "catalog:linting",
+    "typescript-eslint": "catalog:linting",
+    "globals": "catalog:linting",
+    "postcss-simple-vars": "catalog:tooling",
+    "postcss-preset-mantine": "catalog:components"
+  },
+  "devDependencies": {
+    "eslint": "catalog:linting",
     "prettier": "catalog:linting",
     "globals": "catalog:linting"
   }
