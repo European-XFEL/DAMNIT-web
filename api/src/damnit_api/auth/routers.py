@@ -1,43 +1,21 @@
-from typing import Annotated
-from urllib.parse import parse_qs, unquote, urlencode
+from urllib.parse import parse_qs, unquote
 
 from authlib.integrations.starlette_client import (  # type: ignore[import-untyped]
-    OAuth,
     OAuthError,
-    StarletteOAuth2App,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from ..shared.settings import settings
-from . import services
-from .models import User
+from .. import get_logger
+from . import dependencies
 
-router = APIRouter(prefix="/oauth", include_in_schema=False)
+logger = get_logger(__name__)
 
-_OAUTH = OAuth()
-
-OAUTH: StarletteOAuth2App = None  # type: ignore[assignment]
-
-DEFAULT_LOGIN_REDIRECT_URI = "/home"
-DEFAULT_LOGOUT_REDIRECT_URI = "/logged-out"
-
-
-def configure() -> None:
-    global OAUTH
-
-    _OAUTH.register(
-        name="damnit_web",
-        client_id=settings.auth.client_id,
-        client_secret=settings.auth.client_secret.get_secret_value(),
-        server_metadata_url=str(settings.auth.server_metadata_url),
-        client_kwargs={"scope": "openid email"},
-    )
-
-    OAUTH = _OAUTH.damnit_web  # type: ignore[assignment, no-redef]
+router = APIRouter(prefix="/oauth", tags=["auth"])
 
 
 def get_public_base_url(request: Request) -> str:
+    # TODO: Upgrade Starlette and use ProxyHeadersMiddleware
     # The forwarded protocol could return "https,http"
     proto = request.headers.get("x-forwarded-proto", "").split(",")
     if not proto or request.url.scheme in proto:
@@ -51,42 +29,68 @@ def get_public_base_url(request: Request) -> str:
 
 
 @router.get("/login")
-async def auth(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
+async def auth(
+    request: Request,
+    redirect_uri: dependencies.RedirectURI,
+    client: dependencies.Client,
+):
+    # Note: session is managed by Starlette's SessionMiddleware, which handles
+    # expiration.
     if request.session.get("user"):
         return RedirectResponse(url=redirect_uri)
 
-    state = urlencode({"redirect_uri": redirect_uri})
+    callback_uri = request.url_for("callback")
 
-    # TODO: Upgrade Starlette and use ProxyHeadersMiddleware
-    base = get_public_base_url(request)
-    callback_path = request.url_for("callback").path
-    callback_uri = f"{base}{callback_path}"
+    if callback_uri.scheme == "http":
+        # TODO: error on non-HTTPS in production
+        await logger.awarning("Callback URI is using HTTP, upgrading to HTTPS")
+        callback_uri = callback_uri.replace(scheme="https")
 
-    return await OAUTH.authorize_redirect(request, callback_uri, state=state)
+    res = await client.authorize_redirect(request, redirect_uri=str(callback_uri))
+
+    await logger.adebug("OAuth redirect response", headers=res.headers)
+
+    return res
 
 
 @router.get("/callback")
-async def callback(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
+async def callback(
+    request: Request,
+    redirect_uri: dependencies.RedirectURI,
+    client: dependencies.Client,
+):
     try:
-        token = await OAUTH.authorize_access_token(request)
-        user = await OAUTH.userinfo(token=token)
+        token = await client.authorize_access_token(request)
+        user = await client.userinfo(token=token)
     except OAuthError as e:
         raise HTTPException(status_code=401, detail=str(e)) from e
 
     state = request.query_params.get("state", "")
     state_params = parse_qs(state)
-    redirect_uri = state_params.get("redirect_uri", [DEFAULT_LOGIN_REDIRECT_URI])[0]
+    redirect_uri = state_params.get("redirect_uri", [redirect_uri])[0]
 
     request.session["user"] = dict(user)
-    return RedirectResponse(url=unquote(redirect_uri))
+    return RedirectResponse(url=unquote(str(redirect_uri)))
 
 
 @router.get("/logout")
-async def logout(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
-    request.session.pop("user", None)
-    return RedirectResponse(url=redirect_uri)
+async def logout(request: Request, client: dependencies.Client):
+    """Redirect to the OAuth provider's logout endpoint and clear the session."""
+    logout_endpoint = client.server_metadata.get("end_session_endpoint")
+
+    request.session.clear()
+
+    if logout_endpoint:
+        return RedirectResponse(url=logout_endpoint)
+
+    return {"detail": "Logged out"}
 
 
 @router.get("/userinfo")
-async def userinfo(user: Annotated[User, Depends(services.user_from_session)]):
-    return user.model_dump(exclude={"groups"})
+async def userinfo(user: dependencies.OAuthUserInfo):
+    return user
+
+
+@router.get("/userinfo/full")
+async def full_userinfo(user: dependencies.User):
+    return user
