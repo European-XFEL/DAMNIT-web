@@ -6,7 +6,7 @@ from .vendor.models import GetProposals, InstrumentCycles, Users, UsersProposals
 User = Users
 """MyMdC User model."""
 
-type UserId = str
+UserId = str
 """MyMdC User ID."""
 
 Proposal = GetProposals
@@ -15,10 +15,8 @@ Proposal = GetProposals
 InstrumentCycle = InstrumentCycles
 """MyMdC Instrument Cycle model."""
 
-
 UserProposals = UsersProposals
 """MyMdC User Proposals model, list of all proposals a user has access to."""
-
 
 __all__ = [
     "InstrumentCycle",
