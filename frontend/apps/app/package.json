@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "prettier --check --cache .",
+    "lint:tsc": "tsc -b --noEmit"
   },
   "dependencies": {
     "@apollo/client": "^3.13.6",
-    "@damnit-frontend/ui": "workspace:^",
+    "@damnit-frontend/ui": "workspace:*",
     "@glideapps/glide-data-grid": "^6.0.3",
     "@glideapps/glide-data-grid-cells": "^6.0.3",
     "@mantine/core": "^7.17.3",
@@ -35,6 +37,7 @@
     "react-router-dom": "^7.5.0"
   },
   "devDependencies": {
+    "@damnit-frontend/config": "workspace:*",
     "@eslint/js": "^9.22.0",
     "@types/node": "^24.10.0",
     "@types/react": "18.2.45",
