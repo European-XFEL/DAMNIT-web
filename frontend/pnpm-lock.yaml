@@ -151,10 +151,10 @@ importers:
         version: link:../../packages/ui
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(lodash@4.17.21)(marked@4.3.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
-        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@4.3.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@mantine/core':
         specifier: catalog:components
         version: 7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -216,9 +216,6 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../../packages/config
-      '@eslint/js':
-        specifier: catalog:linting
-        version: 9.22.0
       '@types/node':
         specifier: catalog:types
         version: 24.10.0
@@ -237,46 +234,22 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.22.0
-      eslint-config-prettier:
-        specifier: catalog:linting
-        version: 10.1.1(eslint@9.22.0)
-      eslint-plugin-react-hooks:
-        specifier: catalog:linting
-        version: 7.0.1(eslint@9.22.0)
-      eslint-plugin-react-refresh:
-        specifier: catalog:linting
-        version: 0.4.19(eslint@9.22.0)
-      globals:
-        specifier: catalog:linting
-        version: 16.0.0
       postcss:
         specifier: catalog:tooling
         version: 8.5.3
-      postcss-preset-mantine:
-        specifier: catalog:components
-        version: 1.17.0(postcss@8.5.3)
-      postcss-simple-vars:
-        specifier: catalog:tooling
-        version: 7.0.1(postcss@8.5.3)
       prettier:
         specifier: catalog:linting
         version: 3.6.2
       typescript:
         specifier: catalog:tooling
         version: 5.9.3
-      typescript-eslint:
-        specifier: catalog:linting
-        version: 8.46.4(eslint@9.22.0)(typescript@5.9.3)
       vite:
         specifier: catalog:tooling
         version: 7.2.2(@types/node@24.10.0)
 
   packages/config:
-    devDependencies:
+    dependencies:
       '@eslint/js':
-        specifier: catalog:linting
-        version: 9.22.0
-      eslint:
         specifier: catalog:linting
         version: 9.22.0
       eslint-config-prettier:
@@ -291,6 +264,19 @@ importers:
       globals:
         specifier: catalog:linting
         version: 16.0.0
+      postcss-preset-mantine:
+        specifier: catalog:components
+        version: 1.17.0(postcss@8.5.6)
+      postcss-simple-vars:
+        specifier: catalog:tooling
+        version: 7.0.1(postcss@8.5.6)
+      typescript-eslint:
+        specifier: catalog:linting
+        version: 8.46.4(eslint@9.22.0)(typescript@5.9.3)
+    devDependencies:
+      eslint:
+        specifier: catalog:linting
+        version: 9.22.0
       prettier:
         specifier: catalog:linting
         version: 3.6.2
@@ -303,15 +289,12 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../config
-      '@eslint/js':
-        specifier: catalog:linting
-        version: 9.22.0
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(lodash@4.17.21)(marked@4.3.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
-        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@4.3.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@mantine/core':
         specifier: catalog:components
         version: 7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -354,18 +337,6 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.22.0
-      eslint-config-prettier:
-        specifier: catalog:linting
-        version: 10.1.1(eslint@9.22.0)
-      eslint-plugin-react-hooks:
-        specifier: catalog:linting
-        version: 7.0.1(eslint@9.22.0)
-      eslint-plugin-react-refresh:
-        specifier: catalog:linting
-        version: 0.4.19(eslint@9.22.0)
-      globals:
-        specifier: catalog:linting
-        version: 16.0.0
       graphql:
         specifier: catalog:graphql
         version: 16.10.0
@@ -381,12 +352,6 @@ importers:
       postcss:
         specifier: catalog:tooling
         version: 8.5.3
-      postcss-preset-mantine:
-        specifier: catalog:components
-        version: 1.17.0(postcss@8.5.3)
-      postcss-simple-vars:
-        specifier: catalog:tooling
-        version: 7.0.1(postcss@8.5.3)
       prettier:
         specifier: catalog:linting
         version: 3.6.2
@@ -414,9 +379,6 @@ importers:
       typescript:
         specifier: catalog:tooling
         version: 5.9.3
-      typescript-eslint:
-        specifier: catalog:linting
-        version: 8.46.4(eslint@9.22.0)(typescript@5.9.3)
       vite:
         specifier: catalog:tooling
         version: 7.2.2(@types/node@24.10.0)
@@ -2222,6 +2184,11 @@ packages:
     engines: {node: '>= 18'}
     hasBin: true
 
+  marked@4.3.0:
+    resolution: {integrity: sha512-PRsaiG84bK+AMvxziE/lCFss8juXjNaWzVbN5tXAm4XjeaS9NAHhop+PjQxz2A9h8Q4M/xGmzP8vqNwy6JeK0A==}
+    engines: {node: '>= 12'}
+    hasBin: true
+
   math-log2@1.0.1:
     resolution: {integrity: sha512-9W0yGtkaMAkf74XGYVy4Dqw3YUMnTNB2eeiw9aQbUl4A3KmuCEHTt2DgAB07ENzOYAjsYSAYufkAq0Zd+jU7zA==}
     engines: {node: '>=0.10.0'}
@@ -3492,9 +3459,9 @@ snapshots:
 
   '@floating-ui/utils@0.2.10': {}
 
-  '@glideapps/glide-data-grid-cells@6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
+  '@glideapps/glide-data-grid-cells@6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@4.3.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
     dependencies:
-      '@glideapps/glide-data-grid': 6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+      '@glideapps/glide-data-grid': 6.0.3(lodash@4.17.21)(marked@4.3.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@linaria/react': 4.5.4(react@18.2.0)
       '@toast-ui/editor': 3.1.10
       '@toast-ui/react-editor': 3.1.10(react@18.2.0)
@@ -3508,12 +3475,12 @@ snapshots:
       - react-responsive-carousel
       - supports-color
 
-  '@glideapps/glide-data-grid@6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
+  '@glideapps/glide-data-grid@6.0.3(lodash@4.17.21)(marked@4.3.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
     dependencies:
       '@linaria/react': 4.5.4(react@18.2.0)
       canvas-hypertxt: 1.0.3
       lodash: 4.17.21
-      marked: 14.0.0
+      marked: 4.3.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
       react-number-format: 5.4.4(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -5064,6 +5031,8 @@ snapshots:
 
   marked@14.0.0: {}
 
+  marked@4.3.0: {}
+
   math-log2@1.0.1: {}
 
   memoize-one@6.0.0: {}
@@ -5282,38 +5251,38 @@ snapshots:
 
   polybooljs@1.2.2: {}
 
-  postcss-js@4.1.0(postcss@8.5.3):
+  postcss-js@4.1.0(postcss@8.5.6):
     dependencies:
       camelcase-css: 2.0.1
-      postcss: 8.5.3
+      postcss: 8.5.6
 
-  postcss-mixins@9.0.4(postcss@8.5.3):
+  postcss-mixins@9.0.4(postcss@8.5.6):
     dependencies:
       fast-glob: 3.3.3
-      postcss: 8.5.3
-      postcss-js: 4.1.0(postcss@8.5.3)
-      postcss-simple-vars: 7.0.1(postcss@8.5.3)
-      sugarss: 4.0.1(postcss@8.5.3)
+      postcss: 8.5.6
+      postcss-js: 4.1.0(postcss@8.5.6)
+      postcss-simple-vars: 7.0.1(postcss@8.5.6)
+      sugarss: 4.0.1(postcss@8.5.6)
 
-  postcss-nested@6.2.0(postcss@8.5.3):
+  postcss-nested@6.2.0(postcss@8.5.6):
     dependencies:
-      postcss: 8.5.3
+      postcss: 8.5.6
       postcss-selector-parser: 6.1.2
 
-  postcss-preset-mantine@1.17.0(postcss@8.5.3):
+  postcss-preset-mantine@1.17.0(postcss@8.5.6):
     dependencies:
-      postcss: 8.5.3
-      postcss-mixins: 9.0.4(postcss@8.5.3)
-      postcss-nested: 6.2.0(postcss@8.5.3)
+      postcss: 8.5.6
+      postcss-mixins: 9.0.4(postcss@8.5.6)
+      postcss-nested: 6.2.0(postcss@8.5.6)
 
   postcss-selector-parser@6.1.2:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
 
-  postcss-simple-vars@7.0.1(postcss@8.5.3):
+  postcss-simple-vars@7.0.1(postcss@8.5.6):
     dependencies:
-      postcss: 8.5.3
+      postcss: 8.5.6
 
   postcss@8.5.3:
     dependencies:
@@ -5755,9 +5724,9 @@ snapshots:
 
   stylis@4.2.0: {}
 
-  sugarss@4.0.1(postcss@8.5.3):
+  sugarss@4.0.1(postcss@8.5.6):
     dependencies:
-      postcss: 8.5.3
+      postcss: 8.5.6
 
   supercluster@7.1.5:
     dependencies:
