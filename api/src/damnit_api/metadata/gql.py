@@ -31,7 +31,7 @@ class Query:
     @strawberry.field
     async def proposal_metadata(
         self, proposal_no: int, info: strawberry.Info[Context]
-    ) -> ProposalMeta:
+    ) -> ProposalMeta | None:
         """Fetch metadata for the provided proposal number."""
         user, mymdc = info.context.oauth_user, info.context.mymdc
 
@@ -42,9 +42,8 @@ class Query:
 
         if proposal_no not in allowed_proposals:
             msg = (
-                "User "
-                f"{user.preferred_username} "
-                f"not authorized for proposal {proposal_no}"
+                f"User {user.preferred_username} not authorised for proposal "
+                f"{proposal_no}, or proposal does not exist."
             )
             raise PermissionError(msg)
 
