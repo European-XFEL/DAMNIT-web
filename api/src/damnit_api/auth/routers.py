@@ -7,7 +7,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from .. import get_logger
-from . import dependencies
+from .._mymdc.dependencies import MyMdCClient
+from . import dependencies, models
 
 logger = get_logger(__name__)
 
@@ -75,10 +76,11 @@ async def logout(request: Request, client: dependencies.Client):
 
 
 @router.get("/userinfo")
-async def userinfo(user: dependencies.OAuthUserInfo):
-    return user
+async def userinfo(request: Request, mymdc: MyMdCClient, with_proposals: bool = False):
+    """User information."""
+    if with_proposals:
+        user = await models.User.from_request(request, mymdc)
+    else:
+        user = models.OAuthUserInfo.from_request(request)
 
-
-@router.get("/userinfo/full")
-async def full_userinfo(user: dependencies.User):
     return user
