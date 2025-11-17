@@ -3,7 +3,7 @@
 from typing import Self
 
 from fastapi import Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from .._mymdc.dependencies import MyMdCClient
 from .._mymdc.models import UserProposals
@@ -11,13 +11,18 @@ from .._mymdc.models import UserProposals
 
 class BaseUserInfo(BaseModel):
     email: str
-    email_verified: bool
     family_name: str
     given_name: str
     groups: list[str]
     name: str
     preferred_username: str
-    sub: str
+
+    # Discarded fields
+    # email_verified: bool
+    # sub: str
+    # roles: list[str]
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class OAuthUserInfo(BaseUserInfo):
