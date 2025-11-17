@@ -26,6 +26,8 @@ class BaseUserInfo(BaseModel):
 
 
 class OAuthUserInfo(BaseUserInfo):
+    """Basic user information obtained from the OAuth provider."""
+
     @classmethod
     def from_request(cls, request: Request) -> Self:
         """Create an OAuthUserInfo from the request session."""
@@ -37,6 +39,8 @@ class OAuthUserInfo(BaseUserInfo):
 
 
 class User(BaseUserInfo):
+    """Full user information including list of proposals."""
+
     proposals: UserProposals
 
     @classmethod
