@@ -12,7 +12,7 @@ KNOWN_PATHS = ["/graphql"]
 
 def create_app():
     from . import _logging, _mymdc, auth, contextfile, get_logger, metadata
-    from .graphql import add_graphql_router
+    from .shared import gql
     from .shared.settings import settings
 
     @asynccontextmanager
@@ -31,10 +31,10 @@ def create_app():
             for bs in bootstraps:
                 tg.create_task(bs(settings))
 
-        add_graphql_router(app)
         app.router.include_router(auth.router)
         app.router.include_router(metadata.router)
         app.router.include_router(contextfile.router)
+        app.router.include_router(gql.get_gql_app(), prefix="/graphql")
         yield
 
     app = FastAPI(
