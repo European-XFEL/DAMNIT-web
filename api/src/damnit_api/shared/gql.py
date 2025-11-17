@@ -1,14 +1,17 @@
+from dataclasses import dataclass
+
 import numpy as np
 import orjson
 import strawberry
-from fastapi import Depends
-from strawberry.fastapi import GraphQLRouter
+from strawberry.fastapi import BaseContext, GraphQLRouter
 from strawberry.http import GraphQLHTTPResponse
 from strawberry.schema.config import StrawberryConfig
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL
 
 from .. import graphql as gql_main
+from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
+from ..auth.dependencies import OAuthUserInfo
 from ..instance import gql as instance
 from ..metadata import gql as metadata
 
@@ -18,14 +21,8 @@ SUBSCRIPTION_PROTOCOLS = [
 
 
 @strawberry.type
-class Query(auth.Query, gql_main.queries.Query, instance.Query):
+class Query(auth.Query, gql_main.queries.Query, instance.Query, metadata.Query):
     pass
-
-
-class Context(metadata.Context):
-    """Per-request context for the main GraphQL API.
-
-    Note that this includes `auth.Context` via `metadata.Context`."""
 
 
 class Mutation(gql_main.mutations.Mutation):
@@ -51,12 +48,14 @@ class Subscription(gql_main.subscriptions.Subscription):
     pass
 
 
-def custom_context_dependency() -> Context:
-    return Context()
+@dataclass(slots=True)
+class Context(BaseContext):
+    mymdc: MyMdCClient
+    oauth_user: OAuthUserInfo
 
 
-async def get_context(custom_context=Depends(custom_context_dependency)):
-    return custom_context
+async def get_context(oauth_user: OAuthUserInfo, mymdc: MyMdCClient):  # noqa: RUF029
+    return Context(oauth_user=oauth_user, mymdc=mymdc)
 
 
 def get_gql_app():
@@ -72,5 +71,5 @@ def get_gql_app():
     return Router(
         schema=schema,
         subscription_protocols=SUBSCRIPTION_PROTOCOLS,
-        context_getter=get_context,
+        context_getter=get_context,  # pyright: ignore[reportArgumentType]
     )
