@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 from .models import InstrumentCycle, Proposal, ProposalNo, User, UserId, UserProposals
 
 if TYPE_CHECKING:
-    from .clients import MyMdCClient, MyMdCClientMock
+    from . import clients
 
 
 class MyMdCPort(ABC):
     """MyMdC Port Definition."""
 
     @classmethod
-    def from_global(cls) -> "MyMdCClient | MyMdCClientMock":
+    def from_global(cls) -> "clients.MyMdCClient":
         """Create a MyMdCPort from the global client."""
         from damnit_api import _mymdc
 
