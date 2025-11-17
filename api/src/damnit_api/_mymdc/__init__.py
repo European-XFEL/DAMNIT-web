@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 global CLIENT
 
-CLIENT: "clients.MyMdCClient" = None  # pyright: ignore[reportAssignmentType]
+CLIENT: "clients.MyMdCClientAsync" = None  # pyright: ignore[reportAssignmentType]
 """Global/singleton MyMdC client instance, configured by [`.bootstrap`]"""
 
 

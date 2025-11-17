@@ -92,7 +92,7 @@ class MyMdCAuth(httpx.Auth, MyMdCCredentials):
         yield request
 
 
-class MyMdCClient(httpx.AsyncClient, ports.MyMdCPort):
+class MyMdCClientAsync(httpx.AsyncClient, ports.MyMdCPort):
     """Client for the MyMdC API."""
 
     def __init__(self, auth: MyMdCAuth) -> None:
@@ -145,3 +145,6 @@ class MyMdCClientMock(MockMyMdCData, ports.MyMdCPort):
     async def _get_user_proposals(self, id: models.UserId):
         """Mock method to get all proposals associated with a user ID."""
         return self.mock_user_proposals[id].model_dump()
+
+
+type MyMdCClient = MyMdCClientAsync | MyMdCClientMock
