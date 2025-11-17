@@ -17,6 +17,7 @@
     "./styles": "./src/styles.ts"
   },
   "sideEffects": [
+    "./src/styles.ts",
     "**/*.css"
   ],
   "scripts": {
