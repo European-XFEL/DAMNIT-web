@@ -74,7 +74,9 @@ class Settings(BaseSettings):
 
     uvicorn: UvicornSettings = UvicornSettings()
 
-    mymdc: MyMdCConfig = MockMyMdCData()
+    mymdc: MyMdCConfig = MockMyMdCData(
+        mock_responses_file=Path(__file__).parents[3] / "tests" / "mock" / "_mymdc.json"
+    )
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",
