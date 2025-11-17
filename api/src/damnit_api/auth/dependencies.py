@@ -1,8 +1,8 @@
+"""Dependency type aliases for the auth module."""
+
 from typing import Annotated
 
-from authlib.integrations.starlette_client import (  # type: ignore[import-untyped]
-    StarletteOAuth2App,
-)
+from authlib.integrations.starlette_client import StarletteOAuth2App
 from fastapi import Depends
 
 from .bootstrap import get_oauth_client

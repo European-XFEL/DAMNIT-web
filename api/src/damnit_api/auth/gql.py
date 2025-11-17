@@ -13,24 +13,16 @@ if TYPE_CHECKING:
 
 @strawberry.type
 class UserProposal:
-    id: int | None
-    number: int | None
+    """Proposal information returned by MyMdC user proposal query."""
+
 
 
 @st_pydantic.type(model=models.BaseUserInfo)
 class User:
-    email: strawberry.auto
-    family_name: strawberry.auto
-    given_name: strawberry.auto
-    groups: strawberry.auto
-    name: strawberry.auto
-    preferred_username: strawberry.auto
+    """User information stored in the request session."""
 
     @strawberry.field
-    async def proposals(self, info: strawberry.Info) -> list[UserProposal]:
-        mymdc: MyMdCClient = await info.context.mymdc
-
-        res = await mymdc.get_user_proposals(self.preferred_username)
+        """List of proposals for the user."""
 
         return [
             UserProposal(id=p.proposal_id, number=p.proposal_number) for p in res.root
@@ -50,6 +42,7 @@ class Context(BaseContext):
 
 @strawberry.type
 class Query:
-    @strawberry.field
-    def get_user(self, info: strawberry.Info[Context]) -> User | None:
-        return info.context.user
+    @strawberry.field(graphql_type=User)
+    def get_user(self, info: "strawberry.Info[Context]") -> OAuthUserInfo | None:
+        """Get the current authenticated user from the request session/context."""
+        return info.context.oauth_user

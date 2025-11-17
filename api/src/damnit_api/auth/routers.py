@@ -20,6 +20,7 @@ async def auth(
     redirect_uri: dependencies.RedirectURI,
     client: dependencies.Client,
 ):
+    """Initiate the OAuth2 login flow."""
     # Note: session is managed by Starlette's SessionMiddleware, which handles
     # expiration.
     if request.session.get("user"):
@@ -45,6 +46,7 @@ async def callback(
     redirect_uri: dependencies.RedirectURI,
     client: dependencies.Client,
 ):
+    """OAuth2 callback endpoint to handle the response from the OAuth provider."""
     try:
         token = await client.authorize_access_token(request)
         user = await client.userinfo(token=token)

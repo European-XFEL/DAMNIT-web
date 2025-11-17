@@ -2,10 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from authlib.integrations.starlette_client import (  # type: ignore[import-untyped]
-    OAuth,  # type: ignore[import-untyped]
-    StarletteOAuth2App,
-)
+from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
 
 from .. import get_logger
 
@@ -21,7 +18,8 @@ __OAUTH: OAuth = None  # type: ignore[assignment]
 
 
 async def bootstrap(settings: "Settings"):
-    await logger.ainfo("Bootstrapping auth module", settings=settings)
+    """Bootstrap auth module - registers client defined in settings to [`.__OAUTH`] as
+    `damnit_web` and sets [`damnit_api.auth.__CLIENT`] to [`.__OAUTH.damnit_web`]."""
     import damnit_api.auth
 
     global __OAUTH
@@ -36,6 +34,7 @@ async def bootstrap(settings: "Settings"):
 
 
 def _register(settings: "Settings"):
+    """Register the OAuth client defined in settings to [`.__OAUTH`] as `damnit_web`."""
     global __OAUTH
     __OAUTH.register(
         name="damnit_web",
@@ -51,10 +50,16 @@ def get_oauth_client() -> StarletteOAuth2App:
 
     Returns:
         The global OAuth client.
+
+    Raises:
+        RuntimeError: If the OAuth client has not been initialized.
     """
     from damnit_api import auth
 
     if auth.__CLIENT is None:
-        msg = "OAuth client has not been initialized. Call configure() first."
+        msg = (
+            "OAuth client has not been initialized. Call "
+            "[`damnit_api.auth.bootstrap.bootstrap()`] first."
+        )
         raise RuntimeError(msg)
     return auth.__CLIENT
