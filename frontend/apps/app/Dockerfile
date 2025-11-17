@@ -1,42 +1,53 @@
-# syntax=docker/dockerfile:1
+# -------------------------------------------------
+# Base: Node + pnpm + dependencies
+# -------------------------------------------------
+FROM node:24-alpine AS base
+RUN corepack enable
+WORKDIR /usr/src/app
 
-# Base Stage
-# Only for installing dependencies used by dev/prod stages
-FROM node:22-alpine AS base
+# Prepare workspace
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/app/package.json apps/app/
+COPY packages/ui/package.json packages/ui/
+COPY packages/config/package.json packages/config/
 
-WORKDIR /app
+# Install workspace dependencies
+RUN pnpm install --recursive --frozen-lockfile
 
-COPY package.json package-lock.json ./
-RUN npm ci
+# -------------------------------------------------
+# Build: Create static web pages using Vite
+# -------------------------------------------------
+FROM base AS build
 
-# Development Stage
-# Run dev server with hot reloading
-FROM base AS dev
-
-ENV NODE_ENV=development
-
+# Copy the rest of the codebase
 COPY . .
 
-EXPOSE 5173
+WORKDIR /usr/src/app/apps/app
+RUN pnpm build
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# -------------------------------------------------
+# Preview: Serve static web pages using Vite
+# -------------------------------------------------
+FROM base AS preview
 
-# Static Build Stage
-# Build static files for production
-FROM base AS static
-
-ENV NODE_ENV=production
-
+# Copy the rest of the codebase
 COPY . .
 
-RUN npm run build
+# Copy built dist from build stage
+COPY --from=build /usr/src/app/apps/app/dist /usr/src/app/apps/app/dist
 
-# Production Stage
-# Serve static files with nginx
+WORKDIR /usr/src/app/apps/app
+
+EXPOSE 4173
+CMD ["pnpm", "preview", "--host", "0.0.0.0", "--port", "4173"]
+
+# -------------------------------------------------
+# Production: Serve static web pages using Nginx
+# -------------------------------------------------
 FROM nginx:stable-alpine AS production
 
-COPY --from=static /app/nginx /etc/nginx
-COPY --from=static /app/dist /usr/share/nginx/html
+COPY --from=build /app/nginx /etc/nginx
+COPY --from=build /app/dist /usr/share/nginx/html
 
 HEALTHCHECK --interval=30s --timeout=3s \
   CMD wget -qO- http://127.0.0.1/ || exit 1
