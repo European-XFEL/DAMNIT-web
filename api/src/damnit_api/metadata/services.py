@@ -32,13 +32,12 @@ async def _get_proposal_meta(
     path = path_raw.parent  # gpfs proposal directory
 
     return ProposalMeta(
-        # FIX: weird pyright errors
-        no=proposal.number,  # pyright: ignore[reportArgumentType]
+        no=proposal.number,
         path=path,
-        cycle=cycle.identifier,  # pyright: ignore[reportArgumentType]
+        cycle=cycle.identifier,
         instrument=Instrument(proposal.instrument_identifier),
         title=proposal.title,
-        damnit_path=None,
+        damnit_path=(await _search_damnit_dir(path)),
         start_date=datetime.fromisoformat(proposal.beamtime_start_at),
         end_date=datetime.fromisoformat(proposal.beamtime_end_at),
     )
@@ -71,9 +70,7 @@ async def get_proposal_meta(
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number, using the repository and/or provided
     MyMdC Client."""
-    meta = await _get_proposal_meta(client, proposal_no)
 
-    if damnit_path := await _search_damnit_dir(meta.path):
-        meta.damnit_path = damnit_path
+    # TODO: caching layer/repository
 
-    return meta
+    return await _get_proposal_meta(client, proposal_no)
