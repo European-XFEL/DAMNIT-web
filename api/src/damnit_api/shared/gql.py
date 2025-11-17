@@ -12,7 +12,6 @@ from .. import graphql as gql_main
 from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
-from ..instance import gql as instance
 from ..metadata import gql as metadata
 
 SUBSCRIPTION_PROTOCOLS = [
@@ -21,7 +20,7 @@ SUBSCRIPTION_PROTOCOLS = [
 
 
 @strawberry.type
-class Query(auth.Query, gql_main.queries.Query, instance.Query, metadata.Query):
+class Query(auth.Query, gql_main.queries.Query, metadata.Query):
     pass
 
 
@@ -63,7 +62,7 @@ def get_gql_app():
         query=Query,
         mutation=Mutation,
         subscription=Subscription,
-        types=[gql_main.models.DamnitVariable, instance.ListenerStatus],
+        types=[gql_main.models.DamnitVariable],
         directives=[gql_main.directives.lightweight],
         config=StrawberryConfig(auto_camel_case=False),
     )
