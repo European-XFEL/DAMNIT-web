@@ -15,12 +15,12 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/oauth", tags=["auth"])
 
 
-@router.get("/login")
+@router.get("/login", status_code=307)
 async def auth(
     request: Request,
     redirect_uri: dependencies.RedirectURI,
     client: dependencies.Client,
-):
+) -> RedirectResponse:
     """Initiate the OAuth2 login flow."""
     # Note: session is managed by Starlette's SessionMiddleware, which handles
     # expiration.
@@ -41,12 +41,12 @@ async def auth(
     return res
 
 
-@router.get("/callback")
+@router.get("/callback", status_code=307)
 async def callback(
     request: Request,
     redirect_uri: dependencies.RedirectURI,
     client: dependencies.Client,
-):
+) -> RedirectResponse:
     """OAuth2 callback endpoint to handle the response from the OAuth provider."""
     try:
         token = await client.authorize_access_token(request)
@@ -62,8 +62,8 @@ async def callback(
     return RedirectResponse(url=unquote(str(redirect_uri)))
 
 
-@router.get("/logout")
-async def logout(request: Request, client: dependencies.Client):
+@router.get("/logout", status_code=307)
+async def logout(request: Request, client: dependencies.Client) -> RedirectResponse:
     """Redirect to the OAuth provider's logout endpoint and clear the session."""
     logout_endpoint = client.server_metadata.get("end_session_endpoint")
 
@@ -72,11 +72,13 @@ async def logout(request: Request, client: dependencies.Client):
     if logout_endpoint:
         return RedirectResponse(url=logout_endpoint)
 
-    return {"detail": "Logged out"}
+    return RedirectResponse(url="/")
 
 
 @router.get("/userinfo")
-async def userinfo(request: Request, mymdc: MyMdCClient, with_proposals: bool = False):
+async def userinfo(
+    request: Request, mymdc: MyMdCClient, with_proposals: bool = False
+) -> models.User | models.OAuthUserInfo:
     """User information."""
     if with_proposals:
         user = await models.User.from_request(request, mymdc)
