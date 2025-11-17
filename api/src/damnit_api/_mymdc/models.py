@@ -1,7 +1,7 @@
 """MyMdC models, re-exported from vendor models and shared models."""
 
 from ..shared.models import ProposalNo
-from .vendor.models import GetProposals, InstrumentCycles, Users, UsersProposals
+from .vendor import GetProposals, InstrumentCycles, Users, UsersProposals
 
 User = Users
 """MyMdC User model."""
