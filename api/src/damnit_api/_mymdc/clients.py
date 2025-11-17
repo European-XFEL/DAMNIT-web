@@ -5,6 +5,9 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import httpx
+import orjson
+from anyio import Path as APath
+from async_lru import alru_cache
 from structlog import get_logger
 
 from damnit_api._mymdc import ports
@@ -124,27 +127,33 @@ class MyMdCClientAsync(httpx.AsyncClient, ports.MyMdCPort):
 
 
 class MyMdCClientMock(MockMyMdCData, ports.MyMdCPort):
-    """Mock MyMdC provider for testing and local development.
+    """Mock MyMdC provider for testing and local development."""
 
-    The mock data is provided via inheritance from [`MockMyMdCData`]."""
+    @staticmethod
+    @alru_cache(ttl=5)
+    async def _data(file_path: str) -> dict:
+        return orjson.loads(await APath(file_path).read_bytes())
+
+    @property
+    async def data(self) -> dict:
+        """Load mock data from file if provided, else return empty dict."""
+        return await self._data(self.mock_responses_file)
 
     async def _get_proposal_by_number(self, no: models.ProposalNo):
         """Mock method to get proposals by number."""
-        # FIX: strange pyright error saying `"ProposalNo" is not assignable to
-        # "int" (reportArgumentType)`
-        return self.mock_proposals[no].model_dump()  # pyright: ignore[reportArgumentType]
+        return (await self.data)["proposals_by_number"][str(no)]
 
     async def _get_user_by_id(self, id: models.UserId):
         """Mock method to get user information."""
-        return self.mock_users[id].model_dump()
+        return (await self.data)["users"][str(id)]
 
     async def _get_cycle_by_id(self, id: int):
         """Mock method to get instrument cycles by ID."""
-        return self.mock_cycles[id].model_dump()
+        return (await self.data)["instrument_cycles"][str(id)]
 
     async def _get_user_proposals(self, id: models.UserId):
         """Mock method to get all proposals associated with a user ID."""
-        return self.mock_user_proposals[id].model_dump()
+        return (await self.data)["user_proposals"][str(id)]
 
 
 type MyMdCClient = MyMdCClientAsync | MyMdCClientMock
