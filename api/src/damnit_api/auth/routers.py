@@ -37,6 +37,14 @@ def configure() -> None:
     OAUTH = _OAUTH.damnit_web  # type: ignore[assignment, no-redef]
 
 
+def get_public_base_url(request: Request) -> str:
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("x-forwarded-host") or request.headers.get(
+        "host"
+    )
+    return f"{proto}://{host}"
+
+
 @router.get("/login")
 async def auth(
     request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI
@@ -45,12 +53,14 @@ async def auth(
         return RedirectResponse(url=redirect_uri)
 
     state = urlencode({"redirect_uri": redirect_uri})
-    callback_uri = request.url_for("callback")
+
+    # TODO: Upgrade Starlette and use ProxyHeadersMiddleware
+    base = get_public_base_url(request)
+    callback_path = request.url_for("callback").path
+    callback_uri = f"{base}{callback_path}"
 
     return await OAUTH.authorize_redirect(
-        request,
-        str(callback_uri),
-        state=state
+        request, str(callback_uri), state=state
     )
 
 
@@ -67,8 +77,8 @@ async def callback(
     state = request.query_params.get("state", "")
     state_params = parse_qs(state)
     redirect_uri = state_params.get(
-        "redirect_uri",
-        [DEFAULT_LOGIN_REDIRECT_URI])[0]
+        "redirect_uri", [DEFAULT_LOGIN_REDIRECT_URI]
+    )[0]
 
     request.session["user"] = dict(user)
     return RedirectResponse(url=unquote(redirect_uri))

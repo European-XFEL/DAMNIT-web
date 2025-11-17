@@ -62,6 +62,7 @@ export default defineConfig(({ command, mode }): UserConfig => {
       target: apiURL.origin,
       secure: !!sslConfig,
       changeOrigin: true,
+      xfwd: true,
       configure: (_proxy, options) => {
         if (sslConfig) {
           options.agent = httpsAgent
