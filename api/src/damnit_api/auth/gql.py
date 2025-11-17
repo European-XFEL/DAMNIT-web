@@ -43,6 +43,6 @@ class User:
 @strawberry.type
 class Query:
     @strawberry.field(graphql_type=User)
-    def get_user(self, info: "strawberry.Info[Context]") -> OAuthUserInfo | None:
+    def get_user(self, info: "strawberry.Info[Context]") -> OAuthUserInfo:
         """Get the current authenticated user from the request session/context."""
         return info.context.oauth_user

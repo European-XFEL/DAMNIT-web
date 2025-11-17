@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from ..shared.models import Instrument, ProposalCycle, ProposalNo
+from ..shared.models import ProposalCycle, ProposalNo
 
 
 class ProposalMeta(BaseModel):
@@ -13,11 +13,11 @@ class ProposalMeta(BaseModel):
 
     no: ProposalNo
     cycle: ProposalCycle
-    instrument: Instrument
+    instrument: str
     path: Path
     title: str
 
     damnit_path: Path | None = None
 
-    start_date: datetime
-    end_date: datetime
+    start_date: datetime | None
+    end_date: datetime | None

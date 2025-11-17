@@ -7,7 +7,7 @@ from anyio import Path as APath
 
 from .. import get_logger
 from .._mymdc.clients import MyMdCClient
-from ..shared.models import Instrument, ProposalNo
+from ..shared.models import ProposalNo
 from .models import ProposalMeta
 
 logger = get_logger(__name__)
@@ -31,15 +31,18 @@ async def _get_proposal_meta(
 
     path = path_raw.parent  # gpfs proposal directory
 
+    start_date = proposal.beamtime_start_at or proposal.begin_at
+    end_date = proposal.beamtime_end_at or proposal.end_at
+
     return ProposalMeta(
         no=proposal.number,
         path=path,
         cycle=cycle.identifier,
-        instrument=Instrument(proposal.instrument_identifier),
+        instrument=proposal.instrument_identifier,
         title=proposal.title,
         damnit_path=(await _search_damnit_dir(path)),
-        start_date=datetime.fromisoformat(proposal.beamtime_start_at),
-        end_date=datetime.fromisoformat(proposal.beamtime_end_at),
+        start_date=datetime.fromisoformat(start_date) if start_date else None,
+        end_date=datetime.fromisoformat(end_date) if end_date else None,
     )
 
 
