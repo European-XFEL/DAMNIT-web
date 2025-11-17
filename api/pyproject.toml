@@ -51,6 +51,7 @@ docs = [
 # note that this is a separate group to `dev` as toml requires arrays to
 # be of a consistent type, so this needs to be included via `include-group`
 develop = [
+    "datamodel-code-generator[http]>=0.35.0",
     "pre-commit>=4.5.1",
     "strawberry-graphql[debug-server,fastapi]>=0.283.3",
 ]
