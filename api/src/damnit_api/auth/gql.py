@@ -1,43 +1,43 @@
-from functools import cached_property
+"""GraphQL types for auth module."""
+
 from typing import TYPE_CHECKING
 
 import strawberry
-import strawberry.experimental.pydantic as st_pydantic
-from strawberry.fastapi import BaseContext
 
-from . import models
+from .models import OAuthUserInfo
 
 if TYPE_CHECKING:
-    from .._mymdc.clients import MyMdCClient
+    from ..shared.gql import Context
 
 
 @strawberry.type
 class UserProposal:
     """Proposal information returned by MyMdC user proposal query."""
 
+    proposal_id: int | None
+    proposal_number: int | None
 
 
-@st_pydantic.type(model=models.BaseUserInfo)
+@strawberry.type
 class User:
     """User information stored in the request session."""
 
+    email: str
+    family_name: str
+    given_name: str
+    groups: list[str]
+    name: str
+    preferred_username: str
+
     @strawberry.field
+    async def proposals(self, info: "strawberry.Info[Context]") -> list[UserProposal]:
         """List of proposals for the user."""
+        mymdc = info.context.mymdc
 
         return [
-            UserProposal(id=p.proposal_id, number=p.proposal_number) for p in res.root
+            UserProposal(**p.model_dump())
+            for p in (await mymdc.get_user_proposals(self.preferred_username)).root
         ]
-
-
-class Context(BaseContext):
-    @cached_property
-    def user(self) -> User | None:
-        if not self.request:
-            return None
-
-        userinfo = models.OAuthUserInfo.from_request(self.request)  # pyright: ignore[reportArgumentType]
-
-        return User.from_pydantic(userinfo)
 
 
 @strawberry.type
