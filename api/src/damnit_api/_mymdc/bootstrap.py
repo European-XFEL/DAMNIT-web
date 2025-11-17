@@ -27,15 +27,13 @@ async def bootstrap(settings: "Settings"):
         await logger.awarning("MyMdC client already initialised")
 
 
-async def _init(
-    settings: "Settings",
-) -> clients.MyMdCClient | clients.MyMdCClientMock:
+async def _init(settings: "Settings") -> clients.MyMdCClient:
     """Create MyMdC client based on settings."""
     match settings.mymdc:
         case MyMdCCredentials():
             await logger.ainfo("Creating MyMdC client from credentials")
             auth = clients.MyMdCAuth.model_validate(settings.mymdc.model_dump())
-            return clients.MyMdCClient(auth)
+            return clients.MyMdCClientAsync(auth)
         case MockMyMdCData():
             await logger.ainfo("Creating Mock MyMdC client")
             return clients.MyMdCClientMock.model_validate(settings.mymdc.model_dump())
