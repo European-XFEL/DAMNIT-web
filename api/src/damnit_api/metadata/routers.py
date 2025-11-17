@@ -1,22 +1,26 @@
 """Metadata routers."""
 
-from typing import Annotated
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Depends
-
-from .._mymdc import get_client_mymdc
-from .._mymdc.clients import MyMdCClient
+from .._mymdc.dependencies import MyMdCClient
+from ..auth.dependencies import User
 from ..shared.models import ProposalNo
 from . import services
 from .models import ProposalMeta
 
-router = APIRouter(prefix="/metadata")
+router = APIRouter(prefix="/metadata", tags=["metadata"])
 
 
-# TODO: depend on user object for authentication/authorization
 @router.get("/proposal/{proposal_no}")
 async def get_proposal_meta(
-    proposal_no: ProposalNo, client: Annotated[MyMdCClient, Depends(get_client_mymdc)]
+    proposal_no: ProposalNo, mymdc: MyMdCClient, user: User
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number."""
-    return await services.get_proposal_meta(client, proposal_no)
+
+    if proposal_no not in {p.proposal_number for p in user.proposals.root}:
+        msg = (
+            f"User {user.preferred_username} not authorized for proposal {proposal_no}"
+        )
+        raise PermissionError(msg)
+
+    return await services.get_proposal_meta(mymdc, proposal_no)
