@@ -10,7 +10,7 @@ from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL
 from .. import graphql as gql_main
 from ..auth import gql as auth
 from ..instance import gql as instance
-from ..metadata import routers_gql as metadata
+from ..metadata import gql as metadata
 
 SUBSCRIPTION_PROTOCOLS = [
     GRAPHQL_TRANSPORT_WS_PROTOCOL,
