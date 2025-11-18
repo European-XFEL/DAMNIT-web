@@ -5,26 +5,35 @@
 
 Get the environment variables for authentication from [TeamPass](https://passman.xfel.eu/), and put them in a `.env` file in this directory.
 
-If you don't already have the `poetry` command available, [install Poetry](https://python-poetry.org/docs/#installation).
+`uv` is used for project management, install it if required, see the [uv docs for more information](https://docs.astral.sh/uv/).
 
-The API server requires Python 3.12 or above. You can load a module for this:
-
-```sh
-module load maxwell python/3.12
-```
-
-Then set up the dependencies and launch the server:
+To start the API server run:
 
 ```sh
-poetry install
-poetry run uvicorn damnit_api.main:create_app
+# Start by calling uvicorn, allows for passing uvicorn flags directly:
+uv run uvicorn damnit_api.main:create_app
+
+# Start server by calling the `main` function directly, this only allows
+# configuration via env vars or by modifying the `.env` value, has slightly
+# improved logging:
+uv run -m damnit_api.main
 ```
 
-If port `8000` is not free change the port with the `--port NNNN` flag on the `uvicorn` command.
+If port `8000` is not free you can change the port number, by using the `--port NNNN` flag on the `uvicorn` command, or by setting the `DW_API_UVICORN__PORT` env var if running `damnit_api.main`.
 
 An interactive GraphQL interface can be accessed at `localhost:8000/graphql`.
 More information can be found [here](https://github.com/graphql/graphiql/tree/main/packages/graphiql).
 
+Running the server in a container can be done by:
+
+```shell
+# Running container directly:
+podman build -t damnit-web-api .
+podman run --env-file .env --rm -it damnit-web-api
+
+# Via compose:
+podman compose up
+```
 
 ## Usage
 
