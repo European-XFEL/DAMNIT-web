@@ -6,5 +6,3 @@ services:
       target: preview
     environment:
       - VITE_API=http://host.docker.internal:30030/
-    ports:
-      - 4173:4173

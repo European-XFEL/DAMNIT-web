@@ -38,11 +38,18 @@ def configure() -> None:
 
 
 def get_public_base_url(request: Request) -> str:
-    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    # The forwarded protocol could return "https,http"
+    proto = request.headers.get("x-forwarded-proto", "").split(",")
+    if not proto or request.url.scheme in proto:
+        scheme = request.url.scheme
+    else:
+        scheme = proto[0]
+
     host = request.headers.get("x-forwarded-host") or request.headers.get(
         "host"
     )
-    return f"{proto}://{host}"
+
+    return f"{scheme}://{host}"
 
 
 @router.get("/login")
@@ -59,9 +66,7 @@ async def auth(
     callback_path = request.url_for("callback").path
     callback_uri = f"{base}{callback_path}"
 
-    return await OAUTH.authorize_redirect(
-        request, str(callback_uri), state=state
-    )
+    return await OAUTH.authorize_redirect(request, callback_uri, state=state)
 
 
 @router.get("/callback")
