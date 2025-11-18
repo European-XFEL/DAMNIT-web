@@ -21,6 +21,7 @@ nav:
 - Development:
   - ./dev/setup.md
   - ./dev/architecture.md
+  - ./dev/security.md
   - ./dev/notes.md
   - ./dev/docs.md
   - ./dev/ci-cd.md
