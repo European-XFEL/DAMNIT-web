@@ -1,0 +1,68 @@
+site_name: DAMNIT Web API
+site_description: DAMNIT Web API Documentation
+
+theme:
+  name: material
+  features:
+    - content.code.annotate
+    - navigation.instant
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.sections
+
+extra_css:
+- stylesheets/mkdocstrings.css
+
+repo_url: https://github.com/European-XFEL/DAMNIT-web.git
+
+nav:
+- index.md
+- Deployment: deployment.md
+- Development:
+  - ./dev/setup.md
+  - ./dev/ci-cd.md
+  - ./dev/docs.md
+  - ./dev/architecture.md
+
+markdown_extensions:
+- admonition
+- pymdownx.details
+- pymdownx.snippets
+- pymdownx.superfences
+
+plugins:
+- search
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [src]
+        inventories:
+        # Load object inventories to enable cross-references to other projects.
+        - https://docs.python.org/3/objects.inv
+        - https://docs.pydantic.dev/latest/objects.inv
+        options:
+          # See https://mkdocstrings.github.io/python/usage/#recommended-settings
+          docstring_section_style: spacy
+          docstring_style: "google"
+          heading_level: 1
+          inherited_members: true
+          merge_init_into_class: true
+          modernize_annotations: true
+          parameter_headings: true
+          separate_signature: true
+          show_bases: true
+          show_if_no_docstring: true
+          show_root_full_path: false
+          show_root_heading: true
+          show_signature_annotations: true
+          show_signature_type_parameters: true
+          show_symbol_type_heading: true
+          show_symbol_type_toc: true
+          signature_crossrefs: true
+          summary: true
+          type_parameter_headings: true
+          unwrap_annotated: true
+- api-autonav:
+    modules: ['src/damnit_api']
+    exclude_private: false
+    nav_section_title: "Reference"
