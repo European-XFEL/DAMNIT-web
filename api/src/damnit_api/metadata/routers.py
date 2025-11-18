@@ -16,11 +16,4 @@ async def get_proposal_meta(
     proposal_no: ProposalNo, mymdc: MyMdCClient, user: User
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number."""
-
-    if proposal_no not in {p.proposal_number for p in user.proposals.root}:
-        msg = (
-            f"User {user.preferred_username} not authorized for proposal {proposal_no}"
-        )
-        raise PermissionError(msg)
-
-    return await services.get_proposal_meta(mymdc, proposal_no)
+    return await services.get_proposal_meta(mymdc, proposal_no, user)

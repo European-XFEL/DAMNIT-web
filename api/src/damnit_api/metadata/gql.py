@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
+from ..auth.models import User
 from . import models, services
 
 if TYPE_CHECKING:
@@ -33,20 +34,13 @@ class Query:
         self, proposal_no: int, info: strawberry.Info[Context]
     ) -> ProposalMeta | None:
         """Fetch metadata for the provided proposal number."""
-        user, mymdc = info.context.oauth_user, info.context.mymdc
+        oauth_user, mymdc = info.context.oauth_user, info.context.mymdc
 
-        allowed_proposals = {
-            p.proposal_number
-            for p in (await mymdc.get_user_proposals(user.preferred_username)).root
-        }
-
-        if proposal_no not in allowed_proposals:
-            msg = (
-                f"User {user.preferred_username} not authorised for proposal "
-                f"{proposal_no}, or proposal does not exist."
-            )
-            raise PermissionError(msg)
+        user = User(
+            **oauth_user.model_dump(),
+            proposals=await mymdc.get_user_proposals(oauth_user.preferred_username),
+        )
 
         return ProposalMeta.from_pydantic(
-            await services.get_proposal_meta(mymdc, proposal_no)
+            await services.get_proposal_meta(mymdc, proposal_no, user)
         )
