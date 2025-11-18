@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import strawberry
 from async_lru import alru_cache
@@ -9,7 +10,7 @@ from strawberry.types import Info
 from ..db import async_latest_rows, async_variables
 from ..utils import create_map
 from .models import Timestamp, get_model
-from .utils import DatabaseInput, LatestData, fetch_info
+from .utils import DamnitDataSpecifierInput, LatestData, fetch_info
 
 POLLING_INTERVAL = 1  # seconds
 
@@ -76,7 +77,7 @@ class Subscription:
     async def latest_data(
         self,
         info: Info,
-        database: DatabaseInput,
+        database: DamnitDataSpecifierInput,
         timestamp: Timestamp,  # FIX: # pyright: ignore[reportInvalidTypeForm]
     ) -> AsyncGenerator[JSON]:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         while True:

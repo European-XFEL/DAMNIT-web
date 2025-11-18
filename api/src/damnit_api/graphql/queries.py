@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import strawberry
 from sqlalchemy import and_, func, select
 from strawberry.scalars import JSON
@@ -5,7 +7,7 @@ from strawberry.scalars import JSON
 from ..data import get_extracted_data
 from ..db import async_table, get_session
 from .models import DamnitRun, get_model
-from .utils import DatabaseInput, fetch_info
+from .utils import DamnitDataSpecifierInput, fetch_info
 
 
 def group_by_run(data):
@@ -62,7 +64,7 @@ async def fetch_variables(db_path: Path, *, limit, offset):
         ),
     )
 
-    async with get_session(proposal) as session:
+    async with get_session(db_path) as session:
         result = await session.execute(query)
         if not result:
             raise ValueError  # TODO: Better error handling
@@ -78,7 +80,11 @@ class Query:
 
     @strawberry.field
     async def runs(
-        self, database: DatabaseInput, page: int = 1, per_page: int = 10
+        self,
+        info,
+        database: DamnitDataSpecifierInput,
+        page: int = 1,
+        per_page: int = 10,
     ) -> list[DamnitRun]:
         """
         Returns a list of Damnit runs, with pagination support.
@@ -91,22 +97,30 @@ class Query:
         Returns:
             List[DamnitRun]: A list of Damnit runs.
         """
-        proposal = database.proposal
+        context = info.context
 
-        model = get_model(proposal)  # FIX: # pyright: ignore[reportArgumentType]
+        proposal_meta = (
+            await database.get_proposal_meta_with_auth(
+                context.oauth_user, context.mymdc
+            )
+        ).with_damnit_path()
+
+        db_path = proposal_meta.damnit_path / "runs.sqlite"
+
+        model = get_model(db_path)  # FIX: # pyright: ignore[reportArgumentType]
         if model is None:
-            msg = f"Table model for proposal {proposal} is not found."
+            msg = f"Table model not found in {db_path}."
             raise RuntimeError(msg)
 
         variables = await fetch_variables(
-            proposal, limit=per_page, offset=(page - 1) * per_page
+            db_path, limit=per_page, offset=(page - 1) * per_page
         )
 
         if not len(variables):
             return []
 
         info = await fetch_info(
-            proposal, runs=[variable["run"] for variable in variables]
+            db_path, runs=[variable["run"] for variable in variables]
         )
 
         return [
@@ -114,12 +128,23 @@ class Query:
         ]
 
     @strawberry.field
-    def metadata(
-        self, database: DatabaseInput
+    async def metadata(
+        self, info, database: DamnitDataSpecifierInput
     ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+        context = info.context
+
+        proposal_meta = (
+            await database.get_proposal_meta_with_auth(
+                context.oauth_user, context.mymdc
+            )
+        ).with_damnit_path()
+
+        db_path = proposal_meta.damnit_path / "runs.sqlite"
+
         model = get_model(
-            database.proposal  # FIX: # pyright: ignore[reportArgumentType]
+            db_path  # FIX: # pyright: ignore[reportArgumentType]
         )
+
         return {
             "runs": model.runs,
             "variables": model.variables,
@@ -128,9 +153,19 @@ class Query:
         }
 
     @strawberry.field
-    def extracted_data(
-        self, database: DatabaseInput, run: int, variable: str
+    async def extracted_data(
+        self, info, database: DamnitDataSpecifierInput, run: int, variable: str
     ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+        context = info.context
+
+        proposal_meta = (
+            await database.get_proposal_meta_with_auth(
+                context.oauth_user, context.mymdc
+            )
+        ).with_damnit_path()
+
+        db_path = proposal_meta.damnit_path / "runs.sqlite"
+
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
         return get_extracted_data(
