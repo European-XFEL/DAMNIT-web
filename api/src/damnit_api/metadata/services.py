@@ -7,6 +7,7 @@ from anyio import Path as APath
 
 from .. import get_logger
 from .._mymdc.clients import MyMdCClient
+from ..auth.dependencies import User
 from ..shared.models import ProposalNo
 from .models import ProposalMeta
 
@@ -74,11 +75,26 @@ async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
 
 
 async def get_proposal_meta(
-    client: MyMdCClient, proposal_no: ProposalNo
+    client: MyMdCClient,
+    proposal_no: ProposalNo,
+    user: User,
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number, using the repository and/or provided
     MyMdC Client."""
 
     # TODO: caching layer/repository
+
+    allowed_proposals = {p.proposal_number for p in user.proposals.root}
+
+    if allowed_proposals is None:
+        msg = "No allowed proposals provided."
+        raise ValueError(msg)
+
+    if proposal_no not in allowed_proposals:
+        msg = (
+            f"User not authorised for proposal {proposal_no}, or proposal does not "
+            "exist."
+        )
+        raise PermissionError(msg)
 
     return await _get_proposal_meta(client, proposal_no)
