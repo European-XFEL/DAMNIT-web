@@ -1,5 +1,7 @@
 import inspect
+import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import (
     Generic,
     NewType,
@@ -9,7 +11,7 @@ from typing import (
 import numpy as np
 import strawberry
 
-from ..shared.const import DEFAULT_PROPOSAL, DamnitType
+from ..shared.const import DamnitType
 from ..utils import Registry, b64image, create_map, get_type, map_dtype
 
 T = TypeVar("T")
@@ -150,15 +152,25 @@ class DamnitRun:
 
 
 class DamnitTable(metaclass=Registry):
-    proposal = ""
-    path = ""  # TODO: handle dynamic database path
     stype = None  # strawberry type
 
     # timestamp of the latest model
     timestamp = datetime.now(tz=UTC).timestamp()
 
-    def __init__(self, proposal: str = DEFAULT_PROPOSAL):
-        self.proposal = proposal
+    @staticmethod
+    def _name_fallback(db_path: Path) -> str:
+        """Fallback to extract proposal name from path, assuming db_path is in proposal
+        dir"""
+
+        name_match = re.search(r"(?:^|/)(p\d{6})(?:/|$)", str(db_path))
+        if name_match:
+            return name_match.group(1)
+
+        return str(db_path)
+
+    def __init__(self, db_path: Path, name: str | None = None):
+        self.name = name or self._name_fallback(db_path)
+        self.db_path = db_path
         self.variables = DamnitRun.known_variables()
         self.stype = self._create_stype()
         self.runs = []
@@ -192,9 +204,7 @@ class DamnitTable(metaclass=Registry):
         }
 
         # Create class
-        new_class = type(
-            f"p{self.proposal}", (DamnitRun,), {"__annotations__": annotations}
-        )
+        new_class = type(f"{self.name}", (DamnitRun,), {"__annotations__": annotations})
         return strawberry.type(new_class)
 
     def resolve(self, **fields):
