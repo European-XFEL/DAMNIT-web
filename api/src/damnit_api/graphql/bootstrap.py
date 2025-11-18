@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from async_lru import alru_cache
 
 from .. import db
@@ -5,7 +7,7 @@ from . import models
 
 
 @alru_cache(ttl=10)
-async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
+async def bootstrap(db_path: Path):
     """Sets up the DAMNIT model by adding annotations to its class definition
     and converting it to a Strawberry type. This function should only be called
     once.
@@ -14,14 +16,14 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
         RuntimeError: If setup is called more than once.
     """
 
-    model = models.get_model(proposal)
+    model = models.get_model(db_path)
 
-    tags = await db.async_all_tags(proposal)
+    tags = await db.async_all_tags(db_path)
     model.tags = tags
 
-    variables = await db.async_variables(proposal)
+    variables = await db.async_variables(db_path)
 
-    variable_tags_list = await db.async_variable_tags(proposal)
+    variable_tags_list = await db.async_variable_tags(db_path)
     tags_map: dict[str, list[int]] = {}
     for row in variable_tags_list:
         name = row["variable_name"]
@@ -33,7 +35,7 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
 
     model.update(variables)
 
-    runs = await db.async_column(proposal, table="run_info", name="run")
+    runs = await db.async_column(db_path, table="run_info", name="run")
     model.runs = sorted(runs or [])
 
     return model

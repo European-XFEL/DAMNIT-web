@@ -20,8 +20,8 @@ def group_by_run(data):
     return list(grouped.values())
 
 
-async def fetch_variables(proposal, *, limit, offset):
-    table = await async_table(proposal, name="run_variables")
+async def fetch_variables(db_path: Path, *, limit, offset):
+    table = await async_table(db_path, name="run_variables")
 
     runs_subquery = (
         select(table.c.run)

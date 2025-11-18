@@ -1,7 +1,6 @@
-import os.path as osp
 from abc import ABCMeta
 from base64 import b64encode
-from glob import iglob
+from types import UnionType
 from typing import Any, ClassVar, Union, get_args, get_origin
 
 import numpy as np
@@ -31,42 +30,6 @@ def map_dtype(dtype, default=DamnitType.STRING):
 
 def b64image(bytes_):
     return f"data:image/png;base64,{b64encode(bytes_).decode('utf-8')}"
-
-
-# -----------------------------------------------------------------------------
-# Proposal and runs
-
-DATA_ROOT_DIR = "/gpfs/exfel/exp"
-
-
-def format_proposal_number(proposal):
-    """Format a given unformatted proposal number."
-
-    Lifted and modified from extra_data.reader.py
-    https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/reader.py
-    """
-    if not proposal.startswith("p"):
-        proposal = "p" + proposal.rjust(6, "0")
-
-    return proposal
-
-
-def find_proposal(propno):
-    """Find the proposal directory for a given proposal on Maxwell
-
-    Lifted and modified from extra_data.read_machinery.py
-    https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/read_machinery.py
-    """
-
-    if "/" in propno:
-        # Already passed a proposal directory
-        return propno
-
-    propno = format_proposal_number(propno)
-    for d in iglob(osp.join(DATA_ROOT_DIR, f"*/*/{propno}")):  # noqa: PTH118, PTH207
-        return d
-
-    return ""
 
 
 # -----------------------------------------------------------------------------
@@ -117,7 +80,7 @@ def create_map(
 
 
 def get_type(type_):
-    if get_origin(type_) is Union:
+    if get_origin(type_) in {Union, UnionType}:
         # Optional type hint
         return get_args(type_)[0]
 

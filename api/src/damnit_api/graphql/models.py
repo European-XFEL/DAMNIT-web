@@ -201,20 +201,20 @@ class DamnitTable(metaclass=Registry):
         return self.stype.resolve(fields)  # pyright: ignore[reportOptionalMemberAccess] # FIX:
 
 
-def get_model(proposal: str):
-    return DamnitTable(proposal)
+def get_model(db_path: Path):
+    return DamnitTable(db_path)
 
 
 def update_model(
-    proposal: str,
+    db_path: Path,
     variables: dict,
     timestamp: float | None = None,
 ):
-    model = DamnitTable(proposal)
+    model = DamnitTable(db_path)
     model.update(variables, timestamp)
     return model
 
 
-def get_stype(proposal: str):
-    model = DamnitTable(proposal)
+def get_stype(db_path: Path):
+    model = DamnitTable(db_path)
     return model.stype
