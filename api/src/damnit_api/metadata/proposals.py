@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import aiofiles
+from anyio import Path as APath
 from async_lru import alru_cache
 
 from ..settings import settings
@@ -14,7 +15,7 @@ from .mymdc import MyMDC
 
 @alru_cache(ttl=60)
 async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
-    cache = Path(settings.proposal_cache)
+    cache = APath(settings.proposal_cache)
     proposals = None
 
     # Check from cache if existing
@@ -33,7 +34,7 @@ async def get_proposal_info(proposal_num: str, use_cache: bool = True) -> dict:
         root_path = format_proposal_path(info["def_proposal_path"])
         damnit_path = get_damnit_path(root_path, suffix="usr/Shared")
         if not damnit_path:
-            return None
+            return None  # FIX: # pyright: ignore[reportReturnType]
 
         principal_investigator = await mymdc.fetch_user(
             info["principal_investigator_id"]
@@ -68,20 +69,18 @@ async def get_available_proposals(user_groups, use_cache=True) -> list[str]:
     all_proposals = await get_damnit_proposals(use_cache)
     read_permissions = get_read_permissions(user_groups)
     read_permissions = [
-        re.compile(permission.replace("*", ".*"))
-        for permission in read_permissions
+        re.compile(permission.replace("*", ".*")) for permission in read_permissions
     ]
 
     proposals = {}
     for prop_num, info in all_proposals.items():
         if not any(
-            permission.match(info["proposal_path"])
-            for permission in read_permissions
+            permission.match(info["proposal_path"]) for permission in read_permissions
         ):
             continue
         proposals[prop_num] = info
 
-    return proposals
+    return proposals  # FIX: # pyright: ignore[reportReturnType]
 
 
 def sort_proposals_by_run_cycle(proposals, full=False):
@@ -106,11 +105,11 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
     read_permissions = []
 
     # Instrument staff
-    _sase_groups = {"sa1", "sa2", "sa3"}
-    _las_groups = {"la1", "la2", "la3"}
-    _instrument_groups = {"spb", "fxe", "hed", "mid", "scs", "sqs", "sxp"}
+    sase_groups = {"sa1", "sa2", "sa3"}
+    las_groups = {"la1", "la2", "la3"}
+    instrument_groups_ = {"spb", "fxe", "hed", "mid", "scs", "sqs", "sxp"}
 
-    instrument_groups = _sase_groups | _las_groups | _instrument_groups
+    instrument_groups = sase_groups | las_groups | instrument_groups_
 
     for _group in instrument_groups:
         group = f"{_group}DATA".lower()
@@ -132,7 +131,7 @@ def get_read_permissions(current_user_groups: list[str]) -> list[str]:
 
 
 async def get_damnit_proposals(use_cache: bool) -> dict:
-    cache = Path(settings.proposal_cache)
+    cache = APath(settings.proposal_cache)
     if use_cache and cache.exists():
         async with aiofiles.open(settings.proposal_cache) as file:
             # TODO: Update cache for new proposals
@@ -168,9 +167,7 @@ async def get_damnit_proposals(use_cache: bool) -> dict:
 def get_damnit_paths() -> list[str]:
     exp = Path("/gpfs/exfel/exp/")
     return [
-        damnit
-        for ush in exp.glob("**/usr/Shared")
-        if (damnit := get_damnit_path(ush))
+        damnit for ush in exp.glob("**/usr/Shared") if (damnit := get_damnit_path(ush))
     ]
 
 
@@ -189,7 +186,7 @@ def get_damnit_path(path: str | Path, suffix: str | None = None) -> str:
             if p.is_dir():
                 return str(p)
 
-    return None
+    return None  # FIX: # pyright: ignore[reportReturnType]
 
 
 def get_proposal_number_from_path(path: str) -> str:

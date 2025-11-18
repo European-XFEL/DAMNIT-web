@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from anyio import Path as APath
 from pydantic import BaseModel
 
 from ..acl.models import ACL, GroupACE, Mask, UserACE
@@ -29,12 +30,11 @@ class User(BaseModel):
 
     @property
     def acl(self) -> ACL:
-        _groups = [group.ace for group in self.groups]
-        return ACL([self.ace, *_groups])
+        return ACL([self.ace, *[group.ace for group in self.groups]])
 
 
 class Resource(BaseModel):
-    path: Path
+    path: Path | APath
     acl: ACL
     owner: str
     group: str

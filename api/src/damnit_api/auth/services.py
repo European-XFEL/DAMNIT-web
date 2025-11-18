@@ -1,7 +1,7 @@
 import asyncio
 import re
-from pathlib import Path
 
+from anyio import Path as APath
 from async_lru import alru_cache
 from fastapi import Request
 from ldap3 import ALL, SUBTREE, Connection, Server
@@ -39,9 +39,9 @@ async def user_from_ldap(uid: str = "", mail: str = "") -> User:
 
     search_attributes = ["uid", "uidNumber", "cn", "mail", "isMemberOf"]
 
-    _logger = logger.bind(user=uid or mail)
+    logger_ = logger.bind(user=uid or mail)
 
-    _logger.debug(
+    logger_.debug(
         "LDAP search for user",
         ldap_bash=_LDAP_BASE,
         search_filter=search_filter,
@@ -64,7 +64,7 @@ async def user_from_ldap(uid: str = "", mail: str = "") -> User:
         msg = "User not found"
         raise Exception(msg)  # TODO: better exception
 
-    _logger.debug("LDAP search result", entries=conn.entries)
+    logger_.debug("LDAP search result", entries=conn.entries)
 
     entry = conn.entries[0]
     username = entry.uid.value
@@ -79,13 +79,17 @@ async def user_from_ldap(uid: str = "", mail: str = "") -> User:
         res = _GROUP_NAME_RE.search(g)
 
         if not res:
-            _logger.debug("Group not found", group=g)
+            logger_.debug("Group not found", group=g)
             continue
 
         groups.append(res.group(1))
 
     # For now, let's also include the list of proposals.
     proposals = await get_available_proposals(groups)
+
+    if not uid or not isinstance(uid, int):
+        msg = "Invalid UID from LDAP"
+        raise Exception(msg)  # TODO: better exception
 
     user = User(
         uid=uid,
@@ -119,13 +123,11 @@ async def user_from_session(request: Request) -> User:
 
 
 @alru_cache(ttl=60)
-async def resource_from_path(path: Path) -> Resource:
+async def resource_from_path(path: APath) -> Resource:
     acl = await ACL.from_path(path)
-    owner = path.owner()
-    group = path.group()
+    owner = await path.owner()
+    group = await path.group()
 
-    logger.debug(
-        "Resource from path", path=path, acl=acl, owner=owner, group=group
-    )
+    logger.debug("Resource from path", path=path, acl=acl, owner=owner, group=group)
 
     return Resource(path=path, acl=acl, owner=owner, group=group)

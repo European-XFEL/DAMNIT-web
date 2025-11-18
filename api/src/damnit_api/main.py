@@ -45,9 +45,7 @@ def create_app():
             exc.status_code == status.HTTP_401_UNAUTHORIZED
             and request_path in KNOWN_PATHS
         ):
-            return RedirectResponse(
-                url=f"/oauth/login?redirect_uri={request_path}"
-            )
+            return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
@@ -78,14 +76,11 @@ if __name__ == "__main__":
     # TODO: warning/logging for address bind to localhost only which is aware
     # of running in container/in front of reverse proxy?
 
-    logger.info(
-        "Starting uvicorn with settings", **settings.uvicorn.model_dump()
-    )
+    logger.info("Starting uvicorn with settings", **settings.uvicorn.model_dump())
 
     if settings.uvicorn.ssl_cert_reqs != 2:
         logger.warning(
-            "Not configured to require mTLS. "
-            "This is not recommended for production."
+            "Not configured to require mTLS. This is not recommended for production."
         )
 
     uvicorn.run(

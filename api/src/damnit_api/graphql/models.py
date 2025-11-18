@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from typing import (
     Generic,
     NewType,
-    Optional,
     TypeVar,
 )
 
@@ -34,9 +33,7 @@ def serialize(value, *, dtype=DamnitType.STRING):
     if dtype is DamnitType.IMAGE:
         value = b64image(value)
     elif dtype is DamnitType.TIMESTAMP:
-        value = int(
-            value.timestamp() if isinstance(value, datetime) else value * 1000
-        )
+        value = int(value.timestamp() if isinstance(value, datetime) else value * 1000)
     elif dtype is DamnitType.NUMBER and not np.isfinite(value):
         value = to_js_string(value)
 
@@ -44,12 +41,12 @@ def serialize(value, *, dtype=DamnitType.STRING):
 
 
 Any = strawberry.scalar(
-    NewType("Any", object),
+    NewType("Any", object),  # FIX: # pyright: ignore[reportArgumentType]
 )
 
 
 Timestamp = strawberry.scalar(
-    int | float,
+    int | float,  # FIX: # pyright: ignore[reportArgumentType]
     parse_value=lambda value: value / 1000,
     name="Timestamp",
 )
@@ -62,21 +59,21 @@ class BaseVariable:
 
 
 @strawberry.type
-class KnownVariable(Generic[T], BaseVariable):
+class KnownVariable(Generic[T], BaseVariable):  # FIX: # noqa: UP046
     value: T
 
 
 @strawberry.type
 class DamnitVariable(BaseVariable):
-    value: Any | None
+    value: Any | None  # FIX: # pyright: ignore[reportInvalidTypeForm]
 
 
 @strawberry.interface
 class DamnitRun:
     proposal: KnownVariable[int]
     run: KnownVariable[int]
-    start_time: KnownVariable[Timestamp] | None
-    added_at: KnownVariable[Timestamp] | None
+    start_time: KnownVariable[Timestamp] | None  # pyright: ignore[reportInvalidTypeForm] # FIX:
+    added_at: KnownVariable[Timestamp] | None  # pyright: ignore[reportInvalidTypeForm] # FIX:
 
     @classmethod
     def from_db(cls, entry):
@@ -169,7 +166,7 @@ class DamnitTable(metaclass=Registry):
 
     def update(self, variables=None, timestamp: float | None = None):
         """We update the strawberry type and the schema here"""
-        new_variables = {**self.variables, **variables}
+        new_variables = {**self.variables, **variables}  # pyright: ignore[reportGeneralTypeIssues] # FIX:
         has_changed = self.variables != new_variables
         if has_changed:
             self.variables = new_variables
@@ -182,14 +179,14 @@ class DamnitTable(metaclass=Registry):
 
     def as_stype(self, **fields):
         """Converts the database entry to Damnit type"""
-        return self.stype.from_db(fields)
+        return self.stype.from_db(fields)  # pyright: ignore[reportOptionalMemberAccess] # FIX:
 
     def _create_stype(self) -> type[DamnitRun]:
         # Map annotations as (dynamic) DAMNIT variable
         annotations = {
             name: DamnitRun.known_annotations().get(
                 name,
-                Optional[DamnitVariable],  # noqa: UP007
+                DamnitVariable | None,
             )
             for name in self.variables
         }
@@ -201,7 +198,7 @@ class DamnitTable(metaclass=Registry):
         return strawberry.type(new_class)
 
     def resolve(self, **fields):
-        return self.stype.resolve(fields)
+        return self.stype.resolve(fields)  # pyright: ignore[reportOptionalMemberAccess] # FIX:
 
 
 def get_model(proposal: str):

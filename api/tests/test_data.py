@@ -75,10 +75,7 @@ datasets = [
     scalars + images + ndarrays + dataarrays,
 )
 def test_get_damnit_type_valid(data):
-    assert (
-        get_damnit_type(data.value, type_hint=data.type_hint)
-        is data.expected_type
-    )
+    assert get_damnit_type(data.value, type_hint=data.type_hint) is data.expected_type
 
 
 @pytest.mark.parametrize(
@@ -96,9 +93,7 @@ def test_get_damnit_type_unsupported(data):
 def test_to_dataarray_1d_ndarray():
     data = np.random.rand(10)
     assert to_dataarray(data).equals(
-        xr.DataArray(
-            data, dims=["index"], coords={"index": np.arange(data.shape[0])}
-        )
+        xr.DataArray(data, dims=["index"], coords={"index": np.arange(data.shape[0])})
     )
 
 
