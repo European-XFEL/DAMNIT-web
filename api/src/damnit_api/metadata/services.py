@@ -34,29 +34,34 @@ async def _get_proposal_meta(
     start_date = proposal.beamtime_start_at or proposal.begin_at
     end_date = proposal.beamtime_end_at or proposal.end_at
 
+    damnit_path, damnit_paths_searched = await _search_damnit_dir(path)
+
     return ProposalMeta(
         no=proposal.number,
         path=path,
         cycle=cycle.identifier,
         instrument=proposal.instrument_identifier,
+        damnit_path=damnit_path,
+        damnit_paths_searched=damnit_paths_searched,
         title=proposal.title,
-        damnit_path=(await _search_damnit_dir(path)),
         start_date=datetime.fromisoformat(start_date) if start_date else None,
         end_date=datetime.fromisoformat(end_date) if end_date else None,
     )
 
 
-async def _search_damnit_dir(path: Path) -> Path | None:
+async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
     """Search for a DAMNIT directory in common locations relative to `path`.
 
     Looks for `usr/Shared/{amore,amore-online}` directories."""
     usr_share = APath(path) / "usr" / "Shared" / "amore"
 
+    searched_paths = []
     for dirs in ("amore", "amore-online"):
         try:
             damnit_path = damnit_path = usr_share.parent / dirs
+            searched_paths.append(Path(damnit_path))
             if await damnit_path.is_dir():
-                return Path(damnit_path)
+                return Path(damnit_path), searched_paths
 
             await logger.adebug(f"No DAMNIT directory found at {damnit_path}")
         except PermissionError:
@@ -65,7 +70,7 @@ async def _search_damnit_dir(path: Path) -> Path | None:
             )
             continue
 
-    return None
+    return None, searched_paths
 
 
 async def get_proposal_meta(

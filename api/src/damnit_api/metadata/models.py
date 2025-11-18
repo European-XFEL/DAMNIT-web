@@ -18,6 +18,7 @@ class ProposalMeta(BaseModel):
     title: str
 
     damnit_path: Path | None = None
+    damnit_paths_searched: list[Path]
 
     start_date: datetime | None
     end_date: datetime | None
