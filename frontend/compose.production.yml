@@ -8,5 +8,12 @@ services:
     environment:
       - NGINX_SERVER_NAME=localhost
       - NGINX_API_URL=https://max-exfl458.desy.de:8123/
+    volumes:
+      # Certs used for mTLS
+      - ./certs:/etc/nginx/certs/mtls
+      # Certs for serving
+      - /data/certs/damnit-test.xfel.eu.key:/etc/nginx/certs/server.key
+      - /data/certs/damnit-test.xfel.eu.pem:/etc/nginx/certs/server.crt
     ports:
       - 443:443
+    restart: unless-stopped
