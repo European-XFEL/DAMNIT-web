@@ -1,4 +1,4 @@
-name: damnit-web-stage
+name: dw-stage
 
 services:
   frontend:
