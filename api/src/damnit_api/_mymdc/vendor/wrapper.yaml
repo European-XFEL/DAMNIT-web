@@ -1,0 +1,15 @@
+openapi: 3.0.2
+info:
+  title: Slim models
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    get_proposals:
+      $ref: ./openapi.yaml#/components/schemas/get_proposals
+    users:
+      $ref: ./openapi.yaml#/components/schemas/users
+    instrument_cycles:
+      $ref: ./openapi.yaml#/components/schemas/instrument_cycles
+    users_proposals:
+      $ref: ./openapi.yaml#/components/schemas/users_proposals

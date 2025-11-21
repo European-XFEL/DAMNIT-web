@@ -1,40 +1,53 @@
-from pathlib import Path
+"""Authentication and Authorization models."""
 
-from anyio import Path as APath
-from pydantic import BaseModel
+from typing import Self
 
-from ..acl.models import ACL, GroupACE, Mask, UserACE
+from fastapi import Request
+from pydantic import BaseModel, ConfigDict
+
+from .._mymdc.dependencies import MyMdCClient
+from .._mymdc.models import UserProposals
 
 
-class Group(BaseModel):
-    gid: int | None
+class BaseUserInfo(BaseModel):
+    email: str
+    family_name: str
+    given_name: str
+    groups: list[str]
     name: str
+    preferred_username: str
 
-    @property
-    def ace(self) -> GroupACE:
-        return GroupACE(who=self.name, mask=Mask.rwx)
+    # Discarded fields
+    # email_verified: bool
+    # sub: str
+    # roles: list[str]
 
-
-class User(BaseModel):
-    uid: int | None
-    username: str
-    name: str | None
-    email: str | None
-
-    proposals: dict[str, list[str]]
-    groups: list[Group]
-
-    @property
-    def ace(self) -> UserACE:
-        return UserACE(who=self.username, mask=Mask.rwx)
-
-    @property
-    def acl(self) -> ACL:
-        return ACL([self.ace, *[group.ace for group in self.groups]])
+    model_config = ConfigDict(extra="ignore")
 
 
-class Resource(BaseModel):
-    path: Path | APath
-    acl: ACL
-    owner: str
-    group: str
+class OAuthUserInfo(BaseUserInfo):
+    """Basic user information obtained from the OAuth provider."""
+
+    @classmethod
+    def from_request(cls, request: Request) -> Self:
+        """Create an OAuthUserInfo from the request session."""
+        user_dict = request.session.get("user")
+        if user_dict is None:
+            msg = "No user info in session"
+            raise ValueError(msg)
+        return cls.model_validate(user_dict)
+
+
+class User(BaseUserInfo):
+    """Full user information including list of proposals."""
+
+    proposals: UserProposals
+
+    @classmethod
+    async def from_request(cls, request: Request, mymdc: MyMdCClient) -> Self:
+        oauth = OAuthUserInfo.from_request(request)
+        proposals = await mymdc.get_user_proposals(oauth.preferred_username)
+        return cls.model_validate({
+            **oauth.model_dump(),
+            "proposals": proposals,
+        })

@@ -1,17 +1,19 @@
-from fastapi import APIRouter, HTTPException
+"""Metadata routers."""
 
-from .proposals import get_proposal_info
+from fastapi import APIRouter
 
-router = APIRouter(prefix="/metadata", include_in_schema=False)
+from .._mymdc.dependencies import MyMdCClient
+from ..auth.dependencies import User
+from ..shared.models import ProposalNo
+from . import services
+from .models import ProposalMeta
+
+router = APIRouter(prefix="/metadata", tags=["metadata"])
 
 
-@router.get("/proposal/{proposal_num}")
-async def proposal_info(proposal_num):
-    # TODO: Use authentication
-    info = await get_proposal_info(proposal_num)
-    if not info:
-        raise HTTPException(
-            status_code=404, detail=f"Proposal `p{proposal_num}` not found."
-        )
-
-    return info
+@router.get("/proposal/{proposal_no}")
+async def get_proposal_meta(
+    proposal_no: ProposalNo, mymdc: MyMdCClient, user: User
+) -> ProposalMeta:
+    """Get proposal metadata by proposal number."""
+    return await services.get_proposal_meta(mymdc, proposal_no, user)

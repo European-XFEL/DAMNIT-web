@@ -1,0 +1,365 @@
+openapi: 3.0.2
+info:
+  title: Slim models
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    get_proposals:
+      required:
+        - instrument_cycle_id
+        - instrument_id
+        - main_proposer_id
+        - principal_investigator_id
+        - title
+      type: object
+      properties:
+        number:
+          type: integer
+          example: 900184
+        title:
+          type: string
+          example: test proposal
+        proposal_folder:
+          type: string
+          example: p900212
+        def_proposal_path:
+          type: string
+          example: /gpfs/exfel/exp/SCS/202131/p900212/raw
+        abstract:
+          type: string
+          example: test abstract
+        url:
+          type: string
+          example: https://internal.xfel.eu/test_metadata/
+        instrument_id:
+          type: integer
+          example: 111
+        instrument_cycle_id:
+          type: integer
+          example: 112
+        principal_investigator_id:
+          type: integer
+          example: 1
+        main_proposer_id:
+          type: integer
+          example: 1010
+        begin_at:
+          type: string
+          example: 13-05-2020 18:09:44
+        end_at:
+          type: string
+          example: 15-05-2020 18:09:44
+        release_at:
+          type: string
+          example: 17-05-2020 18:09:44
+        flg_data_archived_notification:
+          type: string
+          example: R
+        expected_data_archive_at:
+          type: string
+          example: 17-05-2020 18:09:44
+        data_archived_at:
+          type: string
+          example: 21-05-2020 18:09:44
+        flg_beamtime_status:
+          type: string
+          example: T
+        beamtime_start_at:
+          type: string
+          example: ''
+        beamtime_end_at:
+          type: string
+          example: ''
+        flg_public:
+          type: boolean
+          default: false
+        flg_proposal_system:
+          type: string
+          example: local
+        flg_available:
+          type: boolean
+          default: true
+        description:
+          type: string
+          example: description
+        local_contact_id:
+          type: integer
+          example: 231
+        local_data_contact_id:
+          type: integer
+          example: 391
+        experiment_data_contact_id:
+          type: integer
+          example: 1274
+        orig_repository_id:
+          type: integer
+        last_run:
+          type: integer
+          example: 99
+        flg_preferred_data_output:
+          type: string
+          example: R
+          default: R
+        num_delivered_shifts:
+          type: integer
+          example: 1
+        num_preparation_shifts:
+          type: integer
+          example: 1
+        num_scheduled_shifts:
+          type: integer
+          example: 1
+        flg_cloneable_status:
+          type: string
+          default: NC
+          example: AC
+        flg_auto_run_quality:
+          type: integer
+          default: -1
+        techniques:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              name:
+                type: string
+                example: XFEL Technique
+              identifier:
+                type: string
+                example: XFEL_Technique_1
+              url:
+                type: string
+                example: https://in.xfel.eu/metadata/techniques/:id
+              flg_available:
+                type: boolean
+                example: true
+              description:
+                type: string
+                example: European XFEL example technique
+        logbook_info:
+          type: object
+          properties:
+            logbook_identifier:
+              type: string
+            logbook_url:
+              type: string
+              example: https://in.xfel.eu/elog/SCS+Proposal+2937/
+            using_zulip_logbook:
+              type: string
+            logbook_base_url:
+              type: string
+              example: https://in.xfel.eu/elog/SCS+Proposal+2937/
+        beamtimes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              begin_at:
+                type: string
+                example: '2021-07-20T15:00:00.000+02:00'
+              end_at:
+                type: string
+                example: '2021-07-25T23:00:00.000+02:00'
+              flg_available:
+                type: integer
+                example: 1
+              description:
+                type: string
+                example: about beamtimes
+        instrument_identifier:
+          type: string
+          example: SCS
+        meeting:
+          type: string
+          example: zoom.xfel.eu
+        team:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              user_id:
+                type: integer
+                example: 1
+              data_access_role:
+                type: integer
+                example: 1
+              flg_lab_access:
+                type: boolean
+                example: false
+        openly_released_at:
+          type: string
+          example: '2021-07-25T23:00:00.000+02:00'
+        users_info:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: integer
+                example: 1
+              data_access_role:
+                type: integer
+                default: 2
+              flg_lab_access:
+                type: boolean
+                default: false
+              flg_support:
+                type: boolean
+                default: false
+              flg_deputy_local_contact:
+                type: boolean
+                default: false
+              role_description:
+                type: boolean
+                example: Group coordinator
+              uid:
+                type: string
+                example: 1
+              provider:
+                type: string
+                default: local
+              name:
+                type: integer
+                example: First Last
+              email:
+                type: string
+                example: first.last@xfeel.eu
+              flg_upex_acceptances:
+                type: boolean
+                example: false
+        users_ids:
+          type: array
+          items:
+            type:
+              - integer
+              - string
+      xml:
+        name: Proposals
+    users:
+      required:
+        - email
+        - first_name
+        - last_name
+        - sign_in_count
+      type: object
+      properties:
+        email:
+          type: string
+          example: xfel.user@xfel.eu
+          default: ''
+        created_at:
+          type: string
+          example: 17-05-2020 18:09:44
+        updated_at:
+          type: string
+          example: 17-08-2020 18:09:44
+          default: ''
+        provider:
+          type: string
+          example: ldap
+          default: local
+        uid:
+          type: string
+          example: xfellow
+        name:
+          type: string
+          example: Xfel User
+        first_name:
+          type: string
+          example: Xfel
+        last_name:
+          type: string
+          example: User
+          default: ''
+        nickname:
+          type: string
+          example: xfellow
+        contact_email:
+          type: string
+          example: xfel.user@example.com
+        flg_upex_acceptances:
+          type: boolean
+          example: true
+          default: false
+        upex_synced_at:
+          type: string
+          example: 17-05-2020 18:09:44
+        ldap_synced_at:
+          type: string
+          example: 17-08-2020 18:09:44
+        flg_ldap_account_valid:
+          type: boolean
+          example: true
+          default: false
+        current_sign_in_at:
+          type: string
+          example: 02-02-2021 18:09:44
+      xml:
+        name: Users
+    instrument_cycles:
+      required:
+        - begin_at
+        - end_at
+        - identifier
+        - instrument_id
+      type: object
+      properties:
+        identifier:
+          type: string
+          example: '202020'
+        instrument_id:
+          type: integer
+          example: 106
+        instrument_identifier:
+          type: string
+          example: SPB
+        begin_at:
+          type: string
+          example: '08-04-2020 18:09:44 '
+        end_at:
+          type: string
+          example: '07-05-2020 18:09:44 '
+        start_call_at:
+          type: string
+          example: '08-04-2020 18:09:44 '
+        close_call_at:
+          type: string
+          example: '07-05-2020 18:09:44 '
+        url:
+          type: string
+          example: https://www.google.de/
+        flg_available:
+          type: boolean
+          example: true
+          default: true
+        flg_proposal_system:
+          type: string
+          example: local
+        description:
+          type: string
+          example: about instrument cycle description
+      xml:
+        name: Instrument_cycles
+    users_proposals:
+      type: array
+      items:
+        type: object
+        properties:
+          proposal_id:
+            type: integer
+            example: 1
+          proposal_number:
+            type: integer
+            example: 1
+      xml:
+        name: users_proposals

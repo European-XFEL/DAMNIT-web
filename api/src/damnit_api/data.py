@@ -5,7 +5,7 @@ import xarray as xr
 from damnit.api import Damnit, DataType
 from PIL import Image
 
-from .const import DamnitType
+from .shared.const import DamnitType
 from .utils import b64image
 
 NOT_SUPPORTED_MESSAGE = "Not supported."

@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from .const import DEFAULT_PROPOSAL
+from .shared.const import DEFAULT_PROPOSAL
 from .utils import Registry, create_map, find_proposal
 
 DAMNIT_PATH = "usr/Shared/amore/"
