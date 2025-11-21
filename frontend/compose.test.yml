@@ -1,4 +1,4 @@
-name: dw-test
+name: damnit-web-test
 
 services:
   frontend:

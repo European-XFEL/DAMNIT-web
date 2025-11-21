@@ -1,4 +1,4 @@
-name: dw-dev
+name: damnit-web-dev
 
 networks:
   proxy:

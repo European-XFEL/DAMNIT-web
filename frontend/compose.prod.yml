@@ -1,4 +1,4 @@
-name: dw-prod
+name: damnit-web-prod
 
 services:
   frontend:
