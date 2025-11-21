@@ -38,8 +38,6 @@ FROM nginx:stable-alpine AS production
 COPY --from=static /app/nginx /etc/nginx
 COPY --from=static /app/dist /usr/share/nginx/html
 
-EXPOSE 80
-
 HEALTHCHECK --interval=30s --timeout=3s \
   CMD wget -qO- http://127.0.0.1/ || exit 1
 
