@@ -1,17 +1,44 @@
-FROM node:22.16-alpine3.22 AS base
-WORKDIR /usr/src/app
-COPY package*.json package-lock.json ./
+# syntax=docker/dockerfile:1
+
+# Base Stage
+# Only for installing dependencies used by dev/prod stages
+FROM node:22-alpine AS base
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
 RUN npm ci
 
-FROM base AS development
-COPY ./ ./
-CMD ["npm", "run", "dev"]
+# Development Stage
+# Run dev server with hot reloading
+FROM base AS dev
 
-FROM base AS build
-COPY ./ ./
+ENV NODE_ENV=development
+
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# Static Build Stage
+# Build static files for production
+FROM base AS static
+
+ENV NODE_ENV=production
+
+COPY . .
+
 RUN npm run build
 
+# Production Stage
+# Serve static files with nginx
 FROM nginx:stable-alpine AS production
-COPY --from=build /usr/src/app/nginx /etc/nginx
-COPY --from=build /usr/src/app/dist /usr/share/nginx/html
-COPY --from=build /usr/src/app/certs /etc/nginx/certs
+
+COPY --from=static /app/nginx /etc/nginx
+COPY --from=static /app/dist /usr/share/nginx/html
+
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget -qO- http://127.0.0.1/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

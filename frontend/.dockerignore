@@ -19,3 +19,6 @@ build
 eslint*
 prettier*
 .DS_Store
+
+# Ignore Dockerfiles
+Dockerfile*
