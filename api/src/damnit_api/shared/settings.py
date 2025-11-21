@@ -22,7 +22,7 @@ class AuthSettings(BaseModel):
 
 
 class UvicornSettings(BaseModel):
-    host: str = "localhost"
+    host: str = "127.0.0.1"
     port: int = 8000
     reload: bool = True
     factory: bool = True
@@ -74,7 +74,9 @@ class Settings(BaseSettings):
 
     uvicorn: UvicornSettings = UvicornSettings()
 
-    mymdc: MyMdCConfig = MockMyMdCData(
+    localhost_to_127: bool = True
+
+    mymdc: MyMdCClientSettings = MyMdCMockSettings(
         mock_responses_file=Path(__file__).parents[3] / "tests" / "mock" / "_mymdc.json"
     )
 

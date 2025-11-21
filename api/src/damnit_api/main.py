@@ -63,6 +63,11 @@ def create_app():
         secret_key=settings.session_secret.get_secret_value(),
     )
 
+    if settings.localhost_to_127:
+        from .shared.middlewares import RedirectLocalhost127Middleware
+
+        app.add_middleware(RedirectLocalhost127Middleware)
+
     return app
 
 
