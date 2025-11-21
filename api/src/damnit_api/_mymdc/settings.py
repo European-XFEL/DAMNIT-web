@@ -6,7 +6,7 @@ from pydantic import FilePath, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings
 
 
-class MyMdCCredentials(BaseSettings):
+class MyMdCHTTPSettings(BaseSettings):
     """MyMdC client settings used for authentication.
 
     Get from from <https://in.xfel.eu/metadata/oauth/applications>.
@@ -23,10 +23,10 @@ class MyMdCCredentials(BaseSettings):
     _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(UTC)
 
 
-class MockMyMdCData(BaseSettings):
+class MyMdCMockSettings(BaseSettings):
     """Mock MyMdC data for testing and local development."""
 
     mock_responses_file: FilePath
 
 
-type MyMdCConfig = MyMdCCredentials | MockMyMdCData
+type MyMdCClientSettings = MyMdCHTTPSettings | MyMdCMockSettings

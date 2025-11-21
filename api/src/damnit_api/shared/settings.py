@@ -12,7 +12,7 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .._mymdc.settings import MockMyMdCData, MyMdCConfig
+from .._mymdc.settings import MyMdCClientSettings, MyMdCMockSettings
 
 
 class AuthSettings(BaseModel):

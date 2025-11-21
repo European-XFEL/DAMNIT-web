@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from .. import get_logger
 from . import clients
-from .settings import MockMyMdCData, MyMdCCredentials
+from .settings import MyMdCHTTPSettings, MyMdCMockSettings
 
 if TYPE_CHECKING:
     from ..shared.settings import Settings
@@ -30,11 +30,11 @@ async def bootstrap(settings: "Settings"):
 async def _init(settings: "Settings") -> clients.MyMdCClient:
     """Create MyMdC client based on settings."""
     match settings.mymdc:
-        case MyMdCCredentials():
+        case MyMdCHTTPSettings():
             await logger.ainfo("Creating MyMdC client from credentials")
             auth = clients.MyMdCAuth.model_validate(settings.mymdc.model_dump())
             return clients.MyMdCClientAsync(auth)
-        case MockMyMdCData():
+        case MyMdCMockSettings():
             await logger.ainfo("Creating Mock MyMdC client")
             return clients.MyMdCClientMock.model_validate(settings.mymdc.model_dump())
         case _:
