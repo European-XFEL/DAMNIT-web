@@ -1,8 +1,6 @@
 from urllib.parse import parse_qs, unquote
 
-from authlib.integrations.starlette_client import (  # type: ignore[import-untyped]
-    OAuthError,
-)
+from authlib.integrations.starlette_client import OAuthError
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
@@ -43,10 +41,7 @@ async def auth(
 
     callback_uri = request.url_for("callback")
 
-    if callback_uri.scheme == "http":
-        # TODO: error on non-HTTPS in production
-        await logger.awarning("Callback URI is using HTTP, upgrading to HTTPS")
-        callback_uri = callback_uri.replace(scheme="https")
+    # TODO: error on non-HTTPS in production?
 
     res = await client.authorize_redirect(request, redirect_uri=str(callback_uri))
 
