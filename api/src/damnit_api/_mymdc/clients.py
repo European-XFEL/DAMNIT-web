@@ -13,12 +13,12 @@ from structlog import get_logger
 from damnit_api._mymdc import ports
 
 from . import models
-from .settings import MockMyMdCData, MyMdCCredentials
+from .settings import MyMdCHTTPSettings, MyMdCMockSettings
 
 logger = get_logger(__name__)
 
 
-class MyMdCAuth(httpx.Auth, MyMdCCredentials):
+class MyMdCAuth(httpx.Auth, MyMdCHTTPSettings):
     """MyMdC Authentication for HTTPX Async Client.
 
     !!! note
@@ -126,7 +126,7 @@ class MyMdCClientAsync(httpx.AsyncClient, ports.MyMdCPort):
         return response.json()
 
 
-class MyMdCClientMock(MockMyMdCData, ports.MyMdCPort):
+class MyMdCClientMock(MyMdCMockSettings, ports.MyMdCPort):
     """Mock MyMdC provider for testing and local development."""
 
     @staticmethod
