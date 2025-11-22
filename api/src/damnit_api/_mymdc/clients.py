@@ -120,6 +120,7 @@ class MyMdCClientAsync(httpx.AsyncClient, ports.MyMdCPort):
         response.raise_for_status()
         return response.json()
 
+    # TODO: fix annotation, this is actually the str 'uid' (username) not int id
     async def _get_user_proposals(self, id: models.UserId):
         response = await self.get(f"users/{id}/proposals")
         response.raise_for_status()

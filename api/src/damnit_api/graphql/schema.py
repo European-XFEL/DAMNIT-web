@@ -46,7 +46,7 @@ class Schema(strawberry.Schema):
         """Lifted from strawberry.Schema.__init__"""
         if (
             has_object_definition(type_)
-            and type_.__strawberry_definition__.is_generic  # FIX: # pyright: ignore[reportAttributeAccessIssue]  # noqa: E501
+            and type_.__strawberry_definition__.is_graphql_generic
         ):
             type_ = StrawberryAnnotation(type_).resolve()
         graphql_type = self.schema_converter.from_maybe_optional(type_)

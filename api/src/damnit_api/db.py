@@ -17,8 +17,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from .shared.const import DEFAULT_PROPOSAL
-from .utils import Registry, create_map, find_proposal
+from .utils import Registry, create_map
 
 DAMNIT_PATH = "usr/Shared/amore/"
 
@@ -28,16 +27,14 @@ DAMNIT_PATH = "usr/Shared/amore/"
 
 
 class DatabaseSessionManager(metaclass=Registry):
-    def __init__(self, proposal: str = DEFAULT_PROPOSAL):
-        self.proposal = proposal
-        self.root_path = get_damnit_path(proposal)
-        self._engine = create_async_engine(self.db_path)
-        self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
+    def __init__(self, db_path: Path):
+        if not db_path.exists():
+            msg = f"Database file does not exist: {db_path}"
+            raise FileNotFoundError(msg)
 
-    @property
-    def db_path(self):
-        path = Path(self.root_path) / "runs.sqlite"
-        return f"sqlite+aiosqlite:///{path}"
+        self.db_uri = f"sqlite+aiosqlite:///{db_path}"
+        self._engine = create_async_engine(self.db_uri)
+        self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
     async def close(self):
         if self._engine is None:
@@ -76,29 +73,29 @@ class DatabaseSessionManager(metaclass=Registry):
             await session.close()
 
 
-def get_session(proposal) -> AsyncSession:
+def get_session(db_path: Path) -> AsyncSession:
     return DatabaseSessionManager(
-        proposal
+        db_path
     ).session()  # FIX: # pyright: ignore[reportReturnType]
 
 
-def get_connection(proposal) -> AsyncConnection:
+def get_connection(db_path: Path) -> AsyncConnection:
     return DatabaseSessionManager(
-        proposal
+        db_path
     ).connect()  # FIX: # pyright: ignore[reportReturnType]
 
 
-async def async_table(proposal, name: str = "runs") -> Table:
-    async with get_connection(proposal) as conn:
+async def async_table(db_path: Path, name: str = "runs") -> Table:
+    async with get_connection(db_path) as conn:
         return await conn.run_sync(
             lambda conn: Table(name, MetaData(), autoload_with=conn)
         )
 
 
-async def async_variables(proposal):
-    variables = await async_table(proposal, name="variables")
+async def async_variables(db_path: Path):
+    variables = await async_table(db_path, name="variables")
     selection_variables = select(variables.c.name, variables.c.title)
-    async with get_session(proposal) as session:
+    async with get_session(db_path) as session:
         result = await session.execute(selection_variables)
 
     variable_rows = result.mappings().all()
@@ -107,7 +104,7 @@ async def async_variables(proposal):
 
 
 async def async_latest_rows(
-    proposal,
+    db_path: Path,
     *,
     table: str | Table,
     by: str,
@@ -119,7 +116,7 @@ async def async_latest_rows(
     order_by = desc(by) if descending else by
 
     if isinstance(table, str):
-        table = await async_table(proposal, name=table)
+        table = await async_table(db_path, name=table)
 
     selection = (
         select(table)
@@ -129,58 +126,45 @@ async def async_latest_rows(
         .order_by(order_by)
     )
 
-    async with get_session(proposal) as session:
+    async with get_session(db_path) as session:
         result = await session.execute(selection)
     return result.mappings().all()  # FIX: # pyright: ignore[reportReturnType]
 
 
-async def async_column(proposal, *, table: str, name: str):
+async def async_column(db_path: Path, *, table: str, name: str):
     table = await async_table(
-        proposal, name=table
+        db_path, name=table
     )  # FIX:  # pyright: ignore[reportAssignmentType]
     selection = select(
         table.c.get(name)  # FIX:  # pyright: ignore[reportAttributeAccessIssue]
     )
 
-    async with get_session(proposal) as session:
+    async with get_session(db_path) as session:
         result = await session.execute(selection)
 
     return result.scalars().all()
 
 
-async def async_all_tags(proposal):
-    tags_table = await async_table(proposal, name="tags")
+async def async_all_tags(db_path: Path):
+    tags_table = await async_table(db_path, name="tags")
     selection = select(
         tags_table.c.id,
         tags_table.c.name,
     )
-    async with get_session(proposal) as session:
+    async with get_session(db_path) as session:
         result = await session.execute(selection)
 
     return create_map(result.mappings().all(), key="id")
 
 
-async def async_variable_tags(proposal):
+async def async_variable_tags(db_path: Path):
     try:
-        variable_tags_table = await async_table(proposal, name="variable_tags")
+        variable_tags_table = await async_table(db_path, name="variable_tags")
         selection = select(
             variable_tags_table.c.variable_name, variable_tags_table.c.tag_id
         )
-        async with get_session(proposal) as session:
+        async with get_session(db_path) as session:
             result = await session.execute(selection)
         return result.mappings().all()
     except NoSuchTableError:
         return []
-
-
-# -----------------------------------------------------------------------------
-# Etc.
-
-
-def get_damnit_path(proposal_number: str = DEFAULT_PROPOSAL) -> str:
-    """Returns the directory of the given proposal."""
-    path = find_proposal(proposal_number)
-    if not path:
-        msg = f"Proposal '{proposal_number}' is not found."
-        raise RuntimeError(msg)
-    return str(Path(path) / DAMNIT_PATH)

@@ -1,20 +1,56 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import strawberry
 from sqlalchemy import or_, select
 
+from .._mymdc.clients import MyMdCClient
+from ..auth.models import OAuthUserInfo, User
 from ..db import async_table, get_session
-from ..shared.const import DEFAULT_PROPOSAL
+from ..metadata import services as metadata
+from ..metadata.models import ProposalMeta
 from ..utils import map_dtype
 from .models import DamnitType
 
 
 @strawberry.input
-class DatabaseInput:
-    proposal: str | None = strawberry.field(default=DEFAULT_PROPOSAL)
-    path: str | None = strawberry.field(default=strawberry.UNSET)
+class DamnitDataSpecifierPath:
+    db_path: str
+    name: str
+
+
+@strawberry.input
+class DamnitDataSpecifierProposal:
+    proposal_no: int
+
+    def __hash__(self) -> int:
+        return hash(self.proposal_no)
+
+
+@strawberry.input(one_of=True)
+class DamnitDataSpecifierInput:
+    path: strawberry.Maybe[DamnitDataSpecifierPath]
+    proposal: strawberry.Maybe[DamnitDataSpecifierProposal]
+
+    async def get_proposal_meta_with_auth(
+        self,
+        oauth_user: OAuthUserInfo,
+        mymdc: MyMdCClient,
+    ) -> ProposalMeta:
+        if self.proposal is not None:
+            proposal_no = self.proposal.value.proposal_no
+        else:  # self.path is not None:
+            msg = "Only proposal specifier is supported for non-development usage."
+            raise NotImplementedError(msg)
+
+        user = User.model_validate({
+            **oauth_user.model_dump(),
+            "proposals": await mymdc.get_user_proposals(oauth_user.preferred_username),
+        })
+
+        return await metadata.get_proposal_meta(mymdc, proposal_no, user)
 
 
 @dataclass
@@ -68,12 +104,12 @@ class LatestData:
         return instance
 
 
-async def fetch_info(proposal, *, runs):
-    table = await async_table(proposal, name="run_info")
+async def fetch_info(db_path: Path, *, runs):
+    table = await async_table(db_path, name="run_info")
     conditions = [table.c.run == run for run in runs]
     query = select(table).where(or_(*conditions)).order_by(table.c.run)
 
-    async with get_session(proposal) as session:
+    async with get_session(db_path) as session:
         result = await session.execute(query)
         if not result:
             raise ValueError  # TODO: Better error handling

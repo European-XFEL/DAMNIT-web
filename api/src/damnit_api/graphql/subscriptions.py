@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 import strawberry
 from async_lru import alru_cache
@@ -9,16 +10,16 @@ from strawberry.types import Info
 from ..db import async_latest_rows, async_variables
 from ..utils import create_map
 from .models import Timestamp, get_model
-from .utils import DatabaseInput, LatestData, fetch_info
+from .utils import DamnitDataSpecifierInput, LatestData, fetch_info
 
 POLLING_INTERVAL = 1  # seconds
 
 
 @alru_cache(ttl=POLLING_INTERVAL)
-async def get_latest_data(proposal, timestamp, schema):
+async def get_latest_data(db_path: Path, timestamp, schema):
     # Get latest data
     latest_data = await async_latest_rows(
-        proposal,
+        db_path,
         table="run_variables",
         by="timestamp",
         start_at=timestamp,
@@ -29,12 +30,12 @@ async def get_latest_data(proposal, timestamp, schema):
     latest_data = LatestData.from_list(latest_data)
 
     # Get latest runs
-    latest_runs = await fetch_info(proposal, runs=list(latest_data.runs.keys()))
+    latest_runs = await fetch_info(db_path, runs=list(latest_data.runs.keys()))
     latest_runs = create_map(latest_runs, key="run")
 
     # Update model
-    model = get_model(proposal)
-    latest_variables = await async_variables(proposal)
+    model = get_model(db_path)
+    latest_variables = await async_variables(db_path)
     model_changed = model.update(
         latest_variables,
         timestamp=latest_data.timestamp,
@@ -76,7 +77,7 @@ class Subscription:
     async def latest_data(
         self,
         info: Info,
-        database: DatabaseInput,
+        database: DamnitDataSpecifierInput,
         timestamp: Timestamp,  # FIX: # pyright: ignore[reportInvalidTypeForm]
     ) -> AsyncGenerator[JSON]:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         while True:
