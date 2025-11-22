@@ -1,5 +1,5 @@
 # Ignore node_modules directory
-node_modules
+**/node_modules
 
 # Ignore env files
 .env*
@@ -12,8 +12,8 @@ node_modules
 .gitignore
 
 # Ignore build folder
-dist
-build
+**/dist
+**/build
 
 # Ignore configuration files
 eslint*
