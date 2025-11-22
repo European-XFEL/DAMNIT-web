@@ -6,11 +6,13 @@ networks:
 
 services:
   frontend:
+    extends:
+      file: ./compose.base.yml
+      service: frontend
     build:
       target: preview
     environment:
       - VITE_API=http://max-exfl463.desy.de:8123
-      # - NODE_EXTRA_CA_CERTS=/certs/root_ca.crt
     volumes:
       - ./certs:/certs
     networks:
