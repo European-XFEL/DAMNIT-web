@@ -46,8 +46,8 @@ CMD ["pnpm", "preview", "--host", "0.0.0.0", "--port", "4173"]
 # -------------------------------------------------
 FROM nginx:stable-alpine AS production
 
-COPY --from=build /app/nginx /etc/nginx
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /usr/src/app/apps/app/nginx /etc/nginx
+COPY --from=build /usr/src/app/apps/app/dist /usr/share/nginx/html
 
 HEALTHCHECK --interval=30s --timeout=3s \
   CMD wget -qO- http://127.0.0.1/ || exit 1
