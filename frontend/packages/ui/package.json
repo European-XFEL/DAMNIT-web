@@ -1,0 +1,87 @@
+{
+  "name": "@damnit-frontend/ui",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.21.0",
+  "author": {
+    "name": "European XFEL",
+    "email": "da@xfel.eu"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles": "./src/styles.ts"
+  },
+  "sideEffects": [
+    "./src/styles.ts",
+    "**/*.css"
+  ],
+  "scripts": {
+    "lint:eslint": "eslint .",
+    "lint:prettier": "prettier --check --cache .",
+    "lint:tsc": "tsc -b --noEmit"
+  },
+  "peerDependencies": {
+    "react": "catalog:frontend",
+    "react-dom": "catalog:frontend",
+    "react-router-dom": "catalog:frontend",
+    "clsx": "catalog:frontend",
+    "dayjs": "catalog:frontend",
+    "react-laag": "catalog:frontend",
+    "@mantine/core": "catalog:components",
+    "@mantine/form": "catalog:components",
+    "@mantine/hooks": "catalog:components",
+    "mantine-contextmenu": "catalog:components",
+    "mantine-datatable": "catalog:components",
+    "@monaco-editor/react": "catalog:components",
+    "@glideapps/glide-data-grid": "catalog:components",
+    "@glideapps/glide-data-grid-cells": "catalog:components",
+    "@tabler/icons-react": "catalog:components",
+    "react-plotly.js": "catalog:components",
+    "@apollo/client": "catalog:graphql",
+    "graphql": "catalog:graphql",
+    "graphql-ws": "catalog:graphql",
+    "@reduxjs/toolkit": "catalog:redux",
+    "react-redux": "catalog:redux",
+    "react-redux-loading-bar": "catalog:redux"
+  },
+  "devDependencies": {
+    "@damnit-frontend/config": "workspace:*",
+    "react": "catalog:frontend",
+    "react-dom": "catalog:frontend",
+    "react-router-dom": "catalog:frontend",
+    "clsx": "catalog:frontend",
+    "dayjs": "catalog:frontend",
+    "react-laag": "catalog:frontend",
+    "@mantine/core": "catalog:components",
+    "@mantine/form": "catalog:components",
+    "@mantine/hooks": "catalog:components",
+    "mantine-contextmenu": "catalog:components",
+    "mantine-datatable": "catalog:components",
+    "@monaco-editor/react": "catalog:components",
+    "@glideapps/glide-data-grid": "catalog:components",
+    "@glideapps/glide-data-grid-cells": "catalog:components",
+    "@tabler/icons-react": "catalog:components",
+    "react-plotly.js": "catalog:components",
+    "@apollo/client": "catalog:graphql",
+    "graphql": "catalog:graphql",
+    "graphql-ws": "catalog:graphql",
+    "@reduxjs/toolkit": "catalog:redux",
+    "react-redux": "catalog:redux",
+    "react-redux-loading-bar": "catalog:redux",
+    "typescript": "catalog:tooling",
+    "vite": "catalog:tooling",
+    "@vitejs/plugin-react": "catalog:tooling",
+    "postcss": "catalog:tooling",
+    "eslint": "catalog:linting",
+    "prettier": "catalog:linting",
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "@types/react-plotly.js": "catalog:types"
+  }
+}

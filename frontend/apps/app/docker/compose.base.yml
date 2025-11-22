@@ -1,0 +1,5 @@
+services:
+  frontend:
+    build:
+      context: ../../..
+      dockerfile: apps/app/Dockerfile
