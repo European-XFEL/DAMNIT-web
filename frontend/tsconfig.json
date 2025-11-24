@@ -1,7 +1,5 @@
 {
+  "extends": "@damnit-frontend/config/tsconfig/base",
   "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "references": [{ "path": "packages/ui" }, { "path": "apps/app" }]
 }
