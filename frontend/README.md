@@ -19,34 +19,28 @@ The application enables visualization and interaction with the DAMNIT table.
 
 ## Installation
 
-Clone the project and run the following:
+Clone the project and run the following on the root folder:
 
 ```sh
-npm install
+pnpm install
 ```
 
 ## Usage
 
-After the installation, start the project:
+After the installation, start the app with a development server:
 
 ```sh
-npm run dev
+pnpm run dev:app
 ```
 
 and navigate to `localhost:5173` on your favorite browser.
 
 You might need to supply a couple of environment variables to connect to a
-running web server. Add an `.env` file on the project root with the following:
+running web server. Add an `.env` file on `apps/app` with the following:
 
 ```ini
 # .env
 VITE_API = "http://127.0.0.1:30200"
-```
-
-One can also run the tests with the following:
-
-```sh
-npm test
 ```
 
 ## Deployment
@@ -65,11 +59,11 @@ docker compose -f compose.test.yml up --build
 docker compose -f compose.prod.yml up --build
 ```
 
-The compose project will be named `dw-{test,prod}`, which can then be used to manage the service:
+The compose project will be named `damnit-web-{test,prod}`, which can then be used to manage the service:
 
 ```sh
 # Then standard compose commands with the project, e.g.
-docker compose -p dw-test {ps,logs,up,down,etc...}
+docker compose -p damnit-web-test {ps,logs,up,down,etc...}
 ```
 
 ### Certificates
