@@ -46,6 +46,7 @@ function HeroPage() {
           alignItems: 'flex-end',
           justifyContent: 'end',
           marginBottom: 8,
+          marginRight: 8,
         }}
       >
         <SiteFooter aboutUrl={aboutUrl} />
