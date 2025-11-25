@@ -42,18 +42,18 @@ function HeroPage() {
             color="indigo"
             variant="filled"
             component="a"
-            href={DEMO_URL}
+            href={APP_URL}
           >
-            See examples
+            View your proposals
           </Button>
           <Button
             size="md"
             color="indigo"
             variant="outline"
             component="a"
-            href={APP_URL}
+            href={DEMO_URL}
           >
-            Go to the app
+            Browse sample experiments
           </Button>
         </Group>
       </Stack>
