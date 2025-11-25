@@ -3,7 +3,7 @@ from graphql import GraphQLNamedType, GraphQLNonNull
 from graphql.type.schema import InterfaceImplementations, remap_named_type
 from strawberry.annotation import StrawberryAnnotation
 from strawberry.schema.config import StrawberryConfig
-from strawberry.type import has_object_definition
+from strawberry.types import has_object_definition
 
 from . import directives, models, mutations, queries, subscriptions
 
