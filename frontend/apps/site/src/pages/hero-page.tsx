@@ -1,7 +1,14 @@
 import { useHref } from 'react-router'
 
 import { Flex, Box, Stack, Title, Text, Group, Button } from '@mantine/core'
-import { SiteFooter } from '@damnit-frontend/ui'
+import { SiteFooter, formatUrl } from '@damnit-frontend/ui'
+
+const APP_URL = formatUrl(
+  import.meta.env.VITE_APP_URL || 'https://damnit.xfel.eu/app'
+)
+const DEMO_URL = formatUrl(
+  import.meta.env.VITE_DEMO_URL || 'https://damnit.xfel.eu/demo'
+)
 
 function HeroPage() {
   const aboutUrl = useHref('about')
@@ -30,10 +37,22 @@ function HeroPage() {
         </Text>
 
         <Group mt="xl" gap="md" wrap="wrap">
-          <Button size="md" color="indigo" variant="filled">
+          <Button
+            size="md"
+            color="indigo"
+            variant="filled"
+            component="a"
+            href={DEMO_URL}
+          >
             See examples
           </Button>
-          <Button size="md" color="indigo" variant="outline">
+          <Button
+            size="md"
+            color="indigo"
+            variant="outline"
+            component="a"
+            href={APP_URL}
+          >
             Go to the app
           </Button>
         </Group>

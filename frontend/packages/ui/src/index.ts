@@ -28,3 +28,6 @@ export { LoginRoute, LogoutRoute, PrivateRoute, history } from './routes'
 export { resetExtractedData } from './data/extracted'
 export { resetMetadata, setProposalPending } from './data/metadata'
 export { resetTable as resetTableData } from './data/table'
+
+// Utilities
+export { formatUrl } from './utils/helpers'
