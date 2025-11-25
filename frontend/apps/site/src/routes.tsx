@@ -1,4 +1,3 @@
-// routes.tsx
 import type { RouteObject } from 'react-router'
 import { AboutPage, HeroPage } from './pages'
 
