@@ -6,7 +6,7 @@ import {
   useNavigate,
   useLocation,
   useParams,
-} from 'react-router-dom'
+} from 'react-router'
 import LoadingBar, { showLoading } from 'react-redux-loading-bar'
 
 import {

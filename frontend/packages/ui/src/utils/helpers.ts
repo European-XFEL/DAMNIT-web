@@ -24,6 +24,10 @@ function formatFloat(number: number, { offset = 2 } = {}) {
   return Number(number.toFixed(decimal >= 0 ? decimal + offset : 1))
 }
 
+export function formatUrl(url: string) {
+  return (url || '/').replace(/\/?$/, '/')
+}
+
 type MaybeObjectOrArray<T> =
   | Record<string, unknown>
   | ReadonlyArray<T>

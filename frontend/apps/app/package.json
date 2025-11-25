@@ -15,7 +15,7 @@
     "@damnit-frontend/ui": "workspace:*",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",
-    "react-router-dom": "catalog:frontend",
+    "react-router": "catalog:frontend",
     "clsx": "catalog:frontend",
     "dayjs": "catalog:frontend",
     "react-laag": "catalog:frontend",

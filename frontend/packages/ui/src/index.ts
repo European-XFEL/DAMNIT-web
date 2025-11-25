@@ -1,6 +1,9 @@
 // Providers
 export { Providers } from './providers'
 
+// Components
+export { SiteFooter } from './components/footers'
+
 // Features
 export { default as Dashboard } from './features/dashboard'
 export {
