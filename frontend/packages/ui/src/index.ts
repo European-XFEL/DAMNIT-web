@@ -1,6 +1,9 @@
 // Providers
 export { Providers } from './providers'
 
+// Components
+export { SiteFooter } from './components/footers'
+
 // Features
 export { default as Dashboard } from './features/dashboard'
 export {
@@ -25,3 +28,6 @@ export { LoginRoute, LogoutRoute, PrivateRoute, history } from './routes'
 export { resetExtractedData } from './data/extracted'
 export { resetMetadata, setProposalPending } from './data/metadata'
 export { resetTable as resetTableData } from './data/table'
+
+// Utilities
+export { formatUrl } from './utils/helpers'

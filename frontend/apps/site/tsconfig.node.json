@@ -1,0 +1,4 @@
+{
+  "extends": "@damnit-frontend/config/tsconfig/node",
+  "include": ["vite.config.ts"]
+}
