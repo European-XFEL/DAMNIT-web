@@ -2,7 +2,7 @@
 # Base: Node + pnpm + dependencies
 # -------------------------------------------------
 FROM node:24-alpine AS base
-ARG APP_DIR=apps/app
+ARG APP_DIR=apps/site
 
 RUN corepack enable
 WORKDIR /usr/src/app
@@ -20,8 +20,8 @@ RUN pnpm install --recursive --frozen-lockfile
 # Build: Create static web pages using Vite
 # -------------------------------------------------
 FROM base AS build
-ARG SITE_URL
-ENV VITE_SITE_URL=${SITE_URL}
+ARG APP_URL
+ENV VITE_APP_URL=${APP_URL}
 
 # Copy the rest of the codebase
 COPY . .
@@ -43,9 +43,6 @@ COPY . .
 COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/src/app/${APP_DIR}/dist
 
 # Start preview server
-ARG API_URL
-ENV VITE_API=${API_URL}
-
 WORKDIR /usr/src/app/${APP_DIR}
 
 EXPOSE ${PREVIEW_PORT}

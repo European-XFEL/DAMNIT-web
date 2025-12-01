@@ -1,13 +1,15 @@
 name: damnit-web-local
 
 services:
-  frontend:
+  app:
     extends:
       file: ./compose.base.yml
-      service: frontend
+      service: app
     build:
       target: preview
-    environment:
-      - VITE_API=http://host.docker.internal:8123/
+      args:
+        PREVIEW_PORT: ${APP_PREVIEW_PORT:-4173}
+        SITE_URL: https://damnit-dev.xfel.eu
+        API_URL: http://host.docker.internal:8123/
     ports:
-      - 4173:4173
+      - ${APP_PREVIEW_PORT:-4173}:${APP_PREVIEW_PORT:-4173}

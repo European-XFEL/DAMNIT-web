@@ -1,10 +1,10 @@
 name: damnit-web-test
 
 services:
-  frontend:
+  app:
     extends:
       file: ./compose.base.yml
-      service: frontend
+      service: app
     build:
       target: production
     environment:
