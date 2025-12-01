@@ -1,0 +1,24 @@
+name: damnit-web-local
+
+services:
+  site:
+    extends:
+      file: ./apps/site/docker/compose.local.yml
+      service: site
+    build:
+      args:
+        PREVIEW_PORT: ${SITE_PREVIEW_PORT?}
+        APP_URL: http://127.0.0.1:${APP_PREVIEW_PORT?}
+    ports:
+      - ${SITE_PREVIEW_PORT?}:${SITE_PREVIEW_PORT?}
+  app:
+    extends:
+      file: ./apps/app/docker/compose.local.yml
+      service: app
+    build:
+      args:
+        PREVIEW_PORT: ${APP_PREVIEW_PORT?}
+        SITE_URL: http://127.0.0.1:${SITE_PREVIEW_PORT?}
+        API_URL: ${API_URL}
+    ports:
+      - ${APP_PREVIEW_PORT?}:${APP_PREVIEW_PORT?}
