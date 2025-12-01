@@ -23,6 +23,9 @@ FROM base AS build
 ARG SITE_URL
 ENV VITE_SITE_URL=${SITE_URL}
 
+ARG BASE_PATH
+ENV VITE_BASE_URL=${BASE_PATH}
+
 # Copy the rest of the codebase
 COPY . .
 
@@ -36,6 +39,12 @@ FROM base AS preview
 ARG PREVIEW_PORT=4173
 ENV PREVIEW_PORT=${PREVIEW_PORT}
 
+ARG BASE_PATH
+ENV VITE_BASE_URL=${BASE_PATH}
+
+ARG API_URL
+ENV VITE_API=${API_URL}
+
 # Copy the rest of the codebase
 COPY . .
 
@@ -43,9 +52,6 @@ COPY . .
 COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/src/app/${APP_DIR}/dist
 
 # Start preview server
-ARG API_URL
-ENV VITE_API=${API_URL}
-
 WORKDIR /usr/src/app/${APP_DIR}
 
 EXPOSE ${PREVIEW_PORT}
