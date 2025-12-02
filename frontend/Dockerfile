@@ -1,0 +1,16 @@
+FROM damnit-web-site:latest AS site
+FROM damnit-web-app:latest AS app
+
+FROM nginx:stable-alpine AS test
+
+COPY nginx/templates/default.frontend.conf.template /etc/nginx/templates/default.conf.template
+COPY nginx/proxy_api.conf /etc/nginx/proxy_api.conf
+
+COPY --from=site /usr/src/app/apps/site/dist /usr/share/nginx/html/site
+COPY --from=app /usr/src/app/apps/app/dist  /usr/share/nginx/html/app
+
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget -qO- http://127.0.0.1/ || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]
+

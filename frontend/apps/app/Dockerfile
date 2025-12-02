@@ -1,8 +1,13 @@
 # -------------------------------------------------
+# Globals
+# -------------------------------------------------
+ARG APP_DIR=apps/app
+
+# -------------------------------------------------
 # Base: Node + pnpm + dependencies
 # -------------------------------------------------
 FROM node:24-alpine AS base
-ARG APP_DIR=apps/app
+ARG APP_DIR
 
 RUN corepack enable
 WORKDIR /usr/src/app
@@ -20,6 +25,7 @@ RUN pnpm install --recursive --frozen-lockfile
 # Build: Create static web pages using Vite
 # -------------------------------------------------
 FROM base AS build
+ARG APP_DIR
 ARG SITE_URL
 ENV VITE_SITE_URL=${SITE_URL}
 
@@ -36,6 +42,7 @@ RUN pnpm build
 # Preview: Serve static web pages using Vite
 # -------------------------------------------------
 FROM base AS preview
+ARG APP_DIR
 ARG PREVIEW_PORT=4173
 ENV PREVIEW_PORT=${PREVIEW_PORT}
 
@@ -61,6 +68,7 @@ CMD pnpm preview --host 0.0.0.0 --port "$PREVIEW_PORT"
 # Production: Serve static web pages using Nginx
 # -------------------------------------------------
 FROM nginx:stable-alpine AS production
+ARG APP_DIR
 
 COPY --from=build /usr/src/app/nginx /etc/nginx
 COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/share/nginx/html
