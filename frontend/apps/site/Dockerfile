@@ -1,8 +1,13 @@
 # -------------------------------------------------
+# Globals
+# -------------------------------------------------
+ARG APP_DIR=apps/site
+
+# -------------------------------------------------
 # Base: Node + pnpm + dependencies
 # -------------------------------------------------
 FROM node:24-alpine AS base
-ARG APP_DIR=apps/site
+ARG APP_DIR
 
 RUN corepack enable
 WORKDIR /usr/src/app
@@ -20,6 +25,8 @@ RUN pnpm install --recursive --frozen-lockfile
 # Build: Create static web pages using Vite
 # -------------------------------------------------
 FROM base AS build
+ARG APP_DIR
+
 ARG APP_URL
 ENV VITE_APP_URL=${APP_URL}
 
@@ -33,6 +40,8 @@ RUN pnpm build
 # Preview: Serve static web pages using Vite
 # -------------------------------------------------
 FROM base AS preview
+ARG APP_DIR
+
 ARG PREVIEW_PORT=4173
 ENV PREVIEW_PORT=${PREVIEW_PORT}
 
@@ -47,16 +56,3 @@ WORKDIR /usr/src/app/${APP_DIR}
 
 EXPOSE ${PREVIEW_PORT}
 CMD pnpm preview --host 0.0.0.0 --port "$PREVIEW_PORT"
-
-# -------------------------------------------------
-# Production: Serve static web pages using Nginx
-# -------------------------------------------------
-FROM nginx:stable-alpine AS production
-
-COPY --from=build /usr/src/app/nginx /etc/nginx
-COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/share/nginx/html
-
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget -qO- http://127.0.0.1/ || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]

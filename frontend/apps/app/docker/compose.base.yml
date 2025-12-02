@@ -1,7 +1,0 @@
-services:
-  app:
-    build:
-      context: ../../..
-      dockerfile: apps/app/Dockerfile
-    image: damnit-web-app:latest
-

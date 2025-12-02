@@ -1,7 +1,7 @@
 FROM damnit-web-site:latest AS site
 FROM damnit-web-app:latest AS app
 
-FROM nginx:stable-alpine AS test
+FROM nginx:stable-alpine AS frontend
 
 COPY nginx/templates/default.frontend.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/proxy_api.conf /etc/nginx/proxy_api.conf
@@ -13,4 +13,3 @@ HEALTHCHECK --interval=30s --timeout=3s \
   CMD wget -qO- http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
-
