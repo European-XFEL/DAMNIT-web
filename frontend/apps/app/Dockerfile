@@ -26,6 +26,7 @@ RUN pnpm install --recursive --frozen-lockfile
 # -------------------------------------------------
 FROM base AS build
 ARG APP_DIR
+
 ARG SITE_URL
 ENV VITE_SITE_URL=${SITE_URL}
 
@@ -43,6 +44,7 @@ RUN pnpm build
 # -------------------------------------------------
 FROM base AS preview
 ARG APP_DIR
+
 ARG PREVIEW_PORT=4173
 ENV PREVIEW_PORT=${PREVIEW_PORT}
 
@@ -63,17 +65,3 @@ WORKDIR /usr/src/app/${APP_DIR}
 
 EXPOSE ${PREVIEW_PORT}
 CMD pnpm preview --host 0.0.0.0 --port "$PREVIEW_PORT"
-
-# -------------------------------------------------
-# Production: Serve static web pages using Nginx
-# -------------------------------------------------
-FROM nginx:stable-alpine AS production
-ARG APP_DIR
-
-COPY --from=build /usr/src/app/nginx /etc/nginx
-COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/share/nginx/html
-
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget -qO- http://127.0.0.1/ || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
