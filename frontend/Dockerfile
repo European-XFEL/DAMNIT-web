@@ -1,5 +1,5 @@
-FROM damnit-web-site:latest AS site
-FROM damnit-web-app:latest AS app
+FROM damnit-web-site:test AS site
+FROM damnit-web-app:test AS app
 
 FROM nginx:stable-alpine AS frontend
 
