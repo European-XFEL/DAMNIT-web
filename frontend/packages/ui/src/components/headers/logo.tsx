@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Title } from '@mantine/core'
 
 import styles from './logo.module.css'
