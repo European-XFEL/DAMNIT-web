@@ -3,3 +3,4 @@ services:
     build:
       context: ../../..
       dockerfile: apps/site/Dockerfile
+    image: damnit-web-site:latest

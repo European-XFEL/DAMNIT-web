@@ -1,0 +1,42 @@
+name: damnit-web-test
+
+services:
+  site:
+    extends:
+      file: ./apps/site/docker/compose.base.yml
+      service: site
+    build:
+      target: build
+      args:
+        APP_URL: https://damnit-test.xfel.eu/app
+
+  app:
+    extends:
+      file: ./apps/app/docker/compose.base.yml
+      service: app
+    build:
+      target: build
+      args:
+        SITE_URL: https://damnit-test.xfel.eu
+        BASE_PATH: ${APP_BASE_PATH?}
+
+  frontend:
+    build:
+      dockerfile: ./Dockerfile
+    depends_on:
+      - site
+      - app
+    environment:
+      - NGINX_SERVER_NAME=localhost
+      - NGINX_API_URL=https://max-exfl458.desy.de:8123/
+      - NGINX_APP_BASE_PATH=${APP_BASE_PATH?}
+    volumes:
+      # Certs used for mTLS
+      - ./certs:/etc/nginx/certs/mtls
+      # Certs for serving
+      - /data/certs/damnit-test.xfel.eu.key:/etc/nginx/certs/server.key
+      - /data/certs/damnit-test.xfel.eu.pem:/etc/nginx/certs/server.crt
+    ports:
+      - 443:443
+    restart: unless-stopped
+    image: damnit-web-frontend:latest
