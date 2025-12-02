@@ -2,21 +2,25 @@
 
 The provider of this website according to Sec. 5 German Telemedia Act (TMG) is the European X-Ray Free-Electron Laser Facility GmbH, a non-profit limited liability company under German law.
 
-**European X-Ray Free-Electron Laser Facility GmbH**
-Holzkoppel 4
-22869 Schenefeld
-Germany
-Phone: +49 40 8998-6006
-Fax: +49 40 8998-1905
+**European X-Ray Free-Electron Laser Facility GmbH**  
+Holzkoppel 4  
+22869 Schenefeld  
+Germany  
+Phone: +49 40 8998-6006  
+Fax: +49 40 8998-1905  
 E-Mail: da@xfel.eu
 
-**Managing Directors:** Prof. Dr. Thomas Feurer, Dr. Nicole Elleuche
+**Managing Directors:**  
+Prof. Dr. Thomas Feurer, Dr. Nicole Elleuche
 
-**Registered in the German Commercial Register at Amtsgericht Hamburg:** HRB 111165
+**Registered in the German Commercial Register at Amtsgericht Hamburg:**  
+HRB 111165
 
-**VAT identification number according to Sec. 27a German Value Added Tax Act:** DE 815 117 472
+**VAT identification number according to Sec. 27a German Value Added Tax Act:**  
+DE 815 117 472
 
-**Person responsible according to Sec. 55 German Interstate Broadcasting Treaty (Rundfunkstaatsvertrag - RStV):** Dr Bernd Ebeling, Group Leader Press and Public Relations
+**Person responsible according to Sec. 55 German Interstate Broadcasting Treaty (Rundfunkstaatsvertrag - RStV):**  
+Dr Bernd Ebeling, Group Leader Press and Public Relations
 
 ## Disclaimer
 
@@ -38,6 +42,9 @@ For questions, suggestions or comments on the subject of data protection, please
 
 ## Editors
 
-Responsible: European XFEL GmbH / Data Analysis Group
+**Responsible:**  
+European XFEL GmbH / Data Analysis Group
 
-Developed by: [Cammille Carinan](mailto:cammille.carinan@xfel.eu), [Robert Rosca](mailto:robert.rosca@xfel.eu)
+**Developed by:**  
+[Cammille Carinan](mailto:cammille.carinan@xfel.eu)  
+[Robert Rosca](mailto:robert.rosca@xfel.eu)

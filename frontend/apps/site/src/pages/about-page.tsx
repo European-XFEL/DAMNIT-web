@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 import { Container } from '@mantine/core'
 import Markdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 function AboutPage() {
   const [content, setContent] = useState<string | null>(null)
@@ -21,7 +22,7 @@ function AboutPage() {
 
   return (
     <Container size="md" my="xl">
-      <Markdown>{content}</Markdown>
+      <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
     </Container>
   )
 }
