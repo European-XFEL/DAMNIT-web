@@ -20,8 +20,7 @@ const HomePage = () => {
       </AppShell.Main>
       <AppShell.Footer
         withBorder={false}
-        mb={8}
-        mr={8}
+        mr={17}
         style={{ background: 'transparent' }}
       >
         <SiteFooter />

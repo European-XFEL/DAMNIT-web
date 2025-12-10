@@ -1,6 +1,6 @@
 import { useHref } from 'react-router'
 
-import { Flex, Box, Stack, Title, Text, Group, Button } from '@mantine/core'
+import { Flex, Box, Stack, Title, Group, Button } from '@mantine/core'
 import { SiteFooter, formatUrl } from '@damnit-frontend/ui'
 
 const APP_URL = formatUrl(
@@ -14,7 +14,7 @@ function HeroPage() {
   const aboutUrl = useHref('about')
 
   return (
-    <Flex direction="column" mih="100vh" px="md">
+    <Flex direction="column" mih="100vh">
       <Box style={{ flex: 1 }} />
 
       <Stack align="right" gap="md" maw={640} mx={100}>
@@ -26,16 +26,6 @@ function HeroPage() {
           Automated experiment overview at European XFEL
         </Title>
 
-        <Text c="dimmed" size="md">
-          The name &apos;DAMNIT&apos; is definitely-not-a-backronym for{' '}
-          <Text span fs="italic" inherit>
-            Data And Metadata iNspection Interactive Thing
-          </Text>
-          . It provides users with a way to automatically create an overview of
-          their experiment, hopefully replacing the manually created
-          spreadsheets that are often used.
-        </Text>
-
         <Group mt="xl" gap="md" wrap="wrap">
           <Button
             size="md"
@@ -44,7 +34,7 @@ function HeroPage() {
             component="a"
             href={APP_URL}
           >
-            View your proposals
+            View proposals
           </Button>
           <Button
             size="md"
@@ -53,7 +43,7 @@ function HeroPage() {
             component="a"
             href={DEMO_URL}
           >
-            Browse sample experiments
+            Browse examples
           </Button>
         </Group>
       </Stack>
@@ -63,9 +53,7 @@ function HeroPage() {
           flex: 2,
           display: 'flex',
           alignItems: 'flex-end',
-          justifyContent: 'end',
-          marginBottom: 8,
-          marginRight: 8,
+          justifyContent: 'center',
         }}
       >
         <SiteFooter aboutUrl={aboutUrl} />
