@@ -1,13 +1,30 @@
 name: damnit-web-test
 
 services:
+  site:
+    build:
+      dockerfile: ./apps/site/Dockerfile
+      target: build
+      args:
+        APP_URL: https://damnit-test.xfel.eu/app
+    image: damnit-web-site:test
+
+  app:
+    build:
+      dockerfile: ./apps/app/Dockerfile
+      target: build
+      args:
+        SITE_URL: https://damnit-test.xfel.eu
+        BASE_PATH: ${APP_BASE_PATH?}
+    image: damnit-web-app:test
+
   frontend:
     build:
-      context: .
-      target: production
+      dockerfile: ./Dockerfile
     environment:
       - NGINX_SERVER_NAME=localhost
       - NGINX_API_URL=https://max-exfl458.desy.de:8123/
+      - NGINX_APP_BASE_PATH=${APP_BASE_PATH?}
     volumes:
       # Certs used for mTLS
       - ./certs:/etc/nginx/certs/mtls
@@ -17,3 +34,4 @@ services:
     ports:
       - 443:443
     restart: unless-stopped
+    image: damnit-web-frontend:test
