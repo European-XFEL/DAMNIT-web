@@ -55,4 +55,4 @@ COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/src/app/${APP_DIR}/dist
 WORKDIR /usr/src/app/${APP_DIR}
 
 EXPOSE ${PREVIEW_PORT}
-CMD pnpm preview --host 0.0.0.0 --port "$PREVIEW_PORT"
+CMD ["pnpm", "preview", "--host", "0.0.0.0", "--port", "$PREVIEW_PORT"]
