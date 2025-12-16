@@ -1,7 +1,7 @@
 # -------------------------------------------------
 # Globals
 # -------------------------------------------------
-ARG APP_DIR=apps/app
+ARG APP_DIR=apps/site
 
 # -------------------------------------------------
 # Base: Node + pnpm + dependencies
@@ -27,11 +27,8 @@ RUN pnpm install --recursive --frozen-lockfile
 FROM base AS build
 ARG APP_DIR
 
-ARG SITE_URL
-ENV VITE_SITE_URL=${SITE_URL}
-
-ARG BASE_PATH
-ENV VITE_BASE_URL=${BASE_PATH}
+ARG APP_URL
+ENV VITE_APP_URL=${APP_URL}
 
 # Copy the rest of the codebase
 COPY . .
@@ -48,12 +45,6 @@ ARG APP_DIR
 ARG PREVIEW_PORT=4173
 ENV PREVIEW_PORT=${PREVIEW_PORT}
 
-ARG BASE_PATH
-ENV VITE_BASE_URL=${BASE_PATH}
-
-ARG API_URL
-ENV VITE_API=${API_URL}
-
 # Copy the rest of the codebase
 COPY . .
 
@@ -64,4 +55,4 @@ COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/src/app/${APP_DIR}/dist
 WORKDIR /usr/src/app/${APP_DIR}
 
 EXPOSE ${PREVIEW_PORT}
-CMD pnpm preview --host 0.0.0.0 --port "$PREVIEW_PORT"
+CMD ["pnpm", "preview", "--host", "0.0.0.0", "--port", "$PREVIEW_PORT"]
