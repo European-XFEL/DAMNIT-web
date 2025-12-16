@@ -72,6 +72,7 @@ Don't forget to add some environment on the variables on the monorepo by creatin
 # .env
 SITE_PREVIEW_PORT=4174
 APP_PREVIEW_PORT=4173
+APP_PREVIEW_PORT="/"
 API_URL="http://127.0.0.1:30200"
 ```
 
