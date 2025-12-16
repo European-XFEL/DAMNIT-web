@@ -21,6 +21,9 @@ services:
   frontend:
     build:
       dockerfile: ./Dockerfile
+    depends_on:
+      - site
+      - app
     environment:
       - NGINX_SERVER_NAME=localhost
       - NGINX_API_URL=https://max-exfl458.desy.de:8123/
