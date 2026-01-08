@@ -37,3 +37,17 @@ export type TabItem = {
 export type WithTypeName<T> = T & {
   __typename: string
 }
+
+export type ProposalInfo = {
+  number: number
+  instrument: string
+  title: string
+  principal_investigator: string
+
+  start_date: string
+  end_date: string
+  run_cycle: string
+
+  proposal_path: string
+  damnit_path: string
+}

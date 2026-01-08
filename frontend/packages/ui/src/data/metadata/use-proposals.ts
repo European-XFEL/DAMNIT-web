@@ -1,22 +1,9 @@
 import { useEffect, useState } from 'react'
 
 import { metadataApi } from './metadata.api'
-import { isArrayEqual } from '../../utils/array'
 import useQueries from '../../hooks/use-queries'
-
-type ProposalInfo = {
-  number: number
-  instrument: string
-  title: string
-  principal_investigator: string
-
-  start_date: string
-  end_date: string
-  run_cycle: string
-
-  proposal_path: string
-  damnit_path: string
-}
+import { type ProposalInfo } from '../../types'
+import { isArrayEqual } from '../../utils/array'
 
 const useProposals = (proposals: string[]) => {
   const [queries, setQueries] = useState<string[]>([])

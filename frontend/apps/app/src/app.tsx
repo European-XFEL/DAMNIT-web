@@ -7,17 +7,20 @@ import {
   useLocation,
   useParams,
 } from 'react-router'
-import LoadingBar, { showLoading } from 'react-redux-loading-bar'
+import { Container } from '@mantine/core'
 
 import {
   Dashboard,
+  Header,
   HeroPage,
   HomePage,
   LoggedOutPage,
   LoginRoute,
   LogoutRoute,
+  Logo,
   NotFoundPage,
   PrivateRoute,
+  Proposals,
   history,
   resetExtractedData,
   resetMetadata,
@@ -76,7 +79,18 @@ const App = () => {
           path="/home"
           element={
             <PrivateRoute>
-              <HomePage />
+              <HomePage
+                header={
+                  <Header px={20}>
+                    <Logo linkTo="/home" />
+                  </Header>
+                }
+                main={
+                  <Container>
+                    <Proposals />
+                  </Container>
+                }
+              />
             </PrivateRoute>
           }
         />
