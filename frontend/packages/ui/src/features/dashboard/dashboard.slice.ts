@@ -6,6 +6,10 @@ type MainState = {
   currentTab: string
 }
 
+type NavState = {
+  isOpened: boolean
+}
+
 type AsideState = {
   tabs: Record<string, TabItem>
   isOpened: boolean
@@ -13,6 +17,7 @@ type AsideState = {
 
 type DasboardState = {
   main: MainState
+  nav: NavState
   aside: AsideState
 }
 
@@ -20,6 +25,9 @@ const initialState: DasboardState = {
   main: {
     tabs: { table: { title: 'Table' }, editor: { title: 'Context File' } },
     currentTab: 'table',
+  },
+  nav: {
+    isOpened: false,
   },
   aside: {
     isOpened: false,
@@ -49,6 +57,14 @@ const slice = createSlice({
       state.main.tabs = rest
     },
 
+    // Nav
+    openNav: (state) => {
+      state.nav.isOpened = true
+    },
+    closeNav: (state) => {
+      state.nav.isOpened = false
+    },
+
     // Aside
     openAside: (state) => {
       state.aside.isOpened = true
@@ -60,5 +76,12 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { addTab, removeTab, setCurrentTab, openAside, closeAside } =
-  slice.actions
+export const {
+  addTab,
+  removeTab,
+  setCurrentTab,
+  openNav,
+  closeNav,
+  openAside,
+  closeAside,
+} = slice.actions

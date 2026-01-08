@@ -1,6 +1,5 @@
 import { type PropsWithChildren, useState } from 'react'
-import { UnstyledButton, Group, Text, Menu, Burger, rem } from '@mantine/core'
-import { useDisclosure } from '@mantine/hooks'
+import { UnstyledButton, Group, Text, Menu, rem } from '@mantine/core'
 import { IconLogout, IconChevronDown } from '@tabler/icons-react'
 import cx from 'clsx'
 
@@ -64,7 +63,6 @@ type HeaderProps = {
 }
 
 const Header = ({ children, ...props }: PropsWithChildren<HeaderProps>) => {
-  const [opened, { toggle }] = useDisclosure(false)
   return (
     <Group
       h="100%"
@@ -75,7 +73,6 @@ const Header = ({ children, ...props }: PropsWithChildren<HeaderProps>) => {
       {...props}
     >
       {children}
-      <Burger opened={opened} onClick={toggle} hiddenFrom="xs" size="sm" />
       <UserMenu />
     </Group>
   )

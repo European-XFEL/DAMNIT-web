@@ -5,7 +5,13 @@ export { Providers } from './providers'
 export { SiteFooter } from './components/footers'
 
 // Features
-export { default as Dashboard } from './features/dashboard'
+export {
+  default as Dashboard,
+  DashboardBase,
+  DashboardMain,
+  openNav,
+  closeNav,
+} from './features/dashboard'
 export {
   HeroPage,
   HomePage,
