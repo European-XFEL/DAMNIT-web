@@ -1,5 +1,4 @@
 import { combineReducers } from '@reduxjs/toolkit'
-import { loadingBarReducer as loadingBar } from 'react-redux-loading-bar'
 
 import { authApi } from '../auth'
 
@@ -20,7 +19,6 @@ const reducer = combineReducers({
   table,
   tableData,
   extractedData,
-  loadingBar,
   [authApi.reducerPath]: authApi.reducer,
   [metadataApi.reducerPath]: metadataApi.reducer,
   [contextfileApi.reducerPath]: contextfileApi.reducer,

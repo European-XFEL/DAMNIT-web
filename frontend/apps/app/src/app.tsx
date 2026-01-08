@@ -41,7 +41,6 @@ function ProposalWrapper({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (proposal_number) {
-      dispatch(showLoading())
       dispatch(setProposalPending(proposal_number))
     }
 
@@ -99,7 +98,6 @@ const App = () => {
           element={
             <PrivateRoute>
               <ProposalWrapper>
-                <LoadingBar style={{ backgroundColor: '#1864AB' }} />
                 <Dashboard />
               </ProposalWrapper>
             </PrivateRoute>

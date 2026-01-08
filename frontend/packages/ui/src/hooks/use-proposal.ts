@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 
 import { useMutation, useSubscription } from '@apollo/client/react'
-import { hideLoading } from 'react-redux-loading-bar'
 
 import { updateTable } from '../data/table'
 import { setProposalNotFound, setProposalSuccess } from '../data/metadata'
@@ -44,12 +43,10 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
         dispatch(updateTable({ data: {}, metadata: refresh.metadata }))
 
         // Finalize
-        dispatch(hideLoading())
         dispatch(setProposalSuccess())
       },
       onError: (_) => {
         // Finalize
-        dispatch(hideLoading())
         dispatch(setProposalNotFound())
       },
     })
