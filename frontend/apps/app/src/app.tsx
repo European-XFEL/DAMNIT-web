@@ -29,8 +29,10 @@ import {
   useProposal,
 } from '@damnit-frontend/ui'
 
+const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === 'test')
+
 function ProposalWrapper({ children }: PropsWithChildren) {
-  const proposal = useProposal()
+  const proposal = useProposal({ subscribe: SHOULD_SUBSCRIBE })
   const dispatch = useAppDispatch()
   const { proposal_number } = useParams()
 

@@ -12,9 +12,11 @@ import {
 } from '../data/table'
 import { useAppDispatch, useAppSelector } from '../redux/hooks'
 
-const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === 'test')
+type UseProposalOptions = {
+  subscribe: boolean
+}
 
-const useProposal = () => {
+const useProposal = ({ subscribe = true }: UseProposalOptions) => {
   // Initialize Redux things
   const proposal = useAppSelector((state) => state.metadata.proposal)
   const { timestamp } = useAppSelector((state) => state.tableData.metadata)
@@ -26,7 +28,7 @@ const useProposal = () => {
       const { runs, metadata } = data.data[LATEST_DATA_FIELD_NAME]
       dispatch(updateTable({ data: runs, metadata, notify: true }))
     },
-    skip: !SHOULD_SUBSCRIBE || proposal.loading || proposal.notFound,
+    skip: !subscribe || proposal.loading || proposal.notFound,
   })
 
   // Synchronize the server and the client table data
