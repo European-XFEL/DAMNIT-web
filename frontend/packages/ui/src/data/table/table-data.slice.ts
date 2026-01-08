@@ -28,20 +28,11 @@ const initialState: TableDataState = {
   lastUpdate: {},
 }
 
-type TableDataQuery = {
-  proposal: string
-  page: number
-  pageSize: number
-}
+type TableOptions = Omit<TableDataOptions, 'deferred'>
 
 export const getTable = createAsyncThunk(
   'tableData/get',
-  async ({
-    proposal,
-    page,
-    pageSize,
-    lightweight,
-  }: TableDataQuery & { lightweight: boolean }) => {
+  async ({ proposal, page, pageSize, lightweight = false }: TableOptions) => {
     const result = await TableDataServices.getTable({
       proposal,
       page,
