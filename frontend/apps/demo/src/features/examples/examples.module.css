@@ -1,0 +1,16 @@
+.card {
+  display: block;
+  transition:
+    box-shadow 100ms ease,
+    transform 100ms ease;
+}
+
+.card:hover {
+  box-shadow: var(--mantine-shadow-md);
+  transform: translateY(-1px);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}

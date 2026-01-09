@@ -12,7 +12,10 @@
     "preview:app": "pnpm --filter @damnit-frontend/app preview",
     "dev:site": "pnpm --filter @damnit-frontend/site dev",
     "build:site": "pnpm --filter @damnit-frontend/site build",
-    "preview:site": "pnpm --filter @damnit-frontend/site preview"
+    "preview:site": "pnpm --filter @damnit-frontend/site preview",
+    "dev:demo": "pnpm --filter @damnit-frontend/demo dev",
+    "build:demo": "pnpm --filter @damnit-frontend/demo build",
+    "preview:demo": "pnpm --filter @damnit-frontend/demo preview"
   },
   "keywords": [],
   "author": "",

@@ -17,6 +17,12 @@ import { client } from '../../graphql/apollo'
 import { type WithTypeName } from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
+const NUMBER_RE = /^-?\d+(\.\d+)?$/
+
+function formatProposalName(proposal: string) {
+  return NUMBER_RE.test(proposal) ? `p${proposal}` : proposal
+}
+
 /*
  * -----------------------------
  *   Query: getTableData
@@ -57,7 +63,12 @@ async function getTableData(
   } = options
 
   const { data } = await client.query({
-    query: get_table_data_query(`p${proposal}`, fields, lightweight, deferred),
+    query: get_table_data_query(
+      formatProposalName(proposal),
+      fields,
+      lightweight,
+      deferred
+    ),
     variables: {
       proposal: String(proposal),
       page,

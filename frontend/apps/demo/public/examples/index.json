@@ -1,0 +1,6 @@
+{
+  "xpcs": {
+    "label": "X-ray Photon Correlation Spectroscopy (XPCS)",
+    "base_path": "examples/xpcs"
+  }
+}

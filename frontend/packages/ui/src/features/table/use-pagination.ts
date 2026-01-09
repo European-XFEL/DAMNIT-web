@@ -113,6 +113,10 @@ export const usePagination = ({
 
   // Effect: Trigger load page when visible region changes
   useEffect(() => {
+    if (!proposal) {
+      return
+    }
+
     if (!enabled) {
       dispatch(getTable({ proposal, pageSize: 10000 }))
       return
