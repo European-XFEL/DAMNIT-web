@@ -1,23 +1,18 @@
-import { AppShell, Container } from '@mantine/core'
+import { type ReactNode } from 'react'
+import { AppShell } from '@mantine/core'
 
-import { Header, Logo } from '../../components/headers'
 import { SiteFooter } from '../../components/footers'
-import { Proposals } from '../proposals'
 
-const HomePage = () => {
+type HomePageProps = {
+  main: ReactNode
+  header: ReactNode
+}
+
+const HomePage = ({ main, header }: HomePageProps) => {
   return (
     <AppShell header={{ height: 60 }} padding="md">
-      <AppShell.Header>
-        <Header px={20}>
-          <Logo />
-        </Header>
-      </AppShell.Header>
-
-      <AppShell.Main>
-        <Container>
-          <Proposals />
-        </Container>
-      </AppShell.Main>
+      <AppShell.Header>{header}</AppShell.Header>
+      <AppShell.Main>{main}</AppShell.Main>
       <AppShell.Footer
         withBorder={false}
         mr={17}

@@ -2,6 +2,7 @@
 export { Providers } from './providers'
 
 // Components
+export { Header, Logo } from './components/headers'
 export { SiteFooter } from './components/footers'
 
 // Features
@@ -19,6 +20,7 @@ export {
   NotFoundPage,
 } from './features/pages'
 export { resetPlots } from './features/plots'
+export { Proposals } from './features/proposals'
 export { resetTable as resetTableView } from './features/table'
 
 // Hooks
