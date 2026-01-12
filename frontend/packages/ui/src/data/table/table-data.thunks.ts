@@ -4,8 +4,9 @@ import { getTable, getTableData } from './table-data.slice'
 import { type TableInfo } from './table-data.types'
 
 import { type AppDispatch } from '../../redux/store'
+import { isEmpty } from '../../utils/helpers'
 
-export const getDeferredTableValues =
+export const getDeferredTable =
   ({
     proposal,
     page = 1,
@@ -21,7 +22,7 @@ export const getDeferredTableValues =
     )) as PayloadAction<TableInfo>
 
     const { data } = action.payload
-    if (!data) {
+    if (isEmpty(data)) {
       return
     }
 

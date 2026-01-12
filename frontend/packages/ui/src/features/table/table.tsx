@@ -42,7 +42,7 @@ export type TableProps = {
   paginated?: boolean
 }
 
-const Table = ({ grid }: TableProps) => {
+const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: Selectors
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const {
@@ -54,7 +54,7 @@ const Table = ({ grid }: TableProps) => {
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
-  const paginationProps = usePagination(proposal)
+  const paginationProps = usePagination({ proposal, enabled: paginated })
   const [contextMenu, setContextMenu] = useContextMenu()
 
   // Initialization: Memos

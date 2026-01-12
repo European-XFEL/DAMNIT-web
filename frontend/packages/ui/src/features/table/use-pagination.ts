@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { range } from '@mantine/hooks'
 
-import { getDeferredTableValues } from '../../data/table/table-data.thunks'
+import { getDeferredTable } from '../../data/table/table-data.thunks'
+import { getTable } from '../../data/table'
 import { useAppDispatch } from '../../redux/hooks'
 import { sortedInsert, sortedSearch } from '../../utils/array'
 
@@ -45,7 +46,17 @@ type Rect = {
   height: number
 }
 
-export const usePagination = (proposal: string, pageSize = 10) => {
+type UsePaginationOptions = {
+  proposal: string
+  enabled?: boolean
+  pageSize?: number
+}
+
+export const usePagination = ({
+  proposal,
+  enabled = true,
+  pageSize = 10,
+}: UsePaginationOptions) => {
   const dispatch = useAppDispatch()
 
   // Reference: Loaded pages
@@ -67,7 +78,7 @@ export const usePagination = (proposal: string, pageSize = 10) => {
       }
 
       try {
-        await dispatch(getDeferredTableValues({ proposal, page, pageSize }))
+        await dispatch(getDeferredTable({ proposal, page, pageSize }))
         return true
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -79,9 +90,7 @@ export const usePagination = (proposal: string, pageSize = 10) => {
 
   // Callback: On visible region changed
   const onVisibleRegionChanged = useCallback((rect: Rect) => {
-    setVisibleRegion((_) => {
-      return rect
-    })
+    setVisibleRegion(rect)
   }, [])
 
   const loadPage = useCallback(
@@ -104,6 +113,11 @@ export const usePagination = (proposal: string, pageSize = 10) => {
 
   // Effect: Trigger load page when visible region changes
   useEffect(() => {
+    if (!enabled) {
+      dispatch(getTable({ proposal, pageSize: 10000 }))
+      return
+    }
+
     if (visibleRegion.width === 0 || visibleRegion.height === 0) {
       return
     }
@@ -120,7 +134,7 @@ export const usePagination = (proposal: string, pageSize = 10) => {
         loadPage(page)
       }
     })
-  }, [loadPage, pageSize, visibleRegion])
+  }, [loadPage, pageSize, visibleRegion, proposal, enabled, dispatch])
 
   return { onVisibleRegionChanged }
 }
