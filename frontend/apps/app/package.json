@@ -33,8 +33,7 @@
     "graphql": "catalog:graphql",
     "graphql-ws": "catalog:graphql",
     "@reduxjs/toolkit": "catalog:redux",
-    "react-redux": "catalog:redux",
-    "react-redux-loading-bar": "catalog:redux"
+    "react-redux": "catalog:redux"
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",

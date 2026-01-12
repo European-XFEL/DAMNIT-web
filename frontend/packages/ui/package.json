@@ -46,7 +46,6 @@
     "react-laag": "catalog:frontend",
     "react-plotly.js": "catalog:components",
     "react-redux": "catalog:redux",
-    "react-redux-loading-bar": "catalog:redux",
     "react-router": "catalog:frontend"
   },
   "devDependencies": {
@@ -79,7 +78,6 @@
     "react-laag": "catalog:frontend",
     "react-plotly.js": "catalog:components",
     "react-redux": "catalog:redux",
-    "react-redux-loading-bar": "catalog:redux",
     "react-router": "catalog:frontend",
     "typescript": "catalog:tooling",
     "vite": "catalog:tooling"
