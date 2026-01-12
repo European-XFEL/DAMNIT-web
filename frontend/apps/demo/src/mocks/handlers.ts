@@ -4,10 +4,45 @@ import { BASE_URL } from '@damnit-frontend/ui'
 
 import { getExampleIndex } from '../utils'
 
+type Runs = {
+  meta: Meta
+  data: Data[]
+}
+
+type Meta = {
+  sources: Record<string, SourceMeta>
+  variables: Record<string, VariableMeta>
+  runs: number[]
+}
+
+type SourceMeta = {
+  proposal_number: number
+  title: string
+  principal_investigator: string
+}
+
+type VariableMeta = {
+  name: string
+  title: string
+}
+
+type Data = {
+  source: {
+    ref: string
+    run_number: number
+  }
+  variables: Record<string, VariableValue>
+}
+
+// TODO: Use types from the shared package
+type VariableValue =
+  | { dtype: 'number'; value: number }
+  | { dtype: 'string'; value: string }
+
 const api = graphql.link(`${BASE_URL}graphql`)
 const exampleIndex = await getExampleIndex()
 
-export async function getRuns(proposal: string) {
+export async function fetchRuns(proposal: string): Promise<Runs> {
   const result = await fetch(
     `${BASE_URL}${exampleIndex[proposal].base_path}/runs.json`
   )
@@ -20,34 +55,48 @@ export async function getRuns(proposal: string) {
   return await result.json()
 }
 
+function getMetadata(meta: Meta) {
+  const withTagIds = Object.entries(meta.variables).map(([name, variable]) => [
+    name,
+    { ...(variable as Record<string, unknown>), tag_ids: [] },
+  ])
+
+  return {
+    variables: Object.fromEntries(withTagIds),
+    runs: meta.runs,
+    timestamp: 0,
+    tags: {},
+  }
+}
+
 const gqlHandlers = [
   api.mutation('RefreshMutation', async ({ variables }) => {
-    const { metadata } = await getRuns(variables.proposal)
+    const { meta } = await fetchRuns(variables.proposal)
 
     return HttpResponse.json({
       data: {
         refresh: {
-          metadata,
+          metadata: getMetadata(meta),
         },
       },
     })
   }),
   api.query('TableMetadataQuery', async ({ variables }) => {
-    const { metadata } = await getRuns(variables.proposal)
+    const { meta } = await fetchRuns(variables.proposal)
 
     return HttpResponse.json({
       data: {
-        metadata,
+        metadata: getMetadata(meta),
       },
     })
   }),
   api.query('TableDataQuery', async ({ variables }) => {
-    const { data } = await getRuns(variables.proposal)
+    const { data } = await fetchRuns(variables.proposal)
 
     return HttpResponse.json({
       data: {
-        runs: (data as Record<string, unknown>[]).map((run) => ({
-          ...run,
+        runs: data.map((run) => ({
+          ...run.variables,
           __typename: variables.proposal,
         })),
       },

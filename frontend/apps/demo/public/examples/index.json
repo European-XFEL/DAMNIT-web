@@ -1,6 +1,9 @@
 {
   "xpcs": {
-    "label": "X-ray Photon Correlation Spectroscopy (XPCS)",
+    "title": "X-ray Photon Correlation Spectroscopy (XPCS)",
+    "subtitle": "MHz XPCS enabled studies of dynamics, interactions and aggregation phenomena in protein solutions",
+    "instrument": "MID",
+    "principal_investigator": "Christian Gutt",
     "base_path": "examples/xpcs"
   }
 }

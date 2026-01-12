@@ -7,9 +7,9 @@ import classes from './examples.module.css'
 
 export type ExampleInfo = {
   id: string
-  label: string
-  instrument: string
   title: string
+  subtitle: string
+  instrument: string
   principal_investigator: string
 }
 
@@ -28,14 +28,14 @@ function ExampleCard(props: ExampleCardProps) {
     >
       <Group justify="space-between" align="flex-start" gap="md">
         <Title order={4} style={{ lineHeight: 1.2, margin: 0 }}>
-          {props.label}
+          {props.title}
         </Title>
         <InstrumentBadge instrument={props.instrument} />
       </Group>
 
       <Stack gap={6} mt="sm">
         <Text size="sm" c="dimmed" lineClamp={2} style={{ lineHeight: 1.45 }}>
-          {props.title}
+          {props.subtitle}
         </Text>
 
         <Group gap="xs" c="dimmed">
