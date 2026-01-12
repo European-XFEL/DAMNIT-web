@@ -55,6 +55,28 @@ async function fetchRuns(proposal: string): Promise<Runs> {
   return await result.json()
 }
 
+type FetchDataOptions = {
+  proposal: string
+  run: number
+  variable: string
+}
+
+async function fetchData({ proposal, run, variable }: FetchDataOptions) {
+  const result = await fetch(
+    `${BASE_URL}${exampleIndex[proposal].base_path}/data/${run}/${variable}.json`
+  )
+
+  if (!result.ok) {
+    throw new Response(
+      `Failed to fetch data for "${proposal}:${run}:${variable}"`,
+      {
+        status: result.status,
+      }
+    )
+  }
+  return await result.json()
+}
+
 function getMetadata(meta: Meta) {
   const withTagIds = Object.entries(meta.variables).map(([name, variable]) => [
     name,
@@ -99,6 +121,19 @@ const gqlHandlers = [
           ...run.variables,
           __typename: variables.proposal,
         })),
+      },
+    })
+  }),
+  api.query('ExtractedDataQuery', async ({ variables }) => {
+    const data = await fetchData({
+      proposal: variables.proposal,
+      run: variables.run,
+      variable: variables.variable,
+    })
+
+    return HttpResponse.json({
+      data: {
+        extracted_data: data,
       },
     })
   }),
