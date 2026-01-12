@@ -9,7 +9,9 @@ from .utils import DatabaseInput
 @strawberry.type
 class Mutation:
     @strawberry.mutation
-    async def refresh(self, info: Info, database: DatabaseInput) -> JSON:
+    async def refresh(
+        self, info: Info, database: DatabaseInput
+    ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         proposal = database.proposal
 
         # Bootstrap

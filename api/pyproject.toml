@@ -35,15 +35,17 @@ dependencies = [
     "damnit>=0.1",
     "aiohttp~=3.11",
     "aiofiles>=24.1.0",
+    "anyio>=4.11.0",
 ]
 
 [dependency-groups]
 test = ["pytest~=7.4", "pytest-asyncio~=0.21", "pytest-mock~=3.11"]
-lint = ["pyright>=1.1.406", "ruff>=0.7"]
+lint = ["pre-commit>=4.5.1", "pyright>=1.1.406", "ruff>=0.7"]
+debug = ["strawberry-graphql[debug-server,fastapi]>=0.283.3"]
 dev = [
-    "strawberry-graphql[debug-server, fastapi]~=0.195",
     { include-group = "lint" },
     { include-group = "test" },
+    { include-group = "debug" },
 ]
 
 [tool.uv]

@@ -32,9 +32,7 @@ class DatabaseSessionManager(metaclass=Registry):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
         self._engine = create_async_engine(self.db_path)
-        self._sessionmaker = async_sessionmaker(
-            autocommit=False, bind=self._engine
-        )
+        self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
     @property
     def db_path(self):
@@ -79,11 +77,15 @@ class DatabaseSessionManager(metaclass=Registry):
 
 
 def get_session(proposal) -> AsyncSession:
-    return DatabaseSessionManager(proposal).session()
+    return DatabaseSessionManager(
+        proposal
+    ).session()  # FIX: # pyright: ignore[reportReturnType]
 
 
 def get_connection(proposal) -> AsyncConnection:
-    return DatabaseSessionManager(proposal).connect()
+    return DatabaseSessionManager(
+        proposal
+    ).connect()  # FIX: # pyright: ignore[reportReturnType]
 
 
 async def async_table(proposal, name: str = "runs") -> Table:
@@ -120,17 +122,25 @@ async def async_latest_rows(
         table = await async_table(proposal, name=table)
 
     selection = (
-        select(table).where(table.c.get(by) > start_at).order_by(order_by)
+        select(table)
+        .where(
+            table.c.get(by) > start_at  # FIX: # pyright: ignore[reportOptionalOperand]
+        )
+        .order_by(order_by)
     )
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)
-    return result.mappings().all()
+    return result.mappings().all()  # FIX: # pyright: ignore[reportReturnType]
 
 
 async def async_column(proposal, *, table: str, name: str):
-    table = await async_table(proposal, name=table)
-    selection = select(table.c.get(name))
+    table = await async_table(
+        proposal, name=table
+    )  # FIX:  # pyright: ignore[reportAssignmentType]
+    selection = select(
+        table.c.get(name)  # FIX:  # pyright: ignore[reportAttributeAccessIssue]
+    )
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)
