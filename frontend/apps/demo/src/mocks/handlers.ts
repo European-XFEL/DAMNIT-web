@@ -42,13 +42,13 @@ type VariableValue =
 const api = graphql.link(`${BASE_URL}graphql`)
 const exampleIndex = await getExampleIndex()
 
-export async function fetchRuns(proposal: string): Promise<Runs> {
+async function fetchRuns(proposal: string): Promise<Runs> {
   const result = await fetch(
     `${BASE_URL}${exampleIndex[proposal].base_path}/runs.json`
   )
 
   if (!result.ok) {
-    throw new Response(`Failed to fetch data for "${proposal}"`, {
+    throw new Response(`Failed to fetch runs for "${proposal}"`, {
       status: result.status,
     })
   }
