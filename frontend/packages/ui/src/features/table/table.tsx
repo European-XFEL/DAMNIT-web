@@ -37,8 +37,9 @@ const formatColumns = (columns: Column[]) => {
   }))
 }
 
-type TableProps = {
+export type TableProps = {
   grid?: DataEditorProps
+  paginated?: boolean
 }
 
 const Table = ({ grid }: TableProps) => {

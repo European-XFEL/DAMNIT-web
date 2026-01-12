@@ -3,9 +3,13 @@ import { Title } from '@mantine/core'
 
 import styles from './logo.module.css'
 
-const Logo = () => {
+type LogoProps = {
+  linkTo: string
+}
+
+const Logo = ({ linkTo }: LogoProps) => {
   return (
-    <Link to="/home" className={styles.link}>
+    <Link to={linkTo} className={styles.link}>
       <Title order={1} style={{ fontFamily: 'Arial' }}>
         DAMNIT!
       </Title>
