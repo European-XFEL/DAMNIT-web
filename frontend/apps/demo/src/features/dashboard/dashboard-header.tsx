@@ -10,7 +10,13 @@ import {
   useAppSelector,
 } from '@damnit-frontend/ui'
 
-function DashboardHeader() {
+export type DashboardHeaderProps = {
+  title: string
+  subtitle: string
+  instrument: string
+}
+
+function DashboardHeader(props: DashboardHeaderProps) {
   const dispatch = useAppDispatch()
   const nav = useAppSelector((state) => state.dashboard.nav)
 
@@ -26,14 +32,11 @@ function DashboardHeader() {
         <Logo linkTo="/" />
         <Stack gap={0}>
           <Flex gap={10} align="center">
-            <InstrumentBadge instrument="MID" />
-            <Title order={5}>
-              X-ray Photon Correlation Spectroscopy (XPCS)
-            </Title>
+            <InstrumentBadge instrument={props.instrument} />
+            <Title order={5}>{props.title}</Title>
           </Flex>
           <Text size={rem(10)} c="dimmed" fs="italic">
-            MHz XPCS enabled studies of dynamics, interactions and aggregation
-            phenomena in protein solutions
+            {props.subtitle}
           </Text>
         </Stack>
       </Group>

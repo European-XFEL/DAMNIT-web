@@ -36,7 +36,17 @@ function ExampleRoute() {
     }
   }, [info?.id, dispatch])
 
-  return proposal.notFound ? <NotFoundPage /> : <Dashboard />
+  return proposal.notFound ? (
+    <NotFoundPage />
+  ) : (
+    <Dashboard
+      headerProps={{
+        title: info.title,
+        subtitle: info.subtitle,
+        instrument: info.instrument,
+      }}
+    />
+  )
 }
 
 export default ExampleRoute
