@@ -37,3 +37,6 @@ export { resetTable as resetTableData } from './data/table'
 
 // Utilities
 export { formatUrl } from './utils/helpers'
+
+// Constants
+export { BASE_URL } from './constants'
