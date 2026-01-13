@@ -9,7 +9,7 @@ from .settings import MyMdCHTTPSettings, MyMdCMockSettings
 if TYPE_CHECKING:
     from ..shared.settings import Settings
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 async def bootstrap(settings: "Settings"):

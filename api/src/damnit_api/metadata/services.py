@@ -11,7 +11,7 @@ from ..auth.dependencies import User
 from ..shared.models import ProposalNo
 from .models import ProposalMeta
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 async def _get_proposal_meta(

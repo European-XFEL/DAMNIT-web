@@ -8,7 +8,7 @@ from .. import get_logger
 from .._mymdc.dependencies import MyMdCClient
 from . import dependencies, models
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 router = APIRouter(prefix="/oauth", tags=["auth"])
 
