@@ -8,7 +8,12 @@ type DashboardProps = {
 function Dashboard(props: DashboardProps) {
   return (
     <DashboardBase
-      main={<DashboardMain tableProps={{ paginated: false }} />}
+      main={
+        <DashboardMain
+          tableProps={{ paginated: false }}
+          contextFileProps={{ subscribe: false }}
+        />
+      }
       header={<DashboardHeader {...props.headerProps} />}
     />
   )

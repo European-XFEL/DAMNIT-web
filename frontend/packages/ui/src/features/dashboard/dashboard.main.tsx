@@ -15,9 +15,11 @@ import { IconGraph, IconX } from '@tabler/icons-react'
 import cx from 'clsx'
 
 import { setCurrentTab, removeTab } from './dashboard.slice'
-import { type TabsProps } from '../../components/tabs'
-import { type TableProps } from '../table'
+import { type ContextFileProps } from '../context-file'
 import { PlotDialog } from '../plots'
+import { type TableProps } from '../table'
+
+import { type TabsProps } from '../../components/tabs'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 
 import styles from './dashboard.module.css'
@@ -26,9 +28,9 @@ import headerStyles from '../../styles/header.module.css'
 const PlotsTab = lazy(() =>
   import('../plots').then((module) => ({ default: module.PlotsTab }))
 )
-const ContextFileEditorTab = lazy(() =>
-  import('../context-file-editor').then((module) => ({
-    default: module.ContextFileEditorTab,
+const ContextFile = lazy(() =>
+  import('../context-file').then((module) => ({
+    default: module.ContextFile,
   }))
 )
 const Table = lazy(() => import('../table'))
@@ -127,9 +129,10 @@ const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
 
 type DashBoardMainProps = {
   tableProps?: TableProps
+  contextFileProps?: ContextFileProps
 }
 
-function DashboardMain({ tableProps }: DashBoardMainProps) {
+function DashboardMain({ tableProps, contextFileProps }: DashBoardMainProps) {
   const dispatch = useAppDispatch()
   const main = useAppSelector((state) => state.dashboard.main)
 
@@ -147,7 +150,7 @@ function DashboardMain({ tableProps }: DashBoardMainProps) {
     ),
     editor: (
       <Suspense fallback={<div>Loading...</div>}>
-        <ContextFileEditorTab />
+        <ContextFile {...contextFileProps} />
       </Suspense>
     ),
   }

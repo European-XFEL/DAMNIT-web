@@ -1,4 +1,4 @@
-import { HttpResponse, graphql } from 'msw'
+import { http, HttpResponse, graphql } from 'msw'
 
 import { BASE_URL } from '@damnit-frontend/ui'
 
@@ -139,4 +139,33 @@ const gqlHandlers = [
   }),
 ]
 
-export const handlers = [...gqlHandlers]
+type FetchContextFileOptions = {
+  proposal: string
+}
+
+async function fetchContextFile({ proposal }: FetchContextFileOptions) {
+  const result = await fetch(
+    `${BASE_URL}${exampleIndex[proposal].base_path}/context.py`
+  )
+
+  if (!result.ok) {
+    throw new Response(`Failed to fetch context file for "${proposal}"`, {
+      status: result.status,
+    })
+  }
+  return await result.text()
+}
+
+const restHandlers = [
+  http.get(`${BASE_URL}contextfile/content`, async ({ request }) => {
+    const url = new URL(request.url)
+    const proposal_number = url.searchParams.get('proposal_num') ?? ''
+
+    const content = await fetchContextFile({ proposal: proposal_number })
+    return HttpResponse.json({
+      fileContent: content,
+    })
+  }),
+]
+
+export const handlers = [...gqlHandlers, ...restHandlers]
