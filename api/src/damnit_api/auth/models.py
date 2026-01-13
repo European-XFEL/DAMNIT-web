@@ -5,8 +5,11 @@ from typing import Self
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict
 
+from .. import get_logger
 from .._mymdc.dependencies import MyMdCClient
 from .._mymdc.models import UserProposals
+
+logger = get_logger()
 
 
 class BaseUserInfo(BaseModel):
@@ -47,6 +50,7 @@ class User(BaseUserInfo):
     async def from_request(cls, request: Request, mymdc: MyMdCClient) -> Self:
         oauth = OAuthUserInfo.from_request(request)
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
+        await logger.ainfo("User info", preferred_username=oauth.preferred_username)
         return cls.model_validate({
             **oauth.model_dump(),
             "proposals": proposals,

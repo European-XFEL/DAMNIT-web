@@ -6,7 +6,7 @@ from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
 
 from .. import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 if TYPE_CHECKING:
     from ..shared.settings import Settings
