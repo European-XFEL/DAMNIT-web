@@ -8,6 +8,7 @@ from anyio import Path as APath
 from .. import get_logger
 from .._mymdc.clients import MyMdCClient
 from ..auth.dependencies import User
+from ..shared.errors import ForbiddenError
 from ..shared.models import ProposalNo
 from .models import ProposalMeta
 
@@ -35,7 +36,15 @@ async def _get_proposal_meta(
     start_date = proposal.beamtime_start_at or proposal.begin_at
     end_date = proposal.beamtime_end_at or proposal.end_at
 
+    await logger.ainfo("Proposal metadata", path=path)
+
     damnit_path, damnit_paths_searched = await _search_damnit_dir(path)
+
+    await logger.adebug(
+        "Damnit path info",
+        damnit_path=damnit_path,
+        damnit_paths_searched=[str(p.relative_to(path)) for p in damnit_paths_searched],
+    )
 
     return ProposalMeta(
         no=proposal.number,
@@ -57,17 +66,15 @@ async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
     usr_share = APath(path) / "usr" / "Shared" / "amore"
 
     searched_paths = []
-    for dirs in ("amore", "amore-online"):
+    for dir in ("amore", "amore-online"):
         try:
-            damnit_path = damnit_path = usr_share.parent / dirs
+            damnit_path = damnit_path = usr_share.parent / dir
             searched_paths.append(Path(damnit_path))
             if await damnit_path.is_dir():
                 return Path(damnit_path), searched_paths
-
-            await logger.adebug(f"No DAMNIT directory found at {damnit_path}")
         except PermissionError:
-            await logger.adebug(
-                f"Permission denied when accessing {usr_share.parent / dirs}"
+            await logger.awarning(
+                f"Permission denied when accessing {usr_share.parent / dir}"
             )
             continue
 
@@ -86,15 +93,19 @@ async def get_proposal_meta(
 
     allowed_proposals = {p.proposal_number for p in user.proposals.root}
 
-    if allowed_proposals is None:
-        msg = "No allowed proposals provided."
-        raise ValueError(msg)
-
     if proposal_no not in allowed_proposals:
         msg = (
             f"User not authorised for proposal {proposal_no}, or proposal does not "
             "exist."
         )
-        raise PermissionError(msg)
+        details = None
+        if allowed_proposals is None:
+            details = "User has no authorised proposals."
+        await logger.ainfo(
+            "Forbidden",
+            message=msg,
+            details=details,
+        )
+        raise ForbiddenError(msg, details=details)
 
     return await _get_proposal_meta(client, proposal_no)

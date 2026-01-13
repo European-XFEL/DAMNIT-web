@@ -14,7 +14,7 @@ KNOWN_PATHS = ["/graphql"]
 
 def create_app():
     from . import _logging, _mymdc, auth, contextfile, get_logger, metadata
-    from .shared import gql
+    from .shared import errors, gql
     from .shared.settings import settings
 
     @asynccontextmanager
@@ -58,6 +58,26 @@ def create_app():
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
+        )
+
+    @app.exception_handler(errors.DWError)
+    async def base_exception_handler(request: Request, exc: errors.DWError):  # noqa: RUF029
+        status_code = exc.code or status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        content: dict[str, str | int | dict] = {
+            "message": exc.message,
+            "status_code": status_code,
+        }
+
+        if exc.details:
+            content["details"] = exc.details
+
+        if exc.request_id:
+            content["request_id"] = exc.request_id
+
+        return JSONResponse(
+            status_code=status_code,
+            content=content,
         )
 
     app.add_middleware(
