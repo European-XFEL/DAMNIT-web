@@ -36,6 +36,7 @@ dependencies = [
     "aiohttp~=3.11",
     "aiofiles>=24.1.0",
     "anyio>=4.11.0",
+    "python-ulid[pydantic]>=3.1.0",
 ]
 
 [dependency-groups]
@@ -53,6 +54,7 @@ docs = [
 develop = [
     "datamodel-code-generator[http]>=0.35.0",
     "pre-commit>=4.5.1",
+    "rich>=14.2.0",
     "strawberry-graphql[debug-server,fastapi]>=0.283.3",
 ]
 dev = [

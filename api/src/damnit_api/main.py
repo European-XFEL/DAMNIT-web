@@ -5,6 +5,8 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
+from ._logging import RequestLoggingMiddleware
+
 # Known paths are redirected to the login page and
 # then back after successful authentication.
 KNOWN_PATHS = ["/graphql"]
@@ -62,6 +64,8 @@ def create_app():
         SessionMiddleware,
         secret_key=settings.session_secret.get_secret_value(),
     )
+
+    app.add_middleware(RequestLoggingMiddleware)
 
     if settings.localhost_to_127:
         from .shared.middlewares import RedirectLocalhost127Middleware
