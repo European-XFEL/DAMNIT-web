@@ -41,8 +41,12 @@ dependencies = [
 [dependency-groups]
 test = ["pytest~=7.4", "pytest-asyncio~=0.21", "pytest-mock~=3.11"]
 lint = ["pyright>=1.1.406", "ruff>=0.7"]
+# Additional development dependencies
+# note that this is a separate group to `dev` as toml requires arrays to
+# be of a consistent type, so this needs to be included via `include-group`
+develop = ["strawberry-graphql[debug-server,fastapi]>=0.283.3"]
 dev = [
-    "strawberry-graphql[debug-server, fastapi]~=0.195",
+    { include-group = "develop" },
     { include-group = "lint" },
     { include-group = "test" },
 ]
