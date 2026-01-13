@@ -13,7 +13,7 @@ class MyMDC:
     )
 
     def __init__(self):
-        self.session = None
+        self.session: aiohttp.ClientSession = None  # pyright: ignore[reportAttributeAccessIssue]
         self.token = None
 
     async def __aenter__(self):
@@ -51,9 +51,7 @@ class MyMDC:
         """
         Fetch proposal info given a proposal number.
         """
-        url = (
-            f"{settings.mymdc.base_url}/api/proposals/by_number/{proposal_num}"
-        )
+        url = f"{settings.mymdc.base_url}/api/proposals/by_number/{proposal_num}"
         async with self.session.get(url, headers=self.headers) as response:
             response.raise_for_status()
             return await response.json()

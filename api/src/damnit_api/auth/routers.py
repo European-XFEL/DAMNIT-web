@@ -45,17 +45,13 @@ def get_public_base_url(request: Request) -> str:
     else:
         scheme = proto[0]
 
-    host = request.headers.get("x-forwarded-host") or request.headers.get(
-        "host"
-    )
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
 
     return f"{scheme}://{host}"
 
 
 @router.get("/login")
-async def auth(
-    request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI
-):
+async def auth(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
     if request.session.get("user"):
         return RedirectResponse(url=redirect_uri)
 
@@ -70,9 +66,7 @@ async def auth(
 
 
 @router.get("/callback")
-async def callback(
-    request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI
-):
+async def callback(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
     try:
         token = await OAUTH.authorize_access_token(request)
         user = await OAUTH.userinfo(token=token)
@@ -81,18 +75,14 @@ async def callback(
 
     state = request.query_params.get("state", "")
     state_params = parse_qs(state)
-    redirect_uri = state_params.get(
-        "redirect_uri", [DEFAULT_LOGIN_REDIRECT_URI]
-    )[0]
+    redirect_uri = state_params.get("redirect_uri", [DEFAULT_LOGIN_REDIRECT_URI])[0]
 
     request.session["user"] = dict(user)
     return RedirectResponse(url=unquote(redirect_uri))
 
 
 @router.get("/logout")
-async def logout(
-    request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI
-):
+async def logout(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
     request.session.pop("user", None)
     return RedirectResponse(url=redirect_uri)
 

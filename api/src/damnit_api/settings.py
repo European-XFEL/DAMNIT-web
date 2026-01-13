@@ -17,9 +17,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AuthSettings(BaseModel):
     client_id: str
     client_secret: SecretStr
-    server_metadata_url: Annotated[
-        HttpUrl, UrlConstraints(allowed_schemes=["https"])
-    ]
+    server_metadata_url: Annotated[HttpUrl, UrlConstraints(allowed_schemes=["https"])]
 
 
 class UvicornSettings(BaseModel):
@@ -75,9 +73,7 @@ class MyMdCCredentials(BaseSettings):
     base_url: HttpUrl
 
     _access_token: str = ""
-    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(
-        UTC
-    )
+    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(UTC)
 
 
 class Settings(BaseSettings):
@@ -107,7 +103,7 @@ settings = Settings()  # type: ignore[assignment]
 
 if __name__ == "__main__":
     try:
-        from rich import print as pprint
+        from rich import print as pprint  # pyright: ignore[reportMissingImports]
     except ImportError:
 
         def pprint(*args, **kwargs):

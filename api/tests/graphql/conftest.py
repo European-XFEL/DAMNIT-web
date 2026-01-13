@@ -10,7 +10,7 @@ from .const import EXAMPLE_TAGS, EXAMPLE_VARIABLE_TAGS, EXAMPLE_VARIABLES, RUNS
 
 @pytest.fixture(autouse=True)
 def lifespan():
-    DamnitTable.registry.clear()
+    DamnitTable.registry.clear()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
     bootstrap.cache_clear()
     return
 
@@ -48,9 +48,12 @@ def mocked_bootstrap_column(mocker):
 
 
 @pytest_asyncio.fixture
-async def graphql_schema(mocked_bootstrap_variables, mocked_bootstrap_column,
-                         mocked_bootstrap_all_tags,
-                         mock_bootstrap_variable_tags):
+async def graphql_schema(
+    mocked_bootstrap_variables,
+    mocked_bootstrap_column,
+    mocked_bootstrap_all_tags,
+    mock_bootstrap_variable_tags,
+):
     schema = Schema()
 
     # Initialize

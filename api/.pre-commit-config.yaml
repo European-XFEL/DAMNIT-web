@@ -1,0 +1,33 @@
+repos:
+    # Standard
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v3.2.0
+      hooks:
+          - id: check-added-large-files
+          - id: check-json
+          - id: check-merge-conflict
+          - id: check-toml
+          - id: check-yaml
+          - id: end-of-file-fixer
+          - id: trailing-whitespace
+    # Ruff
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+      rev: v0.14.4
+      hooks:
+          - id: ruff-check
+          - id: ruff-format
+    # UV - update lockfile
+    - repo: https://github.com/astral-sh/uv-pre-commit
+      rev: 0.9.8
+      hooks:
+          - id: uv-lock
+    # Pyright - static type checker
+    - repo: local
+      hooks:
+          - id: pyright
+            name: pyright
+            entry: uv
+            args: ["run", "pyright"]
+            language: system
+            exclude: frontend
+            types: [python]
