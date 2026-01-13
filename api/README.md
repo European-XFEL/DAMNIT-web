@@ -8,6 +8,8 @@ Get the environment variables for authentication from [TeamPass](https://passman
 
 `uv` is used for project management, install it if required, see the [uv docs for more information](https://docs.astral.sh/uv/).
 
+This project has some `pre-commit` hooks set up, after installing and activating the running `pre-commit install` will install the hooks and their dependencies.
+
 To start the API server run:
 
 ```sh
