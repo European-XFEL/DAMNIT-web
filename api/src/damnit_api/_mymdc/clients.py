@@ -15,7 +15,7 @@ from damnit_api._mymdc import ports
 from . import models
 from .settings import MyMdCHTTPSettings, MyMdCMockSettings
 
-logger = get_logger(__name__)
+logger = get_logger()
 
 
 class MyMdCAuth(httpx.Auth, MyMdCHTTPSettings):

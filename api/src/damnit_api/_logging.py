@@ -1,3 +1,4 @@
+import inspect
 import logging
 import sys
 from typing import TYPE_CHECKING
@@ -11,6 +12,26 @@ from structlog.stdlib import ProcessorFormatter
 if TYPE_CHECKING:  # pragma: no cover
     from starlette.requests import Request
     from starlette.responses import Response
+
+
+def get_logger(logger_name: str | None = None):
+    if logger_name:
+        return structlog.get_logger(logger_name=logger_name)
+
+    frame = inspect.currentframe()
+    if frame is None or frame.f_back is None:
+        return structlog.get_logger()
+
+    caller_globals = frame.f_back.f_globals
+    module_name = caller_globals.get("__name__")
+    # filepath = caller_globals.get("__file__")
+    # filepath_rel = (
+    #     Path(filepath).relative_to(Path(__file__).parent) if filepath else None
+    # )
+    return structlog.get_logger(
+        logger_name=module_name,
+        # filepath=filepath_rel,
+    )
 
 
 def logger_name_callsite(logger, method_name, event_dict):
