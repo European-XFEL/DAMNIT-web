@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import colorama
 import structlog
 import structlog.typing
+import ulid
 from starlette.middleware.base import BaseHTTPMiddleware
 from structlog.stdlib import ProcessorFormatter
 
@@ -54,6 +55,13 @@ def pretty_format_name_callsite(logger, method_name, event_dict):
     return event_dict
 
 
+def request_id_at_front(logger, method_name, event_dict):
+    request_id = event_dict.pop("request_id", None)
+    if request_id is not None:
+        event_dict = {"request_id": request_id, **event_dict}
+    return event_dict
+
+
 def configure(
     level: str | int | None = None,
     debug: bool | None = None,
@@ -77,7 +85,9 @@ def configure(
         level_styles["debug"] = colorama.Fore.MAGENTA
 
     renderer: structlog.typing.Processor = (
-        structlog.dev.ConsoleRenderer(colors=True, level_styles=level_styles)  # type: ignore[assignment]
+        structlog.dev.ConsoleRenderer(
+            colors=True, level_styles=level_styles, sort_keys=False
+        )  # type: ignore[assignment]
         if debug
         else structlog.processors.JSONRenderer(indent=1)
     )
@@ -90,6 +100,7 @@ def configure(
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="%Y-%m-%dT%H:%M:%SZ", utc=True),
+        request_id_at_front,
     ]
 
     if add_call_site_parameters:
@@ -173,6 +184,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         """Add a middleware to FastAPI that will log requests and responses,
         this is used instead of the builtin Uvicorn access logging to better
         integrate with structlog"""
+
+        structlog.contextvars.bind_contextvars(request_id=str(ulid.ULID()))
+
         info = {
             "method": request.method,
             "path": request.scope["path"],
@@ -185,7 +199,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if request.path_params:
             info["path_params"] = str(request.path_params)
 
-        logger = self.logger.bind(path=request.scope["path"], method=request.method)
+        logger = self.logger.bind()
+
         logger.info("Request", **info)
 
         response = await call_next(request)
