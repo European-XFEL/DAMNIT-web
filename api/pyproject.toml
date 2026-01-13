@@ -41,6 +41,12 @@ dependencies = [
 [dependency-groups]
 test = ["pytest~=7.4", "pytest-asyncio~=0.21", "pytest-mock~=3.11"]
 lint = ["pyright>=1.1.406", "ruff>=0.7"]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.7.0",
+    "mkdocstrings[python]>=0.30.1",
+    "mkdocs-api-autonav>=0.4.0",
+]
 # Additional development dependencies
 # note that this is a separate group to `dev` as toml requires arrays to
 # be of a consistent type, so this needs to be included via `include-group`
@@ -50,6 +56,7 @@ develop = [
 ]
 dev = [
     { include-group = "develop" },
+    { include-group = "docs" },
     { include-group = "lint" },
     { include-group = "test" },
 ]
