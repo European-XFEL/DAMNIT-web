@@ -86,7 +86,7 @@ async def logout(request: Request, client: dependencies.Client) -> RedirectRespo
 
 @router.get("/userinfo")
 async def userinfo(
-    request: Request, mymdc: MyMdCClient, with_proposals: bool = False
+    request: Request, mymdc: MyMdCClient, with_proposals: bool = True
 ) -> models.User | models.OAuthUserInfo:
     """User information."""
     if with_proposals:
