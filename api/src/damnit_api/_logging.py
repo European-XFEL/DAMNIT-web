@@ -34,11 +34,22 @@ def get_logger(logger_name: str | None = None):
     )
 
 
-def logger_name_callsite(logger, method_name, event_dict):
-    if not event_dict.get("logger_name"):
-        logger_name = f"{event_dict.pop('module')}.{event_dict.pop('func_name')}"
-        if not event_dict.pop("disable_name", False):
-            event_dict["logger_name"] = logger_name.strip(".")  # pyright: ignore[reportInvalidTypeForm]
+def pretty_format_name_callsite(logger, method_name, event_dict):
+    logger_name = event_dict.get("logger_name")
+
+    if not logger_name or not logger_name.startswith("damnit_api."):
+        return event_dict
+
+    if func_name := event_dict.pop("func_name"):
+        logger_name = f"{logger_name}.{func_name}"
+
+    if lineno := event_dict.pop("lineno"):
+        logger_name = f"{logger_name}:{lineno}"
+
+    if logger_name.startswith("damnit_api.access_log"):
+        return event_dict
+
+    event_dict["logger_name"] = logger_name.strip(".")
 
     return event_dict
 
@@ -84,10 +95,10 @@ def configure(
     if add_call_site_parameters:
         shared_processors.extend([
             structlog.processors.CallsiteParameterAdder({
-                structlog.processors.CallsiteParameter.MODULE,
                 structlog.processors.CallsiteParameter.FUNC_NAME,
+                structlog.processors.CallsiteParameter.LINENO,
             }),  # type: ignore[arg-type]
-            logger_name_callsite,
+            pretty_format_name_callsite,
         ])
 
     structlog_processors = [*shared_processors, renderer]
@@ -104,7 +115,8 @@ def configure(
     structlog.configure(
         processors=structlog_processors,
         wrapper_class=structlog.make_filtering_bound_logger(level),
-        logger_factory=structlog.PrintLoggerFactory(sys.stderr),
+        logger_factory=structlog.PrintLoggerFactory(),
+        # logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
         context_class=dict,
     )
@@ -144,6 +156,7 @@ def configure_uvicorn(renderer, shared_processors):
 
     # Disabled access log handlers as they are handled by the middleware
     uvicorn.config.LOGGING_CONFIG["loggers"]["uvicorn.access"]["handlers"] = []
+    uvicorn.config.LOGGING_CONFIG["loggers"]["uvicorn.access"]["propagate"] = False
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -152,7 +165,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     @property
     def logger(self):
         if not self._logger:
-            self._logger = structlog.get_logger(disable_name=True)
+            self._logger = structlog.get_logger(logger_name="damnit_api.access_log")
 
         return self._logger
 
@@ -173,7 +186,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             info["path_params"] = str(request.path_params)
 
         logger = self.logger.bind(path=request.scope["path"], method=request.method)
-        logger.debug("Request", **info)
+        logger.info("Request", **info)
 
         response = await call_next(request)
 
