@@ -4,7 +4,7 @@ import { listenerMiddleware } from './listeners'
 import reducer, { type RootState } from './reducer'
 import { authApi } from '../auth'
 import { metadataApi } from '../data/metadata'
-import { contextfileApi } from '../features/context-file-editor/context-file-editor.api'
+import { contextfileApi } from '../features/context-file/context-file.api'
 
 export const setupStore = (preloadedState?: Partial<RootState>) => {
   return configureStore({

@@ -52,6 +52,7 @@ const PlotsTab = () => {
 
   return isEmpty(contents) ? null : (
     <Tabs
+      style={{ width: '100%', height: '100%' }}
       orientation="vertical"
       contents={contents}
       active={plots.currentPlot}
