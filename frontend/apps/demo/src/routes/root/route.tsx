@@ -15,9 +15,16 @@ function Main() {
             Explore experiments with an interactive overview
           </Title>
 
-          <Text c="dimmed" size="md">
-            The examples below use actual data from real experiments.
-          </Text>
+          <Stack gap={4}>
+            <Text c="dimmed" size="lg" fw={400}>
+              The examples below use actual data from real experiments.
+            </Text>
+
+            <Text c="dimmed" size="sm" fs="italic" style={{ opacity: 0.8 }}>
+              Just a heads-up: the data is preloaded in the demo, there are no
+              live updates.
+            </Text>
+          </Stack>
         </Stack>
 
         <Divider />
