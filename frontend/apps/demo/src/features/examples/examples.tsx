@@ -21,7 +21,6 @@ function ExampleCard(props: ExampleCardProps) {
       withBorder
       shadow="xs"
       padding="xl"
-      maw={800}
       className={classes.card}
       component={Link}
       to={`/example/${props.id}`}
