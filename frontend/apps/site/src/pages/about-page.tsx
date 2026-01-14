@@ -16,8 +16,6 @@ function AboutPage() {
       })
   }, [])
 
-  console.log(content)
-
   if (!content) return null // or show a loader
 
   return (

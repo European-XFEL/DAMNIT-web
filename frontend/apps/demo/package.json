@@ -1,0 +1,57 @@
+{
+  "name": "@damnit-frontend/demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "prettier . --check --cache --ignore-path ../../.prettierignore",
+    "lint:tsc": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@apollo/client": "catalog:graphql",
+    "@damnit-frontend/ui": "workspace:*",
+    "@glideapps/glide-data-grid": "catalog:components",
+    "@glideapps/glide-data-grid-cells": "catalog:components",
+    "@mantine/core": "catalog:components",
+    "@mantine/form": "catalog:components",
+    "@mantine/hooks": "catalog:components",
+    "@monaco-editor/react": "catalog:components",
+    "@reduxjs/toolkit": "catalog:redux",
+    "@tabler/icons-react": "catalog:components",
+    "clsx": "catalog:frontend",
+    "dayjs": "catalog:frontend",
+    "graphql": "catalog:graphql",
+    "graphql-ws": "catalog:graphql",
+    "mantine-contextmenu": "catalog:components",
+    "mantine-datatable": "catalog:components",
+    "msw": "^2.12.7",
+    "react": "catalog:frontend",
+    "react-dom": "catalog:frontend",
+    "react-laag": "catalog:frontend",
+    "react-plotly.js": "catalog:components",
+    "react-redux": "catalog:redux",
+    "react-router": "catalog:frontend"
+  },
+  "devDependencies": {
+    "@damnit-frontend/config": "workspace:*",
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "@types/react-plotly.js": "catalog:types",
+    "@vitejs/plugin-react": "catalog:tooling",
+    "eslint": "catalog:linting",
+    "postcss": "catalog:tooling",
+    "prettier": "catalog:linting",
+    "typescript": "catalog:tooling",
+    "vite": "catalog:tooling"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
+  }
+}

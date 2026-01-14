@@ -1,5 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
+import type { DeepPartial } from '../../types'
+
 interface Proposal {
   value: string
   loading: boolean
@@ -23,6 +25,10 @@ const slice = createSlice({
   initialState,
   reducers: {
     reset: () => initialState,
+    set: (state, action: PayloadAction<DeepPartial<State>>) => {
+      const metadata = action.payload
+      state.proposal = { ...state.proposal, ...metadata.proposal }
+    },
     setProposalPending(state, action: PayloadAction<string>) {
       state.proposal = {
         ...initialState.proposal,
@@ -45,5 +51,6 @@ export const {
   setProposalPending,
   setProposalSuccess,
   setProposalNotFound,
+  set: setMetadata,
   reset: resetMetadata,
 } = slice.actions

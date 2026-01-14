@@ -4,6 +4,7 @@ export { Providers } from './providers'
 // Components
 export { Header, Logo } from './components/headers'
 export { SiteFooter } from './components/footers'
+export { InstrumentBadge } from './components/badges'
 
 // Features
 export {
@@ -27,14 +28,14 @@ export { resetTable as resetTableView } from './features/table'
 export { useProposal } from './hooks'
 
 // Redux
-export { useAppDispatch } from './redux/hooks'
+export { useAppDispatch, useAppSelector } from './redux/hooks'
 
 // Routes
 export { LoginRoute, LogoutRoute, PrivateRoute, history } from './routes'
 
 // Data
 export { resetExtractedData } from './data/extracted'
-export { resetMetadata, setProposalPending } from './data/metadata'
+export { resetMetadata, setMetadata, setProposalPending } from './data/metadata'
 export { resetTable as resetTableData } from './data/table'
 
 // Utilities

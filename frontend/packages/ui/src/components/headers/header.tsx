@@ -14,6 +14,10 @@ const UserMenu = () => {
   const [userMenuOpened, setUserMenuOpened] = useState(false)
   const userFullName = useAppSelector(selectUserFullName)
 
+  if (!userFullName) {
+    return null // no detected user
+  }
+
   return (
     <Menu
       width={260}
