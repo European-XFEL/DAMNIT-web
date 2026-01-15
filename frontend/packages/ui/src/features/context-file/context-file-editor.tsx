@@ -1,5 +1,7 @@
 import { Editor as Monaco } from '@monaco-editor/react'
 
+import { CenteredLoader } from '../../components/feedback'
+
 interface ContextFileEditorProps {
   content?: string
 }
@@ -20,6 +22,7 @@ const ContextFileEditor = ({ content }: ContextFileEditorProps) => {
       }}
       defaultLanguage="python"
       value={content}
+      loading={<CenteredLoader />}
     />
   )
 }
