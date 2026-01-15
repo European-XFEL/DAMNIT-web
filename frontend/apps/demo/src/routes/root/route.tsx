@@ -17,12 +17,13 @@ function Main() {
 
           <Stack gap={4}>
             <Text c="dimmed" size="lg" fw={400}>
-              The examples below use actual data from real experiments.
+              Explore real-world applications of DAMNIT using data from previous experimental campaigns.
             </Text>
 
             <Text c="dimmed" size="sm" fs="italic" style={{ opacity: 0.8 }}>
-              Just a heads-up: the data is preloaded in the demo, there are no
-              live updates.
+              These examples demonstrate how DAMNIT automates the 
+              extraction of metadata and analysis results, providing a live, 
+              searchable overview of your experiment's progress.
             </Text>
           </Stack>
         </Stack>
