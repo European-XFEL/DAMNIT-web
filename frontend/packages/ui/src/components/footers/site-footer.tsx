@@ -5,9 +5,6 @@ import {
   type AnchorProps,
   type ElementProps,
 } from '@mantine/core'
-import { formatUrl } from '../../utils/helpers'
-
-const DEFAULT_ABOUT_URL = `${formatUrl(import.meta.env.VITE_SITE_URL || 'https://damnit.xfel.eu/')}about`
 
 interface SiteAnchorProps
   extends AnchorProps,
@@ -22,11 +19,7 @@ function SiteAnchor({ children, ...props }: SiteAnchorProps) {
   )
 }
 
-interface SiteFooterProps {
-  aboutUrl?: string
-}
-
-function SiteFooter({ aboutUrl = DEFAULT_ABOUT_URL }: SiteFooterProps) {
+function SiteFooter() {
   return (
     <Group justify="space-between" w="100%" mx={16} my={8}>
       <Group gap="lg">
@@ -36,8 +29,10 @@ function SiteFooter({ aboutUrl = DEFAULT_ABOUT_URL }: SiteFooterProps) {
         </SiteAnchor>
       </Group>
       <Group gap="lg">
-        <SiteAnchor href={aboutUrl}>Legals & About</SiteAnchor>
-        <SiteAnchor href="http://www.xfel.eu/contacts/">Contacts</SiteAnchor>
+        <SiteAnchor href="https://www.xfel.eu/legal_notice/index_eng.html">
+          Legal Notice
+        </SiteAnchor>
+        <SiteAnchor href="https://www.xfel.eu/contacts/">Contacts</SiteAnchor>
       </Group>
     </Group>
   )

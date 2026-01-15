@@ -16,9 +16,7 @@
     "@mantine/core": "catalog:components",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",
-    "react-markdown": "^10.1.0",
-    "react-router": "catalog:frontend",
-    "remark-gfm": "^4.0.1"
+    "react-router": "catalog:frontend"
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
