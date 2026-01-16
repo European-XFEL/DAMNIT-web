@@ -27,7 +27,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version-file: "package.json"
+          node-version-file: "frontend/package.json"
 
       - name: Enable Corepack
         run: corepack enable
@@ -41,7 +41,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-pages-artifact@v4
         with:
-          path: "apps/site/dist"
+          path: "frontend/apps/site/dist"
 
   deploy:
     needs: build
