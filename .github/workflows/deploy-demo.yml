@@ -36,7 +36,9 @@ jobs:
         run: pnpm install
 
       - name: Build app
-        run: pnpm run build:demo --base=/${{ github.event.repository.name }}/
+        run: pnpm run build:demo
+        env:
+          VITE_BASE_URL: "/${{ github.event.repository.name }}/demo"
 
       - name: Upload artifacts
         uses: actions/upload-pages-artifact@v4
