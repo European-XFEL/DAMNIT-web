@@ -8,6 +8,7 @@ import {
   useCheckFileLastModifiedQuery,
   useGetFileContentQuery,
 } from './context-file.api'
+import { CenteredLoader } from '../../components/feedback'
 import {
   ConnectionStatus,
   LabelStatus,
@@ -86,9 +87,7 @@ const ContextFile = ({
   return (
     <Stack align="stretch" h="100%">
       {isLoading ? (
-        <Box style={{ textAlign: 'center', padding: '20px' }}>
-          Loading file content...
-        </Box>
+        <CenteredLoader />
       ) : error ? (
         <Box
           style={{

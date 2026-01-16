@@ -19,6 +19,7 @@ import { type ContextFileProps } from '../context-file'
 import { PlotDialog } from '../plots'
 import { type TableProps } from '../table'
 
+import { CenteredLoader } from '../../components/feedback'
 import { type TabsProps } from '../../components/tabs'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 
@@ -139,17 +140,17 @@ function DashboardMain({ tableProps, contextFileProps }: DashBoardMainProps) {
   // Main tabs
   const mainTabElements = {
     table: (
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<CenteredLoader />}>
         <Table {...tableProps} />
       </Suspense>
     ),
     plots: (
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<CenteredLoader />}>
         <PlotsTab />
       </Suspense>
     ),
     editor: (
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<CenteredLoader />}>
         <ContextFile {...contextFileProps} />
       </Suspense>
     ),
