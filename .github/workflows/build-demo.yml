@@ -1,13 +1,10 @@
-name: Deploy Demo
+name: Build Demo
 
 on:
-  push:
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -38,26 +35,10 @@ jobs:
       - name: Build app
         run: pnpm run build:demo
         env:
-          VITE_BASE_URL: "/${{ github.event.repository.name }}/demo"
+          VITE_BASE_URL: "/${{ github.event.repository.name }}/demo/"
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
+          name: demo-dist
           path: "frontend/apps/demo/dist"
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    permissions:
-      pages: write
-      id-token: write
-
-    steps:
-      - name: Deploy app
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-    environment:
-      name: github-pages
-      url: "${{ steps.deployment.outputs.page_url }}demo"

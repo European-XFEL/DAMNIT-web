@@ -1,15 +1,10 @@
-name: Deploy Site
+name: Build Site
 
 on:
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -40,24 +35,8 @@ jobs:
       - name: Build app
         run: pnpm run build:site --base=/${{ github.event.repository.name }}/
 
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
+          name: site-dist
           path: "frontend/apps/site/dist"
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    permissions:
-      pages: write
-      id-token: write
-
-    steps:
-      - name: Deploy app
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
