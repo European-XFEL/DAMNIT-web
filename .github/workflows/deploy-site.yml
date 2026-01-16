@@ -36,7 +36,7 @@ jobs:
         run: pnpm install
 
       - name: Build app
-        run: pnpm run build:site --base=${{ secrets.DW_REPO }}
+        run: pnpm run build:site --base=/${{ github.event.repository.name }}/
 
       - name: Upload artifacts
         uses: actions/upload-pages-artifact@v4
