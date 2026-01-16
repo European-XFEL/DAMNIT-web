@@ -15,7 +15,7 @@ const HomePage = ({ main, header }: HomePageProps) => {
       <AppShell.Main>{main}</AppShell.Main>
       <AppShell.Footer
         withBorder={false}
-        mr={17}
+        mr={32}
         style={{ background: 'transparent' }}
       >
         <SiteFooter />

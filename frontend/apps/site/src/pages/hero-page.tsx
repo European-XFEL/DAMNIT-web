@@ -1,5 +1,3 @@
-import { useHref } from 'react-router'
-
 import { Flex, Box, Stack, Title, Group, Button } from '@mantine/core'
 import { SiteFooter, formatUrl } from '@damnit-frontend/ui'
 
@@ -11,8 +9,6 @@ const DEMO_URL = formatUrl(
 )
 
 function HeroPage() {
-  const aboutUrl = useHref('about')
-
   return (
     <Flex direction="column" mih="100vh">
       <Box style={{ flex: 1 }} />
@@ -56,7 +52,7 @@ function HeroPage() {
           justifyContent: 'center',
         }}
       >
-        <SiteFooter aboutUrl={aboutUrl} />
+        <SiteFooter />
       </Box>
     </Flex>
   )
