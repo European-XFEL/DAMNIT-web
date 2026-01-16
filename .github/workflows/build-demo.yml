@@ -38,7 +38,7 @@ jobs:
           VITE_BASE_URL: "/${{ github.event.repository.name }}/demo/"
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: demo-dist
           path: "frontend/apps/demo/dist"
