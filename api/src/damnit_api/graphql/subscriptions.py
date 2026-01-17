@@ -89,4 +89,4 @@ class Subscription:
                 schema=info.context["schema"],
             )
             if result is not None:
-                yield result
+                yield result  # FIX: # pyright: ignore[reportReturnType]

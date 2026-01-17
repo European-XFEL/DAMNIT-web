@@ -41,8 +41,10 @@ def serialize(value, *, dtype=DamnitType.STRING):
 
 
 Any = strawberry.scalar(
-    NewType("Any", object),  # FIX: # pyright: ignore[reportArgumentType]
-)
+    NewType(
+        "Any", object
+    ),  # FIX: # pyright: ignore[reportArgumentType, reportCallIssue]
+)  # pyright: ignore[reportCallIssue]
 
 
 Timestamp = strawberry.scalar(
