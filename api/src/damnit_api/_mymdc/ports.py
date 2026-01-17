@@ -10,7 +10,7 @@ from .. import get_logger
 from .models import (
     InstrumentCycle,
     Proposal,
-    ProposalNo,
+    ProposalNumber,
     User,
     UserId,
     UserProposalsByCycle,
@@ -56,10 +56,10 @@ class MyMdCPort(ABC):
         return _mymdc.CLIENT
 
     @abstractmethod
-    async def _get_proposal_by_number(self, no: ProposalNo) -> dict: ...
+    async def _get_proposal_by_number(self, no: ProposalNumber) -> dict: ...
 
     @async_lru.alru_cache(ttl=60 * 60)  # TODO: remove
-    async def get_proposal_by_number(self, no: ProposalNo) -> Proposal:
+    async def get_proposal_by_number(self, no: ProposalNumber) -> Proposal:
         """Get a proposal by its number."""
         return Proposal.model_validate(await self._get_proposal_by_number(no))
 

@@ -105,7 +105,7 @@ class MyMdCClientAsync(httpx.AsyncClient, ports.MyMdCPort):
 
         super().__init__(auth=auth, base_url=api_url)
 
-    async def _get_proposal_by_number(self, no: models.ProposalNo):
+    async def _get_proposal_by_number(self, no: models.ProposalNumber):
         response = await self.get(f"proposals/by_number/{no}")
         response.raise_for_status()
         return response.json()
@@ -139,7 +139,7 @@ class MyMdCClientMock(MyMdCMockSettings, ports.MyMdCPort):
         """Load mock data from file if provided, else return empty dict."""
         return await self._data(self.mock_responses_file)
 
-    async def _get_proposal_by_number(self, no: models.ProposalNo):
+    async def _get_proposal_by_number(self, no: models.ProposalNumber):
         """Mock method to get proposals by number."""
         return (await self.data)["proposals_by_number"][str(no)]
 
