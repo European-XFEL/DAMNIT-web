@@ -8,6 +8,7 @@ import structlog
 import structlog.typing
 import ulid
 from starlette.middleware.base import BaseHTTPMiddleware
+from structlog.dev import RichTracebackFormatter
 from structlog.stdlib import ProcessorFormatter
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -86,7 +87,10 @@ def configure(
 
     renderer: structlog.typing.Processor = (
         structlog.dev.ConsoleRenderer(
-            colors=True, level_styles=level_styles, sort_keys=False
+            colors=True,
+            level_styles=level_styles,
+            sort_keys=False,
+            exception_formatter=RichTracebackFormatter(max_frames=1),
         )  # type: ignore[assignment]
         if debug
         else structlog.processors.JSONRenderer(indent=1)
