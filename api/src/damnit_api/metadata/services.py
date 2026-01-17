@@ -10,7 +10,7 @@ from .. import get_logger
 from .._mymdc.clients import MyMdCClient
 from ..auth.dependencies import User
 from ..shared.errors import ForbiddenError
-from ..shared.models import ProposalNo
+from ..shared.models import ProposalNumber
 from .models import ProposalMeta
 
 logger = get_logger()
@@ -18,10 +18,10 @@ logger = get_logger()
 
 @async_lru.alru_cache(ttl=60 * 60)  # TODO: remove
 async def _get_proposal_meta(
-    client: MyMdCClient, proposal_no: ProposalNo
+    client: MyMdCClient, proposal_number: ProposalNumber
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number, using the provided MyMdC Client."""
-    proposal = await client.get_proposal_by_number(proposal_no)
+    proposal = await client.get_proposal_by_number(proposal_number)
     cycle = await client.get_cycle_by_id(proposal.instrument_cycle_id)
 
     # This **should** always be the raw path,
@@ -61,7 +61,7 @@ async def _get_proposal_meta(
             principal_investigator = pi.name
 
     return ProposalMeta(
-        no=proposal.number,
+        number=proposal.number,
         path=path,
         cycle=cycle.identifier,
         instrument=proposal.instrument_identifier,
@@ -98,7 +98,7 @@ async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
 
 async def get_proposal_meta(
     client: MyMdCClient,
-    proposal_no: ProposalNo,
+    proposal_number: ProposalNumber,
     user: User,
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number, using the repository and/or provided
@@ -110,9 +110,9 @@ async def get_proposal_meta(
         p for proposals in user.proposals.root.values() for p in proposals
     }
 
-    if proposal_no not in allowed_proposals:
+    if proposal_number not in allowed_proposals:
         msg = (
-            f"User not authorised for proposal {proposal_no}, or proposal does not "
+            f"User not authorised for proposal {proposal_number}, or proposal does not "
             "exist."
         )
         details = None
@@ -125,4 +125,4 @@ async def get_proposal_meta(
         )
         raise ForbiddenError(msg, details=details)
 
-    return await _get_proposal_meta(client, proposal_no)
+    return await _get_proposal_meta(client, proposal_number)

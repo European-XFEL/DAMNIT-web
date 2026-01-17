@@ -2,9 +2,9 @@ import { useGetProposalQuery } from './metadata.api'
 import { useAppSelector } from '../../redux/hooks'
 
 const useCurrentProposal = () => {
-  const proposal_num = useAppSelector((state) => state.metadata.proposal.value)
+  const proposal_number = useAppSelector((state) => state.metadata.proposal.value)
   const { data, isLoading, isUninitialized, isError, isFetching } =
-    useGetProposalQuery(proposal_num, { skip: !proposal_num })
+    useGetProposalQuery(proposal_number, { skip: !proposal_number })
 
   return {
     proposal: data,

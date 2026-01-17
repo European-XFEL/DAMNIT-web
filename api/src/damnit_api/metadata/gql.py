@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class ProposalMeta:
     """Proposal metadata."""
 
-    no: int
+    number: int
     cycle: str
     path: str
     damnit_path: str | None
@@ -31,7 +31,7 @@ class ProposalMeta:
 class Query:
     @strawberry.field
     async def proposal_metadata(
-        self, proposal_no: int, info: strawberry.Info[Context]
+        self, proposal_number: int, info: strawberry.Info[Context]
     ) -> ProposalMeta | None:
         """Fetch metadata for the provided proposal number."""
         oauth_user, mymdc = info.context.oauth_user, info.context.mymdc
@@ -42,5 +42,5 @@ class Query:
         )
 
         return ProposalMeta.from_pydantic(
-            await services.get_proposal_meta(mymdc, proposal_no, user)
+            await services.get_proposal_meta(mymdc, proposal_number, user)
         )

@@ -5,13 +5,13 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from ..shared.models import ProposalCycle, ProposalNo
+from ..shared.models import ProposalCycle, ProposalNumber
 
 
 class ProposalMeta(BaseModel):
     """Proposal Metadata."""
 
-    no: ProposalNo
+    number: ProposalNumber
     cycle: ProposalCycle
     instrument: str
     path: Path
