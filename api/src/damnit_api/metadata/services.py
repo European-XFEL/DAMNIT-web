@@ -3,6 +3,7 @@
 from datetime import datetime
 from pathlib import Path
 
+import async_lru
 from anyio import Path as APath
 
 from .. import get_logger
@@ -15,6 +16,7 @@ from .models import ProposalMeta
 logger = get_logger()
 
 
+@async_lru.alru_cache(ttl=60 * 60)  # TODO: remove
 async def _get_proposal_meta(
     client: MyMdCClient, proposal_no: ProposalNo
 ) -> ProposalMeta:
@@ -46,6 +48,18 @@ async def _get_proposal_meta(
         damnit_paths_searched=[str(p.relative_to(path)) for p in damnit_paths_searched],
     )
 
+    principal_investigator = None
+    if proposal.users_info:
+        for user in proposal.users_info:
+            if user.user_id == proposal.principal_investigator_id:
+                principal_investigator = user.name
+                break
+
+    if not principal_investigator:
+        pi = await client.get_user_by_id(proposal.principal_investigator_id)
+        if pi:
+            principal_investigator = pi.name
+
     return ProposalMeta(
         no=proposal.number,
         path=path,
@@ -54,6 +68,7 @@ async def _get_proposal_meta(
         damnit_path=damnit_path,
         damnit_paths_searched=damnit_paths_searched,
         title=proposal.title,
+        principal_investigator=principal_investigator or "Unknown",
         start_date=datetime.fromisoformat(start_date) if start_date else None,
         end_date=datetime.fromisoformat(end_date) if end_date else None,
     )
@@ -91,7 +106,9 @@ async def get_proposal_meta(
 
     # TODO: caching layer/repository
 
-    allowed_proposals = {p.proposal_number for p in user.proposals.root}
+    allowed_proposals = {
+        p for proposals in user.proposals.root.values() for p in proposals
+    }
 
     if proposal_no not in allowed_proposals:
         msg = (
