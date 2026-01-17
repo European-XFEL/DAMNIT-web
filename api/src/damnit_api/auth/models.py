@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from .. import get_logger
 from .._mymdc.dependencies import MyMdCClient
-from .._mymdc.models import UserProposals
+from .._mymdc.models import UserProposalsByCycle
 
 logger = get_logger()
 
@@ -44,7 +44,7 @@ class OAuthUserInfo(BaseUserInfo):
 class User(BaseUserInfo):
     """Full user information including list of proposals."""
 
-    proposals: UserProposals
+    proposals: UserProposalsByCycle
 
     @classmethod
     async def from_request(cls, request: Request, mymdc: MyMdCClient) -> Self:

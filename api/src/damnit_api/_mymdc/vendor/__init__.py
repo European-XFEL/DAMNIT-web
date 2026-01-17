@@ -18,7 +18,7 @@ schemas.
 """
 
 from . import models
-from .models import InstrumentCycles, Users, UsersProposals
+from .models import InstrumentCycles, Users, UsersProposal, UsersProposals
 
 # TODO: Contact ITDM to request fixes to the OpenAPI spec
 
@@ -40,4 +40,10 @@ class GetProposals(models.GetProposals):
     logbook_info: LogbookInfo | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
-__all__ = ["GetProposals", "InstrumentCycles", "Users", "UsersProposals"]
+__all__ = [
+    "GetProposals",
+    "InstrumentCycles",
+    "Users",
+    "UsersProposal",
+    "UsersProposals",
+]

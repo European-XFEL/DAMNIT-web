@@ -1,7 +1,9 @@
 """MyMdC models, re-exported from vendor models and shared models."""
 
+from pydantic import RootModel
+
 from ..shared.models import ProposalNo
-from .vendor import GetProposals, InstrumentCycles, Users, UsersProposals
+from .vendor import GetProposals, InstrumentCycles, Users, UsersProposal, UsersProposals
 
 User = Users
 """MyMdC User model."""
@@ -15,8 +17,16 @@ Proposal = GetProposals
 InstrumentCycle = InstrumentCycles
 """MyMdC Instrument Cycle model."""
 
-UserProposals = UsersProposals
-"""MyMdC User Proposals model, list of all proposals a user has access to."""
+UserProposal = UsersProposal
+"""MyMdC User Proposal model, element returned by `users/{id}/proposals` call."""
+
+UsersProposals = UsersProposals
+"""MyMdC Users Proposals model, returned by `users/{id}/proposals` call."""
+
+
+class UserProposalsByCycle(RootModel[dict[int, list[ProposalNo]]]):
+    """User proposals grouped by instrument cycle."""
+
 
 __all__ = [
     "InstrumentCycle",
@@ -24,5 +34,6 @@ __all__ = [
     "ProposalNo",
     "User",
     "UserId",
-    "UserProposals",
+    "UserProposalsByCycle",
+    "UsersProposals",
 ]
