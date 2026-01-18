@@ -85,16 +85,23 @@ def configure(
     if debug:
         level_styles["debug"] = colorama.Fore.MAGENTA
 
-    renderer: structlog.typing.Processor = (
-        structlog.dev.ConsoleRenderer(
+    if debug:
+        try:
+            import rich as _  # noqa: F401
+
+            exception_formatter = RichTracebackFormatter(max_frames=1)
+        except Exception:
+            # Fall back to plain traceback if `rich` isn't installed or import fails
+            exception_formatter = structlog.dev.plain_traceback  # type: ignore[attr-defined]
+
+        renderer: structlog.typing.Processor = structlog.dev.ConsoleRenderer(
             colors=True,
             level_styles=level_styles,
             sort_keys=False,
-            exception_formatter=RichTracebackFormatter(max_frames=1),
+            exception_formatter=exception_formatter,
         )  # type: ignore[assignment]
-        if debug
-        else structlog.processors.JSONRenderer(indent=1)
-    )
+    else:
+        renderer = structlog.processors.JSONRenderer(indent=1)
 
     # sentry_processor = sentry.SentryProcessor(level=level)
 
