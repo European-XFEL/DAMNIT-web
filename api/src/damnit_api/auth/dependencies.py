@@ -21,8 +21,8 @@ RedirectURI = Annotated[str, Depends(_get_default_redirect_login_uri)]
 Client = Annotated[StarletteOAuth2App, Depends(get_oauth_client)]
 """Type alias for the OAuth client dependency."""
 
-OAuthUserInfo = Annotated[_OAuthUserInfo, Depends(_OAuthUserInfo.from_request)]
+OAuthUserInfo = Annotated[_OAuthUserInfo, Depends(_OAuthUserInfo.from_connection)]
 """Type alias for the OAuth user info dependency."""
 
-User = Annotated[_User, Depends(_User.from_request)]
+User = Annotated[_User, Depends(_User.from_connection)]
 """Type alias for the full User dependency."""

@@ -90,8 +90,8 @@ async def userinfo(
 ) -> models.User | models.OAuthUserInfo:
     """User information."""
     if with_proposals:
-        user = await models.User.from_request(request, mymdc)
+        user = await models.User.from_connection(request, mymdc)
     else:
-        user = models.OAuthUserInfo.from_request(request)
+        user = models.OAuthUserInfo.from_connection(request)
 
     return user
