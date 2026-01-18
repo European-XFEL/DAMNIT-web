@@ -14,7 +14,7 @@ class Mutation:
 
         # Bootstrap
         model = await bootstrap(proposal)  # pyright: ignore[reportGeneralTypeIssues]
-        info.context["schema"].update(model.stype)
+        info.schema.update(model.stype)  # pyright: ignore[reportAttributeAccessIssue]
 
         metadata = {
             "runs": model.runs,
