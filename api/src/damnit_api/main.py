@@ -17,6 +17,8 @@ def create_app():
     from .shared import errors, gql
     from .shared.settings import settings
 
+    logger = get_logger("lifespan")
+
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         _logging.configure(
@@ -25,7 +27,6 @@ def create_app():
             add_call_site_parameters=True,
         )
 
-        logger = get_logger("lifespan")
         logger.info("Starting application lifespan")
 
         bootstraps = [_mymdc.bootstrap, auth.bootstrap]
@@ -86,6 +87,15 @@ def create_app():
     )
 
     app.add_middleware(RequestLoggingMiddleware)
+
+    try:
+        from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+        app.add_middleware(
+            ProxyHeadersMiddleware, trusted_hosts=["localhost", "127.0.0.1"]
+        )
+    except Exception:
+        logger.warning("Could not add proxy headers middleware")
 
     return app
 
