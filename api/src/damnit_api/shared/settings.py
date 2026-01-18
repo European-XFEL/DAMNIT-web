@@ -74,8 +74,6 @@ class Settings(BaseSettings):
 
     uvicorn: UvicornSettings = UvicornSettings()
 
-    localhost_to_127: bool = True
-
     mymdc: MyMdCClientSettings = MyMdCMockSettings(
         mock_responses_file=Path(__file__).parents[3] / "tests" / "mock" / "_mymdc.json"
     )
