@@ -2,7 +2,7 @@
 
 from typing import Self
 
-from fastapi import Request
+from fastapi.requests import HTTPConnection
 from pydantic import BaseModel, ConfigDict
 
 from .. import get_logger
@@ -32,9 +32,14 @@ class OAuthUserInfo(BaseUserInfo):
     """Basic user information obtained from the OAuth provider."""
 
     @classmethod
-    def from_request(cls, request: Request) -> Self:
-        """Create an OAuthUserInfo from the request session."""
-        user_dict = request.session.get("user")
+    def from_connection(cls, connection: HTTPConnection) -> Self:
+        """Create an OAuthUserInfo from the request session.
+
+        !!! note
+
+            Dependency on `HTTPConnection` instead of `Request` to support websockets.
+        """
+        user_dict = connection.session.get("user")
         if user_dict is None:
             msg = "No user info in session"
             raise ValueError(msg)
@@ -47,8 +52,17 @@ class User(BaseUserInfo):
     proposals: UserProposalsByCycle
 
     @classmethod
-    async def from_request(cls, request: Request, mymdc: MyMdCClient) -> Self:
-        oauth = OAuthUserInfo.from_request(request)
+    async def from_connection(
+        cls, connection: HTTPConnection, mymdc: MyMdCClient
+    ) -> Self:
+        """Create a `User` from the request session, which contains a list of proposals
+        that the is a member of.
+
+        !!! note
+
+            Dependency on `HTTPConnection` instead of `Request` to support websockets.
+        """
+        oauth = OAuthUserInfo.from_connection(connection)
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
         await logger.ainfo("User info", preferred_username=oauth.preferred_username)
         return cls.model_validate({
