@@ -87,11 +87,6 @@ def create_app():
 
     app.add_middleware(RequestLoggingMiddleware)
 
-    if settings.localhost_to_127:
-        from .shared.middlewares import RedirectLocalhost127Middleware
-
-        app.add_middleware(RedirectLocalhost127Middleware)
-
     return app
 
 
