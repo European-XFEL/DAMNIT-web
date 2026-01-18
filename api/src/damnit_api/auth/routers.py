@@ -13,20 +13,6 @@ logger = get_logger()
 router = APIRouter(prefix="/oauth", tags=["auth"])
 
 
-def get_public_base_url(request: Request) -> str:
-    # TODO: Upgrade Starlette and use ProxyHeadersMiddleware
-    # The forwarded protocol could return "https,http"
-    proto = request.headers.get("x-forwarded-proto", "").split(",")
-    if not proto or request.url.scheme in proto:
-        scheme = request.url.scheme
-    else:
-        scheme = proto[0]
-
-    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
-
-    return f"{scheme}://{host}"
-
-
 @router.get("/login", status_code=307)
 async def auth(
     request: Request,
@@ -42,6 +28,9 @@ async def auth(
     callback_uri = request.url_for("callback")
 
     # TODO: error on non-HTTPS in production?
+
+    if x_forwarded_host := request.headers.get("x-forwarded-host"):
+        callback_uri = callback_uri.replace(netloc=x_forwarded_host)
 
     res = await client.authorize_redirect(request, redirect_uri=str(callback_uri))
 
