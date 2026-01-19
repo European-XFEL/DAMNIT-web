@@ -6,7 +6,9 @@ import { MantineProvider } from '@mantine/core'
 import '@damnit-frontend/ui/styles'
 import { routes } from './routes'
 
-const router = createBrowserRouter(routes)
+const router = createBrowserRouter(routes, {
+  basename: import.meta.env.BASE_URL,
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
