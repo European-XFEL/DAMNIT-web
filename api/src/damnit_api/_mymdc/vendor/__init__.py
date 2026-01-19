@@ -32,6 +32,7 @@ class LogbookInfo(models.LogbookInfo):
 
 
 class GetProposals(models.GetProposals):
+    id: int  # pyright: ignore[reportGeneralTypeIssues, reportIncompatibleVariableOverride]
     number: int  # pyright: ignore[reportGeneralTypeIssues, reportIncompatibleVariableOverride]
     def_proposal_path: str  # pyright: ignore[reportGeneralTypeIssues, reportIncompatibleVariableOverride]
     instrument_identifier: str  # pyright: ignore[reportGeneralTypeIssues, reportIncompatibleVariableOverride]
