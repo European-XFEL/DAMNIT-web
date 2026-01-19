@@ -1,25 +1,32 @@
 """Metadata models."""
 
 from datetime import datetime
-from pathlib import Path
 
-from pydantic import BaseModel
+from sqlmodel import JSON, Column, Field, SQLModel
 
+from .. import get_logger
+from .._db.models import CreatedAtMixin, UpdatedAtMixin
 from ..shared.models import ProposalCycle, ProposalNumber
 
+logger = get_logger()
 
-class ProposalMeta(BaseModel):
+
+class ProposalMetaBase(SQLModel):
     """Proposal Metadata."""
 
+    id: int = Field(default=None, primary_key=True)
     number: ProposalNumber
     cycle: ProposalCycle
     instrument: str
-    path: Path
+    path: str
     title: str
     principal_investigator: str
-
-    damnit_path: Path | None = None
-    damnit_paths_searched: list[Path]
-
     start_date: datetime | None
     end_date: datetime | None
+
+    damnit_path: str | None
+    damnit_paths_searched: list[str] = Field(
+        default_factory=list,
+        sa_column=Column(JSON),
+    )
+class ProposalMeta(ProposalMetaBase, CreatedAtMixin, UpdatedAtMixin, table=True): ...
