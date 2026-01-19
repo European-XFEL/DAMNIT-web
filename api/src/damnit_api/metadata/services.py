@@ -29,9 +29,17 @@ async def _get_proposal_meta(
     path_raw = Path(proposal.def_proposal_path)
 
     if path_raw.parts[-1] != "raw":
-        msg = f"Unexpected proposal path format: {path_raw!s}"
-        # TODO: better exception
-        raise ValueError(msg)
+        # Unless it's not
+        if "/d/raw/" in str(path_raw):
+            # e.g. `/gpfs/exfel/d/raw/XMPL/202550/p700005`
+            path_raw = Path(str(path_raw).replace("/d/raw/", "/exp/"))
+        elif path_raw.parts[-1].startswith("p"):
+            # e.g. `/gpfs/exfel/exp/XMPL/202550/p700005`
+            path_raw = path_raw / "raw"
+        else:
+            msg = f"Unexpected proposal path format: {path_raw!s}"
+            # TODO: better exception
+            raise ValueError(msg)
 
     path = path_raw.parent  # gpfs proposal directory
 
