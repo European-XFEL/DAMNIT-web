@@ -13,6 +13,17 @@ server {
     try_files $uri $uri/ /index.html =404;
   }
 
+  # Demo
+  location ${NGINX_DEMO_BASE_PATH} {
+    alias /usr/share/nginx/html/demo;
+    index index.html;
+    try_files $uri $uri/ /index.html =404;
+  }
+
+  location = ${NGINX_DEMO_BASE_PATH} {
+    return 301 ${NGINX_DEMO_BASE_PATH}/;
+  }
+
   # App
   location ${NGINX_APP_BASE_PATH}/ {
     alias /usr/share/nginx/html/app/;
@@ -25,22 +36,22 @@ server {
   }
 
   location ${NGINX_APP_BASE_PATH}/oauth {
-    proxy_pass ${NGINX_API_URL}oauth;
+    proxy_pass ${NGINX_API_URL}/oauth;
     include /etc/nginx/proxy_api.conf;
   }
 
   location ${NGINX_APP_BASE_PATH}/metadata {
-    proxy_pass ${NGINX_API_URL}metadata;
+    proxy_pass ${NGINX_API_URL}/metadata;
     include /etc/nginx/proxy_api.conf;
   }
 
   location ${NGINX_APP_BASE_PATH}/contextfile {
-    proxy_pass ${NGINX_API_URL}contextfile;
+    proxy_pass ${NGINX_API_URL}/contextfile;
     include /etc/nginx/proxy_api.conf;
   }
 
   location ${NGINX_APP_BASE_PATH}/graphql {
-    proxy_pass ${NGINX_API_URL}graphql;
+    proxy_pass ${NGINX_API_URL}/graphql;
     include /etc/nginx/proxy_api.conf;
 
     proxy_http_version 1.1;
