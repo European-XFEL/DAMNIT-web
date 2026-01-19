@@ -1,6 +1,4 @@
-import { type RouteObject, createBrowserRouter } from 'react-router'
-
-import { BASE_URL } from '@damnit-frontend/ui'
+import { type RouteObject, createHashRouter } from 'react-router'
 
 import { RootRoute, loadRootData } from './routes/root'
 import { ExampleRoute, loadExampleData } from './routes/example'
@@ -18,6 +16,4 @@ const routes: RouteObject[] = [
   },
 ]
 
-export const router = createBrowserRouter(routes, {
-  basename: BASE_URL,
-})
+export const router = createHashRouter(routes)
