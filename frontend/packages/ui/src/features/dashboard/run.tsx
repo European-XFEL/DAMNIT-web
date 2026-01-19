@@ -82,6 +82,9 @@ const Run = () => {
   const metadataVariables = useAppSelector(
     (state) => state.tableData.metadata.variables
   )
+  const variableVisibility = useAppSelector(
+    (state) => state.table.variableVisibility
+  )
 
   if (!run || !tableData[run]) {
     return null
@@ -95,13 +98,16 @@ const Run = () => {
         )
       )
 
+  const validRuns = Object.entries(runData).filter(
+    ([name, data]) =>
+      variableVisibility[name] !== false &&
+      data.value != null &&
+      !EXCLUDED_VARIABLES.includes(name)
+  )
+
   return (
     <ScrollArea h="100vh" offsetScrollbars>
-      {Object.entries(runData).map(([name, data]) => {
-        if (!data || data.value == null || EXCLUDED_VARIABLES.includes(name)) {
-          return null
-        }
-
+      {validRuns.map(([name, data]) => {
         const render = renderFactory[data.dtype] ?? renderFactory.default
         return render({
           name,
