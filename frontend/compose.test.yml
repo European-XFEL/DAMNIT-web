@@ -6,28 +6,45 @@ services:
       dockerfile: ./apps/site/Dockerfile
       target: build
       args:
-        APP_URL: https://damnit-test.xfel.eu/app
+        APP_URL: ${PUBLIC_URL?}${APP_BASE_PATH?}
+        DEMO_URL: ${PUBLIC_URL?}${DEMO_BASE_PATH?}
     image: damnit-web-site:test
+
+  demo:
+    build:
+      dockerfile: ./apps/demo/Dockerfile
+      target: build
+      args:
+        SITE_URL: ${PUBLIC_URL?}
+        BASE_PATH: ${DEMO_BASE_PATH?}
+    image: damnit-web-demo:test
 
   app:
     build:
       dockerfile: ./apps/app/Dockerfile
       target: build
       args:
-        SITE_URL: https://damnit-test.xfel.eu
+        SITE_URL: ${PUBLIC_URL?}
         BASE_PATH: ${APP_BASE_PATH?}
     image: damnit-web-app:test
 
   frontend:
     build:
+      context: .
       dockerfile: ./Dockerfile
+      additional_contexts:
+        site: "service:site"
+        demo: "service:demo"
+        app: "service:app"
     depends_on:
       - site
+      - demo
       - app
     environment:
-      - NGINX_SERVER_NAME=localhost
-      - NGINX_API_URL=https://max-exfl458.desy.de:8123/
+      - NGINX_SERVER_NAME=damnit-test.xfel.eu
+      - NGINX_API_URL=${API_URL?}
       - NGINX_APP_BASE_PATH=${APP_BASE_PATH?}
+      - NGINX_DEMO_BASE_PATH=${DEMO_BASE_PATH?}
     volumes:
       # Certs used for mTLS
       - ./certs:/etc/nginx/certs/mtls

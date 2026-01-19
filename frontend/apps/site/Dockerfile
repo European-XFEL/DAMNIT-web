@@ -30,6 +30,9 @@ ARG APP_DIR
 ARG APP_URL
 ENV VITE_APP_URL=${APP_URL}
 
+ARG DEMO_URL
+ENV VITE_DEMO_URL=${DEMO_URL}
+
 # Copy the rest of the codebase
 COPY . .
 
