@@ -35,6 +35,11 @@ async def _get_proposal_meta(
 
     path = path_raw.parent  # gpfs proposal directory
 
+    try:
+        path_read_only = (await APath(path).stat()).st_mode & 0o222 == 0
+    except Exception:
+        path_read_only = False
+
     start_date = proposal.beamtime_start_at or proposal.begin_at
     end_date = proposal.beamtime_end_at or proposal.end_at
 
@@ -60,17 +65,20 @@ async def _get_proposal_meta(
         if pi:
             principal_investigator = pi.name
 
-    return ProposalMeta(
+    return ProposalMetaBase(
+        id=proposal.id,
         number=proposal.number,
-        path=path,
         cycle=cycle.identifier,
         instrument=proposal.instrument_identifier,
-        damnit_path=damnit_path,
-        damnit_paths_searched=damnit_paths_searched,
+        path=str(path),
         title=proposal.title,
         principal_investigator=principal_investigator or "Unknown",
         start_date=datetime.fromisoformat(start_date) if start_date else None,
         end_date=datetime.fromisoformat(end_date) if end_date else None,
+        damnit_path=str(damnit_path) if damnit_path else None,
+        damnit_paths_searched=[str(p) for p in damnit_paths_searched],
+        proposal_read_only=path_read_only,
+        damnit_path_last_check=datetime.now(tz=UTC),
     )
 
 

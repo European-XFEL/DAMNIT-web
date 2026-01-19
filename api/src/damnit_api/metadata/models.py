@@ -29,4 +29,9 @@ class ProposalMetaBase(SQLModel):
         default_factory=list,
         sa_column=Column(JSON),
     )
+
+    proposal_read_only: bool = False
+    damnit_path_last_check: datetime | None = None
+
+
 class ProposalMeta(ProposalMetaBase, CreatedAtMixin, UpdatedAtMixin, table=True): ...
