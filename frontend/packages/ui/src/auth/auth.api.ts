@@ -16,6 +16,10 @@ export const authApi = createApi({
   endpoints: (builder) => ({
     getUserInfo: builder.query<UserInfo, void>({
       query: () => 'userinfo',
+      transformResponse: ({ proposals_by_year_half, ...rest }: any): UserInfo => ({
+        ...rest,
+        proposals: proposals_by_year_half,
+      }),
     }),
   }),
 })
