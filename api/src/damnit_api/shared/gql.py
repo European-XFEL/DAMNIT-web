@@ -9,6 +9,7 @@ from strawberry.schema.config import StrawberryConfig
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL
 
 from .. import graphql as gql_main
+from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
@@ -51,10 +52,13 @@ class Subscription(gql_main.subscriptions.Subscription):
 class Context(BaseContext):
     mymdc: MyMdCClient
     oauth_user: OAuthUserInfo
+    session: DBSession
 
 
-async def get_context(oauth_user: OAuthUserInfo, mymdc: MyMdCClient):  # noqa: RUF029
-    return Context(oauth_user=oauth_user, mymdc=mymdc)
+async def get_context(  # noqa: RUF029
+    oauth_user: OAuthUserInfo, mymdc: MyMdCClient, session: DBSession
+):
+    return Context(oauth_user=oauth_user, mymdc=mymdc, session=session)
 
 
 def get_gql_app():
