@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 import numpy as np
@@ -30,9 +31,11 @@ class Mutation(gql_main.mutations.Mutation):
 
 
 class Router(GraphQLRouter):
-    def encode_json(  # FIX: # pyright: ignore[reportIncompatibleMethodOverride]
-        self, data: GraphQLHTTPResponse
-    ) -> bytes:
+    def encode_json(self, data: GraphQLHTTPResponse) -> str | bytes:  # pyright: ignore[reportIncompatibleMethodOverride]
+        # For some reason returning orjson bytes to websockets breaks things
+        # since websockets include type key we use this to check and bypass
+        if isinstance(data, dict) and "type" in data:
+            return json.dumps(data, ensure_ascii=False)
         return orjson.dumps(
             data,
             default=lambda x: None if isinstance(x, float) and np.isnan(x) else x,
