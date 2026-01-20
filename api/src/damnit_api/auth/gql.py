@@ -1,5 +1,6 @@
 """GraphQL types for auth module."""
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import strawberry
@@ -24,7 +25,9 @@ class User:
     preferred_username: str
 
     @strawberry.field
-    async def proposals(self, info: "strawberry.Info[Context]") -> list[ProposalMeta]:
+    async def proposals(
+        self, info: "strawberry.Info[Context]", start_after: datetime | None = None
+    ) -> list[ProposalMeta]:
         """List of proposals for the user."""
         mymdc, session = info.context.mymdc, info.context.session
 
@@ -37,6 +40,7 @@ class User:
             mymdc,
             proposal_numbers,
             session,
+            start_after=start_after,
         )
 
         return [ProposalMeta.from_pydantic(p) for p in proposals_meta]
