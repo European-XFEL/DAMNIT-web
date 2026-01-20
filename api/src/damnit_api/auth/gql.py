@@ -4,18 +4,12 @@ from typing import TYPE_CHECKING
 
 import strawberry
 
+from ..metadata.gql import ProposalMeta
+from ..metadata.services import _get_proposal_meta_many
 from .models import OAuthUserInfo
 
 if TYPE_CHECKING:
     from ..shared.gql import Context
-
-
-@strawberry.type
-class UserProposal:
-    """Proposal information returned by MyMdC user proposal query."""
-
-    proposal_id: int | None
-    proposal_number: int | None
 
 
 @strawberry.type
@@ -30,14 +24,22 @@ class User:
     preferred_username: str
 
     @strawberry.field
-    async def proposals(self, info: "strawberry.Info[Context]") -> list[UserProposal]:
+    async def proposals(self, info: "strawberry.Info[Context]") -> list[ProposalMeta]:
         """List of proposals for the user."""
-        mymdc = info.context.mymdc
+        mymdc, session = info.context.mymdc, info.context.session
 
-        return [
-            UserProposal(**p.model_dump())
-            for p in (await mymdc.get_user_proposals(self.preferred_username)).root
+        proposals = await mymdc.get_user_proposals(self.preferred_username)
+        proposal_numbers = [
+            p.proposal_number for p in proposals.root if p.proposal_number is not None
         ]
+
+        proposals_meta = await _get_proposal_meta_many(
+            mymdc,
+            proposal_numbers,
+            session,
+        )
+
+        return [ProposalMeta.from_pydantic(p) for p in proposals_meta]
 
 
 @strawberry.type

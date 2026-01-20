@@ -3,11 +3,11 @@
 from typing import Self
 
 from fastapi.requests import HTTPConnection
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, RootModel
 
 from .. import get_logger
+from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
-from .._mymdc.models import UserProposalsByCycle
 
 logger = get_logger()
 
@@ -60,7 +60,10 @@ class User(BaseUserInfo):
 
     @classmethod
     async def from_connection(
-        cls, connection: HTTPConnection, mymdc: MyMdCClient
+        cls,
+        connection: HTTPConnection,
+        mymdc: MyMdCClient,
+        session: DBSession,
     ) -> Self:
         """Create a `User` from the request session, which contains a list of proposals
         that the is a member of.
@@ -69,8 +72,19 @@ class User(BaseUserInfo):
 
             Dependency on `HTTPConnection` instead of `Request` to support websockets.
         """
+        from ..metadata.services import _get_proposal_meta_many
+
         oauth = OAuthUserInfo.from_connection(connection)
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
+        proposal_numbers = [
+            p.proposal_number for p in proposals.root if p.proposal_number is not None
+        ]
+
+        proposals_meta = await _get_proposal_meta_many(
+            mymdc,
+            proposal_numbers,
+            session,
+        )
 
         proposals_by_year_half = {}
         for meta in proposals_meta:
