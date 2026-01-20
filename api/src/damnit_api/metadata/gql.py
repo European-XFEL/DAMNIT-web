@@ -35,13 +35,13 @@ class Query:
         self, proposal_number: int, info: strawberry.Info[Context]
     ) -> ProposalMeta | None:
         """Fetch metadata for the provided proposal number."""
-        oauth_user, mymdc = info.context.oauth_user, info.context.mymdc
+        if info.context.request is None:
+            return None
 
-        user = User(
-            **oauth_user.model_dump(),
-            proposals=await mymdc.get_user_proposals(oauth_user.preferred_username),
-        )
+        mymdc, session = info.context.mymdc, info.context.session
+
+        user = await User.from_connection(info.context.request, mymdc, session)
 
         return ProposalMeta.from_pydantic(
-            await services.get_proposal_meta(mymdc, proposal_number, user)
+            await services.get_proposal_meta(mymdc, proposal_number, user, session)
         )

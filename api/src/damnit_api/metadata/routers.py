@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
 from ..auth.dependencies import User
 from ..shared.models import ProposalNumber
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/metadata", tags=["metadata"])
 
 @router.get("/proposal/{proposal_number}")
 async def get_proposal_meta(
-    proposal_number: ProposalNumber, mymdc: MyMdCClient, user: User
+    proposal_number: ProposalNumber, mymdc: MyMdCClient, user: User, session: DBSession
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number."""
-    return await services.get_proposal_meta(mymdc, proposal_number, user)
+    return await services.get_proposal_meta(mymdc, proposal_number, user, session)
