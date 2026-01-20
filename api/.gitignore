@@ -1,5 +1,5 @@
 # DB
-dw_db.sqlite
+dw_api.sqlite
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
