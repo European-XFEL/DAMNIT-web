@@ -2,6 +2,7 @@
 
 from datetime import datetime
 
+from pydantic import computed_field
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from .. import get_logger
@@ -32,6 +33,14 @@ class ProposalMetaBase(SQLModel):
 
     proposal_read_only: bool = False
     damnit_path_last_check: datetime | None = None
+
+    @computed_field
+    def year_half(self) -> str | None:
+        if self.start_date is None:
+            return None
+
+        year_month = self.start_date.strftime("%Y%m")
+        return str(year_month[:4] + ("01" if year_month[4] < "07" else "02"))
 
 
 class ProposalMeta(ProposalMetaBase, CreatedAtMixin, UpdatedAtMixin, table=True): ...
