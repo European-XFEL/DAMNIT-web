@@ -1,25 +1,29 @@
 """Metadata services."""
 
-from datetime import datetime
+import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-import async_lru
 from anyio import Path as APath
+from sqlmodel import col, select
 
 from .. import get_logger
-from .._mymdc.clients import MyMdCClient
-from ..auth.dependencies import User
 from ..shared.errors import ForbiddenError
 from ..shared.models import ProposalNumber
-from .models import ProposalMeta
+from .models import ProposalMeta, ProposalMetaBase
 
 logger = get_logger()
 
+if TYPE_CHECKING:
+    from .._db.dependencies import DBSession
+    from .._mymdc.clients import MyMdCClient
+    from ..auth.dependencies import User
 
-@async_lru.alru_cache(ttl=60 * 60)  # TODO: remove
-async def _get_proposal_meta(
-    client: MyMdCClient, proposal_number: ProposalNumber
-) -> ProposalMeta:
+
+async def _fetch_proposal_meta(
+    client: "MyMdCClient", proposal_number: ProposalNumber
+) -> ProposalMetaBase:
     """Get proposal metadata by proposal number, using the provided MyMdC Client."""
     proposal = await client.get_proposal_by_number(proposal_number)
     cycle = await client.get_cycle_by_id(proposal.instrument_cycle_id)
@@ -112,27 +116,21 @@ async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
     return None, searched_paths
 
 
-async def get_proposal_meta(
-    client: MyMdCClient,
+async def _check_user_allowed(
     proposal_number: ProposalNumber,
-    user: User,
-) -> ProposalMeta:
-    """Get proposal metadata by proposal number, using the repository and/or provided
-    MyMdC Client."""
+    user: "User",
+) -> None:
+    """Check if the user is allowed to access the given proposal number.
 
-    # TODO: caching layer/repository
-
-    allowed_proposals = {
-        p for proposals in user.proposals.root.values() for p in proposals
-    }
-
-    if proposal_number not in allowed_proposals:
+    Raises `ForbiddenError` if not allowed.
+    """
+    if proposal_number not in user._proposals:
         msg = (
             f"User not authorised for proposal {proposal_number}, or proposal does not "
             "exist."
         )
         details = None
-        if allowed_proposals is None:
+        if user._proposals is None:
             details = "User has no authorised proposals."
         await logger.ainfo(
             "Forbidden",
@@ -141,4 +139,83 @@ async def get_proposal_meta(
         )
         raise ForbiddenError(msg, details=details)
 
-    return await _get_proposal_meta(client, proposal_number)
+    return
+
+
+async def _get_proposal_meta(
+    client: "MyMdCClient",
+    proposal_number: ProposalNumber,
+    session: "DBSession",
+) -> ProposalMeta:
+    """Get proposal metadata by proposal number, using the repository and/or provided
+    MyMdC Client."""
+
+    statement = select(ProposalMeta).where(ProposalMeta.number == proposal_number)
+    result = (await session.exec(statement)).one_or_none()
+
+    if result:
+        await logger.ainfo(
+            "Loaded proposal metadata from repository", proposal=proposal_number
+        )
+        return result
+
+    fetched = await _fetch_proposal_meta(client, proposal_number)
+    result = ProposalMeta(**fetched.model_dump())
+    session.add(result)
+    await session.commit()
+    return result
+
+
+def _chunks(list_, n=10):
+    for i in range(0, len(list_), n):
+        yield list_[i : i + n]
+
+
+async def _get_proposal_meta_many(
+    client: "MyMdCClient",
+    proposal_numbers: list[ProposalNumber],
+    session: "DBSession",
+    only_with_damnit: bool = True,
+) -> list[ProposalMeta]:
+    statement = select(ProposalMeta).where(
+        col(ProposalMeta.number).in_(proposal_numbers)
+    )
+
+    results = list((await session.exec(statement)).all())
+    missing = set(proposal_numbers) - {p.number for p in results}
+
+    if not missing:
+        return results
+
+    for chunk in _chunks(list(missing), n=10):
+        new_fetched = await asyncio.gather(
+            *[_fetch_proposal_meta(client, no) for no in chunk],
+            return_exceptions=True,
+        )
+        new = [
+            ProposalMeta(**p.model_dump())
+            for p in new_fetched
+            if not isinstance(p, BaseException)
+        ]
+        session.add_all(new)
+        await session.commit()
+        results.extend(new)
+
+    if only_with_damnit:
+        results = [p for p in results if p.damnit_path is not None]
+
+    return results
+
+
+async def get_proposal_meta(
+    client: "MyMdCClient",
+    proposal_number: ProposalNumber,
+    user: "User",
+    session: "DBSession",
+) -> ProposalMeta:
+    """Get proposal metadata by proposal number, using the repository and/or provided
+    MyMdC Client."""
+
+    await _check_user_allowed(proposal_number, user)
+
+    return await _get_proposal_meta(client, proposal_number, session)
