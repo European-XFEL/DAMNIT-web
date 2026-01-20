@@ -64,7 +64,7 @@ class UvicornSettings(BaseModel):
 class Settings(BaseSettings):
     auth: AuthSettings
 
-    proposal_cache: Path = Path(__file__).parents[2] / "damnit_proposals.json"
+    db_path: Path = Path(__file__).parents[3] / "dw_api.sqlite"
 
     debug: bool = True
 
