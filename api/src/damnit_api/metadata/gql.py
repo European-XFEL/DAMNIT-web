@@ -14,17 +14,18 @@ if TYPE_CHECKING:
     from ..shared.gql import Context
 
 
-@st_pydantic.type(
-    model=models.ProposalMeta,
-    fields=["instrument", "title", "start_date", "end_date"],
-)
+@st_pydantic.type(model=models.ProposalMeta, all_fields=True)
 class ProposalMeta:
     """Proposal metadata."""
 
-    number: int
-    cycle: str
-    path: str
-    damnit_path: str | None
+    # NOTE: pydantic computed fields not included by default
+    @strawberry.field
+    def year_half(self) -> str | None:
+        if self.start_date is None:  # pyright: ignore[reportAttributeAccessIssue]
+            return None
+
+        year_month = self.start_date.strftime("%Y%m")  # pyright: ignore[reportAttributeAccessIssue]
+        return str(year_month[:4] + ("01" if year_month[4] < "07" else "02"))
 
 
 @strawberry.type

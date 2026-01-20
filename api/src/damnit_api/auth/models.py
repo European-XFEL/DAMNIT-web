@@ -46,10 +46,17 @@ class OAuthUserInfo(BaseUserInfo):
         return cls.model_validate(user_dict)
 
 
+class ProposalsByYearHalf(RootModel):
+    """Mapping of year half (e.g. 202401, 202402) to list of proposal numbers."""
+
+    root: dict[int, list[int]]
+
+
 class User(BaseUserInfo):
     """Full user information including list of proposals."""
 
-    proposals: UserProposalsByCycle
+    _proposals: list[int]
+    proposals_by_year_half: ProposalsByYearHalf
 
     @classmethod
     async def from_connection(
@@ -64,8 +71,26 @@ class User(BaseUserInfo):
         """
         oauth = OAuthUserInfo.from_connection(connection)
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
-        await logger.ainfo("User info", preferred_username=oauth.preferred_username)
-        return cls.model_validate({
+
+        proposals_by_year_half = {}
+        for meta in proposals_meta:
+            if meta.damnit_path is None:
+                proposal_numbers.remove(meta.number)
+                continue
+
+            if meta.start_date is None:
+                continue
+
+            if meta.year_half not in proposals_by_year_half:
+                proposals_by_year_half[meta.year_half] = []
+
+            proposals_by_year_half[meta.year_half].append(meta.number)
+
+        res = cls.model_validate({
             **oauth.model_dump(),
-            "proposals": proposals,
+            "proposals_by_year_half": proposals_by_year_half,
         })
+
+        res._proposals = proposal_numbers
+
+        return res
