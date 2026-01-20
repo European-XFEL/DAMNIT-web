@@ -2,7 +2,6 @@ import { combineReducers } from '@reduxjs/toolkit'
 
 import { authApi } from '../auth'
 
-import { metadataApi } from '../data/metadata'
 import { contextfileApi } from '../features/context-file/context-file.api'
 import { extractedDataReducer as extractedData } from '../data/extracted'
 import { metadataReducer as metadata } from '../data/metadata'
@@ -20,7 +19,6 @@ const reducer = combineReducers({
   tableData,
   extractedData,
   [authApi.reducerPath]: authApi.reducer,
-  [metadataApi.reducerPath]: metadataApi.reducer,
   [contextfileApi.reducerPath]: contextfileApi.reducer,
 })
 

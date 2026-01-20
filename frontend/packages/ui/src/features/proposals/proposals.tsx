@@ -24,8 +24,10 @@ import {
   InstrumentBadge,
   type InstrumentBadgeProps,
 } from '../../components/badges'
+import { CenteredLoader } from '../../components/feedback'
 import { useProposals } from '../../data/metadata'
 import { useAppSelector } from '../../redux/hooks'
+import { isEmpty } from '../../utils/helpers'
 import { orderBy } from '../../utils/objects'
 import styles from './proposals.module.css'
 
@@ -151,27 +153,44 @@ const DateCell = memo(function DateCell({ datetime, ...props }: DateCellProps) {
  */
 
 type ProposalContentProps = {
-  title: string
-  damnit_path: string
+  proposal: number
 }
 
 const ProposalContent = memo(function ProposalContent({
-  title,
-  damnit_path,
+  proposal,
 }: ProposalContentProps) {
+  const { proposals, isLoading } = useProposals({
+    proposals: [proposal],
+    full: true,
+  })
+
+  if (isLoading) {
+    return (
+      <Stack h={50}>
+        <CenteredLoader size="xs" />
+      </Stack>
+    )
+  }
+
+  if (isEmpty(proposals)) {
+    return <div />
+  }
+
+  const proposalInfo = proposals[0]
+
   return (
     <Stack className={styles.content} p="xs" gap={6} pl={65} pr={65}>
       <Group gap={6}>
         <Text size="xs" className={styles.contentLabel} c="dark.4">
           Title:
         </Text>
-        <Text size="xs">{title}</Text>
+        <Text size="xs">{proposalInfo.title}</Text>
       </Group>
       <Group gap={6}>
         <Text size="xs" className={styles.contentLabel} c="dark.4">
           Path:
         </Text>
-        <Code style={{ fontSize: rem(11) }}>{damnit_path}</Code>
+        <Code style={{ fontSize: rem(11) }}>{proposalInfo.damnit_path}</Code>
       </Group>
     </Stack>
   )
@@ -184,14 +203,14 @@ const ProposalContent = memo(function ProposalContent({
  */
 
 type ProposalSubTableProps = {
-  proposals: string[]
+  proposals: number[]
 }
 
 const ProposalSubTable = memo(function ProposalSubTable({
   proposals,
 }: ProposalSubTableProps) {
   const [expandedProposals, setExpandedProposals] = useState<string[]>([])
-  const { proposals: proposalInfo, isLoading } = useProposals(proposals)
+  const { proposals: proposalInfo, isLoading } = useProposals({ proposals })
 
   return (
     <DataTable
@@ -254,7 +273,7 @@ const ProposalSubTable = memo(function ProposalSubTable({
         },
       ]}
       records={
-        isLoading
+        isLoading || proposalInfo == null
           ? []
           : proposalInfo
               .concat()
@@ -267,12 +286,7 @@ const ProposalSubTable = memo(function ProposalSubTable({
           recordIds: expandedProposals,
           onRecordIdsChange: setExpandedProposals,
         },
-        content: ({ record }) => (
-          <ProposalContent
-            title={record.title}
-            damnit_path={record.damnit_path}
-          />
-        ),
+        content: ({ record }) => <ProposalContent proposal={record.number} />,
       }}
     />
   )

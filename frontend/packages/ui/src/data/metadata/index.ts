@@ -1,4 +1,3 @@
-export { metadataApi, useGetProposalQuery } from './metadata.api'
 export {
   default as metadataReducer,
   resetMetadata,
