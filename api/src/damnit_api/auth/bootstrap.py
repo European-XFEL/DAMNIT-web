@@ -29,6 +29,7 @@ async def bootstrap(settings: "Settings"):
         await logger.ainfo("Configuring OAuth client")
         _register(settings)
         damnit_api.auth.__CLIENT = __OAUTH.damnit_web  # type: ignore[assignment, no-redef]
+        await damnit_api.auth.__CLIENT.load_server_metadata()  # pyright: ignore[reportOptionalMemberAccess]
     else:
         await logger.awarning("OAuth client already configured")
 
