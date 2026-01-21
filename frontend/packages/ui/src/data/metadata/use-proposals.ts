@@ -1,29 +1,32 @@
-import { useEffect, useState } from 'react'
+import { useQuery, gql } from '@apollo/client'
 
-import { metadataApi } from './metadata.api'
-import useQueries from '../../hooks/use-queries'
-import { type ProposalInfo } from '../../types'
-import { isArrayEqual } from '../../utils/array'
+const PROPOSAL_METADATA_QUERY = gql`
+  query ProposalMetadata($proposalNumbers: [Int!]!, $full: Boolean = false) {
+    proposal_metadata(proposal_numbers: $proposalNumbers) {
+      number
+      instrument
+      principal_investigator
+      start_date
+      title @include(if: $full)
+      damnit_path @include(if: $full)
+    }
+  }
+`
 
-const useProposals = (proposals: string[]) => {
-  const [queries, setQueries] = useState<string[]>([])
+type UseProposalsOptions = {
+  proposals: number[]
+  full?: boolean
+}
 
-  useEffect(() => {
-    // Get the new time series data from the attributes
-    setQueries((current) =>
-      isArrayEqual(current, proposals) ? current : proposals
-    )
-  }, [proposals])
-
-  const { data, isLoading, isUninitialized, isFetching, isError } = useQueries(
-    metadataApi.endpoints.getProposal,
-    queries
-  )
+function useProposals({ proposals, full = false }: UseProposalsOptions) {
+  const { loading, error, data } = useQuery(PROPOSAL_METADATA_QUERY, {
+    variables: { proposalNumbers: proposals, full },
+  })
 
   return {
-    proposals: data as ProposalInfo[],
-    isLoading: isLoading || isUninitialized || isFetching,
-    isError,
+    proposals: data?.proposal_metadata,
+    isLoading: loading,
+    isError: error,
   }
 }
 

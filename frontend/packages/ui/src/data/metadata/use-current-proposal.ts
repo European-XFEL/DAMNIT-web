@@ -1,14 +1,17 @@
-import { useGetProposalQuery } from './metadata.api'
+import useProposals from './use-proposals'
 import { useAppSelector } from '../../redux/hooks'
+import { isEmpty } from '../../utils/helpers'
 
 const useCurrentProposal = () => {
-  const proposal_number = useAppSelector((state) => state.metadata.proposal.value)
-  const { data, isLoading, isUninitialized, isError, isFetching } =
-    useGetProposalQuery(proposal_number, { skip: !proposal_number })
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
+  const { proposals, isLoading, isError } = useProposals({
+    proposals: [Number(proposal)],
+    full: true,
+  })
 
   return {
-    proposal: data,
-    isLoading: isLoading || isUninitialized || isFetching,
+    proposal: isEmpty(proposals) ? undefined : proposals[0],
+    isLoading,
     isError,
   }
 }
