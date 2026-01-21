@@ -22,6 +22,7 @@ import {
   PrivateRoute,
   Proposals,
   history,
+  resetDashboard,
   resetExtractedData,
   resetMetadata,
   resetPlots,
@@ -50,6 +51,7 @@ function ProposalWrapper({ children }: PropsWithChildren) {
       dispatch(resetExtractedData())
       dispatch(resetPlots())
       dispatch(resetMetadata())
+      dispatch(resetDashboard())
     }
   }, [proposal_number, dispatch])
 

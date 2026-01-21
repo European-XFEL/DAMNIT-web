@@ -11,6 +11,7 @@ export {
   default as Dashboard,
   DashboardBase,
   DashboardMain,
+  resetDashboard,
   openNav,
   closeNav,
 } from './features/dashboard'
