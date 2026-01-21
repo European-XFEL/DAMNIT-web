@@ -2,23 +2,12 @@ import strawberry
 from graphql import GraphQLNamedType, GraphQLNonNull
 from graphql.type.schema import InterfaceImplementations, remap_named_type
 from strawberry.annotation import StrawberryAnnotation
-from strawberry.schema.config import StrawberryConfig
 from strawberry.types import has_object_definition
 
-from . import directives, models, mutations, queries, subscriptions
+from . import models
 
 
 class Schema(strawberry.Schema):
-    def __init__(self):
-        super().__init__(
-            query=queries.Query,
-            mutation=mutations.Mutation,
-            subscription=subscriptions.Subscription,
-            types=[models.DamnitVariable],
-            directives=[directives.lightweight],
-            config=StrawberryConfig(auto_camel_case=False),
-        )
-
     def update(self, *types):
         graphql_schema = self._schema
         type_map = graphql_schema.type_map
@@ -57,7 +46,7 @@ class Schema(strawberry.Schema):
         """Lifted from strawberry.Schema.__init__"""
         if (
             has_object_definition(type_)
-            and type_.__strawberry_definition__.is_generic  # FIX: # pyright: ignore[reportAttributeAccessIssue]  # noqa: E501
+            and type_.__strawberry_definition__.is_graphql_generic
         ):
             type_ = StrawberryAnnotation(type_).resolve()
         graphql_type = self.schema_converter.from_maybe_optional(type_)

@@ -17,7 +17,7 @@ export const contextfileApi = createApi({
     getFileContent: builder.query<FileContent, { proposalNum: string }>({
       query: ({ proposalNum }) => ({
         url: 'content',
-        params: { proposal_num: proposalNum },
+        params: { proposal_number: proposalNum },
       }),
     }),
     checkFileLastModified: builder.query<
@@ -26,7 +26,7 @@ export const contextfileApi = createApi({
     >({
       query: ({ proposalNum }) => ({
         url: 'last_modified',
-        params: { proposal_num: proposalNum },
+        params: { proposal_number: proposalNum },
       }),
     }),
   }),

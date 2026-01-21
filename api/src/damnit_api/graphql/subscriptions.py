@@ -86,7 +86,7 @@ class Subscription:
             result = await get_latest_data(
                 proposal=database.proposal,
                 timestamp=timestamp,
-                schema=info.context["schema"],
+                schema=info.schema,
             )
             if result is not None:
-                yield result
+                yield result  # FIX: # pyright: ignore[reportReturnType]

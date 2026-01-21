@@ -1,3 +1,4 @@
+import inspect
 import logging
 import sys
 from typing import TYPE_CHECKING
@@ -5,7 +6,9 @@ from typing import TYPE_CHECKING
 import colorama
 import structlog
 import structlog.typing
+import ulid
 from starlette.middleware.base import BaseHTTPMiddleware
+from structlog.dev import RichTracebackFormatter
 from structlog.stdlib import ProcessorFormatter
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -13,12 +16,50 @@ if TYPE_CHECKING:  # pragma: no cover
     from starlette.responses import Response
 
 
-def logger_name_callsite(logger, method_name, event_dict):
-    if not event_dict.get("logger_name"):
-        logger_name = f"{event_dict.pop('module')}.{event_dict.pop('func_name')}"
-        if not event_dict.pop("disable_name", False):
-            event_dict["logger_name"] = logger_name.strip(".")  # pyright: ignore[reportInvalidTypeForm]
+def get_logger(logger_name: str | None = None):
+    if logger_name:
+        return structlog.get_logger(logger_name=logger_name)
 
+    frame = inspect.currentframe()
+    if frame is None or frame.f_back is None:
+        return structlog.get_logger()
+
+    caller_globals = frame.f_back.f_globals
+    module_name = caller_globals.get("__name__")
+    # filepath = caller_globals.get("__file__")
+    # filepath_rel = (
+    #     Path(filepath).relative_to(Path(__file__).parent) if filepath else None
+    # )
+    return structlog.get_logger(
+        logger_name=module_name,
+        # filepath=filepath_rel,
+    )
+
+
+def pretty_format_name_callsite(logger, method_name, event_dict):
+    logger_name = event_dict.get("logger_name")
+
+    if not logger_name or not logger_name.startswith("damnit_api."):
+        return event_dict
+
+    if func_name := event_dict.pop("func_name"):
+        logger_name = f"{logger_name}.{func_name}"
+
+    if lineno := event_dict.pop("lineno"):
+        logger_name = f"{logger_name}:{lineno}"
+
+    if logger_name.startswith("damnit_api.access_log"):
+        return event_dict
+
+    event_dict["logger_name"] = logger_name.strip(".")
+
+    return event_dict
+
+
+def request_id_at_front(logger, method_name, event_dict):
+    request_id = event_dict.pop("request_id", None)
+    if request_id is not None:
+        event_dict = {"request_id": request_id, **event_dict}
     return event_dict
 
 
@@ -31,7 +72,7 @@ def configure(
     Configures logging and sets up Uvicorn to use Structlog.
     """
 
-    from .settings import settings
+    from .shared.settings import settings
 
     debug = settings.debug if debug is None else debug
     level = settings.log_level if level is None else level
@@ -44,11 +85,23 @@ def configure(
     if debug:
         level_styles["debug"] = colorama.Fore.MAGENTA
 
-    renderer: structlog.typing.Processor = (
-        structlog.dev.ConsoleRenderer(colors=True, level_styles=level_styles)  # type: ignore[assignment]
-        if debug
-        else structlog.processors.JSONRenderer(indent=1)
-    )
+    if debug:
+        try:
+            import rich as _  # noqa: F401
+
+            exception_formatter = RichTracebackFormatter(max_frames=1)
+        except Exception:
+            # Fall back to plain traceback if `rich` isn't installed or import fails
+            exception_formatter = structlog.dev.plain_traceback  # type: ignore[attr-defined]
+
+        renderer: structlog.typing.Processor = structlog.dev.ConsoleRenderer(
+            colors=True,
+            level_styles=level_styles,
+            sort_keys=False,
+            exception_formatter=exception_formatter,
+        )  # type: ignore[assignment]
+    else:
+        renderer = structlog.processors.JSONRenderer(indent=1)
 
     # sentry_processor = sentry.SentryProcessor(level=level)
 
@@ -58,15 +111,16 @@ def configure(
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="%Y-%m-%dT%H:%M:%SZ", utc=True),
+        request_id_at_front,
     ]
 
     if add_call_site_parameters:
         shared_processors.extend([
             structlog.processors.CallsiteParameterAdder({
-                structlog.processors.CallsiteParameter.MODULE,
                 structlog.processors.CallsiteParameter.FUNC_NAME,
+                structlog.processors.CallsiteParameter.LINENO,
             }),  # type: ignore[arg-type]
-            logger_name_callsite,
+            pretty_format_name_callsite,
         ])
 
     structlog_processors = [*shared_processors, renderer]
@@ -83,7 +137,8 @@ def configure(
     structlog.configure(
         processors=structlog_processors,
         wrapper_class=structlog.make_filtering_bound_logger(level),
-        logger_factory=structlog.PrintLoggerFactory(sys.stderr),
+        logger_factory=structlog.PrintLoggerFactory(),
+        # logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
         context_class=dict,
     )
@@ -123,6 +178,7 @@ def configure_uvicorn(renderer, shared_processors):
 
     # Disabled access log handlers as they are handled by the middleware
     uvicorn.config.LOGGING_CONFIG["loggers"]["uvicorn.access"]["handlers"] = []
+    uvicorn.config.LOGGING_CONFIG["loggers"]["uvicorn.access"]["propagate"] = False
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -131,7 +187,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     @property
     def logger(self):
         if not self._logger:
-            self._logger = structlog.get_logger(disable_name=True)
+            self._logger = structlog.get_logger(logger_name="damnit_api.access_log")
 
         return self._logger
 
@@ -139,6 +195,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         """Add a middleware to FastAPI that will log requests and responses,
         this is used instead of the builtin Uvicorn access logging to better
         integrate with structlog"""
+
+        structlog.contextvars.bind_contextvars(request_id=str(ulid.ULID()))
+
         info = {
             "method": request.method,
             "path": request.scope["path"],
@@ -151,8 +210,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         if request.path_params:
             info["path_params"] = str(request.path_params)
 
-        logger = self.logger.bind(path=request.scope["path"], method=request.method)
-        logger.debug("Request", **info)
+        logger = self.logger.bind()
+
+        logger.info("Request", **info)
 
         response = await call_next(request)
 

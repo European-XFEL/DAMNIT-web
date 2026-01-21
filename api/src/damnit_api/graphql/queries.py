@@ -125,7 +125,7 @@ class Query:
             "variables": model.variables,
             "timestamp": model.timestamp * 1000,  # deserialize to JS
             "tags": model.tags,
-        }
+        }  # pyright: ignore[reportReturnType]
 
     @strawberry.field
     def extracted_data(
@@ -135,8 +135,8 @@ class Query:
         # and make it analogous to DamitVariable; e.g. `data`
         return get_extracted_data(
             proposal=int(
-                database.proposal  # FIX: # pyright: ignore[reportArgumentType]
+                database.proposal  # FIX: # pyright: ignore[reportArgumentType, reportReturnType]  # noqa: E501
             ),
             run=run,
-            variable=variable,  # FIX: # pyright: ignore[reportArgumentType]
+            variable=variable,
         )

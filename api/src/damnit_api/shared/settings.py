@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -13,6 +12,8 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .._mymdc.settings import MyMdCClientSettings, MyMdCMockSettings
+
 
 class AuthSettings(BaseModel):
     client_id: str
@@ -21,7 +22,7 @@ class AuthSettings(BaseModel):
 
 
 class UvicornSettings(BaseModel):
-    host: str = "localhost"
+    host: str = "127.0.0.1"
     port: int = 8000
     reload: bool = True
     factory: bool = True
@@ -60,26 +61,10 @@ class UvicornSettings(BaseModel):
     model_config = SettingsConfigDict(extra="allow")
 
 
-class MyMdCCredentials(BaseSettings):
-    """MyMdC client settings.
-
-    Get from from <https://in.xfel.eu/metadata/oauth/applications>.
-    """
-
-    client_id: str
-    client_secret: SecretStr
-    email: str
-    token_url: HttpUrl
-    base_url: HttpUrl
-
-    _access_token: str = ""
-    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(UTC)
-
-
 class Settings(BaseSettings):
     auth: AuthSettings
 
-    proposal_cache: Path = Path(__file__).parents[2] / "damnit_proposals.json"
+    db_path: Path = Path(__file__).parents[3] / "dw_api.sqlite"
 
     debug: bool = True
 
@@ -89,7 +74,9 @@ class Settings(BaseSettings):
 
     uvicorn: UvicornSettings = UvicornSettings()
 
-    mymdc: MyMdCCredentials
+    mymdc: MyMdCClientSettings = MyMdCMockSettings(
+        mock_responses_file=Path(__file__).parents[3] / "tests" / "mock" / "_mymdc.json"
+    )
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",

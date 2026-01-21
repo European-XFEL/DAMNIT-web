@@ -42,7 +42,7 @@ select = [
     "PTH",   # flake8-use-pathlib
     "LOG",   # flake8-logging
 ]
-ignore = ["B018", "B019", "ISC001"]
+ignore = ["B018", "B019", "ISC001", "RUF067"]
 
 [lint.per-file-ignores]
 "tests/*" = ["S101"]

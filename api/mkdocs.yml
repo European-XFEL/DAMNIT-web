@@ -20,12 +20,15 @@ nav:
 - Deployment: deployment.md
 - Development:
   - ./dev/setup.md
-  - ./dev/ci-cd.md
-  - ./dev/docs.md
   - ./dev/architecture.md
+  - ./dev/security.md
+  - ./dev/notes.md
+  - ./dev/docs.md
+  - ./dev/ci-cd.md
 
 markdown_extensions:
 - admonition
+- attr_list
 - pymdownx.details
 - pymdownx.snippets
 - pymdownx.superfences
@@ -40,6 +43,7 @@ plugins:
         # Load object inventories to enable cross-references to other projects.
         - https://docs.python.org/3/objects.inv
         - https://docs.pydantic.dev/latest/objects.inv
+        - https://python-dependency-injector.ets-labs.org/objects.inv
         options:
           # See https://mkdocstrings.github.io/python/usage/#recommended-settings
           docstring_section_style: spacy

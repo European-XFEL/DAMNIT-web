@@ -3,12 +3,14 @@ import { useState } from 'react'
 import { useAppSelector } from '../../redux/hooks'
 import { BreadcrumbsBar } from './breadcrumbs-bar'
 import { type SettingsView, nodeByView } from './settings-config'
+import { isEmpty } from '../../utils/helpers'
 
 function Settings() {
   const [currentView, setCurrentView] = useState<SettingsView>('main')
-  const hasTags = useAppSelector(
-    (state) => !!Object.keys(state.tableData.metadata.tags).length
+  const tags = useAppSelector(
+    (state) => state.tableData.metadata.tags
   )
+  const hasTags = isEmpty(tags) === false
 
   return (
     <Stack h="100%">

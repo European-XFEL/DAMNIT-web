@@ -6,7 +6,7 @@ export const metadataApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: `${BASE_URL}metadata` }),
   endpoints: (builder) => ({
     getProposal: builder.query({
-      query: (proposal_num) => `proposal/${proposal_num}`,
+      query: (proposal_number) => `proposal/${proposal_number}`,
     }),
   }),
 })

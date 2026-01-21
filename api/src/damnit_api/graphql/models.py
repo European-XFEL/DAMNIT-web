@@ -9,7 +9,7 @@ from typing import (
 import numpy as np
 import strawberry
 
-from ..const import DEFAULT_PROPOSAL, DamnitType
+from ..shared.const import DEFAULT_PROPOSAL, DamnitType
 from ..utils import Registry, b64image, create_map, get_type, map_dtype
 
 T = TypeVar("T")
@@ -41,8 +41,10 @@ def serialize(value, *, dtype=DamnitType.STRING):
 
 
 Any = strawberry.scalar(
-    NewType("Any", object),  # FIX: # pyright: ignore[reportArgumentType]
-)
+    NewType(
+        "Any", object
+    ),  # FIX: # pyright: ignore[reportArgumentType, reportCallIssue]
+)  # pyright: ignore[reportCallIssue]
 
 
 Timestamp = strawberry.scalar(

@@ -2,11 +2,12 @@ import os.path as osp
 from abc import ABCMeta
 from base64 import b64encode
 from glob import iglob
+from types import UnionType
 from typing import Any, ClassVar, Union, get_args, get_origin
 
 import numpy as np
 
-from .const import DamnitType
+from .shared.const import DamnitType
 
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
@@ -117,7 +118,7 @@ def create_map(
 
 
 def get_type(type_):
-    if get_origin(type_) is Union:
+    if get_origin(type_) in {Union, UnionType}:
         # Optional type hint
         return get_args(type_)[0]
 

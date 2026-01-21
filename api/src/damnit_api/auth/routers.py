@@ -1,92 +1,135 @@
-from typing import Annotated
 from urllib.parse import parse_qs, unquote, urlencode
 
-from authlib.integrations.starlette_client import (  # type: ignore[import-untyped]
-    OAuth,
-    OAuthError,
-    StarletteOAuth2App,
-)
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from authlib.integrations.starlette_client import OAuthError
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse
 
-from ..settings import settings
-from . import services
-from .models import User
+from .. import get_logger
+from .._db.dependencies import DBSession
+from .._mymdc.dependencies import MyMdCClient
+from . import dependencies, models
 
-router = APIRouter(prefix="/oauth", include_in_schema=False)
+logger = get_logger()
 
-_OAUTH = OAuth()
+router = APIRouter(prefix="/oauth", tags=["auth"])
 
-OAUTH: StarletteOAuth2App = None  # type: ignore[assignment]
-
-DEFAULT_LOGIN_REDIRECT_URI = "/home"
-DEFAULT_LOGOUT_REDIRECT_URI = "/logged-out"
+TOKEN_STORE = {}
 
 
-def configure() -> None:
-    global OAUTH
-
-    _OAUTH.register(
-        name="damnit_web",
-        client_id=settings.auth.client_id,
-        client_secret=settings.auth.client_secret.get_secret_value(),
-        server_metadata_url=str(settings.auth.server_metadata_url),
-        client_kwargs={"scope": "openid email"},
-    )
-
-    OAUTH = _OAUTH.damnit_web  # type: ignore[assignment, no-redef]
-
-
-def get_public_base_url(request: Request) -> str:
-    # The forwarded protocol could return "https,http"
-    proto = request.headers.get("x-forwarded-proto", "").split(",")
-    if not proto or request.url.scheme in proto:
-        scheme = request.url.scheme
-    else:
-        scheme = proto[0]
-
-    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
-
-    return f"{scheme}://{host}"
-
-
-@router.get("/login")
-async def auth(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
+@router.get("/login", status_code=307)
+async def auth(
+    request: Request,
+    redirect_uri: dependencies.RedirectURI,
+    client: dependencies.Client,
+) -> RedirectResponse:
+    """Initiate the OAuth2 login flow."""
+    # Note: session is managed by Starlette's SessionMiddleware, which handles
+    # expiration.
     if request.session.get("user"):
         return RedirectResponse(url=redirect_uri)
 
-    state = urlencode({"redirect_uri": redirect_uri})
+    callback_uri = request.url_for("callback")
 
-    # TODO: Upgrade Starlette and use ProxyHeadersMiddleware
-    base = get_public_base_url(request)
-    callback_path = request.url_for("callback").path
-    callback_uri = f"{base}{callback_path}"
+    # TODO: error on non-HTTPS in production?
 
-    return await OAUTH.authorize_redirect(request, callback_uri, state=state)
+    if x_forwarded_host := request.headers.get("x-forwarded-host"):
+        callback_uri = callback_uri.replace(netloc=x_forwarded_host)
+
+    res = await client.authorize_redirect(request, redirect_uri=str(callback_uri))
+
+    await logger.adebug("OAuth redirect response", headers=res.headers)
+
+    return res
 
 
-@router.get("/callback")
-async def callback(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
+@router.get("/callback", status_code=307)
+async def callback(
+    request: Request,
+    redirect_uri: dependencies.RedirectURI,
+    client: dependencies.Client,
+) -> RedirectResponse:
+    """OAuth2 callback endpoint to handle the response from the OAuth provider."""
     try:
-        token = await OAUTH.authorize_access_token(request)
-        user = await OAUTH.userinfo(token=token)
+        token = await client.authorize_access_token(request)
+        user = await client.userinfo(token=token)
     except OAuthError as e:
         raise HTTPException(status_code=401, detail=str(e)) from e
 
     state = request.query_params.get("state", "")
     state_params = parse_qs(state)
-    redirect_uri = state_params.get("redirect_uri", [DEFAULT_LOGIN_REDIRECT_URI])[0]
+    redirect_uri = state_params.get("redirect_uri", [redirect_uri])[0]
 
     request.session["user"] = dict(user)
-    return RedirectResponse(url=unquote(redirect_uri))
+
+    # TODO: could (should?) be stored in db for persistence across server restarts
+    # NOTE: required for revoking tokens on logout
+    TOKEN_STORE[user["sub"]] = token
+
+    return RedirectResponse(url=unquote(str(redirect_uri)))
 
 
-@router.get("/logout")
-async def logout(request: Request, redirect_uri: str = DEFAULT_LOGIN_REDIRECT_URI):
-    request.session.pop("user", None)
-    return RedirectResponse(url=redirect_uri)
+@router.post("/logout")
+async def logout(
+    request: Request,
+    client: dependencies.Client,
+) -> JSONResponse:
+    """Fully logout the user and revoke tokens.
+
+    Endpoint (attempts to) revoke both access and refresh tokens via revocation
+    endpoint, then redirects to end session endpoint if available.
+    """
+    user_sub = request.session.get("user", {}).get("sub")
+
+    revocation_endpoint = client.server_metadata.get("revocation_endpoint", None)
+
+    if client.client_id and client.client_secret:
+        auth = (client.client_id, client.client_secret)
+        token = await client.fetch_access_token()
+
+        for k in ("refresh_token", "access_token"):
+            if user_token := TOKEN_STORE.get(user_sub, {}).pop(k, None):
+                await client.post(
+                    revocation_endpoint,
+                    token=token,
+                    auth=auth,
+                    data={"token": user_token, "token_type_hint": f"{k}"},
+                )
+
+    end_session_endpoint = client.server_metadata.get("end_session_endpoint")
+
+    token_id = TOKEN_STORE.get(user_sub, {}).pop("id_token", None)
+
+    logout_url = None
+    if token_id and end_session_endpoint:
+        params = {}
+        if token_id:
+            params["id_token_hint"] = token_id
+        # TODO: request post_logout_redirect_uri added to keycloak client
+        # if logout_redirect := request.headers.get("x-forwarded-host"):
+        #     params["post_logout_redirect_uri"] = logout_redirect
+        logout_url = f"{end_session_endpoint}?{urlencode(params)}"
+
+    try:
+        request.session.pop("user", None)
+    except Exception:
+        await logger.adebug("Failed clearing user session during logout")
+
+    response = JSONResponse(status_code=200, content={"logout_url": logout_url})
+    response.delete_cookie("session", path="/")
+    return response
 
 
 @router.get("/userinfo")
-async def userinfo(user: Annotated[User, Depends(services.user_from_session)]):
-    return user.model_dump(exclude={"groups"})
+async def userinfo(
+    request: Request,
+    mymdc: MyMdCClient,
+    session: DBSession,
+    with_proposals: bool = True,
+) -> models.User | models.OAuthUserInfo:
+    """User information."""
+    if with_proposals:
+        user = await models.User.from_connection(request, mymdc, session)
+    else:
+        user = models.OAuthUserInfo.from_connection(request)
+
+    return user
