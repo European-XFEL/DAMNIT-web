@@ -3,6 +3,7 @@ export { default as DashboardBase } from './dashboard.base'
 export { default as DashboardMain } from './dashboard.main'
 export {
   default as dashboardReducer,
+  reset as resetDashboard,
   addTab,
   removeTab,
   setCurrentTab,

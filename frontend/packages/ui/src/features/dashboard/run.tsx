@@ -101,7 +101,7 @@ const Run = () => {
   const validRuns = Object.entries(runData).filter(
     ([name, data]) =>
       variableVisibility[name] !== false &&
-      data.value != null &&
+      data?.value != null &&
       !EXCLUDED_VARIABLES.includes(name)
   )
 

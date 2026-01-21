@@ -6,6 +6,7 @@ import {
   SegmentedControl,
   Select,
   Flex,
+  Title,
 } from '@mantine/core'
 import { TextInput, Text, Blockquote } from '@mantine/core'
 import { useForm } from '@mantine/form'
@@ -147,7 +148,7 @@ const PlotDialog = (props: PlotDialogProps) => {
     <Modal
       opened={props.opened}
       onClose={handleClose}
-      title="Plot settings"
+      title={<Title order={4}>Plot Settings</Title>}
       size="400px"
       keepMounted={false}
       centered
@@ -197,8 +198,13 @@ const PlotDialog = (props: PlotDialogProps) => {
           <SegmentedControl
             id="plotType"
             value={formValues.plotType}
-            onChange={(event) => {
-              dialogForm.setFieldValue('plotType', event)
+            onChange={(value) => {
+              dialogForm.setFieldValue('plotType', value)
+              if (value === 'extracted') {
+                dialogForm.setFieldValue('runSelectionType', 'manualSelection')
+              } else if (!formValues.runSelection) {
+                dialogForm.setFieldValue('runSelectionType', 'allSelection')
+              }
             }}
             data={[
               { label: 'Plot summary', value: 'summary' },
@@ -214,7 +220,11 @@ const PlotDialog = (props: PlotDialogProps) => {
             <Text size="sd">Run selection:</Text>
             <Select
               data={[
-                { value: 'allSelection', label: 'All runs' },
+                {
+                  value: 'allSelection',
+                  label: 'All runs',
+                  disabled: formValues.plotType !== 'summary',
+                },
                 { value: 'manualSelection', label: 'Custom' },
               ]}
               defaultValue="allSelection"
@@ -239,8 +249,8 @@ const PlotDialog = (props: PlotDialogProps) => {
           )}
           {formValues.plotType !== 'summary' &&
             formValues.runSelectionType === 'allSelection' && (
-              <Blockquote color="indigo" p="10" w="100%">
-                You are about to plot data for all the runs
+              <Blockquote color="red" p="10" w="100%">
+                You are about to plot data for all the runs.
               </Blockquote>
             )}
 

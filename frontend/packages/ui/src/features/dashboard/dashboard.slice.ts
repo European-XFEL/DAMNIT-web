@@ -39,6 +39,8 @@ const slice = createSlice({
   name: 'dashboard',
   initialState,
   reducers: {
+    reset: () => initialState,
+
     // Main
     setCurrentTab: (state, action) => {
       const id = action.payload
@@ -84,4 +86,5 @@ export const {
   closeNav,
   openAside,
   closeAside,
+  reset,
 } = slice.actions
