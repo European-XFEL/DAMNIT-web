@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
 import { AppShell, Stack } from '@mantine/core'
 
+import { ContactButton } from '../../components/buttons'
 import { SiteFooter } from '../../components/footers'
 
 type HomePageProps = {
@@ -26,6 +27,7 @@ const HomePage = ({ main, header }: HomePageProps) => {
           <SiteFooter />
         </Stack>
       </AppShell.Footer>
+      <ContactButton />
     </AppShell>
   )
 }
