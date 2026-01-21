@@ -12,7 +12,7 @@ from .models import User as _User
 
 # TODO: Get from settings
 def _get_default_redirect_login_uri() -> str:
-    return "/home"
+    return "/app/home"
 
 
 RedirectURI = Annotated[str, Depends(_get_default_redirect_login_uri)]
