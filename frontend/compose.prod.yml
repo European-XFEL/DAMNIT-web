@@ -51,6 +51,7 @@ services:
       # Certs for serving
       - /data/certs/cert.key:/etc/nginx/certs/server.key
       - /data/certs/cert.pem:/etc/nginx/certs/server.crt
+      - /var/log/webserver:/var/log/webserver
     ports:
       - 443:443
     restart: unless-stopped

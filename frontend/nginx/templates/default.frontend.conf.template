@@ -2,6 +2,8 @@ server {
   listen 443 ssl;
   server_name ${NGINX_SERVER_NAME};
 
+  access_log /var/log/webserver/webserver.log;
+
   ssl_certificate     /etc/nginx/certs/server.crt;
   ssl_certificate_key /etc/nginx/certs/server.key;
   ssl_protocols       TLSv1.2 TLSv1.3;
