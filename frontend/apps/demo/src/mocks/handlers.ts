@@ -159,7 +159,7 @@ async function fetchContextFile({ proposal }: FetchContextFileOptions) {
 const restHandlers = [
   http.get(`${BASE_URL}contextfile/content`, async ({ request }) => {
     const url = new URL(request.url)
-    const proposal_number = url.searchParams.get('proposal_num') ?? ''
+    const proposal_number = url.searchParams.get('proposal_number') ?? ''
 
     const content = await fetchContextFile({ proposal: proposal_number })
     return HttpResponse.json({
