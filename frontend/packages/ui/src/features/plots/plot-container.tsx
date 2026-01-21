@@ -199,17 +199,20 @@ const useExtractedData = ({
     }
 
     const newEntries = Object.entries(extracted)
-      .filter(([run]) => !(run in plotData))
-      .map(([run, extracted]) => [run, getPlotData(extracted, { run })])
+      .filter(
+        ([run, extracted]) => !(run in plotData) && extracted.data != null
+      )
+      .map(
+        ([run, extracted]) => [run, getPlotData(extracted, { run })] as const
+      )
 
     if (newEntries.length) {
       setPlotData((prevData) => ({
         ...prevData,
         ...Object.fromEntries(newEntries),
       }))
-      if (runs.length > 0) {
-        setPlotMetadata(getPlotMetadata(extracted[runs[0]]))
-      }
+
+      setPlotMetadata(getPlotMetadata(extracted[newEntries[0][0]]))
     }
   }, [enabled, runs, extracted, plotData])
 
