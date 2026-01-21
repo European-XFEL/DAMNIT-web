@@ -1,9 +1,10 @@
 import { type PropsWithChildren, useState } from 'react'
 import { UnstyledButton, Group, Text, Menu, rem } from '@mantine/core'
-import { IconLogout, IconChevronDown } from '@tabler/icons-react'
+import { IconLogout, IconMail, IconChevronDown } from '@tabler/icons-react'
 import cx from 'clsx'
 
 import { selectUserFullName } from '../../auth'
+import { CONTACT_EMAIL } from '../../constants'
 import { useAppSelector } from '../../redux/hooks'
 import { history } from '../../routes'
 
@@ -46,6 +47,18 @@ const UserMenu = () => {
         </UnstyledButton>
       </Menu.Target>
       <Menu.Dropdown>
+        <Menu.Item
+          component="a"
+          href={`mailto:${CONTACT_EMAIL}`}
+          leftSection={
+            <IconMail
+              style={{ width: rem(16), height: rem(16) }}
+              stroke={1.5}
+            />
+          }
+        >
+          Send feedback
+        </Menu.Item>
         <Menu.Item
           onClick={() => history.navigate('/logout')}
           leftSection={

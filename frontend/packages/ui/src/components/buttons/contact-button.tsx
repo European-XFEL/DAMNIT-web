@@ -1,7 +1,7 @@
 import { ActionIcon, Affix, Text, Tooltip } from '@mantine/core'
 import { IconMail } from '@tabler/icons-react'
 
-const CONTACT_EMAIL = 'da@xfel.eu'
+import { CONTACT_EMAIL } from '../../constants'
 
 function ContactButton() {
   return (
