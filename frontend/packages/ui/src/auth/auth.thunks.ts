@@ -14,23 +14,25 @@ export const login = (): AppThunk => (_) => {
 
 export const logout = (): AppThunk => (dispatch) => {
   fetch(`${HTTP_URL}oauth/logout?redirect_uri=${HTTP_URL}logged-out`, {
-    method: 'GET',
+    method: 'POST',
     credentials: 'include', // Include cookies in the request
+    headers: { 'Content-Type': 'application/json' },
   })
-    .then((response) => {
-      if (response.ok) {
+    .then((response) => response.json())
+    .then((data) => {
+      const logoutUrl = data?.logout_url
+      if (logoutUrl) {
+        // Navigate to end session endpoint
+        window.location.assign(logoutUrl)
+      } else {
         // Reset the application
         dispatch(resetTableData())
         dispatch(resetTableView())
         dispatch(resetExtractedData())
         dispatch(resetPlots())
-      }
 
-      // Reset the API state
-      dispatch(authApi.util.resetApiState())
+        dispatch(authApi.util.resetApiState())
 
-      // Handle the redirect
-      if (response.redirected && response.url) {
         history.navigate('/logged-out')
       }
     })
