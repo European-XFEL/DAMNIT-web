@@ -1,8 +1,8 @@
-from urllib.parse import parse_qs, unquote
+from urllib.parse import parse_qs, unquote, urlencode
 
 from authlib.integrations.starlette_client import OAuthError
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from .. import get_logger
 from .._db.dependencies import DBSession
@@ -12,6 +12,8 @@ from . import dependencies, models
 logger = get_logger()
 
 router = APIRouter(prefix="/oauth", tags=["auth"])
+
+TOKEN_STORE = {}
 
 
 @router.get("/login", status_code=307)
@@ -58,20 +60,63 @@ async def callback(
     redirect_uri = state_params.get("redirect_uri", [redirect_uri])[0]
 
     request.session["user"] = dict(user)
+
+    # TODO: could (should?) be stored in db for persistence across server restarts
+    # NOTE: required for revoking tokens on logout
+    TOKEN_STORE[user["sub"]] = token
+
     return RedirectResponse(url=unquote(str(redirect_uri)))
 
 
-@router.get("/logout", status_code=307)
-async def logout(request: Request, client: dependencies.Client) -> RedirectResponse:
-    """Redirect to the OAuth provider's logout endpoint and clear the session."""
-    logout_endpoint = client.server_metadata.get("end_session_endpoint")
+@router.post("/logout")
+async def logout(
+    request: Request,
+    client: dependencies.Client,
+) -> JSONResponse:
+    """Fully logout the user and revoke tokens.
 
-    request.session.clear()
+    Endpoint (attempts to) revoke both access and refresh tokens via revocation
+    endpoint, then redirects to end session endpoint if available.
+    """
+    user_sub = request.session.get("user", {}).get("sub")
 
-    if logout_endpoint:
-        return RedirectResponse(url=logout_endpoint)
+    revocation_endpoint = client.server_metadata.get("revocation_endpoint", None)
 
-    return RedirectResponse(url="/")
+    if client.client_id and client.client_secret:
+        auth = (client.client_id, client.client_secret)
+        token = await client.fetch_access_token()
+
+        for k in ("refresh_token", "access_token"):
+            if user_token := TOKEN_STORE.get(user_sub, {}).pop(k, None):
+                await client.post(
+                    revocation_endpoint,
+                    token=token,
+                    auth=auth,
+                    data={"token": user_token, "token_type_hint": f"{k}"},
+                )
+
+    end_session_endpoint = client.server_metadata.get("end_session_endpoint")
+
+    token_id = TOKEN_STORE.get(user_sub, {}).pop("id_token", None)
+
+    logout_url = None
+    if token_id and end_session_endpoint:
+        params = {}
+        if token_id:
+            params["id_token_hint"] = token_id
+        # TODO: request post_logout_redirect_uri added to keycloak client
+        # if logout_redirect := request.headers.get("x-forwarded-host"):
+        #     params["post_logout_redirect_uri"] = logout_redirect
+        logout_url = f"{end_session_endpoint}?{urlencode(params)}"
+
+    try:
+        request.session.pop("user", None)
+    except Exception:
+        await logger.adebug("Failed clearing user session during logout")
+
+    response = JSONResponse(status_code=200, content={"logout_url": logout_url})
+    response.delete_cookie("session", path="/")
+    return response
 
 
 @router.get("/userinfo")
