@@ -121,11 +121,6 @@ if __name__ == "__main__":
 
     logger.info("Starting uvicorn with settings", **settings.uvicorn.model_dump())
 
-    if settings.uvicorn.ssl_cert_reqs != 2:
-        logger.warning(
-            "Not configured to require mTLS. This is not recommended for production."
-        )
-
     uvicorn.run(
         "damnit_api.main:create_app",
         **settings.uvicorn.model_dump(),
