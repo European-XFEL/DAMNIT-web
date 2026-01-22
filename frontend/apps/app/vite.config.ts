@@ -75,12 +75,6 @@ export default defineConfig(({ command, mode }): UserConfig => {
       host: true,
       port: Number(VITE_PORT) || 5173,
       allowedHosts: true as const,
-      resolve: {
-        alias: {
-          // /esm/icons/index.mjs only exports the icons statically, so no separate chunks are created
-          '@tabler/icons-react': '@tabler/icons-react/dist/esm/icons/index.mjs',
-        },
-      },
       proxy: {
         [withBaseUrl('graphql')]: { ...defaultProxyConfig, ws: true },
         [withBaseUrl('oauth')]: { ...defaultProxyConfig },
@@ -95,5 +89,11 @@ export default defineConfig(({ command, mode }): UserConfig => {
     base: BASE_URL,
     plugins: [react()],
     server: command === 'serve' ? getServerConfig() : undefined,
+    resolve: {
+      alias: {
+        // /esm/icons/index.mjs only exports the icons statically, so no separate chunks are created
+        '@tabler/icons-react': '@tabler/icons-react/dist/esm/icons/index.mjs',
+      },
+    },
   }
 })
