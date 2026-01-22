@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { range } from '@mantine/hooks'
 
+import type { Rectangle } from './types'
 import { getDeferredTable } from '../../data/table/table-data.thunks'
 import { getTable } from '../../data/table'
 import { useAppDispatch } from '../../redux/hooks'
@@ -39,13 +40,6 @@ class Pages {
   }
 }
 
-type Rect = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
 type UsePaginationOptions = {
   proposal: string
   enabled?: boolean
@@ -63,7 +57,7 @@ export const usePagination = ({
   const pagesRef = useRef(new Pages())
 
   // State: Visible pages
-  const [visibleRegion, setVisibleRegion] = useState<Rect>({
+  const [visibleRegion, setVisibleRegion] = useState<Rectangle>({
     x: 0,
     y: 0,
     width: 0,
@@ -89,7 +83,7 @@ export const usePagination = ({
   )
 
   // Callback: On visible region changed
-  const onVisibleRegionChanged = useCallback((rect: Rect) => {
+  const onVisibleRegionChanged = useCallback((rect: Rectangle) => {
     setVisibleRegion(rect)
   }, [])
 

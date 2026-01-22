@@ -46,6 +46,9 @@ catalogs:
     dayjs:
       specifier: 1.11.13
       version: 1.11.13
+    lodash:
+      specifier: 4.17.23
+      version: 4.17.23
     react:
       specifier: 18.2.0
       version: 18.2.0
@@ -117,6 +120,9 @@ catalogs:
       specifier: 7.2.2
       version: 7.2.2
   types:
+    '@types/lodash':
+      specifier: 4.17.23
+      version: 4.17.23
     '@types/node':
       specifier: 24.10.0
       version: 24.10.0
@@ -148,10 +154,10 @@ importers:
         version: link:../../packages/ui
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
-        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@mantine/core':
         specifier: catalog:components
         version: 7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -182,6 +188,9 @@ importers:
       graphql-ws:
         specifier: catalog:graphql
         version: 6.0.4(graphql@16.10.0)
+      lodash:
+        specifier: catalog:frontend
+        version: 4.17.23
       mantine-contextmenu:
         specifier: catalog:components
         version: 7.17.1(@mantine/core@7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(@mantine/hooks@7.17.3(react@18.2.0))(clsx@2.1.1)(react@18.2.0)
@@ -210,6 +219,9 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@types/lodash':
+        specifier: catalog:types
+        version: 4.17.23
       '@types/node':
         specifier: catalog:types
         version: 24.10.0
@@ -251,10 +263,10 @@ importers:
         version: link:../../packages/ui
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
-        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@mantine/core':
         specifier: catalog:components
         version: 7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -285,6 +297,9 @@ importers:
       graphql-ws:
         specifier: catalog:graphql
         version: 6.0.4(graphql@16.10.0)
+      lodash:
+        specifier: catalog:frontend
+        version: 4.17.23
       mantine-contextmenu:
         specifier: catalog:components
         version: 7.17.1(@mantine/core@7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(@mantine/hooks@7.17.3(react@18.2.0))(clsx@2.1.1)(react@18.2.0)
@@ -316,6 +331,9 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@types/lodash':
+        specifier: catalog:types
+        version: 4.17.23
       '@types/node':
         specifier: catalog:types
         version: 24.10.0
@@ -440,10 +458,10 @@ importers:
         version: link:../config
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
-        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@mantine/core':
         specifier: catalog:components
         version: 7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -462,6 +480,9 @@ importers:
       '@tabler/icons-react':
         specifier: catalog:components
         version: 3.31.0(react@18.2.0)
+      '@types/lodash':
+        specifier: catalog:types
+        version: 4.17.23
       '@types/node':
         specifier: catalog:types
         version: 24.10.0
@@ -492,6 +513,9 @@ importers:
       graphql-ws:
         specifier: catalog:graphql
         version: 6.0.4(graphql@16.10.0)
+      lodash:
+        specifier: catalog:frontend
+        version: 4.17.23
       mantine-contextmenu:
         specifier: catalog:components
         version: 7.17.1(@mantine/core@7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(@mantine/hooks@7.17.3(react@18.2.0))(clsx@2.1.1)(react@18.2.0)
@@ -1338,6 +1362,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/lodash@4.17.23':
+    resolution: {integrity: sha512-RDvF6wTulMPjrNdCoYRC8gNR880JNGT8uB+REUpC2Ns4pRqQJhGz90wh7rgdXDPpCczF3VGktDuFGVnz8zP7HA==}
 
   '@types/mapbox__point-geometry@0.1.4':
     resolution: {integrity: sha512-mUWlSxAmYLfwnRBmgYV86tgYmMIICX4kza8YnE/eIlywGe2XoOxlpVnXWwir92xRLjwyarqwpu2EJKD2pk0IUA==}
@@ -2387,8 +2414,8 @@ packages:
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
 
-  lodash@4.17.21:
-    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
+  lodash@4.17.23:
+    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
 
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
@@ -3771,9 +3798,9 @@ snapshots:
 
   '@floating-ui/utils@0.2.10': {}
 
-  '@glideapps/glide-data-grid-cells@6.0.3(@types/react@18.2.45)(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
+  '@glideapps/glide-data-grid-cells@6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
     dependencies:
-      '@glideapps/glide-data-grid': 6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+      '@glideapps/glide-data-grid': 6.0.3(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@linaria/react': 4.5.4(react@18.2.0)
       '@toast-ui/editor': 3.1.10
       '@toast-ui/react-editor': 3.1.10(react@18.2.0)
@@ -3787,11 +3814,11 @@ snapshots:
       - react-responsive-carousel
       - supports-color
 
-  '@glideapps/glide-data-grid@6.0.3(lodash@4.17.21)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
+  '@glideapps/glide-data-grid@6.0.3(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
     dependencies:
       '@linaria/react': 4.5.4(react@18.2.0)
       canvas-hypertxt: 1.0.3
-      lodash: 4.17.21
+      lodash: 4.17.23
       marked: 14.0.0
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
@@ -4248,6 +4275,8 @@ snapshots:
   '@types/geojson@7946.0.16': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/lodash@4.17.23': {}
 
   '@types/mapbox__point-geometry@0.1.4': {}
 
@@ -5341,7 +5370,7 @@ snapshots:
 
   lodash.merge@4.6.2: {}
 
-  lodash@4.17.21: {}
+  lodash@4.17.23: {}
 
   loose-envify@1.4.0:
     dependencies:

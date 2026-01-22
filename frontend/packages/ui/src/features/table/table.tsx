@@ -1,12 +1,14 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   CompactSelection,
   DataEditor,
   type CellClickedEventArgs,
   type DataEditorProps,
+  type DataEditorRef,
   type GridSelection,
   type HeaderClickedEventArgs,
   type Item,
+  type Rectangle,
 } from '@glideapps/glide-data-grid'
 import { allCells } from '@glideapps/glide-data-grid-cells'
 
@@ -14,6 +16,7 @@ import { getCell, numberCell, textCell } from './cells'
 import ContextMenu from './context-menu'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
+import { useScrollToView } from './use-scroll-to-view'
 import { selectRun } from './table.slice'
 import { canPlotData } from '../plots/utils'
 import { addPlot } from '../plots/plots.slice'
@@ -43,6 +46,9 @@ export type TableProps = {
 }
 
 const Table = ({ grid, paginated = true }: TableProps) => {
+  // Initialization: References
+  const tableRef = useRef<DataEditorRef>(null)
+
   // Initialization: Selectors
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const {
@@ -54,7 +60,15 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
-  const paginationProps = usePagination({ proposal, enabled: paginated })
+  const { onVisibleRegionChanged: paginationHandler } = usePagination({
+    proposal,
+    enabled: paginated,
+  })
+  const {
+    onVisibleRegionChanged: scrollToViewHandler,
+    scrollX,
+    scrollY,
+  } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
 
   // Initialization: Memos
@@ -311,12 +325,21 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     })
   }
 
+  const handleVisibleRegionchange = useCallback(
+    (rect: Rectangle) => {
+      paginationHandler(rect)
+      scrollToViewHandler(rect)
+    },
+    [paginationHandler, scrollToViewHandler]
+  )
+
   return (
     <div style={{ width: '100%', height: '100%' }}>
       {!tableColumns.length ? null : (
         <>
           <DataEditor
             {...(grid || {})}
+            ref={tableRef}
             columns={formatColumns(tableColumns)}
             getCellContent={getContent}
             rows={tableMetadata.runs.length}
@@ -330,7 +353,9 @@ const Table = ({ grid, paginated = true }: TableProps) => {
             onHeaderContextMenu={handleHeaderContextMenu}
             freezeColumns={1}
             customRenderers={allCells}
-            {...paginationProps}
+            onVisibleRegionChanged={handleVisibleRegionchange}
+            scrollOffsetX={scrollX}
+            scrollOffsetY={scrollY}
           />
           <ContextMenu {...contextMenu} />
           <div id="portal" />

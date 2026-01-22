@@ -26,6 +26,7 @@
     "dayjs": "catalog:frontend",
     "graphql": "catalog:graphql",
     "graphql-ws": "catalog:graphql",
+    "lodash": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
     "msw": "^2.12.7",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
+    "@types/lodash": "catalog:types",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",
