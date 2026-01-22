@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 import { formatUrl } from './utils/helpers'
 
+export const CONTACT_EMAIL = 'da@xfel.eu'
+
 export const BASE_URL = formatUrl(import.meta.env.VITE_BASE_URL)
 export const HTTP_URL = window.location.origin + BASE_URL
 

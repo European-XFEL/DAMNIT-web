@@ -23,16 +23,18 @@ function SiteFooter() {
   return (
     <Group justify="space-between" w="100%" mx={16} my={8}>
       <Group gap="lg">
-        <SiteAnchor href="https://damnit.rtfd.io">Docs</SiteAnchor>
+        <SiteAnchor href="https://damnit.rtfd.io">📑 Documentation</SiteAnchor>
         <SiteAnchor href="https://github.com/European-XFEL/DAMNIT-web">
-          GitHub
+          💻 Source code
         </SiteAnchor>
       </Group>
       <Group gap="lg">
         <SiteAnchor href="https://www.xfel.eu/legal_notice/index_eng.html">
-          Legal Notice
+          ⚖️ Legal Notice
         </SiteAnchor>
-        <SiteAnchor href="https://www.xfel.eu/contacts/">Contacts</SiteAnchor>
+        <SiteAnchor href="https://www.xfel.eu/contacts/">
+          🏢 Contacts
+        </SiteAnchor>
       </Group>
     </Group>
   )

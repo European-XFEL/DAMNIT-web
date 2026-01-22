@@ -2,6 +2,7 @@
 export { Providers } from './providers'
 
 // Components
+export { ContactButton } from './components/buttons'
 export { Header, Logo } from './components/headers'
 export { SiteFooter } from './components/footers'
 export { InstrumentBadge } from './components/badges'

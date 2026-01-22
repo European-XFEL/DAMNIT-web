@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
-import { AppShell } from '@mantine/core'
+import { AppShell, Stack } from '@mantine/core'
 
+import { ContactButton } from '../../components/buttons'
 import { SiteFooter } from '../../components/footers'
 
 type HomePageProps = {
@@ -14,12 +15,19 @@ const HomePage = ({ main, header }: HomePageProps) => {
       <AppShell.Header>{header}</AppShell.Header>
       <AppShell.Main>{main}</AppShell.Main>
       <AppShell.Footer
+        h={100}
         withBorder={false}
         mr={32}
-        style={{ background: 'transparent' }}
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 70%)',
+        }}
       >
-        <SiteFooter />
+        <Stack h="100%" justify="flex-end">
+          <SiteFooter />
+        </Stack>
       </AppShell.Footer>
+      <ContactButton />
     </AppShell>
   )
 }

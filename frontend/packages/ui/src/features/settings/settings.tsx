@@ -7,9 +7,7 @@ import { isEmpty } from '../../utils/helpers'
 
 function Settings() {
   const [currentView, setCurrentView] = useState<SettingsView>('main')
-  const tags = useAppSelector(
-    (state) => state.tableData.metadata.tags
-  )
+  const tags = useAppSelector((state) => state.tableData.metadata.tags)
   const hasTags = isEmpty(tags) === false
 
   return (
