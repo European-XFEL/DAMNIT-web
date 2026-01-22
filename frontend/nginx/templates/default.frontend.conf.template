@@ -1,0 +1,69 @@
+server {
+  listen 443 ssl;
+  server_name ${NGINX_SERVER_NAME};
+
+  access_log /var/log/webserver/webserver.log;
+
+  ssl_certificate     /etc/nginx/certs/cert.bundle;
+  ssl_certificate_key /etc/nginx/certs/cert.key;
+  ssl_protocols       TLSv1.2 TLSv1.3;
+
+  # Site
+  location / {
+    root /usr/share/nginx/html/site;
+    index index.html;
+    try_files $uri $uri/ /index.html =404;
+  }
+
+  # Demo
+  location ${NGINX_DEMO_BASE_PATH} {
+    alias /usr/share/nginx/html/demo;
+    index index.html;
+    try_files $uri $uri/ /index.html =404;
+  }
+
+  location = ${NGINX_DEMO_BASE_PATH} {
+    return 301 ${NGINX_DEMO_BASE_PATH}/;
+  }
+
+  # App
+  location ${NGINX_APP_BASE_PATH}/ {
+    alias /usr/share/nginx/html/app/;
+    index index.html;
+    try_files $uri $uri/ /index.html =404;
+  }
+
+  location = ${NGINX_APP_BASE_PATH} {
+    return 301 ${NGINX_APP_BASE_PATH}/;
+  }
+
+  location ${NGINX_APP_BASE_PATH}/oauth {
+    proxy_pass ${NGINX_API_URL}/oauth;
+    include /etc/nginx/proxy_api.conf;
+  }
+
+  location ${NGINX_APP_BASE_PATH}/metadata {
+    proxy_pass ${NGINX_API_URL}/metadata;
+    include /etc/nginx/proxy_api.conf;
+  }
+
+  location ${NGINX_APP_BASE_PATH}/contextfile {
+    proxy_pass ${NGINX_API_URL}/contextfile;
+    include /etc/nginx/proxy_api.conf;
+  }
+
+  location ${NGINX_APP_BASE_PATH}/graphql {
+    proxy_pass ${NGINX_API_URL}/graphql;
+    include /etc/nginx/proxy_api.conf;
+
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_cache_bypass $http_upgrade;
+  }
+
+  # REMOVEME: Add URL with base path to allowed KeyCloak redirect URIs
+  location /oauth/ {
+    return 301 ${NGINX_APP_BASE_PATH}$request_uri;
+  }
+}

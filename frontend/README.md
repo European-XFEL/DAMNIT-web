@@ -66,6 +66,16 @@ The compose project will be named `damnit-web-{test,prod}`, which can then be us
 docker compose -p damnit-web-test {ps,logs,up,down,etc...}
 ```
 
+Don't forget to add some environment on the variables on the monorepo by creating an `.env` file on the root repo with the following:
+
+```ini
+# .env
+SITE_PREVIEW_PORT=4174
+APP_PREVIEW_PORT=4173
+APP_BASE_PATH="/"
+API_URL="http://127.0.0.1:30200"
+```
+
 ### Certificates
 
 Certificates are managed via `getssl` script as per DESY's documentation, see the [DESY CA Documentation](https://www-ca.desy.de/acme/index_ger.html) and [getssl documentation](https://github.com/srvrco/getssl) for details. Key parts of the configuration are:
