@@ -29,7 +29,7 @@ class MyMdCMockSettings(BaseSettings):
 
     mock_responses_file: FilePath | None = None
 
-    @field_validator("mock_responses_file")
+    @field_validator("mock_responses_file", mode="before")
     @classmethod
     def allow_missing_file(cls, v: Path | None):
         return v if v and v.is_file() else None
