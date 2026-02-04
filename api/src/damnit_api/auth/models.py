@@ -72,9 +72,17 @@ class User(BaseUserInfo):
 
             Dependency on `HTTPConnection` instead of `Request` to support websockets.
         """
-        from ..metadata.services import _get_proposal_meta_many
 
         oauth = OAuthUserInfo.from_connection(connection)
+
+        return await cls.from_oauth_user(mymdc, session, oauth)
+
+    @classmethod
+    async def from_oauth_user(
+        cls, mymdc: MyMdCClient, session: DBSession, oauth: OAuthUserInfo
+    ) -> Self:
+        from ..metadata.services import _get_proposal_meta_many
+
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
         proposal_numbers = [
             p.proposal_number for p in proposals.root if p.proposal_number is not None
