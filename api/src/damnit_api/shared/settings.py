@@ -3,6 +3,7 @@ from typing import Annotated
 
 from pydantic import (
     BaseModel,
+    FilePath,
     HttpUrl,
     SecretStr,
     UrlConstraints,
@@ -24,6 +25,9 @@ class UvicornSettings(BaseModel):
     port: int = 8000
     reload: bool = True
     factory: bool = True
+
+    ssl_keyfile: FilePath | None = None
+    ssl_certfile: FilePath | None = None
 
     @field_validator("factory", mode="after")
     @classmethod
