@@ -14,5 +14,5 @@ services:
       - DW_API_UVICORN__HOST=0.0.0.0
       - DW_API_UVICORN__PORT=8443
     ports:
-      - 8443:8443
+      - 8543:8443
     restart: unless-stopped
