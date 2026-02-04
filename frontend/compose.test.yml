@@ -55,8 +55,9 @@ services:
       - NGINX_APP_BASE_PATH=${APP_BASE_PATH?}
       - NGINX_DEMO_BASE_PATH=${DEMO_BASE_PATH?}
     volumes:
-      - /data/certs/damnit-test.xfel.eu.key:/etc/nginx/certs/server.key
-      - /data/certs/damnit-test.xfel.eu.pem:/etc/nginx/certs/server.crt
+      - /data/certs/damnit-test.xfel.eu.key:/etc/nginx/certs/cert.key
+      - /data/certs/damnit-test.xfel.eu.pem:/etc/nginx/certs/cert.bundle
+      - /var/log/webserver:/var/log/webserver
     ports:
       - 443:443
     restart: unless-stopped
