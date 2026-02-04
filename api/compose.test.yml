@@ -5,6 +5,7 @@ services:
     build: .
     volumes:
       - ./db:/db
+      - ./certs:/certs
       - /gpfs:/gpfs:ro
       - /pnfs:/pnfs:ro
     env_file:
@@ -13,7 +14,7 @@ services:
       - DW_API_DB_PATH=/db/dw_api.sqlite
       - DW_API_UVICORN__HOST=0.0.0.0
       - DW_API_UVICORN__PORT=8443
-      - DW_API_UVICORN__SSL_CERTFILE=/certs/cert.bundle
+      - DW_API_UVICORN__SSL_CERTFILE=/certs/cert.pem
       - DW_API_UVICORN__SSL_KEYFILE=/certs/cert.key
     ports:
       - 8443:8443
