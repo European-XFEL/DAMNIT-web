@@ -12,6 +12,7 @@
     "lint:prettier": "pnpm -r lint:prettier",
     "lint:eslint": "pnpm -r lint:eslint",
     "lint:tsc": "pnpm -r lint:tsc",
+    "lint:staged": "lint-staged",
     "dev:app": "pnpm --filter @damnit-frontend/app dev",
     "build:app": "pnpm --filter @damnit-frontend/app build",
     "preview:app": "pnpm --filter @damnit-frontend/app preview",
@@ -23,11 +24,27 @@
     "preview:demo": "pnpm --filter @damnit-frontend/demo preview",
     "prepare": "cd .. && husky frontend/.husky"
   },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "pnpm exec eslint --fix",
+      "pnpm exec prettier --write"
+    ],
+    "**/*.{json,html,css,md}": [
+      "pnpm exec prettier --write"
+    ],
+    "**/*.{ts,tsx}": [
+      "pnpm exec tsc --noEmit --incremental"
+    ]
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
-    "husky": "^9.1.7"
+    "eslint": "catalog:linting",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "catalog:linting",
+    "typescript": "catalog:tooling"
   }
 }
