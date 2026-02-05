@@ -83,7 +83,7 @@ const Run = () => {
     (state) => state.tableData.metadata.variables
   )
   const variableVisibility = useAppSelector(
-    (state) => state.table.variableVisibility
+    (state) => state.table.visibility.variables
   )
 
   if (!run || !tableData[run]) {

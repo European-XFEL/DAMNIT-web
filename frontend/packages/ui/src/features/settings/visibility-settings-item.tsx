@@ -31,7 +31,9 @@ function VisibilitySettingsItem({
 }: VisibilitySettingsItemProps) {
   const dispatch = useAppDispatch()
   const { variables } = useAppSelector((state) => state.tableData.metadata)
-  const { variableVisibility } = useAppSelector((state) => state.table)
+  const variableVisibility = useAppSelector(
+    (state) => state.table.visibility.variables
+  )
 
   function varListForTagId(tagId: number): string[] {
     return Object.keys(variables).filter((varName) =>

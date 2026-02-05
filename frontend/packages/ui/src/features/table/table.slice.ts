@@ -8,15 +8,17 @@ type TableState = {
     run: number | null
     variables: string[]
   }
-  variableVisibility: Record<string, boolean>
   view: {
     scroll: Scroll
+  }
+  visibility: {
+    variables: Record<string, boolean>
   }
 }
 
 const initialState: TableState = {
   selection: { run: null, variables: [] },
-  variableVisibility: {},
+  visibility: { variables: {} },
   view: { scroll: { x: 0, y: 0 } },
 }
 
@@ -33,16 +35,13 @@ const slice = createSlice({
         selection.variables = variables
       }
     },
-    reset: (state) => {
-      state.selection = { ...initialState.selection }
-      state.variableVisibility = {}
-    },
+    reset: () => initialState,
     setVariablesVisibility: (
       state,
       action: PayloadAction<Record<string, boolean>>
     ) => {
       for (const [name, isVisible] of Object.entries(action.payload)) {
-        state.variableVisibility[name] = isVisible
+        state.visibility.variables[name] = isVisible
       }
     },
     setViewScroll: (state, action: PayloadAction<Scroll>) => {

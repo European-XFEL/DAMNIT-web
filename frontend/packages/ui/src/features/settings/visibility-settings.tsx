@@ -27,7 +27,7 @@ function VisibilitySettings({
     (state) => state.tableData.metadata
   )
   const variableVisibility = useAppSelector(
-    (state) => state.table.variableVisibility
+    (state) => state.table.visibility.variables
   )
 
   const sortedTags = useMemo(

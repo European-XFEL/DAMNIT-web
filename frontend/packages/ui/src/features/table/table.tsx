@@ -56,7 +56,9 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     metadata: tableMetadata,
     lastUpdate: tableLastUpdate,
   } = useAppSelector((state) => state.tableData)
-  const { variableVisibility } = useAppSelector((state) => state.table)
+  const variableVisibility = useAppSelector(
+    (state) => state.table.visibility.variables
+  )
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
