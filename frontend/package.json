@@ -11,7 +11,6 @@
     "lint:prettier": "pnpm -r lint:prettier",
     "lint:eslint": "pnpm -r lint:eslint",
     "lint:tsc": "pnpm -r lint:tsc",
-    "lint:staged": "lint-staged",
     "dev:app": "pnpm --filter @damnit-frontend/app dev",
     "build:app": "pnpm --filter @damnit-frontend/app build",
     "preview:app": "pnpm --filter @damnit-frontend/app preview",
