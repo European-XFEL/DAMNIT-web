@@ -1,2 +1,2 @@
 cd frontend
-pnpm exec lint-staged
+pnpm exec lint-staged --concurrent false

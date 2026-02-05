@@ -70,7 +70,7 @@ const App = () => {
   history.setLocation(useLocation())
 
   return (
-    <div>
+    <>
       <Routes>
         <Route path="/" element={<HeroPage />} />
         <Route path="/login" element={<LoginRoute />} />
@@ -108,7 +108,7 @@ const App = () => {
         <Route path="/not-found" element={<NotFoundPage />} />
         <Route path="*" element={<Navigate to="/not-found" />} />
       </Routes>
-    </div>
+    </>
   )
 }
 

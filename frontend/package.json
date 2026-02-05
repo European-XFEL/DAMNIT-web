@@ -2,7 +2,6 @@
   "name": "damnit-frontend",
   "version": "0.2.0",
   "description": "",
-  "main": "index.js",
   "engines": {
     "node": ">=24",
     "pnpm": ">=10"
@@ -23,18 +22,6 @@
     "build:demo": "pnpm --filter @damnit-frontend/demo build",
     "preview:demo": "pnpm --filter @damnit-frontend/demo preview",
     "prepare": "cd .. && husky frontend/.husky"
-  },
-  "lint-staged": {
-    "**/*.{js,jsx,ts,tsx}": [
-      "pnpm exec eslint --fix",
-      "pnpm exec prettier --write"
-    ],
-    "**/*.{json,html,css,md}": [
-      "pnpm exec prettier --write"
-    ],
-    "**/*.{ts,tsx}": [
-      "pnpm exec tsc --noEmit --incremental"
-    ]
   },
   "keywords": [],
   "author": "",
