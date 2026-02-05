@@ -20,12 +20,14 @@
     "preview:site": "pnpm --filter @damnit-frontend/site preview",
     "dev:demo": "pnpm --filter @damnit-frontend/demo dev",
     "build:demo": "pnpm --filter @damnit-frontend/demo build",
-    "preview:demo": "pnpm --filter @damnit-frontend/demo preview"
+    "preview:demo": "pnpm --filter @damnit-frontend/demo preview",
+    "prepare": "cd .. && husky frontend/.husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@damnit-frontend/config": "workspace:*"
+    "@damnit-frontend/config": "workspace:*",
+    "husky": "^9.1.7"
   }
 }

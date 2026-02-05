@@ -1,0 +1,4 @@
+cd frontend
+pnpm lint:prettier
+pnpm lint:eslint
+pnpm lint:tsc
