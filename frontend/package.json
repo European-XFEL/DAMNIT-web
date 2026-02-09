@@ -2,7 +2,6 @@
   "name": "damnit-frontend",
   "version": "0.2.0",
   "description": "",
-  "main": "index.js",
   "engines": {
     "node": ">=24",
     "pnpm": ">=10"
@@ -20,12 +19,18 @@
     "preview:site": "pnpm --filter @damnit-frontend/site preview",
     "dev:demo": "pnpm --filter @damnit-frontend/demo dev",
     "build:demo": "pnpm --filter @damnit-frontend/demo build",
-    "preview:demo": "pnpm --filter @damnit-frontend/demo preview"
+    "preview:demo": "pnpm --filter @damnit-frontend/demo preview",
+    "prepare": "cd .. && husky frontend/.husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@damnit-frontend/config": "workspace:*"
+    "@damnit-frontend/config": "workspace:*",
+    "eslint": "catalog:linting",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "catalog:linting",
+    "typescript": "catalog:tooling"
   }
 }
