@@ -11,8 +11,10 @@ import {
   type Rectangle,
 } from '@glideapps/glide-data-grid'
 import { allCells } from '@glideapps/glide-data-grid-cells'
+import { Group, Stack } from '@mantine/core'
 
 import { getCell, numberCell, textCell } from './cells'
+import { VariablesPopover } from './components/popovers/variables-popover'
 import ContextMenu from './context-menu'
 import { useVariableSettings } from './hooks/use-variable-settings'
 import { useContextMenu } from './use-context-menu'
@@ -335,34 +337,39 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   )
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
+    <>
       {!tableColumns.length ? null : (
-        <>
-          <DataEditor
-            {...(grid || {})}
-            ref={tableRef}
-            columns={formatColumns(tableColumns)}
-            getCellContent={getContent}
-            rows={tableMetadata.runs.length}
-            rowSelect="single"
-            rowMarkers="clickable-number"
-            gridSelection={gridSelection}
-            onGridSelectionChange={handleGridSelectionChange}
-            onCellActivated={handleCellActivated}
-            rangeSelect="multi-cell"
-            onCellContextMenu={handleCellContextMenu}
-            onHeaderContextMenu={handleHeaderContextMenu}
-            freezeColumns={1}
-            customRenderers={allCells}
-            onVisibleRegionChanged={handleVisibleRegionchange}
-            scrollOffsetX={scrollX}
-            scrollOffsetY={scrollY}
-          />
-          <ContextMenu {...contextMenu} />
-          <div id="portal" />
-        </>
+        <Stack w="100%" h="100%" gap="sm">
+          <Group px={6}>
+            <VariablesPopover />
+          </Group>
+          <>
+            <DataEditor
+              {...(grid || {})}
+              ref={tableRef}
+              columns={formatColumns(tableColumns)}
+              getCellContent={getContent}
+              rows={tableMetadata.runs.length}
+              rowSelect="single"
+              rowMarkers="clickable-number"
+              gridSelection={gridSelection}
+              onGridSelectionChange={handleGridSelectionChange}
+              onCellActivated={handleCellActivated}
+              rangeSelect="multi-cell"
+              onCellContextMenu={handleCellContextMenu}
+              onHeaderContextMenu={handleHeaderContextMenu}
+              freezeColumns={1}
+              customRenderers={allCells}
+              onVisibleRegionChanged={handleVisibleRegionchange}
+              scrollOffsetX={scrollX}
+              scrollOffsetY={scrollY}
+            />
+            <ContextMenu {...contextMenu} />
+            <div id="portal" />
+          </>
+        </Stack>
       )}
-    </div>
+    </>
   )
 }
 
