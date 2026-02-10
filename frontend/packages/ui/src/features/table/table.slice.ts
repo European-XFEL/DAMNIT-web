@@ -3,6 +3,10 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { Scroll } from './types'
 import { isArrayEqual } from '../../utils/array'
 
+type VariableOptions = {
+  visibility: boolean
+}
+
 type TableState = {
   selection: {
     run: number | null
@@ -11,14 +15,12 @@ type TableState = {
   view: {
     scroll: Scroll
   }
-  visibility: {
-    variables: Record<string, boolean>
-  }
+  variables: Record<string, VariableOptions>
 }
 
 const initialState: TableState = {
   selection: { run: null, variables: [] },
-  visibility: { variables: {} },
+  variables: {},
   view: { scroll: { x: 0, y: 0 } },
 }
 
@@ -26,6 +28,7 @@ const slice = createSlice({
   name: 'table',
   initialState,
   reducers: {
+    reset: () => initialState,
     selectRun: ({ selection }, action) => {
       const { run, variables } = action.payload
       if (selection.run !== run) {
@@ -35,13 +38,13 @@ const slice = createSlice({
         selection.variables = variables
       }
     },
-    reset: () => initialState,
-    setVariablesVisibility: (
+    setVariableVisibility: (
       state,
       action: PayloadAction<Record<string, boolean>>
     ) => {
       for (const [name, isVisible] of Object.entries(action.payload)) {
-        state.visibility.variables[name] = isVisible
+        const options = state.variables[name] ?? {}
+        state.variables[name] = { ...options, visibility: isVisible }
       }
     },
     setViewScroll: (state, action: PayloadAction<Scroll>) => {
@@ -51,5 +54,5 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { selectRun, reset, setVariablesVisibility, setViewScroll } =
+export const { selectRun, reset, setVariableVisibility, setViewScroll } =
   slice.actions

@@ -14,6 +14,7 @@ import { allCells } from '@glideapps/glide-data-grid-cells'
 
 import { getCell, numberCell, textCell } from './cells'
 import ContextMenu from './context-menu'
+import { useVariableSettings } from './hooks/use-variable-settings'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
@@ -56,9 +57,6 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     metadata: tableMetadata,
     lastUpdate: tableLastUpdate,
   } = useAppSelector((state) => state.tableData)
-  const variableVisibility = useAppSelector(
-    (state) => state.table.visibility.variables
-  )
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
@@ -72,6 +70,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     scrollY,
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
+  const { visibility: variableVisibility } = useVariableSettings()
 
   // Initialization: Memos
   const tableColumns = useMemo(

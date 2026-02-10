@@ -12,7 +12,8 @@ import {
 } from '@mantine/core'
 import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
-import { setVariablesVisibility } from '../table/table.slice'
+import { setVariableVisibility } from '../table/table.slice'
+import { selectVariableVisibility } from '../table/store/selectors'
 
 export interface VisibilitySettingsItemProps {
   tagId?: number
@@ -31,9 +32,7 @@ function VisibilitySettingsItem({
 }: VisibilitySettingsItemProps) {
   const dispatch = useAppDispatch()
   const { variables } = useAppSelector((state) => state.tableData.metadata)
-  const variableVisibility = useAppSelector(
-    (state) => state.table.visibility.variables
-  )
+  const variableVisibility = useAppSelector(selectVariableVisibility)
 
   function varListForTagId(tagId: number): string[] {
     return Object.keys(variables).filter((varName) =>
@@ -86,7 +85,7 @@ function VisibilitySettingsItem({
               const updates = Object.fromEntries(
                 groupVarList.map((name) => [name, event.currentTarget.checked])
               )
-              dispatch(setVariablesVisibility(updates))
+              dispatch(setVariableVisibility(updates))
             }}
             color="indigo"
             style={{
@@ -120,7 +119,7 @@ function VisibilitySettingsItem({
               checked={variableVisibility[v] !== false}
               onClick={(event) =>
                 dispatch(
-                  setVariablesVisibility({ [v]: event.currentTarget.checked })
+                  setVariableVisibility({ [v]: event.currentTarget.checked })
                 )
               }
               onChange={() => {}}

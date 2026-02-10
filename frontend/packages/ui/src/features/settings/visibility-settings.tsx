@@ -12,7 +12,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { VISIBILITY_EXCLUDED_VARIABLES } from '../../constants'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import type { TagItem } from '../../types'
-import { setVariablesVisibility } from '../table/table.slice'
+import { setVariableVisibility } from '../table/table.slice'
+import { selectVariableVisibility } from '../table/store/selectors'
 import VisibilitySettingsItem from './visibility-settings-item'
 
 export interface VisibilitySettingsProps {
@@ -26,9 +27,7 @@ function VisibilitySettings({
   const { tags, variables: originalVariables } = useAppSelector(
     (state) => state.tableData.metadata
   )
-  const variableVisibility = useAppSelector(
-    (state) => state.table.visibility.variables
-  )
+  const variableVisibility = useAppSelector(selectVariableVisibility)
 
   const sortedTags = useMemo(
     () =>
@@ -129,7 +128,7 @@ function VisibilitySettings({
           const updates = Object.fromEntries(
             allVarNames.map((name) => [name, !allOn])
           )
-          dispatch(setVariablesVisibility(updates))
+          dispatch(setVariableVisibility(updates))
         }}
       >
         {allOn ? 'Deselect all' : 'Select all'}
