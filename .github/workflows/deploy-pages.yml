@@ -1,31 +1,51 @@
 name: Deploy Pages
 
 on:
-  push:
-    tags:
-      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
+    inputs:
+    folder_prefix:
+      description: "Top-level folder (default: branches)."
+      required: false
+      default: "branches"
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: true
 
 jobs:
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      subdir: ${{ steps.v.outputs.subdir }}
+      branch: ${{ steps.v.outputs.branch }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          SAFE="$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]+#-#g')"
+          PREFIX="${{ inputs.folder_prefix }}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "subdir=$PREFIX/$SAFE" >> "$GITHUB_OUTPUT"
+
   build-site:
+    needs: vars
     uses: ./.github/workflows/build-site.yml
+    with:
+      deploy_subdir: ${{ needs.vars.outputs.subdir }}
 
   build-demo:
+    needs: vars
     uses: ./.github/workflows/build-demo.yml
+    with:
+      deploy_subdir: ${{ needs.vars.outputs.subdir }}
 
   assemble-and-deploy:
-    needs: [build-site, build-demo]
+    needs: [vars, build-site, build-demo]
     runs-on: ubuntu-latest
-
     steps:
       - name: Download site artifact
         uses: actions/download-artifact@v4
@@ -39,15 +59,20 @@ jobs:
           name: demo-dist
           path: pages/demo
 
-      - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v4
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./pages
+          destination_dir: ${{ needs.vars.outputs.subdir }}
+          keep_files: true
 
-      - name: Deploy to GitHub pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      - name: Print URLs
+        shell: bash
+        run: |
+          owner="${{ github.repository_owner }}"
+          repo="${{ github.event.repository.name }}"
+          subdir="${{ needs.vars.outputs.subdir }}"
+          echo "Site: https://${owner}.github.io/${repo}/${subdir}/"
+          echo "Demo: https://${owner}.github.io/${repo}/${subdir}/demo/"
