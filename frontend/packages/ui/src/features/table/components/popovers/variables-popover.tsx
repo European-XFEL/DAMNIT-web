@@ -3,18 +3,16 @@ import { IconList } from '@tabler/icons-react'
 
 import type { Field } from './field-settings'
 import { FieldsPopover } from './fields-popover'
-import { useVariableSettings } from '../../hooks/use-variable-settings'
+import { NONCONFIGURABLE_VARIABLES } from '../../constants'
+import { selectVariableVisibility } from '../../store/selectors'
 import { setVariableVisibility } from '../../table.slice'
 
 import { useAppDispatch, useAppSelector } from '../../../../redux/hooks'
-import { EXCLUDED_VARIABLES } from '../../../../constants'
-
-const NONCONFIGURABLE_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
 
 export function VariablesPopover() {
   const dispatch = useAppDispatch()
   const metadata = useAppSelector((state) => state.tableData.metadata.variables)
-  const { visibility } = useVariableSettings()
+  const visibility = useAppSelector(selectVariableVisibility)
 
   const fields = Object.values(metadata)
     .filter((meta) => !NONCONFIGURABLE_VARIABLES.includes(meta.name))
