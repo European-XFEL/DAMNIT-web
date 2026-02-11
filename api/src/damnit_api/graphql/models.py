@@ -112,22 +112,22 @@ class DamnitRun:
                 {
                     "name": "proposal",
                     "title": "Proposal",
-                    "tag_ids": [],
+                    "tags": [],
                 },
                 {
                     "name": "run",
                     "title": "Run",
-                    "tag_ids": [],
+                    "tags": [],
                 },
                 {
                     "name": "start_time",
                     "title": "Timestamp",
-                    "tag_ids": [],
+                    "tags": [],
                 },
                 {
                     "name": "added_at",
                     "title": "Added at",
-                    "tag_ids": [],
+                    "tags": [],
                 },
             ],
             key="name",

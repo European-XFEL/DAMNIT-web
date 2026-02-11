@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -168,7 +169,12 @@ async def async_variable_tags(proposal):
         )
         async with get_session(proposal) as session:
             result = await session.execute(selection)
-        return result.mappings().all()
+
+        variable_tags: dict[str, list[int]] = defaultdict(list)
+        for row in result.mappings().all():
+            variable_tags[row["variable_name"]].append(row["tag_id"])
+
+        return variable_tags
     except NoSuchTableError:
         return []
 
