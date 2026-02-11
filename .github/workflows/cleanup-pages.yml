@@ -1,0 +1,57 @@
+name: Cleanup Pages
+
+on:
+  delete:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup-branch:
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v5
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Remove branch folder
+        shell: bash
+        run: |
+          BRANCH="${{ github.event.ref }}"
+          SAFE="$(echo "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's#[^a-z0-9._-]+#-#g')"
+          DIR="branches/$SAFE"
+          rm -rf "$DIR"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove Pages preview for deleted branch: $BRANCH" || exit 0
+          git push
+
+  cleanup-pr:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v5
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Remove PR folder
+        shell: bash
+        run: |
+          PR="${{ github.event.pull_request.number }}"
+          DIR="pull/$PR"
+          rm -rf "$DIR"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove Pages preview for closed PR: #$PR" || exit 0
+          git push
