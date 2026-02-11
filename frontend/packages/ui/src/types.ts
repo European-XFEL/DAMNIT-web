@@ -17,12 +17,13 @@ export type VariableDataItem = {
 export type VariableMetadataItem = {
   name: string
   title?: string
-  tag_ids: number[]
+  tags: string[]
 }
 
 export type TagItem = {
   id: number
   name: string
+  variables: string[]
 }
 
 export type ExtractedDataItem = unknown
