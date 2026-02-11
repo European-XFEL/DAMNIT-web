@@ -7,6 +7,10 @@ type VariableOptions = {
   visibility: boolean
 }
 
+type TagSettings = {
+  isSelected: boolean
+}
+
 type TableState = {
   selection: {
     run: number | null
@@ -16,11 +20,13 @@ type TableState = {
     scroll: Scroll
   }
   variables: Record<string, VariableOptions>
+  tags: Record<string, TagSettings>
 }
 
 const initialState: TableState = {
   selection: { run: null, variables: [] },
   variables: {},
+  tags: {},
   view: { scroll: { x: 0, y: 0 } },
 }
 
@@ -47,6 +53,16 @@ const slice = createSlice({
         state.variables[name] = { ...options, visibility: isVisible }
       }
     },
+    setTagSelection: (
+      state,
+      action: PayloadAction<Record<string, boolean>>
+    ) => {
+      // Set the tags selection
+      for (const [name, isSelected] of Object.entries(action.payload)) {
+        const settings = state.tags[name] ?? {}
+        state.tags[name] = { ...settings, isSelected }
+      }
+    },
     setViewScroll: (state, action: PayloadAction<Scroll>) => {
       state.view.scroll = action.payload
     },
@@ -54,5 +70,10 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { selectRun, reset, setVariableVisibility, setViewScroll } =
-  slice.actions
+export const {
+  selectRun,
+  reset,
+  setTagSelection,
+  setVariableVisibility,
+  setViewScroll,
+} = slice.actions
