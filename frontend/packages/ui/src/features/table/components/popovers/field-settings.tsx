@@ -15,7 +15,7 @@ import { IconSearch } from '@tabler/icons-react'
 
 export type Field = {
   name: string
-  title?: string
+  title: string
   isVisible: boolean
 }
 
@@ -45,7 +45,7 @@ function FieldSearchInput({ value, onChange }: FieldSearchInputProps) {
 
 type FieldSettingsEntryProps = {
   field: Field
-  onVisibilityChange: (visibility: Record<string, boolean>) => void
+  onVisibilityChange: (visibility: Record<Field['name'], boolean>) => void
 }
 
 function FieldSettingsEntry({
@@ -55,7 +55,7 @@ function FieldSettingsEntry({
   return (
     <Box px="sm" py={rem(6)}>
       <Group justify="space-between" wrap="nowrap" gap="sm">
-        <Text size="xs">{field.title ?? field.name}</Text>
+        <Text size="xs">{field.title}</Text>
         <Checkbox
           checked={field.isVisible}
           onChange={(e) =>
@@ -85,10 +85,10 @@ export function FieldSettings({
   onVisibilityChange,
 }: FieldSettingsProps) {
   const [query, setQuery] = useState('')
-  const allVisible = fields.every((field) => !!field.isVisible)
 
+  const allVisible = fields.every((field) => !!field.isVisible)
   const filtered = fields.filter((field) =>
-    (field.title ?? field.name).toLowerCase().includes(query.toLowerCase())
+    field.title.toLowerCase().includes(query.toLowerCase())
   )
 
   function handleAllVisibleChange(event: ChangeEvent<HTMLInputElement>) {
@@ -115,7 +115,7 @@ export function FieldSettings({
         mah={scrollAreaMaxHeight}
         scrollbarSize={scrollbarSize}
         type="always"
-        offsetScrollbars="present"
+        offsetScrollbars="y"
         scrollbars="y"
       >
         {filtered.map((field) => (

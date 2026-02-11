@@ -22,11 +22,10 @@ export function VariablesPopover() {
       (meta) =>
         ({
           name: meta.name,
-          title: meta.title,
+          title: meta.title ?? meta.name,
           isVisible: visibility[meta.name] !== false,
         }) as Field
     )
-  // .slice(0, 3)
 
   const notVisibleCount = fields.filter((f) => !f.isVisible).length
 
