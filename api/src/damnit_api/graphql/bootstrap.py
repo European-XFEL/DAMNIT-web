@@ -1,6 +1,6 @@
 from async_lru import alru_cache
 
-from .. import db
+from .. import db, utils
 from . import models
 
 
@@ -17,21 +17,32 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
     model = models.get_model(proposal)
 
     tags = await db.async_all_tags(proposal)
-    model.tags = tags
-
     variables = await db.async_variables(proposal)
 
-    variable_tags_list = await db.async_variable_tags(proposal)
-    tags_map: dict[str, list[int]] = {}
-    for row in variable_tags_list:
-        name = row["variable_name"]
-        tag_id = row["tag_id"]
-        tags_map.setdefault(name, []).append(tag_id)
-
+    # Populate variable model with tags
+    variable_tags = await db.async_variable_tags(proposal)
     for name, var in variables.items():
-        var["tag_ids"] = tags_map.get(name, [])
+        var["tags"] = [tags[tag]["name"] for tag in variable_tags.get(name, [])]
 
     model.update(variables)
+
+    # Popoulate tag model with variables
+    for name, var_tags in variable_tags.items():
+        for tag in var_tags:
+            tags[tag].setdefault("variables", []).append(name)
+
+    # Also create a tag for untagged variables
+    untagged = {
+        "id": 0,
+        "name": "(Untagged)",
+        "variables": [
+            variable["name"]
+            for variable in model.variables.values()
+            if len(variable["tags"]) == 0
+        ],
+    }
+
+    model.tags = utils.create_map([untagged, *tags.values()], key="name")
 
     runs = await db.async_column(proposal, table="run_info", name="run")
     model.runs = sorted(runs or [])
