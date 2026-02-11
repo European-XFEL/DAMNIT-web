@@ -10,60 +10,100 @@
     "variables": {
       "run": {
         "name": "run",
-        "title": "Run"
+        "title": "Run",
+        "tags": []
       },
       "n_trains": {
         "name": "n_trains",
-        "title": "Trains"
+        "title": "Trains",
+        "tags": ["Run details"]
       },
       "n_pulses": {
         "name": "n_pulses",
-        "title": "Pulses"
+        "title": "Pulses",
+        "tags": ["Run details"]
       },
       "sample_type": {
         "name": "sample_type",
-        "title": "Sample type"
+        "title": "Sample type",
+        "tags": ["Run details"]
       },
       "sample_x": {
         "name": "sample_x",
-        "title": "Sample X [mm]"
+        "title": "Sample X [mm]",
+        "tags": ["Run details"]
       },
       "sample_y": {
         "name": "sample_y",
-        "title": "Sample Y [mm]"
+        "title": "Sample Y [mm]",
+        "tags": ["Run details"]
       },
       "scan_type": {
         "name": "scan_type",
-        "title": "Scan type"
+        "title": "Scan type",
+        "tags": ["Run details"]
       },
       "xgm_intensity": {
         "name": "xgm_intensity",
-        "title": "XGM intensity [uJ]"
+        "title": "XGM intensity [uJ]",
+        "tags": ["Beam properties"]
       },
       "total_transmission": {
         "name": "total_transmission",
-        "title": "Total Transmission"
+        "title": "Total Transmission",
+        "tags": ["Beam properties"]
       },
       "xpcs_q_rings_plot": {
         "name": "xpcs_q_rings_plot",
-        "title": "XPCS q-rings"
+        "title": "XPCS q-rings",
+        "tags": ["XPCS"]
       },
       "xpcs_saxs_plot": {
         "name": "xpcs_saxs_plot",
-        "title": "XPCS SAXS overview"
+        "title": "XPCS SAXS overview",
+        "tags": ["XPCS"]
       },
       "xpcs_g2_plot": {
         "name": "xpcs_g2_plot",
-        "title": "XPCS g2"
+        "title": "XPCS g2",
+        "tags": ["XPCS"]
       },
       "xpcs_intensity_outliers_plot": {
         "name": "xpcs_intensity_outliers_plot",
-        "title": "XPCS intensity outliers"
+        "title": "XPCS intensity outliers",
+        "tags": ["XPCS"]
       }
     },
-    "runs": [
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
-    ]
+    "runs": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+    "tags": {
+      "Run details": {
+        "id": 1,
+        "name": "Run details",
+        "variables": [
+          "n_trains",
+          "n_pulses",
+          "sample_type",
+          "sample_x",
+          "sample_y",
+          "scan_type"
+        ]
+      },
+      "Beam properties": {
+        "id": 2,
+        "name": "Beam properties",
+        "variables": ["xgm_intensity", "total_transmission"]
+      },
+      "XPCS": {
+        "id": 3,
+        "name": "XPCS",
+        "variables": [
+          "xpcs_q_rings_plot",
+          "xpcs_saxs_plot",
+          "xpcs_g2_plot",
+          "xpcs_intensity_outliers_plot"
+        ]
+      }
+    }
   },
   "data": [
     {

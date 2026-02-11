@@ -13,6 +13,11 @@ type Meta = {
   sources: Record<string, SourceMeta>
   variables: Record<string, VariableMeta>
   runs: number[]
+  tags: {
+    id: number
+    name: string
+    variables: string[]
+  }
 }
 
 type SourceMeta = {
@@ -78,16 +83,11 @@ async function fetchData({ proposal, run, variable }: FetchDataOptions) {
 }
 
 function getMetadata(meta: Meta) {
-  const withTagIds = Object.entries(meta.variables).map(([name, variable]) => [
-    name,
-    { ...(variable as Record<string, unknown>), tag_ids: [] },
-  ])
-
   return {
-    variables: Object.fromEntries(withTagIds),
+    variables: meta.variables,
     runs: meta.runs,
     timestamp: 0,
-    tags: {},
+    tags: meta.tags,
   }
 }
 
