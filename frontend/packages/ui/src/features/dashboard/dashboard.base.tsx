@@ -1,12 +1,10 @@
 import { type ReactNode } from 'react'
-import { AppShell, CloseButton, ScrollArea } from '@mantine/core'
+import { AppShell, CloseButton, Skeleton } from '@mantine/core'
 
 import { Tabs } from '../../components/tabs'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { closeAside } from './dashboard.slice'
 import Run from './run'
-
-import { Settings } from '../settings'
 
 type DashboardBaseProps = {
   main: ReactNode
@@ -51,9 +49,11 @@ const DashboardBase = ({ main, header }: DashboardBaseProps) => {
     >
       <AppShell.Header>{header}</AppShell.Header>
       <AppShell.Navbar p="md">
-        <ScrollArea>
-          <Settings />
-        </ScrollArea>
+        {Array(15)
+          .fill(0)
+          .map((_, index) => (
+            <Skeleton key={index} h={28} mt="sm" animate={false} />
+          ))}
       </AppShell.Navbar>
       <AppShell.Main>{main}</AppShell.Main>
       <AppShell.Aside p="xs">
