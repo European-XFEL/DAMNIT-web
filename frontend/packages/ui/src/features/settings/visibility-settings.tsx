@@ -1,3 +1,4 @@
+import { isEmpty } from 'lodash'
 import {
   Accordion,
   Anchor,
@@ -73,7 +74,7 @@ function VisibilitySettings({
       if (!filteredVariableNames) return true
       return Object.values(variables).some(
         (v) =>
-          v.tag_ids.includes(tag.id) && filteredVariableNames.includes(v.name)
+          v.tags.includes(tag.name) && filteredVariableNames.includes(v.name)
       )
     })
   }, [variant, sortedTags, variables, filteredVariableNames])
@@ -90,18 +91,15 @@ function VisibilitySettings({
     }
   }, [variant, searchTerm, visibleTags, filteredVariableNames])
 
-  const getVarCount = (
-    options: { tagId?: number; untagged?: boolean } = {}
-  ) => {
-    const { tagId, untagged } = options
+  const getVarCount = (options: { tag?: string; untagged?: boolean } = {}) => {
+    const { tag, untagged } = options
 
-    if (tagId !== undefined) {
-      return Object.values(variables).filter((v) => v.tag_ids.includes(tagId))
+    if (tag !== undefined) {
+      return Object.values(variables).filter((v) => v.tags?.includes(tag))
         .length
     }
     if (untagged) {
-      return Object.values(variables).filter((v) => v.tag_ids.length === 0)
-        .length
+      return Object.values(variables).filter((v) => isEmpty(v.tags)).length
     }
     return Object.keys(variables).length
   }
@@ -157,17 +155,16 @@ function VisibilitySettings({
               <VisibilitySettingsItem
                 key={'untagged'}
                 isUntagged={true}
-                tagName={'(Untagged)'}
+                tag={'(Untagged)'}
                 variableCount={getVarCount({ untagged: true })}
                 filteredVariableNames={filteredVariableNames}
               />
               {visibleTags.map((tag) => (
                 <VisibilitySettingsItem
-                  key={tag.id}
-                  tagId={tag.id}
-                  tagName={tag.name}
+                  key={tag.name}
+                  tag={tag.name}
                   filteredVariableNames={filteredVariableNames}
-                  variableCount={getVarCount({ tagId: tag.id })}
+                  variableCount={getVarCount({ tag: tag.name })}
                 />
               ))}
             </>

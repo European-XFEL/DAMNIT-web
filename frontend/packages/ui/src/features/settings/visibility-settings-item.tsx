@@ -16,16 +16,14 @@ import { setVariableVisibility } from '../table/table.slice'
 import { selectVariableVisibility } from '../table/store/selectors'
 
 export interface VisibilitySettingsItemProps {
-  tagId?: number
-  tagName?: string
+  tag?: string
   variableCount?: number
   filteredVariableNames?: string[]
   isUntagged?: boolean
 }
 
 function VisibilitySettingsItem({
-  tagId,
-  tagName,
+  tag,
   variableCount,
   filteredVariableNames,
   isUntagged = false,
@@ -34,19 +32,19 @@ function VisibilitySettingsItem({
   const { variables } = useAppSelector((state) => state.tableData.metadata)
   const variableVisibility = useAppSelector(selectVariableVisibility)
 
-  function varListForTagId(tagId: number): string[] {
+  function getVariablesFromTag(tag: string): string[] {
     return Object.keys(variables).filter((varName) =>
-      variables[varName].tag_ids.includes(tagId)
+      variables[varName].tags?.includes(tag)
     )
   }
 
-  const groupVarList = tagId
-    ? varListForTagId(tagId)
+  const groupVarList = tag
+    ? getVariablesFromTag(tag)
     : isUntagged
       ? Object.keys(variables).filter(
           (varName) =>
             !VISIBILITY_EXCLUDED_VARIABLES.includes(varName) &&
-            variables[varName].tag_ids.length === 0
+            variables[varName].tags.length === 0
         )
       : Object.keys(variables).filter(
           (v) => !VISIBILITY_EXCLUDED_VARIABLES.includes(v)
@@ -67,16 +65,14 @@ function VisibilitySettingsItem({
   }
 
   return (
-    <AccordionItem
-      value={tagId?.toString() ?? (isUntagged ? 'untagged' : 'all-variables')}
-    >
+    <AccordionItem value={tag ?? (isUntagged ? 'untagged' : 'all-variables')}>
       <Box pos="relative">
-        {(tagId || isUntagged) && (
+        {(tag || isUntagged) && (
           // We need to remount the checkbox when using the `indeterminate`
           // prop due to a Mantine bug: the `CheckboxIcon` child component
           // is falsely rendered with `indeterminate=false`
           <Checkbox
-            key={`checkbox-${tagName}-all-${isIndeterminate}`}
+            key={`checkbox-${tag}-all-${isIndeterminate}`}
             checked={allOn}
             indeterminate={isIndeterminate}
             onChange={() => {}}
@@ -100,7 +96,7 @@ function VisibilitySettingsItem({
         <AccordionControl pl={rem(42)}>
           <Group justify="space-between">
             <Text fw={600} size="sm">
-              {tagName ?? 'All Variables'}
+              {tag ?? 'All Variables'}
             </Text>
             {variableCount !== undefined && (
               <Badge mx={rem(12)} variant="light" color="indigo">

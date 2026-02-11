@@ -78,13 +78,13 @@ async function fetchData({ proposal, run, variable }: FetchDataOptions) {
 }
 
 function getMetadata(meta: Meta) {
-  const withTagIds = Object.entries(meta.variables).map(([name, variable]) => [
+  const withTags = Object.entries(meta.variables).map(([name, variable]) => [
     name,
-    { ...(variable as Record<string, unknown>), tag_ids: [] },
+    { ...(variable as Record<string, unknown>), tags: [] },
   ])
 
   return {
-    variables: Object.fromEntries(withTagIds),
+    variables: Object.fromEntries(withTags),
     runs: meta.runs,
     timestamp: 0,
     tags: {},
