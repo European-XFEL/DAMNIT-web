@@ -6,6 +6,9 @@ on:
       deploy_subdir:
         required: true
         type: string
+      checkout_ref:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -18,12 +21,11 @@ jobs:
       run:
         working-directory: frontend
 
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.checkout_ref }}
 
       - name: Set up Node
         uses: actions/setup-node@v6
