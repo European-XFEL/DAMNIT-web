@@ -8,7 +8,7 @@ const DEMO_URL = formatUrl(
   import.meta.env.VITE_DEMO_URL || 'https://damnit.xfel.eu/demo'
 )
 
-function HeroPage() {
+function HomeRoute() {
   return (
     <Flex direction="column" mih="100vh">
       <Box style={{ flex: 1 }} />
@@ -58,4 +58,4 @@ function HeroPage() {
   )
 }
 
-export default HeroPage
+export default HomeRoute

@@ -33,7 +33,13 @@ export { useProposal } from './hooks'
 export { useAppDispatch, useAppSelector } from './redux/hooks'
 
 // Routes
-export { LoginRoute, LogoutRoute, PrivateRoute, history } from './routes'
+export {
+  LoginRoute,
+  LogoutRoute,
+  PrivateRoute,
+  RootRoute,
+  history,
+} from './routes'
 
 // Data
 export { resetExtractedData } from './data/extracted'
