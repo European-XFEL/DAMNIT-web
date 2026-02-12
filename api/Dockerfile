@@ -22,6 +22,6 @@ ADD pyproject.toml uv.lock README.md src ./
 RUN --mount=type=cache,target=/opt/uv-cache/ \
   uv sync --locked
 
-EXPOSE 8000
+EXPOSE 8443
 
 CMD ["uv", "run", "-m", "damnit_api.main"]

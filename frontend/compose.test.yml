@@ -8,7 +8,10 @@ services:
       args:
         APP_URL: ${PUBLIC_URL?}${APP_BASE_PATH?}
         DEMO_URL: ${PUBLIC_URL?}${DEMO_BASE_PATH?}
-    image: damnit-web-site:test
+        UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID}
+        UMAMI_HOST_URL: ${UMAMI_HOST_URL}
+        UMAMI_ENABLED: true
+    image: damnit-web-site:latest
 
   demo:
     build:
@@ -17,7 +20,10 @@ services:
       args:
         SITE_URL: ${PUBLIC_URL?}
         BASE_PATH: ${DEMO_BASE_PATH?}
-    image: damnit-web-demo:test
+        UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID}
+        UMAMI_HOST_URL: ${UMAMI_HOST_URL}
+        UMAMI_ENABLED: true
+    image: damnit-web-demo:latest
 
   app:
     build:
@@ -26,16 +32,19 @@ services:
       args:
         SITE_URL: ${PUBLIC_URL?}
         BASE_PATH: ${APP_BASE_PATH?}
-    image: damnit-web-app:test
+        UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID}
+        UMAMI_HOST_URL: ${UMAMI_HOST_URL}
+        UMAMI_ENABLED: true
+    image: damnit-web-app:latest
 
   frontend:
     build:
       context: .
       dockerfile: ./Dockerfile
       additional_contexts:
-        site: "service:site"
-        demo: "service:demo"
-        app: "service:app"
+        site: 'service:site'
+        demo: 'service:demo'
+        app: 'service:app'
     depends_on:
       - site
       - demo
@@ -46,12 +55,10 @@ services:
       - NGINX_APP_BASE_PATH=${APP_BASE_PATH?}
       - NGINX_DEMO_BASE_PATH=${DEMO_BASE_PATH?}
     volumes:
-      # Certs used for mTLS
-      - ./certs:/etc/nginx/certs/mtls
-      # Certs for serving
-      - /data/certs/damnit-test.xfel.eu.key:/etc/nginx/certs/server.key
-      - /data/certs/damnit-test.xfel.eu.pem:/etc/nginx/certs/server.crt
+      - /data/certs/damnit-test.xfel.eu.key:/etc/nginx/certs/cert.key
+      - /data/certs/damnit-test.xfel.eu.pem:/etc/nginx/certs/cert.bundle
+      - /var/log/webserver:/var/log/webserver
     ports:
       - 443:443
     restart: unless-stopped
-    image: damnit-web-frontend:test
+    image: damnit-web-frontend:latest

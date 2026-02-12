@@ -1,8 +1,9 @@
 """MyMdC Client Configurations."""
 
 from datetime import UTC, datetime
+from pathlib import Path
 
-from pydantic import FilePath, HttpUrl, SecretStr
+from pydantic import FilePath, HttpUrl, SecretStr, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -26,7 +27,12 @@ class MyMdCHTTPSettings(BaseSettings):
 class MyMdCMockSettings(BaseSettings):
     """Mock MyMdC data for testing and local development."""
 
-    mock_responses_file: FilePath
+    mock_responses_file: FilePath | None = None
+
+    @field_validator("mock_responses_file", mode="before")
+    @classmethod
+    def allow_missing_file(cls, v: Path | None):
+        return v if v and v.is_file() else None
 
 
 type MyMdCClientSettings = MyMdCHTTPSettings | MyMdCMockSettings

@@ -33,6 +33,15 @@ ENV VITE_SITE_URL=${SITE_URL}
 ARG BASE_PATH
 ENV VITE_BASE_URL=${BASE_PATH}
 
+ARG UMAMI_ENABLED=false
+ENV VITE_UMAMI_ENABLED=${UMAMI_ENABLED}
+
+ARG UMAMI_WEBSITE_ID
+ENV VITE_UMAMI_WEBSITE_ID=${UMAMI_WEBSITE_ID}
+
+ARG UMAMI_HOST_URL
+ENV VITE_UMAMI_HOST_URL=${UMAMI_HOST_URL}
+
 # Copy the rest of the codebase
 COPY . .
 
@@ -64,4 +73,4 @@ COPY --from=build /usr/src/app/${APP_DIR}/dist /usr/src/app/${APP_DIR}/dist
 WORKDIR /usr/src/app/${APP_DIR}
 
 EXPOSE ${PREVIEW_PORT}
-CMD pnpm preview --host 0.0.0.0 --port "$PREVIEW_PORT"
+CMD ["pnpm", "preview", "--host", "0.0.0.0", "--port", "$PREVIEW_PORT"]
