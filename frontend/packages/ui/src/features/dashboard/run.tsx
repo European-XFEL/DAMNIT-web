@@ -1,6 +1,7 @@
 import { Image, ScrollArea, Text } from '@mantine/core'
 
 import classes from './run.module.css'
+import { selectVariableVisibility } from '../table/store/selectors'
 import { DTYPES } from '../../constants'
 import { useAppSelector } from '../../redux/hooks'
 import { type VariableValue } from '../../types'
@@ -82,9 +83,7 @@ const Run = () => {
   const metadataVariables = useAppSelector(
     (state) => state.tableData.metadata.variables
   )
-  const variableVisibility = useAppSelector(
-    (state) => state.table.variableVisibility
-  )
+  const variableVisibility = useAppSelector(selectVariableVisibility)
 
   if (!run || !tableData[run]) {
     return null
