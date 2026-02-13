@@ -2,6 +2,13 @@ name: Build Site
 
 on:
   workflow_call:
+    inputs:
+      deploy_subdir:
+        required: true
+        type: string
+      checkout_ref:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -14,12 +21,11 @@ jobs:
       run:
         working-directory: frontend
 
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.checkout_ref }}
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -33,7 +39,9 @@ jobs:
         run: pnpm install
 
       - name: Build app
-        run: pnpm run build:site --base=/${{ github.event.repository.name }}/
+        run: pnpm run build:site --base="/${{ github.event.repository.name }}/${{ inputs.deploy_subdir }}/"
+        env:
+          VITE_DEMO_URL: "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ inputs.deploy_subdir }}/demo/"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
