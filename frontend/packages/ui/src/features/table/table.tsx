@@ -14,9 +14,10 @@ import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack } from '@mantine/core'
 
 import { getCell, numberCell, textCell } from './cells'
+import { TagsPopover } from './components/popovers/tags-popover'
 import { VariablesPopover } from './components/popovers/variables-popover'
 import ContextMenu from './context-menu'
-import { useVariableSettings } from './hooks/use-variable-settings'
+import { useTable } from './hooks/use-table'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
@@ -72,7 +73,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     scrollY,
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
-  const { visibility: variableVisibility } = useVariableSettings()
+  const { columnVisibility } = useTable()
 
   // Initialization: Memos
   const tableColumns = useMemo(
@@ -81,10 +82,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         .filter(
           ({ name }) =>
             !EXCLUDED_VARIABLES.includes(name) &&
-            variableVisibility[name] !== false
+            columnVisibility[name] !== false
         )
         .map(({ name, title }) => ({ id: name, title: title || name })),
-    [tableMetadata.variables, variableVisibility]
+    [tableMetadata.variables, columnVisibility]
   )
 
   // Data: Populate grid
@@ -342,6 +343,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         <Stack w="100%" h="100%" gap="sm">
           <Group px={6}>
             <VariablesPopover />
+            <TagsPopover />
           </Group>
           <>
             <DataEditor
