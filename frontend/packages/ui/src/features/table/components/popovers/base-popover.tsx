@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { Popover, rem } from '@mantine/core'
+import { Popover } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 
 type RenderTargetOptions = {
@@ -20,7 +20,6 @@ export function BasePopover({ renderTarget, children }: BasePopoverProps) {
       opened={opened}
       onChange={(value) => (value ? open() : close())}
       onClose={close}
-      width={rem(320)}
       shadow="md"
       radius="sm"
       closeOnClickOutside
