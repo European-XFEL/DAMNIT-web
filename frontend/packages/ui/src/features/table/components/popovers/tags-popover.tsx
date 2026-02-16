@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
 import { isEmpty } from 'lodash'
-import { Badge, Button, Group, Text } from '@mantine/core'
 import { IconHash } from '@tabler/icons-react'
 
 import type { Field } from './field-settings'
 import { FieldsPopover } from './fields-popover'
+import { ControlButton } from '../control-button'
 import { selectTagSelection } from '../../store/selectors'
 import { setTagSelection } from '../../table.slice'
 
@@ -44,25 +44,13 @@ export function TagsPopover() {
   return (
     <FieldsPopover
       renderTarget={({ opened, toggle }) => (
-        <Button
-          variant={opened ? 'light' : 'white'}
-          color="gray"
-          c="black"
-          size="xs"
-          leftSection={<IconHash size={14} />}
+        <ControlButton
           onClick={toggle}
-        >
-          <Group gap={6}>
-            <Text size="xs" fw={500}>
-              Tags
-            </Text>
-            {selectionCount && (
-              <Badge variant="light" size="sm" radius="sm">
-                {selectionCount}
-              </Badge>
-            )}
-          </Group>
-        </Button>
+          isActive={opened}
+          icon={IconHash}
+          label="Tags"
+          badgeCount={selectionCount}
+        />
       )}
       fields={fields}
       onVisibilityChange={handleVisibilityChange}

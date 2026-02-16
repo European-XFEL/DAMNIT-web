@@ -1,8 +1,8 @@
-import { Badge, Button, Group, Text } from '@mantine/core'
 import { IconList } from '@tabler/icons-react'
 
 import type { Field } from './field-settings'
 import { FieldsPopover } from './fields-popover'
+import { ControlButton } from '../control-button'
 import { NONCONFIGURABLE_VARIABLES } from '../../constants'
 import { selectVariableVisibility } from '../../store/selectors'
 import { setVariableVisibility } from '../../table.slice'
@@ -30,27 +30,13 @@ export function VariablesPopover() {
   return (
     <FieldsPopover
       renderTarget={({ opened, toggle }) => (
-        <Button
-          variant={opened ? 'light' : 'white'}
-          color="gray"
-          c="black"
-          size="xs"
-          leftSection={<IconList size={14} />}
+        <ControlButton
           onClick={toggle}
-        >
-          <Group gap={6}>
-            <Text size="xs" fw={500}>
-              Variables
-            </Text>
-            {notVisibleCount && (
-              <Badge
-                variant="light"
-                size="sm"
-                radius="sm"
-              >{`-${notVisibleCount}`}</Badge>
-            )}
-          </Group>
-        </Button>
+          isActive={opened}
+          icon={IconList}
+          label="Variables"
+          badgeCount={notVisibleCount * -1}
+        />
       )}
       fields={fields}
       onVisibilityChange={(visibility) => {
