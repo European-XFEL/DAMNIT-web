@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import { isEmpty } from 'lodash'
 import { IconHash } from '@tabler/icons-react'
 
-import type { Field } from './field-settings'
-import { FieldsPopover } from './fields-popover'
+import { FieldSettings, type Field } from './field-settings'
+import { BasePopover } from './base-popover'
 import { ControlButton } from '../control-button'
 import { selectTagSelection } from '../../store/selectors'
 import { setTagSelection } from '../../table.slice'
@@ -42,7 +42,7 @@ export function TagsPopover() {
   }
 
   return (
-    <FieldsPopover
+    <BasePopover
       renderTarget={({ opened, toggle }) => (
         <ControlButton
           onClick={toggle}
@@ -52,8 +52,11 @@ export function TagsPopover() {
           badgeCount={selectionCount}
         />
       )}
-      fields={fields}
-      onVisibilityChange={handleVisibilityChange}
-    />
+    >
+      <FieldSettings
+        fields={fields}
+        onVisibilityChange={handleVisibilityChange}
+      />
+    </BasePopover>
   )
 }

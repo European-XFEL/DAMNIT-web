@@ -1,7 +1,8 @@
 import { IconList } from '@tabler/icons-react'
 
 import type { Field } from './field-settings'
-import { FieldsPopover } from './fields-popover'
+import { BasePopover } from './base-popover'
+import { FieldSettings } from './field-settings'
 import { ControlButton } from '../control-button'
 import { NONCONFIGURABLE_VARIABLES } from '../../constants'
 import { selectVariableVisibility } from '../../store/selectors'
@@ -28,7 +29,7 @@ export function VariablesPopover() {
   const notVisibleCount = fields.filter((f) => !f.isVisible).length
 
   return (
-    <FieldsPopover
+    <BasePopover
       renderTarget={({ opened, toggle }) => (
         <ControlButton
           onClick={toggle}
@@ -38,10 +39,13 @@ export function VariablesPopover() {
           badgeCount={notVisibleCount * -1}
         />
       )}
-      fields={fields}
-      onVisibilityChange={(visibility) => {
-        dispatch(setVariableVisibility(visibility))
-      }}
-    />
+    >
+      <FieldSettings
+        fields={fields}
+        onVisibilityChange={(visibility) => {
+          dispatch(setVariableVisibility(visibility))
+        }}
+      />
+    </BasePopover>
   )
 }
