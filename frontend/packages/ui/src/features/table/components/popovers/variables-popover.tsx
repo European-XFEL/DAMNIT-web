@@ -1,22 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import {
   Box,
   Checkbox,
-  Divider,
   Group,
-  ScrollArea,
   Stack,
   Text,
   rem,
   type CheckboxProps,
 } from '@mantine/core'
-import { useDebouncedValue } from '@mantine/hooks'
 import { IconCheck, IconList, IconCircle } from '@tabler/icons-react'
-import { DataTable } from 'mantine-datatable'
 
 import { BasePopover } from './base-popover'
+import { SearchableTable } from './searchable-table'
 import { ControlButton } from '../control-button'
-import { SearchInput } from '../search-input'
 import {
   useColumnVisibilityFromTags,
   useColumnVisibilityFromVariables,
@@ -129,6 +125,13 @@ function VariableDetails({ tags }: VariableDetailsProps) {
   )
 }
 
+type VariableRecord = {
+  name: string
+  title: string
+  tags: TagSelection
+  isVisible: boolean
+}
+
 function VariablesTable() {
   const dispatch = useAppDispatch()
 
@@ -138,32 +141,23 @@ function VariablesTable() {
   const visibilityFromVariables = useColumnVisibilityFromVariables()
   const visibilityFromTags = useColumnVisibilityFromTags()
 
-  const [query, setQuery] = useState('')
-  const [debouncedQuery] = useDebouncedValue(query, 200)
-
   const records = useMemo(
     () =>
-      Object.entries(visibilityFromVariables)
-        .map(([variable, isVisible]) => {
-          const meta = metadata?.[variable]
+      Object.entries(visibilityFromVariables).map(([variable, isVisible]) => {
+        const meta = metadata?.[variable]
 
-          const tags = Object.fromEntries(
-            (meta?.tags ?? []).map((tag) => [tag, !!tagSelection?.[tag]])
-          ) as TagSelection
+        const tags = Object.fromEntries(
+          (meta?.tags ?? []).map((tag) => [tag, !!tagSelection?.[tag]])
+        )
 
-          return {
-            name: variable,
-            title: meta?.title ?? variable,
-            tags,
-            isVisible,
-          }
-        })
-        .filter((record) =>
-          record.title
-            .toLowerCase()
-            .includes(debouncedQuery.trim().toLowerCase())
-        ),
-    [visibilityFromVariables, tagSelection, metadata, debouncedQuery]
+        return {
+          name: variable,
+          title: meta?.title ?? variable,
+          tags,
+          isVisible,
+        } as VariableRecord
+      }),
+    [visibilityFromVariables, tagSelection, metadata]
   )
 
   const applyVisibility = (visibility: VariableVisibility) => {
@@ -176,13 +170,37 @@ function VariablesTable() {
     )
 
   return (
-    <Stack gap={2}>
-      <Group justify="space-between">
-        <SearchInput
-          value={query}
-          onChange={setQuery}
-          placeholder="Search variables"
-        />
+    <SearchableTable
+      searchKey="title"
+      searchPlaceholder="Search variables"
+      dataTableProps={{
+        records,
+        columns: [
+          { accessor: 'title' },
+          {
+            accessor: 'isVisible',
+            width: rem(36),
+            render: ({ name, isVisible }) => (
+              <VariableCheckbox
+                checked={isVisible}
+                onChange={(e) =>
+                  applyVisibility({ [name]: e.currentTarget.checked })
+                }
+                variant={
+                  visibilityFromTags == null || visibilityFromTags[name]
+                    ? 'filled'
+                    : 'outline'
+                }
+              />
+            ),
+          },
+        ],
+        rowExpansion: {
+          content: ({ record }) => <VariableDetails tags={record.tags} />,
+        },
+        idAccessor: 'name',
+      }}
+      toolbarAction={
         <Checkbox
           checked={Object.values(visibilityFromVariables).every(Boolean)}
           onChange={(e) =>
@@ -192,49 +210,8 @@ function VariablesTable() {
           size="sm"
           mr={16}
         />
-      </Group>
-      <Divider />
-      <ScrollArea.Autosize
-        mah="50vh"
-        scrollbarSize={6}
-        type="always"
-        offsetScrollbars="present"
-        scrollbars="y"
-      >
-        <DataTable
-          noHeader
-          highlightOnHover
-          verticalSpacing="xs"
-          fz="xs"
-          withRowBorders={false}
-          columns={[
-            { accessor: 'title' },
-            {
-              accessor: 'isVisible',
-              width: rem(36),
-              render: ({ name, isVisible }) => (
-                <VariableCheckbox
-                  checked={isVisible}
-                  onChange={(e) =>
-                    applyVisibility({ [name]: e.currentTarget.checked })
-                  }
-                  variant={
-                    visibilityFromTags == null || visibilityFromTags[name]
-                      ? 'filled'
-                      : 'outline'
-                  }
-                />
-              ),
-            },
-          ]}
-          records={records}
-          rowExpansion={{
-            content: ({ record }) => <VariableDetails tags={record.tags} />,
-          }}
-          idAccessor="name"
-        />
-      </ScrollArea.Autosize>
-    </Stack>
+      }
+    />
   )
 }
 
