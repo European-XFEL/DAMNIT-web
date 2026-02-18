@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import isEmpty from 'lodash/isEmpty'
 import lodashSize from 'lodash/size'
-import { rem } from '@mantine/core'
+import { Anchor, rem } from '@mantine/core'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
 
 import { BasePopover } from './base-popover'
@@ -10,7 +10,7 @@ import { SearchableTable } from './searchable-table'
 import { ControlButton } from '../control-button'
 import { useColumnVisibility } from '../../hooks/use-column-visibility'
 import { selectTagSelection } from '../../store/selectors'
-import { setTagSelection } from '../../table.slice'
+import { clearTagSelection, setTagSelection } from '../../table.slice'
 
 import { useAppDispatch, useAppSelector } from '../../../../redux/hooks'
 
@@ -110,6 +110,19 @@ export function TagsTable() {
         },
         idAccessor: 'name',
       }}
+      toolbarAction={
+        <Anchor
+          component="button"
+          type="button"
+          size="xs"
+          c="indigo"
+          onClick={(_) => dispatch(clearTagSelection())}
+          underline="hover"
+          mr={10}
+        >
+          Clear all
+        </Anchor>
+      }
     />
   )
 }
