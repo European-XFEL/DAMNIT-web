@@ -26,12 +26,14 @@ function VariableDetails({ name }: VariableDetailsProps) {
   const metadata = useAppSelector((state) => state.tableData.metadata.variables)
   const tagSelection = useAppSelector(selectTagSelection)
 
-  const tags = Object.fromEntries(
-    metadata[name].tags.map((tag) => [tag, !!tagSelection?.[tag]])
-  )
+  const items = metadata[name].tags.map((tagName) => ({
+    name: tagName,
+    title: tagName,
+    selected: !!tagSelection?.[tagName],
+  }))
 
-  const selectedCount = Object.values(tags).reduce(
-    (acc, value) => acc + Number(value),
+  const selectedCount = items.reduce(
+    (acc, item) => acc + Number(item.selected),
     0
   )
 
@@ -39,10 +41,10 @@ function VariableDetails({ name }: VariableDetailsProps) {
     <RowDetails>
       <RowDetails.Section
         header="Tags"
-        info={`${selectedCount}/${lodashSize(tags)} selected`}
+        info={`${selectedCount}/${lodashSize(items)} selected`}
       >
         <RowDetails.List
-          items={tags}
+          items={items}
           renderIndicator={({ selected, color, size }) =>
             selected ? (
               <IconCheck size={size} style={{ color }} />
@@ -132,7 +134,7 @@ function VariablesTable() {
           }
           color="indigo"
           size="sm"
-          mr={16}
+          mr={14}
         />
       }
     />

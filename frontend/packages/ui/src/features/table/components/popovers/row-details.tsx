@@ -83,8 +83,14 @@ export function RowItemCheckbox({
 // ----------------------------------------------------------------------------
 // List
 
+type RowListItem = {
+  name: string
+  title: string
+  selected: boolean
+}
+
 export type RowListProps = {
-  items: Record<string, boolean>
+  items: RowListItem[]
   renderIndicator?: IndicatorRenderer
 }
 
@@ -94,18 +100,22 @@ function List({ items, renderIndicator }: RowListProps) {
     numeric: true,
   })
 
-  const entries = Object.entries(items).sort(
-    ([aKey, aSelected], [bKey, bSelected]) =>
-      aSelected !== bSelected
-        ? Number(bSelected) - Number(aSelected)
-        : collator.compare(aKey, bKey)
+  // TODO: Change `.sort()` to `.toSorted()` when it's more widely adopted
+  const sorted = [...items].sort((a, b) =>
+    a.selected !== b.selected
+      ? Number(b.selected) - Number(a.selected)
+      : collator.compare(a.title, b.title)
   )
 
   return (
     <Stack gap={6}>
-      {entries.map(([key, selected]) => (
-        <Item key={key} selected={selected} renderIndicator={renderIndicator}>
-          {key}
+      {sorted.map((item) => (
+        <Item
+          key={item.name}
+          selected={item.selected}
+          renderIndicator={renderIndicator}
+        >
+          {item.title}
         </Item>
       ))}
     </Stack>

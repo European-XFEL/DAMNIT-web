@@ -27,6 +27,7 @@ export function SearchInput({
       placeholder={placeholder}
       leftSection={<IconSearch size={14} />}
       variant="unstyled"
+      style={{ minWidth: 100 }}
     />
   )
 }

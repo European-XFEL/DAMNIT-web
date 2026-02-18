@@ -24,18 +24,23 @@ type TagDetailProps = {
 }
 
 function TagDetail({ name }: TagDetailProps) {
-  const metadata = useAppSelector((state) => state.tableData.metadata.tags)
+  const { variables, tags } = useAppSelector(
+    (state) => state.tableData.metadata
+  )
   const columnVisibility = useColumnVisibility()
 
-  const variables = Object.fromEntries(
-    metadata[name].variables.map((variable) => [
-      variable,
-      columnVisibility[variable],
-    ])
-  )
+  const items = tags[name].variables.map((varName) => {
+    const varMeta = variables[varName]
 
-  const visibleCount = Object.values(variables).reduce(
-    (acc, value) => acc + Number(value),
+    return {
+      name: varMeta.name,
+      title: varMeta.title ?? varMeta.name,
+      selected: columnVisibility[varName],
+    }
+  })
+
+  const visibleCount = items.reduce(
+    (acc, item) => acc + Number(item.selected),
     0
   )
 
@@ -43,10 +48,10 @@ function TagDetail({ name }: TagDetailProps) {
     <RowDetails>
       <RowDetails.Section
         header="Variables"
-        info={`${visibleCount}/${lodashSize(variables)} visible`}
+        info={`${visibleCount}/${lodashSize(items)} visible`}
       >
         <RowDetails.List
-          items={variables}
+          items={items}
           renderIndicator={({ selected, color, size }) =>
             selected ? (
               <IconEye size={size} style={{ color }} />
