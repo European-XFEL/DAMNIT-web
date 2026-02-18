@@ -1,16 +1,10 @@
 import { useMemo } from 'react'
-import {
-  Box,
-  Checkbox,
-  Group,
-  Stack,
-  Text,
-  rem,
-  type CheckboxProps,
-} from '@mantine/core'
+import lodashSize from 'lodash/size'
+import { Checkbox, rem } from '@mantine/core'
 import { IconCheck, IconList, IconCircle } from '@tabler/icons-react'
 
 import { BasePopover } from './base-popover'
+import { RowDetails, RowItemCheckbox } from './row-details'
 import { SearchableTable } from './searchable-table'
 import { ControlButton } from '../control-button'
 import {
@@ -23,112 +17,48 @@ import { setVariableVisibility } from '../../table.slice'
 import { useAppDispatch, useAppSelector } from '../../../../redux/hooks'
 
 type VariableVisibility = Record<string, boolean>
-type TagSelection = Record<string, boolean>
-
-type VariableCheckboxProps = Pick<
-  CheckboxProps,
-  'checked' | 'onChange' | 'variant'
->
-
-function VariableCheckbox({
-  variant,
-  checked,
-  onChange,
-}: VariableCheckboxProps) {
-  return (
-    <Checkbox
-      variant={variant}
-      checked={checked}
-      onChange={onChange}
-      onClick={(e) => e.stopPropagation()}
-      color="indigo"
-      size="xs"
-    />
-  )
-}
 
 type VariableDetailsProps = {
-  tags: TagSelection
+  name: string
 }
 
-function VariableDetails({ tags }: VariableDetailsProps) {
-  const entries = Object.entries(tags ?? {})
-  const selectedCount = entries.reduce((acc, [, v]) => acc + (v ? 1 : 0), 0)
+function VariableDetails({ name }: VariableDetailsProps) {
+  const metadata = useAppSelector((state) => state.tableData.metadata.variables)
+  const tagSelection = useAppSelector(selectTagSelection)
 
-  const sorted = entries
-    .slice()
-    .sort(
-      ([aTag, aSel], [bTag, bSel]) =>
-        Number(bSel) - Number(aSel) || aTag.localeCompare(bTag)
-    )
+  const tags = Object.fromEntries(
+    metadata[name].tags.map((tag) => [tag, !!tagSelection?.[tag]])
+  )
 
-  const headerC =
-    'light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2))'
-  const unselectedC =
-    'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-2))'
-  const selectedC =
-    'light-dark(var(--mantine-color-gray-9), var(--mantine-color-dark-0))'
+  const selectedCount = Object.values(tags).reduce(
+    (acc, value) => acc + Number(value),
+    0
+  )
 
   return (
-    <Stack
-      bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
-      px="md"
-      py="xs"
-      gap={6}
-      style={{
-        borderLeft:
-          '3px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4))',
-      }}
-    >
-      <Group justify="space-between" gap={8}>
-        <Text
-          fz={10}
-          fw={500}
-          tt="uppercase"
-          c={headerC}
-          style={{ letterSpacing: 0.8 }}
-        >
-          Tags
-        </Text>
-
-        <Text fz={10} c={headerC} style={{ letterSpacing: 0.6 }}>
-          {selectedCount}/{entries.length} selected
-        </Text>
-      </Group>
-
-      <Stack gap={6}>
-        {sorted.map(([tag, isSelected]) => {
-          const color = isSelected ? selectedC : unselectedC
-
-          return (
-            <Group key={tag} gap={6} wrap="nowrap" align="center">
-              <Box
-                w={14}
-                h={14}
-                style={{ display: 'grid', placeItems: 'center' }}
-              >
-                {isSelected ? (
-                  <IconCheck size={13} style={{ color }} />
-                ) : (
-                  <IconCircle size={6} stroke={2} style={{ color }} />
-                )}
-              </Box>
-
-              <Text fz={11} lh={1.2} c={color} fw={400} lineClamp={1}>
-                {tag}
-              </Text>
-            </Group>
-          )
-        })}
-      </Stack>
-    </Stack>
+    <RowDetails>
+      <RowDetails.Section
+        header="Tags"
+        info={`${selectedCount}/${lodashSize(tags)} selected`}
+      >
+        <RowDetails.List
+          items={tags}
+          renderIndicator={({ selected, color, size }) =>
+            selected ? (
+              <IconCheck size={size} style={{ color }} />
+            ) : (
+              <IconCircle size={6} stroke={4} style={{ color }} />
+            )
+          }
+        />
+      </RowDetails.Section>
+    </RowDetails>
   )
 }
 
 type VariableRecord = {
   name: string
   title: string
-  tags: TagSelection
   isVisible: boolean
 }
 
@@ -136,7 +66,6 @@ function VariablesTable() {
   const dispatch = useAppDispatch()
 
   const metadata = useAppSelector((state) => state.tableData.metadata.variables)
-  const tagSelection = useAppSelector(selectTagSelection)
 
   const visibilityFromVariables = useColumnVisibilityFromVariables()
   const visibilityFromTags = useColumnVisibilityFromTags()
@@ -146,18 +75,13 @@ function VariablesTable() {
       Object.entries(visibilityFromVariables).map(([variable, isVisible]) => {
         const meta = metadata?.[variable]
 
-        const tags = Object.fromEntries(
-          (meta?.tags ?? []).map((tag) => [tag, !!tagSelection?.[tag]])
-        )
-
         return {
           name: variable,
           title: meta?.title ?? variable,
-          tags,
           isVisible,
         } as VariableRecord
       }),
-    [visibilityFromVariables, tagSelection, metadata]
+    [visibilityFromVariables, metadata]
   )
 
   const applyVisibility = (visibility: VariableVisibility) => {
@@ -181,7 +105,7 @@ function VariablesTable() {
             accessor: 'isVisible',
             width: rem(36),
             render: ({ name, isVisible }) => (
-              <VariableCheckbox
+              <RowItemCheckbox
                 checked={isVisible}
                 onChange={(e) =>
                   applyVisibility({ [name]: e.currentTarget.checked })
@@ -196,7 +120,7 @@ function VariablesTable() {
           },
         ],
         rowExpansion: {
-          content: ({ record }) => <VariableDetails tags={record.tags} />,
+          content: ({ record }) => <VariableDetails name={record.name} />,
         },
         idAccessor: 'name',
       }}
@@ -217,10 +141,10 @@ function VariablesTable() {
 
 export function VariablesPopover() {
   const visibilityFromVariables = useColumnVisibilityFromVariables()
-
-  const notVisibleCount = Object.values(visibilityFromVariables).filter(
-    (v) => v === false
-  ).length
+  const notVisibleCount = Object.values(visibilityFromVariables).reduce(
+    (acc, value) => acc + Number(!value),
+    0
+  )
 
   return (
     <BasePopover
