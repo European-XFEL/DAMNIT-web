@@ -91,7 +91,6 @@ export function SearchableTable<T>({
         <DataTable
           noHeader
           highlightOnHover
-          verticalSpacing="xs"
           fz="xs"
           withRowBorders={false}
           records={filtered}
