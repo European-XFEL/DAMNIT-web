@@ -5,6 +5,7 @@ services:
     build: .
     volumes:
       - ./db:/db
+      - ./certs:/certs
       - /gpfs:/gpfs:ro
       - /pnfs:/pnfs:ro
     env_file:
