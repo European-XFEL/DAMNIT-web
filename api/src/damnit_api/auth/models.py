@@ -3,7 +3,7 @@
 from typing import Self
 
 from fastapi.requests import HTTPConnection
-from pydantic import BaseModel, ConfigDict, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 from .. import get_logger
 from .._db.dependencies import DBSession
@@ -16,7 +16,7 @@ class BaseUserInfo(BaseModel):
     email: str
     family_name: str
     given_name: str
-    groups: list[str]
+    groups: list[str] | None = Field(default_factory=list)
     name: str
     preferred_username: str
 
@@ -43,6 +43,7 @@ class OAuthUserInfo(BaseUserInfo):
         if user_dict is None:
             msg = "No user info in session"
             raise ValueError(msg)
+
         return cls.model_validate(user_dict)
 
 
