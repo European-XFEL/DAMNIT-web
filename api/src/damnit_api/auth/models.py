@@ -16,7 +16,7 @@ class BaseUserInfo(BaseModel):
     email: str
     family_name: str
     given_name: str
-    groups: list[str] | None = Field(default_factory=list)
+    groups: list[str] = Field(default_factory=list)
     name: str
     preferred_username: str
 
