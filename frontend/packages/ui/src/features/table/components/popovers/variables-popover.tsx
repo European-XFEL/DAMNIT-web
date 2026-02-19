@@ -142,9 +142,14 @@ function VariablesTable() {
 }
 
 export function VariablesPopover() {
+  const visibilityFromTags = useColumnVisibilityFromTags()
   const visibilityFromVariables = useColumnVisibilityFromVariables()
-  const notVisibleCount = Object.values(visibilityFromVariables).reduce(
-    (acc, value) => acc + Number(!value),
+  const notVisibleCount = Object.entries(visibilityFromVariables).reduce(
+    (acc, [name, isVisible]) =>
+      acc +
+      Number(
+        (visibilityFromTags == null || visibilityFromTags[name]) && !isVisible
+      ),
     0
   )
 
