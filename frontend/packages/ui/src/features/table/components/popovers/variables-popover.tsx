@@ -134,7 +134,7 @@ function VariablesTable() {
           }
           color="indigo"
           size="sm"
-          mr={14}
+          mr={10}
         />
       }
     />

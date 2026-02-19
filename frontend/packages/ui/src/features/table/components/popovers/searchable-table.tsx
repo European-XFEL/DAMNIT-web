@@ -86,7 +86,7 @@ export function SearchableTable<T>({
         mah="50vh"
         scrollbarSize={6}
         type="always"
-        offsetScrollbars="present"
+        offsetScrollbars="x"
         scrollbars="y"
       >
         <DataTable
