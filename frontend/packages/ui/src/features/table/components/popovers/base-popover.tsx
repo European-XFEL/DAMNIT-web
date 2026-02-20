@@ -1,22 +1,18 @@
 import { type ReactNode } from 'react'
-import { Popover, rem } from '@mantine/core'
+import { Popover } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-
-import { FieldSettings, type FieldSettingsProps } from './field-settings'
 
 type RenderTargetOptions = {
   opened: boolean
   toggle: () => void
 }
 
-type FieldsPopoverProps = {
+type BasePopoverProps = {
   renderTarget: (options: RenderTargetOptions) => ReactNode
-} & FieldSettingsProps
+  children: ReactNode
+}
 
-export function FieldsPopover({
-  renderTarget,
-  ...fieldSettingsProps
-}: FieldsPopoverProps) {
+export function BasePopover({ renderTarget, children }: BasePopoverProps) {
   const [opened, { toggle, open, close }] = useDisclosure(false)
 
   return (
@@ -24,12 +20,11 @@ export function FieldsPopover({
       opened={opened}
       onChange={(value) => (value ? open() : close())}
       onClose={close}
-      width={rem(320)}
       shadow="md"
       radius="sm"
       closeOnClickOutside
       withArrow
-      arrowPosition="center"
+      arrowPosition="side"
       arrowSize={12}
       offset={{ mainAxis: 6 }}
       position="bottom-start"
@@ -44,7 +39,7 @@ export function FieldsPopover({
     >
       <Popover.Target>{renderTarget({ opened, toggle })}</Popover.Target>
       <Popover.Dropdown px={0} py={0}>
-        <FieldSettings {...fieldSettingsProps} />
+        {children}
       </Popover.Dropdown>
     </Popover>
   )
