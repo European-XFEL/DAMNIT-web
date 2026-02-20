@@ -8,6 +8,7 @@ import { BasePopover } from './base-popover'
 import { RowDetails, RowItemCheckbox } from './row-details'
 import { SearchableTable } from './searchable-table'
 import { ControlButton } from '../control-button'
+import { NONCONFIGURABLE_VARIABLES } from '../../constants'
 import { useColumnVisibility } from '../../hooks/use-column-visibility'
 import { selectTagSelection } from '../../store/selectors'
 import { clearTagSelection, setTagSelection } from '../../table.slice'
@@ -29,15 +30,21 @@ function TagDetail({ name }: TagDetailProps) {
   )
   const columnVisibility = useColumnVisibility()
 
-  const items = tags[name].variables.map((varName) => {
-    const varMeta = variables[varName]
+  const items = tags[name].variables
+    .filter(
+      (varName) =>
+        Object.hasOwn(variables, varName) &&
+        !NONCONFIGURABLE_VARIABLES.includes(varName)
+    )
+    .map((varName) => {
+      const varMeta = variables[varName]
 
-    return {
-      name: varMeta.name,
-      title: varMeta.title ?? varMeta.name,
-      selected: columnVisibility[varName],
-    }
-  })
+      return {
+        name: varMeta.name,
+        title: varMeta.title ?? varMeta.name,
+        selected: columnVisibility[varName],
+      }
+    })
 
   const visibleCount = items.reduce(
     (acc, item) => acc + Number(item.selected),
