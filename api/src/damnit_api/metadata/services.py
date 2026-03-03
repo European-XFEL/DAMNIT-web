@@ -62,7 +62,7 @@ async def _fetch_proposal_meta(
     await logger.adebug(
         "Damnit path info",
         damnit_path=damnit_path,
-        damnit_paths_searched=[str(p.relative_to(path)) for p in damnit_paths_searched],
+        damnit_paths_searched=[str(path) for p in damnit_paths_searched],
     )
 
     principal_investigator = None
@@ -98,19 +98,17 @@ async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
     """Search for a DAMNIT directory in common locations relative to `path`.
 
     Looks for `usr/Shared/{amore,amore-online}` directories."""
-    usr_share = APath(path) / "usr" / "Shared" / "amore"
+    usr_share = APath(path) / "usr" / "Shared"
 
     searched_paths = []
     for dir in ("amore", "amore-online"):
         try:
-            damnit_path = damnit_path = usr_share.parent / dir
+            damnit_path = await (usr_share / dir).resolve()
             searched_paths.append(Path(damnit_path))
             if await damnit_path.is_dir():
                 return Path(damnit_path), searched_paths
         except PermissionError:
-            await logger.awarning(
-                f"Permission denied when accessing {usr_share.parent / dir}"
-            )
+            await logger.awarning(f"Permission denied when accessing {damnit_path}")
             continue
 
     return None, searched_paths
