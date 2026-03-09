@@ -4,9 +4,6 @@ export { default as DashboardMain } from './dashboard.main'
 export {
   default as dashboardReducer,
   reset as resetDashboard,
-  addTab,
-  removeTab,
-  setCurrentTab,
   openNav,
   closeNav,
   openAside,
