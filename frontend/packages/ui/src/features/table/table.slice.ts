@@ -63,6 +63,13 @@ const slice = createSlice({
         state.tags[name] = { ...settings, isSelected }
       }
     },
+    clearTagSelection: (state) => {
+      // Set the tags selection
+      for (const name of Object.keys(state.tags)) {
+        const settings = state.tags[name] ?? {}
+        state.tags[name] = { ...settings, isSelected: false }
+      }
+    },
     setViewScroll: (state, action: PayloadAction<Scroll>) => {
       state.view.scroll = action.payload
     },
@@ -71,8 +78,9 @@ const slice = createSlice({
 
 export default slice.reducer
 export const {
-  selectRun,
+  clearTagSelection,
   reset,
+  selectRun,
   setTagSelection,
   setVariableVisibility,
   setViewScroll,
