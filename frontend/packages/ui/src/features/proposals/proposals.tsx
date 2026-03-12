@@ -39,7 +39,7 @@ const formatRunCycle = (date: string) => {
 }
 
 type CellProps = {
-  isExpanded: boolean
+  isExpanded?: boolean
 }
 
 /*
@@ -54,7 +54,7 @@ interface ExpandedCellProps extends CellProps {
 
 const ExpandedCell = memo(function ExpandedCell({
   Component,
-  isExpanded,
+  isExpanded = false,
 }: ExpandedCellProps) {
   return (
     <Component
@@ -77,7 +77,7 @@ interface CycleCellProps extends CellProps {
 
 const CycleCell = memo(function CycleCell({
   cycle,
-  isExpanded,
+  isExpanded = true,
 }: CycleCellProps) {
   return (
     <Group gap={0}>
@@ -303,11 +303,7 @@ const ProposalHeader = () => {
 
 const Proposals = () => {
   const proposals = useAppSelector(selectAvailableProposals)
-
   const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
-  const [expandedCycles, setExpandedCycles] = useState<string[]>(
-    cycles.slice(0, 1) // Expand the most recent cycle by default
-  )
 
   return (
     <DataTable
@@ -320,12 +316,7 @@ const Proposals = () => {
           accessor: 'cycle',
           title: <ProposalHeader />,
           noWrap: true,
-          render: ({ cycle }) => (
-            <CycleCell
-              cycle={cycle}
-              isExpanded={expandedCycles.includes(cycle)}
-            />
-          ),
+          render: ({ cycle }) => <CycleCell cycle={cycle} />,
         },
       ]}
       records={cycles.map((cycle) => ({
@@ -333,11 +324,7 @@ const Proposals = () => {
         proposals: proposals[cycle],
       }))}
       rowExpansion={{
-        allowMultiple: true,
-        expanded: {
-          recordIds: expandedCycles,
-          onRecordIdsChange: setExpandedCycles,
-        },
+        trigger: 'always',
         content: ({ record }) => {
           return <ProposalSubTable proposals={record.proposals} />
         },
