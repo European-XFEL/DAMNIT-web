@@ -13,7 +13,7 @@ const HomePage = ({ main, header }: HomePageProps) => {
   return (
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>{header}</AppShell.Header>
-      <AppShell.Main>{main}</AppShell.Main>
+      <AppShell.Main mb={64}>{main}</AppShell.Main>
       <AppShell.Footer
         h={100}
         withBorder={false}
