@@ -11,16 +11,20 @@ from .utils import b64image
 NOT_SUPPORTED_MESSAGE = "Not supported."
 
 
-def get_extracted_data(proposal, run, variable):
+def get_preview_data(proposal, run, variable):
     try:
         var_data = Damnit(proposal)[run, variable]
     except KeyError:
         return standardize(None, name=variable, dtype=DamnitType.NONE.value)
 
-    data = var_data.read()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-    type_hint = (
-        var_data.type_hint()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-    )
+    data = var_data.preview_data(data_fallback=False)
+    if data is not None:
+        type_hint = None
+    else:
+        data = var_data.read()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+        type_hint = (
+            var_data.type_hint()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+        )
 
     match type(data):
         case np.ndarray:
@@ -87,6 +91,8 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
                 if isinstance(data, int | float | np.integer | np.floating):
                     return DamnitType.NUMBER
                 raise ValueError(NOT_SUPPORTED_MESSAGE)
+            if data.ndim == 3 and data.shape[-1] in (3, 4):
+                return DamnitType.RGBA
         case DataType.Dataset | DataType.PlotlyFigure:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 

@@ -2,7 +2,7 @@ import strawberry
 from sqlalchemy import and_, func, select
 from strawberry.scalars import JSON
 
-from ..data import get_extracted_data
+from ..data import get_preview_data
 from ..db import async_table, get_session
 from .models import DamnitRun, get_model
 from .utils import DatabaseInput, fetch_info
@@ -133,7 +133,7 @@ class Query:
     ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
-        return get_extracted_data(
+        return get_preview_data(
             proposal=int(
                 database.proposal  # FIX: # pyright: ignore[reportArgumentType, reportReturnType]  # noqa: E501
             ),
