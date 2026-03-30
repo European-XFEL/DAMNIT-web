@@ -19,8 +19,7 @@
     "preview:site": "pnpm --filter @damnit-frontend/site preview",
     "dev:demo": "pnpm --filter @damnit-frontend/demo dev",
     "build:demo": "pnpm --filter @damnit-frontend/demo build",
-    "preview:demo": "pnpm --filter @damnit-frontend/demo preview",
-    "prepare": "cd .. && husky frontend/.husky"
+    "preview:demo": "pnpm --filter @damnit-frontend/demo preview"
   },
   "keywords": [],
   "author": "",
@@ -28,8 +27,6 @@
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
     "eslint": "catalog:linting",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"
   }

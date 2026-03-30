@@ -1,4 +1,5 @@
 .vscode
+.venv
 .env
 damnit_proposals.json
 dist/
