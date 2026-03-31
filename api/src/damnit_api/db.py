@@ -1,5 +1,5 @@
-from collections.abc import AsyncIterator
 from collections import defaultdict
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path

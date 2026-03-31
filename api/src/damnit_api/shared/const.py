@@ -11,9 +11,11 @@ class DamnitType(Enum):
     STRING = "string"
     BOOLEAN = "boolean"
     TIMESTAMP = "timestamp"
+    COMPLEX = "complex"
 
     ARRAY = "array"
     IMAGE = "image"
+    NUMPY = "numpy"
     RGBA = "rgba"
 
     PNG = "png"

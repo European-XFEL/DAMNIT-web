@@ -12,19 +12,28 @@ from .shared.const import DamnitType
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
 
-DTYPE_MAP = {
+DATA_TYPES = {
     "bytes": DamnitType.IMAGE,
     "str": DamnitType.STRING,
     "bool_": DamnitType.BOOLEAN,
 }
 
+SUMMARY_TYPES = {
+    "complex": DamnitType.COMPLEX,
+    "numpy": DamnitType.NUMPY,
+    "trendline": DamnitType.ARRAY,
+}
 
-def map_dtype(dtype, default=DamnitType.STRING):
-    dtype = DTYPE_MAP.get(dtype.__name__)
-    if not dtype:
-        dtype = DamnitType.NUMBER if np.issubdtype(dtype, np.number) else default
-    return dtype
 
+def python_type_to_damnit_type(type_):
+    type_ = DATA_TYPES.get(type_.__name__)
+    if not type_ and np.issubdtype(type_, np.number):
+        type_ = DamnitType.NUMBER
+    return type_
+
+
+def summary_type_to_damnit_type(type_):
+    return SUMMARY_TYPES.get(type_)
 
 # -----------------------------------------------------------------------------
 # Conversion
@@ -123,3 +132,7 @@ def get_type(type_):
         return get_args(type_)[0]
 
     return type_
+
+
+def wrap_values(dict_, key="value"):
+    return {k: {key: v} for k, v in dict_.items()}

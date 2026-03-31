@@ -1,16 +1,20 @@
 import inspect
 from datetime import UTC, datetime
-from typing import (
-    Generic,
-    NewType,
-    TypeVar,
-)
+from typing import Generic, NewType, TypeVar
 
 import numpy as np
 import strawberry
+from damnit.api import blob2complex, blob2numpy
 
 from ..shared.const import DEFAULT_PROPOSAL, DamnitType
-from ..utils import Registry, b64image, create_map, get_type, map_dtype
+from ..utils import (
+    Registry,
+    b64image,
+    create_map,
+    get_type,
+    python_type_to_damnit_type,
+    summary_type_to_damnit_type,
+)
 
 T = TypeVar("T")
 
@@ -26,18 +30,72 @@ def to_js_string(value):
     return str(value)
 
 
-def serialize(value, *, dtype=DamnitType.STRING):
+def resample_array(arr):
+    # Cast arrays to float (same as PyQt implementation)
+    x = np.asarray(arr[0], dtype=np.float64)
+    y = np.asarray(arr[1], dtype=np.float64)
+
+    # Drop not finite values (same as PyQt implementation)
+    finite = np.isfinite(x) & np.isfinite(y)
+    x = x[finite]
+    y = y[finite]
+
+    # Order by x-axis
+    order = np.argsort(x)
+    x = x[order]
+    y = y[order]
+
+    # Remove duplicates, just in case
+    x, unique_idx = np.unique(x, return_index=True)
+    y = y[unique_idx]
+
+    # Build evenly-spaced x-axis (maybe using `size` is not the best)
+    x_even = np.linspace(x[0], x[-1], x.size)
+
+    # Build evenly-spaced y-axis
+    return np.interp(x_even, x, y)
+
+
+def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
     if value is None:
         return value
 
-    if dtype is DamnitType.IMAGE:
-        value = b64image(value)
-    elif dtype is DamnitType.TIMESTAMP:
-        value = int(value.timestamp() if isinstance(value, datetime) else value * 1000)
-    elif dtype is DamnitType.NUMBER and not np.isfinite(value):
-        value = to_js_string(value)
+    match dtype:
+        case DamnitType.IMAGE:
+            value = b64image(value)
 
-    return value
+        case DamnitType.TIMESTAMP:
+            if isinstance(value, datetime):
+                return int(value.timestamp())
+
+            value = int(value * 1000)
+
+        case DamnitType.NUMBER:
+            if not np.isfinite(value):
+                value = to_js_string(value)
+
+        case DamnitType.NUMPY:
+            arr = blob2numpy(value)
+            value = f"{arr.dtype}: {arr.shape}"
+            dtype = DamnitType.STRING
+
+        case DamnitType.COMPLEX:
+            value = str(blob2complex(value))
+            dtype = DamnitType.STRING
+
+        case DamnitType.ARRAY:
+            if isinstance(value, bytes):
+                arr = blob2numpy(value)
+
+                # Validate/prepare data (same as PyQt implementation)
+                if arr.ndim != 2 or arr.shape[0] != 2 or arr.shape[1] < 2:
+                    # Unsupported shape
+                    value = f"{arr.dtype}: {arr.shape}"
+                    dtype = DamnitType.STRING
+
+                value = resample_array(arr)
+
+    return value, dtype
 
 
 Any = strawberry.scalar(
@@ -78,20 +136,20 @@ class DamnitRun:
     added_at: KnownVariable[Timestamp] | None  # pyright: ignore[reportInvalidTypeForm] # FIX:
 
     @classmethod
-    def from_db(cls, entry):
-        return cls(**cls.resolve(entry, as_dict=False))
+    def from_db(cls, record):
+        return cls(**cls.resolve(record, as_dict=False))
 
     @classmethod
-    def resolve(cls, entry, as_dict=True):
+    def resolve(cls, record, as_dict=True):
         variables = {}
         for name, klass in cls.__annotations__.items():
-            if name not in entry:
+            if name not in record:
                 variables[name] = None
                 continue
 
             klass = get_type(klass)
-            dtype = cls.get_dtype(value=entry[name], klass=klass)
-            value = serialize(entry[name], dtype=dtype)
+            dtype = cls.get_dtype(entry=record[name], klass=klass)
+            value, dtype = serialize(record[name]["value"], dtype=dtype)
 
             if value is None:
                 result = None
@@ -138,17 +196,27 @@ class DamnitRun:
         return cls.__annotations__
 
     @staticmethod
-    def get_dtype(value, klass=None):
+    def get_dtype(entry, klass=None):
         if klass is not None and hasattr(klass, "__args__"):
             type_ = klass.__args__[0]
-            dtype = (
-                map_dtype(type_)
+            return (
+                python_type_to_damnit_type(type_)
                 if inspect.isclass(type_)
                 else DamnitType(type_._scalar_definition.name.lower())
             )
-        else:
-            dtype = map_dtype(type(value))
-        return dtype
+
+        summary_type = entry.get("summary_type")
+        if summary_type is not None:
+            dtype = summary_type_to_damnit_type(summary_type)
+            if dtype is not None:
+                return dtype
+
+        value = entry.get("value")
+        dtype = python_type_to_damnit_type(type(value))
+        if dtype is not None:
+            return dtype
+
+        return DamnitType.STRING
 
 
 class DamnitTable(metaclass=Registry):
@@ -180,7 +248,7 @@ class DamnitTable(metaclass=Registry):
         return has_changed
 
     def as_stype(self, **fields):
-        """Converts the database entry to Damnit type"""
+        """Converts the database record to Damnit type"""
         return self.stype.from_db(fields)  # pyright: ignore[reportOptionalMemberAccess] # FIX:
 
     def _create_stype(self) -> type[DamnitRun]:
