@@ -35,6 +35,7 @@ def python_type_to_damnit_type(type_):
 def summary_type_to_damnit_type(type_):
     return SUMMARY_TYPES.get(type_)
 
+
 # -----------------------------------------------------------------------------
 # Conversion
 

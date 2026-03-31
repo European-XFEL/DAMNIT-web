@@ -7,8 +7,6 @@ from sqlalchemy import or_, select
 
 from ..db import async_table, get_session
 from ..shared.const import DEFAULT_PROPOSAL
-from ..utils import map_dtype
-from .models import DamnitType
 
 
 @strawberry.input
@@ -19,13 +17,13 @@ class DatabaseInput:
 
 @dataclass
 class MetaData:
-    dtype: DamnitType = DamnitType.STRING
     timestamp: float = 0
 
 
 @dataclass
 class Data(MetaData):
     value: Any = None
+    summary_type: str | None = None
 
 
 class LatestData:
@@ -35,24 +33,20 @@ class LatestData:
 
     def add(self, data):
         timestamp = data["timestamp"]
-        dtype = map_dtype(type(data["value"]))
 
         # Bookkeep by runs
         run = self.runs[data["run"]]
         if run[data["name"]].timestamp < timestamp:
             run[data["name"]] = Data(
-                value=data["value"], dtype=dtype, timestamp=timestamp
+                value=data["value"],
+                summary_type=data.get("summary_type"),
+                timestamp=timestamp,
             )
 
         # Bookkeep by variables
         variable = self.variables[data["name"]]
         if variable.timestamp < timestamp:
-            variable.dtype = dtype
             variable.timestamp = timestamp
-
-    @property
-    def dtypes(self):
-        return {variable: data.dtype for variable, data in self.variables.items()}
 
     @property
     def timestamp(self):
