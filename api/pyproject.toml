@@ -17,7 +17,7 @@ dependencies = [
     "numpy~=2.3",
     "matplotlib~=3.7",
     "h5py~=3.9",
-    "strawberry-graphql[fastapi]~=0.195",
+    "strawberry-graphql[fastapi]>=0.283.3",
     "uvicorn[standard]~=0.29",
     "aiosqlite~=0.19",
     "scipy~=1.11",
@@ -31,7 +31,7 @@ dependencies = [
     "requests~=2.32",
     "structlog~=24.4",
     "colorama~=0.4",
-    "xarray>=2024.11",                    # uses datever
+    "xarray>=2024.11", # uses datever
     "damnit>=0.1",
     "aiohttp~=3.11",
     "aiofiles>=24.1.0",
@@ -56,7 +56,7 @@ develop = [
     "datamodel-code-generator[http]>=0.35.0",
     "pre-commit>=4.5.1",
     "rich>=14.2.0",
-    "strawberry-graphql[debug-server,fastapi]>=0.283.3",
+    "strawberry-graphql[debug-server]>=0.283.3",
 ]
 dev = [
     { include-group = "develop" },
@@ -67,6 +67,9 @@ dev = [
 
 [tool.uv]
 default-groups = []
+
+[tool.uv.sources]
+damnit = { git = "https://github.com/European-XFEL/DAMNIT.git", branch = "master" }
 
 [tool.hatch.build.targets.sdist]
 include = ["src/damnit_api"]
