@@ -48,21 +48,21 @@ repos:
 
           - id: frontend-eslint
             name: frontend-eslint
-            entry: bash -c 'cd frontend && pnpm exec eslint --fix --cache --cache-location node_modules/.cache/eslint/.eslintcache "${@#frontend/}"' --
+            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec eslint --fix --cache --cache-location node_modules/.cache/eslint/.eslintcache "${@#frontend/}"' --
             language: system
             files: ^frontend/
             types_or: [javascript, jsx, ts, tsx]
 
           - id: frontend-prettier
             name: frontend-prettier
-            entry: bash -c 'cd frontend && pnpm exec prettier --write "${@#frontend/}"' --
+            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec prettier --write "${@#frontend/}"' --
             language: system
             files: ^frontend/
             types_or: [javascript, jsx, ts, tsx, json, html, css, markdown]
 
           - id: frontend-tsc
             name: frontend-tsc
-            entry: bash -c 'cd frontend && pnpm exec tsc -b --noEmit'
+            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec tsc -b --noEmit'
             language: system
             files: ^frontend/
             types_or: [ts, tsx]
