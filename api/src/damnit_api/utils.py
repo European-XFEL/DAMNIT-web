@@ -26,10 +26,10 @@ SUMMARY_TYPES = {
 
 
 def python_type_to_damnit_type(type_):
-    type_ = PYTHON_TYPES.get(type_.__name__)
-    if not type_ and np.issubdtype(type_, np.number):
-        type_ = DamnitType.NUMBER
-    return type_
+    dtype = DATA_TYPES.get(type_.__name__)
+    if not dtype and np.issubdtype(type_, np.number):
+        dtype = DamnitType.NUMBER
+    return dtype
 
 
 def summary_type_to_damnit_type(type_):
