@@ -50,7 +50,7 @@ async def get_latest_data(proposal, timestamp, schema):
             name: {"value": data.value, "summary_type": data.summary_type}
             for name, data in variables.items()
         }
-        run_values.setdefault("run", run)
+        run_values.setdefault("run", {"value": run})
 
         if run_info := latest_runs.get(run):
             run_values.update(wrap_values(run_info))

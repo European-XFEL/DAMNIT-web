@@ -122,7 +122,6 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
                     dtype = DamnitType.STRING
                 else:
                     value = resample_array(arr)
-                    print(value)
 
     return value, dtype
 
