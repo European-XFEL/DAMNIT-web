@@ -30,7 +30,7 @@ def to_javascript_string(value):
     return str(value)
 
 
-def to_complex_string(z, symbol="i"):
+def to_complex_string(z, symbol="j"):
     real = z.real
     imag = z.imag
 
