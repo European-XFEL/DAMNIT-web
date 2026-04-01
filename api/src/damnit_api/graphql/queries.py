@@ -144,7 +144,7 @@ class Query:
         # and make it analogous to DamitVariable; e.g. `data`
         return get_preview_data(
             proposal=int(
-                database.proposal  # FIX: # pyright: ignore[reportArgumentType, reportReturnType]  # noqa: E501
+                database.proposal  # FIX: # pyright: ignore[reportArgumentType, reportReturnType]
             ),
             run=run,
             variable=variable,

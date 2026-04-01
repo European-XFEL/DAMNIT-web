@@ -19,7 +19,7 @@ from ..utils import (
 T = TypeVar("T")
 
 
-def to_js_string(value):
+def to_javascript_string(value):
     if np.isnan(value):
         return "NaN"
     if value == np.inf:
@@ -28,6 +28,30 @@ def to_js_string(value):
         return "-Infinity"
 
     return str(value)
+
+
+def to_complex_string(z, symbol="i"):
+    real = z.real
+    imag = z.imag
+
+    def fmt(x):
+        if isinstance(x, float) and x.is_integer():
+            return str(int(x))
+        decimal = int(-np.floor(np.log10(abs(x))))
+        precision = decimal + 2 if decimal >= 0 else 1
+        return str(round(x, precision))
+
+    if imag == 0:
+        return fmt(real)
+
+    abs_imag = abs(imag)
+    imag_part = symbol if abs_imag == 1 else f"{fmt(abs_imag)}{symbol}"
+
+    if real == 0:
+        return f"-{imag_part}" if imag < 0 else imag_part
+
+    sign = "+" if imag >= 0 else "-"
+    return f"{fmt(real)}{sign}{imag_part}"
 
 
 def resample_array(arr):
@@ -76,7 +100,7 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
 
         case DamnitType.NUMBER:
             if not np.isfinite(value):
-                value = to_js_string(value)
+                value = to_javascript_string(value)
 
         case DamnitType.NUMPY:
             arr = blob2numpy(value)
@@ -84,7 +108,7 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
             dtype = DamnitType.STRING
 
         case DamnitType.COMPLEX:
-            value = str(blob2complex(value))
+            value = to_complex_string(blob2complex(value))
             dtype = DamnitType.STRING
 
         case DamnitType.ARRAY:
