@@ -49,6 +49,10 @@ def resample_array(arr):
     x, unique_idx = np.unique(x, return_index=True)
     y = y[unique_idx]
 
+    # Return immediately if there's only less than 2 elements
+    if x.size < 2:
+        return y
+
     # Build evenly-spaced x-axis (maybe using `size` is not the best)
     x_even = np.linspace(x[0], x[-1], x.size)
 
@@ -58,7 +62,7 @@ def resample_array(arr):
 
 def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
     if value is None:
-        return value
+        return value, dtype
 
     match dtype:
         case DamnitType.IMAGE:
@@ -66,9 +70,9 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
 
         case DamnitType.TIMESTAMP:
             if isinstance(value, datetime):
-                return int(value.timestamp())
-
-            value = int(value * 1000)
+                value = int(value.timestamp())
+            else:
+                value = int(value * 1000)
 
         case DamnitType.NUMBER:
             if not np.isfinite(value):
@@ -87,13 +91,14 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
             if isinstance(value, bytes):
                 arr = blob2numpy(value)
 
-                # Validate/prepare data (same as PyQt implementation)
-                if arr.ndim != 2 or arr.shape[0] != 2 or arr.shape[1] < 2:
+                # Validate/prepare data
+                if arr.ndim != 2 or arr.shape[0] != 2:
                     # Unsupported shape
                     value = f"{arr.dtype}: {arr.shape}"
                     dtype = DamnitType.STRING
-
-                value = resample_array(arr)
+                else:
+                    value = resample_array(arr)
+                    print(value)
 
     return value, dtype
 

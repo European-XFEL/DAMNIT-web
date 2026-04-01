@@ -12,7 +12,7 @@ from .shared.const import DamnitType
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
 
-DATA_TYPES = {
+PYTHON_TYPES = {
     "bytes": DamnitType.IMAGE,
     "str": DamnitType.STRING,
     "bool_": DamnitType.BOOLEAN,
@@ -26,7 +26,7 @@ SUMMARY_TYPES = {
 
 
 def python_type_to_damnit_type(type_):
-    type_ = DATA_TYPES.get(type_.__name__)
+    type_ = PYTHON_TYPES.get(type_.__name__)
     if not type_ and np.issubdtype(type_, np.number):
         type_ = DamnitType.NUMBER
     return type_
