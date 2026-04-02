@@ -144,6 +144,21 @@ def test_complex_string_auto_precision():
     assert to_complex_string(z) == "-0.642+7.47j"
 
 
+@pytest.mark.parametrize(
+    ("z", "expected"),
+    [
+        (complex(float("inf"), 0), "inf"),
+        (complex(float("-inf"), 0), "-inf"),
+        (complex(float("nan"), 0), "nan"),
+        (complex(0, float("inf")), "infj"),
+        (complex(1, float("-inf")), "1-infj"),
+        (complex(float("inf"), float("inf")), "inf+infj"),
+    ],
+)
+def test_complex_string_non_finite(z, expected):
+    assert to_complex_string(z) == expected
+
+
 def test_complex_string_custom_symbol():
     assert to_complex_string(1 + 2j, symbol="i") == "1+2i"
 
@@ -160,9 +175,7 @@ def test_resample_array_orders_by_x():
 
 
 def test_resample_array_drops_non_finite():
-    arr = np.array(
-        [[1, 2, 3, 4], [10, np.nan, np.inf, 40]], dtype=np.float64
-    )
+    arr = np.array([[1, 2, 3, 4], [10, np.nan, np.inf, 40]], dtype=np.float64)
     result = resample_array(arr)
     assert np.all(np.isfinite(result))
 

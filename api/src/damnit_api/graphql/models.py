@@ -37,6 +37,8 @@ def to_complex_string(z, symbol="j"):
     def fmt(x):
         if isinstance(x, float) and x.is_integer():
             return str(int(x))
+        if not np.isfinite(x):
+            return str(x)
         decimal = int(-np.floor(np.log10(abs(x))))
         precision = decimal + 2 if decimal >= 0 else 1
         return str(round(x, precision))
