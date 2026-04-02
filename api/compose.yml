@@ -2,7 +2,9 @@ name: damnit-web-local
 
 services:
   api:
-    build: .
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
     volumes:
       - ./tmp-damnit-web/:/tmp/damnit-web/
       - ./certs:/certs

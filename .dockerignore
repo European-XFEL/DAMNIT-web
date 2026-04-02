@@ -1,0 +1,19 @@
+.git
+.venv
+**/.venv
+**/node_modules
+**/.env*
+**/dist
+**/build
+**/__pycache__
+*.egg-info
+.ruff_cache
+**/.ruff_cache
+
+# Runtime data that must not be baked into images
+api/certs
+api/db
+api/tmp-*
+
+# Frontend (not needed for API image)
+frontend/
