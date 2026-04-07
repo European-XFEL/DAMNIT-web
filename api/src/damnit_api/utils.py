@@ -1,3 +1,4 @@
+import io
 import os.path as osp
 from abc import ABCMeta
 from base64 import b64encode
@@ -42,6 +43,13 @@ def summary_type_to_damnit_type(type_):
 
 def b64image(bytes_):
     return f"data:image/png;base64,{b64encode(bytes_).decode('utf-8')}"
+
+
+# TODO: Remove this and import directly after upgrading to DAMNIT>=0.2.2.
+def blob2numpy(data: bytes) -> np.ndarray:
+    """Deserialize .npy bytes from SQLite into a numpy array."""
+    buff = io.BytesIO(data)
+    return np.load(buff, allow_pickle=False)
 
 
 # -----------------------------------------------------------------------------

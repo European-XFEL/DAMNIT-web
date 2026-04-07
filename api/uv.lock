@@ -371,9 +371,8 @@ wheels = [
 [[package]]
 name = "damnit"
 version = "0.2.1"
-source = { git = "https://github.com/European-XFEL/DAMNIT.git?branch=master#42e974af4a36296a74d61d8e71d1997db7a75562" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "fpcs" },
     { name = "h5netcdf" },
     { name = "h5py" },
     { name = "numpy" },
@@ -381,6 +380,10 @@ dependencies = [
     { name = "pandas" },
     { name = "plotly" },
     { name = "xarray" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/25/33/feea29df2c45c27f3690792a96dcc5a29ad3ba1fcdff80d95ef110091151/damnit-0.2.1.tar.gz", hash = "sha256:b3b590c0cb58696577fdcf5ed8906a95c357e1b2d29fafe893716d586128d826", size = 150645, upload-time = "2025-11-06T08:47:48.682Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/39/9945e9df98aa5ded1bc5587ef48f45c54390fa086655799d8734b69e6b07/damnit-0.2.1-py3-none-any.whl", hash = "sha256:00044bda6ce1c967444d9fd241936b4a7905caf37f3e9ec0a1c08644f7c28736", size = 171269, upload-time = "2025-11-06T08:47:46.926Z" },
 ]
 
 [[package]]
@@ -465,7 +468,7 @@ requires-dist = [
     { name = "async-lru", specifier = "~=2.0" },
     { name = "authlib", specifier = "~=1.3" },
     { name = "colorama", specifier = "~=0.4" },
-    { name = "damnit", git = "https://github.com/European-XFEL/DAMNIT.git?branch=master" },
+    { name = "damnit", specifier = "~=0.2.1" },
     { name = "fastapi", specifier = "~=0.115" },
     { name = "h5py", specifier = "~=3.9" },
     { name = "httpx", specifier = "~=0.27" },
@@ -599,22 +602,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f2/f6/53a1e9469331a23dcc400970a27a4caa3d9f6edbf5baab0260285238b884/fonttools-4.62.1-cp313-cp313-win32.whl", hash = "sha256:93c316e0f5301b2adbe6a5f658634307c096fd5aae60a5b3412e4f3e1728ab24", size = 2279928, upload-time = "2026-03-13T13:53:32.352Z" },
     { url = "https://files.pythonhosted.org/packages/38/60/35186529de1db3c01f5ad625bde07c1f576305eab6d86bbda4c58445f721/fonttools-4.62.1-cp313-cp313-win_amd64.whl", hash = "sha256:7aa21ff53e28a9c2157acbc44e5b401149d3c9178107130e82d74ceb500e5056", size = 2330514, upload-time = "2026-03-13T13:53:34.991Z" },
     { url = "https://files.pythonhosted.org/packages/fd/ba/56147c165442cc5ba7e82ecf301c9a68353cede498185869e6e02b4c264f/fonttools-4.62.1-py3-none-any.whl", hash = "sha256:7487782e2113861f4ddcc07c3436450659e3caa5e470b27dc2177cade2d8e7fd", size = 1152647, upload-time = "2026-03-13T13:54:22.735Z" },
-]
-
-[[package]]
-name = "fpcs"
-version = "1.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/1f/3b/dfd4f5cc66c7e33fc6ebcf45095403fae8e3c9dee6cf28769feb42afa3b1/fpcs-1.0.0.tar.gz", hash = "sha256:dc1f2172d7970327ed6669ed4772c2207f95354e630280b4b2d1993ef6bb12fe", size = 185293, upload-time = "2026-01-30T15:02:25.929Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/04/1e/347403f58e9cf7df136249948985cec7881f49da68978e935803728fa049/fpcs-1.0.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:2f5b3dab8d5f4ece8912f4859ffff54dcb7b6235985afd8ba57d6b8a1fa59c83", size = 270793, upload-time = "2026-01-30T15:02:45.59Z" },
-    { url = "https://files.pythonhosted.org/packages/39/c4/f5eb4756212d7df85b091324c73b9e15736c957ea91513bc1a23ed7e7d93/fpcs-1.0.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:18d3191082b31be54c3e8319a474509e0298fae2867ab8ad7cb992c3477786c9", size = 738229, upload-time = "2026-01-30T15:02:47.719Z" },
-    { url = "https://files.pythonhosted.org/packages/cb/7a/b0888dbdf3ae9509bd422a3673cc98ca777294407528c5e726bc9cf74161/fpcs-1.0.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:322702c2e4a98594d1082a80c9dc33374e1fbd43e77ba809ec88c3ff9b053a22", size = 739551, upload-time = "2026-01-30T15:02:23.193Z" },
-    { url = "https://files.pythonhosted.org/packages/14/43/78bc9cd0f4f01bd7abb823307c81c684b4781552ecd9a28b6850847807a6/fpcs-1.0.0-cp313-cp313-win32.whl", hash = "sha256:b6aaa9a577f0bbd9b51b1d91e525c7f59d114b9ca6b26674366369f7f0edd978", size = 249795, upload-time = "2026-01-30T15:02:27.255Z" },
-    { url = "https://files.pythonhosted.org/packages/b0/d8/c453dec4b22b477930aded7dff8f9021134d824b6713db21debcc0f88635/fpcs-1.0.0-cp313-cp313-win_amd64.whl", hash = "sha256:de7df852221b910ee8f214fbc51e856328d2dde2abb794dfb95e651a31bac754", size = 262797, upload-time = "2026-01-30T15:02:28.949Z" },
 ]
 
 [[package]]

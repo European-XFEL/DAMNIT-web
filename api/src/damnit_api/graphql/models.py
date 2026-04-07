@@ -4,12 +4,13 @@ from typing import Generic, NewType, TypeVar
 
 import numpy as np
 import strawberry
-from damnit.api import blob2complex, blob2numpy
+from damnit.api import blob2complex
 
 from ..shared.const import DEFAULT_PROPOSAL, DamnitType
 from ..utils import (
     Registry,
     b64image,
+    blob2numpy,
     create_map,
     get_type,
     python_type_to_damnit_type,
