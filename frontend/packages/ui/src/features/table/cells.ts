@@ -79,6 +79,7 @@ export const arrayCell = (
   const data = value
     ? {
         values: values,
+        displayValues: values.map((v) => formatNumber(v).toString()),
         yAxis: [Math.min(...values), Math.max(...values)] as Item,
       }
     : { values: [], yAxis: [0, 0] as Item }
@@ -89,7 +90,9 @@ export const arrayCell = (
     copyData: '',
     data: {
       kind: 'sparkline-cell',
-      color: '#77c4c4',
+      color: '#4C78A8',
+      graphKind: 'line',
+      hideAxis: true,
       ...data,
     },
     ...params,

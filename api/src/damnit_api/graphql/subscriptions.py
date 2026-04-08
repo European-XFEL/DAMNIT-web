@@ -7,7 +7,7 @@ from strawberry.scalars import JSON
 from strawberry.types import Info
 
 from ..db import async_latest_rows, async_variables
-from ..utils import create_map
+from ..utils import create_map, wrap_values
 from .models import Timestamp, get_model
 from .utils import DatabaseInput, LatestData, fetch_info
 
@@ -46,11 +46,14 @@ async def get_latest_data(proposal, timestamp, schema):
     # Aggregate run values from latest data and runs
     runs = {}
     for run, variables in latest_data.runs.items():
-        run_values = {name: data.value for name, data in variables.items()}
-        run_values.setdefault("run", run)
+        run_values = {
+            name: {"value": data.value, "summary_type": data.summary_type}
+            for name, data in variables.items()
+        }
+        run_values.setdefault("run", {"value": run})
 
         if run_info := latest_runs.get(run):
-            run_values.update(run_info)
+            run_values.update(wrap_values(run_info))
 
         runs[run] = model.resolve(**run_values)
 

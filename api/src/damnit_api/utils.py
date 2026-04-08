@@ -1,3 +1,4 @@
+import io
 import os.path as osp
 from abc import ABCMeta
 from base64 import b64encode
@@ -12,18 +13,28 @@ from .shared.const import DamnitType
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
 
-DTYPE_MAP = {
+PYTHON_TYPES = {
     "bytes": DamnitType.IMAGE,
     "str": DamnitType.STRING,
     "bool_": DamnitType.BOOLEAN,
 }
 
+SUMMARY_TYPES = {
+    "complex": DamnitType.COMPLEX,
+    "numpy": DamnitType.NUMPY,
+    "trendline": DamnitType.ARRAY,
+}
 
-def map_dtype(dtype, default=DamnitType.STRING):
-    dtype = DTYPE_MAP.get(dtype.__name__)
-    if not dtype:
-        dtype = DamnitType.NUMBER if np.issubdtype(dtype, np.number) else default
+
+def python_type_to_damnit_type(type_):
+    dtype = PYTHON_TYPES.get(type_.__name__)
+    if not dtype and np.issubdtype(type_, np.number):
+        dtype = DamnitType.NUMBER
     return dtype
+
+
+def summary_type_to_damnit_type(type_):
+    return SUMMARY_TYPES.get(type_)
 
 
 # -----------------------------------------------------------------------------
@@ -32,6 +43,13 @@ def map_dtype(dtype, default=DamnitType.STRING):
 
 def b64image(bytes_):
     return f"data:image/png;base64,{b64encode(bytes_).decode('utf-8')}"
+
+
+# TODO: Remove this and import directly after upgrading to DAMNIT>=0.2.2.
+def blob2numpy(data: bytes) -> np.ndarray:
+    """Deserialize .npy bytes from SQLite into a numpy array."""
+    buff = io.BytesIO(data)
+    return np.load(buff, allow_pickle=False)
 
 
 # -----------------------------------------------------------------------------
@@ -123,3 +141,7 @@ def get_type(type_):
         return get_args(type_)[0]
 
     return type_
+
+
+def wrap_values(dict_, key="value"):
+    return {k: {key: v} for k, v in dict_.items()}

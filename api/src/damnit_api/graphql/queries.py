@@ -4,18 +4,25 @@ from strawberry.scalars import JSON
 
 from ..data import get_preview_data
 from ..db import async_table, get_session
+from ..utils import wrap_values
 from .models import DamnitRun, get_model
 from .utils import DatabaseInput, fetch_info
 
 
-def group_by_run(data):
+def group_by_run(record):
     grouped = {}
 
-    for entry in data:
+    for entry in record:
         key = (entry["proposal"], entry["run"])
         if key not in grouped:
-            grouped[key] = {"proposal": entry["proposal"], "run": entry["run"]}
-        grouped[key][entry["name"]] = entry["value"]
+            grouped[key] = wrap_values({
+                "proposal": entry["proposal"],
+                "run": entry["run"],
+            })
+        grouped[key][entry["name"]] = {
+            "value": entry["value"],
+            "summary_type": entry["summary_type"],
+        }
 
     return list(grouped.values())
 
@@ -51,6 +58,7 @@ async def fetch_variables(proposal, *, limit, offset):
         table.c.run,
         table.c.name,
         table.c.value,
+        table.c.summary_type,
         table.c.timestamp,
     ).join(
         latest_timestamp_subquery,
@@ -106,11 +114,12 @@ class Query:
             return []
 
         info = await fetch_info(
-            proposal, runs=[variable["run"] for variable in variables]
+            proposal, runs=[variable["run"]["value"] for variable in variables]
         )
 
         return [
-            model.as_stype(**{**v, **i}) for v, i in zip(variables, info, strict=True)
+            model.as_stype(**{**v, **wrap_values(i)})
+            for v, i in zip(variables, info, strict=True)
         ]
 
     @strawberry.field
@@ -135,7 +144,8 @@ class Query:
         # and make it analogous to DamitVariable; e.g. `data`
         return get_preview_data(
             proposal=int(
-                database.proposal  # FIX: # pyright: ignore[reportArgumentType, reportReturnType]  # noqa: E501
+                # FIXME: database.proposal is loosely typed
+                database.proposal  # pyright: ignore[reportArgumentType, reportReturnType]
             ),
             run=run,
             variable=variable,
