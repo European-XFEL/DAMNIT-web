@@ -2,7 +2,9 @@ name: damnit-web-test
 
 services:
   api:
-    build: .
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
     volumes:
       - ./db:/db
       - ./certs:/certs

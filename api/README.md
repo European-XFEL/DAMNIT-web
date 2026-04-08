@@ -29,11 +29,11 @@ An interactive GraphQL interface can be accessed at `localhost:8000/graphql`. Mo
 Running the server in a container can be done by:
 
 ```shell
-# Running container directly:
-podman build -t damnit-web-api .
-podman run --env-file .env --rm -it damnit-web-api
+# Running container directly (from the repo root):
+podman build -t damnit-web-api -f api/Dockerfile .
+podman run --env-file api/.env --rm -it damnit-web-api
 
-# Via compose:
+# Via compose (from api/):
 podman compose up
 ```
 

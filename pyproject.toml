@@ -1,0 +1,21 @@
+[project]
+name = "DAMNIT-web"
+version = "0.1.0"
+description = "Monorepo for serving DAMNIT data over the web"
+authors = [{ name = "European XFEL", email = "da@xfel.eu" }]
+requires-python = "~=3.13.0"
+readme = "README.md"
+maintainers = [
+    { name = "Cammille Carinan", email = "cammille.carinan@xfel.eu" },
+    { name = "Robert Rosca", email = "robert.rosca@xfel.eu" },
+]
+dependencies = []
+
+[dependency-groups]
+dev = ["pre-commit>=4.5"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.uv.workspace]
+members = ["api"]

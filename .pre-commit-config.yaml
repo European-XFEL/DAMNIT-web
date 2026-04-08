@@ -1,0 +1,62 @@
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v6.0.0
+      hooks:
+          - id: check-added-large-files
+          - id: check-json
+            exclude: tsconfig.*\.json$|frontend/apps/demo/public/
+          - id: check-merge-conflict
+          - id: check-toml
+          - id: check-yaml
+          - id: end-of-file-fixer
+          - id: trailing-whitespace
+
+    # ruff walks up from each file to find api/ruff.toml automatically
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+      rev: v0.14.13
+      hooks:
+          - id: ruff-check
+            files: ^api/
+          - id: ruff-format
+            files: ^api/
+
+    # Local hooks cd into subdirectories and strip the prefix from
+    # file arguments so tools see project-relative paths.
+    - repo: local
+      hooks:
+          - id: uv-lock
+            name: uv-lock
+            entry: uv lock
+            language: system
+            files: (^|api/)pyproject\.toml$|^uv\.lock$
+            pass_filenames: false
+
+          - id: pyright
+            name: pyright
+            entry: bash -c 'cd api && uv run --group lint pyright'
+            language: system
+            files: ^api/
+            types: [python]
+            pass_filenames: false
+
+          - id: frontend-eslint
+            name: frontend-eslint
+            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec eslint --fix --cache --cache-location node_modules/.cache/eslint/.eslintcache "${@#frontend/}"' --
+            language: system
+            files: ^frontend/
+            types_or: [javascript, jsx, ts, tsx]
+
+          - id: frontend-prettier
+            name: frontend-prettier
+            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec prettier --write "${@#frontend/}"' --
+            language: system
+            files: ^frontend/
+            types_or: [javascript, jsx, ts, tsx, json, html, css, markdown]
+
+          - id: frontend-tsc
+            name: frontend-tsc
+            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec tsc -b --noEmit'
+            language: system
+            files: ^frontend/
+            types_or: [ts, tsx]
+            pass_filenames: false
