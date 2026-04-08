@@ -441,13 +441,13 @@ dev = [
     { name = "pytest-mock" },
     { name = "rich" },
     { name = "ruff" },
-    { name = "strawberry-graphql", extra = ["fastapi"] },
+    { name = "strawberry-graphql" },
 ]
 develop = [
     { name = "datamodel-code-generator", extra = ["http"] },
     { name = "pre-commit" },
     { name = "rich" },
-    { name = "strawberry-graphql", extra = ["fastapi"] },
+    { name = "strawberry-graphql" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -474,7 +474,7 @@ requires-dist = [
     { name = "async-lru", specifier = "~=2.0" },
     { name = "authlib", specifier = "~=1.3" },
     { name = "colorama", specifier = "~=0.4" },
-    { name = "damnit", specifier = ">=0.1" },
+    { name = "damnit", specifier = "~=0.2.1" },
     { name = "fastapi", specifier = "~=0.115" },
     { name = "h5py", specifier = "~=3.9" },
     { name = "httpx", specifier = "~=0.27" },
@@ -491,7 +491,7 @@ requires-dist = [
     { name = "scipy", specifier = "~=1.11" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "~=2.0" },
     { name = "sqlmodel", specifier = ">=0.0.31" },
-    { name = "strawberry-graphql", extras = ["fastapi"], specifier = "~=0.195" },
+    { name = "strawberry-graphql", extras = ["fastapi"], specifier = ">=0.283.3" },
     { name = "structlog", specifier = "~=24.4" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.29" },
     { name = "xarray", specifier = ">=2024.11" },
@@ -511,13 +511,13 @@ dev = [
     { name = "pytest-mock", specifier = "~=3.11" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "ruff", specifier = ">=0.7" },
-    { name = "strawberry-graphql", extras = ["debug-server", "fastapi"], specifier = ">=0.283.3" },
+    { name = "strawberry-graphql", extras = ["debug-server"], specifier = ">=0.283.3" },
 ]
 develop = [
     { name = "datamodel-code-generator", extras = ["http"], specifier = ">=0.35.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "rich", specifier = ">=14.2.0" },
-    { name = "strawberry-graphql", extras = ["debug-server", "fastapi"], specifier = ">=0.283.3" },
+    { name = "strawberry-graphql", extras = ["debug-server"], specifier = ">=0.283.3" },
 ]
 docs = [
     { name = "mkdocs", specifier = ">=1.6.1" },
