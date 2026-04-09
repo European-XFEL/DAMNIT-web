@@ -1,4 +1,4 @@
-# DAMNIT - Webserver
+# DAMNIT - API
 
 `damnit_api` is a Python package that handles the integration of the Damnit database and web frontend. This utilizes FastAPI for the web framework, Strawberry for the GraphQL API, and SQLAlchemy for the database management.
 
@@ -39,23 +39,7 @@ podman compose up
 
 ## Usage
 
-### 1. Initialize (or refresh) the model
-
-```gql
-mutation RefreshMutation {
-  refresh(database: {proposal: "<PROPOSAL_NUMBER>"})
-}
-```
-
-This is done usually on start to create a model of the Damnit table (if not existing). It is a `mutation` as this changes the model.
-
-This returns the following model information:
-
-- schema (id, data type)
-- number of rows of the current run database
-- timestamp of the last database update
-
-### 2. Query the metadata
+### 1. Query the metadata
 
 ```gql
 query TableMetadataQuery {
@@ -63,46 +47,58 @@ query TableMetadataQuery {
 }
 ```
 
-This returns the following model information:
+This returns a JSON snapshot for the proposal:
 
-- schema (id, data type)
-- number of rows of the current run database
-- timestamp of the last database update
+- `runs` - sorted list of run numbers in the proposal
+- `variables` - map of variable name to its title and tags (includes the
+  known variables listed below alongside any user-defined ones)
+- `tags` - map of tag name to its id and the variables it groups
+- `timestamp` - last update time, in milliseconds since the Unix epoch
 
-### 3. Query the runs
+### 2. Query the runs
 
-For instance, we'd like to query the values of `run`, `added_at`, and
-`energy_min` for the first 10 runs in proposal `2956`. We can do it as such:
+For instance, to fetch the first 10 runs of proposal `2956` along with all
+of their variables:
 
 ```gql
 query TableDataQuery($per_page: Int = 10) {
   runs(database: {proposal: "2956"}, per_page: $per_page) {
-    run {
+    variables {
+      name
       value
-    }
-    added_at {
-      value
-    }
-    ... on p2956 {
-      energy_min {
-        value
-      }
+      dtype
     }
   }
 }
 ```
 
-Known variables are as follows and is usually defined at the root:
+Each run is returned as a flat list of `DamnitVariable` entries (`name`,
+`value`, `dtype`). One can pass a list of `names` to select variables:
+
+```gql
+query TableDataQuery($per_page: Int = 10) {
+  runs(database: {proposal: "2956"}, per_page: $per_page) {
+    variables(names=["proposal", "run"]) {
+      name
+      value
+      dtype
+    }
+  }
+}
+```
+
+The following variables are always present, in addition to any user-defined
+ones from the proposal's context file:
 
 - `proposal`
 - `run`
 - `start_time`
 - `added_at`
 
-Fragments are used for dynamic variables, which varies for every proposal.
-This is denoted by `... on p2956`, with the dynamic variables as follows.
+Pagination is controlled with `page` (1-indexed, defaults to `1`) and
+`per_page` (defaults to `10`).
 
-### 4. Subscribe to latest data
+### 3. Subscribe to latest data
 
 ```gql
 subscription LatestDataSubscription {
@@ -116,10 +112,3 @@ This returns the following:
 - updated metadata
 
 Note that the `timestamp` is in milliseconds since Unix epoch.
-
-## To-dos
-
-- Rename the package to a more meaningful one (e.g., `damnit_webserver`)
-- Clean up and remove the old REST API implementation
-- Add more queries (e.g., fetch all values of a variable, fetch saved data of a variable in a run)
-- ...and so much more!

@@ -25,10 +25,6 @@ class Query(auth.Query, gql_main.queries.Query, metadata.Query):
     pass
 
 
-class Mutation(gql_main.mutations.Mutation):
-    pass
-
-
 class Router(GraphQLRouter):
     def encode_json(self, data: GraphQLHTTPResponse) -> str | bytes:  # pyright: ignore[reportIncompatibleMethodOverride]
         encoded = orjson.dumps(
@@ -44,7 +40,7 @@ class Router(GraphQLRouter):
         return encoded
 
 
-class Schema(gql_main.schema.Schema):
+class Schema(strawberry.Schema):
     pass
 
 
@@ -68,11 +64,13 @@ async def get_context(  # noqa: RUF029
 def get_gql_app():
     schema = Schema(
         query=Query,
-        mutation=Mutation,
         subscription=Subscription,
         types=[gql_main.models.DamnitVariable],
         directives=[gql_main.directives.lightweight],
-        config=StrawberryConfig(auto_camel_case=False),
+        config=StrawberryConfig(
+            auto_camel_case=False,
+            scalar_map=gql_main.models.SCALAR_MAP,
+        ),
     )
 
     return Router(
