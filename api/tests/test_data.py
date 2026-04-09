@@ -9,7 +9,7 @@ from numpy.testing import assert_array_equal
 from damnit_api.data import (
     NOT_SUPPORTED_MESSAGE,
     get_damnit_type,
-    get_extracted_data,
+    get_preview_data,
     standardize,
     to_dataarray,
 )
@@ -223,6 +223,7 @@ DAMNIT_CLASS_PATH = "damnit_api.data.Damnit"
 
 def mock_damnit_class(mocker, *, data, type_hint):
     mock_variable = mocker.Mock(
+        preview_data=mocker.Mock(return_value=None),
         type_hint=mocker.Mock(return_value=type_hint),
         read=mocker.Mock(return_value=data),
     )
@@ -231,13 +232,13 @@ def mock_damnit_class(mocker, *, data, type_hint):
     return mock_damnit_cls
 
 
-def test_get_extracted_data_ndarray(mocker):
+def test_get_preview_data_ndarray(mocker):
     name = "some_array"
     dtype = DamnitType.ARRAY
     data = np.random.rand(4)
 
     mock_damnit_class(mocker, data=data, type_hint=None)
-    actual = get_extracted_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(proposal=1234, run=1, variable=name)
 
     assert actual == {
         "name": name,
@@ -249,7 +250,7 @@ def test_get_extracted_data_ndarray(mocker):
     }
 
 
-def test_get_extracted_data_dataarray(mocker):
+def test_get_preview_data_dataarray(mocker):
     name = "some_array"
     dtype = DamnitType.ARRAY
     data = xr.DataArray(
@@ -259,7 +260,7 @@ def test_get_extracted_data_dataarray(mocker):
     )
 
     mock_damnit_class(mocker, data=data, type_hint=DataType.DataArray)
-    actual = get_extracted_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(proposal=1234, run=1, variable=name)
 
     assert actual["name"] == name
     assert actual["dtype"] == dtype.value
@@ -270,13 +271,13 @@ def test_get_extracted_data_dataarray(mocker):
     assert_coords(actual["coords"], data.coords)
 
 
-def test_get_extracted_data_png(mocker):
+def test_get_preview_data_png(mocker):
     name = "some_png"
     dtype = DamnitType.PNG  # because we convert RGBA array to PNG string
     data = np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8)
 
     mock_damnit_class(mocker, data=data, type_hint=DataType.Image)
-    actual = get_extracted_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(proposal=1234, run=1, variable=name)
 
     assert actual["name"] == name
     assert actual["dtype"] == dtype.value
