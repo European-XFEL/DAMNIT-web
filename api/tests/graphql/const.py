@@ -1,90 +1,134 @@
-from damnit_api.graphql.models import DamnitType
+from dataclasses import dataclass
+
+from damnit_api.shared.const import DamnitType
 from damnit_api.utils import create_map
 
-RUNS = list(range(10))
+PROPOSAL = 900485
+RUNS = [348, 349, 350]
 
-# TODO: Create dataclass for test values
 
+@dataclass(frozen=True, kw_only=True)
+class DatabaseVariable:
+    value: object
+    summary_type: str | None = None
+    # Expected serialization results
+    damnit_value: object = None
+    damnit_dtype: DamnitType = DamnitType.STRING
+
+    def __post_init__(self):
+        if self.damnit_value is None:
+            object.__setattr__(self, "damnit_value", self.value)
+
+
+def get_values(data):
+    return {k: v.value for k, v in data.items()}
+
+
+# -----------------------------------------------------------------------------
+# Known fields (run_info columns)
+
+KNOWN_DATA = {
+    "proposal": DatabaseVariable(
+        value=PROPOSAL,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+    "run": DatabaseVariable(
+        value=348,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+    "start_time": DatabaseVariable(
+        value=1740154563.795096,
+        damnit_value=1740154563795,
+        damnit_dtype=DamnitType.TIMESTAMP,
+    ),
+    "added_at": DatabaseVariable(
+        value=1775038442.775598,
+        damnit_value=1775038442775,
+        damnit_dtype=DamnitType.TIMESTAMP,
+    ),
+}
+
+
+# -----------------------------------------------------------------------------
+# Variables metadata (as returned by async_variables)
 
 EXAMPLE_VARIABLES = create_map(
     [
-        {"name": "integer", "title": "Integer", "tag_ids": [1, 2]},
-        {"name": "float", "title": "Float", "tag_ids": [2]},
-        {"name": "string", "title": "String", "tag_ids": [3]},
+        {"name": "n_trains", "title": "Trains"},
+        {"name": "run_length", "title": "Run length"},
+        {"name": "xgm_intensity", "title": "XGM intensity [uJ]"},
+        {"name": "etof_settings.ret0", "title": "eTOF settings/Retardation, sector 0"},
+        {"name": "etof.eTOF_calibration", "title": "eTOF calib./eTOF calibration"},
+        {"name": "etof.eTOF_response_width", "title": "eTOF calib./eTOF response FWHM"},
     ],
     key="name",
 )
 
-KNOWN_ANNOTATIONS = {
-    "proposal": int,
-    "run": int,
-    "start_time": float,
-    "added_at": float,
-    # 'comment': str,
-}
+# -----------------------------------------------------------------------------
+# Tags (as returned by async_all_tags)
 
-KNOWN_VALUES = {
-    "proposal": 1234,
-    "run": 1,
-    "start_time": 1697493600.0,
-    "added_at": 1697580000.0,
-    # 'comment': 'Run number 1',
-}
+EXAMPLE_TAGS = create_map(
+    [
+        {"id": 1, "name": "eTOF setting"},
+        {"id": 7, "name": "eTOF"},
+    ],
+    key="id",
+)
 
-KNOWN_DTYPES = {
-    "proposal": DamnitType.NUMBER,
-    "run": DamnitType.NUMBER,
-    "start_time": DamnitType.TIMESTAMP,
-    "added_at": DamnitType.TIMESTAMP,
-    # 'comment': DamnitType.STRING,
-}
-
-
-EXAMPLE_ANNOTATIONS = {
-    "integer": int,
-    "float": float,
-    "string": str,
-}
-
-
-EXAMPLE_VALUES = {
-    "proposal": 1234,
-    "run": 1,
-    "integer": 1,
-    "float": 0.1,
-    "string": "one",
-}
-
-
-EXAMPLE_DTYPES = {
-    "proposal": DamnitType.NUMBER,
-    "run": DamnitType.NUMBER,
-    "integer": DamnitType.NUMBER,
-    "float": DamnitType.NUMBER,
-    "string": DamnitType.STRING,
-}
-
-
-NEW_VALUES = {
-    "integer": 2,
-    "float": "not a float",
-    "string": 0.2,
-}
-
-NEW_DTYPES = {
-    "integer": DamnitType.NUMBER,
-    "float": DamnitType.STRING,
-    "string": DamnitType.NUMBER,
-}
-
-EXAMPLE_TAGS = {
-    1: {"id": 1, "name": "tag1"},
-    2: {"id": 2, "name": "tag2"},
-    3: {"id": 3, "name": "tag3"},
-}
+# -----------------------------------------------------------------------------
+# Variable -> tag mapping (as returned by async_variable_tags)
 
 EXAMPLE_VARIABLE_TAGS = {
-    "integer": [1, 2],
-    "float": [2],
-    "string": [3],
+    "n_trains": [],
+    "run_length": [],
+    "xgm_intensity": [],
+    "etof_settings.ret0": [1],
+    "etof.eTOF_calibration": [7],
+    "etof.eTOF_response_width": [7],
+}
+
+# -----------------------------------------------------------------------------
+# Run variable values for a single run
+
+EXAMPLE_DATA = {
+    "proposal": DatabaseVariable(
+        value=PROPOSAL,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+    "run": DatabaseVariable(
+        value=348,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+    "n_trains": DatabaseVariable(
+        value=3641,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+    "run_length": DatabaseVariable(
+        value="0:06:03",
+    ),
+    "xgm_intensity": DatabaseVariable(
+        value=2.073,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+    "etof_settings.ret0": DatabaseVariable(
+        value=-77.0,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+}
+
+# -----------------------------------------------------------------------------
+# Subscription: new values arriving for a new run
+
+NEW_DATA = {
+    "n_trains": DatabaseVariable(
+        value=1200,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
+    "run_length": DatabaseVariable(
+        value="0:02:30",
+    ),
+    "xgm_intensity": DatabaseVariable(
+        value=1.5,
+        damnit_dtype=DamnitType.NUMBER,
+    ),
 }
