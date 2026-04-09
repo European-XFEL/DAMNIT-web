@@ -1,16 +1,36 @@
 import asyncio
 import time
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
-from damnit_api.contextfile import mtime_cache, routers
+from damnit_api.contextfile import models
 from damnit_api.main import create_app
+from damnit_api.metadata.routers import get_proposal_meta
 
 
-@pytest.fixture(scope="module")
-def client():
+@pytest.fixture
+def app(monkeypatch):
+    monkeypatch.setenv("DW_API_AUTH__CLIENT_ID", "test")
+    monkeypatch.setenv("DW_API_AUTH__CLIENT_SECRET", "test")
+    monkeypatch.setenv(
+        "DW_API_AUTH__SERVER_METADATA_URL", "https://example.com/.well-known"
+    )
+    monkeypatch.setenv("DW_API_SESSION_SECRET", "test")
+
+    async def noop_bootstrap(settings):
+        pass
+
+    monkeypatch.setattr("damnit_api.auth.bootstrap", noop_bootstrap)
+
     app = create_app()
+    yield app
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(app):
     with TestClient(app) as c:
         yield c
 
@@ -23,49 +43,34 @@ def temp_dir(tmp_path):
 
 
 @pytest.fixture(autouse=True)
-def fast_ttl(monkeypatch):
-    monkeypatch.setattr(mtime_cache, "TTL", 0.01)
-    mtime_cache.file_mtime_cache.clear()
+def clear_cache():
     yield
-    mtime_cache.file_mtime_cache.clear()
+    models.ModifiedTime.from_file.cache_clear()
+    models.ContextFile.from_file.cache_clear()
 
 
 @pytest.mark.asyncio
-async def test_watcher_detects_change(client, temp_dir, monkeypatch):
+async def test_watcher_detects_change(app, client, temp_dir):
     temp_path = temp_dir / "context.py"
-    temp_dir_str = str(temp_dir)
+    app.dependency_overrides[get_proposal_meta] = lambda: SimpleNamespace(
+        damnit_path=str(temp_dir)
+    )
 
-    async def fake_get_proposal_info(proposal_num):  # noqa: RUF029
-        return {"damnit_path": temp_dir_str}
-
-    monkeypatch.setattr(routers, "get_proposal_info", fake_get_proposal_info)
-
-    proposal_num = "1"
-
-    resp = client.get(f"/contextfile/last_modified?proposal_num={proposal_num}")
+    resp = client.get("/contextfile/last_modified")
     assert resp.status_code == 200
     initial_modified = resp.json()["lastModified"]
 
     await asyncio.to_thread(temp_path.write_text, "new content")
 
-    assert await wait_for_change(
-        client,
-        f"/contextfile/last_modified?proposal_num={proposal_num}",
-        initial_modified,
+    assert await wait_for_change(client, "/contextfile/last_modified", initial_modified)
+
+
+def test_file_fetching(app, client, temp_dir):
+    app.dependency_overrides[get_proposal_meta] = lambda: SimpleNamespace(
+        damnit_path=str(temp_dir)
     )
 
-
-def test_file_fetching(client, temp_dir, monkeypatch):
-    temp_dir_str = str(temp_dir)
-
-    async def fake_get_proposal_info(proposal_num):  # noqa: RUF029
-        return {"damnit_path": temp_dir_str}
-
-    monkeypatch.setattr(routers, "get_proposal_info", fake_get_proposal_info)
-
-    proposal_num = "1"
-
-    resp = client.get(f"/contextfile/content?proposal_num={proposal_num}")
+    resp = client.get("/contextfile/content")
     assert resp.status_code == 200
     assert resp.json()["fileContent"] == "initial content"
 
@@ -78,6 +83,7 @@ async def wait_for_change(
 ):
     start = time.time()
     while time.time() - start < timeout:
+        models.ModifiedTime.from_file.cache_clear()
         resp = client.get(url)
         if resp.json()["lastModified"] > initial_value:
             return True
