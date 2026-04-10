@@ -11,6 +11,6 @@ export {
   updateTable,
 } from './table-data.slice'
 export {
-  REFRESH_MUTATION,
+  TABLE_METADATA_QUERY,
   LATEST_DATA_SUBSCRIPTION,
 } from './table-data.services'
