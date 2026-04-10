@@ -36,6 +36,7 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
     {
       variables: { proposal: proposal.value },
       skip: !proposal.value,
+      fetchPolicy: 'cache-and-network',
     }
   )
 
