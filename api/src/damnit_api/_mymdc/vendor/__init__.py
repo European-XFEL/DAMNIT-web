@@ -41,6 +41,7 @@ class GetProposals(models.GetProposals):
     users_ids: list[tuple[int, str, str]] | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
     users_info: list[UsersInfoItem] | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
     logbook_info: LogbookInfo | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    meeting: dict | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 __all__ = [
