@@ -4683,11 +4683,11 @@ paths:
       summary: delete dataset files in bulk
       operationId: delete_bulkdataset_file
       requestBody:
-        description: 'To delete dataset files in bulk provide "ids" as array or "data_group_id" as integer E.g { "dataset_files": { "ids": [ 9, 8, ...] }'
+        description: 'To delete dataset files in bulk provide "ids" as array or "data_group_id" as integer E.g { "dataset_files": [ {id, data_group_id}, {id, data_group_id}, ... ]'
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dataset_files_delete_bulk'
+              $ref: '#/components/schemas/dataset_files_bulk'
         required: true
       responses:
         '201':
@@ -4695,7 +4695,71 @@ paths:
           content:
             application/json; version=1:
               schema:
-                $ref: '#/components/schemas/dataset_files_delete_bulk'
+                $ref: '#/components/schemas/dataset_files_bulk'
+        '401':
+          description: Unauthorized header - valid authorization required
+        '403':
+          description: Access to the requested resource is forbidden - permission issue
+        '422':
+          description: e.g. mandatory fields missing or unique field already taken/present
+      security:
+        - UserEmail: []
+          MetadataAuth:
+            - read:modules
+        - UserEmail: []
+          BearerToken: []
+  /dataset_files/bulk_update:
+    post:
+      tags:
+        - dataset_files
+      summary: Update bulk dataset_file
+      operationId: update_bulkdataset_file
+      requestBody:
+        description: 'Provide Dataset files as array of records. E.g { "dataset_files": [ {record1},{record2},{record3},... ]'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dataset_files_bulk'
+        required: true
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json; version=1:
+              schema:
+                $ref: '#/components/schemas/dataset_files_bulk'
+        '401':
+          description: Unauthorized header - valid authorization required
+        '403':
+          description: Access to the requested resource is forbidden - permission issue
+        '422':
+          description: e.g. mandatory fields missing or unique field already taken/present
+      security:
+        - UserEmail: []
+          MetadataAuth:
+            - read:modules
+        - UserEmail: []
+          BearerToken: []
+  /dataset_files/bulk_check:
+    post:
+      tags:
+        - dataset_files
+      summary: check dataset files in bulk
+      operationId: check_bulkdataset_file
+      requestBody:
+        description: 'To check dataset files in bulk provide "ids" as array or "data_group_id" as integer E.g { "dataset_files": { "ids": [ 9, 8, ...] }'
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/dataset_files_bulk'
+        required: true
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json; version=1:
+              schema:
+                $ref: '#/components/schemas/dataset_files_bulk'
         '401':
           description: Unauthorized header - valid authorization required
         '403':
@@ -8848,26 +8912,6 @@ components:
                 example: 145123456
       xml:
         name: Dataset_files_bulk
-    dataset_files_delete_bulk:
-      required:
-        - ids
-      properties:
-        dataset_file:
-          type: array
-          example:
-            ids:
-              - 12
-              - 13
-            data_group_id: 0
-          items:
-            properties:
-              ids:
-                type: array
-                example: '[1]'
-              data_group_id:
-                type: integer
-      xml:
-        name: Dataset_files_bulk
     Data_source_groups:
       required:
         - group_identifier
@@ -9551,14 +9595,14 @@ components:
                 type: integer
                 example: 1
               uid:
-                type: lastf
-                example: 1
+                type: string
+                example: lastf
               name:
-                type: integer
+                type: string
                 example: First Last
               email:
                 type: string
-                example: first.last@xfeel.eu
+                example: first.last@xfel.eu
               flg_upex_acceptances:
                 type: boolean
                 example: false
@@ -9759,14 +9803,14 @@ components:
                 type: integer
                 example: 1
               uid:
-                type: lastf
-                example: 1
+                type: string
+                example: lastf
               name:
-                type: integer
+                type: string
                 example: First Last
               email:
                 type: string
-                example: first.last@xfeel.eu
+                example: first.last@xfel.eu
               flg_upex_acceptances:
                 type: boolean
                 example: false
@@ -10984,16 +11028,16 @@ components:
                 example: Group coordinator
               uid:
                 type: string
-                example: 1
+                example: lastf
               provider:
                 type: string
                 default: local
               name:
-                type: integer
+                type: string
                 example: First Last
               email:
                 type: string
-                example: first.last@xfeel.eu
+                example: first.last@xfel.eu
               flg_upex_acceptances:
                 type: boolean
                 example: false
@@ -11005,7 +11049,7 @@ components:
               - string
       xml:
         name: Proposals
-    schemas-Schema1:
+    Schema1-2:
       type: object
       properties:
         user_id:
@@ -11120,10 +11164,10 @@ components:
         proposals_users_attributes:
           type: array
           items:
-            $ref: '#/components/schemas/schemas-Schema1'
+            $ref: '#/components/schemas/Schema1-2'
       xml:
         name: Proposals
-    schemas-Schema2:
+    Schema2-2:
       type: object
       properties:
         id:
@@ -11227,8 +11271,8 @@ components:
           type: array
           items:
             oneOf:
-              - $ref: '#/components/schemas/schemas-Schema2'
-              - $ref: '#/components/schemas/schemas-Schema1'
+              - $ref: '#/components/schemas/Schema2-2'
+              - $ref: '#/components/schemas/Schema1-2'
       xml:
         name: Proposals
     proposal_runs:

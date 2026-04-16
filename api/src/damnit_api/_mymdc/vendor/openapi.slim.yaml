@@ -224,16 +224,16 @@ components:
                 example: Group coordinator
               uid:
                 type: string
-                example: 1
+                example: lastf
               provider:
                 type: string
                 default: local
               name:
-                type: integer
+                type: string
                 example: First Last
               email:
                 type: string
-                example: first.last@xfeel.eu
+                example: first.last@xfel.eu
               flg_upex_acceptances:
                 type: boolean
                 example: false
