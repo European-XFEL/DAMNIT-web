@@ -18,13 +18,15 @@ schemas.
 """
 
 from . import models
-from .models import InstrumentCycles, Users, UsersProposal, UsersProposals
+from .models import (
+    InstrumentCycles,
+    Users,
+    UsersInfoItem,
+    UsersProposal,
+    UsersProposals,
+)
 
 # TODO: Contact ITDM to request fixes to the OpenAPI spec
-
-
-class UsersInfoItem(models.UsersInfoItem):
-    name: str  # pyright: ignore[reportGeneralTypeIssues, reportIncompatibleVariableOverride]
 
 
 class LogbookInfo(models.LogbookInfo):
@@ -39,6 +41,7 @@ class GetProposals(models.GetProposals):
     users_ids: list[tuple[int, str, str]] | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
     users_info: list[UsersInfoItem] | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
     logbook_info: LogbookInfo | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    meeting: dict | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
 
 
 __all__ = [
