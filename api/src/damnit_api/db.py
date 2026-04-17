@@ -205,6 +205,11 @@ async def async_variable_tags(proposal):
 
 def get_damnit_path(proposal_number: str = DEFAULT_PROPOSAL) -> str:
     """Returns the directory of the given proposal."""
+    from .shared.settings import settings
+
+    if settings.is_local:
+        return str(settings.damnit_path)
+
     path = find_proposal(proposal_number)
     if not path:
         msg = f"Proposal '{proposal_number}' is not found."
