@@ -101,6 +101,7 @@ async def _single_reader(deadline):
     from damnit_api.db import (
         async_all_tags,
         async_latest_rows,
+        async_table,
         async_variable_tags,
         async_variables,
     )
@@ -112,9 +113,12 @@ async def _single_reader(deadline):
     while time.monotonic() < deadline:
         try:
             await async_variables(PROPOSAL_LABEL)
+            run_variables = await async_table(
+                PROPOSAL_LABEL, name="run_variables"
+            )
             await async_latest_rows(
                 PROPOSAL_LABEL,
-                table="run_variables",
+                table=run_variables,
                 by="timestamp",
                 start_at=0,
             )
@@ -156,7 +160,20 @@ def stage_copy(damnit_dir, scratch_dir):
     scratch_dir.mkdir(parents=True, exist_ok=True)
     staging = scratch_dir / f"repro-{uuid.uuid4().hex[:8]}"
     staging.mkdir()
-    shutil.copyfile(src, staging / "runs.sqlite")
+    dst = staging / "runs.sqlite"
+    shutil.copyfile(src, dst)
+
+    # Some older sqlites lack tags/variable_tags. Create empty placeholders
+    # so both branches exercise the same read path on this scratch copy.
+    import sqlite3
+    with sqlite3.connect(dst) as conn:
+        conn.executescript(
+            "CREATE TABLE IF NOT EXISTS tags ("
+            "id INTEGER PRIMARY KEY, name TEXT);"
+            "CREATE TABLE IF NOT EXISTS variable_tags ("
+            "variable_name TEXT, tag_id INTEGER);"
+        )
+
     return staging
 
 
