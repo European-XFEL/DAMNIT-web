@@ -292,7 +292,7 @@ def main():
             shutil.rmtree(staging, ignore_errors=True)
 
     print()
-    print("--------- reproduction summary ---------"))
+    print("--------- reproduction summary ---------")
     print(f"duration:        {args.duration:.1f} s")
     print(
         f"reader ops:      {reader_ops}"
