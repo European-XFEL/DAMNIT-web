@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from .shared.const import DEFAULT_PROPOSAL
 from .utils import Registry, create_map, find_proposal
@@ -32,7 +33,11 @@ class DatabaseSessionManager(metaclass=Registry):
     def __init__(self, proposal: str = DEFAULT_PROPOSAL):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
-        self._engine = create_async_engine(self.db_path)
+        self._engine = create_async_engine(
+            self.db_path,
+            isolation_level="AUTOCOMMIT",
+            poolclass=NullPool,
+        )
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
     @property
