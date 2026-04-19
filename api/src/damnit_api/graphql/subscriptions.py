@@ -11,7 +11,7 @@ from ..utils import create_map, wrap_values
 from .models import Timestamp, get_model
 from .utils import DatabaseInput, LatestData, fetch_info
 
-POLLING_INTERVAL = 1  # seconds
+POLLING_INTERVAL = 5  # seconds
 
 
 @alru_cache(ttl=POLLING_INTERVAL)
