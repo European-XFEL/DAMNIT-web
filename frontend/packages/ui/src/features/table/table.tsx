@@ -11,7 +11,7 @@ import {
   type Rectangle,
 } from '@glideapps/glide-data-grid'
 import { allCells } from '@glideapps/glide-data-grid-cells'
-import { Group, Stack } from '@mantine/core'
+import { Group, Stack, rem } from '@mantine/core'
 
 import { getCell, numberCell, textCell } from './cells'
 import { TagsPopover } from './components/popovers/tags-popover'
@@ -340,7 +340,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   return (
     <>
       {!tableColumns.length ? null : (
-        <Stack w="100%" h="100%" gap="sm">
+        <Stack w="100%" h="100%" gap={rem(6)}>
           <Group px={6}>
             <VariablesPopover />
             <TagsPopover />
