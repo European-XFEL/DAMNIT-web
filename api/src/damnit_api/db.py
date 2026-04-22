@@ -179,6 +179,31 @@ async def async_variable_tags(proposal):
         return []
 
 
+async def async_config_value(proposal, key):
+    metameta = await async_table(proposal, name="metameta")
+    selection = select(metameta.c.value).where(metameta.c.key == key)
+    async with get_session(proposal) as session:
+        result = await session.execute(selection)
+    return result.scalar()
+
+
+async def async_changed_values(proposal, data_proposal, run, values):
+    run_vars = await async_table(proposal, name="run_variables")
+
+    selection = (
+        select(run_vars)
+        .where(
+            run_vars.c.proposal == data_proposal,
+            run_vars.c.run == run,
+            run_vars.c.run.in_(values)
+        )
+    )
+
+    async with get_session(proposal) as session:
+        result = await session.execute(selection)
+    return result.mappings().all()  # FIX: # pyright: ignore[reportReturnType]
+
+
 # -----------------------------------------------------------------------------
 # Etc.
 
