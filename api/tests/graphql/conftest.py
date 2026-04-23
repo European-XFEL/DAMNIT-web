@@ -1,9 +1,12 @@
 import pytest
 import pytest_asyncio
+from strawberry.schema.config import StrawberryConfig
 
 from damnit_api.graphql.bootstrap import bootstrap
 from damnit_api.graphql.models import DamnitTable, get_stype
+from damnit_api.graphql.queries import Query
 from damnit_api.graphql.schema import Schema
+from damnit_api.graphql.subscriptions import Subscription, poll_proposal
 
 from .const import EXAMPLE_TAGS, EXAMPLE_VARIABLE_TAGS, EXAMPLE_VARIABLES, RUNS
 
@@ -12,6 +15,7 @@ from .const import EXAMPLE_TAGS, EXAMPLE_VARIABLE_TAGS, EXAMPLE_VARIABLES, RUNS
 def lifespan():
     DamnitTable.registry.clear()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
     bootstrap.cache_clear()
+    poll_proposal.cache_clear()
     return
 
 
@@ -47,14 +51,27 @@ def mocked_bootstrap_column(mocker):
     )
 
 
+@pytest.fixture
+def mocked_bootstrap_max(mocker):
+    mocker.patch(
+        "damnit_api.graphql.bootstrap.db.async_max",
+        return_value=None,
+    )
+
+
 @pytest_asyncio.fixture
 async def graphql_schema(
     mocked_bootstrap_variables,
     mocked_bootstrap_column,
     mocked_bootstrap_all_tags,
     mock_bootstrap_variable_tags,
+    mocked_bootstrap_max,
 ):
-    schema = Schema()
+    schema = Schema(
+        query=Query,
+        subscription=Subscription,
+        config=StrawberryConfig(auto_camel_case=False),
+    )
 
     # Initialize
     await bootstrap(proposal="1234")

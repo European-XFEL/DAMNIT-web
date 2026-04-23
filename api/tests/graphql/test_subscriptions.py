@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from damnit_api.graphql.models import DamnitRun, serialize
-from damnit_api.graphql.subscriptions import POLLING_INTERVAL
+from damnit_api.graphql.subscriptions import POLLING_INTERVAL, filter_for_client
 
 from .const import (
     EXAMPLE_VARIABLES,
@@ -30,8 +30,14 @@ def current_timestamp():
 
 @pytest.fixture
 def mocked_latest_rows(mocker, current_timestamp):
+    table_sentinel = mocker.sentinel.run_variables_table
+    mocker.patch(
+        "damnit_api.graphql.subscriptions.async_table",
+        return_value=table_sentinel,
+    )
+
     def mocked_returns(*args, table, **kwargs):
-        if table == "run_variables":
+        if table is table_sentinel:
             return create_run_variables(
                 NEW_VALUES,
                 proposal=KNOWN_VALUES["proposal"],
@@ -80,43 +86,39 @@ async def test_latest_data(
         """,
         variable_values={
             "proposal": "1234",
-            "timestamp": current_timestamp * 1000,  # some arbitrary timestamp
+            "timestamp": (current_timestamp - 1) * 1000,  # before the new row
         },
         context_value={
             "schema": graphql_schema,
         },
     )
 
-    # Only test the first update
-    async for result in subscription:
-        assert not result.errors
+    result = await asyncio.wait_for(anext(subscription), timeout=2)
+    assert not result.errors
 
-        data = {**KNOWN_VALUES, **NEW_VALUES, "run": NEW_RUN}
-        dtypes = {**KNOWN_DTYPES, **NEW_DTYPES}
+    data = {**KNOWN_VALUES, **NEW_VALUES, "run": NEW_RUN}
+    dtypes = {**KNOWN_DTYPES, **NEW_DTYPES}
 
-        latest_data = result.data["latest_data"]
-        assert set(latest_data.keys()) == {"runs", "metadata"}
-        assert latest_data["runs"] == {
-            NEW_RUN: {
-                name: {
-                    "value": serialize(value, dtype=dtypes[name]),
-                    "dtype": dtypes[name].value,
-                }
-                for name, value in data.items()
+    latest_data = result.data["latest_data"]
+    assert set(latest_data.keys()) == {"runs", "metadata"}
+    assert latest_data["runs"] == {
+        NEW_RUN: {
+            name: {
+                "value": serialize(value, dtype=dtypes[name])[0],
+                "dtype": dtypes[name].value,
             }
+            for name, value in data.items()
         }
+    }
 
-        metadata = latest_data["metadata"]
-        assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
-        assert metadata["runs"] == [*RUNS, NEW_RUN]
-        assert metadata["timestamp"] == current_timestamp * 1000
-        assert metadata["variables"] == {
-            **DamnitRun.known_variables(),
-            **EXAMPLE_VARIABLES,
-        }
-
-        # Don't forget to break!
-        break
+    metadata = latest_data["metadata"]
+    assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
+    assert metadata["runs"] == [*RUNS, NEW_RUN]
+    assert metadata["timestamp"] == current_timestamp * 1000
+    assert metadata["variables"] == {
+        **DamnitRun.known_variables(),
+        **EXAMPLE_VARIABLES,
+    }
 
 
 @pytest.mark.asyncio
@@ -136,7 +138,7 @@ async def test_latest_data_with_concurrent_subscriptions(
         """
     variables = {
         "proposal": "1234",
-        "timestamp": current_timestamp * 1000,  # some arbitrary timestamp
+        "timestamp": (current_timestamp - 1) * 1000,  # before the new row
     }
     context = {
         "schema": graphql_schema,
@@ -154,20 +156,16 @@ async def test_latest_data_with_concurrent_subscriptions(
     )
 
     with patched_sleep:
-        async for result in first_sub:
-            # Only test the first update
-            assert not result.errors
-            mocked_latest_rows.assert_called()
-            break
+        result = await asyncio.wait_for(anext(first_sub), timeout=2)
+        assert not result.errors
+        mocked_latest_rows.assert_called()
 
     mocked_latest_rows.reset_mock()
 
     with patched_sleep:
-        async for result in second_sub:
-            # Only test the first update
-            assert not result.errors
-            mocked_latest_rows.assert_not_called()
-            break
+        result = await asyncio.wait_for(anext(second_sub), timeout=2)
+        assert not result.errors
+        mocked_latest_rows.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -187,7 +185,7 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
         """
     variables = {
         "proposal": "1234",
-        "timestamp": current_timestamp * 1000,  # some arbitrary timestamp
+        "timestamp": (current_timestamp - 1) * 1000,  # before the new row
     }
     context = {
         "schema": graphql_schema,
@@ -205,18 +203,48 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
     )
 
     with patched_sleep:
-        async for result in first_sub:
-            # Only test the first update
-            assert not result.errors
-            mocked_latest_rows.assert_called()
-            break
+        result = await asyncio.wait_for(anext(first_sub), timeout=2)
+        assert not result.errors
+        mocked_latest_rows.assert_called()
 
     await asyncio.sleep(POLLING_INTERVAL * 3)  # give enough time to clear the cache
     mocked_latest_rows.reset_mock()
 
     with patched_sleep:
-        async for result in second_sub:
-            # Only test the first update
-            assert not result.errors
-            mocked_latest_rows.assert_called()
-            break
+        result = await asyncio.wait_for(anext(second_sub), timeout=2)
+        assert not result.errors
+        mocked_latest_rows.assert_called()
+
+
+# -----------------------------------------------------------------------------
+# filter_for_client
+
+
+def _snapshot(run_timestamps):
+    runs = {run: {"value": run} for run in run_timestamps}
+    return {
+        "runs": runs,
+        "run_timestamps": run_timestamps,
+        "max_timestamp": max(run_timestamps.values()),
+        "metadata": {"runs": list(runs), "variables": {}, "timestamp": 0},
+    }
+
+
+def test_filter_for_client_none_snapshot():
+    assert filter_for_client(None, since=0) is None
+
+
+def test_filter_for_client_since_zero_returns_none():
+    snapshot = _snapshot({1: 100.0, 2: 200.0})
+    assert filter_for_client(snapshot, since=0) is None
+
+
+def test_filter_for_client_excludes_equal_timestamp():
+    snapshot = _snapshot({1: 100.0, 2: 200.0})
+    result = filter_for_client(snapshot, since=100.0)
+    assert set(result["runs"].keys()) == {2}
+
+
+def test_filter_for_client_since_above_all_returns_none():
+    snapshot = _snapshot({1: 100.0, 2: 200.0})
+    assert filter_for_client(snapshot, since=300.0) is None

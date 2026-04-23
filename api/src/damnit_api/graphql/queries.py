@@ -29,6 +29,8 @@ def group_by_run(record):
 
 async def fetch_variables(proposal, *, limit, offset):
     table = await async_table(proposal, name="run_variables")
+    if table is None:
+        return []
 
     runs_subquery = (
         select(table.c.run)

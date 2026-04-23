@@ -24,7 +24,10 @@ async def bootstrap(proposal=db.DEFAULT_PROPOSAL):
     for name, var in variables.items():
         var["tags"] = [tags[tag]["name"] for tag in variable_tags.get(name, [])]
 
-    model.update(variables)
+    latest_timestamp = await db.async_max(
+        proposal, table="run_variables", column="timestamp"
+    )
+    model.update(variables, timestamp=latest_timestamp)
 
     # Popoulate tag model with variables
     for name, var_tags in variable_tags.items():

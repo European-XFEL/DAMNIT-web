@@ -64,6 +64,8 @@ class LatestData:
 
 async def fetch_info(proposal, *, runs):
     table = await async_table(proposal, name="run_info")
+    if table is None:
+        return []
     conditions = [table.c.run == run for run in runs]
     query = select(table).where(or_(*conditions)).order_by(table.c.run)
 
