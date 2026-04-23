@@ -4,6 +4,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import colorama
+import rich.console
 import structlog
 import structlog.typing
 import ulid
@@ -74,31 +75,27 @@ def configure(
 
     from .shared.settings import settings
 
+    def _render_kwargs() -> dict:
+        rv = dict(
+            colors=rich.console.Console().color_system is not None,
+            exception_formatter=RichTracebackFormatter(max_frames=1),
+            level_styles=None,
+            sort_keys=False,
+        )
+        if rv["colors"]:
+            rv["level_styles"] = structlog.dev.ConsoleRenderer.get_default_level_styles()
+            rv["level_styles"]["debug"] = colorama.Fore.MAGENTA
+        return rv
+
     debug = settings.debug if debug is None else debug
     level = settings.log_level if level is None else level
 
     if isinstance(level, str):
         level = logging.getLevelNamesMapping()[level.upper()]
 
-    level_styles = structlog.dev.ConsoleRenderer.get_default_level_styles()
-
     if debug:
-        level_styles["debug"] = colorama.Fore.MAGENTA
-
-    if debug:
-        try:
-            import rich as _  # noqa: F401
-
-            exception_formatter = RichTracebackFormatter(max_frames=1)
-        except Exception:
-            # Fall back to plain traceback if `rich` isn't installed or import fails
-            exception_formatter = structlog.dev.plain_traceback  # type: ignore[attr-defined]
-
         renderer: structlog.typing.Processor = structlog.dev.ConsoleRenderer(
-            colors=True,
-            level_styles=level_styles,
-            sort_keys=False,
-            exception_formatter=exception_formatter,
+            **_render_kwargs()
         )  # type: ignore[assignment]
     else:
         renderer = structlog.processors.JSONRenderer(indent=1)
