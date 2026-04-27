@@ -19,44 +19,44 @@ from damnit_api.shared.const import DamnitType
 
 
 @dataclass
-class TestData:
+class ExtractedData:
     value: object
-    expected_type: DamnitType
+    dtype: DamnitType
     type_hint: DataType | None = None
 
 
 scalars = [
-    TestData(value="foo", expected_type=DamnitType.STRING),
-    TestData(value=1234, expected_type=DamnitType.NUMBER),
-    TestData(value=False, expected_type=DamnitType.BOOLEAN),
+    ExtractedData(value="foo", dtype=DamnitType.STRING),
+    ExtractedData(value=1234, dtype=DamnitType.NUMBER),
+    ExtractedData(value=False, dtype=DamnitType.BOOLEAN),
 ]
 images = [
-    TestData(
+    ExtractedData(
         value=np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8),
         type_hint=DataType.Image,
-        expected_type=DamnitType.RGBA,
+        dtype=DamnitType.RGBA,
     ),
 ]
 ndarrays = [
-    TestData(
+    ExtractedData(
         value=np.random.rand(10),
-        expected_type=DamnitType.ARRAY,
+        dtype=DamnitType.ARRAY,
     ),
-    TestData(
+    ExtractedData(
         value=np.random.rand(4, 3),
-        expected_type=DamnitType.IMAGE,
+        dtype=DamnitType.IMAGE,
     ),
 ]
 dataarrays = [
-    TestData(
+    ExtractedData(
         xr.DataArray(data.value),
         type_hint=DataType.DataArray,
-        expected_type=data.expected_type,
+        dtype=data.dtype,
     )
     for data in ndarrays
 ]
 datasets = [
-    TestData(
+    ExtractedData(
         value=xr.Dataset(
             {
                 "a": ("x", np.random.rand(10)),
@@ -65,7 +65,7 @@ datasets = [
             coords={"x": np.arange(10)},
         ),
         type_hint=DataType.Dataset,
-        expected_type=DamnitType.DATASET,
+        dtype=DamnitType.DATASET,
     ),
 ]
 
@@ -75,7 +75,7 @@ datasets = [
     scalars + images + ndarrays + dataarrays,
 )
 def test_get_damnit_type_valid(data):
-    assert get_damnit_type(data.value, type_hint=data.type_hint) is data.expected_type
+    assert get_damnit_type(data.value, type_hint=data.type_hint) is data.dtype
 
 
 @pytest.mark.parametrize(
