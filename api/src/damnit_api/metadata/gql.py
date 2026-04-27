@@ -36,8 +36,16 @@ class Query:
         proposal_numbers: list[int],
     ) -> list[ProposalMeta] | None:
         """Fetch metadata for the provided proposal number."""
+        from ..shared.settings import settings
+
         if info.context.request is None:
             return None
+
+        if settings.is_local:
+            return [
+                ProposalMeta.from_pydantic(services._local_proposal_meta(n))
+                for n in proposal_numbers
+            ]
 
         mymdc, session = info.context.mymdc, info.context.session
 

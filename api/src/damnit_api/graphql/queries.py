@@ -25,6 +25,11 @@ async def _ensure_proposal_damnit_path(info: Info, proposal: str) -> None:
     """Resolve the user, check access, and ensure the proposal has a DAMNIT
     path. Refreshes from MyMdC if the cached metadata has no path.
     """
+    from ..shared.settings import settings
+
+    if settings.is_local:
+        return
+
     user = await User.from_oauth_user(
         info.context.mymdc, info.context.session, info.context.oauth_user
     )
@@ -222,10 +227,7 @@ class Query:
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
         return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
-            proposal=int(
-                # FIXME: database.proposal is loosely typed
-                database.proposal  # pyright: ignore[reportArgumentType, reportReturnType]
-            ),
+            proposal=database.proposal,
             run=run,
             variable=variable,
         )
