@@ -46,6 +46,7 @@ ignore = ["B018", "B019", "ISC001", "RUF067"]
 
 [lint.per-file-ignores]
 "tests/*" = ["S101"]
+"scripts/*" = ["S404", "S603"]
 
 [lint.isort]
 known-local-folder = ["src"]

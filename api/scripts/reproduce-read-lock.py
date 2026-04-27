@@ -125,7 +125,7 @@ async def _single_reader(deadline):
             await async_all_tags(PROPOSAL_LABEL)
             await async_variable_tags(PROPOSAL_LABEL)
             ops += 4
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             if "database is locked" in str(exc):
                 lock_errors += 1
             else:
@@ -153,9 +153,8 @@ async def reader_loop(duration, readers):
 def stage_copy(damnit_dir, scratch_dir):
     src = damnit_dir / "runs.sqlite"
     if not src.is_file():
-        raise SystemExit(
-            f"--damnit-dir does not contain runs.sqlite: {src}"
-        )
+        msg = f"--damnit-dir does not contain runs.sqlite: {src}"
+        raise SystemExit(msg)
 
     scratch_dir.mkdir(parents=True, exist_ok=True)
     staging = scratch_dir / f"repro-{uuid.uuid4().hex[:8]}"

@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-test = ["pytest~=7.4", "pytest-asyncio~=0.21", "pytest-mock~=3.11"]
+test = ["pytest~=8.2", "pytest-asyncio~=0.24", "pytest-mock~=3.11"]
 lint = ["pyright>=1.1.406", "ruff>=0.7"]
 docs = [
     "mkdocs>=1.6.1",
@@ -67,6 +67,12 @@ dev = [
 
 [tool.uv]
 default-groups = []
+
+[tool.pytest.ini_options]
+# Session-scoped event loop so alru_cache instances bind once and never
+# see a loop change between tests (no AlruCacheLoopResetWarning).
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 
 [tool.hatch.build.targets.sdist]
 include = ["src/damnit_api"]
