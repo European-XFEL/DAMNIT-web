@@ -65,6 +65,10 @@ async def test_watcher_detects_change(app, client, temp_dir):
     assert await wait_for_change(client, "/contextfile/last_modified", initial_modified)
 
 
+# FastAPI's TestClient creates a fresh event loop per request, so any
+# alru_cached helper called by the handler binds to that loop. The
+# loop-reset warning is intrinsic to this testing pattern.
+@pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
 def test_file_fetching(app, client, temp_dir):
     app.dependency_overrides[get_proposal_meta] = lambda: SimpleNamespace(
         damnit_path=str(temp_dir)
