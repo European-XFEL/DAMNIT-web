@@ -87,38 +87,41 @@ async def test_latest_data(
         },
     )
 
-    result = await asyncio.wait_for(anext(subscription), timeout=2)
-    assert not result.errors
+    try:
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+        assert not result.errors
 
-    data = {
-        **KNOWN_DATA,
-        **NEW_DATA,
-        "run": DatabaseVariable(
-            value=NEW_RUN,
-            damnit_dtype=DamnitType.NUMBER,
-        ),
-    }
-
-    latest_data = result.data["latest_data"]
-    assert set(latest_data.keys()) == {"runs", "metadata"}
-    assert latest_data["runs"] == {
-        NEW_RUN: {
-            name: {
-                "value": var.damnit_value,
-                "dtype": var.damnit_dtype.value,
-            }
-            for name, var in data.items()
+        data = {
+            **KNOWN_DATA,
+            **NEW_DATA,
+            "run": DatabaseVariable(
+                value=NEW_RUN,
+                damnit_dtype=DamnitType.NUMBER,
+            ),
         }
-    }
 
-    metadata = latest_data["metadata"]
-    assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
-    assert metadata["runs"] == [*RUNS, NEW_RUN]
-    assert metadata["timestamp"] == current_timestamp * 1000
-    assert metadata["variables"] == {
-        **DamnitRun.known_variables(),
-        **EXAMPLE_VARIABLES,
-    }
+        latest_data = result.data["latest_data"]
+        assert set(latest_data.keys()) == {"runs", "metadata"}
+        assert latest_data["runs"] == {
+            NEW_RUN: {
+                name: {
+                    "value": var.damnit_value,
+                    "dtype": var.damnit_dtype.value,
+                }
+                for name, var in data.items()
+            }
+        }
+
+        metadata = latest_data["metadata"]
+        assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
+        assert metadata["runs"] == [*RUNS, NEW_RUN]
+        assert metadata["timestamp"] == current_timestamp * 1000
+        assert metadata["variables"] == {
+            **DamnitRun.known_variables(),
+            **EXAMPLE_VARIABLES,
+        }
+    finally:
+        await subscription.aclose()
 
 
 @pytest.mark.asyncio
@@ -149,17 +152,21 @@ async def test_latest_data_with_concurrent_subscriptions(
         variable_values=variables,
     )
 
-    with patched_sleep:
-        result = await asyncio.wait_for(anext(first_sub), timeout=2)
-        assert not result.errors
-        mocked_latest_rows.assert_called()
+    try:
+        with patched_sleep:
+            result = await asyncio.wait_for(anext(first_sub), timeout=2)
+            assert not result.errors
+            mocked_latest_rows.assert_called()
 
-    mocked_latest_rows.reset_mock()
+        mocked_latest_rows.reset_mock()
 
-    with patched_sleep:
-        result = await asyncio.wait_for(anext(second_sub), timeout=2)
-        assert not result.errors
-        mocked_latest_rows.assert_not_called()
+        with patched_sleep:
+            result = await asyncio.wait_for(anext(second_sub), timeout=2)
+            assert not result.errors
+            mocked_latest_rows.assert_not_called()
+    finally:
+        await first_sub.aclose()
+        await second_sub.aclose()
 
 
 @pytest.mark.asyncio
@@ -190,18 +197,22 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
         variable_values=variables,
     )
 
-    with patched_sleep:
-        result = await asyncio.wait_for(anext(first_sub), timeout=2)
-        assert not result.errors
-        mocked_latest_rows.assert_called()
+    try:
+        with patched_sleep:
+            result = await asyncio.wait_for(anext(first_sub), timeout=2)
+            assert not result.errors
+            mocked_latest_rows.assert_called()
 
-    await asyncio.sleep(POLLING_INTERVAL * 3)  # give enough time to clear the cache
-    mocked_latest_rows.reset_mock()
+        await asyncio.sleep(POLLING_INTERVAL * 3)  # give enough time to clear the cache
+        mocked_latest_rows.reset_mock()
 
-    with patched_sleep:
-        result = await asyncio.wait_for(anext(second_sub), timeout=2)
-        assert not result.errors
-        mocked_latest_rows.assert_called()
+        with patched_sleep:
+            result = await asyncio.wait_for(anext(second_sub), timeout=2)
+            assert not result.errors
+            mocked_latest_rows.assert_called()
+    finally:
+        await first_sub.aclose()
+        await second_sub.aclose()
 
 
 # -----------------------------------------------------------------------------
