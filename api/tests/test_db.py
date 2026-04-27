@@ -22,7 +22,6 @@ from damnit_api.db import (
     get_session,
 )
 
-
 # -----------------------------------------------------------------------------
 # Fixtures
 
@@ -54,11 +53,11 @@ def _open_file_descriptors_to(db_file: Path):
     hits = []
     for link in fd_dir.iterdir():
         try:
-            target = os.readlink(link)
+            target = link.readlink()
         except OSError:
             continue
-        if target == str(db_file):
-            hits.append(target)
+        if target == db_file:
+            hits.append(str(target))
     return hits
 
 
