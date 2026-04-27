@@ -14,8 +14,7 @@ from .utils import DatabaseInput, LatestData, fetch_info
 POLLING_INTERVAL = 1  # seconds
 
 # Server-side high-water mark per proposal so each tick only fetches rows
-# newer than what the previous tick already shipped. Bridges the role
-# `model.timestamp` used to play before the flat-model refactor.
+# newer than what the previous tick already shipped.
 _last_seen_timestamp: dict[str, float] = {}
 
 
@@ -47,7 +46,6 @@ async def poll_proposal(proposal):
     latest_runs = await fetch_info(proposal, runs=list(latest_data.runs.keys()))
     latest_runs = create_map(latest_runs, key="run")
 
-    # New rows arrived. Clear the metadata cache so the next read is fresh.
     fetch_metadata.cache_invalidate(proposal)
     metadata = await fetch_metadata(proposal)
 

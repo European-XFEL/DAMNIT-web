@@ -221,7 +221,7 @@ class Query:
     ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
-        return get_preview_data(  # FIX:  # pyright: ignore[reportReturnType]
+        return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
             proposal=int(
                 # FIXME: database.proposal is loosely typed
                 database.proposal  # pyright: ignore[reportArgumentType, reportReturnType]
