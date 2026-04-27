@@ -15,7 +15,8 @@ from damnit_api.data import (
 )
 from damnit_api.shared.const import DamnitType
 
-# ---- get_damnit_type -------------------------------------------------------
+# -----------------------------------------------------------------------------
+# get_damnit_type
 
 
 @dataclass
@@ -87,7 +88,8 @@ def test_get_damnit_type_unsupported(data):
         get_damnit_type(data.value, type_hint=data.type_hint)
 
 
-# ---- to_dataarray ----------------------------------------------------------
+# -----------------------------------------------------------------------------
+# to_dataarray
 
 
 def test_to_dataarray_1d_ndarray():
@@ -171,7 +173,8 @@ def test_to_data_array_unsupported(data):
         to_dataarray(data)
 
 
-# ---- standardize -----------------------------------------------------------
+# -----------------------------------------------------------------------------
+# standardize
 
 
 def test_standardize_dataarray():
@@ -216,7 +219,8 @@ def test_standardize_png():
     }
 
 
-# ---- standardize -----------------------------------------------------------
+# -----------------------------------------------------------------------------
+# get_preview_data
 
 DAMNIT_CLASS_PATH = "damnit_api.data.Damnit"
 
@@ -285,7 +289,8 @@ def test_get_preview_data_png(mocker):
     assert actual["attrs"] == {"shape": list(data.shape[:2])}
 
 
-# ---- helpers -----------------------------------------------------------
+# -----------------------------------------------------------------------------
+# helpers
 
 
 def assert_coords(actual, expected):
