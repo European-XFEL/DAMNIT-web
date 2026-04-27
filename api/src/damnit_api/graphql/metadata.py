@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 
 from async_lru import alru_cache
@@ -15,9 +16,12 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
     is TTL-cached; the `latest_data` subscription invalidates this cache when
     it observes new data so subsequent reads stay fresh.
     """
-    tags = await db.async_all_tags(proposal)
-    variables = await db.async_variables(proposal)
-    variable_tags = await db.async_variable_tags(proposal)
+    tags, variables, variable_tags, runs = await asyncio.gather(
+        db.async_all_tags(proposal),
+        db.async_variables(proposal),
+        db.async_variable_tags(proposal),
+        db.async_column(proposal, table="run_info", name="run"),
+    )
 
     for name, var in variables.items():
         var["tags"] = [tags[tag]["name"] for tag in variable_tags.get(name, [])]
@@ -34,8 +38,6 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
         "variables": [name for name, var in variables.items() if not var.get("tags")],
     }
     tags = create_map([untagged, *tags.values()], key="name")
-
-    runs = await db.async_column(proposal, table="run_info", name="run")
 
     return {
         "runs": sorted(runs or []),
