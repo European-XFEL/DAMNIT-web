@@ -10,11 +10,7 @@ import {
 } from '@reduxjs/toolkit'
 
 import TableDataServices from './table-data.services'
-import {
-  type TableData,
-  type TableDataOptions,
-  type TableInfo,
-} from './table-data.types'
+import { type TableDataOptions, type TableInfo } from './table-data.types'
 import { type Maybe } from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
@@ -53,12 +49,13 @@ export const getTableData = createAsyncThunk(
     pageSize = 10000,
     deferred = false,
   }: TableDataOptions & { variables: string[] }) => {
-    return (await TableDataServices.getTableData(['run', ...variables], {
+    return await TableDataServices.getTableData({
       proposal,
+      variables: ['run', ...variables],
       page,
       pageSize,
       deferred,
-    })) as TableData
+    })
   }
 )
 
