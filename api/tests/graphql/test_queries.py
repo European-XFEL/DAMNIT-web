@@ -42,10 +42,10 @@ def mocked_fetch_info(mocker):
 
 
 @pytest.fixture
-def mocked_metadata_auth(mocker):
-    """Bypass the auth + damnit_path check on the metadata query."""
+def mocked_ensure_damnit_path(mocker):
+    """Bypass the damnit_path validation on the metadata query."""
     mocker.patch(
-        "damnit_api.graphql.queries._ensure_proposal_damnit_path",
+        "damnit_api.graphql.queries._ensure_damnit_path",
         return_value=None,
     )
 
@@ -260,7 +260,7 @@ async def test_runs_query_fetches_run_info_when_metadata_requested(
 
 
 @pytest.mark.asyncio
-async def test_metadata_query(graphql_schema, mocked_metadata_auth):
+async def test_metadata_query(graphql_schema, mocked_ensure_damnit_path):
     query = """
         query TableMetadataQuery($proposal: String) {
           metadata(database: { proposal: $proposal })
