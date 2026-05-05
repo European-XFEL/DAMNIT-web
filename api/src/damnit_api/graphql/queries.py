@@ -5,7 +5,7 @@ from strawberry.types import Info
 from strawberry.types.nodes import SelectedField
 
 from .. import get_logger
-from ..auth.models import User
+from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..data import get_preview_data
 from ..db import async_table, get_session
 from ..metadata.services import get_proposal_meta, update_proposal_meta
@@ -162,7 +162,7 @@ class Query:
     Defines the GraphQL queries for the Damnit API.
     """
 
-    @strawberry.field
+    @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
     async def runs(
         self,
         info: Info,
@@ -202,7 +202,7 @@ class Query:
             for v, i in zip(variables, info_rows, strict=True)
         ]
 
-    @strawberry.field
+    @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
     async def metadata(
         self,
         info: Info,
@@ -222,7 +222,7 @@ class Query:
             "timestamp": snapshot["timestamp"] * 1000,  # ms for JS
         }  # pyright: ignore[reportReturnType]
 
-    @strawberry.field
+    @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
     async def extracted_data(
         self,
         info: Info,
