@@ -12,9 +12,10 @@ from ._logging import RequestLoggingMiddleware
 KNOWN_PATHS = ["/graphql"]
 
 
-def create_app():
+def create_app():  # noqa: C901
     from . import _db, _logging, _mymdc, auth, contextfile, get_logger, metadata
     from .shared import errors, gql
+    from .shared import routers as shared_routers
     from .shared.settings import settings
 
     logger = get_logger("lifespan")
@@ -29,14 +30,18 @@ def create_app():
 
         logger.info("Starting application lifespan")
 
-        bootstraps = [_mymdc.bootstrap, auth.bootstrap, _db.bootstrap]
+        bootstraps = [auth.bootstrap, _db.bootstrap]
+        if settings.metadata.provider == "mymdc":
+            bootstraps.append(_mymdc.bootstrap)
         async with TaskGroup() as tg:
             for bs in bootstraps:
                 tg.create_task(bs(settings))
 
         app.router.include_router(auth.router)
+        app.router.include_router(auth.ldap_router)
         app.router.include_router(metadata.router)
         app.router.include_router(contextfile.router)
+        app.router.include_router(shared_routers.router)
         app.router.include_router(gql.get_gql_app(), prefix="/graphql")
         yield
 
@@ -47,6 +52,11 @@ def create_app():
             "clientId": settings.auth.client_id,
         },
     )
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> RedirectResponse:
+        """Redirect the API root to the interactive documentation."""
+        return RedirectResponse(url="/docs")
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):  # noqa: RUF029

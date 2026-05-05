@@ -5,6 +5,7 @@ from strawberry.types import Info
 from .. import get_logger
 from ..auth.models import User
 from ..metadata.services import get_proposal_meta, update_proposal_meta
+from ..shared.settings import settings
 from .bootstrap import bootstrap
 from .utils import DatabaseInput
 
@@ -20,29 +21,30 @@ class Mutation:
             # TODO: custom exceptions
             raise ValueError(msg)
 
-        user = await User.from_oauth_user(
-            info.context.mymdc, info.context.session, info.context.oauth_user
-        )
+        if settings.metadata.provider == "mymdc" and info.context.mymdc is not None:
+            user = await User.from_oauth_user(
+                info.context.mymdc, info.context.session, info.context.oauth_user
+            )
 
-        meta = await get_proposal_meta(
-            info.context.mymdc,
-            int(database.proposal),
-            user,
-            info.context.session,
-        )
-
-        if not meta.damnit_path:
-            logger.info("No damnit path found, updating proposal metadata")
-            meta = await update_proposal_meta(
+            meta = await get_proposal_meta(
                 info.context.mymdc,
                 int(database.proposal),
                 user,
                 info.context.session,
             )
+
             if not meta.damnit_path:
-                msg = "No damnit path found after updating proposal metadata."
-                # TODO: custom exceptions
-                raise ValueError(msg)
+                logger.info("No damnit path found, updating proposal metadata")
+                meta = await update_proposal_meta(
+                    info.context.mymdc,
+                    int(database.proposal),
+                    user,
+                    info.context.session,
+                )
+                if not meta.damnit_path:
+                    msg = "No damnit path found after updating proposal metadata."
+                    # TODO: custom exceptions
+                    raise ValueError(msg)
 
         proposal = database.proposal
 

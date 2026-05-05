@@ -6,12 +6,14 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from .. import get_logger
 from .._db.dependencies import DBSession
-from .._mymdc.dependencies import MyMdCClient
-from . import dependencies, models
+from .._mymdc.dependencies import OptionalMyMdCClient
+from ..shared.settings import settings
+from . import dependencies, ldap, models
 
 logger = get_logger()
 
 router = APIRouter(prefix="/oauth", tags=["auth"])
+ldap_router = APIRouter(prefix="/ldap", tags=["auth"])
 
 TOKEN_STORE = {}
 
@@ -20,13 +22,25 @@ TOKEN_STORE = {}
 async def auth(
     request: Request,
     redirect_uri: dependencies.RedirectURI,
-    client: dependencies.Client,
+    client: dependencies.OptionalClient,
 ) -> RedirectResponse:
     """Initiate the OAuth2 login flow."""
     # Note: session is managed by Starlette's SessionMiddleware, which handles
     # expiration.
     if request.session.get("user"):
         return RedirectResponse(url=redirect_uri)
+
+    if settings.auth.mode == "ldap":
+        if settings.auth.ldap.server_url:
+            raise HTTPException(
+                status_code=501,
+                detail="LDAP form login is not implemented in the web UI yet.",
+            )
+        request.session["user"] = _debug_user_info()
+        return RedirectResponse(url=redirect_uri)
+
+    if client is None:
+        raise HTTPException(status_code=500, detail="OAuth client is not configured")
 
     callback_uri = request.url_for("callback")
 
@@ -71,7 +85,7 @@ async def callback(
 @router.post("/logout")
 async def logout(
     request: Request,
-    client: dependencies.Client,
+    client: dependencies.OptionalClient,
 ) -> JSONResponse:
     """Fully logout the user and revoke tokens.
 
@@ -79,6 +93,12 @@ async def logout(
     endpoint, then redirects to end session endpoint if available.
     """
     user_sub = request.session.get("user", {}).get("sub")
+
+    if client is None:
+        request.session.pop("user", None)
+        response = JSONResponse(status_code=200, content={"logout_url": None})
+        response.delete_cookie("session", path="/")
+        return response
 
     revocation_endpoint = client.server_metadata.get("revocation_endpoint", None)
 
@@ -122,14 +142,54 @@ async def logout(
 @router.get("/userinfo")
 async def userinfo(
     request: Request,
-    mymdc: MyMdCClient,
+    mymdc: OptionalMyMdCClient,
     session: DBSession,
     with_proposals: bool = True,
 ) -> models.User | models.OAuthUserInfo:
     """User information."""
-    if with_proposals:
+    if with_proposals and settings.metadata.provider == "mymdc" and mymdc is not None:
         user = await models.User.from_connection(request, mymdc, session)
     else:
         user = models.OAuthUserInfo.from_connection(request)
 
     return user
+
+
+@ldap_router.post("/login")
+async def ldap_login(request: Request, login: ldap.LDAPLogin) -> JSONResponse:
+    """Create a DAMNIT-web session from LDAP credentials."""
+    if settings.auth.mode != "ldap":
+        raise HTTPException(status_code=404, detail="LDAP authentication is disabled")
+
+    try:
+        request.session["user"] = ldap.authenticate_ldap_user(
+            settings.auth.ldap, login
+        )
+    except Exception as exc:
+        await logger.ainfo("LDAP login failed", error=str(exc))
+        raise HTTPException(status_code=401, detail="Invalid LDAP credentials") from exc
+
+    return JSONResponse(status_code=200, content={"ok": True})
+
+
+@ldap_router.post("/logout")
+async def ldap_logout(request: Request) -> JSONResponse:
+    """Clear a DAMNIT-web LDAP session."""
+    request.session.pop("user", None)
+    response = JSONResponse(status_code=200, content={"logout_url": None})
+    response.delete_cookie("session", path="/")
+    return response
+
+
+def _debug_user_info() -> dict[str, str | list[str]]:
+    """Return a local HZDR debug user for auth-free frontend development."""
+    return {
+        "email": "hzdr-dev@localhost",
+        "family_name": "User",
+        "given_name": "HZDR",
+        "groups": ["hzdr-dev"],
+        "name": "HZDR Dev User",
+        "preferred_username": "hzdr-dev",
+        "proposals_by_year_half": {},
+        "sub": "hzdr-dev",
+    }

@@ -21,7 +21,7 @@ class MyMdCHTTPSettings(BaseSettings):
     scope: str | None = None
 
     _access_token: str = ""
-    _expires_at: datetime = datetime.fromisocalendar(1970, 1, 1).astimezone(UTC)
+    _expires_at: datetime = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 class MyMdCMockSettings(BaseSettings):

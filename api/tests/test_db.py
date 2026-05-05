@@ -22,7 +22,6 @@ from damnit_api.db import (
     get_session,
 )
 
-
 # -----------------------------------------------------------------------------
 # Fixtures
 
@@ -51,10 +50,13 @@ def damnit_db(tmp_path):
 
 def _open_file_descriptors_to(db_file: Path):
     fd_dir = Path(f"/proc/{os.getpid()}/fd")
+    if not fd_dir.exists():
+        pytest.skip("/proc file descriptor checks are only available on Unix")
+
     hits = []
     for link in fd_dir.iterdir():
         try:
-            target = os.readlink(link)
+            target = str(link.readlink())
         except OSError:
             continue
         if target == str(db_file):

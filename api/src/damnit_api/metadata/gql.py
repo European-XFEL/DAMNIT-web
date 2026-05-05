@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
+from ..shared.settings import settings
 from . import models, services
 
 if TYPE_CHECKING:
@@ -40,6 +41,8 @@ class Query:
             return None
 
         mymdc, session = info.context.mymdc, info.context.session
+        if settings.metadata.provider != "mymdc" or mymdc is None:
+            return []
 
         proposals_meta = await services._get_proposal_meta_many(
             mymdc,

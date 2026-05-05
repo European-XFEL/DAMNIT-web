@@ -19,6 +19,7 @@ class BaseUserInfo(BaseModel):
     groups: list[str] = Field(default_factory=list)
     name: str
     preferred_username: str
+    proposals_by_year_half: dict[int, list[int]] = Field(default_factory=dict)
 
     # Discarded fields
     # email_verified: bool

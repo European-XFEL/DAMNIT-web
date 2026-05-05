@@ -7,3 +7,9 @@ certs/
 *.crt
 *.key
 *.pem
+.generated/
+.pytest-tmp/
+
+
+# personal notes
+STATUS_NOTES.md

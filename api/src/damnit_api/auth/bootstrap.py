@@ -22,6 +22,10 @@ async def bootstrap(settings: "Settings"):
     `damnit_web` and sets [`damnit_api.auth.__CLIENT`] to [`.__OAUTH.damnit_web`]."""
     import damnit_api.auth
 
+    if settings.auth.mode == "ldap":
+        await logger.ainfo("Using LDAP authentication backend")
+        return
+
     global __OAUTH
     __OAUTH = OAuth()
 

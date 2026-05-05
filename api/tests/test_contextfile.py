@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from damnit_api.contextfile import mtime_cache, routers
 from damnit_api.main import create_app
+from damnit_api.shared.settings import settings
 
 
 @pytest.fixture(scope="module")
@@ -68,6 +69,29 @@ def test_file_fetching(client, temp_dir, monkeypatch):
     resp = client.get(f"/contextfile/content?proposal_num={proposal_num}")
     assert resp.status_code == 200
     assert resp.json()["fileContent"] == "initial content"
+
+
+def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
+    """HZDR users can maintain a campaign-scoped context workspace."""
+    monkeypatch.setattr(settings.context_workspace, "root", tmp_path)
+    monkeypatch.setattr(settings.context_workspace, "write_enabled", True)
+    app = create_app()
+
+    with TestClient(app) as local_client:
+        local_client.get("/oauth/login?redirect_uri=/home", follow_redirects=False)
+
+        response = local_client.get("/contextfile/campaign/hzdr-example/me")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["campaign"] == "hzdr-example"
+        assert "hzdr_next_field" in payload["fileContent"]
+
+        save_response = local_client.put(
+            "/contextfile/campaign/hzdr-example/me",
+            json={"fileContent": "from damnit_ctx import Variable\n"},
+        )
+        assert save_response.status_code == 200
+        assert save_response.json()["fileContent"] == "from damnit_ctx import Variable\n"
 
 
 async def wait_for_change(

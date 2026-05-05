@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from .shared.const import DEFAULT_PROPOSAL
+from .shared.settings import settings
 from .utils import Registry, create_map, find_proposal
 
 DAMNIT_PATH = "usr/Shared/amore/"
@@ -32,9 +33,9 @@ DAMNIT_PATH = "usr/Shared/amore/"
 
 
 class DatabaseSessionManager(metaclass=Registry):
-    def __init__(self, proposal: str = DEFAULT_PROPOSAL):
+    def __init__(self, proposal: str = DEFAULT_PROPOSAL, path: str | None = None):
         self.proposal = proposal
-        self.root_path = get_damnit_path(proposal)
+        self.root_path = get_damnit_path(proposal, path=path)
         self._engine = create_async_engine(
             self.db_path,
             isolation_level="AUTOCOMMIT",
@@ -203,10 +204,21 @@ async def async_variable_tags(proposal):
 # Etc.
 
 
-def get_damnit_path(proposal_number: str = DEFAULT_PROPOSAL) -> str:
-    """Returns the directory of the given proposal."""
+def get_damnit_path(
+    proposal_number: str = DEFAULT_PROPOSAL, path: str | Path | None = None
+) -> str:
+    """Return the DAMNIT database directory for a proposal or configured path."""
+    try:
+        return str(settings.damnit.path_for(proposal=proposal_number, path=path))
+    except RuntimeError:
+        pass
+
+    proposal_path = Path(proposal_number)
+    if proposal_path.is_absolute():
+        return str(proposal_path / settings.damnit.damnit_directory_name)
+
     path = find_proposal(proposal_number)
     if not path:
         msg = f"Proposal '{proposal_number}' is not found."
         raise RuntimeError(msg)
-    return str(Path(path) / DAMNIT_PATH)
+    return str(Path(path) / settings.damnit.damnit_directory_name)

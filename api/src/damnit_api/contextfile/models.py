@@ -27,6 +27,22 @@ class ContextFile(BaseModel):
         return cls(lastModified=modified_timestamp.lastModified, fileContent=content)
 
 
+class CampaignContextFile(ContextFile):
+    campaign: str
+    user: str
+    path: str
+
+
+class ContextFileUpdate(BaseModel):
+    fileContent: str  # noqa: N815
+
+
+class ContextFileEntry(BaseModel):
+    name: str
+    path: str
+    active: bool = False
+
+
 # TODO: update models to the following and update frontend API calls:
 #
 # class ModifiedTime(BaseModel):

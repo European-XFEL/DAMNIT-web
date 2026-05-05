@@ -7,6 +7,7 @@ import strawberry
 
 from ..metadata.gql import ProposalMeta
 from ..metadata.services import _get_proposal_meta_many
+from ..shared.settings import settings
 from .models import OAuthUserInfo
 
 if TYPE_CHECKING:
@@ -30,6 +31,8 @@ class User:
     ) -> list[ProposalMeta]:
         """List of proposals for the user."""
         mymdc, session = info.context.mymdc, info.context.session
+        if settings.metadata.provider != "mymdc" or mymdc is None:
+            return []
 
         proposals = await mymdc.get_user_proposals(self.preferred_username)
         proposal_numbers = [
