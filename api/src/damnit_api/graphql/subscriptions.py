@@ -5,6 +5,7 @@ import strawberry
 from async_lru import alru_cache
 from strawberry.scalars import JSON
 
+from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..db import async_latest_rows, async_max, async_table
 from ..utils import create_map, wrap_values
 from .metadata import fetch_metadata
@@ -102,7 +103,7 @@ def filter_for_client(snapshot, since):
 
 @strawberry.type
 class Subscription:
-    @strawberry.subscription
+    @strawberry.subscription(permission_classes=PROPOSAL_PERMISSIONS)
     async def latest_data(
         self,
         database: DatabaseInput,
