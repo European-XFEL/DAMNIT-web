@@ -8,6 +8,7 @@ import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
 from ..auth.models import User
+from ..auth.permissions import IsAuthenticated
 from . import models, services
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ class ProposalMeta:
 
 @strawberry.type
 class Query:
-    @strawberry.field
+    @strawberry.field(permission_classes=[IsAuthenticated])
     async def proposal_metadata(
         self,
         info: strawberry.Info[Context],
