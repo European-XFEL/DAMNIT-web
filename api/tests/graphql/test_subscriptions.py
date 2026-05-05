@@ -247,3 +247,48 @@ def test_filter_for_client_excludes_equal_timestamp():
 def test_filter_for_client_since_above_all_returns_none():
     snapshot = _snapshot({1: 100.0, 2: 200.0})
     assert filter_for_client(snapshot, since=300.0) is None
+
+
+# -----------------------------------------------------------------------------
+# Authorization
+
+
+@pytest.fixture
+def graphql_schema_no_auth(
+    mocked_metadata_variables,
+    mocked_metadata_column,
+    mocked_metadata_all_tags,
+    mocked_metadata_variable_tags,
+):
+    """Schema without bypass_proposal_permission so permission checks run."""
+    import strawberry
+    from strawberry.schema.config import StrawberryConfig
+
+    from damnit_api.graphql.directives import lightweight
+    from damnit_api.graphql.models import SCALAR_MAP, DamnitVariable
+    from damnit_api.graphql.queries import Query
+    from damnit_api.graphql.subscriptions import Subscription
+
+    return strawberry.Schema(
+        query=Query,
+        subscription=Subscription,
+        types=[DamnitVariable],
+        directives=[lightweight],
+        config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
+    )
+
+
+@pytest.mark.asyncio
+async def test_latest_data_unauthorized(graphql_schema_no_auth, current_timestamp):
+    gen = await graphql_schema_no_auth.subscribe(
+        """
+        subscription {
+          latest_data(database: { proposal: "999999" }, timestamp: 0)
+        }
+        """,
+    )
+    # Subscription permission failures surface as a PreExecutionError on the
+    # first iteration rather than immediately from subscribe().
+    first = await gen.__anext__()
+    assert first.errors is not None
+    assert first.errors[0].message == "Authentication required."
