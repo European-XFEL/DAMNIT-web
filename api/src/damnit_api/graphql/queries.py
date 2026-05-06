@@ -5,10 +5,10 @@ from strawberry.types import Info
 from strawberry.types.nodes import SelectedField
 
 from .. import get_logger
-from ..auth.models import User
+from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..data import get_preview_data
 from ..db import async_table, get_session
-from ..metadata.services import get_proposal_meta, update_proposal_meta
+from ..metadata.services import _get_proposal_meta, _update_proposal_meta
 from ..utils import wrap_values
 from .metadata import fetch_metadata
 from .models import KNOWN_DTYPES, DamnitRun
@@ -21,20 +21,18 @@ logger = get_logger()
 RUN_INFO_NAMES = frozenset(KNOWN_DTYPES) - {"proposal", "run"}
 
 
-async def _ensure_proposal_damnit_path(info: Info, proposal: str) -> None:
-    """Resolve the user, check access, and ensure the proposal has a DAMNIT
-    path. Refreshes from MyMdC if the cached metadata has no path.
+async def _ensure_damnit_path(info: Info, proposal: str) -> None:
+    """Ensure the proposal has a DAMNIT path, refreshing from MyMdC if needed.
+
+    Authorization is handled separately by IsProposalMember before this runs.
     """
-    user = await User.from_oauth_user(
-        info.context.mymdc, info.context.session, info.context.oauth_user
-    )
-    meta = await get_proposal_meta(
-        info.context.mymdc, int(proposal), user, info.context.session
+    meta = await _get_proposal_meta(
+        info.context.mymdc, int(proposal), info.context.session
     )
     if not meta.damnit_path:
         logger.info("No damnit path found, updating proposal metadata")
-        meta = await update_proposal_meta(
-            info.context.mymdc, int(proposal), user, info.context.session
+        meta = await _update_proposal_meta(
+            info.context.mymdc, int(proposal), info.context.session
         )
         if not meta.damnit_path:
             msg = "No damnit path found after updating proposal metadata."
@@ -156,7 +154,7 @@ class Query:
     Defines the GraphQL queries for the Damnit API.
     """
 
-    @strawberry.field
+    @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
     async def runs(
         self,
         info: Info,
@@ -195,7 +193,7 @@ class Query:
             for v, i in zip(variables, info_rows, strict=True)
         ]
 
-    @strawberry.field
+    @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
     async def metadata(
         self,
         info: Info,
@@ -207,7 +205,7 @@ class Query:
             # TODO: custom exceptions
             raise ValueError(msg)
 
-        await _ensure_proposal_damnit_path(info, proposal)
+        await _ensure_damnit_path(info, proposal)
 
         snapshot = await fetch_metadata(proposal)
         return {
@@ -215,7 +213,7 @@ class Query:
             "timestamp": snapshot["timestamp"] * 1000,  # ms for JS
         }  # pyright: ignore[reportReturnType]
 
-    @strawberry.field
+    @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
     def extracted_data(
         self, database: DatabaseInput, run: int, variable: str
     ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]

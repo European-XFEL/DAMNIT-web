@@ -26,6 +26,21 @@ def reset_caches():
 
 
 @pytest.fixture
+def bypass_proposal_permission(mocker):
+    """Bypass all proposal permission checks so tests focus on resolver logic."""
+    mocker.patch(
+        "damnit_api.auth.permissions.IsAuthenticated.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=True,
+    )
+    mocker.patch(
+        "damnit_api.auth.permissions.IsProposalMember.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=True,
+    )
+
+
+@pytest.fixture
 def mocked_metadata_variables(mocker):
     mocker.patch(
         "damnit_api.graphql.metadata.db.async_variables",
@@ -59,6 +74,7 @@ def mocked_metadata_column(mocker):
 
 @pytest.fixture
 def graphql_schema(
+    bypass_proposal_permission,
     mocked_metadata_variables,
     mocked_metadata_column,
     mocked_metadata_all_tags,

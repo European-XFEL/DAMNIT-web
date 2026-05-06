@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
+from ..auth.models import User
+from ..auth.permissions import IsAuthenticated
 from . import models, services
 
 if TYPE_CHECKING:
@@ -29,7 +31,7 @@ class ProposalMeta:
 
 @strawberry.type
 class Query:
-    @strawberry.field
+    @strawberry.field(permission_classes=[IsAuthenticated])
     async def proposal_metadata(
         self,
         info: strawberry.Info[Context],
@@ -41,9 +43,12 @@ class Query:
 
         mymdc, session = info.context.mymdc, info.context.session
 
+        user = await User.from_oauth_user(mymdc, session, info.context.oauth_user)
+        allowed_proposal_numbers = [n for n in proposal_numbers if n in user._proposals]
+
         proposals_meta = await services._get_proposal_meta_many(
             mymdc,
-            proposal_numbers,
+            allowed_proposal_numbers,
             session,
         )
 

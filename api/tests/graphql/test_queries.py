@@ -42,10 +42,10 @@ def mocked_fetch_info(mocker):
 
 
 @pytest.fixture
-def mocked_metadata_auth(mocker):
-    """Bypass the auth + damnit_path check on the metadata query."""
+def mocked_ensure_damnit_path(mocker):
+    """Bypass the damnit_path validation on the metadata query."""
     mocker.patch(
-        "damnit_api.graphql.queries._ensure_proposal_damnit_path",
+        "damnit_api.graphql.queries._ensure_damnit_path",
         return_value=None,
     )
 
@@ -260,7 +260,7 @@ async def test_runs_query_fetches_run_info_when_metadata_requested(
 
 
 @pytest.mark.asyncio
-async def test_metadata_query(graphql_schema, mocked_metadata_auth):
+async def test_metadata_query(graphql_schema, mocked_ensure_damnit_path):
     query = """
         query TableMetadataQuery($proposal: String) {
           metadata(database: { proposal: $proposal })
@@ -282,3 +282,57 @@ async def test_metadata_query(graphql_schema, mocked_metadata_auth):
     }
     assert "(Untagged)" in metadata["tags"]
     assert "eTOF" in metadata["tags"]
+
+
+@pytest.fixture
+def graphql_schema_no_auth(
+    mocked_metadata_variables,
+    mocked_metadata_column,
+    mocked_metadata_all_tags,
+    mocked_metadata_variable_tags,
+):
+    """Schema without the bypass_proposal_permission fixture, so permission
+    checks run normally (and fail since there is no real request context)."""
+    import strawberry
+    from strawberry.schema.config import StrawberryConfig
+
+    from damnit_api.graphql.directives import lightweight
+    from damnit_api.graphql.models import SCALAR_MAP, DamnitVariable
+    from damnit_api.graphql.queries import Query
+    from damnit_api.graphql.subscriptions import Subscription
+
+    return strawberry.Schema(
+        query=Query,
+        subscription=Subscription,
+        types=[DamnitVariable],
+        directives=[lightweight],
+        config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
+    )
+
+
+@pytest.mark.asyncio
+async def test_runs_unauthorized(graphql_schema_no_auth):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}) {{
+            variables {{ name }}
+          }}
+        }}
+    """
+    result = await graphql_schema_no_auth.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Authentication required."
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_unauthorized(graphql_schema_no_auth):
+    query = f"""
+        query {{
+          extracted_data(database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "x")
+        }}
+    """
+    result = await graphql_schema_no_auth.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Authentication required."
