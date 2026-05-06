@@ -78,7 +78,7 @@ Each run is returned as a flat list of `DamnitVariable` entries (`name`,
 ```gql
 query TableDataQuery($per_page: Int = 10) {
   runs(database: {proposal: "2956"}, per_page: $per_page) {
-    variables(names=["proposal", "run"]) {
+    variables(names: ["proposal", "run"]) {
       name
       value
       dtype

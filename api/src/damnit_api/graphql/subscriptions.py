@@ -88,8 +88,6 @@ async def poll_proposal(proposal):
 
 
 def filter_for_client(snapshot, since):
-    # A zero cursor means the client never completed REFRESH; skip the tick
-    # rather than flooding it with every row newer than epoch.
     if snapshot is None or not since or snapshot["max_timestamp"] <= since:
         return None
     runs = {
