@@ -58,11 +58,20 @@ def mocked_metadata_column(mocker):
 
 
 @pytest.fixture
+def mocked_metadata_max(mocker):
+    mocker.patch(
+        "damnit_api.graphql.metadata.db.async_max",
+        return_value=0,
+    )
+
+
+@pytest.fixture
 def graphql_schema(
     mocked_metadata_variables,
     mocked_metadata_column,
     mocked_metadata_all_tags,
     mocked_metadata_variable_tags,
+    mocked_metadata_max,
 ):
     return strawberry.Schema(
         query=Query,
