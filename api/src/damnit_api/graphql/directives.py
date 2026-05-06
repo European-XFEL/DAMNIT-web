@@ -18,7 +18,7 @@ def lightweight(field: DirectiveValue[DamnitRun | DamnitVariable]):
     fields = field if isinstance(field, list) else [field]
 
     for variable in get_variables(fields):
-        if variable is not None and DamnitType(variable.dtype) in HEAVY_DATA:
+        if variable is not None and variable.dtype in HEAVY_DATA:
             variable.value = None
 
     # Return original field

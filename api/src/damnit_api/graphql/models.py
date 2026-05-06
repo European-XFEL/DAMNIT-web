@@ -153,12 +153,14 @@ SCALAR_MAP = {
     ),
 }
 
+strawberry.enum(DamnitType, graphql_name_from="value")
+
 
 @strawberry.type
 class DamnitVariable:
     name: str
     value: Any | None
-    dtype: str
+    dtype: DamnitType
 
 
 @strawberry.type
@@ -183,7 +185,7 @@ class DamnitRun:
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)
             variables.append(
-                DamnitVariable(name=name, value=Any(value), dtype=dtype.value)
+                DamnitVariable(name=name, value=Any(value), dtype=dtype)
             )
         return cls(_variables=variables)
 
