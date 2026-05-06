@@ -1,10 +1,8 @@
-from . import directives, models, mutations, queries, schema, subscriptions
+from . import directives, models, queries, subscriptions
 
 __all__ = [
     "directives",
     "models",
-    "mutations",
     "queries",
-    "schema",
     "subscriptions",
 ]

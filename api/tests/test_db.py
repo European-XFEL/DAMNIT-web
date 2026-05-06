@@ -22,7 +22,6 @@ from damnit_api.db import (
     get_session,
 )
 
-
 # -----------------------------------------------------------------------------
 # Fixtures
 
@@ -54,11 +53,11 @@ def _open_file_descriptors_to(db_file: Path):
     hits = []
     for link in fd_dir.iterdir():
         try:
-            target = os.readlink(link)
+            target = link.readlink()
         except OSError:
             continue
-        if target == str(db_file):
-            hits.append(target)
+        if target == db_file:
+            hits.append(str(target))
     return hits
 
 
@@ -76,6 +75,10 @@ def test_engine_uses_nullpool_and_autocommit(damnit_db):
 # -----------------------------------------------------------------------------
 # File descriptor lifetime
 
+# asyncio.run() creates and tears down a fresh event loop, which is what
+# this test verifies (no file descriptors leak after the loop dies).
+# alru_cached async_table sees that loop change; warning is intrinsic.
+@pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
 def test_no_lingering_file_descriptor_after_read(damnit_db):
     db_file = Path(damnit_db) / DAMNIT_PATH / "runs.sqlite"
 
