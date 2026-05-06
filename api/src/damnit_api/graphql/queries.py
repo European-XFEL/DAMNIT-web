@@ -9,7 +9,6 @@ from ..auth.models import User
 from ..data import get_preview_data
 from ..db import async_table, get_session
 from ..metadata.services import get_proposal_meta, update_proposal_meta
-from ..utils import wrap_values
 from .metadata import fetch_metadata
 from .models import KNOWN_DTYPES, DamnitRun
 from .utils import DatabaseInput, fetch_info
@@ -48,10 +47,10 @@ def group_by_run(record):
     for entry in record:
         key = (entry["proposal"], entry["run"])
         if key not in grouped:
-            grouped[key] = wrap_values({
-                "proposal": entry["proposal"],
-                "run": entry["run"],
-            })
+            grouped[key] = {
+                "proposal": {"value": entry["proposal"]},
+                "run": {"value": entry["run"]},
+            }
         # Outer-join placeholder for a run with no matching variables.
         if entry["name"] is None:
             continue
@@ -192,7 +191,7 @@ class Query:
             info_rows = [{} for _ in variables]
 
         return [
-            DamnitRun.from_db({**v, **wrap_values(i)})
+            DamnitRun.from_db({**v, **i})
             for v, i in zip(variables, info_rows, strict=True)
         ]
 

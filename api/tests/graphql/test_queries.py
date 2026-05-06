@@ -4,7 +4,6 @@ from sqlalchemy import text
 
 from damnit_api.db import DAMNIT_PATH, DatabaseSessionManager
 from damnit_api.graphql.models import DamnitRun
-from damnit_api.utils import wrap_values
 
 from .const import (
     EXAMPLE_DATA,
@@ -20,13 +19,15 @@ from .const import (
 def mocked_fetch_variables(mocker):
     # fetch_variables returns wrapped values: {"run": {"value": 348}, ...}
     values = get_values(EXAMPLE_DATA)
-    known = {"proposal": values["proposal"], "run": values["run"]}
-    dynamic = {
-        name: {"value": value, "summary_type": None}
-        for name, value in values.items()
-        if name not in ("proposal", "run")
+    wrapped = {
+        "proposal": {"value": values["proposal"]},
+        "run": {"value": values["run"]},
+        **{
+            name: {"value": value, "summary_type": None}
+            for name, value in values.items()
+            if name not in ("proposal", "run")
+        },
     }
-    wrapped = {**wrap_values(known), **dynamic}
     return mocker.patch(
         "damnit_api.graphql.queries.fetch_variables",
         return_value=[wrapped],

@@ -178,6 +178,8 @@ class DamnitRun:
         for name, entry in record.items():
             if entry is None:
                 continue
+            if not isinstance(entry, dict):
+                entry = {"value": entry}
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)
             variables.append(
@@ -195,6 +197,8 @@ class DamnitRun:
             if entry is None:
                 variables[name] = None
                 continue
+            if not isinstance(entry, dict):
+                entry = {"value": entry}
 
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)

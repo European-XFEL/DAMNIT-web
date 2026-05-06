@@ -6,7 +6,7 @@ from async_lru import alru_cache
 from strawberry.scalars import JSON
 
 from ..db import async_latest_rows, async_max, async_table
-from ..utils import create_map, wrap_values
+from ..utils import create_map
 from .metadata import fetch_metadata
 from .models import DamnitRun, Timestamp
 from .utils import DatabaseInput, LatestData, fetch_info
@@ -59,7 +59,7 @@ async def poll_proposal(proposal):
         run_values.setdefault("run", {"value": run})
 
         if run_info := latest_runs.get(run):
-            run_values.update(wrap_values(run_info))
+            run_values.update(run_info)
 
         runs[run] = DamnitRun.resolve(run_values)
         run_timestamps[run] = max(
