@@ -175,8 +175,7 @@ class DamnitRun:
         return [v for v in self._variables if v.name in requested]
 
     @classmethod
-    def from_db(cls, record):
-        variables = []
+    def _iter_variables(cls, record):
         for name, entry in record.items():
             if entry is None:
                 continue
@@ -184,33 +183,28 @@ class DamnitRun:
                 entry = {"value": entry}
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)
-            variables.append(
-                DamnitVariable(name=name, value=Any(value), dtype=dtype)
+            yield DamnitVariable(
+                name=name, value=Any(value), dtype=dtype
             )
-        return cls(_variables=variables)
 
     @classmethod
-    def resolve(cls, record, as_dict=True):
-        if not as_dict:
-            return cls.from_db(record)
+    def from_db(cls, record):
+        return cls(_variables=list(cls._iter_variables(record)))
 
-        variables = {}
-        for name, entry in record.items():
-            if entry is None:
-                variables[name] = None
-                continue
-            if not isinstance(entry, dict):
-                entry = {"value": entry}
-
-            dtype = cls.get_dtype(name, entry)
-            value, dtype = serialize(entry["value"], dtype=dtype)
-
-            if value is None:
-                variables[name] = None
-            else:
-                variables[name] = {"value": value, "dtype": dtype.value}
-
-        return variables
+    @classmethod
+    def resolve(cls, record):
+        out = {
+            name: None
+            for name, entry in record.items()
+            if entry is None
+        }
+        for v in cls._iter_variables(record):
+            out[v.name] = (
+                None
+                if v.value is None
+                else {"value": v.value, "dtype": v.dtype.value}
+            )
+        return out
 
     @staticmethod
     def known_variables():
