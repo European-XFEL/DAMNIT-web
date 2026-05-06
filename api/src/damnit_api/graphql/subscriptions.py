@@ -69,7 +69,9 @@ async def poll_proposal(proposal):
     if not runs:
         return None
 
-    assert latest_data.timestamp is not None  # noqa: S101
+    if latest_data.timestamp is None:
+        raise ValueError("Latest data has no timestamp.")
+
     _last_seen_timestamp[proposal] = latest_data.timestamp
 
     metadata = {
