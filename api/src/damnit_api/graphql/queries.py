@@ -171,6 +171,7 @@ class Query:
         argument returns every variable for each run.
         """
         proposal = database.proposal
+        await _ensure_proposal_damnit_path(info, proposal)
         names = _selected_variable_names(info)
 
         variables = await fetch_variables(
@@ -216,9 +217,14 @@ class Query:
         }  # pyright: ignore[reportReturnType]
 
     @strawberry.field
-    def extracted_data(
-        self, database: DatabaseInput, run: int, variable: str
+    async def extracted_data(
+        self,
+        info: Info,
+        database: DatabaseInput,
+        run: int,
+        variable: str,
     ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+        await _ensure_proposal_damnit_path(info, database.proposal)
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
         return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
