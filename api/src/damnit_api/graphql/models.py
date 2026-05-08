@@ -1,23 +1,36 @@
-import inspect
-from datetime import UTC, datetime
-from typing import Generic, NewType, TypeVar
+from dataclasses import dataclass
+from datetime import datetime
+from typing import NewType
 
 import numpy as np
 import strawberry
 from damnit.api import blob2complex
 
-from ..shared.const import DEFAULT_PROPOSAL, DamnitType
+from ..shared.const import DamnitType
 from ..utils import (
-    Registry,
     b64image,
     blob2numpy,
     create_map,
-    get_type,
     python_type_to_damnit_type,
     summary_type_to_damnit_type,
 )
 
-T = TypeVar("T")
+
+@dataclass(frozen=True)
+class KnownVariable:
+    name: str
+    title: str
+    dtype: DamnitType
+
+
+KNOWN_VARIABLES = (
+    KnownVariable(name="proposal", title="Proposal", dtype=DamnitType.NUMBER),
+    KnownVariable(name="run", title="Run", dtype=DamnitType.NUMBER),
+    KnownVariable(name="start_time", title="Timestamp", dtype=DamnitType.TIMESTAMP),
+    KnownVariable(name="added_at", title="Added at", dtype=DamnitType.TIMESTAMP),
+)
+
+KNOWN_DTYPES = {v.name: v.dtype for v in KNOWN_VARIABLES}
 
 
 def to_javascript_string(value):
@@ -129,112 +142,82 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
     return value, dtype
 
 
-Any = strawberry.scalar(
-    NewType(
-        "Any", object
-    ),  # FIX: # pyright: ignore[reportArgumentType, reportCallIssue]
-)  # pyright: ignore[reportCallIssue]
+Any = NewType("Any", object)
+Timestamp = NewType("Timestamp", float)
+
+SCALAR_MAP = {
+    Any: strawberry.scalar(name="Any"),
+    Timestamp: strawberry.scalar(
+        name="Timestamp",
+        parse_value=lambda value: value / 1000,
+    ),
+}
+
+strawberry.enum(DamnitType, graphql_name_from="value")
 
 
-Timestamp = strawberry.scalar(
-    int | float,  # FIX: # pyright: ignore[reportArgumentType]
-    parse_value=lambda value: value / 1000,
-    name="Timestamp",
-)
-
-
-@strawberry.interface
-class BaseVariable:
+@strawberry.type
+class DamnitVariable:
     name: str
-    dtype: str
+    value: Any | None
+    dtype: DamnitType
 
 
 @strawberry.type
-class KnownVariable(Generic[T], BaseVariable):  # FIX: # noqa: UP046
-    value: T
-
-
-@strawberry.type
-class DamnitVariable(BaseVariable):
-    value: Any | None  # FIX: # pyright: ignore[reportInvalidTypeForm]
-
-
-@strawberry.interface
 class DamnitRun:
-    proposal: KnownVariable[int]
-    run: KnownVariable[int]
-    start_time: KnownVariable[Timestamp] | None  # pyright: ignore[reportInvalidTypeForm] # FIX:
-    added_at: KnownVariable[Timestamp] | None  # pyright: ignore[reportInvalidTypeForm] # FIX:
+    _variables: strawberry.Private[list[DamnitVariable]]
+
+    @strawberry.field
+    def variables(self, names: list[str] | None = None) -> list[DamnitVariable]:
+        if names is None:
+            return self._variables
+        requested = set(names)
+        return [v for v in self._variables if v.name in requested]
+
+    @classmethod
+    def _iter_variables(cls, record):
+        for name, entry in record.items():
+            if entry is None:
+                continue
+            if not isinstance(entry, dict):
+                entry = {"value": entry}
+            dtype = cls.get_dtype(name, entry)
+            value, dtype = serialize(entry["value"], dtype=dtype)
+            yield DamnitVariable(
+                name=name, value=Any(value), dtype=dtype
+            )
 
     @classmethod
     def from_db(cls, record):
-        return cls(**cls.resolve(record, as_dict=False))
+        return cls(_variables=list(cls._iter_variables(record)))
 
     @classmethod
-    def resolve(cls, record, as_dict=True):
-        variables = {}
-        for name, klass in cls.__annotations__.items():
-            if name not in record:
-                variables[name] = None
-                continue
+    def resolve(cls, record):
+        out = {
+            name: None
+            for name, entry in record.items()
+            if entry is None
+        }
+        for v in cls._iter_variables(record):
+            out[v.name] = (
+                None
+                if v.value is None
+                else {"value": v.value, "dtype": v.dtype.value}
+            )
+        return out
 
-            klass = get_type(klass)
-            dtype = cls.get_dtype(entry=record[name], klass=klass)
-            value, dtype = serialize(record[name]["value"], dtype=dtype)
-
-            if value is None:
-                result = None
-            elif as_dict:
-                result = {"value": value, "dtype": dtype.value}
-            else:
-                result = klass(name=name, value=value, dtype=dtype.value)
-
-            variables[name] = result
-
-        return variables
-
-    @classmethod
-    def known_variables(cls):
-        # TODO: Make this more streamlined
+    @staticmethod
+    def known_variables():
         return create_map(
-            [
-                {
-                    "name": "proposal",
-                    "title": "Proposal",
-                    "tags": [],
-                },
-                {
-                    "name": "run",
-                    "title": "Run",
-                    "tags": [],
-                },
-                {
-                    "name": "start_time",
-                    "title": "Timestamp",
-                    "tags": [],
-                },
-                {
-                    "name": "added_at",
-                    "title": "Added at",
-                    "tags": [],
-                },
-            ],
+            [{"name": v.name, "title": v.title, "tags": []} for v in KNOWN_VARIABLES],
             key="name",
         )
 
-    @classmethod
-    def known_annotations(cls):
-        return cls.__annotations__
-
     @staticmethod
-    def get_dtype(entry, klass=None):
-        if klass is not None and hasattr(klass, "__args__"):
-            type_ = klass.__args__[0]
-            return (
-                python_type_to_damnit_type(type_)
-                if inspect.isclass(type_)
-                else DamnitType(type_._scalar_definition.name.lower())
-            )
+    def get_dtype(name, entry):
+        known = KNOWN_DTYPES.get(name)
+        if known is not None:
+            return known
 
         summary_type = entry.get("summary_type")
         if summary_type is not None:
@@ -248,74 +231,3 @@ class DamnitRun:
             return dtype
 
         return DamnitType.STRING
-
-
-class DamnitTable(metaclass=Registry):
-    proposal = ""
-    path = ""  # TODO: handle dynamic database path
-    stype = None  # strawberry type
-
-    # timestamp of the latest model
-    timestamp = datetime.now(tz=UTC).timestamp()
-
-    def __init__(self, proposal: str = DEFAULT_PROPOSAL):
-        self.proposal = proposal
-        self.variables = DamnitRun.known_variables()
-        self.stype = self._create_stype()
-        self.runs = []
-        self.tags = {}
-
-    def update(self, variables=None, timestamp: float | None = None):
-        """We update the strawberry type and the schema here"""
-        new_variables = {**self.variables, **variables}  # pyright: ignore[reportGeneralTypeIssues] # FIX:
-        has_changed = self.variables != new_variables
-        if has_changed:
-            self.variables = new_variables
-            self.stype = self._create_stype()
-
-        if timestamp is not None:
-            self.timestamp = timestamp
-
-        return has_changed
-
-    def as_stype(self, **fields):
-        """Converts the database record to Damnit type"""
-        return self.stype.from_db(fields)  # pyright: ignore[reportOptionalMemberAccess] # FIX:
-
-    def _create_stype(self) -> type[DamnitRun]:
-        # Map annotations as (dynamic) DAMNIT variable
-        annotations = {
-            name: DamnitRun.known_annotations().get(
-                name,
-                DamnitVariable | None,
-            )
-            for name in self.variables
-        }
-
-        # Create class
-        new_class = type(
-            f"p{self.proposal}", (DamnitRun,), {"__annotations__": annotations}
-        )
-        return strawberry.type(new_class)
-
-    def resolve(self, **fields):
-        return self.stype.resolve(fields)  # pyright: ignore[reportOptionalMemberAccess] # FIX:
-
-
-def get_model(proposal: str):
-    return DamnitTable(proposal)
-
-
-def update_model(
-    proposal: str,
-    variables: dict,
-    timestamp: float | None = None,
-):
-    model = DamnitTable(proposal)
-    model.update(variables, timestamp)
-    return model
-
-
-def get_stype(proposal: str):
-    model = DamnitTable(proposal)
-    return model.stype

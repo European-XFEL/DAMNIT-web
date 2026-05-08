@@ -141,7 +141,3 @@ def get_type(type_):
         return get_args(type_)[0]
 
     return type_
-
-
-def wrap_values(dict_, key="value"):
-    return {k: {key: v} for k, v in dict_.items()}
