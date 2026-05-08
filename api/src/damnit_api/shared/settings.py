@@ -8,6 +8,7 @@ from pydantic import (
     SecretStr,
     UrlConstraints,
     field_validator,
+    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -45,7 +46,9 @@ class UvicornSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    auth: AuthSettings
+    auth: AuthSettings | None = None
+
+    damnit_path: Path | None = None
 
     db_path: Path = Path(__file__).parents[3] / "dw_api.sqlite"
 
@@ -53,9 +56,33 @@ class Settings(BaseSettings):
 
     log_level: str = "DEBUG"
 
-    session_secret: SecretStr
+    session_secret: SecretStr | None = None
 
     uvicorn: UvicornSettings = UvicornSettings()
+
+    @property
+    def is_local(self) -> bool:
+        return self.damnit_path is not None
+
+    @model_validator(mode="after")
+    def _apply_local_mode(self):
+        if self.is_local:
+            self.auth = None
+            if self.session_secret is None:
+                self.session_secret = SecretStr("dev-secret")
+        elif self.auth is None:
+            msg = (
+                "auth settings are required when not in local mode"
+                " (set damnit_path for local development)"
+            )
+            raise ValueError(msg)
+        elif self.session_secret is None:
+            msg = (
+                "session_secret is required when not in local mode"
+                " (set damnit_path for local development)"
+            )
+            raise ValueError(msg)
+        return self
 
     mymdc: MyMdCClientSettings = MyMdCMockSettings(
         mock_responses_file=Path(__file__).parents[3] / "tests" / "mock" / "_mymdc.json"

@@ -3,7 +3,7 @@ from authlib.integrations.starlette_client import (  # type: ignore[import-untyp
 )
 
 from .bootstrap import bootstrap as bootstrap
-from .routers import router
+from .routers import noauth_router, router
 
 global __CLIENT
 
@@ -11,4 +11,4 @@ __CLIENT: StarletteOAuth2App = None  # type: ignore[assignment]
 """Global/singleton OAuth client instance."""
 
 
-__all__ = ["bootstrap", "router"]
+__all__ = ["bootstrap", "noauth_router", "router"]

@@ -29,6 +29,16 @@ class User:
         self, info: "strawberry.Info[Context]", start_after: datetime | None = None
     ) -> list[ProposalMeta]:
         """List of proposals for the user."""
+        from ..shared.settings import settings
+
+        if settings.is_local:
+            from ..metadata.services import _local_proposal_meta, _local_proposal_number
+
+            proposal_number = await _local_proposal_number()
+            if proposal_number is None:
+                return []
+            return [ProposalMeta.from_pydantic(_local_proposal_meta(proposal_number))]
+
         mymdc, session = info.context.mymdc, info.context.session
 
         proposals = await mymdc.get_user_proposals(self.preferred_username)

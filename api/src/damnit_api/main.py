@@ -34,25 +34,31 @@ def create_app():
             for bs in bootstraps:
                 tg.create_task(bs(settings))
 
-        app.router.include_router(auth.router)
+        if settings.is_local:
+            app.router.include_router(auth.noauth_router)
+        else:
+            app.router.include_router(auth.router)
         app.router.include_router(metadata.router)
         app.router.include_router(contextfile.router)
         app.router.include_router(gql.get_gql_app(), prefix="/graphql")
         yield
 
-    app = FastAPI(
-        lifespan=lifespan,
-        swagger_ui_init_oauth={
+    swagger_oauth = (
+        None
+        if settings.auth is None
+        else {
             "usePkceWithAuthorizationCodeGrant": True,
             "clientId": settings.auth.client_id,
-        },
+        }
     )
+    app = FastAPI(lifespan=lifespan, swagger_ui_init_oauth=swagger_oauth)
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):  # noqa: RUF029
         request_path = request.url.path
         if (
-            exc.status_code == status.HTTP_401_UNAUTHORIZED
+            not settings.is_local
+            and exc.status_code == status.HTTP_401_UNAUTHORIZED
             and request_path in KNOWN_PATHS
         ):
             return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")
@@ -83,7 +89,7 @@ def create_app():
 
     app.add_middleware(
         SessionMiddleware,
-        secret_key=settings.session_secret.get_secret_value(),
+        secret_key=settings.session_secret.get_secret_value(),  # pyright: ignore[reportOptionalMemberAccess]
     )
 
     app.add_middleware(RequestLoggingMiddleware)
@@ -101,6 +107,33 @@ def create_app():
 
 
 if __name__ == "__main__":
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser(description="DAMNIT Web API Server")
+    parser.add_argument("--path", type=str, help="Path to amore/damnit directory")
+    args = parser.parse_args()
+
+    if args.path:
+        from pathlib import Path
+
+        path = Path(args.path)
+        if not path.is_dir():
+            parser.error(f"'{args.path}' does not exist or is not a directory")
+
+        missing = [
+            name
+            for name in ("runs.sqlite", "context.py", "extracted_data")
+            if not (path / name).exists()
+        ]
+        if missing:
+            parser.error(
+                f"'{args.path}' is not a valid DAMNIT directory"
+                f" (missing: {', '.join(missing)})"
+            )
+
+        os.environ["DW_API_DAMNIT_PATH"] = args.path
+
     import uvicorn
 
     from . import _logging, get_logger
@@ -113,9 +146,6 @@ if __name__ == "__main__":
     )
 
     logger = get_logger()
-
-    # TODO: warning/logging for address bind to localhost only which is aware
-    # of running in container/in front of reverse proxy?
 
     logger.debug("Settings", **settings.model_dump())
 
