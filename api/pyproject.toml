@@ -31,6 +31,7 @@ dependencies = [
     "requests~=2.32",
     "structlog~=24.4",
     "colorama~=0.4",
+    "rich>=14.2.0",
     "xarray>=2024.11", # uses datever
     "damnit~=0.2.1",
     "aiohttp~=3.11",
@@ -55,7 +56,6 @@ docs = [
 develop = [
     "datamodel-code-generator[http]>=0.35.0",
     "pre-commit>=4.5.1",
-    "rich>=14.2.0",
     "strawberry-graphql[debug-server]>=0.283.3",
 ]
 dev = [
