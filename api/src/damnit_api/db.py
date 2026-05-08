@@ -85,15 +85,11 @@ class DatabaseSessionManager(metaclass=Registry):
 
 
 def get_session(proposal) -> AsyncSession:
-    return DatabaseSessionManager(
-        proposal
-    ).session()  # FIX: # pyright: ignore[reportReturnType]
+    return DatabaseSessionManager(proposal).session()  # FIX: # pyright: ignore[reportReturnType]
 
 
 def get_connection(proposal) -> AsyncConnection:
-    return DatabaseSessionManager(
-        proposal
-    ).connect()  # FIX: # pyright: ignore[reportReturnType]
+    return DatabaseSessionManager(proposal).connect()  # FIX: # pyright: ignore[reportReturnType]
 
 
 @alru_cache(ttl=300)
@@ -134,11 +130,7 @@ async def async_latest_rows(
         start_at = datetime.now().astimezone().timestamp()
     order_by = desc(by) if descending else by
 
-    selection = (
-        select(table)
-        .where(table.c.get(by) > start_at)
-        .order_by(order_by)
-    )
+    selection = select(table).where(table.c.get(by) > start_at).order_by(order_by)
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)

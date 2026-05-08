@@ -62,15 +62,14 @@ async def poll_proposal(proposal):
             run_values.update(run_info)
 
         runs[run] = DamnitRun.resolve(run_values)
-        run_timestamps[run] = max(
-            data.timestamp for data in variables.values()
-        )
+        run_timestamps[run] = max(data.timestamp for data in variables.values())
 
     if not runs:
         return None
 
     if latest_data.timestamp is None:
-        raise ValueError("Latest data has no timestamp.")
+        msg = "Latest data has no timestamp."
+        raise ValueError(msg)
 
     _last_seen_timestamp[proposal] = latest_data.timestamp
 
