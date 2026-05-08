@@ -129,11 +129,7 @@ const splitLink = split(
   from([priorityLink, httpLink])
 )
 
-export const cache = new InMemoryCache({
-  possibleTypes: {
-    DamnitRun: ['p.*'],
-  },
-})
+export const cache = new InMemoryCache()
 
 export const client = new ApolloClient({
   cache,

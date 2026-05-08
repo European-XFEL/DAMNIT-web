@@ -1,5 +1,4 @@
 import { gql } from '@apollo/client'
-import { stripTypename } from '@apollo/client/utilities'
 
 import {
   DEFERRED_TABLE_DATA_QUERY_NAME,
@@ -14,14 +13,8 @@ import {
   type TableMetadataOptions,
 } from './table-data.types'
 import { client } from '../../graphql/apollo'
-import { type WithTypeName } from '../../types'
+import { type VariableDataItem, type VariableValue } from '../../types'
 import { isEmpty } from '../../utils/helpers'
-
-const NUMBER_RE = /^-?\d+(\.\d+)?$/
-
-function formatProposalName(proposal: string) {
-  return NUMBER_RE.test(proposal) ? `p${proposal}` : proposal
-}
 
 /*
  * -----------------------------
@@ -29,50 +22,100 @@ function formatProposalName(proposal: string) {
  * -----------------------------
  */
 
-const get_table_data_query = (
-  type: string,
-  fields: string[] = [],
-  lightweight = false,
-  deferred = false
-) => {
-  return gql`
-    query ${
-      deferred ? DEFERRED_TABLE_DATA_QUERY_NAME : TABLE_DATA_QUERY_NAME
-    }($proposal: String, $page: Int, $per_page: Int) {
-      runs(database: { proposal: $proposal }, page: $page, per_page: $per_page) ${
-        lightweight ? '@lightweight' : ''
-      } {
-        ... on ${type} {
-          ${fields.map((field) => `${field} { value dtype }`).join(' ')}
-        }
+const buildTableDataQuery = (
+  operationName: string,
+  lightweight: boolean
+) => gql`
+  query ${operationName}(
+    $proposal: String
+    $page: Int
+    $per_page: Int
+    $names: [String!]
+  ) {
+    runs(
+      database: { proposal: $proposal }
+      page: $page
+      per_page: $per_page
+    ) ${lightweight ? '@lightweight' : ''} {
+      variables(names: $names) {
+        name
+        value
+        dtype
       }
     }
-  `
+  }
+`
+
+const TABLE_DATA_QUERY = buildTableDataQuery(TABLE_DATA_QUERY_NAME, false)
+const LIGHTWEIGHT_TABLE_DATA_QUERY = buildTableDataQuery(
+  `Lightweight${TABLE_DATA_QUERY_NAME}`,
+  true
+)
+const DEFERRED_TABLE_DATA_QUERY = buildTableDataQuery(
+  DEFERRED_TABLE_DATA_QUERY_NAME,
+  false
+)
+
+type DamnitVariable = {
+  name: string
+  value: VariableValue
+  dtype: string
 }
 
-async function getTableData(
-  fields: string[],
-  options: TableDataOptions
-): Promise<TableData> {
+type DamnitRun = {
+  variables: DamnitVariable[]
+}
+
+export function flattenRuns(runs: DamnitRun[]): TableData {
+  const table: TableData = {}
+
+  for (const run of runs) {
+    const runVariable = run.variables.find((v) => v.name === 'run')
+    if (runVariable === undefined || runVariable.value == null) {
+      continue
+    }
+
+    const row: Record<string, VariableDataItem> = {}
+    for (const variable of run.variables) {
+      row[variable.name] = {
+        value: variable.value,
+        dtype: variable.dtype,
+      }
+    }
+
+    table[String(runVariable.value)] = row
+  }
+
+  return table
+}
+
+function pickTableDataQuery(lightweight: boolean, deferred: boolean) {
+  if (deferred) {
+    return DEFERRED_TABLE_DATA_QUERY
+  }
+  if (lightweight) {
+    return LIGHTWEIGHT_TABLE_DATA_QUERY
+  }
+  return TABLE_DATA_QUERY
+}
+
+async function getTableData(options: TableDataOptions): Promise<TableData> {
   const {
     proposal,
     page = 1,
     pageSize = 10,
     lightweight = false,
     deferred = false,
+    variables,
   } = options
 
   const { data } = await client.query({
-    query: get_table_data_query(
-      formatProposalName(proposal),
-      fields,
-      lightweight,
-      deferred
-    ),
+    query: pickTableDataQuery(lightweight, deferred),
     variables: {
       proposal: String(proposal),
       page,
       per_page: pageSize,
+      names: variables,
     },
   })
 
@@ -80,11 +123,7 @@ async function getTableData(
     return {}
   }
 
-  return Object.fromEntries(
-    data.runs.map((run: WithTypeName<TableData>) => {
-      return [run.run.value, stripTypename(run)]
-    })
-  )
+  return flattenRuns(data.runs as DamnitRun[])
 }
 
 /*
@@ -93,7 +132,7 @@ async function getTableData(
  * -----------------------------
  */
 
-const TABLE_METADATA_QUERY = gql`
+export const TABLE_METADATA_QUERY = gql`
   query TableMetadataQuery($proposal: String) {
     metadata(database: { proposal: $proposal })
   }
@@ -123,25 +162,10 @@ async function getTable({
   ...options
 }: TableDataOptions | TableMetadataOptions): Promise<TableInfo> {
   const metadata: TableMetadata = await getTableMetadata({ proposal })
-  const data = await getTableData(Object.keys(metadata.variables), {
-    proposal,
-    ...options,
-  })
+  const data = await getTableData({ proposal, ...options })
 
   return { data, metadata }
 }
-
-/*
- * -----------------------------
- *   Mutation: refresh
- * -----------------------------
- */
-
-export const REFRESH_MUTATION = gql`
-  mutation RefreshMutation($proposal: String) {
-    refresh(database: { proposal: $proposal })
-  }
-`
 
 /*
  * -----------------------------

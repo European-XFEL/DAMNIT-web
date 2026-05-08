@@ -26,6 +26,7 @@ export type TableDataOptions = {
   pageSize?: number
   lightweight?: boolean
   deferred?: boolean
+  variables?: string[]
 }
 
 export type TableMetadataOptions = {
