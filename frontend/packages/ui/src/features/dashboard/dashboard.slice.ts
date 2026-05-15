@@ -4,6 +4,7 @@ import { type TabItem } from '../../types'
 type MainState = {
   tabs: Record<string, TabItem>
   currentTab: string
+  previousTab?: string
 }
 
 type NavState = {
@@ -44,18 +45,33 @@ const slice = createSlice({
     // Main
     setCurrentTab: (state, action) => {
       const id = action.payload
-      if (id in state.main.tabs) {
+      if (id in state.main.tabs && id !== state.main.currentTab) {
+        state.main.previousTab = state.main.currentTab
         state.main.currentTab = id
       }
     },
     addTab: (state, action) => {
       const { id, ...rest } = action.payload
+      if (id !== state.main.currentTab) {
+        state.main.previousTab = state.main.currentTab
+      }
       state.main.currentTab = id
       state.main.tabs = Object.assign(state.main.tabs || {}, { [id]: rest })
     },
     removeTab: (state, action: PayloadAction<string>) => {
-      const { [action.payload]: _ = {}, ...rest } = state.main.tabs
-      state.main.currentTab = Object.keys(rest).slice(-1)[0]
+      const removed = action.payload
+      const { [removed]: _ = {}, ...rest } = state.main.tabs
+
+      if (state.main.currentTab === removed) {
+        const { previousTab } = state.main
+        state.main.currentTab =
+          previousTab && previousTab in rest
+            ? previousTab
+            : Object.keys(rest).slice(-1)[0]
+      }
+      if (state.main.previousTab === removed) {
+        state.main.previousTab = undefined
+      }
       state.main.tabs = rest
     },
 
