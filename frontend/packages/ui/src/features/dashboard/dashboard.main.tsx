@@ -83,7 +83,6 @@ const MainTabs = ({ contents, active, setActive, ...props }: TabsProps) => {
         variant="outline"
         visibleFrom="sm"
         pt={8}
-        keepMounted={false}
         {...props}
       >
         <MantineTabs.List px={8}>
@@ -138,12 +137,18 @@ function DashboardMain({ tableProps, contextFileProps }: DashBoardMainProps) {
   const main = useAppSelector((state) => state.dashboard.main)
 
   // Main tabs
+  //
+  // The editor and plots tabs stay mounted (Mantine's default keepMounted) so
+  // Monaco/Plotly keep their view state. The table instead restores its scroll
+  // position on mount (see useScrollToView), so we render it only while active
+  // and let it remount on return.
   const mainTabElements = {
-    table: (
-      <Suspense fallback={<CenteredLoader />}>
-        <Table {...tableProps} />
-      </Suspense>
-    ),
+    table:
+      main.currentTab === 'table' ? (
+        <Suspense fallback={<CenteredLoader />}>
+          <Table {...tableProps} />
+        </Suspense>
+      ) : null,
     plots: (
       <Suspense fallback={<CenteredLoader />}>
         <PlotsTab />
