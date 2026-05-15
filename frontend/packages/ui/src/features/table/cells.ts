@@ -1,18 +1,25 @@
 import {
   GridCellKind,
   type BaseGridCell,
+  type CustomCell,
+  type CustomRenderer,
   type GridCell,
   type ImageCell,
   type Item,
   type LoadingCell,
   type NumberCell,
   type TextCell,
+  roundedRect,
 } from '@glideapps/glide-data-grid'
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES } from '../../constants'
-import { type VariableValue } from '../../types'
+import { type VariableError, type VariableValue } from '../../types'
 import { formatDate, formatNumber } from '../../utils/helpers'
+
+// Width of the small skeleton/error box, shared by loadingCell and
+// errorCellRenderer so a no-data cell and an errored cell line up.
+const SKELETON_BOX_WIDTH = 30
 
 // TODO: Handle nonconforming data type
 
@@ -117,6 +124,71 @@ export const dateCell = (
   }
 }
 
+// Shown for variables that failed to execute (the run_variables row carries an
+// `error` instead of a value). Rendered as a small box with different colors
+// depending on the error.
+const ERROR_CELL_KIND = 'error-cell'
+
+export interface ErrorCellProps {
+  readonly kind: typeof ERROR_CELL_KIND
+  readonly error: VariableError
+}
+
+export type ErrorCell = CustomCell<ErrorCellProps>
+
+// Mantine's orange.4 and gray.5 respectively (the on-canvas draw can't use
+// Mantine tokens; keep these in sync with the tooltip's `c="orange.4"`).
+const ERROR_BOX_COLOR = '#FFA94D'
+const SKIP_BOX_COLOR = '#ADB5BD'
+
+// `error_cls` values that aren't serious failures get drawn in grey instead of
+// orange.
+const GREYED_ERROR_CLASSES: ReadonlySet<string> = new Set([
+  'Skip',
+  'SourceNameError',
+])
+
+export const errorCell = (
+  error: VariableError,
+  params: Partial<BaseGridCell> = {}
+): ErrorCell => {
+  return {
+    kind: GridCellKind.Custom,
+    allowOverlay: false,
+    copyData: error.message,
+    data: { kind: ERROR_CELL_KIND, error },
+    ...params,
+  }
+}
+
+export const errorCellRenderer: CustomRenderer<ErrorCell> = {
+  kind: GridCellKind.Custom,
+  isMatch: (cell: CustomCell): cell is ErrorCell =>
+    (cell.data as Partial<ErrorCellProps>).kind === ERROR_CELL_KIND,
+  draw: ({ ctx, rect, theme, cell }) => {
+    const boxHeight = Math.min(18, rect.height - 2 * theme.cellVerticalPadding)
+    const x = rect.x + theme.cellHorizontalPadding
+    const y = rect.y + (rect.height - boxHeight) / 2
+
+    roundedRect(
+      ctx,
+      x,
+      y,
+      SKELETON_BOX_WIDTH,
+      boxHeight,
+      theme.roundingRadius ?? 3
+    )
+
+    let boxColor = ERROR_BOX_COLOR
+    if (GREYED_ERROR_CLASSES.has(cell.data.error.cls)) {
+      boxColor = SKIP_BOX_COLOR
+    }
+
+    ctx.fillStyle = boxColor
+    ctx.fill()
+  },
+}
+
 export const loadingCell = (
   _: VariableValue,
   params: Partial<BaseGridCell> = {}
@@ -124,7 +196,7 @@ export const loadingCell = (
   return {
     kind: GridCellKind.Loading,
     allowOverlay: false,
-    skeletonWidth: 30,
+    skeletonWidth: SKELETON_BOX_WIDTH,
     skeletonHeight: 30,
     ...params,
   }
