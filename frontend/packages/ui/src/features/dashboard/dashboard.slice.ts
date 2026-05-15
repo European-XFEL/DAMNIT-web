@@ -1,9 +1,20 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { type TabItem } from '../../types'
+import { createMap } from '../../utils/helpers'
+
+export type MainContent =
+  | { kind: 'table' }
+  | { kind: 'contextFile' }
+  | { kind: 'plots' }
+
+type MainView = {
+  id: string
+  title: string
+  content: MainContent
+}
 
 type MainState = {
-  tabs: Record<string, TabItem>
-  currentTab: string
+  view: MainView
 }
 
 type NavState = {
@@ -21,11 +32,21 @@ type DasboardState = {
   aside: AsideState
 }
 
+export const DEFAULT_MAIN_VIEWS: Map<string, MainView> = createMap(
+  [
+    { id: 'default-table', title: 'Table', content: { kind: 'table' } },
+    {
+      id: 'default-context-file',
+      title: 'Context File',
+      content: { kind: 'contextFile' },
+    },
+    { id: 'default-plots', title: 'Plots', content: { kind: 'plots' } },
+  ],
+  'id'
+)
+
 const initialState: DasboardState = {
-  main: {
-    tabs: { table: { title: 'Table' }, editor: { title: 'Context File' } },
-    currentTab: 'table',
-  },
+  main: { view: DEFAULT_MAIN_VIEWS.get('default-table')! },
   nav: {
     isOpened: false,
   },
@@ -40,23 +61,9 @@ const slice = createSlice({
   initialState,
   reducers: {
     reset: () => initialState,
-
     // Main
-    setCurrentTab: (state, action) => {
-      const id = action.payload
-      if (id in state.main.tabs) {
-        state.main.currentTab = id
-      }
-    },
-    addTab: (state, action) => {
-      const { id, ...rest } = action.payload
-      state.main.currentTab = id
-      state.main.tabs = Object.assign(state.main.tabs || {}, { [id]: rest })
-    },
-    removeTab: (state, action: PayloadAction<string>) => {
-      const { [action.payload]: _ = {}, ...rest } = state.main.tabs
-      state.main.currentTab = Object.keys(rest).slice(-1)[0]
-      state.main.tabs = rest
+    setMainView: (state, action: PayloadAction<MainView['id']>) => {
+      state.main.view = DEFAULT_MAIN_VIEWS.get(action.payload)!
     },
 
     // Nav
@@ -78,13 +85,5 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const {
-  addTab,
-  removeTab,
-  setCurrentTab,
-  openNav,
-  closeNav,
-  openAside,
-  closeAside,
-  reset,
-} = slice.actions
+export const { openNav, closeNav, openAside, closeAside, reset, setMainView } =
+  slice.actions

@@ -48,10 +48,15 @@ export function size<T>(value: MaybeObjectOrArray<T>) {
   return Object.keys(value).length
 }
 
-export function createMap<T>(array: T[], by: keyof T): Map<T[keyof T], T> {
-  const map = new Map<T[keyof T], T>()
+export function createMap<T, K extends keyof T>(
+  array: T[],
+  by: K
+): Map<T[K], T> {
+  const map = new Map<T[K], T>()
+
   array.forEach((obj) => {
     map.set(obj[by], obj)
   })
+
   return map
 }
