@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import NewType
 
@@ -157,10 +158,40 @@ strawberry.enum(DamnitType, graphql_name_from="value")
 
 
 @strawberry.type
+class DamnitVariableError:
+    message: str
+    cls: str
+
+
+def extract_error(attributes):
+    """Pull the error out of a `run_variables.attributes` value.
+
+    When a variable fails to execute, DAMNIT stores a JSON object like
+    ``{"error": "...", "error_cls": "..."}`` in the `attributes` column.
+    Returns a `DamnitVariableError`, or None if there is no error.
+    """
+    if isinstance(attributes, str):
+        try:
+            attributes = json.loads(attributes)
+        except ValueError:
+            return None
+    if not isinstance(attributes, dict):
+        return None
+
+    message = attributes.get("error")
+    cls = attributes.get("error_cls")
+    if isinstance(message, str) and isinstance(cls, str):
+        return DamnitVariableError(message=message, cls=cls)
+
+    return None
+
+
+@strawberry.type
 class DamnitVariable:
     name: str
     value: Any | None
     dtype: DamnitType
+    error: DamnitVariableError | None = None
 
 
 @strawberry.type
@@ -183,8 +214,9 @@ class DamnitRun:
                 entry = {"value": entry}
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)
+            error = extract_error(entry.get("attributes"))
             yield DamnitVariable(
-                name=name, value=Any(value), dtype=dtype
+                name=name, value=Any(value), dtype=dtype, error=error
             )
 
     @classmethod
@@ -193,17 +225,19 @@ class DamnitRun:
 
     @classmethod
     def resolve(cls, record):
-        out = {
+        out: dict[str, object | None] = {
             name: None
             for name, entry in record.items()
             if entry is None
         }
         for v in cls._iter_variables(record):
-            out[v.name] = (
-                None
-                if v.value is None
-                else {"value": v.value, "dtype": v.dtype.value}
-            )
+            if v.value is None and v.error is None:
+                out[v.name] = None
+                continue
+            resolved = {"value": v.value, "dtype": v.dtype.value}
+            if v.error is not None:
+                resolved["error"] = asdict(v.error)
+            out[v.name] = resolved
         return out
 
     @staticmethod

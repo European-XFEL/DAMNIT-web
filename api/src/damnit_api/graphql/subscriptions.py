@@ -53,7 +53,11 @@ async def poll_proposal(proposal):
     run_timestamps = {}
     for run, variables in latest_data.runs.items():
         run_values = {
-            name: {"value": data.value, "summary_type": data.summary_type}
+            name: {
+                "value": data.value,
+                "summary_type": data.summary_type,
+                "attributes": data.attributes,
+            }
             for name, data in variables.items()
         }
         run_values.setdefault("run", {"value": run})

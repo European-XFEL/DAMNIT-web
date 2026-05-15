@@ -24,6 +24,7 @@ class MetaData:
 class Data(MetaData):
     value: Any = None
     summary_type: str | None = None
+    attributes: Any = None
 
 
 class LatestData:
@@ -40,6 +41,7 @@ class LatestData:
             run[data["name"]] = Data(
                 value=data["value"],
                 summary_type=data.get("summary_type"),
+                attributes=data.get("attributes"),
                 timestamp=timestamp,
             )
 
