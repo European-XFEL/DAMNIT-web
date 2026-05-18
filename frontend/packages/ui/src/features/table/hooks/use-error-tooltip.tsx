@@ -5,6 +5,7 @@ import {
   ErrorTooltip,
   type ErrorTooltipState,
 } from '../components/error-tooltip'
+import { errorText } from '../cells'
 
 import { type VariableError } from '../../../types'
 
@@ -64,7 +65,7 @@ export const useErrorTooltip = (
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
         e.preventDefault()
         void navigator.clipboard
-          .writeText(tooltip.error.message)
+          .writeText(errorText(tooltip.error))
           .then(() => setCopied(true))
       }
     }

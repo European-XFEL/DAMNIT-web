@@ -9,13 +9,15 @@ import {
   type LoadingCell,
   type NumberCell,
   type TextCell,
-  roundedRect,
 } from '@glideapps/glide-data-grid'
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES } from '../../constants'
 import { type VariableError, type VariableValue } from '../../types'
 import { formatDate, formatNumber } from '../../utils/helpers'
+import errorErrorIcon from './assets/error-error.svg?url'
+import errorMissingIcon from './assets/error-missing.svg?url'
+import errorSkippedIcon from './assets/error-skipped.svg?url'
 
 // Width of the small skeleton/error box, shared by loadingCell and
 // errorCellRenderer so a no-data cell and an errored cell line up.
@@ -125,8 +127,8 @@ export const dateCell = (
 }
 
 // Shown for variables that failed to execute (the run_variables row carries an
-// `error` instead of a value). Rendered as a small box with different colors
-// depending on the error.
+// `error` instead of a value). Rendered as a small right-aligned glyph that
+// varies with the kind of error.
 const ERROR_CELL_KIND = 'error-cell'
 
 export interface ErrorCellProps {
@@ -136,17 +138,41 @@ export interface ErrorCellProps {
 
 export type ErrorCell = CustomCell<ErrorCellProps>
 
-// Mantine's orange.4 and gray.5 respectively (the on-canvas draw can't use
-// Mantine tokens; keep these in sync with the tooltip's `c="orange.4"`).
-const ERROR_BOX_COLOR = '#FFA94D'
-const SKIP_BOX_COLOR = '#ADB5BD'
+export type ErrorKind = 'skipped' | 'missing' | 'error'
 
-// `error_cls` values that aren't serious failures get drawn in grey instead of
-// orange.
-const GREYED_ERROR_CLASSES: ReadonlySet<string> = new Set([
-  'Skip',
-  'SourceNameError',
-])
+export interface ErrorVisuals {
+  kind: ErrorKind
+  title: string
+  icon: HTMLImageElement
+}
+
+const ERROR_META: Record<ErrorKind, { title: string; src: string }> = {
+  skipped: { title: 'Missing dependency', src: errorSkippedIcon },
+  missing: { title: 'Missing data', src: errorMissingIcon },
+  error: { title: 'Error', src: errorErrorIcon },
+}
+
+const errorIconCache = new Map<ErrorKind, HTMLImageElement>()
+
+// Resolve an exception class to its display kind, title and (cached) icon.
+export const errorVisuals = (cls: string): ErrorVisuals => {
+  const kind: ErrorKind =
+    cls === 'Skip' ? 'skipped' : cls === 'SourceNameError' ? 'missing' : 'error'
+
+  let icon = errorIconCache.get(kind)
+  if (!icon) {
+    icon = new Image()
+    icon.src = ERROR_META[kind].src
+    errorIconCache.set(kind, icon)
+  }
+
+  return { kind, title: ERROR_META[kind].title, icon }
+}
+
+// Clipboard/copy representation, shared by the cell's copyData and the
+// tooltip's Ctrl+C handler.
+export const errorText = (error: VariableError): string =>
+  `${error.cls}\n${error.message}`
 
 export const errorCell = (
   error: VariableError,
@@ -155,7 +181,7 @@ export const errorCell = (
   return {
     kind: GridCellKind.Custom,
     allowOverlay: false,
-    copyData: error.message,
+    copyData: errorText(error),
     data: { kind: ERROR_CELL_KIND, error },
     ...params,
   }
@@ -166,26 +192,14 @@ export const errorCellRenderer: CustomRenderer<ErrorCell> = {
   isMatch: (cell: CustomCell): cell is ErrorCell =>
     (cell.data as Partial<ErrorCellProps>).kind === ERROR_CELL_KIND,
   draw: ({ ctx, rect, theme, cell }) => {
-    const boxHeight = Math.min(18, rect.height - 2 * theme.cellVerticalPadding)
-    const x = rect.x + theme.cellHorizontalPadding
-    const y = rect.y + (rect.height - boxHeight) / 2
+    const img = errorVisuals(cell.data.error.cls).icon
+    if (!img.complete || img.naturalWidth === 0) return
 
-    roundedRect(
-      ctx,
-      x,
-      y,
-      SKELETON_BOX_WIDTH,
-      boxHeight,
-      theme.roundingRadius ?? 3
-    )
+    const size = Math.min(20, rect.height - 2 * theme.cellVerticalPadding)
+    const x = rect.x + rect.width - theme.cellHorizontalPadding - size
+    const y = rect.y + (rect.height - size) / 2
 
-    let boxColor = ERROR_BOX_COLOR
-    if (GREYED_ERROR_CLASSES.has(cell.data.error.cls)) {
-      boxColor = SKIP_BOX_COLOR
-    }
-
-    ctx.fillStyle = boxColor
-    ctx.fill()
+    ctx.drawImage(img, x, y, size, size)
   },
 }
 
