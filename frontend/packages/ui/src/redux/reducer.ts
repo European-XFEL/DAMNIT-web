@@ -2,6 +2,7 @@ import { combineReducers } from '@reduxjs/toolkit'
 
 import { authApi } from '../auth'
 
+import { contextFileReducer as contextFile } from '../features/context-file'
 import { contextfileApi } from '../features/context-file/context-file.api'
 import { extractedDataReducer as extractedData } from '../data/extracted'
 import { metadataReducer as metadata } from '../data/metadata'
@@ -12,6 +13,7 @@ import { plotsReducer as plots } from '../features/plots'
 import { tableReducer as table } from '../features/table'
 
 const reducer = combineReducers({
+  contextFile,
   dashboard,
   plots,
   metadata,
