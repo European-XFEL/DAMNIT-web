@@ -7,7 +7,6 @@ import pytest
 from damnit_api.graphql.models import (
     DamnitRun,
     DamnitVariableError,
-    extract_error,
     resample_array,
     serialize,
     to_complex_string,
@@ -142,27 +141,30 @@ def test_serialize_image():
 
 
 # -----------------------------------------------------------------------------
-# Test extract_error
+# Test DamnitVariableError.from_attrs
 
 ERROR_ATTRS = {"error": "IndexError: list index out of range", "error_cls": "Foo"}
 
 
-def test_extract_error_from_dict():
-    error = extract_error(ERROR_ATTRS)
-    assert error == DamnitVariableError(message=ERROR_ATTRS["error"], cls="Foo")
-
-
 def test_extract_error_from_json_string():
-    error = extract_error(json.dumps(ERROR_ATTRS))
+    error = DamnitVariableError.from_attrs(json.dumps(ERROR_ATTRS))
     assert error == DamnitVariableError(message=ERROR_ATTRS["error"], cls="Foo")
 
 
 @pytest.mark.parametrize(
     "attributes",
-    [None, "not json", {}, {"error": "boom"}, {"error": "boom", "error_cls": 42}],
+    [
+        None,
+        {"error": "boom", "error_cls": "Foo"},
+        "not json",
+        "123",
+        "{}",
+        '{"error": "boom"}',
+        '{"error": "boom", "error_cls": 42}',
+    ],
 )
 def test_extract_error_returns_none(attributes):
-    assert extract_error(attributes) is None
+    assert DamnitVariableError.from_attrs(attributes) is None
 
 
 # -----------------------------------------------------------------------------

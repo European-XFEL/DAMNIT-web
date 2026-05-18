@@ -24,7 +24,7 @@ class MetaData:
 class Data(MetaData):
     value: Any = None
     summary_type: str | None = None
-    attributes: Any = None
+    attributes: str | None = None
 
 
 class LatestData:
