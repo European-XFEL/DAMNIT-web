@@ -13,10 +13,17 @@ import {
 import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack } from '@mantine/core'
 
-import { getCell, numberCell, textCell } from './cells'
+import {
+  errorCell,
+  errorCellRenderer,
+  getCell,
+  numberCell,
+  textCell,
+} from './cells'
 import { TagsPopover } from './components/popovers/tags-popover'
 import { VariablesPopover } from './components/popovers/variables-popover'
 import ContextMenu from './context-menu'
+import { useErrorTooltip } from './hooks/use-error-tooltip'
 import { useTable } from './hooks/use-table'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
@@ -31,6 +38,8 @@ import { getTableData } from '../../data/table'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { isArrayEqual, sorted } from '../../utils/array'
 import { isEmpty } from '../../utils/helpers'
+
+const CUSTOM_RENDERERS = [...allCells, errorCellRenderer]
 
 type Column = {
   id: string
@@ -103,6 +112,11 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         return textCell('')
       }
 
+      const cellError = rowData[variable].error
+      if (cellError) {
+        return errorCell(cellError)
+      }
+
       return getCell({
         value: rowData[variable].value,
         dtype: rowData[variable].dtype,
@@ -111,6 +125,23 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     },
     [tableColumns, tableMetadata.runs, tableData, tableLastUpdate]
   )
+
+  // Cell: Error tooltip (shown when hovering an errored variable's cell).
+  const lookupError = useCallback(
+    (col: number, row: number) => {
+      const run = tableMetadata.runs[row]
+      const variable = tableColumns[col]?.id
+      return run != null && variable
+        ? tableData[run]?.[variable]?.error
+        : undefined
+    },
+    [tableColumns, tableMetadata.runs, tableData]
+  )
+  const {
+    onItemHovered: handleItemHovered,
+    dismiss: dismissErrorTooltip,
+    tooltip: errorTooltip,
+  } = useErrorTooltip(lookupError)
 
   // Cell: Click event
   const [gridSelection, setGridSelection] = useState<GridSelection>({
@@ -333,8 +364,9 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     (rect: Rectangle) => {
       paginationHandler(rect)
       scrollToViewHandler(rect)
+      dismissErrorTooltip()
     },
-    [paginationHandler, scrollToViewHandler]
+    [paginationHandler, scrollToViewHandler, dismissErrorTooltip]
   )
 
   return (
@@ -360,12 +392,14 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               rangeSelect="multi-cell"
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
+              onItemHovered={handleItemHovered}
               freezeColumns={1}
-              customRenderers={allCells}
+              customRenderers={CUSTOM_RENDERERS}
               onVisibleRegionChanged={handleVisibleRegionchange}
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}
             />
+            {errorTooltip}
             <ContextMenu {...contextMenu} />
             <div id="portal" />
           </>

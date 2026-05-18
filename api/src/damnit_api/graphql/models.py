@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import NewType
 
@@ -6,6 +7,7 @@ import numpy as np
 import strawberry
 from damnit.api import blob2complex
 
+from .. import get_logger
 from ..shared.const import DamnitType
 from ..utils import (
     b64image,
@@ -14,6 +16,8 @@ from ..utils import (
     python_type_to_damnit_type,
     summary_type_to_damnit_type,
 )
+
+logger = get_logger()
 
 
 @dataclass(frozen=True)
@@ -157,10 +161,44 @@ strawberry.enum(DamnitType, graphql_name_from="value")
 
 
 @strawberry.type
+class DamnitVariableError:
+    message: str
+    cls: str
+
+    @classmethod
+    def from_attrs(cls, attributes):
+        """Pull the error out of a `run_variables.attributes` value.
+
+        When a variable fails to execute, DAMNIT stores a JSON string like
+        ``{"error": "...", "error_cls": "..."}`` in the `attributes` column.
+        Returns a `DamnitVariableError`, or None if there is no error.
+        """
+        if not isinstance(attributes, str):
+            return None
+        try:
+            attributes = json.loads(attributes)
+        except ValueError:
+            logger.error(
+                "Failed to parse run_variables.attributes JSON: %r", attributes
+            )
+            return None
+        if not isinstance(attributes, dict):
+            return None
+
+        message = attributes.get("error")
+        error_cls = attributes.get("error_cls")
+        if isinstance(message, str) and isinstance(error_cls, str):
+            return cls(message=message, cls=error_cls)
+
+        return None
+
+
+@strawberry.type
 class DamnitVariable:
     name: str
     value: Any | None
     dtype: DamnitType
+    error: DamnitVariableError | None = None
 
 
 @strawberry.type
@@ -183,9 +221,8 @@ class DamnitRun:
                 entry = {"value": entry}
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)
-            yield DamnitVariable(
-                name=name, value=Any(value), dtype=dtype
-            )
+            error = DamnitVariableError.from_attrs(entry.get("attributes"))
+            yield DamnitVariable(name=name, value=Any(value), dtype=dtype, error=error)
 
     @classmethod
     def from_db(cls, record):
@@ -193,17 +230,17 @@ class DamnitRun:
 
     @classmethod
     def resolve(cls, record):
-        out = {
-            name: None
-            for name, entry in record.items()
-            if entry is None
+        out: dict[str, object | None] = {
+            name: None for name, entry in record.items() if entry is None
         }
         for v in cls._iter_variables(record):
-            out[v.name] = (
-                None
-                if v.value is None
-                else {"value": v.value, "dtype": v.dtype.value}
-            )
+            if v.value is None and v.error is None:
+                out[v.name] = None
+                continue
+            resolved = {"value": v.value, "dtype": v.dtype.value}
+            if v.error is not None:
+                resolved["error"] = asdict(v.error)
+            out[v.name] = resolved
         return out
 
     @staticmethod
