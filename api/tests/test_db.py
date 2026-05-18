@@ -64,6 +64,7 @@ def _open_file_descriptors_to(db_file: Path):
 # -----------------------------------------------------------------------------
 # Engine configuration
 
+
 def test_engine_uses_nullpool_and_autocommit(damnit_db):
     mgr = DatabaseSessionManager(damnit_db)
     assert isinstance(mgr._engine.pool, NullPool)
@@ -74,6 +75,7 @@ def test_engine_uses_nullpool_and_autocommit(damnit_db):
 
 # -----------------------------------------------------------------------------
 # File descriptor lifetime
+
 
 # asyncio.run() creates and tears down a fresh event loop, which is what
 # this test verifies (no file descriptors leak after the loop dies).
