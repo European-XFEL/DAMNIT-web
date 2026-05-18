@@ -3,6 +3,7 @@ import { useLoaderData } from 'react-router'
 
 import {
   NotFoundPage,
+  resetContextFile,
   resetExtractedData,
   resetMetadata,
   resetPlots,
@@ -33,6 +34,7 @@ function ExampleRoute() {
       dispatch(resetExtractedData())
       dispatch(resetPlots())
       dispatch(resetMetadata())
+      dispatch(resetContextFile())
     }
   }, [info?.id, dispatch])
 
