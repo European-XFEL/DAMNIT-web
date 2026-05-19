@@ -94,19 +94,13 @@ export const useErrorTooltip = (
     setTooltip(undefined)
   }, [cancelClose, cancelOpen])
 
-  // Body touched: pin the tooltip and treat further switches as deliberate.
   const onBodyEnter = useCallback(() => {
     engagedRef.current = true
     cancelOpen()
     cancelClose()
   }, [cancelClose, cancelOpen])
 
-  // Glide doesn't re-fire onItemHovered for the cell behind the body, so
-  // engagement must pin; close instead comes from off-grid, Escape, or scroll.
   const onBodyLeave = useCallback(() => {
-    if (engagedRef.current) {
-      return
-    }
     scheduleClose()
   }, [scheduleClose])
 
