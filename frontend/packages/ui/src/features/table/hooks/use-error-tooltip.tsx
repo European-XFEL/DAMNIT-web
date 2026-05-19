@@ -77,9 +77,17 @@ export const useErrorTooltip = (
         right: iconCenterX + COPY_BUTTON_RIGHT_INSET,
         bottom: args.bounds.y + args.bounds.height,
       }
-      setTooltip((prev) =>
-        prev && prev.error === error ? prev : { error, bounds }
-      )
+      setTooltip((prev) => {
+        if (
+          prev &&
+          prev.error === error &&
+          prev.bounds.left === bounds.left &&
+          prev.bounds.top === bounds.top
+        ) {
+          return prev
+        }
+        return { error, bounds }
+      })
     },
     [lookupError, cancelClose, scheduleClose]
   )
