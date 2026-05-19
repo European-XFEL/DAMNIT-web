@@ -360,11 +360,18 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     })
   }
 
-  const handleVisibleRegionchange = useCallback(
+  const lastVisibleRectRef = useRef<Rectangle | null>(null)
+  const handleVisibleRegionChange = useCallback(
     (rect: Rectangle) => {
       paginationHandler(rect)
       scrollToViewHandler(rect)
-      dismissErrorTooltip()
+      const previous = lastVisibleRectRef.current
+      const scrolled =
+        !previous || previous.x !== rect.x || previous.y !== rect.y
+      lastVisibleRectRef.current = rect
+      if (scrolled) {
+        dismissErrorTooltip()
+      }
     },
     [paginationHandler, scrollToViewHandler, dismissErrorTooltip]
   )
@@ -395,7 +402,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               onItemHovered={handleItemHovered}
               freezeColumns={1}
               customRenderers={CUSTOM_RENDERERS}
-              onVisibleRegionChanged={handleVisibleRegionchange}
+              onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}
             />

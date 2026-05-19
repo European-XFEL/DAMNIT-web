@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ActionIcon,
   Group,
@@ -9,12 +9,7 @@ import {
   useMantineTheme,
 } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
-import {
-  Arrow,
-  type LayerProps,
-  type LayerSide,
-  type UseLayerArrowProps,
-} from 'react-laag'
+import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
 import { type VariableError } from '../../../types'
 import { errorText, errorVisuals } from '../cells'
@@ -22,45 +17,17 @@ import { errorText, errorVisuals } from '../cells'
 export type ErrorTooltipProps = {
   error: VariableError
   layerProps: LayerProps
-  layerSide: LayerSide
   arrowProps: UseLayerArrowProps
-  bridgePx: number
   onMouseEnter: () => void
   onMouseLeave: () => void
 }
 
 const COPIED_RESET_MS = 1500
 
-// Invisible hover-bridge covering the gap between the cell and the
-// tooltip so that crossing it does not register as hovering an adjacent
-// cell (which would otherwise switch the tooltip's target).
-const bridgeStyle = (side: LayerSide, px: number): CSSProperties => {
-  switch (side) {
-    case 'bottom':
-      return { position: 'absolute', top: -px, left: 0, right: 0, height: px }
-    case 'top':
-      return {
-        position: 'absolute',
-        bottom: -px,
-        left: 0,
-        right: 0,
-        height: px,
-      }
-    case 'right':
-      return { position: 'absolute', left: -px, top: 0, bottom: 0, width: px }
-    case 'left':
-      return { position: 'absolute', right: -px, top: 0, bottom: 0, width: px }
-    default:
-      return { display: 'none' }
-  }
-}
-
 export const ErrorTooltip = ({
   error,
   layerProps,
-  layerSide,
   arrowProps,
-  bridgePx,
   onMouseEnter,
   onMouseLeave,
 }: ErrorTooltipProps) => {
@@ -72,18 +39,13 @@ export const ErrorTooltip = ({
   const scheme = useComputedColorScheme('light')
   const surfaceColor =
     scheme === 'dark' ? theme.colors.dark[5] : theme.colors.dark[7]
-  const borderColor = 'var(--mantine-color-default-border)'
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(resetTimerRef.current)
-    },
-    []
-  )
 
   useEffect(() => {
     window.clearTimeout(resetTimerRef.current)
     setCopied(false)
+    return () => {
+      window.clearTimeout(resetTimerRef.current)
+    }
   }, [error])
 
   const handleCopy = () => {
@@ -115,13 +77,11 @@ export const ErrorTooltip = ({
           '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',
       }}
     >
-      <div style={bridgeStyle(layerSide, bridgePx)} />
       <Arrow
         {...arrowProps}
         backgroundColor={surfaceColor}
-        borderColor={borderColor}
-        borderWidth={1}
-        size={6}
+        borderWidth={0}
+        size={10}
       />
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
