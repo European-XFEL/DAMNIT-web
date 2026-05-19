@@ -1,42 +1,88 @@
-import { Group, ScrollArea, Text } from '@mantine/core'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ActionIcon,
+  Group,
+  ScrollArea,
+  Text,
+  Tooltip,
+  useComputedColorScheme,
+  useMantineTheme,
+} from '@mantine/core'
+import { IconCheck, IconCopy } from '@tabler/icons-react'
+import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
 import { type VariableError } from '../../../types'
-import { errorVisuals } from '../cells'
+import { errorText, errorVisuals } from '../cells'
 
-export type ErrorTooltipState = { error: VariableError; x: number; y: number }
+export type ErrorTooltipProps = {
+  error: VariableError
+  layerProps: LayerProps
+  arrowProps: UseLayerArrowProps
+  onMouseEnter: () => void
+  onMouseLeave: () => void
+}
 
-/**
- * Hover tooltip for cells of variables that failed to execute. Positioned
- * `fixed` against viewport coordinates, so it needs no positioned ancestor. It
- * is purely informational (`pointerEvents: none`) so it never intercepts the
- * mouse while scanning down a column of errors; see `useErrorTooltip` for the
- * copy-on-Ctrl+C behavior.
- */
+const COPIED_RESET_MS = 1500
+
 export const ErrorTooltip = ({
   error,
-  x,
-  y,
-  copied,
-}: ErrorTooltipState & { copied: boolean }) => {
+  layerProps,
+  arrowProps,
+  onMouseEnter,
+  onMouseLeave,
+}: ErrorTooltipProps) => {
   const { kind, title } = errorVisuals(error.cls)
   const accent = kind === 'error' ? 'red.4' : 'gray.4'
+  const [copied, setCopied] = useState(false)
+  const resetTimerRef = useRef<number>(0)
+  const theme = useMantineTheme()
+  const scheme = useComputedColorScheme('light')
+  const surfaceColor =
+    scheme === 'dark' ? theme.colors.dark[5] : theme.colors.dark[7]
+
+  useEffect(() => {
+    window.clearTimeout(resetTimerRef.current)
+    setCopied(false)
+    return () => {
+      window.clearTimeout(resetTimerRef.current)
+    }
+  }, [error])
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(errorText(error)).then(() => {
+      setCopied(true)
+      window.clearTimeout(resetTimerRef.current)
+      resetTimerRef.current = window.setTimeout(
+        () => setCopied(false),
+        COPIED_RESET_MS
+      )
+    })
+  }
+
+  const { ref: layerRef, style: layerStyle } = layerProps
+
   return (
     <div
+      ref={layerRef}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       style={{
-        position: 'fixed',
-        left: x,
-        top: y + 4,
-        transform: 'translateX(-50%)',
-        zIndex: 100,
+        ...layerStyle,
         maxWidth: 360,
-        background: '#2b2b2b',
-        color: '#fff',
+        background: surfaceColor,
+        color: 'var(--mantine-color-white)',
         borderRadius: 6,
         padding: '8px 10px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-        pointerEvents: 'none',
+        boxShadow:
+          '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',
       }}
     >
+      <Arrow
+        {...arrowProps}
+        backgroundColor={surfaceColor}
+        borderWidth={0}
+        size={10}
+      />
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
           <Text size="xs" fw={700} c={accent}>
@@ -46,9 +92,24 @@ export const ErrorTooltip = ({
             {error.cls}
           </Text>
         </div>
-        <Text size="xs" c={copied ? 'teal.4' : 'dimmed'}>
-          {copied ? 'Copied' : 'Press ⌘/Ctrl+C to copy'}
-        </Text>
+        <Tooltip
+          label={copied ? 'Copied' : 'Copy'}
+          withArrow
+          styles={{ tooltip: { fontSize: 10, padding: '2px 6px' } }}
+        >
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            size="sm"
+            onClick={handleCopy}
+          >
+            {copied ? (
+              <IconCheck size={14} color="var(--mantine-color-teal-4)" />
+            ) : (
+              <IconCopy size={14} />
+            )}
+          </ActionIcon>
+        </Tooltip>
       </Group>
       <ScrollArea.Autosize mah={200} type="auto">
         <Text

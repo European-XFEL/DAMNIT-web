@@ -139,7 +139,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   )
   const {
     onItemHovered: handleItemHovered,
-    dismiss: dismissErrorTooltip,
+    dismissOnScroll: dismissErrorTooltipOnScroll,
     tooltip: errorTooltip,
   } = useErrorTooltip(lookupError)
 
@@ -360,13 +360,31 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     })
   }
 
-  const handleVisibleRegionchange = useCallback(
-    (rect: Rectangle) => {
+  const lastVisibleRegionRef = useRef<{
+    rect: Rectangle
+    tx: number
+    ty: number
+  } | null>(null)
+  const handleVisibleRegionChange = useCallback(
+    (rect: Rectangle, tx?: number, ty?: number) => {
       paginationHandler(rect)
       scrollToViewHandler(rect)
-      dismissErrorTooltip()
+      const previous = lastVisibleRegionRef.current
+      const nextTx = tx ?? 0
+      const nextTy = ty ?? 0
+      // tx/ty catch sub-cell smooth-scroll where rect.x/y stay unchanged.
+      const scrolled =
+        !previous ||
+        previous.rect.x !== rect.x ||
+        previous.rect.y !== rect.y ||
+        previous.tx !== nextTx ||
+        previous.ty !== nextTy
+      lastVisibleRegionRef.current = { rect, tx: nextTx, ty: nextTy }
+      if (scrolled) {
+        dismissErrorTooltipOnScroll()
+      }
     },
-    [paginationHandler, scrollToViewHandler, dismissErrorTooltip]
+    [paginationHandler, scrollToViewHandler, dismissErrorTooltipOnScroll]
   )
 
   return (
@@ -395,7 +413,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               onItemHovered={handleItemHovered}
               freezeColumns={1}
               customRenderers={CUSTOM_RENDERERS}
-              onVisibleRegionChanged={handleVisibleRegionchange}
+              onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}
             />
