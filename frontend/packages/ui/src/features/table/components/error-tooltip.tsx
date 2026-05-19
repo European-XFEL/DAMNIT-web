@@ -81,6 +81,11 @@ export const ErrorTooltip = ({
     []
   )
 
+  useEffect(() => {
+    window.clearTimeout(resetTimerRef.current)
+    setCopied(false)
+  }, [error])
+
   const handleCopy = () => {
     void navigator.clipboard.writeText(errorText(error)).then(() => {
       setCopied(true)
