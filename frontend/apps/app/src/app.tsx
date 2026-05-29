@@ -2763,39 +2763,6 @@ function contextRecipeLabel(fieldKind: string) {
   return 'Custom function'
 }
 
-function getContextRecipeValidInputHelp(
-  fieldKind: string,
-  contextScope: string
-) {
-  if (fieldKind === 'metadata') {
-    return contextScope === 'set'
-      ? 'Numeric metadata values only; used for shot-set trends.'
-      : 'One metadata value from the selected shot.'
-  }
-  if (fieldKind === 'hdf5') {
-    return 'One HDF5 dataset; scalar, line, and image datasets are summarized.'
-  }
-  if (fieldKind === 'lineout-preview') {
-    return (
-      'One 1D HDF5 dataset; the table shows a summary and the cell panel ' +
-      'shows the line.'
-    )
-  }
-  if (fieldKind === 'image-preview') {
-    return (
-      'One 2D HDF5 dataset; the table shows a summary and the cell panel ' +
-      'shows the reduced image.'
-    )
-  }
-  if (fieldKind === 'plotly-trend') {
-    return 'One numeric HDF5 dataset; creates an interactive Plotly preview.'
-  }
-  if (fieldKind === 'mongo-filter') {
-    return 'One metadata field returned by the Mongo-style query.'
-  }
-  return 'Any selected metadata or HDF5 inputs; combine them in the expression.'
-}
-
 function getContextRecipeOptionHelp(fieldKind: string, contextScope: string) {
   if (fieldKind === 'metadata') {
     return contextScope === 'set'
@@ -3018,6 +2985,7 @@ function ContextBuilderPage() {
   const [fieldTitle, setFieldTitle] = useState('HZDR/Computed field')
   const [fieldNameEdited, setFieldNameEdited] = useState(false)
   const [selectedInputs, setSelectedInputs] = useState<string[]>([])
+  const [allowMultipleInputs, setAllowMultipleInputs] = useState(false)
   const [mongoCollection, setMongoCollection] = useState('shots')
   const [mongoFilter, setMongoFilter] = useState(
     '{\n  "shot_number": shot_number\n}'
@@ -3122,7 +3090,6 @@ function ContextBuilderPage() {
   const selectedInputSummary = selectedInputs.length
     ? selectedInputs.map(formatSelectedInput).join(', ')
     : 'No inputs selected yet'
-  const validInputHelp = getContextRecipeValidInputHelp(fieldKind, contextScope)
   const recipeOptions = useMemo(
     () =>
       getContextRecipeOptions({
@@ -3172,6 +3139,11 @@ function ContextBuilderPage() {
   }, [snippet])
 
   useEffect(() => {
+    if (!allowMultipleInputs && selectedInputs.length > 1) {
+      setSelectedInputs([selectedInputs[0]])
+      return
+    }
+
     if (
       contextScope === 'set' &&
       ['lineout-preview', 'image-preview', 'plotly-trend'].includes(fieldKind)
@@ -3196,6 +3168,7 @@ function ContextBuilderPage() {
       setSelectedInputs([])
     }
   }, [
+    allowMultipleInputs,
     contextScope,
     fieldKind,
     inputValueKey,
@@ -3531,14 +3504,34 @@ function ContextBuilderPage() {
                       title="Data"
                       description="Choose the metadata or HDF5 data first; valid actions appear below."
                     >
-                      <MultiSelect
-                        label="Data to use"
-                        value={selectedInputs}
-                        onChange={setSelectedInputs}
-                        data={inputOptions}
-                        searchable
-                        clearable
+                      <Checkbox
+                        label="Select multiple inputs"
+                        checked={allowMultipleInputs}
+                        onChange={(event) =>
+                          setAllowMultipleInputs(event.currentTarget.checked)
+                        }
                       />
+                      {allowMultipleInputs ? (
+                        <MultiSelect
+                          label="Data to use"
+                          value={selectedInputs}
+                          onChange={setSelectedInputs}
+                          data={inputOptions}
+                          searchable
+                          clearable
+                        />
+                      ) : (
+                        <Select
+                          label="Data to use"
+                          value={selectedInputs[0] ?? null}
+                          onChange={(value) =>
+                            setSelectedInputs(value ? [value] : [])
+                          }
+                          data={inputOptions}
+                          searchable
+                          clearable
+                        />
+                      )}
                       <Card withBorder radius={4} p="sm">
                         <Stack gap={4}>
                           <Text size="xs" c="dimmed">
@@ -3574,29 +3567,18 @@ function ContextBuilderPage() {
                             <Text size="xs" c="dimmed">
                               Selected action
                             </Text>
-                            <Group gap="xs">
-                              <Badge
-                                variant="light"
-                                color={contextRecipeTone(fieldKind)}
-                                radius={4}
-                                styles={{ label: { textTransform: 'none' } }}
-                              >
-                                {contextRecipeLabel(fieldKind)}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                color="gray"
-                                radius={4}
-                                title={validInputHelp}
-                                styles={{ label: { textTransform: 'none' } }}
-                              >
-                                Valid inputs
-                              </Badge>
-                            </Group>
+                            <Badge
+                              variant="light"
+                              color={contextRecipeTone(fieldKind)}
+                              radius={4}
+                              styles={{ label: { textTransform: 'none' } }}
+                            >
+                              {contextRecipeLabel(fieldKind)}
+                            </Badge>
                             <Text size="xs" c="dimmed">
                               {selectedInputs.length
                                 ? recipeHelp
-                                : validInputHelp}
+                                : 'Choose data first, then available actions appear here.'}
                             </Text>
                           </Stack>
                         </Card>
