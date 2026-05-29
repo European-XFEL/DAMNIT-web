@@ -1,5 +1,5 @@
-site_name: DAMNIT Web API
-site_description: DAMNIT Web API Documentation
+site_name: DAMNIT Web HZDR
+site_description: DAMNIT Web HZDR integration documentation
 
 theme:
   name: material
@@ -13,10 +13,11 @@ theme:
 extra_css:
 - stylesheets/mkdocstrings.css
 
-repo_url: https://github.com/European-XFEL/DAMNIT-web.git
+repo_url: https://github.com/ktippey-hzdr/DAMNIT-web-hzdr.git
 
 nav:
 - index.md
+- HZDR Integration: hzdr.md
 - Deployment: deployment.md
 - Development:
   - ./dev/setup.md

@@ -84,7 +84,7 @@ def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
         assert response.status_code == 200
         payload = response.json()
         assert payload["campaign"] == "hzdr-example"
-        assert "hzdr_next_field" in payload["fileContent"]
+        assert "hzdr_computed_field" in payload["fileContent"]
 
         save_response = local_client.put(
             "/contextfile/campaign/hzdr-example/me",
@@ -92,6 +92,62 @@ def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
         )
         assert save_response.status_code == 200
         assert save_response.json()["fileContent"] == "from damnit_ctx import Variable\n"
+
+
+def test_user_campaign_context_results_run_against_hzdr_shots(tmp_path, monkeypatch):
+    """Saved HZDR context variables produce table values for visible shots."""
+    sources_file = tmp_path / "hzdr_sources.json"
+    sources_file.write_text(
+        """
+{
+  "sources": [
+    {
+      "key": "hzdr-example",
+      "title": "HZDR fixture",
+      "damnit_path": ".",
+      "metadata": {},
+      "shots": [
+        {
+          "source_key": "hzdr-example",
+          "shot_number": 1001,
+          "fired_at": "2026-05-05T10:00:00Z",
+          "metadata": {"laser_energy_j": 12.5}
+        }
+      ]
+    }
+  ]
+}
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings.context_workspace, "root", tmp_path / "contexts")
+    monkeypatch.setattr(settings.context_workspace, "write_enabled", True)
+    monkeypatch.setattr(settings.metadata, "provider", "local")
+    monkeypatch.setattr(settings.metadata, "sources_file", sources_file)
+    app = create_app()
+
+    with TestClient(app) as local_client:
+        local_client.get("/oauth/login?redirect_uri=/home", follow_redirects=False)
+        local_client.put(
+            "/contextfile/campaign/hzdr-example/me/files/context.py",
+            json={
+                "fileContent": """
+from damnit_ctx import Variable
+
+
+@Variable(title="Laser energy")
+def laser_energy(run):
+    return 12.5
+"""
+            },
+        )
+
+        response = local_client.get("/contextfile/campaign/hzdr-example/me/results")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["columns"] == [{"name": "laser_energy", "title": "Laser energy"}]
+    assert payload["rows"][0]["values"]["laser_energy"] == 12.5
 
 
 async def wait_for_change(

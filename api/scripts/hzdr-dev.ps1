@@ -122,8 +122,14 @@ function Start-HzdrGui {
         [int] $SelectedGuiPort
     )
 
-    if (-not (Get-Command "pnpm" -ErrorAction SilentlyContinue)) {
-        throw "pnpm is not on PATH. Install Node >= 24, then run: corepack enable"
+    $pnpmCommand = if (Get-Command "pnpm" -ErrorAction SilentlyContinue) {
+        "pnpm"
+    }
+    elseif (Get-Command "corepack" -ErrorAction SilentlyContinue) {
+        "corepack pnpm"
+    }
+    else {
+        throw "Neither pnpm nor corepack is on PATH. Install Node >= 24, then run: corepack enable"
     }
 
     $repoRoot = Resolve-Path (Join-Path (Join-Path $PSScriptRoot "..") "..")
@@ -136,11 +142,11 @@ function Start-HzdrGui {
 Set-Location '$frontendRoot'
 if (-not (Test-Path '$frontendNodeModules')) {
     Write-Host 'Installing frontend dependencies...'
-    pnpm install
+    $pnpmCommand install
 }
 `$env:VITE_API = '$apiUrl'
 `$env:VITE_PORT = '$SelectedGuiPort'
-pnpm dev:app
+$pnpmCommand --filter @damnit-frontend/app dev
 "@
 
     Write-Host "Starting DAMNIT-web GUI in a new PowerShell window..." -ForegroundColor Cyan

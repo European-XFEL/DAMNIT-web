@@ -54,7 +54,7 @@ const UserMenu = () => {
       <Menu.Dropdown>
         <Menu.Item
           component="a"
-          href="/docs"
+          href="/api-docs"
           target="_blank"
           leftSection={
             <IconBook

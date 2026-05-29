@@ -29,6 +29,7 @@ dependencies = [
     "async-lru~=2.0",
     "ldap3~=2.9",
     "pymongo~=4.10",
+    "kafka-python-ng>=2.2.3",
     "requests~=2.32",
     "structlog~=24.4",
     "colorama~=0.4",

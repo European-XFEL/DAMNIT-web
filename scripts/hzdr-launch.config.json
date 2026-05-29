@@ -1,0 +1,42 @@
+{
+  "repositories": {
+    "damnitWeb": "C:/GitLab/DAMNIT-web-hzdr",
+    "asapoHarness": "C:/GitLab/asapo-for-hzdr-damnit",
+    "kafkaBroker": "C:/GitLab/kafka-broker-docker",
+    "labfrog": "C:/GitLab/labfrog"
+  },
+  "ports": {
+    "api": 8000,
+    "gui": 5173,
+    "asapoBroker": 8765,
+    "kafka": 9092,
+    "mongo": 27018
+  },
+  "connections": {
+    "kafka": {
+      "bootstrap": "127.0.0.1:9092",
+      "topic": "planet.watchdog.events"
+    },
+    "asapo": {
+      "broker": "http://127.0.0.1:8765"
+    },
+    "mongo": {
+      "uri": "mongodb://root:mypasswd@localhost:27018/?authSource=admin",
+      "database": "shotsheet",
+      "collection": "shots",
+      "shotField": "shot_number"
+    }
+  },
+  "emulator": {
+    "sourceKey": "hzdr-emulator",
+    "experimentId": "",
+    "shotCount": 6,
+    "shotIncrement": 1,
+    "eventsDir": "",
+    "outputDir": "",
+    "startAsapoBroker": true,
+    "startKafka": false,
+    "startLabfrog": false,
+    "openFlowMonitor": false
+  }
+}

@@ -264,6 +264,12 @@ HDF5 files           -> deployment data and extracted previews
 VLS MongoDB          -> deployment metadata/events
 ```
 
+The HDF5 builder boundary is the staged package stream, not MongoDB. MongoDB is
+used as live shot/source metadata that DAMNIT-web can poll or join into context
+columns. The builder should consume the normalized staged records, for example
+`events/*.jsonl`, grouped by `experiment_id + shot_id`, then write the combined
+experiment HDF5.
+
 Starter provider flow:
 
 ```mermaid

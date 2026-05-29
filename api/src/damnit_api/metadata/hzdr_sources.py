@@ -161,9 +161,12 @@ def preview_hdf5_dataset(path: Path, dataset_name: str) -> HZDRDatasetPreview:
             preview = data[: min(data.shape[0], 200)].astype(float).tolist()
             preview_kind = "line"
         else:
-            y_stride = max(1, data.shape[0] // 64)
-            x_stride = max(1, data.shape[1] // 64)
-            image = data[::y_stride, ::x_stride].astype(float)
+            image_source = data
+            while image_source.ndim > 2:
+                image_source = image_source[0]
+            y_stride = max(1, image_source.shape[0] // 64)
+            x_stride = max(1, image_source.shape[1] // 64)
+            image = image_source[::y_stride, ::x_stride].astype(float)
             image = image[:64, :64]
             minimum = float(np.nanmin(image))
             maximum = float(np.nanmax(image))

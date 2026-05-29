@@ -409,6 +409,7 @@ dependencies = [
     { name = "h5py" },
     { name = "httpx" },
     { name = "itsdangerous" },
+    { name = "kafka-python-ng" },
     { name = "ldap3" },
     { name = "matplotlib" },
     { name = "numpy" },
@@ -480,6 +481,7 @@ requires-dist = [
     { name = "h5py", specifier = "~=3.9" },
     { name = "httpx", specifier = "~=0.27" },
     { name = "itsdangerous", specifier = "~=2.1" },
+    { name = "kafka-python-ng", specifier = ">=2.2.3" },
     { name = "ldap3", specifier = "~=2.9" },
     { name = "matplotlib", specifier = "~=3.7" },
     { name = "numpy", specifier = "~=2.3" },
@@ -885,6 +887,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d", size = 245115, upload-time = "2025-03-05T20:05:02.478Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899, upload-time = "2025-03-05T20:05:00.369Z" },
+]
+
+[[package]]
+name = "kafka-python-ng"
+version = "2.2.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/04/1d65bdf3f0103a08710e226b851de4b357ac702f1cadabf6128bab7518a7/kafka_python_ng-2.2.3.tar.gz", hash = "sha256:f79f28e10ade9b5a9860b2ec15b7cc8dc510d5702f5a399430478cff5f93a05a", size = 330644, upload-time = "2024-10-02T16:56:58.639Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/61/22e778f642465a157c449782300d8817ebbc106794a8a7ebe88cbb846b05/kafka_python_ng-2.2.3-py2.py3-none-any.whl", hash = "sha256:adc6e82147c441ca4ae1f22e291fc08efab0d10971cbd4aa1481d2ffa38e9480", size = 232824, upload-time = "2024-10-02T16:56:56.932Z" },
 ]
 
 [[package]]

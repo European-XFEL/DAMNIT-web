@@ -1,13 +1,14 @@
 import re
+import inspect
+import sys
+import types
 from pathlib import Path
-from typing import Annotated
 
 from anyio import Path as APath
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
 from ..auth.dependencies import OAuthUserInfo
-from ..metadata.models import ProposalMeta
-from ..metadata.routers import get_proposal_meta
+from ..metadata.hzdr_sources import HZDRShot, HZDRSourceProvider
 from ..shared.settings import settings
 from . import models
 
@@ -16,27 +17,39 @@ router = APIRouter(prefix="/contextfile")
 SLUG_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 
+async def get_proposal_info(proposal_num: str):
+    """Compatibility hook for legacy context-file proposal lookups."""
+    return {
+        "damnit_path": settings.damnit.path_for(proposal_num),
+    }
+
+
 @router.get("/content")
 async def get_content(
-    proposal: Annotated[ProposalMeta, Depends(get_proposal_meta)],
+    proposal_num: str,
 ) -> models.ContextFile | None:
-    if proposal.damnit_path is None:
+    proposal_info = await get_proposal_info(proposal_num)
+    damnit_path = proposal_info.get("damnit_path")
+    if damnit_path is None:
         return None
 
     return await models.ContextFile.from_file(
-        APath(proposal.damnit_path) / "context.py"
+        APath(damnit_path) / "context.py"
     )
 
 
 @router.get("/last_modified")
 async def get_modified(
-    proposal: Annotated[ProposalMeta, Depends(get_proposal_meta)],
+    proposal_num: str,
 ) -> models.ModifiedTime | None:
-    if proposal.damnit_path is None:
+    proposal_info = await get_proposal_info(proposal_num)
+    damnit_path = proposal_info.get("damnit_path")
+    if damnit_path is None:
         return None
 
+    models.ModifiedTime.from_file.cache_clear()
     return await models.ModifiedTime.from_file(
-        APath(proposal.damnit_path) / "context.py"
+        APath(damnit_path) / "context.py"
     )
 
 
@@ -113,6 +126,20 @@ async def save_campaign_context_file(
 
     context_path = _campaign_context_path(campaign, user, file_name)
     return await _write_campaign_context(campaign, payload, user, context_path)
+
+
+@router.get("/campaign/{campaign}/me/results")
+async def get_campaign_context_results(
+    campaign: str,
+    user: OAuthUserInfo,
+) -> dict:
+    """Run this user's active context file against HZDR source shots."""
+    context_path = _campaign_context_path(campaign, user, "context.py")
+    _ensure_context_file(context_path, campaign, user)
+    source = HZDRSourceProvider(settings.metadata).get_source(campaign)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Unknown HZDR source")
+    return _run_hzdr_context_file(context_path, source.shots)
 
 
 async def _write_campaign_context(
@@ -205,8 +232,186 @@ def hzdr_campaign(run):
     return {campaign!r}
 
 
-@Variable(title="HZDR/Next field")
-def hzdr_next_field(run):
-    """Replace this placeholder with a real HZDR computed field."""
-    raise Skip("Edit this user campaign context to add computed fields")
+@Variable(title="HZDR/Laser energy J")
+def hzdr_laser_energy_j(run, laser_energy_j=None):
+    """Show the emulated laser energy metadata for this shot."""
+    if laser_energy_j is None:
+        raise Skip("No laser_energy_j metadata for this shot")
+    return laser_energy_j
+
+
+@Variable(title="HZDR/Computed field")
+def hzdr_computed_field(run, laser_energy_j=None, chamber_pressure_mbar=None):
+    """Small starter calculation that behaves like a real table column."""
+    if laser_energy_j is None or chamber_pressure_mbar is None:
+        raise Skip("Missing laser energy or chamber pressure metadata")
+    return round(float(laser_energy_j) * float(chamber_pressure_mbar) * 1_000_000, 4)
 '''
+
+
+class ContextSkip(Exception):
+    """Local stand-in for DAMNIT Skip during HZDR context previews."""
+
+
+class ContextCell:
+    """Local stand-in for DAMNIT Cell values during HZDR context previews."""
+
+    def __init__(self, value, summary=None, preview=None):
+        self.value = value
+        self.summary = summary
+        self.preview = preview
+
+
+def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
+    """Execute context variables and return shot-indexed table values."""
+    variables = _load_context_variables(context_path, shots)
+    rows = []
+    for shot in shots:
+        values = {}
+        errors = {}
+        previews = {}
+        for name, variable in variables.items():
+            try:
+                raw_value = _call_context_variable(variable, shot)
+                values[name] = _json_safe(_summarize_context_value(raw_value))
+                preview = _summarize_context_preview(raw_value)
+                if preview is not None:
+                    previews[name] = _json_safe(preview)
+            except ContextSkip as exc:
+                values[name] = None
+                errors[name] = str(exc)
+            except Exception as exc:  # noqa: BLE001 - show per-column runtime errors.
+                values[name] = None
+                errors[name] = f"{type(exc).__name__}: {exc}"
+        rows.append(
+            {
+                "shot_number": shot.shot_number,
+                "values": values,
+                "errors": errors,
+                "previews": previews,
+            }
+        )
+    return {
+        "columns": [
+            {
+                "name": name,
+                "title": getattr(variable, "_damnit_title", name),
+            }
+            for name, variable in variables.items()
+        ],
+        "rows": rows,
+    }
+
+
+def _load_context_variables(context_path: Path, shots: list[HZDRShot]):
+    """Load @Variable functions from a user context file."""
+    module = types.ModuleType("damnit_ctx")
+
+    def variable_decorator(*decorator_args, **decorator_kwargs):
+        def decorate(function):
+            function._damnit_variable = True
+            function._damnit_title = decorator_kwargs.get("title", function.__name__)
+            return function
+
+        if decorator_args and callable(decorator_args[0]):
+            return decorate(decorator_args[0])
+        return decorate
+
+    module.Variable = variable_decorator
+    module.Skip = ContextSkip
+    module.Cell = ContextCell
+    module.mongo_find_one = lambda collection, query=None: _mongo_find_one(
+        shots, query or {}
+    )
+    previous_module = sys.modules.get("damnit_ctx")
+    sys.modules["damnit_ctx"] = module
+    namespace = {
+        "__name__": "hzdr_user_context",
+        "__file__": str(context_path),
+    }
+    try:
+        exec(compile(context_path.read_text(encoding="utf-8"), str(context_path), "exec"), namespace)
+    finally:
+        if previous_module is None:
+            sys.modules.pop("damnit_ctx", None)
+        else:
+            sys.modules["damnit_ctx"] = previous_module
+    return {
+        name: value
+        for name, value in namespace.items()
+        if callable(value) and getattr(value, "_damnit_variable", False)
+    }
+
+
+def _call_context_variable(variable, shot: HZDRShot):
+    kwargs = {}
+    for name, parameter in inspect.signature(variable).parameters.items():
+        if name == "run":
+            kwargs[name] = shot.shot_number
+            continue
+        annotation = parameter.annotation
+        if annotation == "meta#hdf5_path" or name == "hdf5_path":
+            kwargs[name] = str(shot.hdf5_path) if shot.hdf5_path else ""
+        elif annotation == "meta#shot_number" or name == "shot_number":
+            kwargs[name] = shot.shot_number
+        else:
+            kwargs[name] = shot.metadata.get(name)
+    return variable(**kwargs)
+
+
+def _mongo_find_one(shots: list[HZDRShot], query: dict):
+    """Use loaded shot metadata as a local Mongo stand-in for previews."""
+    requested_shot = query.get("shot_number") or query.get("shot")
+    for shot in shots:
+        if requested_shot is not None and int(requested_shot) != shot.shot_number:
+            continue
+        return {
+            "shot_number": shot.shot_number,
+            "fired_at": shot.fired_at,
+            "hdf5_path": str(shot.hdf5_path) if shot.hdf5_path else None,
+            **shot.metadata,
+        }
+    return None
+
+
+def _summarize_context_value(value):
+    if isinstance(value, ContextCell):
+        if value.summary == "mean":
+            return _array_mean(value.value)
+        if value.summary == "nanmean":
+            return _array_nanmean(value.value)
+        return value.summary if value.summary is not None else value.value
+    return value
+
+
+def _summarize_context_preview(value):
+    if not isinstance(value, ContextCell):
+        return None
+    preview = value.preview
+    if hasattr(preview, "to_json"):
+        return {"kind": "plotly", "json": preview.to_json()}
+    return preview
+
+
+def _array_mean(value):
+    import numpy as np
+
+    return float(np.mean(value))
+
+
+def _array_nanmean(value):
+    import numpy as np
+
+    return float(np.nanmean(value))
+
+
+def _json_safe(value):
+    import numpy as np
+
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, Path):
+        return str(value)
+    return value

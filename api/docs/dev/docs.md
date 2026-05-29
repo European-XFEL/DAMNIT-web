@@ -1,18 +1,24 @@
 # Documentation
 
-Documentation is generated using [MkDocs](https://www.mkdocs.org/) with the following plugins/extensions:
+DAMNIT-web HZDR documentation is generated using
+[MkDocs](https://www.mkdocs.org/) with the following plugins/extensions:
 
 - [MkDocs Material](https://github.com/squidfunk/mkdocs-material) - main theme.
 - [MkDocs API Auto-Nav](https://github.com/tlambert03/mkdocs-api-autonav) - builds the [API Reference](/reference/damnit_api) page automatically from source code docstrings.
 
 ## Tips
 
-As documentation is automatically generated from source code, you should write the docs as close to the code to the code as possible where relevant - only a few overarching/'meta' topics (this, setup, architecture, deployment, etc...) should have to be written into the `./docs` directory directly.
+As reference documentation is automatically generated from source code, write
+API details close to the code where relevant. HZDR workflow docs belong in
+`./docs/hzdr.md` or the root-level `README.md`, `FLOW.md`, and
+`HZDR-INTEGRATION.md`.
 
 Aim to:
 
 - Use module level docstrings
 - Use references where applicable, e.g. [`damnit_api.main.create_app`][]
+- Keep HZDR behavior separate from EXFEL assumptions when documenting routes,
+  launcher commands, metadata providers, or context files.
 
 ## Setup
 

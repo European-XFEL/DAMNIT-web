@@ -81,7 +81,10 @@ export default defineConfig(({ command, mode }): UserConfig => {
         [withBaseUrl('metadata')]: { ...defaultProxyConfig },
         [withBaseUrl('contextfile')]: { ...defaultProxyConfig },
         [withBaseUrl('config')]: { ...defaultProxyConfig },
-        [withBaseUrl('docs')]: { ...defaultProxyConfig },
+        [withBaseUrl('api-docs')]: {
+          ...defaultProxyConfig,
+          rewrite: () => '/docs',
+        },
         [withBaseUrl('openapi.json')]: { ...defaultProxyConfig },
       },
       https: sslConfig,
