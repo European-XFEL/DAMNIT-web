@@ -21,6 +21,7 @@ class TerminologyConfig(BaseModel):
 class RuntimeConfig(BaseModel):
     profile: str
     auth_mode: str
+    ldap_form_enabled: bool
     metadata_provider: str
     terminology: TerminologyConfig
 
@@ -36,6 +37,7 @@ async def get_runtime_config() -> RuntimeConfig:
     return RuntimeConfig(
         profile=settings.deployment.profile,
         auth_mode=settings.auth.mode,
+        ldap_form_enabled=bool(settings.auth.ldap.server_url),
         metadata_provider=settings.metadata.provider,
         terminology=TerminologyConfig.model_validate(terminology.model_dump()),
     )

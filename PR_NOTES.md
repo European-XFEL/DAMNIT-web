@@ -23,6 +23,8 @@ OAuth/OIDC flow.
 - LDAP session login endpoints:
   - `POST /ldap/login`
   - `POST /ldap/logout`
+- Frontend LDAP login page that is enabled when runtime config reports
+  `DW_API_AUTH__MODE=ldap` and an LDAP server URL is configured.
 - HZDR source UI:
   - `/home` source cards;
   - `/source/{source_key}` shot table;
@@ -88,10 +90,15 @@ cd api
 - Frontend typecheck, lint, and production build.
 - MkDocs strict build.
 
+Follow-up LDAP login check:
+
+- `uv run pytest tests/test_runtime_config.py tests/test_auth_modes.py`
+- `corepack pnpm --filter @damnit-frontend/ui lint:tsc`
+- `corepack pnpm --filter @damnit-frontend/ui lint:eslint`
+- `corepack pnpm exec prettier packages/ui/src/routes/login-route.tsx --check --ignore-path .prettierignore`
+
 ## Caveats
 
 - Internal GraphQL variables still use `proposal` for compatibility.
-- LDAP has backend endpoints; a dedicated frontend LDAP login form is still a
-  future UI improvement.
 - Full backend test collection now works, but existing GraphQL tests still have
   contract drift unrelated to the HZDR changes.
