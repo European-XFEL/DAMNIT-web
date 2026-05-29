@@ -2,6 +2,7 @@
 
 from typing import Self
 
+from fastapi import HTTPException, status
 from fastapi.requests import HTTPConnection
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
@@ -42,8 +43,10 @@ class OAuthUserInfo(BaseUserInfo):
         """
         user_dict = connection.session.get("user")
         if user_dict is None:
-            msg = "No user info in session"
-            raise ValueError(msg)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="No user info in session",
+            )
 
         return cls.model_validate(user_dict)
 

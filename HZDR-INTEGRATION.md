@@ -1,39 +1,46 @@
-# HZDR Integration Test Harness
+# HZDR Integration
 
-This repo can coordinate local smoke tests across these Git repositories:
+This repository can coordinate local HZDR smoke tests across DAMNIT-web,
+ASAPO-style local transport, Kafka, and LabFrog MongoDB.
+
+## Repositories
+
+The default layout expects these repositories as sibling directories. Use
+`-ProjectsRoot` to point the coordinator at another parent directory.
 
 | Repository | Role |
 | --- | --- |
-| `https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/asapo/asapo-for-hzdr-damnit.git` | ASAPO-style local broker and GUI |
-| `https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/infrastructure/kafka-broker-docker.git` | Kafka broker |
-| `https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/data-capturing/labfrog.git` | LabFrog MongoDB and Mongo Express |
-| `https://github.com/ktippey-hzdr/DAMNIT-web-hzdr.git` | DAMNIT-web HZDR API |
+| `asapo-for-hzdr-damnit` | ASAPO-style local broker and GUI |
+| `kafka-broker-docker` | Kafka broker |
+| `labfrog` | MongoDB shotsheet data and Mongo Express |
+| `DAMNIT-web-hzdr` | DAMNIT-web HZDR API and frontend |
 
-The coordinator expects those checkouts to be sibling directories by default.
-Pass `-ProjectsRoot` to point it at a different parent directory.
+## Launchers
 
-The coordinator is:
+Use the integration coordinator for service checks and smoke tests:
 
 ```powershell
 .\scripts\hzdr-integration.ps1
 ```
 
-By default it only checks paths, tools, and ports. It starts services only when
-you pass explicit switches.
+Without switches, it validates paths, tools, and ports only. It starts services
+only when explicit flags are provided.
 
-For the visual emulator setup, use the launcher instead:
+Use the visual launcher for the local package emulator, API, frontend, and flow
+monitor:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1 -InitConfig
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1
 ```
 
-Edit:
+The launcher reads:
 
 ```text
 scripts/hzdr-launch.config.json
 ```
 
-Keep local connection details in that one config file:
+Keep local connection details in that file:
 
 ```json
 "connections": {
@@ -53,52 +60,41 @@ Keep local connection details in that one config file:
 }
 ```
 
-Docker Kafka is fine as the broker as long as `connections.kafka.bootstrap`
-points at the listener exposed to the host, usually `127.0.0.1:9092`.
+## Local Endpoints
 
-Then run:
+| Service | Default endpoint |
+| --- | --- |
+| ASAPO-style broker and GUI | `http://127.0.0.1:8765/` |
+| Kafka broker | `127.0.0.1:9092` |
+| LabFrog MongoDB | `mongodb://root:mypasswd@localhost:27018/?authSource=admin` |
+| Mongo Express | `http://127.0.0.1:8081/` |
+| DAMNIT-web API | `http://127.0.0.1:8000/` |
+| DAMNIT-web frontend | `http://127.0.0.1:5173/` |
+| Flow monitor | `http://127.0.0.1:5173/flow-monitor` |
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1
-```
-
-That launcher reads the repository folders from the config, generates the HZDR
-package emulator output, optionally starts the local ASAPO-style broker, then
-starts DAMNIT-web with the visual flow monitor available at:
+The local ASAPO-style broker spool is written to:
 
 ```text
-http://127.0.0.1:5173/flow-monitor
+.generated/asapo-broker-spool
 ```
 
-## Local Topology
+Override it with `-AsapoSpoolDir` when needed.
 
-| Piece | Project | Default endpoint |
-| --- | --- | --- |
-| ASAPO-style local broker and GUI | `asapo-for-hzdr-damnit` | `http://127.0.0.1:8765/` |
-| Kafka broker | `kafka-broker-docker` | `127.0.0.1:9092` |
-| LabFrog MongoDB | `labfrog` | `mongodb://root:mypasswd@localhost:27018/?authSource=admin` |
-| Mongo Express | `labfrog` | `http://127.0.0.1:8081/` |
-| DAMNIT-web API | `DAMNIT-web-hzdr/api` | `http://127.0.0.1:8000/` |
+## Emulator Output
 
-The ASAPO-style broker spool is written to
-`DAMNIT-web-hzdr/.generated/asapo-broker-spool` by default. Override it with
-`-AsapoSpoolDir` if you want the messages somewhere else.
+The launcher writes local, production-shaped output under:
 
-## Useful Commands
-
-Validate the launcher config without starting anything:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1 -ValidateOnly
+```text
+.generated/hzdr-package-emulator/
 ```
 
-Regenerate emulator data but skip API, GUI, and broker startup:
+That directory contains:
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1 -NoBroker -NoApi -NoGui
-```
+- staged JSONL events;
+- one combined experiment HDF5 file;
+- `hzdr_sources.json` for the local metadata provider.
 
-Change the number of generated shots in:
+Adjust the generated shot count in `scripts/hzdr-launch.config.json`:
 
 ```json
 "emulator": {
@@ -107,99 +103,67 @@ Change the number of generated shots in:
 }
 ```
 
-`shotCount` repeats the example event package set across more shot IDs.
-`shotIncrement` controls the numeric step, for example `2` creates
-`shot-000123`, `shot-000125`, `shot-000127`, and so on.
+`shotIncrement=2` creates shot IDs such as `shot-000123`, `shot-000125`, and
+`shot-000127`.
 
-Inspect the generated HDF5 tree:
+Inspect generated HDF5 content:
 
 ```powershell
 cd api
 uv run python scripts/inspect-hzdr-hdf5.py ..\.generated\hzdr-package-emulator\hdf5\exp-2026-05-draco.h5
 ```
 
-You can also inspect it through DAMNIT-web: open the generated source from
-`/home`, select a shot, and use the HDF5 datasets panel.
+## Common Commands
 
-Check what is currently up:
+Validate launcher configuration:
 
 ```powershell
-.\scripts\hzdr-integration.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1 -ValidateOnly
 ```
 
-Start the local broker and test one produce/consume roundtrip:
+Regenerate emulator data without starting services:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1 -NoBroker -NoApi -NoGui
+```
+
+Start the local ASAPO-style broker and run one roundtrip:
 
 ```powershell
 .\scripts\hzdr-integration.ps1 -StartAsapoBroker -RunAsapoRoundtrip
 ```
 
-Start LabFrog's MongoDB and verify DAMNIT-web can read HZDR sources from it:
+Start LabFrog MongoDB and verify HZDR API metadata access:
 
 ```powershell
 .\scripts\hzdr-integration.ps1 -StartLabfrog -RunApiSmoke
 ```
 
-Start Kafka and run the broker roundtrip from `kafka-broker-docker`:
+Start Kafka and run one roundtrip:
 
 ```powershell
 .\scripts\hzdr-integration.ps1 -StartKafka -RunKafkaRoundtrip
 ```
 
-Verify PLANET Watchdog data using the shared connection config. The verifier
-tries Kafka first, then the ASAPO/local broker, then MongoDB:
+Verify Watchdog data using the shared launch config:
 
 ```powershell
 cd api
 uv run python scripts/verify-hzdr-watchdog.py --config ..\scripts\hzdr-launch.config.json --mode auto
 ```
 
-To require all three connections during local testing:
+Require all configured connections:
 
 ```powershell
 cd api
 uv run python scripts/verify-hzdr-watchdog.py --config ..\scripts\hzdr-launch.config.json --mode all
 ```
 
-Run the focused DAMNIT-web HZDR API tests:
+Run focused DAMNIT-web HZDR API tests:
 
 ```powershell
 .\scripts\hzdr-integration.ps1 -RunApiTests
 ```
-
-Generate a local, production-shaped package emulator output from the normalized
-event examples:
-
-```powershell
-.\scripts\hzdr-integration.ps1 -RunPackageEmulator -SourceKey hzdr-emulator
-```
-
-The emulator writes staged JSONL events, one combined experiment HDF5 file, and
-a `hzdr_sources.json` fixture under:
-
-```text
-DAMNIT-web-hzdr/.generated/hzdr-package-emulator
-```
-
-Point DAMNIT-web at the generated source file with:
-
-```powershell
-$env:DW_API_METADATA__PROVIDER = "local"
-$env:DW_API_METADATA__SOURCES_FILE = (Resolve-Path ".generated\hzdr-package-emulator\hzdr_sources.json").Path
-cd api
-.\scripts\hzdr-dev.ps1 -Provider local -WithGui
-```
-
-Open the visual flow monitor in the frontend:
-
-```text
-http://127.0.0.1:5173/flow-monitor
-```
-
-Use the component buttons inside the diagram to animate Watchdog, LaserData,
-DAMNIT metadata polling, and HDF5 building. Active arrows light up between the
-programs. The monitor treats MongoDB as live shot metadata for DAMNIT polling;
-the HDF5 builder reads the staged `events/*.jsonl` package stream and writes
-the combined experiment file.
 
 Run the full local integration smoke:
 
@@ -214,16 +178,26 @@ Run the full local integration smoke:
   -RunApiTests
 ```
 
+## Flow Monitor
+
+Open:
+
+```text
+http://127.0.0.1:5173/flow-monitor
+```
+
+In local mode, the monitor buttons create emulated LaserData and Watchdog
+traffic. In production, the same view should be fed by real LaserData/ASAPO,
+Watchdog/Kafka, MongoDB shotsheet, and HDF5 builder state.
+
+The monitor is intended to show what is arriving, what is staged, what has been
+combined into HDF5, and what DAMNIT-web can currently see.
+
 ## Notes
 
-- `-RunApiSmoke` expects MongoDB to contain either `damnit_web_test.hzdr_sources`
-  documents or LabFrog-style `shotsheet.shots` documents. If neither exists,
-  the smoke check fails with a clear message.
+- `-RunApiSmoke` expects either `damnit_web_test.hzdr_sources` documents or
+  LabFrog-style `shotsheet.shots` documents.
 - The coordinator sets DAMNIT-web HZDR environment variables only inside the
-  PowerShell process running the script.
-- `-RunPackageEmulator` uses the normalized event contract from
-  `asapo-for-hzdr-damnit/examples` by default. Override it with
-  `-PackageEventsDir`, `-PackageOutputDir`, and `-ExperimentId` when testing
-  other package sets.
-- Docker services are left running after startup so you can inspect them. Use
-  each sibling project's own shutdown command when you are done.
+  current PowerShell process.
+- Docker services remain running after startup. Stop them with each sibling
+  repository's own shutdown command.

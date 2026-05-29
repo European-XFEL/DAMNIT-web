@@ -8,7 +8,6 @@ import h5py
 from damnit_api.metadata.hzdr_sources import load_sources_file
 from damnit_api.metadata.routers import update_local_shot_status
 
-
 SCRIPT_PATH = Path(__file__).parents[1] / "scripts" / "hzdr-package-emulator.py"
 SPEC = importlib.util.spec_from_file_location("hzdr_package_emulator", SCRIPT_PATH)
 assert SPEC is not None
@@ -102,7 +101,10 @@ def test_package_emulator_can_expand_shots(tmp_path: Path):
     sources = load_sources_file(package.sources_file)
     assert [shot.shot_number for shot in sources[0].shots] == [123, 125, 127]
     assert len({shot.metadata["laser_energy_j"] for shot in sources[0].shots}) == 3
-    assert len({shot.metadata["detector_signal_mean"] for shot in sources[0].shots}) == 3
+    assert (
+        len({shot.metadata["detector_signal_mean"] for shot in sources[0].shots})
+        == 3
+    )
 
     with h5py.File(package.hdf5_path, "r") as handle:
         assert list(handle["index/shot_id"].asstr()[...]) == [

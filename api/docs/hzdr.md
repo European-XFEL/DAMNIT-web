@@ -4,8 +4,13 @@ DAMNIT-web HZDR mode is source-first rather than proposal-first. The working
 unit is a source with shot metadata, staged event packages, context columns,
 trend previews, and combined HDF5 output.
 
-This page is layered on purpose: start with the quick path, then expand the
-sections that match what you are trying to debug.
+The live visualization is intended for both development and production. Local
+development uses emulated LaserData/Watchdog buttons to create traffic; a
+production deployment should feed the same view from real ASAPO/Kafka/MongoDB
+state and the operational HDF5 builder.
+
+Start with the quick path, then expand the sections relevant to the workflow
+you are validating.
 
 ## Quick Path
 
@@ -41,51 +46,35 @@ http://127.0.0.1:5173/flow-monitor
 
 ## Mental Model
 
-```mermaid
-flowchart LR
-    L[LaserData] --> A[ASAPO-style broker]
-    W[PLANET Watchdog] --> K[Kafka]
-    A --> E[staged events JSONL]
-    K --> E
-    E --> B[HDF5 builder]
-    B --> H[combined experiment HDF5]
-    M[MongoDB shotsheet] -. live metadata lookup .-> D[DAMNIT-web]
-    E --> D
-    H --> D
-    C[context.py] --> D
-```
+- LaserData produces raw shot events that flow into a broker (ASAPO-style).
+- PLANET Watchdog can publish enrichment events into Kafka.
+- Both brokers produce staged events as JSONL files (events/*.jsonl).
+- The HDF5 builder consumes staged JSONL packages and writes a combined
+  experiment HDF5 file.
+- DAMNIT-web reads live metadata from MongoDB and previews data from the
+  combined HDF5 output; `context.py` provides context joining logic.
 
-LaserData creates new shots. Watchdog/Kafka enriches existing shots. Producers
-append JSONL continuously. HDF5 is created later by an explicit build/finalize
-step that reads those staged JSONL packages. MongoDB remains the live metadata
-and context-join source.
+Summary: LaserData/Watchdog -> broker(s) -> staged JSONL -> HDF5 builder ->
+combined HDF5 -> DAMNIT-web. MongoDB provides live metadata lookups.
 
 ## JSONL to HDF5
 
-The JSONL-to-HDF5 transition is a boundary, not an automatic side effect of
-polling DAMNIT.
+The JSONL-to-HDF5 transition is an explicit boundary (not an automatic side
+effect of polling). Typical steps:
 
-```mermaid
-sequenceDiagram
-    participant Producer as LaserData / Watchdog
-    participant Stage as events/*.jsonl
-    participant Builder as HDF5 builder
-    participant HDF5 as experiment.h5
-    participant DAMNIT as DAMNIT-web
+1. The producer (LaserData or Watchdog) appends normalized package events to
+  `events/*.jsonl`.
+2. DAMNIT may read staged state for visibility and UI previews.
+3. The HDF5 builder is triggered (manually via the flow monitor or by an
+  operational signal) to read the staged JSONL packages.
+4. The builder writes combined shot datasets into a single `experiment.h5` file.
+5. DAMNIT reads/previews datasets and uses them for context inputs in the UI.
 
-    Producer->>Stage: append normalized package events
-    DAMNIT->>Stage: read live staged state for source/table visibility
-    Builder->>Stage: build/finalize requested
-    Builder->>HDF5: write combined shot datasets
-    DAMNIT->>HDF5: preview datasets and context inputs
-```
-
-In the local emulator, the **Build HDF5** button in the flow monitor represents
-that build/finalize request. In production, the same boundary should be triggered
-by the operational package-builder process: for example a run-close hook,
-end-of-shot-set signal, scheduled builder job, or message consumed by a builder
-service. The important contract is that the builder consumes the staged package
-stream and writes the combined HDF5 path that DAMNIT can later read.
+In the local emulator, the **Build HDF5** button in the flow monitor triggers
+the build/finalize request. In production the builder should be invoked by an
+operational mechanism (run-close hook, scheduled job, or consumed builder
+message). The contract remains: builder consumes staged packages and writes a
+combined HDF5 that DAMNIT can later read.
 
 <details>
 <summary>Launcher config</summary>
@@ -136,7 +125,8 @@ Open:
 http://127.0.0.1:5173/flow-monitor
 ```
 
-The flow monitor is the visual test bench.
+The flow monitor is the visual test bench locally and the live traffic view in
+production.
 
 - **LaserData** appends a new emulated shot.
 - **PLANET Watchdog** enriches the latest shot through the Kafka-style path.
@@ -146,6 +136,11 @@ The flow monitor is the visual test bench.
 
 Use it when you want to verify that shot numbers increment, package arrows move,
 and DAMNIT can see the staged source data.
+
+In production, the same visualization should be driven by real incoming
+LaserData/ASAPO events, Watchdog/Kafka enrichment, MongoDB shotsheet metadata,
+and builder status instead of button-triggered emulator writes. The UI should
+remain the operator-facing picture of what is arriving and what DAMNIT can see.
 
 </details>
 
@@ -219,7 +214,7 @@ This repo does not prescribe which production trigger HZDR must use. It keeps
 the contract explicit so the emulator can be replaced by a real builder service
 without changing the DAMNIT table/context behavior.
 
-Inspect the generated tree from Python:
+Inspect the generated tree from Python (use `uv run` for local/dev scripts):
 
 ```powershell
 uv run python - <<'PY'
@@ -227,7 +222,7 @@ import h5py
 
 path = r"..\.generated\hzdr-package-emulator\hdf5\hzdr-emulator.h5"
 with h5py.File(path, "r") as handle:
-    handle.visititems(lambda name, obj: print(name, getattr(obj, "shape", "")))
+  handle.visititems(lambda name, obj: print(name, getattr(obj, "shape", "")))
 PY
 ```
 

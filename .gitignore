@@ -9,7 +9,8 @@ certs/
 *.pem
 .generated/
 .pytest-tmp/
-
+.ruff_cache/
+__pycache__/
 
 # personal notes
 STATUS_NOTES.md

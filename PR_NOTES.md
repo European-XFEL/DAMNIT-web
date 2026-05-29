@@ -2,59 +2,34 @@
 
 ## Summary
 
-This starter change begins wrapping the HZDR/folder-first DAMNIT workflow into
-DAMNIT-web without forcing a proposal-less backend migration. It does not
-require MyMdC for HZDR/local deployments. The web API can map stable source keys
-such as `hzdr` directly to DAMNIT database folders.
+This change adds HZDR source-first support to DAMNIT-web while keeping the
+existing proposal-oriented backend contract intact. HZDR deployments can map
+stable source keys to DAMNIT folders, use local or Mongo-backed metadata, and
+run without MyMdC.
 
-It also adds a clean LDAP authentication entry point alongside the existing
-OAuth/OIDC flow used for Helmholtz-style login.
+It also adds LDAP as an authentication backend alongside the existing
+OAuth/OIDC flow.
 
-## Reviewer-Facing Changes
+## Main Changes
 
-- **HZDR database resolution**
-  - Adds `DW_API_DAMNIT__DEFAULT_PATH` for a default DAMNIT database folder.
-  - Adds `DW_API_DAMNIT__PATHS_BY_PROPOSAL__<key>` for source-key mappings,
-    e.g. mapping `hzdr` to a folder-based DAMNIT database.
-  - Keeps Maxwell/XFEL proposal discovery as a fallback.
-
-- **Authentication backend selection**
-  - Adds `DW_API_AUTH__MODE=oauth|ldap`.
-  - Keeps existing OAuth behavior for Helmholtz/OIDC deployments.
-  - Adds `/ldap/login` and `/ldap/logout` for deployments that authenticate
-    against LDAP directly.
-
-- **MyMdC optional**
-  - Adds `DW_API_METADATA__PROVIDER=local|mymdc`.
-  - Defaults to `local`, so app startup does not bootstrap or contact MyMdC.
-  - GraphQL/userinfo paths tolerate a missing MyMdC client in local/HZDR mode.
-
-- **HZDR local and Mongo metadata**
-  - Adds a file-backed HZDR source provider.
-  - Adds a MongoDB-backed HZDR source provider for labfrog/VLS-style testing.
-  - Adds an ignored example generator instead of tracked Mongo/HDF5 fixture
-    blobs, so local demos can be regenerated without stale seed data.
-
-- **Deployment terminology**
-  - Adds `GET /config/runtime` so clients can display HZDR terms such as
-    `Source/Sources` while EXFEL deployments can keep `Proposal/Proposals`.
-  - Keeps the internal GraphQL compatibility field named `proposal` for now.
-  - Adds three tracked config examples:
-    - `api/.env.test.example` for generated local examples.
-    - `api/.env.hzdr.example` for HZDR labfrog/VLS MongoDB.
-    - `api/.env.exfel.example` for EXFEL OAuth/MyMdC.
-
-- **HZDR shot/source UI starter**
-  - HZDR config now renders source cards on `/home`, not the proposal list.
-  - Adds `/source/{source_key}` as the starter HZDR source-detail route.
-  - Adds placeholder shot rows with `shot_number`, `fired_at`, HDF5 path, and
-    Mongo-style metadata fields.
-  - EXFEL config keeps the existing proposal/MyMdC UI path.
-
-- **Minimal user effort**
-  - A starter HZDR deployment can use the existing frontend route with a stable
-    key, for example `/proposal/hzdr`, while the API maps `hzdr` to the real
-    folder path.
+- Source-key to DAMNIT-folder resolution through
+  `DW_API_DAMNIT__PATHS_BY_PROPOSAL__<key>`.
+- Runtime terminology from `GET /config/runtime`, allowing HZDR deployments to
+  display `Source/Sources` while EXFEL keeps `Proposal/Proposals`.
+- Optional metadata providers:
+  - `local` for generated HZDR fixtures;
+  - `mongo` for LabFrog/VLS-style source and shot metadata;
+  - `mymdc` for EXFEL.
+- LDAP session login endpoints:
+  - `POST /ldap/login`
+  - `POST /ldap/logout`
+- HZDR source UI:
+  - `/home` source cards;
+  - `/source/{source_key}` shot table;
+  - context columns and HDF5 previews;
+  - flow monitor for local and production traffic visibility.
+- Context workspace endpoints for per-user, per-source Python context files.
+- Separate API launchers for development and deployment.
 
 ## Configuration Sketch
 
@@ -63,58 +38,60 @@ DW_API_AUTH__MODE=ldap
 DW_API_AUTH__LDAP__SERVER_URL=ldaps://ldap.example.org
 DW_API_AUTH__LDAP__BIND_DN_TEMPLATE=uid={username},ou=people,dc=example,dc=org
 DW_API_AUTH__LDAP__USER_SEARCH_BASE=ou=people,dc=example,dc=org
-DW_API_METADATA__PROVIDER=local
+
+DW_API_METADATA__PROVIDER=mongo
 DW_API_METADATA__MONGO_URI=mongodb://localhost:27018
+DW_API_METADATA__MONGO_DATABASE=damnit_web
+DW_API_METADATA__MONGO_COLLECTION=hzdr_sources
 DW_API_METADATA__MONGO_SHOTS_DATABASE=shotsheet
 DW_API_METADATA__MONGO_SHOTS_COLLECTION=shots
+
+DW_API_DEPLOYMENT__PROFILE=hzdr
+DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL=Source
+DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL_PLURAL=Sources
+DW_API_DEPLOYMENT__TERMINOLOGY__USES_PROPOSALS=false
+
 DW_API_DAMNIT__PATHS_BY_PROPOSAL__hzdr=C:/data/hzdr/damnit-db
 ```
 
-For generated local example data:
+Local generated data:
 
 ```powershell
 cd api
 uv run python scripts/generate-hzdr-example.py
-$env:DW_API_METADATA__PROVIDER = "local"
-$env:DW_API_METADATA__SOURCES_FILE = "../.generated/hzdr-example/hzdr_sources.json"
 .\scripts\hzdr-dev.ps1 -Provider local -WithGui
 ```
 
-For Helmholtz/OIDC login, keep `DW_API_AUTH__MODE=oauth` and configure the
-existing client ID, client secret, and metadata URL values.
+Development API:
 
-For EXFEL/MyMdC terminology:
+```powershell
+cd api
+.\scripts\damnit-api-dev.ps1
+```
 
-```env
-DW_API_AUTH__MODE=oauth
-DW_API_METADATA__PROVIDER=mymdc
-DW_API_DEPLOYMENT__PROFILE=exfel
-DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_NAME=proposal
-DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_NAME_PLURAL=proposals
-DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL=Proposal
-DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL_PLURAL=Proposals
-DW_API_DEPLOYMENT__TERMINOLOGY__COLLECTION_LABEL=Proposals
-DW_API_DEPLOYMENT__TERMINOLOGY__USES_PROPOSALS=true
+Deployment API:
+
+```powershell
+cd api
+.\scripts\damnit-api-deploy.ps1 -HostAddress 0.0.0.0 -Port 8000
 ```
 
 ## Validation
 
-- Added focused tests for:
-  - source-key to DAMNIT-folder resolution;
-  - explicit path preference;
-  - LDAP record conversion into the existing session user shape.
-  - app startup without a configured MyMdC client.
-  - file-backed HZDR source loading from temporary test data.
-  - HZDR shot record mapping.
+- Source-path resolution tests.
+- Runtime configuration tests.
+- Auth mode and unauthenticated-write tests.
+- HZDR source provider tests.
+- HZDR package emulator tests.
+- Context workspace and context-result tests.
+- Data normalization compatibility tests.
+- Frontend typecheck, lint, and production build.
+- MkDocs strict build.
 
 ## Caveats
 
-- The frontend still speaks in proposal routes and proposal GraphQL variables.
-  The starter compatibility layer treats those values as source keys.
-- LDAP login has an API endpoint, but the existing frontend login button still
-  redirects to OAuth. A small frontend login form is the next step for pure LDAP
-  deployments.
-- HZDR metadata providers for generated local files, labfrog/VLS MongoDB, and
-  HDF5 links should stay separate from MyMdC shims.
-- This does not attempt true proposal-less DAMNIT storage. It is intentionally a
-  compatibility bridge so regular DAMNIT updates remain easy to apply.
+- Internal GraphQL variables still use `proposal` for compatibility.
+- LDAP has backend endpoints; a dedicated frontend LDAP login form is still a
+  future UI improvement.
+- Full backend test collection now works, but existing GraphQL tests still have
+  contract drift unrelated to the HZDR changes.

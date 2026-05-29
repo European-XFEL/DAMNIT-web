@@ -3,6 +3,7 @@ import {
   type PropsWithChildren,
   type ReactNode,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -252,7 +253,9 @@ function HZDRFlowMonitorPage() {
   const [soundEnabled, setSoundEnabled] = useState(false)
   const [damnitPulse, setDamnitPulse] = useState(false)
   const [livePollPulse, setLivePollPulse] = useState(false)
-  const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null)
+  const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(
+    null
+  )
   const lastShotTotal = useRef<number | undefined>(undefined)
   const nextPacketId = useRef(1)
   const nextLogId = useRef(1)
@@ -324,7 +327,9 @@ function HZDRFlowMonitorPage() {
           0
         )
         setSources(loadedSources)
-        setSelectedSourceKey((currentKey) => currentKey ?? loadedSources[0]?.key ?? null)
+        setSelectedSourceKey(
+          (currentKey) => currentKey ?? loadedSources[0]?.key ?? null
+        )
         if (
           lastShotTotal.current !== undefined &&
           loadedShotTotal !== lastShotTotal.current
@@ -346,7 +351,11 @@ function HZDRFlowMonitorPage() {
     return () => window.clearInterval(timer)
   }, [])
 
-  const sendPacket = (lane: FlowPacket['lane'], label: string, detail: string) => {
+  const sendPacket = (
+    lane: FlowPacket['lane'],
+    label: string,
+    detail: string
+  ) => {
     const packet: FlowPacket = {
       id: nextPacketId.current++,
       lane,
@@ -359,7 +368,11 @@ function HZDRFlowMonitorPage() {
         currentPackets.filter((currentPacket) => currentPacket.id !== packet.id)
       )
       if (lane !== 'damnit') {
-        addLogEntry('Staged package', `${label} appended to events JSONL`, 'stage')
+        addLogEntry(
+          'Staged package',
+          `${label} appended to events JSONL`,
+          'stage'
+        )
       }
     }, 1450)
   }
@@ -399,7 +412,11 @@ function HZDRFlowMonitorPage() {
         )
       })
       .catch(() => {
-        addLogEntry('Append failed', 'Local emulator endpoint did not accept the event', 'stage')
+        addLogEntry(
+          'Append failed',
+          'Local emulator endpoint did not accept the event',
+          'stage'
+        )
       })
   }
 
@@ -474,8 +491,9 @@ function HZDRFlowMonitorPage() {
               <Stack gap={2}>
                 <Title order={3}>HZDR flow monitor</Title>
                 <Text size="sm" c="dimmed">
-                  A visual test pane for package traffic, staging, and DAMNIT
-                  metadata visibility.
+                  Live package traffic, staging, HDF5 builder state, and DAMNIT
+                  metadata visibility. Local buttons emulate traffic; production
+                  should feed this view from real incoming services.
                 </Text>
               </Stack>
               <Group gap="xs">
@@ -606,7 +624,9 @@ function HZDRFlowMonitorPage() {
                           <Button
                             component="a"
                             href={
-                              selectedSource ? `/source/${selectedSource.key}` : '#'
+                              selectedSource
+                                ? `/source/${selectedSource.key}`
+                                : '#'
                             }
                             variant="light"
                             disabled={!selectedSource}
@@ -748,8 +768,9 @@ function FlowDiagram({
           <Stack gap={0}>
             <Text fw={700}>Live system diagram</Text>
             <Text size="xs" c="dimmed">
-              Producers append live events, DAMNIT-web watches the JSONL state,
-              then DAMNIT can kick off the HDF5 combine step.
+              Producers append live events, DAMNIT-web watches staged state, and
+              the HDF5 combine step is visible whether traffic is emulated or
+              real.
             </Text>
           </Stack>
           <Group gap="xs">
@@ -790,7 +811,7 @@ function FlowDiagram({
           />
           <ProgramNode
             title="ASAPO local broker"
-            subtitle="emulated ASAPO stream"
+            subtitle="local emulator or real ASAPO stream"
             active={activeLaser}
             icon={<IconRoute size={24} />}
             color="blue"
@@ -819,7 +840,7 @@ function FlowDiagram({
           />
           <ProgramNode
             title="Kafka"
-            subtitle="watchdog transport"
+            subtitle="watchdog transport, local or production"
             active={activeWatchdog}
             icon={<IconRoute size={24} />}
             color="orange"
@@ -847,7 +868,7 @@ function FlowDiagram({
           />
           <ProgramNode
             title="Live event log"
-            subtitle="events/*.jsonl staged by shot_id"
+            subtitle="staged packages keyed by shot_id"
             active={activeLive || activePackage}
             icon={<IconDatabase size={24} />}
             color="teal"
@@ -926,11 +947,11 @@ function ProgramNode({
         width: '100%',
         height: '100%',
         minHeight: 104,
-        borderColor: active
-          ? colorVar
-          : 'var(--mantine-color-gray-3)',
+        borderColor: active ? colorVar : 'var(--mantine-color-gray-3)',
         background: active ? `var(--mantine-color-${color}-0)` : 'white',
-        animation: active ? 'hzdrNodePulse 0.9s ease-in-out infinite' : undefined,
+        animation: active
+          ? 'hzdrNodePulse 0.9s ease-in-out infinite'
+          : undefined,
         ...style,
       }}
     >
@@ -941,7 +962,9 @@ function ProgramNode({
             radius={4}
             p={6}
             style={{
-              background: active ? `var(--mantine-color-${color}-1)` : '#f8fafc',
+              background: active
+                ? `var(--mantine-color-${color}-1)`
+                : '#f8fafc',
               color: colorVar,
             }}
           >
@@ -1031,7 +1054,9 @@ function FlowConnector({
           strokeDasharray={active ? '9 7' : undefined}
           markerEnd={`url(#connector-arrow-${color})`}
           style={{
-            animation: active ? 'hzdrFlowDash 0.75s linear infinite' : undefined,
+            animation: active
+              ? 'hzdrFlowDash 0.75s linear infinite'
+              : undefined,
           }}
         />
         {active ? (
@@ -1077,7 +1102,7 @@ function HZDRSourceHome() {
         <Stack gap={4}>
           <Title order={2}>DAMNIT! HZDR workspace</Title>
           <Text c="dimmed">
-            Follow emulated source traffic into staged packages, context columns,
+            Follow live source traffic into staged packages, context columns,
             trends, and HDF5 previews.
           </Text>
         </Stack>
@@ -1095,8 +1120,8 @@ function HZDRSourceHome() {
               <Title order={4}>Watch the flow</Title>
             </Group>
             <Text size="sm" c="dimmed">
-              Send LaserData and Watchdog events, then see live package traffic
-              move through DAMNIT.
+              Send local LaserData and Watchdog events, or watch production
+              traffic move through DAMNIT.
             </Text>
             <Button component="a" href="/flow-monitor" variant="light">
               Flow monitor
@@ -1234,8 +1259,10 @@ function HZDRDocsPage() {
                     send test LaserData and Watchdog traffic.
                   </Text>
                   <Code block>
-                    powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\hzdr-launch.ps1 -InitConfig{'\n'}
-                    powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\hzdr-launch.ps1
+                    powershell -NoProfile -ExecutionPolicy Bypass -File
+                    ..\scripts\hzdr-launch.ps1 -InitConfig{'\n'}
+                    powershell -NoProfile -ExecutionPolicy Bypass -File
+                    ..\scripts\hzdr-launch.ps1
                   </Code>
                 </Stack>
               </DetailsSection>
@@ -1318,17 +1345,17 @@ function HZDRDocsPage() {
                     and fall back through ASAPO/local broker and MongoDB.
                   </Text>
                   <Code block>
-                    cd api{'\n'}
-                    uv run python scripts/verify-hzdr-watchdog.py --config ..\scripts\hzdr-launch.config.json --mode auto
+                    cd api{'\n'}# use `uv run` for local/dev verification
+                    scripts uv run python scripts/verify-hzdr-watchdog.py
+                    --config ..\scripts\hzdr-launch.config.json --mode auto
                   </Code>
                 </Stack>
               </DetailsSection>
               <DetailsSection title="API reference">
                 <Stack gap="xs">
                   <Text size="sm">
-                    This page is the expandable HZDR workflow guide. Use the
-                    API reference when you need the generated backend endpoint
-                    docs.
+                    This page is the expandable HZDR workflow guide. Use the API
+                    reference when you need the generated backend endpoint docs.
                   </Text>
                   <Button component="a" href="/api-docs" variant="light">
                     Open API reference
@@ -1458,7 +1485,7 @@ function HZDRShotPage() {
       isTableColumnVisible('status') ? 112 : 0,
       isTableColumnVisible('laser_energy_j') ? 96 : 0,
       isTableColumnVisible('target') ? 110 : 0,
-      visibleContextColumns.length * 150,
+      visibleContextColumns.length * 180,
     ].reduce((total, width) => total + width, 0)
   )
   const visibleShots = shots
@@ -1528,7 +1555,11 @@ function HZDRShotPage() {
       kind: 'metadata',
     })
   }
-  const updateShotStatus = (shotNumber: number, status: string, note?: string) => {
+  const updateShotStatus = (
+    shotNumber: number,
+    status: string,
+    note?: string
+  ) => {
     if (!source_key) {
       return
     }
@@ -1599,409 +1630,407 @@ function HZDRShotPage() {
             </Card>
 
             <Grid gutter="md">
-                  <Grid.Col span={{ base: 12, xl: 9 }}>
-                    <Card withBorder radius={4} p="md">
-                      <Group align="flex-end" gap="sm">
-                        <Select
-                          label="Filter column"
-                          value={filterColumn}
-                          onChange={(value) => setFilterColumn(value ?? 'all')}
-                          data={filterColumnOptions}
-                          searchable
-                          style={{ flex: '1 1 220px' }}
-                        />
-                        <Select
-                          label="Match"
-                          value={filterOperator}
-                          onChange={(value) =>
-                            setFilterOperator(
-                              (value as HZDRFilterOperator | null) ?? 'includes'
-                            )
-                          }
-                          data={[
-                            { value: 'includes', label: 'includes' },
-                            { value: 'equals', label: 'equals' },
-                            { value: 'gt', label: 'greater than' },
-                            { value: 'gte', label: 'greater or equal' },
-                            { value: 'lt', label: 'less than' },
-                            { value: 'lte', label: 'less or equal' },
-                          ]}
-                          style={{ flex: '0 1 180px' }}
-                        />
-                        <TextInput
-                          label="Value"
-                          value={filterValue}
-                          onChange={(event) =>
-                            setFilterValue(event.currentTarget.value)
-                          }
-                          placeholder={
-                            filterOperator === 'includes'
-                              ? 'text to find'
-                              : 'number or exact text'
-                          }
-                          style={{ flex: '1 1 180px' }}
-                        />
-                        <Button
-                          variant="subtle"
-                          disabled={!filterValue}
-                          onClick={() => setFilterValue('')}
-                        >
-                          Clear
-                        </Button>
-                        <Button
-                          component="a"
-                          href={`/source/${source_key}/context-builder`}
-                          variant="light"
-                        >
-                          Context builder
-                        </Button>
+              <Grid.Col span={{ base: 12, xl: 10 }}>
+                <Card withBorder radius={4} p="md">
+                  <Group align="flex-end" gap="sm">
+                    <Select
+                      label="Filter column"
+                      value={filterColumn}
+                      onChange={(value) => setFilterColumn(value ?? 'all')}
+                      data={filterColumnOptions}
+                      searchable
+                      style={{ flex: '1 1 220px' }}
+                    />
+                    <Select
+                      label="Match"
+                      value={filterOperator}
+                      onChange={(value) =>
+                        setFilterOperator(
+                          (value as HZDRFilterOperator | null) ?? 'includes'
+                        )
+                      }
+                      data={[
+                        { value: 'includes', label: 'includes' },
+                        { value: 'equals', label: 'equals' },
+                        { value: 'gt', label: 'greater than' },
+                        { value: 'gte', label: 'greater or equal' },
+                        { value: 'lt', label: 'less than' },
+                        { value: 'lte', label: 'less or equal' },
+                      ]}
+                      style={{ flex: '0 1 180px' }}
+                    />
+                    <TextInput
+                      label="Value"
+                      value={filterValue}
+                      onChange={(event) =>
+                        setFilterValue(event.currentTarget.value)
+                      }
+                      placeholder={
+                        filterOperator === 'includes'
+                          ? 'text to find'
+                          : 'number or exact text'
+                      }
+                      style={{ flex: '1 1 180px' }}
+                    />
+                    <Button
+                      variant="subtle"
+                      disabled={!filterValue}
+                      onClick={() => setFilterValue('')}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      component="a"
+                      href={`/source/${source_key}/context-builder`}
+                      variant="light"
+                    >
+                      Context builder
+                    </Button>
+                  </Group>
+                  <DetailsSection title="Columns">
+                    <Checkbox.Group
+                      value={visibleTableColumns}
+                      onChange={(selectedColumns) => {
+                        const nextHiddenColumns = tableColumnOptions
+                          .map((option) => option.value)
+                          .filter((column) => !selectedColumns.includes(column))
+                        setHiddenTableColumns(nextHiddenColumns)
+                      }}
+                    >
+                      <Group gap="sm" mt="xs">
+                        {tableColumnOptions.map((option) => (
+                          <Checkbox
+                            key={option.value}
+                            value={option.value}
+                            label={option.label}
+                            size="xs"
+                          />
+                        ))}
                       </Group>
-                      <DetailsSection title="Columns">
-                        <Checkbox.Group
-                          value={visibleTableColumns}
-                          onChange={(selectedColumns) => {
-                            const nextHiddenColumns = tableColumnOptions
-                              .map((option) => option.value)
-                              .filter(
-                                (column) => !selectedColumns.includes(column)
+                    </Checkbox.Group>
+                  </DetailsSection>
+                </Card>
+                <Card withBorder radius={4} p={0}>
+                  <ScrollArea
+                    h={520}
+                    type="always"
+                    offsetScrollbars
+                    scrollbarSize={14}
+                  >
+                    <Table
+                      striped
+                      highlightOnHover
+                      withColumnBorders
+                      stickyHeader
+                      miw={tableMinWidth}
+                      style={{ tableLayout: 'fixed' }}
+                    >
+                      <Table.Thead>
+                        <Table.Tr>
+                          {isTableColumnVisible('shot_number') ? (
+                            <SortableHeader
+                              width={86}
+                              label="Shot"
+                              column="shot_number"
+                              sortState={sortState}
+                              onSort={toggleSort}
+                            />
+                          ) : null}
+                          {isTableColumnVisible('shot_day') ? (
+                            <SortableHeader
+                              width={92}
+                              label="Day"
+                              column="shot_day"
+                              sortState={sortState}
+                              onSort={toggleSort}
+                            />
+                          ) : null}
+                          {isTableColumnVisible('fired_at') ? (
+                            <SortableHeader
+                              width={168}
+                              label="Fired at"
+                              column="fired_at"
+                              sortState={sortState}
+                              onSort={toggleSort}
+                            />
+                          ) : null}
+                          {isTableColumnVisible('status') ? (
+                            <SortableHeader
+                              width={112}
+                              label="Status"
+                              column="status"
+                              sortState={sortState}
+                              onSort={toggleSort}
+                            />
+                          ) : null}
+                          {isTableColumnVisible('laser_energy_j') ? (
+                            <SortableHeader
+                              width={96}
+                              label="Energy"
+                              column="laser_energy_j"
+                              sortState={sortState}
+                              onSort={toggleSort}
+                            />
+                          ) : null}
+                          {isTableColumnVisible('target') ? (
+                            <SortableHeader
+                              width={110}
+                              label="Target"
+                              column="target"
+                              sortState={sortState}
+                              onSort={toggleSort}
+                            />
+                          ) : null}
+                          {visibleContextColumns.map((column) => (
+                            <SortableHeader
+                              key={column.name}
+                              width={180}
+                              label={column.title}
+                              column={`context:${column.name}`}
+                              sortState={sortState}
+                              onSort={toggleSort}
+                            />
+                          ))}
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {visibleShots.map((shot) => (
+                          <Table.Tr
+                            key={shot.shot_number}
+                            onClick={() =>
+                              setSelectedShotNumber(shot.shot_number)
+                            }
+                            style={{
+                              cursor: 'pointer',
+                              background:
+                                shot.shot_number === selectedShotNumber
+                                  ? 'var(--mantine-color-blue-light)'
+                                  : undefined,
+                            }}
+                          >
+                            {isTableColumnVisible('shot_number') ? (
+                              <Table.Td w={86}>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    selectMetadataCell(
+                                      shot,
+                                      'Shot',
+                                      'shot_number',
+                                      shot.shot_number
+                                    )
+                                  }}
+                                  style={cellButtonStyle}
+                                >
+                                  {shot.shot_number}
+                                </button>
+                              </Table.Td>
+                            ) : null}
+                            {isTableColumnVisible('shot_day') ? (
+                              <Table.Td w={92}>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    selectMetadataCell(
+                                      shot,
+                                      'Day',
+                                      'shot_day',
+                                      shotDayLabels.get(shot.shot_number) ?? '-'
+                                    )
+                                  }}
+                                  style={cellButtonStyle}
+                                >
+                                  <TruncatedCell
+                                    value={
+                                      shotDayLabels.get(shot.shot_number) ?? '-'
+                                    }
+                                  />
+                                </button>
+                              </Table.Td>
+                            ) : null}
+                            {isTableColumnVisible('fired_at') ? (
+                              <Table.Td w={168}>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    selectMetadataCell(
+                                      shot,
+                                      'Fired at',
+                                      'fired_at',
+                                      formatFiredAt(shot.fired_at)
+                                    )
+                                  }}
+                                  style={cellButtonStyle}
+                                >
+                                  <TruncatedCell
+                                    value={formatFiredAt(shot.fired_at)}
+                                  />
+                                </button>
+                              </Table.Td>
+                            ) : null}
+                            {isTableColumnVisible('status') ? (
+                              <Table.Td w={112}>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    selectMetadataCell(
+                                      shot,
+                                      'Status',
+                                      'status',
+                                      shot.metadata.status ?? 'unknown'
+                                    )
+                                  }}
+                                  style={cellButtonStyle}
+                                >
+                                  <StatusBadge
+                                    status={String(
+                                      shot.metadata.status ?? 'unknown'
+                                    )}
+                                  />
+                                </button>
+                              </Table.Td>
+                            ) : null}
+                            {isTableColumnVisible('laser_energy_j') ? (
+                              <Table.Td w={96}>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    selectMetadataCell(
+                                      shot,
+                                      'Energy',
+                                      'laser_energy_j',
+                                      shot.metadata.laser_energy_j ?? '-',
+                                      'laser_energy_j'
+                                    )
+                                  }}
+                                  style={cellButtonStyle}
+                                >
+                                  <TruncatedCell
+                                    value={shot.metadata.laser_energy_j ?? '-'}
+                                  />
+                                </button>
+                              </Table.Td>
+                            ) : null}
+                            {isTableColumnVisible('target') ? (
+                              <Table.Td w={110}>
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    selectMetadataCell(
+                                      shot,
+                                      'Target',
+                                      'target',
+                                      shot.metadata.target ?? '-'
+                                    )
+                                  }}
+                                  style={cellButtonStyle}
+                                >
+                                  <TruncatedCell
+                                    value={shot.metadata.target ?? '-'}
+                                  />
+                                </button>
+                              </Table.Td>
+                            ) : null}
+                            {visibleContextColumns.map((column) => {
+                              const row = contextRowsByShot.get(
+                                shot.shot_number
                               )
-                            setHiddenTableColumns(nextHiddenColumns)
-                          }}
-                        >
-                          <Group gap="sm" mt="xs">
-                            {tableColumnOptions.map((option) => (
-                              <Checkbox
-                                key={option.value}
-                                value={option.value}
-                                label={option.label}
-                                size="xs"
-                              />
-                            ))}
-                          </Group>
-                        </Checkbox.Group>
-                      </DetailsSection>
-                    </Card>
-                    <Card withBorder radius={4} p={0}>
-                      <ScrollArea
-                        h={520}
-                        type="always"
-                        offsetScrollbars
-                        scrollbarSize={14}
-                      >
-                        <Table
-                          striped
-                          highlightOnHover
-                          withColumnBorders
-                          stickyHeader
-                          miw={tableMinWidth}
-                          style={{ tableLayout: 'fixed' }}
-                        >
-                          <Table.Thead>
-                            <Table.Tr>
-                              {isTableColumnVisible('shot_number') ? (
-                                <SortableHeader
-                                  width={86}
-                                  label="Shot"
-                                  column="shot_number"
-                                  sortState={sortState}
-                                  onSort={toggleSort}
-                                />
-                              ) : null}
-                              {isTableColumnVisible('shot_day') ? (
-                                <SortableHeader
-                                  width={92}
-                                  label="Day"
-                                  column="shot_day"
-                                  sortState={sortState}
-                                  onSort={toggleSort}
-                                />
-                              ) : null}
-                              {isTableColumnVisible('fired_at') ? (
-                                <SortableHeader
-                                  width={168}
-                                  label="Fired at"
-                                  column="fired_at"
-                                  sortState={sortState}
-                                  onSort={toggleSort}
-                                />
-                              ) : null}
-                              {isTableColumnVisible('status') ? (
-                                <SortableHeader
-                                  width={112}
-                                  label="Status"
-                                  column="status"
-                                  sortState={sortState}
-                                  onSort={toggleSort}
-                                />
-                              ) : null}
-                              {isTableColumnVisible('laser_energy_j') ? (
-                                <SortableHeader
-                                  width={96}
-                                  label="Energy"
-                                  column="laser_energy_j"
-                                  sortState={sortState}
-                                  onSort={toggleSort}
-                                />
-                              ) : null}
-                              {isTableColumnVisible('target') ? (
-                                <SortableHeader
-                                  width={110}
-                                  label="Target"
-                                  column="target"
-                                  sortState={sortState}
-                                  onSort={toggleSort}
-                                />
-                              ) : null}
-                              {visibleContextColumns.map((column) => (
-                                <SortableHeader
-                                  key={column.name}
-                                  width={150}
-                                  label={column.title}
-                                  column={`context:${column.name}`}
-                                  sortState={sortState}
-                                  onSort={toggleSort}
-                                />
-                              ))}
-                            </Table.Tr>
-                          </Table.Thead>
-                          <Table.Tbody>
-                            {visibleShots.map((shot) => (
-                              <Table.Tr
-                                key={shot.shot_number}
-                                onClick={() =>
-                                  setSelectedShotNumber(shot.shot_number)
-                                }
-                                style={{
-                                  cursor: 'pointer',
-                                  background:
-                                    shot.shot_number === selectedShotNumber
-                                      ? 'var(--mantine-color-blue-light)'
-                                      : undefined,
-                                }}
-                              >
-                                {isTableColumnVisible('shot_number') ? (
-                                <Table.Td w={86}>
+                              const error = row?.errors[column.name]
+                              const value = row?.values[column.name]
+                              const preview = row?.previews?.[column.name]
+                              const trendValues = isScalarContextValue(
+                                value,
+                                preview
+                              )
+                                ? buildContextTrendValues(column.name)
+                                : undefined
+                              return (
+                                <Table.Td key={column.name} w={180}>
                                   <button
                                     type="button"
                                     onClick={(event) => {
                                       event.stopPropagation()
-                                      selectMetadataCell(
-                                        shot,
-                                        'Shot',
-                                        'shot_number',
-                                        shot.shot_number
-                                      )
+                                      setSelectedShotNumber(shot.shot_number)
+                                      setSelectedCell({
+                                        shotNumber: shot.shot_number,
+                                        columnTitle: column.title,
+                                        columnName: column.name,
+                                        value,
+                                        error,
+                                        preview,
+                                        trendValues,
+                                        kind: 'context',
+                                      })
                                     }}
                                     style={cellButtonStyle}
                                   >
-                                    {shot.shot_number}
+                                    {error ? (
+                                      <TruncatedCell value={error} c="dimmed" />
+                                    ) : (
+                                      <ContextCellContent
+                                        value={formatContextValue(value)}
+                                        preview={preview}
+                                        trendValues={trendValues}
+                                      />
+                                    )}
                                   </button>
                                 </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('shot_day') ? (
-                                <Table.Td w={92}>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      selectMetadataCell(
-                                        shot,
-                                        'Day',
-                                        'shot_day',
-                                        shotDayLabels.get(shot.shot_number) ?? '-'
-                                      )
-                                    }}
-                                    style={cellButtonStyle}
-                                  >
-                                    <TruncatedCell
-                                      value={
-                                        shotDayLabels.get(shot.shot_number) ?? '-'
-                                      }
-                                    />
-                                  </button>
-                                </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('fired_at') ? (
-                                <Table.Td w={168}>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      selectMetadataCell(
-                                        shot,
-                                        'Fired at',
-                                        'fired_at',
-                                        formatFiredAt(shot.fired_at)
-                                      )
-                                    }}
-                                    style={cellButtonStyle}
-                                  >
-                                    <TruncatedCell
-                                      value={formatFiredAt(shot.fired_at)}
-                                    />
-                                  </button>
-                                </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('status') ? (
-                                <Table.Td w={112}>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      selectMetadataCell(
-                                        shot,
-                                        'Status',
-                                        'status',
-                                        shot.metadata.status ?? 'unknown'
-                                      )
-                                    }}
-                                    style={cellButtonStyle}
-                                  >
-                                    <StatusBadge
-                                      status={String(
-                                        shot.metadata.status ?? 'unknown'
-                                      )}
-                                    />
-                                  </button>
-                                </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('laser_energy_j') ? (
-                                <Table.Td w={96}>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      selectMetadataCell(
-                                        shot,
-                                        'Energy',
-                                        'laser_energy_j',
-                                        shot.metadata.laser_energy_j ?? '-',
-                                        'laser_energy_j'
-                                      )
-                                    }}
-                                    style={cellButtonStyle}
-                                  >
-                                    <TruncatedCell
-                                      value={shot.metadata.laser_energy_j ?? '-'}
-                                    />
-                                  </button>
-                                </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('target') ? (
-                                <Table.Td w={110}>
-                                  <button
-                                    type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      selectMetadataCell(
-                                        shot,
-                                        'Target',
-                                        'target',
-                                        shot.metadata.target ?? '-'
-                                      )
-                                    }}
-                                    style={cellButtonStyle}
-                                  >
-                                    <TruncatedCell
-                                      value={shot.metadata.target ?? '-'}
-                                    />
-                                  </button>
-                                </Table.Td>
-                                ) : null}
-                                {visibleContextColumns.map((column) => {
-                                  const row = contextRowsByShot.get(shot.shot_number)
-                                  const error = row?.errors[column.name]
-                                  const value = row?.values[column.name]
-                                  const preview = row?.previews?.[column.name]
-                                  const trendValues = isScalarContextValue(
-                                    value,
-                                    preview
-                                  )
-                                    ? buildContextTrendValues(column.name)
-                                    : undefined
-                                  return (
-                                    <Table.Td key={column.name} w={150}>
-                                      <button
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation()
-                                          setSelectedShotNumber(shot.shot_number)
-                                          setSelectedCell({
-                                            shotNumber: shot.shot_number,
-                                            columnTitle: column.title,
-                                            columnName: column.name,
-                                            value,
-                                            error,
-                                            preview,
-                                            trendValues,
-                                            kind: 'context',
-                                          })
-                                        }}
-                                        style={cellButtonStyle}
-                                      >
-                                        {error ? (
-                                          <TruncatedCell value={error} c="dimmed" />
-                                        ) : (
-                                          <ContextCellContent
-                                            value={formatContextValue(
-                                              value
-                                            )}
-                                            preview={preview}
-                                            trendValues={trendValues}
-                                          />
-                                        )}
-                                      </button>
-                                    </Table.Td>
-                                  )
-                                })}
-                              </Table.Tr>
-                            ))}
-                          </Table.Tbody>
-                        </Table>
-                      </ScrollArea>
-                    </Card>
-                    <Group justify="space-between">
-                      <Text size="xs" c="dimmed">
-                        Context columns are loaded from your active context.py
-                        workspace for this source.
-                      </Text>
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        onClick={() => {
-                          if (!source_key) {
-                            return
-                          }
-                          fetch(`/contextfile/campaign/${source_key}/me/results`)
-                            .then((response) =>
-                              response.ok ? response.json() : undefined
-                            )
-                            .then(setContextResults)
-                        }}
-                      >
-                        Refresh context
-                      </Button>
-                    </Group>
-                  </Grid.Col>
+                              )
+                            })}
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                </Card>
+                <Group justify="space-between">
+                  <Text size="xs" c="dimmed">
+                    Context columns are loaded from your active context.py
+                    workspace for this source.
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="subtle"
+                    onClick={() => {
+                      if (!source_key) {
+                        return
+                      }
+                      fetch(`/contextfile/campaign/${source_key}/me/results`)
+                        .then((response) =>
+                          response.ok ? response.json() : undefined
+                        )
+                        .then(setContextResults)
+                    }}
+                  >
+                    Refresh context
+                  </Button>
+                </Group>
+              </Grid.Col>
 
-                  <Grid.Col span={{ base: 12, xl: 3 }}>
-                    <Stack gap="md">
-                      <DetailsSection title="Selected cell" open>
-                        <SelectedCellPanel cell={selectedCell} />
-                      </DetailsSection>
-                      <DetailsSection title="Shot sets" open>
-                        <HZDRShotSetsPanel shots={shots} />
-                      </DetailsSection>
-                      <DetailsSection title="Shot detail">
-                        <ShotDetailPanel
-                          shot={selectedShot}
-                          shotDetail={shotDetail}
-                          availableSources={availableSources}
-                          onUpdateStatus={updateShotStatus}
-                        />
-                      </DetailsSection>
-                    </Stack>
-                  </Grid.Col>
+              <Grid.Col span={{ base: 12, xl: 2 }}>
+                <Stack gap="md">
+                  <DetailsSection title="Selected cell" open>
+                    <SelectedCellPanel cell={selectedCell} />
+                  </DetailsSection>
+                  <DetailsSection title="Shot sets" open>
+                    <HZDRShotSetsPanel shots={shots} />
+                  </DetailsSection>
+                  <DetailsSection title="Shot detail">
+                    <ShotDetailPanel
+                      shot={selectedShot}
+                      shotDetail={shotDetail}
+                      availableSources={availableSources}
+                      onUpdateStatus={updateShotStatus}
+                    />
+                  </DetailsSection>
+                </Stack>
+              </Grid.Col>
             </Grid>
           </Stack>
         </Container>
@@ -2135,7 +2164,10 @@ function ContextPreviewValue({
   preview?: unknown
   value: unknown
 }) {
-  if (Array.isArray(preview) && preview.every((entry) => typeof entry === 'number')) {
+  if (
+    Array.isArray(preview) &&
+    preview.every((entry) => typeof entry === 'number')
+  ) {
     return (
       <MetadataTrendPreview
         values={preview.map((entry, index) => ({
@@ -2149,18 +2181,10 @@ function ContextPreviewValue({
     return <PlotlyFigurePreview preview={preview} />
   }
   if (preview && typeof preview === 'object') {
-    return (
-      <Code block>
-        {JSON.stringify(preview, null, 2)}
-      </Code>
-    )
+    return <Code block>{JSON.stringify(preview, null, 2)}</Code>
   }
   if (Array.isArray(value)) {
-    return (
-      <Code block>
-        {JSON.stringify(value.slice(0, 32), null, 2)}
-      </Code>
-    )
+    return <Code block>{JSON.stringify(value.slice(0, 32), null, 2)}</Code>
   }
   return null
 }
@@ -2175,6 +2199,7 @@ function ContextCellContent({
   trendValues?: { shotNumber: number; value: number }[]
 }) {
   const sparklineValues = getPlotlySparklineValues(preview)
+  const arrayPreviewValues = getNumericPreviewValues(preview)
   if (isPlotlyPreview(preview)) {
     return sparklineValues.length > 1 ? (
       <MiniCellSparkline values={sparklineValues} />
@@ -2185,7 +2210,17 @@ function ContextCellContent({
     )
   }
   if (trendValues && trendValues.length > 1) {
-    return <MiniCellSparkline values={trendValues.map((entry) => entry.value)} />
+    return (
+      <MiniCellSparkline values={trendValues.map((entry) => entry.value)} />
+    )
+  }
+  if (arrayPreviewValues.length > 1) {
+    return (
+      <Stack gap={2}>
+        <TruncatedCell value={value} />
+        <MiniCellSparkline values={arrayPreviewValues} />
+      </Stack>
+    )
   }
   return (
     <Stack gap={2}>
@@ -2210,18 +2245,14 @@ function MiniCellSparkline({ values }: { values: number[] }) {
         padding +
         (index / Math.max(values.length - 1, 1)) * (width - padding * 2)
       const y =
-        height -
-        padding -
-        ((value - minValue) / range) * (height - padding * 2)
+        height - padding - ((value - minValue) / range) * (height - padding * 2)
       return `${x.toFixed(1)},${y.toFixed(1)}`
     })
     .join(' ')
   const lastValue = values[values.length - 1]
   const lastX = width - padding
   const lastY =
-    height -
-    padding -
-    ((lastValue - minValue) / range) * (height - padding * 2)
+    height - padding - ((lastValue - minValue) / range) * (height - padding * 2)
 
   return (
     <svg
@@ -2275,7 +2306,13 @@ function PlotlyFigurePreview({ preview }: { preview: PlotlyPreview }) {
             ...(figure.layout ?? {}),
             autosize: true,
             height: 260,
-            margin: { l: 44, r: 16, t: 24, b: 42, ...(figure.layout?.margin ?? {}) },
+            margin: {
+              l: 44,
+              r: 16,
+              t: 24,
+              b: 42,
+              ...(figure.layout?.margin ?? {}),
+            },
           } as Partial<Plotly.Layout>
         }
         config={
@@ -2292,7 +2329,9 @@ function PlotlyFigurePreview({ preview }: { preview: PlotlyPreview }) {
   } catch (error) {
     return (
       <Code block>
-        {error instanceof Error ? error.message : 'Could not render Plotly preview.'}
+        {error instanceof Error
+          ? error.message
+          : 'Could not render Plotly preview.'}
       </Code>
     )
   }
@@ -2325,6 +2364,21 @@ function getPlotlySparklineValues(preview: unknown) {
   } catch {
     return []
   }
+}
+
+function getNumericPreviewValues(preview: unknown): number[] {
+  if (!Array.isArray(preview)) {
+    return []
+  }
+  const flattened = preview.flatMap((entry) =>
+    Array.isArray(entry) ? entry : [entry]
+  )
+  return flattened
+    .filter(
+      (entry): entry is number =>
+        typeof entry === 'number' && Number.isFinite(entry)
+    )
+    .slice(0, 64)
 }
 
 function decodePlotlyTypedArrays(value: unknown): unknown {
@@ -2473,12 +2527,7 @@ function ShotDetailPanel({
               {shot.metadata.status ?? 'unknown'}
             </Badge>
           </Group>
-          <Paper
-            withBorder
-            radius={4}
-            p="sm"
-            bg="var(--mantine-color-gray-0)"
-          >
+          <Paper withBorder radius={4} p="sm" bg="var(--mantine-color-gray-0)">
             <Stack gap="sm">
               <Radio.Group
                 label="Review status"
@@ -2666,12 +2715,7 @@ function ContextBuilderPanel({
   tone: string
 }>) {
   return (
-    <Paper
-      withBorder
-      radius={4}
-      p="sm"
-      bg={`var(--mantine-color-${tone}-0)`}
-    >
+    <Paper withBorder radius={4} p="sm" bg={`var(--mantine-color-${tone}-0)`}>
       <Stack gap="xs">
         <ContextBuilderSectionTitle title={title} description={description} />
         {children}
@@ -2684,7 +2728,11 @@ function contextRecipeTone(fieldKind: string) {
   if (fieldKind === 'metadata') {
     return 'blue'
   }
-  if (['hdf5', 'lineout-preview', 'image-preview', 'plotly-trend'].includes(fieldKind)) {
+  if (
+    ['hdf5', 'lineout-preview', 'image-preview', 'plotly-trend'].includes(
+      fieldKind
+    )
+  ) {
     return 'teal'
   }
   if (fieldKind === 'mongo-filter') {
@@ -2713,6 +2761,186 @@ function contextRecipeLabel(fieldKind: string) {
     return 'Mongo query'
   }
   return 'Custom function'
+}
+
+function getContextRecipeValidInputHelp(
+  fieldKind: string,
+  contextScope: string
+) {
+  if (fieldKind === 'metadata') {
+    return contextScope === 'set'
+      ? 'Numeric metadata values only; used for shot-set trends.'
+      : 'One metadata value from the selected shot.'
+  }
+  if (fieldKind === 'hdf5') {
+    return 'One HDF5 dataset; scalar, line, and image datasets are summarized.'
+  }
+  if (fieldKind === 'lineout-preview') {
+    return (
+      'One 1D HDF5 dataset; the table shows a summary and the cell panel ' +
+      'shows the line.'
+    )
+  }
+  if (fieldKind === 'image-preview') {
+    return (
+      'One 2D HDF5 dataset; the table shows a summary and the cell panel ' +
+      'shows the reduced image.'
+    )
+  }
+  if (fieldKind === 'plotly-trend') {
+    return 'One numeric HDF5 dataset; creates an interactive Plotly preview.'
+  }
+  if (fieldKind === 'mongo-filter') {
+    return 'One metadata field returned by the Mongo-style query.'
+  }
+  return 'Any selected metadata or HDF5 inputs; combine them in the expression.'
+}
+
+function getContextRecipeOptionHelp(fieldKind: string, contextScope: string) {
+  if (fieldKind === 'metadata') {
+    return contextScope === 'set'
+      ? 'Trends numeric metadata across the visible shots.'
+      : 'Shows the selected metadata value directly in the table.'
+  }
+  if (fieldKind === 'hdf5') {
+    return 'Reads the selected HDF5 dataset and stores a compact numeric summary.'
+  }
+  if (fieldKind === 'lineout-preview') {
+    return (
+      'Stores a 1D lineout, shows a summary in the table, and expands ' +
+      'the line in the cell panel.'
+    )
+  }
+  if (fieldKind === 'image-preview') {
+    return (
+      'Stores a 2D image, shows a summary in the table, and expands a ' +
+      'reduced image in the cell panel.'
+    )
+  }
+  if (fieldKind === 'plotly-trend') {
+    return 'Builds an interactive Plotly preview from a 1D HDF5 dataset.'
+  }
+  if (fieldKind === 'mongo-filter') {
+    return 'Uses the selected metadata field from a Mongo-style lookup result.'
+  }
+  return 'Combines one or more selected inputs with a custom Python expression.'
+}
+
+function getContextRecipeOptions({
+  contextScope,
+  selectedInputs,
+  datasetOptions,
+}: {
+  contextScope: string
+  selectedInputs: string[]
+  datasetOptions: {
+    value: string
+    label: string
+    shape?: Array<number | string>
+  }[]
+}) {
+  const selectedDatasets = selectedInputs
+    .filter((value) => value.startsWith('hdf5:'))
+    .map((value) => datasetOptions.find((option) => option.value === value))
+    .filter(Boolean)
+  const metadataCount = selectedInputs.filter((value) =>
+    value.startsWith('metadata:')
+  ).length
+  const datasetCount = selectedDatasets.length
+  const selectedCount = selectedInputs.length
+  const singleDatasetShape = selectedDatasets[0]?.shape
+  const singleDatasetRank = singleDatasetShape?.length ?? 0
+  const options: { value: string; label: string; disabled?: boolean }[] = []
+
+  if (!selectedCount) {
+    return [
+      {
+        value: 'metadata',
+        label: 'Choose data first',
+        disabled: true,
+      },
+    ]
+  }
+
+  if (selectedCount === 1 && metadataCount === 1) {
+    options.push({
+      value: 'metadata',
+      label:
+        contextScope === 'set'
+          ? 'Trend selected metadata'
+          : 'Show selected metadata',
+    })
+    if (contextScope === 'shot') {
+      options.push({
+        value: 'mongo-filter',
+        label: 'Show results from a query',
+      })
+    }
+  }
+
+  if (selectedCount === 1 && datasetCount === 1) {
+    options.push({
+      value: 'hdf5',
+      label:
+        contextScope === 'set'
+          ? 'Summarize selected data across shots'
+          : 'Summarize selected data',
+    })
+    if (contextScope === 'shot' && singleDatasetRank === 1) {
+      options.push(
+        { value: 'lineout-preview', label: 'Lineout with table preview' },
+        { value: 'plotly-trend', label: 'Interactive trend preview' }
+      )
+    }
+    if (contextScope === 'shot' && singleDatasetRank === 2) {
+      options.push({
+        value: 'image-preview',
+        label: 'Image with reduced preview',
+      })
+    }
+  }
+
+  options.push({
+    value: 'function',
+    label:
+      selectedCount > 1
+        ? 'Compute with selected inputs'
+        : 'Compute with a custom function',
+  })
+
+  return options
+}
+
+function repairCommonContextImports(content: string) {
+  const imports: string[] = []
+  if (/\bh5py\b/.test(content) && !/^\s*import\s+h5py\b/m.test(content)) {
+    imports.push('import h5py')
+  }
+  if (
+    /\bnp\./.test(content) &&
+    !/^\s*import\s+numpy\s+as\s+np\b/m.test(content)
+  ) {
+    imports.push('import numpy as np')
+  }
+  if (
+    /\bpx\./.test(content) &&
+    !/^\s*import\s+plotly\.express\s+as\s+px\b/m.test(content)
+  ) {
+    imports.push('import plotly.express as px')
+  }
+  const damnitNames = ['Cell', 'Skip', 'Variable', 'mongo_find_one'].filter(
+    (name) => new RegExp(`\\b${name}\\b`).test(content)
+  )
+  if (
+    damnitNames.length &&
+    !/^\s*from\s+damnit_ctx\s+import\s+/m.test(content)
+  ) {
+    imports.push(`from damnit_ctx import ${damnitNames.join(', ')}`)
+  }
+  if (!imports.length) {
+    return content
+  }
+  return `${imports.join('\n')}\n\n${content.trimStart()}`
 }
 
 function statusColor(status: string) {
@@ -2802,6 +3030,7 @@ function ContextBuilderPage() {
   const [datasetPreview, setDatasetPreview] = useState<HZDRDatasetPreview>()
   const [saveStatus, setSaveStatus] = useState('')
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null)
+  const [generatedEditorCompact, setGeneratedEditorCompact] = useState(false)
 
   useEffect(() => {
     if (!source_key) {
@@ -2852,43 +3081,73 @@ function ContextBuilderPage() {
   const selectedShot = shots.find(
     (shot) => shot.shot_number === selectedShotNumber
   )
-  const metadataKeys =
-    contextScope === 'set'
-      ? getNumericMetadataKeys(shots)
-      : flattenObjectKeys(selectedShot?.metadata ?? {})
-  const metadataOptions = metadataKeys.map((key) => ({
-    value: `metadata:${key}`,
-    label:
+  const metadataKeys = useMemo(
+    () =>
       contextScope === 'set'
-        ? `${key} (${countNumericValues(shots, key)}/${shots.length} shots)`
-        : key,
-  }))
-  const datasetOptions =
-    shotDetail?.hdf5_datasets.map((dataset) => ({
-      value: `hdf5:${dataset.name}`,
-      label: `${dataset.name} (${dataset.dtype}, ${dataset.shape.join('x')})`,
-    })) ?? []
-  const inputOptions = [
-    { group: 'Shot metadata', items: metadataOptions },
-    { group: 'HDF5 datasets', items: datasetOptions },
-  ]
-  const recipeInputOptions = getContextRecipeInputOptions({
-    fieldKind,
-    metadataOptions,
-    datasetOptions,
-    inputOptions,
-  })
-  const recipeInputValueKey = getContextRecipeInputValues(recipeInputOptions).join(
-    '\u0000'
+        ? getNumericMetadataKeys(shots)
+        : flattenObjectKeys(selectedShot?.metadata ?? {}),
+    [contextScope, selectedShot?.metadata, shots]
+  )
+  const metadataOptions = useMemo(
+    () =>
+      metadataKeys.map((key) => ({
+        value: `metadata:${key}`,
+        label:
+          contextScope === 'set'
+            ? `${key} (${countNumericValues(shots, key)}/${shots.length} shots)`
+            : key,
+      })),
+    [contextScope, metadataKeys, shots]
+  )
+  const datasetOptions = useMemo(
+    () =>
+      shotDetail?.hdf5_datasets.map((dataset) => ({
+        value: `hdf5:${dataset.name}`,
+        label: `${dataset.name} (${dataset.dtype}, ${dataset.shape.join('x')})`,
+        shape: dataset.shape,
+      })) ?? [],
+    [shotDetail?.hdf5_datasets]
+  )
+  const inputOptions = useMemo(
+    () => [
+      { group: 'Shot metadata', items: metadataOptions },
+      { group: 'HDF5 datasets', items: datasetOptions },
+    ],
+    [datasetOptions, metadataOptions]
+  )
+  const inputValueKey = useMemo(
+    () => getContextRecipeInputValues(inputOptions).join('\u0000'),
+    [inputOptions]
   )
   const selectedInputSummary = selectedInputs.length
     ? selectedInputs.map(formatSelectedInput).join(', ')
     : 'No inputs selected yet'
-  const selectedInputValue = selectedInputs[0] ?? null
+  const validInputHelp = getContextRecipeValidInputHelp(fieldKind, contextScope)
+  const recipeOptions = useMemo(
+    () =>
+      getContextRecipeOptions({
+        contextScope,
+        selectedInputs,
+        datasetOptions,
+      }),
+    [contextScope, datasetOptions, selectedInputs]
+  )
+  const recipeOptionValueKey = useMemo(
+    () =>
+      recipeOptions
+        .map(
+          (option) =>
+            `${option.value}:${option.disabled ? 'disabled' : 'enabled'}`
+        )
+        .join('\u0000'),
+    [recipeOptions]
+  )
+  const recipeHelp = getContextRecipeOptionHelp(fieldKind, contextScope)
+  const canBuildColumn = selectedInputs.length > 0
   const contextVariables = parseContextVariableBlocks(contextContent)
-  const showMongoFields = fieldKind === 'mongo-filter' || fieldKind === 'function'
+  const showMongoFields =
+    fieldKind === 'mongo-filter' || fieldKind === 'function'
   const showFunctionFields = fieldKind === 'function'
-  const showInputPicker = fieldKind !== 'mongo-filter'
   const usesHdf5VisualPreview = [
     'hdf5',
     'lineout-preview',
@@ -2922,19 +3181,35 @@ function ContextBuilderPage() {
       return
     }
 
-    if (fieldKind !== 'function' && selectedInputs.length > 1) {
-      setSelectedInputs(selectedInputs.slice(0, 1))
+    const validRecipeValues = recipeOptions
+      .filter((option) => !option.disabled)
+      .map((option) => option.value)
+    if (!validRecipeValues.includes(fieldKind) && validRecipeValues[0]) {
+      setFieldKind(validRecipeValues[0])
       return
     }
 
-    const validInputValues = new Set(recipeInputValueKey.split('\u0000').filter(Boolean))
+    const validInputValues = new Set(
+      inputValueKey.split('\u0000').filter(Boolean)
+    )
     if (selectedInputs.some((input) => !validInputValues.has(input))) {
       setSelectedInputs([])
     }
-  }, [contextScope, fieldKind, recipeInputValueKey, selectedInputs])
+  }, [
+    contextScope,
+    fieldKind,
+    inputValueKey,
+    recipeOptionValueKey,
+    recipeOptions,
+    selectedInputs,
+  ])
 
   const appendToContext = () => {
     if (!source_key || !contextFile) {
+      return
+    }
+    if (!canBuildColumn) {
+      setSaveStatus('Choose data before adding a column.')
       return
     }
     setSaveStatus('Saving...')
@@ -2942,11 +3217,14 @@ function ContextBuilderPage() {
     const uniqueBody = makeContextVariableBlockUnique(body, contextVariables)
     const contextWithImports = mergeImportsAtTop(contextContent, imports)
     const fileContent = `${contextWithImports.trimEnd()}\n\n${uniqueBody.trimEnd()}\n`
-    fetch(`/contextfile/campaign/${source_key}/me/files/${selectedContextFile}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileContent }),
-    })
+    fetch(
+      `/contextfile/campaign/${source_key}/me/files/${selectedContextFile}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileContent }),
+      }
+    )
       .then((response) => requireJson<CampaignContextFile>(response))
       .then((savedContext: CampaignContextFile) => {
         setContextFile(savedContext)
@@ -2958,7 +3236,9 @@ function ContextBuilderPage() {
 
   const selectAndLoadColumn = (columnId: string | null) => {
     setSelectedColumnId(columnId)
-    const selectedBlock = contextVariables.find((block) => block.id === columnId)
+    const selectedBlock = contextVariables.find(
+      (block) => block.id === columnId
+    )
     if (!selectedBlock) {
       return
     }
@@ -2971,6 +3251,10 @@ function ContextBuilderPage() {
       (block) => block.id === selectedColumnId
     )
     if (!source_key || !selectedBlock) {
+      return
+    }
+    if (!canBuildColumn) {
+      setSaveStatus('Choose data before replacing a column.')
       return
     }
     const { imports, body } = splitPythonImportBlock(generatedDraft)
@@ -3015,7 +3299,9 @@ function ContextBuilderPage() {
     const [selectedBlock] = reorderedBlocks.splice(selectedIndex, 1)
     reorderedBlocks.splice(targetIndex, 0, selectedBlock)
     const prefix = contextContent.slice(0, contextVariables[0].start)
-    const suffix = contextContent.slice(contextVariables.at(-1)?.end ?? contextContent.length)
+    const suffix = contextContent.slice(
+      contextVariables.at(-1)?.end ?? contextContent.length
+    )
     const fileContent = `${prefix}${reorderedBlocks
       .map((block) => block.block.trim())
       .join('\n\n')}\n${suffix}`
@@ -3024,6 +3310,11 @@ function ContextBuilderPage() {
   }
 
   const previewColumn = () => {
+    if (!canBuildColumn) {
+      setColumnDetails('Choose data before previewing a column.')
+      setDatasetPreview(undefined)
+      return
+    }
     const preview = buildColumnPreview({
       fieldKind,
       selectedInputs,
@@ -3035,7 +3326,12 @@ function ContextBuilderPage() {
     const datasetName = selectedInputs
       .find((value) => value.startsWith('hdf5:'))
       ?.slice(5)
-    if (usesHdf5VisualPreview && source_key && selectedShotNumber && datasetName) {
+    if (
+      usesHdf5VisualPreview &&
+      source_key &&
+      selectedShotNumber &&
+      datasetName
+    ) {
       fetch(
         `/metadata/hzdr/sources/${source_key}/shots/${selectedShotNumber}/datasets/${datasetName}`
       )
@@ -3054,15 +3350,28 @@ function ContextBuilderPage() {
     saveContextContent(contextContent, `Saved ${selectedContextFile}`)
   }
 
+  const repairContextImports = () => {
+    const repairedContent = repairCommonContextImports(contextContent)
+    if (repairedContent === contextContent) {
+      setSaveStatus('No missing common imports found.')
+      return
+    }
+    setContextContent(repairedContent)
+    setSaveStatus('Added missing common imports. Review, then save.')
+  }
+
   const saveContextContent = (fileContent: string, savedMessage: string) => {
     if (!source_key) {
       return
     }
-    fetch(`/contextfile/campaign/${source_key}/me/files/${selectedContextFile}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileContent }),
-    })
+    fetch(
+      `/contextfile/campaign/${source_key}/me/files/${selectedContextFile}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileContent }),
+      }
+    )
       .then((response) => requireJson<CampaignContextFile>(response))
       .then((savedContext: CampaignContextFile) => {
         setContextFile(savedContext)
@@ -3126,10 +3435,15 @@ function ContextBuilderPage() {
                 <Title order={3}>Context builder</Title>
                 <Text size="sm" c="dimmed">
                   Build and save one DAMNIT context variable for{' '}
-                  {source?.title ?? source_key}. Saved files live on the API host.
+                  {source?.title ?? source_key}. Saved files live on the API
+                  host.
                 </Text>
               </Stack>
-              <Button component="a" href={`/source/${source_key}`} variant="light">
+              <Button
+                component="a"
+                href={`/source/${source_key}`}
+                variant="light"
+              >
                 Back to shots
               </Button>
             </Group>
@@ -3156,7 +3470,9 @@ function ContextBuilderPage() {
                           label="Example shot"
                           value={selectedShotNumber?.toString()}
                           onChange={(value) =>
-                            setSelectedShotNumber(value ? Number(value) : undefined)
+                            setSelectedShotNumber(
+                              value ? Number(value) : undefined
+                            )
                           }
                           data={shots.map((shot) => ({
                             value: shot.shot_number.toString(),
@@ -3211,9 +3527,31 @@ function ContextBuilderPage() {
                       </SimpleGrid>
                     </ContextBuilderPanel>
                     <ContextBuilderPanel
+                      tone="indigo"
+                      title="Data"
+                      description="Choose the metadata or HDF5 data first; valid actions appear below."
+                    >
+                      <MultiSelect
+                        label="Data to use"
+                        value={selectedInputs}
+                        onChange={setSelectedInputs}
+                        data={inputOptions}
+                        searchable
+                        clearable
+                      />
+                      <Card withBorder radius={4} p="sm">
+                        <Stack gap={4}>
+                          <Text size="xs" c="dimmed">
+                            Selected data
+                          </Text>
+                          <Text size="sm">{selectedInputSummary}</Text>
+                        </Stack>
+                      </Card>
+                    </ContextBuilderPanel>
+                    <ContextBuilderPanel
                       tone="teal"
-                      title="Recipe"
-                      description="Pick the kind of context value this column should produce."
+                      title="Action"
+                      description="Choose what this column can do with the selected data."
                     >
                       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                         <Select
@@ -3223,112 +3561,46 @@ function ContextBuilderPage() {
                               : 'What should this set view do?'
                           }
                           value={fieldKind}
-                          onChange={(value) => setFieldKind(value ?? 'metadata')}
-                          data={[
-                            {
-                              value: 'metadata',
-                              label:
-                                contextScope === 'shot'
-                                  ? 'Show a selected value'
-                                  : 'Trend selected values across shots',
-                            },
-                            {
-                              value: 'hdf5',
-                              label:
-                                contextScope === 'shot'
-                                  ? 'Summarize selected data'
-                                  : 'Summarize selected data across shots',
-                            },
-                            ...(contextScope === 'shot'
-                              ? [
-                                  {
-                                    value: 'lineout-preview',
-                                    label: 'Lineout with table preview',
-                                  },
-                                  {
-                                    value: 'image-preview',
-                                    label: 'Image with reduced preview',
-                                  },
-                                  {
-                                    value: 'plotly-trend',
-                                    label: 'Interactive trend preview',
-                                  },
-                                ]
-                              : []),
-                            { value: 'mongo-filter', label: 'Show results from a query' },
-                            {
-                              value: 'function',
-                              label: 'Compute with a custom function',
-                            },
-                          ]}
+                          onChange={(value) => {
+                            if (value) {
+                              setFieldKind(value)
+                            }
+                          }}
+                          data={recipeOptions}
+                          disabled={!selectedInputs.length}
                         />
                         <Card withBorder radius={4} p="sm">
                           <Stack gap={4}>
                             <Text size="xs" c="dimmed">
-                              Selected recipe
+                              Selected action
                             </Text>
-                            <Badge
-                              variant="light"
-                              color={contextRecipeTone(fieldKind)}
-                              radius={4}
-                              styles={{ label: { textTransform: 'none' } }}
-                            >
-                              {contextRecipeLabel(fieldKind)}
-                            </Badge>
+                            <Group gap="xs">
+                              <Badge
+                                variant="light"
+                                color={contextRecipeTone(fieldKind)}
+                                radius={4}
+                                styles={{ label: { textTransform: 'none' } }}
+                              >
+                                {contextRecipeLabel(fieldKind)}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                color="gray"
+                                radius={4}
+                                title={validInputHelp}
+                                styles={{ label: { textTransform: 'none' } }}
+                              >
+                                Valid inputs
+                              </Badge>
+                            </Group>
+                            <Text size="xs" c="dimmed">
+                              {selectedInputs.length
+                                ? recipeHelp
+                                : validInputHelp}
+                            </Text>
                           </Stack>
                         </Card>
                       </SimpleGrid>
-                    </ContextBuilderPanel>
-                    <ContextBuilderPanel
-                      tone="indigo"
-                      title="Inputs"
-                      description={
-                        fieldKind === 'mongo-filter'
-                          ? 'Choose which field from the query result should appear in the column.'
-                          : 'Choose the metadata or HDF5 data used by this recipe.'
-                      }
-                    >
-                      {fieldKind === 'mongo-filter' ? (
-                        <Select
-                          label="Field to show from query result"
-                          value={selectedInputValue}
-                          onChange={(value) => setSelectedInputs(value ? [value] : [])}
-                          data={metadataOptions}
-                          searchable
-                          clearable
-                        />
-                      ) : fieldKind === 'function' ? (
-                        <MultiSelect
-                          label="Inputs for this column"
-                          value={selectedInputs}
-                          onChange={setSelectedInputs}
-                          data={recipeInputOptions}
-                          searchable
-                        />
-                      ) : (
-                        <Select
-                          label={
-                            contextScope === 'set'
-                              ? 'Trend value'
-                              : 'Input for this column'
-                          }
-                          value={selectedInputValue}
-                          onChange={(value) => setSelectedInputs(value ? [value] : [])}
-                          data={recipeInputOptions}
-                          searchable
-                          clearable
-                        />
-                      )}
-                      {showInputPicker ? (
-                        <Card withBorder radius={4} p="sm">
-                          <Stack gap={4}>
-                            <Text size="xs" c="dimmed">
-                              Selected inputs
-                            </Text>
-                            <Text size="sm">{selectedInputSummary}</Text>
-                          </Stack>
-                        </Card>
-                      ) : null}
                     </ContextBuilderPanel>
                     {showMongoFields ? (
                       <ContextBuilderPanel
@@ -3383,7 +3655,12 @@ function ContextBuilderPage() {
                         />
                       </ContextBuilderPanel>
                     ) : null}
-                    <Paper withBorder radius={4} p="sm" bg="var(--mantine-color-gray-0)">
+                    <Paper
+                      withBorder
+                      radius={4}
+                      p="sm"
+                      bg="var(--mantine-color-gray-0)"
+                    >
                       <Text size="sm" c="dimmed">
                         {saveStatus || contextFile?.path || '-'}
                       </Text>
@@ -3405,6 +3682,13 @@ function ContextBuilderPage() {
                         </Stack>
                         <Button onClick={saveManualContext}>
                           Save {selectedContextFile}
+                        </Button>
+                        <Button
+                          onClick={repairContextImports}
+                          variant="light"
+                          leftSection={<IconRefresh size={16} />}
+                        >
+                          Repair imports
                         </Button>
                       </Group>
                       <SimpleGrid cols={{ base: 1, md: 4 }} spacing="sm">
@@ -3465,42 +3749,56 @@ function ContextBuilderPage() {
                   </Card>
                   <Card withBorder radius={4} p="md">
                     <Stack gap="sm">
-                    <Group justify="space-between">
-                      <Stack gap={2}>
-                        <Title order={5}>Generated variable</Title>
-                        <Text size="xs" c="dimmed">
-                          Edit this block before appending it to the selected context file.
-                        </Text>
-                      </Stack>
-                      <Group>
-                        <Button onClick={appendToContext}>
-                          Append to {selectedContextFile}
-                        </Button>
-                        <Button
-                          variant="light"
-                          onClick={replaceSelectedColumn}
-                          disabled={!selectedColumnId}
-                        >
-                          Replace selected
-                        </Button>
+                      <Group justify="space-between">
+                        <Stack gap={2}>
+                          <Title order={5}>Generated variable</Title>
+                          <Text size="xs" c="dimmed">
+                            Edit this block before appending it to the selected
+                            context file.
+                          </Text>
+                        </Stack>
+                        <Group>
+                          <Button
+                            variant="subtle"
+                            onClick={() =>
+                              setGeneratedEditorCompact((compact) => !compact)
+                            }
+                          >
+                            {generatedEditorCompact
+                              ? 'Expand editor'
+                              : 'Compact editor'}
+                          </Button>
+                          <Button
+                            onClick={appendToContext}
+                            disabled={!canBuildColumn}
+                          >
+                            Append to {selectedContextFile}
+                          </Button>
+                          <Button
+                            variant="light"
+                            onClick={replaceSelectedColumn}
+                            disabled={!selectedColumnId || !canBuildColumn}
+                          >
+                            Replace selected
+                          </Button>
+                        </Group>
                       </Group>
-                    </Group>
-                    <Textarea
-                      value={generatedDraft}
-                      onChange={(event) =>
-                        setGeneratedDraft(event.currentTarget.value)
-                      }
-                      autosize
-                      minRows={18}
-                      maxRows={28}
-                      styles={{
-                        input: {
-                          fontFamily:
-                            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                          fontSize: '12px',
-                        },
-                      }}
-                    />
+                      <Textarea
+                        value={generatedDraft}
+                        onChange={(event) =>
+                          setGeneratedDraft(event.currentTarget.value)
+                        }
+                        autosize
+                        minRows={generatedEditorCompact ? 6 : 18}
+                        maxRows={generatedEditorCompact ? 10 : 28}
+                        styles={{
+                          input: {
+                            fontFamily:
+                              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                            fontSize: '12px',
+                          },
+                        }}
+                      />
                     </Stack>
                   </Card>
                   <Card withBorder radius={4} p="md">
@@ -3512,7 +3810,11 @@ function ContextBuilderPage() {
                             Check the selected recipe and input before saving.
                           </Text>
                         </Stack>
-                        <Button onClick={previewColumn} variant="light">
+                        <Button
+                          onClick={previewColumn}
+                          variant="light"
+                          disabled={!canBuildColumn}
+                        >
                           Preview column
                         </Button>
                       </Group>
@@ -3591,7 +3893,10 @@ function ContextBuilderPage() {
   )
 }
 
-function flattenObjectKeys(value: Record<string, unknown>, prefix = ''): string[] {
+function flattenObjectKeys(
+  value: Record<string, unknown>,
+  prefix = ''
+): string[] {
   return Object.entries(value).flatMap(([key, nestedValue]) => {
     const fullKey = prefix ? `${prefix}.${key}` : key
     if (
@@ -3639,7 +3944,8 @@ function splitPythonImportBlock(content: string) {
 
   for (const line of content.split('\n')) {
     const trimmed = line.trim()
-    const isImportLine = /^import\s+\S+/.test(trimmed) || /^from\s+\S+\s+import\s+/.test(trimmed)
+    const isImportLine =
+      /^import\s+\S+/.test(trimmed) || /^from\s+\S+\s+import\s+/.test(trimmed)
     if (inLeadingImports && (isImportLine || trimmed === '')) {
       if (isImportLine) {
         imports.push(trimmed)
@@ -3681,10 +3987,7 @@ function stripDuplicateSnippetImports(snippet: string, contextContent: string) {
 
 function pythonImportAlreadyCovered(content: string, importLine: string) {
   const trimmedImport = importLine.trim()
-  if (content
-    .split('\n')
-    .some((line) => line.trim() === trimmedImport)
-  ) {
+  if (content.split('\n').some((line) => line.trim() === trimmedImport)) {
     return true
   }
 
@@ -3755,30 +4058,6 @@ function parseContextVariableBlocks(content: unknown): ContextVariableBlock[] {
       block: content.slice(start, end),
     }
   })
-}
-
-function getContextRecipeInputOptions({
-  fieldKind,
-  metadataOptions,
-  datasetOptions,
-  inputOptions,
-}: {
-  fieldKind: string
-  metadataOptions: { value: string; label: string }[]
-  datasetOptions: { value: string; label: string }[]
-  inputOptions: { group: string; items: { value: string; label: string }[] }[]
-}) {
-  if (fieldKind === 'metadata') {
-    return metadataOptions
-  }
-  if (
-    ['hdf5', 'lineout-preview', 'image-preview', 'plotly-trend'].includes(
-      fieldKind
-    )
-  ) {
-    return datasetOptions
-  }
-  return inputOptions
 }
 
 function getContextRecipeInputValues(
@@ -3884,13 +4163,8 @@ function shotMatchesTableFilter(
   if (!trimmedFilter) {
     return true
   }
-  return getShotFilterValues(
-    shot,
-    filterColumn,
-    contextRow,
-    shotDayLabel
-  ).some((value) =>
-    valueMatchesTableFilter(value, filterOperator, trimmedFilter)
+  return getShotFilterValues(shot, filterColumn, contextRow, shotDayLabel).some(
+    (value) => valueMatchesTableFilter(value, filterOperator, trimmedFilter)
   )
 }
 
@@ -4017,9 +4291,7 @@ function valueMatchesTableFilter(
 
 function isScalarContextValue(value: unknown, preview: unknown) {
   return (
-    typeof value === 'number' &&
-    Number.isFinite(value) &&
-    preview === undefined
+    typeof value === 'number' && Number.isFinite(value) && preview === undefined
   )
 }
 
@@ -4037,7 +4309,7 @@ function buildShotDayLabels(shots: HZDRShot[]) {
   return new Map(
     shots.map((shot) => {
       const dateKey = getShotDateKey(shot.fired_at)
-      return [shot.shot_number, dateKey ? dayByDate.get(dateKey) ?? '-' : '-']
+      return [shot.shot_number, dateKey ? (dayByDate.get(dateKey) ?? '-') : '-']
     })
   )
 }
@@ -4219,7 +4491,10 @@ function buildColumnPreview({
   )
 }
 
-function getNestedMetadataValue(metadata: Record<string, unknown>, keyPath: string) {
+function getNestedMetadataValue(
+  metadata: Record<string, unknown>,
+  keyPath: string
+) {
   return keyPath.split('.').reduce<unknown>((currentValue, key) => {
     if (
       currentValue &&
@@ -4246,9 +4521,13 @@ function VisualPreview({
   const parsedDetails = parseColumnDetails(columnDetails)
 
   if (
-    !['hdf5', 'lineout-preview', 'image-preview', 'plotly-trend', 'function'].includes(
-      fieldKind
-    )
+    ![
+      'hdf5',
+      'lineout-preview',
+      'image-preview',
+      'plotly-trend',
+      'function',
+    ].includes(fieldKind)
   ) {
     return <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
   }
@@ -4298,8 +4577,7 @@ function VisualPreview({
       .map((value, index) => {
         const x = (index / Math.max(values.length - 1, 1)) * 100
         const y =
-          90 -
-          ((value - minValue) / Math.max(maxValue - minValue, 1e-9)) * 80
+          90 - ((value - minValue) / Math.max(maxValue - minValue, 1e-9)) * 80
         return `${x},${y}`
       })
       .join(' ')
@@ -4331,12 +4609,12 @@ function VisualPreview({
     <Stack gap="xs">
       <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
       <Card withBorder radius={4} p="md">
-      <Stack gap={4}>
-        <Text size="sm" fw={600}>
-          {datasetPreview.name}
-        </Text>
-        <Text size="xl">{String(datasetPreview.preview)}</Text>
-      </Stack>
+        <Stack gap={4}>
+          <Text size="sm" fw={600}>
+            {datasetPreview.name}
+          </Text>
+          <Text size="xl">{String(datasetPreview.preview)}</Text>
+        </Stack>
       </Card>
     </Stack>
   )
@@ -4431,14 +4709,18 @@ function MetadataTrendPreview({
   const rawMin = Math.min(...values.map((entry) => entry.value))
   const rawMax = Math.max(...values.map((entry) => entry.value))
   const rawRange = rawMax - rawMin
-  const padding = rawRange === 0 ? Math.max(Math.abs(rawMax) * 0.1, 1) : rawRange * 0.12
+  const padding =
+    rawRange === 0 ? Math.max(Math.abs(rawMax) * 0.1, 1) : rawRange * 0.12
   const minValue = rawMin - padding
   const maxValue = rawMax + padding
   const valueRange = Math.max(maxValue - minValue, 1e-9)
   const plotWidth = chart.width - chart.left - chart.right
   const plotHeight = chart.height - chart.top - chart.bottom
   const xForIndex = (index: number) =>
-    chart.left + (values.length === 1 ? plotWidth / 2 : (index / (values.length - 1)) * plotWidth)
+    chart.left +
+    (values.length === 1
+      ? plotWidth / 2
+      : (index / (values.length - 1)) * plotWidth)
   const yForValue = (value: number) =>
     chart.top + ((maxValue - value) / valueRange) * plotHeight
   const ticks = [maxValue, (maxValue + minValue) / 2, minValue]
@@ -4561,7 +4843,10 @@ function MetadataTrendPreview({
 }
 
 function formatTrendValue(value: number) {
-  if (Math.abs(value) >= 1000 || (Math.abs(value) > 0 && Math.abs(value) < 0.001)) {
+  if (
+    Math.abs(value) >= 1000 ||
+    (Math.abs(value) > 0 && Math.abs(value) < 0.001)
+  ) {
     return value.toExponential(2)
   }
   return Number.isInteger(value) ? value.toString() : value.toPrecision(4)

@@ -1,137 +1,91 @@
 # DAMNIT Web
 
-Monorepo containing projects required to serve DAMNIT data over the web.
+Monorepo for serving DAMNIT data through a web API and frontend.
 
-## HZDR Data Flow
+## HZDR Flow
 
-The HZDR integration keeps DAMNIT-web as a reader. Producers send normalized
-data packages through local emulator transports first, then the same package
-contract can move to real ASAPO or Kafka services.
+HZDR mode is source-first. Producers emit normalized event packages, the API
+serves source and shot metadata, and the frontend shows live traffic, context
+columns, trends, and HDF5 previews.
 
-```mermaid
-flowchart LR
-    subgraph Producers
-        W[PLANET Watchdog]
-        L[LaserData]
-        Q[MongoDB shotsheet]
-    end
+Core flow:
 
-    subgraph Emulator[Local emulator]
-        LB[ASAPO-style local broker]
-        K[Kafka broker]
-        P[Normalized event packages]
-    end
+- Producers such as LaserData, Watchdog, and shotsheet services create package
+  events.
+- Local emulators or production transports stage those events as JSONL.
+- The HDF5 builder combines events by `experiment_id + shot_id`.
+- DAMNIT-web reads source metadata, context output, and combined HDF5 previews.
+- The flow monitor visualizes both local emulated traffic and production
+  incoming traffic.
 
-    subgraph Staging[Live staging]
-        J[events/*.jsonl]
-        S[hzdr_sources.json]
-    end
+Normalized package fields:
 
-    subgraph Web[DAMNIT-web]
-        A[API metadata provider]
-        U[Source and shot UI]
-        BT[HDF5 builder trigger]
-        V[HDF5 previews]
-    end
+- `experiment_id`
+- `shot_id`
+- `source`
+- `kind`
+- `timestamp`
+- `transport`
+- `payload_ref`
+- optional `values` and `metadata`
 
-    H[combined experiment HDF5]
+## Quick Start
 
-    W --> K
-    L --> LB
-    Q -. live metadata lookup .-> A
-    LB --> P
-    K --> P
-    P --> J
-    J --> S
-    J --> BT
-    S --> A
-    A --> U
-    U --> BT
-    BT --> H
-    H --> V
-```
-
-The important package join key is:
-
-```text
-experiment_id + shot_id
-```
-
-Each normalized package has the same core shape whether it came from the local
-emulator or a real transport:
-
-```mermaid
-flowchart TB
-    E[Normalized event package] --> I[experiment_id]
-    E --> R[shot_id]
-    E --> O[source]
-    E --> K[kind]
-    E --> T[timestamp]
-    E --> X[transport]
-    E --> P[payload_ref]
-    E --> V[optional values]
-    E --> N[optional metadata]
-```
-
-## Emulator To Real
-
-The local emulator is deliberately shaped like the production path:
-
-```mermaid
-flowchart TD
-    A[Local examples in asapo-for-hzdr-damnit/examples] --> B[hzdr-package-emulator.py]
-    B --> C[events/watchdog.jsonl and events/laserdata.jsonl]
-    B --> E[hzdr_sources.json]
-    C --> H[HDF5 builder input]
-    E --> F[DW_API_METADATA__PROVIDER=local]
-    F --> G[DAMNIT-web live source view]
-    G --> H
-    H --> D[hdf5/experiment-id.h5]
-
-    C -. same handoff later .-> R[real transport consumers]
-    R -. append same package contract .-> C
-```
-
-Run the emulator:
+Initialize and run the local HZDR launcher from the repository root:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1 -InitConfig
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1
 ```
 
-Edit `scripts/hzdr-launch.config.json` between those commands if your sibling
-repositories are not under `C:/GitLab`.
-
-It writes:
+Generated events, HDF5 output, and source fixtures are written under:
 
 ```text
-.generated/hzdr-package-emulator/events/*.jsonl
-.generated/hzdr-package-emulator/hdf5/experiment-id.h5
-.generated/hzdr-package-emulator/hzdr_sources.json
+.generated/hzdr-package-emulator/
 ```
 
-Set `emulator.shotCount` and `emulator.shotIncrement` in
-`scripts/hzdr-launch.config.json` to generate more shots. Inspect the generated
-HDF5 with:
+Edit `scripts/hzdr-launch.config.json` to change sibling repository paths,
+connection details, shot counts, or output locations.
+
+## API Launchers
+
+Use the launcher that matches the runtime:
+
+- `damnit-api-dev.ps1` starts the API for local development with reload enabled
+  and a localhost bind.
+- `damnit-api-deploy.ps1` starts the API with explicit `uvicorn` deployment
+  flags, reload disabled, and a network bind suitable for a reverse proxy or
+  service manager.
+- `hzdr-dev.ps1` adds HZDR provider setup, source smoke checks, and optional
+  frontend startup.
 
 ```powershell
 cd api
-uv run python scripts/inspect-hzdr-hdf5.py ..\.generated\hzdr-package-emulator\hdf5\exp-2026-05-draco.h5
+.\scripts\damnit-api-dev.ps1
 ```
 
-## Repository Roles
-
-```mermaid
-flowchart LR
-    A[asapo-for-hzdr-damnit] -->|local broker and normalized examples| D[DAMNIT-web-hzdr]
-    K[kafka-broker-docker] -->|Kafka smoke transport| D
-    L[labfrog] -->|MongoDB shotsheet data| D
-    D -->|API, HZDR source UI, package emulator| U[developer or deployment]
+```powershell
+cd api
+.\scripts\damnit-api-deploy.ps1 -HostAddress 0.0.0.0 -Port 8000
 ```
 
-## More Detail
+```powershell
+cd api
+uv run mkdocs serve
+```
 
-- [FLOW.md](FLOW.md) explains the API config, HZDR source model, and frontend
-  route behavior.
-- [HZDR-INTEGRATION.md](HZDR-INTEGRATION.md) lists the local coordinator
-  commands and sibling repositories.
+## Related Repositories
+
+| Repository | Role |
+| --- | --- |
+| `asapo-for-hzdr-damnit` | Local ASAPO-style broker and normalized examples |
+| `kafka-broker-docker` | Optional Kafka smoke-test broker |
+| `labfrog` | Local MongoDB shotsheet data and Mongo Express |
+| `DAMNIT-web-hzdr` | API, frontend, package emulator, and flow monitor |
+
+## Documentation
+
+- [FLOW.md](FLOW.md): runtime configuration, source model, auth, and frontend
+  routing.
+- [HZDR-INTEGRATION.md](HZDR-INTEGRATION.md): local integration launcher,
+  sibling services, and smoke-test commands.

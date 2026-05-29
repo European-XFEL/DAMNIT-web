@@ -91,7 +91,10 @@ def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
             json={"fileContent": "from damnit_ctx import Variable\n"},
         )
         assert save_response.status_code == 200
-        assert save_response.json()["fileContent"] == "from damnit_ctx import Variable\n"
+        assert (
+            save_response.json()["fileContent"]
+            == "from damnit_ctx import Variable\n"
+        )
 
 
 def test_user_campaign_context_results_run_against_hzdr_shots(tmp_path, monkeypatch):
@@ -147,7 +150,64 @@ def laser_energy(run):
     assert response.status_code == 200
     payload = response.json()
     assert payload["columns"] == [{"name": "laser_energy", "title": "Laser energy"}]
-    assert payload["rows"][0]["values"]["laser_energy"] == 12.5
+    assert payload["rows"][0]["values"]["laser_energy"] == pytest.approx(12.5)
+
+
+def test_context_results_tolerate_removed_common_imports(tmp_path, monkeypatch):
+    """Context previews survive duplicate cleanup removing common imports."""
+    sources_file = tmp_path / "hzdr_sources.json"
+    sources_file.write_text(
+        """
+{
+  "sources": [
+    {
+      "key": "hzdr-example",
+      "title": "HZDR fixture",
+      "damnit_path": ".",
+      "metadata": {},
+      "shots": [
+        {
+          "source_key": "hzdr-example",
+          "shot_number": 1001,
+          "fired_at": "2026-05-05T10:00:00Z",
+          "metadata": {}
+        }
+      ]
+    }
+  ]
+}
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(settings.context_workspace, "root", tmp_path / "contexts")
+    monkeypatch.setattr(settings.context_workspace, "write_enabled", True)
+    monkeypatch.setattr(settings.metadata, "provider", "local")
+    monkeypatch.setattr(settings.metadata, "sources_file", sources_file)
+    app = create_app()
+
+    with TestClient(app) as local_client:
+        local_client.get("/oauth/login?redirect_uri=/home", follow_redirects=False)
+        local_client.put(
+            "/contextfile/campaign/hzdr-example/me/files/context.py",
+            json={
+                "fileContent": """
+from damnit_ctx import Variable
+
+
+@Variable(title="Recovered cell")
+def recovered_cell(run):
+    values = np.asarray([1.0, 2.0, 3.0])
+    return Cell(values, summary="nanmean", preview=values)
+"""
+            },
+        )
+
+        response = local_client.get("/contextfile/campaign/hzdr-example/me/results")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["rows"][0]["values"]["recovered_cell"] == pytest.approx(2.0)
+    assert payload["rows"][0]["previews"]["recovered_cell"] == [1.0, 2.0, 3.0]
 
 
 async def wait_for_change(

@@ -1,66 +1,30 @@
 # DAMNIT-web HZDR Flow
 
-## Goal
+## Purpose
 
-Expose HZDR DAMNIT folders through DAMNIT-web with the least possible fork from
-regular DAMNIT/DAMNIT-web.
-
-The starter approach is:
+HZDR mode exposes DAMNIT folders through DAMNIT-web without requiring an
+immediate proposal-less rewrite. The compatibility path is:
 
 ```text
-frontend proposal key -> API source key -> configured DAMNIT folder -> runs.sqlite
+frontend/source key -> API resolver -> DAMNIT folder -> runs.sqlite
 ```
 
-So a URL such as:
+The internal setting name still uses `proposal` for compatibility, but HZDR
+config values are source keys.
 
-```text
-/proposal/hzdr
-```
+## Configuration
 
-can resolve to:
-
-```text
-C:/data/hzdr/damnit-db/runs.sqlite
-```
-
-## Why This Shape
-
-DAMNIT-web currently assumes a proposal number in these places:
-
-- frontend route: `/proposal/:proposal_number`
-- GraphQL input: `database: { proposal: "..." }`
-- dynamic Strawberry type names such as `p2956`
-- DAMNIT API/database lookup helpers
-
-The regular HZDR DAMNIT work in `DAMNIT-tippey` already keeps folder-first UX
-while preserving an internal key for backend compatibility. DAMNIT-web follows
-the same pattern here: use a stable key now, migrate UI language later.
-
-## Where Config Lives
-
-The API settings are defined in:
+Settings are defined in:
 
 ```text
 api/src/damnit_api/shared/settings.py
 ```
 
-They are loaded by `pydantic-settings` from:
+They are loaded from `api/.env` and environment variables with the `DW_API_`
+prefix. Nested settings use double underscores:
 
-```text
-api/.env
-environment variables
-```
-
-Every API setting uses the prefix:
-
-```text
-DW_API_
-```
-
-Nested settings use double underscores:
-
-```text
-DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL=Source
+```env
+DW_API_AUTH__MODE=ldap
 DW_API_METADATA__PROVIDER=mongo
 DW_API_DAMNIT__PATHS_BY_PROPOSAL__hzdr=C:/data/hzdr/damnit-db
 ```
@@ -73,35 +37,28 @@ api/.env.hzdr.example
 api/.env.exfel.example
 ```
 
-Local machine secrets and paths belong in untracked:
+Local secrets and machine-specific paths belong in untracked `api/.env`.
+
+## Deployment Profiles
+
+| Concern | HZDR | EXFEL |
+| --- | --- | --- |
+| Auth | `DW_API_AUTH__MODE=ldap` | `DW_API_AUTH__MODE=oauth` |
+| Metadata | `local` or `mongo` | `mymdc` |
+| UI terminology | `Source/Sources` | `Proposal/Proposals` |
+| DAMNIT lookup | source key to folder | proposal discovery or configured path |
+
+Runtime terminology is exposed through:
 
 ```text
-api/.env
+GET /config/runtime
 ```
 
-## Config Blocks
+The frontend uses that endpoint for labels and route behavior.
 
-There are four separate decisions. Keeping them separate is what lets HZDR and
-EXFEL use the same code with different config.
+## Local HZDR Setup
 
-| Concern | Setting | HZDR value | EXFEL value |
-| --- | --- | --- | --- |
-| Auth | `DW_API_AUTH__MODE` | `ldap` | `oauth` |
-| Metadata provider | `DW_API_METADATA__PROVIDER` | `local`, `mongo`, later `vlsmongo` | `mymdc` |
-| User-facing words | `DW_API_DEPLOYMENT__TERMINOLOGY__...` | `Source/Sources` | `Proposal/Proposals` |
-| DAMNIT folder lookup | `DW_API_DAMNIT__PATHS_BY_PROPOSAL__<key>` | source key to folder | optional; fallback proposal discovery |
-
-Important: `PATHS_BY_PROPOSAL` is an internal compatibility name. In HZDR
-config, the key is a source key, not a proposal number.
-
-## Minimal HZDR Local Setup
-
-There are three intended config modes.
-
-### Generated Test
-
-Use this when you want to prove the app works without Docker MongoDB, labfrog,
-VLS, MyMdC, or real LDAP:
+Generated fixtures:
 
 ```powershell
 cd api
@@ -110,37 +67,7 @@ Copy-Item .env.test.example .env
 .\scripts\hzdr-dev.ps1 -Provider local -WithGui
 ```
 
-Open:
-
-```text
-http://127.0.0.1:5173/home
-http://127.0.0.1:5173/source/hzdr-example
-http://127.0.0.1:8000/metadata/hzdr/sources
-```
-
-### HZDR Labfrog/VLS
-
-Use this for your existing labfrog/VLS-style MongoDB data:
-
-```env
-DW_API_AUTH__MODE=ldap
-DW_API_METADATA__PROVIDER=mongo
-DW_API_METADATA__MONGO_URI=mongodb://localhost:27018
-DW_API_METADATA__MONGO_DATABASE=damnit_web
-DW_API_METADATA__MONGO_COLLECTION=hzdr_sources
-DW_API_METADATA__MONGO_SHOTS_DATABASE=shotsheet
-DW_API_METADATA__MONGO_SHOTS_COLLECTION=shots
-DW_API_METADATA__MONGO_SHOTS_SOURCE_FIELD=
-DW_API_METADATA__MONGO_SHOTS_NUMBER_FIELD=shot_number
-DW_API_METADATA__MONGO_SHOTS_FIRED_AT_FIELD=fired_at
-DW_API_DEPLOYMENT__PROFILE=hzdr
-DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL=Source
-DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL_PLURAL=Sources
-DW_API_DEPLOYMENT__TERMINOLOGY__USES_PROPOSALS=false
-DW_API_DAMNIT__PATHS_BY_PROPOSAL__hzdr=.
-```
-
-Shortcut script:
+LabFrog/VLS-style MongoDB:
 
 ```powershell
 cd api
@@ -148,9 +75,17 @@ Copy-Item .env.hzdr.example .env
 .\scripts\hzdr-dev.ps1 -Provider labfrog -WithGui -MongoUri "mongodb://USER:PASSWORD@localhost:27018/?authSource=admin"
 ```
 
-## Minimal EXFEL Setup
+Open:
 
-EXFEL keeps proposal and MyMdC behavior:
+```text
+http://127.0.0.1:5173/home
+http://127.0.0.1:5173/flow-monitor
+http://127.0.0.1:8000/metadata/hzdr/sources
+```
+
+## EXFEL Setup
+
+EXFEL keeps OAuth, MyMdC, and proposal terminology:
 
 ```env
 DW_API_AUTH__MODE=oauth
@@ -161,189 +96,60 @@ DW_API_DEPLOYMENT__TERMINOLOGY__IDENTITY_LABEL_PLURAL=Proposals
 DW_API_DEPLOYMENT__TERMINOLOGY__USES_PROPOSALS=true
 ```
 
-Then add OAuth and MyMdC credentials in `api/.env` or deployment secrets.
+Then add OAuth and MyMdC credentials through `api/.env` or deployment secrets.
 
-Shortcut:
+Development launcher:
 
 ```powershell
 cd api
 Copy-Item .env.exfel.example .env
-uv run -m damnit_api.main
+.\scripts\damnit-api-dev.ps1
 ```
 
-## Runtime Config Flow
+## Frontend Flow
 
-```mermaid
-flowchart TD
-    A[api/.env or environment] --> B[Settings in shared/settings.py]
-    B --> C[/config/runtime]
-    C --> D[Frontend labels and navigation wording]
-    B --> E[Auth bootstrap]
-    B --> F[Metadata provider]
-    B --> G[DAMNIT path resolver]
-```
+HZDR branch (`uses_proposals=false`):
 
-Debug the resolved runtime config with:
+- load runtime config;
+- fetch `/metadata/hzdr/sources`;
+- show source cards on `/home`;
+- open `/source/{source_key}`;
+- fetch shots from `/metadata/hzdr/sources/{source_key}/shots`;
+- display fixed metadata columns, context columns, HDF5 previews, and selected
+  cell details.
 
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/config/runtime
-```
+EXFEL branch (`uses_proposals=true`):
 
-## Current Starter Flow
+- open `/proposal/{proposal_key}`;
+- query GraphQL with `proposal`;
+- resolve DAMNIT path from config or discovery;
+- read `runs.sqlite` and render the existing proposal dashboard.
 
-### HZDR: source and shot UI
+## Metadata Providers
 
-When `GET /config/runtime` returns `uses_proposals=false`, the frontend takes
-the HZDR branch:
+HZDR mode does not require MyMdC.
 
-```mermaid
-flowchart TD
-    A[User opens /home] --> B[Frontend reads /config/runtime]
-    B --> C{uses_proposals?}
-    C -- false --> D[Fetch /metadata/hzdr/sources]
-    D --> E[Show HZDR source cards]
-    E --> F[User opens /source/source_key]
-    F --> G[Fetch /metadata/hzdr/sources/source_key/shots]
-    G --> H[Show shot_number + fired_at table]
-```
+Provider roles:
 
-The first HZDR implementation is intentionally shot-first:
+| Provider | Use |
+| --- | --- |
+| `local` | Generated JSON/HDF5 fixtures |
+| `mongo` | LabFrog/VLS-style source and shot metadata |
+| `mymdc` | EXFEL proposal metadata |
 
-```text
-source -> shots -> shot_number + fired_at -> HDF5 placeholder + Mongo metadata
-```
+MongoDB remains live metadata. The HDF5 builder consumes staged event packages,
+for example `events/*.jsonl`, grouped by `experiment_id + shot_id`, and writes
+the combined experiment HDF5 file.
 
-The current shot table fields are placeholders:
+## Context Files
 
-```text
-shot_number
-fired_at
-status
-laser_energy_j
-target
-hdf5_path
-```
-
-Replace these with the real VLS MongoDB and HDF5 fields once the deployment
-schemas are known.
-
-### EXFEL: proposal UI
-
-When `GET /config/runtime` returns `uses_proposals=true`, the frontend keeps the
-existing EXFEL path:
-
-```mermaid
-flowchart TD
-    A[User opens /proposal/hzdr] --> B[Frontend GraphQL proposal=hzdr]
-    B --> C[DAMNIT-web API]
-    C --> D{Configured path for hzdr?}
-    D -- yes --> E[Open configured DAMNIT folder]
-    D -- no --> F[Fallback to proposal discovery]
-    E --> G[Read runs.sqlite]
-    F --> G
-    G --> H[Return table metadata and run data]
-```
-
-For EXFEL this remains:
-
-```text
-proposal -> MyMdC proposal metadata -> DAMNIT proposal folder -> runs.sqlite
-```
-
-## Metadata Sources
-
-HZDR/local mode must not depend on MyMdC. MyMdC is only an optional XFEL
-metadata provider.
-
-Planned HZDR providers:
-
-```text
-local JSON/YAML files -> source metadata and test fixtures
-Docker MongoDB       -> local integration testing
-HDF5 files           -> deployment data and extracted previews
-VLS MongoDB          -> deployment metadata/events
-```
-
-The HDF5 builder boundary is the staged package stream, not MongoDB. MongoDB is
-used as live shot/source metadata that DAMNIT-web can poll or join into context
-columns. The builder should consume the normalized staged records, for example
-`events/*.jsonl`, grouped by `experiment_id + shot_id`, then write the combined
-experiment HDF5.
-
-Starter provider flow:
-
-```mermaid
-flowchart TD
-    A[DW_API_METADATA__PROVIDER] --> B{local or mongo}
-    B -- local --> C[generated hzdr_sources.json]
-    B -- mongo --> D[configured MongoDB hzdr_sources]
-    D --> H[Optional shotsheet.shots hydration]
-    C --> E[HZDRSource records]
-    H --> E
-    E --> F[/metadata/hzdr/sources]
-    E --> G[DAMNIT source key to folder mapping]
-```
-
-## Runtime Terminology
-
-The API contract still uses `proposal` where changing it would cause avoidable
-frontend and GraphQL churn. User-facing language should come from runtime
-configuration instead:
-
-```text
-GET /config/runtime
-```
-
-HZDR defaults:
-
-```text
-profile=hzdr
-metadata_provider=local|mongo
-identity_label=Source
-identity_label_plural=Sources
-uses_proposals=false
-uses_mymdc=false
-```
-
-EXFEL config:
-
-```text
-profile=exfel
-metadata_provider=mymdc
-identity_label=Proposal
-identity_label_plural=Proposals
-uses_proposals=true
-uses_mymdc=true
-```
-
-Frontend rule:
-
-```text
-Use `/config/runtime` for labels and navigation wording.
-Keep GraphQL variable names stable until we intentionally migrate the API.
-```
-
-The provider boundary should be:
-
-```text
-source key -> metadata provider -> DAMNIT folder/data files
-```
-
-not:
-
-```text
-source key -> fake proposal -> MyMdC compatibility shim
-```
-
-## Context File Storage
-
-The HZDR context builder saves editable Python context files through:
+HZDR context files are stored per source and user:
 
 ```text
 PUT /contextfile/campaign/{source_key}/me/files/{file_name}
 ```
 
-Default storage is local on the API host:
+Default storage:
 
 ```env
 DW_API_CONTEXT_WORKSPACE__STORAGE=local
@@ -351,57 +157,36 @@ DW_API_CONTEXT_WORKSPACE__ROOT=../.generated/context-workspaces
 DW_API_CONTEXT_WORKSPACE__WRITE_ENABLED=true
 ```
 
-Files are written under:
+File layout:
 
 ```text
 <root>/<source-key>/<user>/context.py
 <root>/<source-key>/<user>/<save-as-name>.py
 ```
 
-This is intentionally separate from MongoDB shot metadata. It keeps context
-editing simple for the starter version and avoids putting executable Python in
-the live shot database. A Mongo-backed context store can be added later behind
-the same API if deployment needs central storage.
+This keeps executable Python separate from live shot metadata. A central
+context store can be added later behind the same API.
 
-## Auth Flow
+## Auth
 
-```mermaid
-flowchart TD
-    A[DW_API_AUTH__MODE] --> B{oauth or ldap}
-    B -- oauth --> C[Existing OAuth/OIDC login]
-    C --> D[Session userinfo from provider]
-    B -- ldap --> E['/ldap/login username/password']
-    E --> F[LDAP bind and optional user search]
-    F --> G[Session userinfo normalized to existing shape]
-    D --> H[GraphQL and REST dependencies read session user]
-    G --> H
-```
+- `oauth`: existing OIDC login flow.
+- `ldap`: `/ldap/login` binds/searches LDAP and stores normalized session user
+  info.
+- GraphQL and write-capable REST endpoints read the session user for
+  authorization.
 
-## Implementation Plan
+Production deployments should set a non-default `DW_API_SESSION_SECRET` and
+require authenticated sessions for all write operations.
 
-1. Keep regular DAMNIT-web behavior intact.
-2. Add a configuration layer that maps source keys to DAMNIT database folders.
-3. Route API database access through that resolver.
-4. Add LDAP as a second session-auth backend, preserving the existing session
-   user shape.
-5. Make MyMdC optional and skip it in local/HZDR mode.
-6. Add tests around resolver, auth normalization, and no-MyMdC startup.
-7. Next: update frontend login UX for LDAP mode.
-8. Next: add a file-backed HZDR source provider for test/development fixtures.
-9. Next: add Docker MongoDB and VLS MongoDB provider modules.
-10. Next: add a HZDR source list/home view so users do not have to know the
-   source key.
-11. Later: decide whether true proposal-less GraphQL naming is worth the churn.
+## Design Boundary
 
-## Longer-Term Modularization
+HZDR-specific behavior stays at the edges:
 
-Keep HZDR-specific pieces at edges:
+- source-key to path resolution;
+- auth backend selection;
+- metadata provider selection;
+- runtime terminology;
+- source-specific context files.
 
-- config maps source keys to paths;
-- auth backend switches between OAuth and LDAP;
-- metadata/provider modules can later distinguish XFEL proposal metadata from
-  HZDR folder/source metadata;
-- core table reads stay against standard DAMNIT `runs.sqlite`.
-
-This should make upstream DAMNIT-web updates easier to merge because the core
-GraphQL table model does not need an immediate rewrite.
+Core table reads remain standard DAMNIT `runs.sqlite` access, which keeps
+upstream DAMNIT-web updates easier to merge.

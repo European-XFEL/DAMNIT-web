@@ -58,6 +58,31 @@ def get_preview_data(proposal, run, variable):
     return standardize(data, name=variable, dtype=dtype.value, attrs=attrs)
 
 
+def get_extracted_data(proposal, run, variable):
+    """Return extracted DAMNIT data in the legacy normalized response shape."""
+    var_data = Damnit(proposal)[run, variable]
+    data = var_data.read()
+    type_hint = var_data.type_hint()
+
+    match type(data):
+        case np.ndarray:
+            data = data.squeeze()
+        case xr.DataArray:
+            data = data.squeeze(drop=True)
+
+    dtype = get_damnit_type(data, type_hint=type_hint)
+    attrs = None
+    match dtype:
+        case DamnitType.ARRAY | DamnitType.IMAGE:
+            data = get_array(data)
+        case DamnitType.RGBA:
+            attrs = {"shape": list(data.shape[:2])}
+            data = get_png(data)
+            dtype = DamnitType.PNG
+
+    return standardize(data, name=variable, dtype=dtype.value, attrs=attrs)
+
+
 def get_png(data):
     image_obj = Image.fromarray(data)
 

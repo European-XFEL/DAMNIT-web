@@ -96,10 +96,16 @@ async def update_hzdr_shot_status(
     user: OAuthUserInfo,
 ) -> HZDRShot:
     """Update local emulator shot review status."""
-    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
+    if (
+        settings.metadata.provider != "local"
+        or settings.metadata.sources_file is None
+    ):
         raise HTTPException(
             status_code=400,
-            detail="Shot status updates require local metadata provider and sources_file.",
+            detail=(
+                "Shot status updates require local metadata provider and "
+                "sources_file."
+            ),
         )
     return update_local_shot_status(
         settings.metadata.sources_file,
@@ -112,12 +118,20 @@ async def update_hzdr_shot_status(
 
 
 @router.post("/hzdr/emulator/events")
-async def append_hzdr_emulator_event(payload: HZDREmulatorEvent) -> HZDRSource:
+async def append_hzdr_emulator_event(
+    payload: HZDREmulatorEvent, user: OAuthUserInfo
+) -> HZDRSource:
     """Append one local HZDR emulator shot to the local source fixture."""
-    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
+    if (
+        settings.metadata.provider != "local"
+        or settings.metadata.sources_file is None
+    ):
         raise HTTPException(
             status_code=400,
-            detail="HZDR emulator events require local metadata provider and sources_file.",
+            detail=(
+                "HZDR emulator events require local metadata provider and "
+                "sources_file."
+            ),
         )
     return append_emulated_shot(
         settings.metadata.sources_file,
@@ -167,7 +181,9 @@ def append_emulated_shot(
             event_kind=event_kind,
         )
 
-    next_shot_number = max([int(shot.get("shot_number", 0)) for shot in shots] or [122]) + 1
+    next_shot_number = (
+        max([int(shot.get("shot_number", 0)) for shot in shots] or [122]) + 1
+    )
     index = len(shots)
     experiment_id = str(
         source_record.get("metadata", {}).get("experiment_id", "exp-emulated")
@@ -343,7 +359,7 @@ def _build_flow_monitor_metadata(
     event_kind: str,
 ) -> dict:
     """Create varied metadata for a flow-monitor generated shot."""
-    rng = Random(20260529 + index)
+    rng = Random(20260529 + index)  # noqa: S311 - deterministic emulator data.
     return {
         "experiment_id": experiment_id,
         "shot_id": shot_id,
@@ -353,15 +369,31 @@ def _build_flow_monitor_metadata(
         "emulated_sequence": index + 1,
         "emulated_source": event_source,
         "emulated_kind": event_kind,
-        "laser_energy_j": round(12.4 + index * 0.17 + rng.uniform(-0.08, 0.08), 3),
-        "chamber_pressure_mbar": round(2.5e-5 * (1 + index * 0.04 + rng.uniform(-0.01, 0.01)), 8),
+        "laser_energy_j": round(
+            12.4 + index * 0.17 + rng.uniform(-0.08, 0.08), 3
+        ),
+        "chamber_pressure_mbar": round(
+            2.5e-5 * (1 + index * 0.04 + rng.uniform(-0.01, 0.01)), 8
+        ),
         "xray_counts": int(1450 + index * 37 + rng.randint(-18, 18)),
-        "sample_temperature_c": round(21.5 + index * 0.25 + rng.uniform(-0.05, 0.05), 2),
-        "pulse_width_fs": round(42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2),
-        "beam_position_x_mm": round(-0.35 + index * 0.015 + rng.uniform(-0.003, 0.003), 4),
-        "beam_position_y_mm": round(0.18 - index * 0.012 + rng.uniform(-0.003, 0.003), 4),
-        "detector_signal_mean": round(2.25 + index * 0.22 + rng.uniform(-0.06, 0.06), 4),
-        "alignment_score": round(0.82 + (index % 6) * 0.025 + rng.uniform(-0.01, 0.01), 4),
+        "sample_temperature_c": round(
+            21.5 + index * 0.25 + rng.uniform(-0.05, 0.05), 2
+        ),
+        "pulse_width_fs": round(
+            42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2
+        ),
+        "beam_position_x_mm": round(
+            -0.35 + index * 0.015 + rng.uniform(-0.003, 0.003), 4
+        ),
+        "beam_position_y_mm": round(
+            0.18 - index * 0.012 + rng.uniform(-0.003, 0.003), 4
+        ),
+        "detector_signal_mean": round(
+            2.25 + index * 0.22 + rng.uniform(-0.06, 0.06), 4
+        ),
+        "alignment_score": round(
+            0.82 + (index % 6) * 0.025 + rng.uniform(-0.01, 0.01), 4
+        ),
         "operator": ["alex", "sam", "lee"][index % 3],
     }
 
@@ -379,7 +411,10 @@ def _append_staged_emulator_event(
     """Append one production-shaped JSONL event for the flow monitor."""
     events_dir = sources_file.parent / "events"
     events_dir.mkdir(parents=True, exist_ok=True)
-    event_path = events_dir / f"{event_source.lower().replace(' ', '-').replace('_', '-')}.jsonl"
+    event_path = (
+        events_dir
+        / f"{event_source.lower().replace(' ', '-').replace('_', '-')}.jsonl"
+    )
     event = {
         "experiment_id": experiment_id,
         "shot_id": shot_id,

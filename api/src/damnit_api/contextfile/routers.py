@@ -1,7 +1,8 @@
-import re
 import inspect
+import re
 import sys
 import types
+from contextlib import suppress
 from pathlib import Path
 
 from anyio import Path as APath
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/contextfile")
 SLUG_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]+")
 
 
-async def get_proposal_info(proposal_num: str):
+async def get_proposal_info(proposal_num: str):  # noqa: RUF029
     """Compatibility hook for legacy context-file proposal lookups."""
     return {
         "damnit_path": settings.damnit.path_for(proposal_num),
@@ -249,7 +250,7 @@ def hzdr_computed_field(run, laser_energy_j=None, chamber_pressure_mbar=None):
 '''
 
 
-class ContextSkip(Exception):
+class ContextSkip(Exception):  # noqa: N818
     """Local stand-in for DAMNIT Skip during HZDR context previews."""
 
 
@@ -280,7 +281,7 @@ def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
             except ContextSkip as exc:
                 values[name] = None
                 errors[name] = str(exc)
-            except Exception as exc:  # noqa: BLE001 - show per-column runtime errors.
+            except Exception as exc:
                 values[name] = None
                 errors[name] = f"{type(exc).__name__}: {exc}"
         rows.append(
@@ -328,9 +329,21 @@ def _load_context_variables(context_path: Path, shots: list[HZDRShot]):
     namespace = {
         "__name__": "hzdr_user_context",
         "__file__": str(context_path),
+        "Cell": ContextCell,
+        "Skip": ContextSkip,
+        "Variable": variable_decorator,
+        "mongo_find_one": module.mongo_find_one,
     }
+    _add_common_context_globals(namespace)
     try:
-        exec(compile(context_path.read_text(encoding="utf-8"), str(context_path), "exec"), namespace)
+        exec(  # noqa: S102 - context previews intentionally execute user code.
+            compile(
+                context_path.read_text(encoding="utf-8"),
+                str(context_path),
+                "exec",
+            ),
+            namespace,
+        )
     finally:
         if previous_module is None:
             sys.modules.pop("damnit_ctx", None)
@@ -341,6 +354,24 @@ def _load_context_variables(context_path: Path, shots: list[HZDRShot]):
         for name, value in namespace.items()
         if callable(value) and getattr(value, "_damnit_variable", False)
     }
+
+
+def _add_common_context_globals(namespace: dict) -> None:
+    """Provide forgiving globals for context files with accidentally removed imports."""
+    with suppress(ImportError):
+        import h5py
+
+        namespace["h5py"] = h5py
+
+    with suppress(ImportError):
+        import numpy as np
+
+        namespace["np"] = np
+
+    with suppress(ImportError):
+        import plotly.express as px
+
+        namespace["px"] = px
 
 
 def _call_context_variable(variable, shot: HZDRShot):

@@ -71,7 +71,7 @@ class MetadataSettings(BaseModel):
     mongo_collection: str = "hzdr_sources"
     mongo_default_source_key: str = "hzdr"
     mongo_default_source_title: str = "HZDR shots"
-    mongo_default_damnit_path: Path = Path(".")
+    mongo_default_damnit_path: Path = Path()
     mongo_shots_database: str | None = None
     mongo_shots_collection: str | None = None
     mongo_shots_source_field: str = "source_key"

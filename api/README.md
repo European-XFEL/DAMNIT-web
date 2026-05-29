@@ -1,82 +1,103 @@
-# DAMNIT - Webserver
+# DAMNIT Web API
 
-`damnit_api` is a Python package that handles the integration of the Damnit database and web frontend. This utilizes FastAPI for the web framework, Strawberry for the GraphQL API, and SQLAlchemy for the database management.
+FastAPI and Strawberry GraphQL service for DAMNIT-web.
 
 ## Setup
 
-Get the environment variables for authentication from [TeamPass](https://passman.xfel.eu/), and put them in a `.env` file in this directory.
+Copy an environment example and edit local values:
 
-`uv` is used for project management, install it if required, see the [uv docs for more information](https://docs.astral.sh/uv/).
-
-This project has some `pre-commit` hooks set up, after installing and activating the running `pre-commit install` will install the hooks and their dependencies.
-
-To start the API server run:
-
-```sh
-# Start by calling uvicorn, allows for passing uvicorn flags directly:
-uv run uvicorn damnit_api.main:create_app
-
-# Start server by calling the `main` function directly, this only allows
-# configuration via env vars or by modifying the `.env` value, has slightly
-# improved logging:
-uv run -m damnit_api.main
+```powershell
+cd api
+Copy-Item .env.test.example .env
 ```
 
-If port `8000` is not free you can change the port number, by using the `--port NNNN` flag on the `uvicorn` command, or by setting the `DW_API_UVICORN__PORT` env var if running `damnit_api.main`.
+Install `uv` if needed: <https://docs.astral.sh/uv/>.
 
-An interactive GraphQL interface can be accessed at `localhost:8000/graphql`. More information can be found [on the GraphiQL readme](https://github.com/graphql/graphiql/tree/main/packages/graphiql).
+## Launchers
 
-Running the server in a container can be done by:
+Use the launcher that matches the runtime intent:
 
-```shell
-# Running container directly (from the repo root):
+- `damnit-api-dev.ps1` starts the API for local development with reload enabled
+  and a localhost bind.
+- `damnit-api-deploy.ps1` starts the API with explicit `uvicorn` deployment
+  flags, reload disabled, and a network bind suitable for a reverse proxy or
+  service manager.
+- `hzdr-dev.ps1` adds HZDR provider setup, source smoke checks, and optional
+  frontend startup.
+
+Development:
+
+```powershell
+cd api
+.\scripts\damnit-api-dev.ps1
+```
+
+Deployment:
+
+```powershell
+cd api
+.\scripts\damnit-api-deploy.ps1 -HostAddress 0.0.0.0 -Port 8000
+```
+
+HZDR integration development:
+
+```powershell
+cd api
+.\scripts\hzdr-dev.ps1 -Provider local -WithGui
+```
+
+Direct `uvicorn` invocation is also supported:
+
+```powershell
+uv run uvicorn damnit_api.main:create_app --factory --host 0.0.0.0 --port 8000
+```
+
+## Documentation
+
+When the API is running:
+
+- FastAPI reference: `http://localhost:8000/docs`
+- GraphiQL: `http://localhost:8000/graphql`
+
+Serve the MkDocs documentation:
+
+```powershell
+cd api
+uv run mkdocs serve
+```
+
+## Container
+
+From the repository root:
+
+```powershell
 podman build -t damnit-web-api -f api/Dockerfile .
 podman run --env-file api/.env --rm -it damnit-web-api
-
-# Via compose (from api/):
-podman compose up
 ```
 
-## Usage
+## GraphQL Examples
 
-### 1. Initialize (or refresh) the model
+Refresh metadata:
 
 ```gql
 mutation RefreshMutation {
-  refresh(database: {proposal: "<PROPOSAL_NUMBER>"})
+  refresh(database: { proposal: "<PROPOSAL_OR_SOURCE_KEY>" })
 }
 ```
 
-This is done usually on start to create a model of the Damnit table (if not existing). It is a `mutation` as this changes the model.
-
-This returns the following model information:
-
-- schema (id, data type)
-- number of rows of the current run database
-- timestamp of the last database update
-
-### 2. Query the metadata
+Query table metadata:
 
 ```gql
 query TableMetadataQuery {
-  metadata(database: {proposal: "<PROPOSAL_NUMBER>"})
+  metadata(database: { proposal: "<PROPOSAL_OR_SOURCE_KEY>" })
 }
 ```
 
-This returns the following model information:
-
-- schema (id, data type)
-- number of rows of the current run database
-- timestamp of the last database update
-
-### 3. Query the runs
-
-For instance, we'd like to query the values of `run`, `added_at`, and
-`energy_min` for the first 10 runs in proposal `2956`. We can do it as such:
+Query runs:
 
 ```gql
 query TableDataQuery($per_page: Int = 10) {
-  runs(database: {proposal: "2956"}, per_page: $per_page) {
+  runs(database: { proposal: "2956" }, per_page: $per_page) {
     run {
       value
     }
@@ -92,34 +113,12 @@ query TableDataQuery($per_page: Int = 10) {
 }
 ```
 
-Known variables are as follows and is usually defined at the root:
-
-- `proposal`
-- `run`
-- `start_time`
-- `added_at`
-
-Fragments are used for dynamic variables, which varies for every proposal.
-This is denoted by `... on p2956`, with the dynamic variables as follows.
-
-### 4. Subscribe to latest data
+Subscribe to latest data:
 
 ```gql
 subscription LatestDataSubscription {
-  latest_data(database: {proposal: "<PROPOSAL_NUMBER>"}, timestamp: <TIMESTAMP>)
+  latest_data(database: { proposal: "<PROPOSAL_OR_SOURCE_KEY>" }, timestamp: <TIMESTAMP>)
 }
 ```
 
-This returns the following:
-
-- list of (new) runs
-- updated metadata
-
-Note that the `timestamp` is in milliseconds since Unix epoch.
-
-## To-dos
-
-- Rename the package to a more meaningful one (e.g., `damnit_webserver`)
-- Clean up and remove the old REST API implementation
-- Add more queries (e.g., fetch all values of a variable, fetch saved data of a variable in a run)
-- ...and so much more!
+`timestamp` is milliseconds since the Unix epoch.
