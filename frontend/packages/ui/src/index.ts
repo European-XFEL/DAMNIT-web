@@ -22,6 +22,7 @@ export {
   LoggedOutPage,
   NotFoundPage,
 } from './features/pages'
+export { resetContextFile } from './features/context-file'
 export { resetPlots } from './features/plots'
 export { Proposals } from './features/proposals'
 export { resetTable as resetTableView } from './features/table'
