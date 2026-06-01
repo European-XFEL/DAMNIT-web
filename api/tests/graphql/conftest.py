@@ -109,3 +109,37 @@ def graphql_schema(
             scalar_map=SCALAR_MAP,
         ),
     )
+
+
+@pytest.fixture
+def graphql_schema_no_auth(
+    mocked_metadata_variables,
+    mocked_metadata_column,
+    mocked_metadata_all_tags,
+    mocked_metadata_variable_tags,
+):
+    """Schema without the bypass_proposal_permission fixture, so permission
+    checks run normally (and fail since there is no real request context)."""
+    return strawberry.Schema(
+        query=Query,
+        subscription=Subscription,
+        types=[DamnitVariable],
+        directives=[lightweight],
+        config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
+    )
+
+
+@pytest.fixture
+def graphql_schema_authenticated_non_member(mocker, graphql_schema_no_auth):
+    """Schema where the user is authenticated but not a proposal member."""
+    mocker.patch(
+        "damnit_api.auth.permissions.IsAuthenticated.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=True,
+    )
+    mocker.patch(
+        "damnit_api.auth.permissions.IsProposalMember.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=False,
+    )
+    return graphql_schema_no_auth
