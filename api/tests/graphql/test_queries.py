@@ -42,14 +42,6 @@ def mocked_fetch_info(mocker):
     )
 
 
-@pytest.fixture
-def mocked_ensure_damnit_path(mocker):
-    """Bypass the damnit_path validation on the metadata query."""
-    mocker.patch(
-        "damnit_api.graphql.queries._ensure_damnit_path",
-        return_value=None,
-    )
-
 
 @pytest.mark.asyncio
 async def test_runs_query(graphql_schema, mocked_fetch_variables, mocked_fetch_info):
@@ -262,7 +254,7 @@ async def test_runs_query_fetches_run_info_when_metadata_requested(
 
 
 @pytest.mark.asyncio
-async def test_metadata_query(graphql_schema, mocked_ensure_damnit_path):
+async def test_metadata_query(graphql_schema):
     query = """
         query TableMetadataQuery($proposal: String) {
           metadata(database: { proposal: $proposal })
@@ -310,6 +302,50 @@ def graphql_schema_no_auth(
         directives=[lightweight],
         config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
     )
+
+
+@pytest.fixture
+def graphql_schema_authenticated_non_member(mocker, graphql_schema_no_auth):
+    """Schema where the user is authenticated but not a proposal member."""
+    mocker.patch(
+        "damnit_api.auth.permissions.IsAuthenticated.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=True,
+    )
+    mocker.patch(
+        "damnit_api.auth.permissions.IsProposalMember.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=False,
+    )
+    return graphql_schema_no_auth
+
+
+@pytest.mark.asyncio
+async def test_runs_forbidden(graphql_schema_authenticated_non_member):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}) {{
+            variables {{ name }}
+          }}
+        }}
+    """
+    result = await graphql_schema_authenticated_non_member.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Access to this proposal is forbidden."
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_forbidden(graphql_schema_authenticated_non_member):
+    query = f"""
+        query {{
+          extracted_data(database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "x")
+        }}
+    """
+    result = await graphql_schema_authenticated_non_member.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Access to this proposal is forbidden."
 
 
 @pytest.mark.asyncio
