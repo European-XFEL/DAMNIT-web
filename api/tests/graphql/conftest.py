@@ -81,8 +81,18 @@ def mocked_metadata_max(mocker):
 
 
 @pytest.fixture
+def mocked_ensure_damnit_path(mocker):
+    """Bypass the damnit_path validation; tests run without a request context."""
+    mocker.patch(
+        "damnit_api.graphql.queries._ensure_damnit_path",
+        return_value=None,
+    )
+
+
+@pytest.fixture
 def graphql_schema(
     bypass_proposal_permission,
+    mocked_ensure_damnit_path,
     mocked_metadata_variables,
     mocked_metadata_column,
     mocked_metadata_all_tags,
