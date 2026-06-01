@@ -94,6 +94,19 @@ class DeploymentSettings(BaseModel):
     terminology: TerminologySettings = Field(default_factory=TerminologySettings)
 
 
+class FlowMonitorReceiversSettings(BaseModel):
+    laser_data: bool = True
+    watchdog: bool = True
+    motion_auto_logger: bool = False
+    mongo: bool = True
+
+
+class FlowMonitorSettings(BaseModel):
+    receivers: FlowMonitorReceiversSettings = Field(
+        default_factory=FlowMonitorReceiversSettings
+    )
+
+
 class ContextWorkspaceSettings(BaseModel):
     root: Path = Path("../.generated/context-workspaces")
     storage: str = "local"
@@ -136,6 +149,8 @@ class Settings(BaseSettings):
     debug: bool = True
 
     deployment: DeploymentSettings = DeploymentSettings()
+
+    flow_monitor: FlowMonitorSettings = FlowMonitorSettings()
 
     context_workspace: ContextWorkspaceSettings = ContextWorkspaceSettings()
 

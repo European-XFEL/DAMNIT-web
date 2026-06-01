@@ -385,6 +385,10 @@ def _call_context_variable(variable, shot: HZDRShot):
             kwargs[name] = str(shot.hdf5_path) if shot.hdf5_path else ""
         elif annotation == "meta#shot_number" or name == "shot_number":
             kwargs[name] = shot.shot_number
+        elif annotation == "meta#shot_id" or name == "shot_id":
+            kwargs[name] = (
+                shot.metadata.get("shot_id") or f"shot-{shot.shot_number:06d}"
+            )
         else:
             kwargs[name] = shot.metadata.get(name)
     return variable(**kwargs)

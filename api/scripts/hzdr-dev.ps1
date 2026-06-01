@@ -107,6 +107,18 @@ if not any(source.shots for source in sources):
     Invoke-Checked "uv" @("run", "python", "-c", $smokeCheck)
 }
 
+function Test-NodeVersion {
+    if (-not (Get-Command "node" -ErrorAction SilentlyContinue)) {
+        throw "node is required for GUI startup. Install Node >= 24."
+    }
+
+    $major = [int](& node -p "Number(process.versions.node.split('.')[0])")
+    if ($major -lt 24) {
+        $version = & node --version
+        throw "Node >= 24 is required for GUI startup; found $version."
+    }
+}
+
 function Start-HzdrApi {
     Write-Host "Starting DAMNIT-web API in debug mode..." -ForegroundColor Cyan
     Write-Host "Root redirects to docs: http://$env:DW_API_UVICORN__HOST`:$env:DW_API_UVICORN__PORT/"
@@ -121,6 +133,8 @@ function Start-HzdrGui {
         [Parameter(Mandatory = $true)]
         [int] $SelectedGuiPort
     )
+
+    Test-NodeVersion
 
     $pnpmCommand = if (Get-Command "pnpm" -ErrorAction SilentlyContinue) {
         "pnpm"

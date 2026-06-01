@@ -1,9 +1,11 @@
 {
   "repositories": {
-    "damnitWeb": "C:/GitLab/DAMNIT-web-hzdr",
-    "asapoHarness": "C:/GitLab/asapo-for-hzdr-damnit",
-    "kafkaBroker": "C:/GitLab/kafka-broker-docker",
-    "labfrog": "C:/GitLab/labfrog"
+    "damnitWeb": "",
+    "asapoHarness": "asapo-for-hzdr-damnit",
+    "kafkaBroker": "kafka-broker-docker",
+    "labfrog": "labfrog",
+    "planetWatchdog": "planet-watchdog",
+    "motionAutoLogger": "motion-auto-logger"
   },
   "ports": {
     "api": 8000,
@@ -13,9 +15,17 @@
     "mongo": 27018
   },
   "connections": {
+    "shotcounter": {
+      "zmq": "tcp://127.0.0.1:5555",
+      "topic": "shotcounter.shots"
+    },
     "kafka": {
       "bootstrap": "127.0.0.1:9092",
-      "topic": "planet.watchdog.events"
+      "topic": "planet.watchdog.events",
+      "topics": {
+        "watchdog": "planet.watchdog.events",
+        "motionAutoLogger": "motion.auto.logger.events"
+      }
     },
     "asapo": {
       "broker": "http://127.0.0.1:8765"
@@ -34,9 +44,17 @@
     "shotIncrement": 1,
     "eventsDir": "",
     "outputDir": "",
-    "startAsapoBroker": true,
+    "startAsapoBroker": false,
     "startKafka": false,
     "startLabfrog": false,
     "openFlowMonitor": false
+  },
+  "flowMonitor": {
+    "receivers": {
+      "laserData": true,
+      "watchdog": true,
+      "motionAutoLogger": false,
+      "mongo": true
+    }
   }
 }

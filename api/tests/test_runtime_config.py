@@ -24,6 +24,12 @@ def test_runtime_config_defaults_to_hzdr_terms():
     assert payload["auth_mode"] == "ldap"
     assert payload["ldap_form_enabled"] is False
     assert payload["metadata_provider"] == "local"
+    assert payload["flow_monitor"]["receivers"] == {
+        "laser_data": True,
+        "watchdog": True,
+        "motion_auto_logger": False,
+        "mongo": True,
+    }
     assert payload["terminology"]["identity_label"] == "Source"
     assert payload["terminology"]["uses_proposals"] is False
     assert payload["terminology"]["uses_mymdc"] is False

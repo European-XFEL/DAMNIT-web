@@ -30,6 +30,102 @@ function Resolve-ConfigPath {
     return (Resolve-Path (Join-Path $BaseDir $PathValue)).Path
 }
 
+function Find-RelatedRepository {
+    param(
+        [string] $StartDir,
+        [string] $RepoName
+    )
+
+    $current = (Resolve-Path $StartDir).Path
+    while ($true) {
+        $candidate = Join-Path $current $RepoName
+        if (Test-Path $candidate) {
+            return (Resolve-Path $candidate).Path
+        }
+
+        $parent = Split-Path -Parent $current
+        if (-not $parent -or $parent -eq $current) {
+            return ""
+        }
+        $current = $parent
+    }
+}
+
+function Resolve-RepositoryPath {
+    param(
+        [string] $PathValue,
+        [string] $BaseDir,
+        [string] $RepoName,
+        [string] $Label,
+        [string] $SearchStart,
+        [string] $DefaultPath = ""
+    )
+
+    if ($PathValue) {
+        $candidate = if ([System.IO.Path]::IsPathRooted($PathValue)) {
+            $PathValue
+        }
+        else {
+            Join-Path $BaseDir $PathValue
+        }
+        if (Test-Path $candidate) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    if ($DefaultPath -and (Test-Path $DefaultPath)) {
+        return (Resolve-Path $DefaultPath).Path
+    }
+
+    $discovered = Find-RelatedRepository -StartDir $SearchStart -RepoName $RepoName
+    if ($discovered) {
+        return $discovered
+    }
+
+    throw "Could not find $Label repository. Set repositories.$RepoName in the launch config, or place $RepoName in this checkout or a parent folder."
+}
+
+function Resolve-OptionalRepositoryPath {
+    param(
+        [string] $PathValue,
+        [string] $BaseDir,
+        [string] $RepoName,
+        [string] $SearchStart
+    )
+
+    if ($PathValue) {
+        $candidate = if ([System.IO.Path]::IsPathRooted($PathValue)) {
+            $PathValue
+        }
+        else {
+            Join-Path $BaseDir $PathValue
+        }
+        if (Test-Path $candidate) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    return Find-RelatedRepository -StartDir $SearchStart -RepoName $RepoName
+}
+
+function Resolve-DefaultEventsDir {
+    param([string] $AsapoRoot)
+
+    $examplesDir = Join-Path $AsapoRoot "examples"
+    if (
+        (Test-Path $examplesDir) -and
+        (Get-ChildItem -Path $examplesDir -Filter "*.json" -File -ErrorAction SilentlyContinue | Select-Object -First 1)
+    ) {
+        return (Resolve-Path $examplesDir).Path
+    }
+
+    if (Get-ChildItem -Path $AsapoRoot -Filter "*.json" -File -ErrorAction SilentlyContinue | Select-Object -First 1) {
+        return (Resolve-Path $AsapoRoot).Path
+    }
+
+    return $examplesDir
+}
+
 function Test-CommandAvailable {
     param([string] $Command)
     return $null -ne (Get-Command $Command -ErrorAction SilentlyContinue)
@@ -193,10 +289,42 @@ if (-not (Test-Path $selectedConfigPath)) {
 $configDir = Split-Path -Parent (Resolve-Path $selectedConfigPath)
 $config = Get-Content -Path $selectedConfigPath -Raw | ConvertFrom-Json
 
-$damnitRoot = Resolve-ConfigPath (Get-ConfigValue $config.repositories.damnitWeb $repoRoot) $configDir
-$asapoRoot = Resolve-ConfigPath $config.repositories.asapoHarness $configDir
-$kafkaRoot = Resolve-ConfigPath $config.repositories.kafkaBroker $configDir
-$labfrogRoot = Resolve-ConfigPath $config.repositories.labfrog $configDir
+$damnitRoot = Resolve-RepositoryPath `
+    -PathValue $config.repositories.damnitWeb `
+    -BaseDir $configDir `
+    -RepoName "DAMNIT-web-hzdr" `
+    -Label "DAMNIT-web" `
+    -SearchStart $repoRoot `
+    -DefaultPath $repoRoot
+$asapoRoot = Resolve-RepositoryPath `
+    -PathValue $config.repositories.asapoHarness `
+    -BaseDir $configDir `
+    -RepoName "asapo-for-hzdr-damnit" `
+    -Label "ASAPO harness" `
+    -SearchStart $repoRoot
+$kafkaRoot = Resolve-RepositoryPath `
+    -PathValue $config.repositories.kafkaBroker `
+    -BaseDir $configDir `
+    -RepoName "kafka-broker-docker" `
+    -Label "Kafka broker" `
+    -SearchStart $repoRoot
+$labfrogRoot = Resolve-RepositoryPath `
+    -PathValue $config.repositories.labfrog `
+    -BaseDir $configDir `
+    -RepoName "labfrog" `
+    -Label "LabFrog" `
+    -SearchStart $repoRoot
+$planetWatchdogRoot = Resolve-RepositoryPath `
+    -PathValue $config.repositories.planetWatchdog `
+    -BaseDir $configDir `
+    -RepoName "planet-watchdog" `
+    -Label "PLANET Watchdog" `
+    -SearchStart $repoRoot
+$motionAutoLoggerRoot = Resolve-OptionalRepositoryPath `
+    -PathValue $config.repositories.motionAutoLogger `
+    -BaseDir $configDir `
+    -RepoName "motion-auto-logger" `
+    -SearchStart $repoRoot
 
 $apiPort = [int](Get-ConfigValue $config.ports.api 8000)
 $guiPort = [int](Get-ConfigValue $config.ports.gui 5173)
@@ -212,7 +340,7 @@ $eventsDir = if ($config.emulator.eventsDir) {
     Resolve-ConfigPath $config.emulator.eventsDir $configDir
 }
 else {
-    Join-Path $asapoRoot "examples"
+    Resolve-DefaultEventsDir $asapoRoot
 }
 $outputDir = if ($config.emulator.outputDir) {
     Resolve-ConfigPath $config.emulator.outputDir $configDir
@@ -226,6 +354,13 @@ Write-Host "DAMNIT-web: $damnitRoot"
 Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
+Write-Host "PLANET Watchdog: $planetWatchdogRoot"
+if ($motionAutoLoggerRoot) {
+    Write-Host "Motion auto logger: $motionAutoLoggerRoot"
+}
+else {
+    Write-Host "Motion auto logger: not found (optional)"
+}
 Write-Host "Event packages: $eventsDir"
 Write-Host "Emulator output: $outputDir"
 Write-Host "Generated shots: $shotCount, increment: $shotIncrement"
@@ -302,6 +437,11 @@ $sourcesFile = Join-Path $outputDir "hzdr_sources.json"
 if (-not (Test-Path $sourcesFile)) {
     throw "Package emulator did not create expected sources file: $sourcesFile"
 }
+
+$env:DW_API_FLOW_MONITOR__RECEIVERS__LASER_DATA = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.laserData $true)).ToLowerInvariant()
+$env:DW_API_FLOW_MONITOR__RECEIVERS__WATCHDOG = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.watchdog $true)).ToLowerInvariant()
+$env:DW_API_FLOW_MONITOR__RECEIVERS__MOTION_AUTO_LOGGER = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.motionAutoLogger $false)).ToLowerInvariant()
+$env:DW_API_FLOW_MONITOR__RECEIVERS__MONGO = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.mongo $true)).ToLowerInvariant()
 
 Write-Step "Starting DAMNIT-web"
 $devScript = Join-Path $apiRoot "scripts\hzdr-dev.ps1"

@@ -3,6 +3,7 @@ import {
   type PropsWithChildren,
   type ReactNode,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -91,6 +92,14 @@ const cellButtonStyle: CSSProperties = {
 }
 
 type RuntimeConfig = {
+  flow_monitor?: {
+    receivers: {
+      laser_data: boolean
+      watchdog: boolean
+      motion_auto_logger: boolean
+      mongo: boolean
+    }
+  }
   terminology: {
     uses_proposals: boolean
     identity_label: string
@@ -114,12 +123,37 @@ type HZDRShot = {
 type HZDRShotDetail = {
   shot: HZDRShot
   hdf5_exists: boolean
-  hdf5_datasets: {
-    name: string
-    shape: Array<number | string>
-    dtype: string
-  }[]
+  hdf5_datasets: HZDRHDF5Dataset[]
   hdf5_error?: string
+}
+
+type HZDRHDF5Dataset = {
+  name: string
+  shape: Array<number | string>
+  dtype: string
+}
+
+type HZDRDatasetKind = 'scalar' | 'line' | 'image' | 'stack' | 'raw'
+
+type HZDRDatasetOption = {
+  value: string
+  label: string
+  name: string
+  previewName: string
+  dtype: string
+  shape: Array<number | string>
+  kind: HZDRDatasetKind
+  group: string
+}
+
+type SelectOption = {
+  value: string
+  label: string
+}
+
+type SelectOptionGroup = {
+  group: string
+  items: SelectOption[]
 }
 
 type HZDRSource = {
@@ -144,7 +178,7 @@ type HZDRDatasetPreview = {
 
 type FlowPacket = {
   id: number
-  lane: 'watchdog' | 'laser' | 'package' | 'damnit'
+  lane: 'shotcounter' | 'watchdog' | 'motion' | 'laser' | 'package' | 'damnit'
   label: string
 }
 
@@ -154,6 +188,75 @@ type FlowLogEntry = {
   label: string
   detail: string
   tone: 'send' | 'stage' | 'receive'
+}
+
+type FlowReceiverConfig = {
+  laserData: boolean
+  watchdog: boolean
+  motion: boolean
+  mongo: boolean
+}
+
+type FlowMonitorState = {
+  laserStaged: boolean
+  watchdogBuffered: boolean
+  watchdogStaged: boolean
+  motionBuffered: boolean
+  motionStaged: boolean
+  mongoPending: boolean
+  hdf5Built: boolean
+}
+
+type WatchdogWatcherKey =
+  | 'png-originals'
+  | 'dummy-analysis'
+  | 'lli-parser'
+  | 'tps-quick'
+
+type LinkCollectionStatus = {
+  collection: string
+  status: 'matched' | 'candidate' | 'missing'
+  detail: string
+}
+
+type LinkedShotRecord = {
+  source_key: string
+  source_title: string
+  shot_number: number
+  shot_id: string
+  hdf5_path: string | null
+  collections: LinkCollectionStatus[]
+}
+
+type LinkRecordsDraft = {
+  campaign_key: string | null
+  target_source_key: string | null
+  search: {
+    collections: string[]
+    shot_number: number | null
+    searched_sources: number
+  }
+  linked_records: LinkedShotRecord[]
+  output_targets: string[]
+  review_required: boolean
+  unresolved: string[]
+}
+
+type BuiltLinkRecordsPackage = LinkRecordsDraft & {
+  built_at: string
+  coherent_json: {
+    campaign_key: string | null
+    shots: LinkedShotRecord[]
+  }
+  hdf5_plan: {
+    source_count: number
+    row_count: number
+    mode: string
+  }
+  damnit_table_plan: {
+    columns: string[]
+    rows: number
+  }
 }
 
 type HZDRContextResults = {
@@ -215,6 +318,55 @@ type ContextVariableBlock = {
   block: string
 }
 
+type ContextBuilderFormState = {
+  contextScope?: string
+  fieldKind?: string
+  fieldName?: string
+  fieldTitle?: string
+  selectedInputs?: string[]
+  allowMultipleInputs?: boolean
+  mongoCollection?: string
+  mongoFilter?: string
+  combineExpression?: string
+}
+
+const watchdogWatcherOptions: {
+  value: WatchdogWatcherKey
+  label: string
+  description: string
+}[] = [
+  {
+    value: 'png-originals',
+    label: 'PNG originals',
+    description: 'set1_*_original.png with Draco01/Draco07 ZMQ attachment',
+  },
+  {
+    value: 'dummy-analysis',
+    label: 'Dummy analysis',
+    description: 'script parser rule for generic dummy analysis files',
+  },
+  {
+    value: 'lli-parser',
+    label: 'LLI parser',
+    description: 'LLI ToolResult CSV parser with Draco02/04/08 topics',
+  },
+  {
+    value: 'tps-quick',
+    label: 'TPS quick',
+    description: 'simple TPS parser for particle spectrum text output',
+  },
+]
+
+const emptyFlowMonitorState: FlowMonitorState = {
+  laserStaged: false,
+  watchdogBuffered: false,
+  watchdogStaged: false,
+  motionBuffered: false,
+  motionStaged: false,
+  mongoPending: false,
+  hdf5Built: false,
+}
+
 function useRuntimeConfig() {
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig>()
 
@@ -241,24 +393,64 @@ function AppHeader() {
         >
           Flow monitor
         </Button>
+        <Button
+          component="a"
+          href="/link-shot-records"
+          variant="subtle"
+          size="sm"
+          leftSection={<IconDatabase size={16} />}
+        >
+          Link records
+        </Button>
       </Group>
     </Header>
   )
 }
 
 function HZDRFlowMonitorPage() {
+  const runtimeConfig = useRuntimeConfig()
   const [sources, setSources] = useState<HZDRSource[]>([])
   const [packets, setPackets] = useState<FlowPacket[]>([])
   const [logEntries, setLogEntries] = useState<FlowLogEntry[]>([])
   const [soundEnabled, setSoundEnabled] = useState(false)
   const [damnitPulse, setDamnitPulse] = useState(false)
   const [livePollPulse, setLivePollPulse] = useState(false)
+  const [receiverConfig, setReceiverConfig] = useState<FlowReceiverConfig>({
+    laserData: true,
+    watchdog: true,
+    motion: false,
+    mongo: true,
+  })
+  const [selectedWatchdogWatchers, setSelectedWatchdogWatchers] = useState<
+    WatchdogWatcherKey[]
+  >(['png-originals', 'lli-parser'])
+  const [flowState, setFlowState] = useState<FlowMonitorState>(
+    emptyFlowMonitorState
+  )
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(
     null
   )
+  const receiverConfigLoaded = useRef(false)
   const lastShotTotal = useRef<number | undefined>(undefined)
   const nextPacketId = useRef(1)
   const nextLogId = useRef(1)
+
+  useEffect(() => {
+    const runtimeReceivers = runtimeConfig?.flow_monitor?.receivers
+    if (!runtimeReceivers || receiverConfigLoaded.current) {
+      return
+    }
+    receiverConfigLoaded.current = true
+    setReceiverConfig({
+      laserData: runtimeReceivers.laser_data,
+      watchdog: runtimeReceivers.watchdog,
+      motion: runtimeReceivers.motion_auto_logger,
+      mongo: runtimeReceivers.mongo,
+    })
+  }, [runtimeConfig?.flow_monitor?.receivers])
+
+  const motionAutoLoggerAvailable =
+    runtimeConfig?.flow_monitor?.receivers.motion_auto_logger ?? false
 
   const shotTotal = sources.reduce(
     (total, source) => total + source.shots.length,
@@ -421,28 +613,101 @@ function HZDRFlowMonitorPage() {
   }
 
   const sendWatchdog = () => {
+    if (!receiverConfig.watchdog) {
+      addLogEntry(
+        'Watchdog disabled',
+        'Enable PLANET-Watchdog in the launcher flow-monitor config.',
+        'stage'
+      )
+      return
+    }
+    if (!selectedWatchdogWatchers.length) {
+      addLogEntry(
+        'No Watchdog watchers selected',
+        'Select at least one PLANET-Watchdog watcher rule.',
+        'stage'
+      )
+      return
+    }
+    const watcherLabels = watchdogWatcherOptions
+      .filter((option) => selectedWatchdogWatchers.includes(option.value))
+      .map((option) => option.label)
+      .join(', ')
     appendEmulatedShot(
       'PLANET-Watchdog',
       'watchdog_shot_event',
       'enrich',
       'watchdog',
       'Watchdog shot event',
-      'PLANET Watchdog -> Kafka -> live JSONL staging'
+      `PLANET Watchdog (${watcherLabels}) -> Kafka -> live JSONL staging`
     )
+    setFlowState((current) => ({
+      ...current,
+      watchdogBuffered: false,
+      watchdogStaged: true,
+      hdf5Built: false,
+    }))
   }
 
-  const sendLaser = () => {
+  const sendMotion = () => {
+    if (!receiverConfig.motion) {
+      addLogEntry(
+        'Motion disabled',
+        'Enable motion-auto-logger in the launcher flow-monitor config.',
+        'stage'
+      )
+      return
+    }
     appendEmulatedShot(
-      'LaserData',
-      'laser_measurement',
+      'motion-auto-logger',
+      'motion_stage_event',
+      'enrich',
+      'motion',
+      'Motion auto logger event',
+      'Motion auto logger -> Kafka -> live JSONL staging'
+    )
+    setFlowState((current) => ({
+      ...current,
+      motionBuffered: false,
+      motionStaged: true,
+      hdf5Built: false,
+    }))
+  }
+
+  const sendShotcounter = () => {
+    setFlowState({
+      ...emptyFlowMonitorState,
+      laserStaged: receiverConfig.laserData,
+      watchdogBuffered:
+        receiverConfig.watchdog && selectedWatchdogWatchers.length > 0,
+      motionBuffered: motionAutoLoggerAvailable && receiverConfig.motion,
+      mongoPending: receiverConfig.mongo,
+    })
+    appendEmulatedShot(
+      'Shotcounter',
+      'shot_counter_event',
       'append',
-      'laser',
-      'LaserData measurement',
-      'LaserData -> ASAPO-style broker -> live JSONL staging'
+      'shotcounter',
+      'Shotcounter event',
+      'Shotcounter -> ZMQ -> Kafka fanout -> subscribed systems'
     )
   }
 
   const buildPackage = () => {
+    setFlowState((current) => ({
+      ...current,
+      laserStaged: false,
+      watchdogBuffered: false,
+      watchdogStaged: false,
+      motionBuffered: false,
+      motionStaged: false,
+      mongoPending: false,
+      hdf5Built:
+        current.laserStaged ||
+        current.watchdogStaged ||
+        current.motionStaged ||
+        current.hdf5Built,
+    }))
     sendPacket(
       'package',
       'Build HDF5 from staged events',
@@ -456,7 +721,10 @@ function HZDRFlowMonitorPage() {
     triggerDamnitPulse(
       `${shotTotal} currently visible shot package(s); MongoDB/source metadata queried`
     )
-    window.setTimeout(() => setLivePollPulse(false), 1100)
+    window.setTimeout(() => {
+      setLivePollPulse(false)
+      setFlowState((current) => ({ ...current, mongoPending: false }))
+    }, 1100)
   }
   return (
     <HomePage
@@ -492,8 +760,8 @@ function HZDRFlowMonitorPage() {
                 <Title order={3}>HZDR flow monitor</Title>
                 <Text size="sm" c="dimmed">
                   Live package traffic, staging, HDF5 builder state, and DAMNIT
-                  metadata visibility. Local buttons emulate traffic; production
-                  should feed this view from real incoming services.
+                  metadata visibility. LaserData is a passive live stream; local
+                  buttons emulate shotcounter, Watchdog, and builder events.
                 </Text>
               </Stack>
               <Group gap="xs">
@@ -530,8 +798,14 @@ function HZDRFlowMonitorPage() {
                   sourceTotal={sources.length}
                   latestShotNumber={latestShotNumber}
                   nextShotNumber={nextShotNumber}
+                  receiverConfig={receiverConfig}
+                  motionAutoLoggerAvailable={motionAutoLoggerAvailable}
+                  selectedWatchdogWatchers={selectedWatchdogWatchers}
+                  flowState={flowState}
+                  onSelectedWatchdogWatchersChange={setSelectedWatchdogWatchers}
+                  onSendShotcounter={sendShotcounter}
                   onSendWatchdog={sendWatchdog}
-                  onSendLaser={sendLaser}
+                  onSendMotion={sendMotion}
                   onBuildPackage={buildPackage}
                   onRefreshDamnit={refreshDamnit}
                 />
@@ -704,7 +978,9 @@ function HZDRFlowMonitorPage() {
                           ))}
                           {!logEntries.length ? (
                             <Text size="sm" c="dimmed">
-                              Send a packet or poll DAMNIT to start the trace.
+                              LaserData is streaming when enabled. Use
+                              Shotcounter, Watchdog, or DAMNIT actions to add
+                              trace entries.
                             </Text>
                           ) : null}
                         </Stack>
@@ -729,8 +1005,14 @@ function FlowDiagram({
   sourceTotal,
   latestShotNumber,
   nextShotNumber,
+  receiverConfig,
+  motionAutoLoggerAvailable,
+  selectedWatchdogWatchers,
+  flowState,
+  onSelectedWatchdogWatchersChange,
+  onSendShotcounter,
   onSendWatchdog,
-  onSendLaser,
+  onSendMotion,
   onBuildPackage,
   onRefreshDamnit,
 }: {
@@ -741,16 +1023,56 @@ function FlowDiagram({
   sourceTotal: number
   latestShotNumber: number
   nextShotNumber: number
+  receiverConfig: FlowReceiverConfig
+  motionAutoLoggerAvailable: boolean
+  selectedWatchdogWatchers: WatchdogWatcherKey[]
+  flowState: FlowMonitorState
+  onSelectedWatchdogWatchersChange: (watchers: WatchdogWatcherKey[]) => void
+  onSendShotcounter: () => void
   onSendWatchdog: () => void
-  onSendLaser: () => void
+  onSendMotion: () => void
   onBuildPackage: () => void
   onRefreshDamnit: () => void
 }) {
-  const activeWatchdog = packets.some((packet) => packet.lane === 'watchdog')
-  const activeLaser = packets.some((packet) => packet.lane === 'laser')
-  const activePackage = packets.some((packet) => packet.lane === 'package')
-  const activeLive = activeWatchdog || activeLaser || livePollPulse
+  const activeShotcounter = packets.some(
+    (packet) => packet.lane === 'shotcounter'
+  )
+  const activeWatchdogPacket = packets.some(
+    (packet) => packet.lane === 'watchdog'
+  )
+  const activeMotionPacket = packets.some((packet) => packet.lane === 'motion')
+  const activeLaser = receiverConfig.laserData
+  const activePackagePacket = packets.some(
+    (packet) => packet.lane === 'package'
+  )
+  const hasFanoutBuffer =
+    flowState.laserStaged ||
+    flowState.watchdogBuffered ||
+    flowState.motionBuffered ||
+    flowState.mongoPending
+  const activeWatchdog =
+    activeWatchdogPacket ||
+    flowState.watchdogBuffered ||
+    flowState.watchdogStaged
+  const activeMotion =
+    activeMotionPacket || flowState.motionBuffered || flowState.motionStaged
+  const activeWatchdogBroker = activeWatchdogPacket || flowState.watchdogStaged
+  const activeMotionBroker = activeMotionPacket || flowState.motionStaged
+  const activeEnhancers =
+    activeWatchdogBroker || (motionAutoLoggerAvailable && activeMotionBroker)
+  const activeMongoQuery = receiverConfig.mongo && livePollPulse
+  const activeMongo = flowState.mongoPending || activeMongoQuery
+  const activeLiveEventLog =
+    flowState.laserStaged || flowState.watchdogStaged || flowState.motionStaged
+  const activeLive = activeLiveEventLog || activeShotcounter || activeEnhancers
   const activeDamnitLive = activeLive || damnitPulse
+  const activeHdf5 = activePackagePacket || flowState.hdf5Built
+  const steadyTrafficCount =
+    (activeLaser ? 1 : 0) +
+    (flowState.watchdogBuffered ? 1 : 0) +
+    (flowState.motionBuffered ? 1 : 0) +
+    (flowState.mongoPending ? 1 : 0) +
+    (activeLiveEventLog ? 1 : 0)
 
   return (
     <Paper
@@ -778,9 +1100,31 @@ function FlowDiagram({
             <Badge variant="light" color="teal">
               next {nextShotNumber}
             </Badge>
-            <Badge variant="light">{packets.length} active arrow(s)</Badge>
+            <Badge variant="light">
+              {packets.length + steadyTrafficCount} traffic path(s)
+            </Badge>
           </Group>
         </Group>
+        <DetailsSection title="PLANET-Watchdog available watchers">
+          <Checkbox.Group
+            value={selectedWatchdogWatchers}
+            onChange={(values) =>
+              onSelectedWatchdogWatchersChange(values as WatchdogWatcherKey[])
+            }
+          >
+            <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="xs">
+              {watchdogWatcherOptions.map((option) => (
+                <Checkbox
+                  key={option.value}
+                  value={option.value}
+                  label={option.label}
+                  description={option.description}
+                  disabled={!receiverConfig.watchdog}
+                />
+              ))}
+            </SimpleGrid>
+          </Checkbox.Group>
+        </DetailsSection>
 
         <div
           style={{
@@ -788,131 +1132,214 @@ function FlowDiagram({
             display: 'grid',
             gridTemplateColumns:
               'minmax(150px, 1.1fr) minmax(70px, 0.5fr) minmax(150px, 1.1fr) minmax(70px, 0.5fr) minmax(170px, 1.2fr) minmax(70px, 0.5fr) minmax(180px, 1.25fr)',
-            gridTemplateRows: 'repeat(3, minmax(125px, auto))',
+            gridTemplateRows: 'repeat(5, minmax(104px, auto))',
             gap: 12,
             alignItems: 'center',
             minWidth: 920,
           }}
         >
           <ProgramNode
-            title="LaserData"
-            subtitle="primary laser measurements"
-            active={activeLaser}
+            title="Shotcounter"
+            subtitle="ZMQ shot notice, Kafka fanout"
+            active={activeShotcounter}
             icon={<IconServer size={24} />}
             color="blue"
-            actions={[{ label: 'New shot', onClick: onSendLaser }]}
+            actions={[{ label: 'New shot', onClick: onSendShotcounter }]}
             style={{ gridColumn: 1, gridRow: 1 }}
           />
           <FlowConnector
-            active={activeLaser}
+            active={activeShotcounter || hasFanoutBuffer}
             color="blue"
-            label="data"
+            label="fanout"
             style={{ gridColumn: 2, gridRow: 1 }}
           />
           <ProgramNode
-            title="ASAPO local broker"
-            subtitle="local emulator or real ASAPO stream"
-            active={activeLaser}
+            title="Kafka fanout"
+            subtitle="shot notice distributed to subscribers"
+            active={activeShotcounter || hasFanoutBuffer}
             icon={<IconRoute size={24} />}
             color="blue"
             style={{ gridColumn: 3, gridRow: 1 }}
           />
           <FlowConnector
-            active={activeLaser}
+            active={activeShotcounter || hasFanoutBuffer}
             color="blue"
-            label="append"
+            label="buffer"
             style={{ gridColumn: 4, gridRow: 1 }}
           />
           <ProgramNode
-            title="PLANET Watchdog"
-            subtitle="detects shot events"
-            active={activeWatchdog}
-            icon={<IconActivityHeartbeat size={24} />}
-            color="orange"
-            actions={[{ label: 'Enrich latest', onClick: onSendWatchdog }]}
+            title="LaserData"
+            subtitle="primary laser measurements"
+            active={activeLaser}
+            buffered={flowState.laserStaged}
+            icon={<IconServer size={24} />}
+            color="blue"
             style={{ gridColumn: 1, gridRow: 2 }}
           />
           <FlowConnector
-            active={activeWatchdog}
-            color="orange"
-            label="event"
+            active={activeLaser || flowState.laserStaged}
+            color="blue"
+            label="ASAPO"
             style={{ gridColumn: 2, gridRow: 2 }}
           />
           <ProgramNode
-            title="Kafka"
-            subtitle="watchdog transport, local or production"
-            active={activeWatchdog}
+            title="ASAPO local broker"
+            subtitle="local emulator or real ASAPO stream"
+            active={activeLaser}
+            buffered={flowState.laserStaged}
             icon={<IconRoute size={24} />}
-            color="orange"
+            color="blue"
             style={{ gridColumn: 3, gridRow: 2 }}
           />
           <FlowConnector
-            active={activeWatchdog}
-            color="orange"
+            active={activeLaser || flowState.laserStaged}
+            color="blue"
             label="append"
             style={{ gridColumn: 4, gridRow: 2 }}
           />
           <ProgramNode
-            title="MongoDB shotsheet"
-            subtitle="shot metadata source"
-            active={livePollPulse}
-            icon={<IconDatabase size={24} />}
-            color="violet"
+            title="PLANET Watchdog"
+            subtitle={`${selectedWatchdogWatchers.length} watcher rule(s) selected`}
+            active={activeWatchdog}
+            buffered={flowState.watchdogBuffered || flowState.watchdogStaged}
+            icon={<IconActivityHeartbeat size={24} />}
+            color="orange"
+            actions={[
+              {
+                label: 'Enrich latest',
+                onClick: onSendWatchdog,
+                disabled:
+                  !receiverConfig.watchdog || !selectedWatchdogWatchers.length,
+              },
+            ]}
             style={{ gridColumn: 1, gridRow: 3 }}
           />
           <FlowConnector
-            active={livePollPulse}
-            color="violet"
+            active={activeWatchdogBroker}
+            color="orange"
+            label="event"
+            style={{ gridColumn: 2, gridRow: 3 }}
+          />
+          <ProgramNode
+            title="Kafka"
+            subtitle="watchdog transport, local or production"
+            active={activeEnhancers}
+            buffered={flowState.watchdogStaged}
+            icon={<IconRoute size={24} />}
+            color="orange"
+            style={{ gridColumn: 3, gridRow: 3 }}
+          />
+          <FlowConnector
+            active={activeWatchdogBroker}
+            color="orange"
+            label="append"
+            style={{ gridColumn: 4, gridRow: 3 }}
+          />
+          {motionAutoLoggerAvailable ? (
+            <>
+              <ProgramNode
+                title="Motion auto logger"
+                subtitle="motion metadata enhancer"
+                active={activeMotion}
+                buffered={flowState.motionBuffered || flowState.motionStaged}
+                icon={<IconActivityHeartbeat size={24} />}
+                color="violet"
+                actions={[
+                  {
+                    label: 'Enrich latest',
+                    onClick: onSendMotion,
+                    disabled: !receiverConfig.motion,
+                  },
+                ]}
+                style={{ gridColumn: 1, gridRow: 4 }}
+              />
+              <FlowConnector
+                active={activeMotionBroker}
+                color="violet"
+                label="event"
+                style={{ gridColumn: 2, gridRow: 4 }}
+              />
+              <ProgramNode
+                title="Kafka motion topic"
+                subtitle="motion auto logger transport"
+                active={activeMotionBroker}
+                buffered={flowState.motionStaged}
+                icon={<IconRoute size={24} />}
+                color="violet"
+                style={{ gridColumn: 3, gridRow: 4 }}
+              />
+              <FlowConnector
+                active={activeMotionBroker}
+                color="violet"
+                label="append"
+                style={{ gridColumn: 4, gridRow: 4 }}
+              />
+            </>
+          ) : null}
+          <ProgramNode
+            title="MongoDB shotsheet"
+            subtitle="shot metadata source"
+            active={activeMongo}
+            buffered={flowState.mongoPending}
+            icon={<IconDatabase size={24} />}
+            color="teal"
+            style={{ gridColumn: 1, gridRow: 5 }}
+          />
+          <FlowConnector
+            active={activeMongoQuery}
+            color="teal"
             label="query"
-            style={{ gridColumn: '2 / 5', gridRow: 3 }}
+            style={{ gridColumn: '2 / 5', gridRow: 5 }}
           />
           <ProgramNode
             title="Live event log"
             subtitle="staged packages keyed by shot_id"
-            active={activeLive || activePackage}
+            active={activeLive || activePackagePacket}
+            buffered={activeLiveEventLog}
             icon={<IconDatabase size={24} />}
             color="teal"
-            style={{ gridColumn: 5, gridRow: '1 / 3', alignSelf: 'stretch' }}
+            style={{ gridColumn: 5, gridRow: '1 / 5', alignSelf: 'stretch' }}
           />
           <FlowConnector
             active={activeDamnitLive}
             color="teal"
             label="visible"
-            style={{ gridColumn: 6, gridRow: '1 / 3' }}
+            style={{ gridColumn: 6, gridRow: '1 / 5' }}
           />
           <ProgramNode
             title="DAMNIT-web live view"
             subtitle={`${sourceTotal} source(s), ${shotTotal} shot(s) visible`}
             active={activeDamnitLive}
+            buffered={damnitPulse}
             icon={<IconBellRinging size={24} />}
             color="teal"
             actions={[
               { label: 'Poll live', onClick: onRefreshDamnit },
               { label: 'Build HDF5', onClick: onBuildPackage },
             ]}
-            style={{ gridColumn: 7, gridRow: '1 / 3', alignSelf: 'stretch' }}
+            style={{ gridColumn: 7, gridRow: '1 / 5', alignSelf: 'stretch' }}
           />
           <ProgramNode
             title="HDF5 builder"
             subtitle="combines staged event packages"
-            active={activePackage}
+            active={activeHdf5}
             icon={<IconServer size={24} />}
             color="teal"
-            style={{ gridColumn: 5, gridRow: 3 }}
+            style={{ gridColumn: 5, gridRow: 5 }}
           />
           <FlowConnector
-            active={activePackage}
+            active={activeHdf5}
             color="teal"
             label="writes"
-            style={{ gridColumn: 6, gridRow: 3 }}
+            style={{ gridColumn: 6, gridRow: 5 }}
           />
           <ProgramNode
             title="combined HDF5"
             subtitle="reader-ready experiment file"
-            active={activePackage}
+            active={activeHdf5}
             icon={<IconDatabase size={24} />}
             color="teal"
-            style={{ gridColumn: 7, gridRow: 3 }}
+            style={{ gridColumn: 7, gridRow: 5 }}
           />
         </div>
       </Stack>
@@ -924,6 +1351,7 @@ function ProgramNode({
   title,
   subtitle,
   active,
+  buffered,
   icon,
   color,
   actions = [],
@@ -932,9 +1360,10 @@ function ProgramNode({
   title: string
   subtitle: string
   active: boolean
+  buffered?: boolean
   icon: ReactNode
   color: 'orange' | 'blue' | 'teal' | 'violet'
-  actions?: { label: string; onClick: () => void }[]
+  actions?: { label: string; onClick: () => void; disabled?: boolean }[]
   style?: CSSProperties
 }) {
   const colorVar = `var(--mantine-color-${color}-6)`
@@ -948,7 +1377,8 @@ function ProgramNode({
         height: '100%',
         minHeight: 104,
         borderColor: active ? colorVar : 'var(--mantine-color-gray-3)',
-        background: active ? `var(--mantine-color-${color}-0)` : 'white',
+        background:
+          active || buffered ? `var(--mantine-color-${color}-0)` : 'white',
         animation: active
           ? 'hzdrNodePulse 0.9s ease-in-out infinite'
           : undefined,
@@ -988,6 +1418,7 @@ function ProgramNode({
                 color={color}
                 leftSection={<IconPlayerPlay size={14} />}
                 onClick={action.onClick}
+                disabled={action.disabled}
                 fullWidth
               >
                 {action.label}
@@ -1012,6 +1443,7 @@ function FlowConnector({
   style?: CSSProperties
 }) {
   const colorVar = `var(--mantine-color-${color}-6)`
+  const markerId = `connector-arrow-${color}-${useId().replace(/:/g, '')}`
   return (
     <Stack
       gap={4}
@@ -1032,7 +1464,7 @@ function FlowConnector({
       >
         <defs>
           <marker
-            id={`connector-arrow-${color}`}
+            id={markerId}
             markerWidth="10"
             markerHeight="10"
             refX="8"
@@ -1052,7 +1484,7 @@ function FlowConnector({
           strokeWidth={active ? 4 : 2.5}
           strokeLinecap="round"
           strokeDasharray={active ? '9 7' : undefined}
-          markerEnd={`url(#connector-arrow-${color})`}
+          markerEnd={`url(#${markerId})`}
           style={{
             animation: active
               ? 'hzdrFlowDash 0.75s linear infinite'
@@ -1120,8 +1552,8 @@ function HZDRSourceHome() {
               <Title order={4}>Watch the flow</Title>
             </Group>
             <Text size="sm" c="dimmed">
-              Send local LaserData and Watchdog events, or watch production
-              traffic move through DAMNIT.
+              Watch the passive LaserData stream plus local Shotcounter,
+              Watchdog, and optional Motion events as they move through DAMNIT.
             </Text>
             <Button component="a" href="/flow-monitor" variant="light">
               Flow monitor
@@ -1216,7 +1648,8 @@ function HZDRDocsPage() {
                   <Title order={4}>1. Produce</Title>
                   <Text size="sm">
                     LaserData creates new shots through the ASAPO path. Watchdog
-                    events enrich the latest shot through Kafka.
+                    and Motion auto logger events enrich the latest shot through
+                    Kafka.
                   </Text>
                 </Stack>
               </Card>
@@ -1256,13 +1689,16 @@ function HZDRDocsPage() {
                   <Text size="sm">
                     Create `scripts/hzdr-launch.config.json`, start the
                     launcher, open the workspace, then use the flow monitor to
-                    send test LaserData and Watchdog traffic.
+                    send test Shotcounter, Watchdog, and optional Motion
+                    traffic.
                   </Text>
                   <Code block>
+                    bash scripts/hzdr-launch.sh --init-config{'\n'}
+                    bash scripts/hzdr-launch.sh{'\n\n'}
                     powershell -NoProfile -ExecutionPolicy Bypass -File
-                    ..\scripts\hzdr-launch.ps1 -InitConfig{'\n'}
+                    .\scripts\hzdr-launch.ps1 -InitConfig{'\n'}
                     powershell -NoProfile -ExecutionPolicy Bypass -File
-                    ..\scripts\hzdr-launch.ps1
+                    .\scripts\hzdr-launch.ps1
                   </Code>
                 </Stack>
               </DetailsSection>
@@ -1270,8 +1706,9 @@ function HZDRDocsPage() {
                 <Stack gap="xs">
                   <Text size="sm">
                     LaserData creates new shots. Watchdog/Kafka enriches the
-                    latest shot. The HDF5 builder consumes staged JSONL package
-                    events, not MongoDB.
+                    latest shot. Motion auto logger/Kafka does the same for
+                    motion metadata. The HDF5 builder consumes staged JSONL
+                    package events, not MongoDB.
                   </Text>
                   <Text size="sm" c="dimmed">
                     MongoDB remains the live source for shot metadata and
@@ -1302,6 +1739,7 @@ function HZDRDocsPage() {
               <DetailsSection title="Launcher and connections">
                 <Stack gap="xs">
                   <Text size="sm">
+                    PLANET Watchdog, LabFrog, optional motion autologging,
                     Kafka, ASAPO, and MongoDB live together in the shared
                     launcher config so the emulator can be converted toward real
                     services without moving settings around.
@@ -1368,6 +1806,374 @@ function HZDRDocsPage() {
       }
     />
   )
+}
+
+function LinkExistingShotRecordsPage() {
+  const [sources, setSources] = useState<HZDRSource[]>([])
+  const [campaignKey, setCampaignKey] = useState('')
+  const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(
+    null
+  )
+  const [shotNumberQuery, setShotNumberQuery] = useState('')
+  const [collections, setCollections] = useState<string[]>([
+    'shots',
+    'watchdog',
+    'motion',
+  ])
+  const [searchStatus, setSearchStatus] = useState(
+    'Search all visible sources, or choose an optional source after narrowing the campaign.'
+  )
+  const [linkDraft, setLinkDraft] = useState<LinkRecordsDraft>()
+  const [builtPackage, setBuiltPackage] = useState<BuiltLinkRecordsPackage>()
+
+  useEffect(() => {
+    fetch('/metadata/hzdr/sources')
+      .then((response) => (response.ok ? response.json() : []))
+      .then(setSources)
+      .catch(() => setSources([]))
+  }, [])
+
+  const draftInput = {
+    sources,
+    campaignKey,
+    selectedSourceKey,
+    collections,
+    shotNumberQuery,
+  }
+  const emptyDraft = buildLinkRecordsDraft({
+    ...draftInput,
+    sources: [],
+  })
+  const visibleDraft = builtPackage ?? linkDraft ?? emptyDraft
+
+  const searchExistingRecords = () => {
+    const nextDraft = buildLinkRecordsDraft(draftInput)
+    setLinkDraft(nextDraft)
+    setBuiltPackage(undefined)
+    setSearchStatus(
+      `${nextDraft.linked_records.length} candidate shot record(s) from ${nextDraft.search.searched_sources} source(s).`
+    )
+  }
+
+  const buildReviewPackage = () => {
+    const nextDraft = linkDraft ?? buildLinkRecordsDraft(draftInput)
+    const nextPackage = buildLinkRecordsReviewPackage(nextDraft)
+    setLinkDraft(nextDraft)
+    setBuiltPackage(nextPackage)
+    setSearchStatus(
+      `Built review package with ${nextPackage.linked_records.length} linked shot record(s).`
+    )
+  }
+
+  return (
+    <HomePage
+      header={<AppHeader />}
+      main={
+        <Container size="lg" py="xl">
+          <Stack gap="lg">
+            <Stack gap={4}>
+              <Title order={2}>Link Existing Shot Records</Title>
+              <Text c="dimmed">
+                Search existing MongoDB shot, watchdog, and motion records for a
+                campaign key, then prepare a coherent JSON/HDF5/DAMNIT-table
+                handoff for review.
+              </Text>
+            </Stack>
+            <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
+              <Card withBorder radius={4} p="md">
+                <Stack gap="xs">
+                  <Title order={4}>1. Search</Title>
+                  <Text size="sm">
+                    Choose the campaign key and collections that should be
+                    inspected for existing shot records.
+                  </Text>
+                </Stack>
+              </Card>
+              <Card withBorder radius={4} p="md">
+                <Stack gap="xs">
+                  <Title order={4}>2. Link</Title>
+                  <Text size="sm">
+                    Match shotcounter, Watchdog, Motion, and shotsheet records
+                    into one source-level package view.
+                  </Text>
+                </Stack>
+              </Card>
+              <Card withBorder radius={4} p="md">
+                <Stack gap="xs">
+                  <Title order={4}>3. Review</Title>
+                  <Text size="sm">
+                    Let the user fix small mismatches before writing coherent
+                    JSON, HDF5, and DAMNIT table records.
+                  </Text>
+                </Stack>
+              </Card>
+            </SimpleGrid>
+            <Grid gutter="md">
+              <Grid.Col span={{ base: 12, md: 5 }}>
+                <Card withBorder radius={4} p="md">
+                  <Stack gap="sm">
+                    <Title order={4}>Search setup</Title>
+                    <TextInput
+                      label="Campaign key"
+                      value={campaignKey}
+                      onChange={(event) =>
+                        setCampaignKey(event.currentTarget.value)
+                      }
+                      placeholder="exp-2026-05-draco"
+                    />
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                      <TextInput
+                        label="Shot number (optional)"
+                        value={shotNumberQuery}
+                        onChange={(event) =>
+                          setShotNumberQuery(event.currentTarget.value)
+                        }
+                        placeholder="123"
+                      />
+                      <Select
+                        label="Limit to source (optional)"
+                        value={selectedSourceKey}
+                        onChange={setSelectedSourceKey}
+                        data={sources.map((source) => ({
+                          value: source.key,
+                          label: `${source.title} (${source.shots.length})`,
+                        }))}
+                        placeholder="Search all visible sources"
+                        searchable
+                        clearable
+                      />
+                    </SimpleGrid>
+                    <Checkbox.Group
+                      label="Collections to inspect"
+                      value={collections}
+                      onChange={setCollections}
+                    >
+                      <Stack gap="xs" mt="xs">
+                        <Checkbox value="shots" label="MongoDB shotsheet" />
+                        <Checkbox value="watchdog" label="PLANET Watchdog" />
+                        <Checkbox value="motion" label="Motion auto logger" />
+                        <Checkbox value="shotcounter" label="Shotcounter" />
+                      </Stack>
+                    </Checkbox.Group>
+                    <Paper
+                      withBorder
+                      radius={4}
+                      p="sm"
+                      bg="var(--mantine-color-gray-0)"
+                    >
+                      <Text size="sm" c="dimmed">
+                        {searchStatus}
+                      </Text>
+                    </Paper>
+                  </Stack>
+                </Card>
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, md: 7 }}>
+                <Card withBorder radius={4} p="md">
+                  <Stack gap="sm">
+                    <Title order={4}>Link draft</Title>
+                    <Text size="sm" c="dimmed">
+                      Search and build locally from the HZDR sources currently
+                      visible to DAMNIT-web. The backend agent can replace this
+                      with direct MongoDB collection reads later.
+                    </Text>
+                    <Code block>{JSON.stringify(visibleDraft, null, 2)}</Code>
+                    <Group>
+                      <Button onClick={searchExistingRecords} variant="light">
+                        Search visible records
+                      </Button>
+                      <Button onClick={buildReviewPackage}>
+                        Build review package
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Card>
+              </Grid.Col>
+            </Grid>
+          </Stack>
+        </Container>
+      }
+    />
+  )
+}
+
+function buildLinkRecordsDraft({
+  sources,
+  campaignKey,
+  selectedSourceKey,
+  collections,
+  shotNumberQuery,
+}: {
+  sources: HZDRSource[]
+  campaignKey: string
+  selectedSourceKey: string | null
+  collections: string[]
+  shotNumberQuery: string
+}): LinkRecordsDraft {
+  const normalizedCampaignKey = campaignKey.trim() || null
+  const shotNumber = parseShotNumberFilter(shotNumberQuery)
+  const candidateSources = sources.filter((source) => {
+    if (selectedSourceKey && source.key !== selectedSourceKey) {
+      return false
+    }
+    return sourceMatchesCampaign(source, normalizedCampaignKey)
+  })
+  const linkedRecords = candidateSources.flatMap((source) =>
+    source.shots
+      .filter((shot) => shotNumber === null || shot.shot_number === shotNumber)
+      .map((shot) => ({
+        source_key: source.key,
+        source_title: source.title,
+        shot_number: shot.shot_number,
+        shot_id:
+          String(shot.metadata.shot_id ?? '') ||
+          `shot-${String(shot.shot_number).padStart(6, '0')}`,
+        hdf5_path: shot.hdf5_path ?? null,
+        collections: collections.map((collection) =>
+          collectionStatusForShot(collection, shot)
+        ),
+      }))
+  )
+
+  return {
+    campaign_key: normalizedCampaignKey,
+    target_source_key: selectedSourceKey,
+    search: {
+      collections,
+      shot_number: shotNumber,
+      searched_sources: candidateSources.length,
+    },
+    linked_records: linkedRecords,
+    output_targets: ['coherent-json', 'combined-hdf5', 'damnit-table'],
+    review_required: true,
+    unresolved: linkedRecords.length
+      ? linkedRecords.flatMap((record) =>
+          record.collections
+            .filter((collection) => collection.status === 'missing')
+            .map(
+              (collection) =>
+                `Shot ${record.shot_number}: ${collection.collection} not visible in loaded metadata`
+            )
+        )
+      : ['No matching records are visible from the current HZDR sources.'],
+  }
+}
+
+function buildLinkRecordsReviewPackage(
+  draft: LinkRecordsDraft
+): BuiltLinkRecordsPackage {
+  const sourceCount = new Set(
+    draft.linked_records.map((record) => record.source_key)
+  ).size
+
+  return {
+    ...draft,
+    built_at: new Date().toISOString(),
+    coherent_json: {
+      campaign_key: draft.campaign_key,
+      shots: draft.linked_records,
+    },
+    hdf5_plan: {
+      source_count: sourceCount,
+      row_count: draft.linked_records.length,
+      mode: 'review-before-write',
+    },
+    damnit_table_plan: {
+      columns: ['shot_number', 'shot_id', ...draft.search.collections],
+      rows: draft.linked_records.length,
+    },
+  }
+}
+
+function parseShotNumberFilter(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+  const parsed = Number(trimmed)
+  return Number.isInteger(parsed) ? parsed : null
+}
+
+function sourceMatchesCampaign(source: HZDRSource, campaignKey: string | null) {
+  if (!campaignKey) {
+    return true
+  }
+  return collectSearchText([source.key, source.title, source.metadata])
+    .toLowerCase()
+    .includes(campaignKey.toLowerCase())
+}
+
+function collectSearchText(values: unknown[]): string {
+  const parts: string[] = []
+  const visit = (value: unknown) => {
+    if (value === null || value === undefined) {
+      return
+    }
+    if (['string', 'number', 'boolean'].includes(typeof value)) {
+      parts.push(String(value))
+      return
+    }
+    if (Array.isArray(value)) {
+      value.forEach(visit)
+      return
+    }
+    if (typeof value === 'object') {
+      Object.values(value).forEach(visit)
+    }
+  }
+  values.forEach(visit)
+  return parts.join(' ')
+}
+
+function collectionStatusForShot(
+  collection: string,
+  shot: HZDRShot
+): LinkCollectionStatus {
+  if (collection === 'shots') {
+    return {
+      collection,
+      status: 'matched',
+      detail: 'loaded shot row',
+    }
+  }
+  if (collection === 'watchdog') {
+    return shot.metadata.watchdog_status
+      ? {
+          collection,
+          status: 'matched',
+          detail: String(shot.metadata.watchdog_status),
+        }
+      : {
+          collection,
+          status: 'missing',
+          detail: 'no watchdog fields in loaded metadata',
+        }
+  }
+  if (collection === 'motion') {
+    return shot.metadata.motion_status
+      ? {
+          collection,
+          status: 'matched',
+          detail: String(shot.metadata.motion_status),
+        }
+      : {
+          collection,
+          status: 'missing',
+          detail: 'no motion fields in loaded metadata',
+        }
+  }
+  if (collection === 'shotcounter') {
+    return {
+      collection,
+      status: shot.metadata.shot_id ? 'matched' : 'candidate',
+      detail: String(shot.metadata.shot_id ?? 'shot number available'),
+    }
+  }
+  return {
+    collection,
+    status: 'candidate',
+    detail: 'collection selected for agent lookup',
+  }
 }
 
 function HZDRShotPage() {
@@ -1608,8 +2414,8 @@ function HZDRShotPage() {
                     <Badge variant="light">Emulated package stream</Badge>
                   </Group>
                   <Text size="sm" c="dimmed">
-                    LaserData creates shots, Watchdog enriches them, and staged
-                    events feed the HDF5 builder.
+                    LaserData creates shots, Watchdog and Motion enrich them,
+                    and staged events feed the HDF5 builder.
                   </Text>
                   <Code block>{source?.damnit_path ?? '-'}</Code>
                 </Stack>
@@ -2133,6 +2939,10 @@ function SelectedCellPanel({ cell }: { cell?: HZDRSelectedCell }) {
           <Text size="sm" c="dimmed">
             Plot preview
           </Text>
+        ) : isNumericLinePreview(cell.preview) ? (
+          <Text size="sm" c="dimmed">
+            Lineout preview
+          </Text>
         ) : cell.kind === 'metadata' && cell.columnName === 'status' ? (
           <Stack gap="xs">
             <StatusBadge status={String(cell.value ?? 'unknown')} />
@@ -2164,18 +2974,11 @@ function ContextPreviewValue({
   preview?: unknown
   value: unknown
 }) {
-  if (
-    Array.isArray(preview) &&
-    preview.every((entry) => typeof entry === 'number')
-  ) {
-    return (
-      <MetadataTrendPreview
-        values={preview.map((entry, index) => ({
-          shotNumber: index + 1,
-          value: Number(entry),
-        }))}
-      />
-    )
+  if (isNumericLinePreview(preview)) {
+    return <LineoutPreview values={preview} />
+  }
+  if (isNumericMatrixPreview(preview)) {
+    return <ImageMatrixPreview values={preview} />
   }
   if (isPlotlyPreview(preview)) {
     return <PlotlyFigurePreview preview={preview} />
@@ -2200,6 +3003,12 @@ function ContextCellContent({
 }) {
   const sparklineValues = getPlotlySparklineValues(preview)
   const arrayPreviewValues = getNumericPreviewValues(preview)
+  if (isNumericLinePreview(preview)) {
+    return <MiniCellSparkline values={preview} />
+  }
+  if (isNumericMatrixPreview(preview)) {
+    return <MiniImagePreview values={preview} />
+  }
   if (isPlotlyPreview(preview)) {
     return sparklineValues.length > 1 ? (
       <MiniCellSparkline values={sparklineValues} />
@@ -2291,6 +3100,73 @@ function MiniCellSparkline({ values }: { values: number[] }) {
   )
 }
 
+function LineoutPreview({ values }: { values: number[] }) {
+  const indexedValues = values.map((value, index) => ({
+    shotNumber: index,
+    value,
+  }))
+  return (
+    <MetadataTrendPreview
+      values={indexedValues}
+      title="Lineout preview"
+      xLabel="sample index"
+    />
+  )
+}
+
+function ImageMatrixPreview({ values }: { values: number[][] }) {
+  return (
+    <Stack gap="xs">
+      <Text size="sm" fw={600}>
+        Image preview
+      </Text>
+      <MiniImagePreview values={values} size={260} />
+    </Stack>
+  )
+}
+
+function MiniImagePreview({
+  values,
+  size = 108,
+}: {
+  values: number[][]
+  size?: number
+}) {
+  const flattened = values.flat()
+  const minValue = Math.min(...flattened)
+  const maxValue = Math.max(...flattened)
+  const range = maxValue - minValue || 1
+  return (
+    <div
+      role="img"
+      aria-label="Image preview"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${values[0]?.length ?? 1}, 1fr)`,
+        width: '100%',
+        maxWidth: size,
+        aspectRatio: '1 / 1',
+        border: '1px solid var(--mantine-color-gray-4)',
+        overflow: 'hidden',
+      }}
+    >
+      {values.flatMap((row, rowIndex) =>
+        row.map((value, columnIndex) => {
+          const shade = Math.round(((value - minValue) / range) * 255)
+          return (
+            <div
+              key={`${rowIndex}-${columnIndex}`}
+              style={{
+                backgroundColor: `rgb(${shade}, ${shade}, ${shade})`,
+              }}
+            />
+          )
+        })
+      )}
+    </div>
+  )
+}
+
 function PlotlyFigurePreview({ preview }: { preview: PlotlyPreview }) {
   try {
     const figure = decodePlotlyTypedArrays(JSON.parse(preview.json)) as {
@@ -2367,18 +3243,35 @@ function getPlotlySparklineValues(preview: unknown) {
 }
 
 function getNumericPreviewValues(preview: unknown): number[] {
-  if (!Array.isArray(preview)) {
+  if (!isNumericLinePreview(preview)) {
     return []
   }
-  const flattened = preview.flatMap((entry) =>
-    Array.isArray(entry) ? entry : [entry]
-  )
-  return flattened
-    .filter(
-      (entry): entry is number =>
-        typeof entry === 'number' && Number.isFinite(entry)
+  return preview.slice(0, 64)
+}
+
+function isNumericLinePreview(preview: unknown): preview is number[] {
+  return (
+    Array.isArray(preview) &&
+    preview.length > 1 &&
+    preview.every(
+      (entry) => typeof entry === 'number' && Number.isFinite(entry)
     )
-    .slice(0, 64)
+  )
+}
+
+function isNumericMatrixPreview(preview: unknown): preview is number[][] {
+  return (
+    Array.isArray(preview) &&
+    preview.length > 0 &&
+    preview.every(
+      (row) =>
+        Array.isArray(row) &&
+        row.length > 0 &&
+        row.every(
+          (entry) => typeof entry === 'number' && Number.isFinite(entry)
+        )
+    )
+  )
 }
 
 function decodePlotlyTypedArrays(value: unknown): unknown {
@@ -2817,6 +3710,7 @@ function getContextRecipeOptions({
   const selectedCount = selectedInputs.length
   const singleDatasetShape = selectedDatasets[0]?.shape
   const singleDatasetRank = singleDatasetShape?.length ?? 0
+  const selectedDatasetCanPreviewLine = isLinePreviewShape(singleDatasetShape)
   const options: { value: string; label: string; disabled?: boolean }[] = []
 
   if (!selectedCount) {
@@ -2853,7 +3747,7 @@ function getContextRecipeOptions({
           ? 'Summarize selected data across shots'
           : 'Summarize selected data',
     })
-    if (contextScope === 'shot' && singleDatasetRank === 1) {
+    if (contextScope === 'shot' && selectedDatasetCanPreviewLine) {
       options.push(
         { value: 'lineout-preview', label: 'Lineout with table preview' },
         { value: 'plotly-trend', label: 'Interactive trend preview' }
@@ -2876,6 +3770,133 @@ function getContextRecipeOptions({
   })
 
   return options
+}
+
+function buildHdf5DatasetOptions(
+  datasets: HZDRHDF5Dataset[],
+  contextScope: string
+): HZDRDatasetOption[] {
+  const byShotOptions = new Map<string, HZDRDatasetOption>()
+  const directOptions: HZDRDatasetOption[] = []
+
+  for (const dataset of datasets) {
+    const byShotMatch = dataset.name.match(/^(.*\/by_shot\/)([^/]+)\/(.+)$/)
+    if (contextScope === 'shot' && byShotMatch) {
+      const [, prefix, , suffix] = byShotMatch
+      const templateName = `${prefix}{shot_id}/${suffix}`
+      byShotOptions.set(templateName, {
+        value: `hdf5:${templateName}`,
+        label: `${suffix} (${dataset.dtype}, ${formatShape(dataset.shape)})`,
+        name: templateName,
+        previewName: dataset.name,
+        dtype: dataset.dtype,
+        shape: dataset.shape,
+        kind: classifyHdf5DatasetShape(dataset.shape),
+        group: hdf5DatasetGroupLabel(
+          classifyHdf5DatasetShape(dataset.shape),
+          true
+        ),
+      })
+      continue
+    }
+
+    if (contextScope === 'shot' && isShotIndexedAggregateDataset(dataset)) {
+      continue
+    }
+
+    if (contextScope === 'set' && byShotMatch) {
+      continue
+    }
+
+    const kind = classifyHdf5DatasetShape(dataset.shape)
+    directOptions.push({
+      value: `hdf5:${dataset.name}`,
+      label: `${dataset.name} (${dataset.dtype}, ${formatShape(dataset.shape)})`,
+      name: dataset.name,
+      previewName: dataset.name,
+      dtype: dataset.dtype,
+      shape: dataset.shape,
+      kind,
+      group: hdf5DatasetGroupLabel(
+        contextScope === 'set' && isShotIndexedAggregateDataset(dataset)
+          ? 'stack'
+          : kind,
+        false
+      ),
+    })
+  }
+
+  return [...byShotOptions.values(), ...directOptions].sort((left, right) =>
+    `${left.group}/${left.label}`.localeCompare(`${right.group}/${right.label}`)
+  )
+}
+
+function groupHdf5DatasetOptions(
+  datasetOptions: HZDRDatasetOption[]
+): SelectOptionGroup[] {
+  const grouped = new Map<string, HZDRDatasetOption[]>()
+  for (const option of datasetOptions) {
+    grouped.set(option.group, [...(grouped.get(option.group) ?? []), option])
+  }
+  return [...grouped.entries()].map(([group, items]) => ({
+    group,
+    items: items.map((item) => ({ value: item.value, label: item.label })),
+  }))
+}
+
+function classifyHdf5DatasetShape(
+  shape: Array<number | string>
+): HZDRDatasetKind {
+  if (!shape.length || (shape.length === 1 && Number(shape[0]) === 1)) {
+    return 'scalar'
+  }
+  if (shape.length === 1) {
+    return 'line'
+  }
+  if (shape.length === 2) {
+    return 'image'
+  }
+  if (shape.length > 2) {
+    return 'stack'
+  }
+  return 'raw'
+}
+
+function hdf5DatasetGroupLabel(kind: HZDRDatasetKind, perShot: boolean) {
+  const prefix = perShot ? 'HDF5 per-shot ' : 'HDF5 '
+  if (kind === 'scalar') {
+    return `${prefix}scalars`
+  }
+  if (kind === 'line') {
+    return `${prefix}lineouts`
+  }
+  if (kind === 'image') {
+    return `${prefix}images and masks`
+  }
+  if (kind === 'stack') {
+    return `${prefix}shot-set stacks`
+  }
+  return `${prefix}raw datasets`
+}
+
+function isShotIndexedAggregateDataset(dataset: HZDRHDF5Dataset) {
+  return (
+    dataset.name.endsWith('_by_shot') ||
+    dataset.name.includes('_by_shot/') ||
+    dataset.name.includes('/by_shot_')
+  )
+}
+
+function formatShape(shape: Array<number | string>) {
+  return shape.length ? shape.join('x') : 'scalar'
+}
+
+function isLinePreviewShape(shape?: Array<number | string>) {
+  if (!shape || shape.length !== 1) {
+    return false
+  }
+  const length = Number(shape[0])
+  return Number.isFinite(length) && length > 1
 }
 
 function repairCommonContextImports(content: string) {
@@ -3069,18 +4090,15 @@ function ContextBuilderPage() {
   )
   const datasetOptions = useMemo(
     () =>
-      shotDetail?.hdf5_datasets.map((dataset) => ({
-        value: `hdf5:${dataset.name}`,
-        label: `${dataset.name} (${dataset.dtype}, ${dataset.shape.join('x')})`,
-        shape: dataset.shape,
-      })) ?? [],
-    [shotDetail?.hdf5_datasets]
+      buildHdf5DatasetOptions(shotDetail?.hdf5_datasets ?? [], contextScope),
+    [contextScope, shotDetail?.hdf5_datasets]
   )
-  const inputOptions = useMemo(
-    () => [
-      { group: 'Shot metadata', items: metadataOptions },
-      { group: 'HDF5 datasets', items: datasetOptions },
-    ],
+  const inputOptions = useMemo<SelectOptionGroup[]>(
+    () =>
+      [
+        { group: 'Shot metadata', items: metadataOptions },
+        ...groupHdf5DatasetOptions(datasetOptions),
+      ].filter((group) => group.items.length),
     [datasetOptions, metadataOptions]
   )
   const inputValueKey = useMemo(
@@ -3215,8 +4233,50 @@ function ContextBuilderPage() {
     if (!selectedBlock) {
       return
     }
+    const formState = inferContextBuilderFormState(selectedBlock)
+    const validInputValues = new Set(
+      inputValueKey.split('\u0000').filter(Boolean)
+    )
+    const selectedExistingInputs =
+      formState.selectedInputs?.filter((input) =>
+        validInputValues.has(input)
+      ) ?? []
+    if (formState.contextScope) {
+      setContextScope(formState.contextScope)
+    }
+    if (formState.fieldKind) {
+      setFieldKind(formState.fieldKind)
+    }
+    if (formState.fieldName) {
+      setFieldName(formState.fieldName)
+      setFieldNameEdited(true)
+    }
+    if (formState.fieldTitle) {
+      setFieldTitle(formState.fieldTitle)
+    }
+    if (formState.selectedInputs?.length) {
+      setSelectedInputs(
+        selectedExistingInputs.length
+          ? selectedExistingInputs
+          : formState.selectedInputs
+      )
+    }
+    if (formState.allowMultipleInputs !== undefined) {
+      setAllowMultipleInputs(formState.allowMultipleInputs)
+    }
+    if (formState.mongoCollection) {
+      setMongoCollection(formState.mongoCollection)
+    }
+    if (formState.mongoFilter) {
+      setMongoFilter(formState.mongoFilter)
+    }
+    if (formState.combineExpression) {
+      setCombineExpression(formState.combineExpression)
+    }
+    setColumnDetails('')
+    setDatasetPreview(undefined)
     setGeneratedDraft(selectedBlock.block.trim())
-    setSaveStatus(`Loaded ${selectedBlock.name} into the draft editor`)
+    setSaveStatus(`Loaded ${selectedBlock.name} into the builder form`)
   }
 
   const replaceSelectedColumn = () => {
@@ -3292,21 +4352,21 @@ function ContextBuilderPage() {
       fieldKind,
       selectedInputs,
       selectedShot,
-      shotDetail,
+      datasetOptions,
       combineExpression,
     })
     setColumnDetails(preview)
-    const datasetName = selectedInputs
-      .find((value) => value.startsWith('hdf5:'))
-      ?.slice(5)
+    const selectedDataset = selectedInputs
+      .map((value) => datasetOptions.find((option) => option.value === value))
+      .find(Boolean)
     if (
       usesHdf5VisualPreview &&
       source_key &&
       selectedShotNumber &&
-      datasetName
+      selectedDataset
     ) {
       fetch(
-        `/metadata/hzdr/sources/${source_key}/shots/${selectedShotNumber}/datasets/${datasetName}`
+        `/metadata/hzdr/sources/${source_key}/shots/${selectedShotNumber}/datasets/${selectedDataset.previewName}`
       )
         .then((response) => response.json())
         .then(setDatasetPreview)
@@ -4042,10 +5102,93 @@ function parseContextVariableBlocks(content: unknown): ContextVariableBlock[] {
   })
 }
 
+function inferContextBuilderFormState(
+  block: ContextVariableBlock
+): ContextBuilderFormState {
+  const metadataKey = extractPythonDocGetKey(block.block)
+  const datasetName = extractPythonHdf5DatasetName(block.block)
+  const selectedInputs = [
+    metadataKey ? `metadata:${metadataKey}` : undefined,
+    datasetName ? `hdf5:${datasetName}` : undefined,
+  ].filter((input): input is string => Boolean(input))
+  const fieldKind = inferContextBuilderFieldKind(block.block)
+  const mongoFilter = extractPythonMongoFilter(block.block)
+  const combineExpression =
+    fieldKind === 'function'
+      ? extractPythonReturnExpression(block.block)
+      : undefined
+
+  return {
+    contextScope: block.block.includes('trendable shot-set') ? 'set' : 'shot',
+    fieldKind,
+    fieldName: block.name,
+    fieldTitle: block.title,
+    selectedInputs,
+    allowMultipleInputs: selectedInputs.length > 1,
+    mongoCollection: extractPythonMongoCollection(block.block),
+    mongoFilter,
+    combineExpression,
+  }
+}
+
+function inferContextBuilderFieldKind(block: string) {
+  if (/\bhdf5_values\b/.test(block) && /\bmetadata_value\b/.test(block)) {
+    return 'function'
+  }
+  if (/preview\s*=\s*fig\b/.test(block) || /\bpx\.line\b/.test(block)) {
+    return 'plotly-trend'
+  }
+  if (/preview\s*=\s*image\b/.test(block)) {
+    return 'image-preview'
+  }
+  if (/preview\s*=\s*lineout\b/.test(block)) {
+    return 'lineout-preview'
+  }
+  if (/\bh5py\.File\b/.test(block)) {
+    return 'hdf5'
+  }
+  if (/^\s*query\s*=/m.test(block)) {
+    return 'mongo-filter'
+  }
+  if (/\bmongo_find_one\b/.test(block)) {
+    return 'metadata'
+  }
+  return 'function'
+}
+
+function extractPythonDocGetKey(block: string) {
+  return block.match(/doc\.get\(\s*(["'])(.*?)\1\s*\)/)?.[2]
+}
+
+function extractPythonHdf5DatasetName(block: string) {
+  return (
+    block.match(/dataset_name\s*=\s*f?(["'])(.*?)\1/)?.[2] ??
+    block.match(/handle\[\s*(["'])(.*?)\1\s*\]/)?.[2]
+  )
+}
+
+function extractPythonMongoCollection(block: string) {
+  return block.match(/mongo_find_one\(\s*(["'])(.*?)\1/)?.[2]
+}
+
+function extractPythonMongoFilter(block: string) {
+  const queryAssignment = block.match(
+    /^\s*query\s*=\s*([\s\S]*?)\n\s*doc\s*=\s*mongo_find_one/m
+  )
+  if (queryAssignment?.[1]) {
+    return queryAssignment[1].trim()
+  }
+  const keywordQuery = block.match(/query\s*=\s*([\s\S]*?)\n\s*\)/)
+  return keywordQuery?.[1]?.replace(/,\s*$/, '').trim()
+}
+
+function extractPythonReturnExpression(block: string) {
+  const returns = [...block.matchAll(/^\s*return\s+(.+)$/gm)]
+  return returns.at(-1)?.[1]?.trim()
+}
+
 function getContextRecipeInputValues(
-  options:
-    | { value: string; label: string }[]
-    | { group: string; items: { value: string; label: string }[] }[]
+  options: Array<SelectOption | SelectOptionGroup>
 ) {
   return options.flatMap((option) =>
     'items' in option ? option.items.map((item) => item.value) : option.value
@@ -4359,13 +5502,13 @@ function buildColumnPreview({
   fieldKind,
   selectedInputs,
   selectedShot,
-  shotDetail,
+  datasetOptions,
   combineExpression,
 }: {
   fieldKind: string
   selectedInputs: string[]
   selectedShot?: HZDRShot
-  shotDetail?: HZDRShotDetail
+  datasetOptions: HZDRDatasetOption[]
   combineExpression: string
 }) {
   if (!selectedShot) {
@@ -4381,9 +5524,9 @@ function buildColumnPreview({
   const metadataValue = metadataKey
     ? getNestedMetadataValue(selectedShot.metadata, metadataKey)
     : undefined
-  const dataset = shotDetail?.hdf5_datasets.find(
-    (entry) => entry.name === datasetName
-  )
+  const dataset = selectedInputs
+    .map((value) => datasetOptions.find((option) => option.value === value))
+    .find(Boolean)
 
   if (fieldKind === 'metadata') {
     return JSON.stringify(
@@ -4397,7 +5540,7 @@ function buildColumnPreview({
     )
   }
 
-  if (fieldKind === 'hdf5' || fieldKind === 'lineout-preview') {
+  if (fieldKind === 'hdf5') {
     return JSON.stringify(
       {
         shot_number: selectedShot.shot_number,
@@ -4406,6 +5549,21 @@ function buildColumnPreview({
         dtype: dataset?.dtype ?? null,
         value: dataset ? `nanmean(${dataset.name})` : null,
         displayed_value: 'nanmean(dataset)',
+      },
+      null,
+      2
+    )
+  }
+
+  if (fieldKind === 'lineout-preview') {
+    return JSON.stringify(
+      {
+        shot_number: selectedShot.shot_number,
+        dataset: datasetName ?? 'dataset not selected',
+        shape: dataset?.shape ?? null,
+        dtype: dataset?.dtype ?? null,
+        value: dataset ? `lineout(${dataset.name})` : null,
+        displayed_value: 'lineout preview',
       },
       null,
       2
@@ -4667,8 +5825,12 @@ function ColumnCellPreview({
 
 function MetadataTrendPreview({
   values,
+  title = 'Trend preview',
+  xLabel = 'shot number',
 }: {
   values: { shotNumber: number; value: number }[]
+  title?: string
+  xLabel?: string
 }) {
   if (!values.length) {
     return (
@@ -4718,7 +5880,7 @@ function MetadataTrendPreview({
     <Stack gap="xs">
       <Group justify="space-between">
         <Text size="sm" fw={600}>
-          Trend preview
+          {title}
         </Text>
         <Text size="xs" c="dimmed">
           {formatTrendValue(rawMin)} to {formatTrendValue(rawMax)}
@@ -4817,7 +5979,7 @@ function MetadataTrendPreview({
           fontSize="10"
           fill="var(--mantine-color-gray-7)"
         >
-          shot number
+          {xLabel}
         </text>
       </svg>
     </Stack>
@@ -4832,6 +5994,17 @@ function formatTrendValue(value: number) {
     return value.toExponential(2)
   }
   return Number.isInteger(value) ? value.toString() : value.toPrecision(4)
+}
+
+function pythonShotIdParameter(datasetName: string) {
+  return datasetName.includes('{shot_id}') ? ', shot_id: "meta#shot_id"' : ''
+}
+
+function pythonHdf5DatasetExpression(datasetName: string) {
+  if (!datasetName.includes('{shot_id}')) {
+    return JSON.stringify(datasetName)
+  }
+  return `f${JSON.stringify(datasetName)}`
 }
 
 function buildComputedFieldSnippet({
@@ -4861,6 +6034,8 @@ function buildComputedFieldSnippet({
   const datasetName =
     selectedInputs.find((value) => value.startsWith('hdf5:'))?.slice(5) ??
     'signal'
+  const hdf5ShotIdParameter = pythonShotIdParameter(datasetName)
+  const hdf5DatasetExpression = pythonHdf5DatasetExpression(datasetName)
   const safeMongoCollection = mongoCollection.trim() || 'shots'
 
   if (fieldKind === 'metadata') {
@@ -4888,11 +6063,12 @@ from damnit_ctx import Skip, Variable
 
 
 @Variable(title=${JSON.stringify(safeFieldTitle)}, summary="nanmean")
-def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"):
+def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        values = handle[${JSON.stringify(datasetName)}][...]
+        dataset_name = ${hdf5DatasetExpression}
+        values = handle[dataset_name][...]
     return float(np.nanmean(values))
 `
   }
@@ -4904,14 +6080,15 @@ import numpy as np
 from damnit_ctx import Cell, Skip, Variable
 
 
-@Variable(title=${JSON.stringify(safeFieldTitle)}, summary="nanmean")
-def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"):
+@Variable(title=${JSON.stringify(safeFieldTitle)})
+def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     """Store a full lineout while showing a compact table preview."""
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        lineout = np.asarray(handle[${JSON.stringify(datasetName)}][...])
-    return Cell(lineout, summary="nanmean", preview=lineout)
+        dataset_name = ${hdf5DatasetExpression}
+        lineout = np.asarray(handle[dataset_name][...])
+    return Cell(lineout, preview=lineout)
 `
   }
 
@@ -4922,14 +6099,15 @@ import numpy as np
 from damnit_ctx import Cell, Skip, Variable
 
 
-@Variable(title=${JSON.stringify(safeFieldTitle)}, summary="mean")
-def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"):
+@Variable(title=${JSON.stringify(safeFieldTitle)}, summary="image preview")
+def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     """Store a full image while showing a reduced thumbnail in the table."""
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        image = np.asarray(handle[${JSON.stringify(datasetName)}][...])
-    return Cell(image, summary="mean", preview=image[::8, ::8])
+        dataset_name = ${hdf5DatasetExpression}
+        image = np.asarray(handle[dataset_name][...])
+    return Cell(image, summary="image preview", preview=image[::8, ::8])
 `
   }
 
@@ -4942,12 +6120,13 @@ from damnit_ctx import Cell, Skip, Variable
 
 
 @Variable(title=${JSON.stringify(safeFieldTitle)}, summary="nanmean")
-def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"):
+def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     """Use a Plotly figure as the double-click preview for a lineout."""
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        values = np.asarray(handle[${JSON.stringify(datasetName)}][...])
+        dataset_name = ${hdf5DatasetExpression}
+        values = np.asarray(handle[dataset_name][...])
     fig = px.line(x=np.arange(values.size), y=values, labels={"x": "Index", "y": "Signal"})
     return Cell(values, summary="nanmean", preview=fig)
 `
@@ -4975,7 +6154,7 @@ from damnit_ctx import Skip, Variable, mongo_find_one
 
 
 @Variable(title=${JSON.stringify(safeFieldTitle)}, summary="nanmean")
-def ${safeFieldName}(run, shot_number: "meta#shot_number", hdf5_path: "meta#hdf5_path"):
+def ${safeFieldName}(run, shot_number: "meta#shot_number", hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     """Compute this column from selected HZDR inputs."""
     doc = mongo_find_one(
         ${JSON.stringify(safeMongoCollection)},
@@ -4984,7 +6163,8 @@ def ${safeFieldName}(run, shot_number: "meta#shot_number", hdf5_path: "meta#hdf5
     if doc is None or not hdf5_path:
         raise Skip("Missing Mongo metadata or HDF5 path")
     with h5py.File(hdf5_path, "r") as handle:
-        hdf5_values = handle[${JSON.stringify(datasetName)}][...]
+        dataset_name = ${hdf5DatasetExpression}
+        hdf5_values = handle[dataset_name][...]
     metadata_value = doc.get(${JSON.stringify(metadataKey)})
     return ${combineExpression || 'np.nanmean(hdf5_values)'}
 `
@@ -5086,6 +6266,14 @@ const App = () => {
           element={
             <PrivateRoute>
               <HZDRFlowMonitorPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/link-shot-records"
+          element={
+            <PrivateRoute>
+              <LinkExistingShotRecordsPage />
             </PrivateRoute>
           }
         />

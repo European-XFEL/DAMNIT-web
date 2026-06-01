@@ -60,6 +60,14 @@ The frontend uses that endpoint for labels and route behavior.
 
 Generated fixtures:
 
+```bash
+cd api
+uv run python scripts/generate-hzdr-example.py
+cp .env.test.example .env
+cd ..
+bash scripts/hzdr-launch.sh
+```
+
 ```powershell
 cd api
 uv run python scripts/generate-hzdr-example.py
@@ -68,6 +76,13 @@ Copy-Item .env.test.example .env
 ```
 
 LabFrog/VLS-style MongoDB:
+
+```bash
+cd api
+cp .env.hzdr.example .env
+DW_API_METADATA__MONGO_URI="mongodb://USER:PASSWORD@localhost:27018/?authSource=admin" \
+  uv run -m damnit_api.main
+```
 
 ```powershell
 cd api
@@ -82,6 +97,14 @@ http://127.0.0.1:5173/home
 http://127.0.0.1:5173/flow-monitor
 http://127.0.0.1:8000/metadata/hzdr/sources
 ```
+
+The local flow monitor can emulate three package paths:
+
+| Button | Local behavior |
+| --- | --- |
+| LaserData | Appends a new shot through an ASAPO-shaped event |
+| PLANET Watchdog | Enriches the latest shot through `planet.watchdog.events` |
+| Motion auto logger | Enriches the latest shot through `motion.auto.logger.events` |
 
 ## EXFEL Setup
 
@@ -140,6 +163,31 @@ Provider roles:
 MongoDB remains live metadata. The HDF5 builder consumes staged event packages,
 for example `events/*.jsonl`, grouped by `experiment_id + shot_id`, and writes
 the combined experiment HDF5 file.
+
+Future SciCat integration should publish after this ordered package/HDF5
+boundary has a coherent shot or experiment record. Watchdog and Motion apps
+should keep emitting operational/enrichment events instead of owning catalog
+writes directly.
+
+The DAMNIT-side transition helper is:
+
+```bash
+cd api
+uv run python scripts/publish-hzdr-catalog.py --dry-run --limit 1
+```
+
+Its preferred target is a future `POST /scicat/from-damnit` endpoint. Until that
+exists, the helper can fall back to the current `POST /scicat/from-json` payload
+shape exposed by `scicat-plugin`.
+
+Proposed `/scicat/from-damnit` payload boundary:
+
+| Field | Purpose |
+| --- | --- |
+| `schema` | Versioned payload name, currently `damnit-web-hzdr.catalog.v1` |
+| `source` | DAMNIT source key, title, and source metadata |
+| `shot` | Shot number, shot ID, experiment ID, fired time, and merged shot metadata |
+| `dataset` | File path, file manifest, title, dataset type, and SciCat metadata |
 
 ## Context Files
 

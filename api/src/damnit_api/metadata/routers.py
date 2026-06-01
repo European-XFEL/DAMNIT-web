@@ -25,6 +25,14 @@ from .models import ProposalMeta
 
 router = APIRouter(prefix="/metadata", tags=["metadata"])
 
+WATCHDOG_KAFKA_TOPIC = "planet.watchdog.events"
+MOTION_AUTO_LOGGER_KAFKA_TOPIC = "motion.auto.logger.events"
+SHOTCOUNTER_KAFKA_TOPIC = "shotcounter.shots"
+KAFKA_EVENT_SOURCES = {
+    "planet-watchdog": (WATCHDOG_KAFKA_TOPIC, "planet-watchdog"),
+    "motion-auto-logger": (MOTION_AUTO_LOGGER_KAFKA_TOPIC, "motion-auto-logger"),
+}
+
 
 class HZDREmulatorEvent(BaseModel):
     """One local flow-monitor emulator event request."""
@@ -319,6 +327,12 @@ def enrich_latest_emulated_shot(
         float(metadata.get("laser_energy_j", 12.4)) + 0.03,
         3,
     )
+    _apply_event_source_metadata(
+        metadata,
+        event_source=event_source,
+        event_kind=event_kind,
+        sequence=enrich_count,
+    )
 
     file_payload = json.loads(sources_file.read_text(encoding="utf-8"))
     if isinstance(file_payload, dict):
@@ -360,7 +374,7 @@ def _build_flow_monitor_metadata(
 ) -> dict:
     """Create varied metadata for a flow-monitor generated shot."""
     rng = Random(20260529 + index)  # noqa: S311 - deterministic emulator data.
-    return {
+    metadata = {
         "experiment_id": experiment_id,
         "shot_id": shot_id,
         "status": "processed" if index % 5 else "needs-review",
@@ -396,6 +410,52 @@ def _build_flow_monitor_metadata(
         ),
         "operator": ["alex", "sam", "lee"][index % 3],
     }
+    _apply_event_source_metadata(
+        metadata,
+        event_source=event_source,
+        event_kind=event_kind,
+        sequence=index + 1,
+    )
+    return metadata
+
+
+def _apply_event_source_metadata(
+    metadata: dict, *, event_source: str, event_kind: str, sequence: int
+) -> None:
+    """Add source-specific enrichment fields used by the local flow monitor."""
+    source = _event_file_stem(event_source)
+    if source == "planet-watchdog":
+        metadata["watchdog_event_count"] = _next_metadata_counter(
+            metadata, "watchdog_event_count"
+        )
+        metadata["watchdog_last_kind"] = event_kind
+        metadata["watchdog_status"] = "shot-event-seen"
+        return
+    if source == "motion-auto-logger":
+        metadata["motion_event_count"] = _next_metadata_counter(
+            metadata, "motion_event_count"
+        )
+        metadata["motion_last_kind"] = event_kind
+        metadata["motion_status"] = "captured"
+        metadata["motion_stage_x_mm"] = round(-0.25 + sequence * 0.015, 4)
+        metadata["motion_stage_y_mm"] = round(0.18 - sequence * 0.012, 4)
+        metadata["motion_stage_z_mm"] = round(1.75 + sequence * 0.025, 4)
+        return
+    if source == "shotcounter":
+        metadata["shotcounter_event_count"] = _next_metadata_counter(
+            metadata, "shotcounter_event_count"
+        )
+        metadata["shotcounter_status"] = "shot-opened"
+        metadata["shotcounter_last_kind"] = event_kind
+
+
+def _next_metadata_counter(metadata: dict, key: str) -> int:
+    """Increment a metadata counter that may have come from a hand-written file."""
+    try:
+        current = int(metadata.get(key, 0))
+    except (TypeError, ValueError):
+        current = 0
+    return current + 1
 
 
 def _append_staged_emulator_event(
@@ -411,23 +471,92 @@ def _append_staged_emulator_event(
     """Append one production-shaped JSONL event for the flow monitor."""
     events_dir = sources_file.parent / "events"
     events_dir.mkdir(parents=True, exist_ok=True)
-    event_path = (
-        events_dir
-        / f"{event_source.lower().replace(' ', '-').replace('_', '-')}.jsonl"
-    )
+    event_path = events_dir / f"{_event_file_stem(event_source)}.jsonl"
     event = {
         "experiment_id": experiment_id,
         "shot_id": shot_id,
         "source": event_source,
         "kind": event_kind,
         "timestamp": fired_at,
-        "transport": "flow-monitor",
-        "payload_ref": {
-            "source": "damnit-web-flow-monitor",
-            "message_id": metadata["emulated_sequence"],
-        },
-        "values": [metadata["detector_signal_mean"]],
+        "transport": _transport_for_event_source(event_source),
+        "payload_ref": _payload_ref_for_event_source(event_source, metadata),
+        "values": _values_for_event_source(event_source, metadata),
         "metadata": metadata,
     }
     with event_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(event, sort_keys=True) + "\n")
+
+
+def _event_file_stem(event_source: str) -> str:
+    """Return the staged JSONL stem for one event source."""
+    return event_source.lower().replace(" ", "-").replace("_", "-")
+
+
+def _transport_for_event_source(event_source: str) -> str:
+    """Mirror the production transport used by well-known HZDR sources."""
+    source = _event_file_stem(event_source)
+    if source == "shotcounter":
+        return "zmq+kafka"
+    if source in KAFKA_EVENT_SOURCES:
+        return "kafka"
+    if source == "laserdata":
+        return "asapo"
+    return "flow-monitor"
+
+
+def _payload_ref_for_event_source(
+    event_source: str, metadata: dict
+) -> dict[str, str | int]:
+    """Build the staged payload reference for a flow-monitor event."""
+    message_id = _emulated_message_id(metadata)
+    source = _event_file_stem(event_source)
+    kafka_source = KAFKA_EVENT_SOURCES.get(source)
+    if kafka_source:
+        topic, producer = kafka_source
+        return {
+            "topic": topic,
+            "partition": 0,
+            "offset": message_id,
+            "producer": producer,
+        }
+    if source == "shotcounter":
+        return {
+            "endpoint": "shotcounter-zmq",
+            "topic": SHOTCOUNTER_KAFKA_TOPIC,
+            "partition": 0,
+            "offset": message_id,
+            "producer": "shotcounter",
+        }
+    if source == "laserdata":
+        return {
+            "endpoint": "local-asapo-broker",
+            "beamtime": str(metadata.get("experiment_id", "exp-emulated")),
+            "data_source": "hzdr-damnit",
+            "stream": "laser",
+            "message_id": message_id,
+        }
+    return {
+        "source": "damnit-web-flow-monitor",
+        "message_id": message_id,
+    }
+
+
+def _values_for_event_source(event_source: str, metadata: dict) -> list[float]:
+    """Return representative signal values for one staged flow-monitor event."""
+    source = _event_file_stem(event_source)
+    if source == "motion-auto-logger":
+        return [
+            float(metadata.get("motion_stage_x_mm", 0.0)),
+            float(metadata.get("motion_stage_y_mm", 0.0)),
+            float(metadata.get("motion_stage_z_mm", 0.0)),
+        ]
+    return [float(metadata.get("detector_signal_mean", 0.0))]
+
+
+def _emulated_message_id(metadata: dict) -> int:
+    """Return a stable message id even for hand-written source fixtures."""
+    value = metadata.get("emulated_sequence", metadata.get("emulated_enrich_count", 1))
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 1

@@ -18,11 +18,23 @@ class TerminologyConfig(BaseModel):
     uses_mymdc: bool
 
 
+class FlowMonitorReceiversConfig(BaseModel):
+    laser_data: bool
+    watchdog: bool
+    motion_auto_logger: bool
+    mongo: bool
+
+
+class FlowMonitorConfig(BaseModel):
+    receivers: FlowMonitorReceiversConfig
+
+
 class RuntimeConfig(BaseModel):
     profile: str
     auth_mode: str
     ldap_form_enabled: bool
     metadata_provider: str
+    flow_monitor: FlowMonitorConfig
     terminology: TerminologyConfig
 
 
@@ -39,5 +51,8 @@ async def get_runtime_config() -> RuntimeConfig:
         auth_mode=settings.auth.mode,
         ldap_form_enabled=bool(settings.auth.ldap.server_url),
         metadata_provider=settings.metadata.provider,
+        flow_monitor=FlowMonitorConfig.model_validate(
+            settings.flow_monitor.model_dump()
+        ),
         terminology=TerminologyConfig.model_validate(terminology.model_dump()),
     )

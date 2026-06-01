@@ -154,8 +154,8 @@ def preview_hdf5_dataset(path: Path, dataset_name: str) -> HZDRDatasetPreview:
     with h5py.File(path, "r") as handle:
         dataset = handle[dataset_name]
         data = np.asarray(dataset[...])
-        if data.ndim == 0:
-            preview = data.item()
+        if data.ndim == 0 or (data.ndim == 1 and data.size == 1):
+            preview = data.reshape(-1)[0].item()
             preview_kind = "scalar"
         elif data.ndim == 1:
             preview = data[: min(data.shape[0], 200)].astype(float).tolist()

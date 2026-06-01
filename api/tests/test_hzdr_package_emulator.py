@@ -51,6 +51,24 @@ def test_package_emulator_writes_source_fixture_and_hdf5(tmp_path: Path):
         payload_ref={"topic": "planet.watchdog.events", "partition": 0, "offset": 42},
         metadata={"hdf5_path": "Z:/bigdata/hzdr/experiments/exp-test.h5"},
     )
+    write_event(
+        events_dir / "motion-auto-logger.json",
+        source="motion-auto-logger",
+        kind="motion_stage_event",
+        transport="kafka",
+        payload_ref={
+            "topic": "motion.auto.logger.events",
+            "partition": 0,
+            "offset": 43,
+        },
+        values=[-0.235, 0.168, 1.775],
+        metadata={
+            "motion_status": "captured",
+            "motion_stage_x_mm": -0.235,
+            "motion_stage_y_mm": 0.168,
+            "motion_stage_z_mm": 1.775,
+        },
+    )
 
     package = hzdr_package_emulator.run_emulator(
         events_dir=events_dir,
@@ -63,16 +81,19 @@ def test_package_emulator_writes_source_fixture_and_hdf5(tmp_path: Path):
 
     assert (package.events_dir / "laserdata.jsonl").exists()
     assert (package.events_dir / "planet-watchdog.jsonl").exists()
+    assert (package.events_dir / "motion-auto-logger.jsonl").exists()
     sources = load_sources_file(package.sources_file)
     assert sources[0].key == "hzdr-emulator"
     assert sources[0].shots[0].shot_number == 123
     assert sources[0].shots[0].hdf5_path == package.hdf5_path
+    assert sources[0].shots[0].metadata["motion_status"] == "captured"
 
     with h5py.File(package.hdf5_path, "r") as handle:
         assert handle.attrs["profile"] == "hzdr-package-emulator"
         assert "events/payload_ref_json" in handle
         assert "metadata/mongodb_by_shot_json" in handle
         assert "signals/LaserData/pulse_energy_j/values" in handle
+        assert "signals/motion-auto-logger/motion_stage_event/values" in handle
         assert "fixtures/scalars/laser_energy_j_by_shot" in handle
         assert "fixtures/lineouts/pulse_energy_j_by_shot" in handle
         assert "fixtures/images/camera_raw_by_shot" in handle

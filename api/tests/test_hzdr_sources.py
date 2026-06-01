@@ -3,13 +3,16 @@ from pathlib import Path
 import h5py
 import numpy as np
 import orjson
+import pytest
 
 from damnit_api.metadata.hzdr_sources import (
     HZDRSourceProvider,
     _map_mongo_shot,
     list_hdf5_datasets,
     load_sources_file,
+    preview_hdf5_dataset,
 )
+from damnit_api.metadata.routers import append_emulated_shot
 from damnit_api.shared.settings import MetadataSettings
 
 
@@ -121,3 +124,104 @@ def test_list_hdf5_datasets_reads_structure_without_full_arrays(tmp_path: Path):
         ("image_preview", [2, 2]),
         ("signal", [2]),
     ]
+
+
+def test_single_value_hdf5_vector_previews_as_scalar(tmp_path: Path):
+    """One-value vectors should not be treated as line/trend previews."""
+    hdf5_path = tmp_path / "shot.h5"
+    with h5py.File(hdf5_path, "w") as handle:
+        handle.create_dataset("single_value", data=np.asarray([1.25]))
+        handle.create_dataset("lineout", data=np.asarray([1.0, 1.5]))
+
+    scalar_preview = preview_hdf5_dataset(hdf5_path, "single_value")
+    line_preview = preview_hdf5_dataset(hdf5_path, "lineout")
+
+    assert scalar_preview.preview_kind == "scalar"
+    assert scalar_preview.preview == pytest.approx(1.25)
+    assert line_preview.preview_kind == "line"
+    assert line_preview.preview == [1.0, 1.5]
+
+
+def test_watchdog_flow_monitor_event_uses_kafka_shape(tmp_path: Path):
+    """Watchdog enrichment should look like the production Kafka path."""
+    sources_file = write_source_fixture(tmp_path)
+
+    source = append_emulated_shot(
+        sources_file,
+        source_key="hzdr-local",
+        event_source="PLANET-Watchdog",
+        event_kind="watchdog_shot_event",
+        action="enrich",
+    )
+
+    assert source.shots[-1].metadata["emulated_last_enrichment_source"] == (
+        "PLANET-Watchdog"
+    )
+    event_path = tmp_path / "events" / "planet-watchdog.jsonl"
+    event = orjson.loads(event_path.read_bytes().splitlines()[-1])
+    assert event["transport"] == "kafka"
+    assert event["payload_ref"] == {
+        "offset": 1,
+        "partition": 0,
+        "producer": "planet-watchdog",
+        "topic": "planet.watchdog.events",
+    }
+
+
+def test_shotcounter_flow_monitor_event_uses_zmq_kafka_shape(tmp_path: Path):
+    """Shotcounter starts new shots through a ZMQ/Kafka-shaped event."""
+    sources_file = write_source_fixture(tmp_path)
+
+    source = append_emulated_shot(
+        sources_file,
+        source_key="hzdr-local",
+        event_source="Shotcounter",
+        event_kind="shot_counter_event",
+        action="append",
+    )
+
+    assert source.shots[-1].metadata["emulated_source"] == "Shotcounter"
+    assert source.shots[-1].metadata["shotcounter_status"] == "shot-opened"
+    event_path = tmp_path / "events" / "shotcounter.jsonl"
+    event = orjson.loads(event_path.read_bytes().splitlines()[-1])
+    assert event["transport"] == "zmq+kafka"
+    assert event["payload_ref"] == {
+        "endpoint": "shotcounter-zmq",
+        "offset": 3,
+        "partition": 0,
+        "producer": "shotcounter",
+        "topic": "shotcounter.shots",
+    }
+
+
+def test_motion_auto_logger_flow_monitor_event_enriches_latest_shot(
+    tmp_path: Path,
+):
+    """Motion autologging is an optional Kafka-backed enrichment source."""
+    sources_file = write_source_fixture(tmp_path)
+
+    source = append_emulated_shot(
+        sources_file,
+        source_key="hzdr-local",
+        event_source="motion-auto-logger",
+        event_kind="motion_stage_event",
+        action="enrich",
+    )
+
+    metadata = source.shots[-1].metadata
+    assert metadata["emulated_last_enrichment_source"] == "motion-auto-logger"
+    assert metadata["motion_status"] == "captured"
+    assert metadata["motion_stage_x_mm"] == pytest.approx(-0.235)
+    assert metadata["motion_stage_y_mm"] == pytest.approx(0.168)
+    assert metadata["motion_stage_z_mm"] == pytest.approx(1.775)
+
+    event_path = tmp_path / "events" / "motion-auto-logger.jsonl"
+    event = orjson.loads(event_path.read_bytes().splitlines()[-1])
+    assert event["transport"] == "kafka"
+    assert event["payload_ref"] == {
+        "offset": 1,
+        "partition": 0,
+        "producer": "motion-auto-logger",
+        "topic": "motion.auto.logger.events",
+    }
+    assert event["values"] == pytest.approx([-0.235, 0.168, 1.775])

@@ -210,6 +210,42 @@ def recovered_cell(run):
     assert payload["rows"][0]["previews"]["recovered_cell"] == [1.0, 2.0, 3.0]
 
 
+def test_lineout_context_cell_without_summary_preserves_array_value():
+    """Lineout previews should not be collapsed to a scalar summary."""
+    raw_value = routers.ContextCell([1.0, 2.0, 3.0], preview=[1.0, 2.0, 3.0])
+
+    assert routers._json_safe(routers._summarize_context_value(raw_value)) == [
+        1.0,
+        2.0,
+        3.0,
+    ]
+    assert routers._json_safe(routers._summarize_context_preview(raw_value)) == [
+        1.0,
+        2.0,
+        3.0,
+    ]
+
+
+def test_context_variable_can_request_shot_id_metadata():
+    """Generated per-shot HDF5 snippets use shot_id to build common paths."""
+    shot = type(
+        "Shot",
+        (),
+        {
+            "shot_number": 123,
+            "hdf5_path": None,
+            "metadata": {"shot_id": "shot-000123"},
+        },
+    )()
+
+    def variable(run, shot_id: str):
+        return shot_id
+
+    variable.__annotations__["shot_id"] = "meta#shot_id"
+
+    assert routers._call_context_variable(variable, shot) == "shot-000123"
+
+
 async def wait_for_change(
     client,
     url,

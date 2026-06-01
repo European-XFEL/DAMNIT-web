@@ -118,11 +118,40 @@ function Assert-ProjectPath {
         [string] $Name
     )
 
-    $path = Join-Path $Root $Name
-    if (-not (Test-Path $path)) {
-        throw "Expected sibling project not found: $path"
+    $current = (Resolve-Path $Root).Path
+    while ($true) {
+        $path = Join-Path $current $Name
+        if (Test-Path $path) {
+            return (Resolve-Path $path).Path
+        }
+
+        $parent = Split-Path -Parent $current
+        if (-not $parent -or $parent -eq $current) {
+            throw "Expected related project not found while searching upward for ${Name} from $Root"
+        }
+        $current = $parent
     }
-    return (Resolve-Path $path).Path
+}
+
+function Find-OptionalProjectPath {
+    param(
+        [string] $Root,
+        [string] $Name
+    )
+
+    $current = (Resolve-Path $Root).Path
+    while ($true) {
+        $path = Join-Path $current $Name
+        if (Test-Path $path) {
+            return (Resolve-Path $path).Path
+        }
+
+        $parent = Split-Path -Parent $current
+        if (-not $parent -or $parent -eq $current) {
+            return ""
+        }
+        $current = $parent
+    }
 }
 
 function Start-AsapoLocalBroker {
@@ -328,6 +357,8 @@ $damnitRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $asapoRoot = Assert-ProjectPath $root "asapo-for-hzdr-damnit"
 $kafkaRoot = Assert-ProjectPath $root "kafka-broker-docker"
 $labfrogRoot = Assert-ProjectPath $root "labfrog"
+$planetWatchdogRoot = Assert-ProjectPath $root "planet-watchdog"
+$motionAutoLoggerRoot = Find-OptionalProjectPath $root "motion-auto-logger"
 $selectedAsapoSpoolDir = if ($AsapoSpoolDir) {
     (Resolve-Path $AsapoSpoolDir -ErrorAction SilentlyContinue).Path
 } else {
@@ -342,6 +373,13 @@ Write-Host "DAMNIT-web: $damnitRoot"
 Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
+Write-Host "PLANET Watchdog: $planetWatchdogRoot"
+if ($motionAutoLoggerRoot) {
+    Write-Host "Motion auto logger: $motionAutoLoggerRoot"
+}
+else {
+    Write-Host "Motion auto logger: not found (optional)"
+}
 Write-Host "ASAPO spool: $selectedAsapoSpoolDir"
 
 Write-Step "Prerequisites"
