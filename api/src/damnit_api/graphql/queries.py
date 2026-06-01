@@ -25,6 +25,11 @@ async def _ensure_damnit_path(info: Info, proposal: str) -> None:
 
     Authorization is handled separately by IsProposalMember before this runs.
     """
+    from ..shared.settings import settings
+
+    if settings.is_local:
+        return
+
     meta = await _get_proposal_meta(
         info.context.mymdc, int(proposal), info.context.session
     )
