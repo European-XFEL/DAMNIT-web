@@ -13,6 +13,7 @@ from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
+from ..auth.models import User
 from ..metadata import gql as metadata
 
 SUBSCRIPTION_PROTOCOLS = [
@@ -53,6 +54,8 @@ class Context(BaseContext):
     mymdc: MyMdCClient
     oauth_user: OAuthUserInfo
     session: DBSession
+    # Resolved lazily and cached by IsProposalMember; None until first needed.
+    user: User | None = None
 
 
 async def get_context(  # noqa: RUF029

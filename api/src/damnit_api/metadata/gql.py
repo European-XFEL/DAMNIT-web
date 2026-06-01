@@ -52,7 +52,9 @@ class Query:
         mymdc, session = info.context.mymdc, info.context.session
 
         user = await User.from_oauth_user(mymdc, session, info.context.oauth_user)
-        allowed_proposal_numbers = [n for n in proposal_numbers if n in user._proposals]
+        allowed_proposal_numbers = [
+            n for n in proposal_numbers if n in user.proposals
+        ]
 
         proposals_meta = await services._get_proposal_meta_many(
             mymdc,

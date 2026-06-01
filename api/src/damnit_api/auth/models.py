@@ -70,8 +70,14 @@ class ProposalsByYearHalf(RootModel):
 class User(BaseUserInfo):
     """Full user information including list of proposals."""
 
+    # TODO: use single proposals list
+    _damnit_proposals: list[int]
     _proposals: list[int]
     proposals_by_year_half: ProposalsByYearHalf
+
+    @property
+    def proposals(self) -> list[int]:
+        return self._proposals
 
     @classmethod
     async def from_connection(
@@ -98,11 +104,12 @@ class User(BaseUserInfo):
     ) -> Self:
         from ..shared.settings import settings
 
-        if settings.is_local:
+        if settings.is_local:  # TODO: decouple local from auth
             res = cls.model_validate({
                 **oauth.model_dump(),
                 "proposals_by_year_half": {},
             })
+            res._damnit_proposals = []
             res._proposals = []
             return res
 
@@ -112,6 +119,8 @@ class User(BaseUserInfo):
         proposal_numbers = [
             p.proposal_number for p in proposals.root if p.proposal_number is not None
         ]
+        # Raw membership, before narrowing to proposals with a DAMNIT path below.
+        member_proposals = list(proposal_numbers)
 
         proposals_meta = await _get_proposal_meta_many(
             mymdc,
@@ -138,6 +147,7 @@ class User(BaseUserInfo):
             "proposals_by_year_half": proposals_by_year_half,
         })
 
-        res._proposals = proposal_numbers
+        res._damnit_proposals = proposal_numbers
+        res._proposals = member_proposals
 
         return res
