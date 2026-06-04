@@ -4,8 +4,7 @@
     "asapoHarness": "asapo-for-hzdr-damnit",
     "kafkaBroker": "kafka-broker-docker",
     "labfrog": "labfrog",
-    "planetWatchdog": "planet-watchdog",
-    "motionAutoLogger": "motion-auto-logger"
+    "planetWatchdog": "planet-watchdog"
   },
   "ports": {
     "api": 8000,
@@ -23,8 +22,7 @@
       "bootstrap": "127.0.0.1:9092",
       "topic": "planet.watchdog.events",
       "topics": {
-        "watchdog": "planet.watchdog.events",
-        "motionAutoLogger": "motion.auto.logger.events"
+        "watchdog": "planet.watchdog.events"
       }
     },
     "asapo": {
@@ -53,7 +51,6 @@
     "receivers": {
       "laserData": true,
       "watchdog": true,
-      "motionAutoLogger": false,
       "mongo": true
     }
   }

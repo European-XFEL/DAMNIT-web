@@ -320,11 +320,7 @@ $planetWatchdogRoot = Resolve-RepositoryPath `
     -RepoName "planet-watchdog" `
     -Label "PLANET Watchdog" `
     -SearchStart $repoRoot
-$motionAutoLoggerRoot = Resolve-OptionalRepositoryPath `
-    -PathValue $config.repositories.motionAutoLogger `
-    -BaseDir $configDir `
-    -RepoName "motion-auto-logger" `
-    -SearchStart $repoRoot
+
 
 $apiPort = [int](Get-ConfigValue $config.ports.api 8000)
 $guiPort = [int](Get-ConfigValue $config.ports.gui 5173)
@@ -355,12 +351,7 @@ Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
 Write-Host "PLANET Watchdog: $planetWatchdogRoot"
-if ($motionAutoLoggerRoot) {
-    Write-Host "Motion auto logger: $motionAutoLoggerRoot"
-}
-else {
-    Write-Host "Motion auto logger: not found (optional)"
-}
+
 Write-Host "Event packages: $eventsDir"
 Write-Host "Emulator output: $outputDir"
 Write-Host "Generated shots: $shotCount, increment: $shotIncrement"
@@ -440,7 +431,7 @@ if (-not (Test-Path $sourcesFile)) {
 
 $env:DW_API_FLOW_MONITOR__RECEIVERS__LASER_DATA = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.laserData $true)).ToLowerInvariant()
 $env:DW_API_FLOW_MONITOR__RECEIVERS__WATCHDOG = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.watchdog $true)).ToLowerInvariant()
-$env:DW_API_FLOW_MONITOR__RECEIVERS__MOTION_AUTO_LOGGER = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.motionAutoLogger $false)).ToLowerInvariant()
+
 $env:DW_API_FLOW_MONITOR__RECEIVERS__MONGO = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.mongo $true)).ToLowerInvariant()
 
 Write-Step "Starting DAMNIT-web"

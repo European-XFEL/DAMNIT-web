@@ -96,7 +96,7 @@ type RuntimeConfig = {
     receivers: {
       laser_data: boolean
       watchdog: boolean
-      motion_auto_logger: boolean
+
       mongo: boolean
     }
   }
@@ -178,7 +178,7 @@ type HZDRDatasetPreview = {
 
 type FlowPacket = {
   id: number
-  lane: 'shotcounter' | 'watchdog' | 'motion' | 'laser' | 'package' | 'damnit'
+  lane: 'shotcounter' | 'watchdog' | 'laser' | 'package' | 'damnit'
   label: string
 }
 
@@ -193,16 +193,16 @@ type FlowLogEntry = {
 type FlowReceiverConfig = {
   laserData: boolean
   watchdog: boolean
-  motion: boolean
   mongo: boolean
 }
 
 type FlowMonitorState = {
+  laserBuffered: boolean
   laserStaged: boolean
+  laserBrokerPending: boolean
   watchdogBuffered: boolean
+  watchdogBrokerPending: boolean
   watchdogStaged: boolean
-  motionBuffered: boolean
-  motionStaged: boolean
   mongoPending: boolean
   hdf5Built: boolean
 }
@@ -212,6 +212,8 @@ type WatchdogWatcherKey =
   | 'dummy-analysis'
   | 'lli-parser'
   | 'tps-quick'
+
+type ShotcounterTKey = 'draco01' | 'draco02' | 'draco04' | 'draco07' | 'draco08'
 
 type LinkCollectionStatus = {
   collection: string
@@ -357,14 +359,47 @@ const watchdogWatcherOptions: {
   },
 ]
 
+const shotcounterTKeyOptions: {
+  value: ShotcounterTKey
+  label: string
+  description: string
+}[] = [
+  {
+    value: 'draco01',
+    label: 'Draco01',
+    description: 'primary shot notice TKEY',
+  },
+  {
+    value: 'draco02',
+    label: 'Draco02',
+    description: 'LLI watcher fanout TKEY',
+  },
+  {
+    value: 'draco04',
+    label: 'Draco04',
+    description: 'LLI watcher fanout TKEY',
+  },
+  {
+    value: 'draco07',
+    label: 'Draco07',
+    description: 'PNG original attachment TKEY',
+  },
+  {
+    value: 'draco08',
+    label: 'Draco08',
+    description: 'LLI watcher fanout TKEY',
+  },
+]
+
 const emptyFlowMonitorState: FlowMonitorState = {
+  laserBuffered: false,
   laserStaged: false,
+  laserBrokerPending: false,
   watchdogBuffered: false,
+  watchdogBrokerPending: false,
   watchdogStaged: false,
-  motionBuffered: false,
-  motionStaged: false,
   mongoPending: false,
-  hdf5Built: false,
+  hdf5Built: false
 }
 
 function useRuntimeConfig() {
@@ -418,12 +453,14 @@ function HZDRFlowMonitorPage() {
   const [receiverConfig, setReceiverConfig] = useState<FlowReceiverConfig>({
     laserData: true,
     watchdog: true,
-    motion: false,
     mongo: true,
   })
   const [selectedWatchdogWatchers, setSelectedWatchdogWatchers] = useState<
     WatchdogWatcherKey[]
   >(['png-originals', 'lli-parser'])
+  const [selectedShotcounterTKeys, setSelectedShotcounterTKeys] = useState<
+    ShotcounterTKey[]
+  >(['draco01', 'draco07'])
   const [flowState, setFlowState] = useState<FlowMonitorState>(
     emptyFlowMonitorState
   )
@@ -444,13 +481,9 @@ function HZDRFlowMonitorPage() {
     setReceiverConfig({
       laserData: runtimeReceivers.laser_data,
       watchdog: runtimeReceivers.watchdog,
-      motion: runtimeReceivers.motion_auto_logger,
       mongo: runtimeReceivers.mongo,
     })
   }, [runtimeConfig?.flow_monitor?.receivers])
-
-  const motionAutoLoggerAvailable =
-    runtimeConfig?.flow_monitor?.receivers.motion_auto_logger ?? false
 
   const shotTotal = sources.reduce(
     (total, source) => total + source.shots.length,
@@ -575,7 +608,8 @@ function HZDRFlowMonitorPage() {
     action: 'append' | 'enrich',
     lane: FlowPacket['lane'],
     label: string,
-    detail: string
+    detail: string,
+    notifyDamnit = true
   ) => {
     const targetShotNumber =
       action === 'append' ? nextShotNumber : latestShotNumber || nextShotNumber
@@ -597,11 +631,13 @@ function HZDRFlowMonitorPage() {
       .then((response) => requireJson<HZDRSource>(response))
       .then(() => {
         loadSources()
-        triggerDamnitPulse(
-          action === 'append'
-            ? `Shot ${targetShotNumber} appended to local emulator`
-            : `Shot ${targetShotNumber} enriched in local emulator`
-        )
+        if (notifyDamnit) {
+          triggerDamnitPulse(
+            action === 'append'
+              ? `Shot ${targetShotNumber} appended to local emulator`
+              : `Shot ${targetShotNumber} enriched in local emulator`
+          )
+        }
       })
       .catch(() => {
         addLogEntry(
@@ -612,11 +648,43 @@ function HZDRFlowMonitorPage() {
       })
   }
 
+  const sendLaserData = () => {
+    if (!receiverConfig.laserData) {
+      addLogEntry(
+        'LaserData disabled',
+        'Enable LaserData in the launcher flow-monitor config.',
+        'stage'
+      )
+      return
+    }
+
+    appendEmulatedShot(
+      'LaserData',
+      'pulse_energy_j',
+      'enrich',
+      'laser',
+      'LaserData enrichment',
+      'LaserData latest metadata -> ASAPO broker',
+      false
+    )
+
+    setFlowState((current) => {
+      console.log('before LaserData enrich', current)
+      return {
+        ...current,
+        laserBuffered: false,
+        laserBrokerPending: true,
+        laserStaged: false,
+        hdf5Built: false,
+      }
+    })
+  }
+
   const sendWatchdog = () => {
     if (!receiverConfig.watchdog) {
       addLogEntry(
         'Watchdog disabled',
-        'Enable PLANET-Watchdog in the launcher flow-monitor config.',
+        'Enable DAQ File Watchdog in the launcher flow-monitor config.',
         'stage'
       )
       return
@@ -624,7 +692,7 @@ function HZDRFlowMonitorPage() {
     if (!selectedWatchdogWatchers.length) {
       addLogEntry(
         'No Watchdog watchers selected',
-        'Select at least one PLANET-Watchdog watcher rule.',
+        'Select at least one DAQ File Watchdog watcher rule.',
         'stage'
       )
       return
@@ -634,78 +702,66 @@ function HZDRFlowMonitorPage() {
       .map((option) => option.label)
       .join(', ')
     appendEmulatedShot(
-      'PLANET-Watchdog',
+      'DAQ File Watchdog',
       'watchdog_shot_event',
       'enrich',
       'watchdog',
       'Watchdog shot event',
-      `PLANET Watchdog (${watcherLabels}) -> Kafka -> live JSONL staging`
+      `DAQ File Watchdog (${watcherLabels}) -> Kafka broker`,
+      false
     )
     setFlowState((current) => ({
       ...current,
       watchdogBuffered: false,
-      watchdogStaged: true,
-      hdf5Built: false,
-    }))
-  }
-
-  const sendMotion = () => {
-    if (!receiverConfig.motion) {
-      addLogEntry(
-        'Motion disabled',
-        'Enable motion-auto-logger in the launcher flow-monitor config.',
-        'stage'
-      )
-      return
-    }
-    appendEmulatedShot(
-      'motion-auto-logger',
-      'motion_stage_event',
-      'enrich',
-      'motion',
-      'Motion auto logger event',
-      'Motion auto logger -> Kafka -> live JSONL staging'
-    )
-    setFlowState((current) => ({
-      ...current,
-      motionBuffered: false,
-      motionStaged: true,
+      watchdogBrokerPending: true,
+      watchdogStaged: false,
       hdf5Built: false,
     }))
   }
 
   const sendShotcounter = () => {
+    if (!selectedShotcounterTKeys.length) {
+      addLogEntry(
+        'No Shotcounter TKEYs selected',
+        'Select at least one Shotcounter TKEY before publishing a shot notice.',
+        'stage'
+      )
+      return
+    }
+    const tkeyLabels = shotcounterTKeyOptions
+      .filter((option) => selectedShotcounterTKeys.includes(option.value))
+      .map((option) => option.label)
+      .join(', ')
     setFlowState({
       ...emptyFlowMonitorState,
-      laserStaged: receiverConfig.laserData,
+      laserBuffered: receiverConfig.laserData,
       watchdogBuffered:
         receiverConfig.watchdog && selectedWatchdogWatchers.length > 0,
-      motionBuffered: motionAutoLoggerAvailable && receiverConfig.motion,
       mongoPending: receiverConfig.mongo,
-    })
+        })
     appendEmulatedShot(
       'Shotcounter',
       'shot_counter_event',
       'append',
       'shotcounter',
       'Shotcounter event',
-      'Shotcounter -> ZMQ -> Kafka fanout -> subscribed systems'
+      `Shotcounter (${tkeyLabels}) -> ZMQ -> Kafka fanout -> subscribed systems`
     )
   }
 
   const buildPackage = () => {
     setFlowState((current) => ({
       ...current,
+      laserBuffered: false,
       laserStaged: false,
+      laserBrokerPending: false,
       watchdogBuffered: false,
+      watchdogBrokerPending: false,
       watchdogStaged: false,
-      motionBuffered: false,
-      motionStaged: false,
       mongoPending: false,
       hdf5Built:
         current.laserStaged ||
         current.watchdogStaged ||
-        current.motionStaged ||
         current.hdf5Built,
     }))
     sendPacket(
@@ -723,7 +779,14 @@ function HZDRFlowMonitorPage() {
     )
     window.setTimeout(() => {
       setLivePollPulse(false)
-      setFlowState((current) => ({ ...current, mongoPending: false }))
+      setFlowState((current) => ({
+        ...current,
+        laserStaged: current.laserStaged || current.laserBrokerPending,
+        laserBrokerPending: false,
+        watchdogStaged: current.watchdogStaged || current.watchdogBrokerPending,
+        watchdogBrokerPending: false,
+        mongoPending: false,
+      }))
     }, 1100)
   }
   return (
@@ -799,13 +862,15 @@ function HZDRFlowMonitorPage() {
                   latestShotNumber={latestShotNumber}
                   nextShotNumber={nextShotNumber}
                   receiverConfig={receiverConfig}
-                  motionAutoLoggerAvailable={motionAutoLoggerAvailable}
+
                   selectedWatchdogWatchers={selectedWatchdogWatchers}
+                  selectedShotcounterTKeys={selectedShotcounterTKeys}
                   flowState={flowState}
                   onSelectedWatchdogWatchersChange={setSelectedWatchdogWatchers}
+                  onSelectedShotcounterTKeysChange={setSelectedShotcounterTKeys}
                   onSendShotcounter={sendShotcounter}
+                  onSendLaserData={sendLaserData}
                   onSendWatchdog={sendWatchdog}
-                  onSendMotion={sendMotion}
                   onBuildPackage={buildPackage}
                   onRefreshDamnit={refreshDamnit}
                 />
@@ -1006,13 +1071,15 @@ function FlowDiagram({
   latestShotNumber,
   nextShotNumber,
   receiverConfig,
-  motionAutoLoggerAvailable,
+
   selectedWatchdogWatchers,
+  selectedShotcounterTKeys,
   flowState,
   onSelectedWatchdogWatchersChange,
+  onSelectedShotcounterTKeysChange,
   onSendShotcounter,
+  onSendLaserData,
   onSendWatchdog,
-  onSendMotion,
   onBuildPackage,
   onRefreshDamnit,
 }: {
@@ -1024,13 +1091,15 @@ function FlowDiagram({
   latestShotNumber: number
   nextShotNumber: number
   receiverConfig: FlowReceiverConfig
-  motionAutoLoggerAvailable: boolean
+
   selectedWatchdogWatchers: WatchdogWatcherKey[]
+  selectedShotcounterTKeys: ShotcounterTKey[]
   flowState: FlowMonitorState
   onSelectedWatchdogWatchersChange: (watchers: WatchdogWatcherKey[]) => void
+  onSelectedShotcounterTKeysChange: (tkeys: ShotcounterTKey[]) => void
   onSendShotcounter: () => void
+  onSendLaserData: () => void
   onSendWatchdog: () => void
-  onSendMotion: () => void
   onBuildPackage: () => void
   onRefreshDamnit: () => void
 }) {
@@ -1040,37 +1109,37 @@ function FlowDiagram({
   const activeWatchdogPacket = packets.some(
     (packet) => packet.lane === 'watchdog'
   )
-  const activeMotionPacket = packets.some((packet) => packet.lane === 'motion')
-  const activeLaser = receiverConfig.laserData
+
+  const activeLaserPacket = packets.some((packet) => packet.lane === 'laser')
+const activeLaser = flowState.laserBuffered
+
   const activePackagePacket = packets.some(
     (packet) => packet.lane === 'package'
   )
   const hasFanoutBuffer =
-    flowState.laserStaged ||
+    flowState.laserBuffered ||
     flowState.watchdogBuffered ||
-    flowState.motionBuffered ||
     flowState.mongoPending
-  const activeWatchdog =
-    activeWatchdogPacket ||
-    flowState.watchdogBuffered ||
-    flowState.watchdogStaged
-  const activeMotion =
-    activeMotionPacket || flowState.motionBuffered || flowState.motionStaged
-  const activeWatchdogBroker = activeWatchdogPacket || flowState.watchdogStaged
-  const activeMotionBroker = activeMotionPacket || flowState.motionStaged
-  const activeEnhancers =
-    activeWatchdogBroker || (motionAutoLoggerAvailable && activeMotionBroker)
+  const activeWatchdog = activeWatchdogPacket || flowState.watchdogBuffered
+  const activeLaserBroker = activeLaserPacket || flowState.laserBrokerPending
+  const activeWatchdogBroker =
+    activeWatchdogPacket || flowState.watchdogBrokerPending
   const activeMongoQuery = receiverConfig.mongo && livePollPulse
   const activeMongo = flowState.mongoPending || activeMongoQuery
+  const activeIncomingLivePoll =
+    livePollPulse &&
+    (flowState.laserBrokerPending || flowState.watchdogBrokerPending)
   const activeLiveEventLog =
-    flowState.laserStaged || flowState.watchdogStaged || flowState.motionStaged
-  const activeLive = activeLiveEventLog || activeShotcounter || activeEnhancers
+    flowState.laserStaged || flowState.watchdogStaged
+  const activeLive = activeLiveEventLog || activeIncomingLivePoll
   const activeDamnitLive = activeLive || damnitPulse
-  const activeHdf5 = activePackagePacket || flowState.hdf5Built
+  const activeHdf5Builder = activePackagePacket
+  const activeCombinedHdf5 = flowState.hdf5Built
   const steadyTrafficCount =
-    (activeLaser ? 1 : 0) +
+    (flowState.laserBuffered ? 1 : 0) +
+    (flowState.laserBrokerPending ? 1 : 0) +
     (flowState.watchdogBuffered ? 1 : 0) +
-    (flowState.motionBuffered ? 1 : 0) +
+    (flowState.watchdogBrokerPending ? 1 : 0) +
     (flowState.mongoPending ? 1 : 0) +
     (activeLiveEventLog ? 1 : 0)
 
@@ -1105,25 +1174,56 @@ function FlowDiagram({
             </Badge>
           </Group>
         </Group>
-        <DetailsSection title="PLANET-Watchdog available watchers">
-          <Checkbox.Group
-            value={selectedWatchdogWatchers}
-            onChange={(values) =>
-              onSelectedWatchdogWatchersChange(values as WatchdogWatcherKey[])
-            }
-          >
-            <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="xs">
-              {watchdogWatcherOptions.map((option) => (
-                <Checkbox
-                  key={option.value}
-                  value={option.value}
-                  label={option.label}
-                  description={option.description}
-                  disabled={!receiverConfig.watchdog}
-                />
-              ))}
-            </SimpleGrid>
-          </Checkbox.Group>
+        <DetailsSection title="Flow monitor enablement">
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            <Stack gap="xs">
+              <Text fw={700} size="sm">
+                Shotcounter available TKEYs
+              </Text>
+              <Checkbox.Group
+                value={selectedShotcounterTKeys}
+                onChange={(values) =>
+                  onSelectedShotcounterTKeysChange(values as ShotcounterTKey[])
+                }
+              >
+                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+                  {shotcounterTKeyOptions.map((option) => (
+                    <Checkbox
+                      key={option.value}
+                      value={option.value}
+                      label={option.label}
+                      description={option.description}
+                    />
+                  ))}
+                </SimpleGrid>
+              </Checkbox.Group>
+            </Stack>
+            <Stack gap="xs">
+              <Text fw={700} size="sm">
+                DAQ File available watchers
+              </Text>
+              <Checkbox.Group
+                value={selectedWatchdogWatchers}
+                onChange={(values) =>
+                  onSelectedWatchdogWatchersChange(
+                    values as WatchdogWatcherKey[]
+                  )
+                }
+              >
+                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+                  {watchdogWatcherOptions.map((option) => (
+                    <Checkbox
+                      key={option.value}
+                      value={option.value}
+                      label={option.label}
+                      description={option.description}
+                      disabled={!receiverConfig.watchdog}
+                    />
+                  ))}
+                </SimpleGrid>
+              </Checkbox.Group>
+            </Stack>
+          </SimpleGrid>
         </DetailsSection>
 
         <div
@@ -1143,14 +1243,14 @@ function FlowDiagram({
             subtitle="ZMQ shot notice, Kafka fanout"
             active={activeShotcounter}
             icon={<IconServer size={24} />}
-            color="blue"
+            color="grape"
             actions={[{ label: 'New shot', onClick: onSendShotcounter }]}
             style={{ gridColumn: 1, gridRow: 1 }}
           />
           <FlowConnector
             active={activeShotcounter || hasFanoutBuffer}
-            color="blue"
-            label="fanout"
+            color="grape"
+            label="kafka fanout"
             style={{ gridColumn: 2, gridRow: 1 }}
           />
           <ProgramNode
@@ -1158,12 +1258,12 @@ function FlowDiagram({
             subtitle="shot notice distributed to subscribers"
             active={activeShotcounter || hasFanoutBuffer}
             icon={<IconRoute size={24} />}
-            color="blue"
+            color="grape"
             style={{ gridColumn: 3, gridRow: 1 }}
           />
           <FlowConnector
             active={activeShotcounter || hasFanoutBuffer}
-            color="blue"
+            color="cyan"
             label="buffer"
             style={{ gridColumn: 4, gridRow: 1 }}
           />
@@ -1171,37 +1271,47 @@ function FlowDiagram({
             title="LaserData"
             subtitle="primary laser measurements"
             active={activeLaser}
-            buffered={flowState.laserStaged}
+            buffered={flowState.laserBuffered}
             icon={<IconServer size={24} />}
             color="blue"
+            actions={[
+              {
+                label: 'Enrich latest',
+                onClick: onSendLaserData,
+                disabled: !receiverConfig.laserData,
+              },
+            ]}
             style={{ gridColumn: 1, gridRow: 2 }}
           />
           <FlowConnector
-            active={activeLaser || flowState.laserStaged}
+            active={activeLaserPacket || flowState.laserBrokerPending}
             color="blue"
             label="ASAPO"
             style={{ gridColumn: 2, gridRow: 2 }}
           />
           <ProgramNode
-            title="ASAPO local broker"
-            subtitle="local emulator or real ASAPO stream"
-            active={activeLaser}
-            buffered={flowState.laserStaged}
+            title="ASAPO broker"
+            subtitle="LaserData metadata topic"
+            active={activeLaserBroker}
+            buffered={flowState.laserBrokerPending || flowState.laserStaged}
             icon={<IconRoute size={24} />}
             color="blue"
             style={{ gridColumn: 3, gridRow: 2 }}
           />
           <FlowConnector
-            active={activeLaser || flowState.laserStaged}
+            active={
+              flowState.laserStaged ||
+              (livePollPulse && flowState.laserBrokerPending)
+            }
             color="blue"
-            label="append"
+            label="poll"
             style={{ gridColumn: 4, gridRow: 2 }}
           />
           <ProgramNode
-            title="PLANET Watchdog"
+            title="DAQ File Watchdog"
             subtitle={`${selectedWatchdogWatchers.length} watcher rule(s) selected`}
             active={activeWatchdog}
-            buffered={flowState.watchdogBuffered || flowState.watchdogStaged}
+            buffered={flowState.watchdogBuffered}
             icon={<IconActivityHeartbeat size={24} />}
             color="orange"
             actions={[
@@ -1217,65 +1327,30 @@ function FlowDiagram({
           <FlowConnector
             active={activeWatchdogBroker}
             color="orange"
-            label="event"
+            label="kafka"
             style={{ gridColumn: 2, gridRow: 3 }}
           />
           <ProgramNode
             title="Kafka"
             subtitle="watchdog transport, local or production"
-            active={activeEnhancers}
-            buffered={flowState.watchdogStaged}
+            active={activeWatchdogBroker}
+            buffered={
+              flowState.watchdogBrokerPending || flowState.watchdogStaged
+            }
             icon={<IconRoute size={24} />}
             color="orange"
             style={{ gridColumn: 3, gridRow: 3 }}
           />
           <FlowConnector
-            active={activeWatchdogBroker}
+            active={
+              flowState.watchdogStaged ||
+              (livePollPulse && flowState.watchdogBrokerPending)
+            }
             color="orange"
-            label="append"
+            label="poll"
             style={{ gridColumn: 4, gridRow: 3 }}
           />
-          {motionAutoLoggerAvailable ? (
-            <>
-              <ProgramNode
-                title="Motion auto logger"
-                subtitle="motion metadata enhancer"
-                active={activeMotion}
-                buffered={flowState.motionBuffered || flowState.motionStaged}
-                icon={<IconActivityHeartbeat size={24} />}
-                color="violet"
-                actions={[
-                  {
-                    label: 'Enrich latest',
-                    onClick: onSendMotion,
-                    disabled: !receiverConfig.motion,
-                  },
-                ]}
-                style={{ gridColumn: 1, gridRow: 4 }}
-              />
-              <FlowConnector
-                active={activeMotionBroker}
-                color="violet"
-                label="event"
-                style={{ gridColumn: 2, gridRow: 4 }}
-              />
-              <ProgramNode
-                title="Kafka motion topic"
-                subtitle="motion auto logger transport"
-                active={activeMotionBroker}
-                buffered={flowState.motionStaged}
-                icon={<IconRoute size={24} />}
-                color="violet"
-                style={{ gridColumn: 3, gridRow: 4 }}
-              />
-              <FlowConnector
-                active={activeMotionBroker}
-                color="violet"
-                label="append"
-                style={{ gridColumn: 4, gridRow: 4 }}
-              />
-            </>
-          ) : null}
+          
           <ProgramNode
             title="MongoDB shotsheet"
             subtitle="shot metadata source"
@@ -1283,13 +1358,13 @@ function FlowDiagram({
             buffered={flowState.mongoPending}
             icon={<IconDatabase size={24} />}
             color="teal"
-            style={{ gridColumn: 1, gridRow: 5 }}
+            style={{ gridColumn: 1, gridRow: 4 }}
           />
           <FlowConnector
             active={activeMongoQuery}
             color="teal"
             label="query"
-            style={{ gridColumn: '2 / 5', gridRow: 5 }}
+            style={{ gridColumn: '2 / 5', gridRow: 4 }}
           />
           <ProgramNode
             title="Live event log"
@@ -1298,13 +1373,13 @@ function FlowDiagram({
             buffered={activeLiveEventLog}
             icon={<IconDatabase size={24} />}
             color="teal"
-            style={{ gridColumn: 5, gridRow: '1 / 5', alignSelf: 'stretch' }}
+            style={{ gridColumn: 5, gridRow: '1 / 4', alignSelf: 'stretch' }}
           />
           <FlowConnector
             active={activeDamnitLive}
             color="teal"
             label="visible"
-            style={{ gridColumn: 6, gridRow: '1 / 5' }}
+            style={{ gridColumn: 6, gridRow: '1 / 4' }}
           />
           <ProgramNode
             title="DAMNIT-web live view"
@@ -1317,30 +1392,33 @@ function FlowDiagram({
               { label: 'Poll live', onClick: onRefreshDamnit },
               { label: 'Build HDF5', onClick: onBuildPackage },
             ]}
-            style={{ gridColumn: 7, gridRow: '1 / 5', alignSelf: 'stretch' }}
+            style={{ gridColumn: 7, gridRow: '1 / 4', alignSelf: 'stretch' }}
           />
           <ProgramNode
-            title="HDF5 builder"
-            subtitle="combines staged event packages"
-            active={activeHdf5}
-            icon={<IconServer size={24} />}
-            color="teal"
-            style={{ gridColumn: 5, gridRow: 5 }}
-          />
-          <FlowConnector
-            active={activeHdf5}
-            color="teal"
-            label="writes"
-            style={{ gridColumn: 6, gridRow: 5 }}
-          />
-          <ProgramNode
-            title="combined HDF5"
-            subtitle="reader-ready experiment file"
-            active={activeHdf5}
-            icon={<IconDatabase size={24} />}
-            color="teal"
-            style={{ gridColumn: 7, gridRow: 5 }}
-          />
+          title="HDF5 builder"
+          subtitle="combines staged event packages"
+          active={activeHdf5Builder}
+          buffered={activeCombinedHdf5}
+          icon={<IconServer size={24} />}
+          color="teal"
+          style={{ gridColumn: 5, gridRow: 4 }}
+        />
+
+        <FlowConnector
+          active={activeHdf5Builder}
+          color="teal"
+          label="writes"
+          style={{ gridColumn: 6, gridRow: 4 }}
+        />
+
+        <ProgramNode
+          title="combined HDF5"
+          subtitle="reader-ready experiment file"
+          active={activeCombinedHdf5}
+          icon={<IconDatabase size={24} />}
+          color="teal"
+          style={{ gridColumn: 7, gridRow: 4 }}
+        />
         </div>
       </Stack>
     </Paper>
@@ -1362,7 +1440,7 @@ function ProgramNode({
   active: boolean
   buffered?: boolean
   icon: ReactNode
-  color: 'orange' | 'blue' | 'teal' | 'violet'
+  color: 'orange' | 'blue' | 'teal' | 'violet' | 'grape' | 'cyan'
   actions?: { label: string; onClick: () => void; disabled?: boolean }[]
   style?: CSSProperties
 }) {
@@ -1438,7 +1516,7 @@ function FlowConnector({
   style,
 }: {
   active: boolean
-  color: 'orange' | 'blue' | 'teal' | 'violet'
+  color: 'orange' | 'blue' | 'teal' | 'violet' | 'grape' | 'cyan'
   label: string
   style?: CSSProperties
 }) {
@@ -1552,8 +1630,8 @@ function HZDRSourceHome() {
               <Title order={4}>Watch the flow</Title>
             </Group>
             <Text size="sm" c="dimmed">
-              Watch the passive LaserData stream plus local Shotcounter,
-              Watchdog, and optional Motion events as they move through DAMNIT.
+              Watch the passive LaserData stream plus local Shotcounter and
+              Watchdog events as they move through DAMNIT.
             </Text>
             <Button component="a" href="/flow-monitor" variant="light">
               Flow monitor
@@ -1648,8 +1726,7 @@ function HZDRDocsPage() {
                   <Title order={4}>1. Produce</Title>
                   <Text size="sm">
                     LaserData creates new shots through the ASAPO path. Watchdog
-                    and Motion auto logger events enrich the latest shot through
-                    Kafka.
+                    events enrich the latest shot through Kafka.
                   </Text>
                 </Stack>
               </Card>
@@ -1689,8 +1766,7 @@ function HZDRDocsPage() {
                   <Text size="sm">
                     Create `scripts/hzdr-launch.config.json`, start the
                     launcher, open the workspace, then use the flow monitor to
-                    send test Shotcounter, Watchdog, and optional Motion
-                    traffic.
+                    send test Shotcounter and Watchdog traffic.
                   </Text>
                   <Code block>
                     bash scripts/hzdr-launch.sh --init-config{'\n'}
@@ -1706,8 +1782,8 @@ function HZDRDocsPage() {
                 <Stack gap="xs">
                   <Text size="sm">
                     LaserData creates new shots. Watchdog/Kafka enriches the
-                    latest shot. Motion auto logger/Kafka does the same for
-                    motion metadata. The HDF5 builder consumes staged JSONL
+                    latest shot. Additional enrichment data follows the same
+                    staged-event path. The HDF5 builder consumes staged JSONL
                     package events, not MongoDB.
                   </Text>
                   <Text size="sm" c="dimmed">
@@ -1739,10 +1815,10 @@ function HZDRDocsPage() {
               <DetailsSection title="Launcher and connections">
                 <Stack gap="xs">
                   <Text size="sm">
-                    PLANET Watchdog, LabFrog, optional motion autologging,
-                    Kafka, ASAPO, and MongoDB live together in the shared
-                    launcher config so the emulator can be converted toward real
-                    services without moving settings around.
+                    PLANET Watchdog, LabFrog, Kafka, ASAPO, and MongoDB live
+                    together in the shared launcher config so the emulator can
+                    be converted toward real services without moving settings
+                    around.
                   </Text>
                   <Code block>
                     scripts/hzdr-launch.config.json{'\n'}
@@ -1818,7 +1894,6 @@ function LinkExistingShotRecordsPage() {
   const [collections, setCollections] = useState<string[]>([
     'shots',
     'watchdog',
-    'motion',
   ])
   const [searchStatus, setSearchStatus] = useState(
     'Search all visible sources, or choose an optional source after narrowing the campaign.'
@@ -1874,7 +1949,7 @@ function LinkExistingShotRecordsPage() {
             <Stack gap={4}>
               <Title order={2}>Link Existing Shot Records</Title>
               <Text c="dimmed">
-                Search existing MongoDB shot, watchdog, and motion records for a
+                Search existing MongoDB shot and watchdog records for a
                 campaign key, then prepare a coherent JSON/HDF5/DAMNIT-table
                 handoff for review.
               </Text>
@@ -1893,8 +1968,8 @@ function LinkExistingShotRecordsPage() {
                 <Stack gap="xs">
                   <Title order={4}>2. Link</Title>
                   <Text size="sm">
-                    Match shotcounter, Watchdog, Motion, and shotsheet records
-                    into one source-level package view.
+                    Match shotcounter, Watchdog, and shotsheet records into one
+                    source-level package view.
                   </Text>
                 </Stack>
               </Card>
@@ -1951,7 +2026,6 @@ function LinkExistingShotRecordsPage() {
                       <Stack gap="xs" mt="xs">
                         <Checkbox value="shots" label="MongoDB shotsheet" />
                         <Checkbox value="watchdog" label="PLANET Watchdog" />
-                        <Checkbox value="motion" label="Motion auto logger" />
                         <Checkbox value="shotcounter" label="Shotcounter" />
                       </Stack>
                     </Checkbox.Group>
@@ -2149,19 +2223,7 @@ function collectionStatusForShot(
           detail: 'no watchdog fields in loaded metadata',
         }
   }
-  if (collection === 'motion') {
-    return shot.metadata.motion_status
-      ? {
-          collection,
-          status: 'matched',
-          detail: String(shot.metadata.motion_status),
-        }
-      : {
-          collection,
-          status: 'missing',
-          detail: 'no motion fields in loaded metadata',
-        }
-  }
+
   if (collection === 'shotcounter') {
     return {
       collection,
@@ -2399,6 +2461,67 @@ function HZDRShotPage() {
         })
       })
   }
+  const updateShotMetadata = (
+    shotNumber: number,
+    key: string,
+    value: unknown,
+    note?: string
+  ) => {
+    if (!source_key) {
+      return
+    }
+    fetch(`/metadata/hzdr/sources/${source_key}/shots/${shotNumber}/metadata`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value, note }),
+    })
+      .then((response) => requireJson<HZDRShot>(response))
+      .then((updatedShot) => {
+        setShots((currentShots) =>
+          currentShots.map((shot) =>
+            shot.shot_number === updatedShot.shot_number ? updatedShot : shot
+          )
+        )
+        setShotDetail((currentDetail) =>
+          currentDetail?.shot.shot_number === updatedShot.shot_number
+            ? { ...currentDetail, shot: updatedShot }
+            : currentDetail
+        )
+        setSelectedCell((currentCell) => {
+          if (
+            !currentCell ||
+            currentCell.kind !== 'metadata' ||
+            currentCell.shotNumber !== updatedShot.shot_number ||
+            currentCell.columnName !== key
+          ) {
+            return currentCell
+          }
+          const correctedValue = updatedShot.metadata[key]
+          const numericValue = Number(correctedValue)
+          return {
+            ...currentCell,
+            value: correctedValue,
+            error: undefined,
+            trendValues: currentCell.trendValues?.map((entry) =>
+              entry.shotNumber === updatedShot.shot_number &&
+              Number.isFinite(numericValue)
+                ? { ...entry, value: numericValue }
+                : entry
+            ),
+          }
+        })
+        fetch(`/contextfile/campaign/${source_key}/me/results`)
+          .then((response) => (response.ok ? response.json() : undefined))
+          .then(setContextResults)
+      })
+      .catch(() => {
+        setSelectedCell((currentCell) =>
+          currentCell?.shotNumber === shotNumber && currentCell.columnName === key
+            ? { ...currentCell, error: `Could not correct ${key}.` }
+            : currentCell
+        )
+      })
+  }
 
   return (
     <HomePage
@@ -2414,8 +2537,8 @@ function HZDRShotPage() {
                     <Badge variant="light">Emulated package stream</Badge>
                   </Group>
                   <Text size="sm" c="dimmed">
-                    LaserData creates shots, Watchdog and Motion enrich them,
-                    and staged events feed the HDF5 builder.
+                    LaserData creates shots, Watchdog enriches them, and staged
+                    events feed the HDF5 builder.
                   </Text>
                   <Code block>{source?.damnit_path ?? '-'}</Code>
                 </Stack>
@@ -2710,7 +2833,7 @@ function HZDRShotPage() {
                                       shot,
                                       'Energy',
                                       'laser_energy_j',
-                                      shot.metadata.laser_energy_j ?? '-',
+                                      shot.metadata.laser_energy_j,
                                       'laser_energy_j'
                                     )
                                   }}
@@ -2732,7 +2855,7 @@ function HZDRShotPage() {
                                       shot,
                                       'Target',
                                       'target',
-                                      shot.metadata.target ?? '-'
+                                      shot.metadata.target
                                     )
                                   }}
                                   style={cellButtonStyle}
@@ -2777,7 +2900,17 @@ function HZDRShotPage() {
                                     style={cellButtonStyle}
                                   >
                                     {error ? (
-                                      <TruncatedCell value={error} c="dimmed" />
+                                      isMissingContextValueError(error) ? (
+                                        <Badge
+                                          variant="light"
+                                          color="gray"
+                                          title={error}
+                                        >
+                                          Missing
+                                        </Badge>
+                                      ) : (
+                                        <TruncatedCell value={error} c="red" />
+                                      )
                                     ) : (
                                       <ContextCellContent
                                         value={formatContextValue(value)}
@@ -2822,7 +2955,10 @@ function HZDRShotPage() {
               <Grid.Col span={{ base: 12, xl: 2 }}>
                 <Stack gap="md">
                   <DetailsSection title="Selected cell" open>
-                    <SelectedCellPanel cell={selectedCell} />
+                    <SelectedCellPanel
+                      cell={selectedCell}
+                      onCorrectMetadata={updateShotMetadata}
+                    />
                   </DetailsSection>
                   <DetailsSection title="Shot sets" open>
                     <HZDRShotSetsPanel shots={shots} />
@@ -2833,6 +2969,7 @@ function HZDRShotPage() {
                       shotDetail={shotDetail}
                       availableSources={availableSources}
                       onUpdateStatus={updateShotStatus}
+                      onCorrectMetadata={updateShotMetadata}
                     />
                   </DetailsSection>
                 </Stack>
@@ -2908,7 +3045,18 @@ function SortableHeader({
   )
 }
 
-function SelectedCellPanel({ cell }: { cell?: HZDRSelectedCell }) {
+function SelectedCellPanel({
+  cell,
+  onCorrectMetadata,
+}: {
+  cell?: HZDRSelectedCell
+  onCorrectMetadata: (
+    shotNumber: number,
+    key: string,
+    value: unknown,
+    note?: string
+  ) => void
+}) {
   if (!cell) {
     return (
       <Card withBorder radius={4} p="md">
@@ -2918,6 +3066,11 @@ function SelectedCellPanel({ cell }: { cell?: HZDRSelectedCell }) {
       </Card>
     )
   }
+
+  const hasVisualPreview =
+    isPlotlyPreview(cell.preview) ||
+    isNumericLinePreview(cell.preview) ||
+    isNumericMatrixPreview(cell.preview)
 
   return (
     <Card withBorder radius={4} p="md">
@@ -2932,17 +3085,15 @@ function SelectedCellPanel({ cell }: { cell?: HZDRSelectedCell }) {
           <Badge variant="light">{cell.kind}</Badge>
         </Group>
         {cell.error ? (
-          <Text size="sm" c="red">
-            {cell.error}
-          </Text>
-        ) : isPlotlyPreview(cell.preview) ? (
-          <Text size="sm" c="dimmed">
-            Plot preview
-          </Text>
-        ) : isNumericLinePreview(cell.preview) ? (
-          <Text size="sm" c="dimmed">
-            Lineout preview
-          </Text>
+          isMissingContextValueError(cell.error) ? (
+            <Text size="sm" c="dimmed">
+              No value is available for this shot.
+            </Text>
+          ) : (
+            <Text size="sm" c="red">
+              {cell.error}
+            </Text>
+          )
         ) : cell.kind === 'metadata' && cell.columnName === 'status' ? (
           <Stack gap="xs">
             <StatusBadge status={String(cell.value ?? 'unknown')} />
@@ -2950,9 +3101,9 @@ function SelectedCellPanel({ cell }: { cell?: HZDRSelectedCell }) {
               Change this in Shot detail using the review status form.
             </Text>
           </Stack>
-        ) : (
+        ) : !hasVisualPreview ? (
           <Text size="xl">{formatContextValue(cell.value)}</Text>
-        )}
+        ) : null}
         <ContextPreviewValue preview={cell.preview} value={cell.value} />
         {cell.trendValues && cell.trendValues.length > 1 ? (
           <Stack gap="xs">
@@ -2962,9 +3113,117 @@ function SelectedCellPanel({ cell }: { cell?: HZDRSelectedCell }) {
             <MetadataTrendPreview values={cell.trendValues} />
           </Stack>
         ) : null}
+        {isCorrectableMetadataCell(cell) ? (
+          <MetadataCorrectionForm
+            cell={cell}
+            onCorrectMetadata={onCorrectMetadata}
+          />
+        ) : null}
       </Stack>
     </Card>
   )
+}
+
+function MetadataCorrectionForm({
+  cell,
+  onCorrectMetadata,
+}: {
+  cell: HZDRSelectedCell
+  onCorrectMetadata: (
+    shotNumber: number,
+    key: string,
+    value: unknown,
+    note?: string
+  ) => void
+}) {
+  const [draft, setDraft] = useState(formatMetadataCorrectionDraft(cell.value))
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    setDraft(formatMetadataCorrectionDraft(cell.value))
+    setNote('')
+  }, [cell.columnName, cell.shotNumber, cell.value])
+
+  return (
+    <DetailsSection title="Correct bad metadata">
+      <Stack gap="xs">
+        <Text size="xs" c="dimmed">
+          Updates the source metadata and records who changed it, the previous
+          value, and the reason.
+        </Text>
+        <Textarea
+          label="Correct value"
+          description="Enter JSON for numbers, booleans, null, arrays, or objects; plain text is kept as text."
+          minRows={2}
+          value={draft}
+          onChange={(event) => setDraft(event.currentTarget.value)}
+        />
+        <TextInput
+          label="Reason"
+          placeholder="Why is this value being corrected?"
+          value={note}
+          onChange={(event) => setNote(event.currentTarget.value)}
+        />
+        <Button
+          size="xs"
+          variant="light"
+          onClick={() =>
+            onCorrectMetadata(
+              cell.shotNumber,
+              cell.columnName,
+              parseMetadataCorrectionDraft(draft),
+              note.trim() || undefined
+            )
+          }
+        >
+          Apply correction
+        </Button>
+      </Stack>
+    </DetailsSection>
+  )
+}
+
+function isCorrectableMetadataCell(cell: HZDRSelectedCell) {
+  return cell.kind === 'metadata' && isCorrectableMetadataKey(cell.columnName)
+}
+
+function isCorrectableMetadataKey(key: string) {
+  return ![
+    'shot_number',
+    'shot_day',
+    'fired_at',
+    'status',
+    'status_history',
+    'reviewed_at',
+    'reviewed_by',
+    'review_note',
+    'metadata_correction_history',
+    'shot_id',
+    'experiment_id',
+    'combined_hdf5_path',
+  ].includes(key)
+}
+
+function formatMetadataCorrectionDraft(value: unknown) {
+  if (value === undefined) {
+    return ''
+  }
+  if (typeof value === 'string') {
+    return value
+  }
+  return JSON.stringify(value, null, 2)
+}
+
+function parseMetadataCorrectionDraft(draft: string): unknown {
+  const trimmed = draft.trim()
+  if (!trimmed) {
+    return ''
+  }
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return draft
+  }
 }
 
 function ContextPreviewValue({
@@ -3007,7 +3266,7 @@ function ContextCellContent({
     return <MiniCellSparkline values={preview} />
   }
   if (isNumericMatrixPreview(preview)) {
-    return <MiniImagePreview values={preview} />
+    return <MiniImagePreview values={preview} size={48} />
   }
   if (isPlotlyPreview(preview)) {
     return sparklineValues.length > 1 ? (
@@ -3378,19 +3637,35 @@ function ShotDetailPanel({
   shotDetail,
   availableSources,
   onUpdateStatus,
+  onCorrectMetadata,
 }: {
   shot?: HZDRShot
   shotDetail?: HZDRShotDetail
   availableSources: HZDRSource[]
   onUpdateStatus?: (shotNumber: number, status: string, note?: string) => void
+  onCorrectMetadata?: (
+    shotNumber: number,
+    key: string,
+    value: unknown,
+    note?: string
+  ) => void
 }) {
   const [reviewStatus, setReviewStatus] = useState('processed')
   const [reviewNote, setReviewNote] = useState('')
+  const [correctionKey, setCorrectionKey] = useState('')
+  const [correctionDraft, setCorrectionDraft] = useState('')
+  const [correctionNote, setCorrectionNote] = useState('')
 
   useEffect(() => {
     setReviewStatus(String(shot?.metadata.status ?? 'processed'))
     setReviewNote(String(shot?.metadata.review_note ?? ''))
   }, [shot?.shot_number, shot?.metadata.status, shot?.metadata.review_note])
+
+  useEffect(() => {
+    setCorrectionKey('')
+    setCorrectionDraft('')
+    setCorrectionNote('')
+  }, [shot?.shot_number])
 
   if (!shot) {
     return (
@@ -3550,6 +3825,80 @@ function ShotDetailPanel({
       <Card withBorder radius={4} p="md">
         <Stack gap="xs">
           <Title order={5}>Metadata</Title>
+          <DetailsSection title="Correct or add metadata">
+            <Stack gap="xs">
+              <Select
+                label="Load existing field"
+                description="Or type a missing top-level key below."
+                data={Object.keys(shot.metadata)
+                  .filter(isCorrectableMetadataKey)
+                  .sort()
+                  .map((key) => ({ value: key, label: key }))}
+                value={
+                  Object.prototype.hasOwnProperty.call(
+                    shot.metadata,
+                    correctionKey
+                  )
+                    ? correctionKey
+                    : null
+                }
+                onChange={(key) => {
+                  const nextKey = key ?? ''
+                  setCorrectionKey(nextKey)
+                  setCorrectionDraft(
+                    nextKey
+                      ? formatMetadataCorrectionDraft(shot.metadata[nextKey])
+                      : ''
+                  )
+                }}
+                searchable
+                clearable
+              />
+              <TextInput
+                label="Metadata key"
+                value={correctionKey}
+                onChange={(event) =>
+                  setCorrectionKey(event.currentTarget.value)
+                }
+                placeholder="missing_or_bad_field"
+              />
+              <Textarea
+                label="Correct value"
+                description="JSON values keep their type; plain text stays text."
+                minRows={2}
+                value={correctionDraft}
+                onChange={(event) =>
+                  setCorrectionDraft(event.currentTarget.value)
+                }
+              />
+              <TextInput
+                label="Reason"
+                value={correctionNote}
+                onChange={(event) =>
+                  setCorrectionNote(event.currentTarget.value)
+                }
+                placeholder="Why is this being corrected?"
+              />
+              <Button
+                size="xs"
+                variant="light"
+                disabled={
+                  !correctionKey.trim() ||
+                  !isCorrectableMetadataKey(correctionKey.trim())
+                }
+                onClick={() =>
+                  onCorrectMetadata?.(
+                    shot.shot_number,
+                    correctionKey.trim(),
+                    parseMetadataCorrectionDraft(correctionDraft),
+                    correctionNote.trim() || undefined
+                  )
+                }
+              >
+                Apply metadata correction
+              </Button>
+            </Stack>
+          </DetailsSection>
           <ScrollArea.Autosize mah={260} type="auto">
             <Code block>{JSON.stringify(shot.metadata, null, 2)}</Code>
           </ScrollArea.Autosize>
@@ -3613,6 +3962,51 @@ function ContextBuilderPanel({
         <ContextBuilderSectionTitle title={title} description={description} />
         {children}
       </Stack>
+    </Paper>
+  )
+}
+
+function ContextBuilderDisclosure({
+  title,
+  description,
+  summary,
+  children,
+  open = false,
+}: PropsWithChildren<{
+  title: string
+  description: string
+  summary?: string
+  open?: boolean
+}>) {
+  const [expanded, setExpanded] = useState(open)
+
+  return (
+    <Paper withBorder radius={4} p="sm">
+      <details
+        open={expanded}
+        onToggle={(event) => setExpanded(event.currentTarget.open)}
+      >
+        <summary style={{ cursor: 'pointer' }}>
+          <Group justify="space-between" gap="sm" wrap="nowrap">
+            <Stack gap={0} style={{ minWidth: 0 }}>
+              <Text size="sm" fw={700}>
+                {title}
+              </Text>
+              <Text size="xs" c="dimmed" truncate="end">
+                {description}
+              </Text>
+            </Stack>
+            {summary ? (
+              <Badge variant="light" radius={4} style={{ flexShrink: 0 }}>
+                {summary}
+              </Badge>
+            ) : null}
+          </Group>
+        </summary>
+        <Stack gap="sm" mt="sm">
+          {children}
+        </Stack>
+      </details>
     </Paper>
   )
 }
@@ -3693,24 +4087,18 @@ function getContextRecipeOptions({
 }: {
   contextScope: string
   selectedInputs: string[]
-  datasetOptions: {
-    value: string
-    label: string
-    shape?: Array<number | string>
-  }[]
+  datasetOptions: HZDRDatasetOption[]
 }) {
   const selectedDatasets = selectedInputs
     .filter((value) => value.startsWith('hdf5:'))
     .map((value) => datasetOptions.find((option) => option.value === value))
-    .filter(Boolean)
+    .filter((option): option is HZDRDatasetOption => option !== undefined)
   const metadataCount = selectedInputs.filter((value) =>
     value.startsWith('metadata:')
   ).length
   const datasetCount = selectedDatasets.length
   const selectedCount = selectedInputs.length
-  const singleDatasetShape = selectedDatasets[0]?.shape
-  const singleDatasetRank = singleDatasetShape?.length ?? 0
-  const selectedDatasetCanPreviewLine = isLinePreviewShape(singleDatasetShape)
+  const singleDataset = selectedDatasets[0]
   const options: { value: string; label: string; disabled?: boolean }[] = []
 
   if (!selectedCount) {
@@ -3739,7 +4127,11 @@ function getContextRecipeOptions({
     }
   }
 
-  if (selectedCount === 1 && datasetCount === 1) {
+  if (
+    selectedCount === 1 &&
+    datasetCount === 1 &&
+    singleDataset?.kind !== 'raw'
+  ) {
     options.push({
       value: 'hdf5',
       label:
@@ -3747,13 +4139,13 @@ function getContextRecipeOptions({
           ? 'Summarize selected data across shots'
           : 'Summarize selected data',
     })
-    if (contextScope === 'shot' && selectedDatasetCanPreviewLine) {
+    if (contextScope === 'shot' && singleDataset.kind === 'line') {
       options.push(
         { value: 'lineout-preview', label: 'Lineout with table preview' },
         { value: 'plotly-trend', label: 'Interactive trend preview' }
       )
     }
-    if (contextScope === 'shot' && singleDatasetRank === 2) {
+    if (contextScope === 'shot' && singleDataset.kind === 'image') {
       options.push({
         value: 'image-preview',
         label: 'Image with reduced preview',
@@ -3772,6 +4164,24 @@ function getContextRecipeOptions({
   return options
 }
 
+function hdf5PerShotTemplateName(datasetName: string) {
+  const patterns = [
+    /^(.*\/by_shot\/)([^/]+)(\/.+)$/,
+    /^(.*\/shots\/)([^/]+)(\/.+)$/,
+    /^(.*\/shot\/)([^/]+)(\/.+)$/,
+  ]
+
+  for (const pattern of patterns) {
+    const match = datasetName.match(pattern)
+    if (match) {
+      const [, prefix, , suffix] = match
+      return `${prefix}{shot_id}${suffix}`
+    }
+  }
+
+  return null
+}
+
 function buildHdf5DatasetOptions(
   datasets: HZDRHDF5Dataset[],
   contextScope: string
@@ -3780,22 +4190,19 @@ function buildHdf5DatasetOptions(
   const directOptions: HZDRDatasetOption[] = []
 
   for (const dataset of datasets) {
-    const byShotMatch = dataset.name.match(/^(.*\/by_shot\/)([^/]+)\/(.+)$/)
-    if (contextScope === 'shot' && byShotMatch) {
-      const [, prefix, , suffix] = byShotMatch
-      const templateName = `${prefix}{shot_id}/${suffix}`
+    const templateName = hdf5PerShotTemplateName(dataset.name)
+    const kind = classifyHdf5Dataset(dataset)
+
+    if (contextScope === 'shot' && templateName) {
       byShotOptions.set(templateName, {
         value: `hdf5:${templateName}`,
-        label: `${suffix} (${dataset.dtype}, ${formatShape(dataset.shape)})`,
+        label: `${dataset.name.split('/').at(-1)} (${dataset.dtype}, ${formatShape(dataset.shape)})`,
         name: templateName,
         previewName: dataset.name,
         dtype: dataset.dtype,
         shape: dataset.shape,
-        kind: classifyHdf5DatasetShape(dataset.shape),
-        group: hdf5DatasetGroupLabel(
-          classifyHdf5DatasetShape(dataset.shape),
-          true
-        ),
+        kind,
+        group: hdf5DatasetGroupLabel(kind, true),
       })
       continue
     }
@@ -3804,11 +4211,10 @@ function buildHdf5DatasetOptions(
       continue
     }
 
-    if (contextScope === 'set' && byShotMatch) {
+    if (contextScope === 'set' && templateName) {
       continue
     }
 
-    const kind = classifyHdf5DatasetShape(dataset.shape)
     directOptions.push({
       value: `hdf5:${dataset.name}`,
       label: `${dataset.name} (${dataset.dtype}, ${formatShape(dataset.shape)})`,
@@ -3826,9 +4232,7 @@ function buildHdf5DatasetOptions(
     })
   }
 
-  return [...byShotOptions.values(), ...directOptions].sort((left, right) =>
-    `${left.group}/${left.label}`.localeCompare(`${right.group}/${right.label}`)
-  )
+  return [...byShotOptions.values(), ...directOptions]
 }
 
 function groupHdf5DatasetOptions(
@@ -3844,21 +4248,58 @@ function groupHdf5DatasetOptions(
   }))
 }
 
-function classifyHdf5DatasetShape(
-  shape: Array<number | string>
-): HZDRDatasetKind {
+function getContextInputOptions({
+  fieldKind,
+  metadataOptions,
+  datasetOptions,
+}: {
+  fieldKind: string
+  metadataOptions: SelectOption[]
+  datasetOptions: HZDRDatasetOption[]
+}): SelectOptionGroup[] {
+  const compatibleDatasetOptions =
+    fieldKind === 'function'
+      ? datasetOptions
+      : datasetOptions.filter((option) => option.kind !== 'raw')
+
+  return [
+    { group: 'Shot metadata', items: metadataOptions },
+    ...groupHdf5DatasetOptions(compatibleDatasetOptions),
+  ].filter((group) => group.items.length)
+}
+
+function isNumericHdf5Dtype(dtype: string) {
+  const normalized = dtype.toLowerCase()
+
+  return (
+    normalized.includes('float') ||
+    normalized.includes('double') ||
+    normalized.includes('int') ||
+    normalized.includes('uint') ||
+    /^[<>|]?[fiu]\d+$/.test(normalized)
+  )
+}
+
+function classifyHdf5Dataset(dataset: HZDRHDF5Dataset): HZDRDatasetKind {
+  const numeric = isNumericHdf5Dtype(dataset.dtype)
+  const shape = dataset.shape
+
   if (!shape.length || (shape.length === 1 && Number(shape[0]) === 1)) {
-    return 'scalar'
+    return numeric ? 'scalar' : 'raw'
   }
+
   if (shape.length === 1) {
-    return 'line'
+    return numeric ? 'line' : 'raw'
   }
+
   if (shape.length === 2) {
-    return 'image'
+    return numeric ? 'image' : 'raw'
   }
+
   if (shape.length > 2) {
-    return 'stack'
+    return numeric ? 'stack' : 'raw'
   }
+
   return 'raw'
 }
 
@@ -3889,14 +4330,6 @@ function isShotIndexedAggregateDataset(dataset: HZDRHDF5Dataset) {
 
 function formatShape(shape: Array<number | string>) {
   return shape.length ? shape.join('x') : 'scalar'
-}
-
-function isLinePreviewShape(shape?: Array<number | string>) {
-  if (!shape || shape.length !== 1) {
-    return false
-  }
-  const length = Number(shape[0])
-  return Number.isFinite(length) && length > 1
 }
 
 function repairCommonContextImports(content: string) {
@@ -4002,9 +4435,10 @@ function ContextBuilderPage() {
   const [saveAsName, setSaveAsName] = useState('context_variant.py')
   const [contextScope, setContextScope] = useState('shot')
   const [fieldKind, setFieldKind] = useState('metadata')
-  const [fieldName, setFieldName] = useState('hzdr_computed_field')
   const [fieldTitle, setFieldTitle] = useState('HZDR/Computed field')
-  const [fieldNameEdited, setFieldNameEdited] = useState(false)
+  const [fieldName, setFieldName] = useState('computed_field')
+  const [fieldNameOverridden, setFieldNameOverridden] = useState(false)
+  const [fieldTitleEdited, setFieldTitleEdited] = useState(false)
   const [selectedInputs, setSelectedInputs] = useState<string[]>([])
   const [allowMultipleInputs, setAllowMultipleInputs] = useState(false)
   const [mongoCollection, setMongoCollection] = useState('shots')
@@ -4019,7 +4453,7 @@ function ContextBuilderPage() {
   const [datasetPreview, setDatasetPreview] = useState<HZDRDatasetPreview>()
   const [saveStatus, setSaveStatus] = useState('')
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null)
-  const [generatedEditorCompact, setGeneratedEditorCompact] = useState(false)
+  const [generatedEditorCompact, setGeneratedEditorCompact] = useState(true)
 
   useEffect(() => {
     if (!source_key) {
@@ -4067,6 +4501,12 @@ function ContextBuilderPage() {
       .catch(() => setShotDetail(undefined))
   }, [source_key, selectedShotNumber])
 
+  useEffect(() => {
+    if (!fieldNameOverridden) {
+      setFieldName(pythonNameFromTitle(fieldTitle))
+    }
+  }, [fieldNameOverridden, fieldTitle])
+
   const selectedShot = shots.find(
     (shot) => shot.shot_number === selectedShotNumber
   )
@@ -4095,11 +4535,12 @@ function ContextBuilderPage() {
   )
   const inputOptions = useMemo<SelectOptionGroup[]>(
     () =>
-      [
-        { group: 'Shot metadata', items: metadataOptions },
-        ...groupHdf5DatasetOptions(datasetOptions),
-      ].filter((group) => group.items.length),
-    [datasetOptions, metadataOptions]
+      getContextInputOptions({
+        fieldKind,
+        metadataOptions,
+        datasetOptions,
+      }),
+    [datasetOptions, fieldKind, metadataOptions]
   )
   const inputValueKey = useMemo(
     () => getContextRecipeInputValues(inputOptions).join('\u0000'),
@@ -4129,10 +4570,21 @@ function ContextBuilderPage() {
   )
   const recipeHelp = getContextRecipeOptionHelp(fieldKind, contextScope)
   const canBuildColumn = selectedInputs.length > 0
+  const canSaveGeneratedColumn =
+    canBuildColumn && Boolean(extractPythonFunctionName(generatedDraft))
   const contextVariables = parseContextVariableBlocks(contextContent)
+  const selectedColumnIndex = contextVariables.findIndex(
+    (block) => block.id === selectedColumnId
+  )
+  const selectedContextVariable =
+    selectedColumnIndex >= 0 ? contextVariables[selectedColumnIndex] : undefined
   const showMongoFields =
     fieldKind === 'mongo-filter' || fieldKind === 'function'
   const showFunctionFields = fieldKind === 'function'
+  const actionCanUseMultipleInputs =
+    fieldKind === 'function' ||
+    (contextScope === 'set' &&
+      (fieldKind === 'metadata' || fieldKind === 'hdf5'))
   const usesHdf5VisualPreview = [
     'hdf5',
     'lineout-preview',
@@ -4155,6 +4607,13 @@ function ContextBuilderPage() {
   useEffect(() => {
     setGeneratedDraft(snippet)
   }, [snippet])
+
+  useEffect(() => {
+    if (!actionCanUseMultipleInputs && allowMultipleInputs) {
+      setAllowMultipleInputs(false)
+      setSelectedInputs((current) => current.slice(0, 1))
+    }
+  }, [actionCanUseMultipleInputs, allowMultipleInputs])
 
   useEffect(() => {
     if (!allowMultipleInputs && selectedInputs.length > 1) {
@@ -4203,8 +4662,12 @@ function ContextBuilderPage() {
       setSaveStatus('Choose data before adding a column.')
       return
     }
-    setSaveStatus('Saving...')
     const { imports, body } = splitPythonImportBlock(generatedDraft)
+    if (!extractPythonFunctionName(body)) {
+      setSaveStatus('Generated variable needs a valid Python function name.')
+      return
+    }
+    setSaveStatus('Saving...')
     const uniqueBody = makeContextVariableBlockUnique(body, contextVariables)
     const contextWithImports = mergeImportsAtTop(contextContent, imports)
     const fileContent = `${contextWithImports.trimEnd()}\n\n${uniqueBody.trimEnd()}\n`
@@ -4249,10 +4712,14 @@ function ContextBuilderPage() {
     }
     if (formState.fieldName) {
       setFieldName(formState.fieldName)
-      setFieldNameEdited(true)
+      setFieldNameOverridden(
+        !formState.fieldTitle ||
+          formState.fieldName !== pythonNameFromTitle(formState.fieldTitle)
+      )
     }
     if (formState.fieldTitle) {
       setFieldTitle(formState.fieldTitle)
+      setFieldTitleEdited(true)
     }
     if (formState.selectedInputs?.length) {
       setSelectedInputs(
@@ -4291,13 +4758,33 @@ function ContextBuilderPage() {
       return
     }
     const { imports, body } = splitPythonImportBlock(generatedDraft)
+    const replacementName = extractPythonFunctionName(body)
+    if (!replacementName) {
+      setSaveStatus('Replacement must contain one named Python function.')
+      return
+    }
+    const duplicateColumn = contextVariables.find(
+      (block) => block.id !== selectedBlock.id && block.name === replacementName
+    )
+    if (duplicateColumn) {
+      setSaveStatus(
+        `Cannot rename to ${replacementName}: that column already exists.`
+      )
+      return
+    }
     const replacedContent = `${contextContent.slice(
       0,
       selectedBlock.start
     )}${body.trimEnd()}\n${contextContent.slice(selectedBlock.end)}`
     const fileContent = mergeImportsAtTop(replacedContent, imports)
     setSaveStatus(`Replacing ${selectedBlock.name}...`)
-    saveContextContent(fileContent, `Replaced ${selectedBlock.name}`)
+    saveContextContent(
+      fileContent,
+      replacementName === selectedBlock.name
+        ? `Replaced ${selectedBlock.name}`
+        : `Replaced ${selectedBlock.name} with ${replacementName}`,
+      () => setSelectedColumnId(replacementName)
+    )
   }
 
   const deleteSelectedColumn = () => {
@@ -4317,19 +4804,17 @@ function ContextBuilderPage() {
   }
 
   const moveSelectedColumn = (direction: -1 | 1) => {
-    const selectedIndex = contextVariables.findIndex(
-      (block) => block.id === selectedColumnId
-    )
-    const targetIndex = selectedIndex + direction
+    const targetIndex = selectedColumnIndex + direction
     if (
-      selectedIndex < 0 ||
+      selectedColumnIndex < 0 ||
       targetIndex < 0 ||
       targetIndex >= contextVariables.length
     ) {
+      setSaveStatus('Select a column that can move in that direction.')
       return
     }
     const reorderedBlocks = [...contextVariables]
-    const [selectedBlock] = reorderedBlocks.splice(selectedIndex, 1)
+    const [selectedBlock] = reorderedBlocks.splice(selectedColumnIndex, 1)
     reorderedBlocks.splice(targetIndex, 0, selectedBlock)
     const prefix = contextContent.slice(0, contextVariables[0].start)
     const suffix = contextContent.slice(
@@ -4393,7 +4878,11 @@ function ContextBuilderPage() {
     setSaveStatus('Added missing common imports. Review, then save.')
   }
 
-  const saveContextContent = (fileContent: string, savedMessage: string) => {
+  const saveContextContent = (
+    fileContent: string,
+    savedMessage: string,
+    onSaved?: (savedContext: CampaignContextFile) => void
+  ) => {
     if (!source_key) {
       return
     }
@@ -4410,6 +4899,7 @@ function ContextBuilderPage() {
         setContextFile(savedContext)
         setContextContent(savedContext.fileContent ?? '')
         setSaveStatus(savedMessage)
+        onSaved?.(savedContext)
       })
       .catch(() => setSaveStatus('Save failed'))
   }
@@ -4457,6 +4947,32 @@ function ContextBuilderPage() {
       .catch(() => setSaveStatus('Save as failed'))
   }
 
+  function titleFromDataName(value: string) {
+    return (
+      value
+        .replace(/^hdf5:/, '')
+        .replace(/^metadata:/, '')
+        .replace(/\{shot_id\}/g, 'shot')
+        .split('/')
+        .filter(Boolean)
+        .at(-1) ?? ''
+    )
+  }
+
+  const updateSelectedInputs = (nextInputs: string[]) => {
+    setSelectedInputs(nextInputs)
+
+    const firstInput = nextInputs[0] ?? ''
+    if (!firstInput) {
+      return
+    }
+
+    const nextTitle = titleFromDataName(firstInput)
+
+    if (nextTitle && !fieldTitleEdited) {
+      setFieldTitle(nextTitle)
+    }
+  }
   return (
     <HomePage
       header={<AppHeader />}
@@ -4484,21 +5000,23 @@ function ContextBuilderPage() {
               <Grid.Col span={{ base: 12, lg: 5 }}>
                 <Card withBorder radius={4} p="md">
                   <Stack gap="md">
-                    <ContextBuilderPanel
-                      tone="gray"
-                      title="Target"
-                      description="Choose whether this creates a shot column or a shot-set helper."
+                    <ContextBuilderDisclosure
+                      title="Target and example shot"
+                      description="Choose the output scope and the shot used for previews."
+                      summary={
+                        contextScope === 'set' ? 'Per-set view' : 'Per-shot'
+                      }
                     >
-                      <Select
-                        label="Build target"
-                        value={contextScope}
-                        onChange={(value) => setContextScope(value ?? 'shot')}
-                        data={[
-                          { value: 'shot', label: 'Per-shot table column' },
-                          { value: 'set', label: 'Per-set trend or summary' },
-                        ]}
-                      />
                       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                        <Select
+                          label="Build target"
+                          value={contextScope}
+                          onChange={(value) => setContextScope(value ?? 'shot')}
+                          data={[
+                            { value: 'shot', label: 'Per-shot table column' },
+                            { value: 'set', label: 'Per-set trend or summary' },
+                          ]}
+                        />
                         <Select
                           label="Example shot"
                           value={selectedShotNumber?.toString()}
@@ -4512,70 +5030,111 @@ function ContextBuilderPage() {
                             label: `${shot.shot_number} - ${shot.fired_at}`,
                           }))}
                         />
-                        <Card withBorder radius={4} p="sm">
-                          <Stack gap={2}>
-                            <Text size="xs" c="dimmed">
-                              Current source
-                            </Text>
-                            <Text size="sm" truncate="end">
-                              {source?.title ?? source_key}
-                            </Text>
-                          </Stack>
-                        </Card>
                       </SimpleGrid>
-                    </ContextBuilderPanel>
+                      <Text size="xs" c="dimmed">
+                        Source: {source?.title ?? source_key}
+                      </Text>
+                    </ContextBuilderDisclosure>
                     <ContextBuilderPanel
                       tone="blue"
                       title="Column identity"
-                      description="The Python name follows the title until you edit it manually."
+                      description="The title drives the Python function name unless you unlock a custom one."
                     >
-                      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                      <Stack gap="sm">
                         <TextInput
                           label="Column title"
                           value={fieldTitle}
                           onChange={(event) => {
                             const nextTitle = event.currentTarget.value
+
                             setFieldTitle(nextTitle)
-                            if (!fieldNameEdited) {
-                              setFieldName(pythonNameFromTitle(nextTitle))
-                            }
+                            setFieldTitleEdited(nextTitle.trim() !== '')
                           }}
                         />
-                        {contextScope === 'shot' || fieldKind === 'function' ? (
-                          <TextInput
-                            label="Generated Python function name"
-                            value={fieldName}
-                            onChange={(event) => {
-                              setFieldNameEdited(true)
-                              setFieldName(event.currentTarget.value)
-                            }}
-                          />
-                        ) : (
-                          <Card withBorder radius={4} p="sm">
-                            <Text size="xs" c="dimmed">
-                              Set views do not need a per-shot function name.
-                            </Text>
-                          </Card>
-                        )}
-                      </SimpleGrid>
+                        <Paper withBorder radius={4} p="sm" bg="white">
+                          <Stack gap="xs">
+                            <Group justify="space-between" align="flex-start">
+                              <Stack gap={0} style={{ minWidth: 0 }}>
+                                <Text size="sm" fw={600}>
+                                  Python function name
+                                </Text>
+                                <Text size="xs" c="dimmed">
+                                  {fieldNameOverridden
+                                    ? 'Custom name is enabled.'
+                                    : 'This stays synced to the title.'}
+                                </Text>
+                              </Stack>
+                              <Group gap="xs">
+                                {fieldNameOverridden ? (
+                                  <Button
+                                    size="xs"
+                                    variant="subtle"
+                                    onClick={() =>
+                                      setFieldNameOverridden(false)
+                                    }
+                                  >
+                                    Use title name
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  size="xs"
+                                  variant="light"
+                                  onClick={() => {
+                                    if (!fieldNameOverridden) {
+                                      setFieldNameOverridden(true)
+                                    }
+                                  }}
+                                >
+                                  {fieldNameOverridden
+                                    ? 'Custom name'
+                                    : 'Override name'}
+                                </Button>
+                              </Group>
+                            </Group>
+                            {fieldNameOverridden ? (
+                              <TextInput
+                                value={fieldName}
+                                error={
+                                  isValidPythonFunctionName(fieldName)
+                                    ? undefined
+                                    : 'Use a valid, non-reserved Python function name.'
+                                }
+                                onChange={(event) =>
+                                  setFieldName(
+                                    pythonNameFromTitle(event.currentTarget.value)
+                                  )
+                                }
+                              />
+                            ) : (
+                              <Code block>{fieldName}</Code>
+                            )}
+                          </Stack>
+                        </Paper>
+                      </Stack>
                     </ContextBuilderPanel>
                     <ContextBuilderPanel
                       tone="indigo"
                       title="Data"
                       description="Choose the metadata or HDF5 data first; valid actions appear below."
                     >
-                      <Checkbox
-                        label="Select multiple inputs"
-                        checked={allowMultipleInputs}
-                        onChange={(event) =>
-                          setAllowMultipleInputs(event.currentTarget.checked)
-                        }
-                      />
-                      {allowMultipleInputs ? (
+                      {actionCanUseMultipleInputs ? (
+                        <Checkbox
+                          label={
+                            contextScope === 'set'
+                              ? 'Compare multiple columns/datasets'
+                              : 'Use multiple inputs for custom function'
+                          }
+                          checked={allowMultipleInputs}
+                          onChange={(event) =>
+                            setAllowMultipleInputs(event.currentTarget.checked)
+                          }
+                        />
+                      ) : null}
+                      {allowMultipleInputs && actionCanUseMultipleInputs ? (
                         <MultiSelect
                           label="Data to use"
                           value={selectedInputs}
-                          onChange={setSelectedInputs}
+                          onChange={updateSelectedInputs}
                           data={inputOptions}
                           searchable
                           clearable
@@ -4585,64 +5144,53 @@ function ContextBuilderPage() {
                           label="Data to use"
                           value={selectedInputs[0] ?? null}
                           onChange={(value) =>
-                            setSelectedInputs(value ? [value] : [])
+                            updateSelectedInputs(value ? [value] : [])
                           }
                           data={inputOptions}
                           searchable
                           clearable
                         />
                       )}
-                      <Card withBorder radius={4} p="sm">
-                        <Stack gap={4}>
-                          <Text size="xs" c="dimmed">
-                            Selected data
-                          </Text>
-                          <Text size="sm">{selectedInputSummary}</Text>
-                        </Stack>
-                      </Card>
+                      <Text size="xs" c="dimmed">
+                        Selected: {selectedInputSummary}
+                      </Text>
                     </ContextBuilderPanel>
                     <ContextBuilderPanel
                       tone="teal"
                       title="Action"
                       description="Choose what this column can do with the selected data."
                     >
-                      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-                        <Select
-                          label={
-                            contextScope === 'shot'
-                              ? 'What should this column do?'
-                              : 'What should this set view do?'
+                      <Select
+                        label={
+                          contextScope === 'shot'
+                            ? 'What should this column do?'
+                            : 'What should this set view do?'
+                        }
+                        value={fieldKind}
+                        onChange={(value) => {
+                          if (value) {
+                            setFieldKind(value)
                           }
-                          value={fieldKind}
-                          onChange={(value) => {
-                            if (value) {
-                              setFieldKind(value)
-                            }
-                          }}
-                          data={recipeOptions}
-                          disabled={!selectedInputs.length}
-                        />
-                        <Card withBorder radius={4} p="sm">
-                          <Stack gap={4}>
-                            <Text size="xs" c="dimmed">
-                              Selected action
-                            </Text>
-                            <Badge
-                              variant="light"
-                              color={contextRecipeTone(fieldKind)}
-                              radius={4}
-                              styles={{ label: { textTransform: 'none' } }}
-                            >
-                              {contextRecipeLabel(fieldKind)}
-                            </Badge>
-                            <Text size="xs" c="dimmed">
-                              {selectedInputs.length
-                                ? recipeHelp
-                                : 'Choose data first, then available actions appear here.'}
-                            </Text>
-                          </Stack>
-                        </Card>
-                      </SimpleGrid>
+                        }}
+                        data={recipeOptions}
+                        disabled={!selectedInputs.length}
+                      />
+                      <Group gap="xs" align="flex-start" wrap="nowrap">
+                        <Badge
+                          variant="light"
+                          color={contextRecipeTone(fieldKind)}
+                          radius={4}
+                          styles={{ label: { textTransform: 'none' } }}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {contextRecipeLabel(fieldKind)}
+                        </Badge>
+                        <Text size="xs" c="dimmed">
+                          {selectedInputs.length
+                            ? recipeHelp
+                            : 'Choose data first, then available actions appear here.'}
+                        </Text>
+                      </Group>
                     </ContextBuilderPanel>
                     {showMongoFields ? (
                       <ContextBuilderPanel
@@ -4711,17 +5259,23 @@ function ContextBuilderPage() {
                 </Card>
               </Grid.Col>
               <Grid.Col span={{ base: 12, lg: 7 }}>
-                <Stack gap="md">
-                  <Card withBorder radius={4} p="md">
-                    <Stack gap="sm">
-                      <Group justify="space-between">
-                        <Stack gap={2}>
-                          <Title order={5}>Context file and column</Title>
-                          <Text size="xs" c="dimmed">
-                            Shared imports stay at the top of the file. Select a
-                            variable here before editing its block below.
-                          </Text>
-                        </Stack>
+                <Stack gap="sm">
+                  <ContextBuilderPanel
+                    tone="gray"
+                    title="Context file and existing columns"
+                    description="Choose the destination, manage existing columns, and add the generated variable."
+                  >
+                    <Group justify="space-between" gap="xs">
+                      <Badge variant="light" radius={4}>
+                        Destination: {selectedContextFile}
+                      </Badge>
+                      <Group gap="xs">
+                        <Button
+                          onClick={appendToContext}
+                          disabled={!canSaveGeneratedColumn}
+                        >
+                          Add to context
+                        </Button>
                         <Button onClick={saveManualContext}>
                           Save {selectedContextFile}
                         </Button>
@@ -4733,198 +5287,245 @@ function ContextBuilderPage() {
                           Repair imports
                         </Button>
                       </Group>
-                      <SimpleGrid cols={{ base: 1, md: 4 }} spacing="sm">
-                        <Select
-                          label="Context file"
-                          value={selectedContextFile}
-                          onChange={loadContextVariant}
-                          data={contextFiles.map((entry) => ({
-                            value: entry.name,
-                            label: entry.active
-                              ? `${entry.name} (active)`
-                              : entry.name,
-                          }))}
-                          searchable
-                        />
-                        <Select
-                          label="Selected column"
-                          value={selectedColumnId}
-                          onChange={selectAndLoadColumn}
-                          data={contextVariables.map((block, index) => ({
-                            value: block.id,
-                            label: block.title
-                              ? `${index + 1}. ${block.title} (${block.name})`
-                              : `${index + 1}. ${block.name}`,
-                          }))}
-                          placeholder="Choose a @Variable"
-                          searchable
-                        />
-                        <Group mt={24} gap="xs" grow>
-                          <Button
-                            variant="light"
-                            leftSection={<IconArrowUp size={16} />}
-                            onClick={() => moveSelectedColumn(-1)}
-                            disabled={!selectedColumnId}
-                          >
-                            Up
-                          </Button>
-                          <Button
-                            variant="light"
-                            leftSection={<IconArrowDown size={16} />}
-                            onClick={() => moveSelectedColumn(1)}
-                            disabled={!selectedColumnId}
-                          >
-                            Down
-                          </Button>
-                        </Group>
-                        <Button
-                          mt={24}
-                          variant="light"
-                          color="red"
-                          onClick={deleteSelectedColumn}
-                          disabled={!selectedColumnId}
-                        >
-                          Delete selected
-                        </Button>
-                      </SimpleGrid>
-                    </Stack>
-                  </Card>
-                  <Card withBorder radius={4} p="md">
-                    <Stack gap="sm">
-                      <Group justify="space-between">
-                        <Stack gap={2}>
-                          <Title order={5}>Generated variable</Title>
-                          <Text size="xs" c="dimmed">
-                            Edit this block before appending it to the selected
-                            context file.
-                          </Text>
-                        </Stack>
-                        <Group>
-                          <Button
-                            variant="subtle"
-                            onClick={() =>
-                              setGeneratedEditorCompact((compact) => !compact)
-                            }
-                          >
-                            {generatedEditorCompact
-                              ? 'Expand editor'
-                              : 'Compact editor'}
-                          </Button>
-                          <Button
-                            onClick={appendToContext}
-                            disabled={!canBuildColumn}
-                          >
-                            Append to {selectedContextFile}
-                          </Button>
-                          <Button
-                            variant="light"
-                            onClick={replaceSelectedColumn}
-                            disabled={!selectedColumnId || !canBuildColumn}
-                          >
-                            Replace selected
-                          </Button>
-                        </Group>
-                      </Group>
-                      <Textarea
-                        value={generatedDraft}
-                        onChange={(event) =>
-                          setGeneratedDraft(event.currentTarget.value)
-                        }
-                        autosize
-                        minRows={generatedEditorCompact ? 6 : 18}
-                        maxRows={generatedEditorCompact ? 10 : 28}
-                        styles={{
-                          input: {
-                            fontFamily:
-                              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                            fontSize: '12px',
-                          },
-                        }}
+                    </Group>
+                    <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm">
+                      <Select
+                        label="Context file"
+                        value={selectedContextFile}
+                        onChange={loadContextVariant}
+                        data={contextFiles.map((entry) => ({
+                          value: entry.name,
+                          label: entry.active
+                            ? `${entry.name} (active)`
+                            : entry.name,
+                        }))}
+                        searchable
                       />
-                    </Stack>
-                  </Card>
-                  <Card withBorder radius={4} p="md">
-                    <Stack gap="xs">
-                      <Group justify="space-between">
-                        <Stack gap={2}>
-                          <Title order={5}>Preview</Title>
-                          <Text size="xs" c="dimmed">
-                            Check the selected recipe and input before saving.
-                          </Text>
-                        </Stack>
-                        <Button
-                          onClick={previewColumn}
-                          variant="light"
-                          disabled={!canBuildColumn}
-                        >
-                          Preview column
-                        </Button>
-                      </Group>
-                      <Grid gutter="md">
-                        <Grid.Col span={{ base: 12, md: 7 }}>
-                          <VisualPreview
-                            datasetPreview={datasetPreview}
-                            fieldKind={fieldKind}
-                            fieldTitle={fieldTitle}
-                            columnDetails={columnDetails}
+                      <Paper withBorder radius={4} p="sm">
+                        <Stack gap="xs">
+                          <Select
+                            label="Selected existing column"
+                            description="The actions below apply to this column."
+                            value={selectedColumnId}
+                            onChange={selectAndLoadColumn}
+                            data={contextVariables.map((block, index) => ({
+                              value: block.id,
+                              label: block.title
+                                ? `${index + 1}. ${block.title} (${block.name})`
+                                : `${index + 1}. ${block.name}`,
+                            }))}
+                            placeholder="Choose a @Variable"
+                            searchable
                           />
-                        </Grid.Col>
-                        <Grid.Col span={{ base: 12, md: 5 }}>
+                          {selectedContextVariable ? (
+                            <Text size="xs" c="dimmed">
+                              Position {selectedColumnIndex + 1} of{' '}
+                              {contextVariables.length}
+                            </Text>
+                          ) : null}
+                          <Group gap="xs">
+                            <Button
+                              size="xs"
+                              variant="light"
+                              onClick={() => {
+                                setSelectedColumnId(null)
+                                setSaveStatus(
+                                  'Existing column deselected. Add to context will create a new column.'
+                                )
+                              }}
+                              disabled={!selectedContextVariable}
+                            >
+                              Deselect / new column
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="light"
+                              onClick={replaceSelectedColumn}
+                              disabled={
+                                !selectedContextVariable ||
+                                !canSaveGeneratedColumn
+                              }
+                            >
+                              Replace selected
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="light"
+                              leftSection={<IconArrowUp size={16} />}
+                              onClick={() => moveSelectedColumn(-1)}
+                              disabled={selectedColumnIndex <= 0}
+                            >
+                              Move selected up
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="light"
+                              leftSection={<IconArrowDown size={16} />}
+                              onClick={() => moveSelectedColumn(1)}
+                              disabled={
+                                selectedColumnIndex < 0 ||
+                                selectedColumnIndex >= contextVariables.length - 1
+                              }
+                            >
+                              Move selected down
+                            </Button>
+                            <Button
+                              size="xs"
+                              variant="light"
+                              color="red"
+                              onClick={deleteSelectedColumn}
+                              disabled={!selectedContextVariable}
+                            >
+                              Delete selected column
+                            </Button>
+                          </Group>
+                        </Stack>
+                      </Paper>
+                    </SimpleGrid>
+                  </ContextBuilderPanel>
+                  <ContextBuilderDisclosure
+                    title="Preview"
+                    description="Visual result and exact technical values in one view."
+                    summary={contextRecipeLabel(fieldKind)}
+                    open
+                  >
+                    <Group justify="space-between" gap="sm">
+                      <Stack gap={2}>
+                        <Text size="xs" c="dimmed">
+                          Selected input
+                        </Text>
+                        <Text size="sm" fw={600}>
+                          {selectedInputSummary}
+                        </Text>
+                      </Stack>
+                      <Button
+                        onClick={previewColumn}
+                        variant="light"
+                        disabled={!canBuildColumn}
+                      >
+                        Preview column
+                      </Button>
+                    </Group>
+                    <Grid gutter="sm">
+                      <Grid.Col span={{ base: 12, md: 7 }}>
+                        <Paper
+                          withBorder
+                          radius={4}
+                          p="sm"
+                          bg="var(--mantine-color-blue-0)"
+                          h="100%"
+                        >
                           <Stack gap="xs">
-                            <Text size="sm" fw={600}>
-                              Details
+                            <Text size="sm" fw={700}>
+                              Visual preview
+                            </Text>
+                            <VisualPreview
+                              contextScope={contextScope}
+                              datasetPreview={datasetPreview}
+                              fieldKind={fieldKind}
+                              fieldTitle={fieldTitle}
+                              columnDetails={columnDetails}
+                              shots={shots}
+                            />
+                          </Stack>
+                        </Paper>
+                      </Grid.Col>
+                      <Grid.Col span={{ base: 12, md: 5 }}>
+                        <Paper
+                          withBorder
+                          radius={4}
+                          p="sm"
+                          bg="var(--mantine-color-gray-0)"
+                          h="100%"
+                        >
+                          <Stack gap="xs">
+                            <Text size="sm" fw={700}>
+                              Technical values
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                              Exact values used to build the visual result.
                             </Text>
                             <Code block>
                               {columnDetails || 'Click Preview column.'}
                             </Code>
                           </Stack>
-                        </Grid.Col>
-                      </Grid>
-                    </Stack>
-                  </Card>
-                  <Card withBorder radius={4} p="md">
-                    <Stack gap="sm">
-                      <Group justify="space-between">
-                        <Stack gap={2}>
-                          <Title order={5}>Manual context editor</Title>
-                          <Text size="xs" c="dimmed">
-                            {contextFile?.path ?? '-'}
-                          </Text>
-                        </Stack>
-                        <Button onClick={saveManualContext}>
-                          Save {selectedContextFile}
-                        </Button>
-                      </Group>
-                      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-                        <TextInput
-                          label="Save as"
-                          value={saveAsName}
-                          onChange={(event) =>
-                            setSaveAsName(event.currentTarget.value)
-                          }
-                        />
-                        <Button mt={24} onClick={saveAsContext} variant="light">
-                          Save as
-                        </Button>
-                      </SimpleGrid>
-                      <Textarea
-                        value={contextContent}
-                        onChange={(event) =>
-                          setContextContent(event.currentTarget.value)
+                        </Paper>
+                      </Grid.Col>
+                    </Grid>
+                  </ContextBuilderDisclosure>
+                  <ContextBuilderDisclosure
+                    title="Generated variable"
+                    description="Review or edit the generated Python before saving it."
+                    summary={generatedEditorCompact ? 'Compact' : 'Expanded'}
+                  >
+                    <Group justify="flex-end" gap="xs">
+                      <Button
+                        variant="subtle"
+                        onClick={() =>
+                          setGeneratedEditorCompact((compact) => !compact)
                         }
-                        autosize
-                        minRows={14}
-                        maxRows={28}
-                        styles={{
-                          input: {
-                            fontFamily:
-                              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                            fontSize: '12px',
-                          },
-                        }}
+                      >
+                        {generatedEditorCompact
+                          ? 'Expand editor'
+                          : 'Compact editor'}
+                      </Button>
+                    </Group>
+                    <Textarea
+                      value={generatedDraft}
+                      onChange={(event) =>
+                        setGeneratedDraft(event.currentTarget.value)
+                      }
+                      autosize
+                      minRows={generatedEditorCompact ? 6 : 18}
+                      maxRows={generatedEditorCompact ? 10 : 28}
+                      styles={{
+                        input: {
+                          fontFamily:
+                            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                          fontSize: '12px',
+                        },
+                      }}
+                    />
+                  </ContextBuilderDisclosure>
+                  <ContextBuilderDisclosure
+                    title="Manual context editor"
+                    description={contextFile?.path ?? 'Edit the full context file.'}
+                    summary={selectedContextFile}
+                  >
+                    <Group justify="flex-end">
+                      <Button onClick={saveManualContext}>
+                        Save {selectedContextFile}
+                      </Button>
+                    </Group>
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                      <TextInput
+                        label="Save as"
+                        value={saveAsName}
+                        onChange={(event) =>
+                          setSaveAsName(event.currentTarget.value)
+                        }
                       />
-                    </Stack>
-                  </Card>
+                      <Button mt={24} onClick={saveAsContext} variant="light">
+                        Save as
+                      </Button>
+                    </SimpleGrid>
+                    <Textarea
+                      value={contextContent}
+                      onChange={(event) =>
+                        setContextContent(event.currentTarget.value)
+                      }
+                      autosize
+                      minRows={14}
+                      maxRows={28}
+                      styles={{
+                        input: {
+                          fontFamily:
+                            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                          fontSize: '12px',
+                        },
+                      }}
+                    />
+                  </ContextBuilderDisclosure>
                 </Stack>
               </Grid.Col>
             </Grid>
@@ -4970,6 +5571,15 @@ function countNumericValues(shots: HZDRShot[], key: string) {
     const value = getNestedMetadataValue(shot.metadata, key)
     return typeof value === 'number' && Number.isFinite(value)
   }).length
+}
+
+function collectNumericMetadataTrendValues(shots: HZDRShot[], key: string) {
+  return shots.flatMap((shot) => {
+    const value = getNestedMetadataValue(shot.metadata, key)
+    return typeof value === 'number' && Number.isFinite(value)
+      ? [{ shotNumber: shot.shot_number, value }]
+      : []
+  })
 }
 
 async function requireJson<T>(response: Response): Promise<T> {
@@ -5092,7 +5702,7 @@ function parseContextVariableBlocks(content: unknown): ContextVariableBlock[] {
     const titleMatch = match[1].match(/title\s*=\s*["']([^"']+)["']/)
     const name = match[2]
     return {
-      id: `${name}-${start}-${end}`,
+      id: name,
       name,
       title: titleMatch?.[1] ?? name,
       start,
@@ -5199,12 +5809,11 @@ function makeContextVariableBlockUnique(
   block: string,
   existingBlocks: ContextVariableBlock[]
 ) {
-  const functionMatch = block.match(/def\s+([A-Za-z_]\w*)\s*\(/)
-  if (!functionMatch) {
+  const currentName = extractPythonFunctionName(block)
+  if (!currentName) {
     return block
   }
   const existingNames = new Set(existingBlocks.map((entry) => entry.name))
-  const currentName = functionMatch[1]
   if (!existingNames.has(currentName)) {
     return block
   }
@@ -5240,14 +5849,64 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+const PYTHON_RESERVED_NAMES = new Set([
+  'False',
+  'None',
+  'True',
+  'and',
+  'as',
+  'assert',
+  'async',
+  'await',
+  'break',
+  'class',
+  'continue',
+  'def',
+  'del',
+  'elif',
+  'else',
+  'except',
+  'finally',
+  'for',
+  'from',
+  'global',
+  'if',
+  'import',
+  'in',
+  'is',
+  'lambda',
+  'nonlocal',
+  'not',
+  'or',
+  'pass',
+  'raise',
+  'return',
+  'try',
+  'while',
+  'with',
+  'yield',
+])
+
+function isValidPythonFunctionName(name: string) {
+  return /^[A-Za-z_]\w*$/.test(name) && !PYTHON_RESERVED_NAMES.has(name)
+}
+
+function extractPythonFunctionName(block: string) {
+  const name = block.match(/def\s+([A-Za-z_]\w*)\s*\(/)?.[1]
+  return name && isValidPythonFunctionName(name) ? name : undefined
+}
+
 function pythonNameFromTitle(title: string) {
   const slug = title
     .trim()
     .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
   const safeSlug = slug || 'hzdr_computed_field'
-  return /^[a-z_]/.test(safeSlug) ? safeSlug : `field_${safeSlug}`
+  const identifier = /^[a-z_]/.test(safeSlug) ? safeSlug : `field_${safeSlug}`
+  return PYTHON_RESERVED_NAMES.has(identifier) ? `field_${identifier}` : identifier
 }
 
 function formatSelectedInput(value: string) {
@@ -5274,6 +5933,15 @@ function formatContextValue(value: unknown) {
     return String(value)
   }
   return JSON.stringify(value)
+}
+
+function isMissingContextValueError(error: string) {
+  const normalized = error.toLowerCase()
+  return (
+    normalized.startsWith('no ') ||
+    normalized.includes('missing ') ||
+    normalized.includes('not found')
+  )
 }
 
 function shotMatchesTableFilter(
@@ -5562,8 +6230,9 @@ function buildColumnPreview({
         dataset: datasetName ?? 'dataset not selected',
         shape: dataset?.shape ?? null,
         dtype: dataset?.dtype ?? null,
-        value: dataset ? `lineout(${dataset.name})` : null,
-        displayed_value: 'lineout preview',
+        value: dataset ? `nanmean(${dataset.name})` : null,
+        preview: dataset ? `lineout(${dataset.name})` : null,
+        displayed_value: 'nanmean(lineout)',
       },
       null,
       2
@@ -5577,8 +6246,9 @@ function buildColumnPreview({
         dataset: datasetName ?? 'dataset not selected',
         shape: dataset?.shape ?? null,
         dtype: dataset?.dtype ?? null,
-        value: dataset ? `mean(${dataset.name})` : null,
-        displayed_value: 'mean(image), thumbnail=image[::8, ::8]',
+        value: dataset ? `nanmean(${dataset.name})` : null,
+        preview: dataset ? `thumbnail(${dataset.name})` : null,
+        displayed_value: 'nanmean(image)',
       },
       null,
       2
@@ -5593,7 +6263,8 @@ function buildColumnPreview({
         shape: dataset?.shape ?? null,
         dtype: dataset?.dtype ?? null,
         value: dataset ? `nanmean(${dataset.name})` : null,
-        displayed_value: 'nanmean(values), preview=Plotly line',
+        preview: dataset ? `Plotly line(${dataset.name})` : null,
+        displayed_value: 'nanmean(values)',
       },
       null,
       2
@@ -5648,17 +6319,35 @@ function getNestedMetadataValue(
 }
 
 function VisualPreview({
+  contextScope,
   datasetPreview,
   fieldKind,
   fieldTitle,
   columnDetails,
+  shots,
 }: {
+  contextScope: string
   datasetPreview?: HZDRDatasetPreview
   fieldKind: string
   fieldTitle: string
   columnDetails: string
+  shots: HZDRShot[]
 }) {
   const parsedDetails = parseColumnDetails(columnDetails)
+  const metadataInput =
+    typeof parsedDetails.input === 'string' ? parsedDetails.input : undefined
+
+  if (contextScope === 'set' && fieldKind === 'metadata' && metadataInput) {
+    return (
+      <Stack gap="xs">
+        <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
+        <MetadataTrendPreview
+          values={collectNumericMetadataTrendValues(shots, metadataInput)}
+          title={`${metadataInput} trend`}
+        />
+      </Stack>
+    )
+  }
 
   if (
     ![
@@ -6080,15 +6769,15 @@ import numpy as np
 from damnit_ctx import Cell, Skip, Variable
 
 
-@Variable(title=${JSON.stringify(safeFieldTitle)})
+@Variable(title=${JSON.stringify(safeFieldTitle)}, summary="nanmean")
 def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
-    """Store a full lineout while showing a compact table preview."""
+    """Show a scalar summary in the table and the full lineout in the preview."""
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
         dataset_name = ${hdf5DatasetExpression}
         lineout = np.asarray(handle[dataset_name][...])
-    return Cell(lineout, preview=lineout)
+    return Cell(lineout, summary="nanmean", preview=lineout)
 `
   }
 
@@ -6099,15 +6788,15 @@ import numpy as np
 from damnit_ctx import Cell, Skip, Variable
 
 
-@Variable(title=${JSON.stringify(safeFieldTitle)}, summary="image preview")
+@Variable(title=${JSON.stringify(safeFieldTitle)}, summary="nanmean")
 def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
-    """Store a full image while showing a reduced thumbnail in the table."""
+    """Show a scalar summary in the table and a reduced image in the preview."""
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
         dataset_name = ${hdf5DatasetExpression}
         image = np.asarray(handle[dataset_name][...])
-    return Cell(image, summary="image preview", preview=image[::8, ::8])
+    return Cell(image, summary="nanmean", preview=image[::8, ::8])
 `
   }
 

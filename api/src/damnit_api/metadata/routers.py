@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from random import Random
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -26,11 +27,9 @@ from .models import ProposalMeta
 router = APIRouter(prefix="/metadata", tags=["metadata"])
 
 WATCHDOG_KAFKA_TOPIC = "planet.watchdog.events"
-MOTION_AUTO_LOGGER_KAFKA_TOPIC = "motion.auto.logger.events"
 SHOTCOUNTER_KAFKA_TOPIC = "shotcounter.shots"
 KAFKA_EVENT_SOURCES = {
     "planet-watchdog": (WATCHDOG_KAFKA_TOPIC, "planet-watchdog"),
-    "motion-auto-logger": (MOTION_AUTO_LOGGER_KAFKA_TOPIC, "motion-auto-logger"),
 }
 
 
@@ -47,6 +46,14 @@ class HZDRShotStatusUpdate(BaseModel):
     """Operator status change for one local HZDR shot."""
 
     status: str
+    note: str | None = None
+
+
+class HZDRShotMetadataUpdate(BaseModel):
+    """Operator correction for one local HZDR shot metadata value."""
+
+    key: str
+    value: Any
     note: str | None = None
 
 
@@ -122,6 +129,36 @@ async def update_hzdr_shot_status(
         status=payload.status,
         note=payload.note,
         reviewed_by=user.preferred_username or user.email,
+    )
+
+
+@router.patch("/hzdr/sources/{source_key}/shots/{shot_number}/metadata")
+async def update_hzdr_shot_metadata(
+    source_key: str,
+    shot_number: int,
+    payload: HZDRShotMetadataUpdate,
+    user: OAuthUserInfo,
+) -> HZDRShot:
+    """Correct one metadata value in a local emulator shot."""
+    if (
+        settings.metadata.provider != "local"
+        or settings.metadata.sources_file is None
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Shot metadata corrections require local metadata provider and "
+                "sources_file."
+            ),
+        )
+    return update_local_shot_metadata(
+        settings.metadata.sources_file,
+        source_key=source_key,
+        shot_number=shot_number,
+        key=payload.key,
+        value=payload.value,
+        note=payload.note,
+        corrected_by=user.preferred_username or user.email,
     )
 
 
@@ -303,6 +340,80 @@ def update_local_shot_status(
     return HZDRShot.model_validate(shot)
 
 
+def update_local_shot_metadata(
+    sources_file: Path,
+    *,
+    source_key: str,
+    shot_number: int,
+    key: str,
+    value: Any,
+    note: str | None,
+    corrected_by: str,
+) -> HZDRShot:
+    """Correct one shot metadata field and retain an audit trail."""
+    key = key.strip()
+    reserved_keys = {
+        "status",
+        "status_history",
+        "reviewed_at",
+        "reviewed_by",
+        "review_note",
+        "metadata_correction_history",
+        "shot_id",
+        "experiment_id",
+        "combined_hdf5_path",
+    }
+    if not key or key in reserved_keys:
+        raise HTTPException(status_code=400, detail="Unsupported metadata key.")
+    if not sources_file.exists():
+        raise HTTPException(status_code=404, detail="HZDR sources file not found.")
+
+    payload = json.loads(sources_file.read_text(encoding="utf-8"))
+    sources = payload.get("sources", payload if isinstance(payload, list) else [])
+    source_record = next(
+        (source for source in sources if source.get("key") == source_key),
+        None,
+    )
+    if source_record is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+
+    shot = next(
+        (
+            shot
+            for shot in source_record.get("shots", [])
+            if int(shot.get("shot_number", 0)) == shot_number
+        ),
+        None,
+    )
+    if shot is None:
+        raise HTTPException(status_code=404, detail="HZDR shot not found.")
+
+    metadata = shot.setdefault("metadata", {})
+    previous_value = metadata.get(key)
+    corrected_at = datetime.now(UTC).isoformat()
+    metadata[key] = value
+    history = metadata.setdefault("metadata_correction_history", [])
+    if isinstance(history, list):
+        history.append(
+            {
+                "at": corrected_at,
+                "key": key,
+                "from": previous_value,
+                "to": value,
+                "by": corrected_by,
+                "note": note or "Corrected from source table",
+            }
+        )
+
+    if isinstance(payload, dict):
+        payload["sources"] = sources
+        sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    else:
+        sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
+
+    return HZDRShot.model_validate(shot)
+
+
 def enrich_latest_emulated_shot(
     *,
     source_record: dict,
@@ -431,16 +542,6 @@ def _apply_event_source_metadata(
         metadata["watchdog_last_kind"] = event_kind
         metadata["watchdog_status"] = "shot-event-seen"
         return
-    if source == "motion-auto-logger":
-        metadata["motion_event_count"] = _next_metadata_counter(
-            metadata, "motion_event_count"
-        )
-        metadata["motion_last_kind"] = event_kind
-        metadata["motion_status"] = "captured"
-        metadata["motion_stage_x_mm"] = round(-0.25 + sequence * 0.015, 4)
-        metadata["motion_stage_y_mm"] = round(0.18 - sequence * 0.012, 4)
-        metadata["motion_stage_z_mm"] = round(1.75 + sequence * 0.025, 4)
-        return
     if source == "shotcounter":
         metadata["shotcounter_event_count"] = _next_metadata_counter(
             metadata, "shotcounter_event_count"
@@ -543,13 +644,6 @@ def _payload_ref_for_event_source(
 
 def _values_for_event_source(event_source: str, metadata: dict) -> list[float]:
     """Return representative signal values for one staged flow-monitor event."""
-    source = _event_file_stem(event_source)
-    if source == "motion-auto-logger":
-        return [
-            float(metadata.get("motion_stage_x_mm", 0.0)),
-            float(metadata.get("motion_stage_y_mm", 0.0)),
-            float(metadata.get("motion_stage_z_mm", 0.0)),
-        ]
     return [float(metadata.get("detector_signal_mean", 0.0))]
 
 

@@ -5,9 +5,9 @@ unit is a source with shot metadata, staged event packages, context columns,
 trend previews, and combined HDF5 output.
 
 The live visualization is intended for both development and production. Local
-development uses emulated LaserData, Watchdog, and Motion auto logger buttons to
-create traffic; a production deployment should feed the same view from real
-ASAPO/Kafka/MongoDB state and the operational HDF5 builder.
+development uses emulated LaserData and Watchdog buttons to create traffic; a
+production deployment should feed the same view from real ASAPO/Kafka/MongoDB
+state and the operational HDF5 builder.
 
 Start with the quick path, then expand the sections relevant to the workflow
 you are validating.
@@ -48,14 +48,13 @@ http://127.0.0.1:5173/flow-monitor
 
 - LaserData produces raw shot events that flow into a broker (ASAPO-style).
 - PLANET Watchdog can publish enrichment events into Kafka.
-- Motion auto logger can publish motion-system enrichment events into Kafka.
 - Both brokers produce staged events as JSONL files (events/*.jsonl).
 - The HDF5 builder consumes staged JSONL packages and writes a combined
   experiment HDF5 file.
 - DAMNIT-web reads live metadata from MongoDB and previews data from the
   combined HDF5 output; `context.py` provides context joining logic.
 
-Summary: LaserData/Watchdog/Motion -> broker(s) -> staged JSONL -> HDF5 builder
+Summary: LaserData/Watchdog -> broker(s) -> staged JSONL -> HDF5 builder
 -> combined HDF5 -> DAMNIT-web. MongoDB provides live metadata lookups.
 
 ## JSONL to HDF5
@@ -63,7 +62,7 @@ Summary: LaserData/Watchdog/Motion -> broker(s) -> staged JSONL -> HDF5 builder
 The JSONL-to-HDF5 transition is an explicit boundary (not an automatic side
 effect of polling). Typical steps:
 
-1. The producer or enhancer (LaserData, Watchdog, or Motion auto logger)
+1. The producer or enhancer (LaserData or Watchdog)
   appends normalized package events to `events/*.jsonl`.
 2. DAMNIT may read staged state for visibility and UI previews.
 3. The HDF5 builder is triggered (manually via the flow monitor or by an
@@ -132,7 +131,6 @@ production.
 
 - **LaserData** appends a new emulated shot.
 - **PLANET Watchdog** enriches the latest shot through the Kafka-style path.
-- **Motion auto logger** enriches the latest shot through the Kafka-style path.
 - **Build HDF5** simulates the production build/finalize trigger and combines
   staged packages into the experiment HDF5.
 - **Poll DAMNIT** reloads source metadata and table-visible shots.
@@ -141,10 +139,9 @@ Use it when you want to verify that shot numbers increment, package arrows move,
 and DAMNIT can see the staged source data.
 
 In production, the same visualization should be driven by real incoming
-LaserData/ASAPO events, Watchdog/Kafka enrichment, Motion/Kafka enrichment,
-MongoDB shotsheet metadata, and builder status instead of button-triggered
-emulator writes. The UI should remain the operator-facing picture of what is
-arriving and what DAMNIT can see.
+LaserData/ASAPO events, Watchdog/Kafka enrichment, MongoDB shotsheet metadata,
+and builder status instead of button-triggered emulator writes. The UI should
+remain the operator-facing picture of what is arriving and what DAMNIT can see.
 
 </details>
 

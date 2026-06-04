@@ -27,7 +27,6 @@ def test_runtime_config_defaults_to_hzdr_terms():
     assert payload["flow_monitor"]["receivers"] == {
         "laser_data": True,
         "watchdog": True,
-        "motion_auto_logger": False,
         "mongo": True,
     }
     assert payload["terminology"]["identity_label"] == "Source"

@@ -21,7 +21,6 @@ class TerminologyConfig(BaseModel):
 class FlowMonitorReceiversConfig(BaseModel):
     laser_data: bool
     watchdog: bool
-    motion_auto_logger: bool
     mongo: bool
 
 

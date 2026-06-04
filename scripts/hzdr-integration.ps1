@@ -358,7 +358,7 @@ $asapoRoot = Assert-ProjectPath $root "asapo-for-hzdr-damnit"
 $kafkaRoot = Assert-ProjectPath $root "kafka-broker-docker"
 $labfrogRoot = Assert-ProjectPath $root "labfrog"
 $planetWatchdogRoot = Assert-ProjectPath $root "planet-watchdog"
-$motionAutoLoggerRoot = Find-OptionalProjectPath $root "motion-auto-logger"
+
 $selectedAsapoSpoolDir = if ($AsapoSpoolDir) {
     (Resolve-Path $AsapoSpoolDir -ErrorAction SilentlyContinue).Path
 } else {
@@ -374,12 +374,7 @@ Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
 Write-Host "PLANET Watchdog: $planetWatchdogRoot"
-if ($motionAutoLoggerRoot) {
-    Write-Host "Motion auto logger: $motionAutoLoggerRoot"
-}
-else {
-    Write-Host "Motion auto logger: not found (optional)"
-}
+
 Write-Host "ASAPO spool: $selectedAsapoSpoolDir"
 
 Write-Step "Prerequisites"

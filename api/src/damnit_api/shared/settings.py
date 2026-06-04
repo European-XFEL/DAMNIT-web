@@ -97,7 +97,6 @@ class DeploymentSettings(BaseModel):
 class FlowMonitorReceiversSettings(BaseModel):
     laser_data: bool = True
     watchdog: bool = True
-    motion_auto_logger: bool = False
     mongo: bool = True
 
 

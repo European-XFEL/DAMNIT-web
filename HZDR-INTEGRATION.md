@@ -1,8 +1,7 @@
 # HZDR Integration
 
 This repository can coordinate local HZDR smoke tests across DAMNIT-web,
-ASAPO-style local transport, Kafka, LabFrog MongoDB, PLANET Watchdog, and
-optional motion autologging.
+ASAPO-style local transport, Kafka, LabFrog MongoDB, and PLANET Watchdog.
 
 ## Local Smoke-Test Repositories
 
@@ -17,7 +16,6 @@ else.
 | `kafka-broker-docker` | Kafka broker |
 | `labfrog` | MongoDB shotsheet data and Mongo Express |
 | [`planet-watchdog`](https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/infrastructure/planet-watchdog) | PLANET Watchdog event source for production planet/watchdog traffic |
-| [`motion-auto-logger`](https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/data-capturing/motion-auto-logger) | Optional motion-system autologging enhancer for experiment metadata |
 | `DAMNIT-web-hzdr` | DAMNIT-web HZDR API and frontend |
 
 ## Future Integrations
@@ -34,7 +32,6 @@ current required HZDR production path.
 | Area | Current status | What is changing |
 | --- | --- | --- |
 | PLANET Watchdog | Required workflow source, same category as LabFrog | Launchers require the repo and flow-monitor events write Kafka-shaped staged metadata |
-| Motion auto logger | Optional workflow source and local enhancer emulator | Launchers discover `motion-auto-logger` when present; flow-monitor Motion events enrich the latest shot through the Kafka-shaped `motion.auto.logger.events` path |
 | SciCat plugin | Future downstream catalog target | `api/scripts/publish-hzdr-catalog.py` builds DAMNIT catalog payloads for `/scicat/from-damnit`, with fallback to `/scicat/from-json` |
 
 ## Related Production References
@@ -88,8 +85,7 @@ Keep local connection details in that file:
     "bootstrap": "127.0.0.1:9092",
     "topic": "planet.watchdog.events",
     "topics": {
-      "watchdog": "planet.watchdog.events",
-      "motionAutoLogger": "motion.auto.logger.events"
+      "watchdog": "planet.watchdog.events"
     }
   },
   "asapo": {
@@ -260,11 +256,10 @@ Open:
 http://127.0.0.1:5173/flow-monitor
 ```
 
-In local mode, the monitor buttons create emulated LaserData, Watchdog, and
-Motion auto logger traffic. LaserData appends new shots; Watchdog and Motion
-auto logger enrich the latest shot. In production, the same view should be fed
-by real LaserData/ASAPO, Watchdog/Kafka, Motion/Kafka, MongoDB shotsheet, and
-HDF5 builder state.
+In local mode, the monitor buttons create emulated LaserData and Watchdog
+traffic. LaserData appends new shots; Watchdog enriches the latest shot. In
+production, the same view should be fed by real LaserData/ASAPO,
+Watchdog/Kafka, MongoDB shotsheet, and HDF5 builder state.
 
 The monitor is intended to show what is arriving, what is staged, what has been
 combined into HDF5, and what DAMNIT-web can currently see.

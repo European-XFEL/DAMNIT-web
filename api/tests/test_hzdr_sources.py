@@ -193,35 +193,3 @@ def test_shotcounter_flow_monitor_event_uses_zmq_kafka_shape(tmp_path: Path):
         "topic": "shotcounter.shots",
     }
 
-
-def test_motion_auto_logger_flow_monitor_event_enriches_latest_shot(
-    tmp_path: Path,
-):
-    """Motion autologging is an optional Kafka-backed enrichment source."""
-    sources_file = write_source_fixture(tmp_path)
-
-    source = append_emulated_shot(
-        sources_file,
-        source_key="hzdr-local",
-        event_source="motion-auto-logger",
-        event_kind="motion_stage_event",
-        action="enrich",
-    )
-
-    metadata = source.shots[-1].metadata
-    assert metadata["emulated_last_enrichment_source"] == "motion-auto-logger"
-    assert metadata["motion_status"] == "captured"
-    assert metadata["motion_stage_x_mm"] == pytest.approx(-0.235)
-    assert metadata["motion_stage_y_mm"] == pytest.approx(0.168)
-    assert metadata["motion_stage_z_mm"] == pytest.approx(1.775)
-
-    event_path = tmp_path / "events" / "motion-auto-logger.jsonl"
-    event = orjson.loads(event_path.read_bytes().splitlines()[-1])
-    assert event["transport"] == "kafka"
-    assert event["payload_ref"] == {
-        "offset": 1,
-        "partition": 0,
-        "producer": "motion-auto-logger",
-        "topic": "motion.auto.logger.events",
-    }
-    assert event["values"] == pytest.approx([-0.235, 0.168, 1.775])

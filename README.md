@@ -1,6 +1,7 @@
 # DAMNIT Web
 
-Monorepo for serving DAMNIT data through a web API and frontend.
+Monorepo for serving DAMNIT data through a web API and frontend, with HZDR
+launcher support for local source emulation, context building, and previewing.
 
 ## HZDR Flow
 
@@ -10,13 +11,29 @@ columns, trends, and HDF5 previews.
 
 Core flow:
 
-- Producers such as LaserData, Watchdog, motion autologging, and shotsheet
-  services create package events.
+- Producers such as LaserData, Watchdog, and shotsheet services create
+  package events.
 - Local emulators or production transports stage those events as JSONL.
 - The HDF5 builder combines events by `experiment_id + shot_id`.
 - DAMNIT-web reads source metadata, context output, and combined HDF5 previews.
 - The flow monitor visualizes both local emulated traffic and production
   incoming traffic.
+
+## Screenshots
+
+Recent UI snapshots from `screenshots/`:
+
+### Flow monitor
+
+![Flow monitor](<screenshots/Screenshot 2026-06-04 120943.png>)
+
+### Main DAMNIT table
+
+![Main DAMNIT table](<screenshots/Screenshot 2026-06-04 182809.png>)
+
+### Context builder
+
+![Context builder](<screenshots/Screenshot 2026-06-04 182836.png>)
 
 Normalized package fields:
 
@@ -31,7 +48,7 @@ Normalized package fields:
 
 ## Quick Start
 
-Initialize and run the local HZDR launcher from the repository root.
+Run the local HZDR launcher from the repository root.
 
 Linux:
 
@@ -54,9 +71,9 @@ Generated events, HDF5 output, and source fixtures are written under:
 ```
 
 The launcher searches upward from this checkout for related sibling folders such
-as `labfrog`, `planet-watchdog`, and `motion-auto-logger`. Edit
-`scripts/hzdr-launch.config.json` when your repository paths, connection
-details, shot counts, or output locations are different.
+as `labfrog` and `planet-watchdog`. Edit `scripts/hzdr-launch.config.json` when
+your repository paths, connection details, shot counts, or output locations are
+different.
 
 ## API Launchers
 
@@ -93,7 +110,6 @@ uv run mkdocs serve
 | `kafka-broker-docker` | Optional Kafka smoke-test broker |
 | `labfrog` | Local MongoDB shotsheet data and Mongo Express |
 | [`planet-watchdog`](https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/infrastructure/planet-watchdog) | PLANET Watchdog event source for production planet/watchdog traffic |
-| [`motion-auto-logger`](https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/data-capturing/motion-auto-logger) | Optional motion-system autologging enhancer for experiment metadata |
 | [`draco-shotcounter`](https://codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/infrastructure/draco-shotcounter) | Reference shot-counter implementation for TANGO-aligned shot numbering behavior |
 | `DAMNIT-web-hzdr` | API, frontend, package emulator, and flow monitor |
 
@@ -108,7 +124,6 @@ uv run mkdocs serve
 | Area | Current status | What is changing |
 | --- | --- | --- |
 | PLANET Watchdog | Required workflow source, same category as LabFrog | Flow-monitor Watchdog events use the Kafka-shaped `planet.watchdog.events` metadata path |
-| Motion auto logger | Optional workflow source and local enhancer emulator | Launchers discover it when present; flow-monitor Motion events enrich the latest shot through the Kafka-shaped `motion.auto.logger.events` path |
 | SciCat plugin | Future downstream catalog target | DAMNIT-web now has a publisher script that can target `/scicat/from-damnit` once the plugin exposes it |
 
 ## Documentation

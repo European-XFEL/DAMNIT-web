@@ -104,8 +104,6 @@ The local flow monitor can emulate three package paths:
 | --- | --- |
 | LaserData | Appends a new shot through an ASAPO-shaped event |
 | PLANET Watchdog | Enriches the latest shot through `planet.watchdog.events` |
-| Motion auto logger | Enriches the latest shot through `motion.auto.logger.events` |
-
 ## EXFEL Setup
 
 EXFEL keeps OAuth, MyMdC, and proposal terminology:
@@ -165,7 +163,7 @@ for example `events/*.jsonl`, grouped by `experiment_id + shot_id`, and writes
 the combined experiment HDF5 file.
 
 Future SciCat integration should publish after this ordered package/HDF5
-boundary has a coherent shot or experiment record. Watchdog and Motion apps
+boundary has a coherent shot or experiment record. Watchdog-related apps
 should keep emitting operational/enrichment events instead of owning catalog
 writes directly.
 

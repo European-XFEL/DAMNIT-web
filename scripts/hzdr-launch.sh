@@ -348,8 +348,7 @@ ASAPO_ROOT="$(resolve_repository_path "$(config_get repositories.asapoHarness)" 
 KAFKA_ROOT="$(resolve_repository_path "$(config_get repositories.kafkaBroker)" "Kafka broker" "kafka-broker-docker")"
 LABFROG_ROOT="$(resolve_repository_path "$(config_get repositories.labfrog)" "LabFrog" "labfrog")"
 PLANET_WATCHDOG_ROOT="$(resolve_repository_path "$(config_get repositories.planetWatchdog)" "PLANET Watchdog" "planet-watchdog")"
-MOTION_AUTO_LOGGER_ROOT="$(resolve_optional_repository_path "$(config_get repositories.motionAutoLogger)" "motion-auto-logger")"
-
+ 
 API_PORT="$(config_get ports.api 8000)"
 GUI_PORT="$(config_get ports.gui 5173)"
 ASAPO_PORT="$(config_get ports.asapoBroker 8765)"
@@ -369,11 +368,7 @@ echo "ASAPO harness: $ASAPO_ROOT"
 echo "Kafka broker: $KAFKA_ROOT"
 echo "LabFrog: $LABFROG_ROOT"
 echo "PLANET Watchdog: $PLANET_WATCHDOG_ROOT"
-if [[ -n "$MOTION_AUTO_LOGGER_ROOT" ]]; then
-  echo "Motion auto logger: $MOTION_AUTO_LOGGER_ROOT"
-else
-  echo "Motion auto logger: not found (optional)"
-fi
+
 echo "Event packages: $EVENTS_DIR"
 echo "Emulator output: $OUTPUT_DIR"
 echo "Generated shots: $SHOT_COUNT, increment: $SHOT_INCREMENT"
@@ -452,7 +447,6 @@ export DW_API_DEPLOYMENT__TERMINOLOGY__USES_PROPOSALS=false
 export DW_API_DEPLOYMENT__TERMINOLOGY__USES_MYMDC=false
 export DW_API_FLOW_MONITOR__RECEIVERS__LASER_DATA="$(config_get flowMonitor.receivers.laserData true)"
 export DW_API_FLOW_MONITOR__RECEIVERS__WATCHDOG="$(config_get flowMonitor.receivers.watchdog true)"
-export DW_API_FLOW_MONITOR__RECEIVERS__MOTION_AUTO_LOGGER="$(config_get flowMonitor.receivers.motionAutoLogger false)"
 export DW_API_FLOW_MONITOR__RECEIVERS__MONGO="$(config_get flowMonitor.receivers.mongo true)"
 export DW_API_UVICORN__HOST=127.0.0.1
 export DW_API_UVICORN__PORT="$API_PORT"
