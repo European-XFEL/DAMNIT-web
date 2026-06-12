@@ -36,7 +36,7 @@ async def auth(
                 status_code=501,
                 detail="LDAP form login is not implemented in the web UI yet.",
             )
-        request.session["user"] = _debug_user_info()
+        request.session["user"] = models.DEV_USER.model_dump()
         return RedirectResponse(url=redirect_uri)
 
     if client is None:
@@ -153,7 +153,34 @@ async def userinfo(
         user = models.OAuthUserInfo.from_connection(request)
 
     return user
+# -----------------------------------------------------------------------------
+# No-auth mode
 
+noauth_router = APIRouter(prefix="/oauth", tags=["auth"])
+
+
+@noauth_router.get("/userinfo")
+async def noauth_userinfo():
+    from ..metadata.services import LOCAL_CYCLE, _local_proposal_number
+
+    proposals = {}
+    proposal_number = await _local_proposal_number()
+    if proposal_number:
+        proposals = {LOCAL_CYCLE: [proposal_number]}
+
+    return {**models.DEV_USER.model_dump(), "proposals_by_year_half": proposals}
+
+
+@noauth_router.post("/logout")
+async def noauth_logout(request: Request):
+    request.session.pop("user", None)
+    response = JSONResponse(status_code=200, content={"logout_url": None})
+    response.delete_cookie("session", path="/")
+    return response
+
+
+# -----------------------------------------------------------------------------
+# LDAP mode
 
 @ldap_router.post("/login")
 async def ldap_login(request: Request, login: ldap.LDAPLogin) -> JSONResponse:
@@ -181,15 +208,4 @@ async def ldap_logout(request: Request) -> JSONResponse:
     return response
 
 
-def _debug_user_info() -> dict[str, str | list[str]]:
-    """Return a local HZDR debug user for auth-free frontend development."""
-    return {
-        "email": "hzdr-dev@localhost",
-        "family_name": "User",
-        "given_name": "HZDR",
-        "groups": ["hzdr-dev"],
-        "name": "HZDR Dev User",
-        "preferred_username": "hzdr-dev",
-        "proposals_by_year_half": {},
-        "sub": "hzdr-dev",
-    }
+

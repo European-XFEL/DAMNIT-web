@@ -105,10 +105,8 @@ class Singleton(ABCMeta):
 
 class Registry(ABCMeta):
     def __call__(cls, proposal, *args, **kwargs):
-        instance = (
-            cls.registry.get(  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-                proposal
-            )
+        instance = cls.registry.get(  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+            proposal
         )
         if instance is None:
             instance = super().__call__(proposal, *args, **kwargs)
@@ -141,7 +139,3 @@ def get_type(type_):
         return get_args(type_)[0]
 
     return type_
-
-
-def wrap_values(dict_, key="value"):
-    return {k: {key: v} for k, v in dict_.items()}

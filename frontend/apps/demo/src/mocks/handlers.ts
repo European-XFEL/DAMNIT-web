@@ -91,18 +91,23 @@ function getMetadata(meta: Meta) {
   }
 }
 
-const gqlHandlers = [
-  api.mutation('RefreshMutation', async ({ variables }) => {
-    const { meta } = await fetchRuns(variables.proposal)
+async function buildTableData(proposal: string, names?: string[] | null) {
+  const { data } = await fetchRuns(proposal)
 
-    return HttpResponse.json({
-      data: {
-        refresh: {
-          metadata: getMetadata(meta),
-        },
-      },
-    })
-  }),
+  return {
+    runs: data.map((run) => ({
+      variables: Object.entries(run.variables)
+        .filter(([name]) => names == null || names.includes(name))
+        .map(([name, variable]) => ({
+          name,
+          value: variable.value,
+          dtype: variable.dtype,
+        })),
+    })),
+  }
+}
+
+const gqlHandlers = [
   api.query('TableMetadataQuery', async ({ variables }) => {
     const { meta } = await fetchRuns(variables.proposal)
 
@@ -113,16 +118,16 @@ const gqlHandlers = [
     })
   }),
   api.query('TableDataQuery', async ({ variables }) => {
-    const { data } = await fetchRuns(variables.proposal)
-
-    return HttpResponse.json({
-      data: {
-        runs: data.map((run) => ({
-          ...run.variables,
-          __typename: variables.proposal,
-        })),
-      },
-    })
+    const data = await buildTableData(variables.proposal, variables.names)
+    return HttpResponse.json({ data })
+  }),
+  api.query('LightweightTableDataQuery', async ({ variables }) => {
+    const data = await buildTableData(variables.proposal, variables.names)
+    return HttpResponse.json({ data })
+  }),
+  api.query('DeferredTableDataQuery', async ({ variables }) => {
+    const data = await buildTableData(variables.proposal, variables.names)
+    return HttpResponse.json({ data })
   }),
   api.query('ExtractedDataQuery', async ({ variables }) => {
     const data = await fetchData({

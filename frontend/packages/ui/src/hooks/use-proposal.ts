@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
 
-import { useMutation, useSubscription } from '@apollo/client/react'
+import { useQuery, useSubscription } from '@apollo/client/react'
 
 import { updateTable } from '../data/table'
 import { setProposalNotFound, setProposalSuccess } from '../data/metadata'
 import {
-  REFRESH_MUTATION,
+  TABLE_METADATA_QUERY,
   LATEST_DATA_FIELD_NAME,
   LATEST_DATA_SUBSCRIPTION,
 } from '../data/table'
@@ -30,27 +30,34 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
     skip: !subscribe || proposal.loading || proposal.notFound,
   })
 
-  // Synchronize the server and the client table data
-  const [refresh, _] = useMutation(REFRESH_MUTATION)
+  // Synchronize the server and the client table metadata
+  const { data: metadataResult, error: metadataError } = useQuery(
+    TABLE_METADATA_QUERY,
+    {
+      variables: { proposal: proposal.value },
+      skip: !proposal.value,
+      fetchPolicy: 'cache-and-network',
+    }
+  )
+
   useEffect(() => {
-    if (!proposal.value) {
+    if (metadataError) {
+      dispatch(setProposalNotFound())
       return
     }
 
-    refresh({
-      variables: { proposal: proposal.value },
-      onCompleted: ({ refresh }) => {
-        dispatch(updateTable({ data: {}, metadata: refresh.metadata }))
+    const metadata = metadataResult?.metadata
+    if (metadata === undefined) {
+      return
+    }
 
-        // Finalize
-        dispatch(setProposalSuccess())
-      },
-      onError: (_) => {
-        // Finalize
-        dispatch(setProposalNotFound())
-      },
-    })
-  }, [proposal.value, refresh, dispatch])
+    const normalized = {
+      ...metadata,
+      runs: metadata.runs.map(String),
+    }
+    dispatch(updateTable({ data: {}, metadata: normalized }))
+    dispatch(setProposalSuccess())
+  }, [metadataResult, metadataError, dispatch])
 
   return proposal
 }

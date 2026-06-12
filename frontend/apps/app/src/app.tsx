@@ -68,6 +68,7 @@ import {
   PrivateRoute,
   Proposals,
   history,
+  resetContextFile,
   resetDashboard,
   resetExtractedData,
   resetMetadata,
@@ -6891,6 +6892,7 @@ function ProposalWrapper({ children }: PropsWithChildren) {
       dispatch(resetPlots())
       dispatch(resetMetadata())
       dispatch(resetDashboard())
+      dispatch(resetContextFile())
     }
   }, [proposal_number, dispatch])
 

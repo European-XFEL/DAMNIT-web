@@ -1,6 +1,7 @@
 """Reproduce the writer-side `database is locked` error against the
 production read path in `damnit_api.db`.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -97,6 +98,7 @@ sys.stdout.flush()
 # ---------------------------------------------------------------------------
 # Reader
 
+
 async def _single_reader(deadline):
     from damnit_api.db import (
         async_all_tags,
@@ -113,9 +115,7 @@ async def _single_reader(deadline):
     while time.monotonic() < deadline:
         try:
             await async_variables(PROPOSAL_LABEL)
-            run_variables = await async_table(
-                PROPOSAL_LABEL, name="run_variables"
-            )
+            run_variables = await async_table(PROPOSAL_LABEL, name="run_variables")
             await async_latest_rows(
                 PROPOSAL_LABEL,
                 table=run_variables,
@@ -125,7 +125,7 @@ async def _single_reader(deadline):
             await async_all_tags(PROPOSAL_LABEL)
             await async_variable_tags(PROPOSAL_LABEL)
             ops += 4
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             if "database is locked" in str(exc):
                 lock_errors += 1
             else:
@@ -136,9 +136,7 @@ async def _single_reader(deadline):
 
 async def reader_loop(duration, readers):
     deadline = time.monotonic() + duration
-    results = await asyncio.gather(
-        *[_single_reader(deadline) for _ in range(readers)]
-    )
+    results = await asyncio.gather(*[_single_reader(deadline) for _ in range(readers)])
     total_ops = total_locks = total_others = 0
     for ops, locks, others in results:
         total_ops += ops
@@ -150,12 +148,12 @@ async def reader_loop(duration, readers):
 # ---------------------------------------------------------------------------
 # Orchestration
 
+
 def stage_copy(damnit_dir, scratch_dir):
     src = damnit_dir / "runs.sqlite"
     if not src.is_file():
-        raise SystemExit(
-            f"--damnit-dir does not contain runs.sqlite: {src}"
-        )
+        msg = f"--damnit-dir does not contain runs.sqlite: {src}"
+        raise SystemExit(msg)
 
     scratch_dir.mkdir(parents=True, exist_ok=True)
     staging = scratch_dir / f"repro-{uuid.uuid4().hex[:8]}"
@@ -166,6 +164,7 @@ def stage_copy(damnit_dir, scratch_dir):
     # Some older sqlites lack tags/variable_tags. Create empty placeholders
     # so both branches exercise the same read path on this scratch copy.
     import sqlite3
+
     with sqlite3.connect(dst) as conn:
         conn.executescript(
             "CREATE TABLE IF NOT EXISTS tags ("

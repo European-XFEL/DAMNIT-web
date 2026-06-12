@@ -3,6 +3,7 @@ import { authApi } from './auth.api'
 import { HTTP_URL } from '../constants'
 import { resetExtractedData } from '../data/extracted'
 import { resetTable as resetTableData } from '../data/table'
+import { resetContextFile } from '../features/context-file'
 import { resetTable as resetTableView } from '../features/table'
 import { resetPlots } from '../features/plots'
 import { type AppThunk } from '../redux/thunks'
@@ -30,6 +31,7 @@ export const logout = (): AppThunk => (dispatch) => {
         dispatch(resetTableView())
         dispatch(resetExtractedData())
         dispatch(resetPlots())
+        dispatch(resetContextFile())
 
         dispatch(authApi.util.resetApiState())
 

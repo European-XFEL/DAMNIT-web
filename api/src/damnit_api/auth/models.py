@@ -43,12 +43,26 @@ class OAuthUserInfo(BaseUserInfo):
         """
         user_dict = connection.session.get("user")
         if user_dict is None:
+            from ..shared.settings import settings
+
+            if settings.is_local:
+                return DEV_USER  # type: ignore[return-value]
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="No user info in session",
             )
 
         return cls.model_validate(user_dict)
+
+
+DEV_USER = OAuthUserInfo(
+    email="dev@localhost",
+    family_name="Developer",
+    given_name="Local",
+    groups=[],
+    name="Local Developer",
+    preferred_username="dev",
+)
 
 
 class ProposalsByYearHalf(RootModel):
@@ -86,6 +100,16 @@ class User(BaseUserInfo):
     async def from_oauth_user(
         cls, mymdc: MyMdCClient, session: DBSession, oauth: OAuthUserInfo
     ) -> Self:
+        from ..shared.settings import settings
+
+        if settings.is_local:
+            res = cls.model_validate({
+                **oauth.model_dump(),
+                "proposals_by_year_half": {},
+            })
+            res._proposals = []
+            return res
+
         from ..metadata.services import _get_proposal_meta_many
 
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
