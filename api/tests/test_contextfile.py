@@ -103,8 +103,7 @@ def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
         )
         assert save_response.status_code == 200
         assert (
-            save_response.json()["fileContent"]
-            == "from damnit_ctx import Variable\n"
+            save_response.json()["fileContent"] == "from damnit_ctx import Variable\n"
         )
 
 

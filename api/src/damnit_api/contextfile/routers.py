@@ -34,9 +34,7 @@ async def get_content(
     if damnit_path is None:
         return None
 
-    return await models.ContextFile.from_file(
-        APath(damnit_path) / "context.py"
-    )
+    return await models.ContextFile.from_file(APath(damnit_path) / "context.py")
 
 
 @router.get("/last_modified")
@@ -49,9 +47,7 @@ async def get_modified(
         return None
 
     models.ModifiedTime.from_file.cache_clear()
-    return await models.ModifiedTime.from_file(
-        APath(damnit_path) / "context.py"
-    )
+    return await models.ModifiedTime.from_file(APath(damnit_path) / "context.py")
 
 
 @router.get("/campaign/{campaign}/me")
@@ -284,14 +280,12 @@ def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
             except Exception as exc:
                 values[name] = None
                 errors[name] = f"{type(exc).__name__}: {exc}"
-        rows.append(
-            {
-                "shot_number": shot.shot_number,
-                "values": values,
-                "errors": errors,
-                "previews": previews,
-            }
-        )
+        rows.append({
+            "shot_number": shot.shot_number,
+            "values": values,
+            "errors": errors,
+            "previews": previews,
+        })
     return {
         "columns": [
             {

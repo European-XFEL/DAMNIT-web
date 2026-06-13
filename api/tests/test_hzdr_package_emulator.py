@@ -114,8 +114,7 @@ def test_package_emulator_can_expand_shots(tmp_path: Path):
     assert [shot.shot_number for shot in sources[0].shots] == [123, 125, 127]
     assert len({shot.metadata["laser_energy_j"] for shot in sources[0].shots}) == 3
     assert (
-        len({shot.metadata["detector_signal_mean"] for shot in sources[0].shots})
-        == 3
+        len({shot.metadata["detector_signal_mean"] for shot in sources[0].shots}) == 3
     )
 
     with h5py.File(package.hdf5_path, "r") as handle:

@@ -72,7 +72,11 @@ def write_hdf5_files(shots: list[ExampleShot]) -> None:
             diagnostics.create_dataset("image_preview", data=detector_image[::8, ::8])
 
 
-def write_source_json(output_dir: Path, source_key: str, shots: list[ExampleShot]) -> Path:
+def write_source_json(
+    output_dir: Path,
+    source_key: str,
+    shots: list[ExampleShot],
+) -> Path:
     """Write a local provider JSON file that DAMNIT-web can read directly."""
     source_file = output_dir / "hzdr_sources.json"
     payload = {

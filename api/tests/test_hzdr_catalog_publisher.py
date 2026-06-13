@@ -69,12 +69,10 @@ def test_default_sources_file_points_to_repo_generated_dir():
 
 
 def test_publish_payload_auto_falls_back_to_from_json():
-    session = FakeSession(
-        [
-            FakeResponse(404, {"detail": "missing"}),
-            FakeResponse(200, {"ok": True, "pid": "pid-1"}),
-        ]
-    )
+    session = FakeSession([
+        FakeResponse(404, {"detail": "missing"}),
+        FakeResponse(200, {"ok": True, "pid": "pid-1"}),
+    ])
     payload = publish_hzdr_catalog.build_damnit_catalog_payload(
         {"key": "hzdr", "title": "HZDR"},
         {

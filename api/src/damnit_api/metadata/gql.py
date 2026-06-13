@@ -37,7 +37,6 @@ class Query:
         proposal_numbers: list[int],
     ) -> list[ProposalMeta] | None:
         """Fetch metadata for the provided proposal number."""
-        from ..shared.settings import settings
 
         if info.context.request is None:
             return None

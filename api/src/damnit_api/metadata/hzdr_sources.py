@@ -334,11 +334,7 @@ def _map_mongo_shot(
         "events",
         "data_products",
     }
-    metadata = {
-        key: value
-        for key, value in record.items()
-        if key not in api_fields
-    }
+    metadata = {key: value for key, value in record.items() if key not in api_fields}
 
     return HZDRShot(
         source_key=source_key,

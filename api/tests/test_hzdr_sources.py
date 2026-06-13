@@ -20,32 +20,30 @@ def write_source_fixture(tmp_path: Path) -> Path:
     """Write a minimal source fixture without relying on tracked example data."""
     path = tmp_path / "hzdr_sources.json"
     path.write_bytes(
-        orjson.dumps(
-            {
-                "sources": [
-                    {
-                        "key": "hzdr-local",
-                        "title": "HZDR local file fixture",
-                        "damnit_path": "damnit/hzdr-local",
-                        "metadata": {"facility": "HZDR"},
-                        "shots": [
-                            {
-                                "source_key": "hzdr-local",
-                                "shot_number": 1001,
-                                "fired_at": "2026-05-05T08:15:00Z",
-                                "metadata": {"status": "processed"},
-                            },
-                            {
-                                "source_key": "hzdr-local",
-                                "shot_number": 1002,
-                                "fired_at": "2026-05-05T08:17:30Z",
-                                "metadata": {"status": "metadata-only"},
-                            },
-                        ],
-                    }
-                ]
-            }
-        )
+        orjson.dumps({
+            "sources": [
+                {
+                    "key": "hzdr-local",
+                    "title": "HZDR local file fixture",
+                    "damnit_path": "damnit/hzdr-local",
+                    "metadata": {"facility": "HZDR"},
+                    "shots": [
+                        {
+                            "source_key": "hzdr-local",
+                            "shot_number": 1001,
+                            "fired_at": "2026-05-05T08:15:00Z",
+                            "metadata": {"status": "processed"},
+                        },
+                        {
+                            "source_key": "hzdr-local",
+                            "shot_number": 1002,
+                            "fired_at": "2026-05-05T08:17:30Z",
+                            "metadata": {"status": "metadata-only"},
+                        },
+                    ],
+                }
+            ]
+        })
     )
     return path
 
@@ -192,4 +190,3 @@ def test_shotcounter_flow_monitor_event_uses_zmq_kafka_shape(tmp_path: Path):
         "producer": "shotcounter",
         "topic": "shotcounter.shots",
     }
-

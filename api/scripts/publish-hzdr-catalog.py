@@ -95,8 +95,7 @@ def build_damnit_catalog_payload(
         "source_folder": _source_folder(file_path),
         "title": title,
         "description": (
-            "DAMNIT-web HZDR catalog publish for "
-            f"{experiment_id} / {shot_id}"
+            f"DAMNIT-web HZDR catalog publish for {experiment_id} / {shot_id}"
         ),
         "dataset_type": "raw",
         "meta": {

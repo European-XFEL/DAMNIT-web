@@ -32,7 +32,8 @@ def parse_json_object(value: str) -> dict[str, Any]:
         return {}
     parsed = json.loads(value)
     if not isinstance(parsed, dict):
-        raise argparse.ArgumentTypeError("expected a JSON object")
+        msg = f"Expected a JSON object, got: {parsed}"
+        raise argparse.ArgumentTypeError(msg)
     return parsed
 
 
@@ -50,7 +51,8 @@ def verify_kafka(args) -> VerifyResult:
     host, _, port_text = args.kafka_bootstrap.partition(":")
     port = int(port_text or "9092")
     if not tcp_reachable(host or "127.0.0.1", port, args.timeout):
-        raise RuntimeError(f"Kafka broker is not reachable at {args.kafka_bootstrap}")
+        msg = f"Kafka broker is not reachable at {args.kafka_bootstrap}"
+        raise RuntimeError(msg)
 
     from kafka import KafkaConsumer
 
@@ -64,15 +66,14 @@ def verify_kafka(args) -> VerifyResult:
     )
     try:
         events = [
-            message.value
-            for message in consumer
-            if event_matches(message.value, args)
+            message.value for message in consumer if event_matches(message.value, args)
         ][: args.limit]
     finally:
         consumer.close()
 
     if not events:
-        raise RuntimeError(f"No matching Kafka events found on {args.kafka_topic}")
+        msg = f"No matching Kafka events found on {args.kafka_topic}"
+        raise RuntimeError(msg)
     return VerifyResult(
         backend="kafka",
         events=events,
@@ -88,20 +89,24 @@ def verify_asapo(args) -> VerifyResult:
     status = response.json()
     recent_messages = status.get("recent_messages", [])
     if not isinstance(recent_messages, list):
-        raise RuntimeError("ASAPO local broker returned invalid recent_messages")
+        msg = f"ASAPO local broker returned invalid recent_messages: {recent_messages}"
+        raise RuntimeError(msg)
     events = [
         message
         for message in recent_messages[-args.limit :]
         if isinstance(message, dict) and event_matches(message, args)
     ]
     if not events:
-        raise RuntimeError(f"No matching ASAPO/local-broker events found at {endpoint}")
+        msg = f"No matching ASAPO/local-broker events found at {endpoint}"
+        raise RuntimeError(msg)
+    message_count = status.get("message_count", "?")
     return VerifyResult(
         backend="asapo",
+        ok=True,
         events=events,
         detail=(
             f"Read {len(events)} recent event(s) from ASAPO/local broker "
-            f"{endpoint}; broker has {status.get('message_count', '?')} total message(s)"
+            f"{endpoint}; broker has {message_count} total message(s)"
         ),
     )
 
@@ -116,7 +121,9 @@ def verify_mongo(args) -> VerifyResult:
     if args.experiment_id:
         query.setdefault("experiment_id", args.experiment_id)
 
-    client = MongoClient(args.mongo_uri, serverSelectionTimeoutMS=int(args.timeout * 1000))
+    client = MongoClient(
+        args.mongo_uri, serverSelectionTimeoutMS=int(args.timeout * 1000)
+    )
     try:
         collection = client[args.mongo_database][args.mongo_collection]
         records = list(
@@ -126,7 +133,8 @@ def verify_mongo(args) -> VerifyResult:
         client.close()
 
     if not records:
-        raise RuntimeError("No matching MongoDB Watchdog records found")
+        msg = "No matching MongoDB Watchdog records found"
+        raise RuntimeError(msg)
     return VerifyResult(
         backend="mongo",
         events=[json_safe(record) for record in records],
@@ -145,7 +153,8 @@ def decode_event(value) -> dict[str, Any]:
         value = value.decode("utf-8")
     parsed = json.loads(value)
     if not isinstance(parsed, dict):
-        raise ValueError("event payload is not a JSON object")
+        msg = f"Kafka message value is not a JSON object: {parsed}"
+        raise ValueError(msg)
     return parsed
 
 
@@ -201,7 +210,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--kafka-topic", default="planet.watchdog.events")
     parser.add_argument("--kafka-group", default="damnit-web-hzdr-verifier")
     parser.add_argument("--asapo-broker", default="http://127.0.0.1:8765")
-    parser.add_argument("--mongo-uri", default="mongodb://root:mypasswd@localhost:27018/?authSource=admin")
+    parser.add_argument(
+        "--mongo-uri",
+        default="mongodb://root:mypasswd@localhost:27018/?authSource=admin",
+    )
     parser.add_argument("--mongo-database", default="shotsheet")
     parser.add_argument("--mongo-collection", default="shots")
     parser.add_argument("--mongo-query", type=parse_json_object, default={})
@@ -250,10 +262,11 @@ def main() -> None:
         for name, check in checks.items():
             try:
                 results.append(check(args))
-            except Exception as exc:  # noqa: BLE001 - CLI reports every backend.
+            except Exception as exc:
                 errors[name] = str(exc)
         if errors:
-            raise RuntimeError(f"Backend verification failed: {errors}")
+            msg = f"Some backends failed verification: {errors}"
+            raise RuntimeError(msg)
         emit_results(args, results)
         return
 
@@ -266,9 +279,10 @@ def main() -> None:
         try:
             emit_results(args, [checks[name](args)])
             return
-        except Exception as exc:  # noqa: BLE001 - CLI reports fallback chain.
+        except Exception as exc:
             errors[name] = str(exc)
-    raise RuntimeError(f"No Watchdog backend verified: {errors}")
+    msg = f"No Watchdog backend verified: {errors}"
+    raise RuntimeError(msg)
 
 
 def emit_results(args, results: list[VerifyResult]) -> None:
@@ -294,13 +308,15 @@ def emit_results(args, results: list[VerifyResult]) -> None:
             print(f"Verified PLANET Watchdog via {result.backend}")
             print(result.detail)
             for event in result.events:
-                shot = event.get("shot_number", event.get("shot", event.get("shot_id", "?")))
+                shot = event.get(
+                    "shot_number", event.get("shot", event.get("shot_id", "?"))
+                )
                 print(f"  shot={shot} keys={sorted(event.keys())}")
 
 
 if __name__ == "__main__":
     try:
         main()
-    except Exception as exc:  # noqa: BLE001 - CLI exit message.
+    except Exception as exc:
         print(f"Verification failed: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

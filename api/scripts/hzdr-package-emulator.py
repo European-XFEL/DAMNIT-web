@@ -48,13 +48,18 @@ def load_event(path: Path) -> dict[str, Any]:
     event = json.loads(path.read_text(encoding="utf-8"))
     missing = sorted(REQUIRED_EVENT_FIELDS - set(event))
     if missing:
-        raise ValueError(f"{path} is missing required field(s): {', '.join(missing)}")
+        msg = f"{path} is missing required field(s): {', '.join(missing)}"
+        raise ValueError(msg)
+
     if not isinstance(event["payload_ref"], dict):
-        raise ValueError(f"{path} field payload_ref must be an object")
+        msg = f"{path} field payload_ref must be an object"
+        raise ValueError(msg)
     if "values" in event and not isinstance(event["values"], list):
-        raise ValueError(f"{path} field values must be a list when present")
+        msg = f"{path} field values must be a list when present"
+        raise ValueError(msg)
     if "metadata" in event and not isinstance(event["metadata"], dict):
-        raise ValueError(f"{path} field metadata must be an object when present")
+        msg = f"{path} field metadata must be an object when present"
+        raise ValueError(msg)
     return event
 
 
@@ -62,7 +67,8 @@ def load_events(events_dir: Path) -> list[dict[str, Any]]:
     """Load all normalized JSON examples from an events directory."""
     event_paths = sorted(events_dir.glob("*.json"))
     if not event_paths:
-        raise ValueError(f"No *.json event packages found in {events_dir}")
+        msg = f"No *.json event packages found in {events_dir}"
+        raise ValueError(msg)
     return [load_event(path) for path in event_paths]
 
 
@@ -79,15 +85,15 @@ def expand_events(
 
     expanded_events: list[dict[str, Any]] = []
     for index in range(shot_count):
-        for event in events:
-            expanded_events.append(
-                mutate_event_for_shot(
-                    event,
-                    index=index,
-                    shot_increment=shot_increment,
-                    random_seed=random_seed,
-                )
+        expanded_events.extend(
+            mutate_event_for_shot(
+                event,
+                index=index,
+                shot_increment=shot_increment,
+                random_seed=random_seed,
             )
+            for event in events
+        )
     return expanded_events
 
 
@@ -163,7 +169,9 @@ def increment_timestamp(timestamp: str, index: int) -> str:
     """Offset ISO timestamps by one second per generated shot."""
     try:
         normalized = timestamp.replace("Z", "+00:00")
-        return (datetime.fromisoformat(normalized) + timedelta(seconds=index)).isoformat()
+        return (
+            datetime.fromisoformat(normalized) + timedelta(seconds=index)
+        ).isoformat()
     except ValueError:
         return timestamp
 
@@ -201,23 +209,30 @@ def write_staged_events(
     return paths
 
 
-def encode_json_dataset(group: h5py.Group, name: str, values: list[dict[str, Any]]) -> None:
+def encode_json_dataset(
+    group: h5py.Group, name: str, values: list[dict[str, Any]]
+) -> None:
     """Store JSON records as UTF-8 HDF5 string datasets."""
     dtype = h5py.string_dtype(encoding="utf-8")
     group.create_dataset(
         name,
-        data=np.asarray([json.dumps(value, sort_keys=True) for value in values], dtype=dtype),
+        data=np.asarray(
+            [json.dumps(value, sort_keys=True) for value in values], dtype=dtype
+        ),
     )
 
 
-def write_hdf5(events: list[dict[str, Any]], experiment_id: str, hdf5_path: Path) -> None:
+def write_hdf5(
+    events: list[dict[str, Any]], experiment_id: str, hdf5_path: Path
+) -> None:
     """Write the combined experiment HDF5 shape used by DAMNIT-web previews."""
     hdf5_path.parent.mkdir(parents=True, exist_ok=True)
     selected_events = [
         event for event in events if str(event["experiment_id"]) == experiment_id
     ]
     if not selected_events:
-        raise ValueError(f"No events matched experiment_id={experiment_id}")
+        msg = f"No events matched experiment_id={experiment_id}"
+        raise ValueError(msg)
 
     string_dtype = h5py.string_dtype(encoding="utf-8")
     with h5py.File(hdf5_path, "w") as handle:
@@ -235,18 +250,25 @@ def write_hdf5(events: list[dict[str, Any]], experiment_id: str, hdf5_path: Path
         )
         index.create_dataset(
             "event_shot_id",
-            data=np.asarray([str(event["shot_id"]) for event in selected_events], dtype=string_dtype),
+            data=np.asarray(
+                [str(event["shot_id"]) for event in selected_events], dtype=string_dtype
+            ),
         )
         index.create_dataset(
             "timestamp",
-            data=np.asarray([str(event["timestamp"]) for event in selected_events], dtype=string_dtype),
+            data=np.asarray(
+                [str(event["timestamp"]) for event in selected_events],
+                dtype=string_dtype,
+            ),
         )
 
         events_group = handle.create_group("events")
         for field in ("source", "kind", "transport"):
             events_group.create_dataset(
                 field,
-                data=np.asarray([str(event[field]) for event in selected_events], dtype=string_dtype),
+                data=np.asarray(
+                    [str(event[field]) for event in selected_events], dtype=string_dtype
+                ),
             )
         encode_json_dataset(
             events_group,
@@ -276,7 +298,9 @@ def write_hdf5(events: list[dict[str, Any]], experiment_id: str, hdf5_path: Path
                     "shot_id": shot_id,
                     "emulated": True,
                 }
-                for shot_id in sorted({str(event["shot_id"]) for event in selected_events})
+                for shot_id in sorted({
+                    str(event["shot_id"]) for event in selected_events
+                })
             ],
         )
         metadata_group.create_dataset(
@@ -299,9 +323,13 @@ def write_hdf5(events: list[dict[str, Any]], experiment_id: str, hdf5_path: Path
             source_group = signals_group.require_group(str(event["source"]))
             kind_group = source_group.require_group(str(event["kind"]))
             if "shot_id" not in kind_group:
-                kind_group.create_dataset("shot_id", shape=(0,), maxshape=(None,), dtype=string_dtype)
+                kind_group.create_dataset(
+                    "shot_id", shape=(0,), maxshape=(None,), dtype=string_dtype
+                )
             if "values" not in kind_group:
-                kind_group.create_dataset("values", shape=(0,), maxshape=(None,), dtype=float)
+                kind_group.create_dataset(
+                    "values", shape=(0,), maxshape=(None,), dtype=float
+                )
             shot_dataset = kind_group["shot_id"]
             value_dataset = kind_group["values"]
             shot_dataset.resize((shot_dataset.shape[0] + 1,))
@@ -355,7 +383,9 @@ def write_fixture_datasets(handle: h5py.File, events: list[dict[str, Any]]) -> N
         lineout = energy + np.sin(x + index * 0.35) * 0.35 + index * 0.05
         lineouts.append(lineout)
 
-        yy, xx = np.mgrid[-1:1:complex(image_shape[0]), -1:1:complex(image_shape[1])]
+        yy, xx = np.mgrid[
+            -1 : 1 : complex(image_shape[0]), -1 : 1 : complex(image_shape[1])
+        ]
         center_x = -0.25 + index * 0.08
         center_y = 0.18 - index * 0.05
         image = np.exp(-(((xx - center_x) ** 2) / 0.08 + ((yy - center_y) ** 2) / 0.12))
@@ -385,10 +415,14 @@ def write_fixture_datasets(handle: h5py.File, events: list[dict[str, Any]]) -> N
         image_group.create_dataset("camera_raw", data=image.astype(np.float32))
         image_group.create_dataset("camera_mask", data=masks[-1])
         image_group.create_dataset("camera_labels", data=labels[-1])
-        shot_group.create_group("stacks").create_dataset("camera_stack", data=stacks[-1])
+        shot_group.create_group("stacks").create_dataset(
+            "camera_stack", data=stacks[-1]
+        )
 
     scalars_group = fixtures.create_group("scalars")
-    scalars_group.create_dataset("laser_energy_j_by_shot", data=np.asarray(scalar_values))
+    scalars_group.create_dataset(
+        "laser_energy_j_by_shot", data=np.asarray(scalar_values)
+    )
     scalars_group.create_dataset(
         "shot_count",
         data=np.asarray(len(shot_ids), dtype=np.int32),
@@ -433,20 +467,18 @@ def write_sources_file(
         if shot_id in seen_shots:
             continue
         seen_shots.add(shot_id)
-        shots.append(
-            {
-                "source_key": source_key,
-                "shot_number": shot_number_from_shot_id(shot_id, index),
-                "fired_at": str(event["timestamp"]),
-                "hdf5_path": str(hdf5_path),
-                "metadata": build_shot_metadata(
-                    events_by_shot[shot_id],
-                    experiment_id=experiment_id,
-                    shot_id=shot_id,
-                    hdf5_path=hdf5_path,
-                ),
-            }
-        )
+        shots.append({
+            "source_key": source_key,
+            "shot_number": shot_number_from_shot_id(shot_id, index),
+            "fired_at": str(event["timestamp"]),
+            "hdf5_path": str(hdf5_path),
+            "metadata": build_shot_metadata(
+                events_by_shot[shot_id],
+                experiment_id=experiment_id,
+                shot_id=shot_id,
+                hdf5_path=hdf5_path,
+            ),
+        })
 
     payload = {
         "sources": [
@@ -593,7 +625,7 @@ def main() -> None:
     print(f"HDF5: {package.hdf5_path}")
     print(f"Source JSON: {package.sources_file}")
     print("Run DAMNIT-web against it with:")
-    print(f"$env:DW_API_METADATA__PROVIDER = 'local'")
+    print("$env:DW_API_METADATA__PROVIDER = 'local'")
     print(f"$env:DW_API_METADATA__SOURCES_FILE = '{package.sources_file}'")
     print(".\\scripts\\hzdr-dev.ps1 -Provider local -WithGui")
 

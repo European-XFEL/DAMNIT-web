@@ -1,3 +1,5 @@
+# ruff: noqa: F821
+#
 import numpy as np
 
 from extra_analysis.pipeline import saxs_xpcs_offline

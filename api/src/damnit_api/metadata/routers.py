@@ -93,7 +93,9 @@ async def get_hzdr_shot_detail(
     )
 
 
-@router.get("/hzdr/sources/{source_key}/shots/{shot_number}/datasets/{dataset_name:path}")
+@router.get(
+    "/hzdr/sources/{source_key}/shots/{shot_number}/datasets/{dataset_name:path}"
+)
 async def preview_hzdr_dataset(
     source_key: str, shot_number: int, dataset_name: str
 ) -> HZDRDatasetPreview | None:
@@ -111,15 +113,11 @@ async def update_hzdr_shot_status(
     user: OAuthUserInfo,
 ) -> HZDRShot:
     """Update local emulator shot review status."""
-    if (
-        settings.metadata.provider != "local"
-        or settings.metadata.sources_file is None
-    ):
+    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
         raise HTTPException(
             status_code=400,
             detail=(
-                "Shot status updates require local metadata provider and "
-                "sources_file."
+                "Shot status updates require local metadata provider and sources_file."
             ),
         )
     return update_local_shot_status(
@@ -140,10 +138,7 @@ async def update_hzdr_shot_metadata(
     user: OAuthUserInfo,
 ) -> HZDRShot:
     """Correct one metadata value in a local emulator shot."""
-    if (
-        settings.metadata.provider != "local"
-        or settings.metadata.sources_file is None
-    ):
+    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
         raise HTTPException(
             status_code=400,
             detail=(
@@ -167,15 +162,11 @@ async def append_hzdr_emulator_event(
     payload: HZDREmulatorEvent, user: OAuthUserInfo
 ) -> HZDRSource:
     """Append one local HZDR emulator shot to the local source fixture."""
-    if (
-        settings.metadata.provider != "local"
-        or settings.metadata.sources_file is None
-    ):
+    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
         raise HTTPException(
             status_code=400,
             detail=(
-                "HZDR emulator events require local metadata provider and "
-                "sources_file."
+                "HZDR emulator events require local metadata provider and sources_file."
             ),
         )
     return append_emulated_shot(
@@ -247,15 +238,13 @@ def append_emulated_shot(
         event_kind=event_kind,
     )
 
-    shots.append(
-        {
-            "source_key": source_record["key"],
-            "shot_number": next_shot_number,
-            "fired_at": fired_at,
-            "hdf5_path": hdf5_path,
-            "metadata": metadata,
-        }
-    )
+    shots.append({
+        "source_key": source_record["key"],
+        "shot_number": next_shot_number,
+        "fired_at": fired_at,
+        "hdf5_path": hdf5_path,
+        "metadata": metadata,
+    })
     if isinstance(payload, dict):
         payload["sources"] = sources
         sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -321,15 +310,13 @@ def update_local_shot_status(
     )
     history = metadata.setdefault("status_history", [])
     if isinstance(history, list):
-        history.append(
-            {
-                "at": metadata["reviewed_at"],
-                "from": previous_status,
-                "to": status,
-                "by": reviewed_by,
-                "note": metadata["review_note"],
-            }
-        )
+        history.append({
+            "at": metadata["reviewed_at"],
+            "from": previous_status,
+            "to": status,
+            "by": reviewed_by,
+            "note": metadata["review_note"],
+        })
 
     if isinstance(payload, dict):
         payload["sources"] = sources
@@ -394,16 +381,14 @@ def update_local_shot_metadata(
     metadata[key] = value
     history = metadata.setdefault("metadata_correction_history", [])
     if isinstance(history, list):
-        history.append(
-            {
-                "at": corrected_at,
-                "key": key,
-                "from": previous_value,
-                "to": value,
-                "by": corrected_by,
-                "note": note or "Corrected from source table",
-            }
-        )
+        history.append({
+            "at": corrected_at,
+            "key": key,
+            "from": previous_value,
+            "to": value,
+            "by": corrected_by,
+            "note": note or "Corrected from source table",
+        })
 
     if isinstance(payload, dict):
         payload["sources"] = sources
@@ -494,9 +479,7 @@ def _build_flow_monitor_metadata(
         "emulated_sequence": index + 1,
         "emulated_source": event_source,
         "emulated_kind": event_kind,
-        "laser_energy_j": round(
-            12.4 + index * 0.17 + rng.uniform(-0.08, 0.08), 3
-        ),
+        "laser_energy_j": round(12.4 + index * 0.17 + rng.uniform(-0.08, 0.08), 3),
         "chamber_pressure_mbar": round(
             2.5e-5 * (1 + index * 0.04 + rng.uniform(-0.01, 0.01)), 8
         ),
@@ -504,9 +487,7 @@ def _build_flow_monitor_metadata(
         "sample_temperature_c": round(
             21.5 + index * 0.25 + rng.uniform(-0.05, 0.05), 2
         ),
-        "pulse_width_fs": round(
-            42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2
-        ),
+        "pulse_width_fs": round(42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2),
         "beam_position_x_mm": round(
             -0.35 + index * 0.015 + rng.uniform(-0.003, 0.003), 4
         ),

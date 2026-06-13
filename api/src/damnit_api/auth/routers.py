@@ -153,8 +153,11 @@ async def userinfo(
         user = models.OAuthUserInfo.from_connection(request)
 
     return user
+
+
 # -----------------------------------------------------------------------------
 # No-auth mode
+
 
 noauth_router = APIRouter(prefix="/oauth", tags=["auth"])
 
@@ -182,6 +185,7 @@ async def noauth_logout(request: Request):
 # -----------------------------------------------------------------------------
 # LDAP mode
 
+
 @ldap_router.post("/login")
 async def ldap_login(request: Request, login: ldap.LDAPLogin) -> JSONResponse:
     """Create a DAMNIT-web session from LDAP credentials."""
@@ -189,9 +193,7 @@ async def ldap_login(request: Request, login: ldap.LDAPLogin) -> JSONResponse:
         raise HTTPException(status_code=404, detail="LDAP authentication is disabled")
 
     try:
-        request.session["user"] = ldap.authenticate_ldap_user(
-            settings.auth.ldap, login
-        )
+        request.session["user"] = ldap.authenticate_ldap_user(settings.auth.ldap, login)
     except Exception as exc:
         await logger.ainfo("LDAP login failed", error=str(exc))
         raise HTTPException(status_code=401, detail="Invalid LDAP credentials") from exc
@@ -206,6 +208,3 @@ async def ldap_logout(request: Request) -> JSONResponse:
     response = JSONResponse(status_code=200, content={"logout_url": None})
     response.delete_cookie("session", path="/")
     return response
-
-
-

@@ -158,7 +158,6 @@ class Settings(BaseSettings):
 
     log_level: str = "DEBUG"
 
-    session_secret: SecretStr | None = None
     session_secret: SecretStr = SecretStr("dev-session-secret")
 
     uvicorn: UvicornSettings = UvicornSettings()

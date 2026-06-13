@@ -30,7 +30,6 @@ class User:
         self, info: "strawberry.Info[Context]", start_after: datetime | None = None
     ) -> list[ProposalMeta]:
         """List of proposals for the user."""
-        from ..shared.settings import settings
 
         if settings.is_local:
             from ..metadata.services import _local_proposal_meta, _local_proposal_number
