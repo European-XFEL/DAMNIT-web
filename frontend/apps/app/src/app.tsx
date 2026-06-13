@@ -2,6 +2,7 @@ import {
   type CSSProperties,
   type PropsWithChildren,
   type ReactNode,
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -113,12 +114,47 @@ type HZDRShot = {
   source_key: string
   shot_number: number
   fired_at: string
+  shot_key?: string
+  shot_date?: string
+  labfrog_record_id?: string
+  labfrog_date_time?: string
+  match_status?: string
+  match_quality?: string
+  match_time_delta_s?: number
   hdf5_path?: string
+  nexus_entry?: string
   metadata: Record<string, unknown> & {
     laser_energy_j?: number
     status?: string
     target?: string
   }
+  events: HZDRSourceEvent[]
+  data_products: HZDRDataProduct[]
+}
+
+type HZDRSourceEvent = {
+  event_id: string
+  source: string
+  kind: string
+  timestamp: string
+  transport?: string
+  payload_ref: Record<string, unknown>
+  metadata: Record<string, unknown>
+  match_quality?: string
+  match_time_delta_s?: number
+}
+
+type HZDRDataProduct = {
+  product_id?: string
+  source: string
+  kind: string
+  path?: string
+  dataset_name?: string
+  preview_kind?: string
+  shape: Array<number | string>
+  dtype?: string
+  units?: string
+  metadata: Record<string, unknown>
 }
 
 type HZDRShotDetail = {
@@ -400,7 +436,7 @@ const emptyFlowMonitorState: FlowMonitorState = {
   watchdogBrokerPending: false,
   watchdogStaged: false,
   mongoPending: false,
-  hdf5Built: false
+  hdf5Built: false,
 }
 
 function useRuntimeConfig() {
@@ -499,22 +535,21 @@ function HZDRFlowMonitorPage() {
   )
   const nextShotNumber = latestShotNumber ? latestShotNumber + 1 : 123
 
-  const addLogEntry = (
-    label: string,
-    detail: string,
-    tone: FlowLogEntry['tone']
-  ) => {
-    const entry: FlowLogEntry = {
-      id: nextLogId.current++,
-      at: new Date().toLocaleTimeString(),
-      label,
-      detail,
-      tone,
-    }
-    setLogEntries((currentEntries) => [entry, ...currentEntries].slice(0, 16))
-  }
+  const addLogEntry = useCallback(
+    (label: string, detail: string, tone: FlowLogEntry['tone']) => {
+      const entry: FlowLogEntry = {
+        id: nextLogId.current++,
+        at: new Date().toLocaleTimeString(),
+        label,
+        detail,
+        tone,
+      }
+      setLogEntries((currentEntries) => [entry, ...currentEntries].slice(0, 16))
+    },
+    []
+  )
 
-  const playBleep = () => {
+  const playBleep = useCallback(() => {
     if (!soundEnabled) {
       return
     }
@@ -535,16 +570,19 @@ function HZDRFlowMonitorPage() {
     oscillator.start()
     oscillator.stop(context.currentTime + 0.18)
     window.setTimeout(() => context.close(), 220)
-  }
+  }, [soundEnabled])
 
-  const triggerDamnitPulse = (detail: string) => {
-    setDamnitPulse(true)
-    addLogEntry('DAMNIT received', detail, 'receive')
-    playBleep()
-    window.setTimeout(() => setDamnitPulse(false), 850)
-  }
+  const triggerDamnitPulse = useCallback(
+    (detail: string) => {
+      setDamnitPulse(true)
+      addLogEntry('DAMNIT received', detail, 'receive')
+      playBleep()
+      window.setTimeout(() => setDamnitPulse(false), 850)
+    },
+    [addLogEntry, playBleep]
+  )
 
-  const loadSources = () => {
+  const loadSources = useCallback(() => {
     fetch('/metadata/hzdr/sources')
       .then((response) => (response.ok ? response.json() : []))
       .then((loadedSources: HZDRSource[]) => {
@@ -569,13 +607,13 @@ function HZDRFlowMonitorPage() {
       .catch(() => {
         setSources([])
       })
-  }
+  }, [triggerDamnitPulse])
 
   useEffect(() => {
     loadSources()
     const timer = window.setInterval(loadSources, 3000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [loadSources])
 
   const sendPacket = (
     lane: FlowPacket['lane'],
@@ -739,7 +777,7 @@ function HZDRFlowMonitorPage() {
       watchdogBuffered:
         receiverConfig.watchdog && selectedWatchdogWatchers.length > 0,
       mongoPending: receiverConfig.mongo,
-        })
+    })
     appendEmulatedShot(
       'Shotcounter',
       'shot_counter_event',
@@ -761,9 +799,7 @@ function HZDRFlowMonitorPage() {
       watchdogStaged: false,
       mongoPending: false,
       hdf5Built:
-        current.laserStaged ||
-        current.watchdogStaged ||
-        current.hdf5Built,
+        current.laserStaged || current.watchdogStaged || current.hdf5Built,
     }))
     sendPacket(
       'package',
@@ -863,7 +899,6 @@ function HZDRFlowMonitorPage() {
                   latestShotNumber={latestShotNumber}
                   nextShotNumber={nextShotNumber}
                   receiverConfig={receiverConfig}
-
                   selectedWatchdogWatchers={selectedWatchdogWatchers}
                   selectedShotcounterTKeys={selectedShotcounterTKeys}
                   flowState={flowState}
@@ -1112,7 +1147,7 @@ function FlowDiagram({
   )
 
   const activeLaserPacket = packets.some((packet) => packet.lane === 'laser')
-const activeLaser = flowState.laserBuffered
+  const activeLaser = flowState.laserBuffered
 
   const activePackagePacket = packets.some(
     (packet) => packet.lane === 'package'
@@ -1130,8 +1165,7 @@ const activeLaser = flowState.laserBuffered
   const activeIncomingLivePoll =
     livePollPulse &&
     (flowState.laserBrokerPending || flowState.watchdogBrokerPending)
-  const activeLiveEventLog =
-    flowState.laserStaged || flowState.watchdogStaged
+  const activeLiveEventLog = flowState.laserStaged || flowState.watchdogStaged
   const activeLive = activeLiveEventLog || activeIncomingLivePoll
   const activeDamnitLive = activeLive || damnitPulse
   const activeHdf5Builder = activePackagePacket
@@ -1351,7 +1385,7 @@ const activeLaser = flowState.laserBuffered
             label="poll"
             style={{ gridColumn: 4, gridRow: 3 }}
           />
-          
+
           <ProgramNode
             title="MongoDB shotsheet"
             subtitle="shot metadata source"
@@ -1396,30 +1430,30 @@ const activeLaser = flowState.laserBuffered
             style={{ gridColumn: 7, gridRow: '1 / 4', alignSelf: 'stretch' }}
           />
           <ProgramNode
-          title="HDF5 builder"
-          subtitle="combines staged event packages"
-          active={activeHdf5Builder}
-          buffered={activeCombinedHdf5}
-          icon={<IconServer size={24} />}
-          color="teal"
-          style={{ gridColumn: 5, gridRow: 4 }}
-        />
+            title="HDF5 builder"
+            subtitle="combines staged event packages"
+            active={activeHdf5Builder}
+            buffered={activeCombinedHdf5}
+            icon={<IconServer size={24} />}
+            color="teal"
+            style={{ gridColumn: 5, gridRow: 4 }}
+          />
 
-        <FlowConnector
-          active={activeHdf5Builder}
-          color="teal"
-          label="writes"
-          style={{ gridColumn: 6, gridRow: 4 }}
-        />
+          <FlowConnector
+            active={activeHdf5Builder}
+            color="teal"
+            label="writes"
+            style={{ gridColumn: 6, gridRow: 4 }}
+          />
 
-        <ProgramNode
-          title="combined HDF5"
-          subtitle="reader-ready experiment file"
-          active={activeCombinedHdf5}
-          icon={<IconDatabase size={24} />}
-          color="teal"
-          style={{ gridColumn: 7, gridRow: 4 }}
-        />
+          <ProgramNode
+            title="combined HDF5"
+            subtitle="reader-ready experiment file"
+            active={activeCombinedHdf5}
+            icon={<IconDatabase size={24} />}
+            color="teal"
+            style={{ gridColumn: 7, gridRow: 4 }}
+          />
         </div>
       </Stack>
     </Paper>
@@ -1595,6 +1629,9 @@ function HZDRSourceHome() {
       fetch('/metadata/hzdr/sources')
         .then((response) => response.json())
         .then(setSources)
+        .catch((error) => {
+          console.error('Failed to load HZDR sources', error)
+        })
     }
 
     loadSources()
@@ -1950,9 +1987,9 @@ function LinkExistingShotRecordsPage() {
             <Stack gap={4}>
               <Title order={2}>Link Existing Shot Records</Title>
               <Text c="dimmed">
-                Search existing MongoDB shot and watchdog records for a
-                campaign key, then prepare a coherent JSON/HDF5/DAMNIT-table
-                handoff for review.
+                Search existing MongoDB shot and watchdog records for a campaign
+                key, then prepare a coherent JSON/HDF5/DAMNIT-table handoff for
+                review.
               </Text>
             </Stack>
             <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
@@ -2258,39 +2295,41 @@ function HZDRShotPage() {
   const [hiddenTableColumns, setHiddenTableColumns] = useState<string[]>([])
   const [selectedCell, setSelectedCell] = useState<HZDRSelectedCell>()
 
-  const loadShotPageData = () => {
-    if (!source_key) {
-      return
-    }
-    fetch(`/metadata/hzdr/sources/${source_key}`)
-      .then((response) => response.json())
-      .then(setSource)
-    fetch(`/metadata/hzdr/sources/${source_key}/shots`)
-      .then((response) => response.json())
-      .then((loadedShots: HZDRShot[]) => {
-        setShots(loadedShots)
-        setSelectedShotNumber((currentShotNumber) => {
-          if (
-            currentShotNumber &&
-            loadedShots.some((shot) => shot.shot_number === currentShotNumber)
-          ) {
-            return currentShotNumber
-          }
-          return loadedShots[0]?.shot_number
-        })
-      })
-    fetch('/metadata/hzdr/sources')
-      .then((response) => response.json())
-      .then(setAvailableSources)
-    fetch(`/contextfile/campaign/${source_key}/me/results`)
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then(setContextResults)
-  }
-
   useEffect(() => {
+    const loadShotPageData = () => {
+      if (!source_key) {
+        return
+      }
+
+      fetch(`/metadata/hzdr/sources/${source_key}`)
+        .then((response) => response.json())
+        .then(setSource)
+
+      fetch(`/metadata/hzdr/sources/${source_key}/shots`)
+        .then((response) => response.json())
+        .then((loadedShots: HZDRShot[]) => {
+          setShots(loadedShots)
+          setSelectedShotNumber((currentShotNumber) => {
+            if (
+              currentShotNumber &&
+              loadedShots.some((shot) => shot.shot_number === currentShotNumber)
+            ) {
+              return currentShotNumber
+            }
+            return loadedShots[0]?.shot_number
+          })
+        })
+
+      fetch('/metadata/hzdr/sources')
+        .then((response) => response.json())
+        .then(setAvailableSources)
+
+      fetch(`/contextfile/campaign/${source_key}/me/results`)
+        .then((response) => (response.ok ? response.json() : undefined))
+        .then(setContextResults)
+    }
+
     loadShotPageData()
-    const timer = window.setInterval(loadShotPageData, 5000)
-    return () => window.clearInterval(timer)
   }, [source_key])
 
   useEffect(() => {
@@ -2517,7 +2556,8 @@ function HZDRShotPage() {
       })
       .catch(() => {
         setSelectedCell((currentCell) =>
-          currentCell?.shotNumber === shotNumber && currentCell.columnName === key
+          currentCell?.shotNumber === shotNumber &&
+          currentCell.columnName === key
             ? { ...currentCell, error: `Could not correct ${key}.` }
             : currentCell
         )
@@ -3788,6 +3828,36 @@ function ShotDetailPanel({
               </Text>
               <Text size="sm">{shot.metadata.target ?? '-'}</Text>
             </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">
+                Canonical shot key
+              </Text>
+              <Text size="sm">{shot.shot_key ?? '-'}</Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">
+                Match quality
+              </Text>
+              <Text size="sm">
+                {shot.match_quality ?? shot.match_status ?? '-'}
+                {shot.match_time_delta_s !== undefined &&
+                shot.match_time_delta_s !== null
+                  ? ` (${shot.match_time_delta_s.toFixed(3)} s)`
+                  : ''}
+              </Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">
+                LabFrog record
+              </Text>
+              <Text size="sm">{shot.labfrog_record_id ?? '-'}</Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">
+                LabFrog date/time
+              </Text>
+              <Text size="sm">{shot.labfrog_date_time ?? '-'}</Text>
+            </Stack>
           </SimpleGrid>
           <Divider />
           <Stack gap={4}>
@@ -3796,6 +3866,86 @@ function ShotDetailPanel({
             </Text>
             <Code block>{shot.hdf5_path ?? '-'}</Code>
           </Stack>
+        </Stack>
+      </Card>
+
+      <Card withBorder radius={4} p="md">
+        <Stack gap="xs">
+          <Group justify="space-between">
+            <Title order={5}>Linked source events</Title>
+            <Badge variant="light">{shot.events?.length ?? 0}</Badge>
+          </Group>
+          {shot.events?.length ? (
+            shot.events.map((event) => (
+              <Paper key={event.event_id} withBorder radius={4} p="xs">
+                <Group justify="space-between" align="flex-start">
+                  <Stack gap={2}>
+                    <Group gap="xs">
+                      <Badge variant="light">{event.source}</Badge>
+                      <Text size="sm" fw={600}>
+                        {event.kind}
+                      </Text>
+                    </Group>
+                    <Text size="xs" c="dimmed">
+                      {event.timestamp} /{' '}
+                      {event.transport ?? 'unknown transport'}
+                    </Text>
+                  </Stack>
+                  <Text size="xs" c="dimmed">
+                    {event.match_quality ?? '-'}
+                  </Text>
+                </Group>
+              </Paper>
+            ))
+          ) : (
+            <Text size="sm" c="dimmed">
+              No source events are linked to this canonical shot.
+            </Text>
+          )}
+        </Stack>
+      </Card>
+
+      <Card withBorder radius={4} p="md">
+        <Stack gap="xs">
+          <Group justify="space-between">
+            <Title order={5}>Data products</Title>
+            <Badge variant="light">{shot.data_products?.length ?? 0}</Badge>
+          </Group>
+          {shot.data_products?.length ? (
+            shot.data_products.map((product, index) => (
+              <Paper
+                key={product.product_id ?? `${product.source}-${index}`}
+                withBorder
+                radius={4}
+                p="xs"
+              >
+                <Group justify="space-between" align="flex-start" wrap="nowrap">
+                  <Stack gap={2} style={{ minWidth: 0 }}>
+                    <Group gap="xs">
+                      <Badge variant="light">{product.source}</Badge>
+                      <Text size="sm" fw={600}>
+                        {product.preview_kind ?? product.kind}
+                      </Text>
+                    </Group>
+                    <Text size="xs" style={{ overflowWrap: 'anywhere' }}>
+                      {product.dataset_name ?? product.path ?? '-'}
+                    </Text>
+                  </Stack>
+                  <Text size="xs" c="dimmed" ta="right">
+                    {product.dtype ?? '-'}
+                    {product.shape.length
+                      ? ` [${product.shape.join(', ')}]`
+                      : ''}
+                    {product.units ? ` ${product.units}` : ''}
+                  </Text>
+                </Group>
+              </Paper>
+            ))
+          ) : (
+            <Text size="sm" c="dimmed">
+              No data products are registered for this shot.
+            </Text>
+          )}
         </Stack>
       </Card>
 
@@ -5102,7 +5252,9 @@ function ContextBuilderPage() {
                                 }
                                 onChange={(event) =>
                                   setFieldName(
-                                    pythonNameFromTitle(event.currentTarget.value)
+                                    pythonNameFromTitle(
+                                      event.currentTarget.value
+                                    )
                                   )
                                 }
                               />
@@ -5365,7 +5517,8 @@ function ContextBuilderPage() {
                               onClick={() => moveSelectedColumn(1)}
                               disabled={
                                 selectedColumnIndex < 0 ||
-                                selectedColumnIndex >= contextVariables.length - 1
+                                selectedColumnIndex >=
+                                  contextVariables.length - 1
                               }
                             >
                               Move selected down
@@ -5490,7 +5643,9 @@ function ContextBuilderPage() {
                   </ContextBuilderDisclosure>
                   <ContextBuilderDisclosure
                     title="Manual context editor"
-                    description={contextFile?.path ?? 'Edit the full context file.'}
+                    description={
+                      contextFile?.path ?? 'Edit the full context file.'
+                    }
                     summary={selectedContextFile}
                   >
                     <Group justify="flex-end">
@@ -5907,7 +6062,9 @@ function pythonNameFromTitle(title: string) {
     .replace(/^_+|_+$/g, '')
   const safeSlug = slug || 'hzdr_computed_field'
   const identifier = /^[a-z_]/.test(safeSlug) ? safeSlug : `field_${safeSlug}`
-  return PYTHON_RESERVED_NAMES.has(identifier) ? `field_${identifier}` : identifier
+  return PYTHON_RESERVED_NAMES.has(identifier)
+    ? `field_${identifier}`
+    : identifier
 }
 
 function formatSelectedInput(value: string) {
