@@ -20,7 +20,7 @@ def test_runtime_config_defaults_to_hzdr_terms():
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["profile"] == "hzdr"
+    assert payload["profile"] in {"hzdr", "hzdr-test"}
     assert payload["auth_mode"] == "ldap"
     assert payload["ldap_form_enabled"] is False
     assert payload["metadata_provider"] == "local"

@@ -19,12 +19,47 @@ class HZDRSource(BaseModel):
     shots: list["HZDRShot"] = Field(default_factory=list)
 
 
+class HZDRSourceEvent(BaseModel):
+    event_id: str
+    source: str
+    kind: str
+    timestamp: str
+    transport: str | None = None
+    payload_ref: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    match_quality: str | None = None
+    match_time_delta_s: float | None = None
+
+
+class HZDRDataProduct(BaseModel):
+    product_id: str | None = None
+    source: str
+    kind: str
+    path: str | None = None
+    dataset_name: str | None = None
+    preview_kind: str | None = None
+    shape: list[int | str] = Field(default_factory=list)
+    dtype: str | None = None
+    units: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class HZDRShot(BaseModel):
     source_key: str
     shot_number: int
     fired_at: str
+    shot_key: str | None = None
+    shot_date: str | None = None
+    labfrog_record_id: str | None = None
+    labfrog_date_time: str | None = None
+    match_status: str | None = None
+    match_quality: str | None = None
+    match_time_delta_s: float | None = None
     hdf5_path: Path | None = None
-    metadata: dict = Field(default_factory=dict)
+    nexus_entry: str = "/entry"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    events: list[HZDRSourceEvent] = Field(default_factory=list)
+    data_products: list[HZDRDataProduct] = Field(default_factory=list)
 
 
 class HZDRHDF5Dataset(BaseModel):
@@ -288,6 +323,16 @@ def _map_mongo_shot(
         "timestamp",
         "date_time",
         "hdf5_path",
+        "shot_key",
+        "shot_date",
+        "labfrog_record_id",
+        "labfrog_date_time",
+        "match_status",
+        "match_quality",
+        "match_time_delta_s",
+        "nexus_entry",
+        "events",
+        "data_products",
     }
     metadata = {
         key: value
@@ -299,6 +344,16 @@ def _map_mongo_shot(
         source_key=source_key,
         shot_number=int(shot_number),
         fired_at=fired_at,
+        shot_key=record.get("shot_key"),
+        shot_date=record.get("shot_date"),
+        labfrog_record_id=record.get("labfrog_record_id"),
+        labfrog_date_time=record.get("labfrog_date_time", record.get("date_time")),
+        match_status=record.get("match_status"),
+        match_quality=record.get("match_quality"),
+        match_time_delta_s=record.get("match_time_delta_s"),
         hdf5_path=hdf5_path,
+        nexus_entry=str(record.get("nexus_entry", "/entry")),
         metadata=metadata,
+        events=record.get("events", []),
+        data_products=record.get("data_products", []),
     )

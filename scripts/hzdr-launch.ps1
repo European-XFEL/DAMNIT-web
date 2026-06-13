@@ -314,6 +314,12 @@ $labfrogRoot = Resolve-RepositoryPath `
     -RepoName "labfrog" `
     -Label "LabFrog" `
     -SearchStart $repoRoot
+$labfrogSqliteToolsRoot = Resolve-RepositoryPath `
+    -PathValue $config.repositories.labfrogSqliteTools `
+    -BaseDir $configDir `
+    -RepoName "labfrog-sqlite-tools-repo" `
+    -Label "LabFrog SQLite tools" `
+    -SearchStart $repoRoot
 $planetWatchdogRoot = Resolve-RepositoryPath `
     -PathValue $config.repositories.planetWatchdog `
     -BaseDir $configDir `
@@ -350,6 +356,7 @@ Write-Host "DAMNIT-web: $damnitRoot"
 Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
+Write-Host "LabFrog SQLite tools: $labfrogSqliteToolsRoot"
 Write-Host "PLANET Watchdog: $planetWatchdogRoot"
 
 Write-Host "Event packages: $eventsDir"

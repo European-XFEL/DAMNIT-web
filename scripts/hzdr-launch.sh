@@ -347,6 +347,7 @@ DAMNIT_ROOT="$(resolve_repository_path "$(config_get repositories.damnitWeb)" "D
 ASAPO_ROOT="$(resolve_repository_path "$(config_get repositories.asapoHarness)" "ASAPO harness" "asapo-for-hzdr-damnit")"
 KAFKA_ROOT="$(resolve_repository_path "$(config_get repositories.kafkaBroker)" "Kafka broker" "kafka-broker-docker")"
 LABFROG_ROOT="$(resolve_repository_path "$(config_get repositories.labfrog)" "LabFrog" "labfrog")"
+LABFROG_SQLITE_TOOLS_ROOT="$(resolve_repository_path "$(config_get repositories.labfrogSqliteTools)" "LabFrog SQLite tools" "labfrog-sqlite-tools-repo")"
 PLANET_WATCHDOG_ROOT="$(resolve_repository_path "$(config_get repositories.planetWatchdog)" "PLANET Watchdog" "planet-watchdog")"
  
 API_PORT="$(config_get ports.api 8000)"
@@ -367,6 +368,7 @@ echo "DAMNIT-web: $DAMNIT_ROOT"
 echo "ASAPO harness: $ASAPO_ROOT"
 echo "Kafka broker: $KAFKA_ROOT"
 echo "LabFrog: $LABFROG_ROOT"
+echo "LabFrog SQLite tools: $LABFROG_SQLITE_TOOLS_ROOT"
 echo "PLANET Watchdog: $PLANET_WATCHDOG_ROOT"
 
 echo "Event packages: $EVENTS_DIR"

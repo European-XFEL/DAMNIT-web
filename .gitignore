@@ -1,6 +1,7 @@
 .vscode
 .venv
 .env
+.pytest_cache/
 damnit_proposals.json
 dist/
 certs/

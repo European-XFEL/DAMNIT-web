@@ -9,9 +9,9 @@ DAMNIT-web HZDR documentation is generated using
 ## Tips
 
 As reference documentation is automatically generated from source code, write
-API details close to the code where relevant. HZDR workflow docs belong in
-`./docs/hzdr.md` or the root-level `README.md`, `FLOW.md`, and
-`HZDR-INTEGRATION.md`.
+API details close to the code where relevant. API route details belong in
+`./docs/hzdr.md`; cross-repository workflow documentation belongs in the
+repository-level `docs/` directory.
 
 Aim to:
 

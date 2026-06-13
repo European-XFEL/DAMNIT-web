@@ -357,6 +357,7 @@ $damnitRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $asapoRoot = Assert-ProjectPath $root "asapo-for-hzdr-damnit"
 $kafkaRoot = Assert-ProjectPath $root "kafka-broker-docker"
 $labfrogRoot = Assert-ProjectPath $root "labfrog"
+$labfrogSqliteToolsRoot = Assert-ProjectPath $root "labfrog-sqlite-tools-repo"
 $planetWatchdogRoot = Assert-ProjectPath $root "planet-watchdog"
 
 $selectedAsapoSpoolDir = if ($AsapoSpoolDir) {
@@ -373,6 +374,7 @@ Write-Host "DAMNIT-web: $damnitRoot"
 Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
+Write-Host "LabFrog SQLite tools: $labfrogSqliteToolsRoot"
 Write-Host "PLANET Watchdog: $planetWatchdogRoot"
 
 Write-Host "ASAPO spool: $selectedAsapoSpoolDir"

@@ -1,14 +1,12 @@
 import asyncio
 import time
-from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
-from damnit_api.contextfile import models
+from damnit_api.contextfile import models, routers
 from damnit_api.main import create_app
 from damnit_api.shared.settings import settings
-from damnit_api.metadata.routers import get_proposal_meta
 
 
 @pytest.fixture
@@ -51,31 +49,35 @@ def clear_cache():
 
 
 @pytest.mark.asyncio
-async def test_watcher_detects_change(app, client, temp_dir):
+async def test_watcher_detects_change(app, client, temp_dir, monkeypatch):
     temp_path = temp_dir / "context.py"
-    app.dependency_overrides[get_proposal_meta] = lambda: SimpleNamespace(
-        damnit_path=str(temp_dir)
-    )
 
-    resp = client.get("/contextfile/last_modified")
+    async def proposal_info(_proposal_num):  # noqa: RUF029
+        return {"damnit_path": str(temp_dir)}
+
+    monkeypatch.setattr(routers, "get_proposal_info", proposal_info)
+
+    url = "/contextfile/last_modified?proposal_num=hzdr-test"
+    resp = client.get(url)
     assert resp.status_code == 200
     initial_modified = resp.json()["lastModified"]
 
     await asyncio.to_thread(temp_path.write_text, "new content")
 
-    assert await wait_for_change(client, "/contextfile/last_modified", initial_modified)
+    assert await wait_for_change(client, url, initial_modified)
 
 
 # FastAPI's TestClient creates a fresh event loop per request, so any
 # alru_cached helper called by the handler binds to that loop. The
 # loop-reset warning is intrinsic to this testing pattern.
 @pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
-def test_file_fetching(app, client, temp_dir):
-    app.dependency_overrides[get_proposal_meta] = lambda: SimpleNamespace(
-        damnit_path=str(temp_dir)
-    )
+def test_file_fetching(app, client, temp_dir, monkeypatch):
+    async def proposal_info(_proposal_num):  # noqa: RUF029
+        return {"damnit_path": str(temp_dir)}
 
-    resp = client.get("/contextfile/content")
+    monkeypatch.setattr(routers, "get_proposal_info", proposal_info)
+
+    resp = client.get("/contextfile/content?proposal_num=hzdr-test")
     assert resp.status_code == 200
     assert resp.json()["fileContent"] == "initial content"
 

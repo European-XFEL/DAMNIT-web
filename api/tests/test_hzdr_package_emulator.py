@@ -72,6 +72,8 @@ def test_package_emulator_writes_source_fixture_and_hdf5(tmp_path: Path):
     assert sources[0].key == "hzdr-emulator"
     assert sources[0].shots[0].shot_number == 123
     assert sources[0].shots[0].hdf5_path == package.hdf5_path
+    assert len(sources[0].shots[0].events) == 2
+    assert len(sources[0].shots[0].data_products) == 2
 
     with h5py.File(package.hdf5_path, "r") as handle:
         assert handle.attrs["profile"] == "hzdr-package-emulator"
@@ -88,6 +90,10 @@ def test_package_emulator_writes_source_fixture_and_hdf5(tmp_path: Path):
         assert "fixtures/by_shot/shot-000123/scalars/laser_energy_j" in handle
         assert "fixtures/by_shot/shot-000123/lineouts/pulse_energy_j" in handle
         assert "fixtures/by_shot/shot-000123/images/camera_raw" in handle
+        assert "entry/shots/shot_key" in handle
+        assert "entry/source_events/event_id" in handle
+        assert "entry/data_products/dataset_path" in handle
+        assert "entry/laserdata/pulse_energy_j" in handle
 
 
 def test_package_emulator_can_expand_shots(tmp_path: Path):

@@ -56,12 +56,12 @@ class OAuthUserInfo(BaseUserInfo):
 
 
 DEV_USER = OAuthUserInfo(
-    email="dev@localhost",
+    email="hzdr-dev@localhost",
     family_name="Developer",
     given_name="Local",
     groups=[],
     name="Local Developer",
-    preferred_username="dev",
+    preferred_username="hzdr-dev",
 )
 
 

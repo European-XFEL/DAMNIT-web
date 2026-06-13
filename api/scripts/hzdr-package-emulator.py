@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -13,6 +14,13 @@ from typing import Any
 import h5py
 import numpy as np
 
+os.environ.setdefault("DW_API_DAMNIT_PATH", str(Path.cwd()))
+
+from damnit_api.metadata.hzdr_nexus import (
+    reconcile_canonical_shots,
+    write_nexus_bridge,
+    write_sources_catalog,
+)
 
 REQUIRED_EVENT_FIELDS = {
     "experiment_id",
@@ -519,12 +527,26 @@ def run_emulator(
 
     write_staged_events(events, staged_dir)
     write_hdf5(events, selected_experiment, hdf5_path)
-    write_sources_file(
+    canonical_shots, normalized_events = reconcile_canonical_shots(
         events,
+        experiment_id=selected_experiment,
+        source_key=source_key,
+    )
+    for shot in canonical_shots:
+        shot["metadata"].setdefault("status", "emulated")
+        shot["metadata"]["combined_hdf5_path"] = str(hdf5_path)
+    write_nexus_bridge(
+        output_path=hdf5_path,
+        experiment_id=selected_experiment,
+        shots=canonical_shots,
+        events=normalized_events,
+    )
+    write_sources_catalog(
+        sources_file=sources_file,
         source_key=source_key,
         experiment_id=selected_experiment,
-        hdf5_path=hdf5_path,
-        sources_file=sources_file,
+        nexus_path=hdf5_path,
+        shots=canonical_shots,
     )
 
     return EmulatedPackage(

@@ -288,7 +288,9 @@ reach, for example `127.0.0.1:9092`.
 ## Related Files
 
 - `README.md`: high-level project orientation.
-- `FLOW.md`: provider model and HZDR-vs-EXFEL architecture notes.
-- `HZDR-INTEGRATION.md`: launcher, repository list, and integration commands.
+- `docs/architecture.md`: provider model, identity, and HZDR-vs-EXFEL notes.
+- `docs/integration-roadmap.md`: ordered cross-repository implementation plan.
+- `docs/local-development.md`: launcher, repository list, and integration commands.
+- `docs/handoff.md`: current status and the next session's starting point.
 - `scripts/hzdr-launch.config.example.json`: shared connection/config shape.
 - `api/scripts/verify-hzdr-watchdog.py`: Kafka/ASAPO/Mongo verifier.

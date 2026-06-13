@@ -4,6 +4,7 @@
     "asapoHarness": "asapo-for-hzdr-damnit",
     "kafkaBroker": "kafka-broker-docker",
     "labfrog": "labfrog",
+    "labfrogSqliteTools": "labfrog-sqlite-tools-repo",
     "planetWatchdog": "planet-watchdog"
   },
   "ports": {
