@@ -320,11 +320,19 @@ def test_adapts_planet_watchdog_processed_document():
             "event": {
                 "filename": "shot-17.csv",
                 "filepath": "Z:/data/shot-17.csv",
+                "file_uri": "file:///Z:/data/shot-17.csv",
                 "timestamp": "2026-06-10T12:00:01Z",
             },
             "analysis": {"data": {"shot": "17", "energy": "8.2"}},
             "zmq_data": [{"topic": "Draco01", "payload": {"shot": 17}}],
-            "_kafka": {"topic": "planet.watchdog.events", "offset": 42},
+            "_id": "mongo-watchdog-17",
+            "scicat_pid": "20.500.11935/abc-17",
+            "_kafka": {
+                "topic": "planet.watchdog.events",
+                "partition": 2,
+                "offset": 42,
+                "key": "watchdog-key-17",
+            },
         },
         experiment_id="HELPMI",
     )
@@ -332,8 +340,15 @@ def test_adapts_planet_watchdog_processed_document():
     assert event["shot_id"] == "shot-000017"
     assert event["source"] == "PLANET-Watchdog"
     assert event["kind"] == "watchdog.TPS_results"
+    assert event["payload_ref"]["path"] == "Z:/data/shot-17.csv"
     assert event["payload_ref"]["filepath"] == "Z:/data/shot-17.csv"
+    assert event["payload_ref"]["uri"] == "file:///Z:/data/shot-17.csv"
+    assert event["payload_ref"]["topic"] == "planet.watchdog.events"
+    assert event["payload_ref"]["partition"] == 2
     assert event["payload_ref"]["offset"] == 42
+    assert event["payload_ref"]["message_key"] == "watchdog-key-17"
+    assert event["payload_ref"]["mongo_id"] == "mongo-watchdog-17"
+    assert event["payload_ref"]["scicat_pid"] == "20.500.11935/abc-17"
 
 
 def test_adapts_legacy_processed_trigger_without_inventing_shot_number():
@@ -362,6 +377,10 @@ def test_adapts_legacy_processed_trigger_without_inventing_shot_number():
     assert event["kind"] == "trigger.threshold_crossing"
     assert event["shot_id"].startswith("unassigned-")
     assert "shot_number" not in event
+    assert event["payload_ref"]["topic"] == "Draco01"
+    assert event["payload_ref"]["partition"] == 0
+    assert event["payload_ref"]["offset"] == 42
+    assert event["payload_ref"]["message_key"] == "processed_message"
     assert event["values"] == [0.81]
     assert event["metadata"]["trigger"] == {
         "channel_id": "Draco01",

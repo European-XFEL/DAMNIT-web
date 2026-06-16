@@ -15,6 +15,9 @@ Completed and tested:
 - Atomic LabFrog SQLite/NeXus export changes.
 - Watchdog normalized HZDR Kafka output and Mongo credential correction.
 - ASAPO timestamp/identity example contract.
+- Shared example payloads now use the canonical `hzdr-event-v1` schema-version
+  string, and `api/examples/Example_Campaign_06.2026.light.sqlite` provides a
+  lightweight anonymized LabFrog SQLite fixture using the real export schema.
 - Offline four-source integration test.
 - Canonical `HZDREventV1` event model, shared by `hzdr_sources.py` and
   `hzdr_nexus.py` instead of independently maintained field lists.
@@ -30,17 +33,21 @@ Completed and tested:
   (`api/scripts/hzdr-local-acceptance.py`) exercising the same vertical
   slice end to end.
 
-The remaining work is operational integration, not another data-model redesign.
+The remaining work is operational integration and production validation, not
+another data-model redesign.
 
 ## Work Order
 
 1. Capture one real pilot sequence from all producers.
-2. Finish producer metadata at the DRACO/TANGO boundary.
-3. Implement durable ASAPO and Kafka ingestion into one campaign spool.
-4. Add deduplication, locking, validation, and atomic publication around the
-   existing DAMNIT builder.
-5. Connect API/frontend flow status to those real services.
-6. Run the replayable pilot acceptance test.
+2. Decide and wire the authoritative shot-number source across LabFrog,
+   shotcounter/DRACO, Watchdog, and DAMNIT.
+3. Deploy producer metadata/configuration for the canonical campaign and
+   confirm a real Kafka/ASAPO roundtrip.
+4. Implement durable ASAPO and Kafka ingestion into one campaign spool.
+5. Add production staged-event validation and retained-export/spool
+   reproducibility around the existing DAMNIT builder.
+6. Connect API/frontend flow status to real Kafka/ASAPO/Mongo/export health.
+7. Run the replayable pilot acceptance test.
 
 ## Repository Responsibilities
 
@@ -50,31 +57,44 @@ Done in the current integration branch:
 
 - Map MediaWiki campaign choice to canonical `experiment_id` and store it
   alongside the unchanged human-readable `Campaign` field.
+- Keep operator-facing `date_time` as local wall time and add explicit
+  `date_time_timezone`/`date_time_utc` fields for integration clarity.
+- Document that Mongo `_id`, `_id_OLD`, `version`, and `status:
+  active`/`archived` already implement stable record identity and
+  current/superseded history.
 
 Still needed:
 
 - Store/import the authoritative TANGO shot number where available.
-- Document or emit timezone-aware `date_time`.
-- Document that stable Mongo record IDs and current/superseded version
-  semantics are already implemented, then remove them from open work tracking.
 
 ### `GitLab/labfrog-sqlite-tools-repo`
 
 Code changes are applied and its suite passes, including the `experiment_id`
-column/migration and NeXus export plumbing. Operationally:
+column/migration and NeXus export plumbing. A lightweight anonymized example
+SQLite export is available in this repo under `api/examples/`. Operationally:
 
 - Schedule campaign-scoped exports.
 - Publish completed SQLite/NeXus pairs by atomic rename or completion marker.
 - Retain each source export used for a canonical build.
 - Keep DAMNIT output separate from the immutable LabFrog export.
+- Run the lightweight fixture and one retained real export through the
+  DAMNIT builder as part of the pilot rehearsal.
 
 ### `GitLab/planet-watchdog`
 
-Code changes are applied and its focused suite passes. Still needed:
+Code changes are applied and its focused suite passes. Done in code/config:
 
-- Configure the canonical campaign and output topic in deployment.
-- Ensure the authoritative shot number reaches the normalized event.
-- Preserve Kafka topic, partition, offset, file URI, and Mongo/SciCat identity.
+- Canonical campaign/output topic settings exist in the producer configuration;
+  deployment still needs to point the running service at the selected campaign.
+- Normalized Watchdog/trigger events preserve Kafka topic, partition, offset,
+  message key, file URI/path, and real Mongo/SciCat identity in `payload_ref`.
+
+Still needed:
+
+- Ensure the authoritative TANGO shot number reaches the normalized event once
+  the upstream authority is selected and deployed.
+- Configure the production deployment with the canonical campaign and output
+  topic values.
 - Run a real broker roundtrip and restart/replay test.
 
 ### `GitLab/asapo-for-hzdr-damnit`
@@ -104,10 +124,10 @@ server that succeeded `draco-shotcounter`. Branch
 - A long-lived producer and retry with the same `event_id`.
 
 `Name` remains the stable channel and current counters remain metadata.
-Still needed: run the branch's tests in a real `pytango`/Kafka environment
-(not available where the branch was authored), merge, and replace
-`shot_number` with a TANGO-authoritative value once that exists upstream.
-See [second-opinion.md](second-opinion.md) section 2.5 for detail.
+Still needed: merge/deploy the branch after its real `pytango`/Kafka test run,
+then replace the provisional device-local `shot_number` with the chosen
+TANGO-authoritative value once that upstream authority exists. See
+[second-opinion.md](second-opinion.md) section 2.5 for detail.
 
 ### `GitHub/DAMNIT-web-hzdr`
 
@@ -117,7 +137,8 @@ UI (see "Where We Are" above).
 
 Still needed:
 
-- Versioned Pydantic/JSON Schema validation for staged events.
+- Versioned JSON Schema publication from `HZDREventV1`, plus staged-event
+  validation in the production ingestion path.
 - Durable per-campaign spool with transport positions and deduplication state.
 - Decide whether catalog edits (confirm/dismiss, manual shot corrections)
   should survive a rebuild, and implement that decision
@@ -139,4 +160,6 @@ replay each consumer, then verify:
 - explicit matched, ambiguous, and unmatched counts;
 - atomic file replacement while the API is reading;
 - source, shot, provenance, and preview views in the frontend;
+- staged-event schema validation rejects malformed producer payloads with
+  actionable errors;
 - reproducible output from retained exports and spools.

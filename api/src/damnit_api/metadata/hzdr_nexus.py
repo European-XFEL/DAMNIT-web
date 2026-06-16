@@ -846,18 +846,16 @@ def normalize_watchdog_document(
     ) or "file"
     payload_ref: dict[str, Any] = {}
     if isinstance(event, dict):
-        path = event.get("filepath", event.get("filepath_src"))
-        if path:
+        _copy_payload_ref_fields(event, payload_ref)
+        path = _first_string(event, "filepath", "filepath_src", "file_path", "path")
+        if path and "filepath" not in payload_ref:
             payload_ref["filepath"] = path
         if event.get("filename"):
             payload_ref["filename"] = event["filename"]
+    _copy_payload_ref_fields(document, payload_ref)
     kafka = document.get("_kafka", {})
     if isinstance(kafka, dict):
-        payload_ref.update({
-            key: kafka[key]
-            for key in ("topic", "partition", "offset", "key")
-            if kafka.get(key) is not None
-        })
+        _copy_payload_ref_fields(kafka, payload_ref)
     metadata = {
         "watch": _json_safe(watch),
         "analysis": _json_safe(analysis),
@@ -920,12 +918,10 @@ def normalize_processed_trigger_message(
         "channel_id": channel_id,
         "key": "processed_message",
     }
+    _copy_payload_ref_fields(document, payload_ref)
+    _copy_payload_ref_fields(payload, payload_ref)
     if isinstance(kafka, dict):
-        payload_ref.update({
-            key: kafka[key]
-            for key in ("topic", "partition", "offset", "key")
-            if kafka.get(key) is not None
-        })
+        _copy_payload_ref_fields(kafka, payload_ref)
 
     adc_value = payload.get("adc_value", payload.get("ADC_value"))
     metadata = {
@@ -975,6 +971,43 @@ def safe_hdf5_name(value: str) -> str:
     """Return a stable HDF5 path component for source-controlled labels."""
     cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
     return cleaned or "unnamed"
+
+
+def _copy_payload_ref_fields(source: dict[str, Any], target: dict[str, Any]) -> None:
+    """Copy canonical traceability aliases into ``payload_ref``.
+
+    Producers still use a few historical field names. Keep those legacy extras
+    when already present, but always populate the canonical names used by
+    HZDRPayloadRef so replay/debug tooling has one stable place to look.
+    """
+    for key in ("topic", "partition", "offset"):
+        if source.get(key) is not None:
+            target[key] = source[key]
+
+    message_key = _first_string(source, "message_key", "key")
+    if message_key is not None:
+        target["message_key"] = message_key
+        target.setdefault("key", message_key)
+
+    uri = _first_string(source, "uri", "file_uri", "fileUri", "url")
+    if uri is not None:
+        target["uri"] = uri
+
+    path = _first_string(source, "path", "filepath", "file_path", "filepath_src")
+    if path is not None:
+        target["path"] = path
+        if "filepath" in source:
+            target.setdefault("filepath", path)
+
+    mongo_id = _first_string(
+        source, "mongo_id", "mongoId", "mongodb_id", "mongo_record_id", "_id"
+    )
+    if mongo_id is not None:
+        target["mongo_id"] = mongo_id
+
+    scicat_pid = _first_string(source, "scicat_pid", "scicatPid", "pid")
+    if scicat_pid is not None:
+        target["scicat_pid"] = scicat_pid
 
 
 def _canonical_from_labfrog(

@@ -1,5 +1,5 @@
 {
-  "schema_version": "hzdr.source-event/1",
+  "schema_version": "hzdr-event-v1",
   "event_id": "watchdog-solenoid-20250115-000001",
   "experiment_id": "Solenoid_Beamline_Tests_01.2025",
   "shot_id": "shot-000001",

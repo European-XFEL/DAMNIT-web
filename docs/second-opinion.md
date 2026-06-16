@@ -756,7 +756,6 @@ time this note was written, not committed in this repo.
    into `api/examples/` and planet-watchdog's normalized-event examples.
    `api/examples/Example_Campaign_06.2026.light.sqlite` is a lightweight
    anonymized LabFrog SQLite fixture generated from the real export schema
-   with modified example rows for `Example Campaign 06.2026`. The remaining
-   cross-repo inconsistency is the schema-version string:
-   `"hzdr.source-event/1"` in the shared examples versus `"hzdr-event-v1"` in
+   with modified example rows for `Example Campaign 06.2026`. The shared
+   examples now use the canonical `"hzdr-event-v1"` schema-version string from
    this repo's `HZDREventV1`/architecture docs.
