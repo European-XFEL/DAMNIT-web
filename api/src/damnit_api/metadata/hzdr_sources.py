@@ -17,6 +17,41 @@ class HZDRSource(BaseModel):
     data_paths: list[Path] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
     shots: list["HZDRShot"] = Field(default_factory=list)
+    review_events: list["HZDRReviewEvent"] = Field(default_factory=list)
+    match_summary: "HZDRMatchSummary" = Field(default_factory=lambda: HZDRMatchSummary())
+
+
+class HZDRMatchSummary(BaseModel):
+    """Matched/ambiguous/unmatched counts for one source, per the go-live gate."""
+
+    matched: int = 0
+    ambiguous: int = 0
+    unmatched: int = 0
+
+
+class HZDRReviewEvent(BaseModel):
+    """One ambiguous or unmatched event awaiting operator review.
+
+    Unlike HZDRSourceEvent (an event already attached to a shot), this carries
+    match_status and, for ambiguous events, the candidate_shot_keys the matcher
+    actually considered tied - the set a reviewer is offered to confirm against.
+    """
+
+    event_id: str
+    experiment_id: str
+    source: str
+    kind: str
+    timestamp: str
+    transport: str | None = None
+    payload_ref: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    match_status: str
+    match_quality: str | None = None
+    candidate_shot_keys: list[str] = Field(default_factory=list)
+    acknowledged: bool = False
+    acknowledged_at: str | None = None
+    acknowledged_by: str | None = None
+    acknowledged_note: str | None = None
 
 
 class HZDRSourceEvent(BaseModel):

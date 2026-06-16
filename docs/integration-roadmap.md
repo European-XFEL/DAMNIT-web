@@ -1,6 +1,6 @@
 # Integration Roadmap
 
-Updated: 2026-06-13
+Updated: 2026-06-16
 
 ## Where We Are
 
@@ -69,17 +69,24 @@ consumer that:
 - References large arrays externally instead of embedding them in JSON.
 - Restarts from its saved position and tolerates replay.
 
-### DRACO/TANGO Trigger Publisher
+### `GitLab/shotcounter` (DRACO/TANGO Trigger Publisher)
 
-This producer repository is still outside the integration workspace. Add:
+Now in the integration workspace: `GitLab/shotcounter` is the PyTango device
+server that succeeded `draco-shotcounter`. Branch
+`feature/hzdr-canonical-trigger-event` adds:
 
 - `schema_version`, stable `event_id`, canonical `experiment_id`, UTC timestamp,
-  and authoritative `shot_number` when available.
-- Machine-readable `trigger_role`; do not infer it from `Nickname`.
+  and a provisional `shot_number` (10 Hz counter; not yet TANGO-authoritative).
+- Machine-readable `trigger_role` via a new `TriggerRoleXX` attribute; not
+  inferred from `Nickname`.
 - Kafka key `<experiment_id>:<channel_id>` for ordering.
 - A long-lived producer and retry with the same `event_id`.
 
-Keep `Name` as the stable channel and retain current counters as metadata.
+`Name` remains the stable channel and current counters remain metadata.
+Still needed: run the branch's tests in a real `pytango`/Kafka environment
+(not available where the branch was authored), merge, and replace
+`shot_number` with a TANGO-authoritative value once that exists upstream.
+See [second-opinion.md](second-opinion.md) section 2.5 for detail.
 
 ### `GitHub/DAMNIT-web-hzdr`
 

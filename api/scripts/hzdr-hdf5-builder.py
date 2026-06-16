@@ -157,6 +157,7 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
         experiment_id=experiment_id,
         nexus_path=output_nexus,
         shots=shots,
+        events=normalized_events,
     )
     return output_nexus, sources_file
 

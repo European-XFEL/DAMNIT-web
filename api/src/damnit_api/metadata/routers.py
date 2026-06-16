@@ -17,6 +17,8 @@ from ..shared.settings import settings
 from . import services
 from .hzdr_sources import (
     HZDRDatasetPreview,
+    HZDRMatchSummary,
+    HZDRReviewEvent,
     HZDRShot,
     HZDRShotDetail,
     HZDRSource,
@@ -54,6 +56,26 @@ class HZDRShotMetadataUpdate(BaseModel):
 
     key: str
     value: Any
+    note: str | None = None
+
+
+class HZDRReviewResponse(BaseModel):
+    """Events awaiting review plus the matched/ambiguous/unmatched summary."""
+
+    match_summary: HZDRMatchSummary
+    review_events: list[HZDRReviewEvent]
+
+
+class HZDRConfirmMatchRequest(BaseModel):
+    """Operator's chosen shot for one ambiguous event."""
+
+    shot_key: str
+    note: str | None = None
+
+
+class HZDRDismissReviewEventRequest(BaseModel):
+    """Operator acknowledgement for one unmatched event, with no shot attached."""
+
     note: str | None = None
 
 
@@ -154,6 +176,62 @@ async def update_hzdr_shot_metadata(
         value=payload.value,
         note=payload.note,
         corrected_by=user.preferred_username or user.email,
+    )
+
+
+@router.get("/hzdr/sources/{source_key}/review")
+async def get_hzdr_review(source_key: str) -> HZDRReviewResponse:
+    """Get ambiguous/unmatched events and the match-status summary for one source."""
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+    return HZDRReviewResponse(
+        match_summary=source.match_summary, review_events=source.review_events
+    )
+
+
+@router.post("/hzdr/sources/{source_key}/review/{event_id}/confirm")
+async def confirm_hzdr_review_event(
+    source_key: str,
+    event_id: str,
+    payload: HZDRConfirmMatchRequest,
+    user: OAuthUserInfo,
+) -> HZDRSource:
+    """Attach an ambiguous event to one of its candidate shots."""
+    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Confirming matches requires local metadata provider and sources_file.",
+        )
+    return confirm_local_review_event(
+        settings.metadata.sources_file,
+        source_key=source_key,
+        event_id=event_id,
+        shot_key=payload.shot_key,
+        note=payload.note,
+        confirmed_by=user.preferred_username or user.email,
+    )
+
+
+@router.post("/hzdr/sources/{source_key}/review/{event_id}/dismiss")
+async def dismiss_hzdr_review_event(
+    source_key: str,
+    event_id: str,
+    payload: HZDRDismissReviewEventRequest,
+    user: OAuthUserInfo,
+) -> HZDRSource:
+    """Acknowledge an unmatched event without attaching it to any shot."""
+    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Dismissing review events requires local metadata provider and sources_file.",
+        )
+    return dismiss_local_review_event(
+        settings.metadata.sources_file,
+        source_key=source_key,
+        event_id=event_id,
+        note=payload.note,
+        dismissed_by=user.preferred_username or user.email,
     )
 
 
@@ -397,6 +475,177 @@ def update_local_shot_metadata(
         sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
 
     return HZDRShot.model_validate(shot)
+
+
+def confirm_local_review_event(
+    sources_file: Path,
+    *,
+    source_key: str,
+    event_id: str,
+    shot_key: str,
+    note: str | None,
+    confirmed_by: str,
+) -> HZDRSource:
+    """Attach an ambiguous review event to one of its candidate shots.
+
+    This is a catalog-only edit, like update_local_shot_status above: it does not
+    rewrite the canonical NeXus file, so the next real builder run (which
+    recomputes review_events/match_summary from scratch) will undo it unless the
+    underlying ambiguity is also resolved at the source (e.g. a duplicate LabFrog
+    shot_number entry is corrected). Treat this as an operational triage tool for
+    the catalog/API/frontend view, not a substitute for fixing root causes.
+    """
+    source_record, sources, payload = _load_source_record(sources_file, source_key)
+
+    review_events = source_record.get("review_events", [])
+    event = next(
+        (event for event in review_events if event.get("event_id") == event_id), None
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail="Review event not found.")
+    if event.get("match_status") != "ambiguous":
+        raise HTTPException(
+            status_code=400,
+            detail="Only ambiguous events can be confirmed to a shot.",
+        )
+    candidate_shot_keys = event.get("candidate_shot_keys") or []
+    if shot_key not in candidate_shot_keys:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "shot_key must be one of the matcher's candidate shots for this "
+                "event: " + ", ".join(candidate_shot_keys)
+            ),
+        )
+    shot = next(
+        (
+            shot
+            for shot in source_record.get("shots", [])
+            if shot.get("shot_key") == shot_key
+        ),
+        None,
+    )
+    if shot is None:
+        raise HTTPException(status_code=404, detail="Candidate shot not found.")
+
+    confirmed_at = datetime.now(UTC).isoformat()
+    attached_event = {
+        key: value
+        for key, value in event.items()
+        if key not in {"match_status", "experiment_id", "candidate_shot_keys"}
+    }
+    attached_event["match_quality"] = "operator_confirmed"
+    shot.setdefault("events", []).append(attached_event)
+    shot["match_status"] = "matched"
+    shot_metadata = shot.setdefault("metadata", {})
+    history = shot_metadata.setdefault("match_confirmation_history", [])
+    if isinstance(history, list):
+        history.append({
+            "at": confirmed_at,
+            "event_id": event_id,
+            "by": confirmed_by,
+            "note": note or "Confirmed ambiguous match",
+        })
+
+    review_events.remove(event)
+    source_record["review_events"] = review_events
+    source_record["match_summary"] = _recompute_match_summary(source_record)
+
+    _write_sources_payload(sources_file, payload, sources)
+    return HZDRSource.model_validate(source_record)
+
+
+def dismiss_local_review_event(
+    sources_file: Path,
+    *,
+    source_key: str,
+    event_id: str,
+    note: str | None,
+    dismissed_by: str,
+) -> HZDRSource:
+    """Acknowledge an unmatched review event without attaching it to any shot.
+
+    The event stays in review_events (so there is still a record it exists and
+    needs a real fix upstream) but is flagged acknowledged, and excluded from the
+    unmatched count in match_summary so it stops nagging. Catalog-only edit, same
+    caveat as confirm_local_review_event above re: surviving a rebuild.
+    """
+    source_record, sources, payload = _load_source_record(sources_file, source_key)
+
+    review_events = source_record.get("review_events", [])
+    event = next(
+        (event for event in review_events if event.get("event_id") == event_id), None
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail="Review event not found.")
+    if event.get("match_status") != "unmatched":
+        raise HTTPException(
+            status_code=400,
+            detail="Only unmatched events can be dismissed without a shot.",
+        )
+
+    event["acknowledged"] = True
+    event["acknowledged_at"] = datetime.now(UTC).isoformat()
+    event["acknowledged_by"] = dismissed_by
+    event["acknowledged_note"] = note or "Acknowledged with no shot attached"
+
+    source_record["match_summary"] = _recompute_match_summary(source_record)
+
+    _write_sources_payload(sources_file, payload, sources)
+    return HZDRSource.model_validate(source_record)
+
+
+def _load_source_record(
+    sources_file: Path, source_key: str
+) -> tuple[dict, list, dict | list]:
+    """Read hzdr_sources.json and return the matching source record to mutate."""
+    if not sources_file.exists():
+        raise HTTPException(status_code=404, detail="HZDR sources file not found.")
+    payload = json.loads(sources_file.read_text(encoding="utf-8"))
+    sources = payload.get("sources", payload if isinstance(payload, list) else [])
+    source_record = next(
+        (source for source in sources if source.get("key") == source_key),
+        None,
+    )
+    if source_record is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+    return source_record, sources, payload
+
+
+def _write_sources_payload(
+    sources_file: Path, payload: dict | list, sources: list
+) -> None:
+    """Persist hzdr_sources.json after sources have been mutated in place."""
+    if isinstance(payload, dict):
+        payload["sources"] = sources
+        sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    else:
+        sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
+
+
+def _recompute_match_summary(source_record: dict) -> dict[str, int]:
+    """Recompute matched/ambiguous/unmatched after a review action.
+
+    Mirrors hzdr_nexus._build_match_summary's counting rules (matched = shots
+    whose match_status is "matched", not just shot.get("events") truthiness -
+    every shot also carries its own synthetic LabFrog event, so "events" is
+    always non-empty and can't distinguish "labfrog-only" from "matched" - see
+    that function's docstring for detail), but operates on the already
+    serialized catalog dict instead of the builder's in-memory objects, and
+    excludes acknowledged unmatched events from the unmatched count.
+    """
+    shots = source_record.get("shots", [])
+    review_events = source_record.get("review_events", [])
+    matched = sum(1 for shot in shots if shot.get("match_status") == "matched")
+    ambiguous = sum(
+        1 for event in review_events if event.get("match_status") == "ambiguous"
+    )
+    unmatched = sum(
+        1
+        for event in review_events
+        if event.get("match_status") == "unmatched" and not event.get("acknowledged")
+    )
+    return {"matched": matched, "ambiguous": ambiguous, "unmatched": unmatched}
 
 
 def enrich_latest_emulated_shot(

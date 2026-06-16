@@ -257,7 +257,7 @@ def reconcile_canonical_shots(  # noqa: C901
             for record in labfrog_shots
         ]
         for event in normalized_events:
-            match, quality, status = _match_event(
+            match, quality, status, candidate_shot_keys = _match_event(
                 event,
                 canonical,
                 match_tolerance_s=match_tolerance_s,
@@ -267,6 +267,7 @@ def reconcile_canonical_shots(  # noqa: C901
             event["match_status"] = status
             event["match_time_delta_s"] = None
             event["shot_key"] = ""
+            event["candidate_shot_keys"] = candidate_shot_keys
             if match is None:
                 continue
 
@@ -495,13 +496,28 @@ def write_sources_catalog(
     experiment_id: str,
     nexus_path: Path,
     shots: list[dict[str, Any]],
+    events: list[dict[str, Any]] | None = None,
 ) -> None:
-    """Write DAMNIT-web's compact source catalog from canonical shots."""
+    """Write DAMNIT-web's compact source catalog from canonical shots.
+
+    `events` is the full normalized event list from `reconcile_canonical_shots`
+    (matched, ambiguous, and unmatched). Matched events are already visible via
+    their shot's `events` list; here we additionally surface the ambiguous and
+    unmatched ones as `review_events`, plus a `match_summary` count, since
+    otherwise they are only ever written to the NeXus file's `source_events`
+    group and have no API/frontend visibility at all.
+    """
     current_shots = [
         shot
         for shot in shots
         if not _as_bool(shot.get("metadata", {}).get("has_newer_version"))
     ]
+    review_events = [
+        _review_event_api_record(event)
+        for event in (events or [])
+        if event.get("match_status") in {"ambiguous", "unmatched"}
+    ]
+    match_summary = _build_match_summary(current_shots, review_events)
     payload = {
         "sources": [
             {
@@ -525,11 +541,61 @@ def write_sources_catalog(
                     }
                     for shot in current_shots
                 ],
+                "review_events": review_events,
+                "match_summary": match_summary,
             }
         ]
     }
     sources_file.parent.mkdir(parents=True, exist_ok=True)
     sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _review_event_api_record(event: dict[str, Any]) -> dict[str, Any]:
+    """Build the API-facing record for one ambiguous or unmatched event.
+
+    Unlike `_event_api_record` (used for events already attached to a shot),
+    this keeps `match_status`, `experiment_id`, and `candidate_shot_keys` since
+    a reviewer needs them to decide what to do with the event.
+    """
+    return {
+        key: event.get(key)
+        for key in (
+            "event_id",
+            "experiment_id",
+            "source",
+            "kind",
+            "timestamp",
+            "transport",
+            "payload_ref",
+            "metadata",
+            "match_status",
+            "match_quality",
+            "candidate_shot_keys",
+        )
+        if event.get(key) is not None
+    }
+
+
+def _build_match_summary(
+    shots: list[dict[str, Any]], review_events: list[dict[str, Any]]
+) -> dict[str, int]:
+    """Count matched/ambiguous/unmatched, the literal go-live-gate wording.
+
+    "matched" counts shots whose match_status is "matched" - i.e. at least one
+    non-LabFrog event was actually linked to them. Every shot also gets its own
+    synthetic LabFrog event appended unconditionally (see the labfrog_event loop
+    above), so shot.get("events") is always truthy and cannot be used to tell
+    "an external producer matched this shot" from "labfrog-only" - match_status
+    is set before that append and is the field that actually distinguishes them.
+    """
+    matched = sum(1 for shot in shots if shot.get("match_status") == "matched")
+    ambiguous = sum(
+        1 for event in review_events if event.get("match_status") == "ambiguous"
+    )
+    unmatched = sum(
+        1 for event in review_events if event.get("match_status") == "unmatched"
+    )
+    return {"matched": matched, "ambiguous": ambiguous, "unmatched": unmatched}
 
 
 def make_shot_key(experiment_id: str, shot_date: str | None, shot_number: int) -> str:
@@ -870,7 +936,14 @@ def _match_event(
     *,
     match_tolerance_s: float,
     campaign_timezone: str,
-) -> tuple[dict[str, Any] | None, str, str]:
+) -> tuple[dict[str, Any] | None, str, str, list[str]]:
+    """Match one event to a canonical shot.
+
+    Returns (matched_shot_or_None, match_quality, match_status, candidate_shot_keys).
+    candidate_shot_keys is only populated when match_status is "ambiguous": it lists
+    the shot_key of every tied candidate, so a reviewer can be offered exactly the
+    shots the matcher actually considered, not the whole source.
+    """
     current_shots = [
         shot
         for shot in shots
@@ -892,9 +965,9 @@ def _match_event(
             and shot.get("shot_date") == event_date
         ]
         if len(exact) == 1:
-            return exact[0], "exact_day_shot_number", "matched"
+            return exact[0], "exact_day_shot_number", "matched", []
         if len(exact) > 1:
-            return None, "ambiguous", "ambiguous"
+            return None, "ambiguous", "ambiguous", [shot["shot_key"] for shot in exact]
 
     if shot_number is not None:
         same_number = [
@@ -907,9 +980,14 @@ def _match_event(
             campaign_timezone=campaign_timezone,
         )
         if nearest is not None:
-            return nearest, "shot_number_time_window", "matched"
+            return nearest, "shot_number_time_window", "matched", []
         if len(same_number) > 1:
-            return None, "ambiguous", "ambiguous"
+            return (
+                None,
+                "ambiguous",
+                "ambiguous",
+                [shot["shot_key"] for shot in same_number],
+            )
 
     nearest = _unique_nearest_shot(
         candidates,
@@ -918,8 +996,8 @@ def _match_event(
         campaign_timezone=campaign_timezone,
     )
     if nearest is not None:
-        return nearest, "nearest_time", "matched"
-    return None, "unmatched", "unmatched"
+        return nearest, "nearest_time", "matched", []
+    return None, "unmatched", "unmatched", []
 
 
 def _unique_nearest_shot(
@@ -1137,6 +1215,10 @@ def _write_source_events(entry: h5py.Group, events: list[dict[str, Any]]) -> Non
             np.nan
             if event.get("match_time_delta_s") is None
             else event["match_time_delta_s"]
+            for event in events
+        ],
+        "candidate_shot_keys_json": [
+            json.dumps(event.get("candidate_shot_keys") or [])
             for event in events
         ],
     }

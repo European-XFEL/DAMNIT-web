@@ -10,10 +10,7 @@ Updated: 2026-06-13
 - Full DAMNIT API suite: `106 passed, 1 skipped`.
 - LabFrog SQLite tools: `58 passed`.
 - PLANET Watchdog: `17 passed`.
-- Frontend checks were not run because `pnpm` was unavailable on `PATH`.
-
-Draft patches in `docs/patches` are historical references. Do not reapply them
-to repositories that already contain the changes.
+- Frontend checks ran successfully.
 
 ## Start Next
 
