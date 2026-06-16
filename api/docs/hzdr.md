@@ -306,3 +306,6 @@ reach, for example `127.0.0.1:9092`.
 - `api/scripts/hzdr-local-acceptance.py`: local-only HTTP acceptance check
   (emulator events through Confirm Matches), no sibling repo or broker
   required - see `docs/testing.md` and `docs/second-opinion.md` Section 8.
+- `api/examples/*.example.json`: the shared normalized source-event contract,
+  kept in sync by hand with `asapo-for-hzdr-damnit/examples/` and
+  `planet-watchdog/testing/examples/normalized-events/`.

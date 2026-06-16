@@ -20,6 +20,7 @@ from damnit_api.metadata.hzdr_nexus import (
     read_labfrog_nexus_shots,
     read_labfrog_sqlite_shots,
     reconcile_canonical_shots,
+    single_writer_lock,
     write_nexus_bridge,
     write_sources_catalog,
 )
@@ -139,26 +140,30 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
             shot["data_products"].extend(products_by_shot.get(shot["shot_key"], []))
 
     output_nexus = args.output_nexus.resolve()
-    write_nexus_bridge(
-        output_path=output_nexus,
-        experiment_id=experiment_id,
-        shots=shots,
-        events=normalized_events,
-        source_nexus=args.labfrog_nexus,
-    )
     sources_file = (
         args.sources_file.resolve()
         if args.sources_file
         else output_nexus.parent / "hzdr_sources.json"
     )
-    write_sources_catalog(
-        sources_file=sources_file,
-        source_key=args.source_key,
-        experiment_id=experiment_id,
-        nexus_path=output_nexus,
-        shots=shots,
-        events=normalized_events,
-    )
+    # Reconciliation above only reads inputs; only the publish step below
+    # touches this campaign's shared output files, so that is what a second
+    # concurrent invocation must not be allowed to race on.
+    with single_writer_lock(output_nexus):
+        write_nexus_bridge(
+            output_path=output_nexus,
+            experiment_id=experiment_id,
+            shots=shots,
+            events=normalized_events,
+            source_nexus=args.labfrog_nexus,
+        )
+        write_sources_catalog(
+            sources_file=sources_file,
+            source_key=args.source_key,
+            experiment_id=experiment_id,
+            nexus_path=output_nexus,
+            shots=shots,
+            events=normalized_events,
+        )
     return output_nexus, sources_file
 
 

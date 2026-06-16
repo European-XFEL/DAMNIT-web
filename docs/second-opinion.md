@@ -37,6 +37,12 @@ DAMNIT's matching step has no authoritative campaign key or shot number from
 the source of truth, and is reduced to fuzzy timestamp matching for every
 shot.
 
+**Update 2026-06-16:** the `experiment_id` half of this finding is now fixed
+in the current LabFrog branch: saved shot documents keep the human-readable
+`Campaign` field and also receive a derived canonical `experiment_id` from
+the MediaWiki campaign choice. TANGO-authoritative shot numbering remains
+open.
+
 ### 2.2 `GitLab/labfrog-sqlite-tools-repo`
 
 | Roadmap item | Actual state |
@@ -48,6 +54,11 @@ shot.
 
 **Net:** Code-quality claim ("its suite passes") is accurate, but 2 of 4
 operational bullets are unstarted, same as everywhere else.
+
+**Update 2026-06-16:** the LabFrog SQLite tools branch now carries
+`experiment_id` through the SQLite schema, migrations, transform/export path,
+and NeXus writer instead of inferring it only from campaign-name strings.
+The operational scheduling/retention bullets above are unchanged.
 
 ### 2.3 `GitLab/planet-watchdog`
 
@@ -88,6 +99,13 @@ examples/tests are pushed" is accurate; everything past that is aspirational:
 roadmap's relatively gentle "production still needs a supervised consumer"
 phrasing. It needs a rewrite of the ack/flush ordering, not just an addition
 of supervision around the existing script.
+
+**Update 2026-06-16:** the local ASAPO emulator/test harness now proves the
+correct pattern: claim before ack, flush/fsync JSONL before ack,
+campaign-scoped consumer-group offsets, and replay deduplication by
+`event_id` with message-ID fallback. That de-risks the production design, but
+it is still an emulator harness, not the supervised ASAPO SDK consumer that
+the roadmap needs.
 
 ### 2.5 DRACO/TANGO Trigger Publisher
 
@@ -183,11 +201,11 @@ flows correctly into both outputs now.
 
 ### 2.6 `GitHub/DAMNIT-web-hzdr` (this repo)
 
-**Updated 2026-06-16 (second pass):** the items below describing "no
-canonical event model" and "no atomic catalog writes" are now stale — both
-were fixed in the sessions tracked in Section 7. Kept here with a status
-note rather than deleted, so the history of what was wrong and when it was
-fixed stays visible.
+**Updated 2026-06-16 (third pass):** the items below describing "no
+canonical event model", "no atomic catalog writes", and "no single-writer
+guard" are now stale - all three were fixed in the sessions tracked in
+Sections 7-9. Kept here with status notes rather than deleted, so the history
+of what was wrong and when it was fixed stays visible.
 
 - ⚪ **Canonical event model: done.** `HZDREventV1`
   ([hzdr_event.py](../api/src/damnit_api/metadata/hzdr_event.py)) is a real
@@ -198,13 +216,14 @@ fixed stays visible.
   derives from the same source of intent (documented inline as to why it's a
   narrower set than the full model). Covered by `test_hzdr_event.py` and
   exercised end-to-end by `api/scripts/hzdr-local-acceptance.py`.
-- 🔴 `hzdr-hdf5-builder.py` is still a synchronous, manually-invoked CLI batch
-  job. No lock file, mutex, or single-writer guard — two concurrent
-  invocations for the same campaign would race on the same output path.
-  "Single-writer orchestration" is still 0% started. (Atomic *catalog* writes
-  are now in place, immediately below — that closes the "reader sees a
-  half-written file" risk, but not the "two writers race" risk; those are
-  different problems and only the first is fixed.)
+- ⚪ **Single-writer builder locking: done.** `hzdr-hdf5-builder.py` now wraps
+  the publish step in `single_writer_lock()` from
+  [hzdr_nexus.py](../api/src/damnit_api/metadata/hzdr_nexus.py). The lock is
+  PID-stamped, exclusive via atomic file creation, located next to the output
+  NeXus path, and reclaims stale locks after confirming the holder process is
+  gone. Covered by focused tests in `test_hzdr_nexus.py`. The builder is
+  still a manually invoked batch job, but two builders for the same output
+  path no longer race through publication.
 - ⚪ **Atomic catalog writes: done.** `write_json_atomic`
   ([hzdr_nexus.py](../api/src/damnit_api/metadata/hzdr_nexus.py)) ports
   exactly the temp-file-plus-`Path.replace` pattern
@@ -212,9 +231,8 @@ fixed stays visible.
   closed. Every `hzdr_sources.json` write site (`routers.py`,
   `hzdr_nexus.write_sources_catalog`, the package emulator script) goes
   through it; tested in `test_hzdr_nexus.py` (failure leaves the original
-  file untouched, no stray `.tmp`). Does not address single-writer locking
-  above - a concurrent *writer* race is still possible, this only protects
-  concurrent *readers* from a partial write.
+  file untouched, no stray `.tmp`). Single-writer locking is now covered
+  separately above.
 - 🔴 No durable spool. There's no Kafka/ASAPO consumer in this repo — the
   "durable per-campaign spool with transport positions and deduplication
   state" doesn't exist yet in any form, not even a stub.

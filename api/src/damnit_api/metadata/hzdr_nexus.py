@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
+import os
 import re
 import shutil
 import sqlite3
@@ -20,8 +22,105 @@ import numpy as np
 from .hzdr_event import EVENT_REQUIRED_FIELDS
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
     from pathlib import Path
+
+
+class BuilderAlreadyRunningError(RuntimeError):
+    """Another hzdr-hdf5-builder invocation already holds the output lock."""
+
+
+_WIN_PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+_WIN_ERROR_INVALID_PARAMETER = 87
+
+
+def _pid_is_alive_windows(pid: int) -> bool:
+    """Windows has no signal-0 probe; os.kill(pid, 0) raises a generic
+    OSError for *any* invalid pid, alive or not, so it can't distinguish
+    them. OpenProcess + GetLastError can: error 87 (ERROR_INVALID_PARAMETER)
+    means no such pid; anything else (e.g. 5, access denied) means it exists
+    but we can't query it, so treat that as alive."""
+    import ctypes
+
+    kernel32 = ctypes.windll.kernel32
+    handle = kernel32.OpenProcess(
+        _WIN_PROCESS_QUERY_LIMITED_INFORMATION, False, pid
+    )
+    if handle:
+        kernel32.CloseHandle(handle)
+        return True
+    return kernel32.GetLastError() != _WIN_ERROR_INVALID_PARAMETER
+
+
+def _pid_is_alive(pid: int) -> bool:
+    """Best-effort liveness check, used only to reclaim a stale lock file."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        return _pid_is_alive_windows(pid)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Process exists but is owned by someone else - treat as alive.
+        return True
+    except OSError:
+        # Conservatively treat any other unexpected failure as "alive" so we
+        # never steal a lock we can't actually verify is stale.
+        return True
+    return True
+
+
+@contextlib.contextmanager
+def single_writer_lock(output_path: Path) -> Iterator[None]:
+    """Guard one campaign's builder output against a second concurrent run.
+
+    `hzdr-hdf5-builder.py` is invoked manually/by cron with no orchestration
+    above it; two invocations for the same --output-nexus would otherwise
+    race on the same NeXus/catalog files. This takes an exclusive,
+    PID-stamped lock file next to `output_path` (atomic create via O_EXCL on
+    both POSIX and Windows) and removes it on exit. A lock file left behind
+    by a crashed/killed process is reclaimed automatically once its PID is no
+    longer alive, so a crash does not require manual cleanup before the next
+    run. This is single-writer locking only - it does not replace
+    write_json_atomic's protection for concurrent *readers*.
+    """
+    lock_path = output_path.with_name(f"{output_path.name}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        stale = False
+        try:
+            holder_pid = int(lock_path.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            holder_pid = -1
+        if not _pid_is_alive(holder_pid):
+            stale = True
+            with contextlib.suppress(OSError):
+                lock_path.unlink()
+            try:
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError as exc:
+                # Lost the race to reclaim it - someone else got there first.
+                message = f"Builder output is locked by another process: {lock_path}"
+                raise BuilderAlreadyRunningError(message) from exc
+        if not stale:
+            message = (
+                f"Builder output is locked by pid {holder_pid}: {lock_path}. "
+                "If that process is no longer running, remove the lock file "
+                "and retry."
+            )
+            raise BuilderAlreadyRunningError(message) from None
+    try:
+        os.write(fd, str(os.getpid()).encode("ascii"))
+        os.close(fd)
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            lock_path.unlink()
+
 
 MATCH_RANK = {
     "unmatched": 0,

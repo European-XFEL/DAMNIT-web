@@ -1,0 +1,23 @@
+{
+  "schema_version": "hzdr.source-event/1",
+  "event_id": "laserdata-solenoid-20250115-000001-energy",
+  "experiment_id": "Solenoid_Beamline_Tests_01.2025",
+  "shot_id": "shot-000001",
+  "shot_number": 1,
+  "source": "LaserData",
+  "kind": "pulse_energy_j",
+  "timestamp": "2025-01-15T09:00:01Z",
+  "transport": "asapo",
+  "payload_ref": {
+    "endpoint": "localhost:8400",
+    "beamtime": "asapo_test",
+    "data_source": "hzdr-damnit",
+    "stream": "laser",
+    "message_id": 1
+  },
+  "values": [12.5],
+  "metadata": {
+    "diagnostic": "main beam",
+    "unit": "J"
+  }
+}

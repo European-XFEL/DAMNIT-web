@@ -16,6 +16,19 @@ Completed and tested:
 - Watchdog normalized HZDR Kafka output and Mongo credential correction.
 - ASAPO timestamp/identity example contract.
 - Offline four-source integration test.
+- Canonical `HZDREventV1` event model, shared by `hzdr_sources.py` and
+  `hzdr_nexus.py` instead of independently maintained field lists.
+- Atomic `hzdr_sources.json` publication (temp file + rename) at every write
+  site, and explicit dedup-by-`event_id`/corrupt-JSONL handling in the
+  reconcile step.
+- Single-writer locking around `hzdr-hdf5-builder.py` for each output NeXus
+  path, with stale-lock recovery when the holder process has exited.
+- A real operator review UI (Confirm Matches) backed by
+  `GET/POST .../review`, replacing the old client-side-fabricated
+  `/link-shot-records` page.
+- A local, sibling-repo-free HTTP acceptance script
+  (`api/scripts/hzdr-local-acceptance.py`) exercising the same vertical
+  slice end to end.
 
 The remaining work is operational integration, not another data-model redesign.
 
@@ -33,16 +46,22 @@ The remaining work is operational integration, not another data-model redesign.
 
 ### `GitLab/labfrog`
 
+Done in the current integration branch:
+
+- Map MediaWiki campaign choice to canonical `experiment_id` and store it
+  alongside the unchanged human-readable `Campaign` field.
+
 Still needed:
 
-- Map MediaWiki campaign choice to canonical `experiment_id`.
 - Store/import the authoritative TANGO shot number where available.
 - Document or emit timezone-aware `date_time`.
-- Preserve stable Mongo record IDs and current/superseded version semantics.
+- Document that stable Mongo record IDs and current/superseded version
+  semantics are already implemented, then remove them from open work tracking.
 
 ### `GitLab/labfrog-sqlite-tools-repo`
 
-Code changes are applied and its suite passes. Operationally:
+Code changes are applied and its suite passes, including the `experiment_id`
+column/migration and NeXus export plumbing. Operationally:
 
 - Schedule campaign-scoped exports.
 - Publish completed SQLite/NeXus pairs by atomic rename or completion marker.
@@ -60,14 +79,16 @@ Code changes are applied and its focused suite passes. Still needed:
 
 ### `GitLab/asapo-for-hzdr-damnit`
 
-The contract examples/tests are pushed. Production still needs a supervised
-consumer that:
+The contract examples/tests are pushed. The local broker harness now proves
+claim-before-ack, flush/fsync-before-ack, campaign-scoped group offsets, and
+replay deduplication by `event_id`/message ID. Production still needs a
+supervised consumer that:
 
 - Uses a named consumer group and campaign routing.
-- Writes and flushes normalized JSONL before acknowledge.
+- Carries the proven write-and-flush-before-ack pattern into the real consumer.
 - Preserves stream, data source, and message ID in `payload_ref`.
 - References large arrays externally instead of embedding them in JSON.
-- Restarts from its saved position and tolerates replay.
+- Restarts from its saved position and tolerates replay in a real broker test.
 
 ### `GitLab/shotcounter` (DRACO/TANGO Trigger Publisher)
 
@@ -90,13 +111,20 @@ See [second-opinion.md](second-opinion.md) section 2.5 for detail.
 
 ### `GitHub/DAMNIT-web-hzdr`
 
+Done: canonical event model, atomic `hzdr_sources.json` publication, staged
+event dedup, single-writer builder locking, and a real Confirm Matches review
+UI (see "Where We Are" above).
+
 Still needed:
 
 - Versioned Pydantic/JSON Schema validation for staged events.
 - Durable per-campaign spool with transport positions and deduplication state.
-- Single-writer orchestration around `hzdr-hdf5-builder.py`.
-- Temporary build, HDF5 validation, and atomic NeXus/catalog publication.
-- Real flow-monitor health and unmatched/ambiguous review.
+- Decide whether catalog edits (confirm/dismiss, manual shot corrections)
+  should survive a rebuild, and implement that decision
+  ([second-opinion.md](second-opinion.md) Section 7).
+- Real flow-monitor backend health (Kafka/ASAPO/Mongo); today's flow-monitor
+  status panel is presentation only, derived from already-loaded catalog
+  data.
 - Optional `runs.sqlite` projection only if legacy table workflows require it.
 - Production auth, storage, backup, logging, and restart configuration.
 

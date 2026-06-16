@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import numpy as np
 import pytest
 
 from damnit_api.metadata.hzdr_nexus import (
+    BuilderAlreadyRunningError,
     discover_labfrog_data_products,
     load_normalized_events,
     normalize_processed_trigger_message,
@@ -14,6 +16,7 @@ from damnit_api.metadata.hzdr_nexus import (
     read_labfrog_nexus_shots,
     read_labfrog_sqlite_shots,
     reconcile_canonical_shots,
+    single_writer_lock,
     write_json_atomic,
     write_nexus_bridge,
     write_sources_catalog,
@@ -478,3 +481,51 @@ def test_write_json_atomic_replaces_existing_file_contents(tmp_path: Path):
 
     assert json.loads(target.read_text(encoding="utf-8")) == {"sources": ["new"]}
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_single_writer_lock_blocks_a_second_concurrent_build(tmp_path: Path):
+    output_nexus = tmp_path / "canonical.nxs"
+    lock_path = tmp_path / "canonical.nxs.lock"
+
+    with single_writer_lock(output_nexus):
+        assert lock_path.exists()
+        with (
+            pytest.raises(BuilderAlreadyRunningError),
+            single_writer_lock(output_nexus),
+        ):
+            pass  # pragma: no cover - must not be reached
+
+    # released on normal exit, so a later build can proceed
+    assert not lock_path.exists()
+    with single_writer_lock(output_nexus):
+        assert lock_path.exists()
+    assert not lock_path.exists()
+
+
+def test_single_writer_lock_is_released_even_if_the_build_raises(tmp_path: Path):
+    output_nexus = tmp_path / "canonical.nxs"
+    lock_path = tmp_path / "canonical.nxs.lock"
+
+    def _failing_build() -> None:
+        with single_writer_lock(output_nexus):
+            assert lock_path.exists()
+            message = "boom"
+            raise ValueError(message)
+
+    with pytest.raises(ValueError, match="boom"):
+        _failing_build()
+
+    assert not lock_path.exists()
+
+
+def test_single_writer_lock_reclaims_a_stale_lock_from_a_dead_pid(tmp_path: Path):
+    output_nexus = tmp_path / "canonical.nxs"
+    lock_path = tmp_path / "canonical.nxs.lock"
+
+    # A PID that is essentially guaranteed not to be a running process.
+    lock_path.write_text("999999999", encoding="utf-8")
+
+    with single_writer_lock(output_nexus):
+        assert lock_path.read_text(encoding="utf-8").strip() == str(os.getpid())
+
+    assert not lock_path.exists()

@@ -48,4 +48,9 @@ uv run -m damnit_api.main
 ```
 
 Generated emulator files live under `.generated/hzdr-package-emulator`.
-Testing commands are in [testing.md](testing.md).
+
+To check the local vertical slice (emulator events through Confirm Matches)
+without building a real pilot file, run
+`uv run python scripts/hzdr-local-acceptance.py` from `api`, or
+`scripts/test.ps1 -WithAcceptance` from the repo root. Testing commands are
+in [testing.md](testing.md).

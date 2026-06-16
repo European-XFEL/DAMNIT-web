@@ -1,0 +1,20 @@
+{
+  "schema_version": "hzdr.source-event/1",
+  "event_id": "watchdog-solenoid-20250115-000001",
+  "experiment_id": "Solenoid_Beamline_Tests_01.2025",
+  "shot_id": "shot-000001",
+  "shot_number": 1,
+  "source": "PLANET-Watchdog",
+  "kind": "mongodb_shotsheet",
+  "timestamp": "2025-01-15T09:00:02Z",
+  "transport": "kafka",
+  "payload_ref": {
+    "topic": "planet.watchdog.events",
+    "partition": 0,
+    "offset": 1
+  },
+  "metadata": {
+    "watch_name": "mongodb_shotsheet",
+    "hdf5_path": "Z:/bigdata/hzdr/experiments/Solenoid_Beamline_Tests_01.2025.nxs"
+  }
+}
