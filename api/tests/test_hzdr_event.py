@@ -110,9 +110,7 @@ class TestSharedContractDerivation:
         assert set(HZDREventV1.model_fields) >= EVENT_REQUIRED_FIELDS
         assert "payload_ref" in EVENT_REQUIRED_FIELDS
 
-    def test_load_normalized_events_accepts_a_full_hzdr_event_v1_record(
-        self, tmp_path
-    ):
+    def test_load_normalized_events_accepts_a_full_hzdr_event_v1_record(self, tmp_path):
         event = HZDREventV1.model_validate(_minimal_event()).model_dump(mode="json")
         path = tmp_path / "events.json"
         path.write_text(json.dumps(event), encoding="utf-8")

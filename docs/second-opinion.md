@@ -183,41 +183,72 @@ flows correctly into both outputs now.
 
 ### 2.6 `GitHub/DAMNIT-web-hzdr` (this repo)
 
-- 🔴 **No canonical event model.** The only event `BaseModel`,
-  `HZDRSourceEvent` ([hzdr_sources.py:22-31](../api/src/damnit_api/metadata/hzdr_sources.py#L22-L31)),
-  has none of `schema_version`, `experiment_id`, `shot_id`, or `shot_number`.
-  Those fields exist only as informally-checked dict keys in
-  `EVENT_REQUIRED_FIELDS` ([hzdr_nexus.py:23-31](../api/src/damnit_api/metadata/hzdr_nexus.py#L23-L31))
-  — and even that set omits `schema_version` and `shot_number` entirely, so
-  nothing in the codebase actually enforces the envelope architecture.md
-  advertises. See Section 4 for why this matters now rather than later.
-- 🔴 `hzdr-hdf5-builder.py` is a synchronous, manually-invoked CLI batch
+**Updated 2026-06-16 (second pass):** the items below describing "no
+canonical event model" and "no atomic catalog writes" are now stale — both
+were fixed in the sessions tracked in Section 7. Kept here with a status
+note rather than deleted, so the history of what was wrong and when it was
+fixed stays visible.
+
+- ⚪ **Canonical event model: done.** `HZDREventV1`
+  ([hzdr_event.py](../api/src/damnit_api/metadata/hzdr_event.py)) is a real
+  Pydantic model with `schema_version`, `event_id`, `experiment_id`,
+  `shot_id`, `shot_number` (explicitly advisory/non-authoritative until a
+  TANGO-authoritative source exists - see Section 5 item 3),
+  `payload_ref`, `values`, `metadata`. `hzdr_nexus.EVENT_REQUIRED_FIELDS`
+  derives from the same source of intent (documented inline as to why it's a
+  narrower set than the full model). Covered by `test_hzdr_event.py` and
+  exercised end-to-end by `api/scripts/hzdr-local-acceptance.py`.
+- 🔴 `hzdr-hdf5-builder.py` is still a synchronous, manually-invoked CLI batch
   job. No lock file, mutex, or single-writer guard — two concurrent
   invocations for the same campaign would race on the same output path.
-  "Single-writer orchestration" is 0% started, not "remaining operational
-  work" as the phrasing implies.
-- 🟡 NeXus/catalog publication writes in place
-  (`write_nexus_bridge`/`write_sources_catalog`), not via the
-  temp-file-plus-atomic-rename pattern that `labfrog-sqlite-tools-repo`
-  already proved out (2.2). This is a known-good pattern one repo away;
-  porting it is low-risk, low-effort, and should happen before any concurrent
-  reader/writer test.
+  "Single-writer orchestration" is still 0% started. (Atomic *catalog* writes
+  are now in place, immediately below — that closes the "reader sees a
+  half-written file" risk, but not the "two writers race" risk; those are
+  different problems and only the first is fixed.)
+- ⚪ **Atomic catalog writes: done.** `write_json_atomic`
+  ([hzdr_nexus.py](../api/src/damnit_api/metadata/hzdr_nexus.py)) ports
+  exactly the temp-file-plus-`Path.replace` pattern
+  `labfrog-sqlite-tools-repo` proved out (2.2) — Section 5 item 5, now
+  closed. Every `hzdr_sources.json` write site (`routers.py`,
+  `hzdr_nexus.write_sources_catalog`, the package emulator script) goes
+  through it; tested in `test_hzdr_nexus.py` (failure leaves the original
+  file untouched, no stray `.tmp`). Does not address single-writer locking
+  above - a concurrent *writer* race is still possible, this only protects
+  concurrent *readers* from a partial write.
 - 🔴 No durable spool. There's no Kafka/ASAPO consumer in this repo — the
   "durable per-campaign spool with transport positions and deduplication
   state" doesn't exist yet in any form, not even a stub.
-- 🟡 `FlowMonitorSettings` is configuration only
-  ([settings.py:104-107](../api/src/damnit_api/shared/settings.py#L104-L107));
-  there's no actual backend health check of Kafka/ASAPO/Mongo, and no
-  unmatched/ambiguous review surface beyond what the offline test exercises.
+- 🟡 `FlowMonitorSettings` now also exposes per-producer-box option lists
+  (Shotcounter TKEYs, Watchdog watcher rules, Mongo sqlite-sync toggle) via
+  `.env`/`GET /config/runtime`, replacing what used to be hard-coded
+  frontend arrays - but this is still presentation/config only, not a real
+  backend health check of Kafka/ASAPO/Mongo. The Flow Monitor now also
+  surfaces matched/ambiguous/unmatched/confirmed/dismissed/staged-event
+  counts and last-rebuild/last-export info per source (read-only, derived
+  from already-loaded catalog data; the Flow Monitor still owns no
+  staging/matching/exporting logic itself).
+- 🟡 **Duplicate `event_id` handling and corrupt JSONL: now explicit and
+  tested**, where before they were undefined behavior (a repeated staged
+  line would silently double-count; a malformed JSON line raised a bare,
+  file-less `JSONDecodeError`). `reconcile_canonical_shots` now deduplicates
+  by `event_id` (first occurrence wins); `load_normalized_events` raises
+  `ValueError` naming the file and line. This does **not** add the durable
+  spool's own dedup/position-tracking (still 🔴 above) - it only fixes the
+  in-process reconcile step's behavior on a JSONL file that already has a
+  duplicate line in it, by whatever means.
 - ⚪ The offline four-source integration test
   (`api/tests/test_hzdr_integration.py`) is real and does what
   [testing.md](testing.md) says: it combines LabFrog, ASAPO, Watchdog, and
   DRACO inputs and checks matching, NeXus output, and previews. This is a
   legitimate, valuable proof that the *reconciliation logic* (matching rules,
-  shot-key scheme, NeXus layout) works — it's just not evidence that the
-  *production pipeline* (ingestion, locking, atomic publish) exists, and the
-  testing docs should be clearer that it's a model/logic test, not a system 
-  test.
+  shot-key scheme, NeXus layout) works. As of 2026-06-16,
+  `api/scripts/hzdr-local-acceptance.py` complements it with a genuine HTTP
+  acceptance check (real FastAPI app via `TestClient`, real
+  emulator-events-to-Confirm-Matches round trip) - still not evidence the
+  *production pipeline* (durable ingestion, locking, atomic publish across
+  process restarts) exists, but it does now prove the local vertical slice
+  the roadmap's go-live gate eventually needs end to end, not just at the
+  unit level.
 
 ## 3. Cross-Cutting Pattern
 
@@ -384,14 +415,15 @@ that `shotcounter` (2.5) is now real, owned, branched, and verified.
    so `ShotNumber` never increments until an operator explicitly opts a
    channel in — confirm that's the desired default, not silently-broken
    shot counting).
-2. **Formalize the event envelope as one shared model in this repo**
-   (Section 4.1). Now that `shotcounter` emits a real `hzdr-event-v1` payload,
-   use it as a concrete second example (alongside watchdog's) when writing
-   the canonical `HZDREventV1` Pydantic model + JSON Schema. Make
-   `hzdr_sources.py`'s `HZDRSourceEvent` and `hzdr_nexus.py`'s
-   `EVENT_REQUIRED_FIELDS` both derive from it instead of maintaining
-   independent field lists. Resolve the `shot_number` optionality and
-   `values` ambiguity (4.2) as part of this pass.
+2. ✅ **Done.** Formalize the event envelope as one shared model in this repo
+   (Section 4.1). `HZDREventV1` exists
+   ([hzdr_event.py](../api/src/damnit_api/metadata/hzdr_event.py)),
+   `shot_number` is explicitly documented as advisory/non-authoritative
+   (resolving the 4.2 optionality question), and `EVENT_REQUIRED_FIELDS`
+   documents inline why it's a narrower set than the full model rather than
+   silently diverging from it. Still open: actually wiring `shotcounter`'s
+   real `hzdr-event-v1` payload through as a live second example/contract
+   test (today's coverage is watchdog + synthetic fixtures, see Section 2.6).
 3. **Close the `experiment_id`/shot-number authority gap at the source**
    (2.1, and the `shot_number` provisional note in `shotcounter`, 2.5). This
    blocks correctness for every producer's "authoritative shot number"
@@ -438,10 +470,12 @@ that `shotcounter` (2.5) is now real, owned, branched, and verified.
    This is a correctness bug (silent data loss on crash), not a feature gap,
    and should be prioritized above adding consumer-group/supervision
    features on top of it.
-5. **Port the atomic-publish pattern from `labfrog-sqlite-tools-repo` into
-   this repo's builder** (2.2, 2.6). Low effort, proven code, removes a real
-   race condition (concurrent reader during a write) ahead of any concurrency
-   testing.
+5. ✅ **Done.** Port the atomic-publish pattern from
+   `labfrog-sqlite-tools-repo` into this repo's builder (2.2, 2.6).
+   `write_json_atomic` covers every `hzdr_sources.json` write site. Note this
+   only removes the concurrent-*reader*-during-a-write race; single-writer
+   locking for two builders racing on the same output (Section 2.6,
+   `hzdr-hdf5-builder.py` bullet) is a separate, still-open problem.
 6. Only after 1–5: proceed with the roadmap's durable spool, single-writer
    orchestration, and flow-monitor work, since those depend on having a
    trustworthy contract and an authoritative shot number to ingest in the
@@ -459,12 +493,17 @@ that `shotcounter` (2.5) is now real, owned, branched, and verified.
   repo, and which are simply not started. Consider adding a status enum
   (`done` / `blocked-on:<repo>` / `not started`) per bullet instead of prose.
 
-## 7. Option 1 Verification + Confirm-Matches Work (2026-06-16, in progress)
+## 7. Option 1 Verification + Confirm-Matches Work (2026-06-16, done and committed)
 
 Decision: stick with **Option 1** from Section 5 item 3 (matcher stays
 authoritative; no labfrog-sqlite-tools-repo or shared-TANGO-device work yet).
 This section tracks verifying it and adding a real operator review UI on top.
-**Committed up to this point**.
+**Status update:** the frontend item below ("replace
+`LinkExistingShotRecordsPage`") is also done — `/link-shot-records` now
+renders a real "Confirm Matches" view wired to `GET .../review`,
+`POST .../confirm`, `POST .../dismiss`; the fabricated helpers/types listed
+below were deleted. Everything in this section is committed. See Section 8
+for the hardening pass on top of this.
 
 ### Done and verified (all tests passing: `cd api && uv run pytest` → 115
 passed, 1 skipped, no regressions)
@@ -537,33 +576,143 @@ passed, 1 skipped, no regressions)
   literally; manual attach-to-any-shot for unmatched events is a possible
   future extension, not built.
 
-### Not started yet — pick up here
+### Done since this section was first written
 
-1. **Frontend: replace `LinkExistingShotRecordsPage`** in
-   [app.tsx](../frontend/apps/app/src/app.tsx) (route `/link-shot-records`,
-   nav button "Link records"). Confirmed it is **100% client-side
-   fabrication** today: `buildLinkRecordsDraft`/`buildLinkRecordsReviewPackage`/
-   `collectionStatusForShot` invent `matched/candidate/missing` statuses from
-   emulator-only metadata fields (`shot.metadata.watchdog_status` etc.), never
-   call any matching endpoint, and the page's own copy says *"The backend
-   agent can replace this with direct MongoDB collection reads later."*
-   Decision made: **repurpose the same route/nav entry**, replace the body
-   with a real Confirm Matches view that calls the new `GET .../review`
-   endpoint, lists ambiguous events with a picker over their
-   `candidate_shot_keys` (calling `POST .../confirm`), lists unmatched events
-   with an acknowledge button (calling `POST .../dismiss`), and shows the
-   `match_summary` counts up top. Delete the fabricated helper
-   functions/types (`LinkRecordsDraft`, `BuiltLinkRecordsPackage`,
-   `LinkedShotRecord`, `LinkCollectionStatus`, `buildLinkRecordsDraft`,
-   `buildLinkRecordsReviewPackage`, `collectionStatusForShot`,
-   `sourceMatchesCampaign` if unused elsewhere) once the new view replaces it.
-2. **Decide whether to fix the catalog-edit-doesn't-survive-rebuild problem**
+1. ✅ **Frontend: `LinkExistingShotRecordsPage` replaced.** `/link-shot-records`
+   now renders a real Confirm Matches view calling `GET .../review`,
+   `POST .../confirm`, `POST .../dismiss`, with `match_summary` counts
+   shown. The fabricated helpers/types are gone. Committed.
+
+### Still open
+
+1. **Decide whether to fix the catalog-edit-doesn't-survive-rebuild problem**
    now or later. It's pre-existing (shared by `update_local_shot_status`/
-   `update_local_shot_metadata` too), but the new confirm/dismiss endpoints
-   make it more visible. Options: teach the builder to merge prior
+   `update_local_shot_metadata` too), and the confirm/dismiss endpoints make
+   it more visible. Options: teach the builder to merge prior
    `review_events`/shot corrections back in on rebuild (the real fix, more
    work), or explicitly document/accept it as a stopgap until the durable
-   spool work (Section 5 item 6) exists. No decision made yet.
-3. Nothing in this section has been committed. Review the diff
-   (`git status`/`git diff` in this repo) and commit when ready — no commits
-   were made without being asked, per how this session went.
+   spool work (Section 5 item 6) exists. **Still no decision made** - the
+   2026-06-16 hardening pass (Section 8) deliberately left this alone and
+   documented the existing behavior instead of changing it (Section 8 covers
+   why: it's a real design decision, not a hardening bug).
+
+## 8. Local Acceptance + Hardening Pass (2026-06-16, done and committed)
+
+Scope for this pass: prove the local vertical slice end to end (emulator
+events -> HZDREventV1 -> JSONL staging -> catalog rebuild -> review API ->
+Confirm Matches -> export hook) and harden the staged/derived file boundary
+around it, without expanding into the durable-spool/TANGO-authority/real-
+ASAPO-Watchdog work Section 5 items 1, 3, 4, 6 still depend on.
+
+### Done and verified (`cd api && uv run pytest` -> 136 passed, 1 skipped, no
+regressions; `pnpm --filter @damnit-frontend/app lint:tsc`/`lint:eslint` clean)
+
+1. **New local acceptance script:**
+   [api/scripts/hzdr-local-acceptance.py](../api/scripts/hzdr-local-acceptance.py).
+   Self-contained (no sibling repo, no Docker/Mongo/Kafka/ASAPO): writes
+   minimal HZDREventV1-shaped JSONL events plus a tiny synthetic LabFrog
+   `shots` table (same schema as a real labfrog-sqlite-tools-repo curated
+   export, scrubbed of any real data - deliberately not the real
+   Solenoid_Beamline_Tests_01.2025.sqlite file, see the design-decisions
+   note below), runs the real `reconcile_canonical_shots`/
+   `write_nexus_bridge`/`write_sources_catalog` functions, then boots the
+   actual FastAPI app via `TestClient` and drives the real HTTP routes:
+   `GET /metadata/hzdr/sources`, `GET .../review`, `POST .../confirm`,
+   `POST .../dismiss`, then re-fetches to prove the catalog reflects both
+   actions. Exit code reflects pass/fail. Two real bugs found and fixed
+   while building this (item 6 below).
+2. **Atomic catalog writes:** `write_json_atomic`
+   ([hzdr_nexus.py](../api/src/damnit_api/metadata/hzdr_nexus.py)) - temp
+   file in the same directory plus `Path.replace`, used at every
+   `hzdr_sources.json` write site (`routers.py`'s six call sites
+   consolidated through the existing `_write_sources_payload` helper,
+   `hzdr_nexus.write_sources_catalog`, the package emulator's dead-but-
+   still-fixed `write_sources_file`). Closes Section 5 item 5.
+3. **Explicit duplicate-event_id behavior:** `reconcile_canonical_shots` now
+   deduplicates by `event_id` after normalization (first occurrence wins)
+   via a new `_deduplicate_by_event_id` helper - a repeated staged JSONL
+   line (producer retry, emulator re-run, at-least-once transport replay)
+   no longer double-counts in `match_summary` or duplicates an entry in a
+   shot's events list. Previously undefined/untested behavior.
+4. **Explicit corrupt-JSONL/JSON behavior:** `load_normalized_events` now
+   raises `ValueError` naming the file and, for JSONL, the 1-based line
+   number, instead of a bare `json.JSONDecodeError` with no file context.
+5. **HZDRMatchSummary gained confirmed/dismissed counts**, computed from
+   `match_quality == "operator_confirmed"` and acknowledged-unmatched events
+   respectively - both reset to 0 on rebuild, same as
+   matched/ambiguous/unmatched (documented inline, ties to item 7 below).
+6. **Two real bugs found while wiring the acceptance script through HTTP
+   (neither was a hardening target going in):**
+   - `GET /config/runtime` crashed with `AttributeError` whenever
+     `settings.auth` is `None` - true local/offline mode with zero
+     `DW_API_AUTH__*` env (the acceptance script's own mode, and also
+     whatever cwd/.env combination triggers it for a plain `uv run pytest`
+     from the repo root). Fixed: `auth_mode` now reports `"none"` instead of
+     crashing.
+   - `test_runtime_config_defaults_to_hzdr_terms` and
+     `test_runtime_config_reports_configured_ldap_form` silently depended on
+     whatever api/.env/ambient env the test happened to run under for
+     metadata_provider/auth.mode, because `create_app()` does not re-read
+     environment variables into the already-constructed settings singleton
+     - `monkeypatch.setenv` alone cannot isolate these tests. Fixed by
+     monkeypatching the live singleton's fields directly (the pattern
+     `test_runtime_config_reports_configured_ldap_form` already used for
+     `ldap_form_enabled`, just not consistently). Added
+     `test_runtime_config_reports_none_auth_mode_in_offline_local_mode` to
+     cover the new auth=None path explicitly.
+7. **Flow Monitor status panel:** per-selected-source status block (staged
+   event count, matched/ambiguous/unmatched/confirmed/dismissed, last
+   rebuild timestamp, export path) added to app.tsx's existing "DAMNIT-web"
+   status card. All values are read-only renders of already-fetched
+   HZDRSource fields (`staged_event_count` - a new Pydantic `computed_field`
+   on HZDRSource, derived from already-loaded shots/review_events, not a new
+   file scan; match_summary; `metadata.catalog_built_at`, new - stamped by
+   `write_sources_catalog` on every rebuild; combined_hdf5_path/
+   canonical_nexus_path, already existed). The Flow Monitor still owns no
+   staging/matching/exporting logic of its own - presentation only, per the
+   explicit constraint for this pass.
+8. **scripts/test.ps1 fixed to run from api/**, matching
+   [testing.md](testing.md)'s documented flow (copies .env.test.example to
+   .env if missing, sets DW_API_DAMNIT_PATH relative to api/). Running it
+   from the repo root (as originally written) silently skipped loading
+   api/.env, which is what surfaced bug 6 above. Added an optional
+   `-WithAcceptance` switch to also run the new acceptance script.
+
+### Design decisions made (asked and answered this session)
+
+- **Real curated LabFrog data vs. a synthetic fixture for the acceptance
+  script:** a real curated SQLite export for Solenoid_Beamline_Tests_01.2025
+  exists locally (GitLab/labfrog-sqlite-tools-repo/curated_files/..., about
+  11.5 MB, with free-text operator comments/usernames). Decided not to
+  commit it (size plus real-data/PII concerns) and not to read it directly
+  from an external sibling-repo path either (machine-specific, breaks for
+  other developers). The acceptance script instead generates its own tiny
+  synthetic shots table with the same schema, including one deliberate
+  same-day/same-shot_number duplicate so there is a genuine ambiguous case
+  to drive through Confirm Matches, without depending on or asserting
+  anything about real shot data. Important correction made mid-session:
+  LabFrog shot_number resets daily, so two rows sharing a shot_number is not
+  by itself evidence of "the same shot, different version" - the fixture's
+  duplicate is constructed deliberately (same day, same number, two
+  distinct records), not inferred from version-count heuristics.
+- **staged_event_count is derived, not a new file scan.** Considered reading
+  events/*.jsonl line counts directly for a literal "how many lines are
+  staged" number, but every event that reaches a shot or review_events
+  already came from a staged file, so counting those (minus each shot's
+  synthetic LabFrog row) gives the same operationally-useful number without
+  adding a new filesystem read path the Flow Monitor would then "own."
+- **The catalog-edit-survives-rebuild question (Section 7) was left alone.**
+  Tempting to fix while already touching confirmed/dismissed counts, but
+  it's a real design decision (merge-on-rebuild vs. accept-as-stopgap) with
+  no decision recorded yet, not a hardening bug - changing it without that
+  decision being made would have been scope creep into Section 5 item 6
+  territory (durable spool / single-writer orchestration).
+
+### Still open
+
+- The catalog-edit-survives-rebuild decision (Section 7, "Still open" above).
+- hzdr-hdf5-builder.py single-writer locking (Section 2.6) - atomic catalog
+  writes (this pass) protect concurrent readers, not concurrent writers.
+- Everything Section 5 items 1, 3, 4, 6 already cover (TANGO authority,
+  ack-before-flush in asapo-for-hzdr-damnit, durable spool) - explicitly out
+  of scope for this pass, unchanged.

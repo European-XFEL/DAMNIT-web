@@ -108,11 +108,14 @@ def test_confirm_attaches_ambiguous_event_to_chosen_shot(tmp_path: Path):
     assert source.match_summary.matched == 1
     assert source.match_summary.ambiguous == 0
     assert source.match_summary.unmatched == 1  # untouched
+    assert source.match_summary.confirmed == 1
+    assert source.match_summary.dismissed == 0  # untouched
 
     # persisted to disk, not just returned in-memory
     reloaded = orjson.loads(sources_file.read_bytes())
     reloaded_source = reloaded["sources"][0]
     assert reloaded_source["match_summary"]["matched"] == 1
+    assert reloaded_source["match_summary"]["confirmed"] == 1
     assert len(reloaded_source["review_events"]) == 1
 
 
@@ -168,6 +171,8 @@ def test_dismiss_acknowledges_unmatched_event_without_attaching_a_shot(
     # still listed (audit trail), but excluded from the unmatched count
     assert len(source.review_events) == 2
     assert source.match_summary.unmatched == 0
+    assert source.match_summary.dismissed == 1
+    assert source.match_summary.confirmed == 0  # untouched
     assert source.match_summary.ambiguous == 1  # untouched
 
 

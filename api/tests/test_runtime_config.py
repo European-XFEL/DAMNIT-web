@@ -13,8 +13,22 @@ def test_root_redirects_to_docs():
     assert response.headers["location"] == "/docs"
 
 
-def test_runtime_config_defaults_to_hzdr_terms():
-    """HZDR/local deployments should expose source terminology to clients."""
+def test_runtime_config_defaults_to_hzdr_terms(monkeypatch):
+    """HZDR/local deployments should expose source terminology to clients.
+
+    Pin metadata_provider and auth on the live settings singleton rather than
+    relying on whatever api/.env happens to set locally (e.g. "mongo" for
+    labfrog-style dev, or no .env at all if pytest runs from a different cwd
+    - see test_runtime_config_reports_none_auth_mode_in_offline_local_mode)
+    - create_app() does not re-read environment variables into the
+    already-constructed settings object, so monkeypatch.setenv alone would
+    not isolate this test from the environment it happens to run in.
+    """
+    from damnit_api.shared.settings import AuthSettings
+
+    monkeypatch.setattr(settings.metadata, "provider", "local")
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="ldap"))
+
     with TestClient(create_app()) as client:
         response = client.get("/config/runtime")
 
@@ -53,9 +67,20 @@ def test_runtime_config_defaults_to_hzdr_terms():
 
 
 def test_runtime_config_reports_configured_ldap_form(monkeypatch):
-    """The frontend needs to know when it should show the LDAP login form."""
-    monkeypatch.setattr(settings.auth, "mode", "ldap")
-    monkeypatch.setattr(settings.auth.ldap, "server_url", "ldap://localhost")
+    """The frontend needs to know when it should show the LDAP login form.
+
+    Builds a fresh AuthSettings rather than mutating settings.auth's
+    attributes in place: settings.auth is None in true local/offline mode
+    (no DW_API_AUTH__* env at all), and this test must hold regardless of
+    what mode the environment running it happens to be in.
+    """
+    from damnit_api.shared.settings import AuthSettings, LDAPSettings
+
+    monkeypatch.setattr(
+        settings,
+        "auth",
+        AuthSettings(mode="ldap", ldap=LDAPSettings(server_url="ldap://localhost")),
+    )
 
     with TestClient(create_app()) as client:
         response = client.get("/config/runtime")
@@ -64,6 +89,19 @@ def test_runtime_config_reports_configured_ldap_form(monkeypatch):
     payload = response.json()
     assert payload["auth_mode"] == "ldap"
     assert payload["ldap_form_enabled"] is True
+
+
+def test_runtime_config_reports_none_auth_mode_in_offline_local_mode(monkeypatch):
+    """True local/offline mode (no auth config at all) must not 500."""
+    monkeypatch.setattr(settings, "auth", None)
+
+    with TestClient(create_app()) as client:
+        response = client.get("/config/runtime")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["auth_mode"] == "none"
+    assert payload["ldap_form_enabled"] is False
 
 
 def test_flow_monitor_producer_options_overridable_via_env(monkeypatch):

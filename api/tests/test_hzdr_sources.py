@@ -59,6 +59,69 @@ def test_load_hzdr_sources_from_json_file(tmp_path: Path):
     assert [shot.shot_number for shot in sources[0].shots] == [1001, 1002]
 
 
+def test_staged_event_count_excludes_synthetic_labfrog_rows(tmp_path: Path):
+    """staged_event_count is a Flow Monitor status number: every shot's own
+    synthetic LabFrog row should not inflate it, but real producer events
+    (attached or still pending review) should."""
+    path = tmp_path / "hzdr_sources.json"
+    path.write_bytes(
+        orjson.dumps({
+            "sources": [
+                {
+                    "key": "hzdr-local",
+                    "title": "HZDR local file fixture",
+                    "damnit_path": "damnit/hzdr-local",
+                    "metadata": {},
+                    "shots": [
+                        {
+                            "source_key": "hzdr-local",
+                            "shot_number": 1,
+                            "fired_at": "2026-05-05T08:15:00Z",
+                            "metadata": {},
+                            "events": [
+                                {
+                                    "event_id": "labfrog-1",
+                                    "source": "LabFrog",
+                                    "kind": "shotsheet.row",
+                                    "timestamp": "2026-05-05T08:15:00Z",
+                                    "payload_ref": {},
+                                    "metadata": {},
+                                },
+                                {
+                                    "event_id": "laser-1",
+                                    "source": "LaserData",
+                                    "kind": "pulse_energy_j",
+                                    "timestamp": "2026-05-05T08:15:01Z",
+                                    "payload_ref": {},
+                                    "metadata": {},
+                                },
+                            ],
+                        }
+                    ],
+                    "review_events": [
+                        {
+                            "event_id": "evt-unmatched-1",
+                            "experiment_id": "exp",
+                            "source": "PLANET-Watchdog",
+                            "kind": "watchdog.tps",
+                            "timestamp": "2026-05-05T09:45:00Z",
+                            "payload_ref": {},
+                            "metadata": {},
+                            "match_status": "unmatched",
+                        }
+                    ],
+                }
+            ]
+        })
+    )
+
+    sources = load_sources_file(path)
+
+    # 1 matched LaserData event + 1 pending review event = 2; the synthetic
+    # LabFrog row on the shot is not counted.
+    assert sources[0].staged_event_count == 2
+
+
 def test_local_provider_returns_sources_from_file(tmp_path: Path):
     """The local provider is the default for file-backed HZDR testing."""
     path = write_source_fixture(tmp_path)

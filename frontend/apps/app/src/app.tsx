@@ -213,8 +213,14 @@ type HZDRSource = {
     facility?: string
     instrument?: string
     source_type?: string
+    catalog_built_at?: string
+    combined_hdf5_path?: string
+    canonical_nexus_path?: string
   }
   shots: HZDRShot[]
+  review_events: HZDRReviewEvent[]
+  match_summary: HZDRMatchSummary
+  staged_event_count: number
 }
 
 type HZDRDatasetPreview = {
@@ -268,6 +274,8 @@ type HZDRMatchSummary = {
   matched: number
   ambiguous: number
   unmatched: number
+  confirmed: number
+  dismissed: number
 }
 
 type HZDRReviewEvent = {
@@ -988,6 +996,66 @@ function HZDRFlowMonitorPage() {
                           </Stack>
                         </SimpleGrid>
                       </Paper>
+                      {selectedSource ? (
+                        <Paper withBorder radius={4} p="sm" bg="gray.0">
+                          <Stack gap={6}>
+                            <Text size="xs" c="dimmed" fw={700}>
+                              Review status ({selectedSource.key})
+                            </Text>
+                            <SimpleGrid cols={3} spacing="xs">
+                              <ReviewStatusFigure
+                                label="Staged"
+                                value={selectedSource.staged_event_count}
+                              />
+                              <ReviewStatusFigure
+                                label="Matched"
+                                value={selectedSource.match_summary.matched}
+                                color="teal"
+                              />
+                              <ReviewStatusFigure
+                                label="Ambiguous"
+                                value={selectedSource.match_summary.ambiguous}
+                                color="orange"
+                              />
+                              <ReviewStatusFigure
+                                label="Unmatched"
+                                value={selectedSource.match_summary.unmatched}
+                                color="red"
+                              />
+                              <ReviewStatusFigure
+                                label="Confirmed"
+                                value={selectedSource.match_summary.confirmed}
+                                color="teal"
+                              />
+                              <ReviewStatusFigure
+                                label="Dismissed"
+                                value={selectedSource.match_summary.dismissed}
+                              />
+                            </SimpleGrid>
+                            <Divider />
+                            <Group justify="space-between" gap="xs">
+                              <Text size="xs" c="dimmed">
+                                Last rebuild
+                              </Text>
+                              <Text size="xs">
+                                {formatFlowMonitorTimestamp(
+                                  selectedSource.metadata.catalog_built_at
+                                )}
+                              </Text>
+                            </Group>
+                            <Group justify="space-between" gap="xs">
+                              <Text size="xs" c="dimmed">
+                                Export path
+                              </Text>
+                              <Text size="xs" truncate>
+                                {selectedSource.metadata.combined_hdf5_path ??
+                                  selectedSource.metadata.canonical_nexus_path ??
+                                  '-'}
+                              </Text>
+                            </Group>
+                          </Stack>
+                        </Paper>
+                      ) : null}
                       <Divider />
                       <Stack gap="xs">
                         <Select
@@ -1473,6 +1541,35 @@ function FlowDiagram({
         </div>
       </Stack>
     </Paper>
+  )
+}
+
+function formatFlowMonitorTimestamp(value: string | undefined): string {
+  if (!value) {
+    return '-'
+  }
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString()
+}
+
+function ReviewStatusFigure({
+  label,
+  value,
+  color,
+}: {
+  label: string
+  value: number
+  color?: string
+}) {
+  return (
+    <Stack gap={0}>
+      <Text size="xs" c="dimmed">
+        {label}
+      </Text>
+      <Text size="md" fw={700} c={value > 0 ? color : undefined}>
+        {value}
+      </Text>
+    </Stack>
   )
 }
 

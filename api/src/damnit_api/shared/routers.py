@@ -72,7 +72,13 @@ class RuntimeConfig(BaseModel):
 
 @router.get("/runtime")
 async def get_runtime_config() -> RuntimeConfig:
-    """Return deployment terms so clients can avoid hard-coded proposal wording."""
+    """Return deployment terms so clients can avoid hard-coded proposal wording.
+
+    settings.auth is None in true local/offline mode (damnit_path set, no
+    DW_API_AUTH__* env at all - see Settings._apply_local_mode) - the local
+    HZDR acceptance script and scripts/test.ps1 both run this way, so this
+    must not assume settings.auth is always an object.
+    """
     terminology = settings.deployment.terminology.model_copy(
         update={
             "uses_mymdc": settings.metadata.provider == "mymdc",
@@ -80,8 +86,8 @@ async def get_runtime_config() -> RuntimeConfig:
     )
     return RuntimeConfig(
         profile=settings.deployment.profile,
-        auth_mode=settings.auth.mode,
-        ldap_form_enabled=bool(settings.auth.ldap.server_url),
+        auth_mode=settings.auth.mode if settings.auth else "none",
+        ldap_form_enabled=bool(settings.auth and settings.auth.ldap.server_url),
         metadata_provider=settings.metadata.provider,
         flow_monitor=FlowMonitorConfig.model_validate(
             settings.flow_monitor.model_dump()

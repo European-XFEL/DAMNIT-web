@@ -1,11 +1,28 @@
+param(
+    [switch] $WithAcceptance
+)
+
 $ErrorActionPreference = "Stop"
 
 $repo = Resolve-Path "$PSScriptRoot\.."
-Set-Location $repo
+$apiRoot = Join-Path $repo "api"
 
-$env:DW_API_DAMNIT_PATH = "$PWD\.damnit-test"
+# Run from api/, not the repo root: api/.env (auth/metadata config consumed
+# by Settings()) and api/ruff.toml are resolved relative to cwd, and
+# api/tests assumes that layout too (see docs/testing.md).
+Set-Location $apiRoot
+
+if (-not (Test-Path ".env") -and (Test-Path ".env.test.example")) {
+    Copy-Item ".env.test.example" ".env"
+}
+
+$env:DW_API_DAMNIT_PATH = (Join-Path $apiRoot ".damnit-test")
 
 uv run ruff check . --fix
 uv run ruff format .
 uv run ruff check .
 uv run pytest
+
+if ($WithAcceptance) {
+    uv run python scripts/hzdr-local-acceptance.py
+}

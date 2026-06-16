@@ -192,9 +192,7 @@ class FlowMonitorProducersSettings(BaseModel):
     laser_data: LaserDataProducerSettings = Field(
         default_factory=LaserDataProducerSettings
     )
-    watchdog: WatchdogProducerSettings = Field(
-        default_factory=WatchdogProducerSettings
-    )
+    watchdog: WatchdogProducerSettings = Field(default_factory=WatchdogProducerSettings)
     mongo: MongoProducerSettings = Field(default_factory=MongoProducerSettings)
 
 

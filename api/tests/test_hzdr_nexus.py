@@ -1,16 +1,20 @@
+import json
 import sqlite3
 from pathlib import Path
 
 import h5py
 import numpy as np
+import pytest
 
 from damnit_api.metadata.hzdr_nexus import (
     discover_labfrog_data_products,
+    load_normalized_events,
     normalize_processed_trigger_message,
     normalize_watchdog_document,
     read_labfrog_nexus_shots,
     read_labfrog_sqlite_shots,
     reconcile_canonical_shots,
+    write_json_atomic,
     write_nexus_bridge,
     write_sources_catalog,
 )
@@ -115,6 +119,8 @@ def test_preserves_rich_labfrog_nexus_and_adds_damnit_bridge(tmp_path: Path):
         "LabFrog",
         "LaserData",
     }
+    # "last rebuild" timestamp, surfaced for the Flow Monitor status panel
+    assert "catalog_built_at" in sources[0].metadata
 
 
 def test_ambiguous_labfrog_match_is_not_silently_assigned():
@@ -387,3 +393,88 @@ def test_processed_trigger_uses_only_explicit_shot_number():
     assert event["shot_number"] == 17
     assert event["shot_id"] == "shot-000017"
     assert event["kind"] == "trigger.shot_trigger"
+
+
+def test_duplicate_event_id_is_kept_once_not_double_counted():
+    """A staged JSONL line appended twice (producer retry, emulator re-run,
+    at-least-once transport) must not double-count or duplicate the event."""
+    event = normalized_event()
+    shots, events = reconcile_canonical_shots(
+        [event, dict(event)],  # same event, appended twice
+        experiment_id="HELPMI",
+        source_key="hzdr-laserdata",
+    )
+
+    assert len(events) == 1
+    assert len(shots) == 1
+    assert len(shots[0]["events"]) == 1
+
+
+def test_duplicate_event_id_across_separate_jsonl_files_is_deduplicated(
+    tmp_path: Path,
+):
+    """The same event re-appended to a JSONL file (e.g. after a restart that
+    replays unacknowledged lines) collapses to one event end-to-end through
+    load_normalized_events, not just within a single in-memory list."""
+    jsonl_path = tmp_path / "laserdata.jsonl"
+    event = normalized_event()
+    with jsonl_path.open("w", encoding="utf-8") as handle:
+        handle.write(json.dumps(event) + "\n")
+        handle.write(json.dumps(event) + "\n")  # duplicate line
+
+    loaded = load_normalized_events([jsonl_path])
+    assert len(loaded) == 2  # load_normalized_events itself does not dedupe
+
+    shots, events = reconcile_canonical_shots(
+        loaded, experiment_id="HELPMI", source_key="hzdr-laserdata"
+    )
+    # reconcile_canonical_shots is where deduplication actually happens
+    assert len(events) == 1
+    assert len(shots) == 1
+
+
+def test_load_normalized_events_reports_corrupt_jsonl_line_and_path(tmp_path: Path):
+    jsonl_path = tmp_path / "broken.jsonl"
+    jsonl_path.write_text(
+        json.dumps(normalized_event()) + "\n" + "{not valid json\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=r"broken\.jsonl:2 is not valid JSON"):
+        load_normalized_events([jsonl_path])
+
+
+def test_load_normalized_events_reports_corrupt_json_file(tmp_path: Path):
+    json_path = tmp_path / "broken.json"
+    json_path.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"broken\.json is not valid JSON"):
+        load_normalized_events([json_path])
+
+
+def test_write_json_atomic_never_leaves_a_partial_file_on_failure(tmp_path: Path):
+    """If serialization fails partway, the existing target file must be left
+    untouched - not truncated or replaced by a half-written temp file."""
+    target = tmp_path / "hzdr_sources.json"
+    target.write_text('{"sources": []}', encoding="utf-8")
+
+    class Unserializable:
+        def __repr__(self):
+            return "<unserializable>"
+
+    with pytest.raises(TypeError):
+        write_json_atomic(target, {"sources": [Unserializable()]})
+
+    # original file is untouched, and no stray .tmp file was left behind
+    assert target.read_text(encoding="utf-8") == '{"sources": []}'
+    assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_write_json_atomic_replaces_existing_file_contents(tmp_path: Path):
+    target = tmp_path / "hzdr_sources.json"
+    target.write_text('{"sources": ["old"]}', encoding="utf-8")
+
+    write_json_atomic(target, {"sources": ["new"]})
+
+    assert json.loads(target.read_text(encoding="utf-8")) == {"sources": ["new"]}
+    assert list(tmp_path.glob("*.tmp")) == []

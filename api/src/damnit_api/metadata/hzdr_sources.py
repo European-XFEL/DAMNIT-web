@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import orjson
-from pydantic import BaseModel, Field, JsonValue
+from pydantic import BaseModel, Field, JsonValue, computed_field
 
 from ..shared.settings import MetadataSettings
 from .hzdr_event import HZDRPayloadRef
@@ -23,13 +23,42 @@ class HZDRSource(BaseModel):
         default_factory=lambda: HZDRMatchSummary()
     )
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def staged_event_count(self) -> int:
+        """Count staged source events this catalog actually reflects.
+
+        Every shot also carries its own synthetic LabFrog event (see
+        hzdr_nexus._labfrog_source_event); that one is not a staged JSONL
+        event, so it is excluded here. This is a Flow Monitor status number,
+        derived from already-loaded catalog data - not a new file scan, and
+        not staging/matching logic the frontend would otherwise have to own.
+        """
+        matched_events = sum(
+            1
+            for shot in self.shots
+            for event in shot.events
+            if event.source != "LabFrog"
+        )
+        return matched_events + len(self.review_events)
+
 
 class HZDRMatchSummary(BaseModel):
-    """Matched/ambiguous/unmatched counts for one source, per the go-live gate."""
+    """Matched/ambiguous/unmatched counts for one source, per the go-live gate.
+
+    confirmed/dismissed are operator-review outcomes layered on top: confirmed
+    counts events an operator attached via the Confirm Matches UI (folded into
+    "matched" too, since the shot really is matched now); dismissed counts
+    acknowledged-without-a-shot unmatched events (excluded from "unmatched").
+    Both reset to 0 on the next catalog rebuild - see
+    routers.confirm_local_review_event's docstring.
+    """
 
     matched: int = 0
     ambiguous: int = 0
     unmatched: int = 0
+    confirmed: int = 0
+    dismissed: int = 0
 
 
 class HZDRReviewEvent(BaseModel):

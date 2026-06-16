@@ -7,6 +7,7 @@ import json
 import re
 import shutil
 import sqlite3
+import uuid
 from collections import defaultdict
 from datetime import UTC, datetime
 from operator import itemgetter
@@ -32,15 +33,45 @@ MATCH_RANK = {
 }
 
 
+def write_json_atomic(path: Path, payload: Any) -> None:
+    """Write hzdr_sources.json (derived/review/catalog state) atomically.
+
+    JSONL under events/ is the staged source-event log and is only ever
+    appended to; this file (and any other catalog/review JSON DAMNIT-web
+    writes) is fully rebuilt/rewritten on every update, so a writer crashing
+    or being killed mid-write must not leave a half-written file for the next
+    reader (e.g. a concurrent GET /metadata/hzdr/sources/{key}/review) to
+    trip over. Write to a sibling temp file in the same directory, then
+    replace() it over the target - Path.replace (os.replace under the hood)
+    is atomic on the same filesystem on both POSIX and Windows, unlike a
+    plain write_text().
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        temp_path.replace(path)
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+
 def load_normalized_events(paths: Iterable[Path]) -> list[dict[str, Any]]:
-    """Load normalized events from JSON or JSONL files."""
+    """Load normalized events from JSON or JSONL files.
+
+    Raises ValueError (not a raw JSONDecodeError) naming the file and, for
+    JSONL, the 1-based line number, so a corrupt staged event - e.g. a
+    truncated line from a crash mid-append, or a hand-edited fixture typo -
+    is something a developer can locate immediately instead of a bare
+    "Expecting value: line 1 column 1" with no file context.
+    """
     events: list[dict[str, Any]] = []
     for path in paths:
         text = path.read_text(encoding="utf-8")
         records = (
-            [json.loads(line) for line in text.splitlines() if line.strip()]
+            _load_jsonl_records(path, text)
             if path.suffix.lower() == ".jsonl"
-            else [json.loads(text)]
+            else [_load_json_record(path, text)]
         )
         for record in records:
             missing = sorted(EVENT_REQUIRED_FIELDS - set(record))
@@ -54,6 +85,27 @@ def load_normalized_events(paths: Iterable[Path]) -> list[dict[str, Any]]:
                 raise ValueError(message)
             events.append(record)
     return events
+
+
+def _load_jsonl_records(path: Path, text: str) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            records.append(json.loads(line))
+        except json.JSONDecodeError as exc:
+            message = f"{path}:{line_number} is not valid JSON: {exc.msg}"
+            raise ValueError(message) from exc
+    return records
+
+
+def _load_json_record(path: Path, text: str) -> dict[str, Any]:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        message = f"{path} is not valid JSON: {exc.msg}"
+        raise ValueError(message) from exc
 
 
 def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
@@ -241,7 +293,9 @@ def reconcile_canonical_shots(  # noqa: C901
         for event in events
         if str(event.get("experiment_id")) == experiment_id
     ]
-    normalized_events = [_normalize_event(event) for event in selected_events]
+    normalized_events = _deduplicate_by_event_id(
+        _normalize_event(event) for event in selected_events
+    )
 
     if labfrog_shots:
         canonical = [
@@ -524,6 +578,7 @@ def write_sources_catalog(
                     "experiment_id": experiment_id,
                     "canonical_nexus_path": str(nexus_path),
                     "combined_hdf5_path": str(nexus_path),
+                    "catalog_built_at": datetime.now(UTC).isoformat(),
                 },
                 "shots": [
                     {
@@ -538,8 +593,7 @@ def write_sources_catalog(
             }
         ]
     }
-    sources_file.parent.mkdir(parents=True, exist_ok=True)
-    sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_json_atomic(sources_file, payload)
 
 
 def _review_event_api_record(event: dict[str, Any]) -> dict[str, Any]:
@@ -579,6 +633,11 @@ def _build_match_summary(
     above), so shot.get("events") is always truthy and cannot be used to tell
     "an external producer matched this shot" from "labfrog-only" - match_status
     is set before that append and is the field that actually distinguishes them.
+
+    confirmed/dismissed are always 0 here: this runs at build time, before any
+    operator review action exists. routers._recompute_match_summary (run after
+    a confirm/dismiss catalog edit) computes the real values - see its
+    docstring for why a rebuild resets them, same as matched/ambiguous/unmatched.
     """
     matched = sum(1 for shot in shots if shot.get("match_status") == "matched")
     ambiguous = sum(
@@ -587,7 +646,13 @@ def _build_match_summary(
     unmatched = sum(
         1 for event in review_events if event.get("match_status") == "unmatched"
     )
-    return {"matched": matched, "ambiguous": ambiguous, "unmatched": unmatched}
+    return {
+        "matched": matched,
+        "ambiguous": ambiguous,
+        "unmatched": unmatched,
+        "confirmed": 0,
+        "dismissed": 0,
+    }
 
 
 def make_shot_key(experiment_id: str, shot_date: str | None, shot_number: int) -> str:
@@ -1026,6 +1091,31 @@ def _normalize_event(event: dict[str, Any]) -> dict[str, Any]:
         else {}
     )
     return normalized
+
+
+def _deduplicate_by_event_id(
+    events: Iterable[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Drop later events that repeat an already-seen event_id, keep the first.
+
+    A staged JSONL file is an append-only log; a producer retry, an emulator
+    re-run over the same fixture, or an at-least-once transport can append the
+    same logical event twice. Without this, reconcile_canonical_shots would
+    count and attach it twice (double matched/ambiguous/unmatched counts, a
+    duplicated row in a shot's events list). event_id is deterministic for a
+    given (experiment_id, shot_id, source, kind, timestamp, transport,
+    payload_ref) tuple (see _event_id), so an exact repeat - not just two
+    events that happen to share a shot - is what gets collapsed here.
+    """
+    seen: set[str] = set()
+    deduplicated: list[dict[str, Any]] = []
+    for event in events:
+        event_id = str(event["event_id"])
+        if event_id in seen:
+            continue
+        seen.add(event_id)
+        deduplicated.append(event)
+    return deduplicated
 
 
 def _event_id(event: dict[str, Any]) -> str:

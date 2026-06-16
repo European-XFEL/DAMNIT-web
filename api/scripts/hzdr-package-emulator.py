@@ -18,6 +18,7 @@ os.environ.setdefault("DW_API_DAMNIT_PATH", str(Path.cwd()))
 
 from damnit_api.metadata.hzdr_nexus import (
     reconcile_canonical_shots,
+    write_json_atomic,
     write_nexus_bridge,
     write_sources_catalog,
 )
@@ -497,8 +498,7 @@ def write_sources_file(
             }
         ]
     }
-    sources_file.parent.mkdir(parents=True, exist_ok=True)
-    sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    write_json_atomic(sources_file, payload)
 
 
 def build_shot_metadata(

@@ -15,6 +15,7 @@ from ..auth.dependencies import OAuthUserInfo, User
 from ..shared.models import ProposalNumber
 from ..shared.settings import settings
 from . import services
+from .hzdr_nexus import write_json_atomic
 from .hzdr_sources import (
     HZDRDatasetPreview,
     HZDRMatchSummary,
@@ -325,11 +326,7 @@ def append_emulated_shot(
         "hdf5_path": hdf5_path,
         "metadata": metadata,
     })
-    if isinstance(payload, dict):
-        payload["sources"] = sources
-        sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    else:
-        sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
+    _write_sources_payload(sources_file, payload, sources)
 
     _append_staged_emulator_event(
         sources_file=sources_file,
@@ -398,11 +395,7 @@ def update_local_shot_status(
             "note": metadata["review_note"],
         })
 
-    if isinstance(payload, dict):
-        payload["sources"] = sources
-        sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    else:
-        sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
+    _write_sources_payload(sources_file, payload, sources)
 
     return HZDRShot.model_validate(shot)
 
@@ -470,11 +463,7 @@ def update_local_shot_metadata(
             "note": note or "Corrected from source table",
         })
 
-    if isinstance(payload, dict):
-        payload["sources"] = sources
-        sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    else:
-        sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
+    _write_sources_payload(sources_file, payload, sources)
 
     return HZDRShot.model_validate(shot)
 
@@ -617,16 +606,16 @@ def _load_source_record(
 def _write_sources_payload(
     sources_file: Path, payload: dict | list, sources: list
 ) -> None:
-    """Persist hzdr_sources.json after sources have been mutated in place."""
+    """Persist hzdr_sources.json (derived catalog/review state) atomically."""
     if isinstance(payload, dict):
         payload["sources"] = sources
-        sources_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        write_json_atomic(sources_file, payload)
     else:
-        sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
+        write_json_atomic(sources_file, sources)
 
 
 def _recompute_match_summary(source_record: dict) -> dict[str, int]:
-    """Recompute matched/ambiguous/unmatched after a review action.
+    """Recompute matched/ambiguous/unmatched/confirmed/dismissed after a review action.
 
     Mirrors hzdr_nexus._build_match_summary's counting rules (matched = shots
     whose match_status is "matched", not just shot.get("events") truthiness -
@@ -635,6 +624,13 @@ def _recompute_match_summary(source_record: dict) -> dict[str, int]:
     that function's docstring for detail), but operates on the already
     serialized catalog dict instead of the builder's in-memory objects, and
     excludes acknowledged unmatched events from the unmatched count.
+
+    confirmed counts events an operator attached via confirm_local_review_event
+    (tagged match_quality="operator_confirmed" there); dismissed counts
+    unmatched events an operator acknowledged via dismiss_local_review_event.
+    Both are operator-review outcomes layered on top of the matcher's own
+    output, and - like matched/ambiguous/unmatched - reset to 0 on the next
+    catalog rebuild, since a rebuild recomputes this whole dict from scratch.
     """
     shots = source_record.get("shots", [])
     review_events = source_record.get("review_events", [])
@@ -647,7 +643,24 @@ def _recompute_match_summary(source_record: dict) -> dict[str, int]:
         for event in review_events
         if event.get("match_status") == "unmatched" and not event.get("acknowledged")
     )
-    return {"matched": matched, "ambiguous": ambiguous, "unmatched": unmatched}
+    confirmed = sum(
+        1
+        for shot in shots
+        for event in shot.get("events", [])
+        if event.get("match_quality") == "operator_confirmed"
+    )
+    dismissed = sum(
+        1
+        for event in review_events
+        if event.get("match_status") == "unmatched" and event.get("acknowledged")
+    )
+    return {
+        "matched": matched,
+        "ambiguous": ambiguous,
+        "unmatched": unmatched,
+        "confirmed": confirmed,
+        "dismissed": dismissed,
+    }
 
 
 def enrich_latest_emulated_shot(
@@ -682,11 +695,7 @@ def enrich_latest_emulated_shot(
     )
 
     file_payload = json.loads(sources_file.read_text(encoding="utf-8"))
-    if isinstance(file_payload, dict):
-        file_payload["sources"] = sources
-        sources_file.write_text(json.dumps(file_payload, indent=2), encoding="utf-8")
-    else:
-        sources_file.write_text(json.dumps(sources, indent=2), encoding="utf-8")
+    _write_sources_payload(sources_file, file_payload, sources)
 
     _append_staged_emulator_event(
         sources_file=sources_file,

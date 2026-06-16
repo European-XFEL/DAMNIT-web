@@ -18,6 +18,11 @@ def app(monkeypatch):
     )
     monkeypatch.setenv("DW_API_SESSION_SECRET", "test")
 
+    # HZDR test specific
+    monkeypatch.setenv("DW_API_PROFILE", "hzdr-test")
+    monkeypatch.setenv("DW_API_AUTH__MODE", "ldap")
+    monkeypatch.setenv("DW_API_METADATA__PROVIDER", "local")
+
     async def noop_bootstrap(settings):
         pass
 

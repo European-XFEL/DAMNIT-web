@@ -303,3 +303,6 @@ reach, for example `127.0.0.1:9092`.
 - `docs/handoff.md`: current status and the next session's starting point.
 - `scripts/hzdr-launch.config.example.json`: shared connection/config shape.
 - `api/scripts/verify-hzdr-watchdog.py`: Kafka/ASAPO/Mongo verifier.
+- `api/scripts/hzdr-local-acceptance.py`: local-only HTTP acceptance check
+  (emulator events through Confirm Matches), no sibling repo or broker
+  required - see `docs/testing.md` and `docs/second-opinion.md` Section 8.
