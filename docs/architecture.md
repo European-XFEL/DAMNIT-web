@@ -38,7 +38,15 @@ LabFrog Mongo `_id` remains the exact record/version identity.
 
 ## Event Envelope
 
-Every transport event should converge on this model:
+Every transport event should converge on this model, implemented once as the
+canonical `HZDREventV1` Pydantic model and vendored identically (kept in sync
+by hand) in each producer/consumer that does not share a Python package with
+DAMNIT-web-hzdr today:
+
+- `planet-watchdog/watchdog_core/hzdr_event.py`
+- `DAMNIT-web-hzdr/api/src/damnit_api/metadata/hzdr_event.py`
+- the shotcounter producer (`hzdrTangoDSShotcounter`), which builds a
+  plain-dict event of the same shape
 
 ```json
 {
@@ -51,16 +59,74 @@ Every transport event should converge on this model:
   "kind": "producer-defined type",
   "timestamp": "2025-01-16T08:00:00Z",
   "transport": "asapo | kafka | zmq",
-  "payload_ref": {},
+  "payload_ref": {
+    "topic": null,
+    "partition": null,
+    "offset": null,
+    "uri": null,
+    "path": null,
+    "message_key": null,
+    "mongo_id": null,
+    "scicat_pid": null
+  },
   "values": null,
   "metadata": {}
 }
 ```
 
-`shot_number` is optional only when unavailable. TANGO's shot counter is the
-authority; channel counters, 10 Hz counters, Kafka offsets, and nicknames are
-not substitutes. `Draco01` to `Draco16` are stable channel IDs. Nicknames remain
-free operator display text.
+### `shot_number`
+
+`shot_number` is a required *key*, but its value is nullable
+(`int | None`). TANGO's shot counter is the authority; channel counters,
+10 Hz counters, Kafka offsets, and nicknames are not substitutes.
+`Draco01` to `Draco16` are stable channel IDs. Nicknames remain free operator
+display text.
+
+A null `shot_number` means no authoritative shot number is available yet for
+this event - that is expected, not an error, while LabFrog/DRACO do not yet
+propagate one end to end (see Pilot Identity and the integration roadmap).
+Producers are not blocked from emitting an event just because they lack an
+authoritative shot number.
+
+PLANET-Watchdog may still observe a non-authoritative, nested/local shot
+number (e.g. whatever is embedded in an attached DRACO/ZMQ payload). It may
+carry that value as the canonical `shot_number` rather than leaving it null,
+but only together with explicit provenance in `metadata` (e.g.
+`metadata.shot_number_provenance = {"authoritative": false, ...}`) so a
+consumer can never mistake it for TANGO's authoritative counter.
+
+### `payload_ref`
+
+`payload_ref` is the canonical source traceability object - it is what must
+let a consumer replay or trace an event back to its source record.
+`metadata` is not a substitute for this: core traceability belongs in
+`payload_ref`, even though `metadata.kafka_data`/`metadata.zmq_data` may also
+be kept for backward compatibility or debugging convenience.
+
+At minimum, Kafka-sourced events should populate `topic`, `partition`, and
+`offset`. `uri`/`path` cover file-backed sources. `message_key` is the
+transport message key when available. `mongo_id`/`scicat_pid` are populated
+only when a real Mongo `_id` or SciCat PID already exists - producers must
+never invent one. Producer-specific extra references (e.g. `channel_id`,
+`run_id`, `record_id`, `nexus_path`) may be attached directly on
+`payload_ref` alongside the standard fields.
+
+### `values` and large payloads
+
+`values` is for small structured scalar values only (`dict[str, JsonValue]`,
+default `None`) - things like a single ADC reading or a handful of derived
+numbers. Large datasets do not belong here; represent them with a
+URI/path/object-store/SciCat/Mongo reference in `payload_ref` instead.
+
+### `metadata`
+
+`metadata` is a free-form JSON object for extra detail that is not part of
+the contract above. Consumers that need a flat storage row (e.g. SQLite,
+NeXus attributes) are expected to serialize the whole object to one
+JSON-text column/dataset themselves - the same convention
+`labfrog-sqlite-tools` already uses for its own `metadata_json`/
+`parameters_json`/`options_json` columns. The model does not flatten it for
+them.
 
 ## Matching
 

@@ -16,19 +16,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import h5py
 import numpy as np
 
+from .hzdr_event import EVENT_REQUIRED_FIELDS
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
-
-EVENT_REQUIRED_FIELDS = {
-    "experiment_id",
-    "shot_id",
-    "source",
-    "kind",
-    "timestamp",
-    "transport",
-    "payload_ref",
-}
 
 MATCH_RANK = {
     "unmatched": 0,

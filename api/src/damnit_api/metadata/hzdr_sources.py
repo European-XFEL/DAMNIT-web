@@ -5,9 +5,10 @@ from pathlib import Path
 from typing import Any
 
 import orjson
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue
 
 from ..shared.settings import MetadataSettings
+from .hzdr_event import HZDRPayloadRef
 
 
 class HZDRSource(BaseModel):
@@ -37,6 +38,12 @@ class HZDRReviewEvent(BaseModel):
     Unlike HZDRSourceEvent (an event already attached to a shot), this carries
     match_status and, for ambiguous events, the candidate_shot_keys the matcher
     actually considered tied - the set a reviewer is offered to confirm against.
+
+    This is a reconciliation-facing API shape, not the canonical HZDREventV1
+    envelope itself (it adds match_status/candidate_shot_keys/acknowledged*
+    and omits shot_id/shot_number, which do not apply before a shot match
+    exists) - but payload_ref reuses HZDRPayloadRef so source traceability
+    stays one type across both models.
     """
 
     event_id: str
@@ -45,8 +52,8 @@ class HZDRReviewEvent(BaseModel):
     kind: str
     timestamp: str
     transport: str | None = None
-    payload_ref: dict[str, Any] = Field(default_factory=dict)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    payload_ref: HZDRPayloadRef = Field(default_factory=HZDRPayloadRef)
+    metadata: dict[str, JsonValue] = Field(default_factory=dict)
     match_status: str
     match_quality: str | None = None
     candidate_shot_keys: list[str] = Field(default_factory=list)
@@ -57,13 +64,22 @@ class HZDRReviewEvent(BaseModel):
 
 
 class HZDRSourceEvent(BaseModel):
+    """One source event already attached to a shot, as exposed by the API.
+
+    A reconciliation-facing projection of HZDREventV1 - experiment_id/shot_id/
+    shot_number are dropped because they are redundant with the parent
+    HZDRShot, and match_quality/match_time_delta_s are added since they only
+    make sense once an event has been matched - but payload_ref reuses
+    HZDRPayloadRef so source traceability stays one type across both models.
+    """
+
     event_id: str
     source: str
     kind: str
     timestamp: str
     transport: str | None = None
-    payload_ref: dict[str, Any] = Field(default_factory=dict)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    payload_ref: HZDRPayloadRef = Field(default_factory=HZDRPayloadRef)
+    metadata: dict[str, JsonValue] = Field(default_factory=dict)
     match_quality: str | None = None
     match_time_delta_s: float | None = None
 
