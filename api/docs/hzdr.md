@@ -309,3 +309,6 @@ reach, for example `127.0.0.1:9092`.
 - `api/examples/*.example.json`: the shared normalized source-event contract,
   kept in sync by hand with `asapo-for-hzdr-damnit/examples/` and
   `planet-watchdog/testing/examples/normalized-events/`.
+- `api/examples/Example_Campaign_06.2026.light.sqlite`: lightweight,
+  anonymized LabFrog SQLite example with the real export schema and a handful
+  of modified sample rows.

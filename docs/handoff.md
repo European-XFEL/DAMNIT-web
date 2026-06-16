@@ -26,7 +26,9 @@ Updated: 2026-06-16
   gone.
 - `api/examples/*.example.json` mirrors the shared normalized source-event
   examples used by `asapo-for-hzdr-damnit` and planet-watchdog's
-  normalized-event fixtures.
+  normalized-event fixtures. `api/examples/Example_Campaign_06.2026.light.sqlite`
+  is a lightweight anonymized LabFrog SQLite fixture generated from the real
+  export schema with modified example rows.
 - The local `asapo-for-hzdr-damnit` harness now proves claim-before-ack,
   flush/fsync-before-ack, campaign-scoped group offsets, and replay dedup.
   It is still an emulator/test harness, not the production supervised

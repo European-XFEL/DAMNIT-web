@@ -484,18 +484,17 @@ that `shotcounter` (2.5) is now real, owned, branched, and verified.
    live authoritative number is a hard requirement for the pilot. Worth a
    short, explicit decision rather than letting `shotcounter` and labfrog
    each grow their own local notion of "the" shot number indefinitely.
-4. **Fix the ack-before-flush ordering in `asapo-for-hzdr-damnit`** (2.4).
-   This is a correctness bug (silent data loss on crash), not a feature gap,
-   and should be prioritized above adding consumer-group/supervision
-   features on top of it.
+4. **Carry the proven ack-after-flush pattern into production
+   `asapo-for-hzdr-damnit`** (2.4). The local harness now proves the correct
+   claim/flush/ack/replay-dedup ordering, but the production supervised
+   ASAPO consumer still needs to use that pattern.
 5. ✅ **Done.** Port the atomic-publish pattern from
    `labfrog-sqlite-tools-repo` into this repo's builder (2.2, 2.6).
-   `write_json_atomic` covers every `hzdr_sources.json` write site. Note this
-   only removes the concurrent-*reader*-during-a-write race; single-writer
-   locking for two builders racing on the same output (Section 2.6,
-   `hzdr-hdf5-builder.py` bullet) is a separate, still-open problem.
-6. Only after 1–5: proceed with the roadmap's durable spool, single-writer
-   orchestration, and flow-monitor work, since those depend on having a
+   `write_json_atomic` covers every `hzdr_sources.json` write site; the
+   follow-up single-writer lock now covers two builders racing on the same
+   output path.
+6. Only after 1–5: proceed with the roadmap's durable spool and real
+   flow-monitor backend work, since those depend on having a
    trustworthy contract and an authoritative shot number to ingest in the
    first place.
 7. Then run the existing go-live gate (replay `Solenoid Beamline Tests
@@ -729,8 +728,35 @@ regressions; `pnpm --filter @damnit-frontend/app lint:tsc`/`lint:eslint` clean)
 ### Still open
 
 - The catalog-edit-survives-rebuild decision (Section 7, "Still open" above).
-- hzdr-hdf5-builder.py single-writer locking (Section 2.6) - atomic catalog
-  writes (this pass) protect concurrent readers, not concurrent writers.
 - Everything Section 5 items 1, 3, 4, 6 already cover (TANGO authority,
-  ack-before-flush in asapo-for-hzdr-damnit, durable spool) - explicitly out
-  of scope for this pass, unchanged.
+  production ASAPO ack-after-flush carry-through, durable spool) -
+  explicitly out of scope for this pass, unchanged.
+
+## 9. Single-Writer Locking + Cross-Repo Contract Carry-Through (2026-06-16, done locally)
+
+Follow-up pass after Section 8. These changes are tested locally but, at the
+time this note was written, not committed in this repo.
+
+1. **DAMNIT builder single-writer lock:** `hzdr-hdf5-builder.py` now guards
+   the `write_nexus_bridge`/`write_sources_catalog` publish step with
+   `single_writer_lock()`. The lock file lives beside the output NeXus file,
+   records the holder PID, uses atomic exclusive creation, and reclaims stale
+   locks when the holder process is dead. Full API suite: `139 passed, 1
+   skipped`; ruff clean.
+2. **LabFrog `experiment_id`:** the current LabFrog branch derives canonical
+   `experiment_id` from the MediaWiki campaign choice at save time while
+   preserving the original `Campaign` value.
+3. **labfrog-sqlite-tools `experiment_id`:** the current SQLite tools branch
+   migrates/stores/exports `experiment_id` through SQLite and NeXus instead
+   of relying on campaign-name inference.
+4. **ASAPO local harness:** the emulator/test harness now demonstrates the
+   safe claim/flush/ack/replay-dedup pattern. The production supervised
+   consumer is still open.
+5. **Shared example files:** the normalized source-event examples are mirrored
+   into `api/examples/` and planet-watchdog's normalized-event examples.
+   `api/examples/Example_Campaign_06.2026.light.sqlite` is a lightweight
+   anonymized LabFrog SQLite fixture generated from the real export schema
+   with modified example rows for `Example Campaign 06.2026`. The remaining
+   cross-repo inconsistency is the schema-version string:
+   `"hzdr.source-event/1"` in the shared examples versus `"hzdr-event-v1"` in
+   this repo's `HZDREventV1`/architecture docs.
