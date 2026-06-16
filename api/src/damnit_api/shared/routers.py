@@ -24,8 +24,41 @@ class FlowMonitorReceiversConfig(BaseModel):
     mongo: bool
 
 
+class FlowMonitorOptionConfig(BaseModel):
+    value: str
+    label: str
+    description: str = ""
+
+
+class ShotcounterProducerConfig(BaseModel):
+    enabled: bool
+    tkeys: list[FlowMonitorOptionConfig]
+
+
+class LaserDataProducerConfig(BaseModel):
+    enabled: bool
+
+
+class WatchdogProducerConfig(BaseModel):
+    enabled: bool
+    watchers: list[FlowMonitorOptionConfig]
+
+
+class MongoProducerConfig(BaseModel):
+    enabled: bool
+    updates_damnit_sqlite: bool
+
+
+class FlowMonitorProducersConfig(BaseModel):
+    shotcounter: ShotcounterProducerConfig
+    laser_data: LaserDataProducerConfig
+    watchdog: WatchdogProducerConfig
+    mongo: MongoProducerConfig
+
+
 class FlowMonitorConfig(BaseModel):
     receivers: FlowMonitorReceiversConfig
+    producers: FlowMonitorProducersConfig
 
 
 class RuntimeConfig(BaseModel):

@@ -101,9 +101,109 @@ class FlowMonitorReceiversSettings(BaseModel):
     mongo: bool = True
 
 
+class FlowMonitorOption(BaseModel):
+    """One selectable rule/topic/TKEY offered inside a producer's flow box."""
+
+    value: str
+    label: str
+    description: str = ""
+
+
+def _default_shotcounter_tkeys() -> list[FlowMonitorOption]:
+    return [
+        FlowMonitorOption(
+            value="draco01", label="Draco01", description="primary shot notice TKEY"
+        ),
+        FlowMonitorOption(
+            value="draco02", label="Draco02", description="LLI watcher fanout TKEY"
+        ),
+        FlowMonitorOption(
+            value="draco04", label="Draco04", description="LLI watcher fanout TKEY"
+        ),
+        FlowMonitorOption(
+            value="draco07",
+            label="Draco07",
+            description="PNG original attachment TKEY",
+        ),
+        FlowMonitorOption(
+            value="draco08", label="Draco08", description="LLI watcher fanout TKEY"
+        ),
+    ]
+
+
+def _default_watchdog_watchers() -> list[FlowMonitorOption]:
+    return [
+        FlowMonitorOption(
+            value="png-originals",
+            label="PNG originals",
+            description="set1_*_original.png with Draco01/Draco07 ZMQ attachment",
+        ),
+        FlowMonitorOption(
+            value="dummy-analysis",
+            label="Dummy analysis",
+            description="script parser rule for generic dummy analysis files",
+        ),
+        FlowMonitorOption(
+            value="lli-parser",
+            label="LLI parser",
+            description="LLI ToolResult CSV parser with Draco02/04/08 topics",
+        ),
+        FlowMonitorOption(
+            value="tps-quick",
+            label="TPS quick",
+            description="simple TPS parser for particle spectrum text output",
+        ),
+    ]
+
+
+class ShotcounterProducerSettings(BaseModel):
+    enabled: bool = True
+    tkeys: list[FlowMonitorOption] = Field(default_factory=_default_shotcounter_tkeys)
+
+
+class LaserDataProducerSettings(BaseModel):
+    enabled: bool = True
+
+
+class WatchdogProducerSettings(BaseModel):
+    enabled: bool = True
+    watchers: list[FlowMonitorOption] = Field(
+        default_factory=_default_watchdog_watchers
+    )
+
+
+class MongoProducerSettings(BaseModel):
+    enabled: bool = True
+    updates_damnit_sqlite: bool = False
+
+
+class FlowMonitorProducersSettings(BaseModel):
+    """Per-producer-box settings: what each flow box offers, not its selection.
+
+    The frontend's flow monitor renders one box per producer and lets an
+    operator choose among the options listed here (e.g. which Shotcounter
+    TKEYs or Watchdog watcher rules are available at all); the operator's
+    current choice among them stays client-side UI state, not config.
+    """
+
+    shotcounter: ShotcounterProducerSettings = Field(
+        default_factory=ShotcounterProducerSettings
+    )
+    laser_data: LaserDataProducerSettings = Field(
+        default_factory=LaserDataProducerSettings
+    )
+    watchdog: WatchdogProducerSettings = Field(
+        default_factory=WatchdogProducerSettings
+    )
+    mongo: MongoProducerSettings = Field(default_factory=MongoProducerSettings)
+
+
 class FlowMonitorSettings(BaseModel):
     receivers: FlowMonitorReceiversSettings = Field(
         default_factory=FlowMonitorReceiversSettings
+    )
+    producers: FlowMonitorProducersSettings = Field(
+        default_factory=FlowMonitorProducersSettings
     )
 
 

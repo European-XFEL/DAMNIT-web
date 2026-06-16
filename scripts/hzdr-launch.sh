@@ -127,6 +127,31 @@ else:
 PY
 }
 
+# Dump one nested object (e.g. flowMonitor.producers.shotcounter) as compact
+# JSON, or nothing if missing, so it can be forwarded as one
+# DW_API_FLOW_MONITOR__PRODUCERS__<NAME> env var. pydantic-settings decodes
+# JSON for any complex field at any nesting level, so the API accepts this
+# the same way it accepts a single boolean leaf env var.
+config_get_json() {
+  local key="$1"
+  "$PYTHON_BIN" - "$SELECTED_CONFIG_PATH" "$key" <<'PY'
+import json
+import sys
+
+path, key = sys.argv[1:3]
+with open(path, encoding="utf-8") as handle:
+    value = json.load(handle)
+for part in key.split("."):
+    if isinstance(value, dict):
+        value = value.get(part)
+    else:
+        value = None
+        break
+if value is not None:
+    print(json.dumps(value))
+PY
+}
+
 find_related_repository() {
   local repo_name="$1"
   local current="$REPO_ROOT"
@@ -450,6 +475,20 @@ export DW_API_DEPLOYMENT__TERMINOLOGY__USES_MYMDC=false
 export DW_API_FLOW_MONITOR__RECEIVERS__LASER_DATA="$(config_get flowMonitor.receivers.laserData true)"
 export DW_API_FLOW_MONITOR__RECEIVERS__WATCHDOG="$(config_get flowMonitor.receivers.watchdog true)"
 export DW_API_FLOW_MONITOR__RECEIVERS__MONGO="$(config_get flowMonitor.receivers.mongo true)"
+# Per-producer-box settings (Shotcounter TKEYs, Watchdog watcher rules, Mongo
+# sqlite sync, ...) come from this launch config file's flowMonitor.producers
+# section. Each is forwarded as one JSON env var, matching how the API
+# already accepts DW_API_*__... settings - so the frontend's Flow Monitor
+# renders whatever is configured here instead of a hard-coded option list.
+# Producers omitted from the config keep the API's built-in defaults.
+FLOW_MONITOR_SHOTCOUNTER_JSON="$(config_get_json flowMonitor.producers.shotcounter)"
+[[ -n "$FLOW_MONITOR_SHOTCOUNTER_JSON" ]] && export DW_API_FLOW_MONITOR__PRODUCERS__SHOTCOUNTER="$FLOW_MONITOR_SHOTCOUNTER_JSON"
+FLOW_MONITOR_LASER_DATA_JSON="$(config_get_json flowMonitor.producers.laserData)"
+[[ -n "$FLOW_MONITOR_LASER_DATA_JSON" ]] && export DW_API_FLOW_MONITOR__PRODUCERS__LASER_DATA="$FLOW_MONITOR_LASER_DATA_JSON"
+FLOW_MONITOR_WATCHDOG_JSON="$(config_get_json flowMonitor.producers.watchdog)"
+[[ -n "$FLOW_MONITOR_WATCHDOG_JSON" ]] && export DW_API_FLOW_MONITOR__PRODUCERS__WATCHDOG="$FLOW_MONITOR_WATCHDOG_JSON"
+FLOW_MONITOR_MONGO_JSON="$(config_get_json flowMonitor.producers.mongo)"
+[[ -n "$FLOW_MONITOR_MONGO_JSON" ]] && export DW_API_FLOW_MONITOR__PRODUCERS__MONGO="$FLOW_MONITOR_MONGO_JSON"
 export DW_API_UVICORN__HOST=127.0.0.1
 export DW_API_UVICORN__PORT="$API_PORT"
 export DW_API_UVICORN__RELOAD=true

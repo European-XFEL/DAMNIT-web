@@ -53,6 +53,34 @@
       "laserData": true,
       "watchdog": true,
       "mongo": true
+    },
+    "producers": {
+      "shotcounter": {
+        "enabled": true,
+        "tkeys": [
+          { "value": "draco01", "label": "Draco01", "description": "primary shot notice TKEY" },
+          { "value": "draco02", "label": "Draco02", "description": "LLI watcher fanout TKEY" },
+          { "value": "draco04", "label": "Draco04", "description": "LLI watcher fanout TKEY" },
+          { "value": "draco07", "label": "Draco07", "description": "PNG original attachment TKEY" },
+          { "value": "draco08", "label": "Draco08", "description": "LLI watcher fanout TKEY" }
+        ]
+      },
+      "laserData": {
+        "enabled": true
+      },
+      "watchdog": {
+        "enabled": true,
+        "watchers": [
+          { "value": "png-originals", "label": "PNG originals", "description": "set1_*_original.png with Draco01/Draco07 ZMQ attachment" },
+          { "value": "dummy-analysis", "label": "Dummy analysis", "description": "script parser rule for generic dummy analysis files" },
+          { "value": "lli-parser", "label": "LLI parser", "description": "LLI ToolResult CSV parser with Draco02/04/08 topics" },
+          { "value": "tps-quick", "label": "TPS quick", "description": "simple TPS parser for particle spectrum text output" }
+        ]
+      },
+      "mongo": {
+        "enabled": true,
+        "updates_damnit_sqlite": false
+      }
     }
   }
 }

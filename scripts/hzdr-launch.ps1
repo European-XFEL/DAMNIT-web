@@ -441,6 +441,26 @@ $env:DW_API_FLOW_MONITOR__RECEIVERS__WATCHDOG = [Convert]::ToString([bool](Get-C
 
 $env:DW_API_FLOW_MONITOR__RECEIVERS__MONGO = [Convert]::ToString([bool](Get-ConfigValue $config.flowMonitor.receivers.mongo $true)).ToLowerInvariant()
 
+# Per-producer-box settings (Shotcounter TKEYs, Watchdog watcher rules, Mongo
+# sqlite sync, ...) come from this launch config file's flowMonitor.producers
+# section. Each is forwarded as one JSON env var, matching how the API
+# already accepts DW_API_*__... settings - so the frontend's Flow Monitor
+# renders whatever is configured here instead of a hard-coded option list.
+# Producers omitted from the config keep the API's built-in defaults.
+$producers = $config.flowMonitor.producers
+if ($producers.shotcounter) {
+    $env:DW_API_FLOW_MONITOR__PRODUCERS__SHOTCOUNTER = ($producers.shotcounter | ConvertTo-Json -Depth 10 -Compress)
+}
+if ($producers.laserData) {
+    $env:DW_API_FLOW_MONITOR__PRODUCERS__LASER_DATA = ($producers.laserData | ConvertTo-Json -Depth 10 -Compress)
+}
+if ($producers.watchdog) {
+    $env:DW_API_FLOW_MONITOR__PRODUCERS__WATCHDOG = ($producers.watchdog | ConvertTo-Json -Depth 10 -Compress)
+}
+if ($producers.mongo) {
+    $env:DW_API_FLOW_MONITOR__PRODUCERS__MONGO = ($producers.mongo | ConvertTo-Json -Depth 10 -Compress)
+}
+
 Write-Step "Starting DAMNIT-web"
 $devScript = Join-Path $apiRoot "scripts\hzdr-dev.ps1"
 $devArguments = @(

@@ -93,6 +93,12 @@ const cellButtonStyle: CSSProperties = {
   cursor: 'pointer',
 }
 
+type FlowMonitorOption = {
+  value: string
+  label: string
+  description?: string
+}
+
 type RuntimeConfig = {
   flow_monitor?: {
     receivers: {
@@ -100,6 +106,12 @@ type RuntimeConfig = {
       watchdog: boolean
 
       mongo: boolean
+    }
+    producers: {
+      shotcounter: { enabled: boolean; tkeys: FlowMonitorOption[] }
+      laser_data: { enabled: boolean }
+      watchdog: { enabled: boolean; watchers: FlowMonitorOption[] }
+      mongo: { enabled: boolean; updates_damnit_sqlite: boolean }
     }
   }
   terminology: {
@@ -244,58 +256,41 @@ type FlowMonitorState = {
   hdf5Built: boolean
 }
 
-type WatchdogWatcherKey =
-  | 'png-originals'
-  | 'dummy-analysis'
-  | 'lli-parser'
-  | 'tps-quick'
+// Shotcounter TKEYs and Watchdog watcher rules are configured server-side
+// (DW_API_FLOW_MONITOR__PRODUCERS__... or the launcher's flowMonitor.producers
+// config) and reported through GET /config/runtime, so their value sets are
+// open-ended strings rather than fixed unions.
+type WatchdogWatcherKey = string
 
-type ShotcounterTKey = 'draco01' | 'draco02' | 'draco04' | 'draco07' | 'draco08'
+type ShotcounterTKey = string
 
-type LinkCollectionStatus = {
-  collection: string
-  status: 'matched' | 'candidate' | 'missing'
-  detail: string
+type HZDRMatchSummary = {
+  matched: number
+  ambiguous: number
+  unmatched: number
 }
 
-type LinkedShotRecord = {
-  source_key: string
-  source_title: string
-  shot_number: number
-  shot_id: string
-  hdf5_path: string | null
-  collections: LinkCollectionStatus[]
+type HZDRReviewEvent = {
+  event_id: string
+  experiment_id: string
+  source: string
+  kind: string
+  timestamp: string
+  transport?: string
+  payload_ref: Record<string, unknown>
+  metadata: Record<string, unknown>
+  match_status: string
+  match_quality?: string
+  candidate_shot_keys: string[]
+  acknowledged: boolean
+  acknowledged_at?: string
+  acknowledged_by?: string
+  acknowledged_note?: string
 }
 
-type LinkRecordsDraft = {
-  campaign_key: string | null
-  target_source_key: string | null
-  search: {
-    collections: string[]
-    shot_number: number | null
-    searched_sources: number
-  }
-  linked_records: LinkedShotRecord[]
-  output_targets: string[]
-  review_required: boolean
-  unresolved: string[]
-}
-
-type BuiltLinkRecordsPackage = LinkRecordsDraft & {
-  built_at: string
-  coherent_json: {
-    campaign_key: string | null
-    shots: LinkedShotRecord[]
-  }
-  hdf5_plan: {
-    source_count: number
-    row_count: number
-    mode: string
-  }
-  damnit_table_plan: {
-    columns: string[]
-    rows: number
-  }
+type HZDRReviewResponse = {
+  match_summary: HZDRMatchSummary
+  review_events: HZDRReviewEvent[]
 }
 
 type HZDRContextResults = {
@@ -369,11 +364,23 @@ type ContextBuilderFormState = {
   combineExpression?: string
 }
 
-const watchdogWatcherOptions: {
-  value: WatchdogWatcherKey
-  label: string
-  description: string
-}[] = [
+// Local fallback option lists, used until GET /config/runtime resolves (or if
+// an older API omits flow_monitor.producers). Mirrors the API's own built-in
+// defaults (api/src/damnit_api/shared/settings.py) so the page renders
+// something sensible for local testing even before runtime config loads.
+const defaultShotcounterTKeyOptions: FlowMonitorOption[] = [
+  { value: 'draco01', label: 'Draco01', description: 'primary shot notice TKEY' },
+  { value: 'draco02', label: 'Draco02', description: 'LLI watcher fanout TKEY' },
+  { value: 'draco04', label: 'Draco04', description: 'LLI watcher fanout TKEY' },
+  {
+    value: 'draco07',
+    label: 'Draco07',
+    description: 'PNG original attachment TKEY',
+  },
+  { value: 'draco08', label: 'Draco08', description: 'LLI watcher fanout TKEY' },
+]
+
+const defaultWatchdogWatcherOptions: FlowMonitorOption[] = [
   {
     value: 'png-originals',
     label: 'PNG originals',
@@ -393,38 +400,6 @@ const watchdogWatcherOptions: {
     value: 'tps-quick',
     label: 'TPS quick',
     description: 'simple TPS parser for particle spectrum text output',
-  },
-]
-
-const shotcounterTKeyOptions: {
-  value: ShotcounterTKey
-  label: string
-  description: string
-}[] = [
-  {
-    value: 'draco01',
-    label: 'Draco01',
-    description: 'primary shot notice TKEY',
-  },
-  {
-    value: 'draco02',
-    label: 'Draco02',
-    description: 'LLI watcher fanout TKEY',
-  },
-  {
-    value: 'draco04',
-    label: 'Draco04',
-    description: 'LLI watcher fanout TKEY',
-  },
-  {
-    value: 'draco07',
-    label: 'Draco07',
-    description: 'PNG original attachment TKEY',
-  },
-  {
-    value: 'draco08',
-    label: 'Draco08',
-    description: 'LLI watcher fanout TKEY',
   },
 ]
 
@@ -492,12 +467,19 @@ function HZDRFlowMonitorPage() {
     watchdog: true,
     mongo: true,
   })
+  const shotcounterTKeyOptions =
+    runtimeConfig?.flow_monitor?.producers.shotcounter.tkeys ??
+    defaultShotcounterTKeyOptions
+  const watchdogWatcherOptions =
+    runtimeConfig?.flow_monitor?.producers.watchdog.watchers ??
+    defaultWatchdogWatcherOptions
+  const mongoProducerConfig = runtimeConfig?.flow_monitor?.producers.mongo
   const [selectedWatchdogWatchers, setSelectedWatchdogWatchers] = useState<
     WatchdogWatcherKey[]
-  >(['png-originals', 'lli-parser'])
+  >(defaultWatchdogWatcherOptions.map((option) => option.value))
   const [selectedShotcounterTKeys, setSelectedShotcounterTKeys] = useState<
     ShotcounterTKey[]
-  >(['draco01', 'draco07'])
+  >(defaultShotcounterTKeyOptions.map((option) => option.value))
   const [flowState, setFlowState] = useState<FlowMonitorState>(
     emptyFlowMonitorState
   )
@@ -505,6 +487,7 @@ function HZDRFlowMonitorPage() {
     null
   )
   const receiverConfigLoaded = useRef(false)
+  const producerSelectionLoaded = useRef(false)
   const lastShotTotal = useRef<number | undefined>(undefined)
   const nextPacketId = useRef(1)
   const nextLogId = useRef(1)
@@ -521,6 +504,24 @@ function HZDRFlowMonitorPage() {
       mongo: runtimeReceivers.mongo,
     })
   }, [runtimeConfig?.flow_monitor?.receivers])
+
+  // Default the operator's selection to every configured option once the
+  // real lists arrive, so the page is immediately testable instead of
+  // starting empty. After this first sync, selection is purely UI state -
+  // an operator narrowing their choice should not get reset on the next poll.
+  useEffect(() => {
+    const producers = runtimeConfig?.flow_monitor?.producers
+    if (!producers || producerSelectionLoaded.current) {
+      return
+    }
+    producerSelectionLoaded.current = true
+    setSelectedShotcounterTKeys(
+      producers.shotcounter.tkeys.map((option) => option.value)
+    )
+    setSelectedWatchdogWatchers(
+      producers.watchdog.watchers.map((option) => option.value)
+    )
+  }, [runtimeConfig?.flow_monitor?.producers])
 
   const shotTotal = sources.reduce(
     (total, source) => total + source.shots.length,
@@ -899,6 +900,11 @@ function HZDRFlowMonitorPage() {
                   latestShotNumber={latestShotNumber}
                   nextShotNumber={nextShotNumber}
                   receiverConfig={receiverConfig}
+                  shotcounterTKeyOptions={shotcounterTKeyOptions}
+                  watchdogWatcherOptions={watchdogWatcherOptions}
+                  mongoUpdatesDamnitSqlite={
+                    mongoProducerConfig?.updates_damnit_sqlite ?? false
+                  }
                   selectedWatchdogWatchers={selectedWatchdogWatchers}
                   selectedShotcounterTKeys={selectedShotcounterTKeys}
                   flowState={flowState}
@@ -1108,6 +1114,9 @@ function FlowDiagram({
   nextShotNumber,
   receiverConfig,
 
+  shotcounterTKeyOptions,
+  watchdogWatcherOptions,
+  mongoUpdatesDamnitSqlite,
   selectedWatchdogWatchers,
   selectedShotcounterTKeys,
   flowState,
@@ -1128,6 +1137,9 @@ function FlowDiagram({
   nextShotNumber: number
   receiverConfig: FlowReceiverConfig
 
+  shotcounterTKeyOptions: FlowMonitorOption[]
+  watchdogWatcherOptions: FlowMonitorOption[]
+  mongoUpdatesDamnitSqlite: boolean
   selectedWatchdogWatchers: WatchdogWatcherKey[]
   selectedShotcounterTKeys: ShotcounterTKey[]
   flowState: FlowMonitorState
@@ -1275,7 +1287,7 @@ function FlowDiagram({
         >
           <ProgramNode
             title="Shotcounter"
-            subtitle="ZMQ shot notice, Kafka fanout"
+            subtitle={`${selectedShotcounterTKeys.length} TKEY(s) selected; ZMQ shot notice, Kafka fanout`}
             active={activeShotcounter}
             icon={<IconServer size={24} />}
             color="grape"
@@ -1388,7 +1400,11 @@ function FlowDiagram({
 
           <ProgramNode
             title="MongoDB shotsheet"
-            subtitle="shot metadata source"
+            subtitle={
+              mongoUpdatesDamnitSqlite
+                ? 'shot metadata source; updates related damnit-sqlite'
+                : 'shot metadata source'
+            }
             active={activeMongo}
             buffered={flowState.mongoPending}
             icon={<IconDatabase size={24} />}
@@ -1924,58 +1940,105 @@ function HZDRDocsPage() {
 
 function LinkExistingShotRecordsPage() {
   const [sources, setSources] = useState<HZDRSource[]>([])
-  const [campaignKey, setCampaignKey] = useState('')
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(
     null
   )
-  const [shotNumberQuery, setShotNumberQuery] = useState('')
-  const [collections, setCollections] = useState<string[]>([
-    'shots',
-    'watchdog',
-  ])
-  const [searchStatus, setSearchStatus] = useState(
-    'Search all visible sources, or choose an optional source after narrowing the campaign.'
-  )
-  const [linkDraft, setLinkDraft] = useState<LinkRecordsDraft>()
-  const [builtPackage, setBuiltPackage] = useState<BuiltLinkRecordsPackage>()
+  const [review, setReview] = useState<HZDRReviewResponse>()
+  const [loadError, setLoadError] = useState<string>()
+  const [actionError, setActionError] = useState<string>()
+  const [actionStatus, setActionStatus] = useState<string>()
+  const [candidateChoices, setCandidateChoices] = useState<
+    Record<string, string | null>
+  >({})
+  const [dismissNotes, setDismissNotes] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch('/metadata/hzdr/sources')
-      .then((response) => (response.ok ? response.json() : []))
-      .then(setSources)
+      .then((response) => requireJson<HZDRSource[]>(response))
+      .then((loadedSources) => {
+        setSources(loadedSources)
+        setSelectedSourceKey((currentKey) => {
+          if (
+            currentKey &&
+            loadedSources.some((source) => source.key === currentKey)
+          ) {
+            return currentKey
+          }
+          return loadedSources[0]?.key ?? null
+        })
+      })
       .catch(() => setSources([]))
   }, [])
 
-  const draftInput = {
-    sources,
-    campaignKey,
-    selectedSourceKey,
-    collections,
-    shotNumberQuery,
-  }
-  const emptyDraft = buildLinkRecordsDraft({
-    ...draftInput,
-    sources: [],
-  })
-  const visibleDraft = builtPackage ?? linkDraft ?? emptyDraft
+  const loadReview = useCallback(() => {
+    if (!selectedSourceKey) {
+      setReview(undefined)
+      return
+    }
+    setLoadError(undefined)
+    fetch(`/metadata/hzdr/sources/${selectedSourceKey}/review`)
+      .then((response) => requireJson<HZDRReviewResponse>(response))
+      .then(setReview)
+      .catch(() => {
+        setReview(undefined)
+        setLoadError('Could not load review events for this source.')
+      })
+  }, [selectedSourceKey])
 
-  const searchExistingRecords = () => {
-    const nextDraft = buildLinkRecordsDraft(draftInput)
-    setLinkDraft(nextDraft)
-    setBuiltPackage(undefined)
-    setSearchStatus(
-      `${nextDraft.linked_records.length} candidate shot record(s) from ${nextDraft.search.searched_sources} source(s).`
+  useEffect(() => {
+    loadReview()
+  }, [loadReview])
+
+  const ambiguousEvents = (review?.review_events ?? []).filter(
+    (event) => event.match_status === 'ambiguous'
+  )
+  const unmatchedEvents = (review?.review_events ?? []).filter(
+    (event) => event.match_status === 'unmatched'
+  )
+
+  const confirmEvent = (event: HZDRReviewEvent) => {
+    const shotKey = candidateChoices[event.event_id]
+    if (!selectedSourceKey || !shotKey) {
+      return
+    }
+    setActionError(undefined)
+    fetch(
+      `/metadata/hzdr/sources/${selectedSourceKey}/review/${event.event_id}/confirm`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shot_key: shotKey }),
+      }
     )
+      .then((response) => requireJson<HZDRSource>(response))
+      .then(() => {
+        setActionStatus(`Confirmed event ${event.event_id} to ${shotKey}.`)
+        loadReview()
+      })
+      .catch(() => setActionError(`Could not confirm event ${event.event_id}.`))
   }
 
-  const buildReviewPackage = () => {
-    const nextDraft = linkDraft ?? buildLinkRecordsDraft(draftInput)
-    const nextPackage = buildLinkRecordsReviewPackage(nextDraft)
-    setLinkDraft(nextDraft)
-    setBuiltPackage(nextPackage)
-    setSearchStatus(
-      `Built review package with ${nextPackage.linked_records.length} linked shot record(s).`
+  const dismissEvent = (event: HZDRReviewEvent) => {
+    if (!selectedSourceKey) {
+      return
+    }
+    setActionError(undefined)
+    fetch(
+      `/metadata/hzdr/sources/${selectedSourceKey}/review/${event.event_id}/dismiss`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          note: dismissNotes[event.event_id]?.trim() || undefined,
+        }),
+      }
     )
+      .then((response) => requireJson<HZDRSource>(response))
+      .then(() => {
+        setActionStatus(`Acknowledged event ${event.event_id}.`)
+        loadReview()
+      })
+      .catch(() => setActionError(`Could not dismiss event ${event.event_id}.`))
   }
 
   return (
@@ -1985,295 +2048,183 @@ function LinkExistingShotRecordsPage() {
         <Container size="lg" py="xl">
           <Stack gap="lg">
             <Stack gap={4}>
-              <Title order={2}>Link Existing Shot Records</Title>
+              <Title order={2}>Confirm Matches</Title>
               <Text c="dimmed">
-                Search existing MongoDB shot and watchdog records for a campaign
-                key, then prepare a coherent JSON/HDF5/DAMNIT-table handoff for
-                review.
+                Review ambiguous and unmatched HZDR events for one source, and
+                confirm or acknowledge them.
+              </Text>
+              <Text size="sm" c="orange">
+                Review actions are saved to the local catalog only and may be
+                reset if the HZDR builder is rerun.
               </Text>
             </Stack>
-            <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-              <Card withBorder radius={4} p="md">
-                <Stack gap="xs">
-                  <Title order={4}>1. Search</Title>
-                  <Text size="sm">
-                    Choose the campaign key and collections that should be
-                    inspected for existing shot records.
-                  </Text>
-                </Stack>
-              </Card>
-              <Card withBorder radius={4} p="md">
-                <Stack gap="xs">
-                  <Title order={4}>2. Link</Title>
-                  <Text size="sm">
-                    Match shotcounter, Watchdog, and shotsheet records into one
-                    source-level package view.
-                  </Text>
-                </Stack>
-              </Card>
-              <Card withBorder radius={4} p="md">
-                <Stack gap="xs">
-                  <Title order={4}>3. Review</Title>
-                  <Text size="sm">
-                    Let the user fix small mismatches before writing coherent
-                    JSON, HDF5, and DAMNIT table records.
-                  </Text>
-                </Stack>
-              </Card>
-            </SimpleGrid>
-            <Grid gutter="md">
-              <Grid.Col span={{ base: 12, md: 5 }}>
+            <Select
+              label="Source"
+              value={selectedSourceKey}
+              onChange={setSelectedSourceKey}
+              data={sources.map((source) => ({
+                value: source.key,
+                label: `${source.title} (${source.shots.length})`,
+              }))}
+              placeholder="Choose a source"
+              searchable
+            />
+            {loadError ? (
+              <Text size="sm" c="red">
+                {loadError}
+              </Text>
+            ) : null}
+            {actionError ? (
+              <Text size="sm" c="red">
+                {actionError}
+              </Text>
+            ) : null}
+            {actionStatus ? (
+              <Text size="sm" c="teal">
+                {actionStatus}
+              </Text>
+            ) : null}
+            {review ? (
+              <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
                 <Card withBorder radius={4} p="md">
-                  <Stack gap="sm">
-                    <Title order={4}>Search setup</Title>
-                    <TextInput
-                      label="Campaign key"
-                      value={campaignKey}
-                      onChange={(event) =>
-                        setCampaignKey(event.currentTarget.value)
-                      }
-                      placeholder="exp-2026-05-draco"
-                    />
-                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-                      <TextInput
-                        label="Shot number (optional)"
-                        value={shotNumberQuery}
-                        onChange={(event) =>
-                          setShotNumberQuery(event.currentTarget.value)
-                        }
-                        placeholder="123"
-                      />
-                      <Select
-                        label="Limit to source (optional)"
-                        value={selectedSourceKey}
-                        onChange={setSelectedSourceKey}
-                        data={sources.map((source) => ({
-                          value: source.key,
-                          label: `${source.title} (${source.shots.length})`,
-                        }))}
-                        placeholder="Search all visible sources"
-                        searchable
-                        clearable
-                      />
-                    </SimpleGrid>
-                    <Checkbox.Group
-                      label="Collections to inspect"
-                      value={collections}
-                      onChange={setCollections}
-                    >
-                      <Stack gap="xs" mt="xs">
-                        <Checkbox value="shots" label="MongoDB shotsheet" />
-                        <Checkbox value="watchdog" label="PLANET Watchdog" />
-                        <Checkbox value="shotcounter" label="Shotcounter" />
-                      </Stack>
-                    </Checkbox.Group>
-                    <Paper
-                      withBorder
-                      radius={4}
-                      p="sm"
-                      bg="var(--mantine-color-gray-0)"
-                    >
-                      <Text size="sm" c="dimmed">
-                        {searchStatus}
-                      </Text>
-                    </Paper>
-                  </Stack>
-                </Card>
-              </Grid.Col>
-              <Grid.Col span={{ base: 12, md: 7 }}>
-                <Card withBorder radius={4} p="md">
-                  <Stack gap="sm">
-                    <Title order={4}>Link draft</Title>
+                  <Stack gap={2}>
                     <Text size="sm" c="dimmed">
-                      Search and build locally from the HZDR sources currently
-                      visible to DAMNIT-web. The backend agent can replace this
-                      with direct MongoDB collection reads later.
+                      Matched
                     </Text>
-                    <Code block>{JSON.stringify(visibleDraft, null, 2)}</Code>
-                    <Group>
-                      <Button onClick={searchExistingRecords} variant="light">
-                        Search visible records
-                      </Button>
-                      <Button onClick={buildReviewPackage}>
-                        Build review package
-                      </Button>
-                    </Group>
+                    <Title order={3}>{review.match_summary.matched}</Title>
                   </Stack>
                 </Card>
-              </Grid.Col>
-            </Grid>
+                <Card withBorder radius={4} p="md">
+                  <Stack gap={2}>
+                    <Text size="sm" c="dimmed">
+                      Ambiguous
+                    </Text>
+                    <Title order={3}>{review.match_summary.ambiguous}</Title>
+                  </Stack>
+                </Card>
+                <Card withBorder radius={4} p="md">
+                  <Stack gap={2}>
+                    <Text size="sm" c="dimmed">
+                      Unmatched
+                    </Text>
+                    <Title order={3}>{review.match_summary.unmatched}</Title>
+                  </Stack>
+                </Card>
+              </SimpleGrid>
+            ) : null}
+
+            <Stack gap="sm">
+              <Title order={4}>Ambiguous events</Title>
+              {ambiguousEvents.length === 0 ? (
+                <Text size="sm" c="dimmed">
+                  No ambiguous events awaiting review.
+                </Text>
+              ) : (
+                ambiguousEvents.map((event) => (
+                  <Card key={event.event_id} withBorder radius={4} p="md">
+                    <Stack gap="xs">
+                      <Group justify="space-between" align="flex-start">
+                        <Stack gap={2}>
+                          <Text fw={700}>{event.event_id}</Text>
+                          <Text size="xs" c="dimmed">
+                            {event.source} / {event.kind}
+                            {event.transport ? ` / ${event.transport}` : ''}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {event.timestamp}
+                          </Text>
+                        </Stack>
+                        <Badge variant="light">{event.match_quality ?? '-'}</Badge>
+                      </Group>
+                      <Group align="flex-end" gap="sm">
+                        <Select
+                          label="Candidate shot"
+                          value={candidateChoices[event.event_id] ?? null}
+                          onChange={(value) =>
+                            setCandidateChoices((current) => ({
+                              ...current,
+                              [event.event_id]: value,
+                            }))
+                          }
+                          data={event.candidate_shot_keys.map((shotKey) => ({
+                            value: shotKey,
+                            label: shotKey,
+                          }))}
+                          placeholder="Choose a candidate shot key"
+                          style={{ flex: '1 1 240px' }}
+                        />
+                        <Button
+                          size="xs"
+                          disabled={!candidateChoices[event.event_id]}
+                          onClick={() => confirmEvent(event)}
+                        >
+                          Confirm
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Card>
+                ))
+              )}
+            </Stack>
+
+            <Stack gap="sm">
+              <Title order={4}>Unmatched events</Title>
+              {unmatchedEvents.length === 0 ? (
+                <Text size="sm" c="dimmed">
+                  No unmatched events awaiting review.
+                </Text>
+              ) : (
+                unmatchedEvents.map((event) => (
+                  <Card key={event.event_id} withBorder radius={4} p="md">
+                    <Stack gap="xs">
+                      <Group justify="space-between" align="flex-start">
+                        <Stack gap={2}>
+                          <Text fw={700}>{event.event_id}</Text>
+                          <Text size="xs" c="dimmed">
+                            {event.source} / {event.kind}
+                            {event.transport ? ` / ${event.transport}` : ''}
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            {event.timestamp}
+                          </Text>
+                        </Stack>
+                        {event.acknowledged ? (
+                          <Badge color="teal" variant="light">
+                            Acknowledged
+                          </Badge>
+                        ) : null}
+                      </Group>
+                      <Group align="flex-end" gap="sm">
+                        <TextInput
+                          label="Note (optional)"
+                          value={dismissNotes[event.event_id] ?? ''}
+                          onChange={(changeEvent) =>
+                            setDismissNotes((current) => ({
+                              ...current,
+                              [event.event_id]: changeEvent.currentTarget.value,
+                            }))
+                          }
+                          style={{ flex: '1 1 240px' }}
+                        />
+                        <Button
+                          size="xs"
+                          variant="light"
+                          disabled={event.acknowledged}
+                          onClick={() => dismissEvent(event)}
+                        >
+                          Acknowledge
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Card>
+                ))
+              )}
+            </Stack>
           </Stack>
         </Container>
       }
     />
   )
-}
-
-function buildLinkRecordsDraft({
-  sources,
-  campaignKey,
-  selectedSourceKey,
-  collections,
-  shotNumberQuery,
-}: {
-  sources: HZDRSource[]
-  campaignKey: string
-  selectedSourceKey: string | null
-  collections: string[]
-  shotNumberQuery: string
-}): LinkRecordsDraft {
-  const normalizedCampaignKey = campaignKey.trim() || null
-  const shotNumber = parseShotNumberFilter(shotNumberQuery)
-  const candidateSources = sources.filter((source) => {
-    if (selectedSourceKey && source.key !== selectedSourceKey) {
-      return false
-    }
-    return sourceMatchesCampaign(source, normalizedCampaignKey)
-  })
-  const linkedRecords = candidateSources.flatMap((source) =>
-    source.shots
-      .filter((shot) => shotNumber === null || shot.shot_number === shotNumber)
-      .map((shot) => ({
-        source_key: source.key,
-        source_title: source.title,
-        shot_number: shot.shot_number,
-        shot_id:
-          String(shot.metadata.shot_id ?? '') ||
-          `shot-${String(shot.shot_number).padStart(6, '0')}`,
-        hdf5_path: shot.hdf5_path ?? null,
-        collections: collections.map((collection) =>
-          collectionStatusForShot(collection, shot)
-        ),
-      }))
-  )
-
-  return {
-    campaign_key: normalizedCampaignKey,
-    target_source_key: selectedSourceKey,
-    search: {
-      collections,
-      shot_number: shotNumber,
-      searched_sources: candidateSources.length,
-    },
-    linked_records: linkedRecords,
-    output_targets: ['coherent-json', 'combined-hdf5', 'damnit-table'],
-    review_required: true,
-    unresolved: linkedRecords.length
-      ? linkedRecords.flatMap((record) =>
-          record.collections
-            .filter((collection) => collection.status === 'missing')
-            .map(
-              (collection) =>
-                `Shot ${record.shot_number}: ${collection.collection} not visible in loaded metadata`
-            )
-        )
-      : ['No matching records are visible from the current HZDR sources.'],
-  }
-}
-
-function buildLinkRecordsReviewPackage(
-  draft: LinkRecordsDraft
-): BuiltLinkRecordsPackage {
-  const sourceCount = new Set(
-    draft.linked_records.map((record) => record.source_key)
-  ).size
-
-  return {
-    ...draft,
-    built_at: new Date().toISOString(),
-    coherent_json: {
-      campaign_key: draft.campaign_key,
-      shots: draft.linked_records,
-    },
-    hdf5_plan: {
-      source_count: sourceCount,
-      row_count: draft.linked_records.length,
-      mode: 'review-before-write',
-    },
-    damnit_table_plan: {
-      columns: ['shot_number', 'shot_id', ...draft.search.collections],
-      rows: draft.linked_records.length,
-    },
-  }
-}
-
-function parseShotNumberFilter(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) {
-    return null
-  }
-  const parsed = Number(trimmed)
-  return Number.isInteger(parsed) ? parsed : null
-}
-
-function sourceMatchesCampaign(source: HZDRSource, campaignKey: string | null) {
-  if (!campaignKey) {
-    return true
-  }
-  return collectSearchText([source.key, source.title, source.metadata])
-    .toLowerCase()
-    .includes(campaignKey.toLowerCase())
-}
-
-function collectSearchText(values: unknown[]): string {
-  const parts: string[] = []
-  const visit = (value: unknown) => {
-    if (value === null || value === undefined) {
-      return
-    }
-    if (['string', 'number', 'boolean'].includes(typeof value)) {
-      parts.push(String(value))
-      return
-    }
-    if (Array.isArray(value)) {
-      value.forEach(visit)
-      return
-    }
-    if (typeof value === 'object') {
-      Object.values(value).forEach(visit)
-    }
-  }
-  values.forEach(visit)
-  return parts.join(' ')
-}
-
-function collectionStatusForShot(
-  collection: string,
-  shot: HZDRShot
-): LinkCollectionStatus {
-  if (collection === 'shots') {
-    return {
-      collection,
-      status: 'matched',
-      detail: 'loaded shot row',
-    }
-  }
-  if (collection === 'watchdog') {
-    return shot.metadata.watchdog_status
-      ? {
-          collection,
-          status: 'matched',
-          detail: String(shot.metadata.watchdog_status),
-        }
-      : {
-          collection,
-          status: 'missing',
-          detail: 'no watchdog fields in loaded metadata',
-        }
-  }
-
-  if (collection === 'shotcounter') {
-    return {
-      collection,
-      status: shot.metadata.shot_id ? 'matched' : 'candidate',
-      detail: String(shot.metadata.shot_id ?? 'shot number available'),
-    }
-  }
-  return {
-    collection,
-    status: 'candidate',
-    detail: 'collection selected for agent lookup',
-  }
 }
 
 function HZDRShotPage() {

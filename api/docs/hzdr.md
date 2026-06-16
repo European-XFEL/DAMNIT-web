@@ -99,6 +99,15 @@ Important sections:
   topic map for enhancer sources.
 - `connections.asapo`: local broker URL/spool settings.
 - `connections.mongo`: MongoDB URI, database, and source collection.
+- `flowMonitor.receivers`: which producer boxes the flow monitor accepts
+  traffic from (`laserData`, `watchdog`, `mongo`).
+- `flowMonitor.producers`: per-producer-box settings rendered by the flow
+  monitor instead of hard-coded frontend lists - Shotcounter's selectable
+  `tkeys`, Watchdog's selectable `watchers`, and Mongo's
+  `updatesDamnitSqlite` toggle. Edit this file to add/remove options; the API
+  reads it directly via `DW_API_FLOW_MONITOR__CONFIG_FILE` (set by the
+  launcher) and the frontend renders whatever it reports from
+  `GET /config/runtime`.
 
 The launcher generates:
 
