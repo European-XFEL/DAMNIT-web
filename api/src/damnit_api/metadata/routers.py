@@ -201,7 +201,8 @@ async def confirm_hzdr_review_event(
     if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
         raise HTTPException(
             status_code=400,
-            detail="Confirming matches requires local metadata provider and sources_file.",
+            detail="Confirming matches requires local metadata provider and "
+            "sources_file.",
         )
     return confirm_local_review_event(
         settings.metadata.sources_file,
@@ -224,7 +225,8 @@ async def dismiss_hzdr_review_event(
     if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
         raise HTTPException(
             status_code=400,
-            detail="Dismissing review events requires local metadata provider and sources_file.",
+            detail="Dismissing review events requires local metadata provider "
+            "and sources_file.",
         )
     return dismiss_local_review_event(
         settings.metadata.sources_file,

@@ -1218,8 +1218,7 @@ def _write_source_events(entry: h5py.Group, events: list[dict[str, Any]]) -> Non
             for event in events
         ],
         "candidate_shot_keys_json": [
-            json.dumps(event.get("candidate_shot_keys") or [])
-            for event in events
+            json.dumps(event.get("candidate_shot_keys") or []) for event in events
         ],
     }
     for name, values in columns.items():

@@ -180,28 +180,6 @@ flows correctly into both outputs now.
   Kafka envelope is forward-looking until DAMNIT-web-hzdr's durable spool
   (§2.6) actually consumes Kafka directly.
 
-#### Original assessment of `draco-shotcounter` (superseded, kept for context)
-
-The roadmap is honest that this is "still outside the integration
-workspace," but it's worth stating plainly: **`draco-shotcounter` is not that
-publisher and should not be assumed to become it by incremental patching.**
-
-- It's a single-device ADC threshold monitor (`Draco_ShotCounter.py`), not a
-  DRACO+TANGO bridge. There is no TANGO code in the repo at all.
-- It already publishes to Kafka, but with a static `"processed_message"` key
-  (`Draco_ShotCounter.py:91`) instead of `<experiment_id>:<channel_id>`, a new
-  producer instantiated per event rather than long-lived (`:834`), and a
-  payload (`:801-816`) with `Campaign`/`Nickname`/`10Hz_counter` but none of
-  `schema_version`, `event_id`, `experiment_id`, or `trigger_role`.
-- Retrofitting all of the roadmap's bullets onto this repo would change its
-  scope from "one device's threshold relay" to "the canonical experiment
-  trigger bus," which is a different piece of software with different
-  failure-mode requirements (long-lived connections, retry-with-same-id,
-  ordering guarantees).
-
-This is now moot: `shotcounter` is the real TANGO successor and the branch
-above addresses it directly, so no further decision about `draco-shotcounter`'s
-scope is needed.
 
 ### 2.6 `GitHub/DAMNIT-web-hzdr` (this repo)
 
@@ -238,13 +216,8 @@ scope is needed.
   legitimate, valuable proof that the *reconciliation logic* (matching rules,
   shot-key scheme, NeXus layout) works — it's just not evidence that the
   *production pipeline* (ingestion, locking, atomic publish) exists, and the
-  handoff/testing docs should be clearer that it's a model/logic test, not a
-  system test.
-- Stale doc pointer: [handoff.md](handoff.md) refers to "Draft patches in
-  `docs/patches`" — that directory does not exist in this repo (confirmed via
-  git history: it was never committed). Either it lives somewhere else and
-  the path is wrong, or the note is leftover from an earlier draft and should
-  be deleted.
+  testing docs should be clearer that it's a model/logic test, not a system 
+  test.
 
 ## 3. Cross-Cutting Pattern
 
@@ -479,8 +452,6 @@ that `shotcounter` (2.5) is now real, owned, branched, and verified.
 
 ## 6. Documentation Hygiene Notes
 
-- [handoff.md](handoff.md)'s reference to `docs/patches` should be removed or
-  corrected — the directory isn't in this repo.
 - Several roadmap "still needed" bullets (labfrog's Mongo ID/versioning;
   this repo's offline integration test being held up as evidence of pipeline
   readiness) should be reworded so a future reader doesn't need to re-derive,
@@ -493,8 +464,7 @@ that `shotcounter` (2.5) is now real, owned, branched, and verified.
 Decision: stick with **Option 1** from Section 5 item 3 (matcher stays
 authoritative; no labfrog-sqlite-tools-repo or shared-TANGO-device work yet).
 This section tracks verifying it and adding a real operator review UI on top.
-**Nothing below is committed yet** — `git status` in this repo still shows
-all of it as uncommitted working-tree changes.
+**Committed up to this point**.
 
 ### Done and verified (all tests passing: `cd api && uv run pytest` → 115
 passed, 1 skipped, no regressions)

@@ -37,7 +37,7 @@ def create_app():  # noqa: C901
             for bs in bootstraps:
                 tg.create_task(bs(settings))
 
-        if settings.is_local:
+        if settings.is_local and settings.auth is None:
             app.router.include_router(auth.noauth_router)
         else:
             app.router.include_router(auth.router)

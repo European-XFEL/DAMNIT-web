@@ -18,7 +18,9 @@ class HZDRSource(BaseModel):
     metadata: dict = Field(default_factory=dict)
     shots: list["HZDRShot"] = Field(default_factory=list)
     review_events: list["HZDRReviewEvent"] = Field(default_factory=list)
-    match_summary: "HZDRMatchSummary" = Field(default_factory=lambda: HZDRMatchSummary())
+    match_summary: "HZDRMatchSummary" = Field(
+        default_factory=lambda: HZDRMatchSummary()
+    )
 
 
 class HZDRMatchSummary(BaseModel):

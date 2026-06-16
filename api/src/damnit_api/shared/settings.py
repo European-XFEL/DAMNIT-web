@@ -169,7 +169,11 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _apply_local_mode(self):
         if self.is_local:
-            self.auth = None
+            # Upstream/local DAMNIT behavior: if no auth config is provided,
+            # stay in auth-disabled local mode.
+            #
+            # HZDR/local behavior: if auth config *is* provided, preserve it so
+            # LDAP/debug-session routes and runtime config still work.
             if self.session_secret is None:
                 self.session_secret = SecretStr("dev-secret")
         elif self.auth is None:
