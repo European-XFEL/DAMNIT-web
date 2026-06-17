@@ -94,7 +94,7 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
                 "timestamp": "2025-01-16T08:00:01Z",
             },
             "analysis": {"data": {"shot": 1, "energy": 8.2}},
-            "_kafka": {"topic": "planet-watchdog-events", "offset": 42},
+            "_kafka": {"topic": "planet-watchdog-events", "partition": 0, "offset": 42},
         },
     )
     write_json(
@@ -189,6 +189,14 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
     assert source.match_summary.unmatched == 0
     assert source.review_events == []
 
+    # planet-watchdog payload_ref must carry topic/partition/offset from _kafka
+    watchdog_event_obj = next(
+        e for e in source.shots[1].events if e.source == "PLANET-Watchdog"
+    )
+    assert watchdog_event_obj.payload_ref.topic == "planet-watchdog-events"
+    assert watchdog_event_obj.payload_ref.partition == 0
+    assert watchdog_event_obj.payload_ref.offset == 42
+
     camera_product = next(
         product
         for product in source.shots[1].data_products
@@ -256,6 +264,34 @@ def build_args(
         match_tolerance_s=120.0,
         campaign_timezone="Europe/Berlin",
     )
+
+
+def write_trigger_event_v1(
+    path: Path,
+    *,
+    event_id: str,
+    shot_number: int | None,
+    timestamp: str,
+    trigger_role: str = "pump",
+) -> None:
+    """Write a flat hzdr-event-v1 trigger envelope as shotcounter's
+    Kafka branch emits."""
+    event: dict = {
+        "schema_version": "hzdr-event-v1",
+        "event_id": event_id,
+        "experiment_id": EXPERIMENT_ID,
+        "source": "DRACO-Trigger",
+        "kind": "draco.trigger",
+        "trigger_role": trigger_role,
+        "timestamp": timestamp,
+        "transport": "kafka",
+        "payload_ref": {"channel_id": "Draco01", "run_id": 4},
+        "values": None,
+        "metadata": {"device": "DRACO-01"},
+    }
+    if shot_number is not None:
+        event["shot_number"] = shot_number
+    write_json(path, event)
 
 
 def write_trigger_event(path: Path, *, shot_number: int | None, timestamp: str) -> None:
@@ -390,3 +426,43 @@ def test_missing_shot_number_falls_back_to_nearest_time_or_unmatched(
     assert source.review_events == []
     matched_shot = next(shot for shot in source.shots if shot.match_status == "matched")
     assert matched_shot.shot_date == "2025-01-16"
+
+
+def test_flat_hzdr_event_v1_trigger_matches_shot(tmp_path: Path):
+    """The builder must accept the flat hzdr-event-v1 Kafka envelope that
+    shotcounter's feature branch emits (no processed_message wrapper, trigger_role
+    at top level) and match it to the correct LabFrog shot."""
+    labfrog_nexus = tmp_path / "labfrog.nxs"
+    trigger_event = tmp_path / "trigger.jsonl"
+    output_nexus = tmp_path / "canonical.nxs"
+    sources_file = tmp_path / "hzdr_sources.json"
+    write_labfrog_export(labfrog_nexus)
+    write_trigger_event_v1(
+        trigger_event,
+        event_id="evt-draco-v1-001",
+        shot_number=1,
+        timestamp="2025-01-16T08:00:02Z",
+    )
+
+    args = build_args(
+        trigger_jsonl=[trigger_event],
+        labfrog_nexus=labfrog_nexus,
+        output_nexus=output_nexus,
+        sources_file=sources_file,
+    )
+    _, built_sources = hzdr_hdf5_builder.build(args)
+
+    provider = HZDRSourceProvider(
+        MetadataSettings(provider="local", sources_file=built_sources)
+    )
+    source = provider.get_source(SOURCE_KEY)
+    assert source is not None
+    assert source.match_summary.matched == 1
+    assert source.match_summary.ambiguous == 0
+    assert source.match_summary.unmatched == 0
+    assert source.review_events == []
+
+    matched_shot = next(shot for shot in source.shots if shot.match_status == "matched")
+    assert matched_shot.shot_date == "2025-01-16"
+    draco_event = next(e for e in matched_shot.events if e.source == "DRACO-Trigger")
+    assert draco_event.kind == "draco.trigger"

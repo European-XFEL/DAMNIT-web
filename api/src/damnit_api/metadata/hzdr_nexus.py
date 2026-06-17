@@ -43,9 +43,7 @@ def _pid_is_alive_windows(pid: int) -> bool:
     import ctypes
 
     kernel32 = ctypes.windll.kernel32
-    handle = kernel32.OpenProcess(
-        _WIN_PROCESS_QUERY_LIMITED_INFORMATION, False, pid
-    )
+    handle = kernel32.OpenProcess(_WIN_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     if handle:
         kernel32.CloseHandle(handle)
         return True
@@ -1069,10 +1067,75 @@ def normalize_watchdog_document(
     return normalized
 
 
+def _normalize_hzdr_event_v1_trigger(
+    document: dict[str, Any], *, experiment_id: str | None = None
+) -> dict[str, Any]:
+    """Pass through a shotcounter hzdr-event-v1 Kafka envelope with minimal adaptation.
+
+    The shotcounter branch emits a flat dict with schema_version, event_id,
+    experiment_id, shot_number, source, kind, trigger_role (top-level),
+    timestamp, transport, payload_ref, values, and metadata. It is already
+    in the canonical shape; we only need to:
+    - Override experiment_id if the caller supplies one (builder --experiment-id flag).
+    - Normalise shot_id from shot_number, matching the convention used for the
+      legacy path.
+    - Strip trigger_role from the top level (it belongs in metadata.trigger.role,
+      same as the legacy path produces) so downstream code sees one consistent shape.
+    """
+    selected_experiment = _as_optional_string(
+        experiment_id or document.get("experiment_id")
+    )
+    if not selected_experiment:
+        message = "hzdr-event-v1 trigger message does not contain experiment_id"
+        raise ValueError(message)
+
+    event_id = _as_optional_string(document.get("event_id"))
+    if not event_id:
+        message = "hzdr-event-v1 trigger message does not contain event_id"
+        raise ValueError(message)
+
+    shot_number = _as_optional_int(document.get("shot_number"))
+    trigger_role = safe_hdf5_name(
+        _as_optional_string(document.get("trigger_role")) or "threshold_crossing"
+    )
+
+    normalized = dict(document)
+    normalized["experiment_id"] = selected_experiment
+    normalized["shot_id"] = (
+        f"shot-{shot_number:06d}"
+        if shot_number is not None
+        else f"unassigned-{event_id}"
+    )
+    # trigger_role is a top-level field on the shotcounter envelope; fold it into
+    # metadata.trigger.role so readers see the same shape as the legacy path.
+    normalized.pop("trigger_role", None)
+    metadata = dict(normalized.get("metadata") or {})
+    trigger_meta = dict(metadata.get("trigger") or {})
+    trigger_meta.setdefault("role", trigger_role)
+    metadata["trigger"] = trigger_meta
+    normalized["metadata"] = metadata
+
+    if shot_number is None:
+        normalized.pop("shot_number", None)
+
+    return normalized
+
+
 def normalize_processed_trigger_message(
     document: dict[str, Any], *, experiment_id: str | None = None
 ) -> dict[str, Any]:
-    """Adapt the legacy ZMQ/Kafka processed_message trigger payload."""
+    """Adapt a trigger payload to the shared event contract.
+
+    Accepts two shapes:
+    - A flat ``hzdr-event-v1`` envelope (shotcounter's Kafka output): returned
+      directly after validating the required fields are present, with
+      ``experiment_id`` overridden if the caller provides one.
+    - The legacy ``processed_message`` wrapper (ZMQ relay / pre-branch Kafka):
+      adapted into the same envelope shape.
+    """
+    if document.get("schema_version") == "hzdr-event-v1":
+        return _normalize_hzdr_event_v1_trigger(document, experiment_id=experiment_id)
+
     payload = document.get("processed_message", document)
     if not isinstance(payload, dict):
         message = "processed_message must be an object"

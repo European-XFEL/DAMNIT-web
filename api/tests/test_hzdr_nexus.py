@@ -420,6 +420,95 @@ def test_processed_trigger_uses_only_explicit_shot_number():
     assert event["kind"] == "trigger.shot_trigger"
 
 
+def test_normalize_accepts_flat_hzdr_event_v1_trigger_envelope():
+    """Shotcounter's Kafka branch emits a flat hzdr-event-v1 dict with
+    trigger_role at top level (not wrapped in processed_message). The normalizer
+    must pass it through without re-wrapping and must fold trigger_role into
+    metadata.trigger.role."""
+    event = normalize_processed_trigger_message({
+        "schema_version": "hzdr-event-v1",
+        "event_id": "evt-draco-001",
+        "experiment_id": "Solenoid_Tests_01",
+        "shot_number": 7,
+        "source": "DRACO-Trigger",
+        "kind": "draco.trigger",
+        "trigger_role": "pump",
+        "timestamp": "2025-01-16T08:00:00Z",
+        "transport": "kafka",
+        "payload_ref": {"channel_id": "Draco01", "run_id": 4},
+        "values": None,
+        "metadata": {"device": "DRACO-01"},
+    })
+
+    assert event["schema_version"] == "hzdr-event-v1"
+    assert event["event_id"] == "evt-draco-001"
+    assert event["experiment_id"] == "Solenoid_Tests_01"
+    assert event["shot_number"] == 7
+    assert event["shot_id"] == "shot-000007"
+    assert event["source"] == "DRACO-Trigger"
+    assert event["kind"] == "draco.trigger"
+    assert "trigger_role" not in event
+    assert event["metadata"]["trigger"]["role"] == "pump"
+    assert event["metadata"]["device"] == "DRACO-01"
+    assert event["payload_ref"] == {"channel_id": "Draco01", "run_id": 4}
+
+
+def test_normalize_hzdr_event_v1_overrides_experiment_id():
+    event = normalize_processed_trigger_message(
+        {
+            "schema_version": "hzdr-event-v1",
+            "event_id": "evt-draco-002",
+            "experiment_id": "Campaign_From_Device",
+            "shot_number": 1,
+            "source": "DRACO-Trigger",
+            "kind": "draco.trigger",
+            "trigger_role": "shot",
+            "timestamp": "2025-01-16T08:00:00Z",
+            "transport": "kafka",
+            "payload_ref": {"channel_id": "Draco01", "run_id": 5},
+            "values": None,
+            "metadata": {},
+        },
+        experiment_id="Override_From_Builder",
+    )
+
+    assert event["experiment_id"] == "Override_From_Builder"
+
+
+def test_normalize_hzdr_event_v1_without_shot_number():
+    event = normalize_processed_trigger_message({
+        "schema_version": "hzdr-event-v1",
+        "event_id": "evt-draco-003",
+        "experiment_id": "Solenoid_Tests_01",
+        "source": "DRACO-Trigger",
+        "kind": "draco.trigger",
+        "trigger_role": "probe",
+        "timestamp": "2025-01-16T08:00:00Z",
+        "transport": "kafka",
+        "payload_ref": {"channel_id": "Draco01", "run_id": 6},
+        "values": None,
+        "metadata": {},
+    })
+
+    assert "shot_number" not in event
+    assert event["shot_id"] == "unassigned-evt-draco-003"
+
+
+def test_normalize_hzdr_event_v1_requires_experiment_id():
+    with pytest.raises(ValueError, match="experiment_id"):
+        normalize_processed_trigger_message({
+            "schema_version": "hzdr-event-v1",
+            "event_id": "evt-draco-004",
+            "source": "DRACO-Trigger",
+            "kind": "draco.trigger",
+            "timestamp": "2025-01-16T08:00:00Z",
+            "transport": "kafka",
+            "payload_ref": {"channel_id": "Draco01", "run_id": 7},
+            "values": None,
+            "metadata": {},
+        })
+
+
 def test_duplicate_event_id_is_kept_once_not_double_counted():
     """A staged JSONL line appended twice (producer retry, emulator re-run,
     at-least-once transport) must not double-count or duplicate the event."""
@@ -733,9 +822,7 @@ def test_write_sources_catalog_merges_dismissed_decision_from_sidecar(tmp_path: 
     source = load_sources_file(sources_file)[0]
     assert source.match_summary.dismissed == 1
     assert source.match_summary.unmatched == 0
-    dismissed = next(
-        e for e in source.review_events if e.event_id == "evt-unmatched"
-    )
+    dismissed = next(e for e in source.review_events if e.event_id == "evt-unmatched")
     assert dismissed.acknowledged is True
     assert dismissed.acknowledged_by == "sam"
     assert dismissed.review_level == "VERIFIED"
