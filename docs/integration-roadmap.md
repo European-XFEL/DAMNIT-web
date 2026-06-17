@@ -58,13 +58,13 @@ The sequence below is ordered by dependency, not effort.
    in explicitly).
 2. **Commit the `asapo-for-hzdr-damnit` schema-version fix** — three example
    files have an uncommitted `"hzdr.source-event/1"` → `"hzdr-event-v1"` fix.
-3. **Wire `shotcounter`'s Kafka envelope into DAMNIT's normalizer** — ✅ done
-   locally. `normalize_processed_trigger_message` now detects a flat
+3. **Wire `shotcounter`'s Kafka envelope into DAMNIT's normalizer** — ✅
+   committed. `normalize_processed_trigger_message` detects a flat
    `hzdr-event-v1` document (`schema_version` field present) and routes it
    through `_normalize_hzdr_event_v1_trigger`, folding top-level `trigger_role`
    into `metadata.trigger.role` and deriving `shot_id` from `shot_number`.
    Four new unit tests; one new integration test.
-4. **Catalog-edit persistence across rebuilds** — ✅ done locally. Operator
+4. **Catalog-edit persistence across rebuilds** — ✅ committed. Operator
    `confirm`/`dismiss` actions are written to `hzdr_sources.review.jsonl`;
    `write_sources_catalog` merges them on every rebuild. Review levels:
    `VERIFIED > REVIEWED > BASE`. See §Durable Spool for the production variant.
@@ -116,7 +116,7 @@ Branch: `master` (changes committed)
 | Item | Status |
 | --- | --- |
 | Canonical campaign/output topic settings in producer config | ✅ committed |
-| Normalized events preserve Kafka topic, partition, offset, file URI/path, `payload_ref` | 🔄 `kafka_output.py` correctly copies `topic/partition/offset` into `payload_ref`; integration test fixture updated (partition added); assertion added that `topic` lands in `payload_ref` |
+| Normalized events preserve Kafka topic, partition, offset, file URI/path, `payload_ref` | ✅ committed — `kafka_output.py` copies `topic/partition/offset` into `payload_ref`; integration test asserts all three fields |
 | `IsShotCounterXX`-gated authoritative shot number in normalized event | 🔴 blocked-on: `shotcounter` merge and cross-system shot-number authority decision |
 | Configure production deployment with canonical campaign and output topic | 🟡 config exists; deployment not yet pointed at it |
 | Real broker roundtrip and restart/replay test | 🔴 not started |
@@ -128,7 +128,7 @@ Branch: `main` (local harness committed; 3 example files have uncommitted fix)
 | Item | Status |
 | --- | --- |
 | Local harness proves claim-before-ack, flush/fsync-before-ack, campaign-scoped group offsets, replay dedup by `event_id` | ✅ committed and verified |
-| Example files use canonical `hzdr-event-v1` schema-version string | 🔄 fix is local, not committed (`"hzdr.source-event/1"` → `"hzdr-event-v1"` in 3 files) |
+| Example files use canonical `hzdr-event-v1` schema-version string | ✅ committed |
 | Production supervised consumer with named consumer group and campaign routing | 🔴 not started |
 | Carry claim/flush/ack/replay-dedup pattern into real ASAPO SDK consumer | 🔴 not started — the harness proves the pattern; production needs to implement it |
 | References large arrays externally instead of embedding in JSON | 🔴 not started |
@@ -146,7 +146,7 @@ Branch: `feature/hzdr-canonical-trigger-event` (not yet merged to main)
 | Operator-configurable `ShotNumber` with debounce; `IsShotCounterXX` per channel | ✅ on branch |
 | Manual Kafka smoke test with `KafkaEnabled=1` against real broker | 🟡 needed before merge |
 | Merge to main | 🟡 pending smoke test and `IsShotCounterXX` defaults decision |
-| `shotcounter`'s `hzdr-event-v1` Kafka envelope consumed by DAMNIT normalizer | 🔄 done locally — `_normalize_hzdr_event_v1_trigger` added; 4 unit + 1 integration test |
+| `shotcounter`'s `hzdr-event-v1` Kafka envelope consumed by DAMNIT normalizer | ✅ committed — `_normalize_hzdr_event_v1_trigger` added; 4 unit + 1 integration test |
 
 ### `GitHub/DAMNIT-web-hzdr`
 
@@ -158,7 +158,7 @@ Branch: `main`
 | Ambiguous/unmatched events in API; real Confirm Matches UI | ✅ committed |
 | Local acceptance script; offline four-source integration test | ✅ committed |
 | Shared example payloads and anonymized SQLite fixture | ✅ committed |
-| Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | 🔄 done locally — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |
+| Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | ✅ committed — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |
 | Versioned JSON Schema publication from `HZDREventV1` | ⬜ lower priority while only one schema version exists |
 | Durable per-campaign spool with transport positions and dedup state | 🔴 not started — biggest unbuilt piece |
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | 🟡 not started; today is presentation-only |
