@@ -58,15 +58,16 @@ The sequence below is ordered by dependency, not effort.
    in explicitly).
 2. **Commit the `asapo-for-hzdr-damnit` schema-version fix** — three example
    files have an uncommitted `"hzdr.source-event/1"` → `"hzdr-event-v1"` fix.
-3. **Wire `shotcounter`'s Kafka envelope into DAMNIT's normalizer** — the new
-   `hzdr-event-v1` Kafka output is not yet consumed. Today's
-   `normalize_processed_trigger_message` reads only the legacy ZMQ
-   `processed_message` relay.
-4. **Decide and implement catalog-edit persistence across rebuilds** — operator
-   `confirm`/`dismiss` actions are currently lost when the builder reruns
-   (pre-existing behavior, now more visible). Options: teach the builder to
-   merge prior review state on rebuild (real fix), or explicitly accept it as a
-   stopgap until the durable spool (step 6) exists.
+3. **Wire `shotcounter`'s Kafka envelope into DAMNIT's normalizer** — ✅ done
+   locally. `normalize_processed_trigger_message` now detects a flat
+   `hzdr-event-v1` document (`schema_version` field present) and routes it
+   through `_normalize_hzdr_event_v1_trigger`, folding top-level `trigger_role`
+   into `metadata.trigger.role` and deriving `shot_id` from `shot_number`.
+   Four new unit tests; one new integration test.
+4. **Catalog-edit persistence across rebuilds** — ✅ done locally. Operator
+   `confirm`/`dismiss` actions are written to `hzdr_sources.review.jsonl`;
+   `write_sources_catalog` merges them on every rebuild. Review levels:
+   `VERIFIED > REVIEWED > BASE`. See §Durable Spool for the production variant.
 5. **Capture one real pilot sequence** — one synchronized real capture for
    `Solenoid Beamline Tests 01.2025`: LabFrog export, ASAPO event, Watchdog
    Kafka event, shotcounter trigger message.
@@ -115,7 +116,7 @@ Branch: `master` (changes committed)
 | Item | Status |
 | --- | --- |
 | Canonical campaign/output topic settings in producer config | ✅ committed |
-| Normalized events preserve Kafka topic, partition, offset, file URI/path, `payload_ref` | 🟡 partition/offset are in `metadata.kafka_data`; **topic name** is absent from `payload_ref` — violates architecture.md's `payload_ref` contract for Kafka sources |
+| Normalized events preserve Kafka topic, partition, offset, file URI/path, `payload_ref` | 🔄 `kafka_output.py` correctly copies `topic/partition/offset` into `payload_ref`; integration test fixture updated (partition added); assertion added that `topic` lands in `payload_ref` |
 | `IsShotCounterXX`-gated authoritative shot number in normalized event | 🔴 blocked-on: `shotcounter` merge and cross-system shot-number authority decision |
 | Configure production deployment with canonical campaign and output topic | 🟡 config exists; deployment not yet pointed at it |
 | Real broker roundtrip and restart/replay test | 🔴 not started |
@@ -145,7 +146,7 @@ Branch: `feature/hzdr-canonical-trigger-event` (not yet merged to main)
 | Operator-configurable `ShotNumber` with debounce; `IsShotCounterXX` per channel | ✅ on branch |
 | Manual Kafka smoke test with `KafkaEnabled=1` against real broker | 🟡 needed before merge |
 | Merge to main | 🟡 pending smoke test and `IsShotCounterXX` defaults decision |
-| `shotcounter`'s `hzdr-event-v1` Kafka envelope consumed by DAMNIT normalizer | 🔴 not started — DAMNIT currently reads only legacy ZMQ `processed_message` |
+| `shotcounter`'s `hzdr-event-v1` Kafka envelope consumed by DAMNIT normalizer | 🔄 done locally — `_normalize_hzdr_event_v1_trigger` added; 4 unit + 1 integration test |
 
 ### `GitHub/DAMNIT-web-hzdr`
 
@@ -157,7 +158,7 @@ Branch: `main`
 | Ambiguous/unmatched events in API; real Confirm Matches UI | ✅ committed |
 | Local acceptance script; offline four-source integration test | ✅ committed |
 | Shared example payloads and anonymized SQLite fixture | ✅ committed |
-| Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | 🟡 decision pending — see Work Order step 4 |
+| Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | 🔄 done locally — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |
 | Versioned JSON Schema publication from `HZDREventV1` | ⬜ lower priority while only one schema version exists |
 | Durable per-campaign spool with transport positions and dedup state | 🔴 not started — biggest unbuilt piece |
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | 🟡 not started; today is presentation-only |
@@ -188,6 +189,59 @@ effort:
 
 The decision to use Option 1 for the pilot is recorded. Options 2 and 3 remain
 open for post-pilot evaluation.
+
+## Durable Spool Design
+
+Work Order step 6: production supervised consumer with ack-after-flush semantics.
+
+### What the local harness already proves
+
+`asapo-for-hzdr-damnit/tests/test_asapo_harness.py` (5 tests) proves the
+correct ordering for the ASAPO path:
+
+1. **Claim** message from named consumer group (ASAPO `GetNext`).
+2. **Write and flush/fsync** the event JSON to local disk.
+3. **Ack** (`Acknowledge`) only after the write is verified.
+4. **Dedup** by `event_id` on replay (reject already-present IDs).
+5. **Campaign routing**: each consumer group is scoped to a campaign slug;
+   offset/position are per-group, so replaying one campaign does not disturb
+   another.
+
+The same five properties must hold for the real production consumer.
+
+### What production needs
+
+| Gap | Work required |
+| --- | --- |
+| Real ASAPO SDK consumer | Replace emulator with `asapo_consumer.create_consumer(…, consumer_name=<campaign-slug>)` call, configured from the same env-file settings used by the existing harness |
+| Supervised restart | Wrap the consume loop in a `systemd` unit (or DAMNIT background task) that restarts on exit; last acked offset is the consumer group position — restart picks up where it left off |
+| Large-array externalisation | ASAPO messages > ~1 MB should not embed raw arrays in JSON; use `payload_ref.uri` pointing to a streamed dataset, and write the array to the NeXus file separately. The `HZDRPayloadRef` model already has the `uri` field |
+| Kafka consumer (PLANET-Watchdog / shotcounter) | Same claim/write/ack loop but using a Kafka `ConsumerGroup` with `enable.auto.commit=False`; commit offset only after `write_json_atomic` succeeds |
+| Per-campaign spool directory | `<campaign-slug>/spool/asapo/` and `<campaign-slug>/spool/kafka/<topic>/` under the DAMNIT data root; the builder's `--events-jsonl` / `--trigger-jsonl` flags already point to exactly these paths |
+| Write-and-flush before ack | `write_json_atomic` (temp file + `fsync` + rename) is already implemented in `hzdr_nexus.py`; the consumer calls it, then acks |
+| Dedup on replay | Consumer checks whether `event_id` already exists in the spool directory before writing; if yes, skip and ack (idempotent replay) |
+| Builder trigger | On each new event file, the builder reruns; the single-writer PID lock already serialises concurrent runs |
+
+### Implementation sequence (not yet started)
+
+1. Add a `HZDRSpoolConsumer` class in a new `api/src/damnit_api/consumer/` module.
+   - Config: broker URIs, topic(s), consumer-group name (= campaign slug), spool root path.
+   - Loop: claim → write-and-flush → ack → trigger builder.
+   - Handles `KeyboardInterrupt` / `SIGTERM` cleanly (do not ack on interrupted write).
+2. Add ASAPO SDK consumer variant (`AsapoSpoolConsumer`) and Kafka variant
+   (`KafkaSpoolConsumer`) sharing the same loop logic.
+3. Supervised launch: `systemd` unit per campaign, or a FastAPI lifespan task
+   started from `DAMNIT_HZDR_SPOOL=1` env flag.
+4. Integration test: start the consumer against a real broker (Docker Compose),
+   publish 3 events, restart the consumer, verify no duplicates and no lost events.
+
+### Key invariant
+
+> A message is acked **if and only if** its event file exists, is complete
+> (written + fsync'd), and the builder has been triggered. An unclean shutdown
+> between ack and builder trigger means the event is on disk but the catalog
+> has not been updated; the next builder run corrects this automatically because
+> it reads all spool files.
 
 ## Go-Live Gate
 
