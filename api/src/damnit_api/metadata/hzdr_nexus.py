@@ -155,6 +155,180 @@ def write_json_atomic(path: Path, payload: Any) -> None:
         raise
 
 
+REVIEW_LEVELS = ("BASE", "REVIEWED", "VERIFIED")
+_REVIEW_LEVEL_RANK = {level: rank for rank, level in enumerate(REVIEW_LEVELS)}
+
+
+def review_sidecar_path(sources_file: Path) -> Path:
+    """Return the operator-decision sidecar path next to sources_file."""
+    return sources_file.with_name(sources_file.stem + ".review.jsonl")
+
+
+def append_review_decision(
+    sources_file: Path,
+    *,
+    source_key: str,
+    event_id: str,
+    action: str,
+    by: str,
+    note: str | None = None,
+    shot_key: str | None = None,
+    candidate_shot_keys: list[str] | None = None,
+    review_level: str = "REVIEWED",
+) -> None:
+    """Append one operator review decision to the durable sidecar JSONL.
+
+    The sidecar (``<sources_file_stem>.review.jsonl``) survives builder
+    rebuilds: ``write_sources_catalog`` merges decisions back in at publish
+    time so confirm/dismiss actions are not lost when the builder reruns.
+
+    ``review_level`` is one of ``"BASE"`` (matcher output, not stored here),
+    ``"REVIEWED"`` (operator action), or ``"VERIFIED"`` (countersigned). The
+    highest-rank decision for each ``event_id`` wins when merging.
+
+    ``action`` is one of ``"confirm"`` (with ``shot_key``) or ``"dismiss"``.
+    The full event shape (source, kind, timestamp) is not duplicated here;
+    only identity and the decision matter for merge. ``candidate_shot_keys``
+    is stored so a rebuild can re-validate the shot_key is still a candidate.
+    """
+    if review_level not in _REVIEW_LEVEL_RANK:
+        message = f"review_level must be one of {REVIEW_LEVELS}"
+        raise ValueError(message)
+    record: dict[str, Any] = {
+        "source_key": source_key,
+        "event_id": event_id,
+        "action": action,
+        "review_level": review_level,
+        "by": by,
+        "at": datetime.now(UTC).isoformat(),
+        "note": note,
+    }
+    if shot_key is not None:
+        record["shot_key"] = shot_key
+    if candidate_shot_keys is not None:
+        record["candidate_shot_keys"] = candidate_shot_keys
+    sidecar = review_sidecar_path(sources_file)
+    sidecar.parent.mkdir(parents=True, exist_ok=True)
+    with sidecar.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
+
+
+def load_review_decisions(
+    sources_file: Path, source_key: str
+) -> dict[str, dict[str, Any]]:
+    """Load the highest-precedence decision per event_id from the sidecar.
+
+    Returns a mapping of ``event_id`` → decision record. If the same event
+    has multiple entries (e.g. REVIEWED then VERIFIED), the one with the
+    highest ``review_level`` rank wins; ties go to the last entry (latest in
+    time, since entries are appended in order).
+    """
+    sidecar = review_sidecar_path(sources_file)
+    if not sidecar.exists():
+        return {}
+    decisions: dict[str, dict[str, Any]] = {}
+    for lineno, raw in enumerate(sidecar.read_text(encoding="utf-8").splitlines(), 1):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            record = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            msg = f"Corrupt review sidecar {sidecar}, line {lineno}: {exc}"
+            raise ValueError(msg) from exc
+        if record.get("source_key") != source_key:
+            continue
+        event_id = record.get("event_id")
+        if not event_id:
+            continue
+        existing = decisions.get(event_id)
+        incoming_rank = _REVIEW_LEVEL_RANK.get(record.get("review_level", ""), -1)
+        existing_rank = _REVIEW_LEVEL_RANK.get(
+            (existing or {}).get("review_level", ""), -1
+        )
+        if existing is None or incoming_rank >= existing_rank:
+            decisions[event_id] = record
+    return decisions
+
+
+def _apply_review_decisions(
+    review_events: list[dict[str, Any]],
+    shots: list[dict[str, Any]],
+    decisions: dict[str, dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Merge durable operator decisions into freshly-built catalog lists.
+
+    Mutates ``shots`` in-place (attaching confirmed events) and returns a
+    filtered ``review_events`` list (confirmed events removed, dismissed ones
+    flagged). Called by ``write_sources_catalog`` after ``decisions`` is loaded
+    from the sidecar, so a builder rebuild restores prior operator actions.
+    """
+    if not decisions:
+        return review_events, shots
+
+    shots_by_key: dict[str, dict[str, Any]] = {}
+    for shot in shots:
+        key = shot.get("shot_key")
+        if key and key not in shots_by_key:
+            shots_by_key[key] = shot
+
+    remaining: list[dict[str, Any]] = []
+    for event in review_events:
+        event_id = event.get("event_id")
+        decision = decisions.get(event_id)
+        if decision is None:
+            remaining.append(event)
+            continue
+
+        action = decision.get("action")
+        review_level = decision.get("review_level", "REVIEWED")
+        by = decision.get("by", "")
+        at = decision.get("at", "")
+        note = decision.get("note")
+
+        if action == "confirm":
+            shot_key = decision.get("shot_key")
+            shot = shots_by_key.get(shot_key) if shot_key else None
+            if shot is None:
+                # Shot may have been renumbered; keep as review event.
+                remaining.append(event)
+                continue
+            attached = {
+                k: v
+                for k, v in event.items()
+                if k not in {"match_status", "experiment_id", "candidate_shot_keys"}
+            }
+            attached["match_quality"] = "operator_confirmed"
+            attached["review_level"] = review_level
+            shot.setdefault("events", []).append(attached)
+            shot["match_status"] = "matched"
+            history = shot.setdefault("metadata", {}).setdefault(
+                "match_confirmation_history", []
+            )
+            if isinstance(history, list):
+                history.append({
+                    "at": at,
+                    "event_id": event_id,
+                    "by": by,
+                    "note": note or "Confirmed ambiguous match",
+                    "review_level": review_level,
+                })
+        elif action == "dismiss":
+            flagged = dict(event)
+            flagged["acknowledged"] = True
+            flagged["acknowledged_at"] = at
+            flagged["acknowledged_by"] = by
+            flagged["acknowledged_note"] = note or "Acknowledged with no shot attached"
+            flagged["review_level"] = review_level
+            remaining.append(flagged)
+        else:
+            remaining.append(event)
+
+    return remaining, shots
+
+
 def load_normalized_events(paths: Iterable[Path]) -> list[dict[str, Any]]:
     """Load normalized events from JSON or JSONL files.
 
@@ -653,7 +827,7 @@ def write_sources_catalog(
     group and have no API/frontend visibility at all.
     """
     current_shots = [
-        shot
+        dict(shot)
         for shot in shots
         if not _as_bool(shot.get("metadata", {}).get("has_newer_version"))
     ]
@@ -662,6 +836,10 @@ def write_sources_catalog(
         for event in (events or [])
         if event.get("match_status") in {"ambiguous", "unmatched"}
     ]
+    decisions = load_review_decisions(sources_file, source_key)
+    review_events, current_shots = _apply_review_decisions(
+        review_events, current_shots, decisions
+    )
     match_summary = _build_match_summary(current_shots, review_events)
     payload = {
         "sources": [
@@ -733,24 +911,37 @@ def _build_match_summary(
     "an external producer matched this shot" from "labfrog-only" - match_status
     is set before that append and is the field that actually distinguishes them.
 
-    confirmed/dismissed are always 0 here: this runs at build time, before any
-    operator review action exists. routers._recompute_match_summary (run after
-    a confirm/dismiss catalog edit) computes the real values - see its
-    docstring for why a rebuild resets them, same as matched/ambiguous/unmatched.
+    confirmed/dismissed reflect operator review actions merged from the
+    sidecar (via _apply_review_decisions) before this is called, so they
+    survive a rebuild. routers._recompute_match_summary uses the same logic
+    for the live catalog-edit path (after a confirm/dismiss HTTP call).
     """
     matched = sum(1 for shot in shots if shot.get("match_status") == "matched")
     ambiguous = sum(
         1 for event in review_events if event.get("match_status") == "ambiguous"
     )
     unmatched = sum(
-        1 for event in review_events if event.get("match_status") == "unmatched"
+        1
+        for event in review_events
+        if event.get("match_status") == "unmatched" and not event.get("acknowledged")
+    )
+    confirmed = sum(
+        1
+        for shot in shots
+        for event in shot.get("events", [])
+        if event.get("match_quality") == "operator_confirmed"
+    )
+    dismissed = sum(
+        1
+        for event in review_events
+        if event.get("match_status") == "unmatched" and event.get("acknowledged")
     )
     return {
         "matched": matched,
         "ambiguous": ambiguous,
         "unmatched": unmatched,
-        "confirmed": 0,
-        "dismissed": 0,
+        "confirmed": confirmed,
+        "dismissed": dismissed,
     }
 
 

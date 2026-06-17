@@ -277,9 +277,8 @@ def write_trigger_event(path: Path, *, shot_number: int | None, timestamp: str) 
 
 
 def test_ambiguous_duplicate_shot_number_is_listed_for_review(tmp_path: Path):
-    """Option 1 ('matcher stays authoritative', see docs/second-opinion.md) only
-    works if ambiguous events are actually visible somewhere - this proves they
-    reach the API-facing catalog, not just the NeXus file's source_events group."""
+    """Matcher stays authoritative; ambiguous events must be visible in the
+    API-facing catalog, not just the NeXus source_events group."""
     labfrog_nexus = tmp_path / "labfrog.nxs"
     trigger_event = tmp_path / "trigger.jsonl"
     output_nexus = tmp_path / "canonical.nxs"

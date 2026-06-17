@@ -15,7 +15,7 @@ from ..auth.dependencies import OAuthUserInfo, User
 from ..shared.models import ProposalNumber
 from ..shared.settings import settings
 from . import services
-from .hzdr_nexus import write_json_atomic
+from .hzdr_nexus import REVIEW_LEVELS, append_review_decision, write_json_atomic
 from .hzdr_sources import (
     HZDRDatasetPreview,
     HZDRMatchSummary,
@@ -72,12 +72,14 @@ class HZDRConfirmMatchRequest(BaseModel):
 
     shot_key: str
     note: str | None = None
+    review_level: str = "REVIEWED"
 
 
 class HZDRDismissReviewEventRequest(BaseModel):
     """Operator acknowledgement for one unmatched event, with no shot attached."""
 
     note: str | None = None
+    review_level: str = "REVIEWED"
 
 
 @router.get("/proposal/{proposal_number}")
@@ -212,6 +214,7 @@ async def confirm_hzdr_review_event(
         shot_key=payload.shot_key,
         note=payload.note,
         confirmed_by=user.preferred_username or user.email,
+        review_level=payload.review_level,
     )
 
 
@@ -235,6 +238,7 @@ async def dismiss_hzdr_review_event(
         event_id=event_id,
         note=payload.note,
         dismissed_by=user.preferred_username or user.email,
+        review_level=payload.review_level,
     )
 
 
@@ -476,16 +480,20 @@ def confirm_local_review_event(
     shot_key: str,
     note: str | None,
     confirmed_by: str,
+    review_level: str = "REVIEWED",
 ) -> HZDRSource:
     """Attach an ambiguous review event to one of its candidate shots.
 
-    This is a catalog-only edit, like update_local_shot_status above: it does not
-    rewrite the canonical NeXus file, so the next real builder run (which
-    recomputes review_events/match_summary from scratch) will undo it unless the
-    underlying ambiguity is also resolved at the source (e.g. a duplicate LabFrog
-    shot_number entry is corrected). Treat this as an operational triage tool for
-    the catalog/API/frontend view, not a substitute for fixing root causes.
+    Appends a durable decision to the review sidecar so the builder can
+    restore this action on the next rebuild (the sidecar survives; the
+    catalog is regenerated). Also updates the live catalog immediately so
+    the API response reflects the change without waiting for a rebuild.
     """
+    if review_level not in REVIEW_LEVELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"review_level must be one of {REVIEW_LEVELS}",
+        )
     source_record, sources, payload = _load_source_record(sources_file, source_key)
 
     review_events = source_record.get("review_events", [])
@@ -526,6 +534,7 @@ def confirm_local_review_event(
         if key not in {"match_status", "experiment_id", "candidate_shot_keys"}
     }
     attached_event["match_quality"] = "operator_confirmed"
+    attached_event["review_level"] = review_level
     shot.setdefault("events", []).append(attached_event)
     shot["match_status"] = "matched"
     shot_metadata = shot.setdefault("metadata", {})
@@ -536,6 +545,7 @@ def confirm_local_review_event(
             "event_id": event_id,
             "by": confirmed_by,
             "note": note or "Confirmed ambiguous match",
+            "review_level": review_level,
         })
 
     review_events.remove(event)
@@ -543,6 +553,19 @@ def confirm_local_review_event(
     source_record["match_summary"] = _recompute_match_summary(source_record)
 
     _write_sources_payload(sources_file, payload, sources)
+
+    append_review_decision(
+        sources_file,
+        source_key=source_key,
+        event_id=event_id,
+        action="confirm",
+        by=confirmed_by,
+        note=note,
+        shot_key=shot_key,
+        candidate_shot_keys=candidate_shot_keys,
+        review_level=review_level,
+    )
+
     return HZDRSource.model_validate(source_record)
 
 
@@ -553,14 +576,19 @@ def dismiss_local_review_event(
     event_id: str,
     note: str | None,
     dismissed_by: str,
+    review_level: str = "REVIEWED",
 ) -> HZDRSource:
     """Acknowledge an unmatched review event without attaching it to any shot.
 
-    The event stays in review_events (so there is still a record it exists and
-    needs a real fix upstream) but is flagged acknowledged, and excluded from the
-    unmatched count in match_summary so it stops nagging. Catalog-only edit, same
-    caveat as confirm_local_review_event above re: surviving a rebuild.
+    The event stays in review_events with acknowledged=True and is excluded
+    from the unmatched count. Appends a durable decision to the review sidecar
+    so the builder restores this acknowledgement on the next rebuild.
     """
+    if review_level not in REVIEW_LEVELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"review_level must be one of {REVIEW_LEVELS}",
+        )
     source_record, sources, payload = _load_source_record(sources_file, source_key)
 
     review_events = source_record.get("review_events", [])
@@ -575,14 +603,27 @@ def dismiss_local_review_event(
             detail="Only unmatched events can be dismissed without a shot.",
         )
 
+    dismissed_at = datetime.now(UTC).isoformat()
     event["acknowledged"] = True
-    event["acknowledged_at"] = datetime.now(UTC).isoformat()
+    event["acknowledged_at"] = dismissed_at
     event["acknowledged_by"] = dismissed_by
     event["acknowledged_note"] = note or "Acknowledged with no shot attached"
+    event["review_level"] = review_level
 
     source_record["match_summary"] = _recompute_match_summary(source_record)
 
     _write_sources_payload(sources_file, payload, sources)
+
+    append_review_decision(
+        sources_file,
+        source_key=source_key,
+        event_id=event_id,
+        action="dismiss",
+        by=dismissed_by,
+        note=note,
+        review_level=review_level,
+    )
+
     return HZDRSource.model_validate(source_record)
 
 

@@ -4,6 +4,7 @@ import orjson
 import pytest
 from fastapi import HTTPException
 
+from damnit_api.metadata.hzdr_nexus import load_review_decisions
 from damnit_api.metadata.routers import (
     confirm_local_review_event,
     dismiss_local_review_event,
@@ -118,6 +119,12 @@ def test_confirm_attaches_ambiguous_event_to_chosen_shot(tmp_path: Path):
     assert reloaded_source["match_summary"]["confirmed"] == 1
     assert len(reloaded_source["review_events"]) == 1
 
+    # decision also written to the durable sidecar
+    decisions = load_review_decisions(sources_file, SOURCE_KEY)
+    assert "evt-ambiguous-1" in decisions
+    assert decisions["evt-ambiguous-1"]["action"] == "confirm"
+    assert decisions["evt-ambiguous-1"]["review_level"] == "REVIEWED"
+
 
 def test_confirm_rejects_shot_key_not_in_candidates(tmp_path: Path):
     sources_file = write_review_fixture(tmp_path)
@@ -174,6 +181,12 @@ def test_dismiss_acknowledges_unmatched_event_without_attaching_a_shot(
     assert source.match_summary.dismissed == 1
     assert source.match_summary.confirmed == 0  # untouched
     assert source.match_summary.ambiguous == 1  # untouched
+
+    # decision written to the durable sidecar
+    decisions = load_review_decisions(sources_file, SOURCE_KEY)
+    assert "evt-unmatched-1" in decisions
+    assert decisions["evt-unmatched-1"]["action"] == "dismiss"
+    assert decisions["evt-unmatched-1"]["review_level"] == "REVIEWED"
 
 
 def test_dismiss_rejects_ambiguous_event(tmp_path: Path):

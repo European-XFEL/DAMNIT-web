@@ -9,13 +9,16 @@ import pytest
 
 from damnit_api.metadata.hzdr_nexus import (
     BuilderAlreadyRunningError,
+    append_review_decision,
     discover_labfrog_data_products,
     load_normalized_events,
+    load_review_decisions,
     normalize_processed_trigger_message,
     normalize_watchdog_document,
     read_labfrog_nexus_shots,
     read_labfrog_sqlite_shots,
     reconcile_canonical_shots,
+    review_sidecar_path,
     single_writer_lock,
     write_json_atomic,
     write_nexus_bridge,
@@ -548,3 +551,242 @@ def test_single_writer_lock_reclaims_a_stale_lock_from_a_dead_pid(tmp_path: Path
         assert lock_path.read_text(encoding="utf-8").strip() == str(os.getpid())
 
     assert not lock_path.exists()
+
+
+# --- Review sidecar tests ---
+
+
+def _make_review_event(event_id: str, match_status: str, candidate_shot_keys=None):
+    return {
+        "event_id": event_id,
+        "experiment_id": "HELPMI",
+        "source": "PLANET-Watchdog",
+        "kind": "watchdog.tps",
+        "timestamp": "2026-06-10T12:00:00Z",
+        "transport": "kafka",
+        "payload_ref": {},
+        "metadata": {},
+        "match_status": match_status,
+        "match_quality": match_status,
+        "candidate_shot_keys": candidate_shot_keys or [],
+    }
+
+
+def _make_shot(shot_key: str, match_status: str = "labfrog-only"):
+    return {
+        "source_key": "hzdr-labfrog",
+        "shot_number": int(shot_key.split(":")[-1]),
+        "fired_at": "2026-06-10T12:00:00Z",
+        "shot_key": shot_key,
+        "shot_date": "2026-06-10",
+        "match_status": match_status,
+        "events": [],
+        "data_products": [],
+        "metadata": {},
+    }
+
+
+def test_append_review_decision_writes_sidecar_jsonl(tmp_path: Path):
+    sources_file = tmp_path / "hzdr_sources.json"
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-1",
+        action="confirm",
+        by="alice",
+        note="Looks right",
+        shot_key="HELPMI:20260610:000017",
+        candidate_shot_keys=["HELPMI:20260610:000017"],
+        review_level="REVIEWED",
+    )
+
+    sidecar = review_sidecar_path(sources_file)
+    assert sidecar.exists()
+    record = json.loads(sidecar.read_text(encoding="utf-8").strip())
+    assert record["event_id"] == "evt-1"
+    assert record["action"] == "confirm"
+    assert record["review_level"] == "REVIEWED"
+    assert record["shot_key"] == "HELPMI:20260610:000017"
+    assert record["by"] == "alice"
+
+
+def test_load_review_decisions_returns_highest_rank_per_event(tmp_path: Path):
+    sources_file = tmp_path / "hzdr_sources.json"
+    # Write REVIEWED first, then VERIFIED for the same event_id.
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-1",
+        action="confirm",
+        by="alice",
+        shot_key="HELPMI:20260610:000017",
+        review_level="REVIEWED",
+    )
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-1",
+        action="confirm",
+        by="bob",
+        shot_key="HELPMI:20260610:000017",
+        review_level="VERIFIED",
+    )
+
+    decisions = load_review_decisions(sources_file, "hzdr-labfrog")
+    assert decisions["evt-1"]["review_level"] == "VERIFIED"
+    assert decisions["evt-1"]["by"] == "bob"
+
+
+def test_load_review_decisions_ignores_other_source_keys(tmp_path: Path):
+    sources_file = tmp_path / "hzdr_sources.json"
+    append_review_decision(
+        sources_file,
+        source_key="other-source",
+        event_id="evt-1",
+        action="confirm",
+        by="alice",
+        shot_key="HELPMI:20260610:000017",
+    )
+
+    decisions = load_review_decisions(sources_file, "hzdr-labfrog")
+    assert decisions == {}
+
+
+def test_write_sources_catalog_merges_confirmed_decision_from_sidecar(tmp_path: Path):
+    """A confirmed event from the sidecar survives a full catalog rebuild."""
+    sources_file = tmp_path / "hzdr_sources.json"
+    nexus_path = tmp_path / "HELPMI.nxs"
+    nexus_path.touch()
+
+    shot_key = "HELPMI:20260610:000017"
+    shot = _make_shot(shot_key)
+    ambiguous_event = _make_review_event(
+        "evt-ambiguous",
+        "ambiguous",
+        candidate_shot_keys=[shot_key],
+    )
+
+    # Simulate a prior operator confirm stored in the sidecar.
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-ambiguous",
+        action="confirm",
+        by="alice",
+        note="Confirmed",
+        shot_key=shot_key,
+        candidate_shot_keys=[shot_key],
+        review_level="REVIEWED",
+    )
+
+    # Builder reruns and regenerates the catalog from scratch.
+    reconciled_event = {**ambiguous_event, "shot_id": "unassigned-0"}
+    write_sources_catalog(
+        sources_file=sources_file,
+        source_key="hzdr-labfrog",
+        experiment_id="HELPMI",
+        nexus_path=nexus_path,
+        shots=[shot],
+        events=[reconciled_event],
+    )
+
+    source = load_sources_file(sources_file)[0]
+    # Confirmed event should be attached to the shot, not sitting in review_events.
+    assert source.match_summary.confirmed == 1
+    assert source.match_summary.matched == 1
+    assert source.match_summary.ambiguous == 0
+    matched_shots = [s for s in source.shots if s.match_status == "matched"]
+    assert len(matched_shots) == 1
+    assert matched_shots[0].events[0].review_level == "REVIEWED"
+    # Nothing left in review_events for this event_id.
+    assert all(e.event_id != "evt-ambiguous" for e in source.review_events)
+
+
+def test_write_sources_catalog_merges_dismissed_decision_from_sidecar(tmp_path: Path):
+    """A dismissed event from the sidecar survives a full catalog rebuild."""
+    sources_file = tmp_path / "hzdr_sources.json"
+    nexus_path = tmp_path / "HELPMI.nxs"
+    nexus_path.touch()
+
+    unmatched_event = _make_review_event("evt-unmatched", "unmatched")
+
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-unmatched",
+        action="dismiss",
+        by="sam",
+        note="Known glitch",
+        review_level="VERIFIED",
+    )
+
+    reconciled_event = {**unmatched_event, "shot_id": "unassigned-0"}
+    write_sources_catalog(
+        sources_file=sources_file,
+        source_key="hzdr-labfrog",
+        experiment_id="HELPMI",
+        nexus_path=nexus_path,
+        shots=[],
+        events=[reconciled_event],
+    )
+
+    source = load_sources_file(sources_file)[0]
+    assert source.match_summary.dismissed == 1
+    assert source.match_summary.unmatched == 0
+    dismissed = next(
+        e for e in source.review_events if e.event_id == "evt-unmatched"
+    )
+    assert dismissed.acknowledged is True
+    assert dismissed.acknowledged_by == "sam"
+    assert dismissed.review_level == "VERIFIED"
+
+
+def test_verified_beats_reviewed_in_write_sources_catalog(tmp_path: Path):
+    """If an event has both REVIEWED and VERIFIED decisions, VERIFIED wins."""
+    sources_file = tmp_path / "hzdr_sources.json"
+    nexus_path = tmp_path / "HELPMI.nxs"
+    nexus_path.touch()
+
+    shot_key = "HELPMI:20260610:000017"
+    shot = _make_shot(shot_key)
+    ambiguous_event = _make_review_event(
+        "evt-dual", "ambiguous", candidate_shot_keys=[shot_key]
+    )
+
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-dual",
+        action="confirm",
+        by="alice",
+        shot_key=shot_key,
+        candidate_shot_keys=[shot_key],
+        review_level="REVIEWED",
+    )
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-dual",
+        action="confirm",
+        by="bob",
+        shot_key=shot_key,
+        candidate_shot_keys=[shot_key],
+        review_level="VERIFIED",
+    )
+
+    reconciled_event = {**ambiguous_event, "shot_id": "unassigned-0"}
+    write_sources_catalog(
+        sources_file=sources_file,
+        source_key="hzdr-labfrog",
+        experiment_id="HELPMI",
+        nexus_path=nexus_path,
+        shots=[shot],
+        events=[reconciled_event],
+    )
+
+    source = load_sources_file(sources_file)[0]
+    matched_shots = [s for s in source.shots if s.match_status == "matched"]
+    assert len(matched_shots) == 1
+    history = matched_shots[0].metadata["match_confirmation_history"]
+    assert history[0]["review_level"] == "VERIFIED"
+    assert history[0]["by"] == "bob"

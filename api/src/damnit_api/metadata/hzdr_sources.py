@@ -90,6 +90,7 @@ class HZDRReviewEvent(BaseModel):
     acknowledged_at: str | None = None
     acknowledged_by: str | None = None
     acknowledged_note: str | None = None
+    review_level: str | None = None
 
 
 class HZDRSourceEvent(BaseModel):
@@ -111,6 +112,7 @@ class HZDRSourceEvent(BaseModel):
     metadata: dict[str, JsonValue] = Field(default_factory=dict)
     match_quality: str | None = None
     match_time_delta_s: float | None = None
+    review_level: str | None = None
 
 
 class HZDRDataProduct(BaseModel):
