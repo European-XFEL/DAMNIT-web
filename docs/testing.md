@@ -6,7 +6,7 @@ As of 2026-06-17:
 
 | Repository | Result |
 | --- | --- |
-| DAMNIT API | `139 passed, 1 skipped` |
+| DAMNIT API | `150 passed, 1 skipped` |
 | LabFrog SQLite tools | `60 passed` |
 | PLANET Watchdog focused suite | `17 passed` |
 | shotcounter (`feature/hzdr-canonical-trigger-event`) | `18 passed` (1 NTP-tolerance test deselected) |
@@ -15,7 +15,9 @@ As of 2026-06-17:
 `api/tests/test_hzdr_integration.py` is the offline system-contract test. It
 combines LabFrog, ASAPO, Watchdog, and DRACO inputs for
 `Solenoid_Beamline_Tests_01.2025`, then checks matching, canonical NeXus output,
-catalog loading, raw arrays, and API previews.
+catalog loading, raw arrays, and API previews. A second trigger fixture exercises
+the flat `hzdr-event-v1` Kafka envelope that shotcounter's branch emits (no
+`processed_message` wrapper).
 
 `api/scripts/hzdr-local-acceptance.py` is the local HTTP acceptance check:
 emulator events → `HZDREventV1` → JSONL staging → catalog rebuild →
