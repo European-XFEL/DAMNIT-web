@@ -1,6 +1,6 @@
 # Integration Roadmap
 
-Updated: 2026-06-17
+Updated: 2026-06-18
 
 ## Status Key
 
@@ -87,12 +87,12 @@ The sequence below is ordered by dependency, not effort.
 
 ### `GitLab/labfrog`
 
-Branch: `feature/open-sqlite-explorer`
+Branch: `feature/open-sqlite-explorer` — merged to `develop` (default branch)
 
 | Item | Status |
 | --- | --- |
-| Map MediaWiki campaign choice to canonical `experiment_id` alongside `Campaign` | ✅ committed |
-| Store/preserve timezone fields (`date_time_utc`, `date_time_timezone`) | ✅ committed (`added utc timezone field`) |
+| Map MediaWiki campaign choice to canonical `experiment_id` alongside `Campaign` | ✅ merged to `develop` |
+| Store/preserve timezone fields (`date_time_utc`, `date_time_timezone`) | ✅ merged to `develop` |
 | Mongo `_id`/`_id_OLD`/`version`/`status` implement stable identity and history | ✅ pre-existing, documented |
 | Store/import authoritative TANGO shot number | 🔴 blocked-on: `shotcounter` merge + cross-system shot-number authority decision (see `shotcounter` section and §Shot Number Authority) |
 
@@ -158,6 +158,7 @@ Branch: `main`
 | Ambiguous/unmatched events in API; real Confirm Matches UI | ✅ committed |
 | Local acceptance script; offline four-source integration test | ✅ committed |
 | Shared example payloads and anonymized SQLite fixture | ✅ committed |
+| Cross-repo test runner (`scripts/test-all.ps1`) — runs all six suites in one command | ✅ committed |
 | Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | ✅ committed — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |
 | Versioned JSON Schema publication from `HZDREventV1` | ⬜ lower priority while only one schema version exists |
 | Durable per-campaign spool with transport positions and dedup state | 🔴 not started — biggest unbuilt piece |
