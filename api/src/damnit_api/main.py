@@ -1,5 +1,8 @@
+import asyncio
+import contextlib
 from asyncio import TaskGroup
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -46,7 +49,31 @@ def create_app():  # noqa: C901
         app.router.include_router(contextfile.router)
         app.router.include_router(shared_routers.router)
         app.router.include_router(gql.get_gql_app(), prefix="/graphql")
+
+        spool_consumer = None
+        spool_stop = asyncio.Event()
+        spool_task = None
+        if settings.hzdr_spool.enabled:
+            from .consumer.asapo import AsapoSpoolConsumer
+
+            spool_root = settings.damnit_path or Path.cwd()
+            spool_consumer = AsapoSpoolConsumer.from_settings(spool_root)
+            spool_task = asyncio.create_task(spool_consumer.run(spool_stop))
+            logger.info(
+                "ASAPO spool consumer started",
+                campaign=settings.hzdr_spool.campaign,
+                broker=settings.hzdr_spool.broker_url,
+            )
+
         yield
+
+        if spool_task is not None:
+            spool_stop.set()
+            spool_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await spool_task
+        if spool_consumer is not None:
+            await spool_consumer.aclose()
 
     swagger_oauth = (
         None

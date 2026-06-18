@@ -205,6 +205,35 @@ class FlowMonitorSettings(BaseModel):
     )
 
 
+class HZDRSpoolSettings(BaseModel):
+    """Config for the durable per-campaign ASAPO spool consumer.
+
+    Activated by setting DW_API_HZDR_SPOOL__ENABLED=true.
+    The consumer runs as a background asyncio task inside the FastAPI lifespan.
+    """
+
+    enabled: bool = False
+    broker_url: str = "http://127.0.0.1:8765"
+    campaign: str = ""
+    consumer_group: str = "damnit"
+    spool_dir: Path = Path("spool/asapo")
+    poll_interval: float = 2.0
+    batch_size: int = 10
+
+
+class HZDRHealthSettings(BaseModel):
+    """Broker/DB URLs and timeouts for the /config/health liveness probes.
+
+    Each probe is non-blocking and times out independently; a failure sets
+    reachable=false without raising an exception to the caller.
+    """
+
+    asapo_status_url: str = "http://127.0.0.1:8765/api/status"
+    kafka_bootstrap: str = "localhost:9092"
+    mongo_uri: str = "mongodb://localhost:27017"
+    timeout: float = 2.0
+
+
 class ContextWorkspaceSettings(BaseModel):
     root: Path = Path("../.generated/context-workspaces")
     storage: str = "local"
@@ -251,6 +280,10 @@ class Settings(BaseSettings):
     deployment: DeploymentSettings = DeploymentSettings()
 
     flow_monitor: FlowMonitorSettings = FlowMonitorSettings()
+
+    hzdr_spool: HZDRSpoolSettings = Field(default_factory=HZDRSpoolSettings)
+
+    hzdr_health: HZDRHealthSettings = Field(default_factory=HZDRHealthSettings)
 
     context_workspace: ContextWorkspaceSettings = ContextWorkspaceSettings()
 

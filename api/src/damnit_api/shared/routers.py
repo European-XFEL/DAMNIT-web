@@ -1,5 +1,10 @@
 """Shared API routes for runtime application configuration."""
 
+import asyncio
+import time
+from typing import Any
+
+import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
@@ -68,6 +73,83 @@ class RuntimeConfig(BaseModel):
     metadata_provider: str
     flow_monitor: FlowMonitorConfig
     terminology: TerminologyConfig
+
+
+class ServiceHealth(BaseModel):
+    reachable: bool
+    latency_ms: int | None = None
+    detail: str | None = None
+
+
+class FlowMonitorHealth(BaseModel):
+    asapo: ServiceHealth
+    kafka: ServiceHealth
+    mongo: ServiceHealth
+
+
+async def _probe_asapo(url: str, probe_timeout: float) -> ServiceHealth:
+    t0 = time.monotonic()
+    try:
+        async with httpx.AsyncClient(timeout=probe_timeout) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+        ms = int((time.monotonic() - t0) * 1000)
+        return ServiceHealth(reachable=True, latency_ms=ms)
+    except Exception as exc:
+        return ServiceHealth(reachable=False, detail=str(exc)[:120])
+
+
+async def _probe_kafka(bootstrap: str, probe_timeout: float) -> ServiceHealth:
+    host, _, port_str = bootstrap.partition(":")
+    port = int(port_str) if port_str.isdigit() else 9092
+    t0 = time.monotonic()
+    try:
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port),
+            timeout=probe_timeout,
+        )
+        writer.close()
+        await writer.wait_closed()
+        ms = int((time.monotonic() - t0) * 1000)
+        return ServiceHealth(reachable=True, latency_ms=ms)
+    except Exception as exc:
+        return ServiceHealth(reachable=False, detail=str(exc)[:120])
+
+
+async def _probe_mongo(uri: str, probe_timeout: float) -> ServiceHealth:
+    t0 = time.monotonic()
+    try:
+        import motor.motor_asyncio as motor  # type: ignore[import-untyped]
+
+        timeout_ms = int(probe_timeout * 1000)
+        client: Any = motor.AsyncIOMotorClient(
+            uri, serverSelectionTimeoutMS=timeout_ms
+        )
+        await client.admin.command("ping")
+        client.close()
+        ms = int((time.monotonic() - t0) * 1000)
+        return ServiceHealth(reachable=True, latency_ms=ms)
+    except ImportError:
+        return ServiceHealth(reachable=False, detail="motor not installed")
+    except Exception as exc:
+        return ServiceHealth(reachable=False, detail=str(exc)[:120])
+
+
+@router.get("/health")
+async def get_flow_monitor_health() -> FlowMonitorHealth:
+    """Live liveness probes for ASAPO, Kafka, and Mongo.
+
+    Each probe is non-blocking with an independent timeout.  A failed probe
+    sets reachable=false and does not raise an HTTP error; callers can always
+    get a response.
+    """
+    h = settings.hzdr_health
+    asapo, kafka, mongo = await asyncio.gather(
+        _probe_asapo(h.asapo_status_url, h.timeout),
+        _probe_kafka(h.kafka_bootstrap, h.timeout),
+        _probe_mongo(h.mongo_uri, h.timeout),
+    )
+    return FlowMonitorHealth(asapo=asapo, kafka=kafka, mongo=mongo)
 
 
 @router.get("/runtime")
