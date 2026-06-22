@@ -1,13 +1,14 @@
 """Metadata routers."""
 
 import json
+import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from random import Random
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
@@ -60,6 +61,29 @@ class HZDRShotMetadataUpdate(BaseModel):
     note: str | None = None
 
 
+class HZDRSavedViewCreate(BaseModel):
+    """Create or replace a personal HZDR table view."""
+
+    name: str
+    kind: str = "table"
+    scope: str = "personal"
+    state: dict[str, Any] = Field(default_factory=dict)
+
+
+class HZDRSavedView(BaseModel):
+    """One durable HZDR UI view sidecar record."""
+
+    id: str
+    source_key: str
+    name: str
+    kind: str = "table"
+    scope: str = "personal"
+    owner: str
+    state: dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+    updated_at: str
+
+
 class HZDRReviewResponse(BaseModel):
     """Events awaiting review plus the matched/ambiguous/unmatched summary."""
 
@@ -100,6 +124,136 @@ async def list_hzdr_sources() -> list[HZDRSource]:
 async def get_hzdr_source(source_key: str) -> HZDRSource | None:
     """Get one HZDR source from the active local metadata provider."""
     return HZDRSourceProvider(settings.metadata).get_source(source_key)
+
+
+def hzdr_saved_views_sidecar_path(sources_file: Path) -> Path:
+    return sources_file.with_name(f"{sources_file.stem}.views.json")
+
+
+def _current_view_owner(user: OAuthUserInfo) -> str:
+    return user.preferred_username or getattr(user, "sub", "") or user.email
+
+
+def _saved_view_id() -> str:
+    return "view_" + secrets.token_urlsafe(12).replace("-", "_")
+
+
+def _require_local_hzdr_view_store() -> Path:
+    if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
+        raise HTTPException(
+            status_code=400,
+            detail="HZDR saved views require local metadata provider and sources_file.",
+        )
+    return hzdr_saved_views_sidecar_path(settings.metadata.sources_file)
+
+
+def load_hzdr_saved_views(path: Path) -> list[HZDRSavedView]:
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Invalid saved views sidecar: {path}"
+        ) from exc
+    records = payload.get("views", []) if isinstance(payload, dict) else payload
+    if not isinstance(records, list):
+        raise HTTPException(
+            status_code=500, detail=f"Invalid saved views sidecar: {path}"
+        )
+    return [
+        HZDRSavedView.model_validate(record)
+        for record in records
+        if isinstance(record, dict)
+    ]
+
+
+def write_hzdr_saved_views(path: Path, views: list[HZDRSavedView]) -> None:
+    write_json_atomic(
+        path, {"version": 1, "views": [view.model_dump() for view in views]}
+    )
+
+
+@router.get("/hzdr/sources/{source_key}/views")
+async def list_hzdr_saved_views(
+    source_key: str, user: OAuthUserInfo
+) -> list[HZDRSavedView]:
+    """List this user's personal HZDR table views plus reserved shared views."""
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+    owner = _current_view_owner(user)
+    views = load_hzdr_saved_views(_require_local_hzdr_view_store())
+    return [
+        view
+        for view in views
+        if view.source_key == source_key
+        and (view.scope == "shared" or view.owner == owner)
+    ]
+
+
+@router.post("/hzdr/sources/{source_key}/views")
+async def save_hzdr_saved_view(
+    source_key: str, payload: HZDRSavedViewCreate, user: OAuthUserInfo
+) -> HZDRSavedView:
+    """Create or replace this user's personal HZDR table view."""
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+    if payload.scope != "personal":
+        raise HTTPException(
+            status_code=400, detail="Only personal saved views are supported."
+        )
+    owner = _current_view_owner(user)
+    path = _require_local_hzdr_view_store()
+    views = load_hzdr_saved_views(path)
+    existing = {
+        (view.source_key, view.owner, view.kind, view.name): view for view in views
+    }
+    key = (source_key, owner, payload.kind, payload.name)
+    previous = existing.get(key)
+    now = datetime.now(UTC).isoformat()
+    saved = HZDRSavedView(
+        id=previous.id if previous else _saved_view_id(),
+        source_key=source_key,
+        name=payload.name,
+        kind=payload.kind,
+        scope="personal",
+        owner=owner,
+        state=payload.state,
+        created_at=previous.created_at if previous else now,
+        updated_at=now,
+    )
+    existing[key] = saved
+    write_hzdr_saved_views(path, list(existing.values()))
+    return saved
+
+
+@router.delete("/hzdr/sources/{source_key}/views/{view_id}")
+async def delete_hzdr_saved_view(
+    source_key: str, view_id: str, user: OAuthUserInfo
+) -> dict[str, bool]:
+    """Delete one of this user's personal HZDR table views."""
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+    owner = _current_view_owner(user)
+    path = _require_local_hzdr_view_store()
+    views = load_hzdr_saved_views(path)
+    kept: list[HZDRSavedView] = []
+    deleted = False
+    for view in views:
+        if view.source_key == source_key and view.id == view_id:
+            if view.owner != owner or view.scope != "personal":
+                raise HTTPException(
+                    status_code=403, detail="Cannot delete this saved view."
+                )
+            deleted = True
+            continue
+        kept.append(view)
+    if deleted:
+        write_hzdr_saved_views(path, kept)
+    return {"deleted": deleted}
 
 
 @router.get("/hzdr/sources/{source_key}/shots")

@@ -14,6 +14,7 @@ import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack } from '@mantine/core'
 
 import { getCell, numberCell, textCell } from './cells'
+import { SavedViewsPopover } from './components/popovers/saved-views-popover'
 import { TagsPopover } from './components/popovers/tags-popover'
 import { VariablesPopover } from './components/popovers/variables-popover'
 import ContextMenu from './context-menu'
@@ -344,6 +345,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
           <Group px={6}>
             <VariablesPopover />
             <TagsPopover />
+            <SavedViewsPopover sourceKey={proposal} />
           </Group>
           <>
             <DataEditor

@@ -12,11 +12,11 @@ Updated: 2026-06-18
 
 ## Where We Are
 
-The data model, offline integration path, local acceptance test, and operator
-review UI are all implemented and committed. Every repo's integration branch has
-been tested. The remaining work is (a) merging branches that are verified but
-not yet on main, (b) wiring a real broker roundtrip, and (c) running the pilot
-capture.
+The data model, offline integration path, local acceptance test, operator
+review UI, durable spool consumer, and flow-monitor health endpoint are all
+implemented and committed. Every repo's integration branch has been tested.
+The remaining work is (a) merging the shotcounter branch, (b) wiring real
+broker roundtrips, and (c) running the pilot capture.
 
 Committed and tested:
 
@@ -44,8 +44,15 @@ Committed and tested:
 - Local ASAPO emulator/test harness proves claim-before-ack,
   flush/fsync-before-ack, campaign-scoped group offsets, and replay dedup by
   `event_id` with message-ID fallback.
-- Offline four-source integration test
-  (`api/tests/test_hzdr_integration.py`).
+- Offline four-source integration test (`api/tests/test_hzdr_integration.py`).
+- Durable ASAPO spool consumer (`consumer/spool.py` + `consumer/asapo.py`):
+  claim→write-fsync→ack→dedup loop running as a FastAPI lifespan background
+  task; 11 integration tests against the live harness broker.
+- `GET /config/health` endpoint: async ASAPO/Kafka/Mongo liveness probes with
+  per-service `reachable` + `latency_ms`; configured via `DW_API_HZDR_HEALTH__*`.
+- Production deployment templates: `api/.env.production.example`,
+  `scripts/damnit-api.service` systemd unit.
+- Cross-repo test runner `scripts/test-all.ps1` (all six suites, one command).
 
 ## Work Order
 
@@ -56,8 +63,9 @@ The sequence below is ordered by dependency, not effort.
    against a local broker, plus a decision on `IsShotCounterXX` defaults for
    real deployments (currently all `False` — operators must opt each channel
    in explicitly).
-2. **Commit the `asapo-for-hzdr-damnit` schema-version fix** — three example
-   files have an uncommitted `"hzdr.source-event/1"` → `"hzdr-event-v1"` fix.
+2. **`asapo-for-hzdr-damnit` schema-version fix** — ✅ committed. Example files
+   use canonical `"hzdr-event-v1"` schema-version string; `drop-in/damnit-consumer.env.example`
+   added mapping harness vars to `DW_API_HZDR_SPOOL__*`.
 3. **Wire `shotcounter`'s Kafka envelope into DAMNIT's normalizer** — ✅
    committed. `normalize_processed_trigger_message` detects a flat
    `hzdr-event-v1` document (`schema_version` field present) and routes it
@@ -71,16 +79,19 @@ The sequence below is ordered by dependency, not effort.
 5. **Capture one real pilot sequence** — one synchronized real capture for
    `Solenoid Beamline Tests 01.2025`: LabFrog export, ASAPO event, Watchdog
    Kafka event, shotcounter trigger message.
-6. **Implement durable campaign spool with ack-after-flush consumers** — the
-   local ASAPO harness proves the correct claim/flush/ack/dedup ordering, but
-   no production supervised consumer is wired into DAMNIT yet. This is the
-   biggest unbuilt piece.
+6. **Implement durable campaign spool with ack-after-flush consumers** — ✅
+   committed. `api/src/damnit_api/consumer/spool.py` (`HZDRSpoolConsumer` base,
+   claim→write→ack→dedup loop) and `consumer/asapo.py` (`AsapoSpoolConsumer`,
+   talks to harness HTTP API and real ASAPO broker endpoint alike). Activated by
+   `DW_API_HZDR_SPOOL__ENABLED=true`; starts as a FastAPI lifespan background
+   task. 11 new tests in `api/tests/test_hzdr_spool.py`. Suite: `161 passed, 1 skipped`.
 7. **Run real broker roundtrips with restart/replay** — `test_kafka_docker.py`
    in planet-watchdog is a one-shot smoke test; the go-live gate needs a
    restart-and-replay pass.
-8. **Connect flow-monitor backend health** — today's Flow Monitor reads
-   already-loaded catalog data. Real Kafka/ASAPO/Mongo health checks are not
-   wired.
+8. **Connect flow-monitor backend health** — ✅ committed. `GET /config/health`
+   in `shared/routers.py` returns `FlowMonitorHealth` with async probes for
+   ASAPO (httpx), Kafka (TCP), and Mongo (motor ping), each with a 2 s timeout.
+   Configured via `DW_API_HZDR_HEALTH__*` env vars.
 9. **Run the go-live replay** — see Go-Live Gate below.
 
 ## Repository Responsibilities
@@ -123,15 +134,16 @@ Branch: `master` (changes committed)
 
 ### `GitLab/asapo-for-hzdr-damnit`
 
-Branch: `main` (local harness committed; 3 example files have uncommitted fix)
+Branch: `main` (all committed)
 
 | Item | Status |
 | --- | --- |
 | Local harness proves claim-before-ack, flush/fsync-before-ack, campaign-scoped group offsets, replay dedup by `event_id` | ✅ committed and verified |
 | Example files use canonical `hzdr-event-v1` schema-version string | ✅ committed |
-| Production supervised consumer with named consumer group and campaign routing | 🔴 not started |
-| Carry claim/flush/ack/replay-dedup pattern into real ASAPO SDK consumer | 🔴 not started — the harness proves the pattern; production needs to implement it |
-| References large arrays externally instead of embedding in JSON | 🔴 not started |
+| `drop-in/damnit-consumer.env.example` maps harness vars to `DW_API_HZDR_SPOOL__*` | ✅ committed |
+| Production supervised consumer with named consumer group and campaign routing | ✅ implemented in DAMNIT — `AsapoSpoolConsumer` in `api/src/damnit_api/consumer/asapo.py`; talks to harness and real broker alike |
+| Carry claim/flush/ack/replay-dedup pattern into real ASAPO SDK consumer | 🟡 loop is built; swap harness HTTP client for real ASAPO SDK when broker is available |
+| References large arrays externally instead of embedding in JSON | 🔴 not started — `HZDRPayloadRef.uri` field exists; producer-side work needed |
 
 ### `GitLab/shotcounter`
 
@@ -161,9 +173,9 @@ Branch: `main`
 | Cross-repo test runner (`scripts/test-all.ps1`) — runs all six suites in one command | ✅ committed |
 | Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | ✅ committed — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |
 | Versioned JSON Schema publication from `HZDREventV1` | ⬜ lower priority while only one schema version exists |
-| Durable per-campaign spool with transport positions and dedup state | 🔴 not started — biggest unbuilt piece |
-| Real flow-monitor backend health (Kafka/ASAPO/Mongo) | 🟡 not started; today is presentation-only |
-| Production auth, storage, backup, logging, restart configuration | 🟡 not started |
+| Durable per-campaign spool with transport positions and dedup state | ✅ committed — `consumer/spool.py` + `consumer/asapo.py`; `DW_API_HZDR_SPOOL__ENABLED=true` activates background task in lifespan |
+| Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
+| Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
 
 ## Shot Number Authority
@@ -223,18 +235,19 @@ The same five properties must hold for the real production consumer.
 | Dedup on replay | Consumer checks whether `event_id` already exists in the spool directory before writing; if yes, skip and ack (idempotent replay) |
 | Builder trigger | On each new event file, the builder reruns; the single-writer PID lock already serialises concurrent runs |
 
-### Implementation sequence (not yet started)
+### Implementation (completed 2026-06-18)
 
-1. Add a `HZDRSpoolConsumer` class in a new `api/src/damnit_api/consumer/` module.
-   - Config: broker URIs, topic(s), consumer-group name (= campaign slug), spool root path.
-   - Loop: claim → write-and-flush → ack → trigger builder.
-   - Handles `KeyboardInterrupt` / `SIGTERM` cleanly (do not ack on interrupted write).
-2. Add ASAPO SDK consumer variant (`AsapoSpoolConsumer`) and Kafka variant
-   (`KafkaSpoolConsumer`) sharing the same loop logic.
-3. Supervised launch: `systemd` unit per campaign, or a FastAPI lifespan task
-   started from `DAMNIT_HZDR_SPOOL=1` env flag.
-4. Integration test: start the consumer against a real broker (Docker Compose),
-   publish 3 events, restart the consumer, verify no duplicates and no lost events.
+1. ✅ `HZDRSpoolConsumer` base class in `api/src/damnit_api/consumer/spool.py` —
+   `SpoolConfig` dataclass, `consume_one()` write+dedup, `run(stop)` poll loop,
+   clean `CancelledError` handling.
+2. ✅ `AsapoSpoolConsumer` in `api/src/damnit_api/consumer/asapo.py` — talks to
+   the harness HTTP broker and the real ASAPO broker endpoint via the same API.
+   `KafkaSpoolConsumer` deferred; same base class will cover it.
+3. ✅ Supervised launch: `DW_API_HZDR_SPOOL__ENABLED=true` starts a background
+   asyncio task in the FastAPI lifespan (`main.py`); `scripts/damnit-api.service`
+   systemd unit wraps the whole API process with `Restart=on-failure`.
+4. ✅ 11 integration tests in `api/tests/test_hzdr_spool.py` using the live
+   in-process harness broker.  Remaining: roundtrip test with real ASAPO SDK.
 
 ### Key invariant
 

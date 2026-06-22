@@ -4386,7 +4386,7 @@ function buildHdf5DatasetOptions(
   contextScope: string
 ): HZDRDatasetOption[] {
   const byShotOptions = new Map<string, HZDRDatasetOption>()
-  const directOptions: HZDRDatasetOption[] = []
+  const directOptions = new Map<string, HZDRDatasetOption>()
 
   for (const dataset of datasets) {
     const templateName = hdf5PerShotTemplateName(dataset.name)
@@ -4414,8 +4414,12 @@ function buildHdf5DatasetOptions(
       continue
     }
 
-    directOptions.push({
-      value: `hdf5:${dataset.name}`,
+    const value = `hdf5:${dataset.name}`
+    if (directOptions.has(value)) {
+      continue
+    }
+    directOptions.set(value, {
+      value,
       label: `${dataset.name} (${dataset.dtype}, ${formatShape(dataset.shape)})`,
       name: dataset.name,
       previewName: dataset.name,
@@ -4431,7 +4435,7 @@ function buildHdf5DatasetOptions(
     })
   }
 
-  return [...byShotOptions.values(), ...directOptions]
+  return [...byShotOptions.values(), ...directOptions.values()]
 }
 
 function groupHdf5DatasetOptions(

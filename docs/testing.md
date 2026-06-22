@@ -2,11 +2,11 @@
 
 ## Verified
 
-As of 2026-06-17:
+As of 2026-06-18:
 
 | Repository | Result |
 | --- | --- |
-| DAMNIT API | `150 passed, 1 skipped` |
+| DAMNIT API | `161 passed, 1 skipped` |
 | LabFrog SQLite tools | `60 passed` |
 | PLANET Watchdog focused suite | `17 passed` |
 | shotcounter (`feature/hzdr-canonical-trigger-event`) | `18 passed` (1 NTP-tolerance test deselected) |
@@ -18,6 +18,12 @@ combines LabFrog, ASAPO, Watchdog, and DRACO inputs for
 catalog loading, raw arrays, and API previews. A second trigger fixture exercises
 the flat `hzdr-event-v1` Kafka envelope that shotcounter's branch emits (no
 `processed_message` wrapper).
+
+`api/tests/test_hzdr_spool.py` tests the durable spool consumer end-to-end
+using a live in-process broker (loaded from the asapo-for-hzdr-damnit sibling
+repo). Covers: claim→write-fsync→ack cycle, no-ack-without-write, dedup by
+`event_id`, campaign offset isolation, and replay dedup surviving consumer
+restart. 11 tests; skipped automatically if the sibling repo is not present.
 
 `api/scripts/hzdr-local-acceptance.py` is the local HTTP acceptance check:
 emulator events → `HZDREventV1` → JSONL staging → catalog rebuild →
@@ -54,8 +60,9 @@ Pass `-WithAcceptance` to also run `hzdr-local-acceptance.py`.
 1. Build DAMNIT from current real sibling-repository artifacts (real LabFrog
    export + real broker events).
 2. Run Kafka roundtrip and restart/replay for planet-watchdog and shotcounter.
-3. Run ASAPO publish/consume/restart roundtrip with the production SDK
-   consumer (harness proves the pattern; production consumer not yet built).
+3. Run ASAPO publish/consume/restart roundtrip with the production ASAPO SDK
+   wired into `AsapoSpoolConsumer` (consumer loop is built; SDK swap is the
+   remaining step).
 4. Add Playwright coverage for campaign, shot, provenance, and preview views.
 5. Replay the captured pilot and report match/deduplication counts against the
    go-live gate in [integration-roadmap.md](integration-roadmap.md).
