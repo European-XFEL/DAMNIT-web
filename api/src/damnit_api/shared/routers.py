@@ -47,8 +47,10 @@ async def get_runtime_config() -> RuntimeConfig:
     )
     return RuntimeConfig(
         profile=settings.deployment.profile,
-        auth_mode=settings.auth.mode,
-        ldap_form_enabled=bool(settings.auth.ldap.server_url),
+        auth_mode=settings.auth.mode if settings.auth is not None else "none",
+        ldap_form_enabled=bool(
+            settings.auth is not None and settings.auth.ldap.server_url
+        ),
         metadata_provider=settings.metadata.provider,
         flow_monitor=FlowMonitorConfig.model_validate(
             settings.flow_monitor.model_dump()

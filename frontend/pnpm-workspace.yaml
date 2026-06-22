@@ -40,11 +40,16 @@ catalogs:
     '@reduxjs/toolkit': 2.6.1
     react-redux: 9.2.0
   tooling:
+    '@testing-library/jest-dom': 6.6.3
+    '@testing-library/react': 16.0.0
+    '@testing-library/user-event': 14.5.2
     '@vitejs/plugin-react': 5.1.0
+    jsdom: 26.1.0
     postcss: 8.5.3
     postcss-simple-vars: 7.0.1
     typescript: 5.9.3
     vite: 7.2.2
+    vitest: 3.2.4
   types:
     '@types/lodash': 4.17.23
     '@types/node': 24.10.0

@@ -4,6 +4,7 @@ $repo = Resolve-Path "$PSScriptRoot\.."
 Set-Location $repo
 
 $env:DW_API_DAMNIT_PATH = "$PWD\.damnit-test"
+$env:DW_API_AUTH__MODE = "ldap"
 
 uv run ruff check . --fix
 uv run ruff format .
