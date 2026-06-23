@@ -114,10 +114,21 @@ export function HZDRShotPage() {
       return
     }
 
-    fetch(`/metadata/hzdr/sources/${source_key}/shots/${selectedShotNumber}`)
+    // Prefer the unambiguous shot_key route: shot_number can repeat when the
+    // counter restarts each day, so fetching detail by number alone is fragile.
+    // Fall back to the legacy number route only when no shot_key is available.
+    const selected = shots.find(
+      (shot) => shot.shot_number === selectedShotNumber
+    )
+    const shotsBase = `/metadata/hzdr/sources/${source_key}/shots`
+    const detailPath = selected?.shot_key
+      ? `${shotsBase}/by-key/${encodeURIComponent(selected.shot_key)}`
+      : `${shotsBase}/${selectedShotNumber}`
+
+    fetch(detailPath)
       .then((response) => response.json())
       .then(setShotDetail)
-  }, [source_key, selectedShotNumber])
+  }, [source_key, selectedShotNumber, shots])
 
   const selectedShot = shots.find(
     (shot) => shot.shot_number === selectedShotNumber
