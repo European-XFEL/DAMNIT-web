@@ -221,6 +221,27 @@ class HZDRSpoolSettings(BaseModel):
     batch_size: int = 10
 
 
+class HZDRKafkaSpoolSettings(BaseModel):
+    """Config for the durable Kafka trigger spool consumer.
+
+    Activated by setting DW_API_HZDR_KAFKA_SPOOL__ENABLED=true.  Consumes the
+    PLANET-Watchdog / shotcounter ``hzdr-event-v1`` envelope from a Kafka
+    consumer group (manual offset commit) and spools it next to the ASAPO
+    events; runs as a background asyncio task inside the FastAPI lifespan.
+    """
+
+    enabled: bool = False
+    bootstrap_servers: str = "localhost:9092"
+    topics: list[str] = Field(default_factory=list)
+    campaign: str = ""
+    consumer_group: str = "damnit-kafka"
+    spool_dir: Path = Path("spool/kafka")
+    filename: str = "trigger.jsonl"
+    poll_interval: float = 2.0
+    poll_timeout_ms: int = 1000
+    batch_size: int = 10
+
+
 class HZDRHealthSettings(BaseModel):
     """Broker/DB URLs and timeouts for the /config/health liveness probes.
 
@@ -282,6 +303,10 @@ class Settings(BaseSettings):
     flow_monitor: FlowMonitorSettings = FlowMonitorSettings()
 
     hzdr_spool: HZDRSpoolSettings = Field(default_factory=HZDRSpoolSettings)
+
+    hzdr_kafka_spool: HZDRKafkaSpoolSettings = Field(
+        default_factory=HZDRKafkaSpoolSettings
+    )
 
     hzdr_health: HZDRHealthSettings = Field(default_factory=HZDRHealthSettings)
 

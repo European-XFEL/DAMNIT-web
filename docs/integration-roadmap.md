@@ -176,7 +176,7 @@ Branch: `main`
 | Cross-repo test runner (`scripts/test-all.ps1`) — runs all six suites in one command | ✅ committed |
 | Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | ✅ committed — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |
 | Versioned JSON Schema publication from `HZDREventV1` | ⬜ lower priority while only one schema version exists |
-| Durable per-campaign spool with transport positions and dedup state | ✅ committed — `consumer/spool.py` + `consumer/asapo.py`; `DW_API_HZDR_SPOOL__ENABLED=true` activates background task in lifespan |
+| Durable per-campaign spool with transport positions and dedup state | ✅ committed — `consumer/spool.py` + `consumer/asapo.py` (ASAPO) + `consumer/kafka.py` (Kafka trigger events); `DW_API_HZDR_SPOOL__ENABLED` / `DW_API_HZDR_KAFKA_SPOOL__ENABLED` activate background tasks in lifespan |
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
@@ -247,8 +247,10 @@ Follow-ups (not yet done):
    number.** Correct for well-formed curated exports; if an export ever marks an
    older row `active`, the flag would be wrong. Acceptable for the pilot; revisit
    if curated data proves noisier.
-3. **Next real work** remains the Kafka spool consumer for shotcounter/Watchdog
-   (see below); identity matching is now ready to consume those linking fields.
+3. **Kafka spool consumer for shotcounter/Watchdog** — ✅ landed as
+   `KafkaSpoolConsumer` (`consumer/kafka.py`); identity matching was already
+   ready to consume those linking fields. Next real work is now the real-broker
+   restart/replay pass (Work Order step 7) toward the go-live gate.
 
 ### Reassessment (2026-06-23, follow-up pass)
 
@@ -275,9 +277,9 @@ suite 100 tests with `-k hzdr`, `ruff` clean on all touched modules):
   `kafka_event_id` identity matching. (was follow-up 5)
 
 The remaining items above are deliberately deferred: the frontend `shot_key`
-adoption is UI work tracked separately, the `has_newer_version` status keying is
-acceptable for the pilot, and the Kafka spool consumer is the next real
-work item.
+adoption is UI work tracked separately, and the `has_newer_version` status keying
+is acceptable for the pilot. The Kafka spool consumer — previously the next real
+work item — has since landed (`KafkaSpoolConsumer`, `consumer/kafka.py`).
 
 ## Durable Spool Design
 
@@ -305,7 +307,7 @@ The same five properties must hold for the real production consumer.
 | Real ASAPO SDK consumer | Replace emulator with `asapo_consumer.create_consumer(…, consumer_name=<campaign-slug>)` call, configured from the same env-file settings used by the existing harness |
 | Supervised restart | Wrap the consume loop in a `systemd` unit (or DAMNIT background task) that restarts on exit; last acked offset is the consumer group position — restart picks up where it left off |
 | Large-array externalisation | ASAPO messages > ~1 MB should not embed raw arrays in JSON; use `payload_ref.uri` pointing to a streamed dataset, and write the array to the NeXus file separately. The `HZDRPayloadRef` model already has the `uri` field |
-| Kafka consumer (PLANET-Watchdog / shotcounter) | Same claim/write/ack loop but using a Kafka `ConsumerGroup` with `enable.auto.commit=False`; commit offset only after `write_json_atomic` succeeds |
+| Kafka consumer (PLANET-Watchdog / shotcounter) | ✅ `KafkaSpoolConsumer` (`consumer/kafka.py`): same `HZDRSpoolConsumer` claim/write/ack loop over a `kafka-python-ng` consumer group with `enable_auto_commit=False`; `_claim` polls a batch without committing, `_ack` commits `OffsetAndMetadata(last+1)` only after every message is fsync'd. Sync client calls are off-loaded with `asyncio.to_thread`. Activated by `DW_API_HZDR_KAFKA_SPOOL__ENABLED=true` |
 | Per-campaign spool directory | `<campaign-slug>/spool/asapo/` and `<campaign-slug>/spool/kafka/<topic>/` under the DAMNIT data root; the builder's `--events-jsonl` / `--trigger-jsonl` flags already point to exactly these paths |
 | Write-and-flush before ack | `write_json_atomic` (temp file + `fsync` + rename) is already implemented in `hzdr_nexus.py`; the consumer calls it, then acks |
 | Dedup on replay | Consumer checks whether `event_id` already exists in the spool directory before writing; if yes, skip and ack (idempotent replay) |
@@ -318,12 +320,19 @@ The same five properties must hold for the real production consumer.
    clean `CancelledError` handling.
 2. ✅ `AsapoSpoolConsumer` in `api/src/damnit_api/consumer/asapo.py` — talks to
    the harness HTTP broker and the real ASAPO broker endpoint via the same API.
-   `KafkaSpoolConsumer` deferred; same base class will cover it.
-3. ✅ Supervised launch: `DW_API_HZDR_SPOOL__ENABLED=true` starts a background
-   asyncio task in the FastAPI lifespan (`main.py`); `scripts/damnit-api.service`
-   systemd unit wraps the whole API process with `Restart=on-failure`.
-4. ✅ 11 integration tests in `api/tests/test_hzdr_spool.py` using the live
-   in-process harness broker.  Remaining: roundtrip test with real ASAPO SDK.
+   ✅ `KafkaSpoolConsumer` in `api/src/damnit_api/consumer/kafka.py` — the same
+   base class over a `kafka-python-ng` consumer group with manual offset commit;
+   sync `poll`/`commit` off-loaded via `asyncio.to_thread`. 6 offline tests in
+   `api/tests/test_hzdr_kafka_spool.py` (in-memory fake broker, no Docker).
+3. ✅ Supervised launch: `DW_API_HZDR_SPOOL__ENABLED=true` (ASAPO) and
+   `DW_API_HZDR_KAFKA_SPOOL__ENABLED=true` (Kafka) each start a background
+   asyncio task in the FastAPI lifespan (`main.py`), sharing one stop event and
+   teardown; `scripts/damnit-api.service` systemd unit wraps the whole API
+   process with `Restart=on-failure`.
+4. ✅ 11 integration tests in `api/tests/test_hzdr_spool.py` (ASAPO, live
+   in-process harness broker) + 6 in `api/tests/test_hzdr_kafka_spool.py`
+   (Kafka, in-memory fake). Remaining: roundtrip test with real ASAPO SDK and a
+   real broker restart/replay pass (Work Order step 7).
 
 ### Key invariant
 
@@ -347,3 +356,37 @@ replay each consumer, then verify:
 - staged-event schema validation rejects malformed producer payloads with
   actionable errors
 - reproducible output from retained exports and spools
+
+## Cross-repo standardization (2026-06-23)
+
+A sibling-repo standardization pass to keep the shared schema and tooling in
+sync across `DAMNIT-web-hzdr`, `planet-watchdog`, `shotcounter`,
+`labfrog`, `labfrog-sqlite-tools-repo`, `asapo-for-hzdr-damnit`, and
+`kafka-broker-docker`:
+
+- **Schema drift guard (✅).** Reconciled the vendored `hzdr_event.py` copies
+  (planet-watchdog's `values` was `dict[str, JsonValue] | None` and lacked the
+  `check_values_size`/`EVENT_REQUIRED_FIELDS` guardrails; now byte-equivalent in
+  contract to DAMNIT's canonical model). Added a committed JSON-Schema + sample
+  fixture, vendored identically into each repo, and a `test_hzdr_event.py`
+  assertion per repo so future drift fails CI. See **Event Envelope** in
+  `architecture.md`. A real `F821` NameError in `labfrog/login.py` (`_optional_url_for`)
+  surfaced during the lint pass and was fixed.
+- **Ruff everywhere (✅).** Vendored one shared `ruff.toml` baseline into every
+  sibling repo (replacing Trunk/black in labfrog/planet-watchdog and black/isort
+  in shotcounter; mypy retained where present). Each repo was formatted and
+  safe-fixed; the residual opinionated/legacy families are baselined in a
+  clearly-marked, per-repo "adoption baseline" ignore block to re-enable family
+  by family. labfrog keeps its REUSE/SPDX `license-lint` gate unchanged, and
+  `F401` is `unfixable` there to protect its implicit re-export pattern.
+
+Status of the three deferred follow-ups after this pass:
+
+- **Frontend `shot_key` adoption** — still deferred; separate UI work, unrelated
+  to schema/tooling sync.
+- **`has_newer_version` keyed on `status == active`** — left as-is; an accepted
+  pilot simplification, not a standardization concern.
+- **Kafka spool consumer** — ✅ now implemented (`KafkaSpoolConsumer`,
+  `consumer/kafka.py`). The drift guard above de-risked it: the consumer ingests
+  exactly the `hzdr-event-v1` envelope pinned by a conformance test in every
+  producer repo. The remaining go-live work is a real-broker restart/replay pass.

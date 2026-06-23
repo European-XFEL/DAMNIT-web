@@ -97,13 +97,19 @@ class SpoolConfig:
     spool_dir: Path
     poll_interval: float = 2.0
     batch_size: int = 10
+    filename: str = "events.jsonl"
     extra: dict[str, Any] = field(default_factory=dict)
 
     @property
     def events_jsonl(self) -> Path:
-        """Path to the campaign JSONL spool file consumed by the builder."""
+        """Path to the campaign JSONL spool file consumed by the builder.
+
+        The ASAPO path writes ``events.jsonl``; the Kafka trigger path overrides
+        ``filename`` (e.g. ``trigger.jsonl``) so the builder can be pointed at it
+        via ``--trigger-jsonl`` independently of the normalized event spool.
+        """
         slug = self.campaign.replace(" ", "_") if self.campaign else "default"
-        return self.spool_dir / slug / "events.jsonl"
+        return self.spool_dir / slug / self.filename
 
 
 class HZDRSpoolConsumer(ABC):

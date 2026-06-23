@@ -50,30 +50,45 @@ def create_app():  # noqa: C901
         app.router.include_router(shared_routers.router)
         app.router.include_router(gql.get_gql_app(), prefix="/graphql")
 
-        spool_consumer = None
+        spool_root = settings.damnit_path or Path.cwd()
         spool_stop = asyncio.Event()
-        spool_task = None
+        spool_consumers = []
+        spool_tasks = []
         if settings.hzdr_spool.enabled:
             from .consumer.asapo import AsapoSpoolConsumer
 
-            spool_root = settings.damnit_path or Path.cwd()
-            spool_consumer = AsapoSpoolConsumer.from_settings(spool_root)
-            spool_task = asyncio.create_task(spool_consumer.run(spool_stop))
+            asapo_consumer = AsapoSpoolConsumer.from_settings(spool_root)
+            spool_consumers.append(asapo_consumer)
+            spool_tasks.append(asyncio.create_task(asapo_consumer.run(spool_stop)))
             logger.info(
                 "ASAPO spool consumer started",
                 campaign=settings.hzdr_spool.campaign,
                 broker=settings.hzdr_spool.broker_url,
             )
+        if settings.hzdr_kafka_spool.enabled:
+            from .consumer.kafka import KafkaSpoolConsumer
+
+            kafka_consumer = KafkaSpoolConsumer.from_settings(spool_root)
+            spool_consumers.append(kafka_consumer)
+            spool_tasks.append(asyncio.create_task(kafka_consumer.run(spool_stop)))
+            logger.info(
+                "Kafka spool consumer started",
+                campaign=settings.hzdr_kafka_spool.campaign,
+                bootstrap_servers=settings.hzdr_kafka_spool.bootstrap_servers,
+                topics=settings.hzdr_kafka_spool.topics,
+            )
 
         yield
 
-        if spool_task is not None:
+        if spool_tasks:
             spool_stop.set()
-            spool_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await spool_task
-        if spool_consumer is not None:
-            await spool_consumer.aclose()
+            for task in spool_tasks:
+                task.cancel()
+            for task in spool_tasks:
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await task
+        for consumer in spool_consumers:
+            await consumer.aclose()
 
     swagger_oauth = (
         None
