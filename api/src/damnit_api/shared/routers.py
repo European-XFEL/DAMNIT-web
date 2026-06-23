@@ -122,9 +122,7 @@ async def _probe_mongo(uri: str, probe_timeout: float) -> ServiceHealth:
         import motor.motor_asyncio as motor  # type: ignore[import-untyped]
 
         timeout_ms = int(probe_timeout * 1000)
-        client: Any = motor.AsyncIOMotorClient(
-            uri, serverSelectionTimeoutMS=timeout_ms
-        )
+        client: Any = motor.AsyncIOMotorClient(uri, serverSelectionTimeoutMS=timeout_ms)
         await client.admin.command("ping")
         client.close()
         ms = int((time.monotonic() - t0) * 1000)

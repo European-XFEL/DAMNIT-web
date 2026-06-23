@@ -44,9 +44,12 @@ def _message_identity(message: dict[str, Any]) -> str:
     broker = message.get("_broker")
     if isinstance(broker, dict) and broker.get("message_id") is not None:
         return f"{_BROKER_ID_PREFIX}{broker['message_id']}"
-    return _SHA256_PREFIX + hashlib.sha256(
-        json.dumps(message, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
+    return (
+        _SHA256_PREFIX
+        + hashlib.sha256(
+            json.dumps(message, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+    )
 
 
 def _load_staged_identities(path: Path) -> set[str]:

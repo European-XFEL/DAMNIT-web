@@ -25,6 +25,17 @@ $ErrorActionPreference = "Stop"
 $gitlabRoot = Resolve-Path "$PSScriptRoot\..\.."
 $damnitRoot = Resolve-Path "$PSScriptRoot\.."
 
+# In PowerShell 5.1, $ErrorActionPreference = "Stop" does not apply to native
+# executables. Wrap every native command that should fail the suite with this.
+function Invoke-Exe {
+    $cmd     = $args[0]
+    $cmdArgs = if ($args.Count -gt 1) { $args[1..($args.Count - 1)] } else { @() }
+    & $cmd $cmdArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Command exited ${LASTEXITCODE}: $($args -join ' ')"
+    }
+}
+
 function Resolve-Repo([string]$name) {
     $path = Join-Path $gitlabRoot $name
     if (-not (Test-Path $path)) {
@@ -51,8 +62,8 @@ $allSuites = [ordered]@{
             $env:DW_API_DAMNIT_PATH = (Join-Path $apiRoot ".damnit-test")
             uv run ruff check . --fix --quiet
             uv run ruff format . --quiet
-            uv run ruff check .
-            uv run pytest -q
+            Invoke-Exe uv run ruff check .
+            Invoke-Exe uv run python -m pytest -q
             if ($WithAcceptance) {
                 Write-Host "  [acceptance]"
                 uv run python scripts/hzdr-local-acceptance.py
@@ -66,28 +77,28 @@ $allSuites = [ordered]@{
             $env:LABFROG_TESTING    = "1"
             $env:SKIP_CUSTOM_OPTIONS = "1"
             $env:SKIP_MEDIAWIKI     = "1"
-            uv run --group testing pytest -q -s tests -k "not webkit"
+            Invoke-Exe uv run --group testing python -m pytest -q -s tests -k "not webkit"
         }
     }
     "sqlite-tools" = @{
         label = "labfrog-sqlite-tools-repo"
         path  = Resolve-Repo "labfrog-sqlite-tools-repo"
-        run   = { uv run pytest -q }
+        run   = { Invoke-Exe uv run python -m pytest -q }
     }
     "planet-watchdog" = @{
         label = "planet-watchdog"
         path  = Resolve-Repo "planet-watchdog"
-        run   = { uv run pytest -q }
+        run   = { Invoke-Exe uv run python -m pytest -q }
     }
     "shotcounter" = @{
         label = "shotcounter"
         path  = Resolve-Repo "shotcounter"
-        run   = { uv run pytest -q -k "not ntp" }
+        run   = { Invoke-Exe uv run python -m pytest -q -k "not ntp" }
     }
     "asapo" = @{
         label = "asapo-for-hzdr-damnit"
         path  = Resolve-Repo "asapo-for-hzdr-damnit"
-        run   = { uv run pytest -q }
+        run   = { Invoke-Exe uv run python -m pytest -q }
     }
 }
 
