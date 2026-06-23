@@ -24,8 +24,11 @@ Committed and tested:
   derive from it instead of maintaining independent field lists.
 - Adapters for normalized ASAPO events, raw Watchdog documents, and legacy
   DRACO `processed_message` payloads.
-- Date-scoped identity and centralized timestamp reconciliation.
-- LabFrog Mongo, SQLite, and rich NeXus readers.
+- Date-scoped identity and centralized reconciliation: exact Kafka identity,
+  TANGO/shotcounter same-day matching, timestamp disambiguation, and
+  timestamp-only fallback.
+- LabFrog Mongo, curated SQLite, and rich NeXus readers; curated SQLite linking
+  columns (`kafka_event_id`, transport offsets, `damnit_*`) are preserved.
 - Canonical NeXus bridge, source catalog, API models, and frontend views.
 - `HZDREventV1.experiment_id` derived from MediaWiki campaign choice in
   LabFrog and plumbed through the SQLite/NeXus export pipeline.
@@ -184,11 +187,11 @@ Branch: `main`
 no cross-system-authoritative source exists. The three options, in order of
 effort:
 
-1. **Cross-check, don't author** — keep `shotcounter`'s `ShotNumber` as a
-   device-local count (useful for debouncing and diagnostics) and treat it as
-   advisory. DAMNIT's existing four-stage matcher remains the authority, using
-   LabFrog's operator-entered shot number plus timestamp proximity. Cheapest;
-   the pilot can run this way. Chosen for the pilot.
+1. **TANGO-preferred with timestamp fallback** — use shotcounter/TANGO
+   `ShotNumber` as the preferred live shot number when it is present, but keep
+   DAMNIT's timestamp matcher for missing, duplicated, or delayed shot numbers.
+   Exact curated `kafka_event_id`/transport-position matches outrank both.
+   Chosen for the pilot.
 
 2. **labfrog-sqlite-tools stamps the number at export time** — reads the
    LabFrog Mongo shot count (already the operator-facing truth) and writes it
@@ -202,6 +205,79 @@ effort:
 
 The decision to use Option 1 for the pilot is recorded. Options 2 and 3 remain
 open for post-pilot evaluation.
+
+## Schema Fix Review (2026-06-23)
+
+Review of the matching/identity schema work (curated SQLite v7/v8 columns,
+identity-first matching, `values` typing, `shot_key` route). Verified: full
+HZDR suite green (59 tests), `ruff` clean on all touched modules.
+
+What landed and is solid:
+
+- **Identity-first matcher.** `_match_event` now resolves in the documented
+  order: `kafka_event_id` → transport position (`topic/partition/offset`) →
+  same-day TANGO `shot_number` → duplicate-shot timestamp disambiguation
+  (`exact_day_shot_number_time_window`) → `shot_number` + nearest time →
+  nearest time → ambiguous/unmatched. `MATCH_RANK` ordering is internally
+  consistent (disambiguated < unique exact-day), and `MATCH_RANK.get(q, 0)`
+  tolerates the non-ranked `ambiguous`/`unmatched` qualities without a KeyError.
+- **Curated SQLite reader.** `read_labfrog_sqlite_shots()` now preserves the
+  Kafka/identity/linking columns and the `damnit_*` hints, prefers `date_time_utc`
+  for timestamp matching while keeping local `date_time` for date-scoping, and
+  drops empty-string columns from metadata (handles the empty `experiment_id`
+  seen in the curated Solenoid export).
+- **Superseded-row handling.** `_mark_superseded_labfrog_rows()` marks non-`active`
+  duplicates of an `active` (campaign, date, shot_number) group with
+  `has_newer_version`, reusing the same flag the NeXus reader already emits and
+  the matcher already filters on — archived rows stay as provenance, out of
+  automatic matching.
+- **`shot_key` lookup.** `GET .../shots/by-key/{shot_key}` is declared before the
+  `{shot_number}` route, so it is not shadowed; `_shot_detail()` is now shared by
+  both lookup paths.
+- **`values` typing.** Relaxed to `JsonValue | None`, so small numeric arrays
+  validate alongside scalars/objects.
+
+Follow-ups (not yet done):
+
+1. **Frontend has not adopted `shot_key`.** The route exists but no UI link or
+   review action uses it yet (Codex step 4). Switch shot-detail links and the
+   ambiguous-review flow to `shot_key` so restart-duplicated `shot_number`s stop
+   being fragile in the UI.
+2. **`has_newer_version` for SQLite is keyed on `status == active`, not version
+   number.** Correct for well-formed curated exports; if an export ever marks an
+   older row `active`, the flag would be wrong. Acceptable for the pilot; revisit
+   if curated data proves noisier.
+3. **Next real work** remains the Kafka spool consumer for shotcounter/Watchdog
+   (see below); identity matching is now ready to consume those linking fields.
+
+### Reassessment (2026-06-23, follow-up pass)
+
+Three of the original follow-ups are now closed; the suite stays green (HZDR
+suite 100 tests with `-k hzdr`, `ruff` clean on all touched modules):
+
+- **`values` size guard added.** `check_values_size()` in `hzdr_event.py`
+  rejects an inline `values` payload over `MAX_VALUES_ITEMS` (4096) leaf items -
+  counted recursively, so nested image arrays count every element - or over
+  `MAX_VALUES_BYTES` (64 KiB) of serialized JSON. `load_normalized_events()`
+  enforces it at staging time, naming the offending file and pointing producers
+  at `payload_ref`. Kept as a standalone function so future strict model
+  validation can reuse the same bound. (was follow-up 2)
+- **`experiment_id` duplication collapsed.** `read_labfrog_sqlite_shots()` now
+  excludes `experiment_id` from the per-row `metadata` dict; it lives only at the
+  top level, the single location `select_experiment_id()` reads. The builder's
+  defensive `metadata` fallback is harmless but no longer exercised for curated
+  SQLite. (was follow-up 3)
+- **Transport-position uniqueness assumption documented.**
+  `_shots_matching_transport_position()` and `docs/architecture.md` now state
+  that the `(topic, partition, offset)` match is intentionally not date-scoped
+  and trusts curated export writers never to rewrite/renumber committed offsets;
+  if a topic is recreated/compacted so offsets are reused, drop to
+  `kafka_event_id` identity matching. (was follow-up 5)
+
+The remaining items above are deliberately deferred: the frontend `shot_key`
+adoption is UI work tracked separately, the `has_newer_version` status keying is
+acceptable for the pilot, and the Kafka spool consumer is the next real
+work item.
 
 ## Durable Spool Design
 

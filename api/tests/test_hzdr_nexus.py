@@ -129,7 +129,7 @@ def test_preserves_rich_labfrog_nexus_and_adds_damnit_bridge(tmp_path: Path):
     assert "catalog_built_at" in sources[0].metadata
 
 
-def test_ambiguous_labfrog_match_is_not_silently_assigned():
+def test_duplicate_tango_shot_number_uses_timestamp_disambiguation():
     duplicate_rows = [
         {
             "record_id": "a",
@@ -142,7 +142,38 @@ def test_ambiguous_labfrog_match_is_not_silently_assigned():
             "record_id": "b",
             "shot_number": 17,
             "shot_date": "2026-06-10",
-            "labfrog_date_time": "2026-06-10T12:00:30Z",
+            "labfrog_date_time": "2026-06-10T12:00:45Z",
+            "metadata": {},
+        },
+    ]
+
+    shots, events = reconcile_canonical_shots(
+        [normalized_event(timestamp="2026-06-10T12:00:42Z")],
+        experiment_id="HELPMI",
+        source_key="hzdr-labfrog",
+        labfrog_shots=duplicate_rows,
+    )
+
+    assert events[0]["match_status"] == "matched"
+    assert events[0]["match_quality"] == "exact_day_shot_number_time_window"
+    matched = next(shot for shot in shots if shot["match_status"] == "matched")
+    assert matched["labfrog_record_id"] == "b"
+
+
+def test_ambiguous_labfrog_match_is_not_silently_assigned():
+    duplicate_rows = [
+        {
+            "record_id": "a",
+            "shot_number": 17,
+            "shot_date": "2026-06-10",
+            "labfrog_date_time": "2026-06-10T11:59:40Z",
+            "metadata": {},
+        },
+        {
+            "record_id": "b",
+            "shot_number": 17,
+            "shot_date": "2026-06-10",
+            "labfrog_date_time": "2026-06-10T12:00:20Z",
             "metadata": {},
         },
     ]
@@ -230,6 +261,44 @@ def test_repeated_shot_numbers_are_scoped_by_campaign_date():
     ]
 
 
+def test_kafka_event_id_takes_priority_over_shot_number_and_timestamp():
+    labfrog_shots = [
+        {
+            "record_id": "identity-match",
+            "shot_number": 17,
+            "shot_date": "2026-06-10",
+            "labfrog_date_time": "2026-06-10T12:00:20Z",
+            "metadata": {"kafka_event_id": "evt-shotcounter-17"},
+        },
+        {
+            "record_id": "timestamp-decoy",
+            "shot_number": 18,
+            "shot_date": "2026-06-10",
+            "labfrog_date_time": "2026-06-10T12:10:00Z",
+            "metadata": {},
+        },
+    ]
+
+    shots, events = reconcile_canonical_shots(
+        [
+            normalized_event(
+                event_id="evt-shotcounter-17",
+                shot_id="shot-000018",
+                shot_number=18,
+                timestamp="2026-06-10T12:10:01Z",
+                payload_ref={"topic": "shotcounter.shots", "partition": 0, "offset": 4},
+            )
+        ],
+        experiment_id="HELPMI",
+        source_key="hzdr-labfrog",
+        labfrog_shots=labfrog_shots,
+    )
+
+    assert events[0]["match_quality"] == "exact_kafka_event_id"
+    matched = next(shot for shot in shots if shot["match_status"] == "matched")
+    assert matched["labfrog_record_id"] == "identity-match"
+
+
 def test_labfrog_version_history_matches_only_current_record(tmp_path: Path):
     version_rows = [
         {
@@ -314,6 +383,92 @@ def test_reads_labfrog_sqlite_canonical_shot_columns(tmp_path: Path):
             "metadata": {"status": "active", "version": 2},
         }
     ]
+
+
+def test_reads_curated_sqlite_linking_columns_and_marks_history(tmp_path: Path):
+    sqlite_path = tmp_path / "campaign.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE shots (
+                mongo_id TEXT PRIMARY KEY,
+                shot_number INTEGER,
+                date_time TEXT,
+                campaign TEXT,
+                experiment_id TEXT,
+                status TEXT,
+                version INTEGER,
+                kafka_topic TEXT,
+                kafka_partition INTEGER,
+                kafka_offset INTEGER,
+                kafka_key TEXT,
+                kafka_event_id TEXT,
+                kafka_experiment_id TEXT,
+                kafka_shot_number INTEGER,
+                kafka_timestamp TEXT,
+                kafka_source TEXT,
+                damnit_shot_key TEXT,
+                damnit_match_quality TEXT
+            )
+            """
+        )
+        connection.executemany(
+            "INSERT INTO shots VALUES "
+            "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    "mongo-old",
+                    17,
+                    "2026-06-10T12:00:20",
+                    "HELPMI Campaign",
+                    "HELPMI",
+                    "archived",
+                    1,
+                    "shotcounter.shots",
+                    0,
+                    41,
+                    "HELPMI:Draco01",
+                    "evt-old",
+                    "HELPMI",
+                    17,
+                    "2026-06-10T10:00:20Z",
+                    "shotcounter",
+                    None,
+                    None,
+                ),
+                (
+                    "mongo-current",
+                    17,
+                    "2026-06-10T12:00:21",
+                    "HELPMI Campaign",
+                    "HELPMI",
+                    "active",
+                    2,
+                    "shotcounter.shots",
+                    0,
+                    42,
+                    "HELPMI:Draco01",
+                    "evt-current",
+                    "HELPMI",
+                    17,
+                    "2026-06-10T10:00:21Z",
+                    "shotcounter",
+                    "HELPMI:20260610:000017",
+                    "exact_kafka_event_id",
+                ),
+            ],
+        )
+
+    shots = read_labfrog_sqlite_shots(sqlite_path)
+
+    assert shots[0]["metadata"]["has_newer_version"] is True
+    assert shots[1]["metadata"]["has_newer_version"] is False
+    assert shots[1]["experiment_id"] == "HELPMI"
+    # experiment_id lives only at the top level now, not duplicated in metadata.
+    assert "experiment_id" not in shots[1]["metadata"]
+    assert shots[1]["metadata"]["kafka_event_id"] == "evt-current"
+    assert shots[1]["metadata"]["kafka_topic"] == "shotcounter.shots"
+    assert shots[1]["metadata"]["damnit_shot_key"] == "HELPMI:20260610:000017"
 
 
 def test_adapts_planet_watchdog_processed_document():
@@ -564,6 +719,26 @@ def test_load_normalized_events_reports_corrupt_json_file(tmp_path: Path):
 
     with pytest.raises(ValueError, match=r"broken\.json is not valid JSON"):
         load_normalized_events([json_path])
+
+
+def test_load_normalized_events_rejects_oversized_values_array(tmp_path: Path):
+    """An event embedding a large array in `values` is rejected at staging time
+    so producers steer big data into payload_ref instead of the envelope."""
+    json_path = tmp_path / "oversized.json"
+    event = normalized_event(values=[float(i) for i in range(5000)])
+    json_path.write_text(json.dumps(event), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"oversized\.json: values has 5000 items"):
+        load_normalized_events([json_path])
+
+
+def test_load_normalized_events_accepts_small_values_array(tmp_path: Path):
+    """A short waveform stays well under the guard and loads normally."""
+    json_path = tmp_path / "ok.json"
+    json_path.write_text(json.dumps(normalized_event()), encoding="utf-8")
+
+    loaded = load_normalized_events([json_path])
+    assert loaded[0]["values"] == [[1.0, 2.0], [3.0, 4.0]]
 
 
 def test_write_json_atomic_never_leaves_a_partial_file_on_failure(tmp_path: Path):

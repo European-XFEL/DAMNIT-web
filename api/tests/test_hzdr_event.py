@@ -7,8 +7,11 @@ from pydantic import ValidationError
 
 from damnit_api.metadata.hzdr_event import (
     EVENT_REQUIRED_FIELDS,
+    MAX_VALUES_BYTES,
+    MAX_VALUES_ITEMS,
     HZDREventV1,
     HZDRPayloadRef,
+    check_values_size,
 )
 from damnit_api.metadata.hzdr_nexus import load_normalized_events
 from damnit_api.metadata.hzdr_sources import HZDRReviewEvent, HZDRSourceEvent
@@ -56,6 +59,47 @@ def test_small_structured_values_validates():
     )
 
     assert event.values == {"energy": 8.2, "ok": True}
+
+
+def test_small_array_values_validate_for_embedded_numeric_payloads():
+    event = HZDREventV1.model_validate(_minimal_event(values=[1.0, 2.0, 3.0]))
+
+    assert event.values == [1.0, 2.0, 3.0]
+
+
+class TestValuesSizeGuard:
+    """check_values_size keeps large payloads out of the inline `values` field."""
+
+    def test_none_and_small_payloads_pass(self):
+        assert check_values_size(None) is None
+        assert check_values_size(8.2) is None
+        assert check_values_size([1.0, 2.0, 3.0]) is None
+        assert check_values_size({"energy": 8.2, "ok": True}) is None
+
+    def test_too_many_items_is_rejected(self):
+        error = check_values_size([0.0] * (MAX_VALUES_ITEMS + 1))
+
+        assert error is not None
+        assert "items" in error
+        assert "payload_ref" in error
+
+    def test_nested_arrays_are_counted_recursively(self):
+        # An image-shaped array: outer length is tiny but total elements exceed
+        # the item limit, so it must still be rejected.
+        rows = MAX_VALUES_ITEMS // 4 + 1
+        error = check_values_size([[0.0, 0.0, 0.0, 0.0] for _ in range(rows)])
+
+        assert error is not None
+        assert "items" in error
+
+    def test_oversized_byte_payload_is_rejected(self):
+        # Few items, but each a long string, so the JSON byte budget trips first.
+        big_string = "x" * (MAX_VALUES_BYTES // 4)
+        error = check_values_size([big_string, big_string, big_string, big_string])
+
+        assert error is not None
+        assert "bytes" in error
+        assert "payload_ref" in error
 
 
 def test_payload_ref_supports_kafka_traceability_fields():

@@ -150,6 +150,46 @@ def test_local_provider_returns_shots_from_file(tmp_path: Path):
     assert shots[0].fired_at == "2026-05-05T08:15:00Z"
 
 
+def test_local_provider_can_lookup_shot_by_date_scoped_key(tmp_path: Path):
+    path = tmp_path / "hzdr_sources.json"
+    path.write_bytes(
+        orjson.dumps({
+            "sources": [
+                {
+                    "key": "hzdr-local",
+                    "title": "HZDR local file fixture",
+                    "damnit_path": "damnit/hzdr-local",
+                    "metadata": {},
+                    "shots": [
+                        {
+                            "source_key": "hzdr-local",
+                            "shot_number": 1,
+                            "shot_key": "exp:20260505:000001",
+                            "fired_at": "2026-05-05T08:15:00Z",
+                            "metadata": {},
+                        },
+                        {
+                            "source_key": "hzdr-local",
+                            "shot_number": 1,
+                            "shot_key": "exp:20260506:000001",
+                            "fired_at": "2026-05-06T08:15:00Z",
+                            "metadata": {},
+                        },
+                    ],
+                }
+            ]
+        })
+    )
+    settings = MetadataSettings(provider="local", sources_file=path)
+
+    detail = HZDRSourceProvider(settings).get_shot_detail_by_key(
+        "hzdr-local", "exp:20260506:000001"
+    )
+
+    assert detail is not None
+    assert detail.shot.fired_at == "2026-05-06T08:15:00Z"
+
+
 def test_map_mongo_shot_supports_shot_alias_fields():
     """Existing shot documents can use `shot` and `timestamp` field names."""
     record = {

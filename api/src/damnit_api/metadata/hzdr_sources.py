@@ -203,12 +203,28 @@ class HZDRSourceProvider:
             None,
         )
 
+    def get_shot_by_key(self, key: str, shot_key: str) -> HZDRShot | None:
+        """Return one shot by canonical date-scoped shot_key."""
+        return next(
+            (shot for shot in self.list_shots(key) if shot.shot_key == shot_key),
+            None,
+        )
+
     def get_shot_detail(self, key: str, shot_number: int) -> HZDRShotDetail | None:
         """Return one shot plus basic HDF5 file structure."""
         shot = self.get_shot(key, shot_number)
         if shot is None:
             return None
+        return self._shot_detail(shot)
 
+    def get_shot_detail_by_key(self, key: str, shot_key: str) -> HZDRShotDetail | None:
+        """Return one date-scoped shot plus basic HDF5 file structure."""
+        shot = self.get_shot_by_key(key, shot_key)
+        if shot is None:
+            return None
+        return self._shot_detail(shot)
+
+    def _shot_detail(self, shot: HZDRShot) -> HZDRShotDetail:
         detail = HZDRShotDetail(shot=shot)
         if shot.hdf5_path is None:
             return detail

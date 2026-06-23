@@ -78,6 +78,33 @@ def select_experiment_id(
             sorted(event_ids)
         )
         raise ValueError(message)
+    labfrog_experiment_ids = {
+        str(
+            shot.get("experiment_id")
+            or (
+                shot.get("metadata", {}).get("experiment_id")
+                if isinstance(shot.get("metadata"), dict)
+                else None
+            )
+        )
+        for shot in labfrog_shots
+        if (
+            shot.get("experiment_id")
+            or (
+                shot.get("metadata", {}).get("experiment_id")
+                if isinstance(shot.get("metadata"), dict)
+                else None
+            )
+        )
+        not in (None, "")
+    }
+    if len(labfrog_experiment_ids) == 1:
+        return labfrog_experiment_ids.pop()
+    if len(labfrog_experiment_ids) > 1:
+        message = "Provide --experiment-id for mixed LabFrog exports: " + ", ".join(
+            sorted(labfrog_experiment_ids)
+        )
+        raise ValueError(message)
     campaigns = {
         str(shot["campaign"])
         for shot in labfrog_shots

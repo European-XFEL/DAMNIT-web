@@ -34,7 +34,10 @@ Shot numbers may restart each day. The canonical shot key is:
 <experiment_id>:<local YYYYMMDD>:<shot_number padded to 6>
 ```
 
-LabFrog Mongo `_id` remains the exact record/version identity.
+LabFrog Mongo `_id` remains the exact record/version identity. API clients
+should prefer `shot_key` for shot detail links; plain `shot_number` routes remain
+for compatibility but are ambiguous when counters restart or LabFrog keeps
+multiple versions of a shot row.
 
 ## Event Envelope
 
@@ -73,6 +76,12 @@ DAMNIT-web-hzdr today:
   "metadata": {}
 }
 ```
+
+LabFrog curated SQLite exports may also carry linking columns such as
+`kafka_event_id`, `kafka_topic`, `kafka_partition`, `kafka_offset`,
+`damnit_shot_key`, and `damnit_match_quality`. DAMNIT uses those fields as
+reconciliation hints/provenance, but still publishes its canonical result in
+the NeXus bridge and `hzdr_sources.json` catalog.
 
 ### `shot_number`
 
@@ -113,10 +122,19 @@ never invent one. Producer-specific extra references (e.g. `channel_id`,
 
 ### `values` and large payloads
 
-`values` is for small structured scalar values only (`dict[str, JsonValue]`,
-default `None`) - things like a single ADC reading or a handful of derived
-numbers. Large datasets do not belong here; represent them with a
+`values` is for small JSON scalar, object, or array values only (default
+`None`) - things like a single ADC reading, a short waveform, or a handful of
+derived numbers. Large datasets do not belong here; represent them with a
 URI/path/object-store/SciCat/Mongo reference in `payload_ref` instead.
+
+"Small" is enforced when staged events are loaded: `check_values_size`
+(`hzdr_event.py`) rejects a `values` payload with more than
+`MAX_VALUES_ITEMS` (4096) leaf items - counted recursively, so a nested image
+array counts every element - or one that serializes to more than
+`MAX_VALUES_BYTES` (64 KiB) of JSON. The error names the offending file and
+tells the producer to move the data behind `payload_ref`, so an oversized
+payload fails the build loudly at staging time rather than bloating the NeXus
+file silently.
 
 ### `metadata`
 
@@ -131,15 +149,31 @@ them.
 ## Matching
 
 Transport timestamps must be timezone-aware UTC. Naive LabFrog times are
-interpreted in the campaign timezone. DAMNIT matches in this order:
+interpreted in the campaign timezone. DAMNIT prefers deterministic identity and
+TANGO shotcounter matches, with timestamp matching available as a disambiguator
+and fallback:
 
-1. Same local date and shot number.
-2. Same shot number and unique nearest timestamp within tolerance.
-3. Unique nearest timestamp within tolerance.
-4. Otherwise retain the event as ambiguous or unmatched.
+1. Exact LabFrog/Kafka event identity (`kafka_event_id`) when a curated export
+   already captured the same `hzdr-event-v1` message.
+2. Exact transport position (`topic`, `partition`, `offset`) when present in
+   both the event `payload_ref` and LabFrog curated SQLite row. This match is
+   intentionally not date-scoped: it trusts that a `(topic, partition, offset)`
+   is globally unique and stable, so the curated export writers must persist the
+   original committed offset and never rewrite or renumber it. If a topic is
+   ever recreated/compacted so offsets are reused, drop to `kafka_event_id`
+   identity matching (step 1) instead.
+3. Same local date and TANGO/shotcounter `shot_number`.
+4. Same local date and `shot_number`, resolved by unique nearest timestamp when
+   duplicate current LabFrog rows remain.
+5. Same `shot_number` and unique nearest timestamp within tolerance.
+6. Unique nearest timestamp within tolerance.
+7. Otherwise retain the event as ambiguous or unmatched.
 
-The result records `match_status`, `match_quality`, and `match_time_delta_s`.
-No ambiguous event is silently attached.
+Archived/superseded LabFrog rows from curated exports are kept as provenance but
+are excluded from automatic matching when an active row for the same
+campaign/date/shot number exists. The result records `match_status`,
+`match_quality`, and `match_time_delta_s`. No ambiguous event is silently
+attached.
 
 ## Canonical Outputs
 

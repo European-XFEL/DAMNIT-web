@@ -262,6 +262,16 @@ async def list_hzdr_shots(source_key: str) -> list[HZDRShot]:
     return HZDRSourceProvider(settings.metadata).list_shots(source_key)
 
 
+@router.get("/hzdr/sources/{source_key}/shots/by-key/{shot_key}")
+async def get_hzdr_shot_detail_by_key(
+    source_key: str, shot_key: str
+) -> HZDRShotDetail | None:
+    """Get one date-scoped shot with basic HDF5 structure metadata."""
+    return HZDRSourceProvider(settings.metadata).get_shot_detail_by_key(
+        source_key, shot_key
+    )
+
+
 @router.get("/hzdr/sources/{source_key}/shots/{shot_number}")
 async def get_hzdr_shot_detail(
     source_key: str, shot_number: int

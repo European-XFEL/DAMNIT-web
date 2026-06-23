@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import h5py
 import numpy as np
 
-from .hzdr_event import EVENT_REQUIRED_FIELDS
+from .hzdr_event import EVENT_REQUIRED_FIELDS, check_values_size
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -125,8 +125,11 @@ MATCH_RANK = {
     "labfrog_only": 1,
     "nearest_time": 2,
     "shot_number_time_window": 3,
-    "exact_day_shot_number": 4,
-    "event_identity": 5,
+    "exact_day_shot_number_time_window": 4,
+    "exact_day_shot_number": 5,
+    "event_identity": 6,
+    "exact_transport_position": 7,
+    "exact_kafka_event_id": 8,
 }
 
 
@@ -354,6 +357,10 @@ def load_normalized_events(paths: Iterable[Path]) -> list[dict[str, Any]]:
             if not isinstance(record["payload_ref"], dict):
                 message = f"{path} payload_ref must be an object"
                 raise ValueError(message)
+            values_error = check_values_size(record.get("values"))
+            if values_error:
+                message = f"{path}: {values_error}"
+                raise ValueError(message)
             events.append(record)
     return events
 
@@ -436,9 +443,24 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "mongo_id",
                 "shot_number",
                 "date_time",
+                "date_time_utc",
+                "date_time_timezone",
                 "campaign",
+                "experiment_id",
                 "status",
                 "version",
+                "kafka_topic",
+                "kafka_partition",
+                "kafka_offset",
+                "kafka_key",
+                "kafka_value",
+                "kafka_event_id",
+                "kafka_experiment_id",
+                "kafka_shot_number",
+                "kafka_timestamp",
+                "kafka_source",
+                "damnit_shot_key",
+                "damnit_match_quality",
             )
             if name in columns
         ]
@@ -451,23 +473,69 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
     shots: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
         record = dict(zip(requested, row, strict=True))
-        labfrog_time = _as_optional_string(record.get("date_time"))
+        local_time = _as_optional_string(record.get("date_time"))
+        labfrog_time = _as_optional_string(record.get("date_time_utc")) or local_time
+        # experiment_id is promoted to the top-level shot field (the single
+        # location select_experiment_id reads), so it is excluded here rather
+        # than left duplicated in metadata.
         metadata = {
             key: value
             for key, value in record.items()
-            if key not in {"mongo_id", "shot_number", "date_time", "campaign"}
+            if key
+            not in {
+                "mongo_id",
+                "shot_number",
+                "date_time",
+                "date_time_utc",
+                "campaign",
+                "experiment_id",
+            }
             and value is not None
+            and value != ""
         }
-        shots.append({
+        shot_record = {
             "record_index": index,
             "record_id": _as_optional_string(record.get("mongo_id")),
             "shot_number": _as_optional_int(record.get("shot_number")),
-            "shot_date": source_date(labfrog_time),
+            "shot_date": source_date(local_time) or source_date(labfrog_time),
             "labfrog_date_time": labfrog_time,
             "campaign": _as_optional_string(record.get("campaign")),
             "metadata": metadata,
-        })
+        }
+        experiment_id = _as_optional_string(record.get("experiment_id"))
+        if experiment_id is not None:
+            shot_record["experiment_id"] = experiment_id
+        shots.append(shot_record)
+    _mark_superseded_labfrog_rows(shots)
     return shots
+
+
+def _mark_superseded_labfrog_rows(shots: list[dict[str, Any]]) -> None:
+    """Prefer current LabFrog rows when curated exports include history rows."""
+    grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
+    for shot in shots:
+        grouped[
+            shot.get("campaign"),
+            shot.get("shot_date"),
+            shot.get("shot_number"),
+        ].append(shot)
+
+    for rows in grouped.values():
+        if len(rows) < 2:
+            continue
+        active_rows = [
+            row
+            for row in rows
+            if str(row.get("metadata", {}).get("status", "")).casefold() == "active"
+        ]
+        if not active_rows:
+            continue
+        active_ids = {id(row) for row in active_rows}
+        for row in rows:
+            if id(row) in active_ids:
+                row.setdefault("metadata", {}).setdefault("has_newer_version", False)
+            else:
+                row.setdefault("metadata", {})["has_newer_version"] = True
 
 
 def normalize_labfrog_mongo_shots(
@@ -1373,6 +1441,81 @@ def _canonical_from_event_identities(
     )
 
 
+def _identity_match_result(
+    matches: list[dict[str, Any]], quality: str
+) -> tuple[dict[str, Any] | None, str, str, list[str]] | None:
+    if len(matches) == 1:
+        return matches[0], quality, "matched", []
+    if len(matches) > 1:
+        return None, "ambiguous", "ambiguous", [shot["shot_key"] for shot in matches]
+    return None
+
+
+def _shots_matching_event_id(
+    event_id: str, candidates: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    return [
+        shot
+        for shot in candidates
+        if _as_optional_string(shot.get("metadata", {}).get("kafka_event_id"))
+        == event_id
+    ]
+
+
+def _shots_matching_transport_position(
+    payload_ref: dict[str, Any], candidates: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Match on Kafka ``(topic, partition, offset)``, ignoring date scoping.
+
+    This trusts that a transport position is globally unique and stable: the
+    curated SQLite export writers (in the sibling LabFrog/shotcounter repos)
+    must persist the *original* committed offset for each message and never
+    rewrite or renumber it. A topic that is recreated/compacted such that an
+    offset is reused would violate this; if that ever happens, fall back to
+    identity (``kafka_event_id``) matching instead of offsets.
+    """
+    topic = _as_optional_string(payload_ref.get("topic"))
+    partition = _as_optional_int(payload_ref.get("partition"))
+    offset = _as_optional_int(payload_ref.get("offset"))
+    if topic is None or partition is None or offset is None:
+        return []
+
+    matches = []
+    for shot in candidates:
+        metadata = shot.get("metadata", {})
+        if not isinstance(metadata, dict):
+            continue
+        if (
+            _as_optional_string(metadata.get("kafka_topic")) == topic
+            and _as_optional_int(metadata.get("kafka_partition")) == partition
+            and _as_optional_int(metadata.get("kafka_offset")) == offset
+        ):
+            matches.append(shot)
+    return matches
+
+
+def _match_event_identity(
+    event: dict[str, Any], candidates: list[dict[str, Any]]
+) -> tuple[dict[str, Any] | None, str, str, list[str]]:
+    event_id = _as_optional_string(event.get("event_id"))
+    if event_id:
+        result = _identity_match_result(
+            _shots_matching_event_id(event_id, candidates), "exact_kafka_event_id"
+        )
+        if result is not None:
+            return result
+
+    payload_ref = event.get("payload_ref")
+    if isinstance(payload_ref, dict):
+        result = _identity_match_result(
+            _shots_matching_transport_position(payload_ref, candidates),
+            "exact_transport_position",
+        )
+        if result is not None:
+            return result
+    return None, "unmatched", "unmatched", []
+
+
 def _match_event(
     event: dict[str, Any],
     shots: list[dict[str, Any]],
@@ -1393,8 +1536,15 @@ def _match_event(
         if not _as_bool(shot.get("metadata", {}).get("has_newer_version"))
     ]
     candidates = current_shots or shots
-    shot_number = _event_shot_number(event)
     event_time = parse_datetime(event.get("timestamp"))
+
+    identity_match, identity_quality, identity_status, identity_keys = (
+        _match_event_identity(event, candidates)
+    )
+    if identity_match is not None or identity_status == "ambiguous":
+        return identity_match, identity_quality, identity_status, identity_keys
+
+    shot_number = _event_shot_number(event)
     event_date = (
         event_time.astimezone(resolve_timezone(campaign_timezone)).date().isoformat()
         if event_time
@@ -1410,6 +1560,14 @@ def _match_event(
         if len(exact) == 1:
             return exact[0], "exact_day_shot_number", "matched", []
         if len(exact) > 1:
+            nearest = _unique_nearest_shot(
+                exact,
+                event_time,
+                match_tolerance_s,
+                campaign_timezone=campaign_timezone,
+            )
+            if nearest is not None:
+                return nearest, "exact_day_shot_number_time_window", "matched", []
             return None, "ambiguous", "ambiguous", [shot["shot_key"] for shot in exact]
 
     if shot_number is not None:

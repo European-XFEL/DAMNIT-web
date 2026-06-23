@@ -213,9 +213,8 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
 
 
 def write_labfrog_export_with_duplicate_shot_number(path: Path) -> None:
-    """Two LabFrog shots on the same day with the same shot_number - a real
-    possibility if an operator mis-enters one - which the matcher must flag as
-    ambiguous rather than silently pick one."""
+    """Two equidistant LabFrog shots on the same day with the same
+    shot_number must stay ambiguous rather than silently pick one."""
     string_dtype = h5py.string_dtype(encoding="utf-8")
     with h5py.File(path, "w") as handle:
         entry = handle.create_group("entry")
@@ -233,7 +232,7 @@ def write_labfrog_export_with_duplicate_shot_number(path: Path) -> None:
         shots.create_dataset(
             "date_time",
             data=np.asarray(
-                ["2025-01-16T09:00:00", "2025-01-16T09:05:00"],
+                ["2025-01-16T09:00:00", "2025-01-16T09:00:04"],
                 dtype=string_dtype,
             ),
         )
