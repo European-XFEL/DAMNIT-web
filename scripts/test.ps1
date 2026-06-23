@@ -17,6 +17,7 @@ if (-not (Test-Path ".env") -and (Test-Path ".env.test.example")) {
 }
 
 $env:DW_API_DAMNIT_PATH = (Join-Path $apiRoot ".damnit-test")
+$env:DW_API_AUTH__MODE = "ldap"
 
 uv run ruff check . --fix
 uv run ruff format .

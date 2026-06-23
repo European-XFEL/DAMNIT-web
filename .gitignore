@@ -13,5 +13,6 @@ certs/
 .ruff_cache/
 __pycache__/
 
-# personal notes
-STATUS_NOTES.md
+# notes
+AGENTS.md
+CLAUDE.md
