@@ -42,14 +42,25 @@ multiple versions of a shot row.
 ## Event Envelope
 
 Every transport event should converge on this model, implemented once as the
-canonical `HZDREventV1` Pydantic model and vendored identically (kept in sync
-by hand) in each producer/consumer that does not share a Python package with
-DAMNIT-web-hzdr today:
+canonical `HZDREventV1` Pydantic model and vendored identically in each
+producer/consumer that does not share a Python package with DAMNIT-web-hzdr
+today:
 
+- `DAMNIT-web-hzdr/api/src/damnit_api/metadata/hzdr_event.py` — **canonical source**
 - `planet-watchdog/watchdog_core/hzdr_event.py`
-- `DAMNIT-web-hzdr/api/src/damnit_api/metadata/hzdr_event.py`
 - the shotcounter producer (`hzdrTangoDSShotcounter`), which builds a
   plain-dict event of the same shape
+
+**Canonical source + drift check.** DAMNIT-web-hzdr's copy is authoritative. The
+model's JSON Schema and a sample event are exported to a committed artifact
+(`api/tests/fixtures/hzdr-event-v1.schema.json` and `.sample.json`, regenerated
+with `api/scripts/regen_hzdr_event_fixtures.py`) and vendored byte-identically
+into each sibling repo's `tests/fixtures/`. Each repo's `test_hzdr_event.py`
+asserts its own model/producer agrees with that fixture, so a copy can no longer
+silently drift: a contract change shows up as a fixture diff and as a failing
+test in every repo until the copies are re-synced. The producer-side extension
+`trigger_role` is a documented exception — shotcounter emits it at the top level
+and DAMNIT folds it into `metadata.trigger.role` during normalization.
 
 ```json
 {

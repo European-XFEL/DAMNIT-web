@@ -1,6 +1,7 @@
 """Tests for the canonical HZDREventV1 contract shared across HZDR producers."""
 
 import json
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -17,6 +18,38 @@ from damnit_api.metadata.hzdr_nexus import load_normalized_events
 from damnit_api.metadata.hzdr_sources import HZDRReviewEvent, HZDRSourceEvent
 
 EXPERIMENT_ID = "Solenoid_Beamline_Tests_01.2025"
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+def _canonical_schema_text() -> str:
+    """Deterministic JSON text of the model's JSON schema (matches the fixture)."""
+    return json.dumps(HZDREventV1.model_json_schema(), indent=2, sort_keys=True) + "\n"
+
+
+def test_model_json_schema_matches_committed_fixture():
+    """Drift guard: the model and the committed hzdr-event-v1.schema.json agree.
+
+    The same schema.json is vendored byte-identically into planet-watchdog and
+    shotcounter, where parallel tests assert their own copy. If this fails after
+    a model change, regenerate with
+    ``api/scripts/regen_hzdr_event_fixtures.py`` and copy both fixtures into the
+    sibling repos - that copy step is the one reviewable point where a contract
+    change crosses repo boundaries.
+    """
+    committed = (FIXTURES_DIR / "hzdr-event-v1.schema.json").read_text(encoding="utf-8")
+    assert _canonical_schema_text() == committed
+
+
+def test_sample_fixture_validates_against_model():
+    """The shared sample event round-trips through the canonical model."""
+    sample = json.loads(
+        (FIXTURES_DIR / "hzdr-event-v1.sample.json").read_text(encoding="utf-8")
+    )
+
+    event = HZDREventV1.model_validate(sample)
+
+    assert event.schema_version == "hzdr-event-v1"
 
 
 def _minimal_event(**overrides) -> dict:

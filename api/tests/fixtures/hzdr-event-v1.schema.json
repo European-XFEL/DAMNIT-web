@@ -1,0 +1,194 @@
+{
+  "$defs": {
+    "HZDRPayloadRef": {
+      "additionalProperties": true,
+      "description": "Canonical source traceability object for one ``hzdr-event-v1`` event.\n\nThis is the field that must let a consumer replay or trace an event back\nto its source record - core traceability belongs here, not only in\n``metadata``. Every field is optional because not every producer/transport\nhas all of them, but at least one should be set for any real event.\n\n``extra=\"allow\"`` because existing producers already attach\nproducer-specific refs at the top level (e.g. ``channel_id``, ``run_id``,\n``record_id``, ``nexus_path``, ``filename``) rather than nesting them, and\nthat shape predates this model.",
+      "properties": {
+        "message_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Message Key"
+        },
+        "mongo_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mongo Id"
+        },
+        "offset": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Offset"
+        },
+        "partition": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Partition"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "scicat_pid": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scicat Pid"
+        },
+        "topic": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Topic"
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uri"
+        }
+      },
+      "title": "HZDRPayloadRef",
+      "type": "object"
+    },
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "description": "The canonical event envelope every transport event converges on.\n\nSee ``docs/architecture.md`` for the authoritative description of this\ncontract.",
+  "properties": {
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "experiment_id": {
+      "title": "Experiment Id",
+      "type": "string"
+    },
+    "kind": {
+      "title": "Kind",
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "Free-form extra detail, not a substitute for payload_ref traceability. Consumers that need a flat storage row (e.g. SQLite, NeXus attrs) are expected to serialize this whole object to one JSON-text column/dataset themselves; this model does not flatten it for them.",
+      "title": "Metadata",
+      "type": "object"
+    },
+    "payload_ref": {
+      "$ref": "#/$defs/HZDRPayloadRef"
+    },
+    "schema_version": {
+      "default": "hzdr-event-v1",
+      "pattern": "^hzdr-event-v1$",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "shot_id": {
+      "title": "Shot Id",
+      "type": "string"
+    },
+    "shot_number": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "TANGO's shot counter is the authority. Null means no authoritative shot number is available yet for this event - this is expected, not an error, while labfrog/DRACO do not yet propagate one. Producers may still carry a non-authoritative nested/local counter, but only as provenance in metadata, never as this field.",
+      "title": "Shot Number"
+    },
+    "source": {
+      "title": "Source",
+      "type": "string"
+    },
+    "timestamp": {
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "transport": {
+      "title": "Transport",
+      "type": "string"
+    },
+    "values": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonValue"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Small JSON scalar, object, or array values only. Large datasets belong in payload_ref (uri/path/object-store/SciCat/Mongo reference), not here."
+    }
+  },
+  "required": [
+    "event_id",
+    "experiment_id",
+    "shot_id",
+    "source",
+    "kind",
+    "timestamp",
+    "transport"
+  ],
+  "title": "HZDREventV1",
+  "type": "object"
+}
