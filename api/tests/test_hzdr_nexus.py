@@ -471,6 +471,47 @@ def test_reads_curated_sqlite_linking_columns_and_marks_history(tmp_path: Path):
     assert shots[1]["metadata"]["damnit_shot_key"] == "HELPMI:20260610:000017"
 
 
+def test_active_keyed_supersede_warns_when_active_row_not_latest(
+    tmp_path: Path, caplog
+):
+    """A malformed export marking an older row active still keys on status, but
+    the version mismatch is surfaced as a warning rather than failing silently."""
+    sqlite_path = tmp_path / "campaign.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE shots (
+                mongo_id TEXT PRIMARY KEY,
+                shot_number INTEGER,
+                date_time TEXT,
+                campaign TEXT,
+                status TEXT,
+                version INTEGER
+            )
+            """
+        )
+        connection.executemany(
+            "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                # The older row (version 1) is wrongly marked active.
+                ("mongo-old", 17, "2026-06-10T12:00:20", "HELPMI", "active", 1),
+                ("mongo-new", 17, "2026-06-10T12:00:21", "HELPMI", "archived", 2),
+            ],
+        )
+
+    with caplog.at_level("WARNING"):
+        shots = read_labfrog_sqlite_shots(sqlite_path)
+
+    # Behavior is unchanged: has_newer_version follows status, not version.
+    by_id = {shot["record_id"]: shot for shot in shots}
+    assert by_id["mongo-old"]["metadata"]["has_newer_version"] is False
+    assert by_id["mongo-new"]["metadata"]["has_newer_version"] is True
+    # But the version disagreement is logged for operator visibility.
+    assert any(
+        "non-latest row active" in record.message for record in caplog.records
+    )
+
+
 def test_adapts_planet_watchdog_processed_document():
     event = normalize_watchdog_document(
         {

@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -24,6 +25,8 @@ from .hzdr_event import EVENT_REQUIRED_FIELDS, check_values_size
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class BuilderAlreadyRunningError(RuntimeError):
@@ -510,6 +513,46 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
     return shots
 
 
+def _row_version(row: dict[str, Any]) -> int | None:
+    """Parse a curated LabFrog row `version`, or None when absent/unparseable."""
+    raw = row.get("metadata", {}).get("version")
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _warn_if_active_row_not_latest(
+    active_rows: list[dict[str, Any]], rows: list[dict[str, Any]]
+) -> None:
+    """Warn when the curated export marks a non-latest row `active`.
+
+    The supersede decision is keyed on `status == active` (an accepted pilot
+    simplification), which is correct only if the export marks the newest row
+    active. When a `version` is present we can detect the malformed case where
+    an older row is active and surface it without changing the decision.
+    """
+    known_versions = [v for v in (_row_version(r) for r in rows) if v is not None]
+    if not known_versions:
+        return
+    max_version = max(known_versions)
+    active_versions = [_row_version(r) for r in active_rows]
+    if any(v is not None and v < max_version for v in active_versions):
+        sample = active_rows[0]
+        logger.warning(
+            "Curated LabFrog export marks a non-latest row active "
+            "(campaign=%s shot_date=%s shot_number=%s active_version=%s "
+            "max_version=%s); has_newer_version follows status, not version",
+            sample.get("campaign"),
+            sample.get("shot_date"),
+            sample.get("shot_number"),
+            active_versions,
+            max_version,
+        )
+
+
 def _mark_superseded_labfrog_rows(shots: list[dict[str, Any]]) -> None:
     """Prefer current LabFrog rows when curated exports include history rows."""
     grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
@@ -530,6 +573,7 @@ def _mark_superseded_labfrog_rows(shots: list[dict[str, Any]]) -> None:
         ]
         if not active_rows:
             continue
+        _warn_if_active_row_not_latest(active_rows, rows)
         active_ids = {id(row) for row in active_rows}
         for row in rows:
             if id(row) in active_ids:

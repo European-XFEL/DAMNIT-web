@@ -237,16 +237,23 @@ What landed and is solid:
 - **`values` typing.** Relaxed to `JsonValue | None`, so small numeric arrays
   validate alongside scalars/objects.
 
-Follow-ups (not yet done):
+Follow-ups:
 
-1. **Frontend has not adopted `shot_key`.** The route exists but no UI link or
-   review action uses it yet (Codex step 4). Switch shot-detail links and the
-   ambiguous-review flow to `shot_key` so restart-duplicated `shot_number`s stop
-   being fragile in the UI.
+1. **Frontend `shot_key` — partially adopted.** ✅ The shot-detail panel in
+   `ShotPage.tsx` now fetches via `GET .../shots/by-key/{shot_key}` when the
+   selected shot carries a `shot_key`, falling back to the legacy
+   `{shot_number}` route only when none is present — so restart-duplicated
+   `shot_number`s no longer make the detail fetch fragile. Still pending: the
+   table's row-selection identity and the ambiguous-review action key on
+   `shot_number`; moving those to `shot_key` needs by-key PATCH/review routes and
+   a larger table-state refactor, tracked separately as UI work.
 2. **`has_newer_version` for SQLite is keyed on `status == active`, not version
-   number.** Correct for well-formed curated exports; if an export ever marks an
-   older row `active`, the flag would be wrong. Acceptable for the pilot; revisit
-   if curated data proves noisier.
+   number** — ✅ guarded. The decision still follows `status == active` (the
+   accepted pilot simplification), but `_mark_superseded_labfrog_rows` now logs a
+   warning via `_warn_if_active_row_not_latest` when a curated export marks a
+   non-latest `version` row active, so the malformed case is observable instead
+   of silently wrong. A characterization test pins both the well-formed and
+   malformed cases. Revisit keying on `version` if curated data proves noisier.
 3. **Kafka spool consumer for shotcounter/Watchdog** — ✅ landed as
    `KafkaSpoolConsumer` (`consumer/kafka.py`); identity matching was already
    ready to consume those linking fields. Next real work is now the real-broker
@@ -276,10 +283,11 @@ suite 100 tests with `-k hzdr`, `ruff` clean on all touched modules):
   if a topic is recreated/compacted so offsets are reused, drop to
   `kafka_event_id` identity matching. (was follow-up 5)
 
-The remaining items above are deliberately deferred: the frontend `shot_key`
-adoption is UI work tracked separately, and the `has_newer_version` status keying
-is acceptable for the pilot. The Kafka spool consumer — previously the next real
-work item — has since landed (`KafkaSpoolConsumer`, `consumer/kafka.py`).
+Status of the items above: the Kafka spool consumer has landed
+(`KafkaSpoolConsumer`, `consumer/kafka.py`); the shot-detail fetch now uses the
+`shot_key` by-key route (full table/review `shot_key` adoption is still tracked
+as separate UI work); and the `has_newer_version` status keying now warns on a
+non-latest active row while keeping the pilot behavior.
 
 ## Durable Spool Design
 
@@ -382,10 +390,14 @@ sync across `DAMNIT-web-hzdr`, `planet-watchdog`, `shotcounter`,
 
 Status of the three deferred follow-ups after this pass:
 
-- **Frontend `shot_key` adoption** — still deferred; separate UI work, unrelated
-  to schema/tooling sync.
-- **`has_newer_version` keyed on `status == active`** — left as-is; an accepted
-  pilot simplification, not a standardization concern.
+- **Frontend `shot_key` adoption** — ✅ partially adopted: the shot-detail fetch
+  in `ShotPage.tsx` now uses the `by-key/{shot_key}` route. The table-selection
+  identity and ambiguous-review action still key on `shot_number`; that larger
+  UI refactor remains tracked separately.
+- **`has_newer_version` keyed on `status == active`** — ✅ guarded: still keyed on
+  status (accepted pilot simplification), but now warns when an export marks a
+  non-latest `version` row active (`_warn_if_active_row_not_latest`), with a
+  characterization test for both cases.
 - **Kafka spool consumer** — ✅ now implemented (`KafkaSpoolConsumer`,
   `consumer/kafka.py`). The drift guard above de-risked it: the consumer ingests
   exactly the `hzdr-event-v1` envelope pinned by a conformance test in every
