@@ -8,6 +8,7 @@ readme = "README.md"
 maintainers = [
     { name = "Cammille Carinan", email = "cammille.carinan@xfel.eu" },
     { name = "Robert Rosca", email = "robert.rosca@xfel.eu" },
+    { name = "Kristin Tippey", email = "k.tippey@hzdr.de" },
 ]
 dependencies = []
 
