@@ -10,20 +10,28 @@
     Comma-separated list of repo names to run (default: all).
     Valid names: damnit, labfrog, sqlite-tools, planet-watchdog, shotcounter, asapo
 
+.PARAMETER NoCoverage
+    Skip pytest-cov collection, per-repo coverage-map refresh, and the aggregate
+    HZDR coverage map in docs/testing.md. By default coverage is collected and
+    the maps are refreshed.
+
 .EXAMPLE
     .\test-all.ps1
     .\test-all.ps1 -WithAcceptance
     .\test-all.ps1 -Repos damnit,planet-watchdog
+    .\test-all.ps1 -NoCoverage
 #>
 param(
     [switch] $WithAcceptance,
-    [string[]] $Repos = @()
+    [string[]] $Repos = @(),
+    [switch] $NoCoverage
 )
 
 $ErrorActionPreference = "Stop"
 
 $gitlabRoot = Resolve-Path "$PSScriptRoot\..\.."
 $damnitRoot = Resolve-Path "$PSScriptRoot\.."
+$script:coverage = -not $NoCoverage
 
 # In PowerShell 5.1, $ErrorActionPreference = "Stop" does not apply to native
 # executables. Wrap every native command that should fail the suite with this.
@@ -33,6 +41,25 @@ function Invoke-Exe {
     & $cmd $cmdArgs
     if ($LASTEXITCODE -ne 0) {
         throw "Command exited ${LASTEXITCODE}: $($args -join ' ')"
+    }
+}
+
+# When coverage is on, the per-repo pytest config already sets `--cov=<pkg>`;
+# we only add the JSON report that the coverage maps read.
+function Get-CovArgs {
+    if ($script:coverage) { return @("--cov-report=json:cover/coverage.json") }
+    return @()
+}
+
+# Refresh a repo's own per-area coverage map after its suite ran with coverage.
+# Non-fatal: a stale/missing map must not turn a green suite red.
+function Update-RepoMap([string] $relScript) {
+    if (-not $script:coverage) { return }
+    if (-not (Test-Path $relScript)) { return }
+    try {
+        uv run python $relScript
+    } catch {
+        Write-Host "  [coverage-map refresh skipped: $_]" -ForegroundColor DarkGray
     }
 }
 
@@ -63,7 +90,16 @@ $allSuites = [ordered]@{
             uv run ruff check . --fix --quiet
             uv run ruff format . --quiet
             Invoke-Exe uv run ruff check .
-            Invoke-Exe uv run python -m pytest -q
+            # `--group test` activates pytest-cov (api sets default-groups = []).
+            # `--cov=damnit_api` is passed here rather than in api/pyproject.toml
+            # so the plain `uv run pytest` workflow stays coverage-free.
+            $pa = @('run', 'python', '-m', 'pytest', '-q')
+            if ($script:coverage) {
+                $pa = @('run', '--group', 'test', 'python', '-m', 'pytest', '-q', '--cov=damnit_api') + (Get-CovArgs)
+            }
+            Invoke-Exe uv @pa
+            # DAMNIT API has no per-area map; its api/cover/coverage.json feeds
+            # the aggregate map refreshed at the end of this script.
             if ($WithAcceptance) {
                 Write-Host "  [acceptance]"
                 uv run python scripts/hzdr-local-acceptance.py
@@ -77,28 +113,46 @@ $allSuites = [ordered]@{
             $env:LABFROG_TESTING    = "1"
             $env:SKIP_CUSTOM_OPTIONS = "1"
             $env:SKIP_MEDIAWIKI     = "1"
-            Invoke-Exe uv run --group testing python -m pytest -q -s tests -k "not webkit"
+            $pa = @('run', '--group', 'testing', 'python', '-m', 'pytest', '-q', '-s', 'tests', '-k', 'not webkit') + (Get-CovArgs)
+            Invoke-Exe uv @pa
+            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
         }
     }
     "sqlite-tools" = @{
         label = "labfrog-sqlite-tools-repo"
         path  = Resolve-Repo "labfrog-sqlite-tools-repo"
-        run   = { Invoke-Exe uv run python -m pytest -q }
+        run   = {
+            $pa = @('run', 'python', '-m', 'pytest', '-q') + (Get-CovArgs)
+            Invoke-Exe uv @pa
+            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+        }
     }
     "planet-watchdog" = @{
         label = "planet-watchdog"
         path  = Resolve-Repo "planet-watchdog"
-        run   = { Invoke-Exe uv run python -m pytest -q }
+        run   = {
+            $pa = @('run', 'python', '-m', 'pytest', '-q') + (Get-CovArgs)
+            Invoke-Exe uv @pa
+            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+        }
     }
     "shotcounter" = @{
         label = "shotcounter"
         path  = Resolve-Repo "shotcounter"
-        run   = { Invoke-Exe uv run python -m pytest -q -k "not ntp" }
+        run   = {
+            $pa = @('run', 'python', '-m', 'pytest', '-q', '-k', 'not ntp') + (Get-CovArgs)
+            Invoke-Exe uv @pa
+            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+        }
     }
     "asapo" = @{
         label = "asapo-for-hzdr-damnit"
         path  = Resolve-Repo "asapo-for-hzdr-damnit"
-        run   = { Invoke-Exe uv run python -m pytest -q }
+        run   = {
+            $pa = @('run', 'python', '-m', 'pytest', '-q') + (Get-CovArgs)
+            Invoke-Exe uv @pa
+            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+        }
     }
 }
 
@@ -158,6 +212,22 @@ foreach ($key in $results.Keys) {
     $status = $results[$key]
     $color  = if ($status -like "PASS*") { "Green" } elseif ($status -like "SKIP*") { "Yellow" } else { "Red" }
     Write-Host ("  {0,-18} {1}" -f $allSuites[$key].label, $status) -ForegroundColor $color
+}
+
+# -- Aggregate coverage map ----------------------------------------------------
+# Reads each repo's cover/coverage.json and refreshes the combined HZDR table in
+# docs/testing.md. Non-fatal so it never flips the suite result.
+if ($script:coverage) {
+    Write-Host ""
+    Write-Host "--- Coverage map (docs/testing.md) ---" -ForegroundColor Cyan
+    try {
+        Set-Location $damnitRoot
+        uv run python scripts/docs/refresh_coverage_summary.py
+    } catch {
+        Write-Host "  [coverage summary refresh failed: $_]" -ForegroundColor DarkGray
+    } finally {
+        Set-Location $startLocation
+    }
 }
 
 $anyFail = $results.Values | Where-Object { $_ -like "FAIL*" }

@@ -2,6 +2,11 @@
 .venv
 .env
 .pytest_cache/
+# Coverage artifacts (the coverage map in docs/testing.md is committed; raw data is not)
+cover/
+htmlcov/
+.coverage
+coverage.json
 damnit_proposals.json
 dist/
 certs/

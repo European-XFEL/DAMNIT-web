@@ -43,7 +43,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-test = ["pytest~=8.2", "pytest-asyncio~=0.24", "pytest-mock~=3.11"]
+test = ["pytest~=8.2", "pytest-asyncio~=0.24", "pytest-mock~=3.11", "pytest-cov~=7.0", "coverage~=7.0"]
 lint = ["pyright>=1.1.406", "ruff>=0.7"]
 docs = [
     "mkdocs>=1.6.1",
@@ -75,6 +75,10 @@ default-groups = []
 # see a loop change between tests (no AlruCacheLoopResetWarning).
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
+# Note: coverage flags are not forced here so the documented plain
+# `cd api; uv run pytest` keeps working without the `test` group. The aggregate
+# HZDR coverage map (docs/testing.md) is produced by scripts/test-all.ps1, which
+# runs `uv run --group test ... --cov=damnit_api --cov-report=json:...`.
 
 [tool.hatch.build.targets.sdist]
 include = ["src/damnit_api"]
