@@ -168,7 +168,7 @@ export function LinkExistingShotRecordsPage() {
                     >
                       <Stack gap="xs" mt="xs">
                         <Checkbox value="shots" label="MongoDB shotsheet" />
-                        <Checkbox value="watchdog" label="PLANET Watchdog" />
+                        <Checkbox value="watchdog" label="DAQ File Watchdog" />
                         <Checkbox value="shotcounter" label="Shotcounter" />
                       </Stack>
                     </Checkbox.Group>

@@ -8,7 +8,7 @@ As of 2026-06-18:
 | --- | --- |
 | DAMNIT API | `161 passed, 1 skipped` |
 | LabFrog SQLite tools | `60 passed` |
-| PLANET Watchdog focused suite | `17 passed` |
+| DAQ File Watchdog focused suite | `17 passed` |
 | shotcounter (`feature/hzdr-canonical-trigger-event`) | `18 passed` (1 NTP-tolerance test deselected) |
 | ASAPO harness | `5 passed` |
 

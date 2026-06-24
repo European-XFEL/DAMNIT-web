@@ -117,30 +117,37 @@ if ($invalid) {
 }
 
 # -- Run -----------------------------------------------------------------------
+# Restore the caller's starting folder afterward: the loop Set-Locations into
+# each repo, and PowerShell's location is process-wide.
 $results  = [ordered]@{}
 $startAll = Get-Date
+$startLocation = Get-Location
 
-foreach ($key in $selected) {
-    $suite = $allSuites[$key]
-    if (-not $suite.path -or -not (Test-Path $suite.path)) {
-        $results[$key] = "SKIP (not found)"
-        continue
+try {
+    foreach ($key in $selected) {
+        $suite = $allSuites[$key]
+        if (-not $suite.path -or -not (Test-Path $suite.path)) {
+            $results[$key] = "SKIP (not found)"
+            continue
+        }
+
+        Write-Host ""
+        Write-Host "--- $($suite.label) ---" -ForegroundColor Cyan
+        $start = Get-Date
+        Set-Location $suite.path
+
+        try {
+            & $suite.run
+            $elapsed = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
+            $results[$key] = "PASS ($($elapsed)s)"
+        } catch {
+            $elapsed = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
+            $results[$key] = "FAIL ($($elapsed)s)"
+            Write-Host "  ERROR: $_" -ForegroundColor Red
+        }
     }
-
-    Write-Host ""
-    Write-Host "--- $($suite.label) ---" -ForegroundColor Cyan
-    $start = Get-Date
-    Set-Location $suite.path
-
-    try {
-        & $suite.run
-        $elapsed = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
-        $results[$key] = "PASS ($($elapsed)s)"
-    } catch {
-        $elapsed = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
-        $results[$key] = "FAIL ($($elapsed)s)"
-        Write-Host "  ERROR: $_" -ForegroundColor Red
-    }
+} finally {
+    Set-Location $startLocation
 }
 
 # -- Summary -------------------------------------------------------------------

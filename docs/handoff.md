@@ -24,7 +24,7 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
 - **shotcounter** (`feature/hzdr-canonical-trigger-event`): canonical
   `hzdr-event-v1` Kafka envelope, `TriggerRole`, operator-configurable
   `ShotNumber` with debounce — 18/18 tests pass, not yet merged to main.
-- **planet-watchdog** (`master`): normalized Kafka/HZDR event builder committed;
+- **planet-watchdog** (`master`, the DAQ-File-Watchdog producer): normalized Kafka/HZDR event builder committed;
   `kafka_output.py` correctly copies `topic/partition/offset` into `payload_ref`.
 - **asapo-for-hzdr-damnit** (`main`): local harness proves correct
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`

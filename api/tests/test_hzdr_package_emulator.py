@@ -49,7 +49,7 @@ def test_package_emulator_writes_source_fixture_and_hdf5(tmp_path: Path):
     write_event(events_dir / "laserdata.json")
     write_event(
         events_dir / "watchdog.json",
-        source="PLANET-Watchdog",
+        source="DAQ-File-Watchdog",
         kind="mongodb_shotsheet",
         transport="kafka",
         payload_ref={"topic": "planet.watchdog.events", "partition": 0, "offset": 42},
@@ -66,7 +66,7 @@ def test_package_emulator_writes_source_fixture_and_hdf5(tmp_path: Path):
     )
 
     assert (package.events_dir / "laserdata.jsonl").exists()
-    assert (package.events_dir / "planet-watchdog.jsonl").exists()
+    assert (package.events_dir / "daq-file-watchdog.jsonl").exists()
 
     sources = load_sources_file(package.sources_file)
     assert sources[0].key == "hzdr-emulator"

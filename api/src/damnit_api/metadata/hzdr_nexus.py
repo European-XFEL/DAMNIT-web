@@ -1122,7 +1122,7 @@ def source_group_name(source: str) -> str:
 def normalize_watchdog_document(
     document: dict[str, Any], *, experiment_id: str
 ) -> dict[str, Any]:
-    """Adapt a PLANET-Watchdog processed document to the shared event contract."""
+    """Adapt a DAQ File Watchdog processed document to the shared event contract."""
     event = document.get("event", {})
     analysis = document.get("analysis", {})
     shot_number = _find_nested_shot_number(document)
@@ -1168,7 +1168,7 @@ def normalize_watchdog_document(
         "experiment_id": experiment_id,
         "shot_id": shot_id,
         "shot_number": shot_number,
-        "source": "PLANET-Watchdog",
+        "source": "DAQ-File-Watchdog",
         "kind": f"watchdog.{safe_hdf5_name(str(watch_name))}",
         "timestamp": timestamp,
         "transport": "kafka",

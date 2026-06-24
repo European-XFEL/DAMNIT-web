@@ -1,7 +1,7 @@
 # DAMNIT Web
 
 DAMNIT Web API and frontend with HZDR source integration for LabFrog,
-LaserData/ASAPO, PLANET Watchdog, Kafka, and canonical NeXus campaign files.
+LaserData/ASAPO, DAQ File Watchdog, Kafka, and canonical NeXus campaign files.
 
 ## Quick Start
 

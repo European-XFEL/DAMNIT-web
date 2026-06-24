@@ -102,7 +102,7 @@ def test_staged_event_count_excludes_synthetic_labfrog_rows(tmp_path: Path):
                         {
                             "event_id": "evt-unmatched-1",
                             "experiment_id": "exp",
-                            "source": "PLANET-Watchdog",
+                            "source": "DAQ-File-Watchdog",
                             "kind": "watchdog.tps",
                             "timestamp": "2026-05-05T09:45:00Z",
                             "payload_ref": {},
@@ -250,15 +250,15 @@ def test_watchdog_flow_monitor_event_uses_kafka_shape(tmp_path: Path):
     source = append_emulated_shot(
         sources_file,
         source_key="hzdr-local",
-        event_source="PLANET-Watchdog",
+        event_source="DAQ-File-Watchdog",
         event_kind="watchdog_shot_event",
         action="enrich",
     )
 
     assert source.shots[-1].metadata["emulated_last_enrichment_source"] == (
-        "PLANET-Watchdog"
+        "DAQ-File-Watchdog"
     )
-    event_path = tmp_path / "events" / "planet-watchdog.jsonl"
+    event_path = tmp_path / "events" / "daq-file-watchdog.jsonl"
     event = orjson.loads(event_path.read_bytes().splitlines()[-1])
     assert event["transport"] == "kafka"
     assert event["payload_ref"] == {

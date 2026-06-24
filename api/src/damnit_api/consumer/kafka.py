@@ -1,4 +1,4 @@
-"""Kafka spool consumer for PLANET-Watchdog / shotcounter trigger events.
+"""Kafka spool consumer for DAQ File Watchdog / shotcounter trigger events.
 
 Same durable claim → write-fsync → ack → dedup loop as the ASAPO consumer
 (see :mod:`.spool`), but the broker is a Kafka consumer group instead of the

@@ -1,4 +1,4 @@
-"""Verify PLANET Watchdog events from Kafka, ASAPO/local broker, and MongoDB.
+"""Verify DAQ File Watchdog events from Kafka, ASAPO/local broker, and MongoDB.
 
 This is a transition helper for local HZDR integration testing. It prefers the
 transport-shaped Kafka path, can check the ASAPO local broker, and falls back to
@@ -305,7 +305,7 @@ def emit_results(args, results: list[VerifyResult]) -> None:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
         for result in results:
-            print(f"Verified PLANET Watchdog via {result.backend}")
+            print(f"Verified DAQ File Watchdog via {result.backend}")
             print(result.detail)
             for event in result.events:
                 shot = event.get(

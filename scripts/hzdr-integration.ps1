@@ -375,7 +375,7 @@ Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
 Write-Host "LabFrog SQLite tools: $labfrogSqliteToolsRoot"
-Write-Host "PLANET Watchdog: $planetWatchdogRoot"
+Write-Host "DAQ File Watchdog: $planetWatchdogRoot"
 
 Write-Host "ASAPO spool: $selectedAsapoSpoolDir"
 
@@ -459,7 +459,7 @@ if ($RunKafkaRoundtrip) {
 }
 
 if ($RunWatchdogVerifier) {
-    Write-Step "PLANET Watchdog verifier"
+    Write-Step "DAQ File Watchdog verifier"
     Invoke-Checked "uv" @(
         "run",
         "python",

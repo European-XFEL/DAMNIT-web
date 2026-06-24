@@ -87,6 +87,10 @@ def test_file_fetching(app, client, temp_dir, monkeypatch):
     assert resp.json()["fileContent"] == "initial content"
 
 
+# TestClient creates a fresh event loop per request, so the alru_cached
+# ContextFile.from_file helper binds to that loop; the loop-reset warning is
+# intrinsic to this testing pattern (see test_file_fetching).
+@pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
 def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
     """HZDR users can maintain a campaign-scoped context workspace."""
     monkeypatch.setattr(settings.context_workspace, "root", tmp_path)

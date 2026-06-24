@@ -47,7 +47,7 @@ producer/consumer that does not share a Python package with DAMNIT-web-hzdr
 today:
 
 - `DAMNIT-web-hzdr/api/src/damnit_api/metadata/hzdr_event.py` — **canonical source**
-- `planet-watchdog/watchdog_core/hzdr_event.py`
+- `planet-watchdog/watchdog_core/hzdr_event.py` — the DAQ-File-Watchdog producer (GitLab repo slug `planet-watchdog`)
 - the shotcounter producer (`hzdrTangoDSShotcounter`), which builds a
   plain-dict event of the same shape
 
@@ -69,7 +69,7 @@ and DAMNIT folds it into `metadata.trigger.role` during normalization.
   "experiment_id": "Solenoid_Beamline_Tests_01.2025",
   "shot_id": "shot-000001",
   "shot_number": 1,
-  "source": "LaserData | PLANET-Watchdog | DRACO-Trigger",
+  "source": "LaserData | DAQ-File-Watchdog | DRACO-Trigger",
   "kind": "producer-defined type",
   "timestamp": "2025-01-16T08:00:00Z",
   "transport": "asapo | kafka | zmq",
@@ -108,7 +108,7 @@ propagate one end to end (see Pilot Identity and the integration roadmap).
 Producers are not blocked from emitting an event just because they lack an
 authoritative shot number.
 
-PLANET-Watchdog may still observe a non-authoritative, nested/local shot
+DAQ File Watchdog may still observe a non-authoritative, nested/local shot
 number (e.g. whatever is embedded in an attached DRACO/ZMQ payload). It may
 carry that value as the canonical `shot_number` rather than leaving it null,
 but only together with explicit provenance in `metadata` (e.g.

@@ -324,7 +324,7 @@ $planetWatchdogRoot = Resolve-RepositoryPath `
     -PathValue $config.repositories.planetWatchdog `
     -BaseDir $configDir `
     -RepoName "planet-watchdog" `
-    -Label "PLANET Watchdog" `
+    -Label "DAQ File Watchdog" `
     -SearchStart $repoRoot
 
 
@@ -357,7 +357,7 @@ Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
 Write-Host "LabFrog SQLite tools: $labfrogSqliteToolsRoot"
-Write-Host "PLANET Watchdog: $planetWatchdogRoot"
+Write-Host "DAQ File Watchdog: $planetWatchdogRoot"
 
 Write-Host "Event packages: $eventsDir"
 Write-Host "Emulator output: $outputDir"

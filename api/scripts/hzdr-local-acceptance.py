@@ -93,7 +93,7 @@ def write_staged_events(events_dir: Path) -> list[Path]:
       design - exercises "ambiguous".
     - LaserData (shot_number=99): matches nothing, by design - exercises
       "unmatched".
-    - PLANET-Watchdog (shot_number=2, via normalize_watchdog_document): a
+    - DAQ File Watchdog (shot_number=2, via normalize_watchdog_document): a
       raw watchdog-shaped document, adapted the same way a real watchdog
       consumer would adapt it before staging.
     - DRACO-Trigger (shot_number=2, via normalize_processed_trigger_message):

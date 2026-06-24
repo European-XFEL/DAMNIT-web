@@ -219,7 +219,7 @@ def main() -> None:
         action="append",
         type=Path,
         help=(
-            "Raw PLANET-Watchdog processed JSON/JSONL; DAMNIT adapts its "
+            "Raw DAQ File Watchdog processed JSON/JSONL; DAMNIT adapts its "
             "watch/event/analysis document to the normalized contract."
         ),
     )

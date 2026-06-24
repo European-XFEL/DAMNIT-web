@@ -225,7 +225,7 @@ class HZDRKafkaSpoolSettings(BaseModel):
     """Config for the durable Kafka trigger spool consumer.
 
     Activated by setting DW_API_HZDR_KAFKA_SPOOL__ENABLED=true.  Consumes the
-    PLANET-Watchdog / shotcounter ``hzdr-event-v1`` envelope from a Kafka
+    DAQ File Watchdog / shotcounter ``hzdr-event-v1`` envelope from a Kafka
     consumer group (manual offset commit) and spools it next to the ASAPO
     events; runs as a background asyncio task inside the FastAPI lifespan.
     """

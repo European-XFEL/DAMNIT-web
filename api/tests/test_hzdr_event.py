@@ -58,7 +58,7 @@ def _minimal_event(**overrides) -> dict:
         "experiment_id": EXPERIMENT_ID,
         "shot_id": "shot-000001",
         "shot_number": 1,
-        "source": "PLANET-Watchdog",
+        "source": "DAQ-File-Watchdog",
         "kind": "watchdog.file",
         "timestamp": "2025-01-15T09:00:01Z",
         "transport": "kafka",
@@ -199,7 +199,7 @@ class TestSharedContractDerivation:
     def test_hzdr_source_event_payload_ref_is_hzdr_payload_ref(self):
         source_event = HZDRSourceEvent.model_validate({
             "event_id": "evt-1",
-            "source": "PLANET-Watchdog",
+            "source": "DAQ-File-Watchdog",
             "kind": "watchdog.file",
             "timestamp": "2025-01-15T09:00:01Z",
             "payload_ref": {"topic": "planet-watchdog-events", "offset": 1},
@@ -212,7 +212,7 @@ class TestSharedContractDerivation:
         review_event = HZDRReviewEvent.model_validate({
             "event_id": "evt-2",
             "experiment_id": EXPERIMENT_ID,
-            "source": "PLANET-Watchdog",
+            "source": "DAQ-File-Watchdog",
             "kind": "watchdog.file",
             "timestamp": "2025-01-15T09:00:01Z",
             "payload_ref": {"path": "Z:/data/shot-1.csv"},

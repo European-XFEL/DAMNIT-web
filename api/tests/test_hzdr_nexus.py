@@ -507,9 +507,7 @@ def test_active_keyed_supersede_warns_when_active_row_not_latest(
     assert by_id["mongo-old"]["metadata"]["has_newer_version"] is False
     assert by_id["mongo-new"]["metadata"]["has_newer_version"] is True
     # But the version disagreement is logged for operator visibility.
-    assert any(
-        "non-latest row active" in record.message for record in caplog.records
-    )
+    assert any("non-latest row active" in record.message for record in caplog.records)
 
 
 def test_adapts_planet_watchdog_processed_document():
@@ -537,7 +535,7 @@ def test_adapts_planet_watchdog_processed_document():
     )
 
     assert event["shot_id"] == "shot-000017"
-    assert event["source"] == "PLANET-Watchdog"
+    assert event["source"] == "DAQ-File-Watchdog"
     assert event["kind"] == "watchdog.TPS_results"
     assert event["payload_ref"]["path"] == "Z:/data/shot-17.csv"
     assert event["payload_ref"]["filepath"] == "Z:/data/shot-17.csv"
@@ -865,7 +863,7 @@ def _make_review_event(event_id: str, match_status: str, candidate_shot_keys=Non
     return {
         "event_id": event_id,
         "experiment_id": "HELPMI",
-        "source": "PLANET-Watchdog",
+        "source": "DAQ-File-Watchdog",
         "kind": "watchdog.tps",
         "timestamp": "2026-06-10T12:00:00Z",
         "transport": "kafka",

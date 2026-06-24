@@ -161,7 +161,7 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
             "DRACO-Trigger",
             "LabFrog",
             "LaserData",
-            "PLANET-Watchdog",
+            "DAQ-File-Watchdog",
         }
         assert "entry/laserdata/camera_raw" in handle
         assert "entry/derived/ict_charge" in handle
@@ -176,7 +176,7 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
         "DRACO-Trigger",
         "LabFrog",
         "LaserData",
-        "PLANET-Watchdog",
+        "DAQ-File-Watchdog",
     }
     assert {event.source for event in source.shots[0].events} == {"LabFrog"}
     # shot 0 (day one) has no external events at all - it's labfrog-only, not
@@ -191,7 +191,7 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
 
     # planet-watchdog payload_ref must carry topic/partition/offset from _kafka
     watchdog_event_obj = next(
-        e for e in source.shots[1].events if e.source == "PLANET-Watchdog"
+        e for e in source.shots[1].events if e.source == "DAQ-File-Watchdog"
     )
     assert watchdog_event_obj.payload_ref.topic == "planet-watchdog-events"
     assert watchdog_event_obj.payload_ref.partition == 0

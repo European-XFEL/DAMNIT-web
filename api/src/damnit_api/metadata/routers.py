@@ -33,14 +33,14 @@ router = APIRouter(prefix="/metadata", tags=["metadata"])
 WATCHDOG_KAFKA_TOPIC = "planet.watchdog.events"
 SHOTCOUNTER_KAFKA_TOPIC = "shotcounter.shots"
 KAFKA_EVENT_SOURCES = {
-    "planet-watchdog": (WATCHDOG_KAFKA_TOPIC, "planet-watchdog"),
+    "daq-file-watchdog": (WATCHDOG_KAFKA_TOPIC, "planet-watchdog"),
 }
 
 
 class HZDREmulatorEvent(BaseModel):
     """One local flow-monitor emulator event request."""
 
-    source: str = "PLANET-Watchdog"
+    source: str = "DAQ-File-Watchdog"
     kind: str = "watchdog"
     source_key: str | None = None
     action: str = "append"
@@ -981,7 +981,7 @@ def _apply_event_source_metadata(
 ) -> None:
     """Add source-specific enrichment fields used by the local flow monitor."""
     source = _event_file_stem(event_source)
-    if source == "planet-watchdog":
+    if source == "daq-file-watchdog":
         metadata["watchdog_event_count"] = _next_metadata_counter(
             metadata, "watchdog_event_count"
         )

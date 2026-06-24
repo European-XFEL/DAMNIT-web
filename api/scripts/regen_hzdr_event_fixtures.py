@@ -35,7 +35,7 @@ SAMPLE_EVENT = {
     "experiment_id": "Solenoid_Beamline_Tests_01.2025",
     "shot_id": "shot-000042",
     "shot_number": 42,
-    "source": "PLANET-Watchdog",
+    "source": "DAQ-File-Watchdog",
     "kind": "watchdog.file",
     "timestamp": "2025-01-15T09:00:01Z",
     "transport": "kafka",

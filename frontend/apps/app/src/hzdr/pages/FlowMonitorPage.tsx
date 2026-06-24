@@ -303,7 +303,7 @@ export function HZDRFlowMonitorPage() {
       .map((option) => option.label)
       .join(', ')
     appendEmulatedShot(
-      'DAQ File Watchdog',
+      'DAQ-File-Watchdog',
       'watchdog_shot_event',
       'enrich',
       'watchdog',

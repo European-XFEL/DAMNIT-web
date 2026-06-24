@@ -122,7 +122,7 @@ export function HZDRDocsPage() {
               <DetailsSection title="Launcher and connections">
                 <Stack gap="xs">
                   <Text size="sm">
-                    PLANET Watchdog, LabFrog, Kafka, ASAPO, and MongoDB live
+                    DAQ File Watchdog, LabFrog, Kafka, ASAPO, and MongoDB live
                     together in the shared launcher config so the emulator can
                     be converted toward real services without moving settings
                     around.

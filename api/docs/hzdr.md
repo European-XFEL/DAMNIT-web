@@ -47,7 +47,7 @@ http://127.0.0.1:5173/flow-monitor
 ## Mental Model
 
 - LaserData produces raw shot events that flow into a broker (ASAPO-style).
-- PLANET Watchdog can publish enrichment events into Kafka.
+- DAQ File Watchdog can publish enrichment events into Kafka.
 - Both brokers produce staged events as JSONL files (events/*.jsonl).
 - The HDF5 builder consumes staged JSONL packages and writes a combined
   experiment HDF5 file.
@@ -139,7 +139,7 @@ The flow monitor is the visual test bench locally and the live traffic view in
 production.
 
 - **LaserData** appends a new emulated shot.
-- **PLANET Watchdog** enriches the latest shot through the Kafka-style path.
+- **DAQ File Watchdog** enriches the latest shot through the Kafka-style path.
 - **Build HDF5** simulates the production build/finalize trigger and combines
   staged packages into the experiment HDF5.
 - **Poll DAMNIT** reloads source metadata and table-visible shots.

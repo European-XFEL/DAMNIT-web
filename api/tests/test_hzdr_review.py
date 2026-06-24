@@ -65,7 +65,7 @@ def write_review_fixture(tmp_path: Path) -> Path:
                         {
                             "event_id": "evt-unmatched-1",
                             "experiment_id": "exp",
-                            "source": "PLANET-Watchdog",
+                            "source": "DAQ-File-Watchdog",
                             "kind": "watchdog.tps",
                             "timestamp": "2026-05-05T09:45:00Z",
                             "transport": "kafka",

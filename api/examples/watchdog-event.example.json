@@ -4,7 +4,7 @@
   "experiment_id": "Solenoid_Beamline_Tests_01.2025",
   "shot_id": "shot-000001",
   "shot_number": 1,
-  "source": "PLANET-Watchdog",
+  "source": "DAQ-File-Watchdog",
   "kind": "mongodb_shotsheet",
   "timestamp": "2025-01-15T09:00:02Z",
   "transport": "kafka",
