@@ -93,5 +93,17 @@ def test_no_lingering_file_descriptor_after_read(damnit_db):
             await session.execute(table.select())  # pyright: ignore[reportOptionalMemberAccess]
 
     assert _open_file_descriptors_to(db_file) == []
-    asyncio.run(do_read())
+    # asyncio.run() resets the thread's current event loop to None on exit.
+    # pytest-asyncio's session-scoped loop relies on that loop staying current
+    # for later async tests, so without restoring it they fail with
+    # "There is no current event loop in thread 'MainThread'". Save and restore.
+    try:
+        previous_loop = asyncio.get_event_loop()
+    except RuntimeError:
+        previous_loop = None
+    try:
+        asyncio.run(do_read())
+    finally:
+        if previous_loop is not None and not previous_loop.is_closed():
+            asyncio.set_event_loop(previous_loop)
     assert _open_file_descriptors_to(db_file) == []
