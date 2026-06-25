@@ -9,11 +9,13 @@ repos:
           - id: check-toml
           - id: check-yaml
           - id: end-of-file-fixer
+            exclude: ^frontend/apps/demo/public/
           - id: trailing-whitespace
+            exclude: ^frontend/apps/demo/public/
 
     # ruff walks up from each file to find api/ruff.toml automatically
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.14.13
+      rev: v0.15.8
       hooks:
           - id: ruff-check
             files: ^api/
@@ -44,6 +46,7 @@ repos:
             entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec eslint --fix --cache --cache-location node_modules/.cache/eslint/.eslintcache "${@#frontend/}"' --
             language: system
             files: ^frontend/
+            exclude: ^frontend/apps/demo/public/
             types_or: [javascript, jsx, ts, tsx]
 
           - id: frontend-prettier
@@ -51,6 +54,7 @@ repos:
             entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec prettier --write "${@#frontend/}"' --
             language: system
             files: ^frontend/
+            exclude: ^frontend/apps/demo/public/
             types_or: [javascript, jsx, ts, tsx, json, html, css, markdown]
 
           - id: frontend-tsc

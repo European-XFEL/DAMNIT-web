@@ -1,6 +1,6 @@
 # DAMNIT Frontend - Site App
 
-This site is a small React + Vite application with a focus on simple static pages (e.g., hero, about).  
+This site is a small React + Vite application with a focus on simple static pages (e.g., hero, about).
 Keeping it separate from the main application allows it to be deployed independently, updated faster (e.g., for documentation), and hosted on external services such as GitHub Pages.
 
 ## Prerequisites

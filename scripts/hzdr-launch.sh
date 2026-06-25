@@ -374,7 +374,7 @@ KAFKA_ROOT="$(resolve_repository_path "$(config_get repositories.kafkaBroker)" "
 LABFROG_ROOT="$(resolve_repository_path "$(config_get repositories.labfrog)" "LabFrog" "labfrog")"
 LABFROG_SQLITE_TOOLS_ROOT="$(resolve_repository_path "$(config_get repositories.labfrogSqliteTools)" "LabFrog SQLite tools" "labfrog-sqlite-tools-repo")"
 PLANET_WATCHDOG_ROOT="$(resolve_repository_path "$(config_get repositories.planetWatchdog)" "DAQ File Watchdog" "planet-watchdog")"
- 
+
 API_PORT="$(config_get ports.api 8000)"
 GUI_PORT="$(config_get ports.gui 5173)"
 ASAPO_PORT="$(config_get ports.asapoBroker 8765)"

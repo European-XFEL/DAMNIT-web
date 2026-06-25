@@ -63,12 +63,12 @@ def _is_broker_reachable(bootstrap: str, timeout: float = 3.0) -> bool:
         )
         admin.close()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 
 @pytest.fixture(scope="module")
-def broker(tmp_path_factory: pytest.TempPathFactory) -> str:  # noqa: ARG001
+def broker(tmp_path_factory: pytest.TempPathFactory) -> str:
     """Skip the whole module when the broker is not reachable."""
     addr = _broker_address()
     if not _is_broker_reachable(addr):
@@ -79,7 +79,7 @@ def broker(tmp_path_factory: pytest.TempPathFactory) -> str:  # noqa: ARG001
     return addr
 
 
-@pytest.fixture()
+@pytest.fixture
 def unique_topic(broker: str) -> str:
     """Fresh single-partition topic per test (UUID suffix avoids cross-test pollution)."""
     from kafka import KafkaAdminClient
@@ -88,7 +88,9 @@ def unique_topic(broker: str) -> str:
     topic = f"hzdr-test-rt-{uuid.uuid4().hex[:10]}"
     admin = KafkaAdminClient(bootstrap_servers=broker)
     try:
-        admin.create_topics([NewTopic(name=topic, num_partitions=1, replication_factor=1)])
+        admin.create_topics([
+            NewTopic(name=topic, num_partitions=1, replication_factor=1)
+        ])
     finally:
         admin.close()
     return topic
@@ -159,10 +161,14 @@ def _make_consumer(
         batch_size=20,
         filename="trigger.jsonl",
     )
-    return KafkaSpoolConsumer(config=cfg, consumer=raw_consumer, poll_timeout_ms=poll_timeout_ms)
+    return KafkaSpoolConsumer(
+        config=cfg, consumer=raw_consumer, poll_timeout_ms=poll_timeout_ms
+    )
 
 
-def _committed_offset(broker: str, group_id: str, topic: str, partition: int = 0) -> int | None:
+def _committed_offset(
+    broker: str, group_id: str, topic: str, partition: int = 0
+) -> int | None:
     """Return the committed offset for the group, or None if none committed yet."""
     from kafka import KafkaAdminClient, TopicPartition
 
@@ -171,7 +177,7 @@ def _committed_offset(broker: str, group_id: str, topic: str, partition: int = 0
         offsets = admin.list_consumer_group_offsets(group_id)
         result = offsets.get(TopicPartition(topic, partition))
         return result.offset if result is not None else None
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
     finally:
         admin.close()
@@ -212,7 +218,11 @@ async def _run_until_drained(
 def _spool_events(spool: Path) -> list[dict]:
     if not spool.exists():
         return []
-    return [json.loads(ln) for ln in spool.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    return [
+        json.loads(ln)
+        for ln in spool.read_text(encoding="utf-8").splitlines()
+        if ln.strip()
+    ]
 
 
 # ---------------------------------------------------------------------------

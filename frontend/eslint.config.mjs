@@ -1,3 +1,3 @@
-import base from "@damnit-frontend/config/eslint";
+import base from '@damnit-frontend/config/eslint'
 
-export default [...base];
+export default [...base]
