@@ -7,6 +7,7 @@ the real pilot replay remain.
 
 | Document | Purpose |
 | --- | --- |
+| [System overview](system-overview.md) | Start here: all seven repositories, the end-to-end data flow, shared contracts, and the end products |
 | [Architecture](architecture.md) | Canonical identity, event model, NeXus layout, and system boundaries |
 | [Roadmap](integration-roadmap.md) | Per-repository status table and ordered work items through go-live |
 | [Testing](testing.md) | Verified coverage and remaining acceptance tests |
