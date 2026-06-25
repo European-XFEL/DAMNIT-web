@@ -102,14 +102,54 @@ knobs: `DW_API_DAMNIT_PATH` (data root), `DW_API_METADATA__PROVIDER` (`local` re
 consumer settings. Structured JSON logging turns on when `DW_API_DEBUG=false`.
 `scripts/damnit-api.service` is the systemd unit (`Restart=on-failure`).
 
-## Cross-repo contract
-The `HZDREventV1` model here is authoritative. `regen_hzdr_event_fixtures.py` exports
-a committed JSON-Schema + sample (`api/tests/fixtures/hzdr-event-v1.*`) that is
-vendored byte-identically into each sibling repo's `tests/fixtures/`; each repo's
-`test_hzdr_event.py` asserts agreement, so a contract change shows up as a failing
-test everywhere until the copies re-sync. `scripts/test-all.ps1` runs all six sibling
-suites. Producer-side `trigger_role` is the one documented extension (folded into
-`metadata.trigger.role` on normalization).
+## Event schema contract (`hzdr-event-v1`)
+The `HZDREventV1` Pydantic model in `api/src/damnit_api/metadata/hzdr_event.py` is the
+**authoritative** definition of the cross-repo event envelope. This section is the
+human-readable copy of its constraints; keep the two in sync (regenerate fixtures and
+update this table together when the model changes).
+
+**The top level is closed (`extra="forbid"`).** Only these keys may appear:
+
+| Field | Type | Required | Constraint |
+| --- | --- | --- | --- |
+| `schema_version` | str | defaulted | must match `^hzdr-event-v1$` |
+| `event_id` | str | yes\* | stable + deterministic; a publish retry must resend the same id |
+| `experiment_id` | str | yes | canonical campaign id |
+| `shot_id` | str | yes | join key together with `experiment_id` |
+| `shot_number` | int \| null | no (null) | TANGO is the authority; `null` is valid, not an error |
+| `source` | str | yes | producer/source label |
+| `kind` | str | yes | event kind, e.g. `draco.trigger` |
+| `timestamp` | str | yes | UTC ISO-8601 |
+| `transport` | str | yes | `kafka` / `asapo` / … |
+| `payload_ref` | object | yes (may be `{}`) | traceability object; **open** (`extra="allow"`) |
+| `values` | JSON \| null | no | small inline data only — see bounds below |
+| `metadata` | object | no (`{}`) | free-form; consumers serialize the whole object to one JSON-text column |
+
+\* `event_id` is required on the wire. `_normalize_event()` synthesizes one only when
+loading a legacy file that omits it (`EVENT_REQUIRED_FIELDS` is the looser loaded-file set).
+
+**Hard constraints**
+- **No extra top-level fields.** The one tolerated producer-dialect field is `trigger_role`;
+  the producer folds it into `metadata.trigger.role` so the wire envelope stays closed.
+  The normalizer keeps a `pop("trigger_role")` shim for in-flight events from older producers.
+- **`shot_number` authority is TANGO.** `null` means "no authoritative number yet" and is
+  expected; a non-authoritative local counter belongs in `metadata`, never in this field.
+- **`values` is small data only:** ≤ `MAX_VALUES_ITEMS` (4096) leaf items counted recursively
+  **and** ≤ `MAX_VALUES_BYTES` (64 KiB) serialized JSON, enforced by `check_values_size()`.
+  Anything larger is a producer-side bug — put a reference in `payload_ref`
+  (`uri`/`path`/object-store/SciCat/Mongo) instead.
+- **`payload_ref` is the traceability object, not `metadata`.** At least one of its fields
+  (`topic/partition/offset/uri/path/message_key/mongo_id/scicat_pid`, plus producer-specific
+  extras it allows) should be set for any real event.
+- **Join key is `experiment_id + shot_id`.**
+
+**Keeping copies in sync.** `api/scripts/regen_hzdr_event_fixtures.py` exports a committed
+JSON-Schema + sample to `api/tests/fixtures/hzdr-event-v1.*`, vendored byte-identically into
+the producer repos that emit the envelope (`shotcounter/`, `planet-watchdog/` under
+`tests/fixtures/`). Each of those repos' `tests/test_hzdr_event.py` asserts its payload
+conforms, so a contract change fails CI in every producer until the copies re-sync.
+`scripts/sync-hzdr-event.ps1` checks (or `-Apply` fixes) the copies; `scripts/test-all.ps1`
+runs all sibling suites.
 
 ## Conventions and boundaries
 - Keep work local-first; prefer the local acceptance script and the harness broker. No real broker/Mongo/ASAPO calls unless the user explicitly changes scope.
