@@ -26,10 +26,11 @@ Kafka smoke test green against `kafka-broker-docker`. Two gate items remain, bot
 1. **Run the smoke test on the target deployment broker** (not just local):
    `uv run python scripts/kafka_smoke_test.py --broker <host:9092> --topic draco.trigger`,
    plus one full-device run with `KafkaEnabled=1` for the end-to-end path.
-2. **Decide `IsShotCounterXX` defaults.** Recommended: keep default `False` (opt-in per
-   channel) for the pilot — the new startup warning catches a misconfigured
-   `KafkaEnabled` device, and `shot_number: null` is contract-valid. Record the choice
-   on the MR and in the TANGO property setup (`scripts/add_server.sh`).
+2. **`IsShotCounterXX` defaults — DECIDED (2026-06-25): default `False`, opt-in per
+   channel.** Already the code behaviour; operators mark each shot-counting channel in
+   the TANGO property setup (`scripts/add_server.sh`), and the startup warning catches a
+   misconfigured `KafkaEnabled` device. No code change. This gate item is closed; only the
+   operational smoke-test-on-deployment-broker step remains.
 
 **Then:** merge to `main`. No code change expected. Unblocks the two 🔴 "authoritative
 shot number" items in `labfrog` and `planet-watchdog` (they depend on this merge + the
