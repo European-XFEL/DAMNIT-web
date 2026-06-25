@@ -155,7 +155,7 @@ def test_payload_ref_supports_kafka_traceability_fields():
 def test_payload_ref_allows_producer_specific_extra_keys():
     payload_ref = HZDRPayloadRef.model_validate({"run_id": "run-42"})
 
-    assert payload_ref.run_id == "run-42"
+    assert payload_ref.run_id == "run-42"  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_envelope_rejects_unknown_top_level_fields():

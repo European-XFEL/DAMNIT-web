@@ -14,7 +14,7 @@ import uuid
 from collections import defaultdict
 from datetime import UTC, datetime
 from operator import itemgetter
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import h5py
@@ -92,28 +92,26 @@ def single_writer_lock(output_path: Path) -> Iterator[None]:
     try:
         fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     except FileExistsError:
-        stale = False
         try:
             holder_pid = int(lock_path.read_text(encoding="utf-8").strip())
         except (OSError, ValueError):
             holder_pid = -1
-        if not _pid_is_alive(holder_pid):
-            stale = True
-            with contextlib.suppress(OSError):
-                lock_path.unlink()
-            try:
-                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            except FileExistsError as exc:
-                # Lost the race to reclaim it - someone else got there first.
-                message = f"Builder output is locked by another process: {lock_path}"
-                raise BuilderAlreadyRunningError(message) from exc
-        if not stale:
+        if _pid_is_alive(holder_pid):
             message = (
                 f"Builder output is locked by pid {holder_pid}: {lock_path}. "
                 "If that process is no longer running, remove the lock file "
                 "and retry."
             )
             raise BuilderAlreadyRunningError(message) from None
+        # Stale lock - the holder is gone; reclaim it.
+        with contextlib.suppress(OSError):
+            lock_path.unlink()
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as exc:
+            # Lost the race to reclaim it - someone else got there first.
+            message = f"Builder output is locked by another process: {lock_path}"
+            raise BuilderAlreadyRunningError(message) from exc
     try:
         os.write(fd, str(os.getpid()).encode("ascii"))
         os.close(fd)
@@ -281,7 +279,7 @@ def _apply_review_decisions(
     remaining: list[dict[str, Any]] = []
     for event in review_events:
         event_id = event.get("event_id")
-        decision = decisions.get(event_id)
+        decision = decisions.get(event_id) if event_id is not None else None
         if decision is None:
             remaining.append(event)
             continue
@@ -395,7 +393,7 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
         if "/entry/shots" not in handle:
             message = f"{path} does not contain /entry/shots"
             raise ValueError(message)
-        group = handle["/entry/shots"]
+        group = cast("h5py.Group", handle["/entry/shots"])
         count = _table_length(group)
         fields = {
             name: _read_hdf5_column(group, name, count)

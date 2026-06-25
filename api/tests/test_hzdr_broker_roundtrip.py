@@ -35,10 +35,12 @@ import json
 import os
 import time
 import uuid
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Broker availability
@@ -81,7 +83,7 @@ def broker(tmp_path_factory: pytest.TempPathFactory) -> str:
 
 @pytest.fixture
 def unique_topic(broker: str) -> str:
-    """Fresh single-partition topic per test (UUID suffix avoids cross-test pollution)."""
+    """Fresh single-partition topic per test (UUID suffix avoids collisions)."""
     from kafka import KafkaAdminClient
     from kafka.admin import NewTopic
 
@@ -238,7 +240,7 @@ async def test_commit_advances_broker_offset(
     """Broker-committed offset advances to N after _ack is called with N messages."""
     campaign = "rt-test-commit"
     _produce_events(broker, unique_topic, count=3, campaign=campaign)
-    time.sleep(0.3)
+    await asyncio.sleep(0.3)
 
     group_id = f"test-commit-{uuid.uuid4().hex[:8]}"
     consumer = _make_consumer(broker, unique_topic, group_id, tmp_path, campaign)
@@ -269,7 +271,7 @@ async def test_restart_resumes_from_committed_offset(
     """A fresh consumer with the same group ID picks up from the committed offset."""
     campaign = "rt-test-resume"
     events = _produce_events(broker, unique_topic, count=10, campaign=campaign)
-    time.sleep(0.3)
+    await asyncio.sleep(0.3)
 
     group_id = f"test-resume-{uuid.uuid4().hex[:8]}"
 
@@ -317,7 +319,7 @@ async def test_dedup_blocks_replay_from_fresh_group(
     """
     campaign = "rt-test-dedup"
     _produce_events(broker, unique_topic, count=5, campaign=campaign)
-    time.sleep(0.3)
+    await asyncio.sleep(0.3)
 
     spool_dir = tmp_path / "dedup"
 
@@ -352,7 +354,7 @@ async def test_10_events_no_lost_no_duplicates(
     """Golden path: 10 events, one clean run → exactly 10 unique spool lines."""
     campaign = "rt-test-golden"
     expected = _produce_events(broker, unique_topic, count=10, campaign=campaign)
-    time.sleep(0.3)
+    await asyncio.sleep(0.3)
 
     group_id = f"test-golden-{uuid.uuid4().hex[:8]}"
     spool_dir = tmp_path / "golden"

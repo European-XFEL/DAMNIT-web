@@ -115,7 +115,7 @@ def test_serialize_numpy():
     blob = to_npy_bytes(np.array([1, 2, 3], dtype=np.float64))
     value, dtype = serialize(blob, dtype=DamnitType.NUMPY)
     assert dtype == DamnitType.STRING
-    assert "float64" in value
+    assert "float64" in value  # pyright: ignore[reportOperatorIssue]
 
 
 def test_serialize_array_unsupported_shape():
@@ -134,4 +134,4 @@ def test_serialize_array_valid():
 def test_serialize_image():
     value, dtype = serialize(b"\x89PNG\r\n", dtype=DamnitType.IMAGE)
     assert dtype == DamnitType.IMAGE
-    assert value.startswith("data:image/png;base64,")
+    assert value.startswith("data:image/png;base64,")  # pyright: ignore[reportAttributeAccessIssue]

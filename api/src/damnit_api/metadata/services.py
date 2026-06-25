@@ -142,13 +142,14 @@ async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
 
     searched_paths = []
     for dir in ("amore", "amore-online"):
+        candidate = usr_share / dir
         try:
-            damnit_path = await (usr_share / dir).resolve()
+            damnit_path = await candidate.resolve()
             searched_paths.append(Path(damnit_path))
             if await damnit_path.is_dir():
                 return Path(damnit_path), searched_paths
         except PermissionError:
-            await logger.awarning(f"Permission denied when accessing {damnit_path}")
+            await logger.awarning(f"Permission denied when accessing {candidate}")
             continue
 
     return None, searched_paths

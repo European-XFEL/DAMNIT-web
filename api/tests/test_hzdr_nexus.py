@@ -106,12 +106,12 @@ def test_preserves_rich_labfrog_nexus_and_adds_damnit_bridge(tmp_path: Path):
     )
 
     with h5py.File(output_nexus, "r") as handle:
-        assert list(handle["entry/raw_labfrog/kept"][...]) == [1, 2]
-        assert handle["entry/shots/shot_key"].asstr()[0] == ("HELPMI:20260610:000017")
-        assert handle["entry/shots/match_quality"].asstr()[0] == (
+        assert list(handle["entry/raw_labfrog/kept"][...]) == [1, 2]  # pyright: ignore[reportArgumentType, reportIndexIssue]
+        assert handle["entry/shots/shot_key"].asstr()[0] == ("HELPMI:20260610:000017")  # pyright: ignore[reportAttributeAccessIssue]
+        assert handle["entry/shots/match_quality"].asstr()[0] == (  # pyright: ignore[reportAttributeAccessIssue]
             "exact_day_shot_number"
         )
-        assert handle["entry/source_events/shot_key"].asstr()[0] == (
+        assert handle["entry/source_events/shot_key"].asstr()[0] == (  # pyright: ignore[reportAttributeAccessIssue]
             "HELPMI:20260610:000017"
         )
         assert "entry/data_products/dataset_path" in handle

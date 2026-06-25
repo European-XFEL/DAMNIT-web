@@ -87,7 +87,7 @@ def configure(
 
     if debug:
         try:
-            import rich as _  # noqa: F401
+            import rich as _  # noqa: F401  # pyright: ignore[reportMissingImports]
 
             exception_formatter = RichTracebackFormatter(max_frames=1)
         except Exception:

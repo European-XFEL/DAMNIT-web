@@ -312,10 +312,10 @@ def _load_context_variables(context_path: Path, shots: list[HZDRShot]):
             return decorate(decorator_args[0])
         return decorate
 
-    module.Variable = variable_decorator
-    module.Skip = ContextSkip
-    module.Cell = ContextCell
-    module.mongo_find_one = lambda collection, query=None: _mongo_find_one(
+    module.Variable = variable_decorator  # pyright: ignore[reportAttributeAccessIssue]
+    module.Skip = ContextSkip  # pyright: ignore[reportAttributeAccessIssue]
+    module.Cell = ContextCell  # pyright: ignore[reportAttributeAccessIssue]
+    module.mongo_find_one = lambda collection, query=None: _mongo_find_one(  # pyright: ignore[reportAttributeAccessIssue]
         shots, query or {}
     )
     previous_module = sys.modules.get("damnit_ctx")
@@ -418,7 +418,7 @@ def _summarize_context_preview(value):
         return None
     preview = value.preview
     if hasattr(preview, "to_json"):
-        return {"kind": "plotly", "json": preview.to_json()}
+        return {"kind": "plotly", "json": preview.to_json()}  # pyright: ignore[reportOptionalMemberAccess]
     return preview
 
 

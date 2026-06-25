@@ -333,10 +333,10 @@ def write_hdf5(
                 )
             shot_dataset = kind_group["shot_id"]
             value_dataset = kind_group["values"]
-            shot_dataset.resize((shot_dataset.shape[0] + 1,))
-            value_dataset.resize((value_dataset.shape[0] + len(values),))
-            shot_dataset[-1] = str(event["shot_id"])
-            value_dataset[-len(values) :] = np.asarray(values, dtype=float)
+            shot_dataset.resize((shot_dataset.shape[0] + 1,))  # pyright: ignore[reportAttributeAccessIssue]
+            value_dataset.resize((value_dataset.shape[0] + len(values),))  # pyright: ignore[reportAttributeAccessIssue]
+            shot_dataset[-1] = str(event["shot_id"])  # pyright: ignore[reportIndexIssue]
+            value_dataset[-len(values) :] = np.asarray(values, dtype=float)  # pyright: ignore[reportIndexIssue]
 
         write_fixture_datasets(handle, selected_events)
 

@@ -70,10 +70,10 @@ def _open_file_descriptors_to(db_file: Path):
 
 def test_engine_uses_nullpool_and_autocommit(damnit_db):
     mgr = DatabaseSessionManager(damnit_db)
-    assert isinstance(mgr._engine.pool, NullPool)
+    assert isinstance(mgr._engine.pool, NullPool)  # pyright: ignore[reportOptionalMemberAccess]
     # Private attribute: the public get_execution_options() does not
     # surface the engine-level isolation_level for async engines.
-    assert mgr._engine.dialect._on_connect_isolation_level == "AUTOCOMMIT"
+    assert mgr._engine.dialect._on_connect_isolation_level == "AUTOCOMMIT"  # pyright: ignore[reportOptionalMemberAccess]
 
 
 # -----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ def test_no_lingering_file_descriptor_after_read(damnit_db):
     async def do_read():
         table = await async_table(damnit_db, name="runs")
         async with get_session(damnit_db) as session:
-            await session.execute(table.select())
+            await session.execute(table.select())  # pyright: ignore[reportOptionalMemberAccess]
 
     assert _open_file_descriptors_to(db_file) == []
     asyncio.run(do_read())

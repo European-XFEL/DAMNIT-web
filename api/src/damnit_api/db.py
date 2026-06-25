@@ -131,7 +131,7 @@ async def async_latest_rows(
         start_at = datetime.now().astimezone().timestamp()
     order_by = desc(by) if descending else by
 
-    selection = select(table).where(table.c.get(by) > start_at).order_by(order_by)
+    selection = select(table).where(table.c[by] > start_at).order_by(order_by)
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)
@@ -139,20 +139,20 @@ async def async_latest_rows(
 
 
 async def async_max(proposal, *, table: str, column: str):
-    table = await async_table(proposal, name=table)
-    if table is None:
+    tbl = await async_table(proposal, name=table)
+    if tbl is None:
         return None
-    selection = select(func.max(table.c.get(column)))
+    selection = select(func.max(tbl.c[column]))
     async with get_session(proposal) as session:
         result = await session.execute(selection)
     return result.scalar()
 
 
 async def async_column(proposal, *, table: str, name: str):
-    table = await async_table(proposal, name=table)
-    if table is None:
+    tbl = await async_table(proposal, name=table)
+    if tbl is None:
         return []
-    selection = select(table.c.get(name))
+    selection = select(tbl.c[name])
 
     async with get_session(proposal) as session:
         result = await session.execute(selection)

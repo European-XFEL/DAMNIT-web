@@ -36,7 +36,7 @@ class AuthSettings(BaseModel):
     client_secret: SecretStr = SecretStr("")
     server_metadata_url: Annotated[
         HttpUrl, UrlConstraints(allowed_schemes=["https"])
-    ] = "https://localhost/.well-known/openid-configuration"
+    ] = "https://localhost/.well-known/openid-configuration"  # pyright: ignore[reportAssignmentType]
     ldap: LDAPSettings = Field(default_factory=LDAPSettings)
 
 
@@ -227,12 +227,13 @@ class HZDRSpoolSettings(BaseModel):
     @model_validator(mode="after")
     def _require_broker_url_when_enabled(self) -> "HZDRSpoolSettings":
         if self.enabled and not self.broker_url:
-            raise ValueError(
+            msg = (
                 "DW_API_HZDR_SPOOL__BROKER_URL must be set when "
                 "DW_API_HZDR_SPOOL__ENABLED=true. "
                 "For the local test harness use http://127.0.0.1:8765; "
                 "for production set it to the real ASAPO broker URL."
             )
+            raise ValueError(msg)
         return self
 
 

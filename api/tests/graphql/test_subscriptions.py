@@ -241,7 +241,7 @@ def test_filter_for_client_since_zero_returns_none():
 def test_filter_for_client_excludes_equal_timestamp():
     snapshot = _snapshot({1: 100.0, 2: 200.0})
     result = filter_for_client(snapshot, since=100.0)
-    assert set(result["runs"].keys()) == {2}
+    assert set(result["runs"].keys()) == {2}  # pyright: ignore[reportOptionalSubscript]
 
 
 def test_filter_for_client_since_above_all_returns_none():

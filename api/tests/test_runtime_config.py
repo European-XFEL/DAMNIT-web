@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from damnit_api.main import create_app
@@ -126,7 +128,7 @@ def test_flow_monitor_producer_options_overridable_via_env(monkeypatch):
         "DW_API_FLOW_MONITOR__PRODUCERS__MONGO__UPDATES_DAMNIT_SQLITE", "true"
     )
 
-    flow_monitor = Settings(damnit_path=".").flow_monitor
+    flow_monitor = Settings(damnit_path=Path()).flow_monitor
 
     assert [option.value for option in flow_monitor.producers.shotcounter.tkeys] == [
         "custom01"

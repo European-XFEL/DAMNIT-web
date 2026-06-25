@@ -191,7 +191,9 @@ class DamnitRun:
 
     @classmethod
     def resolve(cls, record):
-        out = {name: None for name, entry in record.items() if entry is None}
+        out: dict[str, object] = {
+            name: None for name, entry in record.items() if entry is None
+        }
         for v in cls._iter_variables(record):
             out[v.name] = (
                 None if v.value is None else {"value": v.value, "dtype": v.dtype.value}

@@ -75,7 +75,7 @@ class User(BaseUserInfo):
     """Full user information including list of proposals."""
 
     _proposals: list[int]
-    proposals_by_year_half: ProposalsByYearHalf
+    proposals_by_year_half: ProposalsByYearHalf  # pyright: ignore[reportGeneralTypeIssues, reportIncompatibleVariableOverride]
 
     @classmethod
     async def from_connection(

@@ -46,7 +46,7 @@ _SUITE_PATH = (
 if _SUITE_PATH.exists():
     _spec = importlib.util.spec_from_file_location("local_message_suite", _SUITE_PATH)
     _suite = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
-    assert _spec.loader is not None
+    assert _spec.loader is not None  # pyright: ignore[reportOptionalMemberAccess]
     _spec.loader.exec_module(_suite)  # type: ignore[union-attr]
     _SUITE_AVAILABLE = True
 else:
@@ -82,7 +82,7 @@ def _start_broker(
     store: object, tmp_path: Path
 ) -> tuple[str, threading.Thread, ThreadingHTTPServer]:
     """Start a local broker HTTP server in a background thread."""
-    handler = _suite.make_handler(store, {})
+    handler = _suite.make_handler(store, {})  # pyright: ignore[reportOptionalMemberAccess]
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -173,7 +173,7 @@ def test_consume_one_dedup_survives_restart(tmp_path):
 @pytest.mark.asyncio
 async def test_asapo_consumer_claim_write_ack(tmp_path):
     """Full claim→write→ack cycle: event on disk, offset advanced."""
-    store = _suite.BrokerStore(tmp_path / "broker")
+    store = _suite.BrokerStore(tmp_path / "broker")  # pyright: ignore[reportOptionalMemberAccess]
     store.publish(_make_event("event-1", "campaign-a"))
     url, _, server = _start_broker(store, tmp_path)
     try:
@@ -195,7 +195,7 @@ async def test_asapo_consumer_claim_write_ack(tmp_path):
 @pytest.mark.asyncio
 async def test_asapo_consumer_does_not_ack_before_write(tmp_path):
     """Broker offset must stay 0 when no events are published."""
-    store = _suite.BrokerStore(tmp_path / "broker")
+    store = _suite.BrokerStore(tmp_path / "broker")  # pyright: ignore[reportOptionalMemberAccess]
     url, _, server = _start_broker(store, tmp_path)
     try:
         consumer = _make_consumer(url, tmp_path / "spool", campaign="campaign-a")
@@ -209,7 +209,7 @@ async def test_asapo_consumer_does_not_ack_before_write(tmp_path):
 @pytest.mark.asyncio
 async def test_asapo_consumer_campaign_offsets_independent(tmp_path):
     """Consuming campaign-b must not touch campaign-a offset."""
-    store = _suite.BrokerStore(tmp_path / "broker")
+    store = _suite.BrokerStore(tmp_path / "broker")  # pyright: ignore[reportOptionalMemberAccess]
     store.publish(_make_event("event-a", "campaign-a"))
     store.publish(_make_event("event-b", "campaign-b"))
     url, _, server = _start_broker(store, tmp_path)
@@ -226,7 +226,7 @@ async def test_asapo_consumer_campaign_offsets_independent(tmp_path):
 @pytest.mark.asyncio
 async def test_asapo_consumer_replay_dedup(tmp_path):
     """Replayed events (same event_id) must not be written twice."""
-    store = _suite.BrokerStore(tmp_path / "broker")
+    store = _suite.BrokerStore(tmp_path / "broker")  # pyright: ignore[reportOptionalMemberAccess]
     store.publish(_make_event("event-replay", "campaign-a"))
     url, _, server = _start_broker(store, tmp_path)
     try:

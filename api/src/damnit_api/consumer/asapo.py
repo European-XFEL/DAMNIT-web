@@ -81,8 +81,8 @@ class AsapoSpoolConsumer(HZDRSpoolConsumer):
         )
         broker_url = settings.hzdr_spool.broker_url
         # The model validator on HZDRSpoolSettings already rejects enabled=True
-        # without a broker_url, so this assert is only reached in a valid config.
-        assert broker_url is not None, (
-            "broker_url required (validated by HZDRSpoolSettings)"
-        )
+        # without a broker_url, so this guard is only reached in a valid config.
+        if broker_url is None:
+            msg = "broker_url required (validated by HZDRSpoolSettings)"
+            raise RuntimeError(msg)
         return cls(config=cfg, broker_url=broker_url)

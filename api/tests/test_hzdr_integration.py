@@ -152,12 +152,12 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
     assert built_nexus == output_nexus.resolve()
     assert built_sources == sources_file.resolve()
     with h5py.File(built_nexus, "r") as handle:
-        assert list(handle["entry/shots/shot_number"][...]) == [1, 1]
-        assert list(handle["entry/shots/shot_key"].asstr()[...]) == [
+        assert list(handle["entry/shots/shot_number"][...]) == [1, 1]  # pyright: ignore[reportArgumentType, reportIndexIssue]
+        assert list(handle["entry/shots/shot_key"].asstr()[...]) == [  # pyright: ignore[reportAttributeAccessIssue]
             f"{EXPERIMENT_ID}:20250115:000001",
             f"{EXPERIMENT_ID}:20250116:000001",
         ]
-        assert set(handle["entry/source_events/source"].asstr()[...]) == {
+        assert set(handle["entry/source_events/source"].asstr()[...]) == {  # pyright: ignore[reportAttributeAccessIssue]
             "DRACO-Trigger",
             "LabFrog",
             "LaserData",
@@ -203,11 +203,11 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
         if product.source == "LaserData" and product.dataset_name
     )
     with h5py.File(built_nexus, "r") as handle:
-        assert handle[camera_product.dataset_name][...].tolist() == [
+        assert handle[camera_product.dataset_name][...].tolist() == [  # pyright: ignore[reportAttributeAccessIssue, reportIndexIssue]
             [1.0, 2.0],
             [3.0, 4.0],
         ]
-    preview = preview_hdf5_dataset(built_nexus, camera_product.dataset_name)
+    preview = preview_hdf5_dataset(built_nexus, camera_product.dataset_name)  # pyright: ignore[reportArgumentType]
     assert preview.preview_kind == "image"
     assert preview.preview == [[0.0, 1 / 3], [2 / 3, 1.0]]
 

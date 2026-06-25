@@ -262,7 +262,7 @@ def test_context_variable_can_request_shot_id_metadata():
 
     variable.__annotations__["shot_id"] = "meta#shot_id"
 
-    assert routers._call_context_variable(variable, shot) == "shot-000123"
+    assert routers._call_context_variable(variable, shot) == "shot-000123"  # pyright: ignore[reportArgumentType]
 
 
 async def wait_for_change(

@@ -19,7 +19,7 @@ def get_preview_data(proposal, run, variable):
     except KeyError:
         return standardize(None, name=variable, dtype=DamnitType.NONE.value)
 
-    data = var_data.preview_data(data_fallback=False)
+    data = var_data.preview_data(data_fallback=False)  # pyright: ignore[reportAttributeAccessIssue]
     if data is not None:
         type_hint = None
     else:
@@ -62,14 +62,14 @@ def get_preview_data(proposal, run, variable):
 def get_extracted_data(proposal, run, variable):
     """Return extracted DAMNIT data in the legacy normalized response shape."""
     var_data = Damnit(proposal)[run, variable]
-    data = var_data.read()
-    type_hint = var_data.type_hint()
+    data = var_data.read()  # pyright: ignore[reportAttributeAccessIssue]
+    type_hint = var_data.type_hint()  # pyright: ignore[reportAttributeAccessIssue]
 
     match type(data):
         case np.ndarray:
-            data = data.squeeze()
+            data = data.squeeze()  # pyright: ignore[reportAttributeAccessIssue]
         case xr.DataArray:
-            data = data.squeeze(drop=True)
+            data = data.squeeze(drop=True)  # pyright: ignore[reportAttributeAccessIssue, reportCallIssue]
 
     dtype = get_damnit_type(data, type_hint=type_hint)
     attrs = None
@@ -77,7 +77,7 @@ def get_extracted_data(proposal, run, variable):
         case DamnitType.ARRAY | DamnitType.IMAGE:
             data = get_array(data)
         case DamnitType.RGBA:
-            attrs = {"shape": list(data.shape[:2])}
+            attrs = {"shape": list(data.shape[:2])}  # pyright: ignore[reportAttributeAccessIssue]
             data = get_png(data)
             dtype = DamnitType.PNG
 

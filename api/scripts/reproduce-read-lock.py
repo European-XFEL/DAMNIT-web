@@ -118,7 +118,7 @@ async def _single_reader(deadline):
             run_variables = await async_table(PROPOSAL_LABEL, name="run_variables")
             await async_latest_rows(
                 PROPOSAL_LABEL,
-                table=run_variables,
+                table=run_variables,  # pyright: ignore[reportArgumentType]
                 by="timestamp",
                 start_at=0,
             )

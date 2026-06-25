@@ -30,8 +30,8 @@ async def auth(
     if request.session.get("user"):
         return RedirectResponse(url=redirect_uri)
 
-    if settings.auth.mode == "ldap":
-        if settings.auth.ldap.server_url:
+    if settings.auth.mode == "ldap":  # pyright: ignore[reportOptionalMemberAccess]
+        if settings.auth.ldap.server_url:  # pyright: ignore[reportOptionalMemberAccess]
             raise HTTPException(
                 status_code=501,
                 detail="LDAP form login is not implemented in the web UI yet.",
@@ -189,11 +189,11 @@ async def noauth_logout(request: Request):
 @ldap_router.post("/login")
 async def ldap_login(request: Request, login: ldap.LDAPLogin) -> JSONResponse:
     """Create a DAMNIT-web session from LDAP credentials."""
-    if settings.auth.mode != "ldap":
+    if settings.auth.mode != "ldap":  # pyright: ignore[reportOptionalMemberAccess]
         raise HTTPException(status_code=404, detail="LDAP authentication is disabled")
 
     try:
-        request.session["user"] = ldap.authenticate_ldap_user(settings.auth.ldap, login)
+        request.session["user"] = ldap.authenticate_ldap_user(settings.auth.ldap, login)  # pyright: ignore[reportOptionalMemberAccess]
     except Exception as exc:
         await logger.ainfo("LDAP login failed", error=str(exc))
         raise HTTPException(status_code=401, detail="Invalid LDAP credentials") from exc

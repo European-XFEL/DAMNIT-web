@@ -118,14 +118,14 @@ def test_package_emulator_can_expand_shots(tmp_path: Path):
     )
 
     with h5py.File(package.hdf5_path, "r") as handle:
-        assert list(handle["index/shot_id"].asstr()[...]) == [
+        assert list(handle["index/shot_id"].asstr()[...]) == [  # pyright: ignore[reportAttributeAccessIssue]
             "shot-000123",
             "shot-000125",
             "shot-000127",
         ]
-        assert handle["fixtures/scalars/laser_energy_j_by_shot"].shape == (3,)
-        assert handle["fixtures/lineouts/pulse_energy_j_by_shot"].shape == (3, 128)
-        assert handle["fixtures/images/camera_raw_by_shot"].shape == (3, 64, 64)
+        assert handle["fixtures/scalars/laser_energy_j_by_shot"].shape == (3,)  # pyright: ignore[reportAttributeAccessIssue]
+        assert handle["fixtures/lineouts/pulse_energy_j_by_shot"].shape == (3, 128)  # pyright: ignore[reportAttributeAccessIssue]
+        assert handle["fixtures/images/camera_raw_by_shot"].shape == (3, 64, 64)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_local_shot_status_update_records_review_history(tmp_path: Path):

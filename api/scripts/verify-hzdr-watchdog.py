@@ -102,7 +102,6 @@ def verify_asapo(args) -> VerifyResult:
     message_count = status.get("message_count", "?")
     return VerifyResult(
         backend="asapo",
-        ok=True,
         events=events,
         detail=(
             f"Read {len(events)} recent event(s) from ASAPO/local broker "
