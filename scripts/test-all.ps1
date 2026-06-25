@@ -15,16 +15,24 @@
     HZDR coverage map in docs/testing.md. By default coverage is collected and
     the maps are refreshed.
 
+.PARAMETER DockerTests
+    Also run the real-broker integration tests (pytest.mark.integration_docker).
+    Requires a Kafka broker reachable at $env:KAFKA_TEST_BROKER (default localhost:9092).
+    Start one with: cd kafka-broker-docker && docker compose up -d
+
 .EXAMPLE
     .\test-all.ps1
     .\test-all.ps1 -WithAcceptance
     .\test-all.ps1 -Repos damnit,planet-watchdog
     .\test-all.ps1 -NoCoverage
+    .\test-all.ps1 -DockerTests
+    $env:KAFKA_TEST_BROKER="myhost:9092"; .\test-all.ps1 -DockerTests
 #>
 param(
     [switch] $WithAcceptance,
     [string[]] $Repos = @(),
-    [switch] $NoCoverage
+    [switch] $NoCoverage,
+    [switch] $DockerTests
 )
 
 $ErrorActionPreference = "Stop"
@@ -104,6 +112,13 @@ $allSuites = [ordered]@{
                 Write-Host "  [acceptance]"
                 uv run python scripts/hzdr-local-acceptance.py
             }
+            if ($DockerTests) {
+                Write-Host "  [broker integration tests]"
+                $brokerAddr = if ($env:KAFKA_TEST_BROKER) { $env:KAFKA_TEST_BROKER } else { "localhost:9092" }
+                Write-Host "    KAFKA_TEST_BROKER=$brokerAddr" -ForegroundColor DarkGray
+                $env:KAFKA_TEST_BROKER = $brokerAddr
+                Invoke-Exe uv run python -m pytest -q -m integration_docker tests/test_hzdr_broker_roundtrip.py
+            }
         }
     }
     "labfrog" = @{
@@ -168,6 +183,22 @@ $selected = if ($Repos.Count -gt 0) {
 $invalid = $selected | Where-Object { -not $allSuites.Contains($_) }
 if ($invalid) {
     Write-Error "Unknown repo name(s): $($invalid -join ', '). Valid: $($allSuites.Keys -join ', ')"
+}
+
+# -- Contract sync check -------------------------------------------------------
+# Verifies that vendored hzdr_event.py and JSON-Schema fixtures are byte-identical
+# across sibling repos. Fails fast so drift never silently reaches a test run.
+# Skip when only specific repos are selected (the check spans all repos).
+if ($Repos.Count -eq 0) {
+    Write-Host ""
+    Write-Host "--- Contract sync (hzdr_event.py + fixtures) ---" -ForegroundColor Cyan
+    try {
+        & "$PSScriptRoot\sync-hzdr-event.ps1"
+    } catch {
+        Write-Host "  Contract sync failed: $_" -ForegroundColor Red
+        Write-Host "  Run: pwsh scripts/sync-hzdr-event.ps1 -Apply  to fix." -ForegroundColor Yellow
+        exit 1
+    }
 }
 
 # -- Run -----------------------------------------------------------------------

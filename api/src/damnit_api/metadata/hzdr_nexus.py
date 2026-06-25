@@ -433,6 +433,19 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
 
 def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
     """Read LabFrog's canonical SQLite shots table using its stable columns."""
+    # Guard against a partial write: labfrog-sqlite-tools writes to a .tmp file
+    # and atomically renames it, so a zero-size or very-small file means the
+    # rename never happened (either the export is still in flight or a previous
+    # run crashed before the rename). Fail fast with an actionable message rather
+    # than opening what may be an empty or corrupt database.
+    stat = path.stat()
+    if stat.st_size < 1024:
+        message = (
+            f"{path} is {stat.st_size} bytes — too small to be a complete "
+            "LabFrog curated export. The export may still be running, or a "
+            "previous run may have crashed before the atomic rename completed."
+        )
+        raise ValueError(message)
     with sqlite3.connect(path) as connection:
         columns = {
             str(row[1]) for row in connection.execute("PRAGMA table_info(shots)")
@@ -1207,6 +1220,9 @@ def _normalize_hzdr_event_v1_trigger(
         raise ValueError(message)
 
     shot_number = _as_optional_int(document.get("shot_number"))
+    # trigger_role: current producers fold this into metadata.trigger.role before
+    # sending, so document.get("trigger_role") is typically None. The pop+setdefault
+    # below is kept as a shim for in-flight events from older producer versions.
     trigger_role = safe_hdf5_name(
         _as_optional_string(document.get("trigger_role")) or "threshold_crossing"
     )
@@ -1218,9 +1234,7 @@ def _normalize_hzdr_event_v1_trigger(
         if shot_number is not None
         else f"unassigned-{event_id}"
     )
-    # trigger_role is a top-level field on the shotcounter envelope; fold it into
-    # metadata.trigger.role so readers see the same shape as the legacy path.
-    normalized.pop("trigger_role", None)
+    normalized.pop("trigger_role", None)  # shim: no-op for current producers
     metadata = dict(normalized.get("metadata") or {})
     trigger_meta = dict(metadata.get("trigger") or {})
     trigger_meta.setdefault("role", trigger_role)

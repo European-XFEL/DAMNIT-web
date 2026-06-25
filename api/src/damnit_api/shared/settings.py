@@ -210,15 +210,30 @@ class HZDRSpoolSettings(BaseModel):
 
     Activated by setting DW_API_HZDR_SPOOL__ENABLED=true.
     The consumer runs as a background asyncio task inside the FastAPI lifespan.
+
+    ``broker_url`` is required when ``enabled=True``; there is no default because
+    the old localhost:8765 default silently connected to the local test harness
+    instead of the real broker, masking misconfiguration on production deployments.
     """
 
     enabled: bool = False
-    broker_url: str = "http://127.0.0.1:8765"
+    broker_url: str | None = None
     campaign: str = ""
     consumer_group: str = "damnit"
     spool_dir: Path = Path("spool/asapo")
     poll_interval: float = 2.0
     batch_size: int = 10
+
+    @model_validator(mode="after")
+    def _require_broker_url_when_enabled(self) -> "HZDRSpoolSettings":
+        if self.enabled and not self.broker_url:
+            raise ValueError(
+                "DW_API_HZDR_SPOOL__BROKER_URL must be set when "
+                "DW_API_HZDR_SPOOL__ENABLED=true. "
+                "For the local test harness use http://127.0.0.1:8765; "
+                "for production set it to the real ASAPO broker URL."
+            )
+        return self
 
 
 class HZDRKafkaSpoolSettings(BaseModel):

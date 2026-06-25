@@ -295,8 +295,8 @@ Work Order step 6: production supervised consumer with ack-after-flush semantics
 
 ### What the local harness already proves
 
-`asapo-for-hzdr-damnit/tests/test_asapo_harness.py` (5 tests) proves the
-correct ordering for the ASAPO path:
+`asapo-for-hzdr-damnit/tests/test_local_message_suite.py` (9 tests) proves the
+correct ordering for the local ASAPO-style path and its HTTP/CLI surface:
 
 1. **Claim** message from named consumer group (ASAPO `GetNext`).
 2. **Write and flush/fsync** the event JSON to local disk.
@@ -305,8 +305,11 @@ correct ordering for the ASAPO path:
 5. **Campaign routing**: each consumer group is scoped to a campaign slug;
    offset/position are per-group, so replaying one campaign does not disturb
    another.
+6. **HTTP/CLI contract**: publish, claim, ack, consume, reset, invalid-event
+   rejection, LaserData JSONL staging, and replay deduplication are covered
+   without a real broker.
 
-The same five properties must hold for the real production consumer.
+The same ordering and durability properties must hold for the real production consumer.
 
 ### What production needs
 

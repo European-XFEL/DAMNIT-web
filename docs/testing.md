@@ -2,15 +2,15 @@
 
 ## Verified
 
-As of 2026-06-24:
+As of 2026-06-25:
 
 | Repository | Result |
 | --- | --- |
 | DAMNIT API | `185 passed, 1 skipped` |
 | LabFrog SQLite tools | `60 passed` |
-| DAQ File Watchdog focused suite | `17 passed` |
+| DAQ File Watchdog full suite | `210 passed, 3 skipped` |
 | shotcounter (`feature/hzdr-canonical-trigger-event`) | `18 passed` (1 NTP-tolerance test deselected) |
-| ASAPO harness | `5 passed` |
+| ASAPO harness | `9 passed` |
 
 `api/tests/test_hzdr_integration.py` is the offline system-contract test. It
 combines LabFrog, ASAPO, Watchdog, and DRACO inputs for
@@ -30,6 +30,20 @@ emulator events → `HZDREventV1` → JSONL staging → catalog rebuild →
 review API → Confirm Matches → export hook, all proven over a real FastAPI
 app via `TestClient`, with no sibling repo, Docker, Mongo, Kafka, or ASAPO
 required.
+
+`asapo-for-hzdr-damnit/tests/test_local_message_suite.py` now covers both the
+local broker internals and the HTTP/CLI surface: publish, claim, ack, consume,
+reset, invalid-event rejection, LaserData JSONL staging, and replay
+deduplication. The harness coverage is now above the cross-repo "Needs
+attention" threshold; live ASAPO SDK coverage remains separate from this local
+contract suite.
+
+`planet-watchdog/tests/test_gui_test_controls.py` adds headless coverage for
+local test-control helpers: demo/real config guards, packaged fake-ZMQ command
+selection, Docker CLI failure reporting, JSONL edge cases, status/light updates,
+and ZMQ receive-cache polling. The watchdog GUI bucket is still marked "Needs
+attention" because the large Tk app/panel paths remain mostly manual until a
+bounded full-GUI startup smoke test exists.
 
 ## Test Coverage Map
 
@@ -54,9 +68,9 @@ coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).
 | DAMNIT API | <progress value="77" max="100">77%</progress> 77% Good | `damnit_api` | `api/tests` |
 | LabFrog | <progress value="77" max="100">77%</progress> 77% Good | `labfrog` | `tests` (non-webkit) |
 | LabFrog SQLite tools | <progress value="80" max="100">80%</progress> 80% Good | `labfrog_sqlite_tools` | `tests` |
-| DAQ File Watchdog | <progress value="45" max="100">45%</progress> 45% Needs attention | `watchdog_core` | `tests` |
+| DAQ File Watchdog | <progress value="46" max="100">46%</progress> 46% Needs attention | `watchdog_core` | `tests` |
 | shotcounter | <progress value="81" max="100">81%</progress> 81% Good | `hzdrTangoDSShotcounter` | `tests` (non-ntp) |
-| ASAPO harness | <progress value="42" max="100">42%</progress> 42% Needs attention | `tools` | `tests` |
+| ASAPO harness | <progress value="79" max="100">79%</progress> 79% Good | `tools` | `tests` |
 
 <!-- coverage-summary-end -->
 
@@ -88,7 +102,7 @@ Pass `-WithAcceptance` to also run `hzdr-local-acceptance.py`.
 
 1. Build DAMNIT from current real sibling-repository artifacts (real LabFrog
    export + real broker events).
-2. Run Kafka roundtrip and restart/replay for GAQ-File-Watchdog (planet-watchdog) and shotcounter.
+2. Run Kafka roundtrip and restart/replay for DAQ File Watchdog (planet-watchdog) and shotcounter.
 3. Run ASAPO publish/consume/restart roundtrip with the production ASAPO SDK
    wired into `AsapoSpoolConsumer` (consumer loop is built; SDK swap is the
    remaining step).
