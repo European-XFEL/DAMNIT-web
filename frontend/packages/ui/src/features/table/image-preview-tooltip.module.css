@@ -1,0 +1,22 @@
+.tooltip {
+  position: fixed;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--mantine-color-body);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-sm);
+  box-shadow: var(--mantine-shadow-lg);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: inherit;
+  max-height: inherit;
+  object-fit: contain;
+}

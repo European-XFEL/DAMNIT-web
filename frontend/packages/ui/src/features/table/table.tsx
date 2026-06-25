@@ -5,6 +5,7 @@ import {
   type CellClickedEventArgs,
   type DataEditorProps,
   type DataEditorRef,
+  GridCellKind,
   type GridSelection,
   type HeaderClickedEventArgs,
   type Item,
@@ -25,6 +26,11 @@ import { VariablesPopover } from './components/popovers/variables-popover'
 import ContextMenu from './context-menu'
 import { useErrorTooltip } from './hooks/use-error-tooltip'
 import { useTable } from './hooks/use-table'
+import {
+  IMAGE_PREVIEW_TOOLTIP_MAX_SIZE,
+  ImagePreviewTooltip,
+  type ImagePreviewTooltipState,
+} from './image-preview-tooltip'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
@@ -51,6 +57,32 @@ const formatColumns = (columns: Column[]) => {
     ...column,
     width: 100,
   }))
+}
+
+const IMAGE_PREVIEW_TOOLTIP_OFFSET = 8
+
+const getImagePreviewPosition = (bounds: Rectangle) => {
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+
+  let left = bounds.x + bounds.width + IMAGE_PREVIEW_TOOLTIP_OFFSET
+  if (left + IMAGE_PREVIEW_TOOLTIP_MAX_SIZE > viewportWidth) {
+    left =
+      bounds.x - IMAGE_PREVIEW_TOOLTIP_MAX_SIZE - IMAGE_PREVIEW_TOOLTIP_OFFSET
+  }
+
+  const maxTop = Math.max(
+    IMAGE_PREVIEW_TOOLTIP_OFFSET,
+    viewportHeight -
+      IMAGE_PREVIEW_TOOLTIP_MAX_SIZE -
+      IMAGE_PREVIEW_TOOLTIP_OFFSET
+  )
+  const top = Math.min(Math.max(bounds.y, IMAGE_PREVIEW_TOOLTIP_OFFSET), maxTop)
+
+  return {
+    left: Math.max(left, IMAGE_PREVIEW_TOOLTIP_OFFSET),
+    top,
+  }
 }
 
 export type TableProps = {
@@ -83,6 +115,9 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
   const { columnVisibility } = useTable()
+  const gridOnItemHovered = grid?.onItemHovered
+  const [imagePreview, setImagePreview] =
+    useState<ImagePreviewTooltipState | null>(null)
 
   // Initialization: Memos
   const tableColumns = useMemo(
@@ -138,7 +173,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     [tableColumns, tableMetadata.runs, tableData]
   )
   const {
-    onItemHovered: handleItemHovered,
+    onItemHovered: handleErrorItemHovered,
     dismissOnScroll: dismissErrorTooltipOnScroll,
     tooltip: errorTooltip,
   } = useErrorTooltip(lookupError)
@@ -193,6 +228,44 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       })
     )
   }
+  const handleItemHovered: NonNullable<DataEditorProps['onItemHovered']> =
+    useCallback(
+      (event) => {
+        gridOnItemHovered?.(event)
+        handleErrorItemHovered(event)
+
+        if (event.kind !== 'cell') {
+          setImagePreview(null)
+          return
+        }
+
+        const [col, row] = event.location
+        if (col < 0 || row < 0) {
+          setImagePreview(null)
+          return
+        }
+
+        const cell = getContent(event.location)
+        if (cell.kind !== GridCellKind.Image || !cell.data[0]) {
+          setImagePreview(null)
+          return
+        }
+
+        const nextPreview = {
+          src: cell.data[0],
+          ...getImagePreviewPosition(event.bounds),
+        }
+
+        setImagePreview((current) =>
+          current?.src === nextPreview.src &&
+          current.left === nextPreview.left &&
+          current.top === nextPreview.top
+            ? current
+            : nextPreview
+        )
+      },
+      [getContent, gridOnItemHovered, handleErrorItemHovered]
+    )
 
   // Context menus
   const handleCellContextMenu = (
@@ -200,6 +273,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     event: CellClickedEventArgs
   ) => {
     event.preventDefault()
+    setImagePreview(null)
 
     let selectedCell = gridSelection.current?.cell ?? []
     let selectedRange = gridSelection.current?.rangeStack ?? []
@@ -382,6 +456,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       lastVisibleRegionRef.current = { rect, tx: nextTx, ty: nextTy }
       if (scrolled) {
         dismissErrorTooltipOnScroll()
+        setImagePreview(null)
       }
     },
     [paginationHandler, scrollToViewHandler, dismissErrorTooltipOnScroll]
@@ -418,6 +493,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               scrollOffsetY={scrollY}
             />
             {errorTooltip}
+            <ImagePreviewTooltip preview={imagePreview} />
             <ContextMenu {...contextMenu} />
             <div id="portal" />
           </>
