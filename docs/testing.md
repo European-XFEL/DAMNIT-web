@@ -2,14 +2,14 @@
 
 ## Verified
 
-As of 2026-06-25:
+As of 2026-06-26:
 
 | Repository | Result |
 | --- | --- |
-| DAMNIT API | `185 passed, 1 skipped` |
-| LabFrog SQLite tools | `60 passed` |
+| DAMNIT API | `186 passed, 4 skipped` |
+| LabFrog SQLite tools | `89 passed` |
 | DAQ File Watchdog full suite | `210 passed, 3 skipped` |
-| shotcounter (`feature/hzdr-canonical-trigger-event`) | `18 passed` (1 NTP-tolerance test deselected) |
+| shotcounter (`feature/hzdr-canonical-trigger-event`) | `24 passed` (1 NTP-tolerance test deselected) |
 | ASAPO harness | `9 passed` |
 
 `api/tests/test_hzdr_integration.py` is the offline system-contract test. It

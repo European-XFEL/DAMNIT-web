@@ -2,18 +2,25 @@
 
 ## Vision
 
-LabFrog owns campaign and shot context. Transport systems publish immutable
-source events. DAMNIT performs matching once and publishes one canonical
-campaign view.
+LabFrog owns campaign and shot context. shotcounter is the trigger authority: it
+emits the `draco.trigger` event whose `shot_id`/trigger context the other
+producers key off. Transport systems publish immutable source events. DAMNIT
+performs matching once and publishes one canonical campaign view.
 
 ```text
-DRACO/TANGO -> Kafka --------+
-LaserData -> ASAPO ----------+--> durable event spool --> DAMNIT reconciler
-Watchdog -> Kafka -----------+                              |
-LabFrog -> Mongo/SQLite/NeXus+                              v
-                                              canonical NeXus + catalog
-                                                        |
-                                                   API + frontend
+operators -> shotcounter (DRACO-Trigger)
+                  |
+                  +-- Kafka draco.trigger (shot_id) --> LabFrog -> Mongo/SQLite/NeXus --+
+                  +-- Kafka draco.trigger (shot_id) --> planet-watchdog -> Kafka -------+
+                  +-- Kafka draco.trigger (shot_id) --> LaserData -> ASAPO ------------+
+                                                                                       |
+                                                          durable event spool <--------+
+                                                                  |
+                                                          DAMNIT reconciler
+                                                                  |
+                                                   canonical NeXus + catalog
+                                                                  |
+                                                          API + frontend
 ```
 
 Producers must not edit the canonical NeXus file or make independent timestamp

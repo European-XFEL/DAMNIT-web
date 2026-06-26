@@ -1,6 +1,6 @@
 # Integration Roadmap
 
-Updated: 2026-06-18
+Updated: 2026-06-26
 
 ## Status Key
 
@@ -61,7 +61,7 @@ Committed and tested:
 
 The sequence below is ordered by dependency, not effort.
 
-1. **Merge the `shotcounter` branch** — verified passing (18/18 tests), not
+1. **Merge the `shotcounter` branch** — verified passing (24/24 tests), not
    yet on main. Gate: one manual Kafka smoke test with `KafkaEnabled=1`
    against a local broker, plus a decision on `IsShotCounterXX` defaults for
    real deployments (currently all `False` — operators must opt each channel
@@ -154,7 +154,7 @@ Branch: `feature/hzdr-canonical-trigger-event` (not yet merged to main)
 
 | Item | Status |
 | --- | --- |
-| `schema_version`, stable `event_id`, canonical `experiment_id`, UTC timestamp | ✅ on branch, 18/18 tests pass |
+| `schema_version`, stable `event_id`, canonical `experiment_id`, UTC timestamp | ✅ on branch, 24/24 tests pass |
 | Machine-readable `trigger_role` via `TriggerRoleXX` attribute | ✅ on branch |
 | Kafka key `<experiment_id>:<channel_id>` for ordering | ✅ on branch |
 | Long-lived producer with retry on same `event_id` | ✅ on branch |

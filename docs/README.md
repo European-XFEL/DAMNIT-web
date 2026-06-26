@@ -1,9 +1,10 @@
 # HZDR Integration Docs
 
 Current status: data model, offline integration path, local acceptance test,
-and operator review UI are implemented and committed. Branches in `shotcounter`
-and `labfrog` are verified but not yet merged. Production broker ingestion and
-the real pilot replay remain.
+and operator review UI are implemented and committed. The `shotcounter` branch
+is verified but not yet merged to `main`; every other repo's integration work is
+merged to its default branch. Production broker ingestion and the real pilot
+replay remain.
 
 | Document | Purpose |
 | --- | --- |

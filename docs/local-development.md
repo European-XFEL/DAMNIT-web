@@ -5,9 +5,11 @@
 ```text
 GitHub/DAMNIT-web-hzdr
 GitLab/asapo-for-hzdr-damnit
+GitLab/kafka-broker-docker
 GitLab/labfrog
 GitLab/labfrog-sqlite-tools-repo
 GitLab/planet-watchdog
+GitLab/shotcounter
 ```
 
 Launchers discover sibling checkouts or use `scripts/hzdr-launch.config.json`.

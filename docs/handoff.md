@@ -1,11 +1,11 @@
 # Handoff
 
-Updated: 2026-06-18
+Updated: 2026-06-26
 
 ## Current State
 
 All integration branches tested and committed. DAMNIT-web-hzdr suite:
-`161 passed, 1 skipped`.
+`186 passed, 4 skipped`.
 
 - **DAMNIT-web-hzdr** (`main`): canonical `HZDREventV1` model; atomic catalog
   writes; single-writer builder lock; ambiguous/unmatched events in API; real
@@ -23,7 +23,7 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
   SQLite schema, migrations, transform, export, and NeXus writer.
 - **shotcounter** (`feature/hzdr-canonical-trigger-event`): canonical
   `hzdr-event-v1` Kafka envelope, `TriggerRole`, operator-configurable
-  `ShotNumber` with debounce — 18/18 tests pass, not yet merged to main.
+  `ShotNumber` with debounce — 24/24 tests pass, not yet merged to main.
 - **planet-watchdog** (`master`, the DAQ-File-Watchdog producer): normalized Kafka/HZDR event builder committed;
   `kafka_output.py` correctly copies `topic/partition/offset` into `payload_ref`.
 - **asapo-for-hzdr-damnit** (`main`): local harness proves correct
