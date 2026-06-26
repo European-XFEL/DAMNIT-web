@@ -82,7 +82,7 @@ flowchart TD
     class Producers customTitle;
     class Outputs customTitle;
     class DW customTitle;
-    
+
     KB -->|Kafka<br/>shot_id| LF
     OP -.->|campaign selection + trigger-shot setup| SC
     PW -->|Kafka| SPOOL

@@ -76,6 +76,15 @@ coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).
 
 ## Commands
 
+**Pre-commit** (run from repo root — use `uv run` because the system `pre-commit` binary may be
+too old; `pre-commit>=4.5.1` is pinned in `api/pyproject.toml`):
+
+```bash
+uv run pre-commit run --all-files          # check every file
+uv run pre-commit run --files path/to/file # check specific file(s)
+uv run pre-commit install                  # install the git hook
+```
+
 ```powershell
 cd api
 Copy-Item .env.test.example .env -Force

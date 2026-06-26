@@ -44,7 +44,10 @@ def _pid_is_alive_windows(pid: int) -> bool:
     means no such pid; anything else (e.g. 5, access denied) means it exists
     but we can't query it, so treat that as alive."""
     import ctypes
+    import sys
 
+    if sys.platform != "win32":
+        return False
     kernel32 = ctypes.windll.kernel32
     handle = kernel32.OpenProcess(_WIN_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
     if handle:
