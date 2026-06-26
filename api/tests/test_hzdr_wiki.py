@@ -4,7 +4,6 @@ GET /metadata/hzdr/sources/{source_key}/wiki
 GET /metadata/hzdr/sources/{source_key}/wiki?fetch=true
 """
 
-import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -13,10 +12,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from damnit_api.main import create_app
-from damnit_api.metadata.routers import _fetch_wiki_page_info
 from damnit_api.metadata.hzdr_sources import HZDRWikiInfo
-from damnit_api.shared.settings import HZDRWikiSettings, MetadataSettings, settings
-
+from damnit_api.metadata.routers import _fetch_wiki_page_info
+from damnit_api.shared.settings import HZDRWikiSettings, settings
 
 EXPERIMENT_ID = "Solenoid_Beamline_Tests_01.2025"
 SOURCE_KEY = "hzdr-solenoid-beamline-tests-01-2025"
@@ -83,7 +81,7 @@ def write_wiki_source_with_explicit_url(tmp_path: Path) -> Path:
     return path
 
 
-@pytest.fixture()
+@pytest.fixture
 def local_app(tmp_path, monkeypatch):
     """App with a local sources fixture and wiki base URL configured."""
     sources_file = write_wiki_source_fixture(tmp_path)
@@ -94,7 +92,7 @@ def local_app(tmp_path, monkeypatch):
     return create_app()
 
 
-@pytest.fixture()
+@pytest.fixture
 def local_app_no_wiki(tmp_path, monkeypatch):
     """App with a local sources fixture but no wiki base URL."""
     sources_file = write_wiki_source_fixture(tmp_path)
@@ -336,4 +334,4 @@ def test_hzdr_wiki_settings_defaults():
     """Default HZDRWikiSettings has empty base_url and 5-second timeout."""
     s = HZDRWikiSettings()
     assert s.base_url == ""
-    assert s.fetch_timeout == 5.0
+    assert s.fetch_timeout == pytest.approx(5.0)

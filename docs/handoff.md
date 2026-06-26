@@ -30,6 +30,22 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`
   schema-version string. All committed.
 
+## Built 2026-06-26
+
+- `shared/settings.py` — `HZDRWikiSettings` (`DW_API_HZDR_WIKI__BASE_URL`, `DW_API_HZDR_WIKI__FETCH_TIMEOUT`)
+- `metadata/hzdr_sources.py` — `HZDRWikiInfo` response model; `get_shot_by_key` / `get_shot_detail_by_key` / `_shot_detail` on `HZDRSourceProvider`
+- `metadata/routers.py` — `GET /metadata/hzdr/sources/{key}/wiki` and `?fetch=true` (live MediaWiki Action API call); `_fetch_wiki_page_info` helper
+- `api/tests/test_hzdr_wiki.py` — 10 new tests (URL derivation, unconfigured wiki, explicit override, fallback to source_key, 404, async fetch mock, missing-page flag, network error, `fetch=true` param, settings defaults)
+- `docs/` — split into focused docs: `event-schema.md`, `mediawiki-integration.md`, `standards-alignment.md`, `alignment-implementation-plan.md`; README index updated
+- Suite: **196 passed, 15 skipped** (15 skips are broker integration tests requiring `KAFKA_TEST_BROKER` / `ASAPO_TEST_BROKER`)
+
+## Built 2026-06-22/23
+
+- **Frontend restructured** — HZDR-specific UI moved from monolithic `app.tsx` into `apps/app/src/hzdr/` subfolders: `pages/` (ShotPage, LinkRecordsPage, FlowMonitorPage, ContextBuilderPage, DocsPage, SourceHome), `components/` (ShotTable, FlowDiagram, AppHeader, previews), `utils/`, `types.ts`, `hooks.ts`
+- **Saved views sidecar** — `hzdr_sources.views.json` persists durable UI table views (column visibility, sorting, filters) alongside `hzdr_sources.json`; managed via `GET/POST/DELETE /metadata/hzdr/views`; the review sidecar (`hzdr_sources.review.jsonl`) remains separate and builder-owned
+- `shared/routers.py` — guard `settings.auth is None` before accessing `auth.mode` / `auth.ldap` (allows auth-disabled local mode without crashing `GET /config/runtime`)
+- `scripts/test-all.sh` — bash equivalent of `test-all.ps1` for Linux CI
+
 ## Built 2026-06-18
 
 - `api/src/damnit_api/consumer/spool.py` — `HZDRSpoolConsumer` base + `SpoolConfig`; claim→write-fsync→ack→dedup loop
@@ -40,7 +56,6 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
 - `api/.env.production.example` — full production env template
 - `scripts/damnit-api.service` — systemd unit template
 - `api/tests/test_hzdr_spool.py` — 11 new tests (unit + integration against live harness broker)
-- Suite: **161 passed, 1 skipped**
 
 ## Start Next
 
@@ -52,6 +67,10 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
    available; the loop logic is unchanged.
 3. **Capture one real pilot sequence** and run the go-live gate in
    [integration-roadmap.md](integration-roadmap.md).
+4. **Standards alignment Phase 0** — lock the `metadata.*` namespace convention;
+   see [alignment-implementation-plan.md](alignment-implementation-plan.md).
+5. **SciCat registration** — wire up the existing `scicat_plugin`; field mapping
+   table is in [standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping).
 
 The canonical model is in [architecture.md](architecture.md). Avoid adding new
 matching logic in producer repositories.

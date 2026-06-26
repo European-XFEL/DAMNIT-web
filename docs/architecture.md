@@ -209,6 +209,14 @@ The LabFrog NeXus structure is preserved and DAMNIT adds:
 optional future projection for legacy DAMNIT table workflows, not the source of
 truth.
 
+**DAMNIT-owned sidecars** stored alongside `hzdr_sources.json`:
+- `hzdr_sources.review.jsonl` — durable confirm/dismiss decisions from the
+  Confirm Matches UI; survives rebuilds; merged at `VERIFIED > REVIEWED > BASE`
+  priority.
+- `hzdr_sources.views.json` — durable saved UI table views (column visibility,
+  sorting, filters); owned by DAMNIT, not LabFrog; managed via the views API
+  (`GET/POST/DELETE /metadata/hzdr/views`).
+
 ## Production Rules
 
 - Stage and flush events before acknowledging Kafka or ASAPO.

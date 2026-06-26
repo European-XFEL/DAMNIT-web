@@ -119,8 +119,8 @@ Branch: `main` (changes committed)
 | `experiment_id` column, migration, transform/export/NeXus plumbing | ✅ committed (`schema fix`) |
 | Lightweight anonymized SQLite fixture in `DAMNIT-web-hzdr/api/examples/` | ✅ committed |
 | Schedule campaign-scoped exports (cron/systemd/task-scheduler) | ⬜ external infra, not yet decided |
-| Publish completed SQLite/NeXus pairs by atomic rename or completion marker | 🟡 not started |
-| Retain each source export used for a canonical build | 🟡 not started — needed for the go-live gate's "reproducible output" criterion |
+| Publish completed SQLite/NeXus pairs by atomic rename or completion marker | ✅ committed — `bundle-complete.json` marker (atomic, with per-file sha256); atomic temp+rename already in `write_sqlite`/NeXus export |
+| Retain each source export used for a canonical build | ✅ committed — opt-in `retain_exports` snapshots via `export-campaign` CLI |
 | Keep DAMNIT output separate from the immutable LabFrog export | ✅ directory layout enforces this |
 
 ### `GitLab/planet-watchdog` (DAQ-File-Watchdog)

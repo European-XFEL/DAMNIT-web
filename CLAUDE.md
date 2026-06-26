@@ -90,9 +90,20 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
 
 ### Frontend (`frontend/`)
 `apps/app` (main UI), `apps/demo`, `apps/site`; `nginx/` for serving; Vite + pnpm
-workspace. The Confirm Matches UI (`/link-shot-records`) surfaces ambiguous/unmatched
-events; `ShotPage.tsx` fetches shot detail via the `by-key/{shot_key}` route when a
+workspace. HZDR-specific UI code lives under `apps/app/src/hzdr/`:
+- `pages/` — `ShotPage`, `LinkRecordsPage`, `FlowMonitorPage`, `ContextBuilderPage`,
+  `DocsPage`, `SourceHome`
+- `components/` — `ShotTable`, `FlowDiagram`, `AppHeader`, `previews`
+- `utils/` — `api`, `filter`, `format`, `hdf5`, `link-records`, `metadata`, `plotly`,
+  `preview`, `context`
+- `types.ts`, `hooks.ts`, `index.ts`
+
+`ShotPage.tsx` fetches shot detail via the `by-key/{shot_key}` route when a
 `shot_key` is present (falling back to `{shot_number}`).
+The `LinkRecordsPage` (`/link-shot-records`) surfaces ambiguous/unmatched events.
+Saved table views are persisted in `hzdr_sources.views.json` alongside
+`hzdr_sources.json` (same directory, same stem with `.views.json` suffix); the API
+manages them via `GET/POST/DELETE /metadata/hzdr/views`.
 
 ### Configuration
 Pydantic settings via `DW_API_*` env vars with `__` as the nested delimiter (e.g.
