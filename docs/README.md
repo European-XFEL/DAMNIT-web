@@ -10,6 +10,9 @@ replay remain.
 | --- | --- |
 | [System overview](system-overview.md) | Start here: all seven repositories, the end-to-end data flow, shared contracts, and the end products |
 | [Architecture](architecture.md) | Canonical identity, event model, NeXus layout, and system boundaries |
+| [Event schema](event-schema.md) | The `hzdr-event-v1` transport envelope: fields, constraints, and rationale |
+| [MediaWiki integration](mediawiki-integration.md) | Read-only campaign-to-wiki link, configuration, and API endpoint |
+| [Standards alignment](standards-alignment.md) | DAPHNE4NFDI / HELPMI / NeXus / SciCat field cross-walk, gap analysis, and routes |
 | [Roadmap](integration-roadmap.md) | Per-repository status table and ordered work items through go-live |
 | [Testing](testing.md) | Verified coverage and remaining acceptance tests |
 | [Local development](local-development.md) | Minimal build, test, and launch commands |
