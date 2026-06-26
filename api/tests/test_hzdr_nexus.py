@@ -18,6 +18,7 @@ from damnit_api.metadata.hzdr_nexus import (
     read_labfrog_nexus_shots,
     read_labfrog_sqlite_shots,
     reconcile_canonical_shots,
+    review_sidecar_backup_path,
     review_sidecar_path,
     single_writer_lock,
     write_json_atomic,
@@ -955,6 +956,40 @@ def test_append_review_decision_writes_sidecar_jsonl(tmp_path: Path):
     assert record["review_level"] == "REVIEWED"
     assert record["shot_key"] == "HELPMI:20260610:000017"
     assert record["by"] == "alice"
+
+
+def test_append_review_decision_keeps_rolling_backup(tmp_path: Path):
+    """Each append must update a .bak sibling so the sidecar is recoverable
+    if the live file is lost. The backup must equal the live sidecar after
+    every write, and survive multiple appends."""
+    sources_file = tmp_path / "hzdr_sources.json"
+    sidecar = review_sidecar_path(sources_file)
+    backup = review_sidecar_backup_path(sources_file)
+
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-1",
+        action="confirm",
+        by="alice",
+        shot_key="HELPMI:20260610:000017",
+        candidate_shot_keys=["HELPMI:20260610:000017"],
+        review_level="REVIEWED",
+    )
+    assert backup.exists()
+    assert backup.read_text(encoding="utf-8") == sidecar.read_text(encoding="utf-8")
+
+    # A second decision must update the backup to include both lines.
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-2",
+        action="dismiss",
+        by="bob",
+        review_level="VERIFIED",
+    )
+    assert backup.read_text(encoding="utf-8") == sidecar.read_text(encoding="utf-8")
+    assert backup.read_text(encoding="utf-8").count("\n") == 2
 
 
 def test_load_review_decisions_returns_highest_rank_per_event(tmp_path: Path):

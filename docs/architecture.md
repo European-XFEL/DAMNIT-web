@@ -235,6 +235,13 @@ views, and any full-rewrite of a JSON/catalog file.
 
 **What this protects against**: a process killed mid-write (disk full, OOM,
 `SIGKILL`, power loss after OS flush) leaves the previous output untouched.
-It does not protect against silent bit-rot of a file that was written correctly;
-back up the `.review.jsonl` operator-decision sidecar separately, as it is the
-only output not rebuildable from upstream sources (Kafka, LabFrog, staged JSONL).
+It does not protect against silent bit-rot of a file that was written correctly.
+
+**Operator-decision sidecar** (`.review.jsonl`): unlike the NeXus file and
+JSON catalog, this file is not rebuildable from upstream sources — it is the
+durable record of every operator confirm/dismiss action. `append_review_decision`
+copies the sidecar to a sibling `.review.jsonl.bak` after every successful
+fsync, giving a rolling backup that is at most one decision behind the live
+file. To recover a lost sidecar, rename the `.bak` file back in place before
+the next builder run. For off-host resilience, include both files in any
+directory-level backup or sync job.

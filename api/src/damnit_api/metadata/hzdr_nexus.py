@@ -169,6 +169,16 @@ def review_sidecar_path(sources_file: Path) -> Path:
     return sources_file.with_name(sources_file.stem + ".review.jsonl")
 
 
+def review_sidecar_backup_path(sources_file: Path) -> Path:
+    """Return the rolling backup path for the operator-decision sidecar.
+
+    ``append_review_decision`` copies the sidecar here after every successful
+    fsync, so there is always a coherent backup one write behind the live file.
+    """
+    sidecar = review_sidecar_path(sources_file)
+    return sidecar.with_name(sidecar.name + ".bak")
+
+
 def append_review_decision(
     sources_file: Path,
     *,
@@ -218,6 +228,10 @@ def append_review_decision(
         fh.write(json.dumps(record) + "\n")
         fh.flush()
         os.fsync(fh.fileno())
+    # Rolling backup — copied after fsync so it is always a coherent snapshot.
+    # If the sidecar is lost, recover by renaming this file back to the sidecar
+    # path. At most one decision is lost (the one written before the failure).
+    shutil.copy2(sidecar, review_sidecar_backup_path(sources_file))
 
 
 def load_review_decisions(
