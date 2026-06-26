@@ -252,56 +252,182 @@ laser-plasma experiments** (where DRACO and PHELIX operate). Its outputs include
 HELPMI is the closest existing initiative to what HZDR's DRACO experiment data needs.
 HZDR leads the project, so alignment is not just desirable — it is the right path.
 
-### 3.3 Current field mapping
+### 3.3 Detailed field-level alignment mapping
 
-The table below maps the fields DAPHNE4NFDI and HELPMI define to the corresponding
-locations in the current HZDR/DAMNIT schema.
+The following subsections give a concrete, field-by-field cross-walk between the current
+HZDR/DAMNIT schema, the HELPMI DDC Library, standard NeXus base classes, Plasma-MDS, and
+SciCat. The goal is to know exactly which fields are already present, which have the wrong
+name or units, and which are simply missing.
 
-**Experiment / Beamtime / Proposal level** (maps to `HZDRSource`):
+#### 3.3.1 Experiment / campaign level
 
-| Standard field | Location in DAMNIT | Notes |
+| Standard field | DAPHNE4NFDI / HELPMI term | Current HZDR location | Recommended `metadata` key | Notes |
+| --- | --- | --- | --- | --- |
+| Proposal / beamtime ID | `proposalId` (SciCat), `Experiment_identifier` (NeXus) | `HZDRSource.metadata["experiment_id"]` | — (root field, already structured) | Derived from MediaWiki page title in LabFrog; already the canonical campaign ID |
+| Campaign title | `title` | `HZDRSource.title` | — | Human-readable; already present |
+| Primary investigator | `principalInvestigator` (SciCat) | not captured | `metadata.run.pi` | Stored in LabFrog; could be exported to sources catalog |
+| Facility | `facility` | `HZDRSource.metadata["facility"]` | `metadata.run.facility` | Currently `"HZDR"` string; could add beamline sub-field |
+| Beamline / instrument | `instrumentId` (SciCat), `NXinstrument.name` | not captured | `metadata.run.beamline` | e.g. `"DRACO"`, `"ELBE"` |
+| Campaign start / end | — | derivable from `HZDRShot.fired_at` range | `metadata.run.start_utc`, `metadata.run.end_utc` | Not stored at source level; would need builder pass |
+| Wiki / logbook link | — | `GET /metadata/hzdr/sources/{key}/wiki` | — | **Endpoint added this PR** |
+| Number of shots | — | `len(HZDRSource.shots)` | — | Derivable; not yet stored as metadata |
+
+#### 3.3.2 Shot / measurement level
+
+| Standard field | DAPHNE4NFDI / HELPMI term | Current HZDR location | Notes |
+| --- | --- | --- | --- |
+| Shot number | shot_number | `HZDRShot.shot_number` | TANGO-authoritative; nullable; cross-system unique with `experiment_id` |
+| Timestamp | `start_time` (NeXus `NXentry`) | `HZDRShot.fired_at` (UTC ISO-8601) | Present; same format as NeXus requirement |
+| Shot key | — | `HZDRShot.shot_key` (`exp_id:YYYYMMDD:NNNNNN`) | HZDR-specific stable ID; more useful than numeric index alone |
+| Match status | — | `HZDRShot.match_status` | `matched`, `labfrog-only`, `unmatched`; no DAPHNE4NFDI equivalent |
+| Source events | — | `HZDRShot.events` → `HZDRSourceEvent` | Per-event `payload_ref` provides Kafka/ASAPO traceability |
+| Data products | — | `HZDRShot.data_products` → `HZDRDataProduct` | Path, dataset name, preview kind, dtype, shape, units |
+| NeXus dataset path | `HDF5_path` | `HZDRShot.hdf5_path` | Path to the shot group in the campaign NeXus file |
+| Operator | — | `shot.metadata["operator"]` (emulator) | Emulator only; could come from LabFrog session |
+
+#### 3.3.3 Laser parameters
+
+The emulator currently uses flat `shot.metadata` keys with units embedded in the name
+(`laser_energy_j`, `pulse_width_fs`). The recommended HELPMI-aligned keys use a
+`metadata.laser.*` namespace. All three columns must converge before HELPMI conformance
+can be claimed.
+
+| HELPMI DDC term | HELPMI LaserClasses field | Current emulator key | Recommended key | Unit | NeXus equivalent | Gap / note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Pulse energy | `pulse_energy` | `laser_energy_j` | `metadata.laser.pulse_energy_j` | J | `NXsource.pulse_energy` / `NXbeam.incident_energy` | Unit encoding differs: NeXus uses `NX_ENERGY` with separate `@units` attribute |
+| Pulse duration | `pulse_duration` | `pulse_width_fs` | `metadata.laser.pulse_duration_fs` | fs | `NXbeam.pulse_duration` (`NX_TIME`) | NeXus expects SI seconds; write value in fs, set `@units="fs"` |
+| Central wavelength | `central_wavelength` | — | `metadata.laser.wavelength_nm` | nm | `NXbeam.incident_wavelength` (`NX_WAVELENGTH`) | **Missing** — not in emulator or any current producer |
+| Repetition rate | `repetition_rate` | — | `metadata.laser.repetition_rate_hz` | Hz | `NXsource.frequency` | **Missing** — DRACO typically single-shot; HELPMI still requires it |
+| Beam position X / Y | `beam_position_x`, `beam_position_y` | `beam_position_x_mm`, `beam_position_y_mm` | `metadata.laser.beam_pos_x_mm`, `metadata.laser.beam_pos_y_mm` | mm | `NXbeam.incident_beam_divergence` (partial) | Names OK; recommend de-duplicating `_mm` suffix to `@units="mm"` attribute |
+| Beam waist / size | `beam_waist_x`, `beam_waist_y` | — | `metadata.laser.beam_waist_x_um`, `metadata.laser.beam_waist_y_um` | µm | `NXbeam.extent` | **Missing** — beam size at focus not captured |
+| Polarization | `polarization` | — | `metadata.laser.polarization` | string enum | `NXbeam.incident_polarization` | **Missing** — `horizontal`, `vertical`, `circular`, `random` |
+| Pulse contrast | `pulse_contrast` | — | `metadata.laser.contrast_ratio` | dimensionless | — | **Missing** — critical for laser-plasma experiments; not in standard NeXus |
+| Peak intensity | `peak_intensity` | — | `metadata.laser.peak_intensity_wcm2` | W/cm² | — | **Missing** — derivable from energy, duration, waist but not stored |
+| Laser system | `laser_system` | `source` field (`"LaserData"`) | `metadata.laser.system` | string | `NXsource.name` | `source` is producer label, not laser name; add `"DRACO"`, `"DRACO II"` |
+
+#### 3.3.4 Target / sample
+
+HELPMI `TargetClasses` covers solid foil, gas jet, cluster, and liquid targets. DAMNIT
+currently has only the free-form emulator `target` string.
+
+| HELPMI TargetClasses field | Current emulator key | Recommended key | Unit | NeXus equivalent | Gap / note |
+| --- | --- | --- | --- | --- | --- |
+| Target type | `target` (free-form) | `metadata.target.type` | string enum | `NXsample.type` | Types: `foil`, `gas_jet`, `cluster`, `liquid`, `structured` |
+| Material | — | `metadata.target.material` | string | `NXsample.chemical_formula` | **Missing** — e.g. `"Au"`, `"CH2"`, `"mylar"` |
+| Thickness | — | `metadata.target.thickness_nm` | nm | `NXsample.thickness` | **Missing** — characteristic number for solid foils |
+| Diameter | — | `metadata.target.diameter_mm` | mm | — | **Missing** |
+| Substrate material | — | `metadata.target.substrate_material` | string | `NXsample.substrate_material` | **Missing** — relevant for structured targets |
+| Sample temperature | `sample_temperature_c` | `metadata.target.temperature_c` | °C | `NXsample.temperature` | Present in emulator; rename for clarity |
+| Gas species (gas jet) | — | `metadata.target.gas_species` | string | — | **Missing** — `"Ar"`, `"N2"`, `"He"` |
+| Gas pressure (gas jet) | — | `metadata.target.gas_pressure_bar` | bar | `NXsample.gas_pressure` | **Missing** |
+
+#### 3.3.5 Environment / vacuum
+
+HELPMI groups environmental sensors under a `Devices` vocabulary that includes pressure,
+temperature, and humidity sensors. There is a direct NeXus mapping.
+
+| HELPMI Devices term | Current emulator key | Recommended key | Unit | NeXus equivalent | Gap / note |
+| --- | --- | --- | --- | --- | --- |
+| Chamber pressure | `chamber_pressure_mbar` | `metadata.vacuum.chamber_pressure_mbar` | mbar | `NXenvironment.pressure` | Rename namespace; unit convention is fine |
+| Pre-shot vacuum level | — | `metadata.vacuum.pre_shot_pressure_mbar` | mbar | — | **Missing** — pressure immediately before shot |
+| Residual gas analyser reading | — | `metadata.vacuum.rga_dominant_species` | string | — | **Missing** — optional but useful for foil pre-ablation |
+
+#### 3.3.6 Diagnostics and detectors
+
+Data products from diagnostics (detector images, spectra, particle counts) arrive as
+`HZDRDataProduct` records. The mapping to HELPMI `DetectorClasses` and NeXus `NXdetector`
+is currently structural (path + dataset name) rather than semantic.
+
+| HELPMI DetectorClasses | Current location | NeXus class | Recommended path | Gap / note |
+| --- | --- | --- | --- | --- |
+| X-ray / particle count | `shot.metadata["xray_counts"]` (emulator scalar) | `NXdetector.data` | `metadata.diagnostic.xray_counts` | Emulator scalar only; real diagnostics deliver arrays |
+| Streak camera image | `HZDRDataProduct` with `kind="streak_camera"` | `NXdetector` with `detector_type="STREAK"` | `/entry/data_products/{id}/values` | File path captured; `NXdetector.detector_type` attribute missing |
+| Proton/ion spectrum | `HZDRDataProduct` with `kind="proton_spectrometer"` | `NXdetector` with `type="POS"` | `/entry/data_products/{id}/values` | File path captured; energy axis not structured |
+| Thomson parabola | — | `NXdetector` with `type="THOMSON"` | — | **Missing** — important DRACO diagnostic |
+| FROG trace | — | `NXdetector` with `detector_type="FROG"` | — | **Missing** |
+| Scintillator screen | `HZDRDataProduct.source` | `NXdetector.detector_type="SCINT"` | — | Kind known; no structured detector geometry |
+| Alignment score | `shot.metadata["detector_signal_mean"]` | — | `metadata.diagnostic.detector_signal_mean` | Generic; useful for quick go/no-go QA |
+| Detector integration time | — | `NXdetector.count_time` | — | **Missing** in all real and emulated data |
+
+#### 3.3.7 NeXus bridge group class mapping
+
+The canonical NeXus file written by `hzdr_nexus.py` currently uses `NX_class=NXcollection`
+for most bridge groups. The table below shows the correct target classes once HELPMI
+definitions are finalized, and the effort to migrate.
+
+| Current path | Current `NX_class` | Target class (HELPMI/NeXus) | Migration note |
+| --- | --- | --- | --- |
+| `/entry` | `NXentry` | `NXentry` | Correct; set `entry/start_time` from first shot |
+| `/entry/shots` | `NXcollection` | `NXcollection` | DAMNIT-internal shot table; custom class intentional |
+| `/entry/source_events` | `NXcollection` | `NXcollection` | DAMNIT-internal event table; no standard equivalent |
+| `/entry/data_products` | `NXcollection` | `NXcollection` + per-product `NXdetector` | Add `NXdetector` sub-group per product kind; needs HELPMI class map |
+| `/entry/laserdata` | `NXcollection` | `NXbeam` or `NXsource` | LaserData time-series → `NXbeam` per shot; system properties → `NXsource` |
+| `/entry/watchdog` | `NXcollection` | `NXcollection` (keep custom) | File-arrival log; no standard class; keep as-is |
+| — | — | `/entry/instrument/laser` → `NXsource` | **Missing group** — add with `type="Laser"`, `probe="optical laser"`, `name` |
+| — | — | `/entry/sample` → `NXsample` | **Missing group** — add with `name`, `chemical_formula`, `thickness` |
+
+#### 3.3.8 Plasma-MDS cross-walk
+
+The Plasma-MDS schema (developed for low-temperature plasma, but with laser-plasma
+applicability) organises metadata into five top-level objects. Mapping is approximate —
+Plasma-MDS targets plasma reactors more than high-power laser shots, but the structure
+is instructive.
+
+| Plasma-MDS object | Key fields | DAMNIT equivalent | Fit / gap |
+| --- | --- | --- | --- |
+| `plasma.source` | `name`, `specification.waveform`, `specification.frequency`, `specification.power` | `HZDREventV1.metadata.laser.*` | Good conceptual fit; field names differ. `waveform` → pulse shape (not yet captured) |
+| `plasma.medium` | `name`, `state`, `composition` | `HZDRShot.metadata.target.*` (proposed) | Gas targets map well; solid foil targets are a mismatch (medium ≠ target) |
+| `plasma.target` | `material`, `geometry` | `metadata.target.material`, `metadata.target.thickness_nm` (proposed) | Plasma-MDS `target` is optional (reactor has no foil); laser-plasma needs it mandatory |
+| `plasma.diagnostics` | per-diagnostic objects with `technique`, `parameters` | `HZDRDataProduct.source`, `.kind`, `.dataset_path` | `technique` maps to `kind`; `parameters` (wavelength range, energy range) not yet stored |
+| `plasma.resources` | `data_path`, `software`, `format` | `HZDRDataProduct.path`, `.dtype`, `.shape_json` | `software` (which analysis code produced the product) not yet captured |
+
+#### 3.3.9 SciCat field mapping
+
+`HZDRPayloadRef.scicat_pid` is reserved for back-population once a campaign file is
+registered. The mapping below shows which SciCat `RawDataset` fields could be populated
+from existing DAMNIT data without new producers.
+
+| SciCat `RawDataset` field | Source in DAMNIT | Notes |
 | --- | --- | --- |
-| Proposal / beamtime ID | `HZDRSource.metadata["experiment_id"]` | Derived from MediaWiki page title in LabFrog |
-| Campaign title | `HZDRSource.title` | Human-readable name |
-| Primary Investigator | `HZDRSource.metadata["pi"]` (free-form) | Not yet captured |
-| Facility / beamline | `HZDRSource.metadata["facility"]` (free-form) | Not yet structured |
-| Start / end date | `HZDRShot.fired_at` range; not at source level | Could add `metadata["campaign_start"]` |
-| Wiki / logbook link | `GET /metadata/hzdr/sources/{key}/wiki` | **New endpoint** (this PR) |
+| `proposalId` | `HZDRSource.metadata["experiment_id"]` | Direct 1:1 — the campaign ID is already proposal-scoped |
+| `sampleId` | `metadata.target.material` (proposed key) | Not currently structured; would need target metadata capture |
+| `instrumentId` | `metadata.run.beamline` (proposed) or `"DRACO"` hard-coded | Could be sourced from LabFrog if beamline field is exposed |
+| `scientificMetadata` | entire `HZDRShot.metadata` dict | Already a free-form JSON dict; SciCat accepts it as-is |
+| `dataFormat` | `"NeXus/HDF5"` | Constant; no source needed |
+| `ownerGroup` | to be configured per deployment | HZDR Active Directory group; not in transport schema |
+| `accessGroups` | to be configured per deployment | Per-campaign access control; not in transport schema |
+| `size` | derivable from NeXus file size on disk | Not yet tracked in catalog |
+| `numberOfFiles` | `len(HZDRSource.shots)` + 1 (NeXus file) | Derivable |
+| `principalInvestigator` | `metadata.run.pi` (proposed) | Not yet captured; comes from LabFrog session |
+| `sourceFolderHost` | HZDR data server hostname | Deployment-level config; not in transport schema |
+| `sourceFolder` | `HZDRSource.damnit_path` | Already in sources catalog |
 
-**Measurement / Shot level** (maps to `HZDRShot`):
+#### 3.3.10 Gap summary
 
-| Standard field | Location in DAMNIT | Notes |
-| --- | --- | --- |
-| Shot / scan number | `HZDRShot.shot_number` | TANGO authoritative; nullable |
-| Timestamp | `HZDRShot.fired_at` | UTC ISO-8601 |
-| Shot key | `HZDRShot.shot_key` | `exp_id:YYYYMMDD:NNNNNN` — stable cross-system ID |
-| Match status | `HZDRShot.match_status` | `matched`, `labfrog-only`, etc. |
-| Source events | `HZDRShot.events` | List of `HZDRSourceEvent`, each with `payload_ref` |
-| Data products / files | `HZDRShot.data_products` | `HZDRDataProduct` with `path`, `dataset_name`, preview |
-| HDF5 path | `HZDRShot.hdf5_path` | Path to the shot's HDF5 dataset in the NeXus file |
+Fields that appear in HELPMI DDC or DAPHNE4NFDI recommendations and are **not** currently
+captured anywhere in DAMNIT (transport envelope, emulator metadata, or NeXus output):
 
-**Laser parameters** (maps to `HZDREventV1.metadata` or future NeXus groups):
+| Missing field | Standard | Category | Effort to add |
+| --- | --- | --- | --- |
+| Central wavelength (`wavelength_nm`) | HELPMI LaserClasses, NeXus `NXbeam` | Laser | Low — LaserData producer knows this; add to `metadata.laser` |
+| Repetition rate | HELPMI LaserClasses, NeXus `NXsource.frequency` | Laser | Low — fixed per system; add to source catalog |
+| Beam waist / focus spot size | HELPMI LaserClasses | Laser | Medium — measured per campaign; add to LabFrog export |
+| Polarization | HELPMI LaserClasses, NeXus `NXbeam` | Laser | Low — usually fixed; add to source catalog |
+| Pulse contrast | HELPMI LaserClasses | Laser | Medium — measured separately; add to LaserData producer |
+| Target material | HELPMI TargetClasses, NeXus `NXsample` | Target | Medium — in LabFrog shot record; needs LabFrog export |
+| Target thickness | HELPMI TargetClasses | Target | Medium — same as material |
+| Gas species / pressure | HELPMI TargetClasses | Target | Medium — gas jet shots only |
+| Pre-shot vacuum pressure | HELPMI Devices | Environment | Low — sensors are present; add to LaserData or shotcounter |
+| `/entry/instrument/laser` NeXus group | NeXus `NXsource` | NeXus structure | Low effort in `hzdr_nexus.py`; fields mostly known |
+| `/entry/sample` NeXus group | NeXus `NXsample` | NeXus structure | Medium — needs target metadata |
+| Per-product `NXdetector` sub-group | NeXus `NXdetector`, HELPMI DetectorClasses | NeXus structure | Medium — product kind already in catalog |
+| Thomson parabola / FROG product kind | HELPMI DetectorClasses | Diagnostics | Low — add to `kind` enum; no new data |
+| Detector integration time | NeXus `NXdetector.count_time` | Diagnostics | High — requires per-detector producer changes |
+| `plasma.resources.software` | Plasma-MDS | Provenance | Low — add analysis tool name to `HZDRDataProduct.metadata` |
+| `principalInvestigator` | SciCat, DAPHNE4NFDI | Experiment | Low — in LabFrog; add to sources catalog export |
+| `instrumentId` / beamline | SciCat, DAPHNE4NFDI | Experiment | Low — hard-code `"DRACO"` per deployment |
 
-| HELPMI / DAPHNE4NFDI field | Current location | Gap |
-| --- | --- | --- |
-| Laser energy (J) | `shot.metadata["laser_energy_j"]` (free-form emulator) | Emulator only; no structured producer field |
-| Pulse width (fs) | `shot.metadata["pulse_width_fs"]` | Emulator only |
-| Beam position (mm) | `shot.metadata["beam_position_x_mm/y_mm"]` | Emulator only |
-| Target description | — | Not captured; HELPMI `TargetClasses` defines this |
-| Detector / diagnostic | `HZDRDataProduct.source`, `.kind` | Partial; no structured NXdetector equivalent |
-| Chamber pressure | `shot.metadata["chamber_pressure_mbar"]` | Emulator only; HELPMI `vacuum_sensor` class defines this |
-
-**NeXus bridge groups** (maps to canonical NeXus output):
-
-| NeXus path | Standard class | Notes |
-| --- | --- | --- |
-| `/entry/shots` | `NXentry` (custom) | DAMNIT's canonical shot table |
-| `/entry/source_events` | — | DAMNIT-specific; no direct NeXus equivalent |
-| `/entry/data_products` | `NXdata` (partial) | Could be annotated with `NXdetector` |
-| `/entry/laserdata` | `NXlog` or `NXbeam` | Laser parameter time series |
-| `/entry/watchdog` | — | File-arrival events; no NeXus class |
-
-### 3.4 Potential alignment routes
+### 3.5 Potential alignment routes
 
 These are ordered from lowest to highest effort. None block the pilot or the go-live
 gate — they are post-pilot quality improvements.
@@ -369,8 +495,15 @@ writer and analysis tooling concern.
 | `GET /metadata/hzdr/sources/{key}/wiki` endpoint | ✅ this PR | §2.4 |
 | `DW_API_HZDR_WIKI__BASE_URL` configuration | ✅ this PR | §2.3 |
 | Tests for wiki link and optional API fetch | ✅ this PR | §2.4 |
-| HELPMI DDC glossary term mapping in `metadata` keys | ⬜ post-pilot | §3.4, Route 1 |
-| `NXlaser` / `NXtarget` groups in NeXus bridge | ⬜ post-pilot | §3.4, Route 2 |
-| SciCat registration + `scicat_pid` back-population | ⬜ infrastructure dependency | §3.4, Route 3 |
-| NeXus Ontology annotation for federated search | ⬜ aspirational | §3.4, Route 4 |
-| openPMD interoperability (simulation links) | ⬜ aspirational | §3.4, Route 5 |
+| Detailed HELPMI / DAPHNE4NFDI / SciCat / Plasma-MDS alignment mapping | ✅ this PR | §3.3 |
+| Gap analysis: 16 missing fields with effort estimates | ✅ this PR | §3.3.10 |
+| Rename `metadata` keys to HELPMI-aligned namespace (`metadata.laser.*` etc.) | ⬜ post-pilot | §3.3.3, Route 1 |
+| Add `metadata.laser.wavelength_nm`, `polarization`, `repetition_rate_hz` | ⬜ low effort | §3.3.3, §3.3.10 |
+| Add `metadata.target.*` fields from LabFrog shot record | ⬜ medium effort | §3.3.4, §3.3.10 |
+| Add `/entry/instrument/laser` (`NXsource`) to NeXus bridge | ⬜ low effort | §3.3.7, Route 2 |
+| Add `/entry/sample` (`NXsample`) to NeXus bridge | ⬜ medium effort | §3.3.7, Route 2 |
+| Per-product `NXdetector` sub-groups in NeXus bridge | ⬜ medium effort | §3.3.6, §3.3.7 |
+| `NXlaser` / `NXtarget` groups (HELPMI NeXus fork) | ⬜ post-pilot | §3.5, Route 2 |
+| SciCat registration + `scicat_pid` back-population | ⬜ infrastructure dependency | §3.5, Route 3 |
+| NeXus Ontology annotation for federated search | ⬜ aspirational | §3.5, Route 4 |
+| openPMD interoperability (simulation links) | ⬜ aspirational | §3.5, Route 5 |
