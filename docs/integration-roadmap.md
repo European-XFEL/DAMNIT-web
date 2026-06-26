@@ -201,7 +201,10 @@ effort:
 3. **Dedicated cross-system TANGO shot-counter device** — every producer reads
    from it before stamping `shot_number`; labfrog writes to or reads from it.
    Only option that gives a live, cross-system-consistent number at acquisition
-   time. Most work: new device, new integration point in every producer.
+   time. Most work: new device, new integration point in every producer. This
+   overlaps the TANGO device self-archiving work (see *Future: TANGO device
+   self-archiving as a metadata source*) — a control-system archiver is the
+   natural home for reading such a counter alongside other device attributes.
 
 The decision to use Option 1 for the pilot is recorded. Options 2 and 3 remain
 open for post-pilot evaluation.
@@ -367,6 +370,85 @@ replay each consumer, then verify:
 - staged-event schema validation rejects malformed producer payloads with
   actionable errors
 - reproducible output from retained exports and spools
+
+## Future: TANGO device self-archiving as a metadata source
+
+**Status:** 🔴 future / needs live infrastructure · **Effort:** Medium (DAMNIT
+adapter) + external (control-system archiver) · **Added:** 2026-06-26
+
+The goal is to let **TANGO devices write their own metadata** into the canonical
+campaign record, instead of DAMNIT relying on producer-embedded values or the
+emulator's synthetic `metadata.laser.*` / `metadata.vacuum.*` fields. Today the
+only TANGO touchpoint is `shotcounter` (one device server emitting `draco.trigger`
+to Kafka). A control-system archiver would turn *every* relevant device attribute
+(laser energy/wavelength, chamber/pre-shot pressure, stage positions, environmental
+sensors, diagnostic scalars) into a time-stamped feed DAMNIT can attach per shot.
+
+**Reference under evaluation:** CALA's `pyds_archivingserver` (`ArchivingServer`
+device), `gitlab.lrz.de/cala-public/tangodeviceservers/pyds_archivingserver`. CALA
+(Centre for Advanced Laser Applications, LMU/MPQ) is a petawatt laser-plasma
+facility — a close analogue to DRACO — so its TANGO archiving approach is directly
+applicable. *(The repository is on a host this session's egress policy blocks, so
+the specifics below are from the TANGO archiving ecosystem generally and must be
+confirmed against the actual `ArchivingServer.py`: exact storage backend, the
+device/attribute registration mechanism, polling vs. TANGO archive-events, and the
+table/field layout.)*
+
+### What it could add
+
+- **Real device-sourced values for the standards-alignment gaps.** Directly fills
+  the laser/environment/diagnostic rows that are currently `**Missing**` or
+  emulator-only in [standards-alignment §3.3–3.6](standards-alignment.md#33-laser-parameters):
+  wavelength, repetition rate, polarization, pre-shot vacuum pressure, detector
+  scalars — these are already live TANGO attributes in the control system.
+- **A timestamped attribute history** that DAMNIT's existing timestamp matcher can
+  correlate to each shot's `fired_at` (campaign-timezone aware), the same mechanism
+  already used for LabFrog/event matching. No new matching concept needed.
+- **Provenance for free.** Each value carries the originating device + attribute +
+  archive timestamp — a natural `payload_ref` shape (device/attribute/row-id),
+  consistent with the traceability rules in [architecture.md](architecture.md#payload_ref).
+
+### Integration options (lowest to highest DAMNIT-side effort)
+
+1. **Pull / reader at build time** *(recommended first step)* — add a
+   `read_tango_archive_*` source adapter (mirroring the existing LabFrog SQLite
+   reader) that, per shot, queries the archive backend for the shot's time window
+   and folds attributes into `metadata.laser.*` / `metadata.vacuum.*` /
+   `metadata.diagnostic.*` via a config-driven **attribute→metadata-key map**. The
+   map reuses the namespace registry from [standards-alignment Route 1](standards-alignment.md#route-1-structured-metadata-keys-with-helpmi-glossary-terms-low-effort)
+   and [target-ontology.md](target-ontology.md). Low–Medium on the DAMNIT side once
+   the backend/query shape is known; offline-testable against a fixture DB. The live
+   archive + the attribute map are the external dependency.
+2. **Push / event** — a small bridge (or the archiver itself) emits per-shot or
+   per-window `hzdr-event-v1` events into the **existing durable spool**
+   (Kafka/ASAPO consumers already built). Most aligned with the current
+   producer→spool→reconciler architecture; needs producer-side work in the control
+   system. Medium.
+3. **Authoritative shot number** — if the control system exposes a TANGO shot
+   counter alongside the archiver, this overlaps **Shot Number Authority Option 3**
+   below (a dedicated cross-system TANGO shot-counter device). The archiver could be
+   the natural home for that read.
+
+### Key challenges to confirm
+
+- **Backend + query shape.** HDB++ (MariaDB/TimescaleDB/Cassandra, per-type tables
+  keyed on `att_conf_id` + `data_time`) vs. a bespoke store (SQL/InfluxDB/HDF5/files)
+  determines the adapter. Per-attribute time-range query is the core operation.
+- **Attribute→key mapping registry.** A binding TANGO-name → `metadata.*` map, same
+  discipline as the target ontology; un-mapped attributes go to an open bag.
+- **Time-correlation policy.** Nearest archived sample to `fired_at` vs.
+  interval-averaging over the shot window, with an explicit tolerance (reuse the
+  matcher's tolerance convention).
+- **Access path / egress.** DAMNIT reaching the archive DB (driver, network, auth)
+  is a deployment/infra concern; keep endpoints/credentials in `DW_API_*` config,
+  never in code (per `CLAUDE.md` boundaries).
+
+### Next action
+
+Confirm the four assumptions above against the real `ArchivingServer.py` (paste it
+or mirror it where this session can fetch it), then prototype Option 1's
+`read_tango_archive_*` adapter against a small fixture archive — no live control
+system required to build and test the DAMNIT side.
 
 ## Cross-repo standardization (2026-06-23)
 

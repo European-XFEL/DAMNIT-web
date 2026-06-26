@@ -214,7 +214,10 @@ from existing DAMNIT data without new producers.
 ### 3.10 Gap summary
 
 Fields that appear in HELPMI DDC or DAPHNE4NFDI recommendations and are **not** currently
-captured anywhere in DAMNIT (transport envelope, emulator metadata, or NeXus output):
+captured anywhere in DAMNIT (transport envelope, emulator metadata, or NeXus output).
+Many of the laser/environment/diagnostic rows below are live TANGO attributes in the
+control system; a future TANGO device self-archiving source could supply them directly —
+see [integration-roadmap.md](integration-roadmap.md#future-tango-device-self-archiving-as-a-metadata-source):
 
 | Missing field | Standard | Category | Effort to add |
 | --- | --- | --- | --- |
