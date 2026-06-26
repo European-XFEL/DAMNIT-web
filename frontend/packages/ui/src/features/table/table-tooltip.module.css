@@ -1,0 +1,34 @@
+.surface {
+  box-sizing: border-box;
+  background: var(--table-tooltip-bg);
+  border-radius: var(--table-tooltip-radius, var(--mantine-radius-sm));
+  box-shadow: var(--table-tooltip-shadow, var(--mantine-shadow-lg));
+  z-index: 1000;
+}
+
+.imageTooltip {
+  display: grid;
+  place-items: center;
+  max-width: 300px;
+  max-height: 300px;
+  pointer-events: none;
+}
+
+.errorTooltip {
+  --table-tooltip-radius: 6px;
+  --table-tooltip-shadow:
+    0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md);
+
+  max-width: 360px;
+  color: var(--mantine-color-white);
+  padding: 8px 10px;
+}
+
+.image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: inherit;
+  max-height: inherit;
+  object-fit: contain;
+}

@@ -157,8 +157,7 @@ export const useErrorTooltip = (
       const [col, row] = args.location
       const error = lookupError(col, row)
       if (!error) {
-        cancelOpen()
-        scheduleClose()
+        dismiss()
         return
       }
       cancelClose()
@@ -184,7 +183,7 @@ export const useErrorTooltip = (
       }
       scheduleOpen(target)
     },
-    [lookupError, cancelClose, cancelOpen, scheduleClose, scheduleOpen]
+    [lookupError, cancelClose, cancelOpen, dismiss, scheduleClose, scheduleOpen]
   )
 
   useEffect(

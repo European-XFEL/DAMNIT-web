@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  ActionIcon,
-  Group,
-  ScrollArea,
-  Text,
-  Tooltip,
-  useComputedColorScheme,
-  useMantineTheme,
-} from '@mantine/core'
+import { ActionIcon, Group, ScrollArea, Text, Tooltip } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
-import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
+import { type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
 import { type VariableError } from '../../../types'
 import { errorText, errorVisuals } from '../cells'
+import classes from '../table-tooltip.module.css'
+import { TableTooltipLayer } from './table-tooltip-layer'
 
 export type ErrorTooltipProps = {
   error: VariableError
@@ -35,10 +29,6 @@ export const ErrorTooltip = ({
   const accent = kind === 'error' ? 'red.4' : 'gray.4'
   const [copied, setCopied] = useState(false)
   const resetTimerRef = useRef<number>(0)
-  const theme = useMantineTheme()
-  const scheme = useComputedColorScheme('light')
-  const surfaceColor =
-    scheme === 'dark' ? theme.colors.dark[5] : theme.colors.dark[7]
 
   useEffect(() => {
     window.clearTimeout(resetTimerRef.current)
@@ -59,30 +49,14 @@ export const ErrorTooltip = ({
     })
   }
 
-  const { ref: layerRef, style: layerStyle } = layerProps
-
   return (
-    <div
-      ref={layerRef}
+    <TableTooltipLayer
+      layerProps={layerProps}
+      arrowProps={arrowProps}
+      className={classes.errorTooltip}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={{
-        ...layerStyle,
-        maxWidth: 360,
-        background: surfaceColor,
-        color: 'var(--mantine-color-white)',
-        borderRadius: 6,
-        padding: '8px 10px',
-        boxShadow:
-          '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',
-      }}
     >
-      <Arrow
-        {...arrowProps}
-        backgroundColor={surfaceColor}
-        borderWidth={0}
-        size={10}
-      />
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
           <Text size="xs" fw={700} c={accent}>
@@ -119,6 +93,6 @@ export const ErrorTooltip = ({
           {error.message}
         </Text>
       </ScrollArea.Autosize>
-    </div>
+    </TableTooltipLayer>
   )
 }

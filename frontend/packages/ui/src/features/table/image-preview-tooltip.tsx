@@ -1,44 +1,41 @@
-import { Portal } from '@mantine/core'
+import {
+  type IBounds,
+  type LayerProps,
+  type UseLayerArrowProps,
+} from 'react-laag'
 
-import classes from './image-preview-tooltip.module.css'
-
-export const IMAGE_PREVIEW_TOOLTIP_MAX_SIZE = 300
+import { TableTooltipLayer } from './components/table-tooltip-layer'
+import classes from './table-tooltip.module.css'
 
 export type ImagePreviewTooltipState = {
   src: string
-  left: number
-  top: number
+  bounds: IBounds
 }
 
 type ImagePreviewTooltipProps = {
-  preview: ImagePreviewTooltipState | null
+  src: string
+  layerProps: LayerProps
+  arrowProps: UseLayerArrowProps
 }
 
-export function ImagePreviewTooltip({ preview }: ImagePreviewTooltipProps) {
-  if (!preview) {
-    return null
-  }
-
+export function ImagePreviewTooltip({
+  src,
+  layerProps,
+  arrowProps,
+}: ImagePreviewTooltipProps) {
   return (
-    <Portal>
-      <div
-        aria-hidden
-        className={classes.tooltip}
-        style={{
-          left: preview.left,
-          top: preview.top,
-          maxWidth: IMAGE_PREVIEW_TOOLTIP_MAX_SIZE,
-          maxHeight: IMAGE_PREVIEW_TOOLTIP_MAX_SIZE,
-        }}
-      >
-        <img
-          alt=""
-          className={classes.image}
-          decoding="async"
-          draggable={false}
-          src={preview.src}
-        />
-      </div>
-    </Portal>
+    <TableTooltipLayer
+      layerProps={layerProps}
+      arrowProps={arrowProps}
+      className={classes.imageTooltip}
+    >
+      <img
+        alt=""
+        className={classes.image}
+        decoding="async"
+        draggable={false}
+        src={src}
+      />
+    </TableTooltipLayer>
   )
 }

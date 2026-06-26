@@ -13,6 +13,7 @@ import {
 } from '@glideapps/glide-data-grid'
 import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack } from '@mantine/core'
+import { type IBounds, useLayer } from 'react-laag'
 
 import {
   errorCell,
@@ -27,7 +28,6 @@ import ContextMenu from './context-menu'
 import { useErrorTooltip } from './hooks/use-error-tooltip'
 import { useTable } from './hooks/use-table'
 import {
-  IMAGE_PREVIEW_TOOLTIP_MAX_SIZE,
   ImagePreviewTooltip,
   type ImagePreviewTooltipState,
 } from './image-preview-tooltip'
@@ -59,29 +59,23 @@ const formatColumns = (columns: Column[]) => {
   }))
 }
 
-const IMAGE_PREVIEW_TOOLTIP_OFFSET = 8
+const ZERO_BOUNDS: IBounds = {
+  left: 0,
+  top: 0,
+  width: 0,
+  height: 0,
+  right: 0,
+  bottom: 0,
+}
 
-const getImagePreviewPosition = (bounds: Rectangle) => {
-  const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight
-
-  let left = bounds.x + bounds.width + IMAGE_PREVIEW_TOOLTIP_OFFSET
-  if (left + IMAGE_PREVIEW_TOOLTIP_MAX_SIZE > viewportWidth) {
-    left =
-      bounds.x - IMAGE_PREVIEW_TOOLTIP_MAX_SIZE - IMAGE_PREVIEW_TOOLTIP_OFFSET
-  }
-
-  const maxTop = Math.max(
-    IMAGE_PREVIEW_TOOLTIP_OFFSET,
-    viewportHeight -
-      IMAGE_PREVIEW_TOOLTIP_MAX_SIZE -
-      IMAGE_PREVIEW_TOOLTIP_OFFSET
-  )
-  const top = Math.min(Math.max(bounds.y, IMAGE_PREVIEW_TOOLTIP_OFFSET), maxTop)
-
+const getLayerBounds = (bounds: Rectangle): IBounds => {
   return {
-    left: Math.max(left, IMAGE_PREVIEW_TOOLTIP_OFFSET),
-    top,
+    left: bounds.x,
+    top: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    right: bounds.x + bounds.width,
+    bottom: bounds.y + bounds.height,
   }
 }
 
@@ -118,6 +112,23 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const gridOnItemHovered = grid?.onItemHovered
   const [imagePreview, setImagePreview] =
     useState<ImagePreviewTooltipState | null>(null)
+  const imagePreviewTrigger = useMemo(
+    () => ({ getBounds: () => imagePreview?.bounds ?? ZERO_BOUNDS }),
+    [imagePreview]
+  )
+  const {
+    renderLayer: renderImagePreviewLayer,
+    layerProps: imagePreviewLayerProps,
+    arrowProps: imagePreviewArrowProps,
+  } = useLayer({
+    isOpen: imagePreview !== null,
+    placement: 'right-start',
+    possiblePlacements: ['right-start', 'left-start', 'right-end', 'left-end'],
+    auto: true,
+    triggerOffset: 8,
+    container: 'portal',
+    trigger: imagePreviewTrigger,
+  })
 
   // Initialization: Memos
   const tableColumns = useMemo(
@@ -253,13 +264,13 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
         const nextPreview = {
           src: cell.data[0],
-          ...getImagePreviewPosition(event.bounds),
+          bounds: getLayerBounds(event.bounds),
         }
 
         setImagePreview((current) =>
           current?.src === nextPreview.src &&
-          current.left === nextPreview.left &&
-          current.top === nextPreview.top
+          current.bounds.left === nextPreview.bounds.left &&
+          current.bounds.top === nextPreview.bounds.top
             ? current
             : nextPreview
         )
@@ -461,6 +472,15 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     },
     [paginationHandler, scrollToViewHandler, dismissErrorTooltipOnScroll]
   )
+  const imagePreviewTooltip = imagePreview
+    ? renderImagePreviewLayer(
+        <ImagePreviewTooltip
+          src={imagePreview.src}
+          layerProps={imagePreviewLayerProps}
+          arrowProps={imagePreviewArrowProps}
+        />
+      )
+    : null
 
   return (
     <>
@@ -493,7 +513,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               scrollOffsetY={scrollY}
             />
             {errorTooltip}
-            <ImagePreviewTooltip preview={imagePreview} />
+            {imagePreviewTooltip}
             <ContextMenu {...contextMenu} />
             <div id="portal" />
           </>
