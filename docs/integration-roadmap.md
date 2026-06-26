@@ -387,6 +387,18 @@ for Advanced Laser Applications, LMU/MPQ) is a petawatt laser-plasma facility �
 close analogue to DRACO — so the pattern is directly applicable. The notes below are
 from the actual `ArchivingServer.py` source (shared 2026-06-26), not assumptions.
 
+> **Sequencing — this is deferred, not on the critical path.** The plan is to adopt
+> this pattern, but it is still a good way out and will take significant effort. The
+> pipeline **must work end-to-end before then** and does not depend on it. In the
+> interim, per-shot metadata comes from the sources already wired: the LabFrog
+> SQLite/NeXus export, the existing producers (`shotcounter`, DAQ-File-Watchdog,
+> LaserData), and operator entry — including the manual / wiki-selected
+> [target ontology](target-ontology.md), which needs no TANGO integration at all.
+> Treat everything below as the eventual *automation* layer that replaces manual /
+> producer-embedded capture, not a prerequisite for go-live. Consequently
+> `shotcounter` + Shot Number Authority **Option 1** remain the near-term shot-number
+> path; `ArchivingShotNo` (Option 3) is revisited only when this work begins.
+
 ### What `ArchivingServer` actually is
 
 It is **not** an HDB++-style central attribute-value archiver. It is a **shot-context
