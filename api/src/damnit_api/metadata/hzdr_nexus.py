@@ -887,48 +887,64 @@ def write_nexus_bridge(
     events: list[dict[str, Any]],
     source_nexus: Path | None = None,
 ) -> list[dict[str, Any]]:
-    """Preserve a LabFrog NeXus file and add the DAMNIT bridge tables."""
+    """Preserve a LabFrog NeXus file and add the DAMNIT bridge tables.
+
+    Writes to a sibling .tmp.nxs file first, then atomically replaces
+    output_path on success — the same pattern as write_json_atomic(). A crash
+    or exception mid-write leaves the previous output_path intact and a stale
+    .tmp.nxs sibling that is cleaned up on the next invocation.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    if source_nexus is not None and source_nexus.resolve() != output_path.resolve():
-        shutil.copy2(source_nexus, output_path)
+    temp_path = output_path.with_name(f"{output_path.name}.{uuid.uuid4().hex}.tmp.nxs")
+    try:
+        if source_nexus is not None and source_nexus.resolve() != output_path.resolve():
+            shutil.copy2(source_nexus, temp_path)
+        elif output_path.exists():
+            # Preserve existing LabFrog + bridge content across incremental rebuilds.
+            shutil.copy2(output_path, temp_path)
 
-    mode = "r+" if output_path.exists() else "w"
-    with h5py.File(output_path, mode) as handle:
-        handle.attrs["damnit_bridge_profile"] = "hzdr-canonical-shot-v1"
-        handle.attrs["experiment_id"] = experiment_id
-        handle.attrs["damnit_bridge_updated_at"] = datetime.now(UTC).isoformat()
-        if "default" not in handle.attrs:
-            handle.attrs["default"] = "entry"
-        entry = handle.require_group("entry")
-        if "NX_class" not in entry.attrs:
-            entry.attrs["NX_class"] = "NXentry"
-        entry.attrs["damnit_shot_table"] = "shots"
-        entry.attrs["damnit_source_events"] = "source_events"
-        entry.attrs["damnit_data_products"] = "data_products"
+        mode = "r+" if temp_path.exists() else "w"
+        with h5py.File(temp_path, mode) as handle:
+            handle.attrs["damnit_bridge_profile"] = "hzdr-canonical-shot-v1"
+            handle.attrs["experiment_id"] = experiment_id
+            handle.attrs["damnit_bridge_updated_at"] = datetime.now(UTC).isoformat()
+            if "default" not in handle.attrs:
+                handle.attrs["default"] = "entry"
+            entry = handle.require_group("entry")
+            if "NX_class" not in entry.attrs:
+                entry.attrs["NX_class"] = "NXentry"
+            entry.attrs["damnit_shot_table"] = "shots"
+            entry.attrs["damnit_source_events"] = "source_events"
+            entry.attrs["damnit_data_products"] = "data_products"
 
-        shots_group = entry.require_group("shots")
-        if "NX_class" not in shots_group.attrs:
-            shots_group.attrs["NX_class"] = "NXcollection"
-        existing_count = _table_length(shots_group)
-        if existing_count not in (0, len(shots)):
-            message = (
-                "Canonical shot count does not match the preserved LabFrog "
-                f"/entry/shots table ({len(shots)} != {existing_count})"
+            shots_group = entry.require_group("shots")
+            if "NX_class" not in shots_group.attrs:
+                shots_group.attrs["NX_class"] = "NXcollection"
+            existing_count = _table_length(shots_group)
+            if existing_count not in (0, len(shots)):
+                message = (
+                    "Canonical shot count does not match the preserved LabFrog "
+                    f"/entry/shots table ({len(shots)} != {existing_count})"
+                )
+                raise ValueError(message)
+            _write_shot_bridge_columns(
+                shots_group, shots, write_identity=existing_count == 0
             )
-            raise ValueError(message)
-        _write_shot_bridge_columns(
-            shots_group, shots, write_identity=existing_count == 0
-        )
-        _write_source_payloads(entry, events)
+            _write_source_payloads(entry, events)
 
-        products = [
-            product for shot in shots for product in shot.get("data_products", [])
-        ]
-        for product in products:
-            if not product.get("path"):
-                product["path"] = str(output_path)
-        _write_source_events(entry, events)
-        _write_data_products(entry, products, output_path=output_path)
+            products = [
+                product for shot in shots for product in shot.get("data_products", [])
+            ]
+            for product in products:
+                if not product.get("path"):
+                    product["path"] = str(output_path)
+            _write_source_events(entry, events)
+            _write_data_products(entry, products, output_path=output_path)
+
+        temp_path.replace(output_path)
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
     return products
 
 

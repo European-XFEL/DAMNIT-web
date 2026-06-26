@@ -217,3 +217,24 @@ truth.
 - Build and validate temporary outputs, then publish atomically.
 - Publish the NeXus file and source catalog from the same reconciliation result.
 - Keep source exports and spools for replay and audit.
+
+## Write Atomicity
+
+Both canonical outputs are written via a temp-file-then-atomic-rename pattern so
+that a crash or exception mid-write never leaves a half-written file for readers
+or the next builder run to trip over.
+
+**NeXus file** (`write_nexus_bridge`): writes to a sibling
+`<name>.<uuid>.tmp.nxs`, then `os.replace()`s it over the target on success.
+A failed build leaves the previous `canonical.nxs` intact. The stale `.tmp.nxs`
+is cleaned up by the next successful run.
+
+**`hzdr_sources.json` and sidecars** (`write_json_atomic`): same pattern —
+sibling `<name>.<uuid>.tmp`, then `os.replace()`. Used for the catalog, saved
+views, and any full-rewrite of a JSON/catalog file.
+
+**What this protects against**: a process killed mid-write (disk full, OOM,
+`SIGKILL`, power loss after OS flush) leaves the previous output untouched.
+It does not protect against silent bit-rot of a file that was written correctly;
+back up the `.review.jsonl` operator-decision sidecar separately, as it is the
+only output not rebuildable from upstream sources (Kafka, LabFrog, staged JSONL).
