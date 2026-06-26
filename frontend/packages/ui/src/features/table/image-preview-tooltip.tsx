@@ -1,6 +1,6 @@
 import { Portal } from '@mantine/core'
 
-import classes from './image-preview-tooltip.module.css'
+import classes from './table-tooltip.module.css'
 
 export const IMAGE_PREVIEW_TOOLTIP_MAX_SIZE = 300
 
@@ -23,7 +23,7 @@ export function ImagePreviewTooltip({ preview }: ImagePreviewTooltipProps) {
     <Portal>
       <div
         aria-hidden
-        className={classes.tooltip}
+        className={`${classes.surface} ${classes.imageTooltip}`}
         style={{
           left: preview.left,
           top: preview.top,

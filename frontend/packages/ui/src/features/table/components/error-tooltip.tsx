@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import {
   ActionIcon,
   Group,
@@ -13,6 +13,7 @@ import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
 import { type VariableError } from '../../../types'
 import { errorText, errorVisuals } from '../cells'
+import classes from '../table-tooltip.module.css'
 
 export type ErrorTooltipProps = {
   error: VariableError
@@ -60,22 +61,18 @@ export const ErrorTooltip = ({
   }
 
   const { ref: layerRef, style: layerStyle } = layerProps
+  const style = {
+    ...layerStyle,
+    '--table-tooltip-bg': surfaceColor,
+  } as CSSProperties
 
   return (
     <div
       ref={layerRef}
+      className={`${classes.surface} ${classes.errorTooltip}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={{
-        ...layerStyle,
-        maxWidth: 360,
-        background: surfaceColor,
-        color: 'var(--mantine-color-white)',
-        borderRadius: 6,
-        padding: '8px 10px',
-        boxShadow:
-          '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',
-      }}
+      style={style}
     >
       <Arrow
         {...arrowProps}
