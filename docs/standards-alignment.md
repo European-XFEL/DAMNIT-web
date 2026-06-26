@@ -7,7 +7,8 @@ standards (DAPHNE4NFDI, HELPMI, NeXus, SciCat, Plasma-MDS, openPMD), a detailed
 field-level cross-walk, a gap analysis, and which alignment routes are realistic.
 
 Related docs: [event schema](event-schema.md) (the transport envelope these standards
-map onto).
+map onto) and [alignment implementation plan](alignment-implementation-plan.md) (the
+phased *how/when* for the routes in §4).
 
 ---
 

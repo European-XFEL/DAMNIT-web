@@ -13,6 +13,7 @@ replay remain.
 | [Event schema](event-schema.md) | The `hzdr-event-v1` transport envelope: fields, constraints, and rationale |
 | [MediaWiki integration](mediawiki-integration.md) | Read-only campaign-to-wiki link, configuration, and API endpoint |
 | [Standards alignment](standards-alignment.md) | DAPHNE4NFDI / HELPMI / NeXus / SciCat field cross-walk, gap analysis, and routes |
+| [Alignment implementation plan](alignment-implementation-plan.md) | Phased execution plan for enacting the standards alignment |
 | [Roadmap](integration-roadmap.md) | Per-repository status table and ordered work items through go-live |
 | [Testing](testing.md) | Verified coverage and remaining acceptance tests |
 | [Local development](local-development.md) | Minimal build, test, and launch commands |
