@@ -73,7 +73,10 @@ producer repos.
 
 **Scope:** the "Medium effort" target rows: material, thickness, type, gas species/pressure
 ([§3.4](standards-alignment.md#34-target--sample)). These live in the LabFrog shot record
-and are not currently exported.
+and are not currently exported. The binding key schema for this phase is
+[target-ontology.md](target-ontology.md) — bare numeric keys with NeXus `@units`,
+`provenance` (`wiki`/`manual`), `wiki_ref`, and an open `properties` bag for the curated
+fields that vary between wiki target records.
 
 **Do:**
 1. Extend the LabFrog → SQLite/NeXus export (sibling `labfrog-sqlite-tools`) to carry the

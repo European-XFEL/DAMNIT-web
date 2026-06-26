@@ -113,6 +113,12 @@ can be claimed.
 HELPMI `TargetClasses` covers solid foil, gas jet, cluster, and liquid targets. DAMNIT
 currently has only the free-form emulator `target` string.
 
+> **The binding target schema lives in [target-ontology.md](target-ontology.md).** It
+> supersedes the *Recommended key* and *Unit* columns below: stored keys are **bare**
+> (`thickness`, not `thickness_nm`) with the unit applied as a NeXus `@units` attribute,
+> and the schema adds `name`, `notes`, `provenance` (`wiki`/`manual`), `wiki_ref`, and an
+> open `properties` bag. The cross-walk below is retained for the HELPMI field mapping.
+
 | HELPMI TargetClasses field | Current emulator key | Recommended key | Unit | NeXus equivalent | Gap / note |
 | --- | --- | --- | --- | --- | --- |
 | Target type | `target` (free-form) | `metadata.target.type` | string enum | `NXsample.type` | Types: `foil`, `gas_jet`, `cluster`, `liquid`, `structured` |
