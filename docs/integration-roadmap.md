@@ -373,75 +373,111 @@ replay each consumer, then verify:
 
 ## Future: TANGO device self-archiving as a metadata source
 
-**Status:** 🔴 future / needs live infrastructure · **Effort:** Medium (DAMNIT
-adapter) + external (control-system archiver) · **Added:** 2026-06-26
+**Status:** 🔴 future / needs live infrastructure · **Effort:** Medium (bridge +
+DAMNIT adapter) + external (control-system devices) · **Added:** 2026-06-26
 
-The goal is to let **TANGO devices write their own metadata** into the canonical
-campaign record, instead of DAMNIT relying on producer-embedded values or the
-emulator's synthetic `metadata.laser.*` / `metadata.vacuum.*` fields. Today the
-only TANGO touchpoint is `shotcounter` (one device server emitting `draco.trigger`
-to Kafka). A control-system archiver would turn *every* relevant device attribute
-(laser energy/wavelength, chamber/pre-shot pressure, stage positions, environmental
-sensors, diagnostic scalars) into a time-stamped feed DAMNIT can attach per shot.
+The goal is to let **TANGO devices write their own data and metadata** into the
+canonical campaign record, instead of DAMNIT relying only on producer-embedded
+values or the emulator's synthetic fields. Today the only TANGO touchpoint is
+`shotcounter` (one device server emitting `draco.trigger` to Kafka).
 
-**Reference under evaluation:** CALA's `pyds_archivingserver` (`ArchivingServer`
-device), `gitlab.lrz.de/cala-public/tangodeviceservers/pyds_archivingserver`. CALA
-(Centre for Advanced Laser Applications, LMU/MPQ) is a petawatt laser-plasma
-facility — a close analogue to DRACO — so its TANGO archiving approach is directly
-applicable. *(The repository is on a host this session's egress policy blocks, so
-the specifics below are from the TANGO archiving ecosystem generally and must be
-confirmed against the actual `ArchivingServer.py`: exact storage backend, the
-device/attribute registration mechanism, polling vs. TANGO archive-events, and the
-table/field layout.)*
+**Reference evaluated:** CALA's `pyds_archivingserver` (`ArchivingServer` device),
+`gitlab.lrz.de/cala-public/tangodeviceservers/pyds_archivingserver`. CALA (Centre
+for Advanced Laser Applications, LMU/MPQ) is a petawatt laser-plasma facility — a
+close analogue to DRACO — so the pattern is directly applicable. The notes below are
+from the actual `ArchivingServer.py` source (shared 2026-06-26), not assumptions.
 
-### What it could add
+### What `ArchivingServer` actually is
 
-- **Real device-sourced values for the standards-alignment gaps.** Directly fills
-  the laser/environment/diagnostic rows that are currently `**Missing**` or
-  emulator-only in [standards-alignment §3.3–3.6](standards-alignment.md#33-laser-parameters):
-  wavelength, repetition rate, polarization, pre-shot vacuum pressure, detector
-  scalars — these are already live TANGO attributes in the control system.
-- **A timestamped attribute history** that DAMNIT's existing timestamp matcher can
-  correlate to each shot's `fired_at` (campaign-timezone aware), the same mechanism
-  already used for LabFrog/event matching. No new matching concept needed.
-- **Provenance for free.** Each value carries the originating device + attribute +
-  archive timestamp — a natural `payload_ref` shape (device/attribute/row-id),
-  consistent with the traceability rules in [architecture.md](architecture.md#payload_ref).
+It is **not** an HDB++-style central attribute-value archiver. It is a **shot-context
+coordinator + per-shot completeness tracker** for a set of distributed,
+self-archiving devices:
 
-### Integration options (lowest to highest DAMNIT-side effort)
+- It holds a list of **subscriber devices** (`ArchivingDevice`s; property
+  `ArchivingSubscriberList`, commands `ArchivingSubscribe`/`ArchivingUnsubscribe`,
+  attribute `ArchivingSubscribers`).
+- On any change it **broadcasts shot context** to every subscriber via
+  `write_attributes_asynch` (`arch_srv_update_fields`): `ArchivingShotNo` (DevULong),
+  `ArchivingRun` (DevULong), `ArchivingExperimentPath` (a `YYYYMMDD` day folder),
+  `ArchivingFlags`, and `ArchivingShotTime` (`YYYYMMDD_HHmmssfff`, millisecond
+  precision — "timestamp when server triggers shot").
+- Each subscriber then **archives its own files** under
+  `<ArchivingLocalRootPath>/<ArchivingExperimentPath>/<AutoCreationFolders>/`, tagged
+  with that shot number. The server inherits `ArchivingDevice` so it can archive its
+  own files too.
+- It subscribes to each device's `ArchivingLastShotNoSaved` **CHANGE_EVENT**
+  (`register_archiving_complete`) and tracks which devices have *not* confirmed
+  saving each shot, exposing `ArchivingLastShotFailedDevices` and
+  `ArchivingPreviousShotsFailedDevices` (JSON, last 20 shots) — a **per-shot
+  archiving-completeness QA signal**.
+- A cron job (`AutoUpdateArchivingExperimentPath` at `...PathTime`, e.g. `08:15`,
+  via APScheduler) rolls `ArchivingExperimentPath` to the current date daily.
 
-1. **Pull / reader at build time** *(recommended first step)* — add a
-   `read_tango_archive_*` source adapter (mirroring the existing LabFrog SQLite
-   reader) that, per shot, queries the archive backend for the shot's time window
-   and folds attributes into `metadata.laser.*` / `metadata.vacuum.*` /
-   `metadata.diagnostic.*` via a config-driven **attribute→metadata-key map**. The
-   map reuses the namespace registry from [standards-alignment Route 1](standards-alignment.md#route-1-structured-metadata-keys-with-helpmi-glossary-terms-low-effort)
-   and [target-ontology.md](target-ontology.md). Low–Medium on the DAMNIT side once
-   the backend/query shape is known; offline-testable against a fixture DB. The live
-   archive + the attribute map are the external dependency.
-2. **Push / event** — a small bridge (or the archiver itself) emits per-shot or
-   per-window `hzdr-event-v1` events into the **existing durable spool**
-   (Kafka/ASAPO consumers already built). Most aligned with the current
-   producer→spool→reconciler architecture; needs producer-side work in the control
-   system. Medium.
-3. **Authoritative shot number** — if the control system exposes a TANGO shot
-   counter alongside the archiver, this overlaps **Shot Number Authority Option 3**
-   below (a dedicated cross-system TANGO shot-counter device). The archiver could be
-   the natural home for that read.
+No central DB, no attribute polling, no time-series store. The "archive" is the
+shot-numbered, date-foldered file tree each device writes into.
 
-### Key challenges to confirm
+### Why this aligns unusually well with DAMNIT
 
-- **Backend + query shape.** HDB++ (MariaDB/TimescaleDB/Cassandra, per-type tables
-  keyed on `att_conf_id` + `data_time`) vs. a bespoke store (SQL/InfluxDB/HDF5/files)
-  determines the adapter. Per-attribute time-range query is the core operation.
-- **Attribute→key mapping registry.** A binding TANGO-name → `metadata.*` map, same
-  discipline as the target ontology; un-mapped attributes go to an open bag.
-- **Time-correlation policy.** Nearest archived sample to `fired_at` vs.
-  interval-averaging over the shot window, with an explicit tolerance (reuse the
-  matcher's tolerance convention).
-- **Access path / egress.** DAMNIT reaching the archive DB (driver, network, auth)
-  is a deployment/infra concern; keep endpoints/credentials in `DW_API_*` config,
-  never in code (per `CLAUDE.md` boundaries).
+| `ArchivingServer` field | DAMNIT concept | Note |
+| --- | --- | --- |
+| `ArchivingShotNo` | `shot_number` | **Candidate authoritative TANGO counter** — every device already keys off it (see Shot Number Authority Option 3) |
+| `ArchivingShotTime` (`YYYYMMDD_HHmmssfff`) | `fired_at` / event `timestamp` | Local wall-clock; convert with campaign timezone (DAMNIT already does) |
+| `ArchivingExperimentPath` (`YYYYMMDD`) | local-date in `shot_key` `<exp_id>:<YYYYMMDD>:<NNNNNN>` | The day-folder convention *is* DAMNIT's date-scoping |
+| `ArchivingRun` | `metadata.run.*` (run index) | |
+| files under `<ExperimentPath>/…` | `HZDRDataProduct` (`payload_ref.path`) | Already organized by the (day, shot) keys DAMNIT matches on |
+| `ArchivingLastShotFailedDevices` / `ArchivingPreviousShotsFailedDevices` | new `metadata.archiving.*` QA field | "shot N archived by 8/10 devices" — surfaceable in the Confirm Matches / review UI |
+
+The shot identity DAMNIT needs (`shot_number` + local date + ms timestamp) is exactly
+what this server already broadcasts, so no new matching concept is required.
+
+### Integration options (lowest to highest effort)
+
+1. **Bridge subscriber → `hzdr-event-v1` → existing spool** *(recommended)*. Write a
+   small `ArchivingDevice` subscriber (or an external Tango client listening to the
+   server's change-events) that, per shot, emits one `hzdr-event-v1` event:
+   `shot_number` = `ArchivingShotNo`, `timestamp` from `ArchivingShotTime`,
+   experiment day from `ArchivingExperimentPath`, `payload_ref.path` = the shot's
+   archive folder, and `metadata.archiving` = the failed-device / completeness list.
+   It flows straight through the Kafka/ASAPO consumers already built. Medium; reuses
+   the whole reconciler/spool path with no envelope change.
+2. **Point DAQ-File-Watchdog at the archive tree** (low; reuses planet-watchdog). The
+   `<root>/<YYYYMMDD>/` layout is exactly a watch root; file-arrival events become
+   data products. Needs shot-number association — either parse it from the
+   path/filename, or join to the bridge from option 1 for authoritative shot context.
+3. **Adopt `ArchivingShotNo` as the authoritative shot number** — directly realizes
+   **Shot Number Authority Option 3** below. Requires deciding how this relates to
+   HZDR's `shotcounter` `ShotNumber` (same role, two facilities) — they must not both
+   claim authority for the same campaign.
+4. **Per-shot completeness as QA metadata** — ingest
+   `ArchivingPreviousShotsFailedDevices` into `metadata.archiving.*` so the review UI
+   can flag incompletely-archived shots. Genuinely new signal; no analogue today.
+
+### Decisions / things to confirm
+
+- **`shotcounter` vs. `ArchivingShotNo` authority.** Does HZDR run this CALA server,
+  an equivalent, or just adopt the pattern? Whichever supplies `shot_number` must be
+  the single authority per campaign (ties into the unresolved Shot Number Authority
+  decision — currently Option 1 for the pilot).
+- **Timezone.** `ArchivingShotTime` and the path date are **local**; the bridge must
+  emit UTC in the envelope `timestamp` (or DAMNIT interprets them in the campaign tz,
+  as it already does for naive LabFrog times).
+- **Getting data out.** The server emits no event and writes no DB itself, but it is
+  rich in Tango change-events — a subscriber bridge (option 1) is the natural tap; do
+  not try to read attributes synchronously per shot.
+- **Where laser/vacuum/diagnostic *values* come from.** They are written by the
+  individual subscriber `ArchivingDevice`s into their files, not by this coordinator.
+  Mapping those into `metadata.laser.*` / `metadata.vacuum.*`
+  ([standards-alignment §3.3–3.6](standards-alignment.md#33-laser-parameters)) is a
+  per-device-format concern handled when their products are ingested, not by the
+  server attributes above.
+
+### Next action
+
+Prototype option 1 offline: a stub that takes a recorded
+`(ArchivingShotNo, ArchivingShotTime, ArchivingExperimentPath, failed_devices,
+file list)` tuple and produces a conformant `hzdr-event-v1` event, run through the
+existing reconciler against a fixture — no live Tango/control system required to
+build and test the DAMNIT side.
 
 ### Next action
 
