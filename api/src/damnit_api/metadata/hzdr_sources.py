@@ -115,6 +115,27 @@ class HZDRSourceEvent(BaseModel):
     review_level: str | None = None
 
 
+class HZDRWikiInfo(BaseModel):
+    """MediaWiki link and metadata for one campaign source.
+
+    page_url and page_title are derived from experiment_id + the configured
+    DW_API_HZDR_WIKI__BASE_URL; they are null when the base URL is not set.
+    exists/last_modified/page_id/categories are only populated when the caller
+    requests a live fetch from the MediaWiki Action API (fetch=true on the
+    endpoint); on a fetch failure they remain null rather than raising an error.
+    """
+
+    source_key: str
+    experiment_id: str | None = None
+    page_title: str | None = None
+    page_url: str | None = None
+    configured: bool
+    exists: bool | None = None
+    last_modified: str | None = None
+    page_id: int | None = None
+    categories: list[str] = Field(default_factory=list)
+
+
 class HZDRDataProduct(BaseModel):
     product_id: str | None = None
     source: str

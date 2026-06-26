@@ -1,13 +1,15 @@
 """Metadata routers."""
 
 import json
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from random import Random
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+import httpx
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from .._db.dependencies import DBSession
@@ -25,10 +27,12 @@ from .hzdr_sources import (
     HZDRShotDetail,
     HZDRSource,
     HZDRSourceProvider,
+    HZDRWikiInfo,
 )
 from .models import ProposalMeta
 
 router = APIRouter(prefix="/metadata", tags=["metadata"])
+log = logging.getLogger(__name__)
 
 WATCHDOG_KAFKA_TOPIC = "planet.watchdog.events"
 SHOTCOUNTER_KAFKA_TOPIC = "shotcounter.shots"
@@ -124,6 +128,104 @@ async def list_hzdr_sources() -> list[HZDRSource]:
 async def get_hzdr_source(source_key: str) -> HZDRSource | None:
     """Get one HZDR source from the active local metadata provider."""
     return HZDRSourceProvider(settings.metadata).get_source(source_key)
+
+
+@router.get("/hzdr/sources/{source_key}/wiki")
+async def get_hzdr_source_wiki(
+    source_key: str,
+    fetch: bool = Query(
+        default=False,
+        description=(
+            "When true, make a live request to the MediaWiki Action API and "
+            "populate exists/last_modified/page_id/categories. "
+            "On network failure the live fields are returned as null."
+        ),
+    ),
+) -> HZDRWikiInfo:
+    """Return the MediaWiki link for one campaign source.
+
+    The page URL is derived from the source's experiment_id and the configured
+    DW_API_HZDR_WIKI__BASE_URL.  When the base URL is not configured, page_url
+    is null and configured=false — safe for offline/local environments.
+
+    Use fetch=true to get live page metadata (exists, last_modified, categories)
+    from the MediaWiki Action API.
+    """
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+
+    experiment_id: str | None = str(source.metadata.get("experiment_id") or "") or None
+    page_title = experiment_id or source_key
+    wiki = settings.hzdr_wiki
+
+    if not wiki.base_url:
+        return HZDRWikiInfo(
+            source_key=source_key,
+            experiment_id=experiment_id,
+            page_title=page_title,
+            page_url=source.metadata.get("wiki_page_url"),  # type: ignore[arg-type]
+            configured=False,
+        )
+
+    base = wiki.base_url.rstrip("/")
+    page_url: str = str(
+        source.metadata.get("wiki_page_url") or f"{base}/index.php/{page_title}"
+    )
+    info = HZDRWikiInfo(
+        source_key=source_key,
+        experiment_id=experiment_id,
+        page_title=page_title,
+        page_url=page_url,
+        configured=True,
+    )
+
+    if fetch:
+        info = await _fetch_wiki_page_info(info, base, wiki.fetch_timeout)
+
+    return info
+
+
+async def _fetch_wiki_page_info(
+    info: HZDRWikiInfo, wiki_base: str, request_timeout: float
+) -> HZDRWikiInfo:
+    """Query the MediaWiki Action API for page existence and metadata.
+
+    Returns the same info object with live fields populated.  On any network
+    or parse error, logs a warning and returns the info unchanged so the caller
+    always gets a valid response.
+    """
+    api_url = f"{wiki_base}/api.php"
+    params = {
+        "action": "query",
+        "prop": "info|categories",
+        "titles": info.page_title,
+        "format": "json",
+        "redirects": "1",
+        "cllimit": "20",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=request_timeout) as client:
+            resp = await client.get(api_url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+    except Exception as exc:
+        log.warning("MediaWiki API fetch failed for %r: %s", info.page_title, exc)
+        return info
+
+    pages = (data.get("query") or {}).get("pages") or {}
+    if not pages:
+        return info
+
+    page = next(iter(pages.values()))
+    info.page_id = page.get("pageid")
+    info.exists = "missing" not in page
+    info.last_modified = page.get("touched")
+    categories = page.get("categories") or []
+    info.categories = [
+        cat.get("title", "").removeprefix("Category:") for cat in categories
+    ]
+    return info
 
 
 def hzdr_saved_views_sidecar_path(sources_file: Path) -> Path:
