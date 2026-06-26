@@ -121,28 +121,40 @@ data the earlier phases already captured.
 Depends on Phases 1–2 for the *content* but can be built (with empty-tolerant writers)
 independently.
 
-## Phase 4 — SciCat registration + `scicat_pid` back-population 🔴
+## Phase 4 — SciCat registration via the existing HZDR plugin 🟡
 
 **Scope:** [§3.9](standards-alignment.md#39-scicat-field-mapping) and
-[Route 3](standards-alignment.md#route-3-scicat-registration-medium-effort-infrastructure-dependency).
+[Route 3](standards-alignment.md#route-3-scicat-registration-lower-effort--existing-plugin).
 `HZDRPayloadRef.scicat_pid` is already reserved.
 
+**This is smaller than a from-scratch adapter.** HZDR already maintains a SciCat plugin —
+`codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/data-capturing/scicat_plugin` — so
+DAMNIT does **not** write its own SciCat client. The work is: build the metadata payload
+from the campaign catalog, hand it to the plugin, and store the returned PID.
+
 **Do:**
-1. Add a builder post-step that registers the campaign NeXus file as a SciCat `RawDataset`,
-   mapping `proposalId`/`sampleId`/`instrumentId`/`scientificMetadata` per the §3.9 table.
-2. Back-populate `scicat_pid` in `hzdr_sources.json`; surface a SciCat link in the API
-   alongside the wiki link (mirror the MediaWiki endpoint pattern).
-3. Gated integration test (like the broker tests) that runs only when a SciCat instance
-   URL is configured.
+1. Add the plugin as a dependency (mind the private GitLab source, per `CLAUDE.md`) and
+   confirm its actual entry point / expected input — NeXus file path vs. a metadata dict —
+   *(verify against the plugin; the steps below assume a "register(nexus_path, metadata)"
+   shape and should be adjusted to match).*
+2. Add a builder post-step that assembles the `RawDataset` fields per the §3.9 mapping
+   (`proposalId`/`sampleId`/`instrumentId`/`scientificMetadata`) and calls the plugin to
+   register the campaign NeXus file.
+3. Back-populate the returned `scicat_pid` in `hzdr_sources.json`; surface a SciCat link in
+   the API alongside the wiki link (mirror the MediaWiki endpoint pattern).
+4. Gated integration test (like the broker tests) that runs only when a SciCat instance URL
+   + credentials are configured; a unit test with the plugin mocked runs always.
 
 **Files:** builder script (`api/scripts/hzdr-hdf5-builder.py` post-step or a new
 registration module), `api/src/damnit_api/metadata/hzdr_sources.py`, `routers.py`,
-`api/tests/` (gated).
+`api/tests/` (one mocked, one gated), dependency manifest.
 
-**Exit:** a registered campaign shows a working SciCat dataset link; `scicat_pid` persisted.
+**Exit:** a registered campaign shows a working SciCat dataset link; `scicat_pid` persisted;
+mocked test green in CI, gated test green against a real instance.
 
-**Effort:** Medium. 🔴 — blocked on access to a SciCat instance (HZDR-run or shared HMC/HZB).
-Build the adapter now behind config; run the gated test when an instance is reachable.
+**Effort:** Low–Medium (the plugin removes the SciCat-client work). 🟡 — needs the field
+mapping confirmed and the private plugin available; a live instance is only needed for the
+*gated* test, not for building the integration.
 
 ## Phase 5 — Ontology annotation & openPMD interoperability 🔴 (aspirational)
 
@@ -167,7 +179,8 @@ beyond watching the upstream repos.
 3. **Phase 3 — NeXus structural groups** 🟢. Highest-value local step; can start in
    parallel with Phase 1 using empty-tolerant writers, finishes once Phase 1/2 fill the data.
 4. **Phase 2 — target/sample from LabFrog** 🟡. Paced by the LabFrog export change.
-5. **Phase 4 — SciCat registration** 🔴. Adapter now, gated test when an instance is up.
+5. **Phase 4 — SciCat registration** 🟡. Wire up the existing HZDR SciCat plugin
+   (no custom client); gated test when a live instance is up.
 6. **Phase 5 — ontology / openPMD** 🔴. Watch upstream HELPMI; revisit post-pilot.
 
 None of these block the integration go-live gate (see

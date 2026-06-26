@@ -262,13 +262,17 @@ readable by HELPMI-aware tools. This requires:
 2. Adding a `write_nexus_laser_group()` call in `write_nexus_bridge()`.
 3. No change to the transport envelope; the data is already in `metadata`/`values`.
 
-### Route 3: SciCat registration (medium effort, infrastructure dependency)
+### Route 3: SciCat registration (lower effort — existing plugin)
 
-`HZDRPayloadRef.scicat_pid` is already in the schema. Once HZDR runs a SciCat instance
-(or uses the shared HMC/HZB instance), the builder can register each campaign NeXus
-file as a SciCat Dataset and back-populate `scicat_pid` in the catalog. The DAMNIT
-API can then surface direct SciCat links alongside the wiki link. No transport schema
-change needed; `payload_ref.scicat_pid` is already reserved for this purpose.
+`HZDRPayloadRef.scicat_pid` is already in the schema. HZDR already maintains a
+**SciCat plugin** for dataset registration
+(`codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/data-capturing/scicat_plugin`),
+so this is not a from-scratch adapter: the builder calls the existing plugin to register
+each campaign NeXus file as a SciCat Dataset, then back-populates `scicat_pid` in the
+catalog so the DAMNIT API can surface direct SciCat links alongside the wiki link. No
+transport schema change needed; `payload_ref.scicat_pid` is already reserved for this
+purpose. The remaining work is the field mapping (§3.9) and wiring DAMNIT's builder to
+the plugin, not the SciCat client itself.
 
 ### Route 4: NeXus Ontology annotation for federated search (higher effort)
 
@@ -302,6 +306,6 @@ writer and analysis tooling concern.
 | Add `/entry/sample` (`NXsample`) to NeXus bridge | ⬜ medium effort | §3.7, Route 2 |
 | Per-product `NXdetector` sub-groups in NeXus bridge | ⬜ medium effort | §3.6, §3.7 |
 | `NXlaser` / `NXtarget` groups (HELPMI NeXus fork) | ⬜ post-pilot | Route 2 |
-| SciCat registration + `scicat_pid` back-population | ⬜ infrastructure dependency | Route 3 |
+| SciCat registration + `scicat_pid` back-population (via existing HZDR SciCat plugin) | ⬜ wire up plugin | Route 3 |
 | NeXus Ontology annotation for federated search | ⬜ aspirational | Route 4 |
 | openPMD interoperability (simulation links) | ⬜ aspirational | Route 5 |
