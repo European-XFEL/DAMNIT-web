@@ -69,8 +69,11 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
    [integration-roadmap.md](integration-roadmap.md).
 4. **Standards alignment Phase 0** — lock the `metadata.*` namespace convention;
    see [alignment-implementation-plan.md](alignment-implementation-plan.md).
-5. **SciCat registration** — wire up the existing `scicat_plugin`; field mapping
-   table is in [standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping).
+5. **SciCat registration** — wire up the existing `scicat_plugin` (an HTTP
+   service: builder `POST`s the campaign NeXus file path to `/scicat/from-json`
+   or `/scicat/push` and stores the returned `scicat_pid`). Interface and steps
+   in [integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration);
+   field mapping in [standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping).
 
 The canonical model is in [architecture.md](architecture.md). Avoid adding new
 matching logic in producer repositories.

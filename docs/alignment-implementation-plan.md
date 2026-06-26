@@ -135,18 +135,34 @@ independently.
 DAMNIT does **not** write its own SciCat client. The work is: build the metadata payload
 from the campaign catalog, hand it to the plugin, and store the returned PID.
 
+**Interface, verified against the plugin source (not assumed).** The plugin is an
+**HTTP service / embeddable Flask blueprint** (`bp_scicat`) that reuses the upstream
+`SciCatProject/scicat-ingestor` worker codepaths, **registering filesystem path
+references and metadata only — never file contents** (the target SciCat forbids binary
+upload). So the integration boundary is a `POST`, not a Python `register()` import — which
+also avoids the Flask-vs-FastAPI in-process mismatch (DAMNIT's API is FastAPI). The fit:
+`POST /scicat/from-json` with `{filepath, title, description, dataset_type, owner_group,
+access_groups, owner, source_folder, meta}` → `{ok, pid, source_folder, file_name}`; or
+`POST /scicat/push` with a file manifest, which additionally returns a deterministic
+`version_hash` (from `versioning.make_manifest`/`manifest_hash`) for cheap
+re-registration detection on rebuild. Ownership/contact fields default from the plugin's
+own env (`DEFAULT_OWNER_GROUP`, `DEFAULT_ACCESS_GROUPS`, `CONTACT_EMAIL_DEFAULT`,
+`PRINCIPAL_INVESTIGATOR_DEFAULT`) and can be overridden per request. See
+[integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration)
+for the endpoint table.
+
 **Do:**
-1. Add the plugin as a dependency (mind the private GitLab source, per `CLAUDE.md`) and
-   confirm its actual entry point / expected input — NeXus file path vs. a metadata dict —
-   *(verify against the plugin; the steps below assume a "register(nexus_path, metadata)"
-   shape and should be adjusted to match).*
+1. Configure the plugin URL in DAMNIT settings (`DW_API_*`); keep the SciCat URL/token in
+   the plugin's own env, never in DAMNIT API code (secrets boundary, `CLAUDE.md`). No
+   Python dependency on the private GitLab repo is required — DAMNIT calls it over HTTP.
 2. Add a builder post-step that assembles the `RawDataset` fields per the §3.9 mapping
-   (`proposalId`/`sampleId`/`instrumentId`/`scientificMetadata`) and calls the plugin to
-   register the campaign NeXus file.
-3. Back-populate the returned `scicat_pid` in `hzdr_sources.json`; surface a SciCat link in
-   the API alongside the wiki link (mirror the MediaWiki endpoint pattern).
+   (`proposalId`=`experiment_id`, `instrumentId`, `scientificMetadata`=shot metadata dict,
+   `sourceFolder`=`damnit_path`) and `POST`s the campaign NeXus file path to the plugin
+   (`/scicat/from-json` for the simple case, `/scicat/push` if you want the `version_hash`).
+3. Back-populate the returned `pid` as `scicat_pid` in `hzdr_sources.json`; surface a SciCat
+   link in the API alongside the wiki link (mirror the MediaWiki endpoint pattern).
 4. Gated integration test (like the broker tests) that runs only when a SciCat instance URL
-   + credentials are configured; a unit test with the plugin mocked runs always.
+   + credentials are configured; a unit test with the plugin HTTP call mocked runs always.
 
 **Files:** builder script (`api/scripts/hzdr-hdf5-builder.py` post-step or a new
 registration module), `api/src/damnit_api/metadata/hzdr_sources.py`, `routers.py`,

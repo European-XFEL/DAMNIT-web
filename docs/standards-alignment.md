@@ -284,6 +284,15 @@ transport schema change needed; `payload_ref.scicat_pid` is already reserved for
 purpose. The remaining work is the field mapping (§3.9) and wiring DAMNIT's builder to
 the plugin, not the SciCat client itself.
 
+The plugin is an **HTTP service / Flask blueprint** over the upstream
+`SciCatProject/scicat-ingestor` worker codepaths that **registers path references and
+metadata only, never file contents** — a perfect fit for registering a campaign NeXus
+file by path. DAMNIT's builder `POST`s the file path + assembled `scientificMetadata` to
+`/scicat/from-json` (or `/scicat/push`, which also returns a deterministic `version_hash`
+for re-registration detection) and stores the returned `pid`. Full interface and wiring
+steps are in [integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration)
+and [Phase 4 of the alignment plan](alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
+
 ### Route 4: NeXus Ontology annotation for federated search (higher effort)
 
 The `nexusformat/NeXusOntology` (OWL, maintained by the FAIRmat and ExPaNDS projects)
@@ -316,6 +325,6 @@ writer and analysis tooling concern.
 | Add `/entry/sample` (`NXsample`) to NeXus bridge | ⬜ medium effort | §3.7, Route 2 |
 | Per-product `NXdetector` sub-groups in NeXus bridge | ⬜ medium effort | §3.6, §3.7 |
 | `NXlaser` / `NXtarget` groups (HELPMI NeXus fork) | ⬜ post-pilot | Route 2 |
-| SciCat registration + `scicat_pid` back-population (via existing HZDR SciCat plugin) | ⬜ wire up plugin | Route 3 |
+| SciCat registration + `scicat_pid` back-population (via existing HZDR SciCat plugin) | 🟡 plugin built (HTTP `/scicat/from-json` \| `/scicat/push`); DAMNIT builder post-step + API link not yet wired | Route 3, [roadmap §SciCat Registration](integration-roadmap.md#scicat-registration) |
 | NeXus Ontology annotation for federated search | ⬜ aspirational | Route 4 |
 | openPMD interoperability (simulation links) | ⬜ aspirational | Route 5 |

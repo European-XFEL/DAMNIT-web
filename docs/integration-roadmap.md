@@ -180,6 +180,31 @@ Branch: `main`
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
+| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | 🟡 plugin exists; DAMNIT-side builder post-step + catalog link not yet wired — see §SciCat Registration |
+
+### `GitLab/scicat_plugin`
+
+Branch: `master` · `codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/data-capturing/scicat_plugin`
+
+The SciCat sink for the family: a lightweight Flask service (and embeddable
+`bp_scicat` blueprint) that reuses the upstream `SciCatProject/scicat-ingestor`
+worker codepaths, so the datasets/origdatablocks it creates look exactly like the
+official file-writer's. **It registers filesystem path references and metadata
+only — never file contents** (the target SciCat instances forbid binary upload),
+which is exactly what DAMNIT needs to register a campaign NeXus file by path.
+
+| Item | Status |
+| --- | --- |
+| Flask service + embeddable `bp_scicat` blueprint over `scicat-ingestor` worker codepaths (dataset + origdatablock) | ✅ exists |
+| Path/metadata-only registration (no binary upload); records absolute/POSIX file references | ✅ exists |
+| HTTP ingestion: `POST /scicat/from-json` (one file + `meta`), `POST /scicat/push` (file manifest + `meta`, returns deterministic `version_hash`), `POST /scicat/from-watchdog` (planet-watchdog docs) | ✅ exists |
+| Env config: `SCICAT_URL`/`SCICAT_TOKEN`, `DEFAULT_OWNER_GROUP`, `DEFAULT_ACCESS_GROUPS`, `CONTACT_EMAIL_DEFAULT`, `PRINCIPAL_INVESTIGATOR_DEFAULT` | ✅ exists |
+| Connectivity probes (`/scicat/config/test`, `/scicat/config/whoami`), live dashboard + SSE activity stream | ✅ exists |
+| Schema Builder: per-`watch_name` recurring metadata (`schema_store.json`); `"51.9MeV"` → `{value, unit}` auto-detection | ✅ exists |
+| Deterministic version hashing (`versioning.make_manifest`/`manifest_hash`) over the file-reference manifest | ✅ exists |
+| DAMNIT builder post-step registers each campaign NeXus file path and stores the returned `scicat_pid` | 🟡 not wired (DAMNIT side) |
+| Surface a SciCat dataset link in the API alongside the wiki link | ⬜ not started |
+| Re-registration detection on rebuild via stored `version_hash` | ⬜ design noted (see §SciCat Registration) |
 
 ## Shot Number Authority
 
@@ -370,6 +395,72 @@ replay each consumer, then verify:
 - staged-event schema validation rejects malformed producer payloads with
   actionable errors
 - reproducible output from retained exports and spools
+
+## SciCat Registration
+
+**Status:** 🟡 plugin built and live; DAMNIT-side wiring not started · **Effort:**
+Low–Medium · **Added:** 2026-06-26
+
+This is a **post-pilot FAIR enhancement, off the go-live critical path** — the
+pipeline builds and serves the canonical NeXus file + catalog without it. It is
+recorded here because the sink already exists and the only schema hook
+(`payload_ref.scicat_pid`) is already reserved. Detailed field mapping is in
+[standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping) and
+[Phase 4 of the alignment plan](alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
+
+### What the plugin actually is (verified against the source)
+
+Earlier planning assumed an in-process `register(nexus_path, metadata)` Python
+call. The real `scicat_plugin` is an **HTTP service / Flask blueprint**, so the
+integration boundary is a POST, not an import — which also sidesteps the
+Flask-vs-FastAPI in-process mismatch (DAMNIT's API is FastAPI/Strawberry; the
+plugin is Flask). The plugin can run standalone (`scicat-addin-serve`, default
+`127.0.0.1:5001`) or be mounted into another Flask app via `bp_scicat`.
+
+Endpoints relevant to DAMNIT:
+
+| Endpoint | Input | Returns | Fit for DAMNIT |
+| --- | --- | --- | --- |
+| `POST /scicat/from-json` | `{filepath, title?, description?, dataset_type?, owner_group?, access_groups?, owner?, source_folder?, meta?, timestamp?}` | `{ok, pid, source_folder, file_name}` | Simplest: register one canonical NeXus file path + assembled `scientificMetadata` |
+| `POST /scicat/push` | `{title?, files: [path|{path,checksum}], meta?, …}` | `{ok, pid, version_hash, …}` | Better for rebuilds: the deterministic `version_hash` detects when a rebuilt campaign manifest changed and needs re-registration |
+| `POST /scicat/from-watchdog` | one/many Watchdog Mongo/GUI docs | per-doc `{ok, pid}` | Not the builder path — this is the **producer-side**, per-file SciCat path that planet-watchdog can use directly |
+
+Ownership/contact fields default from the plugin's env
+(`DEFAULT_OWNER_GROUP`, `DEFAULT_ACCESS_GROUPS`, `CONTACT_EMAIL_DEFAULT`,
+`PRINCIPAL_INVESTIGATOR_DEFAULT`); a request can override any of them.
+
+### Two granularities of SciCat registration
+
+The plugin supports SciCat ingestion at two points in the family, and they are
+complementary, not competing:
+
+1. **Per-file, producer-side** (`/scicat/from-watchdog`): planet-watchdog
+   instrument files registered as they arrive. Fine-grained provenance; no DAMNIT
+   involvement.
+2. **Per-campaign, consumer-side** (`/scicat/from-json` or `/scicat/push`):
+   DAMNIT's builder registers the *canonical campaign NeXus file* once it is
+   built — the FAIR "one citable dataset per campaign" record. This is the path
+   that back-populates `scicat_pid` into `hzdr_sources.json`.
+
+### Recommended DAMNIT-side wiring (when this is picked up)
+
+1. Add a builder post-step (in `hzdr-hdf5-builder.py` or a small registration
+   module) that assembles the §3.9 `RawDataset` fields
+   (`proposalId`=`experiment_id`, `instrumentId`, `scientificMetadata`=the shot
+   metadata dict, `sourceFolder`=`damnit_path`) and `POST`s the NeXus file path
+   to the configured plugin URL.
+2. Persist the returned `pid` as `payload_ref.scicat_pid` / a source-catalog
+   field; store `version_hash` (if using `/scicat/push`) to skip re-registration
+   when a rebuild is byte-identical.
+3. Surface a SciCat dataset link in the API alongside the wiki link (mirror the
+   MediaWiki endpoint pattern).
+4. Tests: a unit test with the plugin HTTP call mocked runs always; a gated
+   integration test (like the broker tests) runs only when a SciCat URL + token
+   are configured.
+
+Config lives in DAMNIT settings (`DW_API_*`) pointing at the plugin URL; the
+SciCat URL/token stay in the plugin's own env, never in DAMNIT API code (per the
+secrets boundary in `CLAUDE.md`).
 
 ## Future: TANGO device self-archiving as a metadata source
 
