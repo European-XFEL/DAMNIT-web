@@ -48,7 +48,7 @@ flowchart TD
     subgraph Producers [Event producers]
         direction TB
         SC[shotcounter<br/>source = DRACO-Trigger] -->|Kafka draco.trigger| KB[(kafka-broker-docker)]
-        KB -->|Kafka<br/>shot_id| PW[planet-watchdog<br/>source = DAQ-File-Watchdog]
+        KB -->|Kafka<br/>shot_id| PW[planet-watchdog<br/>source = DAQ-File-Watchdog] --> MDB2[(MongoDB<br/>watchdog)]
         KB -->|Kafka<br/>shot_id| LD[LaserData<br/>external]
     end
 
