@@ -15,12 +15,9 @@ import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 import { DTYPES } from '../../constants'
 import { type VariableError, type VariableValue } from '../../types'
 import { formatDate, formatNumber } from '../../utils/helpers'
-import errorErrorIcon from './assets/error-error.svg?url'
-import errorMissingIcon from './assets/error-missing.svg?url'
-import errorSkippedIcon from './assets/error-skipped.svg?url'
 
-// Width of the small skeleton/error box, shared by loadingCell and
-// errorCellRenderer so a no-data cell and an errored cell line up.
+// Width of the small skeleton/error box, shared by loadingCell and the
+// error cell renderer so a no-data cell and an errored cell line up.
 const SKELETON_BOX_WIDTH = 30
 
 // TODO: Handle nonconforming data type
@@ -143,30 +140,22 @@ export type ErrorKind = 'skipped' | 'missing' | 'error'
 export interface ErrorVisuals {
   kind: ErrorKind
   title: string
-  icon: HTMLImageElement
 }
 
-const ERROR_META: Record<ErrorKind, { title: string; src: string }> = {
-  skipped: { title: 'Missing dependency', src: errorSkippedIcon },
-  missing: { title: 'Missing data', src: errorMissingIcon },
-  error: { title: 'Error', src: errorErrorIcon },
+const ERROR_TITLES: Record<ErrorKind, string> = {
+  skipped: 'Missing dependency',
+  missing: 'Missing data',
+  error: 'Error',
 }
 
-const errorIconCache = new Map<ErrorKind, HTMLImageElement>()
+// Resolve an exception class to its display kind.
+const errorKind = (cls: string): ErrorKind =>
+  cls === 'Skip' ? 'skipped' : cls === 'SourceNameError' ? 'missing' : 'error'
 
-// Resolve an exception class to its display kind, title and (cached) icon.
+// Resolve an exception class to its display kind and title.
 export const errorVisuals = (cls: string): ErrorVisuals => {
-  const kind: ErrorKind =
-    cls === 'Skip' ? 'skipped' : cls === 'SourceNameError' ? 'missing' : 'error'
-
-  let icon = errorIconCache.get(kind)
-  if (!icon) {
-    icon = new Image()
-    icon.src = ERROR_META[kind].src
-    errorIconCache.set(kind, icon)
-  }
-
-  return { kind, title: ERROR_META[kind].title, icon }
+  const kind = errorKind(cls)
+  return { kind, title: ERROR_TITLES[kind] }
 }
 
 // Clipboard/copy representation, shared by the cell's copyData and the
@@ -187,20 +176,82 @@ export const errorCell = (
   }
 }
 
-export const errorCellRenderer: CustomRenderer<ErrorCell> = {
-  kind: GridCellKind.Custom,
-  isMatch: (cell: CustomCell): cell is ErrorCell =>
-    (cell.data as Partial<ErrorCellProps>).kind === ERROR_CELL_KIND,
-  draw: ({ ctx, rect, theme, cell }) => {
-    const img = errorVisuals(cell.data.error.cls).icon
-    if (!img.complete || img.naturalWidth === 0) return
+const ERROR_ICON_SIZE = 14
+// Rasterize larger than we draw so the canvas downscales (crisp on HiDPI)
+// instead of upscaling a display-size raster.
+const ERROR_ICON_RENDER_SIZE = 56
+const ERROR_ICON_STROKE = 2
 
-    const size = Math.min(20, rect.height - 2 * theme.cellVerticalPadding)
-    const x = rect.x + rect.width - theme.cellHorizontalPadding - size
-    const y = rect.y + (rect.height - size) / 2
+// Tabler outline icon paths (@tabler/icons-react v3.31.0): alert-triangle,
+// help, and chevrons-right. Inlined so the canvas renderer can build the SVG
+// itself instead of pulling react-dom/server into the client bundle.
+const ERROR_ICON_PATHS: Record<ErrorKind, string> = {
+  error:
+    '<path d="M12 9v4" />' +
+    '<path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />' +
+    '<path d="M12 16h.01" />',
+  missing:
+    '<path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />' +
+    '<path d="M12 17l0 .01" />' +
+    '<path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4" />',
+  skipped: '<path d="M7 7l5 5l-5 5" />' + '<path d="M13 7l5 5l-5 5" />',
+}
 
-    ctx.drawImage(img, x, y, size, size)
-  },
+// Rasterize an error glyph to a cached image keyed by kind and color so the
+// canvas renderer can drawImage() it. The SVG is built once per unique
+// (kind, color); every redraw is a cache hit.
+const iconCache = new Map<string, HTMLImageElement>()
+
+const errorIcon = (kind: ErrorKind, color: string): HTMLImageElement => {
+  const key = `${kind}|${color}`
+  let img = iconCache.get(key)
+  if (!img) {
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"` +
+      ` width="${ERROR_ICON_RENDER_SIZE}" height="${ERROR_ICON_RENDER_SIZE}"` +
+      ` fill="none" stroke="${color}" stroke-width="${ERROR_ICON_STROKE}"` +
+      ` stroke-linecap="round" stroke-linejoin="round">` +
+      `${ERROR_ICON_PATHS[kind]}</svg>`
+    img = new Image()
+    // encodeURIComponent is load-bearing: the hex `#` must become %23 or the
+    // data URL breaks.
+    img.src = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+    iconCache.set(key, img)
+  }
+  return img
+}
+
+export type ErrorColors = Record<ErrorKind, string>
+
+export const makeErrorCellRenderer = (
+  colors: ErrorColors
+): CustomRenderer<ErrorCell> => {
+  const icons: Record<ErrorKind, HTMLImageElement> = {
+    error: errorIcon('error', colors.error),
+    missing: errorIcon('missing', colors.missing),
+    skipped: errorIcon('skipped', colors.skipped),
+  }
+
+  return {
+    kind: GridCellKind.Custom,
+    isMatch: (cell: CustomCell): cell is ErrorCell =>
+      (cell.data as Partial<ErrorCellProps>).kind === ERROR_CELL_KIND,
+    draw: ({ ctx, rect, theme, cell }) => {
+      const img = icons[errorKind(cell.data.error.cls)]
+      if (!img.complete || img.naturalWidth === 0) {
+        return
+      }
+
+      const size = Math.min(
+        ERROR_ICON_SIZE,
+        rect.height - 2 * theme.cellVerticalPadding
+      )
+      const x = rect.x + rect.width - theme.cellHorizontalPadding - size
+      const y = rect.y + (rect.height - size) / 2
+
+      ctx.drawImage(img, x, y, size, size)
+    },
+  }
 }
 
 export const loadingCell = (
