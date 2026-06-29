@@ -9,9 +9,15 @@ export type DeepPartial<T> = T extends Function
 
 export type VariableValue = Maybe<string | number | number[]>
 
+export type VariableError = {
+  message: string
+  cls: string
+}
+
 export type VariableDataItem = {
   value: VariableValue
   dtype: string
+  error?: VariableError
 }
 
 export type VariableMetadataItem = {

@@ -13,7 +13,11 @@ import {
   type TableMetadataOptions,
 } from './table-data.types'
 import { client } from '../../graphql/apollo'
-import { type VariableDataItem, type VariableValue } from '../../types'
+import {
+  type VariableDataItem,
+  type VariableError,
+  type VariableValue,
+} from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
 /*
@@ -41,6 +45,10 @@ const buildTableDataQuery = (
         name
         value
         dtype
+        error {
+          message
+          cls
+        }
       }
     }
   }
@@ -60,6 +68,7 @@ type DamnitVariable = {
   name: string
   value: VariableValue
   dtype: string
+  error?: VariableError | null
 }
 
 type DamnitRun = {
@@ -80,6 +89,7 @@ export function flattenRuns(runs: DamnitRun[]): TableData {
       row[variable.name] = {
         value: variable.value,
         dtype: variable.dtype,
+        error: variable.error ?? undefined,
       }
     }
 
