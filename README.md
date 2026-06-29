@@ -25,6 +25,7 @@ Open `http://127.0.0.1:5173/home` or the flow monitor at
 ## Documentation
 
 - [Documentation index](docs/README.md)
+- [System overview](docs/system-overview.md)
 - [Ordered integration roadmap](docs/integration-roadmap.md)
 - [Architecture and identity rules](docs/architecture.md)
 - [Local development and verification](docs/local-development.md)

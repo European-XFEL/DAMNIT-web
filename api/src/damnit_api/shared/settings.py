@@ -271,6 +271,23 @@ class HZDRHealthSettings(BaseModel):
     timeout: float = 2.0
 
 
+class HZDRWikiSettings(BaseModel):
+    """MediaWiki link configuration for campaign pages.
+
+    Set DW_API_HZDR_WIKI__BASE_URL to the root of the MediaWiki installation
+    (e.g. https://wiki.hzdr.de).  When unset, the wiki endpoint returns
+    configured=false and no URL — safe for offline/local environments.
+
+    The page URL is derived as:
+        {base_url}/index.php/{experiment_id}
+    and the Action API is queried at:
+        {base_url}/api.php
+    """
+
+    base_url: str = ""
+    fetch_timeout: float = 5.0
+
+
 class ContextWorkspaceSettings(BaseModel):
     root: Path = Path("../.generated/context-workspaces")
     storage: str = "local"
@@ -325,6 +342,8 @@ class Settings(BaseSettings):
     )
 
     hzdr_health: HZDRHealthSettings = Field(default_factory=HZDRHealthSettings)
+
+    hzdr_wiki: HZDRWikiSettings = Field(default_factory=HZDRWikiSettings)
 
     context_workspace: ContextWorkspaceSettings = ContextWorkspaceSettings()
 

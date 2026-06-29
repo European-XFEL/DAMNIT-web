@@ -90,9 +90,20 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
 
 ### Frontend (`frontend/`)
 `apps/app` (main UI), `apps/demo`, `apps/site`; `nginx/` for serving; Vite + pnpm
-workspace. The Confirm Matches UI (`/link-shot-records`) surfaces ambiguous/unmatched
-events; `ShotPage.tsx` fetches shot detail via the `by-key/{shot_key}` route when a
+workspace. HZDR-specific UI code lives under `apps/app/src/hzdr/`:
+- `pages/` — `ShotPage`, `LinkRecordsPage`, `FlowMonitorPage`, `ContextBuilderPage`,
+  `DocsPage`, `SourceHome`
+- `components/` — `ShotTable`, `FlowDiagram`, `AppHeader`, `previews`
+- `utils/` — `api`, `filter`, `format`, `hdf5`, `link-records`, `metadata`, `plotly`,
+  `preview`, `context`
+- `types.ts`, `hooks.ts`, `index.ts`
+
+`ShotPage.tsx` fetches shot detail via the `by-key/{shot_key}` route when a
 `shot_key` is present (falling back to `{shot_number}`).
+The `LinkRecordsPage` (`/link-shot-records`) surfaces ambiguous/unmatched events.
+Saved table views are persisted in `hzdr_sources.views.json` alongside
+`hzdr_sources.json` (same directory, same stem with `.views.json` suffix); the API
+manages them via `GET/POST/DELETE /metadata/hzdr/views`.
 
 ### Configuration
 Pydantic settings via `DW_API_*` env vars with `__` as the nested delimiter (e.g.
@@ -172,3 +183,75 @@ runs all sibling suites.
 - `pwsh scripts/test-all.ps1` before a cross-repo change (it runs the sibling conformance suites).
 - `python api/scripts/hzdr-local-acceptance.py` for an end-to-end check without a broker or sibling repos.
 - Frontend: `pnpm run dev:app` and verify in the browser; `pnpm run lint`.
+
+## Agent Pack
+
+First act as the Main Coordinator Agent. Choose the most relevant specialist section for the task. If the task crosses areas, use multiple sections.
+
+Maintain DAMNIT-web-hzdr. Act as the Main Coordinator: route tasks to backend, frontend, data, tests/refactor, or CI/deployment. Keep changes minimal, preserve HZDR-specific behavior, and add tests before risky refactors.
+
+Backend/API: FastAPI/Python — routers, settings, auth/noauth/LDAP, database access. Preserve local dev behavior. Use uv, ruff, and pytest where relevant.
+
+Frontend/UI: React/TypeScript — hooks, forms, tables, dashboard pages, API calls. Fix hook dependency warnings properly. Keep UI changes minimal.
+
+Data/metadata: shot/campaign metadata — SQLite/HDF5/NeXus/openPMD concepts. Link campaign, date/day, shot number, timestamp, and source system. Keep schemas migration-aware.
+
+Test/refactor safety: for messy cleanup or larger refactors, add characterization tests first, preserve behavior unless explicitly changing it, and make small patches.
+
+CI/deployment: GitLab CI, GitHub Actions, uv, Docker, nginx. Mind private GitLab dependencies, keep secrets out of files, and support Windows/Linux differences.
+
+## Schema constraints and current versions
+
+### Event schema: `hzdr-event-v1`
+
+Canonical envelope defined in `api/src/damnit_api/metadata/hzdr_event.py`.
+Current version constant: `HZDR_EVENT_SCHEMA_VERSION = "hzdr-event-v1"`
+
+**This file is vendored by hand** into sibling repos (`planet-watchdog/watchdog_core/hzdr_event.py` and `hzdrTangoDSShotcounter`). Keep all three in sync whenever fields change.
+
+Required fields — every loaded event file must carry these (`EVENT_REQUIRED_FIELDS`):
+`experiment_id`, `shot_id`, `source`, `kind`, `timestamp`, `transport`, `payload_ref`
+
+Optional fields: `schema_version`, `event_id` (synthesized from content hash if absent), `shot_number`, `values`, `metadata`
+
+`payload_ref` uses `HZDRPayloadRef` (`extra="allow"`). At least one traceability field should be set: `uri`, `path`, `topic`/`partition`/`offset`, `mongo_id`, or `scicat_pid`.
+
+### NeXus bridge profile: `hzdr-canonical-shot-v1`
+
+Stamped as `damnit_bridge_profile` on HDF5 root and `/entry/shots`. Current value: `"hzdr-canonical-shot-v1"`. Bump this string if the bridge table layout changes (columns added/removed from the shot or source-events groups).
+
+### Shared Pydantic field constraints (`api/src/damnit_api/shared/models.py`)
+
+| Type | Constraint |
+|------|------------|
+| `ProposalNumber` | `int`, exclusive range `(0, 9_999_999)` — `gt=0, lt=9999999` |
+| `ProposalId` | `int`, exclusive range `(0, 9_999_999)` — `gt=0, lt=9999999` |
+| `ProposalCycle` | `str` matching `^\d{6}$` (e.g. `"202501"`) |
+
+### Match quality ranks (ascending, `hzdr_nexus.MATCH_RANK`)
+
+`unmatched` (0) → `labfrog_only` (1) → `nearest_time` (2) → `shot_number_time_window` (3) → `exact_day_shot_number` (4) → `event_identity` (5)
+
+Higher rank wins when two matches compete for the same shot.
+
+### Review levels (ascending, `hzdr_nexus.REVIEW_LEVELS`)
+
+`BASE` (matcher output — not stored in sidecar) → `REVIEWED` (operator action) → `VERIFIED` (countersigned)
+
+Highest-rank decision per `event_id` wins when the `.review.jsonl` sidecar is merged back at builder-run time.
+
+### SQLite table: `ProposalMeta` (`api/src/damnit_api/metadata/models.py`)
+
+No Alembic migrations — tables are created via `SQLModel.metadata.create_all`. Adding a column requires running the bootstrap script or recreating the DB in local dev.
+
+Columns: `id` (PK), `number` (ProposalNumber), `cycle` (ProposalCycle), `instrument`, `path`, `title`, `principal_investigator`, `start_date`, `end_date`, `damnit_path`, `damnit_paths_searched` (JSON array), `proposal_read_only` (bool, default `False`), `damnit_path_last_check`, `created_at` (auto), `updated_at` (auto on change).
+
+Computed field (not stored): `year_half` — `"YYYYHH"` where `HH` is `"01"` (Jan–Jun) or `"02"` (Jul–Dec).
+
+### `DamnitType` enum (`api/src/damnit_api/shared/const.py`)
+
+Values: `none`, `number`, `string`, `boolean`, `timestamp`, `complex`, `array`, `image`, `numpy`, `rgba`, `png`, `dataset`
+
+### API package version
+
+`damnit-api` current: **`0.1.1`** (see `api/pyproject.toml`). No runtime version endpoint exists; bump this when the public schema changes.

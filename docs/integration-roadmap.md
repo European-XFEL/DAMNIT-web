@@ -1,6 +1,6 @@
 # Integration Roadmap
 
-Updated: 2026-06-18
+Updated: 2026-06-26
 
 ## Status Key
 
@@ -61,7 +61,7 @@ Committed and tested:
 
 The sequence below is ordered by dependency, not effort.
 
-1. **Merge the `shotcounter` branch** — verified passing (18/18 tests), not
+1. **Merge the `shotcounter` branch** — verified passing (24/24 tests), not
    yet on main. Gate: one manual Kafka smoke test with `KafkaEnabled=1`
    against a local broker, plus a decision on `IsShotCounterXX` defaults for
    real deployments (currently all `False` — operators must opt each channel
@@ -119,8 +119,8 @@ Branch: `main` (changes committed)
 | `experiment_id` column, migration, transform/export/NeXus plumbing | ✅ committed (`schema fix`) |
 | Lightweight anonymized SQLite fixture in `DAMNIT-web-hzdr/api/examples/` | ✅ committed |
 | Schedule campaign-scoped exports (cron/systemd/task-scheduler) | ⬜ external infra, not yet decided |
-| Publish completed SQLite/NeXus pairs by atomic rename or completion marker | 🟡 not started |
-| Retain each source export used for a canonical build | 🟡 not started — needed for the go-live gate's "reproducible output" criterion |
+| Publish completed SQLite/NeXus pairs by atomic rename or completion marker | ✅ committed — `bundle-complete.json` marker (atomic, with per-file sha256); atomic temp+rename already in `write_sqlite`/NeXus export |
+| Retain each source export used for a canonical build | ✅ committed — opt-in `retain_exports` snapshots via `export-campaign` CLI |
 | Keep DAMNIT output separate from the immutable LabFrog export | ✅ directory layout enforces this |
 
 ### `GitLab/planet-watchdog` (DAQ-File-Watchdog)
@@ -154,7 +154,7 @@ Branch: `feature/hzdr-canonical-trigger-event` (not yet merged to main)
 
 | Item | Status |
 | --- | --- |
-| `schema_version`, stable `event_id`, canonical `experiment_id`, UTC timestamp | ✅ on branch, 18/18 tests pass |
+| `schema_version`, stable `event_id`, canonical `experiment_id`, UTC timestamp | ✅ on branch, 24/24 tests pass |
 | Machine-readable `trigger_role` via `TriggerRoleXX` attribute | ✅ on branch |
 | Kafka key `<experiment_id>:<channel_id>` for ordering | ✅ on branch |
 | Long-lived producer with retry on same `event_id` | ✅ on branch |
@@ -180,6 +180,31 @@ Branch: `main`
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
+| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | 🟡 plugin exists; DAMNIT-side builder post-step + catalog link not yet wired — see §SciCat Registration |
+
+### `GitLab/scicat_plugin`
+
+Branch: `master` · `codebase.helmholtz.cloud/fwk/fwkt/fwkt-data-management/data-capturing/scicat_plugin`
+
+The SciCat sink for the family: a lightweight Flask service (and embeddable
+`bp_scicat` blueprint) that reuses the upstream `SciCatProject/scicat-ingestor`
+worker codepaths, so the datasets/origdatablocks it creates look exactly like the
+official file-writer's. **It registers filesystem path references and metadata
+only — never file contents** (the target SciCat instances forbid binary upload),
+which is exactly what DAMNIT needs to register a campaign NeXus file by path.
+
+| Item | Status |
+| --- | --- |
+| Flask service + embeddable `bp_scicat` blueprint over `scicat-ingestor` worker codepaths (dataset + origdatablock) | ✅ exists |
+| Path/metadata-only registration (no binary upload); records absolute/POSIX file references | ✅ exists |
+| HTTP ingestion: `POST /scicat/from-json` (one file + `meta`), `POST /scicat/push` (file manifest + `meta`, returns deterministic `version_hash`), `POST /scicat/from-watchdog` (planet-watchdog docs) | ✅ exists |
+| Env config: `SCICAT_URL`/`SCICAT_TOKEN`, `DEFAULT_OWNER_GROUP`, `DEFAULT_ACCESS_GROUPS`, `CONTACT_EMAIL_DEFAULT`, `PRINCIPAL_INVESTIGATOR_DEFAULT` | ✅ exists |
+| Connectivity probes (`/scicat/config/test`, `/scicat/config/whoami`), live dashboard + SSE activity stream | ✅ exists |
+| Schema Builder: per-`watch_name` recurring metadata (`schema_store.json`); `"51.9MeV"` → `{value, unit}` auto-detection | ✅ exists |
+| Deterministic version hashing (`versioning.make_manifest`/`manifest_hash`) over the file-reference manifest | ✅ exists |
+| DAMNIT builder post-step registers each campaign NeXus file path and stores the returned `scicat_pid` | 🟡 not wired (DAMNIT side) |
+| Surface a SciCat dataset link in the API alongside the wiki link | ⬜ not started |
+| Re-registration detection on rebuild via stored `version_hash` | ⬜ design noted (see §SciCat Registration) |
 
 ## Shot Number Authority
 
@@ -201,7 +226,10 @@ effort:
 3. **Dedicated cross-system TANGO shot-counter device** — every producer reads
    from it before stamping `shot_number`; labfrog writes to or reads from it.
    Only option that gives a live, cross-system-consistent number at acquisition
-   time. Most work: new device, new integration point in every producer.
+   time. Most work: new device, new integration point in every producer. This
+   overlaps the TANGO device self-archiving work (see *Future: TANGO device
+   self-archiving as a metadata source*) — a control-system archiver is the
+   natural home for reading such a counter alongside other device attributes.
 
 The decision to use Option 1 for the pilot is recorded. Options 2 and 3 remain
 open for post-pilot evaluation.
@@ -367,6 +395,199 @@ replay each consumer, then verify:
 - staged-event schema validation rejects malformed producer payloads with
   actionable errors
 - reproducible output from retained exports and spools
+
+## SciCat Registration
+
+**Status:** 🟡 plugin built and live; DAMNIT-side wiring not started · **Effort:**
+Low–Medium · **Added:** 2026-06-26
+
+This is a **post-pilot FAIR enhancement, off the go-live critical path** — the
+pipeline builds and serves the canonical NeXus file + catalog without it. It is
+recorded here because the sink already exists and the only schema hook
+(`payload_ref.scicat_pid`) is already reserved. Detailed field mapping is in
+[standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping) and
+[Phase 4 of the alignment plan](alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
+
+### What the plugin actually is (verified against the source)
+
+Earlier planning assumed an in-process `register(nexus_path, metadata)` Python
+call. The real `scicat_plugin` is an **HTTP service / Flask blueprint**, so the
+integration boundary is a POST, not an import — which also sidesteps the
+Flask-vs-FastAPI in-process mismatch (DAMNIT's API is FastAPI/Strawberry; the
+plugin is Flask). The plugin can run standalone (`scicat-addin-serve`, default
+`127.0.0.1:5001`) or be mounted into another Flask app via `bp_scicat`.
+
+Endpoints relevant to DAMNIT:
+
+| Endpoint | Input | Returns | Fit for DAMNIT |
+| --- | --- | --- | --- |
+| `POST /scicat/from-json` | `{filepath, title?, description?, dataset_type?, owner_group?, access_groups?, owner?, source_folder?, meta?, timestamp?}` | `{ok, pid, source_folder, file_name}` | Simplest: register one canonical NeXus file path + assembled `scientificMetadata` |
+| `POST /scicat/push` | `{title?, files: [path|{path,checksum}], meta?, …}` | `{ok, pid, version_hash, …}` | Better for rebuilds: the deterministic `version_hash` detects when a rebuilt campaign manifest changed and needs re-registration |
+| `POST /scicat/from-watchdog` | one/many Watchdog Mongo/GUI docs | per-doc `{ok, pid}` | Not the builder path — this is the **producer-side**, per-file SciCat path that planet-watchdog can use directly |
+
+Ownership/contact fields default from the plugin's env
+(`DEFAULT_OWNER_GROUP`, `DEFAULT_ACCESS_GROUPS`, `CONTACT_EMAIL_DEFAULT`,
+`PRINCIPAL_INVESTIGATOR_DEFAULT`); a request can override any of them.
+
+### Two granularities of SciCat registration
+
+The plugin supports SciCat ingestion at two points in the family, and they are
+complementary, not competing:
+
+1. **Per-file, producer-side** (`/scicat/from-watchdog`): planet-watchdog
+   instrument files registered as they arrive. Fine-grained provenance; no DAMNIT
+   involvement.
+2. **Per-campaign, consumer-side** (`/scicat/from-json` or `/scicat/push`):
+   DAMNIT's builder registers the *canonical campaign NeXus file* once it is
+   built — the FAIR "one citable dataset per campaign" record. This is the path
+   that back-populates `scicat_pid` into `hzdr_sources.json`.
+
+### Recommended DAMNIT-side wiring (when this is picked up)
+
+1. Add a builder post-step (in `hzdr-hdf5-builder.py` or a small registration
+   module) that assembles the §3.9 `RawDataset` fields
+   (`proposalId`=`experiment_id`, `instrumentId`, `scientificMetadata`=the shot
+   metadata dict, `sourceFolder`=`damnit_path`) and `POST`s the NeXus file path
+   to the configured plugin URL.
+2. Persist the returned `pid` as `payload_ref.scicat_pid` / a source-catalog
+   field; store `version_hash` (if using `/scicat/push`) to skip re-registration
+   when a rebuild is byte-identical.
+3. Surface a SciCat dataset link in the API alongside the wiki link (mirror the
+   MediaWiki endpoint pattern).
+4. Tests: a unit test with the plugin HTTP call mocked runs always; a gated
+   integration test (like the broker tests) runs only when a SciCat URL + token
+   are configured.
+
+Config lives in DAMNIT settings (`DW_API_*`) pointing at the plugin URL; the
+SciCat URL/token stay in the plugin's own env, never in DAMNIT API code (per the
+secrets boundary in `CLAUDE.md`).
+
+## Future: TANGO device self-archiving as a metadata source
+
+**Status:** 🔴 future / needs live infrastructure · **Effort:** Medium (bridge +
+DAMNIT adapter) + external (control-system devices) · **Added:** 2026-06-26
+
+The goal is to let **TANGO devices write their own data and metadata** into the
+canonical campaign record, instead of DAMNIT relying only on producer-embedded
+values or the emulator's synthetic fields. Today the only TANGO touchpoint is
+`shotcounter` (one device server emitting `draco.trigger` to Kafka).
+
+**Reference evaluated:** CALA's `pyds_archivingserver` (`ArchivingServer` device),
+`gitlab.lrz.de/cala-public/tangodeviceservers/pyds_archivingserver`. CALA (Centre
+for Advanced Laser Applications, LMU/MPQ) is a petawatt laser-plasma facility — a
+close analogue to DRACO — so the pattern is directly applicable. The notes below are
+from the actual `ArchivingServer.py` source (shared 2026-06-26), not assumptions.
+
+> **Sequencing — this is deferred, not on the critical path.** The plan is to adopt
+> this pattern, but it is still a good way out and will take significant effort. The
+> pipeline **must work end-to-end before then** and does not depend on it. In the
+> interim, per-shot metadata comes from the sources already wired: the LabFrog
+> SQLite/NeXus export, the existing producers (`shotcounter`, DAQ-File-Watchdog,
+> LaserData), and operator entry — including the manual / wiki-selected
+> [target ontology](target-ontology.md), which needs no TANGO integration at all.
+> Treat everything below as the eventual *automation* layer that replaces manual /
+> producer-embedded capture, not a prerequisite for go-live. Consequently
+> `shotcounter` + Shot Number Authority **Option 1** remain the near-term shot-number
+> path; `ArchivingShotNo` (Option 3) is revisited only when this work begins.
+
+### What `ArchivingServer` actually is
+
+It is **not** an HDB++-style central attribute-value archiver. It is a **shot-context
+coordinator + per-shot completeness tracker** for a set of distributed,
+self-archiving devices:
+
+- It holds a list of **subscriber devices** (`ArchivingDevice`s; property
+  `ArchivingSubscriberList`, commands `ArchivingSubscribe`/`ArchivingUnsubscribe`,
+  attribute `ArchivingSubscribers`).
+- On any change it **broadcasts shot context** to every subscriber via
+  `write_attributes_asynch` (`arch_srv_update_fields`): `ArchivingShotNo` (DevULong),
+  `ArchivingRun` (DevULong), `ArchivingExperimentPath` (a `YYYYMMDD` day folder),
+  `ArchivingFlags`, and `ArchivingShotTime` (`YYYYMMDD_HHmmssfff`, millisecond
+  precision — "timestamp when server triggers shot").
+- Each subscriber then **archives its own files** under
+  `<ArchivingLocalRootPath>/<ArchivingExperimentPath>/<AutoCreationFolders>/`, tagged
+  with that shot number. The server inherits `ArchivingDevice` so it can archive its
+  own files too.
+- It subscribes to each device's `ArchivingLastShotNoSaved` **CHANGE_EVENT**
+  (`register_archiving_complete`) and tracks which devices have *not* confirmed
+  saving each shot, exposing `ArchivingLastShotFailedDevices` and
+  `ArchivingPreviousShotsFailedDevices` (JSON, last 20 shots) — a **per-shot
+  archiving-completeness QA signal**.
+- A cron job (`AutoUpdateArchivingExperimentPath` at `...PathTime`, e.g. `08:15`,
+  via APScheduler) rolls `ArchivingExperimentPath` to the current date daily.
+
+No central DB, no attribute polling, no time-series store. The "archive" is the
+shot-numbered, date-foldered file tree each device writes into.
+
+### Why this aligns unusually well with DAMNIT
+
+| `ArchivingServer` field | DAMNIT concept | Note |
+| --- | --- | --- |
+| `ArchivingShotNo` | `shot_number` | **Candidate authoritative TANGO counter** — every device already keys off it (see Shot Number Authority Option 3) |
+| `ArchivingShotTime` (`YYYYMMDD_HHmmssfff`) | `fired_at` / event `timestamp` | Local wall-clock; convert with campaign timezone (DAMNIT already does) |
+| `ArchivingExperimentPath` (`YYYYMMDD`) | local-date in `shot_key` `<exp_id>:<YYYYMMDD>:<NNNNNN>` | The day-folder convention *is* DAMNIT's date-scoping |
+| `ArchivingRun` | `metadata.run.*` (run index) | |
+| files under `<ExperimentPath>/…` | `HZDRDataProduct` (`payload_ref.path`) | Already organized by the (day, shot) keys DAMNIT matches on |
+| `ArchivingLastShotFailedDevices` / `ArchivingPreviousShotsFailedDevices` | new `metadata.archiving.*` QA field | "shot N archived by 8/10 devices" — surfaceable in the Confirm Matches / review UI |
+
+The shot identity DAMNIT needs (`shot_number` + local date + ms timestamp) is exactly
+what this server already broadcasts, so no new matching concept is required.
+
+### Integration options (lowest to highest effort)
+
+1. **Bridge subscriber → `hzdr-event-v1` → existing spool** *(recommended)*. Write a
+   small `ArchivingDevice` subscriber (or an external Tango client listening to the
+   server's change-events) that, per shot, emits one `hzdr-event-v1` event:
+   `shot_number` = `ArchivingShotNo`, `timestamp` from `ArchivingShotTime`,
+   experiment day from `ArchivingExperimentPath`, `payload_ref.path` = the shot's
+   archive folder, and `metadata.archiving` = the failed-device / completeness list.
+   It flows straight through the Kafka/ASAPO consumers already built. Medium; reuses
+   the whole reconciler/spool path with no envelope change.
+2. **Point DAQ-File-Watchdog at the archive tree** (low; reuses planet-watchdog). The
+   `<root>/<YYYYMMDD>/` layout is exactly a watch root; file-arrival events become
+   data products. Needs shot-number association — either parse it from the
+   path/filename, or join to the bridge from option 1 for authoritative shot context.
+3. **Adopt `ArchivingShotNo` as the authoritative shot number** — directly realizes
+   **Shot Number Authority Option 3** below. Requires deciding how this relates to
+   HZDR's `shotcounter` `ShotNumber` (same role, two facilities) — they must not both
+   claim authority for the same campaign.
+4. **Per-shot completeness as QA metadata** — ingest
+   `ArchivingPreviousShotsFailedDevices` into `metadata.archiving.*` so the review UI
+   can flag incompletely-archived shots. Genuinely new signal; no analogue today.
+
+### Decisions / things to confirm
+
+- **`shotcounter` vs. `ArchivingShotNo` authority.** Does HZDR run this CALA server,
+  an equivalent, or just adopt the pattern? Whichever supplies `shot_number` must be
+  the single authority per campaign (ties into the unresolved Shot Number Authority
+  decision — currently Option 1 for the pilot).
+- **Timezone.** `ArchivingShotTime` and the path date are **local**; the bridge must
+  emit UTC in the envelope `timestamp` (or DAMNIT interprets them in the campaign tz,
+  as it already does for naive LabFrog times).
+- **Getting data out.** The server emits no event and writes no DB itself, but it is
+  rich in Tango change-events — a subscriber bridge (option 1) is the natural tap; do
+  not try to read attributes synchronously per shot.
+- **Where laser/vacuum/diagnostic *values* come from.** They are written by the
+  individual subscriber `ArchivingDevice`s into their files, not by this coordinator.
+  Mapping those into `metadata.laser.*` / `metadata.vacuum.*`
+  ([standards-alignment §3.3–3.6](standards-alignment.md#33-laser-parameters)) is a
+  per-device-format concern handled when their products are ingested, not by the
+  server attributes above.
+
+### Next action
+
+Prototype option 1 offline: a stub that takes a recorded
+`(ArchivingShotNo, ArchivingShotTime, ArchivingExperimentPath, failed_devices,
+file list)` tuple and produces a conformant `hzdr-event-v1` event, run through the
+existing reconciler against a fixture — no live Tango/control system required to
+build and test the DAMNIT side.
+
+### Next action
+
+Confirm the four assumptions above against the real `ArchivingServer.py` (paste it
+or mirror it where this session can fetch it), then prototype Option 1's
+`read_tango_archive_*` adapter against a small fixture archive — no live control
+system required to build and test the DAMNIT side.
 
 ## Cross-repo standardization (2026-06-23)
 

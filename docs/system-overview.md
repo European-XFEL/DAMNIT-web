@@ -22,11 +22,12 @@ web UI reads.
 | --- | --- | --- | --- |
 | **labfrog** | Operator captures structured shot/campaign metadata ("the shotsheet") | Flask + MongoDB | Source of truth for campaign + shot context |
 | **labfrog-sqlite-tools-repo** | Exports LabFrog Mongo records to curated SQLite / NeXus / openPMD | Python CLI (`labfrog-sqlite`) | Turns LabFrog records into a portable, immutable export |
-| **shotcounter** | TANGO device server; counts laser shots, emits canonical trigger events | PyTango + ZMQ + Kafka | Producer (`source = DRACO-Trigger`) |
-| **planet-watchdog** | Watches instrument folders, parses files, writes events to Mongo/SciCat | Python GUI + `watchdog` | Producer (`source = DAQ-File-Watchdog`) |
+| **shotcounter** | TANGO device server; counts laser shots, emits canonical trigger events whose `shot_id`/trigger context the other producers key off | PyTango + ZMQ + Kafka | Producer (`source = DRACO-Trigger`) |
+| **planet-watchdog** | Watches instrument folders, parses files, publishes Watchdog source events over Kafka | Python GUI + `watchdog` | Producer (`source = DAQ-File-Watchdog`) |
 | **kafka-broker-docker** | Single-node Kafka broker + helper scripts and examples | Docker Compose (KRaft) | Transport (local/dev message bus) |
 | **asapo-for-hzdr-damnit** | Local harness proving the event contract + ASAPO/Kafka staging semantics | Node + Python | Transport test rig + contract reference |
 | **DAMNIT-web-hzdr** | Reconciler/builder + FastAPI API + React frontend | Python + TS | Consumer; builds and serves the canonical outputs |
+| **scicat_plugin** | Registers file/path references + metadata in SciCat (reuses `scicat-ingestor` worker codepaths; no binary upload) | Flask + `scicat-ingestor` | Sink; SciCat catalog registration (producer-side per file, or DAMNIT-side per campaign NeXus file) — see [integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration) |
 
 A third producer, **LaserData** (`source = LaserData`, transported over ASAPO),
 exists in the wider HZDR setup but is not one of these repositories; it produces
@@ -36,58 +37,90 @@ events of the same shape described below.
 
 ```mermaid
 flowchart TD
-    OP[Operators] -->|shot / campaign metadata| LF[labfrog<br/>Flask]
-    LF --> MDB[(MongoDB<br/>shotsheet)]
-    MDB -->|export| LST[labfrog-sqlite-tools<br/>curated SQLite + NeXus]
+    subgraph Context [Campaign context]
+        direction TB
+        OP[Operators] -->|shot / campaign metadata| LF[labfrog<br/>Flask]
+        LF --> MDB[(MongoDB<br/>shotsheet)]
+        MDB -->|export| LST[labfrog-sqlite-tools<br/>curated SQLite + NeXus]
+    end
 
-    SC[shotcounter<br/>source = DRACO-Trigger] -->|Kafka draco.trigger| KB[(kafka-broker-docker)]
-    PW[planet-watchdog<br/>source = DAQ-File-Watchdog] -->|Kafka| KB
-    PW -->|event docs| MDB
-    PW -->|datasets| SCAT[SciCat]
-    LD[LaserData<br/>external] -->|ASAPO| AS[(ASAPO)]
+    style Context fill:#BDB2FF,stroke:#333,stroke-width:2px
 
-    KB --> SPOOL
-    AS --> SPOOL
-    LST --> REC
+    subgraph Producers [Event producers]
+        direction TB
+        SC[shotcounter<br/>source = DRACO-Trigger] -->|Kafka draco.trigger| KB[(kafka-broker-docker)]
+        KB -->|Kafka<br/>shot_id| PW[planet-watchdog<br/>source = DAQ-File-Watchdog] --> MDB2[(MongoDB<br/>watchdog)]
+        KB -->|Kafka<br/>shot_id| LD[LaserData<br/>external]
+    end
+
+    style Producers fill:#CAFFBF,stroke:#333,stroke-width:2px
 
     subgraph DW [DAMNIT-web-hzdr]
+        direction LR
         SPOOL["durable spool consumers<br/>claim → write+fsync → ack → dedup"]
         REC["reconciler<br/>match events to LabFrog rows"]
-        BLD[single-writer<br/>NeXus / HDF5 builder]
+        BLD["single-writer<br/>NeXus / HDF5 builder"]
         SPOOL --> REC --> BLD
     end
 
-    BLD --> NX[/combined experiment NeXus file/]
-    BLD --> CAT[/hzdr_sources.json catalog/]
-    NX --> API[FastAPI API]
-    CAT --> API
-    API --> FE[React frontend]
+    style DW fill:#FFADAD,stroke:#333,stroke-width:2px
+
+    subgraph Outputs [Canonical outputs]
+        direction TB
+        NX[/combined experiment HDF5/]
+        CAT[/hzdr_sources.json catalog/]
+        API[FastAPI API]
+        FE[React frontend]
+        NX --> API
+        CAT --> API
+        API --> FE
+    end
+
+    style Outputs fill:#FDFFB6,stroke:#333,stroke-width:2px
+
+    classDef customTitle font-size: 18px, font-weight: bold, fill: transparent, stroke-width:0px;
+    class Context customTitle;
+    class Producers customTitle;
+    class Outputs customTitle;
+    class DW customTitle;
+
+    KB -->|Kafka<br/>shot_id| LF
+    OP -.->|campaign selection + trigger-shot setup| SC
+    PW -->|Kafka| SPOOL
+    LD -->|ASAPO| SPOOL
+    LST --> REC
+
+    BLD --> NX
+    BLD --> CAT
 ```
 
-> All producer paths carry the same `hzdr-event-v1` envelope (see the contracts
-> below). `asapo-for-hzdr-damnit` is the local harness that proves this flow
-> without a real broker; it stands in for the Kafka/ASAPO transport during
-> development.
+> All source events sent into DAMNIT carry the same `hzdr-event-v1` envelope
+> (see the contracts below). `asapo-for-hzdr-damnit` is the local harness that
+> proves this flow without a real broker; it stands in for the Kafka/ASAPO
+> transport during development.
 
 **The flow in words:**
 
-1. **LabFrog** records the campaign and each shot's metadata into MongoDB. This is
-   the operator-facing source of truth for *context*.
+1. **Operators** enter campaign and shot metadata in **LabFrog**, and select the
+   active campaign plus trigger-shot setup in **shotcounter**. LabFrog stores the
+   campaign/shot context in MongoDB.
 2. **labfrog-sqlite-tools** exports those Mongo records into an immutable curated
    SQLite + NeXus bundle, stamping the canonical `experiment_id` and preserving
    linking columns (`kafka_event_id`, transport offsets, `damnit_*` hints).
-3. **Producers** publish immutable *source events* as they happen:
-   - **shotcounter** emits a `draco.trigger` Kafka event per laser trigger.
-   - **planet-watchdog** parses new instrument files, writes event docs to MongoDB
-     and SciCat, and can publish to Kafka.
-   - **LaserData** (external) publishes over ASAPO.
-   - **kafka-broker-docker** is the broker those Kafka producers talk to locally.
+3. **shotcounter** emits a `draco.trigger` Kafka event per laser trigger. In local
+   and staged setups, **kafka-broker-docker** carries that trigger context,
+   including `shot_id`, to LabFrog, **planet-watchdog**, and **LaserData**.
+4. **Instrument producers** publish immutable *source events* keyed by that shot
+   context:
+   - **planet-watchdog** parses new instrument files and publishes Watchdog events
+     to DAMNIT over Kafka.
+   - **LaserData** (external) publishes LaserData events to DAMNIT over ASAPO.
    - **asapo-for-hzdr-damnit** is the local rig that proves this contract and the
      staging semantics before a real broker is wired in.
-4. **DAMNIT-web-hzdr** consumes events through durable spool consumers
+5. **DAMNIT-web-hzdr** consumes events through durable spool consumers
    (claim → write+fsync → ack → dedup), matches each event to the right LabFrog
    shot row, and runs a single-writer builder that produces the canonical outputs.
-5. The **API and frontend** read those outputs. DAMNIT never asks producers to
+6. The **API and frontend** read those outputs. DAMNIT never asks producers to
    edit the canonical file or make their own matching decisions.
 
 ## The Contracts That Hold It Together

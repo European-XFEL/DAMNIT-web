@@ -18,6 +18,7 @@ from damnit_api.metadata.hzdr_nexus import (
     read_labfrog_nexus_shots,
     read_labfrog_sqlite_shots,
     reconcile_canonical_shots,
+    review_sidecar_backup_path,
     review_sidecar_path,
     single_writer_lock,
     write_json_atomic,
@@ -780,6 +781,50 @@ def test_load_normalized_events_accepts_small_values_array(tmp_path: Path):
     assert loaded[0]["values"] == [[1.0, 2.0], [3.0, 4.0]]
 
 
+def test_write_nexus_bridge_never_corrupts_existing_output_on_failure(tmp_path: Path):
+    """A failure mid-build must leave the previous canonical.nxs intact rather
+    than a half-written file. The shot-count mismatch guard (existing_count !=
+    len(shots)) is used as a natural injection point: source_nexus has 2 shots
+    but shots=[] triggers the guard inside the temp file write, so output_nexus
+    is never touched. Confirms the original is still readable and no stale
+    .tmp.nxs file was left behind."""
+    labfrog_nexus = tmp_path / "labfrog.nxs"
+    output_nexus = tmp_path / "canonical.nxs"
+    write_labfrog_nexus(labfrog_nexus)
+
+    labfrog_shots = read_labfrog_nexus_shots(labfrog_nexus)
+    shots, events = reconcile_canonical_shots(
+        [normalized_event()],
+        experiment_id="HELPMI",
+        source_key="hzdr-labfrog",
+        labfrog_shots=labfrog_shots,
+    )
+    write_nexus_bridge(
+        output_path=output_nexus,
+        source_nexus=labfrog_nexus,
+        experiment_id="HELPMI",
+        shots=shots,
+        events=events,
+    )
+
+    # shots=[] vs source_nexus with 2 shots triggers ValueError inside temp write
+    with pytest.raises(ValueError, match="shot count"):
+        write_nexus_bridge(
+            output_path=output_nexus,
+            source_nexus=labfrog_nexus,
+            experiment_id="HELPMI",
+            shots=[],
+            events=[],
+        )
+
+    # The canonical file must be intact and still readable
+    with h5py.File(output_nexus, "r") as handle:
+        assert handle.attrs["experiment_id"] == "HELPMI"
+        assert "entry/shots/shot_key" in handle
+    # No stale temp files left behind
+    assert list(tmp_path.glob("*.tmp.nxs")) == []
+
+
 def test_write_json_atomic_never_leaves_a_partial_file_on_failure(tmp_path: Path):
     """If serialization fails partway, the existing target file must be left
     untouched - not truncated or replaced by a half-written temp file."""
@@ -911,6 +956,40 @@ def test_append_review_decision_writes_sidecar_jsonl(tmp_path: Path):
     assert record["review_level"] == "REVIEWED"
     assert record["shot_key"] == "HELPMI:20260610:000017"
     assert record["by"] == "alice"
+
+
+def test_append_review_decision_keeps_rolling_backup(tmp_path: Path):
+    """Each append must update a .bak sibling so the sidecar is recoverable
+    if the live file is lost. The backup must equal the live sidecar after
+    every write, and survive multiple appends."""
+    sources_file = tmp_path / "hzdr_sources.json"
+    sidecar = review_sidecar_path(sources_file)
+    backup = review_sidecar_backup_path(sources_file)
+
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-1",
+        action="confirm",
+        by="alice",
+        shot_key="HELPMI:20260610:000017",
+        candidate_shot_keys=["HELPMI:20260610:000017"],
+        review_level="REVIEWED",
+    )
+    assert backup.exists()
+    assert backup.read_text(encoding="utf-8") == sidecar.read_text(encoding="utf-8")
+
+    # A second decision must update the backup to include both lines.
+    append_review_decision(
+        sources_file,
+        source_key="hzdr-labfrog",
+        event_id="evt-2",
+        action="dismiss",
+        by="bob",
+        review_level="VERIFIED",
+    )
+    assert backup.read_text(encoding="utf-8") == sidecar.read_text(encoding="utf-8")
+    assert backup.read_text(encoding="utf-8").count("\n") == 2
 
 
 def test_load_review_decisions_returns_highest_rank_per_event(tmp_path: Path):

@@ -2,18 +2,25 @@
 
 ## Vision
 
-LabFrog owns campaign and shot context. Transport systems publish immutable
-source events. DAMNIT performs matching once and publishes one canonical
-campaign view.
+LabFrog owns campaign and shot context. shotcounter is the trigger authority: it
+emits the `draco.trigger` event whose `shot_id`/trigger context the other
+producers key off. Transport systems publish immutable source events. DAMNIT
+performs matching once and publishes one canonical campaign view.
 
 ```text
-DRACO/TANGO -> Kafka --------+
-LaserData -> ASAPO ----------+--> durable event spool --> DAMNIT reconciler
-Watchdog -> Kafka -----------+                              |
-LabFrog -> Mongo/SQLite/NeXus+                              v
-                                              canonical NeXus + catalog
-                                                        |
-                                                   API + frontend
+operators -> shotcounter (DRACO-Trigger)
+                  |
+                  +-- Kafka draco.trigger (shot_id) --> LabFrog -> Mongo/SQLite/NeXus --+
+                  +-- Kafka draco.trigger (shot_id) --> planet-watchdog -> Kafka -------+
+                  +-- Kafka draco.trigger (shot_id) --> LaserData -> ASAPO ------------+
+                                                                                       |
+                                                          durable event spool <--------+
+                                                                  |
+                                                          DAMNIT reconciler
+                                                                  |
+                                                   canonical NeXus + catalog
+                                                                  |
+                                                          API + frontend
 ```
 
 Producers must not edit the canonical NeXus file or make independent timestamp
@@ -202,6 +209,14 @@ The LabFrog NeXus structure is preserved and DAMNIT adds:
 optional future projection for legacy DAMNIT table workflows, not the source of
 truth.
 
+**DAMNIT-owned sidecars** stored alongside `hzdr_sources.json`:
+- `hzdr_sources.review.jsonl` — durable confirm/dismiss decisions from the
+  Confirm Matches UI; survives rebuilds; merged at `VERIFIED > REVIEWED > BASE`
+  priority.
+- `hzdr_sources.views.json` — durable saved UI table views (column visibility,
+  sorting, filters); owned by DAMNIT, not LabFrog; managed via the views API
+  (`GET/POST/DELETE /metadata/hzdr/views`).
+
 ## Production Rules
 
 - Stage and flush events before acknowledging Kafka or ASAPO.
@@ -210,3 +225,31 @@ truth.
 - Build and validate temporary outputs, then publish atomically.
 - Publish the NeXus file and source catalog from the same reconciliation result.
 - Keep source exports and spools for replay and audit.
+
+## Write Atomicity
+
+Both canonical outputs are written via a temp-file-then-atomic-rename pattern so
+that a crash or exception mid-write never leaves a half-written file for readers
+or the next builder run to trip over.
+
+**NeXus file** (`write_nexus_bridge`): writes to a sibling
+`<name>.<uuid>.tmp.nxs`, then `os.replace()`s it over the target on success.
+A failed build leaves the previous `canonical.nxs` intact. The stale `.tmp.nxs`
+is cleaned up by the next successful run.
+
+**`hzdr_sources.json` and sidecars** (`write_json_atomic`): same pattern —
+sibling `<name>.<uuid>.tmp`, then `os.replace()`. Used for the catalog, saved
+views, and any full-rewrite of a JSON/catalog file.
+
+**What this protects against**: a process killed mid-write (disk full, OOM,
+`SIGKILL`, power loss after OS flush) leaves the previous output untouched.
+It does not protect against silent bit-rot of a file that was written correctly.
+
+**Operator-decision sidecar** (`.review.jsonl`): unlike the NeXus file and
+JSON catalog, this file is not rebuildable from upstream sources — it is the
+durable record of every operator confirm/dismiss action. `append_review_decision`
+copies the sidecar to a sibling `.review.jsonl.bak` after every successful
+fsync, giving a rolling backup that is at most one decision behind the live
+file. To recover a lost sidecar, rename the `.bak` file back in place before
+the next builder run. For off-host resilience, include both files in any
+directory-level backup or sync job.
