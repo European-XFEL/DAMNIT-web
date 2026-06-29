@@ -320,11 +320,10 @@ $labfrogSqliteToolsRoot = Resolve-RepositoryPath `
     -RepoName "labfrog-sqlite-tools-repo" `
     -Label "LabFrog SQLite tools" `
     -SearchStart $repoRoot
-$planetWatchdogRoot = Resolve-RepositoryPath `
+$planetWatchdogRoot = Resolve-OptionalRepositoryPath `
     -PathValue $config.repositories.planetWatchdog `
     -BaseDir $configDir `
     -RepoName "planet-watchdog" `
-    -Label "DAQ File Watchdog" `
     -SearchStart $repoRoot
 
 
@@ -357,7 +356,7 @@ Write-Host "ASAPO harness: $asapoRoot"
 Write-Host "Kafka broker: $kafkaRoot"
 Write-Host "LabFrog: $labfrogRoot"
 Write-Host "LabFrog SQLite tools: $labfrogSqliteToolsRoot"
-Write-Host "DAQ File Watchdog: $planetWatchdogRoot"
+Write-Host "DAQ File Watchdog: $(if ($planetWatchdogRoot) { $planetWatchdogRoot } else { 'not found (skipped)' })"
 
 Write-Host "Event packages: $eventsDir"
 Write-Host "Emulator output: $outputDir"
