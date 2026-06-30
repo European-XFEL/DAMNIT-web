@@ -11,14 +11,15 @@ import {
   type Rectangle,
 } from '@glideapps/glide-data-grid'
 import { allCells } from '@glideapps/glide-data-grid-cells'
-import { Group, Stack } from '@mantine/core'
+import { Group, Stack, useMantineTheme } from '@mantine/core'
 
 import {
   errorCell,
-  errorCellRenderer,
   getCell,
+  makeErrorCellRenderer,
   numberCell,
   textCell,
+  type ErrorColors,
 } from './cells'
 import { TagsPopover } from './components/popovers/tags-popover'
 import { VariablesPopover } from './components/popovers/variables-popover'
@@ -39,8 +40,6 @@ import { getTableData } from '../../data/table'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { isArrayEqual, sorted } from '../../utils/array'
 import { isEmpty } from '../../utils/helpers'
-
-const CUSTOM_RENDERERS = [...allCells, errorCellRenderer]
 
 type Column = {
   id: string
@@ -84,6 +83,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
   const { columnVisibility } = useTable()
+  const theme = useMantineTheme()
 
   // Initialization: Memos
   const tableColumns = useMemo(
@@ -96,6 +96,20 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         )
         .map(({ name, title }) => ({ id: name, title: title || name })),
     [tableMetadata.variables, columnVisibility]
+  )
+
+  // Error-glyph colors resolved from the live theme; dark mode plugs in here.
+  const errorColors = useMemo<ErrorColors>(
+    () => ({
+      error: theme.colors.red[6],
+      missing: theme.colors.gray[5],
+      skipped: theme.colors.gray[5],
+    }),
+    [theme]
+  )
+  const renderers = useMemo(
+    () => [...allCells, makeErrorCellRenderer(errorColors)],
+    [errorColors]
   )
 
   // Data: Populate grid
@@ -428,7 +442,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               onHeaderContextMenu={handleHeaderContextMenu}
               onItemHovered={handleItemHovered}
               freezeColumns={1}
-              customRenderers={CUSTOM_RENDERERS}
+              customRenderers={renderers}
               onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}
