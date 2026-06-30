@@ -2,11 +2,11 @@
 
 ## Verified
 
-As of 2026-06-26:
+As of 2026-06-30:
 
 | Repository | Result |
 | --- | --- |
-| DAMNIT API | `186 passed, 4 skipped` |
+| DAMNIT API | `213 passed, 4 skipped` |
 | LabFrog SQLite tools | `89 passed` |
 | DAQ File Watchdog full suite | `210 passed, 3 skipped` |
 | shotcounter (`feature/hzdr-canonical-trigger-event`) | `24 passed` (1 NTP-tolerance test deselected) |
@@ -24,6 +24,22 @@ using a live in-process broker (loaded from the asapo-for-hzdr-damnit sibling
 repo). Covers: claim→write-fsync→ack cycle, no-ack-without-write, dedup by
 `event_id`, campaign offset isolation, and replay dedup surviving consumer
 restart. 11 tests; skipped automatically if the sibling repo is not present.
+
+The operational read-only views (see
+[architecture.md](architecture.md#read-only-operational-views)) each have a
+deterministic, broker-free suite:
+
+- `api/tests/test_hzdr_labfrog_sqlite.py` — builds a minimal curated campaign
+  SQLite mirroring `labfrog-sqlite-tools` and checks the campaign list, shot
+  preview, limit clamping, and the safe-empty paths (missing/unset dir, unknown
+  key, a file without a `shot_summary` view).
+- `api/tests/test_hzdr_producer_status.py` — derives DAQ File Watchdog hosts and
+  Shotcounter `absent`/`active`/`idle` status from synthetic source events,
+  including host derivation from traceability fields and TKEY recognition.
+- `api/tests/test_hzdr_flow_activity.py` — exercises the Kafka offset gatherer
+  with an injected consumer factory, the spool JSONL line/timestamp counts, and
+  the ASAPO graceful-degradation paths (unconfigured / client absent) — no real
+  broker or `asapo_consumer` client required.
 
 `api/scripts/hzdr-local-acceptance.py` is the local HTTP acceptance check:
 emulator events → `HZDREventV1` → JSONL staging → catalog rebuild →

@@ -1,11 +1,11 @@
 # Handoff
 
-Updated: 2026-06-26
+Updated: 2026-06-30
 
 ## Current State
 
 All integration branches tested and committed. DAMNIT-web-hzdr suite:
-`186 passed, 4 skipped`.
+`213 passed, 4 skipped`.
 
 - **DAMNIT-web-hzdr** (`main`): canonical `HZDREventV1` model; atomic catalog
   writes; single-writer builder lock; ambiguous/unmatched events in API; real
@@ -29,6 +29,31 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
 - **asapo-for-hzdr-damnit** (`main`): local harness proves correct
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`
   schema-version string. All committed.
+
+## Built 2026-06-30
+
+Three derived, read-only operational views for the operator UI (no writes, no
+Mongo, no broker consumer group; each degrades safely) — see
+[architecture.md §Read-Only Operational Views](architecture.md#read-only-operational-views).
+
+- `metadata/labfrog_sqlite.py` — read-only (`mode=ro`) reader for the curated
+  LabFrog campaign SQLite snapshots; `list_campaigns` / `list_campaign_shots`.
+  New setting `DW_API_METADATA__LABFROG_CURATED_DIR`. Routers:
+  `GET /metadata/hzdr/campaigns` and `.../{campaign_key}/shots`. Backs the Link
+  Records campaign picker.
+- `metadata/producer_status.py` — derives DAQ File Watchdog hosts + Shotcounter
+  `absent`/`active`/`idle` status from events already on a source.
+  Router: `GET /metadata/hzdr/sources/{key}/producer-status`.
+- `shared/flow_activity.py` — Kafka offset counts + spool JSONL line counts +
+  optional ASAPO stream sizes for the flow monitor's Live mode. New settings
+  `DW_API_HZDR_ASAPO_ACTIVITY__*` (token is a `SecretStr`). Router:
+  `GET /config/flow-activity`.
+- Frontend: `LinkRecordsPage` (curated campaign picker) and `FlowMonitorPage`
+  (Live mode) wired to the above; `types.ts` + `utils/link-records.ts` extended.
+- Tests: `test_hzdr_labfrog_sqlite.py`, `test_hzdr_producer_status.py`,
+  `test_hzdr_flow_activity.py`. Suite **213 passed, 4 skipped**.
+- `ruff.toml` — `flake8-type-checking` `runtime-evaluated-base-classes`
+  includes `pydantic.BaseModel` (Path/Iterable model fields stay runtime imports).
 
 ## Built 2026-06-26
 

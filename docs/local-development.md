@@ -14,6 +14,15 @@ GitLab/shotcounter
 
 Launchers discover sibling checkouts or use `scripts/hzdr-launch.config.json`.
 
+### ASAPO standalone image
+
+The ASAPO broker runs from the standalone image. Generate a DESY GitLab token,
+log in, and pull it manually — version `24.11.0` is known to work:
+
+```bash
+docker pull gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0
+```
+
 ```powershell
 .\scripts\hzdr-launch.ps1 -InitConfig
 .\scripts\hzdr-launch.ps1 -ValidateOnly
@@ -46,6 +55,9 @@ Point the API at the catalog:
 ```powershell
 $env:DW_API_METADATA__PROVIDER = "local"
 $env:DW_API_METADATA__SOURCES_FILE = "<hzdr_sources.json>"
+# Optional: point the Link Records campaign picker at the read-only curated
+# SQLite snapshots from labfrog-sqlite-tools (unset => no curated campaigns).
+$env:DW_API_METADATA__LABFROG_CURATED_DIR = "<curated_files>"
 uv run -m damnit_api.main
 ```
 

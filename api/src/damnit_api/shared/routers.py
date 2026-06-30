@@ -8,6 +8,7 @@ import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from .flow_activity import FlowActivity, collect_flow_activity
 from .settings import settings
 
 router = APIRouter(prefix="/config", tags=["config"])
@@ -148,6 +149,17 @@ async def get_flow_monitor_health() -> FlowMonitorHealth:
         _probe_mongo(h.mongo_uri, h.timeout),
     )
     return FlowMonitorHealth(asapo=asapo, kafka=kafka, mongo=mongo)
+
+
+@router.get("/flow-activity")
+async def get_flow_activity() -> FlowActivity:
+    """Real data-flow activity for the flow monitor's Live mode.
+
+    Read-only: Kafka offset counts (no consumer group joined), spool-file line
+    counts, and optional ASAPO stream sizes.  Each broker that is down or
+    unconfigured yields ``available=false`` rather than failing the request.
+    """
+    return await asyncio.to_thread(collect_flow_activity)
 
 
 @router.get("/runtime")

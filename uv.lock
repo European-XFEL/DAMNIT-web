@@ -502,6 +502,7 @@ requires-dist = [
     { name = "aiohttp", specifier = "~=3.11" },
     { name = "aiosqlite", specifier = "~=0.19" },
     { name = "anyio", specifier = ">=4.11.0" },
+    { name = "asapo-consumer", marker = "python_full_version < '3.13' and extra == 'asapo'", specifier = "~=24.11.0" },
     { name = "async-lru", specifier = "~=2.0" },
     { name = "authlib", specifier = "~=1.3" },
     { name = "colorama", specifier = "~=0.4" },
@@ -530,6 +531,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.29" },
     { name = "xarray", specifier = ">=2024.11" },
 ]
+provides-extras = ["asapo"]
 
 [package.metadata.requires-dev]
 dev = [

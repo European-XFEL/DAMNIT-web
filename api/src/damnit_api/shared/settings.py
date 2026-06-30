@@ -82,6 +82,7 @@ class DamnitSettings(BaseModel):
 class MetadataSettings(BaseModel):
     provider: str = "local"
     sources_file: Path | None = None
+    labfrog_curated_dir: Path | None = None
     mongo_uri: str = "mongodb://localhost:27017"
     mongo_database: str = "damnit_web_test"
     mongo_collection: str = "hzdr_sources"
@@ -286,6 +287,38 @@ class HZDRHealthSettings(BaseModel):
     timeout: float = 2.0
 
 
+class HZDRAsapoActivitySettings(BaseModel):
+    """Optional config to surface real ASAPO stream activity in the flow monitor.
+
+    The ASAPO broker query needs the optional ``asapo_consumer`` client
+    (``uv sync --extra asapo`` / ``pip install 'damnit-api[asapo]'``).  When the
+    client or any required field below is missing, ``GET /config/flow-activity``
+    degrades gracefully: ASAPO falls back to reachability-only (still reported by
+    ``GET /config/health``) and the activity block reports ``available=false``
+    with a reason, never raising.
+
+    The token is a SecretStr so it is never serialized into responses or logs.
+    """
+
+    endpoint: str = ""
+    beamtime: str = ""
+    data_source: str = ""
+    token: SecretStr = SecretStr("")
+    source_path: str = ""
+    has_filesystem: bool = False
+    timeout_ms: int = 3000
+
+    @property
+    def configured(self) -> bool:
+        """True only when every field needed to open an ASAPO consumer is set."""
+        return bool(
+            self.endpoint
+            and self.beamtime
+            and self.data_source
+            and self.token.get_secret_value()
+        )
+
+
 class HZDRWikiSettings(BaseModel):
     """MediaWiki link configuration for campaign pages.
 
@@ -357,6 +390,10 @@ class Settings(BaseSettings):
     )
 
     hzdr_health: HZDRHealthSettings = Field(default_factory=HZDRHealthSettings)
+
+    hzdr_asapo_activity: HZDRAsapoActivitySettings = Field(
+        default_factory=HZDRAsapoActivitySettings
+    )
 
     hzdr_wiki: HZDRWikiSettings = Field(default_factory=HZDRWikiSettings)
 

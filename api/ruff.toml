@@ -50,3 +50,8 @@ ignore = ["B018", "B019", "ISC001", "RUF067"]
 
 [lint.isort]
 known-local-folder = ["src"]
+
+[lint.flake8-type-checking]
+# Pydantic evaluates model annotations at runtime, so imports used only in
+# model fields (e.g. pathlib.Path) must stay as real imports, not TYPE_CHECKING.
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]

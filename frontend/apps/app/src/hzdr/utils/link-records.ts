@@ -5,6 +5,104 @@ import type {
   LinkRecordsDraft,
   BuiltLinkRecordsPackage,
 } from '../types'
+import { requireJson } from './api'
+
+// New Link Records types live here (not in types.ts) to avoid colliding with
+// the concurrent FlowMonitor/types.ts edits.
+
+export interface LabFrogCampaignRef {
+  key: string
+  title: string
+  sqlite_path: string
+  source_database: string | null
+  source_collection: string | null
+  row_count: number | null
+  exported_at: string | null
+  shot_date_min: string | null
+  shot_date_max: string | null
+}
+
+export interface LabFrogCampaignShot {
+  shot_id: string | null
+  day_shot_key: string | null
+  shot_number: number | null
+  date_time: string | null
+  shot_date: string | null
+  campaign: string | null
+  target: string | null
+  status: string | null
+}
+
+export interface WatchdogHost {
+  host: string
+  watcher: string | null
+  transport: string | null
+  last_seen: string | null
+  event_count: number
+}
+
+export interface ShotcounterStatus {
+  status: string
+  last_event_at: string | null
+  tkeys_seen: string[]
+  event_count: number
+}
+
+export interface HZDRProducerStatus {
+  source_key: string
+  watchdog_hosts: WatchdogHost[]
+  shotcounter: ShotcounterStatus
+}
+
+export interface HZDRWikiInfo {
+  source_key: string
+  experiment_id: string | null
+  page_title: string | null
+  page_url: string | null
+  configured: boolean
+  exists: boolean | null
+  last_modified: string | null
+  page_id: number | null
+  categories: string[]
+}
+
+export async function fetchHZDRCampaigns(): Promise<LabFrogCampaignRef[]> {
+  return requireJson<LabFrogCampaignRef[]>(
+    await fetch('/metadata/hzdr/campaigns')
+  )
+}
+
+export async function fetchHZDRCampaignShots(
+  campaignKey: string,
+  limit = 200
+): Promise<LabFrogCampaignShot[]> {
+  return requireJson<LabFrogCampaignShot[]>(
+    await fetch(
+      `/metadata/hzdr/campaigns/${encodeURIComponent(campaignKey)}/shots?limit=${limit}`
+    )
+  )
+}
+
+export async function fetchHZDRProducerStatus(
+  sourceKey: string
+): Promise<HZDRProducerStatus> {
+  return requireJson<HZDRProducerStatus>(
+    await fetch(
+      `/metadata/hzdr/sources/${encodeURIComponent(sourceKey)}/producer-status`
+    )
+  )
+}
+
+export async function fetchHZDRSourceWiki(
+  sourceKey: string,
+  fetchLive = true
+): Promise<HZDRWikiInfo> {
+  return requireJson<HZDRWikiInfo>(
+    await fetch(
+      `/metadata/hzdr/sources/${encodeURIComponent(sourceKey)}/wiki?fetch=${fetchLive}`
+    )
+  )
+}
 
 export function buildLinkRecordsDraft({
   sources,

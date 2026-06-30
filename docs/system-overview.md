@@ -233,6 +233,24 @@ python api/scripts/hzdr-hdf5-builder.py \
 # -> writes <campaign>.nxs and (next to it) hzdr_sources.json
 ```
 
+### Operational read-only views (for the operator UI)
+
+Alongside the canonical outputs, the API exposes three derived, read-only views
+that back the operator pages without writing anything or joining a broker
+consumer group (full detail in
+[architecture.md](architecture.md#read-only-operational-views)):
+
+| View | Endpoint(s) | Reads | Backs |
+| --- | --- | --- | --- |
+| Curated LabFrog campaigns | `GET /metadata/hzdr/campaigns`, `.../{campaign_key}/shots` | `labfrog-sqlite-tools` `curated_files/*.sqlite` (read-only), via `DW_API_METADATA__LABFROG_CURATED_DIR` | Link Records campaign picker / record reference |
+| Producer status | `GET /metadata/hzdr/sources/{key}/producer-status` | events already on the source (no new I/O) | DAQ File Watchdog hosts + Shotcounter liveness |
+| Flow activity | `GET /config/flow-activity` | Kafka offset counts, spool JSONL line counts, optional ASAPO stream sizes | Flow Monitor **Live** mode |
+
+Each gatherer is defensive: a broker that is down, a missing client, or an
+unconfigured path yields an empty / `available=false` block rather than failing
+the request, so these are safe to poll even while the real spool consumers are
+disabled.
+
 ## Running the Whole Thing Locally
 
 Each repo has its own `CLAUDE.md` and `README.md` with exact commands. The fastest
