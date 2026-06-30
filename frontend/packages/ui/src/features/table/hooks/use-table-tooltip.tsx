@@ -9,41 +9,46 @@ import {
 import { type GridMouseEventArgs } from '@glideapps/glide-data-grid'
 import { type IBounds, useLayer } from 'react-laag'
 
-import { ErrorTooltip } from '../components/error-tooltip'
+import {
+  TableTooltip,
+  type CellTooltip,
+} from '../components/tooltips/table-tooltip'
+import { ZERO_BOUNDS, toBounds } from '../bounds'
+import { assertNever } from '../../../utils/helpers'
 
-import { type VariableError } from '../../../types'
-
-type TooltipState = { error: VariableError; bounds: IBounds }
-
-const ZERO_BOUNDS: IBounds = {
-  left: 0,
-  top: 0,
-  width: 0,
-  height: 0,
-  right: 0,
-  bottom: 0,
-}
-
-const CLOSE_GRACE_MS = 1000
-const OPEN_DWELL_MS = 500
+const DELAY = { open: 200, switch: 60, close: 200 }
 const TRIGGER_OFFSET = 8
-const ICON_SIZE = 20
-const ICON_PADDING = 8
-// 10px tooltip right padding + 26/2 ActionIcon(sm), so `bottom-end` lands
-// the Copy button on the icon column.
-const COPY_BUTTON_RIGHT_INSET = 23
+
+type TooltipState = { target: CellTooltip; bounds: IBounds }
+type UseTableTooltipOptions = { suppressed?: boolean }
+
+const sameContent = (a: CellTooltip, b: CellTooltip): boolean => {
+  switch (a.kind) {
+    case 'error':
+      return (
+        b.kind === 'error' &&
+        a.error.cls === b.error.cls &&
+        a.error.message === b.error.message
+      )
+    case 'image':
+      return b.kind === 'image' && a.src === b.src
+    default:
+      return assertNever(a)
+  }
+}
 
 const sameTarget = (
   a: TooltipState | null | undefined,
   b: TooltipState
 ): boolean =>
   !!a &&
-  a.error === b.error &&
   a.bounds.left === b.bounds.left &&
-  a.bounds.top === b.bounds.top
+  a.bounds.top === b.bounds.top &&
+  sameContent(a.target, b.target)
 
-export const useErrorTooltip = (
-  lookupError: (col: number, row: number) => VariableError | undefined
+export const useTableTooltip = (
+  resolve: (col: number, row: number) => CellTooltip | undefined,
+  { suppressed = false }: UseTableTooltipOptions = {}
 ) => {
   const [tooltip, setTooltip] = useState<TooltipState>()
   const tooltipRef = useRef<TooltipState | undefined>(tooltip)
@@ -51,7 +56,6 @@ export const useErrorTooltip = (
   const openTimerRef = useRef<number>(0)
   const rehoverFrameRef = useRef<number>(0)
   const pendingTargetRef = useRef<TooltipState | null>(null)
-  const engagedRef = useRef(false)
   const cursorRef = useRef<{ x: number; y: number } | null>(null)
 
   useLayoutEffect(() => {
@@ -75,9 +79,8 @@ export const useErrorTooltip = (
   const scheduleClose = useCallback(() => {
     window.clearTimeout(closeTimerRef.current)
     closeTimerRef.current = window.setTimeout(() => {
-      engagedRef.current = false
       setTooltip(undefined)
-    }, CLOSE_GRACE_MS)
+    }, DELAY.close)
   }, [])
 
   const cancelOpen = useCallback(() => {
@@ -85,30 +88,37 @@ export const useErrorTooltip = (
     pendingTargetRef.current = null
   }, [])
 
-  const scheduleOpen = useCallback((target: TooltipState) => {
+  // Cold first-open waits DELAY.open; switching while one is already showing
+  // (warm) waits the shorter DELAY.switch so the tooltip follows the cursor
+  // down a column without re-incurring the full delay.
+  const scheduleOpen = useCallback((next: TooltipState) => {
     window.clearTimeout(openTimerRef.current)
-    if (engagedRef.current) {
-      pendingTargetRef.current = null
-      setTooltip(target)
-      return
-    }
-    pendingTargetRef.current = target
+    const delay = tooltipRef.current ? DELAY.switch : DELAY.open
+    pendingTargetRef.current = next
     openTimerRef.current = window.setTimeout(() => {
       pendingTargetRef.current = null
-      setTooltip(target)
-    }, OPEN_DWELL_MS)
+      // Sync the bounds ref before the state commit so react-laag positions
+      // against the new cell on first paint instead of flashing at the old one.
+      tooltipRef.current = next
+      setTooltip(next)
+    }, delay)
   }, [])
 
   const dismiss = useCallback(() => {
     cancelOpen()
     cancelClose()
-    engagedRef.current = false
     setTooltip(undefined)
   }, [cancelClose, cancelOpen])
 
-  // Glide doesn't refire hover after a layout shift. Wait one frame for
-  // the tooltip portal to unmount, then dispatch a synthetic mousemove
-  // so Glide re-evaluates which cell is under the cursor.
+  useEffect(() => {
+    if (suppressed) {
+      dismiss()
+    }
+  }, [suppressed, dismiss])
+
+  // Glide doesn't refire hover after a layout shift. Wait one frame for the
+  // tooltip portal to unmount, then dispatch a synthetic mousemove so Glide
+  // re-evaluates which cell is under the cursor.
   const rehoverAtCursor = useCallback(() => {
     const cursor = cursorRef.current
     if (!cursor) {
@@ -138,7 +148,6 @@ export const useErrorTooltip = (
   }, [dismiss, rehoverAtCursor])
 
   const onBodyEnter = useCallback(() => {
-    engagedRef.current = true
     cancelOpen()
     cancelClose()
   }, [cancelClose, cancelOpen])
@@ -149,42 +158,36 @@ export const useErrorTooltip = (
 
   const onItemHovered = useCallback(
     (args: GridMouseEventArgs) => {
+      if (suppressed) {
+        return
+      }
       if (args.kind !== 'cell') {
         cancelOpen()
         scheduleClose()
         return
       }
       const [col, row] = args.location
-      const error = lookupError(col, row)
-      if (!error) {
+      const content = resolve(col, row)
+      if (!content) {
         cancelOpen()
         scheduleClose()
         return
       }
       cancelClose()
-      const iconCenterX =
-        args.bounds.x + args.bounds.width - ICON_PADDING - ICON_SIZE / 2
-      const target: TooltipState = {
-        error,
-        bounds: {
-          left: iconCenterX - COPY_BUTTON_RIGHT_INSET,
-          top: args.bounds.y,
-          width: COPY_BUTTON_RIGHT_INSET * 2,
-          height: args.bounds.height,
-          right: iconCenterX + COPY_BUTTON_RIGHT_INSET,
-          bottom: args.bounds.y + args.bounds.height,
-        },
+      const next: TooltipState = {
+        target: content,
+        bounds: toBounds(args.bounds),
       }
-      if (sameTarget(tooltipRef.current, target)) {
+      if (sameTarget(tooltipRef.current, next)) {
         cancelOpen()
         return
       }
-      if (sameTarget(pendingTargetRef.current, target)) {
+      if (sameTarget(pendingTargetRef.current, next)) {
         return
       }
-      scheduleOpen(target)
+      scheduleOpen(next)
     },
-    [lookupError, cancelClose, cancelOpen, scheduleClose, scheduleOpen]
+    [resolve, cancelClose, cancelOpen, scheduleClose, scheduleOpen, suppressed]
   )
 
   useEffect(
@@ -221,8 +224,8 @@ export const useErrorTooltip = (
 
   const { renderLayer, layerProps, arrowProps } = useLayer({
     isOpen: tooltip !== undefined,
-    placement: 'bottom-end',
-    possiblePlacements: ['bottom-end', 'top-end', 'bottom-start', 'top-start'],
+    placement: 'right-start',
+    possiblePlacements: ['right-start', 'left-start', 'right-end', 'left-end'],
     auto: true,
     triggerOffset: TRIGGER_OFFSET,
     container: 'portal',
@@ -235,8 +238,8 @@ export const useErrorTooltip = (
     dismissOnScroll,
     tooltip: tooltip
       ? renderLayer(
-          <ErrorTooltip
-            error={tooltip.error}
+          <TableTooltip
+            target={tooltip.target}
             layerProps={layerProps}
             arrowProps={arrowProps}
             onMouseEnter={onBodyEnter}

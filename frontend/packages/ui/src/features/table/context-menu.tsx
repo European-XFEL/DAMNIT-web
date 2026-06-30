@@ -5,6 +5,7 @@ import { ContextMenuPortal as MantineContextMenu } from 'mantine-contextmenu'
 import ContextMenuItem, {
   type ContextMenuItemOptions,
 } from './context-menu-item'
+import { toBounds } from './bounds'
 
 export type ContextMenuProps = {
   localPosition: { x: number; y: number }
@@ -31,14 +32,7 @@ const ContextMenu = ({
     triggerOffset: 2,
     // onOutsideClick,
     trigger: {
-      getBounds: () => ({
-        left: bounds.x ?? 0,
-        top: bounds.y ?? 0,
-        width: bounds.width ?? 0,
-        height: bounds.height ?? 0,
-        right: (bounds.x ?? 0) + (bounds.width ?? 0),
-        bottom: (bounds.y ?? 0) + (bounds.height ?? 0),
-      }),
+      getBounds: () => toBounds(bounds),
     },
   })
 

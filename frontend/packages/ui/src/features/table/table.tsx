@@ -22,8 +22,9 @@ import {
 } from './cells'
 import { TagsPopover } from './components/popovers/tags-popover'
 import { VariablesPopover } from './components/popovers/variables-popover'
+import { type CellTooltip } from './components/tooltips/table-tooltip'
 import ContextMenu from './context-menu'
-import { useErrorTooltip } from './hooks/use-error-tooltip'
+import { useTableTooltip } from './hooks/use-table-tooltip'
 import { useTable } from './hooks/use-table'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
@@ -32,7 +33,7 @@ import { selectRun } from './table.slice'
 import { canPlotData } from '../plots/utils'
 import { addPlot } from '../plots/plots.slice'
 
-import { EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
+import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
 import { getExtractedValue } from '../../data/extracted'
 import { getTableData } from '../../data/table'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
@@ -126,22 +127,37 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     [tableColumns, tableMetadata.runs, tableData, tableLastUpdate]
   )
 
-  // Cell: Error tooltip (shown when hovering an errored variable's cell).
-  const lookupError = useCallback(
-    (col: number, row: number) => {
+  // Cell: tooltip. Errored cells show a card; image cells show a preview.
+  const resolveTooltip = useCallback(
+    (col: number, row: number): CellTooltip | undefined => {
       const run = tableMetadata.runs[row]
       const variable = tableColumns[col]?.id
-      return run != null && variable
-        ? tableData[run]?.[variable]?.error
-        : undefined
+      if (run == null || !variable) {
+        return undefined
+      }
+      const item = tableData[run]?.[variable]
+      if (!item) {
+        return undefined
+      }
+      if (item.error) {
+        return { kind: 'error', error: item.error }
+      }
+      if (
+        item.dtype === DTYPES.image &&
+        typeof item.value === 'string' &&
+        item.value
+      ) {
+        return { kind: 'image', src: item.value }
+      }
+      return undefined
     },
     [tableColumns, tableMetadata.runs, tableData]
   )
   const {
     onItemHovered: handleItemHovered,
-    dismissOnScroll: dismissErrorTooltipOnScroll,
-    tooltip: errorTooltip,
-  } = useErrorTooltip(lookupError)
+    dismissOnScroll: dismissTooltipOnScroll,
+    tooltip,
+  } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
 
   // Cell: Click event
   const [gridSelection, setGridSelection] = useState<GridSelection>({
@@ -381,10 +397,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         previous.ty !== nextTy
       lastVisibleRegionRef.current = { rect, tx: nextTx, ty: nextTy }
       if (scrolled) {
-        dismissErrorTooltipOnScroll()
+        dismissTooltipOnScroll()
       }
     },
-    [paginationHandler, scrollToViewHandler, dismissErrorTooltipOnScroll]
+    [paginationHandler, scrollToViewHandler, dismissTooltipOnScroll]
   )
 
   return (
@@ -417,7 +433,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}
             />
-            {errorTooltip}
+            {tooltip}
             <ContextMenu {...contextMenu} />
             <div id="portal" />
           </>
