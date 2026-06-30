@@ -313,9 +313,7 @@ def test_wiki_endpoint_with_fetch_param_calls_api(local_app):
         )
 
         with TestClient(local_app) as client:
-            resp = client.get(
-                f"/metadata/hzdr/sources/{SOURCE_KEY}/wiki?fetch=true"
-            )
+            resp = client.get(f"/metadata/hzdr/sources/{SOURCE_KEY}/wiki?fetch=true")
 
     assert resp.status_code == 200
     data = resp.json()
