@@ -16,7 +16,7 @@ import {
 import { ZERO_BOUNDS, toBounds } from '../bounds'
 import { assertNever } from '../../../utils/helpers'
 
-const DELAY = { open: 250, switch: 80, close: 400 }
+const DELAY = { open: 200, switch: 60, close: 200 }
 const TRIGGER_OFFSET = 8
 
 type TooltipState = { target: CellTooltip; bounds: IBounds }
@@ -97,6 +97,9 @@ export const useTableTooltip = (
     pendingTargetRef.current = next
     openTimerRef.current = window.setTimeout(() => {
       pendingTargetRef.current = null
+      // Sync the bounds ref before the state commit so react-laag positions
+      // against the new cell on first paint instead of flashing at the old one.
+      tooltipRef.current = next
       setTooltip(next)
     }, delay)
   }, [])
