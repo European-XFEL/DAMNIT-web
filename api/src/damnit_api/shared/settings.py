@@ -30,6 +30,11 @@ class LDAPSettings(BaseModel):
     timeout: int = 5
 
 
+# Auth modes that disable OAuth entirely and serve the local DEV_USER. Use these
+# to debug before an OIDC certificate/IdP is available.
+NOAUTH_MODES = frozenset({"none", "noauth", "disabled"})
+
+
 class AuthSettings(BaseModel):
     mode: str = "ldap"
     client_id: str = ""
@@ -38,6 +43,16 @@ class AuthSettings(BaseModel):
         HttpUrl, UrlConstraints(allowed_schemes=["https"])
     ] = "https://localhost/.well-known/openid-configuration"  # pyright: ignore[reportAssignmentType]
     ldap: LDAPSettings = Field(default_factory=LDAPSettings)
+
+    @property
+    def is_disabled(self) -> bool:
+        """True when `mode` turns auth off and the API serves the local DEV_USER."""
+        return self.mode in NOAUTH_MODES
+
+    @property
+    def uses_oauth(self) -> bool:
+        """True only for OAuth/OIDC backends that need server-metadata discovery."""
+        return self.mode != "ldap" and not self.is_disabled
 
 
 class DamnitSettings(BaseModel):

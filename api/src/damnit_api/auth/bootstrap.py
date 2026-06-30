@@ -30,6 +30,13 @@ async def bootstrap(settings: "Settings"):
         await logger.ainfo("Using LDAP authentication backend")
         return
 
+    if settings.auth.is_disabled:
+        await logger.awarning(
+            "Auth mode disables OAuth; skipping OAuth bootstrap",
+            mode=settings.auth.mode,
+        )
+        return
+
     global __OAUTH
     __OAUTH = OAuth()
 
@@ -37,7 +44,21 @@ async def bootstrap(settings: "Settings"):
         await logger.ainfo("Configuring OAuth client")
         _register(settings.auth)
         damnit_api.auth.__CLIENT = __OAUTH.damnit_web  # type: ignore[assignment, no-redef]
-        await damnit_api.auth.__CLIENT.load_server_metadata()  # pyright: ignore[reportOptionalMemberAccess]
+        try:
+            await damnit_api.auth.__CLIENT.load_server_metadata()  # pyright: ignore[reportOptionalMemberAccess]
+        except Exception as exc:
+            # In debug, don't let an unreachable/invalid OIDC discovery endpoint
+            # (e.g. missing TLS certificate) abort startup — let the operator
+            # debug the rest of the app. Production still fails loudly.
+            if not settings.debug:
+                raise
+            await logger.awarning(
+                "Could not load OAuth server metadata; continuing because "
+                "DW_API_DEBUG is true. OAuth login is unavailable until the "
+                "discovery endpoint and its certificate are reachable.",
+                server_metadata_url=str(settings.auth.server_metadata_url),
+                error=str(exc),
+            )
     else:
         await logger.awarning("OAuth client already configured")
 

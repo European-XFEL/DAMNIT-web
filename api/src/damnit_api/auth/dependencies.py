@@ -25,7 +25,7 @@ Client = Annotated[StarletteOAuth2App, Depends(get_oauth_client)]
 
 def get_optional_oauth_client() -> StarletteOAuth2App | None:
     """Return an OAuth client only when OAuth is the active auth backend."""
-    if settings.auth.mode == "ldap":  # pyright: ignore[reportOptionalMemberAccess]
+    if settings.auth is None or not settings.auth.uses_oauth:
         return None
     return get_oauth_client()
 

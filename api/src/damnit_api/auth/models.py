@@ -45,7 +45,7 @@ class OAuthUserInfo(BaseUserInfo):
         if user_dict is None:
             from ..shared.settings import settings
 
-            if settings.is_local and settings.auth is None:
+            if settings.auth is None or settings.auth.is_disabled:
                 return DEV_USER  # type: ignore[return-value]
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
