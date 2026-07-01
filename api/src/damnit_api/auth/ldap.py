@@ -51,11 +51,15 @@ def authenticate_ldap_user(settings: LDAPSettings, login: LDAPLogin) -> dict:
 
     try:
         attributes = [
-            settings.display_name_attribute,
-            settings.email_attribute,
-            settings.family_name_attribute,
-            settings.given_name_attribute,
-            settings.groups_attribute,
+            attr
+            for attr in (
+                settings.display_name_attribute,
+                settings.email_attribute,
+                settings.family_name_attribute,
+                settings.given_name_attribute,
+                settings.groups_attribute,
+            )
+            if attr
         ]
         user_record = _search_user_record(
             settings, connection, login.username, attributes

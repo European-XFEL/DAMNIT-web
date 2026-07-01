@@ -15,7 +15,7 @@
     "mongo": 27018
   },
   "auth": {
-    "mode": "none"
+    "mode": "ldap"
   },
   "connections": {
     "shotcounter": {
