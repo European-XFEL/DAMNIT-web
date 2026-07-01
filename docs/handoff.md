@@ -73,6 +73,19 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
   metadata provider path.
 - `metadata/services.py` — an empty/`"none"` DAMNIT path now resolves to
   `None` rather than a literal `"none"` string, for local dev.
+- **Real-ingestion verification pass** — re-checked the ASAPO/Kafka/LabFrog
+  transition against the code rather than prior doc claims.
+  `.env.production.example` now documents the real `BROKER_KIND=asapo` +
+  `ASAPO_*` settings and `DW_API_HZDR_ASAPO_ACTIVITY__*` (both were missing
+  before, so an operator following the template alone could not configure
+  the real broker path); `main.py`'s ASAPO consumer startup log no longer
+  logs an always-empty `broker_url` when `broker_kind=asapo`. Two gaps found
+  but **not yet fixed** — see `integration-roadmap.md`'s 2026-07-01
+  verification note: (1) no consumer overrides `on_new_events()`, so the
+  builder is never auto-triggered by new spool events, and no cron/timer
+  fills that gap either; (2) there is no ASAPO equivalent of
+  `test_hzdr_broker_roundtrip.py` — `RealAsapoSpoolConsumer` has only been
+  tested against a fake in-process SDK stub.
 
 ## Built 2026-06-30
 
@@ -106,7 +119,7 @@ Mongo, no broker consumer group; each degrades safely) — see
 - `metadata/routers.py` — `GET /metadata/hzdr/sources/{key}/wiki` and `?fetch=true` (live MediaWiki Action API call); `_fetch_wiki_page_info` helper
 - `api/tests/test_hzdr_wiki.py` — 10 new tests (URL derivation, unconfigured wiki, explicit override, fallback to source_key, 404, async fetch mock, missing-page flag, network error, `fetch=true` param, settings defaults)
 - `docs/` — split into focused docs: `event-schema.md`, `mediawiki-integration.md`, `standards-alignment.md`, `alignment-implementation-plan.md`; README index updated
-- Suite: **196 passed, 15 skipped** (15 skips are broker integration tests requiring `KAFKA_TEST_BROKER` / `ASAPO_TEST_BROKER`)
+- Suite: **196 passed, 15 skipped** (15 skips are broker integration tests requiring `KAFKA_TEST_BROKER`; there is no ASAPO equivalent yet — see `integration-roadmap.md`'s 2026-07-01 verification pass)
 
 ## Built 2026-06-22/23
 
@@ -133,10 +146,18 @@ Mongo, no broker consumer group; each degrades safely) — see
    defaults for production.
 2. **Point the deployed API at the real ASAPO/Kafka brokers** —
    `RealAsapoSpoolConsumer` (`consumer/asapo.py`) and
-   `DW_API_HZDR_SPOOL__BROKER_KIND=asapo` are implemented; what's left is
-   setting the real `ASAPO_ENDPOINT`/`BEAMTIME`/`DATA_SOURCE`/`TOKEN` on
-   [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)
-   and running the gated integration test against the live broker.
+   `DW_API_HZDR_SPOOL__BROKER_KIND=asapo` are implemented and now documented
+   in `.env.production.example`; what's left is setting the real
+   `ASAPO_ENDPOINT`/`BEAMTIME`/`DATA_SOURCE`/`TOKEN` on
+   [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/),
+   **writing** an ASAPO real-broker roundtrip test (no equivalent of
+   `test_hzdr_broker_roundtrip.py` exists yet for ASAPO), and then running it
+   against the live broker.
+2a. **Automate the builder trigger** — `on_new_events()` in
+   `consumer/spool.py` is currently a no-op for every consumer, and no
+   cron/systemd-timer unit exists for `hzdr-hdf5-builder.py`. Real events
+   will sit in the spool without updating the catalog until this is wired up
+   (either the hook or an external timer).
 3. **Capture one real pilot sequence** and run the go-live gate in
    [integration-roadmap.md](integration-roadmap.md).
 4. **Standards alignment Phase 0** — lock the `metadata.*` namespace convention;

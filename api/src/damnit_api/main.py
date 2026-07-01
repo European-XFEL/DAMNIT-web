@@ -63,7 +63,12 @@ def create_app():  # noqa: C901
             logger.info(
                 "ASAPO spool consumer started",
                 campaign=settings.hzdr_spool.campaign,
-                broker=settings.hzdr_spool.broker_url,
+                broker_kind=settings.hzdr_spool.broker_kind,
+                broker=(
+                    settings.hzdr_spool.broker_url
+                    if settings.hzdr_spool.broker_kind == "http"
+                    else settings.hzdr_spool.asapo_endpoint
+                ),
             )
         if settings.hzdr_kafka_spool.enabled:
             from .consumer.kafka import KafkaSpoolConsumer
