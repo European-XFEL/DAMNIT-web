@@ -12,8 +12,7 @@
     "gui": 5173,
     "asapoBroker": 8765,
     "kafka": 9092,
-    "mongo": 27018,
-    "web":8005
+    "mongo": 27018
   },
   "auth": {
     "mode": "none"

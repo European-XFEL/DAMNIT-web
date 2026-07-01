@@ -10,21 +10,42 @@ class LDAPLogin(BaseModel):
     password: SecretStr
 
 
+def _build_tls(settings: LDAPSettings):
+    """Build the ldap3 Tls config, or None to fall back to ldap3's own default."""
+    import ssl
+
+    from ldap3 import Tls
+
+    if not settings.validate_cert:
+        return Tls(validate=ssl.CERT_NONE)
+
+    # ca_certs_file=None makes ldap3 fall back to the system trust store.
+    return Tls(
+        validate=ssl.CERT_REQUIRED,
+        ca_certs_file=str(settings.ca_cert_file) if settings.ca_cert_file else None,
+    )
+
+
 def authenticate_ldap_user(settings: LDAPSettings, login: LDAPLogin) -> dict:
     """Authenticate a user with LDAP and return session-compatible user info."""
     if not settings.server_url:
         msg = "LDAP server is not configured"
         raise RuntimeError(msg)
 
-    from ldap3 import ALL, Connection, Server
+    from ldap3 import ALL, AUTO_BIND_TLS_BEFORE_BIND, Connection, Server
 
     user_dn = _get_user_dn(settings, login.username)
-    server = Server(settings.server_url, get_info=ALL, connect_timeout=settings.timeout)
+    server = Server(
+        settings.server_url,
+        get_info=ALL,
+        connect_timeout=settings.timeout,
+        tls=_build_tls(settings),
+    )
     connection = Connection(
         server,
         user=user_dn,
         password=login.password.get_secret_value(),
-        auto_bind=True,
+        auto_bind=AUTO_BIND_TLS_BEFORE_BIND if settings.start_tls else True,
         receive_timeout=settings.timeout,
     )
 

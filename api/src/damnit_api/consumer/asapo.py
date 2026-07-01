@@ -1,7 +1,7 @@
-"""ASAPO spool consumer using the harness HTTP broker interface.
+"""ASAPO spool consumers.
 
 The local broker in ``asapo-for-hzdr-damnit/tools/local_message_suite.py``
-and the drop-in production scripts expose the same HTTP API:
+exposes a small HTTP API:
 
     GET  /api/claim?group=<g>&campaign=<c>&limit=<n>
          → { "messages": [...], "ack": { "group", "campaign", "offset" } }
@@ -9,16 +9,14 @@ and the drop-in production scripts expose the same HTTP API:
     POST /api/ack
          body: { "group": <g>, "campaign": <c>, "offset": <n> }
 
-This consumer uses ``httpx.AsyncClient`` (already a project dependency) so
-the poll loop is non-blocking inside the FastAPI asyncio event loop.
-
-Production swap: point ``broker_url`` at the real ASAPO broker endpoint and
-set the ``campaign`` / ``consumer_group`` to match the deployment.  No other
-code changes are needed.
+Real ASAPO uses the optional DESY ``asapo_consumer`` SDK.  Both transports feed
+the same ``HZDRSpoolConsumer`` claim/write-fsync/ack loop.
 """
 
 from __future__ import annotations
 
+import asyncio
+import json
 import urllib.parse
 from pathlib import Path  # noqa: TC003
 from typing import Any
@@ -66,7 +64,7 @@ class AsapoSpoolConsumer(HZDRSpoolConsumer):
         response.raise_for_status()
 
     @classmethod
-    def from_settings(cls, spool_root: Path) -> AsapoSpoolConsumer:
+    def from_settings(cls, spool_root: Path) -> HZDRSpoolConsumer:
         """Build from the DW_API_HZDR_SPOOL__* settings block."""
         from ..shared.settings import settings
 
@@ -79,6 +77,18 @@ class AsapoSpoolConsumer(HZDRSpoolConsumer):
             poll_interval=settings.hzdr_spool.poll_interval,
             batch_size=settings.hzdr_spool.batch_size,
         )
+        if settings.hzdr_spool.broker_kind == "asapo":
+            return RealAsapoSpoolConsumer(
+                config=cfg,
+                endpoint=settings.hzdr_spool.asapo_endpoint,
+                beamtime=settings.hzdr_spool.asapo_beamtime,
+                data_source=settings.hzdr_spool.asapo_data_source,
+                token=settings.hzdr_spool.asapo_token.get_secret_value(),
+                stream=settings.hzdr_spool.asapo_stream,
+                source_path=settings.hzdr_spool.asapo_source_path,
+                has_filesystem=settings.hzdr_spool.asapo_has_filesystem,
+                timeout_ms=settings.hzdr_spool.asapo_timeout_ms,
+            )
         broker_url = settings.hzdr_spool.broker_url
         # The model validator on HZDRSpoolSettings already rejects enabled=True
         # without a broker_url, so this guard is only reached in a valid config.
@@ -86,3 +96,116 @@ class AsapoSpoolConsumer(HZDRSpoolConsumer):
             msg = "broker_url required (validated by HZDRSpoolSettings)"
             raise RuntimeError(msg)
         return cls(config=cfg, broker_url=broker_url)
+
+
+class RealAsapoSpoolConsumer(HZDRSpoolConsumer):
+    """Real ASAPO SDK consumer with ack-after-fsync semantics."""
+
+    def __init__(
+        self,
+        config: SpoolConfig,
+        endpoint: str,
+        beamtime: str,
+        data_source: str,
+        token: str,
+        stream: str = "default",
+        source_path: str = "auto",
+        has_filesystem: bool = False,
+        timeout_ms: int = 5000,
+        sdk_consumer: Any | None = None,
+        sdk_module: Any | None = None,
+    ) -> None:
+        super().__init__(config)
+        self._stream = stream
+        self._sdk_module = sdk_module
+        if sdk_consumer is not None:
+            self._consumer = sdk_consumer
+            return
+        sdk = self._import_sdk()
+        self._consumer = sdk.create_consumer(
+            endpoint,
+            source_path,
+            has_filesystem,
+            beamtime,
+            data_source,
+            token,
+            timeout_ms,
+        )
+
+    async def aclose(self) -> None:
+        return None
+
+    async def _claim(self) -> tuple[list[dict[str, Any]], Any]:
+        return await asyncio.to_thread(self._claim_sync)
+
+    async def _ack(self, token: Any) -> None:
+        await asyncio.to_thread(self._ack_sync, token)
+
+    def _claim_sync(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        messages: list[dict[str, Any]] = []
+        ack_tokens: list[dict[str, Any]] = []
+        for _ in range(self.config.batch_size):
+            try:
+                data, meta = self._consumer.get_next(
+                    self.config.consumer_group,
+                    stream=self._stream,
+                    meta_only=False,
+                    ordered=True,
+                )
+            except self._end_of_stream_errors():
+                break
+            message = self._decode_message(data, meta)
+            messages.append(message)
+            ack_tokens.append({"message_id": meta["_id"], "stream": self._stream})
+        return messages, ack_tokens
+
+    def _ack_sync(self, token: Any) -> None:
+        if not token:
+            return
+        for item in token:
+            self._consumer.acknowledge(
+                self.config.consumer_group,
+                item["message_id"],
+                stream=item["stream"],
+            )
+
+    def _decode_message(self, data: Any, meta: dict[str, Any]) -> dict[str, Any]:
+        if hasattr(data, "tobytes"):
+            raw = data.tobytes()
+        elif isinstance(data, bytes):
+            raw = data
+        else:
+            raw = bytes(data)
+        message = json.loads(raw.decode("utf-8"))
+        if not isinstance(message, dict):
+            msg = "ASAPO message payload must decode to a JSON object"
+            raise ValueError(msg)
+        payload_ref = message.setdefault("payload_ref", {})
+        if isinstance(payload_ref, dict):
+            payload_ref.setdefault("asapo_message_id", meta.get("_id"))
+            payload_ref.setdefault("path", meta.get("name"))
+            payload_ref.setdefault("stream", self._stream)
+        return message
+
+    def _end_of_stream_errors(self) -> tuple[type[BaseException], ...]:
+        sdk = self._sdk_module or self._import_sdk()
+        return (
+            sdk.AsapoEndOfStreamError,
+            sdk.AsapoStreamFinishedError,
+        )
+
+    def _import_sdk(self) -> Any:
+        if self._sdk_module is not None:
+            return self._sdk_module
+        try:
+            import asapo_consumer  # type: ignore[import-not-found]
+        except ImportError as exc:
+            msg = (
+                "asapo_consumer is required when "
+                "DW_API_HZDR_SPOOL__BROKER_KIND=asapo. "
+                "Install the damnit-api[asapo] extra in a Python version "
+                "supported by the DESY ASAPO wheel."
+            )
+            raise RuntimeError(msg) from exc
+        self._sdk_module = asapo_consumer
+        return asapo_consumer

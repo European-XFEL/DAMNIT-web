@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from damnit_api.consumer.asapo import AsapoSpoolConsumer
+from damnit_api.consumer.asapo import AsapoSpoolConsumer, RealAsapoSpoolConsumer
 from damnit_api.consumer.spool import (
     HZDRSpoolConsumer,
     SpoolConfig,
@@ -42,6 +42,8 @@ _SUITE_PATH = (
     / "tools"
     / "local_message_suite.py"
 )
+
+_FAKE_ASAPO_TOKEN = "token"  # noqa: S105 -- not a real credential, test fixture only
 
 if _SUITE_PATH.exists():
     _spec = importlib.util.spec_from_file_location("local_message_suite", _SUITE_PATH)
@@ -245,6 +247,61 @@ async def test_asapo_consumer_replay_dedup(tmp_path):
         server.shutdown()
 
 
+@pytest.mark.asyncio
+async def test_real_asapo_consumer_claims_json_and_acks_after_spool(tmp_path):
+    event = _make_event("event-real-asapo", "campaign-a")
+    sdk_consumer = _FakeAsapoConsumer([(json.dumps(event).encode(), {"_id": 42})])
+    cfg = SpoolConfig(
+        campaign="campaign-a",
+        consumer_group="damnit",
+        spool_dir=tmp_path / "spool",
+        batch_size=10,
+    )
+    consumer = RealAsapoSpoolConsumer(
+        config=cfg,
+        endpoint="localhost:8400",
+        beamtime="asapo_test",
+        data_source="damnit",
+        token=_FAKE_ASAPO_TOKEN,
+        stream="laser",
+        sdk_consumer=sdk_consumer,
+        sdk_module=_FakeAsapoModule,
+    )
+
+    messages, token = await consumer._claim()
+    assert messages[0]["event_id"] == "event-real-asapo"
+    assert messages[0]["payload_ref"]["message_id"] == 1
+    assert messages[0]["payload_ref"]["asapo_message_id"] == 42
+    assert messages[0]["payload_ref"]["stream"] == "laser"
+    assert sdk_consumer.acked == []
+
+    consumer.consume_one(messages[0])
+    await consumer._ack(token)
+
+    assert sdk_consumer.acked == [("damnit", 42, "laser")]
+    assert cfg.events_jsonl.exists()
+
+
+def test_hzdr_spool_settings_validate_real_asapo_required_fields():
+    from pydantic import SecretStr, ValidationError
+
+    from damnit_api.shared.settings import HZDRSpoolSettings
+
+    with pytest.raises(ValidationError, match="ASAPO_ENDPOINT"):
+        HZDRSpoolSettings(enabled=True, broker_kind="asapo")
+
+    settings = HZDRSpoolSettings(
+        enabled=True,
+        broker_kind="asapo",
+        asapo_endpoint="localhost:8400",
+        asapo_beamtime="asapo_test",
+        asapo_data_source="damnit",
+        asapo_token=SecretStr(_FAKE_ASAPO_TOKEN),
+    )
+
+    assert settings.broker_kind == "asapo"
+
+
 # ---------------------------------------------------------------------------
 # Concrete stub — only needed for unit tests that bypass HTTP
 # ---------------------------------------------------------------------------
@@ -256,3 +313,36 @@ class _ConcreteConsumer(HZDRSpoolConsumer):
 
     async def _ack(self, token: object) -> None:
         pass
+
+
+class _FakeAsapoModule:
+    class AsapoEndOfStreamError(Exception):
+        pass
+
+    class AsapoStreamFinishedError(Exception):
+        pass
+
+
+class _FakeAsapoConsumer:
+    def __init__(self, messages: list[tuple[bytes, dict]]) -> None:
+        self.messages = list(messages)
+        self.acked: list[tuple[str, int, str]] = []
+
+    def get_next(
+        self,
+        group_id: str,
+        *,
+        stream: str,
+        meta_only: bool,
+        ordered: bool,
+    ) -> tuple[bytes, dict]:
+        assert group_id == "damnit"
+        assert stream == "laser"
+        assert meta_only is False
+        assert ordered is True
+        if not self.messages:
+            raise _FakeAsapoModule.AsapoEndOfStreamError
+        return self.messages.pop(0)
+
+    def acknowledge(self, group_id: str, message_id: int, *, stream: str) -> None:
+        self.acked.append((group_id, message_id, stream))

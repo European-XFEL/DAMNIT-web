@@ -42,6 +42,11 @@ server {
     include /etc/nginx/proxy_api.conf;
   }
 
+  location ${NGINX_APP_BASE_PATH}/ldap {
+    proxy_pass ${NGINX_API_URL}/ldap;
+    include /etc/nginx/proxy_api.conf;
+  }
+
   location ${NGINX_APP_BASE_PATH}/metadata {
     proxy_pass ${NGINX_API_URL}/metadata;
     include /etc/nginx/proxy_api.conf;
@@ -49,6 +54,11 @@ server {
 
   location ${NGINX_APP_BASE_PATH}/contextfile {
     proxy_pass ${NGINX_API_URL}/contextfile;
+    include /etc/nginx/proxy_api.conf;
+  }
+
+  location ${NGINX_APP_BASE_PATH}/config {
+    proxy_pass ${NGINX_API_URL}/config;
     include /etc/nginx/proxy_api.conf;
   }
 
