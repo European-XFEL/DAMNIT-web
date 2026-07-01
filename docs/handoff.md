@@ -1,8 +1,17 @@
 # Handoff
 
-Updated: 2026-06-30
+Updated: 2026-07-01
 
 ## Current State
+
+**Production deployment is live:** the API + frontend are deployed and reachable
+at [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/),
+served via `api/scripts/damnit-api-deploy.sh`/`.ps1` against
+`.env.production.example`-derived config, behind the `frontend/nginx` templates,
+with LDAP auth against `ldap.fz-rossendorf.de`. Wiring the deployment to a real
+ASAPO/Kafka broker (instead of the local harness/emulator) is in progress; see
+**Built 2026-07-01** below and [remaining-work-plan.md](remaining-work-plan.md)
+items 2-4.
 
 All integration branches tested and committed. DAMNIT-web-hzdr suite:
 `213 passed, 4 skipped`.
@@ -29,6 +38,41 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
 - **asapo-for-hzdr-damnit** (`main`): local harness proves correct
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`
   schema-version string. All committed.
+
+## Built 2026-07-01
+
+- **Production deployment live** at
+  [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/).
+  `api/scripts/damnit-api-deploy.sh` (bash) added alongside the existing
+  `.ps1`, with safer env-file/host/port/worker-count checks; `frontend/nginx`
+  templates gained proxy config for the app and frontend hosts;
+  `scripts/hzdr-launch.config.json` updated for the deployment.
+- **LDAP fixed for the real HZDR/FZR directory** — `.env.production.example`
+  now points at `ldaps://ldap.fz-rossendorf.de:636` with the actual
+  `ou=users,ou=FZR-NIS,ou=it,o=FSR,dc=de` bind DN / search base (previously a
+  placeholder `dc=hzdr,dc=de` tree). `LDAPSettings` gained `validate_cert`,
+  `ca_cert_file`, and `start_tls` for the department's 2026 encrypted-LDAP
+  migration (ldaps:// on 636, or ldap:// on 389 with StartTLS). Note: this
+  repo's `LDAPSettings` has no group-membership gate (LabFrog's `cn=fwt`
+  restriction is not enforced here) — anyone who binds successfully can log in.
+- **Real ASAPO SDK consumer implemented** — `consumer/asapo.py` gained
+  `RealAsapoSpoolConsumer`, which drives the DESY `asapo_consumer` SDK
+  (`create_consumer(...)`) through the same claim→write-fsync→ack→dedup loop
+  as the harness-HTTP `AsapoSpoolConsumer`. Selected via the new
+  `DW_API_HZDR_SPOOL__BROKER_KIND` setting (`http` default, or `asapo`), with
+  `DW_API_HZDR_SPOOL__ASAPO_ENDPOINT/BEAMTIME/DATA_SOURCE/TOKEN/STREAM/...`
+  validated by a new `HZDRSpoolSettings` model validator when
+  `broker_kind=asapo`. This closes most of roadmap item 3 (ASAPO SDK swap,
+  previously 🔴) — what remains is a live-broker gated integration test and
+  the real restart/replay pass (roadmap item 7 / remaining-work-plan item 4).
+  New tests added to `test_hzdr_spool.py`.
+- The Kafka spool consumer (`consumer/kafka.py`) was already talking to a real
+  `kafka-python-ng` broker (unchanged this session) — real-broker wiring was
+  ASAPO-specific.
+- `motor` added as a dependency (async MongoDB driver) for the `mongo`
+  metadata provider path.
+- `metadata/services.py` — an empty/`"none"` DAMNIT path now resolves to
+  `None` rather than a literal `"none"` string, for local dev.
 
 ## Built 2026-06-30
 
@@ -87,9 +131,12 @@ Mongo, no broker consumer group; each degrades safely) — see
 1. **Merge `shotcounter` branch** — gate is one manual Kafka smoke test with
    `KafkaEnabled=1` against a local broker, plus confirming `IsShotCounterXX`
    defaults for production.
-2. **Swap ASAPO SDK into `AsapoSpoolConsumer`** — replace the harness HTTP
-   client with `asapo_consumer.create_consumer(...)` when a real broker is
-   available; the loop logic is unchanged.
+2. **Point the deployed API at the real ASAPO/Kafka brokers** —
+   `RealAsapoSpoolConsumer` (`consumer/asapo.py`) and
+   `DW_API_HZDR_SPOOL__BROKER_KIND=asapo` are implemented; what's left is
+   setting the real `ASAPO_ENDPOINT`/`BEAMTIME`/`DATA_SOURCE`/`TOKEN` on
+   [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)
+   and running the gated integration test against the live broker.
 3. **Capture one real pilot sequence** and run the go-live gate in
    [integration-roadmap.md](integration-roadmap.md).
 4. **Standards alignment Phase 0** — lock the `metadata.*` namespace convention;

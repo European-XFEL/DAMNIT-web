@@ -1,6 +1,14 @@
 # Integration Roadmap
 
-Updated: 2026-06-26
+Updated: 2026-07-01
+
+**2026-07-01:** production deployment is live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/);
+see `docs/handoff.md` §Built 2026-07-01. The ASAPO SDK swap (Work Order step 3
+below / `asapo-for-hzdr-damnit` §"Carry claim/flush/ack/replay-dedup pattern
+into real ASAPO SDK consumer") is now code-complete via
+`RealAsapoSpoolConsumer`; wiring the deployment's real broker credentials and
+the gated integration test are what remain.
 
 ## Status Key
 
@@ -15,8 +23,11 @@ Updated: 2026-06-26
 The data model, offline integration path, local acceptance test, operator
 review UI, durable spool consumer, and flow-monitor health endpoint are all
 implemented and committed. Every repo's integration branch has been tested.
-The remaining work is (a) merging the shotcounter branch, (b) wiring real
-broker roundtrips, and (c) running the pilot capture.
+Production deployment is live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/).
+The remaining work is (a) merging the shotcounter branch, (b) pointing the
+deployment's real ASAPO/Kafka spool consumers at live broker credentials and
+running restart/replay roundtrips, and (c) running the pilot capture.
 
 Committed and tested:
 
@@ -145,7 +156,7 @@ Branch: `main` (all committed)
 | Example files use canonical `hzdr-event-v1` schema-version string | ✅ committed |
 | `drop-in/damnit-consumer.env.example` maps harness vars to `DW_API_HZDR_SPOOL__*` | ✅ committed |
 | Production supervised consumer with named consumer group and campaign routing | ✅ implemented in DAMNIT — `AsapoSpoolConsumer` in `api/src/damnit_api/consumer/asapo.py`; talks to harness and real broker alike |
-| Carry claim/flush/ack/replay-dedup pattern into real ASAPO SDK consumer | 🟡 loop is built; swap harness HTTP client for real ASAPO SDK when broker is available |
+| Carry claim/flush/ack/replay-dedup pattern into real ASAPO SDK consumer | ✅ committed — `RealAsapoSpoolConsumer` (`consumer/asapo.py`) drives the DESY `asapo_consumer` SDK through the same loop; selected via `DW_API_HZDR_SPOOL__BROKER_KIND=asapo`. Remaining: point the live deployment at real broker credentials and run the gated integration test |
 | References large arrays externally instead of embedding in JSON | 🔴 not started — `HZDRPayloadRef.uri` field exists; producer-side work needed |
 
 ### `GitLab/shotcounter`
@@ -179,6 +190,8 @@ Branch: `main`
 | Durable per-campaign spool with transport positions and dedup state | ✅ committed — `consumer/spool.py` + `consumer/asapo.py` (ASAPO) + `consumer/kafka.py` (Kafka trigger events); `DW_API_HZDR_SPOOL__ENABLED` / `DW_API_HZDR_KAFKA_SPOOL__ENABLED` activate background tasks in lifespan |
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
+| Live production deployment reachable | ✅ **[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)** — `api/scripts/damnit-api-deploy.sh`/`.ps1`, `frontend/nginx` proxy templates, LDAP against `ldap.fz-rossendorf.de` |
+| ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); deployment not yet pointed at real broker credentials |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
 | Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | 🟡 plugin exists; DAMNIT-side builder post-step + catalog link not yet wired — see §SciCat Registration |
 

@@ -7,6 +7,14 @@ playbook for the six remaining items, in recommended order.
 Status legend: 🟢 ready now (no external dependency) · 🟡 needs a human decision or
 config · 🔴 needs a real broker / live deployment.
 
+**2026-07-01 update:** production deployment is live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)
+(see `docs/handoff.md` §Built 2026-07-01). Item 3 (ASAPO SDK swap) is now
+code-complete — `RealAsapoSpoolConsumer` is implemented and selected via
+`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`; only pointing it at the real broker's
+endpoint/beamtime/token and the gated integration test remain, so it moves
+from 🔴 to 🟡.
+
 ## Snapshot of what changed 2026-06-25
 
 - **labfrog-sqlite-tools atomic rename + retain source exports** — ✅ **done**. Atomic
@@ -47,19 +55,22 @@ canonical campaign + `planet.watchdog.events` topic and the real broker; run
 `watchdog_test.py`-style preflight against that broker once. Capture the values in the
 deployment runbook. Pairs naturally with item 4 (real-broker pass).
 
-## 3. ASAPO SDK swap (replace harness HTTP client with real SDK) 🔴
+## 3. ASAPO SDK swap (replace harness HTTP client with real SDK) 🟡 (code done 2026-07-01)
 
-**Where it is:** `AsapoSpoolConsumer` (`consumer/asapo.py`) drives the full
-claim→write→fsync→ack→dedup loop against the harness HTTP broker; the loop is
-production-shaped. Only the transport client needs swapping for the real ASAPO SDK.
+**Where it is:** ✅ done — `RealAsapoSpoolConsumer` (`consumer/asapo.py`) drives the
+DESY `asapo_consumer` SDK through the same claim→write→fsync→ack→dedup loop as the
+harness `AsapoSpoolConsumer`; selected via `DW_API_HZDR_SPOOL__BROKER_KIND=asapo`
+(`http` remains the default/harness path), configured by the new
+`DW_API_HZDR_SPOOL__ASAPO_ENDPOINT/BEAMTIME/DATA_SOURCE/TOKEN/STREAM/SOURCE_PATH/HAS_FILESYSTEM/TIMEOUT_MS`
+settings, validated by a model validator on `HZDRSpoolSettings` when
+`broker_kind=asapo`. New tests in `test_hzdr_spool.py`.
 
-**Do:** behind the existing `DW_API_HZDR_SPOOL__*` settings, add an ASAPO-SDK client
-variant (`asapo_consumer.create_consumer(..., consumer_name=<campaign-slug>)`) selected by
-a `broker_kind`/URL scheme, keeping the same `_claim`/`_ack` contract. Add a
-`@pytest.mark.integration_docker`-style gated test mirroring `test_hzdr_broker_roundtrip.py`.
-**Blocked on** access to a real/standalone ASAPO broker (`asapo-for-hzdr-damnit/run-standalone`)
-— do the client adapter now, run the gated test when a broker is reachable. Also fold in
-the large-array externalisation (`payload_ref.uri` instead of inline `values`, already
+**Do:** on the live deployment
+([https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)),
+set `DW_API_HZDR_SPOOL__BROKER_KIND=asapo` and the real `ASAPO_*` values, then run
+a `@pytest.mark.integration_docker`-style gated test mirroring
+`test_hzdr_broker_roundtrip.py` against the real broker. Also still open: the
+large-array externalisation (`payload_ref.uri` instead of inline `values`, already
 bounded by `check_values_size`).
 
 ## 4. Real broker roundtrips with restart/replay 🔴 (the go-live gate's core)

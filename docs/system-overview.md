@@ -267,6 +267,20 @@ ways in:
 - **The file watcher (safe demo):** `planet-watchdog` → `uv run watchdog_test.py`.
 - **This app (consumer + UI):** see [local-development.md](local-development.md).
 
+## Production Deployment
+
+The API + frontend are live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/),
+deployed via `api/scripts/damnit-api-deploy.sh`/`.ps1` from an
+`.env.production.example`-derived config, served behind the `frontend/nginx`
+proxy templates, with LDAP auth against `ldap.fz-rossendorf.de`. The durable
+spool consumers there still run against the local ASAPO/Kafka harness rather
+than the real facility brokers — the real ASAPO SDK client
+(`RealAsapoSpoolConsumer`, `DW_API_HZDR_SPOOL__BROKER_KIND=asapo`) is
+implemented, and pointing the deployment at real broker credentials is the
+next step (see [remaining-work-plan.md](remaining-work-plan.md) and
+[handoff.md](handoff.md)).
+
 ## Where to Go Deeper
 
 | You want… | Read |
