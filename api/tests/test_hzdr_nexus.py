@@ -657,14 +657,26 @@ def test_first_shot_target_warns_once_when_a_later_shot_differs(caplog):
     it should log exactly one warning, and the first shot's target still
     wins (behavior unchanged)."""
     shots = [
-        {"shot_number": 1, "shot_key": "HELPMI:20260610:000001",
-         "metadata": {"target": {"name": "Al foil"}}},
-        {"shot_number": 2, "shot_key": "HELPMI:20260610:000002",
-         "metadata": {"target": {"name": "Al foil"}}},
-        {"shot_number": 3, "shot_key": "HELPMI:20260610:000003",
-         "metadata": {"target": {"name": "Cu wire"}}},
-        {"shot_number": 4, "shot_key": "HELPMI:20260610:000004",
-         "metadata": {"target": {"name": "Ti foil"}}},
+        {
+            "shot_number": 1,
+            "shot_key": "HELPMI:20260610:000001",
+            "metadata": {"target": {"name": "Al foil"}},
+        },
+        {
+            "shot_number": 2,
+            "shot_key": "HELPMI:20260610:000002",
+            "metadata": {"target": {"name": "Al foil"}},
+        },
+        {
+            "shot_number": 3,
+            "shot_key": "HELPMI:20260610:000003",
+            "metadata": {"target": {"name": "Cu wire"}},
+        },
+        {
+            "shot_number": 4,
+            "shot_key": "HELPMI:20260610:000004",
+            "metadata": {"target": {"name": "Ti foil"}},
+        },
     ]
 
     with caplog.at_level("WARNING"):
@@ -682,10 +694,16 @@ def test_first_shot_laser_warns_once_when_a_later_shot_differs(caplog):
     """Same silent-drop risk as `_first_shot_target`, for the campaign-level
     /entry/instrument/laser block."""
     shots = [
-        {"shot_number": 1, "shot_key": "HELPMI:20260610:000001",
-         "metadata": {"laser": {"system": "DRACO"}}},
-        {"shot_number": 2, "shot_key": "HELPMI:20260610:000002",
-         "metadata": {"laser": {"system": "PENELOPE"}}},
+        {
+            "shot_number": 1,
+            "shot_key": "HELPMI:20260610:000001",
+            "metadata": {"laser": {"system": "DRACO"}},
+        },
+        {
+            "shot_number": 2,
+            "shot_key": "HELPMI:20260610:000002",
+            "metadata": {"laser": {"system": "PENELOPE"}},
+        },
     ]
 
     with caplog.at_level("WARNING"):
