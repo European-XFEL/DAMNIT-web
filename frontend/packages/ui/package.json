@@ -23,7 +23,11 @@
   "scripts": {
     "lint:eslint": "eslint .",
     "lint:prettier": "prettier --check --cache .",
-    "lint:tsc": "tsc -b --noEmit"
+    "lint:tsc": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:browser": "vitest run --project browser",
+    "test:watch": "vitest"
   },
   "peerDependencies": {
     "@apollo/client": "catalog:graphql",
@@ -66,6 +70,8 @@
     "@types/react-dom": "catalog:types",
     "@types/react-plotly.js": "catalog:types",
     "@vitejs/plugin-react": "catalog:tooling",
+    "@vitest/browser": "catalog:testing",
+    "@vitest/browser-playwright": "catalog:testing",
     "clsx": "catalog:frontend",
     "dayjs": "catalog:frontend",
     "eslint": "catalog:linting",
@@ -74,6 +80,7 @@
     "lodash": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
+    "playwright": "catalog:testing",
     "postcss": "catalog:tooling",
     "prettier": "catalog:linting",
     "react": "catalog:frontend",
@@ -83,6 +90,8 @@
     "react-redux": "catalog:redux",
     "react-router": "catalog:frontend",
     "typescript": "catalog:tooling",
-    "vite": "catalog:tooling"
+    "vite": "catalog:tooling",
+    "vitest": "catalog:testing",
+    "vitest-browser-react": "catalog:testing"
   }
 }
