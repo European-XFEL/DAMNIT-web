@@ -26,7 +26,7 @@ describe('getCell', () => {
     ).toBe(GridCellKind.Loading)
   })
 
-  test('dispatches to a factory by dtype when a value is present', () => {
+  test('picks the cell type from the dtype when a value is present', () => {
     expect(
       getCell({ value: 3.14159, dtype: DTYPES.number, options: {} }).kind
     ).toBe(GridCellKind.Number)

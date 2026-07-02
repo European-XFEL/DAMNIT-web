@@ -32,14 +32,16 @@ describe('Pages', () => {
 
 describe('pageRangeForRegion', () => {
   test('returns the padded page window for a scroll region', () => {
-    // y=100, height=50, pageSize=10 -> firstPage 9, lastPage 15 -> range(10, 17)
+    // Rows 100-150 live on pages 11-16 (1-based); the window adds a page of
+    // overscan on each side so rows are loaded before they scroll into view.
     expect(
       pageRangeForRegion({ x: 0, y: 100, width: 0, height: 50 }, 10)
     ).toEqual([10, 11, 12, 13, 14, 15, 16, 17])
   })
 
   test('pins the first page at the top boundary', () => {
-    // y=0, height=20, pageSize=10 -> firstPage max(0, -1) = 0 -> range(1, 4)
+    // At the top of the table the upward overscan is clamped: the window
+    // never asks for a page below page 1.
     expect(
       pageRangeForRegion({ x: 0, y: 0, width: 0, height: 20 }, 10)
     ).toEqual([1, 2, 3, 4])
