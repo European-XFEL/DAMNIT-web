@@ -1,6 +1,6 @@
 # Integration Roadmap
 
-Updated: 2026-07-01
+Updated: 2026-07-02
 
 **2026-07-01:** production deployment is live at
 [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/);
@@ -9,6 +9,13 @@ below / `asapo-for-hzdr-damnit` §"Carry claim/flush/ack/replay-dedup pattern
 into real ASAPO SDK consumer") is now code-complete via
 `RealAsapoSpoolConsumer`; wiring the deployment's real broker credentials and
 the gated integration test are what remain.
+
+**2026-07-02:** large-array externalisation is now implemented in DAMNIT's
+`RealAsapoSpoolConsumer`: oversized inline `values` are removed before spooling,
+and `payload_ref.uri` is populated with a replayable ASAPO message URI. The
+builder-side 64 KiB / item-count guard remains in place as a backstop for other
+producer paths; the separate sidecar/producers should emit the URI directly for
+real LaserData rollout.
 
 **2026-07-01 (verification pass):** re-checked the "real data ingestion"
 transition against the actual code (not just prior doc claims). Three
@@ -200,7 +207,7 @@ Branch: `main` (all committed)
 | `drop-in/consumer.ps1` drives real SDK consumer via `DAMNIT_CONSUMER_TRANSPORT=asapo` | committed; requires Python with ASAPO SDK installed |
 | Production supervised consumer with named consumer group and campaign routing | ✅ implemented in DAMNIT — `AsapoSpoolConsumer` in `api/src/damnit_api/consumer/asapo.py` |
 | DAMNIT real-ASAPO production path | deferred; use `asapo-for-hzdr-damnit` as the sidecar after LaserData/package/broker access is confirmed; not a Kafka pilot blocker |
-| References large arrays externally instead of embedding in JSON | 🔴 not started — `HZDRPayloadRef.uri` field exists; producer-side work needed |
+| References large arrays externally instead of embedding in JSON | DAMNIT direct ASAPO adapter done locally — `RealAsapoSpoolConsumer` externalises oversized inline `values` into `payload_ref.uri`; sidecar/producers should mirror before real LaserData rollout |
 
 ### `GitLab/shotcounter`
 
@@ -405,7 +412,7 @@ The same ordering and durability properties must hold for the real production co
 | --- | --- |
 | Real ASAPO SDK consumer | Deferred until LaserData/package/broker access is available. Use `asapo-for-hzdr-damnit` as the sidecar that writes DAMNIT-compatible JSONL; direct DAMNIT SDK imports can wait for compatible wheels |
 | Supervised restart | Wrap the consume loop in a `systemd` unit (or DAMNIT background task) that restarts on exit; last acked offset is the consumer group position — restart picks up where it left off |
-| Large-array externalisation | ASAPO messages > ~1 MB should not embed raw arrays in JSON; use `payload_ref.uri` pointing to a streamed dataset, and write the array to the NeXus file separately. The `HZDRPayloadRef` model already has the `uri` field |
+| Large-array externalisation | DAMNIT direct ASAPO adapter externalises oversized inline `values` into `payload_ref.uri` before JSONL spooling; sidecar/producers should emit the URI directly for real LaserData rollout. The builder size guard remains a backstop for any non-ASAPO path |
 | Kafka consumer (DAQ File Watchdog / shotcounter) | ✅ `KafkaSpoolConsumer` (`consumer/kafka.py`): same `HZDRSpoolConsumer` claim/write/ack loop over a `kafka-python-ng` consumer group with `enable_auto_commit=False`; `_claim` polls a batch without committing, `_ack` commits `OffsetAndMetadata(last+1)` only after every message is fsync'd. Sync client calls are off-loaded with `asyncio.to_thread`. Activated by `DW_API_HZDR_KAFKA_SPOOL__ENABLED=true` |
 | Per-campaign spool directory | `<campaign-slug>/spool/asapo/` and `<campaign-slug>/spool/kafka/<topic>/` under the DAMNIT data root; the builder's `--events-jsonl` / `--trigger-jsonl` flags already point to exactly these paths |
 | Write-and-flush before ack | `write_json_atomic` (temp file + `fsync` + rename) is already implemented in `hzdr_nexus.py`; the consumer calls it, then acks |

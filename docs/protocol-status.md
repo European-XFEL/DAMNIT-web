@@ -1,6 +1,6 @@
 # Data-Transfer Protocol Status
 
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
 Per-source, per-repo implementation status for the HZDR DAMNIT pipeline data-transfer
 protocols. See `integration-roadmap.md` for the full work-order history; see
@@ -113,9 +113,9 @@ broker, then merge the shotcounter branch.
 | **DAMNIT** | 11 tests in `test_hzdr_spool.py` against live in-process harness broker | ✅ committed |
 | **DAMNIT** | Consume LaserData/ASAPO through the `asapo-for-hzdr-damnit` sidecar writing DAMNIT spool JSONL | preferred follow-up path; not a Kafka pilot blocker |
 | **DAMNIT** | Gated integration test for real ASAPO sidecar against broker | deferred until LaserData/package/broker access is available |
-| **DAMNIT** | Large-array externalisation: `payload_ref.uri` instead of inline `values` for payloads > 64 KiB | 🔴 `HZDRPayloadRef.uri` field exists; producer-side not yet implemented |
+| **DAMNIT** | Large-array externalisation: `payload_ref.uri` instead of inline `values` for payloads > 64 KiB | done locally — `RealAsapoSpoolConsumer` drops oversized inline `values`, preserves a generated ASAPO `payload_ref.uri`, and leaves the builder size guard as a backstop |
 
-**Outstanding:** ASAPO is not in the Kafka pilot gate. Watchdog is Kafka-only. ASAPO is relevant for LaserData or a future ASAPO source; the preferred path is the `asapo-for-hzdr-damnit` sidecar writing the same durable JSONL spool. A direct DAMNIT SDK adapter can wait until compatible wheels exist for DAMNIT's target runtime. Large-array externalisation (`payload_ref.uri`) remains producer-side follow-up work.
+**Outstanding:** ASAPO is not in the Kafka pilot gate. Watchdog is Kafka-only. ASAPO is relevant for LaserData or a future ASAPO source; the preferred path is the `asapo-for-hzdr-damnit` sidecar writing the same durable JSONL spool. A direct DAMNIT SDK adapter can wait until compatible wheels exist for DAMNIT's target runtime. Large-array externalisation (`payload_ref.uri`) is covered locally in DAMNIT's direct ASAPO adapter; the separate `asapo-for-hzdr-damnit` sidecar/producers should mirror the same policy before real LaserData rollout.
 
 ---
 

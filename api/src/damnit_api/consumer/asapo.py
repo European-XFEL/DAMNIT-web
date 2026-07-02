@@ -23,6 +23,7 @@ from typing import Any
 
 import httpx
 
+from ..metadata.hzdr_event import check_values_size
 from .spool import HZDRSpoolConsumer, SpoolConfig
 
 
@@ -116,6 +117,9 @@ class RealAsapoSpoolConsumer(HZDRSpoolConsumer):
         sdk_module: Any | None = None,
     ) -> None:
         super().__init__(config)
+        self._endpoint = endpoint
+        self._beamtime = beamtime
+        self._data_source = data_source
         self._stream = stream
         self._sdk_module = sdk_module
         if sdk_consumer is not None:
@@ -185,7 +189,39 @@ class RealAsapoSpoolConsumer(HZDRSpoolConsumer):
             payload_ref.setdefault("asapo_message_id", meta.get("_id"))
             payload_ref.setdefault("path", meta.get("name"))
             payload_ref.setdefault("stream", self._stream)
+            self._externalize_large_values(message, payload_ref, meta)
         return message
+
+    def _externalize_large_values(
+        self,
+        message: dict[str, Any],
+        payload_ref: dict[str, Any],
+        meta: dict[str, Any],
+    ) -> None:
+        """Keep large ASAPO payloads out of the JSON envelope.
+
+        Producers should normally emit the reference directly. This adapter is
+        still a useful production boundary: if a LaserData/ASAPO event arrives
+        with oversized inline ``values``, the spool keeps a replayable ASAPO URI
+        and drops the inline copy before the builder's size guard sees it.
+        """
+        if check_values_size(message.get("values")) is None:
+            return
+        payload_ref.setdefault("uri", self._asapo_payload_uri(meta))
+        message["values"] = None
+
+    def _asapo_payload_uri(self, meta: dict[str, Any]) -> str:
+        message_id = meta.get("_id")
+        name = meta.get("name")
+        query = urllib.parse.urlencode({
+            "endpoint": self._endpoint,
+            "beamtime": self._beamtime,
+            "data_source": self._data_source,
+            "stream": self._stream,
+            "message_id": "" if message_id is None else str(message_id),
+            "name": "" if name is None else str(name),
+        })
+        return f"asapo://message?{query}"
 
     def _end_of_stream_errors(self) -> tuple[type[BaseException], ...]:
         sdk = self._sdk_module or self._import_sdk()
