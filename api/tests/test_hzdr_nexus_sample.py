@@ -11,7 +11,10 @@ import h5py
 import pytest
 
 from damnit_api.metadata.hzdr_event import METADATA_KEY_REGISTRY
-from damnit_api.metadata.hzdr_nexus import write_nexus_sample
+from damnit_api.metadata.hzdr_nexus import (
+    HZDR_TARGET_PROFILE_VERSION,
+    write_nexus_sample,
+)
 
 
 def _sample_group(handle: h5py.File) -> Any:
@@ -40,6 +43,8 @@ def test_wiki_foil_example_with_properties(tmp_path: Path):
     with h5py.File(path, "r") as handle:
         sample = _sample_group(handle)
         assert sample.attrs["NX_class"] == "NXsample"
+        assert sample.attrs["damnit_nx_class"] == "NXhzdr_target"
+        assert sample.attrs["damnit_nxdl_version"] == HZDR_TARGET_PROFILE_VERSION
         assert sample["name"].asstr()[()] == "Au 5 μm #A12"
         assert sample["chemical_formula"].asstr()[()] == "Au"
         assert sample["thickness"][()] == pytest.approx(5000.0)
@@ -83,6 +88,8 @@ def test_manual_other_example_omits_absent_fields(tmp_path: Path):
     with h5py.File(path, "r") as handle:
         sample = _sample_group(handle)
         assert sample.attrs["NX_class"] == "NXsample"
+        assert sample.attrs["damnit_nx_class"] == "NXhzdr_target"
+        assert sample.attrs["damnit_nxdl_version"] == HZDR_TARGET_PROFILE_VERSION
         assert sample["name"].asstr()[()] == "test wedge"
         assert sample["chemical_formula"].asstr()[()] == "Al"
         assert sample["thickness"][()] == pytest.approx(250.0)
@@ -113,6 +120,8 @@ def test_legacy_string_target_normalizes(tmp_path: Path):
     with h5py.File(path, "r") as handle:
         sample = _sample_group(handle)
         assert sample.attrs["NX_class"] == "NXsample"
+        assert sample.attrs["damnit_nx_class"] == "NXhzdr_target"
+        assert sample.attrs["damnit_nxdl_version"] == HZDR_TARGET_PROFILE_VERSION
         assert sample["name"].asstr()[()] == "target-1"
         assert sample.attrs["damnit_provenance"] == "manual"
         # No material/thickness/etc. were ever provided for the legacy form.

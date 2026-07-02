@@ -29,6 +29,11 @@ Last updated: 2026-07-02
 - **Campaign (decided 2026-07-02):** pilot runs as `Pilot_Verification_07.2026`;
   switch to the real campaign slug at the first production campaign via the
   campaign-rotation procedure.
+- **Pilot config exists:** `api/.env.pilot.example` (Kafka on/localhost:9092/pilot
+  slug; ASAPO off).
+- **Test-execution debt:** today's registry/linter/NeXus-profile changes are
+  code-reviewed but the suite has not been executed — run `cd api && uv run
+  pytest -q` before deploying.
 
 The main application (FastAPI + frontend) is already running on the server. This
 document covers **wiring the data-transfer protocol pieces** — the Kafka and ASAPO
@@ -72,7 +77,7 @@ sudo -u damnit mkdir -p /data/damnit/hzdr/spool/kafka
 DW_API_HZDR_KAFKA_SPOOL__ENABLED=true
 DW_API_HZDR_KAFKA_SPOOL__BOOTSTRAP_SERVERS=localhost:9092   # broker runs on this VM
 DW_API_HZDR_KAFKA_SPOOL__TOPICS=["draco.trigger","planet.watchdog.events"]
-DW_API_HZDR_KAFKA_SPOOL__CAMPAIGN=<canonical-campaign-slug>   # e.g. Solenoid_Beamline_Tests_01.2025
+DW_API_HZDR_KAFKA_SPOOL__CAMPAIGN=<canonical-campaign-slug>   # e.g. Solenoid_Beamline_Tests_01.2025 (illustrative only; pilot value is Pilot_Verification_07.2026)
 DW_API_HZDR_KAFKA_SPOOL__CONSUMER_GROUP=damnit-kafka
 DW_API_HZDR_KAFKA_SPOOL__SPOOL_DIR=/data/damnit/hzdr/spool/kafka
 DW_API_HZDR_KAFKA_SPOOL__FILENAME=trigger.jsonl

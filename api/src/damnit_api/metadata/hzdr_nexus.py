@@ -1105,15 +1105,34 @@ def _fill_default_product_paths(
 
 
 def _first_shot_laser(shots: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Pick the first namespaced laser metadata block for `/entry/instrument/laser`."""
+    """Pick the first namespaced laser metadata block for `/entry/instrument/laser`.
+
+    Later shots carrying a *different* non-empty laser block are silently
+    dropped (single campaign-level NXsource, same limitation as
+    `_first_shot_target` below) - log one warning so a divergent laser config
+    mid-campaign is at least visible instead of silently ignored.
+    """
+    chosen: dict[str, Any] | None = None
+    warned = False
     for shot in shots:
         metadata = shot.get("metadata")
         if not isinstance(metadata, dict):
             continue
         laser = metadata.get("laser")
-        if isinstance(laser, dict) and laser:
-            return laser
-    return None
+        if not (isinstance(laser, dict) and laser):
+            continue
+        if chosen is None:
+            chosen = laser
+        elif not warned and laser != chosen:
+            logger.warning(
+                "Shot %s has a laser metadata block that differs from the "
+                "campaign's chosen block (shot_key=%s); only the first "
+                "shot's laser block is written to /entry/instrument/laser.",
+                shot.get("shot_number"),
+                shot.get("shot_key"),
+            )
+            warned = True
+    return chosen
 
 
 def _first_shot_target(shots: list[dict[str, Any]]) -> Any:
@@ -1126,16 +1145,30 @@ def _first_shot_target(shots: list[dict[str, Any]]) -> Any:
     overwhelmingly single-target in practice, so the first shot carrying a
     non-empty `metadata.target` is used; later shots with a different target
     are not reconciled here - that is a future per-shot NXsample extension,
-    not part of this phase.
+    not part of this phase. A subsequent shot with a differing target block
+    is logged once (module logger) so the silent drop is at least visible.
     """
+    chosen: Any = None
+    warned = False
     for shot in shots:
         metadata = shot.get("metadata")
         if not isinstance(metadata, dict):
             continue
         target = metadata.get("target")
-        if target:
-            return target
-    return None
+        if not target:
+            continue
+        if chosen is None:
+            chosen = target
+        elif not warned and target != chosen:
+            logger.warning(
+                "Shot %s has a target metadata block that differs from the "
+                "campaign's chosen block (shot_key=%s); only the first "
+                "shot's target block is written to /entry/sample.",
+                shot.get("shot_number"),
+                shot.get("shot_key"),
+            )
+            warned = True
+    return chosen
 
 
 def write_nexus_laser_group(entry_group: h5py.Group, laser: dict[str, Any]) -> None:
@@ -1217,6 +1250,13 @@ def write_nexus_laser_group(entry_group: h5py.Group, laser: dict[str, Any]) -> N
     )
 
 
+# HZDR-local NXhzdr_target profile version. Bump on any semantic-map change
+# (fields added/removed/retyped) to the metadata.target.* -> /entry/sample
+# mapping; the profile doc version must be bumped to match.
+# See docs/nxhzdr-target-profile.md.
+HZDR_TARGET_PROFILE_VERSION = "0.1"
+
+
 def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
     """Write `/entry/sample` (`NXsample`) from `metadata.target.*`.
 
@@ -1229,7 +1269,11 @@ def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
     on disk.
 
     HELPMI is finished (2026-07-02) and will publish no further base classes,
-    so the group is `NXsample` permanently (no planned `NXtarget` wait).
+    so the group is `NXsample` permanently (no planned `NXtarget` wait). The
+    group also carries the HZDR-local compatibility profile attrs
+    `damnit_nx_class="NXhzdr_target"` and `damnit_nxdl_version` (see
+    docs/nxhzdr-target-profile.md) until a local NXDL ships and
+    `NX_class="NXhzdr_target"` can be set directly.
     """
     target = _normalize_target_metadata(target)
     if not isinstance(target, dict):
@@ -1237,6 +1281,8 @@ def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
 
     sample = entry_group.require_group("sample")
     sample.attrs["NX_class"] = "NXsample"
+    sample.attrs["damnit_nx_class"] = "NXhzdr_target"
+    sample.attrs["damnit_nxdl_version"] = HZDR_TARGET_PROFILE_VERSION
 
     _write_optional_string_dataset(sample, "name", target.get("name"))
     _write_optional_string_dataset(sample, "chemical_formula", target.get("material"))

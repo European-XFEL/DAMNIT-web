@@ -203,11 +203,14 @@ can still read the file. HELPMI is finished (2026-07-02) and will publish no off
 `NXhzdr_target`.
 
 Do **not** use the unqualified `NXtarget` name locally; it looks official and could
-conflict with a future upstream NeXus class. The first implementation should document a
-local NXDL/profile for `NXhzdr_target`, then stamp HZDR-profile files with compatibility
-metadata such as `damnit_nx_class="NXhzdr_target"` and `damnit_nxdl_version` while leaving
-`NX_class="NXsample"`. If the local NXDL is later bundled with the validator/tooling, we
-can decide whether HZDR-profile files should set `NX_class="NXhzdr_target"` directly.
+conflict with a future upstream NeXus class. **Done 2026-07-02:** the v0.1 profile
+document, [docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md), defines the
+semantic map and compatibility-attribute contract, and `write_nexus_sample()` stamps
+`damnit_nx_class="NXhzdr_target"` and `damnit_nxdl_version` (module constant
+`HZDR_TARGET_PROFILE_VERSION` in `hzdr_nexus.py`, currently `"0.1"`) on `/entry/sample`
+while leaving `NX_class="NXsample"`. NXDL formalization is still open — once a local
+NXDL is bundled with a validator, we can decide whether HZDR-profile files should set
+`NX_class="NXhzdr_target"` directly (see nxhzdr-target-profile.md §6).
 HELPMI DDC names remain the documentation cross-walk; see
 [standards-alignment.md Route 2](standards-alignment.md#route-2-nxsource-nxbeam-and-nxsample-groups-in-the-nexus-bridge-ready).
 
@@ -224,5 +227,5 @@ HELPMI DDC names remain the documentation cross-walk; see
 | LabFrog export carries captured target fields | ✅ done 2026-07-02 |
 | DAMNIT reconciler maps exported LabFrog target columns to `metadata.target.*` | ✅ done 2026-07-02 |
 | `write_nexus_sample()` (`NXsample`) reads `metadata.target.*` | ✅ done 2026-07-02 |
-| HZDR-local `NXhzdr_target` profile / NXDL drafted | ⬜ Phase 5 |
+| HZDR-local `NXhzdr_target` profile / NXDL drafted | 🟡 v0.1 doc + compatibility attrs done 2026-07-02 ([nxhzdr-target-profile.md](nxhzdr-target-profile.md)); NXDL formalization still open — Phase 5 |
 | Target→wiki link surfaced in API/UI (`target_wiki_ref` / `target_wiki_page`, table + shot detail links) | ✅ done 2026-07-02 |

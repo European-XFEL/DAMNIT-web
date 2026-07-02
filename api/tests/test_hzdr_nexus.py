@@ -9,6 +9,8 @@ import pytest
 
 from damnit_api.metadata.hzdr_nexus import (
     BuilderAlreadyRunningError,
+    _first_shot_laser,
+    _first_shot_target,
     append_review_decision,
     discover_labfrog_data_products,
     load_normalized_events,
@@ -646,6 +648,52 @@ def test_active_keyed_supersede_warns_when_active_row_not_latest(
     assert by_id["mongo-new"]["metadata"]["has_newer_version"] is True
     # But the version disagreement is logged for operator visibility.
     assert any("non-latest row active" in record.message for record in caplog.records)
+
+
+def test_first_shot_target_warns_once_when_a_later_shot_differs(caplog):
+    """A LabFrog campaign is overwhelmingly single-target, so only the first
+    shot's non-empty `metadata.target` is written to /entry/sample. A later
+    shot with a genuinely different target must not be silently dropped -
+    it should log exactly one warning, and the first shot's target still
+    wins (behavior unchanged)."""
+    shots = [
+        {"shot_number": 1, "shot_key": "HELPMI:20260610:000001",
+         "metadata": {"target": {"name": "Al foil"}}},
+        {"shot_number": 2, "shot_key": "HELPMI:20260610:000002",
+         "metadata": {"target": {"name": "Al foil"}}},
+        {"shot_number": 3, "shot_key": "HELPMI:20260610:000003",
+         "metadata": {"target": {"name": "Cu wire"}}},
+        {"shot_number": 4, "shot_key": "HELPMI:20260610:000004",
+         "metadata": {"target": {"name": "Ti foil"}}},
+    ]
+
+    with caplog.at_level("WARNING"):
+        target = _first_shot_target(shots)
+
+    assert target == {"name": "Al foil"}
+    warnings = [r for r in caplog.records if "target metadata block" in r.message]
+    assert len(warnings) == 1
+    # Only the first divergent shot (shot_number=3) is named; shot 4 (also
+    # divergent) does not trigger a second warning.
+    assert warnings[0].args[0] == 3
+
+
+def test_first_shot_laser_warns_once_when_a_later_shot_differs(caplog):
+    """Same silent-drop risk as `_first_shot_target`, for the campaign-level
+    /entry/instrument/laser block."""
+    shots = [
+        {"shot_number": 1, "shot_key": "HELPMI:20260610:000001",
+         "metadata": {"laser": {"system": "DRACO"}}},
+        {"shot_number": 2, "shot_key": "HELPMI:20260610:000002",
+         "metadata": {"laser": {"system": "PENELOPE"}}},
+    ]
+
+    with caplog.at_level("WARNING"):
+        laser = _first_shot_laser(shots)
+
+    assert laser == {"system": "DRACO"}
+    warnings = [r for r in caplog.records if "laser metadata block" in r.message]
+    assert len(warnings) == 1
 
 
 def test_adapts_planet_watchdog_processed_document():

@@ -151,6 +151,26 @@ def test_consume_one_writes_event_to_disk(tmp_path):
     assert any(row.get("event_id") == "event-1" for row in rows)
 
 
+def test_consume_one_warns_on_legacy_metadata_keys(tmp_path, caplog):
+    """The live ingestion path (consume_one, shared by every spool consumer)
+    should lint incoming metadata the same way the build-time path
+    (hzdr_nexus._normalize_event) does, so a legacy key is visible in the
+    consumer logs instead of only surfacing later at build time."""
+    cfg = SpoolConfig(campaign="campaign-a", consumer_group="g", spool_dir=tmp_path)
+    consumer = _ConcreteConsumer(cfg)
+    event = _make_event("event-legacy")
+    event["metadata"] = {"wavelength_nm": 800}
+
+    with caplog.at_level("WARNING"):
+        path = consumer.consume_one(event)
+
+    assert path is not None
+    assert any(
+        "legacy metadata key" in record.message and "event-legacy" in record.message
+        for record in caplog.records
+    )
+
+
 def test_consume_one_deduplicates_same_event(tmp_path):
     cfg = SpoolConfig(campaign="campaign-a", consumer_group="g", spool_dir=tmp_path)
     consumer = _ConcreteConsumer(cfg)

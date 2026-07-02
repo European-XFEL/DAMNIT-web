@@ -235,26 +235,30 @@ and define the missing HZDR semantic layer locally. For targets, that means an H
 name.
 
 **Do:**
-1. Define a small HZDR semantic map for the metadata key registry: `metadata.*` key ->
-   NeXus path/dataset -> HELPMI DDC term -> NeXus Ontology URI when one exists ->
-   HZDR-local URI/identifier when no upstream term exists. Include a local target class
-   definition, tentatively `NXhzdr_target`, with `NXsample` as its compatibility mapping.
-   Keep this map versioned with the docs first; move it into NXDL/code only when the
-   NeXus writer starts consuming it.
-2. Add optional NeXus annotations from that map in `hzdr_nexus.py` without changing the
-   event envelope. The low-risk first pass keeps `/entry/sample` as `NX_class="NXsample"`
-   for standard-tool compatibility and adds HZDR attrs such as `damnit_nx_class="NXhzdr_target"`
-   / `damnit_nxdl_version` until our custom NXDL is bundled with validation. Once the local
-   NXDL package is in place, we can decide whether to set `NX_class="NXhzdr_target"` directly
-   for HZDR-profile files. Cover the signed-off registry namespaces (`laser`, `target`,
-   `vacuum`, `run`, `diagnostic`) and skip unknown extras in `metadata.target.properties`.
+1. ✅ **Done 2026-07-02:** defined the HZDR semantic map as a versioned doc first —
+   [docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md) v0.1 — mapping each
+   `metadata.target.*` key to its `/entry/sample` NeXus path/attribute, canonical unit,
+   HELPMI DDC term, and whether it's a standard `NXsample` field or a profile extension.
+   Includes the local target class definition, `NXhzdr_target`, with `NXsample` as its
+   compatibility mapping. NeXus Ontology URIs are not yet included (still open, see the
+   profile doc §6).
+2. ✅ **Done 2026-07-02:** `write_nexus_sample()` in `hzdr_nexus.py` keeps `/entry/sample`
+   as `NX_class="NXsample"` for standard-tool compatibility and now stamps
+   `damnit_nx_class="NXhzdr_target"` / `damnit_nxdl_version` (module constant
+   `HZDR_TARGET_PROFILE_VERSION = "0.1"`, matching the profile doc version). Deciding
+   whether to set `NX_class="NXhzdr_target"` directly once a real NXDL is bundled with
+   validation remains open (profile doc §6). Registry namespaces (`laser`, `target`,
+   `vacuum`, `run`, `diagnostic`) beyond `target` are not yet covered by an equivalent
+   profile doc/annotation pass.
 3. For openPMD, start with **linking/manifest interoperability**, not a wholesale
    conversion of the campaign NeXus file. Capture references from an experimental shot
    or data product to a PIC/openPMD series (path/URI, iteration/window, code name,
    checksum/version when available) so comparison tools can join experimental NeXus and
    simulation output explicitly.
-4. Tests: static coverage test for the semantic map, NeXus writer test asserting the
-   annotation attrs on a fixture file, and a manifest-link unit test. No live ontology
+4. Tests: ✅ **done 2026-07-02 for the target profile** — `api/tests/test_hzdr_nexus_sample.py`
+   asserts `damnit_nx_class`/`damnit_nxdl_version` on a fixture file. Still open: a
+   static coverage test for the full semantic map once other namespaces get an
+   equivalent profile doc, and a manifest-link unit test for openPMD. No live ontology
    service is required; a gated/live test only becomes relevant if a site service later
    consumes the annotations.
 

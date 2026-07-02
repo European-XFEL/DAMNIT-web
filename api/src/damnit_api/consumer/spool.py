@@ -27,6 +27,8 @@ from dataclasses import dataclass, field
 from pathlib import Path  # noqa: TC003
 from typing import Any
 
+from ..metadata.hzdr_event import lint_metadata_keys
+
 logger = logging.getLogger(__name__)
 
 # Identity prefix used in the staged-identities set, matching the convention
@@ -139,6 +141,14 @@ class HZDRSpoolConsumer(ABC):
         if identity in self._staged:
             logger.debug("Dedup skip %s", identity)
             return None
+        metadata = message.get("metadata")
+        if isinstance(metadata, dict):
+            for warning in lint_metadata_keys(metadata):
+                logger.warning(
+                    "hzdr-event-v1 metadata for event_id=%s: %s",
+                    message.get("event_id", identity),
+                    warning,
+                )
         path = self.config.events_jsonl
         _append_event_durable(path, message)
         self._staged.add(identity)
