@@ -387,7 +387,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_prefix="DW_API_",
-        env_file=[".env"],
+        # Anchored on the `api/` directory (not cwd) so `Settings()` finds
+        # api/.env regardless of where `uv run`/pytest is invoked from.
+        env_file=[Path(__file__).parents[3] / ".env"],
         env_nested_delimiter="__",
         extra="ignore",
     )

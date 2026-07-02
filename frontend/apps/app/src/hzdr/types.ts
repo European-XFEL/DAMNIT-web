@@ -29,9 +29,9 @@ export type HZDRShot = {
   hdf5_path?: string
   nexus_entry?: string
   metadata: Record<string, unknown> & {
-    laser_energy_j?: number
+    laser?: { pulse_energy?: number } & Record<string, unknown>
     status?: string
-    target?: string
+    target?: string | ({ name?: string } & Record<string, unknown>)
   }
   events: HZDRSourceEvent[]
   data_products: HZDRDataProduct[]

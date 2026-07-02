@@ -18,6 +18,8 @@
   "values": [12.5],
   "metadata": {
     "diagnostic": "main beam",
-    "unit": "J"
+    "laser": {
+      "pulse_energy": 12.5
+    }
   }
 }

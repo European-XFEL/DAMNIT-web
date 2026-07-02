@@ -20,7 +20,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import h5py
 import numpy as np
 
-from .hzdr_event import EVENT_REQUIRED_FIELDS, check_values_size
+from .hzdr_event import (
+    EVENT_REQUIRED_FIELDS,
+    METADATA_KEY_REGISTRY,
+    check_values_size,
+    lint_metadata_keys,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -911,11 +916,7 @@ def write_nexus_bridge(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = output_path.with_name(f"{output_path.name}.{uuid.uuid4().hex}.tmp.nxs")
     try:
-        if source_nexus is not None and source_nexus.resolve() != output_path.resolve():
-            shutil.copy2(source_nexus, temp_path)
-        elif output_path.exists():
-            # Preserve existing LabFrog + bridge content across incremental rebuilds.
-            shutil.copy2(output_path, temp_path)
+        _stage_bridge_temp_file(output_path, temp_path, source_nexus)
 
         mode = "r+" if temp_path.exists() else "w"
         with h5py.File(temp_path, mode) as handle:
@@ -930,6 +931,10 @@ def write_nexus_bridge(
             entry.attrs["damnit_shot_table"] = "shots"
             entry.attrs["damnit_source_events"] = "source_events"
             entry.attrs["damnit_data_products"] = "data_products"
+
+            target = _first_shot_target(shots)
+            if target is not None:
+                write_nexus_sample(entry, target)
 
             shots_group = entry.require_group("shots")
             if "NX_class" not in shots_group.attrs:
@@ -949,9 +954,7 @@ def write_nexus_bridge(
             products = [
                 product for shot in shots for product in shot.get("data_products", [])
             ]
-            for product in products:
-                if not product.get("path"):
-                    product["path"] = str(output_path)
+            _fill_default_product_paths(products, output_path)
             _write_source_events(entry, events)
             _write_data_products(entry, products, output_path=output_path)
 
@@ -960,6 +963,132 @@ def write_nexus_bridge(
         temp_path.unlink(missing_ok=True)
         raise
     return products
+
+
+def _stage_bridge_temp_file(
+    output_path: Path, temp_path: Path, source_nexus: Path | None
+) -> None:
+    """Seed `temp_path` with prior bridge content before it is opened for writing."""
+    if source_nexus is not None and source_nexus.resolve() != output_path.resolve():
+        shutil.copy2(source_nexus, temp_path)
+    elif output_path.exists():
+        # Preserve existing LabFrog + bridge content across incremental rebuilds.
+        shutil.copy2(output_path, temp_path)
+
+
+def _fill_default_product_paths(
+    products: list[dict[str, Any]], output_path: Path
+) -> None:
+    for product in products:
+        if not product.get("path"):
+            product["path"] = str(output_path)
+
+
+def _first_shot_target(shots: list[dict[str, Any]]) -> Any:
+    """Pick the campaign's target for `/entry/sample` from the shot list.
+
+    `metadata.target` arrives per-shot (merged from the events attached to
+    that shot - see `_merged_event_metadata`), but `/entry/sample` is a
+    single campaign-level NeXus group, not a per-shot one (target-ontology.md
+    §8: one `write_nexus_sample()` call per built file). A LabFrog campaign is
+    overwhelmingly single-target in practice, so the first shot carrying a
+    non-empty `metadata.target` is used; later shots with a different target
+    are not reconciled here - that is a future per-shot NXsample extension,
+    not part of this phase.
+    """
+    for shot in shots:
+        metadata = shot.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        target = metadata.get("target")
+        if target:
+            return target
+    return None
+
+
+def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
+    """Write `/entry/sample` (`NXsample`) from `metadata.target.*`.
+
+    Implements docs/target-ontology.md §8 exactly. Tolerates the legacy flat
+    string form of `metadata.target` (§7) by normalizing it first via
+    `_normalize_target_metadata`. Missing/None fields are skipped entirely -
+    never written as null/empty into HDF5 datasets or attributes. `@units`
+    attributes are pulled from `METADATA_KEY_REGISTRY` (not hardcoded), so a
+    registry change cannot silently drift out of sync with what gets stamped
+    on disk.
+
+    HELPMI is finished (2026-07-02) and will publish no further base classes,
+    so the group is `NXsample` permanently (no planned `NXtarget` wait).
+    """
+    target = _normalize_target_metadata(target)
+    if not isinstance(target, dict):
+        target = {}
+
+    sample = entry_group.require_group("sample")
+    sample.attrs["NX_class"] = "NXsample"
+
+    _write_optional_string_dataset(sample, "name", target.get("name"))
+    _write_optional_string_dataset(sample, "chemical_formula", target.get("material"))
+    _write_optional_numeric_dataset(
+        sample, "thickness", target.get("thickness"), unit_key="target.thickness"
+    )
+    _write_optional_numeric_dataset(
+        sample, "diameter", target.get("diameter"), unit_key="target.diameter"
+    )
+    _write_optional_numeric_dataset(
+        sample,
+        "temperature",
+        target.get("temperature"),
+        unit_key="target.temperature",
+    )
+    _write_optional_numeric_dataset(
+        sample,
+        "gas_pressure",
+        target.get("gas_pressure"),
+        unit_key="target.gas_pressure",
+    )
+    _write_optional_string_dataset(
+        sample, "substrate_material", target.get("substrate_material")
+    )
+    _write_optional_string_dataset(sample, "description", target.get("notes"))
+
+    provenance = target.get("provenance")
+    if provenance is not None:
+        sample.attrs["damnit_provenance"] = str(provenance)
+    wiki_ref = target.get("wiki_ref")
+    if wiki_ref is not None:
+        sample.attrs["target_ref"] = str(wiki_ref)
+    gas_species = target.get("gas_species")
+    if gas_species is not None:
+        sample.attrs["gas_species"] = str(gas_species)
+
+    properties = target.get("properties")
+    if isinstance(properties, dict):
+        for key, value in properties.items():
+            if value is None:
+                continue
+            sample.attrs[f"prop_{key}"] = value
+
+
+def _write_optional_string_dataset(group: h5py.Group, name: str, value: Any) -> None:
+    if value is None:
+        return
+    if name in group:
+        del group[name]
+    group.create_dataset(name, data=str(value))
+
+
+def _write_optional_numeric_dataset(
+    group: h5py.Group, name: str, value: Any, *, unit_key: str
+) -> None:
+    if value is None:
+        return
+    if name in group:
+        del group[name]
+    dataset = group.create_dataset(name, data=float(value))
+    unit = METADATA_KEY_REGISTRY.get(unit_key)
+    if unit is not None:
+        dataset.attrs["units"] = unit
 
 
 def write_sources_catalog(
@@ -1715,14 +1844,40 @@ def _unique_nearest_shot(
     return distances[0][1]
 
 
+def _normalize_target_metadata(target: Any) -> Any:
+    """Widen the legacy flat `metadata.target` string to the object form.
+
+    Per docs/target-ontology.md §7: the emulator and early exports set
+    `metadata.target` to a plain string (e.g. "target-1"). Readers must
+    tolerate both shapes, so a string is normalized here to
+    `{"name": <string>, "type": "other", "provenance": "manual"}` before
+    downstream consumers (catalog, NeXus writer, UI) ever see it. An
+    object form (or anything else) passes through unchanged - this is a
+    read-side widening only, not a transport-schema change.
+    """
+    if isinstance(target, str):
+        return {"name": target, "type": "other", "provenance": "manual"}
+    return target
+
+
 def _normalize_event(event: dict[str, Any]) -> dict[str, Any]:
     normalized = {**event}
     normalized["event_id"] = str(event.get("event_id") or _event_id(event))
-    normalized["metadata"] = (
+    metadata = (
         dict(event.get("metadata", {}))
         if isinstance(event.get("metadata"), dict)
         else {}
     )
+    if "target" in metadata:
+        metadata["target"] = _normalize_target_metadata(metadata["target"])
+    normalized["metadata"] = metadata
+
+    for warning in lint_metadata_keys(metadata):
+        logger.warning(
+            "hzdr-event-v1 metadata for event_id=%s: %s",
+            normalized["event_id"],
+            warning,
+        )
     return normalized
 
 

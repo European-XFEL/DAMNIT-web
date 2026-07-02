@@ -64,3 +64,26 @@ export function collectNumericMetadataTrendValues(
       : []
   })
 }
+
+/**
+ * Render `metadata.target` for display regardless of shape. Readers must
+ * tolerate both the legacy flat string (`"target-1"`) and the object form
+ * (`{ name, type, provenance, ... }`, see docs/target-ontology.md §7) - this
+ * mirrors the same widening the API's `_normalize_event` applies read-side,
+ * so the UI never shows a raw `[object Object]` for a curated/manual target.
+ */
+export function formatTargetLabel(target: unknown): string | undefined {
+  if (target === null || target === undefined) {
+    return undefined
+  }
+  if (typeof target === 'string') {
+    return target
+  }
+  if (typeof target === 'object') {
+    const name = (target as Record<string, unknown>).name
+    if (typeof name === 'string' && name) {
+      return name
+    }
+  }
+  return String(target)
+}

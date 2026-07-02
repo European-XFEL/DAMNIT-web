@@ -990,8 +990,12 @@ def enrich_latest_emulated_shot(
         float(metadata.get("detector_signal_mean", 2.25)) + 0.11,
         4,
     )
-    metadata["laser_energy_j"] = round(
-        float(metadata.get("laser_energy_j", 12.4)) + 0.03,
+    laser_metadata = metadata.setdefault("laser", {})
+    if not isinstance(laser_metadata, dict):
+        laser_metadata = {}
+        metadata["laser"] = laser_metadata
+    laser_metadata["pulse_energy"] = round(
+        float(laser_metadata.get("pulse_energy", 12.4)) + 0.03,
         3,
     )
     _apply_event_source_metadata(
@@ -1035,32 +1039,47 @@ def _build_flow_monitor_metadata(
     event_source: str,
     event_kind: str,
 ) -> dict:
-    """Create varied metadata for a flow-monitor generated shot."""
+    """Create varied metadata for a flow-monitor generated shot.
+
+    Numeric laser/vacuum/target fields are namespaced bare keys per the
+    metadata key registry (CLAUDE.md "Metadata key registry", signed off
+    2026-07-02; see also docs/target-ontology.md §5) - no unit suffix in the
+    key name, canonical unit fixed in `hzdr_event.METADATA_KEY_REGISTRY`.
+    """
     rng = Random(20260529 + index)  # noqa: S311 - deterministic emulator data.
+    target_index = (index % 4) + 1
     metadata = {
         "experiment_id": experiment_id,
         "shot_id": shot_id,
         "status": "processed" if index % 5 else "needs-review",
-        "target": f"target-{(index % 4) + 1}",
+        "target": {
+            "type": "other",
+            "name": f"target-{target_index}",
+            "provenance": "manual",
+            "temperature": round(21.5 + index * 0.25 + rng.uniform(-0.05, 0.05), 2),
+        },
         "combined_hdf5_path": hdf5_path,
         "emulated_sequence": index + 1,
         "emulated_source": event_source,
         "emulated_kind": event_kind,
-        "laser_energy_j": round(12.4 + index * 0.17 + rng.uniform(-0.08, 0.08), 3),
-        "chamber_pressure_mbar": round(
-            2.5e-5 * (1 + index * 0.04 + rng.uniform(-0.01, 0.01)), 8
-        ),
+        "laser": {
+            "pulse_energy": round(12.4 + index * 0.17 + rng.uniform(-0.08, 0.08), 3),
+            "pulse_duration": round(
+                42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2
+            ),
+            "beam_pos_x": round(
+                -0.35 + index * 0.015 + rng.uniform(-0.003, 0.003), 4
+            ),
+            "beam_pos_y": round(
+                0.18 - index * 0.012 + rng.uniform(-0.003, 0.003), 4
+            ),
+        },
+        "vacuum": {
+            "chamber_pressure": round(
+                2.5e-5 * (1 + index * 0.04 + rng.uniform(-0.01, 0.01)), 8
+            ),
+        },
         "xray_counts": int(1450 + index * 37 + rng.randint(-18, 18)),
-        "sample_temperature_c": round(
-            21.5 + index * 0.25 + rng.uniform(-0.05, 0.05), 2
-        ),
-        "pulse_width_fs": round(42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2),
-        "beam_position_x_mm": round(
-            -0.35 + index * 0.015 + rng.uniform(-0.003, 0.003), 4
-        ),
-        "beam_position_y_mm": round(
-            0.18 - index * 0.012 + rng.uniform(-0.003, 0.003), 4
-        ),
         "detector_signal_mean": round(
             2.25 + index * 0.22 + rng.uniform(-0.06, 0.06), 4
         ),

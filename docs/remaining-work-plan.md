@@ -21,16 +21,14 @@ config · 🔴 needs a real broker / live deployment.
 ## 1. Merge the `shotcounter` branch 🟡 (smallest path to a closed gate)
 
 **Where it is:** `feature/hzdr-canonical-trigger-event`, unit suite green (24 passed),
-Kafka smoke test green against `kafka-broker-docker`. Two gate items remain, both human:
+`scripts/kafka_smoke_test.py` written and verified green against `kafka-broker-docker`.
+`IsShotCounterXX` defaults **decided (2026-06-25): default `False`, opt-in per channel**
+— already the code behaviour; the startup warning catches a misconfigured `KafkaEnabled`
+device.  One gate item remains:
 
 1. **Run the smoke test on the target deployment broker** (not just local):
    `uv run python scripts/kafka_smoke_test.py --broker <host:9092> --topic draco.trigger`,
    plus one full-device run with `KafkaEnabled=1` for the end-to-end path.
-2. **`IsShotCounterXX` defaults — DECIDED (2026-06-25): default `False`, opt-in per
-   channel.** Already the code behaviour; operators mark each shot-counting channel in
-   the TANGO property setup (`scripts/add_server.sh`), and the startup warning catches a
-   misconfigured `KafkaEnabled` device. No code change. This gate item is closed; only the
-   operational smoke-test-on-deployment-broker step remains.
 
 **Then:** merge to `main`. No code change expected. Unblocks the two 🔴 "authoritative
 shot number" items in `labfrog` and `planet-watchdog` (they depend on this merge + the
@@ -45,34 +43,46 @@ pointed at it yet. Pure ops/config, no code.
 **Do:** set the production `settings/watchdog.json` (and `watch_rules.json` topics) to the
 canonical campaign + `planet.watchdog.events` topic and the real broker; run
 `watchdog_test.py`-style preflight against that broker once. Capture the values in the
-deployment runbook. Pairs naturally with item 4 (real-broker pass).
+deployment runbook. Pairs naturally with item 3 (real-broker pass).
 
-## 3. ASAPO SDK swap (replace harness HTTP client with real SDK) 🔴
+## 3. Real broker roundtrips with restart/replay [gate] (Kafka go-live gate)
+
+**Where it is:** `api/tests/test_hzdr_broker_roundtrip.py` has 4
+`pytest.mark.integration_docker` tests:
+- `test_commit_advances_broker_offset` - confirms `_ack` commits offset via `list_consumer_group_offsets`
+- `test_restart_resumes_from_committed_offset` - same group ID, clean restart, sees 0 new events
+- `test_dedup_blocks_replay_from_fresh_group` - fresh group shares spool dir; dedup drops all re-delivered events
+- `test_10_events_no_lost_no_duplicates` - golden-path, committed offset == 10
+
+Tests are skipped (not failed) when the broker is absent. The `-DockerTests` flag was
+added to `test-all.ps1` to opt into running them.
+
+**Do:**
+1. `cd kafka-broker-docker && docker compose up -d` (wait for broker ready)
+2. `$env:KAFKA_TEST_BROKER="localhost:9092"; pwsh scripts/test-all.ps1 -DockerTests`
+3. Manual restart/replay pass: produce a captured `Solenoid Beamline Tests 01.2025`
+   sequence, kill+restart the spool consumer mid-stream, confirm no lost acks and no
+   duplicate spool lines. Gate criteria are listed under "Go-Live Gate" in the roadmap.
+
+## 4. LaserData/ASAPO sidecar integration [deferred]
 
 **Where it is:** `AsapoSpoolConsumer` (`consumer/asapo.py`) drives the full
-claim→write→fsync→ack→dedup loop against the harness HTTP broker; the loop is
-production-shaped. Only the transport client needs swapping for the real ASAPO SDK.
+claim -> write -> fsync -> ack -> dedup loop against the HTTP harness broker.
+`asapo-for-hzdr-damnit/tools/local_message_suite.py` now has a real SDK
+consumer/producer behind `--transport asapo`, but that is a sidecar/harness path,
+not DAMNIT production wiring.
 
-**Do:** behind the existing `DW_API_HZDR_SPOOL__*` settings, add an ASAPO-SDK client
-variant (`asapo_consumer.create_consumer(..., consumer_name=<campaign-slug>)`) selected by
-a `broker_kind`/URL scheme, keeping the same `_claim`/`_ack` contract. Add a
-`@pytest.mark.integration_docker`-style gated test mirroring `test_hzdr_broker_roundtrip.py`.
-**Blocked on** access to a real/standalone ASAPO broker (`asapo-for-hzdr-damnit/run-standalone`)
-— do the client adapter now, run the gated test when a broker is reachable. Also fold in
-the large-array externalisation (`payload_ref.uri` instead of inline `values`, already
-bounded by `check_values_size`).
+**Runtime boundary:** Watchdog is Kafka-only and does not use ASAPO. ASAPO is
+relevant if LaserData or another future source publishes through ASAPO. The
+preferred path is now the `asapo-for-hzdr-damnit` sidecar: run it in a Python
+runtime with compatible ASAPO SDK wheels and have it write DAMNIT's durable JSONL
+spool. Move the SDK into DAMNIT only later, after a compatible wheel exists for
+DAMNIT's target Python runtime.
 
-## 4. Real broker roundtrips with restart/replay 🔴 (the go-live gate's core)
-
-**Where it is:** offline + in-process broker tests are green; `test_hzdr_broker_roundtrip.py`
-exists (docker-gated). Needs a real restart-and-replay pass per consumer.
-
-**Do:** start `kafka-broker-docker`; run `test-all.ps1 -DockerTests` with
-`KAFKA_TEST_BROKER` set; then the manual restart/replay: produce a captured sequence,
-kill+restart the spool consumer mid-stream, confirm no lost acks and no duplicate
-products (dedup by `event_id`). This is where the **pilot capture** (one synchronized
-`Solenoid Beamline Tests 01.2025` sequence) feeds in. Gate criteria are listed under
-"Go-Live Gate" in the roadmap.
+**Do later:** run the sidecar against the real/standalone ASAPO broker, add a
+gated real-ASAPO integration test, and fold in large-array externalisation
+(`payload_ref.uri` instead of inline `values`).
+This is not a blocker for the Kafka pilot.
 
 ## 5. Full `shot_key` adoption in table/review rows ⬜ (UI, deferrable)
 
@@ -94,8 +104,8 @@ schema change is actually needed.
 
 ## Recommended order
 
-1. **shotcounter gate** (item 1) — closes a 🟡, unblocks two 🔴s, mostly human steps.
-2. **planet-watchdog deploy config** (item 2) — quick, pairs with item 4.
-3. **Real broker restart/replay + pilot capture** (item 4) — the go-live core.
-4. **ASAPO SDK adapter** (item 3) — code now, gated test when a broker is up.
-5. **shot_key UI** (item 5) and **versioned schema** (item 6) — post-pilot.
+1. **shotcounter gate** (item 1) - closes the producer merge gate and unblocks authoritative shot-number follow-up work.
+2. **planet-watchdog deploy config** (item 2) - quick, pairs with item 3.
+3. **Real broker restart/replay + pilot capture** (item 3) - the Kafka go-live core.
+4. **LaserData/ASAPO sidecar** (item 4) - use `asapo-for-hzdr-damnit` after LaserData/package/broker access is clear; not a Kafka pilot blocker.
+5. **shot_key UI** (item 5) and **versioned schema** (item 6) - post-pilot.

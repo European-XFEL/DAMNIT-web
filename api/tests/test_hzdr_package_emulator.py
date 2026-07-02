@@ -37,7 +37,7 @@ def write_event(path: Path, **overrides):
             "message_id": 123,
         },
         "values": [12.5],
-        "metadata": {"unit": "J"},
+        "metadata": {"laser": {"pulse_energy": 12.5}},
     }
     event.update(overrides)
     path.write_text(json.dumps(event), encoding="utf-8")
@@ -112,7 +112,9 @@ def test_package_emulator_can_expand_shots(tmp_path: Path):
 
     sources = load_sources_file(package.sources_file)
     assert [shot.shot_number for shot in sources[0].shots] == [123, 125, 127]
-    assert len({shot.metadata["laser_energy_j"] for shot in sources[0].shots}) == 3
+    assert (
+        len({shot.metadata["laser"]["pulse_energy"] for shot in sources[0].shots}) == 3
+    )
     assert (
         len({shot.metadata["detector_signal_mean"] for shot in sources[0].shots}) == 3
     )
@@ -175,21 +177,25 @@ def test_local_shot_metadata_correction_records_history(tmp_path: Path):
         shot_increment=1,
     )
 
+    # laser.pulse_energy is nested (see docs/target-ontology.md §5 / CLAUDE.md
+    # "Metadata key registry"); update_local_shot_metadata only corrects a
+    # flat top-level key, so this exercises the correction/audit-trail
+    # mechanism itself against a field that stays flat.
     updated_shot = update_local_shot_metadata(
         package.sources_file,
         source_key="hzdr-emulator",
         shot_number=123,
-        key="laser_energy_j",
+        key="detector_signal_mean",
         value=11.75,
         note="Corrected from the logbook",
         corrected_by="hzdr-dev",
     )
 
-    assert updated_shot.metadata["laser_energy_j"] == pytest.approx(11.75)
+    assert updated_shot.metadata["detector_signal_mean"] == pytest.approx(11.75)
     correction = updated_shot.metadata["metadata_correction_history"][-1]
-    assert correction["key"] == "laser_energy_j"
+    assert correction["key"] == "detector_signal_mean"
     assert correction["to"] == pytest.approx(11.75)
     assert correction["by"] == "hzdr-dev"
 
     sources = load_sources_file(package.sources_file)
-    assert sources[0].shots[0].metadata["laser_energy_j"] == pytest.approx(11.75)
+    assert sources[0].shots[0].metadata["detector_signal_mean"] == pytest.approx(11.75)

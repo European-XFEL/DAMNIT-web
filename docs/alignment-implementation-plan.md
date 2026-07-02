@@ -20,27 +20,41 @@ requires a new required field.
 
 ## Phase 0 — Lock the `metadata` namespace convention 🟢
 
+**SIGNED OFF 2026-07-02.** The namespace decision is final: bare keys
+(no unit suffix) + the metadata key registry as the source of truth for
+canonical units, extended family-wide to `metadata.laser.*` and
+`metadata.vacuum.*` (not just `metadata.target.*`). See
+[target-ontology.md §5](target-ontology.md#5-units-convention),
+[standards-alignment.md §3.3/§3.5](standards-alignment.md#33-laser-parameters),
+and the registry in [CLAUDE.md](../CLAUDE.md). No further naming decision is
+needed — the one remaining Phase 0 item is the code item below (test), now
+unblocked by this sign-off.
+
 **Why first:** every later phase writes into `metadata.laser.*`, `metadata.target.*`,
 `metadata.vacuum.*`, `metadata.diagnostic.*`, `metadata.run.*`. The names must be fixed
 once, up front, so producers and the NeXus writer agree and nothing has to be renamed
 twice.
 
 **Do:**
-1. Promote the recommended-key columns in [standards-alignment.md §3.3–3.6](standards-alignment.md#33-laser-parameters)
+1. ✅ Promote the recommended-key columns in [standards-alignment.md §3.3–3.6](standards-alignment.md#33-laser-parameters)
    to a single authoritative key table (a `metadata` key registry) and add it to the
    root `CLAUDE.md` "Event schema contract" section so producers treat it as binding.
-2. Add a non-failing `metadata` key linter to `hzdr_event.py` (or a test) that *warns*
-   when a producer uses a legacy flat key (`laser_energy_j`) instead of the namespaced
-   one (`metadata.laser.pulse_energy_j`). Warn-only — does not reject, since the envelope
-   stays open inside `metadata`.
+   Done — see the "Metadata key registry" subsection of `CLAUDE.md`.
+2. ✅ **Remaining Phase 0 code item, now unblocked — done 2026-07-02:** added
+   `METADATA_KEY_REGISTRY`, `LEGACY_KEY_MAP`, and a non-failing `lint_metadata_keys()`
+   linter to `hzdr_event.py` that *warns* (via `hzdr_nexus._normalize_event`, on every
+   event that flows through normalization) when a producer uses a legacy suffixed key
+   (`pulse_energy_j`) instead of the namespaced bare one (`metadata.laser.pulse_energy`).
+   Warn-only — does not reject, since the envelope stays open inside `metadata`. The
+   `properties` extras sub-object is exempt (docs/target-ontology.md §4).
 
 **Files:** `CLAUDE.md`, `api/src/damnit_api/metadata/hzdr_event.py`, a new
 `api/tests/test_metadata_keys.py`.
 
 **Exit:** key registry committed; linter warns on legacy keys; no producer change yet.
 
-**Effort:** Low. **Decision needed:** confirm the namespace names are final (this is the
-one human sign-off that gates everything downstream).
+**Effort:** Low. **Decision needed:** ~~confirm the namespace names are final (this is
+the one human sign-off that gates everything downstream)~~ — done, signed off 2026-07-02.
 
 ## Phase 1 — Namespaced laser metadata + low-effort missing fields 🟡
 
@@ -51,14 +65,24 @@ the existing flat emulator keys into the `metadata.laser.*` / `metadata.vacuum.*
 namespace.
 
 **Do:**
-1. Update the flow-monitor emulator (`_build_flow_monitor_metadata` in
-   `api/src/damnit_api/metadata/routers.py`) to emit the namespaced keys and the
-   newly-added constant fields (wavelength, rep rate, polarization, laser system).
-2. Update the LaserData / shotcounter producers (sibling repos) to emit the same
+1. ✅ **Done 2026-07-02:** updated the flow-monitor emulator
+   (`_build_flow_monitor_metadata` and `enrich_latest_emulated_shot` in
+   `api/src/damnit_api/metadata/routers.py`) and the standalone
+   `api/scripts/hzdr-package-emulator.py` / `api/scripts/generate-hzdr-example.py`
+   generators to emit `metadata.laser.*` / `metadata.vacuum.*` namespaced bare keys
+   (`pulse_energy`, `pulse_duration`, `beam_pos_x`/`beam_pos_y`, `chamber_pressure`) and
+   a `metadata.target` object (bare `temperature` nested under it) instead of the legacy
+   flat/suffixed keys. Newly-added constant fields (wavelength, rep rate, polarization,
+   laser system) are still open — not part of this pass.
+2. ⬜ Update the LaserData / shotcounter producers (sibling repos) to emit the same
    namespaced keys. Fixed-per-system values (wavelength, rep rate, polarization) can come
    from producer config rather than per-shot data.
-3. Characterization test first: assert the emulator emits the namespaced keys and that
-   `hzdr_sources.json` round-trips them.
+3. ✅ **Done 2026-07-02:** characterization tests
+   (`test_flow_monitor_emulator_emits_namespaced_bare_keys`,
+   `test_flow_monitor_emulator_enrich_action_keeps_namespaced_keys` in
+   `api/tests/test_hzdr_sources.py`) assert the emulator emits the namespaced keys, that
+   `hzdr_sources.json` round-trips them, and that `lint_metadata_keys()` is silent on the
+   emulator's output.
 
 **Files:** `api/src/damnit_api/metadata/routers.py`, sibling producer configs,
 `api/tests/` (new emulator-metadata test).
@@ -104,11 +128,17 @@ local step — it makes the canonical file readable by standard NeXus/HELPMI too
 data the earlier phases already captured.
 
 **Do:**
-1. Add `write_nexus_instrument_laser()` (NXsource: `type="Laser"`, `probe="optical laser"`,
+1. ⬜ Add `write_nexus_instrument_laser()` (NXsource: `type="Laser"`, `probe="optical laser"`,
    `name`, `pulse_energy`, `frequency`) reading from `metadata.laser.*`.
-2. Add `write_nexus_sample()` (NXsample: `name`, `chemical_formula`, `thickness`,
-   `temperature`) reading from `metadata.target.*`.
-3. In `_write_data_products`, write a per-product `NXdetector` sub-group with
+2. ✅ **Done 2026-07-02:** added `write_nexus_sample()` (NXsample: `name`,
+   `chemical_formula`, `thickness`, `diameter`, `temperature`, `gas_pressure`,
+   `substrate_material`, `description`, plus `damnit_provenance`/`target_ref`/
+   `gas_species`/`prop_*` group attrs) reading from `metadata.target.*` in
+   `api/src/damnit_api/metadata/hzdr_nexus.py`, wired into `write_nexus_bridge()` (called
+   for every campaign build via `hzdr-hdf5-builder.py`). Tolerates the legacy string
+   form of `metadata.target` via `_normalize_target_metadata`. Tests in
+   `api/tests/test_hzdr_nexus_sample.py`.
+3. ⬜ In `_write_data_products`, write a per-product `NXdetector` sub-group with
    `detector_type`/`type` derived from the product `kind`; add the missing kinds
    (Thomson parabola, FROG) to the kind→class map.
 4. Set `entry/start_time` from the first shot's `fired_at`.

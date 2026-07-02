@@ -130,6 +130,11 @@ def mutate_event_for_shot(
 
     metadata = mutated.setdefault("metadata", {})
     if isinstance(metadata, dict):
+        # Numeric laser/vacuum/target fields are namespaced bare keys per the
+        # metadata key registry (CLAUDE.md "Metadata key registry", signed
+        # off 2026-07-02; see also docs/target-ontology.md §5) - no unit
+        # suffix in the key name, canonical unit fixed in
+        # hzdr_event.METADATA_KEY_REGISTRY.
         energy = 12.4 + index * 0.17 + float(rng.normal(0, 0.06))
         pressure = 2.5e-5 * (1 + index * 0.04 + float(rng.normal(0, 0.01)))
         xray_counts = int(1450 + index * 37 + rng.integers(-18, 19))
@@ -138,14 +143,20 @@ def mutate_event_for_shot(
         metadata["emulated_sequence"] = index + 1
         metadata["emulated_shot_increment"] = shot_increment
         metadata["status"] = "processed" if index % 5 else "needs-review"
-        metadata["target"] = f"target-{(index % 4) + 1}"
-        metadata["laser_energy_j"] = round(energy, 3)
-        metadata["chamber_pressure_mbar"] = round(pressure, 8)
+        metadata["target"] = {
+            "type": "other",
+            "name": f"target-{(index % 4) + 1}",
+            "provenance": "manual",
+            "temperature": round(temperature, 2),
+        }
+        metadata["laser"] = {
+            "pulse_energy": round(energy, 3),
+            "pulse_duration": round(42.0 + index * 0.35, 2),
+            "beam_pos_x": round(-0.35 + index * 0.015, 4),
+            "beam_pos_y": round(0.18 - index * 0.012, 4),
+        }
+        metadata["vacuum"] = {"chamber_pressure": round(pressure, 8)}
         metadata["xray_counts"] = xray_counts
-        metadata["sample_temperature_c"] = round(temperature, 2)
-        metadata["pulse_width_fs"] = round(42.0 + index * 0.35, 2)
-        metadata["beam_position_x_mm"] = round(-0.35 + index * 0.015, 4)
-        metadata["beam_position_y_mm"] = round(0.18 - index * 0.012, 4)
         metadata["detector_signal_mean"] = round(detector_signal, 4)
         metadata["alignment_score"] = round(0.82 + (index % 6) * 0.025, 4)
         metadata["operator"] = ["alex", "sam", "lee"][index % 3]
@@ -376,8 +387,18 @@ def write_fixture_datasets(handle: h5py.File, events: list[dict[str, Any]]) -> N
 
     for index, shot_id in enumerate(shot_ids):
         metadata = metadata_by_shot[shot_id]
-        energy = float(metadata.get("laser_energy_j", 12.0 + index * 0.2))
-        pressure = float(metadata.get("chamber_pressure_mbar", 2.5e-5))
+        laser_metadata = metadata.get("laser")
+        vacuum_metadata = metadata.get("vacuum")
+        energy = float(
+            (laser_metadata or {}).get("pulse_energy", 12.0 + index * 0.2)
+            if isinstance(laser_metadata, dict)
+            else 12.0 + index * 0.2
+        )
+        pressure = float(
+            (vacuum_metadata or {}).get("chamber_pressure", 2.5e-5)
+            if isinstance(vacuum_metadata, dict)
+            else 2.5e-5
+        )
         scalar_values.append(energy)
 
         x = np.linspace(0, np.pi * 4, line_length)

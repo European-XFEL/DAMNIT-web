@@ -49,7 +49,7 @@ import {
   isMissingContextValueError,
   formatContextValue,
 } from '../utils/format'
-import { getNestedMetadataValue } from '../utils/metadata'
+import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
 
 export function HZDRShotPage() {
@@ -661,14 +661,22 @@ export function HZDRShotPage() {
                                       shot,
                                       'Energy',
                                       'laser_energy_j',
-                                      shot.metadata.laser_energy_j,
-                                      'laser_energy_j'
+                                      getNestedMetadataValue(
+                                        shot.metadata,
+                                        'laser.pulse_energy'
+                                      ),
+                                      'laser.pulse_energy'
                                     )
                                   }}
                                   style={cellButtonStyle}
                                 >
                                   <TruncatedCell
-                                    value={shot.metadata.laser_energy_j ?? '-'}
+                                    value={
+                                      getNestedMetadataValue(
+                                        shot.metadata,
+                                        'laser.pulse_energy'
+                                      ) ?? '-'
+                                    }
                                   />
                                 </button>
                               </Table.Td>
@@ -683,13 +691,13 @@ export function HZDRShotPage() {
                                       shot,
                                       'Target',
                                       'target',
-                                      shot.metadata.target
+                                      formatTargetLabel(shot.metadata.target)
                                     )
                                   }}
                                   style={cellButtonStyle}
                                 >
                                   <TruncatedCell
-                                    value={shot.metadata.target ?? '-'}
+                                    value={formatTargetLabel(shot.metadata.target) ?? '-'}
                                   />
                                 </button>
                               </Table.Td>

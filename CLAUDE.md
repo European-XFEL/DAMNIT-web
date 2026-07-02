@@ -216,6 +216,48 @@ Optional fields: `schema_version`, `event_id` (synthesized from content hash if 
 
 `payload_ref` uses `HZDRPayloadRef` (`extra="allow"`). At least one traceability field should be set: `uri`, `path`, `topic`/`partition`/`offset`, `mongo_id`, or `scicat_pid`.
 
+### Metadata key registry (binding, signed off 2026-07-02)
+
+Namespace convention for numeric `metadata.*` keys: **bare keys, no unit suffix.**
+The canonical unit per key is fixed here; the NeXus writer stamps it as `@units`,
+and the SQLite export carries it in the existing `units` table
+(labfrog-sqlite-tools schema). Superseded suffixed keys (`pulse_energy_j`,
+`wavelength_nm`, etc.) must not be used for new producers. The `properties`
+extras bag (see `target-ontology.md` §4) keeps the `_unit`-suffix convention
+since its keys have no registry entry.
+
+**Linter implemented (2026-07-02):** `METADATA_KEY_REGISTRY`, `LEGACY_KEY_MAP`, and
+`lint_metadata_keys()` in `api/src/damnit_api/metadata/hzdr_event.py` encode this table
+in code and warn (never reject) when a legacy suffixed key is seen; wired into
+`hzdr_nexus._normalize_event()` so every normalized event is linted. The flow-monitor
+emulator (`routers._build_flow_monitor_metadata`) already emits the namespaced bare
+keys, so the linter is silent on its output.
+
+| Namespace | Key | Canonical unit |
+| --- | --- | --- |
+| `target.*` | `thickness` | nm |
+| `target.*` | `diameter` | mm |
+| `target.*` | `temperature` | °C (`C`) |
+| `target.*` | `gas_pressure` | bar |
+| `laser.*` | `pulse_energy` | J |
+| `laser.*` | `pulse_duration` | fs |
+| `laser.*` | `wavelength` | nm |
+| `laser.*` | `beam_pos_x` / `beam_pos_y` | mm |
+| `laser.*` | `beam_waist_x` / `beam_waist_y` | um |
+| `laser.*` | `repetition_rate` | Hz |
+| `laser.*` | `polarization` | — (string enum) |
+| `laser.*` | `contrast_ratio` | — (dimensionless) |
+| `laser.*` | `system` | — (string) |
+| `vacuum.*` | `chamber_pressure` | mbar |
+| `vacuum.*` | `pre_shot_pressure` | mbar |
+| `vacuum.*` | `rga_dominant_species` | — (string) |
+| `run.*` | `facility`, `beamline`, `pi`, `start_utc`, `end_utc` | n/a (non-numeric) |
+| `diagnostic.*` | per-detector scalars | see detector-specific docs |
+
+See [docs/target-ontology.md §5](docs/target-ontology.md#5-units-convention) and
+[docs/standards-alignment.md §3.3/§3.5](docs/standards-alignment.md#33-laser-parameters)
+for the full rationale and HELPMI cross-walk.
+
 ### NeXus bridge profile: `hzdr-canonical-shot-v1`
 
 Stamped as `damnit_bridge_profile` on HDF5 root and `/entry/shots`. Current value: `"hzdr-canonical-shot-v1"`. Bump this string if the bridge table layout changes (columns added/removed from the shot or source-events groups).

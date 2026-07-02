@@ -15,7 +15,10 @@ replay remain.
 | [Standards alignment](standards-alignment.md) | DAPHNE4NFDI / HELPMI / NeXus / SciCat field cross-walk, gap analysis, and routes |
 | [Target ontology](target-ontology.md) | The `metadata.target.*` sub-schema: wiki-curated vs "OTHER" targets, units, provenance, NeXus mapping |
 | [Alignment implementation plan](alignment-implementation-plan.md) | Phased execution plan for enacting the standards alignment |
+| [Protocol status](protocol-status.md) | Per-source / per-repo done-vs-outstanding matrix for all four data-transfer paths |
 | [Roadmap](integration-roadmap.md) | Per-repository status table and ordered work items through go-live |
+| [Remaining work](remaining-work-plan.md) | Next-steps playbook for open items with ordered recommendations |
+| [Deployment plan](deployment-plan.md) | Wiring the Kafka and ASAPO spool consumers into the running server |
 | [Testing](testing.md) | Verified coverage and remaining acceptance tests |
 | [Local development](local-development.md) | Minimal build, test, and launch commands |
 | [Handoff](handoff.md) | Short current-state snapshot for the next session |

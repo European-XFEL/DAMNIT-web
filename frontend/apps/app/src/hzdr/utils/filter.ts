@@ -5,6 +5,7 @@ import type {
   HZDRContextResults,
 } from '../types'
 import { formatFiredAt } from './format'
+import { formatTargetLabel } from './metadata'
 
 export function shotMatchesTableFilter(
   shot: HZDRShot,
@@ -64,8 +65,8 @@ export function getShotFilterValues(
     shot_day: shotDayLabel,
     fired_at: [shot.fired_at, formatFiredAt(shot.fired_at)],
     status: shot.metadata.status,
-    laser_energy_j: shot.metadata.laser_energy_j,
-    target: shot.metadata.target,
+    laser_energy_j: shot.metadata.laser?.pulse_energy,
+    target: formatTargetLabel(shot.metadata.target),
   }
   if (filterColumn !== 'all') {
     return [metadataValues[filterColumn]].flat()

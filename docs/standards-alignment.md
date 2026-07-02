@@ -108,6 +108,14 @@ can be claimed.
 | Peak intensity | `peak_intensity` | — | `metadata.laser.peak_intensity_wcm2` | W/cm² | — | **Missing** — derivable from energy, duration, waist but not stored |
 | Laser system | `laser_system` | `source` field (`"LaserData"`) | `metadata.laser.system` | string | `NXsource.name` | `source` is producer label, not laser name; add `"DRACO"`, `"DRACO II"` |
 
+> **Decided 2026-07-02:** stored keys are bare (see
+> [target-ontology.md §5](target-ontology.md#5-units-convention)); the suffixed
+> names in this table (`pulse_energy_j`, `pulse_duration_fs`, `wavelength_nm`,
+> `repetition_rate_hz`, `beam_pos_x_mm`/`beam_pos_y_mm`,
+> `beam_waist_x_um`/`beam_waist_y_um`) are the HELPMI cross-walk labels only.
+> Canonical units live in the metadata key registry; SQLite carries them in
+> the `units` table.
+
 ### 3.4 Target / sample
 
 HELPMI `TargetClasses` covers solid foil, gas jet, cluster, and liquid targets. DAMNIT
@@ -140,6 +148,12 @@ temperature, and humidity sensors. There is a direct NeXus mapping.
 | Chamber pressure | `chamber_pressure_mbar` | `metadata.vacuum.chamber_pressure_mbar` | mbar | `NXenvironment.pressure` | Rename namespace; unit convention is fine |
 | Pre-shot vacuum level | — | `metadata.vacuum.pre_shot_pressure_mbar` | mbar | — | **Missing** — pressure immediately before shot |
 | Residual gas analyser reading | — | `metadata.vacuum.rga_dominant_species` | string | — | **Missing** — optional but useful for foil pre-ablation |
+
+> **Decided 2026-07-02:** stored keys are bare (see
+> [target-ontology.md §5](target-ontology.md#5-units-convention)); the suffixed
+> names in this table (`chamber_pressure_mbar`, `pre_shot_pressure_mbar`) are
+> the HELPMI cross-walk labels only. Canonical units live in the metadata key
+> registry; SQLite carries them in the `units` table.
 
 ### 3.6 Diagnostics and detectors
 
@@ -261,15 +275,18 @@ metadata.vacuum.pressure_mbar  → HELPMI Devices: vacuum_sensor.pressure
 This is purely a documentation + convention change; no schema bump needed. The `hzdr_nexus.py`
 builder can already write these as HDF5 attributes from the `metadata` JSON.
 
-### Route 2: `NXlaser` and `NXtarget` groups in the NeXus bridge (medium effort)
+### Route 2: `NXsource`/`NXbeam` and `NXsample` groups in the NeXus bridge (ready)
 
-The HELPMI `NeXus-for-HELPMI/definitions` fork extends NeXus with laser-plasma specific
-base classes. Adding `/entry/laser` (`NXlaser`) and `/entry/target` (`NXtarget`) groups
-to the NeXus bridge in `hzdr_nexus.py` would make the canonical NeXus file directly
-readable by HELPMI-aware tools. This requires:
+**Update 2026-07-02: HELPMI is finished and will not publish further NeXus base
+classes**, so the `NXlaser`/`NXtarget` fork is not a dependency. This route is
+no longer blocked on HELPMI publication — use the **standard** NeXus classes
+now: `/entry/instrument/laser` = `NXsource` (+ `NXbeam` for beam parameters),
+and `/entry/sample` = `NXsample`. HELPMI DDC names remain as documentation
+cross-walk only (§3.3, §3.4). This requires:
 
 1. Choosing which producer events carry the relevant fields (LaserData, shotcounter).
-2. Adding a `write_nexus_laser_group()` call in `write_nexus_bridge()`.
+2. Adding a `write_nexus_laser_group()` (`NXsource`/`NXbeam`) and
+   `write_nexus_sample()` (`NXsample`) call in `write_nexus_bridge()`.
 3. No change to the transport envelope; the data is already in `metadata`/`values`.
 
 ### Route 3: SciCat registration (lower effort — existing plugin)
@@ -321,10 +338,10 @@ writer and analysis tooling concern.
 | Rename `metadata` keys to HELPMI-aligned namespace (`metadata.laser.*` etc.) | ⬜ post-pilot | §3.3, Route 1 |
 | Add `metadata.laser.wavelength_nm`, `polarization`, `repetition_rate_hz` | ⬜ low effort | §3.3, §3.10 |
 | Add `metadata.target.*` fields from LabFrog shot record | ⬜ medium effort | §3.4, §3.10 |
-| Add `/entry/instrument/laser` (`NXsource`) to NeXus bridge | ⬜ low effort | §3.7, Route 2 |
-| Add `/entry/sample` (`NXsample`) to NeXus bridge | ⬜ medium effort | §3.7, Route 2 |
+| Add `/entry/instrument/laser` (`NXsource`/`NXbeam`) to NeXus bridge | ⬜ low effort — ready, not blocked | §3.7, Route 2 |
+| Add `/entry/sample` (`NXsample`) to NeXus bridge | ⬜ medium effort — ready, not blocked | §3.7, Route 2 |
 | Per-product `NXdetector` sub-groups in NeXus bridge | ⬜ medium effort | §3.6, §3.7 |
-| `NXlaser` / `NXtarget` groups (HELPMI NeXus fork) | ⬜ post-pilot | Route 2 |
+| `NXlaser` / `NXtarget` groups (HELPMI NeXus fork) | ❌ cancelled 2026-07-02 — HELPMI finished, use standard `NXsource`/`NXbeam`/`NXsample` instead | Route 2 |
 | SciCat registration + `scicat_pid` back-population (via existing HZDR SciCat plugin) | 🟡 plugin built (HTTP `/scicat/from-json` \| `/scicat/push`); DAMNIT builder post-step + API link not yet wired | Route 3, [roadmap §SciCat Registration](integration-roadmap.md#scicat-registration) |
 | NeXus Ontology annotation for federated search | ⬜ aspirational | Route 4 |
 | openPMD interoperability (simulation links) | ⬜ aspirational | Route 5 |

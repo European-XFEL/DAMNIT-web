@@ -38,8 +38,15 @@ def build_shots(output_dir: Path, source_key: str) -> list[ExampleShot]:
                 hdf5_path=str(hdf5_path),
                 metadata={
                     "status": "processed" if index < 2 else "needs-review",
-                    "target": f"target-{index + 1}",
-                    "laser_energy_j": round(12.5 + index * 0.2, 2),
+                    "target": {
+                        "type": "other",
+                        "name": f"target-{index + 1}",
+                        "provenance": "manual",
+                    },
+                    # Namespaced bare key per the metadata key registry
+                    # (CLAUDE.md "Metadata key registry", signed off
+                    # 2026-07-02; docs/target-ontology.md §5).
+                    "laser": {"pulse_energy": round(12.5 + index * 0.2, 2)},
                     "diagnostics": {
                         "lineout_dataset": "diagnostics/lineout",
                         "detector_dataset": "diagnostics/detector_image",

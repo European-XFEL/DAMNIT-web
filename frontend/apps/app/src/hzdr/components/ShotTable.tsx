@@ -37,7 +37,7 @@ import {
 import { isPlotlyPreview } from '../utils/plotly'
 import { isNumericLinePreview, isNumericMatrixPreview } from '../utils/preview'
 import { getNumericMetadataKeys } from '../utils/metadata'
-import { getNestedMetadataValue } from '../utils/metadata'
+import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import {
   MetadataTrendPreview,
   ContextPreviewValue,
@@ -465,7 +465,7 @@ export function ShotDetailPanel({
               <Text size="xs" c="dimmed">
                 Target
               </Text>
-              <Text size="sm">{shot.metadata.target ?? '-'}</Text>
+              <Text size="sm">{formatTargetLabel(shot.metadata.target) ?? '-'}</Text>
             </Stack>
             <Stack gap={2}>
               <Text size="xs" c="dimmed">

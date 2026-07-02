@@ -163,3 +163,102 @@ EVENT_REQUIRED_FIELDS: frozenset[str] = frozenset({
     "transport",
     "payload_ref",
 })
+
+
+# Metadata key registry (binding, signed off 2026-07-02 — see CLAUDE.md
+# "Metadata key registry" section, the authoritative human-readable copy of
+# this table). Namespaced bare key ("namespace.key") -> canonical unit
+# string, or None for a unitless/string key. The NeXus writer stamps the
+# canonical unit as `@units` at write time; the value itself is always a
+# bare number (no unit suffix in the key). The `properties` extras bag (see
+# docs/target-ontology.md §4) is exempt from this registry - its keys keep
+# the legacy `_unit` suffix convention since they have no registry entry.
+METADATA_KEY_REGISTRY: dict[str, str | None] = {
+    "target.thickness": "nm",
+    "target.diameter": "mm",
+    "target.temperature": "C",
+    "target.gas_pressure": "bar",
+    "laser.pulse_energy": "J",
+    "laser.pulse_duration": "fs",
+    "laser.wavelength": "nm",
+    "laser.beam_pos_x": "mm",
+    "laser.beam_pos_y": "mm",
+    "laser.beam_waist_x": "um",
+    "laser.beam_waist_y": "um",
+    "laser.repetition_rate": "Hz",
+    "laser.polarization": None,
+    "laser.contrast_ratio": None,
+    "laser.system": None,
+    "vacuum.chamber_pressure": "mbar",
+    "vacuum.pre_shot_pressure": "mbar",
+    "vacuum.rga_dominant_species": None,
+}
+
+
+# Superseded flat/unit-suffixed key name -> new namespaced bare key (a
+# METADATA_KEY_REGISTRY key). Producers must not use these for new events;
+# they are recognized here only so lint_metadata_keys() can warn about them.
+# Legacy keys are never rejected - only warned about - since the envelope
+# stays open inside `metadata`.
+LEGACY_KEY_MAP: dict[str, str] = {
+    "laser_energy_j": "laser.pulse_energy",
+    "pulse_energy_j": "laser.pulse_energy",
+    "pulse_duration_fs": "laser.pulse_duration",
+    "pulse_width_fs": "laser.pulse_duration",
+    "wavelength_nm": "laser.wavelength",
+    "beam_pos_x_mm": "laser.beam_pos_x",
+    "beam_pos_y_mm": "laser.beam_pos_y",
+    "beam_position_x_mm": "laser.beam_pos_x",
+    "beam_position_y_mm": "laser.beam_pos_y",
+    "beam_waist_x_um": "laser.beam_waist_x",
+    "beam_waist_y_um": "laser.beam_waist_y",
+    "repetition_rate_hz": "laser.repetition_rate",
+    "chamber_pressure_mbar": "vacuum.chamber_pressure",
+    "pre_shot_pressure_mbar": "vacuum.pre_shot_pressure",
+    "sample_temperature_c": "target.temperature",
+    "thickness_nm": "target.thickness",
+    "diameter_mm": "target.diameter",
+    "gas_pressure_bar": "target.gas_pressure",
+}
+
+# Namespace sub-objects exempt from legacy-key linting: the `properties`
+# extras bag (docs/target-ontology.md §4) keeps `_unit`-suffix keys by
+# design since it has no registry entry.
+_LINT_EXEMPT_SUBOBJECTS = frozenset({"properties"})
+
+
+def lint_metadata_keys(metadata: dict[str, Any]) -> list[str]:
+    """Warn (never reject) about legacy suffixed metadata keys.
+
+    Pure/read-only: never mutates `metadata`, never raises. Checks top-level
+    keys directly against LEGACY_KEY_MAP, and - one level down - each key of
+    any nested namespace dict (e.g. `metadata["laser"]`, `metadata["vacuum"]`,
+    `metadata["target"]`) except a sub-object literally named `properties`,
+    which is exempt by design (see docs/target-ontology.md §4).
+
+    Returns a list of human-readable warning strings; does not log by itself
+    (callers decide whether/how to log - see the call site in
+    `hzdr_nexus._normalize_event`).
+    """
+    warnings: list[str] = []
+    if not isinstance(metadata, dict):
+        return warnings
+
+    for key, value in metadata.items():
+        if key in LEGACY_KEY_MAP:
+            warnings.append(
+                f"legacy metadata key '{key}' is superseded by "
+                f"'{LEGACY_KEY_MAP[key]}' (bare key, canonical unit in "
+                "METADATA_KEY_REGISTRY)"
+            )
+        if key in _LINT_EXEMPT_SUBOBJECTS or not isinstance(value, dict):
+            continue
+        for inner_key in value:
+            if inner_key in LEGACY_KEY_MAP:
+                path = f"{key}.{inner_key}"
+                warnings.append(
+                    f"legacy metadata key '{path}' is superseded by "
+                    f"'{LEGACY_KEY_MAP[inner_key]}' (bare key, canonical unit "
+                    "in METADATA_KEY_REGISTRY)"
+                )
+    return warnings

@@ -5,6 +5,7 @@ import numpy as np
 import orjson
 import pytest
 
+from damnit_api.metadata.hzdr_event import lint_metadata_keys
 from damnit_api.metadata.hzdr_sources import (
     HZDRSourceProvider,
     _map_mongo_shot,
@@ -293,3 +294,69 @@ def test_shotcounter_flow_monitor_event_uses_zmq_kafka_shape(tmp_path: Path):
         "producer": "shotcounter",
         "topic": "shotcounter.shots",
     }
+
+
+def test_flow_monitor_emulator_emits_namespaced_bare_keys(tmp_path: Path):
+    """The emulator must emit registry keys, not legacy suffixed ones.
+
+    Characterization test for Phase 1 of docs/alignment-implementation-plan.md:
+    `_build_flow_monitor_metadata` (via `append_emulated_shot`) writes numeric
+    laser/vacuum/target fields under the namespaced bare-key convention (see
+    CLAUDE.md "Metadata key registry"), and the warn-only legacy-key linter
+    must be silent on its output.
+    """
+    sources_file = write_source_fixture(tmp_path)
+
+    source = append_emulated_shot(
+        sources_file,
+        source_key="hzdr-local",
+        event_source="LaserData",
+        event_kind="laser.pulse",
+        action="append",
+    )
+
+    metadata = source.shots[-1].metadata
+    assert "laser_energy_j" not in metadata
+    assert "chamber_pressure_mbar" not in metadata
+    assert "sample_temperature_c" not in metadata
+    assert "pulse_width_fs" not in metadata
+    assert "beam_position_x_mm" not in metadata
+    assert "beam_position_y_mm" not in metadata
+
+    assert isinstance(metadata["laser"], dict)
+    assert isinstance(metadata["laser"]["pulse_energy"], float)
+    assert isinstance(metadata["vacuum"], dict)
+    assert isinstance(metadata["vacuum"]["chamber_pressure"], float)
+    assert isinstance(metadata["target"], dict)
+    assert metadata["target"]["provenance"] == "manual"
+    assert "temperature" in metadata["target"]
+
+    assert lint_metadata_keys(metadata) == []
+
+
+def test_flow_monitor_emulator_enrich_action_keeps_namespaced_keys(
+    tmp_path: Path,
+):
+    """The `enrich` emulator action must not reintroduce a legacy flat key."""
+    sources_file = write_source_fixture(tmp_path)
+    append_emulated_shot(
+        sources_file,
+        source_key="hzdr-local",
+        event_source="LaserData",
+        event_kind="laser.pulse",
+        action="append",
+    )
+
+    source = append_emulated_shot(
+        sources_file,
+        source_key="hzdr-local",
+        event_source="LaserData",
+        event_kind="laser.pulse",
+        action="enrich",
+    )
+
+    metadata = source.shots[-1].metadata
+    assert "laser_energy_j" not in metadata
+    assert isinstance(metadata["laser"], dict)
+    assert isinstance(metadata["laser"]["pulse_energy"], float)
+    assert lint_metadata_keys(metadata) == []

@@ -120,6 +120,16 @@ This supersedes the unit-suffixed names (`thickness_nm`, `diameter_mm`, …) sho
 [standards-alignment.md §3.4](standards-alignment.md#34-target--sample); that table
 is kept for the HELPMI cross-walk but the *stored* key is the bare name here.
 
+**Decided 2026-07-02:** the bare-key + out-of-band-unit convention is now
+family-wide, not just `metadata.target.*` — it also applies to
+`metadata.laser.*` and `metadata.vacuum.*`, superseding suffixed keys like
+`pulse_energy_j`. The canonical unit per key is fixed in the metadata key
+registry (see [CLAUDE.md](../CLAUDE.md)); the NeXus writer stamps it as
+`@units` as above, and the SQLite export carries it in the existing `units`
+table (already part of the labfrog-sqlite-tools schema) rather than in the
+column name. The `properties` extras bag (§4) keeps the `_unit`-suffix
+convention since its keys have no registry entry.
+
 ## 6. Examples
 
 **Wiki-selected foil** (curated, extra detail in `properties`):
@@ -187,8 +197,11 @@ When `write_nexus_sample()` is added (alignment plan Phase 3) it reads
 | `wiki_ref` | — | `@target_ref` |
 | `properties.*` | — | written as group attributes, prefixed `prop_` |
 
-The group gets `NX_class="NXsample"` (or HELPMI `NXtarget` once that base class is
-published — see [standards-alignment.md Route 2](standards-alignment.md#route-2-nxlaser-and-nxtarget-groups-in-the-nexus-bridge-medium-effort)).
+The group gets `NX_class="NXsample"`. HELPMI is finished (2026-07-02) and will
+publish no further base classes, so the planned wait for a HELPMI `NXtarget`
+class is cancelled — the group is `NXsample` permanently. HELPMI DDC names
+remain as documentation cross-walk only; see
+[standards-alignment.md Route 2](standards-alignment.md#route-2-nxlaser-and-nxtarget-groups-in-the-nexus-bridge-medium-effort).
 
 ---
 
@@ -199,7 +212,7 @@ published — see [standards-alignment.md Route 2](standards-alignment.md#route-
 | Target ontology (`metadata.target.*`) defined — core + extended + `properties` | ✅ this doc |
 | Units = bare key + NeXus `@units` | ✅ decided |
 | Provenance (`wiki`/`manual`) + `wiki_ref` first-class | ✅ decided |
-| Legacy string→object normalizer in `hzdr_event.py` | ⬜ Phase 2 |
+| Legacy string→object normalizer (`_normalize_target_metadata`, called from `hzdr_nexus._normalize_event`) | ✅ done 2026-07-02 |
 | LabFrog export carries target fields | ⬜ Phase 2 (sibling repo) |
-| `write_nexus_sample()` (`NXsample`) reads `metadata.target.*` | ⬜ Phase 3 |
+| `write_nexus_sample()` (`NXsample`) reads `metadata.target.*` | ✅ done 2026-07-02 |
 | Target→wiki link surfaced in API/UI | ⬜ optional |

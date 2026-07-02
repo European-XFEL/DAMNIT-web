@@ -112,9 +112,9 @@ Pass `-WithAcceptance` to also run `hzdr-local-acceptance.py`.
 1. Build DAMNIT from current real sibling-repository artifacts (real LabFrog
    export + real broker events).
 2. Run Kafka roundtrip and restart/replay for DAQ File Watchdog (planet-watchdog) and shotcounter.
-3. Run ASAPO publish/consume/restart roundtrip with the production ASAPO SDK
-   wired into `AsapoSpoolConsumer` (consumer loop is built; SDK swap is the
-   remaining step).
+3. Test the `asapo-for-hzdr-damnit` sidecar when LaserData or another ASAPO
+   source is available. It should consume with the DESY SDK, write DAMNIT
+   spool JSONL, fsync before ack, and deduplicate replayed `event_id` values.
 4. Add Playwright coverage for campaign, shot, provenance, and preview views.
 5. Replay the captured pilot and report match/deduplication counts against the
    go-live gate in [integration-roadmap.md](integration-roadmap.md).
