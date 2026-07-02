@@ -1,11 +1,11 @@
 # Target / Sample Ontology (`metadata.target.*`)
 
-Updated: 2026-06-26
+Updated: 2026-07-02
 
 The authoritative definition of the **target (sample) sub-schema** that DAMNIT
 captures per shot, how MediaWiki-curated targets and hand-entered ("OTHER")
 targets share one namespace, how units are encoded, and how the fields map onto
-NeXus `NXsample` / HELPMI `TargetClasses`.
+NeXus `NXsample`, the HZDR-local `NXhzdr_target` profile, and HELPMI `TargetClasses`.
 
 This document is the *fine-grained* companion to the target rows in
 [standards-alignment.md §3.4](standards-alignment.md#34-target--sample) and is the
@@ -178,7 +178,7 @@ The normalizer in `hzdr_event.py` should perform this widening so downstream
 consumers (catalog, NeXus writer, UI) only ever see the object form. This is a
 read-side widening, not a transport-schema change.
 
-## 8. NeXus mapping (`/entry/sample`, `NXsample`)
+## 8. NeXus mapping (`/entry/sample`, `NXsample` + `NXhzdr_target`)
 
 When `write_nexus_sample()` is added (alignment plan Phase 3) it reads
 `metadata.target.*` and writes:
@@ -197,11 +197,19 @@ When `write_nexus_sample()` is added (alignment plan Phase 3) it reads
 | `wiki_ref` | — | `@target_ref` |
 | `properties.*` | — | written as group attributes, prefixed `prop_` |
 
-The group gets `NX_class="NXsample"`. HELPMI is finished (2026-07-02) and will
-publish no further base classes, so the planned wait for a HELPMI `NXtarget`
-class is cancelled — the group is `NXsample` permanently. HELPMI DDC names
-remain as documentation cross-walk only; see
-[standards-alignment.md Route 2](standards-alignment.md#route-2-nxlaser-and-nxtarget-groups-in-the-nexus-bridge-medium-effort).
+The low-risk compatibility group keeps `NX_class="NXsample"` so standard NeXus tooling
+can still read the file. HELPMI is finished (2026-07-02) and will publish no official
+`NXtarget`, so HZDR can define its own local target class/profile instead of waiting:
+`NXhzdr_target`.
+
+Do **not** use the unqualified `NXtarget` name locally; it looks official and could
+conflict with a future upstream NeXus class. The first implementation should document a
+local NXDL/profile for `NXhzdr_target`, then stamp HZDR-profile files with compatibility
+metadata such as `damnit_nx_class="NXhzdr_target"` and `damnit_nxdl_version` while leaving
+`NX_class="NXsample"`. If the local NXDL is later bundled with the validator/tooling, we
+can decide whether HZDR-profile files should set `NX_class="NXhzdr_target"` directly.
+HELPMI DDC names remain the documentation cross-walk; see
+[standards-alignment.md Route 2](standards-alignment.md#route-2-nxsource-nxbeam-and-nxsample-groups-in-the-nexus-bridge-ready).
 
 ---
 
@@ -213,6 +221,8 @@ remain as documentation cross-walk only; see
 | Units = bare key + NeXus `@units` | ✅ decided |
 | Provenance (`wiki`/`manual`) + `wiki_ref` first-class | ✅ decided |
 | Legacy string→object normalizer (`_normalize_target_metadata`, called from `hzdr_nexus._normalize_event`) | ✅ done 2026-07-02 |
-| LabFrog export carries target fields | ⬜ Phase 2 (sibling repo) |
+| LabFrog export carries captured target fields | ✅ done 2026-07-02 |
+| DAMNIT reconciler maps exported LabFrog target columns to `metadata.target.*` | ✅ done 2026-07-02 |
 | `write_nexus_sample()` (`NXsample`) reads `metadata.target.*` | ✅ done 2026-07-02 |
-| Target→wiki link surfaced in API/UI | ⬜ optional |
+| HZDR-local `NXhzdr_target` profile / NXDL drafted | ⬜ Phase 5 |
+| Target→wiki link surfaced in API/UI (`target_wiki_ref` / `target_wiki_page`, table + shot detail links) | ✅ done 2026-07-02 |

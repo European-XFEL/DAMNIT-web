@@ -1,6 +1,6 @@
 # Standards Alignment — Implementation Plan
 
-Updated: 2026-06-26
+Updated: 2026-07-02
 
 The execution plan for enacting the alignment described in
 [standards-alignment.md](standards-alignment.md). That document is the *what* (the
@@ -93,30 +93,42 @@ populated; legacy-key linter from Phase 0 is silent on emulator output.
 **Effort:** Low (DAMNIT side) / Low–Medium (each producer). 🟡 because it touches sibling
 producer repos.
 
-## Phase 2 — Target / sample metadata from LabFrog 🟡
+## Phase 2 — Target / sample metadata from LabFrog 🟢/🟡
 
 **Scope:** the "Medium effort" target rows: material, thickness, type, gas species/pressure
-([§3.4](standards-alignment.md#34-target--sample)). These live in the LabFrog shot record
-and are not currently exported. The binding key schema for this phase is
-[target-ontology.md](target-ontology.md) — bare numeric keys with NeXus `@units`,
-`provenance` (`wiki`/`manual`), `wiki_ref`, and an open `properties` bag for the curated
-fields that vary between wiki target records.
+([§3.4](standards-alignment.md#34-target--sample)). Verified 2026-07-02: LabFrog
+shot records currently store the selected target value for every shot, manual `OTHER`
+target details (`material`, `thickness`, `notes`), and same-target series fields such
+as `target_series_sample`. The sibling `labfrog-sqlite-tools` export already carries
+those captured fields in `shots`/`shot_summary`. DAMNIT now reads the exported target
+columns into `HZDRShot.metadata.target.*`, converting known LabFrog thickness units to
+canonical nanometres for the bare-key metadata convention.
 
-**Do:**
-1. Extend the LabFrog → SQLite/NeXus export (sibling `labfrog-sqlite-tools`) to carry the
-   target fields into the per-shot export row.
-2. Plumb them through the reconciler into `HZDRShot.metadata.target.*` (no envelope change —
-   they arrive in the trigger event's `metadata` or are joined from the LabFrog record).
-3. Test: a shot with a LabFrog target record surfaces `metadata.target.material` etc. in
-   the catalog and shot-detail API.
+The binding key schema remains [target-ontology.md](target-ontology.md) — bare numeric
+keys with NeXus `@units`, `provenance` (`wiki`/`manual`), `wiki_ref`, and an open
+`properties` bag for curated fields that vary between wiki target records.
 
-**Files:** sibling `labfrog-sqlite-tools` export, `api/src/damnit_api/metadata/services.py`
-(reconciler merge), `api/tests/`.
+**Done:**
+1. ✅ LabFrog → SQLite/NeXus export carries captured target fields into the per-shot row.
+2. ✅ DAMNIT reconciler maps exported target columns into `HZDRShot.metadata.target.*`.
+3. ✅ Tests cover a LabFrog target row surfacing as `metadata.target.material` and
+   `metadata.target.thickness` in the reconciled catalog shape.
+4. ✅ DAMNIT API/UI surfaces curated target wiki links: `HZDRShot.target_wiki_ref` /
+   `target_wiki_page` are derived from `metadata.target`, and the shot table/detail panes
+   render a direct wiki link when present.
 
-**Exit:** target material/thickness visible per shot in the API and catalog.
+**Remaining:** LabFrog does not yet persist target `type`, gas species/pressure,
+`wiki_ref`, or arbitrary curated wiki target properties on each shot. Add those at the
+LabFrog capture/wiki-enrichment boundary before DAMNIT can expose them.
 
-**Effort:** Medium. 🟡 — depends on LabFrog export change and on what target fields LabFrog
-actually records.
+**Files:** sibling `labfrog-sqlite-tools` export, `api/src/damnit_api/metadata/hzdr_nexus.py`
+(reconciler merge), `api/tests/test_hzdr_nexus.py`.
+
+**Exit:** target material/thickness visible per shot in the API and catalog for captured
+LabFrog manual target records; richer wiki/gas fields tracked as a follow-up.
+
+**Effort:** Base Phase 2 is green for captured LabFrog fields; extended wiki/gas/type
+capture remains medium.
 
 ## Phase 3 — NeXus structural groups (`NXsource`, `NXsample`, `NXdetector`) 🟢
 
@@ -128,8 +140,11 @@ local step — it makes the canonical file readable by standard NeXus/HELPMI too
 data the earlier phases already captured.
 
 **Do:**
-1. ⬜ Add `write_nexus_instrument_laser()` (NXsource: `type="Laser"`, `probe="optical laser"`,
-   `name`, `pulse_energy`, `frequency`) reading from `metadata.laser.*`.
+1. ✅ **Done 2026-07-02:** added `write_nexus_laser_group()` (`/entry/instrument/laser`
+   as `NXsource`, nested `beam` as `NXbeam`) reading from `metadata.laser.*`; writes
+   `type`, `probe`, `name`, `pulse_energy`, `frequency`, `incident_energy`,
+   `pulse_duration`, `incident_wavelength`, `incident_polarization`, beam position,
+   waist/extent, and contrast when present.
 2. ✅ **Done 2026-07-02:** added `write_nexus_sample()` (NXsample: `name`,
    `chemical_formula`, `thickness`, `diameter`, `temperature`, `gas_pressure`,
    `substrate_material`, `description`, plus `damnit_provenance`/`target_ref`/
@@ -142,8 +157,9 @@ data the earlier phases already captured.
    `detector_type`/`type` derived from the product `kind`; add the missing kinds
    (Thomson parabola, FROG) to the kind→class map.
 4. Set `entry/start_time` from the first shot's `fired_at`.
-5. Characterization test on a built NeXus file: assert the new groups, `NX_class`
-   attributes, and `@units` are present (extend the existing `hzdr_nexus` test suite).
+5. ✅ **Done 2026-07-02 for the laser bridge:** existing `hzdr_nexus` bridge test now asserts
+   `/entry/instrument/laser`, nested `beam`, `NX_class`, and `@units`; keep extending it
+   for the future `NXdetector` product groups.
 
 **Files:** `api/src/damnit_api/metadata/hzdr_nexus.py`, `api/tests/` (NeXus writer tests).
 
@@ -205,18 +221,51 @@ mocked test green in CI, gated test green against a real instance.
 mapping confirmed and the private plugin available; a live instance is only needed for the
 *gated* test, not for building the integration.
 
-## Phase 5 — Ontology annotation & openPMD interoperability 🔴 (aspirational)
+## Phase 5 — HZDR-owned ontology annotation & openPMD interoperability 🟡/🔴
 
-**Scope:** [Routes 4–5](standards-alignment.md#route-4-nexus-ontology-annotation-for-federated-search-higher-effort).
+**Scope:** [Routes 4-5](standards-alignment.md#route-4-nexus-ontology-annotation-for-federated-search-higher-effort).
 NeXus Ontology URIs on file attributes for federated search; openPMD linking for
-simulation comparison. Both wait on HELPMI's laser-plasma extensions stabilizing.
+simulation comparison.
 
-**Do (when upstream is ready):** annotate NeXus attributes with NeXusOntology OWL URIs;
-add an openPMD export/link path for PIC-simulation comparison. Track upstream HELPMI
-`NeXus-for-HELPMI/definitions` releases; revisit when `NXlaser`/`NXtarget` are published.
+**Decision update 2026-07-02:** HELPMI is finished and will not publish the hoped-for
+laser-plasma NeXus base classes. There is no longer an upstream item to wait for. Treat
+the final HELPMI DDC names as a cross-walk, use standard NeXus classes where they exist,
+and define the missing HZDR semantic layer locally. For targets, that means an HZDR-owned
+`NXhzdr_target` NXDL/profile rather than waiting for or squatting on an official `NXtarget`
+name.
 
-**Effort:** High. 🔴 — external dependency on HELPMI/FAIRmat deliverables. No action now
-beyond watching the upstream repos.
+**Do:**
+1. Define a small HZDR semantic map for the metadata key registry: `metadata.*` key ->
+   NeXus path/dataset -> HELPMI DDC term -> NeXus Ontology URI when one exists ->
+   HZDR-local URI/identifier when no upstream term exists. Include a local target class
+   definition, tentatively `NXhzdr_target`, with `NXsample` as its compatibility mapping.
+   Keep this map versioned with the docs first; move it into NXDL/code only when the
+   NeXus writer starts consuming it.
+2. Add optional NeXus annotations from that map in `hzdr_nexus.py` without changing the
+   event envelope. The low-risk first pass keeps `/entry/sample` as `NX_class="NXsample"`
+   for standard-tool compatibility and adds HZDR attrs such as `damnit_nx_class="NXhzdr_target"`
+   / `damnit_nxdl_version` until our custom NXDL is bundled with validation. Once the local
+   NXDL package is in place, we can decide whether to set `NX_class="NXhzdr_target"` directly
+   for HZDR-profile files. Cover the signed-off registry namespaces (`laser`, `target`,
+   `vacuum`, `run`, `diagnostic`) and skip unknown extras in `metadata.target.properties`.
+3. For openPMD, start with **linking/manifest interoperability**, not a wholesale
+   conversion of the campaign NeXus file. Capture references from an experimental shot
+   or data product to a PIC/openPMD series (path/URI, iteration/window, code name,
+   checksum/version when available) so comparison tools can join experimental NeXus and
+   simulation output explicitly.
+4. Tests: static coverage test for the semantic map, NeXus writer test asserting the
+   annotation attrs on a fixture file, and a manifest-link unit test. No live ontology
+   service is required; a gated/live test only becomes relevant if a site service later
+   consumes the annotations.
+
+**Exit:** HZDR can publish a documented semantic profile without waiting on HELPMI; the
+repo contains a local target-class definition/profile (`NXhzdr_target`) with an `NXsample`
+compatibility mapping; a built campaign NeXus file carries ontology/semantic annotations
+for covered metadata; an openPMD simulation reference can be linked to a shot or data
+product for comparison.
+
+**Effort:** Medium-High. 🟡 for the local semantic-map and annotation work; 🔴 only
+for full openPMD comparison tooling or any future live ontology/search-service integration.
 
 ---
 
@@ -227,10 +276,10 @@ beyond watching the upstream repos.
    small producer changes.
 3. **Phase 3 — NeXus structural groups** 🟢. Highest-value local step; can start in
    parallel with Phase 1 using empty-tolerant writers, finishes once Phase 1/2 fill the data.
-4. **Phase 2 — target/sample from LabFrog** 🟡. Paced by the LabFrog export change.
+4. **Phase 2 — target/sample from LabFrog** 🟢/🟡. Base export/reconciler path is done for captured manual target fields; richer wiki/gas/type capture remains.
 5. **Phase 4 — SciCat registration** 🟡. Wire up the existing HZDR SciCat plugin
    (no custom client); gated test when a live instance is up.
-6. **Phase 5 — ontology / openPMD** 🔴. Watch upstream HELPMI; revisit post-pilot.
+6. **Phase 5 — ontology / openPMD** 🟡/🔴. HELPMI is finished; define the HZDR semantic profile ourselves. Start with a local key->NeXus->ontology map, an HZDR `NXhzdr_target` profile, and openPMD links; defer full comparison tooling until there is a concrete analysis user.
 
 None of these block the integration go-live gate (see
 [remaining-work-plan.md](remaining-work-plan.md)); they are FAIR-data quality improvements

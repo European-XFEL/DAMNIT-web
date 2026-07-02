@@ -465,9 +465,23 @@ export function ShotDetailPanel({
               <Text size="xs" c="dimmed">
                 Target
               </Text>
-              <Text size="sm">
-                {formatTargetLabel(shot.metadata.target) ?? '-'}
-              </Text>
+              {shot.target_wiki_ref ? (
+                <Anchor
+                  href={shot.target_wiki_ref}
+                  target="_blank"
+                  rel="noreferrer"
+                  size="sm"
+                  title={shot.target_wiki_page ?? 'Open target wiki'}
+                >
+                  {formatTargetLabel(shot.metadata.target) ??
+                    shot.target_wiki_page ??
+                    'Target wiki'}
+                </Anchor>
+              ) : (
+                <Text size="sm">
+                  {formatTargetLabel(shot.metadata.target) ?? '-'}
+                </Text>
+              )}
             </Stack>
             <Stack gap={2}>
               <Text size="xs" c="dimmed">

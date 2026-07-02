@@ -451,6 +451,92 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
     return shots
 
 
+def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
+    """Build canonical ``metadata.target`` from LabFrog SQLite target columns."""
+    target_display = _as_optional_string(record.get("target"))
+    target_name = _as_optional_string(record.get("target_name")) or target_display
+    material = _as_optional_string(record.get("target_material"))
+    notes = _as_optional_string(record.get("target_notes"))
+    source = _as_optional_string(record.get("target_source"))
+    thickness = _canonical_target_thickness_nm(
+        record.get("target_thickness_value"), record.get("target_thickness_unit")
+    )
+
+    target: dict[str, Any] = {}
+    if target_name:
+        target["name"] = target_name
+    if _is_manual_labfrog_target(record):
+        target["type"] = "other"
+        target["provenance"] = "manual"
+    elif source and source.casefold() == "wiki":
+        target["provenance"] = "wiki"
+    if material:
+        target["material"] = material
+    if thickness is not None:
+        target["thickness"] = thickness
+    if notes:
+        target["notes"] = notes
+
+    if target and thickness is None:
+        source_thickness = _source_target_thickness(record)
+        if source_thickness:
+            target["properties"] = {"source_thickness": source_thickness}
+
+    return target
+
+
+def _is_manual_labfrog_target(record: dict[str, Any]) -> bool:
+    source = (_as_optional_string(record.get("target_source")) or "").casefold()
+    if source == "wiki":
+        return False
+    if source in {"manual", "operator"}:
+        return True
+    target_display = (_as_optional_string(record.get("target")) or "").casefold()
+    target_name = (_as_optional_string(record.get("target_name")) or "").casefold()
+    if target_display.startswith("other") or target_name == "other":
+        return True
+    return any(
+        _as_optional_string(record.get(key))
+        for key in ("target_material", "target_notes")
+    ) or record.get("target_thickness_value") not in (None, "")
+
+
+def _canonical_target_thickness_nm(value: Any, unit: Any) -> float | None:
+    parsed = _as_optional_float(value)
+    if parsed is None:
+        return None
+    unit_text = _normalised_length_unit(unit)
+    if unit_text in {None, "", "nm", "nanometer", "nanometers"}:
+        return parsed
+    if unit_text in {"um", "\u03bcm", "micrometer", "micrometers"}:
+        return parsed * 1_000.0
+    if unit_text in {"mm", "millimeter", "millimeters"}:
+        return parsed * 1_000_000.0
+    if unit_text in {"m", "meter", "meters"}:
+        return parsed * 1_000_000_000.0
+    return None
+
+
+def _normalised_length_unit(unit: Any) -> str | None:
+    unit_text = _as_optional_string(unit)
+    if unit_text is None:
+        return None
+    return (
+        unit_text.strip()
+        .replace("\u00c2\u00b5", "\u03bc")
+        .replace("\u00b5", "\u03bc")
+        .casefold()
+    )
+
+
+def _source_target_thickness(record: dict[str, Any]) -> str | None:
+    value = _as_optional_string(record.get("target_thickness_value"))
+    unit = _as_optional_string(record.get("target_thickness_unit"))
+    if value and unit:
+        return f"{value} {unit}"
+    return value or unit
+
+
 def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
     """Read LabFrog's canonical SQLite shots table using its stable columns."""
     # Guard against a partial write: labfrog-sqlite-tools writes to a .tmp file
@@ -483,6 +569,22 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "date_time_timezone",
                 "campaign",
                 "experiment_id",
+                "target",
+                "target_name",
+                "target_material",
+                "target_thickness_value",
+                "target_thickness_unit",
+                "target_notes",
+                "target_source",
+                "target_series",
+                "target_series_id",
+                "target_series_label",
+                "target_series_index",
+                "target_series_sample",
+                "target_series_planned_count",
+                "target_series_actual_count",
+                "target_series_notes",
+                "target_series_status",
                 "status",
                 "version",
                 "kafka_topic",
@@ -525,10 +627,21 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "date_time_utc",
                 "campaign",
                 "experiment_id",
+                "target",
+                "target_name",
+                "target_material",
+                "target_thickness_value",
+                "target_thickness_unit",
+                "target_notes",
+                "target_source",
             }
             and value is not None
             and value != ""
         }
+        target_metadata = _labfrog_target_metadata(record)
+        if target_metadata:
+            metadata["target"] = target_metadata
+
         shot_record = {
             "record_index": index,
             "record_id": _as_optional_string(record.get("mongo_id")),
@@ -756,7 +869,9 @@ def reconcile_canonical_shots(  # noqa: C901
         )
 
     for shot in canonical:
-        shot["metadata"].update(_merged_event_metadata(shot["events"]))
+        shot["metadata"] = _merge_shot_metadata(
+            shot["metadata"], _merged_event_metadata(shot["events"])
+        )
         event_times = [
             parse_datetime(event["timestamp"])
             for event in shot["events"]
@@ -932,6 +1047,10 @@ def write_nexus_bridge(
             entry.attrs["damnit_source_events"] = "source_events"
             entry.attrs["damnit_data_products"] = "data_products"
 
+            laser = _first_shot_laser(shots)
+            if laser is not None:
+                write_nexus_laser_group(entry, laser)
+
             target = _first_shot_target(shots)
             if target is not None:
                 write_nexus_sample(entry, target)
@@ -984,6 +1103,18 @@ def _fill_default_product_paths(
             product["path"] = str(output_path)
 
 
+def _first_shot_laser(shots: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Pick the first namespaced laser metadata block for `/entry/instrument/laser`."""
+    for shot in shots:
+        metadata = shot.get("metadata")
+        if not isinstance(metadata, dict):
+            continue
+        laser = metadata.get("laser")
+        if isinstance(laser, dict) and laser:
+            return laser
+    return None
+
+
 def _first_shot_target(shots: list[dict[str, Any]]) -> Any:
     """Pick the campaign's target for `/entry/sample` from the shot list.
 
@@ -1004,6 +1135,85 @@ def _first_shot_target(shots: list[dict[str, Any]]) -> Any:
         if target:
             return target
     return None
+
+
+def write_nexus_laser_group(entry_group: h5py.Group, laser: dict[str, Any]) -> None:
+    """Write `/entry/instrument/laser` from canonical `metadata.laser.*` keys."""
+    instrument = entry_group.require_group("instrument")
+    if "NX_class" not in instrument.attrs:
+        instrument.attrs["NX_class"] = "NXinstrument"
+
+    source = instrument.require_group("laser")
+    source.attrs["NX_class"] = "NXsource"
+    _write_optional_string_dataset(source, "type", "Laser")
+    _write_optional_string_dataset(source, "probe", "optical laser")
+    _write_optional_string_dataset(source, "name", laser.get("system"))
+    _write_optional_numeric_dataset(
+        source,
+        "frequency",
+        laser.get("repetition_rate"),
+        unit_key="laser.repetition_rate",
+    )
+    _write_optional_numeric_dataset(
+        source,
+        "pulse_energy",
+        laser.get("pulse_energy"),
+        unit_key="laser.pulse_energy",
+    )
+
+    beam = source.require_group("beam")
+    beam.attrs["NX_class"] = "NXbeam"
+    _write_optional_numeric_dataset(
+        beam,
+        "incident_energy",
+        laser.get("pulse_energy"),
+        unit_key="laser.pulse_energy",
+    )
+    _write_optional_numeric_dataset(
+        beam,
+        "pulse_duration",
+        laser.get("pulse_duration"),
+        unit_key="laser.pulse_duration",
+    )
+    _write_optional_numeric_dataset(
+        beam,
+        "incident_wavelength",
+        laser.get("wavelength"),
+        unit_key="laser.wavelength",
+    )
+    _write_optional_string_dataset(
+        beam, "incident_polarization", laser.get("polarization")
+    )
+    _write_optional_numeric_dataset(
+        beam,
+        "beam_position_x",
+        laser.get("beam_pos_x"),
+        unit_key="laser.beam_pos_x",
+    )
+    _write_optional_numeric_dataset(
+        beam,
+        "beam_position_y",
+        laser.get("beam_pos_y"),
+        unit_key="laser.beam_pos_y",
+    )
+    _write_optional_numeric_dataset(
+        beam,
+        "extent_x",
+        laser.get("beam_waist_x"),
+        unit_key="laser.beam_waist_x",
+    )
+    _write_optional_numeric_dataset(
+        beam,
+        "extent_y",
+        laser.get("beam_waist_y"),
+        unit_key="laser.beam_waist_y",
+    )
+    _write_optional_numeric_dataset(
+        beam,
+        "contrast_ratio",
+        laser.get("contrast_ratio"),
+        unit_key="laser.contrast_ratio",
+    )
 
 
 def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
@@ -1945,6 +2155,23 @@ def _event_api_record(event: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _merge_shot_metadata(
+    labfrog_metadata: dict[str, Any], event_metadata: dict[str, Any]
+) -> dict[str, Any]:
+    """Merge event metadata without flattening richer LabFrog target details."""
+    merged = dict(labfrog_metadata)
+    for key, value in event_metadata.items():
+        if (
+            key == "target"
+            and isinstance(merged.get("target"), dict)
+            and isinstance(value, dict)
+        ):
+            merged["target"] = {**merged["target"], **value}
+            continue
+        merged[key] = value
+    return merged
+
+
 def _merged_event_metadata(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
     merged: dict[str, Any] = {}
     for event in events:
@@ -2183,6 +2410,15 @@ def _as_optional_string(value: Any) -> str | None:
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace")
     return str(_python_scalar(value))
+
+
+def _as_optional_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(_python_scalar(value))
+    except (TypeError, ValueError):
+        return None
 
 
 def _as_optional_int(value: Any) -> int | None:

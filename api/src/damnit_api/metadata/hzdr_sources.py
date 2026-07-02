@@ -166,6 +166,29 @@ class HZDRShot(BaseModel):
     events: list[HZDRSourceEvent] = Field(default_factory=list)
     data_products: list[HZDRDataProduct] = Field(default_factory=list)
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def target_wiki_ref(self) -> str | None:
+        """Resolved MediaWiki URL/id for the selected target, if captured."""
+        return _target_string_field(self.metadata, "wiki_ref")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def target_wiki_page(self) -> str | None:
+        """MediaWiki page title for the selected target, if captured."""
+        return _target_string_field(self.metadata, "wiki_page")
+
+
+def _target_string_field(metadata: dict[str, Any], field: str) -> str | None:
+    target = metadata.get("target")
+    if not isinstance(target, dict):
+        return None
+    value = target.get(field)
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    return value or None
+
 
 class HZDRHDF5Dataset(BaseModel):
     name: str

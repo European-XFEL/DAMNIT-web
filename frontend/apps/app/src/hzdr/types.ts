@@ -33,6 +33,8 @@ export type HZDRShot = {
     status?: string
     target?: string | ({ name?: string } & Record<string, unknown>)
   }
+  target_wiki_ref?: string | null
+  target_wiki_page?: string | null
   events: HZDRSourceEvent[]
   data_products: HZDRDataProduct[]
 }

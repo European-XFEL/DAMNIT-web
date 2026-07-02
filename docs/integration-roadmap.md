@@ -76,6 +76,9 @@ Committed and tested:
 - LabFrog Mongo, curated SQLite, and rich NeXus readers; curated SQLite linking
   columns (`kafka_event_id`, transport offsets, `damnit_*`) are preserved.
 - Canonical NeXus bridge, source catalog, API models, and frontend views.
+- Standards-aligned NeXus laser/sample bridge groups: `/entry/instrument/laser` writes
+  `NXsource` + nested `NXbeam` from available `metadata.laser.*`, and `/entry/sample`
+  writes `NXsample` from available `metadata.target.*`.
 - `HZDREventV1.experiment_id` derived from MediaWiki campaign choice in
   LabFrog and plumbed through the SQLite/NeXus export pipeline.
 - Atomic `hzdr_sources.json` publication (temp file + rename) at every write
@@ -233,6 +236,8 @@ Branch: `main`
 | Item | Status |
 | --- | --- |
 | Canonical `HZDREventV1` model, atomic catalog writes, single-writer builder lock | ✅ committed |
+| Standards-aligned NeXus bridge groups (`/entry/instrument/laser` as `NXsource` + nested `NXbeam`, `/entry/sample` as `NXsample`) | 🔄 done locally, not yet merged/committed |
+| Target wiki links exposed in DAMNIT API/UI (`target_wiki_ref` / `target_wiki_page`, shot table/detail links) | 🔄 done locally, not yet merged/committed |
 | Ambiguous/unmatched events in API; real Confirm Matches UI | ✅ committed |
 | Local acceptance script; offline four-source integration test | ✅ committed |
 | Shared example payloads and anonymized SQLite fixture | ✅ committed |

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  Anchor,
   Badge,
   Button,
   Card,
@@ -179,7 +180,7 @@ export function HZDRShotPage() {
       isTableColumnVisible('fired_at') ? 168 : 0,
       isTableColumnVisible('status') ? 112 : 0,
       isTableColumnVisible('laser_energy_j') ? 96 : 0,
-      isTableColumnVisible('target') ? 110 : 0,
+      isTableColumnVisible('target') ? 146 : 0,
       visibleContextColumns.length * 180,
     ].reduce((total, width) => total + width, 0)
   )
@@ -686,27 +687,48 @@ export function HZDRShotPage() {
                               </Table.Td>
                             ) : null}
                             {isTableColumnVisible('target') ? (
-                              <Table.Td w={110}>
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation()
-                                    selectMetadataCell(
-                                      shot,
-                                      'Target',
-                                      'target',
-                                      formatTargetLabel(shot.metadata.target)
-                                    )
-                                  }}
-                                  style={cellButtonStyle}
-                                >
-                                  <TruncatedCell
-                                    value={
-                                      formatTargetLabel(shot.metadata.target) ??
-                                      '-'
-                                    }
-                                  />
-                                </button>
+                              <Table.Td w={146}>
+                                <Group gap={6} wrap="nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation()
+                                      selectMetadataCell(
+                                        shot,
+                                        'Target',
+                                        'target',
+                                        formatTargetLabel(shot.metadata.target)
+                                      )
+                                    }}
+                                    style={cellButtonStyle}
+                                  >
+                                    <TruncatedCell
+                                      value={
+                                        formatTargetLabel(
+                                          shot.metadata.target
+                                        ) ?? '-'
+                                      }
+                                    />
+                                  </button>
+                                  {shot.target_wiki_ref ? (
+                                    <Anchor
+                                      href={shot.target_wiki_ref}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      size="xs"
+                                      onClick={(event) =>
+                                        event.stopPropagation()
+                                      }
+                                      title={
+                                        shot.target_wiki_page ??
+                                        'Open target wiki'
+                                      }
+                                      style={{ flex: '0 0 auto' }}
+                                    >
+                                      Wiki
+                                    </Anchor>
+                                  ) : null}
+                                </Group>
                               </Table.Td>
                             ) : null}
                             {visibleContextColumns.map((column) => {

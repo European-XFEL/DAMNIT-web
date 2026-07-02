@@ -60,6 +60,45 @@ def test_load_hzdr_sources_from_json_file(tmp_path: Path):
     assert [shot.shot_number for shot in sources[0].shots] == [1001, 1002]
 
 
+def test_shot_surfaces_target_wiki_link_from_metadata(tmp_path: Path):
+    path = tmp_path / "hzdr_sources.json"
+    path.write_bytes(
+        orjson.dumps({
+            "sources": [
+                {
+                    "key": "hzdr-local",
+                    "title": "HZDR local file fixture",
+                    "damnit_path": "damnit/hzdr-local",
+                    "metadata": {},
+                    "shots": [
+                        {
+                            "source_key": "hzdr-local",
+                            "shot_number": 1001,
+                            "fired_at": "2026-05-05T08:15:00Z",
+                            "metadata": {
+                                "target": {
+                                    "name": "Au witness",
+                                    "provenance": "wiki",
+                                    "wiki_page": "Target_Au_5um_A12",
+                                    "wiki_ref": "https://wiki.example/Target_Au_5um_A12",
+                                }
+                            },
+                        }
+                    ],
+                }
+            ]
+        })
+    )
+
+    shot = load_sources_file(path)[0].shots[0]
+
+    assert shot.target_wiki_page == "Target_Au_5um_A12"
+    assert shot.target_wiki_ref == "https://wiki.example/Target_Au_5um_A12"
+    assert shot.model_dump(mode="json")["target_wiki_ref"] == (
+        "https://wiki.example/Target_Au_5um_A12"
+    )
+
+
 def test_staged_event_count_excludes_synthetic_labfrog_rows(tmp_path: Path):
     """staged_event_count is a Flow Monitor status number: every shot's own
     synthetic LabFrog row should not inflate it, but real producer events

@@ -82,7 +82,23 @@ def test_preserves_rich_labfrog_nexus_and_adds_damnit_bridge(tmp_path: Path):
 
     labfrog_shots = read_labfrog_nexus_shots(labfrog_nexus)
     shots, events = reconcile_canonical_shots(
-        [normalized_event()],
+        [
+            normalized_event(
+                metadata={
+                    "unit": "count",
+                    "laser": {
+                        "system": "DRACO",
+                        "pulse_energy": 8.2,
+                        "pulse_duration": 30.0,
+                        "wavelength": 800.0,
+                        "repetition_rate": 10.0,
+                        "polarization": "horizontal",
+                        "beam_pos_x": 0.12,
+                        "beam_pos_y": -0.08,
+                    },
+                }
+            )
+        ],
         experiment_id="HELPMI",
         source_key="hzdr-labfrog",
         labfrog_shots=labfrog_shots,
@@ -115,6 +131,20 @@ def test_preserves_rich_labfrog_nexus_and_adds_damnit_bridge(tmp_path: Path):
         assert handle["entry/source_events/shot_key"].asstr()[0] == (  # pyright: ignore[reportAttributeAccessIssue]
             "HELPMI:20260610:000017"
         )
+        laser = handle["entry/instrument/laser"]
+        assert laser.attrs["NX_class"] == "NXsource"
+        assert laser["name"].asstr()[()] == "DRACO"
+        assert laser["frequency"].attrs["units"] == "Hz"
+        assert laser["frequency"][()] == pytest.approx(10.0)
+        assert laser["pulse_energy"].attrs["units"] == "J"
+        assert laser["pulse_energy"][()] == pytest.approx(8.2)
+        beam = handle["entry/instrument/laser/beam"]
+        assert beam.attrs["NX_class"] == "NXbeam"
+        assert beam["incident_wavelength"].attrs["units"] == "nm"
+        assert beam["incident_wavelength"][()] == pytest.approx(800.0)
+        assert beam["pulse_duration"].attrs["units"] == "fs"
+        assert beam["pulse_duration"][()] == pytest.approx(30.0)
+        assert beam["incident_polarization"].asstr()[()] == "horizontal"
         assert "entry/data_products/dataset_path" in handle
         assert (f"entry/laserdata/camera_raw/{events[0]['event_id']}/values") in handle
 
@@ -384,6 +414,113 @@ def test_reads_labfrog_sqlite_canonical_shot_columns(tmp_path: Path):
             "metadata": {"status": "active", "version": 2},
         }
     ]
+
+
+def test_reads_labfrog_sqlite_target_columns_as_metadata_target(tmp_path: Path):
+    sqlite_path = tmp_path / "campaign.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE shots (
+                mongo_id TEXT PRIMARY KEY,
+                shot_number INTEGER,
+                date_time TEXT,
+                campaign TEXT,
+                target TEXT,
+                target_name TEXT,
+                target_material TEXT,
+                target_thickness_value REAL,
+                target_thickness_unit TEXT,
+                target_notes TEXT,
+                target_source TEXT,
+                target_series_sample TEXT,
+                status TEXT
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "mongo-17",
+                17,
+                "2026-06-10T12:00:20Z",
+                "HELPMI",
+                "OTHER: Kapton witness; Kapton; 0.5 um; mounted on frame",
+                "Kapton witness",
+                "Kapton",
+                0.5,
+                "um",
+                "mounted on frame",
+                "operator",
+                "K-02",
+                "active",
+            ),
+        )
+
+    shots = read_labfrog_sqlite_shots(sqlite_path)
+
+    assert shots == [
+        {
+            "record_index": 0,
+            "record_id": "mongo-17",
+            "shot_number": 17,
+            "shot_date": "2026-06-10",
+            "labfrog_date_time": "2026-06-10T12:00:20Z",
+            "campaign": "HELPMI",
+            "metadata": {
+                "target": {
+                    "name": "Kapton witness",
+                    "type": "other",
+                    "provenance": "manual",
+                    "material": "Kapton",
+                    "thickness": 500.0,
+                    "notes": "mounted on frame",
+                },
+                "target_series_sample": "K-02",
+                "status": "active",
+            },
+        }
+    ]
+
+
+def test_event_target_metadata_does_not_replace_labfrog_details():
+    labfrog_shots = [
+        {
+            "record_id": "target-shot",
+            "shot_number": 17,
+            "shot_date": "2026-06-10",
+            "labfrog_date_time": "2026-06-10T12:00:20Z",
+            "metadata": {
+                "target": {
+                    "name": "Kapton witness",
+                    "type": "other",
+                    "provenance": "manual",
+                    "material": "Kapton",
+                    "thickness": 500.0,
+                    "notes": "mounted on frame",
+                }
+            },
+        }
+    ]
+
+    shots, events = reconcile_canonical_shots(
+        [
+            normalized_event(
+                timestamp="2026-06-10T12:00:20Z",
+                metadata={"target": "LaserData target label"},
+            )
+        ],
+        experiment_id="HELPMI",
+        source_key="hzdr-labfrog",
+        labfrog_shots=labfrog_shots,
+    )
+
+    assert events[0]["match_status"] == "matched"
+    target = shots[0]["metadata"]["target"]
+    assert target["name"] == "LaserData target label"
+    assert target["material"] == "Kapton"
+    assert target["thickness"] == pytest.approx(500.0)
+    assert target["notes"] == "mounted on frame"
 
 
 def test_reads_curated_sqlite_linking_columns_and_marks_history(tmp_path: Path):
