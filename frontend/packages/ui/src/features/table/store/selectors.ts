@@ -1,4 +1,4 @@
-import { type RootState } from '../../../redux/reducer'
+import type { RootState } from '../../../redux/reducer'
 import { createTypedSelector } from '../../../redux/selectors'
 
 // ----------------------------------------------------------------------------

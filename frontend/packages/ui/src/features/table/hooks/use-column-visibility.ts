@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { isEmpty } from 'lodash'
 
+import type { TagItem } from '../../../types'
 import { NONCONFIGURABLE_VARIABLES } from '../constants'
 import {
   selectTagSelection,
@@ -9,91 +9,115 @@ import {
 
 import { useAppSelector } from '../../../redux/hooks'
 
-function useConfigurableVariableNames() {
+type ColumnVisibilityInputs = {
+  variableNames: string[]
+  visibility: Record<string, boolean | undefined>
+  tags: Record<string, TagItem>
+  tagSelection: Record<string, boolean>
+}
+
+// Columns the user can't hide (proposal, added_at, run) never appear here.
+function configurableVariables(variableNames: string[]) {
+  return variableNames.filter(
+    (name) => !NONCONFIGURABLE_VARIABLES.includes(name)
+  )
+}
+
+// A variable is visible unless it was explicitly turned off.
+function visibilityFromVariables(
+  configurable: string[],
+  visibility: ColumnVisibilityInputs['visibility']
+) {
+  return Object.fromEntries(
+    configurable.map((name) => [name, visibility[name] !== false])
+  )
+}
+
+// With no selected tags there's no tag filter (null). Otherwise a variable
+// passes only if it belongs to at least one selected tag.
+function visibilityFromTags(
+  configurable: string[],
+  { tags, tagSelection }: Pick<ColumnVisibilityInputs, 'tags' | 'tagSelection'>
+): Record<string, boolean> | null {
+  const taggedVariables = new Set(
+    Object.entries(tags)
+      .filter(([name]) => !!tagSelection[name])
+      .flatMap(([, tag]) => tag.variables)
+  )
+
+  if (taggedVariables.size === 0) {
+    return null
+  }
+
+  return Object.fromEntries(
+    configurable.map((name) => [name, taggedVariables.has(name)])
+  )
+}
+
+// A column shows when it's variable-visible AND (there's no tag filter OR it
+// passes the tag filter).
+export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
+  const configurable = configurableVariables(inputs.variableNames)
+  const fromVariables = visibilityFromVariables(configurable, inputs.visibility)
+  const fromTags = visibilityFromTags(configurable, inputs)
+
+  return Object.fromEntries(
+    configurable.map((name) => [
+      name,
+      fromVariables[name] && (fromTags == null || fromTags[name]),
+    ])
+  )
+}
+
+function useVariableNames() {
   // TODO: Replace with GraphQL useQuery
   const variables = useAppSelector(
     (state) => state.tableData.metadata.variables
   )
-
-  const configurableVariables = useMemo(
-    () =>
-      Object.keys(variables).filter(
-        (name) => !NONCONFIGURABLE_VARIABLES.includes(name)
-      ),
-    [variables]
-  )
-
-  return configurableVariables
+  return useMemo(() => Object.keys(variables), [variables])
 }
 
 export function useColumnVisibilityFromVariables() {
-  const variableVisibility = useAppSelector(selectVariableVisibility)
-  const variables = useConfigurableVariableNames()
+  const variableNames = useVariableNames()
+  const visibility = useAppSelector(selectVariableVisibility)
 
-  return useMemo(() => {
-    return Object.fromEntries(
-      variables.map((variable) => [
-        variable,
-        variableVisibility[variable] !== false,
-      ])
-    )
-  }, [variables, variableVisibility])
+  return useMemo(
+    () =>
+      visibilityFromVariables(configurableVariables(variableNames), visibility),
+    [variableNames, visibility]
+  )
 }
 
 export function useColumnVisibilityFromTags() {
   // TODO: Replace with GraphQL useQuery
   const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const tagSelection = useAppSelector(selectTagSelection)
+  const variableNames = useVariableNames()
 
-  const selection = useAppSelector(selectTagSelection)
-  const variables = useConfigurableVariableNames()
-
-  const visibleVariablesFromTags = useMemo(() => {
-    const hasSelectedTags =
-      !isEmpty(selection) && Object.values(selection).some(Boolean)
-    if (!hasSelectedTags) {
-      return new Set()
-    }
-
-    return new Set(
-      Object.entries(tags)
-        .filter(([name]) => !!selection[name])
-        .map(([_, tag]) => tag.variables)
-        .flat()
-    )
-  }, [tags, selection])
-
-  const visibilityFromTags = useMemo(() => {
-    if (visibleVariablesFromTags.size === 0) {
-      // There's no selection
-      return null
-    }
-
-    return Object.fromEntries(
-      variables.map((variable) => [
-        variable,
-        visibleVariablesFromTags.has(variable),
-      ])
-    )
-  }, [visibleVariablesFromTags, variables])
-
-  return visibilityFromTags
+  return useMemo(
+    () =>
+      visibilityFromTags(configurableVariables(variableNames), {
+        tags,
+        tagSelection,
+      }),
+    [variableNames, tags, tagSelection]
+  )
 }
 
 export function useColumnVisibility() {
-  const visibilityFromVariables = useColumnVisibilityFromVariables()
-  const visibilityFromTags = useColumnVisibilityFromTags()
+  const variableNames = useVariableNames()
+  const visibility = useAppSelector(selectVariableVisibility)
+  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const tagSelection = useAppSelector(selectTagSelection)
 
-  const columnVisibility = useMemo(
+  return useMemo(
     () =>
-      Object.fromEntries(
-        Object.keys(visibilityFromVariables).map((variable) => [
-          variable,
-          visibilityFromVariables[variable] &&
-            (visibilityFromTags == null || visibilityFromTags[variable]),
-        ])
-      ),
-    [visibilityFromVariables, visibilityFromTags]
+      computeColumnVisibility({
+        variableNames,
+        visibility,
+        tags,
+        tagSelection,
+      }),
+    [variableNames, visibility, tags, tagSelection]
   )
-
-  return columnVisibility
 }
