@@ -701,7 +701,10 @@ export function HZDRShotPage() {
                                   style={cellButtonStyle}
                                 >
                                   <TruncatedCell
-                                    value={formatTargetLabel(shot.metadata.target) ?? '-'}
+                                    value={
+                                      formatTargetLabel(shot.metadata.target) ??
+                                      '-'
+                                    }
                                   />
                                 </button>
                               </Table.Td>

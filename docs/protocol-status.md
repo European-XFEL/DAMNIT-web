@@ -16,8 +16,8 @@ protocols. See `integration-roadmap.md` for the full work-order history; see
 
 ## Source 1: shotcounter → DAMNIT via Kafka (`draco.trigger`)
 
-**Transport:** Kafka (topic `draco.trigger`, registered in `kafka-broker-docker/topics.env`)  
-**Protocol:** `hzdr-event-v1` JSON envelope, manual-commit consumer group  
+**Transport:** Kafka (topic `draco.trigger`, registered in `kafka-broker-docker/topics.env`)
+**Protocol:** `hzdr-event-v1` JSON envelope, manual-commit consumer group
 **Branch status:** producer on `feature/hzdr-canonical-trigger-event` (not yet merged to main)
 
 | Repo | What | Status |
@@ -45,8 +45,8 @@ broker, then merge the shotcounter branch.
 
 ## Source 2: planet-watchdog → DAMNIT via Kafka (`planet.watchdog.events`)
 
-**Transport:** Kafka (topic `planet.watchdog.events`, registered in `kafka-broker-docker/topics.env`)  
-**Protocol:** `hzdr-event-v1` JSON envelope, same consumer-side path as Source 1  
+**Transport:** Kafka (topic `planet.watchdog.events`, registered in `kafka-broker-docker/topics.env`)
+**Protocol:** `hzdr-event-v1` JSON envelope, same consumer-side path as Source 1
 **Branch status:** all code committed to `master`
 
 | Repo | What | Status |
@@ -71,8 +71,8 @@ broker, then merge the shotcounter branch.
 
 ## Source 3: labfrog-sqlite-tools → DAMNIT via shared filesystem (SQLite/NeXus)
 
-**Transport:** Shared filesystem; export drop-in location configurable  
-**Protocol:** Curated SQLite + NeXus file pair, with `bundle-complete.json` marker  
+**Transport:** Shared filesystem; export drop-in location configurable
+**Protocol:** Curated SQLite + NeXus file pair, with `bundle-complete.json` marker
 **Branch status:** all committed to `main`
 
 | Repo | What | Status |
@@ -97,8 +97,8 @@ broker, then merge the shotcounter branch.
 
 ## Source 4: ASAPO → DAMNIT via HTTP harness / real SDK
 
-**Transport:** HTTP (`GET /api/claim`, `POST /api/ack`); harness broker local, real SDK pending  
-**Protocol:** `hzdr-event-v1` JSON envelope; same claim→write+fsync→ack→dedup loop  
+**Transport:** HTTP (`GET /api/claim`, `POST /api/ack`); harness broker local, real SDK pending
+**Protocol:** `hzdr-event-v1` JSON envelope; same claim→write+fsync→ack→dedup loop
 **Branch status:** harness + consumer committed; SDK swap pending
 
 | Repo | What | Status |

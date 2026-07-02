@@ -12,6 +12,9 @@ repos:
             exclude: ^frontend/apps/demo/public/
           - id: trailing-whitespace
             exclude: ^frontend/apps/demo/public/
+          - id: mixed-line-ending
+            args: [--fix=lf]
+            files: \.(bash|sh)$
 
     # ruff walks up from each file to find api/ruff.toml automatically
     - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -35,7 +38,7 @@ repos:
 
           - id: pyright
             name: pyright
-            entry: bash -c 'cd api && uv run --group lint pyright'
+            entry: uv --directory api run --group lint pyright
             language: system
             files: ^api/
             types: [python]
@@ -43,7 +46,7 @@ repos:
 
           - id: frontend-eslint
             name: frontend-eslint
-            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec eslint --fix --cache --cache-location node_modules/.cache/eslint/.eslintcache "${@#frontend/}"' --
+            entry: uv run python scripts/run_frontend_hook.py eslint
             language: system
             files: ^frontend/
             exclude: ^frontend/apps/demo/public/
@@ -51,7 +54,7 @@ repos:
 
           - id: frontend-prettier
             name: frontend-prettier
-            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec prettier --write "${@#frontend/}"' --
+            entry: uv run python scripts/run_frontend_hook.py prettier
             language: system
             files: ^frontend/
             exclude: ^frontend/apps/demo/public/
@@ -59,7 +62,7 @@ repos:
 
           - id: frontend-tsc
             name: frontend-tsc
-            entry: bash -c '. scripts/ensure-node.sh && cd frontend && pnpm exec tsc -b --noEmit'
+            entry: uv run python scripts/run_frontend_hook.py tsc
             language: system
             files: ^frontend/
             types_or: [ts, tsx]

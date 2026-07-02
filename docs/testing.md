@@ -81,12 +81,12 @@ coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).
 
 | Repo | Coverage | Package | Suite |
 | --- | --- | --- | --- |
-| DAMNIT API | <progress value="77" max="100">77%</progress> 77% Good | `damnit_api` | `api/tests` |
-| LabFrog | <progress value="77" max="100">77%</progress> 77% Good | `labfrog` | `tests` (non-webkit) |
+| DAMNIT API | <progress value="78" max="100">78%</progress> 78% Good | `damnit_api` | `api/tests` |
+| LabFrog | <progress value="78" max="100">78%</progress> 78% Good | `labfrog` | `tests` (non-webkit) |
 | LabFrog SQLite tools | <progress value="80" max="100">80%</progress> 80% Good | `labfrog_sqlite_tools` | `tests` |
-| DAQ File Watchdog | <progress value="46" max="100">46%</progress> 46% Needs attention | `watchdog_core` | `tests` |
-| shotcounter | <progress value="81" max="100">81%</progress> 81% Good | `hzdrTangoDSShotcounter` | `tests` (non-ntp) |
-| ASAPO harness | <progress value="79" max="100">79%</progress> 79% Good | `tools` | `tests` |
+| DAQ File Watchdog | <progress value="84" max="100">84%</progress> 84% Good | `watchdog_core` | `tests` |
+| shotcounter | <progress value="80" max="100">80%</progress> 80% Good | `hzdrTangoDSShotcounter` | `tests` (non-ntp) |
+| ASAPO harness | <progress value="65" max="100">65%</progress> 65% Moderate | `tools` | `tests` |
 
 <!-- coverage-summary-end -->
 
@@ -96,9 +96,9 @@ coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).
 too old; `pre-commit>=4.5.1` is pinned in `api/pyproject.toml`):
 
 ```bash
-uv run pre-commit run --all-files          # check every file
-uv run pre-commit run --files path/to/file # check specific file(s)
-uv run pre-commit install                  # install the git hook
+uvx pre-commit run --all-files          # check every file
+uvx pre-commit run --files path/to/file # check specific file(s)
+uvx pre-commit install                  # install the git hook
 ```
 
 ```powershell

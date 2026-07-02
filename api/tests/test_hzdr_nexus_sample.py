@@ -5,12 +5,17 @@ the binding shapes this module writes against.
 """
 
 from pathlib import Path
+from typing import Any, cast
 
 import h5py
 import pytest
 
 from damnit_api.metadata.hzdr_event import METADATA_KEY_REGISTRY
 from damnit_api.metadata.hzdr_nexus import write_nexus_sample
+
+
+def _sample_group(handle: h5py.File) -> Any:
+    return cast("Any", handle["entry/sample"])
 
 
 def test_wiki_foil_example_with_properties(tmp_path: Path):
@@ -33,7 +38,7 @@ def test_wiki_foil_example_with_properties(tmp_path: Path):
         write_nexus_sample(entry, target)
 
     with h5py.File(path, "r") as handle:
-        sample = handle["entry/sample"]
+        sample = _sample_group(handle)
         assert sample.attrs["NX_class"] == "NXsample"
         assert sample["name"].asstr()[()] == "Au 5 μm #A12"
         assert sample["chemical_formula"].asstr()[()] == "Au"
@@ -76,7 +81,7 @@ def test_manual_other_example_omits_absent_fields(tmp_path: Path):
         write_nexus_sample(entry, target)
 
     with h5py.File(path, "r") as handle:
-        sample = handle["entry/sample"]
+        sample = _sample_group(handle)
         assert sample.attrs["NX_class"] == "NXsample"
         assert sample["name"].asstr()[()] == "test wedge"
         assert sample["chemical_formula"].asstr()[()] == "Al"
@@ -106,7 +111,7 @@ def test_legacy_string_target_normalizes(tmp_path: Path):
         write_nexus_sample(entry, "target-1")
 
     with h5py.File(path, "r") as handle:
-        sample = handle["entry/sample"]
+        sample = _sample_group(handle)
         assert sample.attrs["NX_class"] == "NXsample"
         assert sample["name"].asstr()[()] == "target-1"
         assert sample.attrs["damnit_provenance"] == "manual"
@@ -133,7 +138,7 @@ def test_properties_become_prop_prefixed_group_attributes(tmp_path: Path):
         write_nexus_sample(entry, target)
 
     with h5py.File(path, "r") as handle:
-        sample = handle["entry/sample"]
+        sample = _sample_group(handle)
         assert sample.attrs["prop_supplier"] == "Goodfellow"
         assert sample.attrs["prop_areal_density_mg_cm2"] == pytest.approx(9.65)
         assert sample.attrs["prop_geometry"] == "grating, 200 nm pitch"
@@ -160,7 +165,7 @@ def test_units_match_registry_exactly(tmp_path: Path):
         write_nexus_sample(entry, target)
 
     with h5py.File(path, "r") as handle:
-        sample = handle["entry/sample"]
+        sample = _sample_group(handle)
         assert (
             sample["thickness"].attrs["units"]
             == METADATA_KEY_REGISTRY["target.thickness"]
@@ -198,7 +203,7 @@ def test_gas_species_written_when_present(tmp_path: Path):
         write_nexus_sample(entry, target)
 
     with h5py.File(path, "r") as handle:
-        sample = handle["entry/sample"]
+        sample = _sample_group(handle)
         assert sample.attrs["gas_species"] == "Ar"
         assert sample["gas_pressure"][()] == pytest.approx(3.2)
         assert sample["gas_pressure"].attrs["units"] == "bar"

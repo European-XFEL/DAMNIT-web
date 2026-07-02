@@ -549,13 +549,13 @@ dev = [
     { name = "pytest-mock", specifier = "~=3.11" },
     { name = "rich", specifier = ">=14.2.0" },
     { name = "ruff", specifier = ">=0.7" },
-    { name = "strawberry-graphql", extras = ["debug-server"], specifier = ">=0.283.3" },
+    { name = "strawberry-graphql", specifier = ">=0.283.3" },
 ]
 develop = [
     { name = "datamodel-code-generator", extras = ["http"], specifier = ">=0.35.0" },
     { name = "pre-commit", specifier = ">=4.5.1" },
     { name = "rich", specifier = ">=14.2.0" },
-    { name = "strawberry-graphql", extras = ["debug-server"], specifier = ">=0.283.3" },
+    { name = "strawberry-graphql", specifier = ">=0.283.3" },
 ]
 docs = [
     { name = "mkdocs", specifier = ">=1.6.1" },

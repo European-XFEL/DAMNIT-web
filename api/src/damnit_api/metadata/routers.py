@@ -1101,15 +1101,9 @@ def _build_flow_monitor_metadata(
         "emulated_kind": event_kind,
         "laser": {
             "pulse_energy": round(12.4 + index * 0.17 + rng.uniform(-0.08, 0.08), 3),
-            "pulse_duration": round(
-                42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2
-            ),
-            "beam_pos_x": round(
-                -0.35 + index * 0.015 + rng.uniform(-0.003, 0.003), 4
-            ),
-            "beam_pos_y": round(
-                0.18 - index * 0.012 + rng.uniform(-0.003, 0.003), 4
-            ),
+            "pulse_duration": round(42.0 + index * 0.35 + rng.uniform(-0.08, 0.08), 2),
+            "beam_pos_x": round(-0.35 + index * 0.015 + rng.uniform(-0.003, 0.003), 4),
+            "beam_pos_y": round(0.18 - index * 0.012 + rng.uniform(-0.003, 0.003), 4),
         },
         "vacuum": {
             "chamber_pressure": round(

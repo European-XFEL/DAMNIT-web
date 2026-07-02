@@ -465,7 +465,9 @@ export function ShotDetailPanel({
               <Text size="xs" c="dimmed">
                 Target
               </Text>
-              <Text size="sm">{formatTargetLabel(shot.metadata.target) ?? '-'}</Text>
+              <Text size="sm">
+                {formatTargetLabel(shot.metadata.target) ?? '-'}
+              </Text>
             </Stack>
             <Stack gap={2}>
               <Text size="xs" c="dimmed">
