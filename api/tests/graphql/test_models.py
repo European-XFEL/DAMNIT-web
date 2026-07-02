@@ -134,4 +134,5 @@ def test_serialize_array_valid():
 def test_serialize_image():
     value, dtype = serialize(b"\x89PNG\r\n", dtype=DamnitType.IMAGE)
     assert dtype == DamnitType.IMAGE
-    assert value.startswith("data:image/png;base64,")  # pyright: ignore[reportAttributeAccessIssue]
+    assert isinstance(value, str)
+    assert value.startswith("data:image/png;base64,")

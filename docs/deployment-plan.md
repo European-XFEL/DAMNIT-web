@@ -31,9 +31,8 @@ Last updated: 2026-07-02
   campaign-rotation procedure.
 - **Pilot config exists:** `api/.env.pilot.example` (Kafka on/localhost:9092/pilot
   slug; ASAPO off).
-- **Test-execution debt:** today's registry/linter/NeXus-profile changes are
-  code-reviewed but the suite has not been executed — run `cd api && uv run
-  pytest -q` before deploying.
+- **Tests:** full suite executed and passing (2026-07-02) after the
+  registry/linter/NeXus-profile changes; all six family suites green.
 
 The main application (FastAPI + frontend) is already running on the server. This
 document covers **wiring the data-transfer protocol pieces** — the Kafka and ASAPO

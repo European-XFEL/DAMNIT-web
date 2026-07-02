@@ -18,7 +18,6 @@ import contextlib
 from typing import TYPE_CHECKING, NamedTuple
 
 import pytest
-from kafka import OffsetAndMetadata, TopicPartition
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,6 +30,16 @@ from damnit_api.consumer.spool import SpoolConfig
 # ---------------------------------------------------------------------------
 
 
+class _OffsetAndMetadata(NamedTuple):
+    offset: int
+    metadata: str | None
+
+
+class _TopicPartition(NamedTuple):
+    topic: str
+    partition: int
+
+
 class _FakeRecord(NamedTuple):
     value: object
     offset: int
@@ -40,7 +49,7 @@ class _FakeKafkaConsumer:
     """Single-topic, single-partition in-memory Kafka consumer stand-in."""
 
     def __init__(self, topic: str = "triggers", partition: int = 0) -> None:
-        self.tp = TopicPartition(topic, partition)
+        self.tp = _TopicPartition(topic, partition)
         self._log: list[object] = []
         self._delivered = 0
         self.committed: int | None = None
@@ -149,7 +158,7 @@ async def test_commit_token_is_last_offset_plus_one(tmp_path: Path) -> None:
     messages, token = await consumer._claim()
 
     assert [m["event_id"] for m in messages] == ["evt-1", "evt-2"]
-    assert token == {fake.tp: OffsetAndMetadata(2, None)}
+    assert token == {fake.tp: _OffsetAndMetadata(2, None)}
 
 
 @pytest.mark.asyncio

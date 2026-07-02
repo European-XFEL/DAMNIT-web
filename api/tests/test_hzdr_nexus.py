@@ -2,6 +2,7 @@ import json
 import os
 import sqlite3
 from pathlib import Path
+from typing import cast
 
 import h5py
 import numpy as np
@@ -125,28 +126,35 @@ def test_preserves_rich_labfrog_nexus_and_adds_damnit_bridge(tmp_path: Path):
     )
 
     with h5py.File(output_nexus, "r") as handle:
-        assert list(handle["entry/raw_labfrog/kept"][...]) == [1, 2]  # pyright: ignore[reportArgumentType, reportIndexIssue]
-        assert handle["entry/shots/shot_key"].asstr()[0] == ("HELPMI:20260610:000017")  # pyright: ignore[reportAttributeAccessIssue]
-        assert handle["entry/shots/match_quality"].asstr()[0] == (  # pyright: ignore[reportAttributeAccessIssue]
-            "exact_day_shot_number"
-        )
-        assert handle["entry/source_events/shot_key"].asstr()[0] == (  # pyright: ignore[reportAttributeAccessIssue]
-            "HELPMI:20260610:000017"
-        )
-        laser = handle["entry/instrument/laser"]
+        raw_kept = cast("h5py.Dataset", handle["entry/raw_labfrog/kept"])
+        shot_key = cast("h5py.Dataset", handle["entry/shots/shot_key"])
+        match_quality = cast("h5py.Dataset", handle["entry/shots/match_quality"])
+        source_shot_key = cast("h5py.Dataset", handle["entry/source_events/shot_key"])
+        laser = cast("h5py.Group", handle["entry/instrument/laser"])
+        laser_name = cast("h5py.Dataset", laser["name"])
+        laser_frequency = cast("h5py.Dataset", laser["frequency"])
+        laser_pulse_energy = cast("h5py.Dataset", laser["pulse_energy"])
+        beam = cast("h5py.Group", handle["entry/instrument/laser/beam"])
+        incident_wavelength = cast("h5py.Dataset", beam["incident_wavelength"])
+        pulse_duration = cast("h5py.Dataset", beam["pulse_duration"])
+        incident_polarization = cast("h5py.Dataset", beam["incident_polarization"])
+
+        assert list(raw_kept[...]) == [1, 2]
+        assert shot_key.asstr()[0] == "HELPMI:20260610:000017"
+        assert match_quality.asstr()[0] == "exact_day_shot_number"
+        assert source_shot_key.asstr()[0] == "HELPMI:20260610:000017"
         assert laser.attrs["NX_class"] == "NXsource"
-        assert laser["name"].asstr()[()] == "DRACO"
-        assert laser["frequency"].attrs["units"] == "Hz"
-        assert laser["frequency"][()] == pytest.approx(10.0)
-        assert laser["pulse_energy"].attrs["units"] == "J"
-        assert laser["pulse_energy"][()] == pytest.approx(8.2)
-        beam = handle["entry/instrument/laser/beam"]
+        assert laser_name.asstr()[()] == "DRACO"
+        assert laser_frequency.attrs["units"] == "Hz"
+        assert laser_frequency[()] == pytest.approx(10.0)
+        assert laser_pulse_energy.attrs["units"] == "J"
+        assert laser_pulse_energy[()] == pytest.approx(8.2)
         assert beam.attrs["NX_class"] == "NXbeam"
-        assert beam["incident_wavelength"].attrs["units"] == "nm"
-        assert beam["incident_wavelength"][()] == pytest.approx(800.0)
-        assert beam["pulse_duration"].attrs["units"] == "fs"
-        assert beam["pulse_duration"][()] == pytest.approx(30.0)
-        assert beam["incident_polarization"].asstr()[()] == "horizontal"
+        assert incident_wavelength.attrs["units"] == "nm"
+        assert incident_wavelength[()] == pytest.approx(800.0)
+        assert pulse_duration.attrs["units"] == "fs"
+        assert pulse_duration[()] == pytest.approx(30.0)
+        assert incident_polarization.asstr()[()] == "horizontal"
         assert "entry/data_products/dataset_path" in handle
         assert (f"entry/laserdata/camera_raw/{events[0]['event_id']}/values") in handle
 

@@ -21,6 +21,7 @@ endpoint always returns a full picture.
 from __future__ import annotations
 
 import contextlib
+import importlib
 import json
 import logging
 from datetime import UTC, datetime
@@ -90,6 +91,13 @@ def _iso_utc_from_seconds(epoch_s: float) -> str:
     return datetime.fromtimestamp(epoch_s, tz=UTC).isoformat()
 
 
+def _topic_partition(topic: str, partition: int) -> Any:
+    """Return kafka-python-ng's TopicPartition despite incomplete static exports."""
+    return vars(importlib.import_module("kafka.structs"))["TopicPartition"](
+        topic, partition
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Kafka (broker / producer side) — read-only offset inspection
 # --------------------------------------------------------------------------- #
@@ -156,8 +164,6 @@ def gather_kafka_activity(
 
     consumer = None
     try:
-        from kafka import TopicPartition
-
         consumer = consumer_factory()
         results: list[KafkaTopicActivity] = []
         for topic in topics:
@@ -165,7 +171,7 @@ def gather_kafka_activity(
             if not parts:
                 results.append(KafkaTopicActivity(topic=topic, exists=False))
                 continue
-            tps = [TopicPartition(topic, p) for p in parts]
+            tps = [_topic_partition(topic, p) for p in parts]
             beginning = consumer.beginning_offsets(tps)
             end = consumer.end_offsets(tps)
             messages = sum(end[tp] - beginning[tp] for tp in tps)

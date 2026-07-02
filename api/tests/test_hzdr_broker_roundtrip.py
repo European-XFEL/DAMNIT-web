@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import importlib
 import json
 import os
 import time
@@ -103,6 +104,18 @@ def unique_topic(broker: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _topic_partition(topic: str, partition: int) -> Any:
+    return vars(importlib.import_module("kafka.structs"))["TopicPartition"](
+        topic, partition
+    )
+
+
+def _deserialize_value(value: bytes | None) -> Any:
+    if value is None:
+        return None
+    return json.loads(value.decode("utf-8"))
+
+
 def _produce_events(broker: str, topic: str, count: int, campaign: str) -> list[dict]:
     """Publish ``count`` canonical hzdr-event-v1 envelopes; return the list."""
     from kafka import KafkaProducer
@@ -152,7 +165,7 @@ def _make_consumer(
         group_id=group_id,
         enable_auto_commit=False,
         auto_offset_reset="earliest",
-        value_deserializer=lambda b: json.loads(b.decode("utf-8")),
+        value_deserializer=_deserialize_value,
         consumer_timeout_ms=poll_timeout_ms,
     )
     cfg = SpoolConfig(
@@ -172,12 +185,12 @@ def _committed_offset(
     broker: str, group_id: str, topic: str, partition: int = 0
 ) -> int | None:
     """Return the committed offset for the group, or None if none committed yet."""
-    from kafka import KafkaAdminClient, TopicPartition
+    from kafka import KafkaAdminClient
 
     admin = KafkaAdminClient(bootstrap_servers=broker)
     try:
         offsets = admin.list_consumer_group_offsets(group_id)
-        result = offsets.get(TopicPartition(topic, partition))
+        result = offsets.get(_topic_partition(topic, partition))
         return result.offset if result is not None else None
     except Exception:
         return None

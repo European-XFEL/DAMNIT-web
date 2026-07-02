@@ -23,6 +23,7 @@ module never opens a socket) and can be injected for tests.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 import logging
 from pathlib import Path  # noqa: TC003
@@ -53,13 +54,25 @@ def _build_kafka_consumer(
     """Construct a real ``KafkaConsumer`` with manual-commit semantics."""
     from kafka import KafkaConsumer
 
+    def _deserialize_value(value: bytes | None) -> Any:
+        if value is None:
+            return None
+        return json.loads(value.decode("utf-8"))
+
     return KafkaConsumer(
         *topics,
         bootstrap_servers=bootstrap_servers,
         group_id=group_id,
         enable_auto_commit=False,
         auto_offset_reset="earliest",
-        value_deserializer=lambda b: json.loads(b.decode("utf-8")),
+        value_deserializer=_deserialize_value,
+    )
+
+
+def _offset_and_metadata(offset: int) -> Any:
+    """Return kafka-python-ng's commit token without relying on incomplete stubs."""
+    return vars(importlib.import_module("kafka.structs"))["OffsetAndMetadata"](
+        offset, None
     )
 
 
@@ -90,8 +103,6 @@ class KafkaSpoolConsumer(HZDRSpoolConsumer):
         to ``OffsetAndMetadata(last_offset + 1)`` — the position to commit only
         after the batch is durably spooled.
         """
-        from kafka import OffsetAndMetadata
-
         records = self._consumer.poll(
             timeout_ms=self._poll_timeout_ms,
             max_records=self.config.batch_size,
@@ -110,7 +121,7 @@ class KafkaSpoolConsumer(HZDRSpoolConsumer):
                     )
                     continue
                 messages.append(value)
-                offsets[tp] = OffsetAndMetadata(record.offset + 1, None)
+                offsets[tp] = _offset_and_metadata(record.offset + 1)
         return messages, offsets
 
     async def _claim(self) -> tuple[list[dict[str, Any]], Any]:

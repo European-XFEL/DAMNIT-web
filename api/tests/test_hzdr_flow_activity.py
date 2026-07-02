@@ -14,7 +14,7 @@ cover the behaviours that matter when feeders come online:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from damnit_api.shared.flow_activity import (
     gather_asapo_activity,
@@ -24,8 +24,6 @@ from damnit_api.shared.flow_activity import (
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from kafka import TopicPartition
 
 
 # ---------------------------------------------------------------------------
@@ -45,16 +43,16 @@ class _FakeKafkaConsumer:
         parts = self._topics.get(topic)
         return set(parts) if parts else None
 
-    def beginning_offsets(self, tps: list[TopicPartition]) -> dict[TopicPartition, int]:
+    def beginning_offsets(self, tps: list[Any]) -> dict[Any, int]:
         return {tp: self._topics[tp.topic][tp.partition][0] for tp in tps}
 
-    def end_offsets(self, tps: list[TopicPartition]) -> dict[TopicPartition, int]:
+    def end_offsets(self, tps: list[Any]) -> dict[Any, int]:
         return {tp: self._topics[tp.topic][tp.partition][1] for tp in tps}
 
-    def assign(self, tps: list[TopicPartition]) -> None:
+    def assign(self, tps: list[Any]) -> None:
         self._assigned = tps
 
-    def seek(self, tp: TopicPartition, offset: int) -> None:
+    def seek(self, tp: Any, offset: int) -> None:
         self._seek = (tp, offset)
 
     def poll(self, timeout_ms: int, max_records: int | None = None) -> dict:
