@@ -522,7 +522,8 @@ def _normalised_length_unit(unit: Any) -> str | None:
     if unit_text is None:
         return None
     return (
-        unit_text.strip()
+        unit_text
+        .strip()
         .replace("\u00c2\u00b5", "\u03bc")
         .replace("\u00b5", "\u03bc")
         .casefold()

@@ -124,24 +124,28 @@ def build_summary() -> str:
         percent = _read_total_percent(GITLAB_ROOT / repo.coverage_json)
         rows.append(
             "| "
-            + " | ".join((
-                repo.label,
-                _coverage_cell(percent),
-                f"`{repo.package}`",
-                repo.suite,
-            ))
+            + " | ".join(
+                (
+                    repo.label,
+                    _coverage_cell(percent),
+                    f"`{repo.package}`",
+                    repo.suite,
+                )
+            )
             + " |"
         )
-    return "\n".join((
-        "Overall line coverage per repo, from the latest `scripts/test-all.ps1` run.",
-        "Each suite writes a `cover/coverage.json`; rows show `No coverage data` until",
-        "that repo has been run with coverage. Per-area detail lives in each repo's own",
-        "coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).",
-        "",
-        "| Repo | Coverage | Package | Suite |",
-        "| --- | --- | --- | --- |",
-        *rows,
-    ))
+    return "\n".join(
+        (
+            "Overall line coverage per repo, from the latest `scripts/test-all.ps1` run.",
+            "Each suite writes a `cover/coverage.json`; rows show `No coverage data` until",
+            "that repo has been run with coverage. Per-area detail lives in each repo's own",
+            "coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).",
+            "",
+            "| Repo | Coverage | Package | Suite |",
+            "| --- | --- | --- | --- |",
+            *rows,
+        )
+    )
 
 
 def replace_marked_block(text: str, replacement: str) -> str:
