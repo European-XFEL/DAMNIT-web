@@ -1,10 +1,15 @@
 # HZDR Integration Docs
 
 Current status: data model, offline integration path, local acceptance test,
-and operator review UI are implemented and committed. The `shotcounter` branch
-is verified but not yet merged to `main`; every other repo's integration work is
-merged to its default branch. Production broker ingestion and the real pilot
-replay remain.
+operator review UI, and the read-only operational views (curated LabFrog
+campaign picker, producer status, and the flow monitor's Live mode) are
+implemented and committed. The `shotcounter` branch is verified but not yet
+merged to `main`; every other repo's integration work is merged to its default
+branch. **Production deployment is live** at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/);
+the real ASAPO SDK spool consumer is implemented (`RealAsapoSpoolConsumer`)
+but the deployment isn't yet pointed at live broker credentials. Real broker
+ingestion end-to-end and the pilot replay remain.
 
 | Document | Purpose |
 | --- | --- |

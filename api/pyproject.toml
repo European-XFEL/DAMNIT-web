@@ -4,6 +4,8 @@ version = "0.1.1"
 description = ""
 authors = [{ name = "European XFEL", email = "da@xfel.eu" }]
 requires-python = "~=3.13.0"
+# if using ASAPO needs 3.12
+# requires-python = ">=3.12"
 readme = "README.md"
 maintainers = [
     { name = "Cammille Carinan", email = "cammille.carinan@xfel.eu" },
@@ -40,7 +42,23 @@ dependencies = [
     "anyio>=4.11.0",
     "python-ulid[pydantic]>=3.1.0",
     "sqlmodel>=0.0.31",
+    "motor>=3.7.1",
 ]
+
+[project.optional-dependencies]
+# Optional: enables real ASAPO stream activity in the flow monitor's Live mode
+# (GET /config/flow-activity).  Without it the ASAPO activity block degrades to
+# reachability-only; the code path is wired (lazy import in shared/flow_activity).
+#
+# `asapo-consumer` only publishes wheels up to cp312 (no 3.13 build yet), so the
+# `python_version < "3.13"` marker keeps the base lock resolvable on this 3.13
+# project — on 3.13 the extra is a no-op until a compatible wheel exists. Where a
+# wheel is available: uv sync --extra asapo  (or)  pip install 'damnit-api[asapo]'
+#
+# Pinned to match the standalone broker image
+# (gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0) — client and server
+# versions must match. See docs/local-development.md.
+asapo = ["asapo-consumer~=24.11.0; python_version < '3.13'"]
 
 [dependency-groups]
 test = ["pytest~=8.2", "pytest-asyncio~=0.24", "pytest-mock~=3.11", "pytest-cov~=7.0", "coverage~=7.0"]

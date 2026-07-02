@@ -1,5 +1,5 @@
 import { Group, Button } from '@mantine/core'
-import { IconDatabase, IconRoute } from '@tabler/icons-react'
+import { IconDatabase, IconRoute, IconSearch } from '@tabler/icons-react'
 import { Header, Logo } from '@damnit-frontend/ui'
 
 export function AppHeader() {
@@ -7,6 +7,15 @@ export function AppHeader() {
     <Header px={20}>
       <Group gap="md" wrap="nowrap">
         <Logo linkTo="/home" />
+        <Button
+          component="a"
+          href="/home"
+          variant="subtle"
+          size="sm"
+          leftSection={<IconSearch size={16} />}
+        >
+          Inspect sources
+        </Button>
         <Button
           component="a"
           href="/flow-monitor"

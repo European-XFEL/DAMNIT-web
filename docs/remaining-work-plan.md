@@ -7,6 +7,14 @@ playbook for the six remaining items, in recommended order.
 Status legend: 🟢 ready now (no external dependency) · 🟡 needs a human decision or
 config · 🔴 needs a real broker / live deployment.
 
+**2026-07-01 update:** production deployment is live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)
+(see `docs/handoff.md` §Built 2026-07-01). Item 3 (ASAPO SDK swap) is now
+code-complete — `RealAsapoSpoolConsumer` is implemented and selected via
+`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`; only pointing it at the real broker's
+endpoint/beamtime/token and the gated integration test remain, so it moves
+from 🔴 to 🟡.
+
 ## Snapshot of what changed 2026-06-25
 
 - **labfrog-sqlite-tools atomic rename + retain source exports** — ✅ **done**. Atomic

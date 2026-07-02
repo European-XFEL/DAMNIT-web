@@ -370,7 +370,7 @@ export function HZDRShotPage() {
                   </Text>
                   <Code block>{source?.damnit_path ?? '-'}</Code>
                 </Stack>
-                <Stack gap="xs" style={{ minWidth: 260 }}>
+                <Stack gap="xs" style={{ minWidth: 360 }}>
                   <Select
                     label="Source"
                     value={source_key ?? null}
@@ -381,6 +381,10 @@ export function HZDRShotPage() {
                       }
                     }}
                     searchable
+                    comboboxProps={{
+                      width: 'max-content',
+                      position: 'bottom-end',
+                    }}
                   />
                 </Stack>
               </Group>

@@ -233,6 +233,24 @@ python api/scripts/hzdr-hdf5-builder.py \
 # -> writes <campaign>.nxs and (next to it) hzdr_sources.json
 ```
 
+### Operational read-only views (for the operator UI)
+
+Alongside the canonical outputs, the API exposes three derived, read-only views
+that back the operator pages without writing anything or joining a broker
+consumer group (full detail in
+[architecture.md](architecture.md#read-only-operational-views)):
+
+| View | Endpoint(s) | Reads | Backs |
+| --- | --- | --- | --- |
+| Curated LabFrog campaigns | `GET /metadata/hzdr/campaigns`, `.../{campaign_key}/shots` | `labfrog-sqlite-tools` `curated_files/*.sqlite` (read-only), via `DW_API_METADATA__LABFROG_CURATED_DIR` | Link Records campaign picker / record reference |
+| Producer status | `GET /metadata/hzdr/sources/{key}/producer-status` | events already on the source (no new I/O) | DAQ File Watchdog hosts + Shotcounter liveness |
+| Flow activity | `GET /config/flow-activity` | Kafka offset counts, spool JSONL line counts, optional ASAPO stream sizes | Flow Monitor **Live** mode |
+
+Each gatherer is defensive: a broker that is down, a missing client, or an
+unconfigured path yields an empty / `available=false` block rather than failing
+the request, so these are safe to poll even while the real spool consumers are
+disabled.
+
 ## Running the Whole Thing Locally
 
 Each repo has its own `CLAUDE.md` and `README.md` with exact commands. The fastest
@@ -248,6 +266,20 @@ ways in:
   `./scripts/start_local.sh --with-kafka --broker redpanda --test-mode`.
 - **The file watcher (safe demo):** `planet-watchdog` → `uv run watchdog_test.py`.
 - **This app (consumer + UI):** see [local-development.md](local-development.md).
+
+## Production Deployment
+
+The API + frontend are live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/),
+deployed via `api/scripts/damnit-api-deploy.sh`/`.ps1` from an
+`.env.production.example`-derived config, served behind the `frontend/nginx`
+proxy templates, with LDAP auth against `ldap.fz-rossendorf.de`. The durable
+spool consumers there still run against the local ASAPO/Kafka harness rather
+than the real facility brokers — the real ASAPO SDK client
+(`RealAsapoSpoolConsumer`, `DW_API_HZDR_SPOOL__BROKER_KIND=asapo`) is
+implemented, and pointing the deployment at real broker credentials is the
+next step (see [remaining-work-plan.md](remaining-work-plan.md) and
+[handoff.md](handoff.md)).
 
 ## Where to Go Deeper
 

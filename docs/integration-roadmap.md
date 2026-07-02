@@ -1,6 +1,42 @@
 # Integration Roadmap
 
-Updated: 2026-06-26
+Updated: 2026-07-01
+
+**2026-07-01:** production deployment is live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/);
+see `docs/handoff.md` §Built 2026-07-01. The ASAPO SDK swap (Work Order step 3
+below / `asapo-for-hzdr-damnit` §"Carry claim/flush/ack/replay-dedup pattern
+into real ASAPO SDK consumer") is now code-complete via
+`RealAsapoSpoolConsumer`; wiring the deployment's real broker credentials and
+the gated integration test are what remain.
+
+**2026-07-01 (verification pass):** re-checked the "real data ingestion"
+transition against the actual code (not just prior doc claims). Three
+concrete gaps found, two fixed on the spot:
+
+1. **Builder is never auto-triggered by a spool consumer** — `on_new_events()`
+   in `consumer/spool.py` is a documented no-op stub; no subclass
+   (`AsapoSpoolConsumer`, `RealAsapoSpoolConsumer`, `KafkaSpoolConsumer`)
+   overrides it, and no cron/systemd-timer unit for `hzdr-hdf5-builder.py`
+   exists anywhere in the repo. New real events land in the spool but the
+   canonical NeXus/catalog will not reflect them until someone runs the
+   builder. 🔴 still open — previously listed in the Durable Spool Design
+   table with no status marker at all, which read as done by omission.
+2. **No real-broker roundtrip test exists for ASAPO** — only Kafka has one
+   (`test_hzdr_broker_roundtrip.py`, `-m integration_docker`, gated on
+   `KAFKA_TEST_BROKER`). `RealAsapoSpoolConsumer` is exercised only against an
+   in-process fake SDK stub in `test_hzdr_spool.py`. `docs/handoff.md`'s
+   2026-06-26 note about `ASAPO_TEST_BROKER`-gated skips does not correspond
+   to anything in the current code — no such env var or test exists. 🔴 still
+   open.
+3. **`.env.production.example` didn't document the real ASAPO SDK path** —
+   it only showed `DW_API_HZDR_SPOOL__BROKER_URL` (harness/HTTP transport),
+   never `BROKER_KIND=asapo` + `ASAPO_ENDPOINT/BEAMTIME/DATA_SOURCE/TOKEN/...`,
+   nor the `DW_API_HZDR_ASAPO_ACTIVITY__*` settings the flow-monitor Live view
+   needs. ✅ **fixed this pass** — the template now documents both transports
+   and the activity-probe settings. A cosmetic startup-log bug (`main.py`
+   always logged `broker_url`, which is empty in `asapo` mode) was fixed
+   alongside it.
 
 ## Status Key
 
@@ -15,8 +51,11 @@ Updated: 2026-06-26
 The data model, offline integration path, local acceptance test, operator
 review UI, durable spool consumer, and flow-monitor health endpoint are all
 implemented and committed. Every repo's integration branch has been tested.
-The remaining work is (a) merging the shotcounter branch, (b) wiring real
-broker roundtrips, and (c) running the pilot capture.
+Production deployment is live at
+[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/).
+The remaining work is (a) merging the shotcounter branch, (b) pointing the
+deployment's real ASAPO/Kafka spool consumers at live broker credentials and
+running restart/replay roundtrips, and (c) running the pilot capture.
 
 Committed and tested:
 
@@ -197,6 +236,9 @@ Branch: `main`
 | Durable per-campaign spool with transport positions and dedup state | ✅ committed — `consumer/spool.py` + `consumer/asapo.py` (ASAPO) + `consumer/kafka.py` (Kafka trigger events); `DW_API_HZDR_SPOOL__ENABLED` / `DW_API_HZDR_KAFKA_SPOOL__ENABLED` activate background tasks in lifespan |
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
+| Live production deployment reachable | ✅ **[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)** — `api/scripts/damnit-api-deploy.sh`/`.ps1`, `frontend/nginx` proxy templates, LDAP against `ldap.fz-rossendorf.de` |
+| ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` now documents the setting (✅ this pass). Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
+| Builder auto-triggered after new spool events | 🔴 not started — `HZDRSpoolConsumer.on_new_events()` is an unoverridden no-op stub; no cron/systemd-timer for `hzdr-hdf5-builder.py` exists in the repo either. Until one of these exists, real ingested events sit in the spool until someone runs the builder manually |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
 | Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | 🟡 plugin exists; DAMNIT-side builder post-step + catalog link not yet wired — see §SciCat Registration |
 
@@ -368,7 +410,7 @@ The same ordering and durability properties must hold for the real production co
 | Per-campaign spool directory | `<campaign-slug>/spool/asapo/` and `<campaign-slug>/spool/kafka/<topic>/` under the DAMNIT data root; the builder's `--events-jsonl` / `--trigger-jsonl` flags already point to exactly these paths |
 | Write-and-flush before ack | `write_json_atomic` (temp file + `fsync` + rename) is already implemented in `hzdr_nexus.py`; the consumer calls it, then acks |
 | Dedup on replay | Consumer checks whether `event_id` already exists in the spool directory before writing; if yes, skip and ack (idempotent replay) |
-| Builder trigger | On each new event file, the builder reruns; the single-writer PID lock already serialises concurrent runs |
+| Builder trigger | 🔴 not implemented. `on_new_events()` (the documented hook in `consumer/spool.py`) is never overridden by `AsapoSpoolConsumer`/`RealAsapoSpoolConsumer`/`KafkaSpoolConsumer`, and no cron/systemd-timer unit exists for `hzdr-hdf5-builder.py`. Today the builder only reruns when invoked manually. The single-writer PID lock already serialises concurrent runs once something does trigger it |
 
 ### Implementation (completed 2026-06-18)
 

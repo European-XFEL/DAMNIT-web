@@ -138,6 +138,66 @@ export type FlowReceiverConfig = {
   mongo: boolean
 }
 
+export type FlowMonitorMode = 'demo' | 'live'
+
+export type FlowServiceHealth = {
+  reachable: boolean
+  latency_ms?: number | null
+  detail?: string | null
+}
+
+// Mirrors the FastAPI GET /config/health payload (FlowMonitorHealth).
+export type FlowMonitorHealth = {
+  asapo: FlowServiceHealth
+  kafka: FlowServiceHealth
+  mongo: FlowServiceHealth
+}
+
+// Mirrors the FastAPI GET /config/flow-activity payload (FlowActivity).
+export type KafkaTopicActivity = {
+  topic: string
+  exists: boolean
+  messages: number
+  partitions: number
+  last_message_at?: string | null
+}
+
+export type KafkaActivity = {
+  available: boolean
+  detail?: string | null
+  topics: KafkaTopicActivity[]
+}
+
+export type AsapoStreamActivity = {
+  name: string
+  messages: number
+  last_message_at?: string | null
+}
+
+export type AsapoActivity = {
+  available: boolean
+  detail?: string | null
+  streams: AsapoStreamActivity[]
+}
+
+export type SpoolFileActivity = {
+  label: string
+  campaign: string
+  events: number
+  modified_at?: string | null
+  last_event_at?: string | null
+}
+
+export type SpoolActivity = {
+  files: SpoolFileActivity[]
+}
+
+export type FlowActivity = {
+  kafka: KafkaActivity
+  spool: SpoolActivity
+  asapo: AsapoActivity
+}
+
 export type FlowMonitorState = {
   laserBuffered: boolean
   laserStaged: boolean

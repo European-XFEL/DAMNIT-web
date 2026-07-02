@@ -209,6 +209,40 @@ The LabFrog NeXus structure is preserved and DAMNIT adds:
 optional future projection for legacy DAMNIT table workflows, not the source of
 truth.
 
+## Read-Only Operational Views
+
+Three derived, read-only API surfaces back the operator UI. None of them write,
+open Mongo, or join a broker consumer group; each degrades to an empty/`available=false`
+result rather than failing, so they are safe to poll while the real consumers are
+disabled.
+
+- **Curated LabFrog campaigns** (`metadata/labfrog_sqlite.py`) — reads the
+  per-campaign SQLite snapshots that `labfrog-sqlite-tools` writes under
+  `curated_files/<Campaign>/<Campaign>.sqlite` (every connection uses a `mode=ro`
+  URI). It surfaces the unique campaign list (`export_metadata` + `shot_summary`)
+  and a per-campaign shot preview for the Link Records page's campaign picker /
+  record reference, without DAMNIT needing any database access. Configured by
+  `DW_API_METADATA__LABFROG_CURATED_DIR` (unset → no curated campaigns).
+  Endpoints: `GET /metadata/hzdr/campaigns` and
+  `GET /metadata/hzdr/campaigns/{campaign_key}/shots`.
+- **Producer status** (`metadata/producer_status.py`) — derives DAQ File Watchdog
+  hosts and Shotcounter liveness purely from the events already loaded on an
+  `HZDRSource` (no new I/O). There is no dedicated host field on `hzdr-event-v1`,
+  so the watchdog "host" is a best-effort label from the event's traceability
+  fields (`payload_ref` endpoint/topic/path, then `metadata.watch_name`).
+  Shotcounter status is `absent` / `active` (a recognised TANGO TKEY like
+  `draco01` is present) / `idle` (shotcounter events but no TKEY). Endpoint:
+  `GET /metadata/hzdr/sources/{source_key}/producer-status`.
+- **Flow activity** (`shared/flow_activity.py`) — answers "is data actually
+  flowing?" (where `GET /config/health` only answers "can the API reach the
+  brokers?"). Read-only: per-topic Kafka message counts via `end - beginning`
+  offsets (no group joined, no offset committed), per-campaign JSONL spool-file
+  line counts + mtime, and optional ASAPO stream sizes via the optional
+  `asapo_consumer` client. Each broker that is down or unconfigured yields
+  `available=false` with a short reason. Backs the flow monitor's Live mode.
+  Endpoint: `GET /config/flow-activity`; ASAPO activity is configured by
+  `DW_API_HZDR_ASAPO_ACTIVITY__*` (the token is a `SecretStr`, never serialized).
+
 **DAMNIT-owned sidecars** stored alongside `hzdr_sources.json`:
 - `hzdr_sources.review.jsonl` — durable confirm/dismiss decisions from the
   Confirm Matches UI; survives rebuilds; merged at `VERIFIED > REVIEWED > BASE`

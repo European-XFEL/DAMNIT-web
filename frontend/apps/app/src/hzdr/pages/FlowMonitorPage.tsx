@@ -8,6 +8,7 @@ import {
   Group,
   Paper,
   ScrollArea,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
@@ -28,6 +29,9 @@ import type {
   FlowLogEntry,
   FlowReceiverConfig,
   FlowMonitorState,
+  FlowMonitorMode,
+  FlowMonitorHealth,
+  FlowActivity,
   WatchdogWatcherKey,
   ShotcounterTKey,
 } from '../types'
@@ -41,8 +45,20 @@ import { AppHeader } from '../components/AppHeader'
 import { FlowDiagram } from '../components/FlowDiagram'
 import { requireJson } from '../utils/api'
 
+function formatClock(iso?: string | null): string {
+  if (!iso) {
+    return '—'
+  }
+  const parsed = new Date(iso)
+  return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleTimeString()
+}
+
 export function HZDRFlowMonitorPage() {
   const runtimeConfig = useRuntimeConfig()
+  const [monitorMode, setMonitorMode] = useState<FlowMonitorMode>('demo')
+  const [health, setHealth] = useState<FlowMonitorHealth | null>(null)
+  const prevHealth = useRef<FlowMonitorHealth | null>(null)
+  const [activity, setActivity] = useState<FlowActivity | null>(null)
   const [sources, setSources] = useState<HZDRSource[]>([])
   const [packets, setPackets] = useState<FlowPacket[]>([])
   const [logEntries, setLogEntries] = useState<FlowLogEntry[]>([])
@@ -176,6 +192,61 @@ export function HZDRFlowMonitorPage() {
     const timer = window.setInterval(loadSources, 3000)
     return () => window.clearInterval(timer)
   }, [loadSources])
+
+  const loadHealth = useCallback(() => {
+    fetch('/config/health')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: FlowMonitorHealth | null) => {
+        if (!data) {
+          return
+        }
+        const previous = prevHealth.current
+        ;(['asapo', 'kafka', 'mongo'] as const).forEach((service) => {
+          const was = previous?.[service]?.reachable
+          const now = data[service]?.reachable
+          if (was !== undefined && was !== now) {
+            addLogEntry(
+              `${service.toUpperCase()} ${now ? 'reachable' : 'unreachable'}`,
+              now
+                ? `probe ok (${data[service].latency_ms ?? '?'} ms)`
+                : (data[service].detail ?? 'probe failed'),
+              now ? 'receive' : 'stage'
+            )
+          }
+        })
+        prevHealth.current = data
+        setHealth(data)
+      })
+      .catch(() => {
+        // A failed /config/health fetch leaves the last snapshot in place.
+      })
+  }, [addLogEntry])
+
+  const loadActivity = useCallback(() => {
+    fetch('/config/flow-activity')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: FlowActivity | null) => {
+        if (data) {
+          setActivity(data)
+        }
+      })
+      .catch(() => {
+        // A failed fetch leaves the last activity snapshot in place.
+      })
+  }, [])
+
+  useEffect(() => {
+    if (monitorMode !== 'live') {
+      return
+    }
+    const poll = () => {
+      loadHealth()
+      loadActivity()
+    }
+    poll()
+    const timer = window.setInterval(poll, 5000)
+    return () => window.clearInterval(timer)
+  }, [monitorMode, loadHealth, loadActivity])
 
   const sendPacket = (
     lane: FlowPacket['lane'],
@@ -421,12 +492,20 @@ export function HZDRFlowMonitorPage() {
               <Stack gap={2}>
                 <Title order={3}>HZDR flow monitor</Title>
                 <Text size="sm" c="dimmed">
-                  Live package traffic, staging, HDF5 builder state, and DAMNIT
-                  metadata visibility. LaserData is a passive live stream; local
-                  buttons emulate shotcounter, Watchdog, and builder events.
+                  {monitorMode === 'live'
+                    ? 'Live mode polls the API every 5s: broker reachability plus real data-flow activity (Kafka/ASAPO message counts and DAMNIT spool ingest).'
+                    : 'Demo mode: LaserData is a passive live stream; local buttons emulate shotcounter, Watchdog, and builder events.'}
                 </Text>
               </Stack>
               <Group gap="xs">
+                <SegmentedControl
+                  value={monitorMode}
+                  onChange={(value) => setMonitorMode(value as FlowMonitorMode)}
+                  data={[
+                    { label: 'Demo', value: 'demo' },
+                    { label: 'Live', value: 'live' },
+                  ]}
+                />
                 <Button
                   variant="light"
                   leftSection={
@@ -452,26 +531,218 @@ export function HZDRFlowMonitorPage() {
 
             <Grid gutter="md">
               <Grid.Col span={{ base: 12, xl: 9 }}>
-                <FlowDiagram
-                  packets={packets}
-                  damnitPulse={damnitPulse}
-                  livePollPulse={livePollPulse}
-                  shotTotal={shotTotal}
-                  sourceTotal={sources.length}
-                  latestShotNumber={latestShotNumber}
-                  nextShotNumber={nextShotNumber}
-                  receiverConfig={receiverConfig}
-                  selectedWatchdogWatchers={selectedWatchdogWatchers}
-                  selectedShotcounterTKeys={selectedShotcounterTKeys}
-                  flowState={flowState}
-                  onSelectedWatchdogWatchersChange={setSelectedWatchdogWatchers}
-                  onSelectedShotcounterTKeysChange={setSelectedShotcounterTKeys}
-                  onSendShotcounter={sendShotcounter}
-                  onSendLaserData={sendLaserData}
-                  onSendWatchdog={sendWatchdog}
-                  onBuildPackage={buildPackage}
-                  onRefreshDamnit={refreshDamnit}
-                />
+                {monitorMode === 'live' ? (
+                  <Paper withBorder radius={4} p="md">
+                    <Stack gap="md">
+                      <Group justify="space-between" align="flex-end">
+                        <Stack gap={2}>
+                          <Text fw={700}>Live endpoint health</Text>
+                          <Text size="xs" c="dimmed">
+                            Source: GET /config/health · refreshes every 5s
+                          </Text>
+                        </Stack>
+                        <Button
+                          variant="light"
+                          size="xs"
+                          leftSection={<IconRefresh size={14} />}
+                          onClick={loadHealth}
+                        >
+                          Refresh now
+                        </Button>
+                      </Group>
+                      <SimpleGrid cols={{ base: 1, md: 3 }}>
+                        {(
+                          [
+                            ['ASAPO', 'asapo'],
+                            ['Kafka', 'kafka'],
+                            ['MongoDB', 'mongo'],
+                          ] as const
+                        ).map(([label, key]) => {
+                          const probe = health?.[key]
+                          return (
+                            <Paper key={key} withBorder radius={4} p="md">
+                              <Stack gap="xs">
+                                <Group justify="space-between">
+                                  <Text fw={600}>{label}</Text>
+                                  <Badge
+                                    color={
+                                      !probe
+                                        ? 'gray'
+                                        : probe.reachable
+                                          ? 'teal'
+                                          : 'red'
+                                    }
+                                    variant="light"
+                                  >
+                                    {!probe
+                                      ? 'unknown'
+                                      : probe.reachable
+                                        ? 'reachable'
+                                        : 'down'}
+                                  </Badge>
+                                </Group>
+                                <Text size="xs" c="dimmed">
+                                  {probe?.reachable
+                                    ? `Latency ${probe.latency_ms ?? '?'} ms`
+                                    : (probe?.detail ??
+                                      'Awaiting first probe…')}
+                                </Text>
+                              </Stack>
+                            </Paper>
+                          )
+                        })}
+                      </SimpleGrid>
+
+                      <Divider
+                        label="Data flow activity"
+                        labelPosition="left"
+                      />
+                      <Text size="xs" c="dimmed">
+                        Source: GET /config/flow-activity · producer output
+                        (broker) vs DAMNIT ingest (spool)
+                      </Text>
+                      <SimpleGrid cols={{ base: 1, md: 2 }}>
+                        <Paper withBorder radius={4} p="md">
+                          <Stack gap="xs">
+                            <Group justify="space-between">
+                              <Text fw={600}>Kafka topics</Text>
+                              <Badge
+                                variant="light"
+                                color={
+                                  activity?.kafka.available ? 'teal' : 'gray'
+                                }
+                              >
+                                {activity?.kafka.available ? 'broker' : 'n/a'}
+                              </Badge>
+                            </Group>
+                            {activity?.kafka.available ? (
+                              activity.kafka.topics.length ? (
+                                activity.kafka.topics.map((topic) => (
+                                  <Group
+                                    key={topic.topic}
+                                    justify="space-between"
+                                  >
+                                    <Text size="sm">
+                                      {topic.topic}
+                                      {!topic.exists ? ' (missing)' : ''}
+                                    </Text>
+                                    <Text size="sm" c="dimmed">
+                                      {topic.exists
+                                        ? `${topic.messages} msgs · last ${formatClock(topic.last_message_at)}`
+                                        : '—'}
+                                    </Text>
+                                  </Group>
+                                ))
+                              ) : (
+                                <Text size="xs" c="dimmed">
+                                  No topics configured
+                                  (DW_API_HZDR_KAFKA_SPOOL__TOPICS).
+                                </Text>
+                              )
+                            ) : (
+                              <Text size="xs" c="dimmed">
+                                {activity?.kafka.detail ??
+                                  'Awaiting first poll…'}
+                              </Text>
+                            )}
+                          </Stack>
+                        </Paper>
+
+                        <Paper withBorder radius={4} p="md">
+                          <Stack gap="xs">
+                            <Group justify="space-between">
+                              <Text fw={600}>ASAPO streams</Text>
+                              <Badge
+                                variant="light"
+                                color={
+                                  activity?.asapo.available ? 'teal' : 'gray'
+                                }
+                              >
+                                {activity?.asapo.available ? 'broker' : 'n/a'}
+                              </Badge>
+                            </Group>
+                            {activity?.asapo.available ? (
+                              activity.asapo.streams.length ? (
+                                activity.asapo.streams.map((stream) => (
+                                  <Group
+                                    key={stream.name}
+                                    justify="space-between"
+                                  >
+                                    <Text size="sm">{stream.name}</Text>
+                                    <Text size="sm" c="dimmed">
+                                      {stream.messages} msgs
+                                    </Text>
+                                  </Group>
+                                ))
+                              ) : (
+                                <Text size="xs" c="dimmed">
+                                  No streams yet.
+                                </Text>
+                              )
+                            ) : (
+                              <Text size="xs" c="dimmed">
+                                {activity?.asapo.detail ??
+                                  'Awaiting first poll…'}
+                              </Text>
+                            )}
+                          </Stack>
+                        </Paper>
+                      </SimpleGrid>
+
+                      <Paper withBorder radius={4} p="md">
+                        <Stack gap="xs">
+                          <Text fw={600}>DAMNIT spool (ingested events)</Text>
+                          {activity?.spool.files.length ? (
+                            activity.spool.files.map((file) => (
+                              <Group
+                                key={`${file.label}-${file.campaign}`}
+                                justify="space-between"
+                              >
+                                <Text size="sm">
+                                  {file.label} · {file.campaign}
+                                </Text>
+                                <Text size="sm" c="dimmed">
+                                  {file.events} events · last{' '}
+                                  {formatClock(file.last_event_at)}
+                                </Text>
+                              </Group>
+                            ))
+                          ) : (
+                            <Text size="xs" c="dimmed">
+                              No spool files yet — enable a consumer
+                              (DW_API_HZDR_*SPOOL__ENABLED) and publish events.
+                            </Text>
+                          )}
+                        </Stack>
+                      </Paper>
+                    </Stack>
+                  </Paper>
+                ) : (
+                  <FlowDiagram
+                    packets={packets}
+                    damnitPulse={damnitPulse}
+                    livePollPulse={livePollPulse}
+                    shotTotal={shotTotal}
+                    sourceTotal={sources.length}
+                    latestShotNumber={latestShotNumber}
+                    nextShotNumber={nextShotNumber}
+                    receiverConfig={receiverConfig}
+                    selectedWatchdogWatchers={selectedWatchdogWatchers}
+                    selectedShotcounterTKeys={selectedShotcounterTKeys}
+                    flowState={flowState}
+                    onSelectedWatchdogWatchersChange={
+                      setSelectedWatchdogWatchers
+                    }
+                    onSelectedShotcounterTKeysChange={
+                      setSelectedShotcounterTKeys
+                    }
+                    onSendShotcounter={sendShotcounter}
+                    onSendLaserData={sendLaserData}
+                    onSendWatchdog={sendWatchdog}
+                    onBuildPackage={buildPackage}
+                    onRefreshDamnit={refreshDamnit}
+                  />
+                )}
               </Grid.Col>
 
               <Grid.Col span={{ base: 12, xl: 3 }}>

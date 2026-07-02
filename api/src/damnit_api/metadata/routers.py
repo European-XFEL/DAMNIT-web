@@ -29,7 +29,14 @@ from .hzdr_sources import (
     HZDRSourceProvider,
     HZDRWikiInfo,
 )
+from .labfrog_sqlite import (
+    LabFrogCampaignRef,
+    LabFrogCampaignShot,
+    list_campaign_shots,
+    list_campaigns,
+)
 from .models import ProposalMeta
+from .producer_status import HZDRProducerStatus, derive_producer_status
 
 router = APIRouter(prefix="/metadata", tags=["metadata"])
 log = logging.getLogger(__name__)
@@ -124,10 +131,40 @@ async def list_hzdr_sources() -> list[HZDRSource]:
     return HZDRSourceProvider(settings.metadata).list_sources()
 
 
+@router.get("/hzdr/campaigns")
+async def list_hzdr_campaigns() -> list[LabFrogCampaignRef]:
+    """List curated LabFrog campaigns discovered in the configured directory.
+
+    Reads the per-campaign SQLite snapshots produced by labfrog-sqlite-tools
+    (DW_API_METADATA__LABFROG_CURATED_DIR). Returns [] when unconfigured.
+    """
+    return list_campaigns(settings.metadata.labfrog_curated_dir)
+
+
+@router.get("/hzdr/campaigns/{campaign_key}/shots")
+async def list_hzdr_campaign_shots(
+    campaign_key: str,
+    limit: int = Query(default=200, ge=1, le=1000),
+) -> list[LabFrogCampaignShot]:
+    """Preview shot records for one curated campaign from its SQLite snapshot."""
+    return list_campaign_shots(
+        settings.metadata.labfrog_curated_dir, campaign_key, limit=limit
+    )
+
+
 @router.get("/hzdr/sources/{source_key}")
 async def get_hzdr_source(source_key: str) -> HZDRSource | None:
     """Get one HZDR source from the active local metadata provider."""
     return HZDRSourceProvider(settings.metadata).get_source(source_key)
+
+
+@router.get("/hzdr/sources/{source_key}/producer-status")
+async def get_hzdr_producer_status(source_key: str) -> HZDRProducerStatus:
+    """Derive DAQ File Watchdog hosts + Shotcounter status from catalog events."""
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+    return derive_producer_status(source)
 
 
 @router.get("/hzdr/sources/{source_key}/wiki")

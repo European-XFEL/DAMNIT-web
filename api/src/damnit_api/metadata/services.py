@@ -47,6 +47,13 @@ async def _local_proposal_number() -> int | None:
 
     from ..db import async_table, get_session
     from ..shared.const import DEFAULT_PROPOSAL
+    from ..shared.settings import settings
+
+    # Deployments that don't use proposals (e.g. the HZDR profile) have no
+    # DAMNIT proposal path to resolve; the lookup would raise while building the
+    # session manager. Skip it instead of failing startup/userinfo.
+    if not settings.deployment.terminology.uses_proposals:
+        return None
 
     table = await async_table(DEFAULT_PROPOSAL, name="metameta")
     if table is None:

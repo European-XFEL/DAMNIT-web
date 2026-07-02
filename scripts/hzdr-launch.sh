@@ -399,7 +399,9 @@ echo "DAQ File Watchdog: ${PLANET_WATCHDOG_ROOT:-not found (skipped)}"
 echo "Event packages: $EVENTS_DIR"
 echo "Emulator output: $OUTPUT_DIR"
 echo "Generated shots: $SHOT_COUNT, increment: $SHOT_INCREMENT"
-echo "Flow monitor: http://127.0.0.1:$GUI_PORT/flow-monitor"
+if [[ "$NO_GUI" == false ]]; then
+  echo "Flow monitor: http://127.0.0.1:$GUI_PORT/flow-monitor"
+fi
 
 write_step "Prerequisites"
 for command_name in uv node; do
@@ -459,7 +461,7 @@ if [[ ! -f "$SOURCES_FILE" ]]; then
   exit 1
 fi
 
-export DW_API_AUTH__MODE=ldap
+export DW_API_AUTH__MODE="$(config_get auth.mode "${DW_API_AUTH__MODE:-ldap}")"
 export DW_API_DEBUG=true
 export DW_API_LOG_LEVEL=DEBUG
 export DW_API_METADATA__PROVIDER=local
@@ -546,8 +548,19 @@ if [[ "$(config_get emulator.openFlowMonitor false)" == "true" && "$NO_GUI" == f
 fi
 
 write_step "DAMNIT-web endpoints"
-echo "Home: http://127.0.0.1:$GUI_PORT/home"
-echo "Flow monitor: http://127.0.0.1:$GUI_PORT/flow-monitor"
+if [[ "$NO_GUI" == false ]]; then
+  echo "Home: http://127.0.0.1:$GUI_PORT/home"
+  echo "Flow monitor: http://127.0.0.1:$GUI_PORT/flow-monitor"
+else
+  WEB_PORT="$(config_get ports.web "")"
+  if [[ -n "$WEB_PORT" ]]; then
+    echo "Home: http://127.0.0.1:$WEB_PORT/home"
+    echo "Flow monitor: http://127.0.0.1:$WEB_PORT/flow-monitor"
+  else
+    echo "GUI not started (--no-gui); it is served externally (e.g. nginx)."
+    echo "Set ports.web in the launch config to print its Home/Flow monitor URLs here."
+  fi
+fi
 echo "API sources: http://127.0.0.1:$API_PORT/metadata/hzdr/sources"
 
 if [[ "$NO_API" == false ]]; then

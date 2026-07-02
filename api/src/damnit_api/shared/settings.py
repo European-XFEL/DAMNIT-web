@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     BaseModel,
@@ -28,6 +28,19 @@ class LDAPSettings(BaseModel):
     given_name_attribute: str = "givenName"
     groups_attribute: str = "memberOf"
     timeout: int = 5
+    # TLS/CA verification. Defaults are secure-by-default (validate against the
+    # system trust store); ca_cert_file only needs to be set when the dept LDAP
+    # server's cert chains to an internal CA that isn't already trusted system-wide.
+    validate_cert: bool = True
+    ca_cert_file: FilePath | None = None
+    # For deployments that keep ldap:// on 389 and rely on StartTLS instead of
+    # ldaps:// on 636 (see .env.production.example for the dept's 2026 migration note).
+    start_tls: bool = False
+
+
+# Auth modes that disable OAuth entirely and serve the local DEV_USER. Use these
+# to debug before an OIDC certificate/IdP is available.
+NOAUTH_MODES = frozenset({"none", "noauth", "disabled"})
 
 
 class AuthSettings(BaseModel):
@@ -38,6 +51,16 @@ class AuthSettings(BaseModel):
         HttpUrl, UrlConstraints(allowed_schemes=["https"])
     ] = "https://localhost/.well-known/openid-configuration"  # pyright: ignore[reportAssignmentType]
     ldap: LDAPSettings = Field(default_factory=LDAPSettings)
+
+    @property
+    def is_disabled(self) -> bool:
+        """True when `mode` turns auth off and the API serves the local DEV_USER."""
+        return self.mode in NOAUTH_MODES
+
+    @property
+    def uses_oauth(self) -> bool:
+        """True only for OAuth/OIDC backends that need server-metadata discovery."""
+        return self.mode != "ldap" and not self.is_disabled
 
 
 class DamnitSettings(BaseModel):
@@ -67,6 +90,7 @@ class DamnitSettings(BaseModel):
 class MetadataSettings(BaseModel):
     provider: str = "local"
     sources_file: Path | None = None
+    labfrog_curated_dir: Path | None = None
     mongo_uri: str = "mongodb://localhost:27017"
     mongo_database: str = "damnit_web_test"
     mongo_collection: str = "hzdr_sources"
@@ -217,23 +241,52 @@ class HZDRSpoolSettings(BaseModel):
     """
 
     enabled: bool = False
+    broker_kind: Literal["http", "asapo"] = "http"
     broker_url: str | None = None
     campaign: str = ""
     consumer_group: str = "damnit"
     spool_dir: Path = Path("spool/asapo")
     poll_interval: float = 2.0
     batch_size: int = 10
+    asapo_endpoint: str = ""
+    asapo_beamtime: str = ""
+    asapo_data_source: str = ""
+    asapo_token: SecretStr = SecretStr("")
+    asapo_stream: str = "default"
+    asapo_source_path: str = "auto"
+    asapo_has_filesystem: bool = False
+    asapo_timeout_ms: int = 5000
 
     @model_validator(mode="after")
-    def _require_broker_url_when_enabled(self) -> "HZDRSpoolSettings":
-        if self.enabled and not self.broker_url:
+    def _require_transport_config_when_enabled(self) -> "HZDRSpoolSettings":
+        if self.enabled and self.broker_kind == "http" and not self.broker_url:
             msg = (
                 "DW_API_HZDR_SPOOL__BROKER_URL must be set when "
-                "DW_API_HZDR_SPOOL__ENABLED=true. "
+                "DW_API_HZDR_SPOOL__ENABLED=true and "
+                "DW_API_HZDR_SPOOL__BROKER_KIND=http. "
                 "For the local test harness use http://127.0.0.1:8765; "
-                "for production set it to the real ASAPO broker URL."
+                "for real ASAPO set DW_API_HZDR_SPOOL__BROKER_KIND=asapo "
+                "and configure DW_API_HZDR_SPOOL__ASAPO_*."
             )
             raise ValueError(msg)
+        if self.enabled and self.broker_kind == "asapo":
+            missing = [
+                name
+                for name, value in {
+                    "ASAPO_ENDPOINT": self.asapo_endpoint,
+                    "ASAPO_BEAMTIME": self.asapo_beamtime,
+                    "ASAPO_DATA_SOURCE": self.asapo_data_source,
+                    "ASAPO_TOKEN": self.asapo_token.get_secret_value(),
+                }.items()
+                if not value
+            ]
+            if missing:
+                msg = (
+                    "DW_API_HZDR_SPOOL__BROKER_KIND=asapo requires "
+                    + ", ".join(f"DW_API_HZDR_SPOOL__{name}" for name in missing)
+                    + "."
+                )
+                raise ValueError(msg)
         return self
 
 
@@ -269,6 +322,38 @@ class HZDRHealthSettings(BaseModel):
     kafka_bootstrap: str = "localhost:9092"
     mongo_uri: str = "mongodb://localhost:27017"
     timeout: float = 2.0
+
+
+class HZDRAsapoActivitySettings(BaseModel):
+    """Optional config to surface real ASAPO stream activity in the flow monitor.
+
+    The ASAPO broker query needs the optional ``asapo_consumer`` client
+    (``uv sync --extra asapo`` / ``pip install 'damnit-api[asapo]'``).  When the
+    client or any required field below is missing, ``GET /config/flow-activity``
+    degrades gracefully: ASAPO falls back to reachability-only (still reported by
+    ``GET /config/health``) and the activity block reports ``available=false``
+    with a reason, never raising.
+
+    The token is a SecretStr so it is never serialized into responses or logs.
+    """
+
+    endpoint: str = ""
+    beamtime: str = ""
+    data_source: str = ""
+    token: SecretStr = SecretStr("")
+    source_path: str = ""
+    has_filesystem: bool = False
+    timeout_ms: int = 3000
+
+    @property
+    def configured(self) -> bool:
+        """True only when every field needed to open an ASAPO consumer is set."""
+        return bool(
+            self.endpoint
+            and self.beamtime
+            and self.data_source
+            and self.token.get_secret_value()
+        )
 
 
 class HZDRWikiSettings(BaseModel):
@@ -342,6 +427,10 @@ class Settings(BaseSettings):
     )
 
     hzdr_health: HZDRHealthSettings = Field(default_factory=HZDRHealthSettings)
+
+    hzdr_asapo_activity: HZDRAsapoActivitySettings = Field(
+        default_factory=HZDRAsapoActivitySettings
+    )
 
     hzdr_wiki: HZDRWikiSettings = Field(default_factory=HZDRWikiSettings)
 
