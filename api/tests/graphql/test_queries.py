@@ -42,14 +42,6 @@ def mocked_fetch_info(mocker):
     )
 
 
-@pytest.fixture(autouse=True)
-def mocked_proposal_auth(mocker):
-    """Bypass the proposal check; tests run without a request context."""
-    mocker.patch(
-        "damnit_api.graphql.queries._ensure_proposal_damnit_path",
-        return_value=None,
-    )
-
 
 @pytest.mark.asyncio
 async def test_runs_query(graphql_schema, mocked_fetch_variables, mocked_fetch_info):
@@ -284,3 +276,101 @@ async def test_metadata_query(graphql_schema):
     }
     assert "(Untagged)" in metadata["tags"]
     assert "eTOF" in metadata["tags"]
+
+
+@pytest.fixture
+def graphql_schema_no_auth(
+    mocked_metadata_variables,
+    mocked_metadata_column,
+    mocked_metadata_all_tags,
+    mocked_metadata_variable_tags,
+):
+    """Schema without the bypass_proposal_permission fixture, so permission
+    checks run normally (and fail since there is no real request context)."""
+    import strawberry
+    from strawberry.schema.config import StrawberryConfig
+
+    from damnit_api.graphql.directives import lightweight
+    from damnit_api.graphql.models import SCALAR_MAP, DamnitVariable
+    from damnit_api.graphql.queries import Query
+    from damnit_api.graphql.subscriptions import Subscription
+
+    return strawberry.Schema(
+        query=Query,
+        subscription=Subscription,
+        types=[DamnitVariable],
+        directives=[lightweight],
+        config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
+    )
+
+
+@pytest.fixture
+def graphql_schema_authenticated_non_member(mocker, graphql_schema_no_auth):
+    """Schema where the user is authenticated but not a proposal member."""
+    mocker.patch(
+        "damnit_api.auth.permissions.IsAuthenticated.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=True,
+    )
+    mocker.patch(
+        "damnit_api.auth.permissions.IsProposalMember.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=False,
+    )
+    return graphql_schema_no_auth
+
+
+@pytest.mark.asyncio
+async def test_runs_forbidden(graphql_schema_authenticated_non_member):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}) {{
+            variables {{ name }}
+          }}
+        }}
+    """
+    result = await graphql_schema_authenticated_non_member.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Access to this proposal is forbidden."
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_forbidden(graphql_schema_authenticated_non_member):
+    query = f"""
+        query {{
+          extracted_data(database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "x")
+        }}
+    """
+    result = await graphql_schema_authenticated_non_member.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Access to this proposal is forbidden."
+
+
+@pytest.mark.asyncio
+async def test_runs_unauthorized(graphql_schema_no_auth):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}) {{
+            variables {{ name }}
+          }}
+        }}
+    """
+    result = await graphql_schema_no_auth.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Authentication required."
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_unauthorized(graphql_schema_no_auth):
+    query = f"""
+        query {{
+          extracted_data(database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "x")
+        }}
+    """
+    result = await graphql_schema_no_auth.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Authentication required."
