@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  Alert,
   Anchor,
   Badge,
   Button,
@@ -13,17 +14,23 @@ import {
 import { IconBook, IconDatabase, IconRoute } from '@tabler/icons-react'
 import { Link } from 'react-router'
 import type { HZDRSource } from '../types'
+import { requireJson } from '../utils/api'
 
 export function HZDRSourceHome() {
   const [sources, setSources] = useState<HZDRSource[]>([])
+  const [pollFailed, setPollFailed] = useState(false)
 
   useEffect(() => {
     const loadSources = () => {
       fetch('/metadata/hzdr/sources')
-        .then((response) => response.json())
-        .then(setSources)
+        .then((response) => requireJson<HZDRSource[]>(response))
+        .then((loadedSources) => {
+          setSources(loadedSources)
+          setPollFailed(false)
+        })
         .catch((error) => {
           console.error('Failed to load HZDR sources', error)
+          setPollFailed(true)
         })
     }
 
@@ -52,6 +59,14 @@ export function HZDRSourceHome() {
           <Badge variant="light">{shotTotal} shots</Badge>
         </Group>
       </Group>
+
+      {pollFailed ? (
+        <Alert color="yellow" variant="light" py="xs">
+          <Text size="sm" c="dimmed">
+            Could not reach the API — retrying.
+          </Text>
+        </Alert>
+      ) : null}
 
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
         <Card withBorder radius={4} p="md">

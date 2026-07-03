@@ -180,6 +180,6 @@ Update this list as WPs land (check the box, note the commit hash).
 - [x] Plan written and pushed
 - [x] WP1 — navigation
 - [x] WP2 — ShotPage space
-- [ ] WP3 — loading/error feedback
+- [x] WP3 — loading/error feedback
 - [ ] WP4 — LinkRecords layout
 - [ ] WP5 — verification

@@ -74,7 +74,12 @@ export function LinkExistingShotRecordsPage() {
       .catch(() => setSources([]))
     fetchHZDRCampaigns()
       .then(setCampaigns)
-      .catch(() => setCampaigns([]))
+      .catch(() => {
+        setCampaigns([])
+        setSearchStatus(
+          'Could not load curated campaigns — is the API running?'
+        )
+      })
   }, [])
 
   const selectedCampaign = useMemo(
