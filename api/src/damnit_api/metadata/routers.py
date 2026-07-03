@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from random import Random
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query
@@ -16,7 +17,7 @@ from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
 from ..auth.dependencies import OAuthUserInfo, User
 from ..shared.models import ProposalNumber
-from ..shared.settings import settings
+from ..shared.settings import HZDRWikiSettings, settings
 from . import services
 from .hzdr_nexus import REVIEW_LEVELS, append_review_decision, write_json_atomic
 from .hzdr_sources import (
@@ -181,9 +182,18 @@ async def get_hzdr_source_wiki(
 ) -> HZDRWikiInfo:
     """Return the MediaWiki link for one campaign source.
 
-    The page URL is derived from the source's experiment_id and the configured
-    DW_API_HZDR_WIKI__BASE_URL.  When the base URL is not configured, page_url
-    is null and configured=false — safe for offline/local environments.
+    The page URL is derived from source metadata and the configured
+    DW_API_HZDR_WIKI__BASE_URL. An explicit ``metadata.wiki_page_title`` is
+    treated as the full MediaWiki title. Otherwise, when
+    DW_API_HZDR_WIKI__NAMESPACE is set (e.g. ``FWKT``) and the experiment_id
+    carries no namespace prefix, the page title becomes
+    ``{namespace}:{experiment_id}``. Campaign pages on the real FWK wiki live in
+    the ``FWKT:`` namespace while ``experiment_id`` is the bare slug. The
+    derived URL uses the robust query form ``{base}/index.php?title={title}``
+    with the title percent-encoded; an explicit ``metadata.wiki_page_url`` on
+    the source always wins unchanged. When the base URL is not configured, the
+    derived page_url is null and configured=false - safe for offline/local
+    environments.
 
     Use fetch=true to get live page metadata (exists, last_modified, categories)
     from the MediaWiki Action API.
@@ -192,23 +202,27 @@ async def get_hzdr_source_wiki(
     if source is None:
         raise HTTPException(status_code=404, detail="HZDR source not found.")
 
-    experiment_id: str | None = str(source.metadata.get("experiment_id") or "") or None
-    page_title = experiment_id or source_key
     wiki = settings.hzdr_wiki
+    experiment_id = _metadata_string(source.metadata, "experiment_id")
+    page_title = _wiki_page_title(
+        source_key=source_key,
+        metadata=source.metadata,
+        experiment_id=experiment_id,
+        namespace=wiki.namespace,
+    )
+    configured_url = _metadata_string(source.metadata, "wiki_page_url")
 
     if not wiki.base_url:
         return HZDRWikiInfo(
             source_key=source_key,
             experiment_id=experiment_id,
             page_title=page_title,
-            page_url=source.metadata.get("wiki_page_url"),  # type: ignore[arg-type]
+            page_url=configured_url,
             configured=False,
         )
 
     base = wiki.base_url.rstrip("/")
-    page_url: str = str(
-        source.metadata.get("wiki_page_url") or f"{base}/index.php/{page_title}"
-    )
+    page_url = configured_url or _wiki_page_url(base, page_title)
     info = HZDRWikiInfo(
         source_key=source_key,
         experiment_id=experiment_id,
@@ -218,13 +232,62 @@ async def get_hzdr_source_wiki(
     )
 
     if fetch:
-        info = await _fetch_wiki_page_info(info, base, wiki.fetch_timeout)
+        info = await _fetch_wiki_page_info(info, base, wiki.fetch_timeout, wiki)
 
     return info
 
 
+def _metadata_string(metadata: dict[str, Any], key: str) -> str | None:
+    value = metadata.get(key)
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    return value or None
+
+
+def _wiki_page_title(
+    *,
+    source_key: str,
+    metadata: dict[str, Any],
+    experiment_id: str | None,
+    namespace: str,
+) -> str:
+    explicit_title = _metadata_string(metadata, "wiki_page_title")
+    if explicit_title:
+        return explicit_title
+
+    page_title = experiment_id or source_key
+    namespace = namespace.strip().strip(":")
+    if namespace and ":" not in page_title:
+        return f"{namespace}:{page_title}"
+    return page_title
+
+
+def _wiki_page_url(wiki_base: str, page_title: str) -> str:
+    # Query form + percent-encoding: real titles contain "%", commas and dots
+    # (e.g. Ionen:1,1%Formvar062022); the namespace colon stays readable.
+    return f"{wiki_base}/index.php?title={quote(page_title, safe=':')}"
+
+
+def _wiki_auth_headers(wiki_settings: HZDRWikiSettings | None) -> dict[str, str]:
+    if wiki_settings is None:
+        return {}
+
+    headers: dict[str, str] = {}
+    cookie = wiki_settings.cookie_header.get_secret_value().strip()
+    if cookie:
+        headers["Cookie"] = cookie
+    authorization = wiki_settings.authorization_header.get_secret_value().strip()
+    if authorization:
+        headers["Authorization"] = authorization
+    return headers
+
+
 async def _fetch_wiki_page_info(
-    info: HZDRWikiInfo, wiki_base: str, request_timeout: float
+    info: HZDRWikiInfo,
+    wiki_base: str,
+    request_timeout: float,
+    wiki_settings: HZDRWikiSettings | None = None,
 ) -> HZDRWikiInfo:
     """Query the MediaWiki Action API for page existence and metadata.
 
@@ -242,7 +305,9 @@ async def _fetch_wiki_page_info(
         "cllimit": "20",
     }
     try:
-        async with httpx.AsyncClient(timeout=request_timeout) as client:
+        async with httpx.AsyncClient(
+            timeout=request_timeout, headers=_wiki_auth_headers(wiki_settings)
+        ) as client:
             resp = await client.get(api_url, params=params)
             resp.raise_for_status()
             data = resp.json()
@@ -250,18 +315,31 @@ async def _fetch_wiki_page_info(
         log.warning("MediaWiki API fetch failed for %r: %s", info.page_title, exc)
         return info
 
-    pages = (data.get("query") or {}).get("pages") or {}
-    if not pages:
-        return info
+    try:
+        pages = (data.get("query") or {}).get("pages") or {}
+        if not isinstance(pages, dict) or not pages:
+            return info
 
-    page = next(iter(pages.values()))
-    info.page_id = page.get("pageid")
-    info.exists = "missing" not in page
-    info.last_modified = page.get("touched")
-    categories = page.get("categories") or []
-    info.categories = [
-        cat.get("title", "").removeprefix("Category:") for cat in categories
-    ]
+        page = next(iter(pages.values()))
+        if not isinstance(page, dict):
+            return info
+
+        info.page_id = page.get("pageid")
+        info.exists = "missing" not in page
+        info.last_modified = page.get("touched")
+        categories = page.get("categories") or []
+        if isinstance(categories, list):
+            info.categories = [
+                cat.get("title", "").removeprefix("Category:")
+                for cat in categories
+                if isinstance(cat, dict)
+            ]
+    except (AttributeError, TypeError, StopIteration) as exc:
+        log.warning(
+            "MediaWiki API response could not be parsed for %r: %s",
+            info.page_title,
+            exc,
+        )
     return info
 
 

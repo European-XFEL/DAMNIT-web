@@ -493,6 +493,93 @@ def test_reads_labfrog_sqlite_target_columns_as_metadata_target(tmp_path: Path):
     ]
 
 
+def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: Path):
+    """Wiki-catalog extras (schema v9 columns) map onto metadata.target.
+
+    target_wiki_page/target_wiki_ref become typed wiki_page/wiki_ref keys and
+    imply provenance=wiki; provider/status/amount (IonenTargetOrigin columns)
+    land in the properties bag as supplier/status/amount per
+    docs/target-ontology.md.
+    """
+    sqlite_path = tmp_path / "campaign.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE shots (
+                mongo_id TEXT PRIMARY KEY,
+                shot_number INTEGER,
+                date_time TEXT,
+                campaign TEXT,
+                target TEXT,
+                target_name TEXT,
+                target_material TEXT,
+                target_thickness_value REAL,
+                target_thickness_unit TEXT,
+                target_notes TEXT,
+                target_source TEXT,
+                target_wiki_page TEXT,
+                target_wiki_ref TEXT,
+                target_status TEXT,
+                target_provider TEXT,
+                target_amount TEXT
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "mongo-18",
+                18,
+                "2026-06-10T13:00:00Z",
+                "HELPMI",
+                "0.4% Formvar",
+                "0.4% Formvar",
+                "Formvar",
+                None,
+                None,
+                None,
+                "wiki",
+                "Ionen:0.4%Formvar092022",
+                (
+                    "https://athene.fz-rossendorf.de/fwk/index.php"
+                    "?title=Ionen:0.4%25Formvar092022"
+                ),
+                "available",
+                "HZDR target lab",
+                "ca. 20 pieces",
+            ),
+        )
+
+    shots = read_labfrog_sqlite_shots(sqlite_path)
+
+    assert len(shots) == 1
+    metadata = shots[0]["metadata"]
+    assert metadata["target"] == {
+        "name": "0.4% Formvar",
+        "provenance": "wiki",
+        "material": "Formvar",
+        "wiki_page": "Ionen:0.4%Formvar092022",
+        "wiki_ref": (
+            "https://athene.fz-rossendorf.de/fwk/index.php"
+            "?title=Ionen:0.4%25Formvar092022"
+        ),
+        "properties": {
+            "supplier": "HZDR target lab",
+            "status": "available",
+            "amount": "ca. 20 pieces",
+        },
+    }
+    # The wiki extras are folded into metadata.target, not left as flat keys.
+    for flat_key in (
+        "target_wiki_page",
+        "target_wiki_ref",
+        "target_status",
+        "target_provider",
+        "target_amount",
+    ):
+        assert flat_key not in metadata
+
+
 def test_event_target_metadata_does_not_replace_labfrog_details():
     labfrog_shots = [
         {

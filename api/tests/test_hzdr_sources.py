@@ -99,6 +99,53 @@ def test_shot_surfaces_target_wiki_link_from_metadata(tmp_path: Path):
     )
 
 
+def test_target_wiki_ref_is_passed_through_verbatim(tmp_path: Path):
+    """target_wiki_ref/page are pure pass-throughs from producer metadata.
+
+    Neither the API nor the frontend builds these URLs by concatenation, so a
+    producer-supplied, already-percent-encoded URL (real Ionen: titles contain
+    "%" and commas) must survive unchanged — no re-encoding, no decoding.
+    """
+    encoded_ref = (
+        "https://athene.fz-rossendorf.de/fwk/index.php"
+        "?title=Ionen:0.4%25Formvar092022"
+    )
+    path = tmp_path / "hzdr_sources.json"
+    path.write_bytes(
+        orjson.dumps({
+            "sources": [
+                {
+                    "key": "hzdr-local",
+                    "title": "HZDR local file fixture",
+                    "damnit_path": "damnit/hzdr-local",
+                    "metadata": {},
+                    "shots": [
+                        {
+                            "source_key": "hzdr-local",
+                            "shot_number": 1001,
+                            "fired_at": "2026-05-05T08:15:00Z",
+                            "metadata": {
+                                "target": {
+                                    "name": "0.4% Formvar",
+                                    "provenance": "wiki",
+                                    "wiki_page": "Ionen:0.4%Formvar092022",
+                                    "wiki_ref": encoded_ref,
+                                }
+                            },
+                        }
+                    ],
+                }
+            ]
+        })
+    )
+
+    shot = load_sources_file(path)[0].shots[0]
+
+    assert shot.target_wiki_page == "Ionen:0.4%Formvar092022"
+    assert shot.target_wiki_ref == encoded_ref
+    assert shot.model_dump(mode="json")["target_wiki_ref"] == encoded_ref
+
+
 def test_staged_event_count_excludes_synthetic_labfrog_rows(tmp_path: Path):
     """staged_event_count is a Flow Monitor status number: every shot's own
     synthetic LabFrog row should not inflate it, but real producer events

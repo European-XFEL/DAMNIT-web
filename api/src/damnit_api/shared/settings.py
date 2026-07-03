@@ -360,17 +360,33 @@ class HZDRWikiSettings(BaseModel):
     """MediaWiki link configuration for campaign pages.
 
     Set DW_API_HZDR_WIKI__BASE_URL to the root of the MediaWiki installation
-    (e.g. https://wiki.hzdr.de).  When unset, the wiki endpoint returns
-    configured=false and no URL — safe for offline/local environments.
+    (e.g. https://athene.fz-rossendorf.de/fwk).  When unset, the wiki endpoint
+    returns configured=false and no URL — safe for offline/local environments.
 
-    The page URL is derived as:
-        {base_url}/index.php/{experiment_id}
+    Set DW_API_HZDR_WIKI__NAMESPACE (e.g. ``FWKT``) when campaign pages live in
+    a MediaWiki namespace: an ``experiment_id`` without a namespace prefix then
+    resolves to ``{namespace}:{experiment_id}``. Identifiers that already carry
+    a namespace prefix (contain ``:``), or source metadata with an explicit
+    ``wiki_page_title``, are used as full titles.
+
+    The page URL uses the query form, with the title percent-encoded (real page
+    titles contain ``%``, commas and dots — path-style concatenation breaks):
+        {base_url}/index.php?title={page_title}
     and the Action API is queried at:
         {base_url}/api.php
+
+    Optional authenticated live probes can be enabled with:
+        DW_API_HZDR_WIKI__COOKIE_HEADER="wiki_session=..."
+        DW_API_HZDR_WIKI__AUTHORIZATION_HEADER="Bearer ..."
+    Both are SecretStr values, used only as outbound HTTP headers, and never
+    serialized in API responses.
     """
 
     base_url: str = ""
+    namespace: str = ""
     fetch_timeout: float = 5.0
+    cookie_header: SecretStr = SecretStr("")
+    authorization_header: SecretStr = SecretStr("")
 
 
 class ContextWorkspaceSettings(BaseModel):

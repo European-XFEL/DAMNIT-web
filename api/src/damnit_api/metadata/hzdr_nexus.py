@@ -452,12 +452,22 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
 
 
 def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
-    """Build canonical ``metadata.target`` from LabFrog SQLite target columns."""
+    """Build canonical ``metadata.target`` from LabFrog SQLite target columns.
+
+    Wiki-catalog extras exported by labfrog-sqlite-tools map per
+    docs/target-ontology.md: ``target_wiki_page``/``target_wiki_ref`` become the
+    typed ``wiki_page``/``wiki_ref`` keys, and ``target_provider`` /
+    ``target_status`` / ``target_amount`` (from the wiki's IonenTargetOrigin
+    ``provider``/``status``/``amount`` columns) land in the ``properties`` bag
+    as ``supplier``/``status``/``amount``.
+    """
     target_display = _as_optional_string(record.get("target"))
     target_name = _as_optional_string(record.get("target_name")) or target_display
     material = _as_optional_string(record.get("target_material"))
     notes = _as_optional_string(record.get("target_notes"))
     source = _as_optional_string(record.get("target_source"))
+    wiki_page = _as_optional_string(record.get("target_wiki_page"))
+    wiki_ref = _as_optional_string(record.get("target_wiki_ref"))
     thickness = _canonical_target_thickness_nm(
         record.get("target_thickness_value"), record.get("target_thickness_unit")
     )
@@ -468,7 +478,7 @@ def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
     if _is_manual_labfrog_target(record):
         target["type"] = "other"
         target["provenance"] = "manual"
-    elif source and source.casefold() == "wiki":
+    elif wiki_page or wiki_ref or (source and source.casefold() == "wiki"):
         target["provenance"] = "wiki"
     if material:
         target["material"] = material
@@ -476,18 +486,45 @@ def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
         target["thickness"] = thickness
     if notes:
         target["notes"] = notes
+    if wiki_page:
+        target["wiki_page"] = wiki_page
+    if wiki_ref:
+        target["wiki_ref"] = wiki_ref
 
-    if target and thickness is None:
-        source_thickness = _source_target_thickness(record)
-        if source_thickness:
-            target["properties"] = {"source_thickness": source_thickness}
+    properties = _labfrog_target_properties(record, thickness=thickness)
+    if target and properties:
+        target["properties"] = properties
 
     return target
+
+
+def _labfrog_target_properties(
+    record: dict[str, Any], *, thickness: float | None
+) -> dict[str, Any]:
+    properties: dict[str, Any] = {}
+    for column, property_key in (
+        ("target_provider", "supplier"),
+        ("target_status", "status"),
+        ("target_amount", "amount"),
+    ):
+        value = _as_optional_string(record.get(column))
+        if value:
+            properties[property_key] = value
+
+    if thickness is None:
+        source_thickness = _source_target_thickness(record)
+        if source_thickness:
+            properties["source_thickness"] = source_thickness
+    return properties
 
 
 def _is_manual_labfrog_target(record: dict[str, Any]) -> bool:
     source = (_as_optional_string(record.get("target_source")) or "").casefold()
     if source == "wiki":
+        return False
+    if _as_optional_string(record.get("target_wiki_page")) or _as_optional_string(
+        record.get("target_wiki_ref")
+    ):
         return False
     if source in {"manual", "operator"}:
         return True
@@ -577,6 +614,11 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "target_thickness_unit",
                 "target_notes",
                 "target_source",
+                "target_wiki_page",
+                "target_wiki_ref",
+                "target_status",
+                "target_provider",
+                "target_amount",
                 "target_series",
                 "target_series_id",
                 "target_series_label",
@@ -635,6 +677,11 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "target_thickness_unit",
                 "target_notes",
                 "target_source",
+                "target_wiki_page",
+                "target_wiki_ref",
+                "target_status",
+                "target_provider",
+                "target_amount",
             }
             and value is not None
             and value != ""

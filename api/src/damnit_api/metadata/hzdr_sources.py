@@ -118,8 +118,10 @@ class HZDRSourceEvent(BaseModel):
 class HZDRWikiInfo(BaseModel):
     """MediaWiki link and metadata for one campaign source.
 
-    page_url and page_title are derived from experiment_id + the configured
-    DW_API_HZDR_WIKI__BASE_URL; they are null when the base URL is not set.
+    page_url and page_title are derived from metadata.wiki_page_title or
+    experiment_id + the configured DW_API_HZDR_WIKI__BASE_URL (optionally
+    prefixed with DW_API_HZDR_WIKI__NAMESPACE); page_url is null when the base
+    URL is not set.
     exists/last_modified/page_id/categories are only populated when the caller
     requests a live fetch from the MediaWiki Action API (fetch=true on the
     endpoint); on a fetch failure they remain null rather than raising an error.

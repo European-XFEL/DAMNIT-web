@@ -1,6 +1,6 @@
 # Target / Sample Ontology (`metadata.target.*`)
 
-Updated: 2026-07-02
+Updated: 2026-07-03
 
 The authoritative definition of the **target (sample) sub-schema** that DAMNIT
 captures per shot, how MediaWiki-curated targets and hand-entered ("OTHER")
@@ -22,10 +22,15 @@ In LabFrog the operator picks a target for a campaign/shot in one of two ways,
 and the ontology records which:
 
 1. **Selected from the MediaWiki target catalog** (`provenance = "wiki"`). The wiki
-   page is the curated record, so the target carries *more than a name* — at least
-   `material` and `thickness`, and for some entries additional structured detail
-   (geometry, substrate, supplier/batch, gas parameters). DAMNIT keeps a link back
-   to the wiki page so the curated record stays reachable.
+   page is the curated record, so the target carries *more than a name*. On the
+   real FWK wiki the catalog is the Cargo table `IonenTargetOrigin` (see §2.3):
+   `material` is reliably available (from the structured `element` column), but
+   **thickness is usually free text** embedded in the name/description
+   ("0.4 µm Al foil") at the TargetOrigin level, not a structured field — expect
+   `thickness` to often stay null for wiki targets, with the human-readable value
+   preserved in `name`/`notes`/`properties`. Some entries carry additional
+   structured detail (status, provider, amount, documentation). DAMNIT keeps a
+   link back to the wiki page so the curated record stays reachable.
 2. **Entered by hand via the "OTHER" form** (`provenance = "manual"`). The operator
    fills `name`, `material`, `thickness`, and `notes` (and may add any other typed
    field). There is no wiki page behind it; `wiki_page`/`wiki_ref` stay null.
@@ -64,6 +69,39 @@ round-trips losslessly and can be promoted to a typed key later.
 
 All numeric values are **bare** (no unit suffix in the key); their canonical units
 are fixed in §5 and stamped as NeXus `@units` only at write time.
+
+### 2.3 Mapping the wiki target catalog (`IonenTargetOrigin`)
+
+The FWK wiki's target catalog is the Cargo table `IonenTargetOrigin`
+(columns: `name`, `description`, `documentation`, `status`, `element`, `type`,
+`provider`, `responsible`, `pages`, `amount`; target pages live in the `Ionen:`
+and `HIBEF:` namespaces). Wiki-provenance targets map onto this ontology as:
+
+| Wiki column | Ontology key | Note |
+| --- | --- | --- |
+| `name` | `name` | often embeds thickness as free text ("0.4 µm Al foil") |
+| `element` | `material` | the reliable structured material source |
+| `type` | `type` | vocabulary mismatch — see below |
+| `description` | `notes` | free text |
+| page title | `wiki_page` | e.g. `Ionen:1,1%Formvar062022` — contains `%`/commas; URLs must be percent-encoded (see [mediawiki-integration.md](mediawiki-integration.md) §2) |
+| page URL | `wiki_ref` | supplied by the producer, passed through verbatim downstream |
+| `provider` | `properties.supplier` | |
+| `status` | `properties.status` | e.g. `available` / `dumped` |
+| `amount` | `properties.amount` | free text ("ca. 20 pieces") |
+
+The wiki `type` vocabulary (foil/wire/wafer/solution/…) does not match the §3
+enum one-to-one. Mapping guidance — don't over-engineer, map the obvious ones
+and fall back to `other` with the original value kept in `properties.wiki_type`:
+`foil` → `foil`; `wafer` → `foil` (or `structured` if patterned);
+`solution` → `liquid` (jet/sheet use) or `other`; `wire` → `other`;
+anything unrecognized → `other`.
+
+The exported LabFrog SQLite columns carrying these extras are
+`target_wiki_page`, `target_wiki_ref`, `target_status`, `target_provider`,
+`target_amount` (labfrog-sqlite-tools schema v9); DAMNIT's reconciler folds
+them into `metadata.target.*` per this table. LabFrog does not yet persist
+them per shot record — until it does, wiki-provenance targets arrive with
+name/material/thickness/notes only.
 
 ## 3. `type` enumeration
 
@@ -140,8 +178,8 @@ convention since its keys have no registry entry.
     "type": "foil",
     "name": "Au 5 µm #A12",
     "provenance": "wiki",
-    "wiki_page": "Target_Au_5um_A12",
-    "wiki_ref": "https://wiki.hzdr.de/index.php/Target_Au_5um_A12",
+    "wiki_page": "Ionen:1,1%Formvar062022",
+    "wiki_ref": "https://athene.fz-rossendorf.de/fwk/index.php?title=Ionen:1%2C1%25Formvar062022",
     "material": "Au",
     "thickness": 5000.0,
     "diameter": 3.0,
@@ -229,3 +267,5 @@ HELPMI DDC names remain the documentation cross-walk; see
 | `write_nexus_sample()` (`NXsample`) reads `metadata.target.*` | ✅ done 2026-07-02 |
 | HZDR-local `NXhzdr_target` profile / NXDL drafted | 🟡 v0.1 doc + compatibility attrs done 2026-07-02 ([nxhzdr-target-profile.md](nxhzdr-target-profile.md)); NXDL formalization still open — Phase 5 |
 | Target→wiki link surfaced in API/UI (`target_wiki_ref` / `target_wiki_page`, table + shot detail links) | ✅ done 2026-07-02 |
+| Wiki catalog (`IonenTargetOrigin`) → ontology mapping documented (§2.3); SQLite v9 extras columns mapped by the reconciler | ✅ implemented locally 2026-07-03 |
+| LabFrog persists wiki extras (`wiki_page`/`wiki_ref`/status/provider/amount) per shot | ⬜ open (labfrog) |
