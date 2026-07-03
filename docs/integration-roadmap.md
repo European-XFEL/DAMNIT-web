@@ -1,6 +1,6 @@
 # Integration Roadmap
 
-Updated: 2026-07-02
+Updated: 2026-07-03
 
 **2026-07-01:** production deployment is live at
 [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/);
@@ -16,6 +16,13 @@ and `payload_ref.uri` is populated with a replayable ASAPO message URI. The
 builder-side 64 KiB / item-count guard remains in place as a backstop for other
 producer paths; the separate sidecar/producers should emit the URI directly for
 real LaserData rollout.
+
+**2026-07-03:** the offline/local pilot package gate is now committed and green:
+`scripts/test-pilot-package.ps1 -NoCoverage` validates sibling repo presence,
+git-state visibility, shared contract/topic sync, pilot env/config, and the
+selected DAMNIT, LabFrog, LabFrog SQLite tools, DAQ File Watchdog, and
+shotcounter suites. ASAPO remains excluded for the Kafka pilot; the live broker
+`-DockerTests` pass is still a deployment gate.
 
 **2026-07-01 (verification pass):** re-checked the "real data ingestion"
 transition against the actual code (not just prior doc claims). Three
@@ -105,6 +112,7 @@ Committed and tested:
 - Production deployment templates: `api/.env.production.example`,
   `scripts/damnit-api.service` systemd unit.
 - Cross-repo test runner `scripts/test-all.ps1` (all six suites, one command).
+- Pilot package gate (`scripts/test-pilot-package.ps1`) for the Kafka pilot, with ASAPO excluded by default and live broker tests still opt-in via `-DockerTests`.
 
 ## Work Order
 
@@ -241,6 +249,7 @@ Branch: `main`
 | Ambiguous/unmatched events in API; real Confirm Matches UI | ✅ committed |
 | Local acceptance script; offline four-source integration test | ✅ committed |
 | Shared example payloads and anonymized SQLite fixture | ✅ committed |
+| Pilot package gate (`scripts/test-pilot-package.ps1`) | ✅ committed and green locally on 2026-07-03 with `-NoCoverage`; ASAPO excluded by default; live broker `-DockerTests` still separate |
 | Cross-repo test runner (`scripts/test-all.ps1`) — runs all six suites in one command; `-DockerTests` flag adds `pytest.mark.integration_docker` broker roundtrip suite | ✅ committed |
 | Real-broker restart/replay integration test (`api/tests/test_hzdr_broker_roundtrip.py`) — 4 docker-gated tests; skipped not failed when broker absent | ✅ committed |
 | Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | ✅ committed — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |

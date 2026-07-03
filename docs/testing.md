@@ -2,15 +2,16 @@
 
 ## Verified
 
-As of 2026-06-30:
+As of 2026-07-03:
 
-| Repository | Result |
-| --- | --- |
-| DAMNIT API | `213 passed, 4 skipped` |
-| LabFrog SQLite tools | `89 passed` |
-| DAQ File Watchdog full suite | `210 passed, 3 skipped` |
-| shotcounter (`feature/hzdr-canonical-trigger-event`) | `24 passed` (1 NTP-tolerance test deselected) |
-| ASAPO harness | `9 passed` |
+| Repository | Result | Notes |
+| --- | --- | --- |
+| DAMNIT API | `239 passed, 5 skipped` | Via `scripts/test-pilot-package.ps1 -NoCoverage`; broker tests skipped unless `-DockerTests` is used. |
+| LabFrog UI | `508 passed, 1 skipped, 9 deselected` | Included in the pilot package gate. |
+| LabFrog SQLite tools | `108 passed` | Included in the pilot package gate. |
+| DAQ File Watchdog | `247 passed, 3 skipped` | Included in the pilot package gate with ASAPO excluded by design. |
+| shotcounter | `23 passed` | Included in the pilot package gate; one NTP-tolerance test is deselected. |
+| ASAPO harness | `9 passed` | Deferred follow-up path; not part of the pilot package gate. |
 
 `api/tests/test_hzdr_integration.py` is the offline system-contract test. It
 combines LabFrog, ASAPO, Watchdog, and DRACO inputs for
@@ -83,6 +84,11 @@ pilot config, then delegates to `test-all.ps1` for the selected suites:
 .\scripts\test-pilot-package.ps1 -NoCoverage -DockerTests -Broker localhost:9092
 .\scripts\test-pilot-package.ps1 -SkipSuites
 ```
+
+Last local result (2026-07-03): `scripts/test-pilot-package.ps1 -NoCoverage`
+passed across DAMNIT, LabFrog, LabFrog SQLite tools, DAQ File Watchdog, and
+shotcounter. ASAPO is excluded by design for this pilot gate; the live broker
+variant with `-DockerTests` remains a deployment gate.
 
 <!-- coverage-summary-start -->
 

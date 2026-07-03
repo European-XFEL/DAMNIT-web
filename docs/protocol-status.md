@@ -1,6 +1,6 @@
 # Data-Transfer Protocol Status
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
 Per-source, per-repo implementation status for the HZDR DAMNIT pipeline data-transfer
 protocols. See `integration-roadmap.md` for the full work-order history; see
@@ -127,6 +127,7 @@ broker, then merge the shotcounter branch.
 | Vendored `hzdr_event.py` byte-identical in planet-watchdog; JSON-Schema fixtures in shotcounter | ✅ committed |
 | `scripts/sync-hzdr-event.ps1` checks (or `-Apply` fixes) all vendored copies and topic defaults | ✅ committed |
 | `kafka-broker-docker/topics.env` — single canonical topic name registry | ✅ committed |
+| `test-pilot-package.ps1 -NoCoverage` is the offline pilot package gate for DAMNIT, LabFrog, LabFrog SQLite tools, DAQ File Watchdog, and shotcounter; ASAPO is excluded by default | ✅ committed and green locally 2026-07-03 |
 | `test-all.ps1` runs all 6 sibling suites + contract sync check in one command | ✅ committed |
 | `test-all.ps1 -DockerTests` adds real-broker integration suite | ✅ committed |
 | Offline four-source integration test (`test_hzdr_integration.py`) | ✅ committed |

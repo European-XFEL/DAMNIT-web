@@ -1,12 +1,10 @@
 # DAMNIT-web-hzdr Deployment Plan
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
-## Status snapshot (2026-07-02)
+## Status snapshot (2026-07-03)
 
-- **Deployed:** test deployment live at `https://fwkt-damnit.fz-rossendorf.de`
-  on `fwkt-webapps.fz-rossendorf.de` (systemd `damnit-api`, port 8000). Suite
-  green (196 passed / 15 broker-gated skips).
+- **Deployed:** test deployment live at `https://fwkt-damnit.fz-rossendorf.de` on `fwkt-webapps.fz-rossendorf.de` (systemd `damnit-api`, port 8000). The offline pilot package gate passed on 2026-07-03 across DAMNIT, LabFrog, LabFrog SQLite tools, DAQ File Watchdog, and shotcounter; live broker `-DockerTests` remains the deployment gate.
 - **Not yet done:** Kafka and ASAPO spool consumers disabled; real-broker
   restart/replay gate (Step 3) not run against the production broker; nginx
   config for `fwkt-damnit` not yet recorded in the fwkt-webapps hub.
@@ -31,8 +29,7 @@ Last updated: 2026-07-02
   campaign-rotation procedure.
 - **Pilot config exists:** `api/.env.pilot.example` (Kafka on/localhost:9092/pilot
   slug; ASAPO off).
-- **Tests:** full suite executed and passing (2026-07-02) after the
-  registry/linter/NeXus-profile changes; all six family suites green.
+- **Tests:** `scripts/test-pilot-package.ps1 -NoCoverage` passed locally on 2026-07-03; broker-backed restart/replay checks still need to run against the deployment Kafka broker.
 
 The main application (FastAPI + frontend) is already running on the server. This
 document covers **wiring the data-transfer protocol pieces** — the Kafka and ASAPO
@@ -55,6 +52,7 @@ Before enabling any consumer, verify:
   copied from `.env.production.example`
 - [ ] `GET /config/health` returns 200 (even with all consumers off):
   `curl -s http://localhost:8000/config/health | python3 -m json.tool`
+- [ ] Local pilot package gate passed via `scripts/test-pilot-package.ps1 -NoCoverage`.
 
 ---
 
