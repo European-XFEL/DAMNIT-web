@@ -99,9 +99,9 @@ coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).
 
 | Repo | Coverage | Package | Suite |
 | --- | --- | --- | --- |
-| DAMNIT API | <progress value="78" max="100">78%</progress> 78% Good | `damnit_api` | `api/tests` |
+| DAMNIT API | <progress value="76" max="100">76%</progress> 76% Good | `damnit_api` | `api/tests` |
 | LabFrog | <progress value="78" max="100">78%</progress> 78% Good | `labfrog` | `tests` (non-webkit) |
-| LabFrog SQLite tools | <progress value="80" max="100">80%</progress> 80% Good | `labfrog_sqlite_tools` | `tests` |
+| LabFrog SQLite tools | <progress value="81" max="100">81%</progress> 81% Good | `labfrog_sqlite_tools` | `tests` |
 | DAQ File Watchdog | <progress value="84" max="100">84%</progress> 84% Good | `watchdog_core` | `tests` |
 | shotcounter | <progress value="80" max="100">80%</progress> 80% Good | `hzdrTangoDSShotcounter` | `tests` (non-ntp) |
 | ASAPO harness | <progress value="65" max="100">65%</progress> 65% Moderate | `tools` | `tests` |

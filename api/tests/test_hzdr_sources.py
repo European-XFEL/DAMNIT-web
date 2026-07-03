@@ -107,8 +107,7 @@ def test_target_wiki_ref_is_passed_through_verbatim(tmp_path: Path):
     "%" and commas) must survive unchanged — no re-encoding, no decoding.
     """
     encoded_ref = (
-        "https://athene.fz-rossendorf.de/fwk/index.php"
-        "?title=Ionen:0.4%25Formvar092022"
+        "https://athene.fz-rossendorf.de/fwk/index.php?title=Ionen:0.4%25Formvar092022"
     )
     path = tmp_path / "hzdr_sources.json"
     path.write_bytes(
