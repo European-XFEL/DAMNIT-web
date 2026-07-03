@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Anchor,
   Badge,
@@ -52,6 +52,13 @@ import {
 } from '../utils/format'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
+import {
+  SHOT_TABLE_COLUMNS,
+  SHOT_TABLE_COLUMN_WIDTHS,
+  CONTEXT_COLUMN_WIDTH,
+  loadShotTableView,
+  saveShotTableView,
+} from '../utils/table-view'
 
 export function HZDRShotPage() {
   const { source_key } = useParams()
@@ -71,6 +78,49 @@ export function HZDRShotPage() {
   })
   const [hiddenTableColumns, setHiddenTableColumns] = useState<string[]>([])
   const [selectedCell, setSelectedCell] = useState<HZDRSelectedCell>()
+  // Set by the view-loading effect so the save effect skips the render pass
+  // in which the persisted view is applied (or defaults are restored) — the
+  // filter/sort states still hold the previous source's values on that pass.
+  const skipNextViewSave = useRef(false)
+
+  useEffect(() => {
+    if (!source_key) {
+      return
+    }
+    skipNextViewSave.current = true
+    const savedView = loadShotTableView(source_key)
+    setFilterColumn(savedView?.filterColumn ?? 'all')
+    setFilterOperator(savedView?.filterOperator ?? 'includes')
+    setFilterValue(savedView?.filterValue ?? '')
+    setSortState(
+      savedView?.sortState ?? { column: 'shot_number', direction: 'asc' }
+    )
+    setHiddenTableColumns(savedView?.hiddenTableColumns ?? [])
+  }, [source_key])
+
+  useEffect(() => {
+    if (!source_key) {
+      return
+    }
+    if (skipNextViewSave.current) {
+      skipNextViewSave.current = false
+      return
+    }
+    saveShotTableView(source_key, {
+      filterColumn,
+      filterOperator,
+      filterValue,
+      sortState,
+      hiddenTableColumns,
+    })
+  }, [
+    source_key,
+    filterColumn,
+    filterOperator,
+    filterValue,
+    sortState,
+    hiddenTableColumns,
+  ])
 
   useEffect(() => {
     const loadShotPageData = () => {
@@ -138,30 +188,19 @@ export function HZDRShotPage() {
     contextResults?.rows.map((row) => [row.shot_number, row]) ?? []
   )
   const shotDayLabels = buildShotDayLabels(shots)
+  const contextColumnOptions =
+    contextResults?.columns.map((column) => ({
+      value: `context:${column.name}`,
+      label: column.title,
+    })) ?? []
   const filterColumnOptions = [
     { value: 'all', label: 'All visible columns' },
-    { value: 'shot_number', label: 'Shot' },
-    { value: 'shot_day', label: 'Day' },
-    { value: 'fired_at', label: 'Fired at' },
-    { value: 'status', label: 'Status' },
-    { value: 'laser_energy_j', label: 'Energy' },
-    { value: 'target', label: 'Target' },
-    ...(contextResults?.columns.map((column) => ({
-      value: `context:${column.name}`,
-      label: column.title,
-    })) ?? []),
+    ...SHOT_TABLE_COLUMNS.map(({ value, label }) => ({ value, label })),
+    ...contextColumnOptions,
   ]
   const tableColumnOptions = [
-    { value: 'shot_number', label: 'Shot' },
-    { value: 'shot_day', label: 'Day' },
-    { value: 'fired_at', label: 'Fired at' },
-    { value: 'status', label: 'Status' },
-    { value: 'laser_energy_j', label: 'Energy' },
-    { value: 'target', label: 'Target' },
-    ...(contextResults?.columns.map((column) => ({
-      value: `context:${column.name}`,
-      label: column.title,
-    })) ?? []),
+    ...SHOT_TABLE_COLUMNS.map(({ value, label }) => ({ value, label })),
+    ...contextColumnOptions,
   ]
   const visibleTableColumns = tableColumnOptions
     .map((option) => option.value)
@@ -174,15 +213,11 @@ export function HZDRShotPage() {
     ) ?? []
   const tableMinWidth = Math.max(
     680,
-    [
-      isTableColumnVisible('shot_number') ? 86 : 0,
-      isTableColumnVisible('shot_day') ? 92 : 0,
-      isTableColumnVisible('fired_at') ? 168 : 0,
-      isTableColumnVisible('status') ? 112 : 0,
-      isTableColumnVisible('laser_energy_j') ? 96 : 0,
-      isTableColumnVisible('target') ? 146 : 0,
-      visibleContextColumns.length * 180,
-    ].reduce((total, width) => total + width, 0)
+    SHOT_TABLE_COLUMNS.reduce(
+      (total, column) =>
+        total + (isTableColumnVisible(column.value) ? column.width : 0),
+      visibleContextColumns.length * CONTEXT_COLUMN_WIDTH
+    )
   )
   const visibleShots = shots
     .filter((shot) =>
@@ -359,21 +394,17 @@ export function HZDRShotPage() {
         <Container fluid py="md">
           <Stack gap="md">
             <Card withBorder radius={4} p="md">
-              <Group justify="space-between" align="flex-start">
-                <Stack gap={4} style={{ flex: 1, minWidth: 280 }}>
-                  <Group gap="xs">
-                    <Title order={3}>{source?.title ?? source_key}</Title>
-                    <Badge variant="light">Emulated package stream</Badge>
-                  </Group>
-                  <Text size="sm" c="dimmed">
-                    LaserData creates shots, Watchdog enriches them, and staged
-                    events feed the HDF5 builder.
+              <Group justify="space-between" align="center" gap="sm">
+                <Group gap="xs">
+                  <Title order={3}>{source?.title ?? source_key}</Title>
+                  <Badge variant="light">Emulated package stream</Badge>
+                </Group>
+                <Group gap="xs" align="center" wrap="nowrap">
+                  <Text size="sm" fw={500} component="label">
+                    Source
                   </Text>
-                  <Code block>{source?.damnit_path ?? '-'}</Code>
-                </Stack>
-                <Stack gap="xs" style={{ minWidth: 360 }}>
                   <Select
-                    label="Source"
+                    aria-label="Source"
                     value={source_key ?? null}
                     data={sourceOptions}
                     onChange={(value) => {
@@ -386,13 +417,21 @@ export function HZDRShotPage() {
                       width: 'max-content',
                       position: 'bottom-end',
                     }}
+                    style={{ minWidth: 320 }}
                   />
-                </Stack>
+                </Group>
+              </Group>
+              <Group gap="xs" mt={4} align="center">
+                <Text size="sm" c="dimmed">
+                  LaserData creates shots, Watchdog enriches them, and staged
+                  events feed the HDF5 builder.
+                </Text>
+                <Code>{source?.damnit_path ?? '-'}</Code>
               </Group>
             </Card>
 
             <Grid gutter="md">
-              <Grid.Col span={{ base: 12, xl: 10 }}>
+              <Grid.Col span={{ base: 12, lg: 9 }}>
                 <Card withBorder radius={4} p="md">
                   <Group align="flex-end" gap="sm">
                     <Select
@@ -474,7 +513,7 @@ export function HZDRShotPage() {
                 </Card>
                 <Card withBorder radius={4} p={0}>
                   <ScrollArea
-                    h={520}
+                    style={{ height: 'calc(100vh - 340px)', minHeight: 320 }}
                     type="always"
                     offsetScrollbars
                     scrollbarSize={14}
@@ -489,64 +528,22 @@ export function HZDRShotPage() {
                     >
                       <Table.Thead>
                         <Table.Tr>
-                          {isTableColumnVisible('shot_number') ? (
+                          {SHOT_TABLE_COLUMNS.filter((column) =>
+                            isTableColumnVisible(column.value)
+                          ).map((column) => (
                             <SortableHeader
-                              width={86}
-                              label="Shot"
-                              column="shot_number"
+                              key={column.value}
+                              width={column.width}
+                              label={column.label}
+                              column={column.value}
                               sortState={sortState}
                               onSort={toggleSort}
                             />
-                          ) : null}
-                          {isTableColumnVisible('shot_day') ? (
-                            <SortableHeader
-                              width={92}
-                              label="Day"
-                              column="shot_day"
-                              sortState={sortState}
-                              onSort={toggleSort}
-                            />
-                          ) : null}
-                          {isTableColumnVisible('fired_at') ? (
-                            <SortableHeader
-                              width={168}
-                              label="Fired at"
-                              column="fired_at"
-                              sortState={sortState}
-                              onSort={toggleSort}
-                            />
-                          ) : null}
-                          {isTableColumnVisible('status') ? (
-                            <SortableHeader
-                              width={112}
-                              label="Status"
-                              column="status"
-                              sortState={sortState}
-                              onSort={toggleSort}
-                            />
-                          ) : null}
-                          {isTableColumnVisible('laser_energy_j') ? (
-                            <SortableHeader
-                              width={96}
-                              label="Energy"
-                              column="laser_energy_j"
-                              sortState={sortState}
-                              onSort={toggleSort}
-                            />
-                          ) : null}
-                          {isTableColumnVisible('target') ? (
-                            <SortableHeader
-                              width={110}
-                              label="Target"
-                              column="target"
-                              sortState={sortState}
-                              onSort={toggleSort}
-                            />
-                          ) : null}
+                          ))}
                           {visibleContextColumns.map((column) => (
                             <SortableHeader
                               key={column.name}
-                              width={180}
+                              width={CONTEXT_COLUMN_WIDTH}
                               label={column.title}
                               column={`context:${column.name}`}
                               sortState={sortState}
@@ -571,7 +568,9 @@ export function HZDRShotPage() {
                             }}
                           >
                             {isTableColumnVisible('shot_number') ? (
-                              <Table.Td w={86}>
+                              <Table.Td
+                                w={SHOT_TABLE_COLUMN_WIDTHS.shot_number}
+                              >
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -590,7 +589,7 @@ export function HZDRShotPage() {
                               </Table.Td>
                             ) : null}
                             {isTableColumnVisible('shot_day') ? (
-                              <Table.Td w={92}>
+                              <Table.Td w={SHOT_TABLE_COLUMN_WIDTHS.shot_day}>
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -613,7 +612,7 @@ export function HZDRShotPage() {
                               </Table.Td>
                             ) : null}
                             {isTableColumnVisible('fired_at') ? (
-                              <Table.Td w={168}>
+                              <Table.Td w={SHOT_TABLE_COLUMN_WIDTHS.fired_at}>
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -634,7 +633,7 @@ export function HZDRShotPage() {
                               </Table.Td>
                             ) : null}
                             {isTableColumnVisible('status') ? (
-                              <Table.Td w={112}>
+                              <Table.Td w={SHOT_TABLE_COLUMN_WIDTHS.status}>
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -657,7 +656,9 @@ export function HZDRShotPage() {
                               </Table.Td>
                             ) : null}
                             {isTableColumnVisible('laser_energy_j') ? (
-                              <Table.Td w={96}>
+                              <Table.Td
+                                w={SHOT_TABLE_COLUMN_WIDTHS.laser_energy_j}
+                              >
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -687,7 +688,7 @@ export function HZDRShotPage() {
                               </Table.Td>
                             ) : null}
                             {isTableColumnVisible('target') ? (
-                              <Table.Td w={146}>
+                              <Table.Td w={SHOT_TABLE_COLUMN_WIDTHS.target}>
                                 <Group gap={6} wrap="nowrap">
                                   <button
                                     type="button"
@@ -745,7 +746,10 @@ export function HZDRShotPage() {
                                 ? buildContextTrendValues(column.name)
                                 : undefined
                               return (
-                                <Table.Td key={column.name} w={180}>
+                                <Table.Td
+                                  key={column.name}
+                                  w={CONTEXT_COLUMN_WIDTH}
+                                >
                                   <button
                                     type="button"
                                     onClick={(event) => {
@@ -817,7 +821,7 @@ export function HZDRShotPage() {
                 </Group>
               </Grid.Col>
 
-              <Grid.Col span={{ base: 12, xl: 2 }}>
+              <Grid.Col span={{ base: 12, lg: 3 }}>
                 <Stack gap="md">
                   <DetailsSection title="Selected cell" open>
                     <SelectedCellPanel
