@@ -178,7 +178,7 @@ survives session loss.
 Update this list as WPs land (check the box, note the commit hash).
 
 - [x] Plan written and pushed
-- [ ] WP1 — navigation
+- [x] WP1 — navigation
 - [ ] WP2 — ShotPage space
 - [ ] WP3 — loading/error feedback
 - [ ] WP4 — LinkRecords layout

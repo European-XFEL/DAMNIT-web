@@ -17,7 +17,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { history, HomePage } from '@damnit-frontend/ui'
 import type {
   HZDRShot,
@@ -442,8 +442,8 @@ export function HZDRShotPage() {
                       Clear
                     </Button>
                     <Button
-                      component="a"
-                      href={`/source/${source_key}/context-builder`}
+                      component={Link}
+                      to={`/source/${source_key}/context-builder`}
                       variant="light"
                     >
                       Context builder

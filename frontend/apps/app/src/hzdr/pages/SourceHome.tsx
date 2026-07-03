@@ -11,6 +11,7 @@ import {
   Title,
 } from '@mantine/core'
 import { IconBook, IconDatabase, IconRoute } from '@tabler/icons-react'
+import { Link } from 'react-router'
 import type { HZDRSource } from '../types'
 
 export function HZDRSourceHome() {
@@ -63,7 +64,7 @@ export function HZDRSourceHome() {
               Watch the passive LaserData stream plus local Shotcounter and
               Watchdog events as they move through DAMNIT.
             </Text>
-            <Button component="a" href="/flow-monitor" variant="light">
+            <Button component={Link} to="/flow-monitor" variant="light">
               Flow monitor
             </Button>
           </Stack>
@@ -79,8 +80,8 @@ export function HZDRSourceHome() {
               context-rendered data.
             </Text>
             <Button
-              component="a"
-              href={sources[0] ? `/source/${sources[0].key}` : '/home'}
+              component={Link}
+              to={sources[0] ? `/source/${sources[0].key}` : '/home'}
               variant="light"
               disabled={!sources[0]}
             >
@@ -98,7 +99,7 @@ export function HZDRSourceHome() {
               Use the HZDR docs page for the local launcher, connections, and
               package boundaries.
             </Text>
-            <Button component="a" href="/docs" variant="light">
+            <Button component={Link} to="/docs" variant="light">
               Documentation
             </Button>
           </Stack>
@@ -116,7 +117,7 @@ export function HZDRSourceHome() {
           <Card key={source.key} withBorder radius={4} p="md">
             <Group justify="space-between" align="flex-start">
               <Stack gap={4}>
-                <Anchor href={`/source/${source.key}`} fw={600}>
+                <Anchor component={Link} to={`/source/${source.key}`} fw={600}>
                   {source.title}
                 </Anchor>
                 <Text size="sm" c="dimmed">
