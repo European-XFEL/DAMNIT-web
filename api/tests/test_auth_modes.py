@@ -1,10 +1,18 @@
 from fastapi.testclient import TestClient
 
 from damnit_api.main import create_app
+from damnit_api.shared.settings import AuthSettings, settings
 
 
-def test_oauth_login_creates_debug_session_in_ldap_local_mode():
-    """The existing frontend login button should work in HZDR debug mode."""
+def test_oauth_login_creates_debug_session_in_ldap_local_mode(monkeypatch):
+    """The existing frontend login button should work in HZDR debug mode.
+
+    Pinned to a server_url-less AuthSettings rather than relying on whatever
+    api/.env happens to configure locally (e.g. a real LDAP server for
+    manual/production-style verification) - see the isolation note on
+    test_runtime_config.test_runtime_config_defaults_to_hzdr_terms.
+    """
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="ldap"))
     with TestClient(create_app(), follow_redirects=False) as client:
         login_response = client.get("/oauth/login?redirect_uri=/home")
 

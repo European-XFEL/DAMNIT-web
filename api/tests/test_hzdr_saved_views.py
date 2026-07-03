@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from damnit_api.auth import models
 from damnit_api.main import create_app
-from damnit_api.shared.settings import settings
+from damnit_api.shared.settings import AuthSettings, settings
 
 
 def write_sources_file(tmp_path: Path) -> Path:
@@ -49,7 +49,11 @@ def make_user(username: str) -> models.OAuthUserInfo:
     )
 
 
-def login(client: TestClient) -> None:
+def login(client: TestClient, monkeypatch) -> None:
+    # Pin to a server_url-less AuthSettings so this doesn't depend on
+    # whatever api/.env happens to configure locally (e.g. a real LDAP
+    # server for manual/production-style verification).
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="ldap"))
     response = client.get("/oauth/login?redirect_uri=/home", follow_redirects=False)
     assert response.status_code == 307
 
@@ -68,7 +72,7 @@ def test_hzdr_saved_views_create_list_replace_and_delete(tmp_path: Path, monkeyp
     configure_local_sources(monkeypatch, sources_file)
 
     with TestClient(create_app(), follow_redirects=False) as client:
-        login(client)
+        login(client, monkeypatch)
         created = client.post(
             "/metadata/hzdr/sources/hzdr-a/views",
             json={
@@ -116,7 +120,7 @@ def test_hzdr_saved_views_are_source_scoped(tmp_path: Path, monkeypatch):
     configure_local_sources(monkeypatch, write_sources_file(tmp_path))
 
     with TestClient(create_app(), follow_redirects=False) as client:
-        login(client)
+        login(client, monkeypatch)
         for source_key in ("hzdr-a", "hzdr-b"):
             response = client.post(
                 f"/metadata/hzdr/sources/{source_key}/views",

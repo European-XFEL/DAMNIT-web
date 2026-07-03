@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from damnit_api.contextfile import models, routers
 from damnit_api.main import create_app
-from damnit_api.shared.settings import settings
+from damnit_api.shared.settings import AuthSettings, settings
 
 
 @pytest.fixture
@@ -96,6 +96,7 @@ def test_file_fetching(app, client, temp_dir, monkeypatch):
 @pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
 def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
     """HZDR users can maintain a campaign-scoped context workspace."""
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="ldap"))
     monkeypatch.setattr(settings.context_workspace, "root", tmp_path)
     monkeypatch.setattr(settings.context_workspace, "write_enabled", True)
     app = create_app()
@@ -145,6 +146,7 @@ def test_user_campaign_context_results_run_against_hzdr_shots(tmp_path, monkeypa
 """,
         encoding="utf-8",
     )
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="ldap"))
     monkeypatch.setattr(settings.context_workspace, "root", tmp_path / "contexts")
     monkeypatch.setattr(settings.context_workspace, "write_enabled", True)
     monkeypatch.setattr(settings.metadata, "provider", "local")
@@ -201,6 +203,7 @@ def test_context_results_tolerate_removed_common_imports(tmp_path, monkeypatch):
 """,
         encoding="utf-8",
     )
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="ldap"))
     monkeypatch.setattr(settings.context_workspace, "root", tmp_path / "contexts")
     monkeypatch.setattr(settings.context_workspace, "write_enabled", True)
     monkeypatch.setattr(settings.metadata, "provider", "local")

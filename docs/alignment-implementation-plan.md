@@ -117,17 +117,26 @@ keys with NeXus `@units`, `provenance` (`wiki`/`manual`), `wiki_ref`, and an ope
    `target_wiki_page` are derived from `metadata.target`, and the shot table/detail panes
    render a direct wiki link when present.
 
-**Remaining:** LabFrog does not yet persist target `type`, gas species/pressure,
-`wiki_ref`, or arbitrary curated wiki target properties on each shot. Add those at the
-LabFrog capture/wiki-enrichment boundary before DAMNIT can expose them.
+**Remaining:** LabFrog now persists `wiki_page`/`wiki_ref`/`status`/`provider`/`amount`
+(and `type`/`element`/`notes`/`production_date`/`origin` in Mongo) per shot for
+wiki-sourced targets (done 2026-07-03, labfrog `4b203a3`), but the
+`labfrog-sqlite-tools` export still only carries the five columns DAMNIT's reconciler
+already maps (`target_wiki_page`, `target_wiki_ref`, `target_status`, `target_provider`,
+`target_amount` — schema v9). Gas species/pressure and the remaining curated wiki
+properties (`type`, `element`, `notes`, `production_date`, `origin`) are captured in
+LabFrog but not yet exported to SQLite/DAMNIT — add those export columns before DAMNIT
+can expose them.
 
 **Files:** sibling `labfrog-sqlite-tools` export, `api/src/damnit_api/metadata/hzdr_nexus.py`
 (reconciler merge), `api/tests/test_hzdr_nexus.py`.
 
 **Exit:** target material/thickness visible per shot in the API and catalog for captured
-LabFrog manual target records; richer wiki/gas fields tracked as a follow-up.
+LabFrog manual target records; wiki `wiki_page`/`wiki_ref`/`status`/`provider`/`amount`
+visible per shot for wiki-sourced targets; richer wiki/gas fields (`type`, `element`,
+gas species/pressure) tracked as a follow-up pending a sqlite-tools export bump.
 
-**Effort:** Base Phase 2 is green for captured LabFrog fields; extended wiki/gas/type
+**Effort:** Base Phase 2 is green for captured LabFrog fields and wiki extras
+(`wiki_page`/`wiki_ref`/`status`/`provider`/`amount`); extended wiki/gas/type
 capture remains medium.
 
 ## Phase 3 — NeXus structural groups (`NXsource`, `NXsample`, `NXdetector`) 🟢
@@ -280,7 +289,7 @@ for full openPMD comparison tooling or any future live ontology/search-service i
    small producer changes.
 3. **Phase 3 — NeXus structural groups** 🟢. Highest-value local step; can start in
    parallel with Phase 1 using empty-tolerant writers, finishes once Phase 1/2 fill the data.
-4. **Phase 2 — target/sample from LabFrog** 🟢/🟡. Base export/reconciler path is done for captured manual target fields; richer wiki/gas/type capture remains.
+4. **Phase 2 — target/sample from LabFrog** 🟢/🟡. Base export/reconciler path is done for captured manual target fields, and LabFrog now persists wiki extras (`wiki_page`/`wiki_ref`/`status`/`provider`/`amount`) per shot, mapped through by DAMNIT's reconciler; a `labfrog-sqlite-tools` export bump for `type`/gas fields remains.
 5. **Phase 4 — SciCat registration** 🟡. Wire up the existing HZDR SciCat plugin
    (no custom client); gated test when a live instance is up.
 6. **Phase 5 — ontology / openPMD** 🟡/🔴. HELPMI is finished; define the HZDR semantic profile ourselves. Start with a local key->NeXus->ontology map, an HZDR `NXhzdr_target` profile, and openPMD links; defer full comparison tooling until there is a concrete analysis user.
