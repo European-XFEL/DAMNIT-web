@@ -1,48 +1,13 @@
 import { http, HttpResponse, graphql } from 'msw'
 
+import {
+  shapeMetadata,
+  shapeTableData,
+  type Runs,
+} from '@damnit-frontend/shared/mocks'
 import { BASE_URL } from '@damnit-frontend/ui'
 
 import { getExampleIndex } from '../utils'
-
-type Runs = {
-  meta: Meta
-  data: Data[]
-}
-
-type Meta = {
-  sources: Record<string, SourceMeta>
-  variables: Record<string, VariableMeta>
-  runs: number[]
-  tags: {
-    id: number
-    name: string
-    variables: string[]
-  }
-}
-
-type SourceMeta = {
-  proposal_number: number
-  title: string
-  principal_investigator: string
-}
-
-type VariableMeta = {
-  name: string
-  title: string
-}
-
-type Data = {
-  source: {
-    ref: string
-    run_number: number
-  }
-  variables: Record<string, VariableValue>
-}
-
-// TODO: Use types from the shared package
-type VariableValue =
-  | { dtype: 'number'; value: number }
-  | { dtype: 'string'; value: string }
 
 const api = graphql.link(`${BASE_URL}graphql`)
 const exampleIndex = await getExampleIndex()
@@ -82,29 +47,9 @@ async function fetchData({ proposal, run, variable }: FetchDataOptions) {
   return await result.json()
 }
 
-function getMetadata(meta: Meta) {
-  return {
-    variables: meta.variables,
-    runs: meta.runs,
-    timestamp: 0,
-    tags: meta.tags,
-  }
-}
-
 async function buildTableData(proposal: string, names?: string[] | null) {
   const { data } = await fetchRuns(proposal)
-
-  return {
-    runs: data.map((run) => ({
-      variables: Object.entries(run.variables)
-        .filter(([name]) => names == null || names.includes(name))
-        .map(([name, variable]) => ({
-          name,
-          value: variable.value,
-          dtype: variable.dtype,
-        })),
-    })),
-  }
+  return shapeTableData(data, { names })
 }
 
 const gqlHandlers = [
@@ -113,7 +58,7 @@ const gqlHandlers = [
 
     return HttpResponse.json({
       data: {
-        metadata: getMetadata(meta),
+        metadata: shapeMetadata(meta),
       },
     })
   }),

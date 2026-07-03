@@ -283,6 +283,9 @@ importers:
       '@apollo/client':
         specifier: catalog:graphql
         version: 3.13.6(@types/react@18.2.45)(graphql-ws@6.0.4(graphql@16.10.0)(ws@8.21.0))(graphql@16.10.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@damnit-frontend/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@damnit-frontend/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -472,6 +475,21 @@ importers:
       prettier:
         specifier: catalog:linting
         version: 3.6.2
+
+  packages/shared:
+    devDependencies:
+      '@damnit-frontend/config':
+        specifier: workspace:*
+        version: link:../config
+      eslint:
+        specifier: catalog:linting
+        version: 9.22.0
+      prettier:
+        specifier: catalog:linting
+        version: 3.6.2
+      typescript:
+        specifier: catalog:tooling
+        version: 5.9.3
 
   packages/ui:
     devDependencies:
