@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import orjson
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from damnit_api.main import create_app
 from damnit_api.metadata.hzdr_sources import HZDRWikiInfo
@@ -494,8 +495,8 @@ async def test_fetch_wiki_page_info_uses_configured_auth_headers():
         configured=True,
     )
     wiki_settings = HZDRWikiSettings(
-        cookie_header="wiki_session=abc; wikiUserID=42",
-        authorization_header="Bearer test-token",
+        cookie_header=SecretStr("wiki_session=abc; wikiUserID=42"),
+        authorization_header=SecretStr("Bearer test-token"),
     )
 
     with patch("httpx.AsyncClient") as mock_client_cls:

@@ -32,6 +32,34 @@ version). Once a real `NXhzdr_target` NXDL is written and bundled with a
 validator, HZDR can decide whether profile files should set
 `NX_class="NXhzdr_target"` directly (§6).
 
+## 1.1 Literature and standards basis
+
+The profile is intentionally conservative: it uses official NeXus terms where
+they exist, marks HZDR-only semantics explicitly, and keeps the generated file
+readable by generic NeXus/HDF5 tooling.
+
+| Design decision | Source basis | Consequence for `NXhzdr_target` |
+| --- | --- | --- |
+| Use `NXsample` as the compatibility class | The NeXus `NXsample` base class is the standard place for sample information and already defines `name`, `chemical_formula`, `temperature`, `description`, `type`, `thickness`, `physical_form`, sample environment, and incident beam links ([NeXus `NXsample`](https://manual.nexusformat.org/classes/base_classes/NXsample.html)). | `/entry/sample` keeps `NX_class="NXsample"` and maps the overlapping target fields onto standard `NXsample` datasets first. |
+| Keep HZDR-specific fields visibly local | The NXDL manual says NeXus class definitions are the standard glossary; extra items may be inserted, but they are not part of the standard unless defined by an NXDL/application definition ([NeXus NXDL](https://manual.nexusformat.org/nxdl.html)). | HZDR extensions use `damnit_*`, `target_ref`, `gas_species`, and `prop_*` attributes under a named local profile instead of pretending they are upstream NeXus fields. |
+| Write a prose profile before claiming a formal class | NXDL files are machine-readable definitions that can be validated against XML Schema and used to validate data files ([NeXus NXDL](https://manual.nexusformat.org/nxdl.html)). | v0.1 is a profile document only. A real `NXhzdr_target` NXDL and validator bundle are required before files can safely set `NX_class="NXhzdr_target"` directly. |
+| Avoid the bare name `NXtarget` | Official NeXus class lists define the standard namespace ([base classes](https://manual.nexusformat.org/classes/base_classes/index.html), [application definitions](https://manual.nexusformat.org/classes/applications/index.html)). As of the v2026.01 manual used for this review, `NXsample` exists and no official `NXtarget` base class is documented there. | The local class/profile name is prefixed as `NXhzdr_target` to avoid implying official NIAC status or colliding with a future upstream class. |
+| Prefer standard units metadata over unit suffixes in keys | NXDL standardizes common terms including engineering units, and fields carry unit categories such as `NX_LENGTH`, `NX_TEMPERATURE`, and `NX_PRESSURE` ([NeXus NXDL](https://manual.nexusformat.org/nxdl.html), [`NXsample`](https://manual.nexusformat.org/classes/base_classes/NXsample.html)). | Stored metadata keys stay bare (`thickness`, `temperature`, `gas_pressure`); the NeXus writer stamps `@units` at write time. |
+| Keep laser and target as adjacent but separate concepts | NeXus already models the radiation source and beam via `NXsource` and `NXbeam`, including laser/source type, frequency, wavelength, pulse energy, beam extent, incident wavelength, and polarization ([`NXsource`](https://manual.nexusformat.org/classes/base_classes/NXsource.html), [`NXbeam`](https://manual.nexusformat.org/classes/base_classes/NXbeam.html)). | `NXhzdr_target` only covers target/sample semantics; laser semantics stay in `/entry/instrument/laser` as `NXsource` + `NXbeam`. |
+| Keep bridge collections out of the target profile | `NXcollection` is explicitly unvalidated and intended for arbitrary grouped terms ([`NXcollection`](https://manual.nexusformat.org/classes/base_classes/NXcollection.html)). | The canonical shot/event tables can remain `NXcollection`, but target fields that need durable semantics are promoted into `/entry/sample`. |
+| Plan ontology annotation as a later pass | The NeXus Ontology creates machine-readable identifiers for NeXus classes and fields and is designed for annotation/tagging and mappings to other vocabularies ([nexusformat/NeXusOntology](https://github.com/nexusformat/NeXusOntology)). | v0.1 records which fields are standard NeXus fields; URI annotation is deferred until the NXDL/ontology pass. |
+
+Broader RDM alignment supports the same shape. DAPHNE4NFDI emphasizes linked
+metadata capture, data catalogues, and reuse workflows for photon/neutron
+large-facility data ([DAPHNE4NFDI](https://www.daphne4nfdi.de/)); SciCat positions
+itself as a scientific metadata catalogue for findability and sharing
+([SciCat](https://www.scicatproject.org/)); and the FAIR principles emphasize
+machine-actionable metadata for findability, interoperability, and reuse
+([Wilkinson et al. 2016](https://www.nature.com/articles/sdata201618)). The
+Plasma-MDS schema is not a laser-plasma target standard, but it supports the same
+decomposition into plasma source, medium/target, diagnostics, and resources
+([Franke et al. 2020](https://www.nature.com/articles/s41597-020-00771-0)).
+
 ## 2. Semantic map: `metadata.target.*` → `/entry/sample`
 
 | `metadata.target` key | NeXus path (under `/entry/sample`) | Canonical unit | HELPMI DDC term (§3.4) | Upstream NeXus field? |

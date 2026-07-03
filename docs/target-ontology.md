@@ -224,7 +224,7 @@ read-side widening, not a transport-schema change.
 
 ## 8. NeXus mapping (`/entry/sample`, `NXsample` + `NXhzdr_target`)
 
-When `write_nexus_sample()` is added (alignment plan Phase 3) it reads
+The implemented `write_nexus_sample()` writer reads
 `metadata.target.*` and writes:
 
 | `metadata.target` key | `NXsample` field | Attribute |

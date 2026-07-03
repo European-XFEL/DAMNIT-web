@@ -12,6 +12,26 @@ phased *how/when* for the routes in §4).
 
 ---
 
+## Source basis
+
+This whitepaper now separates source-backed standards claims from local HZDR
+profile decisions. The current source set is:
+
+| Source | Why it matters here |
+| --- | --- |
+| [NeXus NXDL](https://manual.nexusformat.org/nxdl.html) | Defines the rule/validation model for NeXus terms, units, fields, groups, attributes, and extension boundaries. |
+| [NeXus `NXsample`](https://manual.nexusformat.org/classes/base_classes/NXsample.html) | Provides the compatibility base for `/entry/sample`: `name`, `chemical_formula`, `temperature`, `description`, `type`, `thickness`, `physical_form`, environment, and incident-beam hooks. |
+| [NeXus `NXsource`](https://manual.nexusformat.org/classes/base_classes/NXsource.html) and [`NXbeam`](https://manual.nexusformat.org/classes/base_classes/NXbeam.html) | Provide the standard laser/source and beam vocabulary used next to, but outside, the target profile. |
+| [NeXus class indexes](https://manual.nexusformat.org/classes/base_classes/index.html) | The v2026.01 official class lists document `NXsample`; they do not document an official `NXtarget`, so HZDR uses a prefixed local profile name. |
+| [NeXus Ontology](https://github.com/nexusformat/NeXusOntology) | Provides machine-readable identifiers for existing NeXus classes/fields and is the right later target for URI annotation. |
+| [DAPHNE4NFDI](https://www.daphne4nfdi.de/) | Supplies the photon/neutron large-facility RDM context: linked metadata capture, catalogues, and reuse workflows. |
+| [SciCat](https://www.scicatproject.org/) | Supplies the scientific metadata catalogue target for campaign-file registration and discoverability. |
+| [FAIR principles](https://www.nature.com/articles/sdata201618) | Justifies machine-actionable metadata and stable provenance as design goals. |
+| [Plasma-MDS](https://www.nature.com/articles/s41597-020-00771-0) | Provides an adjacent plasma-science metadata pattern: source, medium/target, diagnostics, and resources. |
+
+The detailed `NXhzdr_target` design derivation lives in
+[nxhzdr-target-profile.md §1.1](nxhzdr-target-profile.md#11-literature-and-standards-basis).
+
 ## 1. DAPHNE4NFDI
 
 **DAPHNE4NFDI** (DAta from PHoton and Neutron Experiments for NFDI) is a DFG-funded
