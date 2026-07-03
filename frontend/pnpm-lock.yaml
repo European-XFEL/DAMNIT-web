@@ -104,6 +104,9 @@ catalogs:
       specifier: 9.2.0
       version: 9.2.0
   testing:
+    '@playwright/test':
+      specifier: 1.61.1
+      version: 1.61.1
     '@vitest/browser':
       specifier: 4.1.9
       version: 4.1.9
@@ -441,6 +444,33 @@ importers:
       vite:
         specifier: catalog:tooling
         version: 7.2.2(@types/node@24.10.0)(yaml@2.8.2)
+
+  e2e:
+    devDependencies:
+      '@damnit-frontend/config':
+        specifier: workspace:*
+        version: link:../packages/config
+      '@damnit-frontend/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
+      '@playwright/test':
+        specifier: catalog:testing
+        version: 1.61.1
+      '@types/node':
+        specifier: catalog:types
+        version: 24.10.0
+      eslint:
+        specifier: catalog:linting
+        version: 9.22.0
+      globals:
+        specifier: catalog:linting
+        version: 16.0.0
+      prettier:
+        specifier: catalog:linting
+        version: 3.6.2
+      typescript:
+        specifier: catalog:tooling
+        version: 5.9.3
 
   packages/config:
     dependencies:
@@ -1210,6 +1240,11 @@ packages:
 
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
+
+  '@playwright/test@1.61.1':
+    resolution: {integrity: sha512-8nKv6+0RJSL9FE4jYOEGXnPeM/Hg12qZpmqzZjRh3qM0Y7c3z1mrOTfFLids72RDQYVh9WpLEfR5WdpNX4fkig==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@plotly/d3-sankey-circular@0.33.1':
     resolution: {integrity: sha512-FgBV1HEvCr3DV7RHhDsPXyryknucxtfnLwPtCKKxdolKyTFYoLX/ibEfX39iFYIL7DYbVeRtP43dbFcrHNE+KQ==}
@@ -4316,6 +4351,10 @@ snapshots:
       outvariant: 1.4.3
 
   '@open-draft/until@2.1.0': {}
+
+  '@playwright/test@1.61.1':
+    dependencies:
+      playwright: 1.61.1
 
   '@plotly/d3-sankey-circular@0.33.1':
     dependencies:

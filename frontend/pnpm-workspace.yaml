@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - e2e
 
 catalogs:
   components:
@@ -40,6 +41,7 @@ catalogs:
     '@reduxjs/toolkit': 2.6.1
     react-redux: 9.2.0
   testing:
+    '@playwright/test': 1.61.1
     '@vitest/browser': 4.1.9
     '@vitest/browser-playwright': 4.1.9
     playwright: 1.61.1

@@ -1,0 +1,8 @@
+{
+  "extends": "@damnit-frontend/config/tsconfig/node",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
+    "types": ["node", "@playwright/test"]
+  },
+  "include": ["playwright.config.ts", "tests", "fixtures", "examples"]
+}
