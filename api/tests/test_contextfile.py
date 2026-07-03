@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 
 import pytest
@@ -68,6 +69,8 @@ async def test_watcher_detects_change(app, client, temp_dir, monkeypatch):
     initial_modified = resp.json()["lastModified"]
 
     await asyncio.to_thread(temp_path.write_text, "new content")
+    newer_mtime = initial_modified + 1
+    await asyncio.to_thread(os.utime, temp_path, (newer_mtime, newer_mtime))
 
     assert await wait_for_change(client, url, initial_modified)
 

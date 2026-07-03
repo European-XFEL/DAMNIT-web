@@ -72,6 +72,18 @@ below. Coverage is on by default; pass `-NoCoverage` to skip it:
 .\scripts\test-all.ps1 -NoCoverage
 ```
 
+`scripts/test-pilot-package.ps1` is the deployment-facing package gate for the
+`Pilot_Verification_07.2026` Kafka pilot. It excludes ASAPO by default, checks
+the sibling repo presence, git state, shared `hzdr-event-v1` contract, topic
+registry, DAMNIT pilot `.env`, broker pilot env, and watchdog ZMQ-in/Kafka-out
+pilot config, then delegates to `test-all.ps1` for the selected suites:
+
+```powershell
+.\scripts\test-pilot-package.ps1 -NoCoverage
+.\scripts\test-pilot-package.ps1 -NoCoverage -DockerTests -Broker localhost:9092
+.\scripts\test-pilot-package.ps1 -SkipSuites
+```
+
 <!-- coverage-summary-start -->
 
 Overall line coverage per repo, from the latest `scripts/test-all.ps1` run.
