@@ -177,9 +177,11 @@ survives session loss.
 
 Update this list as WPs land (check the box, note the commit hash).
 
-- [x] Plan written and pushed
-- [x] WP1 — navigation
-- [x] WP2 — ShotPage space
-- [x] WP3 — loading/error feedback
-- [x] WP4 — LinkRecords layout
-- [ ] WP5 — verification
+- [x] Plan written and pushed (`bdf8a48`)
+- [x] WP1 — navigation (`bbb2ec1`)
+- [x] WP2 — ShotPage space (`f453705`)
+- [x] WP3 — loading/error feedback (`79352b9`)
+- [x] WP4 — LinkRecords layout (`2066409`)
+- [x] WP5 — verification: eslint (0 errors, 1 pre-existing warning), tsc
+  clean, 124/124 tests, prettier clean, production `vite build` succeeds
+  (chunk-size warnings pre-existing), cumulative diff reviewed
