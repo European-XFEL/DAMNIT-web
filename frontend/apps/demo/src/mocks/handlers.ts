@@ -3,6 +3,7 @@ import { http, HttpResponse, graphql } from 'msw'
 import {
   shapeMetadata,
   shapeTableData,
+  unmockedOperationError,
   type Runs,
 } from '@damnit-frontend/shared/mocks'
 import { BASE_URL } from '@damnit-frontend/ui'
@@ -87,6 +88,10 @@ const gqlHandlers = [
       },
     })
   }),
+  // Catch-all for operations the mocks don't cover.
+  api.operation(({ operationName }) =>
+    HttpResponse.json(unmockedOperationError(operationName))
+  ),
 ]
 
 type FetchContextFileOptions = {
@@ -116,6 +121,9 @@ const restHandlers = [
       fileContent: content,
     })
   }),
+  http.get(`${BASE_URL}contextfile/last_modified`, () =>
+    HttpResponse.json({ lastModified: 0 })
+  ),
 ]
 
 export const handlers = [...gqlHandlers, ...restHandlers]
