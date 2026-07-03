@@ -98,12 +98,16 @@ anything unrecognized → `other`.
 
 The exported LabFrog SQLite columns carrying these extras are
 `target_wiki_page`, `target_wiki_ref`, `target_status`, `target_provider`,
-`target_amount` (labfrog-sqlite-tools schema v9); DAMNIT's reconciler folds
-them into `metadata.target.*` per this table. LabFrog now persists these
-per shot record (wiki-sourced target selections are enriched with
-`wiki_page`/`wiki_ref`/`type`/`status`/`provider`/`amount` and related
-fields at Add/Edit Entry time, resolved from the cached MediaWiki target
-choices); manual `OTHER` targets still carry only name/material/thickness/notes.
+`target_amount` (labfrog-sqlite-tools schema v9), plus `target_type`,
+`target_production_date`, `target_origin` (schema v10); DAMNIT's reconciler
+folds them into `metadata.target.*` per this table — `target_type` goes
+through the wiki→ontology `type` mapping above (original text kept in
+`properties.wiki_type`), and `target_production_date`/`target_origin` land in
+`properties.production_date`/`properties.origin`. LabFrog persists these per
+shot record (wiki-sourced target selections are enriched with
+`wiki_page`/`wiki_ref`/`type`/`status`/`provider`/`amount` and related fields
+at Add/Edit Entry time, resolved from the cached MediaWiki target choices);
+manual `OTHER` targets still carry only name/material/thickness/notes.
 
 ## 3. `type` enumeration
 
@@ -271,3 +275,4 @@ HELPMI DDC names remain the documentation cross-walk; see
 | Target→wiki link surfaced in API/UI (`target_wiki_ref` / `target_wiki_page`, table + shot detail links) | ✅ done 2026-07-02 |
 | Wiki catalog (`IonenTargetOrigin`) → ontology mapping documented (§2.3); SQLite v9 extras columns mapped by the reconciler | ✅ implemented locally 2026-07-03 |
 | LabFrog persists wiki extras (`wiki_page`/`wiki_ref`/status/provider/amount) per shot | ✅ done 2026-07-03 (labfrog) |
+| SQLite `target_type`/`target_production_date`/`target_origin` columns (schema v10) mapped by the reconciler; wiki `type` vocabulary mapped to the §3 enum (`properties.wiki_type` keeps the original) | ✅ done 2026-07-03 |

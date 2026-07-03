@@ -130,7 +130,7 @@ currently has only the free-form emulator `target` string.
 
 | HELPMI TargetClasses field | Current emulator key | Recommended key | Unit | NeXus equivalent | Gap / note |
 | --- | --- | --- | --- | --- | --- |
-| Target type | `target` (free-form) | `metadata.target.type` | string enum | `NXsample.type` | Types: `foil`, `gas_jet`, `cluster`, `liquid`, `structured` |
+| Target type | `target` (free-form) | `metadata.target.type` | string enum | `NXsample.type` | Types: `foil`, `gas_jet`, `cluster`, `liquid`, `structured`; mapped for manual (`other`) and wiki-sourced targets (wiki vocabulary → enum per target-ontology.md §2.3) as of 2026-07-03; `gas_jet`/`cluster` have no source data yet (no gas-jet capture in LabFrog) |
 | Material | LabFrog `OTHER` target export | `metadata.target.material` | string | `NXsample.chemical_formula` | Present for captured manual target records; wiki-selected curated material still needs per-shot enrichment |
 | Thickness | LabFrog `OTHER` target export | `metadata.target.thickness` | nm | `NXsample.thickness` | Present for captured manual target records; DAMNIT converts known export units to canonical nm |
 | Diameter | — | `metadata.target.diameter_mm` | mm | — | **Missing** |
@@ -188,7 +188,7 @@ definitions are finalized, and the effort to migrate.
 | `/entry/laserdata` | `NXcollection` | `NXbeam` or `NXsource` | LaserData time-series → `NXbeam` per shot; system properties → `NXsource` |
 | `/entry/watchdog` | `NXcollection` | `NXcollection` (keep custom) | File-arrival log; no standard class; keep as-is |
 | — | — | `/entry/instrument/laser` → `NXsource` + `NXbeam` | Done in DAMNIT for available `metadata.laser.*`; producer-side fixed fields still need capture |
-| — | — | `/entry/sample` → `NXsample` | Done for available `metadata.target.*`, including wiki extras (`wiki_page`/`wiki_ref`/`status`/`provider`/`amount`); gas/type fields still depend on a sqlite-tools export bump |
+| — | — | `/entry/sample` → `NXsample` | Done for available `metadata.target.*`, including wiki extras (`wiki_page`/`wiki_ref`/`status`/`provider`/`amount`/`type`/`production_date`/`origin`); gas fields have no source data (no gas-jet capture in LabFrog) |
 
 ### 3.8 Plasma-MDS cross-walk
 
@@ -355,7 +355,7 @@ writer and analysis tooling concern.
 | Gap analysis: 16 missing fields with effort estimates | ✅ committed | §3.10 |
 | Rename `metadata` keys to HELPMI-aligned namespace (`metadata.laser.*` etc.) | ⬜ post-pilot | §3.3, Route 1 |
 | Add `metadata.laser.wavelength_nm`, `polarization`, `repetition_rate_hz` | ⬜ low effort | §3.3, §3.10 |
-| Add `metadata.target.*` fields from LabFrog shot record | ✅ base path done; ✅ wiki extras (`wiki_page`/`wiki_ref`/`status`/`provider`/`amount`) persisted 2026-07-03; 🟡 `type`/gas capture pending an export bump | §3.4, §3.10 |
+| Add `metadata.target.*` fields from LabFrog shot record | ✅ base path done; ✅ wiki extras (`wiki_page`/`wiki_ref`/`status`/`provider`/`amount`/`type`/`production_date`/`origin`) persisted, exported, and mapped end-to-end 2026-07-03; 🟡 gas species/pressure blocked on LabFrog gas-jet capture | §3.4, §3.10 |
 | Add `/entry/instrument/laser` (`NXsource`/`NXbeam`) to NeXus bridge | ✅ done for available `metadata.laser.*`; producer enrichment still open | §3.7, Route 2 |
 | Add `/entry/sample` (`NXsample`) to NeXus bridge | ✅ done for available target metadata | §3.7, Route 2 |
 | Per-product `NXdetector` sub-groups in NeXus bridge | ⬜ medium effort | §3.6, §3.7 |

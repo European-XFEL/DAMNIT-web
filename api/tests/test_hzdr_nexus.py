@@ -494,12 +494,14 @@ def test_reads_labfrog_sqlite_target_columns_as_metadata_target(tmp_path: Path):
 
 
 def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: Path):
-    """Wiki-catalog extras (schema v9 columns) map onto metadata.target.
+    """Wiki-catalog extras (schema v9/v10 columns) map onto metadata.target.
 
     target_wiki_page/target_wiki_ref become typed wiki_page/wiki_ref keys and
-    imply provenance=wiki; provider/status/amount (IonenTargetOrigin columns)
-    land in the properties bag as supplier/status/amount per
-    docs/target-ontology.md.
+    imply provenance=wiki; target_type maps through the wiki vocabulary to the
+    ontology type enum (docs/target-ontology.md §2.3); provider/status/amount/
+    production_date/origin (IonenTargetOrigin columns) land in the properties
+    bag as supplier/status/amount/production_date/origin, and the original
+    wiki type text is kept in properties.wiki_type.
     """
     sqlite_path = tmp_path / "campaign.sqlite"
     with sqlite3.connect(sqlite_path) as connection:
@@ -521,12 +523,16 @@ def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: 
                 target_wiki_ref TEXT,
                 target_status TEXT,
                 target_provider TEXT,
-                target_amount TEXT
+                target_amount TEXT,
+                target_type TEXT,
+                target_production_date TEXT,
+                target_origin TEXT
             )
             """
         )
         connection.execute(
-            "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO shots VALUES "
+            "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 "mongo-18",
                 18,
@@ -547,6 +553,9 @@ def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: 
                 "available",
                 "HZDR target lab",
                 "ca. 20 pieces",
+                "foil",
+                "2026-01-15",
+                "HZDR target lab",
             ),
         )
 
@@ -557,6 +566,7 @@ def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: 
     assert metadata["target"] == {
         "name": "0.4% Formvar",
         "provenance": "wiki",
+        "type": "foil",
         "material": "Formvar",
         "wiki_page": "Ionen:0.4%Formvar092022",
         "wiki_ref": (
@@ -567,6 +577,9 @@ def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: 
             "supplier": "HZDR target lab",
             "status": "available",
             "amount": "ca. 20 pieces",
+            "production_date": "2026-01-15",
+            "origin": "HZDR target lab",
+            "wiki_type": "foil",
         },
     }
     # The wiki extras are folded into metadata.target, not left as flat keys.
@@ -576,8 +589,57 @@ def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: 
         "target_status",
         "target_provider",
         "target_amount",
+        "target_type",
+        "target_production_date",
+        "target_origin",
     ):
         assert flat_key not in metadata
+
+
+def test_labfrog_wiki_target_type_maps_unrecognized_vocab_to_other(tmp_path: Path):
+    """Unmapped wiki target types fall back to "other", keeping the original text.
+
+    docs/target-ontology.md §2.3: foil->foil, wafer->foil, solution->liquid,
+    wire->other, anything unrecognized->other; the original wiki value is kept
+    in properties.wiki_type so it is never silently discarded.
+    """
+    sqlite_path = tmp_path / "campaign.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE shots (
+                mongo_id TEXT PRIMARY KEY,
+                shot_number INTEGER,
+                date_time TEXT,
+                campaign TEXT,
+                target TEXT,
+                target_name TEXT,
+                target_source TEXT,
+                target_wiki_page TEXT,
+                target_type TEXT
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "mongo-19",
+                19,
+                "2026-06-11T09:00:00Z",
+                "HELPMI",
+                "Gold wire",
+                "Gold wire",
+                "wiki",
+                "Ionen:GoldWire",
+                "wire",
+            ),
+        )
+
+    shots = read_labfrog_sqlite_shots(sqlite_path)
+
+    metadata = shots[0]["metadata"]
+    assert metadata["target"]["type"] == "other"
+    assert metadata["target"]["properties"]["wiki_type"] == "wire"
 
 
 def test_event_target_metadata_does_not_replace_labfrog_details():

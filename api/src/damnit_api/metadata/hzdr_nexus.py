@@ -451,15 +451,54 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
     return shots
 
 
+# docs/target-ontology.md §2.3: the wiki `type` vocabulary doesn't match the
+# §3 enum one-to-one. Map the obvious ones; anything else falls back to
+# "other" and the original wiki text is kept in properties.wiki_type.
+_WIKI_TARGET_TYPE_MAP = {
+    "foil": "foil",
+    "wafer": "foil",
+    "solution": "liquid",
+}
+
+
+def _map_wiki_target_type(raw_type: str) -> str:
+    return _WIKI_TARGET_TYPE_MAP.get(raw_type.casefold(), "other")
+
+
+def _apply_labfrog_target_provenance(
+    target: dict[str, Any],
+    record: dict[str, Any],
+    *,
+    wiki_page: str | None,
+    wiki_ref: str | None,
+    source: str | None,
+    wiki_type: str | None,
+) -> bool:
+    """Set ``target["provenance"]``/``["type"]``; return True for wiki targets."""
+    if _is_manual_labfrog_target(record):
+        target["type"] = "other"
+        target["provenance"] = "manual"
+        return False
+
+    is_wiki = bool(wiki_page or wiki_ref or (source and source.casefold() == "wiki"))
+    if is_wiki:
+        target["provenance"] = "wiki"
+        if wiki_type:
+            target["type"] = _map_wiki_target_type(wiki_type)
+    return is_wiki
+
+
 def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
     """Build canonical ``metadata.target`` from LabFrog SQLite target columns.
 
     Wiki-catalog extras exported by labfrog-sqlite-tools map per
     docs/target-ontology.md: ``target_wiki_page``/``target_wiki_ref`` become the
-    typed ``wiki_page``/``wiki_ref`` keys, and ``target_provider`` /
-    ``target_status`` / ``target_amount`` (from the wiki's IonenTargetOrigin
-    ``provider``/``status``/``amount`` columns) land in the ``properties`` bag
-    as ``supplier``/``status``/``amount``.
+    typed ``wiki_page``/``wiki_ref`` keys, ``target_type`` maps through the wiki
+    vocabulary to the ontology ``type`` enum (original kept in
+    ``properties.wiki_type``), and ``target_provider``/``target_status``/
+    ``target_amount``/``target_production_date``/``target_origin`` (from the
+    wiki's IonenTargetOrigin columns) land in the ``properties`` bag as
+    ``supplier``/``status``/``amount``/``production_date``/``origin``.
     """
     target_display = _as_optional_string(record.get("target"))
     target_name = _as_optional_string(record.get("target_name")) or target_display
@@ -468,6 +507,7 @@ def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
     source = _as_optional_string(record.get("target_source"))
     wiki_page = _as_optional_string(record.get("target_wiki_page"))
     wiki_ref = _as_optional_string(record.get("target_wiki_ref"))
+    wiki_type = _as_optional_string(record.get("target_type"))
     thickness = _canonical_target_thickness_nm(
         record.get("target_thickness_value"), record.get("target_thickness_unit")
     )
@@ -475,11 +515,14 @@ def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
     target: dict[str, Any] = {}
     if target_name:
         target["name"] = target_name
-    if _is_manual_labfrog_target(record):
-        target["type"] = "other"
-        target["provenance"] = "manual"
-    elif wiki_page or wiki_ref or (source and source.casefold() == "wiki"):
-        target["provenance"] = "wiki"
+    is_wiki = _apply_labfrog_target_provenance(
+        target,
+        record,
+        wiki_page=wiki_page,
+        wiki_ref=wiki_ref,
+        source=source,
+        wiki_type=wiki_type,
+    )
     if material:
         target["material"] = material
     if thickness is not None:
@@ -491,7 +534,9 @@ def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
     if wiki_ref:
         target["wiki_ref"] = wiki_ref
 
-    properties = _labfrog_target_properties(record, thickness=thickness)
+    properties = _labfrog_target_properties(
+        record, thickness=thickness, wiki_type=wiki_type if is_wiki else None
+    )
     if target and properties:
         target["properties"] = properties
 
@@ -499,17 +544,22 @@ def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _labfrog_target_properties(
-    record: dict[str, Any], *, thickness: float | None
+    record: dict[str, Any], *, thickness: float | None, wiki_type: str | None
 ) -> dict[str, Any]:
     properties: dict[str, Any] = {}
     for column, property_key in (
         ("target_provider", "supplier"),
         ("target_status", "status"),
         ("target_amount", "amount"),
+        ("target_production_date", "production_date"),
+        ("target_origin", "origin"),
     ):
         value = _as_optional_string(record.get(column))
         if value:
             properties[property_key] = value
+
+    if wiki_type:
+        properties["wiki_type"] = wiki_type
 
     if thickness is None:
         source_thickness = _source_target_thickness(record)
@@ -619,6 +669,9 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "target_status",
                 "target_provider",
                 "target_amount",
+                "target_type",
+                "target_production_date",
+                "target_origin",
                 "target_series",
                 "target_series_id",
                 "target_series_label",
@@ -682,6 +735,9 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "target_status",
                 "target_provider",
                 "target_amount",
+                "target_type",
+                "target_production_date",
+                "target_origin",
             }
             and value is not None
             and value != ""
