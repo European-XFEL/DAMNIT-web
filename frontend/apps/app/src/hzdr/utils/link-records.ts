@@ -66,6 +66,17 @@ export interface HZDRWikiInfo {
   categories: string[]
 }
 
+export interface HZDRScicatInfo {
+  source_key: string
+  experiment_id: string | null
+  configured: boolean
+  registered: boolean
+  pid: string | null
+  dataset_url: string | null
+  version_hash: string | null
+  registered_at: string | null
+}
+
 export async function fetchHZDRCampaigns(): Promise<LabFrogCampaignRef[]> {
   return requireJson<LabFrogCampaignRef[]>(
     await fetch('/metadata/hzdr/campaigns')
@@ -100,6 +111,16 @@ export async function fetchHZDRSourceWiki(
   return requireJson<HZDRWikiInfo>(
     await fetch(
       `/metadata/hzdr/sources/${encodeURIComponent(sourceKey)}/wiki?fetch=${fetchLive}`
+    )
+  )
+}
+
+export async function fetchHZDRSourceScicat(
+  sourceKey: string
+): Promise<HZDRScicatInfo> {
+  return requireJson<HZDRScicatInfo>(
+    await fetch(
+      `/metadata/hzdr/sources/${encodeURIComponent(sourceKey)}/scicat`
     )
   )
 }

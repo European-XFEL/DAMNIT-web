@@ -42,6 +42,21 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
 
 ## Built 2026-07-04
 
+- **SciCat registration** — the FAIR "one citable dataset per campaign" record.
+  New `metadata/scicat.py` (`register_campaign_nexus`, best-effort — never fails
+  a build; `read_previous_registration`); a builder post-step (`_register_scicat`
+  in `hzdr-hdf5-builder.py`, inside the single-writer lock) `POST`s the built
+  NeXus file *path* + assembled scientificMetadata to the `scicat_plugin` HTTP
+  service and stamps `scicat_pid`/`version_hash`/`dataset_url`/sha256 into the
+  source catalog (flowing back to `payload_ref.scicat_pid`). An unchanged rebuild
+  (same NeXus sha256) skips the re-POST — important now that the auto-trigger can
+  rebuild frequently. `GET /metadata/hzdr/sources/{key}/scicat` (`HZDRScicatInfo`)
+  mirrors the wiki endpoint; a `ScicatCard` sits beside the `WikiCard` on the Link
+  Records page. `HZDRScicatSettings` (`DW_API_HZDR_SCICAT__*`; SciCat URL/token
+  stay in the plugin's own env). 20 tests in `tests/test_hzdr_scicat.py`;
+  end-to-end verified with a real builder run against a mock plugin. Plan in
+  `docs/scicat-registration-plan.md`.
+
 - **Builder auto-trigger** — closes the last durable-spool gap. New module
   `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's
   `on_new_events_hook` signals a shared, debounced background task that reruns
@@ -211,11 +226,13 @@ Mongo, no broker consumer group; each degrades safely) — see
    [integration-roadmap.md](integration-roadmap.md).
 4. **Standards alignment Phase 0** — lock the `metadata.*` namespace convention;
    see [alignment-implementation-plan.md](alignment-implementation-plan.md).
-5. **SciCat registration** — wire up the existing `scicat_plugin` (an HTTP
-   service: builder `POST`s the campaign NeXus file path to `/scicat/from-json`
-   or `/scicat/push` and stores the returned `scicat_pid`). Interface and steps
-   in [integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration);
-   field mapping in [standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping).
+5. **SciCat registration** — ✅ **done 2026-07-04**. The builder's post-step now
+   `POST`s the campaign NeXus file path to the `scicat_plugin` and stores the
+   returned `scicat_pid`; enable with `DW_API_HZDR_SCICAT__ENABLED=true` +
+   `PLUGIN_URL`. Surface the plugin's env (SciCat URL/token) on the deployment
+   host, not in DAMNIT. See
+   [scicat-registration-plan.md](scicat-registration-plan.md); field mapping in
+   [standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping).
 
 The canonical model is in [architecture.md](architecture.md). Avoid adding new
 matching logic in producer repositories.

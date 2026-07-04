@@ -1,7 +1,8 @@
 # SciCat registration plan
 
-**Status:** 🟡 planned · **Roadmap item:** "Register the canonical campaign NeXus
-file in SciCat and back-populate `payload_ref.scicat_pid`" · **Effort:** Low–Medium ·
+**Status:** ✅ implemented 2026-07-04 · **Roadmap item:** "Register the canonical
+campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid`" ·
+**Effort:** Low–Medium ·
 Companion to [integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration)
 and [standards-alignment.md §3.9](standards-alignment.md).
 
@@ -76,3 +77,29 @@ Independent of, and lower priority than, the auto builder-trigger. It slots in
 cleanly *after* the trigger lands, because the natural place to register is the
 same builder post-publish point the trigger already invokes — so an auto-triggered
 build can register with SciCat automatically once both are in place.
+
+## What landed (2026-07-04)
+
+All deliverables shipped:
+
+- `HZDRScicatSettings` (`DW_API_HZDR_SCICAT__*`) + `Settings.hzdr_scicat`; a
+  validator requires `PLUGIN_URL` when enabled. Documented in
+  `.env.production.example`. No SciCat URL/token in DAMNIT.
+- `metadata/scicat.py` — `register_campaign_nexus()` (best-effort, never raises;
+  supports `from-json` and `push`; skips the POST when the NeXus sha256 is
+  unchanged from the previous catalog) and `read_previous_registration()`.
+- Builder post-step (`_register_scicat` in `hzdr-hdf5-builder.py`) inside the
+  single-writer lock; `write_sources_catalog(scicat=…)` stamps `scicat_pid`,
+  `scicat_version_hash`, `scicat_source_sha256`, `scicat_registered_at`,
+  `scicat_dataset_url`, `scicat_endpoint` into the source metadata — flowing back
+  to `payload_ref.scicat_pid` via the existing NeXus target reader.
+- `GET /metadata/hzdr/sources/{key}/scicat` → `HZDRScicatInfo`, mirroring the wiki
+  endpoint. Frontend: `fetchHZDRSourceScicat` + a `ScicatCard` beside the
+  `WikiCard` on the Link Records page.
+- Tests: `api/tests/test_hzdr_scicat.py` (20, plugin HTTP mocked — success,
+  from-json/push bodies, rejection, network failure, missing file, unchanged-skip,
+  changed-repost, catalog stamping, endpoint states). End-to-end verified with a
+  real builder run against a mock plugin producing the stamped catalog block.
+
+Deferred (unchanged): the producer-side per-file `/scicat/from-watchdog` path
+(planet-watchdog's own integration, no DAMNIT involvement).

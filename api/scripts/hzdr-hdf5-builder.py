@@ -183,6 +183,9 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
             events=normalized_events,
             source_nexus=args.labfrog_nexus,
         )
+        scicat = _register_scicat(
+            output_nexus, sources_file, experiment_id, args.source_key, shots
+        )
         write_sources_catalog(
             sources_file=sources_file,
             source_key=args.source_key,
@@ -190,8 +193,39 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
             nexus_path=output_nexus,
             shots=shots,
             events=normalized_events,
+            scicat=scicat,
         )
     return output_nexus, sources_file
+
+
+def _register_scicat(
+    output_nexus: Path,
+    sources_file: Path,
+    experiment_id: str,
+    source_key: str,
+    shots: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Best-effort SciCat registration post-step (no-op unless configured)."""
+    from damnit_api.metadata.scicat import (
+        read_previous_registration,
+        register_campaign_nexus,
+    )
+    from damnit_api.shared.settings import settings
+
+    if not settings.hzdr_scicat.enabled:
+        return None
+    return register_campaign_nexus(
+        settings=settings.hzdr_scicat,
+        nexus_path=output_nexus,
+        experiment_id=experiment_id,
+        source_key=source_key,
+        scientific_metadata={
+            "experiment_id": experiment_id,
+            "shot_count": len(shots),
+        },
+        source_folder=str(output_nexus.parent),
+        previous=read_previous_registration(sources_file, source_key),
+    )
 
 
 def main() -> None:

@@ -32,8 +32,10 @@ import {
   fetchHZDRCampaigns,
   fetchHZDRCampaignShots,
   fetchHZDRProducerStatus,
+  fetchHZDRSourceScicat,
   fetchHZDRSourceWiki,
   type HZDRProducerStatus,
+  type HZDRScicatInfo,
   type HZDRWikiInfo,
   type LabFrogCampaignRef,
   type LabFrogCampaignShot,
@@ -62,6 +64,7 @@ export function LinkExistingShotRecordsPage() {
   ])
   const [producerStatus, setProducerStatus] = useState<HZDRProducerStatus>()
   const [wiki, setWiki] = useState<HZDRWikiInfo>()
+  const [scicat, setScicat] = useState<HZDRScicatInfo>()
   const [searchStatus, setSearchStatus] = useState(
     'Pick a curated campaign, then search visible sources for matching shot records.'
   )
@@ -108,6 +111,7 @@ export function LinkExistingShotRecordsPage() {
     if (!selectedSourceKey) {
       setProducerStatus(undefined)
       setWiki(undefined)
+      setScicat(undefined)
       return
     }
     let active = true
@@ -117,6 +121,9 @@ export function LinkExistingShotRecordsPage() {
     fetchHZDRSourceWiki(selectedSourceKey)
       .then((info) => active && setWiki(info))
       .catch(() => active && setWiki(undefined))
+    fetchHZDRSourceScicat(selectedSourceKey)
+      .then((info) => active && setScicat(info))
+      .catch(() => active && setScicat(undefined))
     return () => {
       active = false
     }
@@ -246,6 +253,10 @@ export function LinkExistingShotRecordsPage() {
                   />
                   <WikiCard
                     wiki={wiki}
+                    sourceSelected={Boolean(selectedSourceKey)}
+                  />
+                  <ScicatCard
+                    scicat={scicat}
                     sourceSelected={Boolean(selectedSourceKey)}
                   />
                 </Stack>
@@ -506,6 +517,60 @@ function WikiCard({
                   </Badge>
                 ))}
               </Group>
+            ) : null}
+          </>
+        )}
+      </Stack>
+    </Card>
+  )
+}
+
+function ScicatCard({
+  scicat,
+  sourceSelected,
+}: {
+  scicat: HZDRScicatInfo | undefined
+  sourceSelected: boolean
+}) {
+  return (
+    <Card withBorder radius={4} p="md">
+      <Stack gap="sm">
+        <Title order={4}>SciCat dataset</Title>
+        {!sourceSelected ? (
+          <Text size="sm" c="dimmed">
+            Limit to a source to see its registered SciCat dataset.
+          </Text>
+        ) : !scicat ? (
+          <Text size="sm" c="dimmed">
+            No SciCat information available for this source.
+          </Text>
+        ) : !scicat.configured ? (
+          <Text size="sm" c="dimmed">
+            SciCat registration is not enabled (DW_API_HZDR_SCICAT__ENABLED).
+          </Text>
+        ) : !scicat.registered ? (
+          <Text size="sm" c="dimmed">
+            Not yet registered — the builder registers the campaign NeXus file
+            on its next run.
+          </Text>
+        ) : (
+          <>
+            <Group gap="xs">
+              {scicat.dataset_url ? (
+                <Anchor href={scicat.dataset_url} target="_blank" size="sm">
+                  {scicat.pid}
+                </Anchor>
+              ) : (
+                <Text size="sm">{scicat.pid}</Text>
+              )}
+              <Badge color="green" variant="light">
+                registered
+              </Badge>
+            </Group>
+            {scicat.registered_at ? (
+              <Text size="xs" c="dimmed">
+                registered {scicat.registered_at}
+              </Text>
             ) : null}
           </>
         )}

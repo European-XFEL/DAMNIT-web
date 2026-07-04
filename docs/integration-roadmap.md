@@ -263,7 +263,7 @@ Branch: `main`
 | ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` documents the setting. Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
 | Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `docs/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
-| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | 🟡 plugin exists; DAMNIT-side builder post-step + catalog link not yet wired — see §SciCat Registration |
+| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | ✅ committed 2026-07-04 — `metadata/scicat.py` + builder post-step (`_register_scicat`) POST the NeXus path to the plugin and stamp `scicat_pid`/`version_hash`/`dataset_url` into the catalog; `GET .../scicat` endpoint + Link Records UI card. Best-effort (never fails a build); unchanged rebuilds skip the re-POST. `DW_API_HZDR_SCICAT__*`. See `docs/scicat-registration-plan.md` |
 
 ### `GitLab/scicat_plugin`
 
@@ -285,9 +285,9 @@ which is exactly what DAMNIT needs to register a campaign NeXus file by path.
 | Connectivity probes (`/scicat/config/test`, `/scicat/config/whoami`), live dashboard + SSE activity stream | ✅ exists |
 | Schema Builder: per-`watch_name` recurring metadata (`schema_store.json`); `"51.9MeV"` → `{value, unit}` auto-detection | ✅ exists |
 | Deterministic version hashing (`versioning.make_manifest`/`manifest_hash`) over the file-reference manifest | ✅ exists |
-| DAMNIT builder post-step registers each campaign NeXus file path and stores the returned `scicat_pid` | 🟡 not wired (DAMNIT side) |
-| Surface a SciCat dataset link in the API alongside the wiki link | ⬜ not started |
-| Re-registration detection on rebuild via stored `version_hash` | ⬜ design noted (see §SciCat Registration) |
+| DAMNIT builder post-step registers each campaign NeXus file path and stores the returned `scicat_pid` | ✅ committed 2026-07-04 — `_register_scicat` in `hzdr-hdf5-builder.py` + `metadata/scicat.py`; runs inside the single-writer lock, best-effort |
+| Surface a SciCat dataset link in the API alongside the wiki link | ✅ committed — `GET /metadata/hzdr/sources/{key}/scicat` (`HZDRScicatInfo`) + `ScicatCard` on the Link Records page |
+| Re-registration detection on rebuild via stored `version_hash` | ✅ committed — DAMNIT-side sha256 skip (`scicat_source_sha256`) avoids a re-POST on byte-identical rebuilds; `version_hash` from `/scicat/push` is stored for plugin-side dedup |
 
 ## Shot Number Authority
 
@@ -482,13 +482,14 @@ replay each consumer, then verify:
 
 ## SciCat Registration
 
-**Status:** 🟡 plugin built and live; DAMNIT-side wiring not started · **Effort:**
-Low–Medium · **Added:** 2026-06-26
+**Status:** ✅ DAMNIT-side wiring implemented 2026-07-04 (see
+`docs/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
++ `PLUGIN_URL` · **Effort:** Low–Medium · **Added:** 2026-06-26
 
 This is a **post-pilot FAIR enhancement, off the go-live critical path** — the
-pipeline builds and serves the canonical NeXus file + catalog without it. It is
-recorded here because the sink already exists and the only schema hook
-(`payload_ref.scicat_pid`) is already reserved. Detailed field mapping is in
+pipeline builds and serves the canonical NeXus file + catalog without it. The
+sink already existed and the schema hook (`payload_ref.scicat_pid`) was reserved;
+the builder post-step, `/scicat` endpoint, and UI link are now wired up. Detailed field mapping is in
 [standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping) and
 [Phase 4 of the alignment plan](alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
 
