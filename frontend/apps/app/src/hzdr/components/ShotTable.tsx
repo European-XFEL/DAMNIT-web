@@ -19,6 +19,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
+import { Link } from 'react-router'
 import type {
   HZDRShot,
   HZDRShotDetail,
@@ -356,7 +357,11 @@ export function ShotDetailPanel({
             Available sources in current provider:
           </Text>
           {availableSources.map((entry) => (
-            <Anchor key={entry.key} href={`/source/${entry.key}`}>
+            <Anchor
+              key={entry.key}
+              component={Link}
+              to={`/source/${entry.key}`}
+            >
               {entry.key} ({entry.shots.length} shots)
             </Anchor>
           ))}
@@ -716,8 +721,8 @@ export function ShotDetailPanel({
           <Group justify="space-between">
             <Title order={5}>Context</Title>
             <Button
-              component="a"
-              href={`/source/${shot.source_key}/context-builder`}
+              component={Link}
+              to={`/source/${shot.source_key}/context-builder`}
               size="xs"
               variant="light"
             >

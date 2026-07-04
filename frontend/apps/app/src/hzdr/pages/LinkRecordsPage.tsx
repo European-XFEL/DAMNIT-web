@@ -9,7 +9,7 @@ import {
   Container,
   Grid,
   Group,
-  Paper,
+  ScrollArea,
   Select,
   SimpleGrid,
   Stack,
@@ -25,6 +25,7 @@ import type {
   BuiltLinkRecordsPackage,
 } from '../types'
 import { AppHeader } from '../components/AppHeader'
+import { DetailsSection } from '../components/ShotTable'
 import {
   buildLinkRecordsDraft,
   buildLinkRecordsReviewPackage,
@@ -74,7 +75,12 @@ export function LinkExistingShotRecordsPage() {
       .catch(() => setSources([]))
     fetchHZDRCampaigns()
       .then(setCampaigns)
-      .catch(() => setCampaigns([]))
+      .catch(() => {
+        setCampaigns([])
+        setSearchStatus(
+          'Could not load curated campaigns — is the API running?'
+        )
+      })
   }, [])
 
   const selectedCampaign = useMemo(
@@ -166,35 +172,11 @@ export function LinkExistingShotRecordsPage() {
                 handoff for review.
               </Text>
             </Stack>
-            <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-              <Card withBorder radius={4} p="md">
-                <Stack gap="xs">
-                  <Title order={4}>1. Search</Title>
-                  <Text size="sm">
-                    Choose the curated campaign and collections that should be
-                    inspected for existing shot records.
-                  </Text>
-                </Stack>
-              </Card>
-              <Card withBorder radius={4} p="md">
-                <Stack gap="xs">
-                  <Title order={4}>2. Link</Title>
-                  <Text size="sm">
-                    Match Shotcounter, DAQ File Watchdog, and shotsheet records
-                    into one source-level package view.
-                  </Text>
-                </Stack>
-              </Card>
-              <Card withBorder radius={4} p="md">
-                <Stack gap="xs">
-                  <Title order={4}>3. Review</Title>
-                  <Text size="sm">
-                    Let the user fix small mismatches before writing coherent
-                    JSON, HDF5, and DAMNIT table records.
-                  </Text>
-                </Stack>
-              </Card>
-            </SimpleGrid>
+            <Text size="sm" c="dimmed">
+              1 Search — choose the curated campaign and collections · 2 Link —
+              match Shotcounter, Watchdog, and shotsheet records · 3 Review —
+              fix mismatches, then write JSON/HDF5/DAMNIT records.
+            </Text>
             <Grid gutter="md">
               <Grid.Col span={{ base: 12, md: 5 }}>
                 <Card withBorder radius={4} p="md">
@@ -249,16 +231,6 @@ export function LinkExistingShotRecordsPage() {
                         <Checkbox value="shotcounter" label="Shotcounter" />
                       </Stack>
                     </Checkbox.Group>
-                    <Paper
-                      withBorder
-                      radius={4}
-                      p="sm"
-                      bg="var(--mantine-color-gray-0)"
-                    >
-                      <Text size="sm" c="dimmed">
-                        {searchStatus}
-                      </Text>
-                    </Paper>
                   </Stack>
                 </Card>
               </Grid.Col>
@@ -282,12 +254,6 @@ export function LinkExistingShotRecordsPage() {
             <Card withBorder radius={4} p="md">
               <Stack gap="sm">
                 <Title order={4}>Link draft</Title>
-                <Text size="sm" c="dimmed">
-                  Search and build locally from the HZDR sources currently
-                  visible to DAMNIT-web, cross-referenced against the curated
-                  campaign snapshot above.
-                </Text>
-                <Code block>{JSON.stringify(visibleDraft, null, 2)}</Code>
                 <Group>
                   <Button onClick={searchExistingRecords} variant="light">
                     Search visible records
@@ -296,6 +262,24 @@ export function LinkExistingShotRecordsPage() {
                     Build review package
                   </Button>
                 </Group>
+                <Text size="sm" c="dimmed">
+                  {searchStatus}
+                </Text>
+                <Text size="sm">
+                  {visibleDraft.linked_records.length} linked record(s) ·{' '}
+                  {visibleDraft.search.searched_sources} searched source(s)
+                  {selectedCampaign ? ` · ${selectedCampaign.title}` : ''}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  Search and build locally from the HZDR sources currently
+                  visible to DAMNIT-web, cross-referenced against the curated
+                  campaign snapshot above.
+                </Text>
+                <DetailsSection title="Full draft JSON" open={false}>
+                  <ScrollArea.Autosize mah={320} type="auto">
+                    <Code block>{JSON.stringify(visibleDraft, null, 2)}</Code>
+                  </ScrollArea.Autosize>
+                </DetailsSection>
               </Stack>
             </Card>
           </Stack>

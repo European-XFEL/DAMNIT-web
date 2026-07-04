@@ -9,6 +9,7 @@ import {
   Text,
   Title,
 } from '@mantine/core'
+import { Link } from 'react-router'
 import { HomePage } from '@damnit-frontend/ui'
 import { AppHeader } from '../components/AppHeader'
 import { DetailsSection } from '../components/ShotTable'
@@ -57,10 +58,10 @@ export function HZDRDocsPage() {
               </Card>
             </SimpleGrid>
             <Group>
-              <Button component="a" href="/flow-monitor">
+              <Button component={Link} to="/flow-monitor">
                 Flow monitor
               </Button>
-              <Button component="a" href="/home" variant="light">
+              <Button component={Link} to="/home" variant="light">
                 Workspace
               </Button>
               <Button component="a" href="/api-docs" variant="light">

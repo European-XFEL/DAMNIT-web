@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  Alert,
   Anchor,
   Badge,
   Button,
@@ -11,18 +12,25 @@ import {
   Title,
 } from '@mantine/core'
 import { IconBook, IconDatabase, IconRoute } from '@tabler/icons-react'
+import { Link } from 'react-router'
 import type { HZDRSource } from '../types'
+import { requireJson } from '../utils/api'
 
 export function HZDRSourceHome() {
   const [sources, setSources] = useState<HZDRSource[]>([])
+  const [pollFailed, setPollFailed] = useState(false)
 
   useEffect(() => {
     const loadSources = () => {
       fetch('/metadata/hzdr/sources')
-        .then((response) => response.json())
-        .then(setSources)
+        .then((response) => requireJson<HZDRSource[]>(response))
+        .then((loadedSources) => {
+          setSources(loadedSources)
+          setPollFailed(false)
+        })
         .catch((error) => {
           console.error('Failed to load HZDR sources', error)
+          setPollFailed(true)
         })
     }
 
@@ -52,6 +60,14 @@ export function HZDRSourceHome() {
         </Group>
       </Group>
 
+      {pollFailed ? (
+        <Alert color="yellow" variant="light" py="xs">
+          <Text size="sm" c="dimmed">
+            Could not reach the API — retrying.
+          </Text>
+        </Alert>
+      ) : null}
+
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
         <Card withBorder radius={4} p="md">
           <Stack gap="xs">
@@ -63,7 +79,7 @@ export function HZDRSourceHome() {
               Watch the passive LaserData stream plus local Shotcounter and
               Watchdog events as they move through DAMNIT.
             </Text>
-            <Button component="a" href="/flow-monitor" variant="light">
+            <Button component={Link} to="/flow-monitor" variant="light">
               Flow monitor
             </Button>
           </Stack>
@@ -79,8 +95,8 @@ export function HZDRSourceHome() {
               context-rendered data.
             </Text>
             <Button
-              component="a"
-              href={sources[0] ? `/source/${sources[0].key}` : '/home'}
+              component={Link}
+              to={sources[0] ? `/source/${sources[0].key}` : '/home'}
               variant="light"
               disabled={!sources[0]}
             >
@@ -98,7 +114,7 @@ export function HZDRSourceHome() {
               Use the HZDR docs page for the local launcher, connections, and
               package boundaries.
             </Text>
-            <Button component="a" href="/docs" variant="light">
+            <Button component={Link} to="/docs" variant="light">
               Documentation
             </Button>
           </Stack>
@@ -116,7 +132,7 @@ export function HZDRSourceHome() {
           <Card key={source.key} withBorder radius={4} p="md">
             <Group justify="space-between" align="flex-start">
               <Stack gap={4}>
-                <Anchor href={`/source/${source.key}`} fw={600}>
+                <Anchor component={Link} to={`/source/${source.key}`} fw={600}>
                   {source.title}
                 </Anchor>
                 <Text size="sm" c="dimmed">

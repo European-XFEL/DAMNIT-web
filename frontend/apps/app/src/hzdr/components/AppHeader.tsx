@@ -1,39 +1,59 @@
+import type { ReactNode } from 'react'
 import { Group, Button } from '@mantine/core'
-import { IconDatabase, IconRoute, IconSearch } from '@tabler/icons-react'
+import {
+  IconBook,
+  IconDatabase,
+  IconRoute,
+  IconSearch,
+} from '@tabler/icons-react'
+import { Link, useLocation } from 'react-router'
 import { Header, Logo } from '@damnit-frontend/ui'
+
+function NavButton({
+  to,
+  icon,
+  label,
+}: {
+  to: string
+  icon: ReactNode
+  label: string
+}) {
+  const { pathname } = useLocation()
+  const active = pathname === to || pathname.startsWith(`${to}/`)
+  return (
+    <Button
+      component={Link}
+      to={to}
+      variant={active ? 'light' : 'subtle'}
+      size="sm"
+      leftSection={icon}
+    >
+      {label}
+    </Button>
+  )
+}
 
 export function AppHeader() {
   return (
     <Header px={20}>
       <Group gap="md" wrap="nowrap">
         <Logo linkTo="/home" />
-        <Button
-          component="a"
-          href="/home"
-          variant="subtle"
-          size="sm"
-          leftSection={<IconSearch size={16} />}
-        >
-          Inspect sources
-        </Button>
-        <Button
-          component="a"
-          href="/flow-monitor"
-          variant="subtle"
-          size="sm"
-          leftSection={<IconRoute size={16} />}
-        >
-          Flow monitor
-        </Button>
-        <Button
-          component="a"
-          href="/link-shot-records"
-          variant="subtle"
-          size="sm"
-          leftSection={<IconDatabase size={16} />}
-        >
-          Link records
-        </Button>
+        <NavButton
+          to="/home"
+          icon={<IconSearch size={16} />}
+          label="Inspect sources"
+        />
+        <NavButton
+          to="/flow-monitor"
+          icon={<IconRoute size={16} />}
+          label="Flow monitor"
+        />
+        <NavButton
+          to="/link-shot-records"
+          icon={<IconDatabase size={16} />}
+          label="Link records"
+        />
+        <NavButton to="/docs" icon={<IconBook size={16} />} label="Docs" />
       </Group>
     </Header>
   )
