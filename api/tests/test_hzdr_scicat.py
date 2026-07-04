@@ -103,7 +103,9 @@ def test_from_json_registration_success(tmp_path, monkeypatch):
     assert result["scicat_endpoint"] == "from-json"
     assert result["scicat_source_sha256"]
     assert result["scicat_registered_at"]
-    assert result["scicat_dataset_url"] == "https://scicat.hzdr.de/datasets/20.500%2Fabc"
+    assert (
+        result["scicat_dataset_url"] == "https://scicat.hzdr.de/datasets/20.500%2Fabc"
+    )
     # from-json posts a filepath, not a files[] manifest
     body = post.calls[0]["json"]
     assert body["filepath"] == str(tmp_path / "campaign.nxs")
@@ -258,8 +260,9 @@ def test_catalog_without_scicat_has_no_pid(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def _app_with_source(tmp_path, monkeypatch, metadata: dict, *, enabled: bool,
-                     frontend_url: str = ""):
+def _app_with_source(
+    tmp_path, monkeypatch, metadata: dict, *, enabled: bool, frontend_url: str = ""
+):
     sources_file = tmp_path / "hzdr_sources.json"
     sources_file.write_bytes(
         orjson.dumps({
