@@ -34,8 +34,10 @@ concrete gaps found, two fixed on the spot:
    overrides it, and no cron/systemd-timer unit for `hzdr-hdf5-builder.py`
    exists anywhere in the repo. New real events land in the spool but the
    canonical NeXus/catalog will not reflect them until someone runs the
-   builder. 🔴 still open — previously listed in the Durable Spool Design
-   table with no status marker at all, which read as done by omission.
+   builder. ✅ **closed 2026-07-04** — `consumer/builder_trigger.py`
+   (`BuilderTrigger`) now overrides the `on_new_events()` dispatch and reruns
+   the builder as a debounced subprocess; `DW_API_HZDR_BUILDER__ENABLED=true`.
+   See `docs/auto-builder-trigger-plan.md`.
 2. **No real-broker roundtrip test exists for ASAPO** — only Kafka has one
    (`test_hzdr_broker_roundtrip.py`, `-m integration_docker`, gated on
    `KAFKA_TEST_BROKER`). `RealAsapoSpoolConsumer` is exercised only against an
@@ -259,7 +261,7 @@ Branch: `main`
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | Live production deployment reachable | ✅ **[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)** — `api/scripts/damnit-api-deploy.sh`/`.ps1`, `frontend/nginx` proxy templates, LDAP against `ldap.fz-rossendorf.de` |
 | ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` documents the setting. Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
-| Builder auto-triggered after new spool events | 🔴 not started — `HZDRSpoolConsumer.on_new_events()` is an unoverridden no-op stub; no cron/systemd-timer for `hzdr-hdf5-builder.py` exists in the repo either. Until one of these exists, real ingested events sit in the spool until someone runs the builder manually |
+| Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `docs/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
 | Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | 🟡 plugin exists; DAMNIT-side builder post-step + catalog link not yet wired — see §SciCat Registration |
 
@@ -431,7 +433,7 @@ The same ordering and durability properties must hold for the real production co
 | Per-campaign spool directory | `<campaign-slug>/spool/asapo/` and `<campaign-slug>/spool/kafka/<topic>/` under the DAMNIT data root; the builder's `--events-jsonl` / `--trigger-jsonl` flags already point to exactly these paths |
 | Write-and-flush before ack | `write_json_atomic` (temp file + `fsync` + rename) is already implemented in `hzdr_nexus.py`; the consumer calls it, then acks |
 | Dedup on replay | Consumer checks whether `event_id` already exists in the spool directory before writing; if yes, skip and ack (idempotent replay) |
-| Builder trigger | 🔴 not implemented. `on_new_events()` (the documented hook in `consumer/spool.py`) is never overridden by `AsapoSpoolConsumer`/`RealAsapoSpoolConsumer`/`KafkaSpoolConsumer`, and no cron/systemd-timer unit exists for `hzdr-hdf5-builder.py`. Today the builder only reruns when invoked manually. The single-writer PID lock already serialises concurrent runs once something does trigger it |
+| Builder trigger | ✅ implemented. `consumer/builder_trigger.py` (`BuilderTrigger`) overrides the `on_new_events()` dispatch via `on_new_events_hook`: a shared debounced task coalesces new-event signals and reruns `hzdr-hdf5-builder.py` as a subprocess. Activated by `DW_API_HZDR_BUILDER__ENABLED=true`. The single-writer PID lock serialises concurrent runs; a standalone systemd timer remains an optional alternative for external scheduling |
 
 ### Implementation (completed 2026-06-18)
 

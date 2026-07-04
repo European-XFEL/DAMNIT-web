@@ -311,6 +311,45 @@ class HZDRKafkaSpoolSettings(BaseModel):
     batch_size: int = 10
 
 
+class HZDRBuilderSettings(BaseModel):
+    """Auto-trigger the canonical NeXus/catalog builder after new spool events.
+
+    Activated by setting DW_API_HZDR_BUILDER__ENABLED=true.  When enabled, each
+    durable spool consumer (ASAPO/Kafka) signals a shared, debounced trigger that
+    reruns ``hzdr-hdf5-builder.py`` as a subprocess so the single-writer PID lock
+    and full isolation are preserved.  Without this (the default), ingested events
+    land in the spool but the catalog is only rebuilt when the builder is run by
+    hand.
+
+    ``output_nexus`` is required when ``enabled=True``.  Event/trigger JSONL inputs
+    are derived from the running consumers' spool paths, not configured here.
+    """
+
+    enabled: bool = False
+    debounce_seconds: float = 10.0
+    output_nexus: Path | None = None
+    experiment_id: str = ""
+    source_key: str = "hzdr-labfrog"
+    campaign_timezone: str = "UTC"
+    labfrog_nexus: Path | None = None
+    labfrog_sqlite: Path | None = None
+    sources_file: Path | None = None
+    match_tolerance_s: float = 120.0
+    python_executable: str = ""
+    script_path: Path | None = None
+    extra_args: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _require_output_when_enabled(self) -> "HZDRBuilderSettings":
+        if self.enabled and self.output_nexus is None:
+            msg = (
+                "DW_API_HZDR_BUILDER__OUTPUT_NEXUS must be set when "
+                "DW_API_HZDR_BUILDER__ENABLED=true."
+            )
+            raise ValueError(msg)
+        return self
+
+
 class HZDRHealthSettings(BaseModel):
     """Broker/DB URLs and timeouts for the /config/health liveness probes.
 
@@ -441,6 +480,8 @@ class Settings(BaseSettings):
     hzdr_kafka_spool: HZDRKafkaSpoolSettings = Field(
         default_factory=HZDRKafkaSpoolSettings
     )
+
+    hzdr_builder: HZDRBuilderSettings = Field(default_factory=HZDRBuilderSettings)
 
     hzdr_health: HZDRHealthSettings = Field(default_factory=HZDRHealthSettings)
 

@@ -40,6 +40,24 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`
   schema-version string. All committed.
 
+## Built 2026-07-04
+
+- **Builder auto-trigger** — closes the last durable-spool gap. New module
+  `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's
+  `on_new_events_hook` signals a shared, debounced background task that reruns
+  `hzdr-hdf5-builder.py` as a subprocess (preserving the single-writer PID lock
+  and keeping the HDF5 build off the API event loop). A burst of events coalesces
+  into one rebuild; events during a build queue exactly one follow-up. Activated
+  by `DW_API_HZDR_BUILDER__ENABLED=true` (`HZDRBuilderSettings`,
+  `DW_API_HZDR_BUILDER__*`; `OUTPUT_NEXUS` required). `--events-jsonl` /
+  `--trigger-jsonl` inputs are derived from the running ASAPO/Kafka consumers'
+  spool paths. Wired into the FastAPI lifespan alongside the consumers.
+  11 tests in `tests/test_hzdr_builder_trigger.py` (command assembly, debounce
+  coalescing, re-arm, failure resilience, hook dispatch, settings validation);
+  end-to-end verified against a real event → NeXus + catalog. Plans for this and
+  SciCat registration in `docs/auto-builder-trigger-plan.md` and
+  `docs/scicat-registration-plan.md`.
+
 ## Built 2026-07-03/04
 
 - **UI critique + space/usability optimization** — merged to `main` via PR #2
@@ -183,11 +201,12 @@ Mongo, no broker consumer group; each degrades safely) — see
    **writing** an ASAPO real-broker roundtrip test (no equivalent of
    `test_hzdr_broker_roundtrip.py` exists yet for ASAPO), and then running it
    against the live broker.
-2a. **Automate the builder trigger** — `on_new_events()` in
-   `consumer/spool.py` is currently a no-op for every consumer, and no
-   cron/systemd-timer unit exists for `hzdr-hdf5-builder.py`. Real events
-   will sit in the spool without updating the catalog until this is wired up
-   (either the hook or an external timer).
+2a. **Automate the builder trigger** — ✅ **done 2026-07-04**. `on_new_events()`
+   now dispatches to a debounced `BuilderTrigger` (`consumer/builder_trigger.py`)
+   that reruns `hzdr-hdf5-builder.py` as a subprocess; enable with
+   `DW_API_HZDR_BUILDER__ENABLED=true` (+ `OUTPUT_NEXUS`). See
+   [auto-builder-trigger-plan.md](auto-builder-trigger-plan.md). Set the
+   production builder env on the deployment when pointing at the real brokers.
 3. **Capture one real pilot sequence** and run the go-live gate in
    [integration-roadmap.md](integration-roadmap.md).
 4. **Standards alignment Phase 0** — lock the `metadata.*` namespace convention;
