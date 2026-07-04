@@ -3,7 +3,7 @@
 Updated: 2026-07-02
 
 The execution plan for enacting the alignment described in
-[standards-alignment.md](standards-alignment.md). That document is the *what* (the
+[standards-alignment.md](../standards-alignment.md). That document is the *what* (the
 field cross-walk and gap analysis); this one is the *how and when* — phased, ordered,
 with the files touched, tests, and exit criteria for each phase.
 
@@ -24,9 +24,9 @@ requires a new required field.
 (no unit suffix) + the metadata key registry as the source of truth for
 canonical units, extended family-wide to `metadata.laser.*` and
 `metadata.vacuum.*` (not just `metadata.target.*`). See
-[target-ontology.md §5](target-ontology.md#5-units-convention),
-[standards-alignment.md §3.3/§3.5](standards-alignment.md#33-laser-parameters),
-and the registry in [CLAUDE.md](../CLAUDE.md). No further naming decision is
+[target-ontology.md §5](../target-ontology.md#5-units-convention),
+[standards-alignment.md §3.3/§3.5](../standards-alignment.md#33-laser-parameters),
+and the registry in [CLAUDE.md](../../CLAUDE.md). No further naming decision is
 needed — the one remaining Phase 0 item is the code item below (test), now
 unblocked by this sign-off.
 
@@ -36,7 +36,7 @@ once, up front, so producers and the NeXus writer agree and nothing has to be re
 twice.
 
 **Do:**
-1. ✅ Promote the recommended-key columns in [standards-alignment.md §3.3–3.6](standards-alignment.md#33-laser-parameters)
+1. ✅ Promote the recommended-key columns in [standards-alignment.md §3.3–3.6](../standards-alignment.md#33-laser-parameters)
    to a single authoritative key table (a `metadata` key registry) and add it to the
    root `CLAUDE.md` "Event schema contract" section so producers treat it as binding.
    Done — see the "Metadata key registry" subsection of `CLAUDE.md`.
@@ -59,7 +59,7 @@ the one human sign-off that gates everything downstream)~~ — done, signed off 
 ## Phase 1 — Namespaced laser metadata + low-effort missing fields 🟡
 
 **Scope:** the "Low effort" laser/environment rows in the
-[gap summary §3.10](standards-alignment.md#310-gap-summary): central wavelength,
+[gap summary §3.10](../standards-alignment.md#310-gap-summary): central wavelength,
 repetition rate, polarization, pre-shot vacuum pressure, laser system name; plus moving
 the existing flat emulator keys into the `metadata.laser.*` / `metadata.vacuum.*`
 namespace.
@@ -96,7 +96,7 @@ producer repos.
 ## Phase 2 — Target / sample metadata from LabFrog 🟢/🟡
 
 **Scope:** the "Medium effort" target rows: material, thickness, type, gas species/pressure
-([§3.4](standards-alignment.md#34-target--sample)). Verified 2026-07-02: LabFrog
+([§3.4](../standards-alignment.md#34-target--sample)). Verified 2026-07-02: LabFrog
 shot records currently store the selected target value for every shot, manual `OTHER`
 target details (`material`, `thickness`, `notes`), and same-target series fields such
 as `target_series_sample`. The sibling `labfrog-sqlite-tools` export already carries
@@ -104,7 +104,7 @@ those captured fields in `shots`/`shot_summary`. DAMNIT now reads the exported t
 columns into `HZDRShot.metadata.target.*`, converting known LabFrog thickness units to
 canonical nanometres for the bare-key metadata convention.
 
-The binding key schema remains [target-ontology.md](target-ontology.md) — bare numeric
+The binding key schema remains [target-ontology.md](../target-ontology.md) — bare numeric
 keys with NeXus `@units`, `provenance` (`wiki`/`manual`), `wiki_ref`, and an open
 `properties` bag for curated fields that vary between wiki target records.
 
@@ -121,7 +121,7 @@ keys with NeXus `@units`, `provenance` (`wiki`/`manual`), `wiki_ref`, and an ope
    `4b203a3`); `labfrog-sqlite-tools` exports all eight as `target_*` columns (schema
    v9 + v10, `1721cca` and the 2026-07-03 v10 bump); DAMNIT's reconciler maps
    `target_type` through the wiki→ontology `type` mapping (§2.3 of
-   [target-ontology.md](target-ontology.md), original kept in `properties.wiki_type`)
+   [target-ontology.md](../target-ontology.md), original kept in `properties.wiki_type`)
    and folds `target_production_date`/`target_origin` into
    `properties.production_date`/`properties.origin`.
 
@@ -146,7 +146,7 @@ extras; gas species/pressure remain medium (blocked on LabFrog capture, not DAMN
 ## Phase 3 — NeXus structural groups (`NXsource`, `NXsample`, `NXdetector`) 🟢
 
 **Scope:** the NeXus-structure rows from
-[§3.7](standards-alignment.md#37-nexus-bridge-group-class-mapping): add the missing
+[§3.7](../standards-alignment.md#37-nexus-bridge-group-class-mapping): add the missing
 `/entry/instrument/laser` (`NXsource`), `/entry/sample` (`NXsample`), and per-product
 `NXdetector` sub-groups; set `entry/start_time`. This is the highest-value, fully
 local step — it makes the canonical file readable by standard NeXus/HELPMI tooling using
@@ -185,8 +185,8 @@ independently.
 
 ## Phase 4 — SciCat registration via the existing HZDR plugin 🟡
 
-**Scope:** [§3.9](standards-alignment.md#39-scicat-field-mapping) and
-[Route 3](standards-alignment.md#route-3-scicat-registration-lower-effort--existing-plugin).
+**Scope:** [§3.9](../standards-alignment.md#39-scicat-field-mapping) and
+[Route 3](../standards-alignment.md#route-3-scicat-registration-lower-effort--existing-plugin).
 `HZDRPayloadRef.scicat_pid` is already reserved.
 
 **This is smaller than a from-scratch adapter.** HZDR already maintains a SciCat plugin —
@@ -207,7 +207,7 @@ access_groups, owner, source_folder, meta}` → `{ok, pid, source_folder, file_n
 re-registration detection on rebuild. Ownership/contact fields default from the plugin's
 own env (`DEFAULT_OWNER_GROUP`, `DEFAULT_ACCESS_GROUPS`, `CONTACT_EMAIL_DEFAULT`,
 `PRINCIPAL_INVESTIGATOR_DEFAULT`) and can be overridden per request. See
-[integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration)
+[integration-roadmap.md §SciCat Registration](../status/integration-roadmap.md#scicat-registration)
 for the endpoint table.
 
 **Do:**
@@ -236,7 +236,7 @@ mapping confirmed and the private plugin available; a live instance is only need
 
 ## Phase 5 — HZDR-owned ontology annotation & openPMD interoperability 🟡/🔴
 
-**Scope:** [Routes 4-5](standards-alignment.md#route-4-nexus-ontology-annotation-for-federated-search-higher-effort).
+**Scope:** [Routes 4-5](../standards-alignment.md#route-4-nexus-ontology-annotation-for-federated-search-higher-effort).
 NeXus Ontology URIs on file attributes for federated search; openPMD linking for
 simulation comparison.
 
@@ -249,7 +249,7 @@ name.
 
 **Do:**
 1. ✅ **Done 2026-07-02:** defined the HZDR semantic map as a versioned doc first —
-   [docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md) v0.1 — mapping each
+   [docs/nxhzdr-target-profile.md](../nxhzdr-target-profile.md) v0.1 — mapping each
    `metadata.target.*` key to its `/entry/sample` NeXus path/attribute, canonical unit,
    HELPMI DDC term, and whether it's a standard `NXsample` field or a profile extension.
    Includes the local target class definition, `NXhzdr_target`, with `NXsample` as its

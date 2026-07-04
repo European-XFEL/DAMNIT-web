@@ -9,7 +9,7 @@ NeXus `NXsample`, the HZDR-local `NXhzdr_target` profile, and HELPMI `TargetClas
 
 This document is the *fine-grained* companion to the target rows in
 [standards-alignment.md §3.4](standards-alignment.md#34-target--sample) and is the
-binding key registry for [alignment-implementation-plan.md Phase 2](alignment-implementation-plan.md#phase-2--target--sample-metadata-from-labfrog).
+binding key registry for [alignment-implementation-plan.md Phase 2](plans/alignment-implementation-plan.md#phase-2--target--sample-metadata-from-labfrog).
 All target fields live inside the free-form `metadata` object of the
 [`hzdr-event-v1`](event-schema.md) envelope — **no transport-schema change and no
 `hzdr-event-v2` bump** is required to adopt this ontology.

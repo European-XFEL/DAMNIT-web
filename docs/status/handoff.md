@@ -10,7 +10,7 @@ served via `api/scripts/damnit-api-deploy.sh`/`.ps1` against
 `.env.production.example`-derived config, behind the `frontend/nginx` templates,
 with LDAP auth against `ldap.fz-rossendorf.de`. Wiring the deployment to a real
 ASAPO/Kafka broker (instead of the local harness/emulator) is in progress; see
-**Built 2026-07-01** below and [remaining-work-plan.md](remaining-work-plan.md)
+**Built 2026-07-01** below and [remaining-work-plan.md](../plans/remaining-work-plan.md)
 items 2-4.
 
 All integration branches tested and committed. DAMNIT-web-hzdr suite (2026-07-04,
@@ -55,7 +55,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   Records page. `HZDRScicatSettings` (`DW_API_HZDR_SCICAT__*`; SciCat URL/token
   stay in the plugin's own env). 20 tests in `tests/test_hzdr_scicat.py`;
   end-to-end verified with a real builder run against a mock plugin. Plan in
-  `docs/scicat-registration-plan.md`.
+  `docs/plans/scicat-registration-plan.md`.
 
 - **Builder auto-trigger** — closes the last durable-spool gap. New module
   `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's
@@ -70,14 +70,14 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   11 tests in `tests/test_hzdr_builder_trigger.py` (command assembly, debounce
   coalescing, re-arm, failure resilience, hook dispatch, settings validation);
   end-to-end verified against a real event → NeXus + catalog. Plans for this and
-  SciCat registration in `docs/auto-builder-trigger-plan.md` and
-  `docs/scicat-registration-plan.md`.
+  SciCat registration in `docs/plans/auto-builder-trigger-plan.md` and
+  `docs/plans/scicat-registration-plan.md`.
 
 ## Built 2026-07-03/04
 
 - **UI critique + space/usability optimization** — merged to `main` via PR #2
   (`claude/ui-critique-optimization-qs2bof` → `de0cfbc`). Frontend-only,
-  behavior-preserving; see [ui-optimization-plan.md](ui-optimization-plan.md)
+  behavior-preserving; see [ui-optimization-plan.md](../plans/ui-optimization-plan.md)
   for the full WP breakdown and per-WP commit hashes.
   - WP1 (`bbb2ec1`): client-side navigation (react-router `Link`/`useNavigate`
     instead of full-page `<a href>` reloads) + active-route indication and a
@@ -95,8 +95,8 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
 - **FWK MediaWiki links + target catalog extras** (`c62c1fc`) — wiki page links
   wired through `hzdr_nexus`/`hzdr_sources`/`routers`; target catalog extras and
   new `DW_API_HZDR_WIKI__*`-adjacent settings; docs in
-  [mediawiki-integration.md](mediawiki-integration.md) and
-  [target-ontology.md](target-ontology.md). Wiki-test fixtures no longer embed
+  [mediawiki-integration.md](../mediawiki-integration.md) and
+  [target-ontology.md](../target-ontology.md). Wiki-test fixtures no longer embed
   real secret strings (`13d7641`).
 - **Pilot package readiness gate** (`5ec1a85`, `a0edd37`) —
   `scripts/test-pilot-package.ps1` and a `test_contextfile.py` check; the gate
@@ -154,7 +154,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
 
 Three derived, read-only operational views for the operator UI (no writes, no
 Mongo, no broker consumer group; each degrades safely) — see
-[architecture.md §Read-Only Operational Views](architecture.md#read-only-operational-views).
+[architecture.md §Read-Only Operational Views](../architecture.md#read-only-operational-views).
 
 - `metadata/labfrog_sqlite.py` — read-only (`mode=ro`) reader for the curated
   LabFrog campaign SQLite snapshots; `list_campaigns` / `list_campaign_shots`.
@@ -220,19 +220,19 @@ Mongo, no broker consumer group; each degrades safely) — see
    now dispatches to a debounced `BuilderTrigger` (`consumer/builder_trigger.py`)
    that reruns `hzdr-hdf5-builder.py` as a subprocess; enable with
    `DW_API_HZDR_BUILDER__ENABLED=true` (+ `OUTPUT_NEXUS`). See
-   [auto-builder-trigger-plan.md](auto-builder-trigger-plan.md). Set the
+   [auto-builder-trigger-plan.md](../plans/auto-builder-trigger-plan.md). Set the
    production builder env on the deployment when pointing at the real brokers.
 3. **Capture one real pilot sequence** and run the go-live gate in
    [integration-roadmap.md](integration-roadmap.md).
 4. **Standards alignment Phase 0** — lock the `metadata.*` namespace convention;
-   see [alignment-implementation-plan.md](alignment-implementation-plan.md).
+   see [alignment-implementation-plan.md](../plans/alignment-implementation-plan.md).
 5. **SciCat registration** — ✅ **done 2026-07-04**. The builder's post-step now
    `POST`s the campaign NeXus file path to the `scicat_plugin` and stores the
    returned `scicat_pid`; enable with `DW_API_HZDR_SCICAT__ENABLED=true` +
    `PLUGIN_URL`. Surface the plugin's env (SciCat URL/token) on the deployment
    host, not in DAMNIT. See
-   [scicat-registration-plan.md](scicat-registration-plan.md); field mapping in
-   [standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping).
+   [scicat-registration-plan.md](../plans/scicat-registration-plan.md); field mapping in
+   [standards-alignment.md §3.9](../standards-alignment.md#39-scicat-field-mapping).
 
-The canonical model is in [architecture.md](architecture.md). Avoid adding new
+The canonical model is in [architecture.md](../architecture.md). Avoid adding new
 matching logic in producer repositories.

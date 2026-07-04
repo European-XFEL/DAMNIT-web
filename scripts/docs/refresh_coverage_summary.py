@@ -2,12 +2,12 @@
 # SPDX-FileCopyrightText: 2026 Helmholtz-Zentrum Dresden-Rossendorf e.V (HZDR)
 # SPDX-License-Identifier: Apache-2.0
 
-"""Refresh the aggregate cross-repo test coverage map in ``docs/testing.md``.
+"""Refresh the aggregate cross-repo test coverage map in ``docs/status/testing.md``.
 
 ``scripts/test-all.ps1`` runs every HZDR suite with pytest-cov and writes a
 ``cover/coverage.json`` into each repo. This script reads the overall line
 coverage from each of those JSON files and renders one row per repo between the
-markers in ``docs/testing.md``.
+markers in ``docs/status/testing.md``.
 
 Each sibling repo also keeps its own per-area coverage map (refreshed by its own
 ``poe test-fast`` / ``scripts/docs/refresh_coverage_map.py``); this is the
@@ -24,7 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 GITLAB_ROOT = ROOT.parent
-DEFAULT_DOC = ROOT / "docs" / "testing.md"
+DEFAULT_DOC = ROOT / "docs" / "status" / "testing.md"
 START_MARKER = "<!-- coverage-summary-start -->"
 END_MARKER = "<!-- coverage-summary-end -->"
 

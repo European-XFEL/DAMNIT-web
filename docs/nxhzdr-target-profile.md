@@ -14,7 +14,7 @@ Related docs: [target-ontology.md §2/§5/§8](target-ontology.md#2-the-schema)
 (HELPMI cross-walk) and
 [Route 2](standards-alignment.md#route-2-nxsourcenxbeam-and-nxsample-groups-in-the-nexus-bridge-ready)
 / [Route 4](standards-alignment.md#route-4-nexus-ontology-annotation-for-federated-search-higher-effort),
-[alignment-implementation-plan.md Phase 5](alignment-implementation-plan.md#phase-5--hzdr-owned-ontology-annotation--openpmd-interoperability-).
+[alignment-implementation-plan.md Phase 5](plans/alignment-implementation-plan.md#phase-5--hzdr-owned-ontology-annotation--openpmd-interoperability-).
 
 ## 1. Purpose and naming rationale
 
@@ -145,7 +145,7 @@ No other deviations are tracked in v0.1.
   validation tooling, decide whether HZDR-profile files should set
   `NX_class="NXhzdr_target"` directly on `/entry/sample` (dropping, or
   keeping alongside, the `NX_class="NXsample"` compatibility value). Tracked
-  as [alignment-implementation-plan.md Phase 5](alignment-implementation-plan.md#phase-5--hzdr-owned-ontology-annotation--openpmd-interoperability-).
+  as [alignment-implementation-plan.md Phase 5](plans/alignment-implementation-plan.md#phase-5--hzdr-owned-ontology-annotation--openpmd-interoperability-).
 - **`type` field.** `metadata.target.type` (target-ontology.md §3) is not yet
   written into `/entry/sample`; add a mapping (dataset or attribute) in a
   later profile version if downstream consumers need it in the NeXus file

@@ -104,7 +104,7 @@ def test_offline_pipeline_combines_labfrog_asapo_watchdog_and_draco(tmp_path: Pa
                 # Field names match what GitLab/shotcounter's
                 # feature/hzdr-canonical-trigger-event branch actually emits
                 # (snake_case, except Name/Campaign which are kept unrenamed
-                # by design - see docs/integration-roadmap.md).
+                # by design - see docs/status/integration-roadmap.md).
                 "Name": "Draco01",
                 "Campaign": EXPERIMENT_ID,
                 "nickname": "trigger_shot_solenoid",

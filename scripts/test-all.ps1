@@ -12,7 +12,7 @@
 
 .PARAMETER NoCoverage
     Skip pytest-cov collection, per-repo coverage-map refresh, and the aggregate
-    HZDR coverage map in docs/testing.md. By default coverage is collected and
+    HZDR coverage map in docs/status/testing.md. By default coverage is collected and
     the maps are refreshed.
 
 .PARAMETER DockerTests
@@ -247,10 +247,10 @@ foreach ($key in $results.Keys) {
 
 # -- Aggregate coverage map ----------------------------------------------------
 # Reads each repo's cover/coverage.json and refreshes the combined HZDR table in
-# docs/testing.md. Non-fatal so it never flips the suite result.
+# docs/status/testing.md. Non-fatal so it never flips the suite result.
 if ($script:coverage) {
     Write-Host ""
-    Write-Host "--- Coverage map (docs/testing.md) ---" -ForegroundColor Cyan
+    Write-Host "--- Coverage map (docs/status/testing.md) ---" -ForegroundColor Cyan
     try {
         Set-Location $damnitRoot
         uv run python scripts/docs/refresh_coverage_summary.py

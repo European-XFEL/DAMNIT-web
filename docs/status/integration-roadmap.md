@@ -4,7 +4,7 @@ Updated: 2026-07-03
 
 **2026-07-01:** production deployment is live at
 [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/);
-see `docs/handoff.md` §Built 2026-07-01. The ASAPO SDK swap (Work Order step 3
+see `docs/status/handoff.md` §Built 2026-07-01. The ASAPO SDK swap (Work Order step 3
 below / `asapo-for-hzdr-damnit` §"Carry claim/flush/ack/replay-dedup pattern
 into real ASAPO SDK consumer") is now code-complete via
 `RealAsapoSpoolConsumer`; wiring the deployment's real broker credentials and
@@ -37,11 +37,11 @@ concrete gaps found, two fixed on the spot:
    builder. ✅ **closed 2026-07-04** — `consumer/builder_trigger.py`
    (`BuilderTrigger`) now overrides the `on_new_events()` dispatch and reruns
    the builder as a debounced subprocess; `DW_API_HZDR_BUILDER__ENABLED=true`.
-   See `docs/auto-builder-trigger-plan.md`.
+   See `docs/plans/auto-builder-trigger-plan.md`.
 2. **No real-broker roundtrip test exists for ASAPO** — only Kafka has one
    (`test_hzdr_broker_roundtrip.py`, `-m integration_docker`, gated on
    `KAFKA_TEST_BROKER`). `RealAsapoSpoolConsumer` is exercised only against an
-   in-process fake SDK stub in `test_hzdr_spool.py`. `docs/handoff.md`'s
+   in-process fake SDK stub in `test_hzdr_spool.py`. `docs/status/handoff.md`'s
    2026-06-26 note about `ASAPO_TEST_BROKER`-gated skips does not correspond
    to anything in the current code — no such env var or test exists. 🔴 still
    open.
@@ -261,9 +261,9 @@ Branch: `main`
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | Live production deployment reachable | ✅ **[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)** — `api/scripts/damnit-api-deploy.sh`/`.ps1`, `frontend/nginx` proxy templates, LDAP against `ldap.fz-rossendorf.de` |
 | ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` documents the setting. Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
-| Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `docs/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
+| Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `docs/plans/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
-| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | ✅ committed 2026-07-04 — `metadata/scicat.py` + builder post-step (`_register_scicat`) POST the NeXus path to the plugin and stamp `scicat_pid`/`version_hash`/`dataset_url` into the catalog; `GET .../scicat` endpoint + Link Records UI card. Best-effort (never fails a build); unchanged rebuilds skip the re-POST. `DW_API_HZDR_SCICAT__*`. See `docs/scicat-registration-plan.md` |
+| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | ✅ committed 2026-07-04 — `metadata/scicat.py` + builder post-step (`_register_scicat`) POST the NeXus path to the plugin and stamp `scicat_pid`/`version_hash`/`dataset_url` into the catalog; `GET .../scicat` endpoint + Link Records UI card. Best-effort (never fails a build); unchanged rebuilds skip the re-POST. `DW_API_HZDR_SCICAT__*`. See `docs/plans/scicat-registration-plan.md` |
 
 ### `GitLab/scicat_plugin`
 
@@ -483,15 +483,15 @@ replay each consumer, then verify:
 ## SciCat Registration
 
 **Status:** ✅ DAMNIT-side wiring implemented 2026-07-04 (see
-`docs/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
+`docs/plans/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
 + `PLUGIN_URL` · **Effort:** Low–Medium · **Added:** 2026-06-26
 
 This is a **post-pilot FAIR enhancement, off the go-live critical path** — the
 pipeline builds and serves the canonical NeXus file + catalog without it. The
 sink already existed and the schema hook (`payload_ref.scicat_pid`) was reserved;
 the builder post-step, `/scicat` endpoint, and UI link are now wired up. Detailed field mapping is in
-[standards-alignment.md §3.9](standards-alignment.md#39-scicat-field-mapping) and
-[Phase 4 of the alignment plan](alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
+[standards-alignment.md §3.9](../standards-alignment.md#39-scicat-field-mapping) and
+[Phase 4 of the alignment plan](../plans/alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
 
 ### What the plugin actually is (verified against the source)
 
@@ -569,7 +569,7 @@ from the actual `ArchivingServer.py` source (shared 2026-06-26), not assumptions
 > interim, per-shot metadata comes from the sources already wired: the LabFrog
 > SQLite/NeXus export, the existing producers (`shotcounter`, DAQ-File-Watchdog,
 > LaserData), and operator entry — including the manual / wiki-selected
-> [target ontology](target-ontology.md), which needs no TANGO integration at all.
+> [target ontology](../target-ontology.md), which needs no TANGO integration at all.
 > Treat everything below as the eventual *automation* layer that replaces manual /
 > producer-embedded capture, not a prerequisite for go-live. Consequently
 > `shotcounter` + Shot Number Authority **Option 1** remain the near-term shot-number
@@ -655,7 +655,7 @@ what this server already broadcasts, so no new matching concept is required.
 - **Where laser/vacuum/diagnostic *values* come from.** They are written by the
   individual subscriber `ArchivingDevice`s into their files, not by this coordinator.
   Mapping those into `metadata.laser.*` / `metadata.vacuum.*`
-  ([standards-alignment §3.3–3.6](standards-alignment.md#33-laser-parameters)) is a
+  ([standards-alignment §3.3–3.6](../standards-alignment.md#33-laser-parameters)) is a
   per-device-format concern handled when their products are ingested, not by the
   server attributes above.
 

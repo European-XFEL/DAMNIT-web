@@ -2,7 +2,7 @@
 
 No Docker or live broker: a tiny in-memory ``_FakeKafkaConsumer`` stands in for
 ``kafka.KafkaConsumer`` and lets us assert the same durability properties the
-ASAPO consumer guarantees (see docs/integration-roadmap.md §Durable Spool):
+ASAPO consumer guarantees (see docs/status/integration-roadmap.md §Durable Spool):
 
     1. claim does not commit the offset until ack (write-before-commit)
     2. the committed offset is exactly last-consumed + 1

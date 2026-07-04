@@ -27,7 +27,7 @@ repo). Covers: claim→write-fsync→ack cycle, no-ack-without-write, dedup by
 restart. 11 tests; skipped automatically if the sibling repo is not present.
 
 The operational read-only views (see
-[architecture.md](architecture.md#read-only-operational-views)) each have a
+[architecture.md](../architecture.md#read-only-operational-views)) each have a
 deterministic, broker-free suite:
 
 - `api/tests/test_hzdr_labfrog_sqlite.py` — builds a minimal curated campaign
