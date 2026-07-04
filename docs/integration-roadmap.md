@@ -55,7 +55,7 @@ concrete gaps found, two fixed on the spot:
 ## Status Key
 
 - ✅ done and committed
-- 🔄 done locally, not yet merged/committed
+- 🔄 done locally, not yet merged/committed (no current rows should use this after the 2026-07-04 docs refresh)
 - 🟡 should fix before pilot — unstarted or partially started
 - 🔴 blocks the go-live gate — not started
 - ⬜ genuinely lower priority or deferred
@@ -218,7 +218,7 @@ Branch: `main` (all committed)
 | `drop-in/consumer.ps1` drives real SDK consumer via `DAMNIT_CONSUMER_TRANSPORT=asapo` | committed; requires Python with ASAPO SDK installed |
 | Production supervised consumer with named consumer group and campaign routing | ✅ implemented in DAMNIT — `AsapoSpoolConsumer` in `api/src/damnit_api/consumer/asapo.py` |
 | DAMNIT real-ASAPO production path | deferred; use `asapo-for-hzdr-damnit` as the sidecar after LaserData/package/broker access is confirmed; not a Kafka pilot blocker |
-| References large arrays externally instead of embedding in JSON | DAMNIT direct ASAPO adapter done locally — `RealAsapoSpoolConsumer` externalises oversized inline `values` into `payload_ref.uri`; sidecar/producers should mirror before real LaserData rollout |
+| References large arrays externally instead of embedding in JSON | ✅ committed for DAMNIT direct ASAPO adapter — `RealAsapoSpoolConsumer` externalises oversized inline `values` into `payload_ref.uri`; sidecar/producers should mirror before real LaserData rollout |
 
 ### `GitLab/shotcounter`
 
@@ -244,8 +244,8 @@ Branch: `main`
 | Item | Status |
 | --- | --- |
 | Canonical `HZDREventV1` model, atomic catalog writes, single-writer builder lock | ✅ committed |
-| Standards-aligned NeXus bridge groups (`/entry/instrument/laser` as `NXsource` + nested `NXbeam`, `/entry/sample` as `NXsample`) | 🔄 done locally, not yet merged/committed |
-| Target wiki links exposed in DAMNIT API/UI (`target_wiki_ref` / `target_wiki_page`, shot table/detail links) | 🔄 done locally, not yet merged/committed |
+| Standards-aligned NeXus bridge groups (`/entry/instrument/laser` as `NXsource` + nested `NXbeam`, `/entry/sample` as `NXsample`) | ✅ committed and covered by `api/tests/test_hzdr_nexus_sample.py` / `test_hzdr_nexus.py` |
+| Target wiki links exposed in DAMNIT API/UI (`target_wiki_ref` / `target_wiki_page`, shot table/detail links) | ✅ committed; API pass-through covered in `api/tests/test_hzdr_sources.py`, frontend table/detail links wired |
 | Ambiguous/unmatched events in API; real Confirm Matches UI | ✅ committed |
 | Local acceptance script; offline four-source integration test | ✅ committed |
 | Shared example payloads and anonymized SQLite fixture | ✅ committed |
@@ -258,7 +258,7 @@ Branch: `main`
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | Live production deployment reachable | ✅ **[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)** — `api/scripts/damnit-api-deploy.sh`/`.ps1`, `frontend/nginx` proxy templates, LDAP against `ldap.fz-rossendorf.de` |
-| ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` now documents the setting (✅ this pass). Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
+| ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` documents the setting. Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
 | Builder auto-triggered after new spool events | 🔴 not started — `HZDRSpoolConsumer.on_new_events()` is an unoverridden no-op stub; no cron/systemd-timer for `hzdr-hdf5-builder.py` exists in the repo either. Until one of these exists, real ingested events sit in the spool until someone runs the builder manually |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
 | Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | 🟡 plugin exists; DAMNIT-side builder post-step + catalog link not yet wired — see §SciCat Registration |

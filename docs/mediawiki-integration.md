@@ -169,10 +169,10 @@ could derive those links from the shot key. Not implemented; pattern would be
 
 | Item | Status |
 | --- | --- |
-| `GET /metadata/hzdr/sources/{key}/wiki` endpoint | ✅ implemented locally |
-| `DW_API_HZDR_WIKI__BASE_URL` configuration | ✅ implemented locally |
-| `DW_API_HZDR_WIKI__NAMESPACE` / `metadata.wiki_page_title` + query-form, percent-encoded URLs | ✅ implemented locally |
-| Tests for wiki link, optional API fetch, and configured auth headers | implemented locally |
+| `GET /metadata/hzdr/sources/{key}/wiki` endpoint | ✅ implemented and committed |
+| `DW_API_HZDR_WIKI__BASE_URL` configuration | ✅ implemented and committed |
+| `DW_API_HZDR_WIKI__NAMESPACE` / `metadata.wiki_page_title` + query-form, percent-encoded URLs | ✅ implemented and committed |
+| Tests for wiki link, optional API fetch, and configured auth headers | ✅ implemented and committed |
 | Operator: create `FWKT:Pilot_Verification_07.2026` page before the pilot | ⬜ operator action (see fwkt-webapps docs/operations/outstanding-work.md) |
 | `action=cargoquery` structured reads (beamtime fields, IonenTargetOrigin) | ⬜ optional, post-pilot |
 | `prop=extracts` campaign abstract in UI | ⬜ optional |

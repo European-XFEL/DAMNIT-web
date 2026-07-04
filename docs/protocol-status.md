@@ -77,7 +77,7 @@ broker, then merge the shotcounter branch.
 
 | Repo | What | Status |
 |------|------|--------|
-| **labfrog-sqlite-tools** | `experiment_id` column, migration, transform/export/NeXus plumbing | ✅ committed |
+| **labfrog-sqlite-tools** | `experiment_id`, beamtime provenance, schema v10 target catalog columns, migration, transform/export/NeXus plumbing | ✅ committed |
 | **labfrog-sqlite-tools** | Atomic export: temp-file + fsync + rename for SQLite and NeXus | ✅ was already in `write_sqlite`; confirmed |
 | **labfrog-sqlite-tools** | `bundle-complete.json` completion marker (atomic rename, per-file sha256) signals the pair is ready | ✅ committed |
 | **labfrog-sqlite-tools** | Opt-in immutable `retain_exports` snapshots via `export-campaign` CLI | ✅ committed |
@@ -113,9 +113,9 @@ broker, then merge the shotcounter branch.
 | **DAMNIT** | 11 tests in `test_hzdr_spool.py` against live in-process harness broker | ✅ committed |
 | **DAMNIT** | Consume LaserData/ASAPO through the `asapo-for-hzdr-damnit` sidecar writing DAMNIT spool JSONL | preferred follow-up path; not a Kafka pilot blocker |
 | **DAMNIT** | Gated integration test for real ASAPO sidecar against broker | deferred until LaserData/package/broker access is available |
-| **DAMNIT** | Large-array externalisation: `payload_ref.uri` instead of inline `values` for payloads > 64 KiB | done locally — `RealAsapoSpoolConsumer` drops oversized inline `values`, preserves a generated ASAPO `payload_ref.uri`, and leaves the builder size guard as a backstop |
+| **DAMNIT** | Large-array externalisation: `payload_ref.uri` instead of inline `values` for payloads > 64 KiB | ✅ committed — `RealAsapoSpoolConsumer` drops oversized inline `values`, preserves a generated ASAPO `payload_ref.uri`, and leaves the builder size guard as a backstop |
 
-**Outstanding:** ASAPO is not in the Kafka pilot gate. Watchdog is Kafka-only. ASAPO is relevant for LaserData or a future ASAPO source; the preferred path is the `asapo-for-hzdr-damnit` sidecar writing the same durable JSONL spool. A direct DAMNIT SDK adapter can wait until compatible wheels exist for DAMNIT's target runtime. Large-array externalisation (`payload_ref.uri`) is covered locally in DAMNIT's direct ASAPO adapter; the separate `asapo-for-hzdr-damnit` sidecar/producers should mirror the same policy before real LaserData rollout.
+**Outstanding:** ASAPO is not in the Kafka pilot gate. Watchdog is Kafka-only. ASAPO is relevant for LaserData or a future ASAPO source; the preferred path is the `asapo-for-hzdr-damnit` sidecar writing the same durable JSONL spool. A direct DAMNIT SDK adapter can wait until compatible wheels exist for DAMNIT's target runtime. Large-array externalisation (`payload_ref.uri`) is committed in DAMNIT's direct ASAPO adapter; the separate `asapo-for-hzdr-damnit` sidecar/producers should mirror the same policy before real LaserData rollout.
 
 ---
 
