@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-01
+Updated: 2026-07-04
 
 ## Current State
 
@@ -13,8 +13,9 @@ ASAPO/Kafka broker (instead of the local harness/emulator) is in progress; see
 **Built 2026-07-01** below and [remaining-work-plan.md](remaining-work-plan.md)
 items 2-4.
 
-All integration branches tested and committed. DAMNIT-web-hzdr suite:
-`213 passed, 4 skipped`.
+All integration branches tested and committed. DAMNIT-web-hzdr suite (2026-07-04,
+post-merge): `236 passed, 18 skipped` (the 18 skips are environmental — 4 Kafka
+broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests).
 
 - **DAMNIT-web-hzdr** (`main`): canonical `HZDREventV1` model; atomic catalog
   writes; single-writer builder lock; ambiguous/unmatched events in API; real
@@ -38,6 +39,35 @@ All integration branches tested and committed. DAMNIT-web-hzdr suite:
 - **asapo-for-hzdr-damnit** (`main`): local harness proves correct
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`
   schema-version string. All committed.
+
+## Built 2026-07-03/04
+
+- **UI critique + space/usability optimization** — merged to `main` via PR #2
+  (`claude/ui-critique-optimization-qs2bof` → `de0cfbc`). Frontend-only,
+  behavior-preserving; see [ui-optimization-plan.md](ui-optimization-plan.md)
+  for the full WP breakdown and per-WP commit hashes.
+  - WP1 (`bbb2ec1`): client-side navigation (react-router `Link`/`useNavigate`
+    instead of full-page `<a href>` reloads) + active-route indication and a
+    Docs button in `AppHeader`.
+  - WP2 (`f453705`): `ShotPage` space optimization — single `SHOT_TABLE_COLUMNS`
+    spec (extracted pure helpers into `hzdr/utils/table-view.ts`), viewport-
+    relative table height, `lg` 9/3 grid split, compressed source header, and
+    per-source view state persisted in `localStorage`
+    (`hzdr:shot-table-view:<source_key>`).
+  - WP3 (`79352b9`): loading/error feedback on `ShotPage`/`SourceHome`/
+    `LinkRecordsPage` fetch paths (skeleton/loader, error `Alert` with retry,
+    empty-state text) instead of silently-blank tables.
+  - WP4 (`2066409`): `LinkRecordsPage` layout economy — compact stepper, actions
+    moved above the draft, full JSON collapsed into a scrollable `DetailsSection`.
+- **FWK MediaWiki links + target catalog extras** (`c62c1fc`) — wiki page links
+  wired through `hzdr_nexus`/`hzdr_sources`/`routers`; target catalog extras and
+  new `DW_API_HZDR_WIKI__*`-adjacent settings; docs in
+  [mediawiki-integration.md](mediawiki-integration.md) and
+  [target-ontology.md](target-ontology.md). Wiki-test fixtures no longer embed
+  real secret strings (`13d7641`).
+- **Pilot package readiness gate** (`5ec1a85`, `a0edd37`) —
+  `scripts/test-pilot-package.ps1` and a `test_contextfile.py` check; the gate
+  is documented in [testing.md](testing.md).
 
 ## Built 2026-07-01
 
