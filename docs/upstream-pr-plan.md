@@ -15,9 +15,23 @@ after that is HZDR work:
 - The sensitive part is the **58 modified upstream files** — that is what an upstream
   PR series has to keep small and reviewable.
 
-First concrete action (needs network access to github.com/European-XFEL): add the
-upstream remote, fetch, and measure what upstream merged *after* #205. Every PR below
-is cut against `upstream/main`, not against this fork's `main`.
+Upstream `main` is currently at `89bc7e9`
+(*ci(frontend): add lint and test workflow (#213)*), i.e. eight merged PRs ahead of
+the fork point. Every PR below is cut against `upstream/main`, not against this
+fork's `main`. Two consequences of #213 specifically:
+
+- Upstream CI now runs frontend lint and unit/browser tests on PRs, so PR 2–4's
+  frontend changes (`login-route.tsx`, `table.tsx`, `saved-views-popover.tsx`) must
+  pass upstream's own workflow, not just the fork's local lint.
+- The fork independently added `frontend/apps/app/vitest.config.ts` and
+  `src/test-setup.ts` for the HZDR component tests. If #213 (or the commits behind
+  it) introduced its own vitest/test scaffolding, expect a conflict there when
+  merging upstream into the fork — reconcile toward upstream's config and port the
+  HZDR test setup onto it.
+
+Before Phase 1, enumerate the remaining #206–#212 commits
+(`git log --oneline 3f38e60..upstream/main`) and merge or rebase fork `main` onto
+`upstream/main` so the disentanglement refactors happen on a current base.
 
 ## 2. Inventory of HZDR changes
 
@@ -99,10 +113,10 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
 
 ## 4. Work order in this fork
 
-1. **Phase 0 — measure:** add `upstream` remote, fetch, list upstream commits since
-   `3f38e60`; rebase or merge upstream/main into fork `main` first so the refactors
-   below happen on a current base. (Blocked in the current sandbox — repo scope is
-   the fork only.)
+1. **Phase 0 — sync with upstream:** upstream/main is at `89bc7e9` (#213). Review
+   the #206–#213 commits, then merge or rebase fork `main` onto `upstream/main` so
+   the refactors below happen on a current base. Watch for the vitest-config
+   conflict noted in §1.
 2. **Phase 1 — disentangle (no behavior change, characterization tests first per
    repo convention):** items C1–C4 above. Validate each step with
    `uv run pytest`, `uv run ruff check .`, `pnpm run lint`,
