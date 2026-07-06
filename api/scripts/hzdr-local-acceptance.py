@@ -45,9 +45,14 @@ def write_minimal_labfrog_sqlite(path: Path) -> None:
     """Write a tiny, synthetic shots table - same schema as a real LabFrog
     curated export (see GitLab/labfrog-sqlite-tools-repo's MANIFEST.txt) but
     no real shot data, names, or comments. One deliberate same-day/
-    same-shot_number duplicate (shot_number=1 twice on 2026-01-01) so the
-    matcher has a genuine ambiguous case to put in front of Confirm Matches,
-    plus one clean shot_number=2 that should match without review.
+    same-shot_number collision (shot_number=1 twice on 2026-01-01, both
+    active and equidistant from the shot-1 event) so the matcher has a genuine
+    ambiguous case to put in front of Confirm Matches, plus one clean
+    shot_number=2 that should match without review.
+
+    Both shot-1 rows must be `active`: an archived+active pair is a version
+    supersession the matcher correctly collapses (see
+    hzdr_nexus._mark_superseded_labfrog_rows), which is *not* ambiguous.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as connection:
@@ -64,17 +69,14 @@ def write_minimal_labfrog_sqlite(path: Path) -> None:
         connection.executemany(
             "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?)",
             [
-                # Two distinct records, same day, same shot_number: a
-                # realistic "operator re-entered the shot" duplicate.
-                (
-                    "acc-shot-1-v0",
-                    1,
-                    0,
-                    "2026-01-01T09:00:00",
-                    EXPERIMENT_ID,
-                    "archived",
-                ),
-                ("acc-shot-1-v1", 1, 1, "2026-01-01T09:05:00", EXPERIMENT_ID, "active"),
+                # Two distinct *active* records, same day, same shot_number: a
+                # shot-numbering collision the matcher cannot auto-resolve. Both
+                # survive supersede filtering (both active) and sit equidistant
+                # (+/-2 s) from the LaserData shot-1 event at 09:00:02, so time
+                # disambiguation ties -> a genuine ambiguous case for Confirm
+                # Matches.
+                ("acc-shot-1a", 1, 0, "2026-01-01T09:00:00", EXPERIMENT_ID, "active"),
+                ("acc-shot-1b", 1, 0, "2026-01-01T09:00:04", EXPERIMENT_ID, "active"),
                 # One unambiguous shot.
                 ("acc-shot-2-v0", 2, 0, "2026-01-01T09:10:00", EXPERIMENT_ID, "active"),
             ],

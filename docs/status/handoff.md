@@ -60,10 +60,14 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   byte-identical to baseline, full suite 290 passed. Docs reorganized — delivered
   plans moved to `docs/plans/done/`.
 
-  *Note:* `scripts/hzdr-local-acceptance.py` currently fails a matcher assertion
-  (expects an ambiguous duplicate-shot review event, gets unmatched). Confirmed
-  **pre-existing** (fails identically on HEAD before the C1/C2 work) — untriaged,
-  likely from the auto-trigger-era `hzdr_nexus.py` matcher change. Worth a look.
+- **Fixed `hzdr-local-acceptance.py` stale fixture** — the acceptance script's
+  duplicate-shot fixture expected an *ambiguous* review event but wrote an
+  `archived`+`active` shot_number=1 pair, which is a version supersession the matcher
+  correctly collapses (`hzdr_nexus._mark_superseded_labfrog_rows`) — never ambiguous.
+  Rewrote it as a genuine numbering collision: two **active** rows, equidistant
+  (±2 s) from the shot-1 event, so time disambiguation ties. Script now passes
+  end-to-end (`matched:1, ambiguous:1, unmatched:1` → Confirm + Dismiss). The matcher
+  was correct; only the fixture was wrong. (Was flagged pre-existing during C1.)
 
 ## Built 2026-07-04
 
