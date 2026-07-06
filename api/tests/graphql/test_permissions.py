@@ -103,6 +103,25 @@ async def test_is_proposal_member_allowed(mocker):
 
 
 @pytest.mark.asyncio
+async def test_is_proposal_member_safe_upstream_error(mocker):
+    """Upstream errors should not leak info to the client."""
+    mocker.patch(
+        "damnit_api.auth.permissions.User.from_oauth_user",
+        new_callable=mocker.AsyncMock,
+        side_effect=RuntimeError(
+            "https://in.xfel.eu/metadata/api/ sensitive error beep boop"
+        ),
+    )
+    database = SimpleNamespace(proposal="p1234")
+
+    with pytest.raises(StrawberryGraphQLError) as excinfo:
+        await IsProposalMember().has_permission(
+            None, _info(_context()), database=database
+        )
+    assert "sensitive error beep boop" not in str(excinfo.value)
+
+
+@pytest.mark.asyncio
 async def test_is_proposal_member_forbidden(mocker):
     mocker.patch(
         "damnit_api.auth.permissions._check_user_allowed",

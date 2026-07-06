@@ -43,9 +43,16 @@ class IsProposalMember(BasePermission):
             raise StrawberryGraphQLError(msg) from None
 
         if info.context.user is None:
-            info.context.user = await User.from_oauth_user(
-                info.context.mymdc, info.context.session, info.context.oauth_user
-            )
+            try:
+                info.context.user = await User.from_oauth_user(
+                    info.context.mymdc, info.context.session, info.context.oauth_user
+                )
+            except Exception as exc:
+                # Do not respond with upstream errors directly, might contain internal
+                # info that shouldn't be sent to client.
+                msg = "Could not verify proposal access"
+                logger.exception(msg, proposal=proposal_str)
+                raise StrawberryGraphQLError(msg) from exc
         user = info.context.user
 
         try:
