@@ -27,13 +27,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# (returncode, stderr_text) — separated out so tests can inject a fake runner
-# instead of spawning a real builder subprocess.
+# (returncode, combined_output_text) — separated out so tests can inject a fake
+# runner instead of spawning a real builder subprocess.
 BuilderRunner = Callable[[Sequence[str]], Awaitable[tuple[int, str]]]
 
 _DEFAULT_SCRIPT = (
     Path(__file__).resolve().parents[3] / "scripts" / "hzdr-hdf5-builder.py"
 )
+
+# Cap how much builder output we echo into a single log line on failure so a
+# large traceback cannot flood the structured logs.
+_MAX_LOGGED_OUTPUT = 2000
 
 
 class BuilderTrigger:
@@ -85,19 +89,25 @@ class BuilderTrigger:
         return cmd
 
     async def _run_subprocess(self, cmd: Sequence[str]) -> tuple[int, str]:
+        # Merge stderr into stdout so a single captured stream carries the full
+        # builder diagnostics (the builder prints its result paths to stdout and
+        # tracebacks to stderr); interleaving keeps them in order for the log.
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
         )
-        _, stderr = await proc.communicate()
-        return proc.returncode or 0, stderr.decode(errors="replace")
+        stdout, _ = await proc.communicate()
+        return proc.returncode or 0, (stdout or b"").decode("utf-8", errors="replace")
 
     async def _run_builder_once(self) -> None:
         cmd = self.build_command()
         logger.info("Auto-trigger: running builder %s", " ".join(cmd))
+        # Note: a CancelledError from shutdown propagates out of this ``try``
+        # (it is a BaseException, not caught by ``except Exception``) so a build
+        # interrupted by shutdown is never mislogged as a failure.
         try:
-            returncode, stderr = await self._runner(cmd)
+            returncode, output = await self._runner(cmd)
         except Exception:
             logger.exception("Auto-trigger: builder subprocess failed to launch")
             return
@@ -105,7 +115,9 @@ class BuilderTrigger:
             logger.info("Auto-trigger: builder finished successfully")
         else:
             logger.error(
-                "Auto-trigger: builder exited %d: %s", returncode, stderr.strip()
+                "Auto-trigger: builder exited %d: %s",
+                returncode,
+                output.strip()[-_MAX_LOGGED_OUTPUT:],
             )
 
     async def run(self, stop: asyncio.Event) -> None:

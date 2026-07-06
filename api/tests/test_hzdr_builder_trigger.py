@@ -8,6 +8,7 @@ the debounce loop with a short window for speed.
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path  # noqa: TC003
 
 import pytest
@@ -223,3 +224,141 @@ def test_enabled_requires_output_nexus():
 def test_disabled_allows_missing_output_nexus():
     settings = HZDRBuilderSettings(enabled=False)
     assert settings.output_nexus is None
+
+
+# ---------------------------------------------------------------------------
+# Concurrency / shutdown edge cases (merged from the alternate design)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_events_during_a_running_build_rearm_exactly_one_followup(tmp_path):
+    """Events landing *while a build runs* must coalesce into one follow-up.
+
+    Unlike the sequential re-arm test, this blocks the runner mid-build to
+    exercise the concurrent case: many notifies during a single build must
+    schedule exactly one more build, never one per notify.
+    """
+    calls: list[list[str]] = []
+    first_started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def runner(cmd):
+        idx = len(calls)
+        calls.append(list(cmd))
+        if idx == 0:
+            first_started.set()
+            await release.wait()  # hold the first build open
+
+    trigger = BuilderTrigger(_settings(tmp_path), runner=runner)
+    stop = asyncio.Event()
+    task = await _drive(trigger, stop)
+
+    trigger.notify()
+    await asyncio.wait_for(first_started.wait(), timeout=1.0)
+
+    # A burst of notifies while the first build is blocked must collapse to one.
+    for _ in range(5):
+        trigger.notify()
+    release.set()
+
+    await asyncio.sleep(6 * DEBOUNCE)
+    assert len(calls) == 2, f"expected exactly one follow-up run, got {len(calls)}"
+
+    await _shutdown(task, stop, trigger)
+
+
+@pytest.mark.asyncio
+async def test_runner_exception_is_isolated_and_loop_survives(tmp_path):
+    """A runner that *raises* (launch failure) is logged, not fatal.
+
+    Branch A's returncode!=0 test covers a builder that exits non-zero; this
+    covers the harder path where the runner itself raises before returning.
+    """
+    calls: list[list[str]] = []
+
+    async def runner(cmd):  # noqa: RUF029 - coroutine runner contract
+        calls.append(list(cmd))
+        if len(calls) == 1:
+            msg = "boom"
+            raise RuntimeError(msg)
+        return 0, ""
+
+    trigger = BuilderTrigger(_settings(tmp_path), runner=runner)
+    stop = asyncio.Event()
+    task = await _drive(trigger, stop)
+
+    trigger.notify()
+    await asyncio.sleep(4 * DEBOUNCE)
+    # The worker survived the exception and is ready to build again.
+    trigger.notify()
+    await asyncio.sleep(4 * DEBOUNCE)
+    assert len(calls) == 2
+
+    await _shutdown(task, stop, trigger)
+
+
+@pytest.mark.asyncio
+async def test_cancel_during_inflight_build_stops_promptly(tmp_path):
+    """The main.py shutdown path (task.cancel) must not hang on a live build.
+
+    A build in progress is interrupted by cancelling the run() task — the same
+    thing the FastAPI lifespan does on shutdown — and must unwind promptly
+    rather than waiting for the (never-completing) runner.
+    """
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def runner(cmd):
+        started.set()
+        await release.wait()  # never released; cancel must unwind this
+
+    trigger = BuilderTrigger(_settings(tmp_path), runner=runner)
+    stop = asyncio.Event()
+    task = await _drive(trigger, stop)
+
+    trigger.notify()
+    await asyncio.wait_for(started.wait(), timeout=1.0)
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(task, timeout=1.0)
+
+
+# ---------------------------------------------------------------------------
+# Default subprocess runner (real, trivial commands — no builder needed)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_subprocess_runner_reports_success(tmp_path):
+    trigger = BuilderTrigger(_settings(tmp_path))
+    rc, output = await trigger._run_subprocess(
+        [sys.executable, "-c", "import sys; sys.exit(0)"]
+    )
+    assert rc == 0
+    assert output == ""
+
+
+@pytest.mark.asyncio
+async def test_subprocess_runner_reports_failure_with_output(tmp_path):
+    trigger = BuilderTrigger(_settings(tmp_path))
+    rc, output = await trigger._run_subprocess(
+        [sys.executable, "-c", "print('nope'); import sys; sys.exit(3)"]
+    )
+    assert rc == 3
+    assert "nope" in output
+
+
+@pytest.mark.asyncio
+async def test_run_builder_once_logs_nonzero_exit(tmp_path, caplog):
+    async def runner(cmd):  # noqa: RUF029 - coroutine runner contract
+        return 7, "explosion in the build"
+
+    trigger = BuilderTrigger(_settings(tmp_path), runner=runner)
+    with caplog.at_level("ERROR"):
+        await trigger._run_builder_once()
+    assert any(
+        "builder exited 7" in record.message and "explosion" in record.message
+        for record in caplog.records
+    )
