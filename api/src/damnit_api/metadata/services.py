@@ -172,15 +172,8 @@ async def _check_user_allowed(
             f"User not authorised for proposal {proposal_number}, or proposal does not "
             "exist."
         )
-        details = None
-        if user._damnit_proposals is None:
-            details = "User has no authorised proposals."
-        await logger.ainfo(
-            "Forbidden",
-            message=msg,
-            details=details,
-        )
-        raise ForbiddenError(msg, details=details)
+        await logger.ainfo("Forbidden", message=msg)
+        raise ForbiddenError(msg)
 
     return
 
