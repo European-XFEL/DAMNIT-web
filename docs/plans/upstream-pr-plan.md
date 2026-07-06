@@ -111,10 +111,18 @@ These upstream files currently mix generic and HZDR changes in one diff:
    290 passed, acceptance green). Still to do at PR-cut time (Phase 2): restore
    EXFEL-preserving defaults on the *generic* settings that get upstreamed
    (`deployment.profile`, `terminology.uses_proposals`, `metadata.provider`).
-4. **`frontend/apps/app/src/app.tsx`** (+55/-11): HZDR routes, `AppHeader` replacement,
-   and `HeroPage` → `/home` redirect are fork-only. Isolate the HZDR route block
-   (e.g. `hzdr/routes.tsx` exporting a fragment) so the fork's `app.tsx` diff is a
-   few lines. The upstream PRs do not touch `app.tsx` at all.
+4. **`frontend/apps/app/src/app.tsx`** (was +55/-11): HZDR routes, `AppHeader`
+   replacement, and `HeroPage` → `/home` redirect are fork-only. ✅ **Done
+   (2026-07-06):** the five HZDR-only routes (`/docs`, `/flow-monitor`,
+   `/link-shot-records`, `/source/:source_key/context-builder`, `/source/:source_key`)
+   moved into `hzdr/routes.tsx` (`hzdrRoutes()`, a fragment of `<Route>` elements);
+   `app.tsx` drops them in as one `{hzdrRoutes()}` line, shrinking ~48 lines. Grouping
+   is behavior-preserving — react-router v7 matches by rank, not source order, and no
+   HZDR path collides with a generic one. `app.tsx`'s remaining fork delta is just the
+   four fork-only imports, the `/` → `/home` redirect, and the `/home` route's
+   `AppHeader` + `usesProposals` conditional. The upstream PRs do not touch `app.tsx`
+   at all. Validated: `tsc -b`, eslint (0 errors), prettier (both new/changed files
+   clean), vitest (124 passed), and a full `vite build`.
 5. **`login-route.tsx`** (fully rewritten): keep, but re-verify the OIDC path is
    byte-for-byte behavior-identical when `ldap_form_enabled` is false — the reviewer
    will ask.
@@ -172,17 +180,22 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
    before the cross-repo-sensitive moves (the `hzdr_event.py` contract file must not
    move or change — it is vendored byte-identically into sibling repos).
 
-   Progress: **C1 + C2 + C3 done (2026-07-06).** C2 — spool/trigger lifespan wiring
-   extracted to `consumer/bootstrap.py`; `main.py`'s fork-only diff is now one
-   `async with`. C1 — all HZDR routes moved to `metadata/hzdr_routers.py`, so
-   `routers.py` is back to the upstream proposal route only. C3 — the HZDR-only
-   setting classes moved to `shared/hzdr_settings.py`, so `shared/settings.py`'s diff
-   against upstream is now just the generic settings (~336 lines lighter). All three
-   verified behavior-preserving (full suite 290 passed; C1 route union byte-identical
-   to baseline; C3 acceptance green). The trial merge confirmed these API files merge
-   cleanly against `upstream/main`, so they were safe to do ahead of Phase 0 without
-   rework. **Remaining:** C4 (frontend `app.tsx` route isolation — this one *does*
-   touch the conflict-prone `table.tsx`/frontend, so sequence it with Phase 0).
+   Progress: **Phase 1 complete — C1 + C2 + C3 + C4 all done (2026-07-06).** C2 —
+   spool/trigger lifespan wiring extracted to `consumer/bootstrap.py`; `main.py`'s
+   fork-only diff is now one `async with`. C1 — all HZDR routes moved to
+   `metadata/hzdr_routers.py`, so `routers.py` is back to the upstream proposal route
+   only. C3 — the HZDR-only setting classes moved to `shared/hzdr_settings.py`, so
+   `shared/settings.py`'s diff against upstream is now just the generic settings (~336
+   lines lighter). C4 — the five HZDR-only routes moved to `hzdr/routes.tsx`, so
+   `app.tsx` drops them in as one `{hzdrRoutes()}` line. All four verified
+   behavior-preserving (API suite 290 passed; C1 route union byte-identical to
+   baseline; C3 acceptance green; C4 tsc/eslint/prettier/vitest 124-passed/vite build).
+   The trial merge confirmed the API files (C1–C3) merge cleanly against
+   `upstream/main`, and `app.tsx` (C4) is untouched by upstream — so all four were
+   safe to do ahead of Phase 0 without rework. **Next: Phase 0** — merge fork `main`
+   onto `upstream/main`, resolving the six-file conflict set below (`table.tsx` is the
+   only hard one; C4 did *not* touch it, so the saved-views hook re-application is
+   unchanged from the reconnaissance).
 3. **Phase 2 — extract PR branches:** for each PR in §3, cherry-pick/re-implement
    onto `upstream/main` in a fresh branch; flip defaults back to EXFEL; strip HZDR
    naming; run upstream's own CI workflows locally where possible.

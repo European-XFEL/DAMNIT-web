@@ -50,7 +50,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   #214), and a trial-merge conflict map (**6 files** conflict — `table.tsx`,
   `graphql/models.py`, `.pre-commit-config.yaml`, root `README.md`,
   `package.json`/`pnpm-lock.yaml`; the big HZDR API files merge cleanly).
-  **Phase 1 / C1 + C2 + C3 done:** C2 — the fork-only spool + builder-trigger lifespan
+  **Phase 1 complete (C1–C4 done):** C2 — the fork-only spool + builder-trigger lifespan
   wiring was extracted from `main.py` into `consumer/bootstrap.py` (`spool_lifespan`,
   an async context manager) with a characterization test
   (`tests/test_hzdr_consumer_bootstrap.py`), shrinking `main.py`'s diff against
@@ -62,9 +62,16 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   `shared/hzdr_settings.py`, so `shared/settings.py`'s diff against upstream is now
   just the generic settings (auth, damnit, metadata, terminology; ~336 lines lighter);
   the HZDR importers (`hzdr_routers`, `scicat`, `builder_trigger`, four `test_hzdr_*`)
-  repoint at `hzdr_settings`. All three verified behavior-preserving (full suite 290
-  passed; acceptance green). Docs reorganized — delivered plans moved to
-  `docs/plans/done/`.
+  repoint at `hzdr_settings`. C4 — the five HZDR-only frontend routes (`/docs`,
+  `/flow-monitor`, `/link-shot-records`, `/source/:source_key/context-builder`,
+  `/source/:source_key`) moved verbatim into `frontend/apps/app/src/hzdr/routes.tsx`
+  (`hzdrRoutes()`, a fragment of `<Route>` elements); `app.tsx` drops them in as one
+  `{hzdrRoutes()}` line (~48 lines lighter, and untouched by upstream). Grouping is
+  behavior-preserving — react-router v7 matches by rank, not source order. All four
+  verified behavior-preserving (API suite 290 passed, acceptance green; frontend
+  `tsc -b` + eslint + prettier + vitest 124-passed + `vite build`). **Phase 1 of the
+  upstream-PR disentanglement is now complete** — next is Phase 0 (merge onto
+  `upstream/main`). Docs reorganized — delivered plans moved to `docs/plans/done/`.
 
 - **Fixed `hzdr-local-acceptance.py` stale fixture** — the acceptance script's
   duplicate-shot fixture expected an *ambiguous* review event but wrote an
@@ -268,12 +275,14 @@ Mongo, no broker consumer group; each degrades safely) — see
    host, not in DAMNIT. See
    [scicat-registration-plan.md](../plans/done/scicat-registration-plan.md); field mapping in
    [standards-alignment.md §3.9](../standards-alignment.md#39-scicat-field-mapping).
-6. **Continue the upstream-PR prep** — Phase 1 disentanglement: **C1 + C2 + C3 done**;
-   the only remaining item is C4 (isolate the HZDR route block in
-   `frontend/apps/app/src/app.tsx`, e.g. into `hzdr/routes.tsx`), then Phase 0
-   (merge fork `main` onto `upstream/main`, resolving the 6-file conflict set). C4
-   touches the conflict-prone `table.tsx`, so sequence it *with* Phase 0 rather than
-   ahead of it. See [upstream-pr-plan.md](../plans/upstream-pr-plan.md).
+6. **Continue the upstream-PR prep** — Phase 1 disentanglement (C1–C4) is **complete**.
+   Next is **Phase 0**: merge fork `main` onto `upstream/main` (currently `d5a1081`,
+   #214), resolving the six-file conflict set in
+   [upstream-pr-plan.md §4](../plans/upstream-pr-plan.md) — `table.tsx` (re-apply the
+   saved-views hook onto upstream's rewrite; C4 did not touch it), `graphql/models.py`,
+   `.pre-commit-config.yaml`, root `README.md`, `frontend/package.json`, and
+   `pnpm-lock.yaml` (regenerate via `pnpm install`, don't hand-merge). After Phase 0,
+   Phase 2 cuts the individual PR branches off `upstream/main`.
 
 The canonical model is in [architecture.md](../architecture.md). Avoid adding new
 matching logic in producer repositories.
