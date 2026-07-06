@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING, cast
 
+from strawberry.exceptions import StrawberryGraphQLError
 from strawberry.permission import BasePermission
 from strawberry.types import Info
 
@@ -36,8 +37,10 @@ class IsProposalMember(BasePermission):
             proposal = int(proposal_str.strip("p"))
         except (ValueError, TypeError):
             logger.info("Invalid proposal identifier", proposal=proposal_str)
-            self.message = "Invalid proposal identifier."
-            return False
+            # NOTE: Strawberry shares one permission instance across all requests, so a
+            # per-call message must be raised, not stored on `self`.
+            msg = "Invalid proposal identifier."
+            raise StrawberryGraphQLError(msg) from None
 
         if info.context.user is None:
             info.context.user = await User.from_oauth_user(

@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from strawberry.exceptions import StrawberryGraphQLError
 
 from damnit_api.auth.permissions import IsAuthenticated, IsProposalMember
 from damnit_api.shared.errors import ForbiddenError
@@ -72,9 +73,9 @@ async def test_is_proposal_member_malformed_proposal():
     info = _info(_context())
     database = SimpleNamespace(proposal="not-a-number")
 
-    result = await perm.has_permission(None, info, database=database)
-    assert result is False
-    assert perm.message == "Invalid proposal identifier."
+    with pytest.raises(StrawberryGraphQLError, match=r"Invalid proposal identifier\."):
+        await perm.has_permission(None, info, database=database)
+    assert perm.message == "Access to this proposal is forbidden."
 
 
 @pytest.mark.asyncio
