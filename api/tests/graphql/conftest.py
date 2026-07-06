@@ -25,19 +25,23 @@ def reset_caches():
     return
 
 
-@pytest.fixture
-def bypass_proposal_permission(mocker):
-    """Bypass all proposal permission checks so tests focus on resolver logic."""
+def _patch_permissions(mocker, *, authenticated: bool, member: bool) -> None:
     mocker.patch(
         "damnit_api.auth.permissions.IsAuthenticated.has_permission",
         new_callable=mocker.AsyncMock,
-        return_value=True,
+        return_value=authenticated,
     )
     mocker.patch(
         "damnit_api.auth.permissions.IsProposalMember.has_permission",
         new_callable=mocker.AsyncMock,
-        return_value=True,
+        return_value=member,
     )
+
+
+@pytest.fixture
+def bypass_proposal_permission(mocker):
+    """Bypass all proposal permission checks so tests focus on resolver logic."""
+    _patch_permissions(mocker, authenticated=True, member=True)
 
 
 @pytest.fixture
@@ -90,28 +94,6 @@ def mocked_ensure_damnit_path(mocker):
 
 
 @pytest.fixture
-def graphql_schema(
-    bypass_proposal_permission,
-    mocked_ensure_damnit_path,
-    mocked_metadata_variables,
-    mocked_metadata_column,
-    mocked_metadata_all_tags,
-    mocked_metadata_variable_tags,
-    mocked_metadata_max,
-):
-    return strawberry.Schema(
-        query=Query,
-        subscription=Subscription,
-        types=[DamnitVariable],
-        directives=[lightweight],
-        config=StrawberryConfig(
-            auto_camel_case=False,
-            scalar_map=SCALAR_MAP,
-        ),
-    )
-
-
-@pytest.fixture
 def graphql_schema_no_auth(
     mocked_metadata_variables,
     mocked_metadata_column,
@@ -130,16 +112,19 @@ def graphql_schema_no_auth(
 
 
 @pytest.fixture
+def graphql_schema(
+    bypass_proposal_permission,
+    mocked_ensure_damnit_path,
+    mocked_metadata_max,
+    graphql_schema_no_auth,
+):
+    """Same schema as graphql_schema_no_auth, with permission and damnit-path
+    checks bypassed so tests exercise resolver logic only."""
+    return graphql_schema_no_auth
+
+
+@pytest.fixture
 def graphql_schema_authenticated_non_member(mocker, graphql_schema_no_auth):
     """Schema where the user is authenticated but not a proposal member."""
-    mocker.patch(
-        "damnit_api.auth.permissions.IsAuthenticated.has_permission",
-        new_callable=mocker.AsyncMock,
-        return_value=True,
-    )
-    mocker.patch(
-        "damnit_api.auth.permissions.IsProposalMember.has_permission",
-        new_callable=mocker.AsyncMock,
-        return_value=False,
-    )
+    _patch_permissions(mocker, authenticated=True, member=False)
     return graphql_schema_no_auth

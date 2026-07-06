@@ -8,7 +8,6 @@ import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
 from .. import get_logger
-from ..auth.models import User
 from ..auth.permissions import IsAuthenticated
 from . import models, services
 
@@ -60,7 +59,7 @@ class Query:
 
         mymdc, session = info.context.mymdc, info.context.session
 
-        user = await User.from_oauth_user(mymdc, session, info.context.oauth_user)
+        user = await info.context.get_user()
         allowed_proposal_numbers = [n for n in proposal_numbers if n in user.proposals]
         if dropped := set(proposal_numbers) - set(allowed_proposal_numbers):
             await logger.ainfo(

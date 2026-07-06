@@ -6,6 +6,7 @@ The schema-level tests in `test_queries.py`/`test_subscriptions.py` mock
 
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
 
 import pytest
 from strawberry.exceptions import StrawberryGraphQLError
@@ -18,12 +19,10 @@ def _info(context: Any) -> Any:
     return SimpleNamespace(context=context)
 
 
-def _context(*, oauth_user: Any = "oauth", user: Any = None) -> Any:
+def _context(*, oauth_user: Any = "oauth", user: Any = "resolved-user") -> Any:
     return SimpleNamespace(
         oauth_user=oauth_user,
-        mymdc=object(),
-        session=object(),
-        user=user,
+        get_user=AsyncMock(return_value=user),
     )
 
 
@@ -87,40 +86,28 @@ async def test_is_proposal_member_allowed(mocker):
         "damnit_api.auth.permissions._check_user_allowed",
         new_callable=mocker.AsyncMock,
     )
-    from_oauth = mocker.patch(
-        "damnit_api.auth.permissions.User.from_oauth_user",
-        new_callable=mocker.AsyncMock,
-        return_value="resolved-user",
-    )
-    ctx = _context(user=None)
+    ctx = _context(user="resolved-user")
     database = SimpleNamespace(proposal="p1234")
 
     result = await IsProposalMember().has_permission(
         None, _info(ctx), database=database
     )
     assert result is True
-    # User resolved from oauth and cached on the context.
-    from_oauth.assert_awaited_once()
-    assert ctx.user == "resolved-user"
+    ctx.get_user.assert_awaited_once()
     check.assert_awaited_once_with(1234, "resolved-user")
 
 
 @pytest.mark.asyncio
-async def test_is_proposal_member_safe_upstream_error(mocker):
+async def test_is_proposal_member_safe_upstream_error():
     """Upstream errors should not leak info to the client."""
-    mocker.patch(
-        "damnit_api.auth.permissions.User.from_oauth_user",
-        new_callable=mocker.AsyncMock,
-        side_effect=RuntimeError(
-            "https://in.xfel.eu/metadata/api/ sensitive error beep boop"
-        ),
+    ctx = _context()
+    ctx.get_user.side_effect = RuntimeError(
+        "https://in.xfel.eu/metadata/api/ sensitive error beep boop"
     )
     database = SimpleNamespace(proposal="p1234")
 
     with pytest.raises(StrawberryGraphQLError) as excinfo:
-        await IsProposalMember().has_permission(
-            None, _info(_context()), database=database
-        )
+        await IsProposalMember().has_permission(None, _info(ctx), database=database)
     assert "sensitive error beep boop" not in str(excinfo.value)
 
 
@@ -131,36 +118,9 @@ async def test_is_proposal_member_forbidden(mocker):
         new_callable=mocker.AsyncMock,
         side_effect=ForbiddenError("nope"),
     )
-    mocker.patch(
-        "damnit_api.auth.permissions.User.from_oauth_user",
-        new_callable=mocker.AsyncMock,
-        return_value="resolved-user",
-    )
     database = SimpleNamespace(proposal="1234")
 
     result = await IsProposalMember().has_permission(
         None, _info(_context()), database=database
     )
     assert result is False
-
-
-@pytest.mark.asyncio
-async def test_is_proposal_member_reuses_cached_user(mocker):
-    check = mocker.patch(
-        "damnit_api.auth.permissions._check_user_allowed",
-        new_callable=mocker.AsyncMock,
-    )
-    from_oauth = mocker.patch(
-        "damnit_api.auth.permissions.User.from_oauth_user",
-        new_callable=mocker.AsyncMock,
-    )
-    ctx = _context(user="cached-user")
-    database = SimpleNamespace(proposal="1234")
-
-    result = await IsProposalMember().has_permission(
-        None, _info(ctx), database=database
-    )
-    assert result is True
-    # Already-resolved user is reused; no second resolution.
-    from_oauth.assert_not_awaited()
-    check.assert_awaited_once_with(1234, "cached-user")
