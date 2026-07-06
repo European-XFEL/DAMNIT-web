@@ -26,13 +26,20 @@
 
 .PARAMETER Apply
     Copy canonical files to sibling repos instead of only checking.
+    Refuses to touch a sibling repo that has uncommitted changes, so a
+    contract sync always lands as its own reviewable commit there.
+
+.PARAMETER Force
+    With -Apply: copy into sibling repos even when they have uncommitted
+    changes.
 
 .EXAMPLE
     .\sync-hzdr-event.ps1
     .\sync-hzdr-event.ps1 -Apply
 #>
 param(
-    [switch] $Apply
+    [switch] $Apply,
+    [switch] $Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -95,6 +102,27 @@ Write-Host ""
 Write-Host "--- Contract sync (hzdr_event.py + fixtures) ---" -ForegroundColor Cyan
 Write-Host "    Canonical root: $damnitRoot"
 Write-Host "    Sibling root:   $gitlabRoot"
+
+# Pre-flight for Apply: never copy into a sibling repo with uncommitted
+# changes, so a vendored-contract update always lands as an isolated,
+# reviewable commit there (all-or-nothing: no partial applies).
+if ($Apply -and -not $Force) {
+    $dirtyTargets = @()
+    foreach ($target in @(
+        @{ root = $watchdogRoot; label = "planet-watchdog" },
+        @{ root = $shotRoot;     label = "shotcounter" }
+    )) {
+        if (-not (Test-Path $target.root)) { continue }
+        $status = & git -C $target.root status --porcelain 2>$null
+        if ($status) { $dirtyTargets += $target.label }
+    }
+    if ($dirtyTargets.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Refusing to apply: uncommitted changes in $($dirtyTargets -join ', ')." -ForegroundColor Red
+        Write-Host "Commit or stash there first, or re-run with -Force to copy anyway." -ForegroundColor Yellow
+        exit 1
+    }
+}
 
 # 1. hzdr_event.py: DAMNIT canonical vs planet-watchdog vendored copy.
 Write-Host "  Checking hzdr_event.py..."

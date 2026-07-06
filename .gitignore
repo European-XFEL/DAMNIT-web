@@ -18,6 +18,5 @@ certs/
 .ruff_cache/
 __pycache__/
 
-# notes
-AGENTS.md
-CLAUDE.md
+# Local launcher config -- created per machine via hzdr-launch.ps1/.sh -InitConfig
+scripts/hzdr-launch.config.json
