@@ -83,8 +83,13 @@ jobs:
       - name: Install Playwright browser
         run: pnpm --filter @damnit-frontend/e2e exec playwright install --with-deps chromium
 
+      - name: Build app
+        run: pnpm --filter @damnit-frontend/app build
+        env:
+          VITE_BASE_URL: /app/
+
       - name: e2e
-        run: pnpm --filter @damnit-frontend/e2e test:e2e
+        run: pnpm e2e
 
       - name: Upload traces
         if: failure()
