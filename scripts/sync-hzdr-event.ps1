@@ -241,3 +241,6 @@ if ($script:driftFound) {
 } elseif (-not $Apply) {
     Write-Host "  All contract copies and topic defaults in sync." -ForegroundColor Green
 }
+# Explicit success exit: without it, callers checking $LASTEXITCODE (or a
+# process exit code) see whatever the last native command left behind.
+exit 0
