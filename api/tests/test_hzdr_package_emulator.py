@@ -6,11 +6,11 @@ from pathlib import Path
 import h5py
 import pytest
 
-from damnit_api.metadata.hzdr_sources import load_sources_file
-from damnit_api.metadata.routers import (
+from damnit_api.metadata.hzdr_routers import (
     update_local_shot_metadata,
     update_local_shot_status,
 )
+from damnit_api.metadata.hzdr_sources import load_sources_file
 
 SCRIPT_PATH = Path(__file__).parents[1] / "scripts" / "hzdr-package-emulator.py"
 SPEC = importlib.util.spec_from_file_location("hzdr_package_emulator", SCRIPT_PATH)

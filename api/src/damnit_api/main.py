@@ -44,6 +44,7 @@ def create_app():  # noqa: C901
             app.router.include_router(auth.router)
         app.router.include_router(auth.ldap_router)
         app.router.include_router(metadata.router)
+        app.router.include_router(metadata.hzdr_router)  # fork-only HZDR routes
         app.router.include_router(contextfile.router)
         app.router.include_router(shared_routers.router)
         app.router.include_router(gql.get_gql_app(), prefix="/graphql")

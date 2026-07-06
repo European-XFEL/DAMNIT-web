@@ -6,6 +6,7 @@ import orjson
 import pytest
 
 from damnit_api.metadata.hzdr_event import lint_metadata_keys
+from damnit_api.metadata.hzdr_routers import append_emulated_shot
 from damnit_api.metadata.hzdr_sources import (
     HZDRSourceProvider,
     _map_mongo_shot,
@@ -13,7 +14,6 @@ from damnit_api.metadata.hzdr_sources import (
     load_sources_file,
     preview_hdf5_dataset,
 )
-from damnit_api.metadata.routers import append_emulated_shot
 from damnit_api.shared.settings import MetadataSettings
 
 
