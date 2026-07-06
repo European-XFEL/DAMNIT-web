@@ -54,8 +54,15 @@ class Context(BaseContext):
     mymdc: MyMdCClient
     oauth_user: OAuthUserInfo
     session: DBSession
-    # Resolved lazily and cached by IsProposalMember; None until first needed.
-    user: User | None = None
+    _user: User | None = None
+
+    async def get_user(self) -> User:
+        """Resolve and memoize the full `User` for this request."""
+        if self._user is None:
+            self._user = await User.from_oauth_user(
+                self.mymdc, self.session, self.oauth_user
+            )
+        return self._user
 
 
 async def get_context(  # noqa: RUF029

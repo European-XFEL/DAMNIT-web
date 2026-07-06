@@ -1,7 +1,5 @@
 """Strawberry permissions for GraphQL authorization."""
 
-from typing import TYPE_CHECKING, cast
-
 from strawberry.exceptions import StrawberryGraphQLError
 from strawberry.permission import BasePermission
 from strawberry.types import Info
@@ -9,10 +7,6 @@ from strawberry.types import Info
 from .. import get_logger
 from ..metadata.services import _check_user_allowed
 from ..shared.errors import ForbiddenError
-from .models import User
-
-if TYPE_CHECKING:
-    from ..graphql.utils import DatabaseInput
 
 logger = get_logger()
 
@@ -38,8 +32,7 @@ class IsProposalMember(BasePermission):
             msg = "Field is misconfigured for proposal authorization."
             raise StrawberryGraphQLError(msg)
 
-        database = cast("DatabaseInput | None", kwargs["database"])
-        proposal_str = database.proposal if database is not None else None
+        proposal_str = getattr(kwargs["database"], "proposal", None)
         if not proposal_str:
             return False
 
@@ -52,18 +45,14 @@ class IsProposalMember(BasePermission):
             msg = "Invalid proposal identifier."
             raise StrawberryGraphQLError(msg) from None
 
-        if info.context.user is None:
-            try:
-                info.context.user = await User.from_oauth_user(
-                    info.context.mymdc, info.context.session, info.context.oauth_user
-                )
-            except Exception as exc:
-                # Do not respond with upstream errors directly, might contain internal
-                # info that shouldn't be sent to client.
-                msg = "Could not verify proposal access"
-                logger.exception(msg, proposal=proposal_str)
-                raise StrawberryGraphQLError(msg) from exc
-        user = info.context.user
+        try:
+            user = await info.context.get_user()
+        except Exception as exc:
+            # Do not respond with upstream errors directly, might contain internal
+            # info that shouldn't be sent to client.
+            msg = "Could not verify proposal access"
+            logger.exception(msg, proposal=proposal_str)
+            raise StrawberryGraphQLError(msg) from exc
 
         try:
             await _check_user_allowed(proposal, user)
