@@ -138,6 +138,25 @@ class HZDRWikiInfo(BaseModel):
     categories: list[str] = Field(default_factory=list)
 
 
+class HZDRScicatInfo(BaseModel):
+    """SciCat dataset link for one campaign source.
+
+    ``configured`` reflects whether DW_API_HZDR_SCICAT__ENABLED is set;
+    ``registered`` is true once the builder's post-step has stored a ``pid`` in
+    the catalog.  ``dataset_url`` is present only when a public SciCat frontend
+    URL is configured (DW_API_HZDR_SCICAT__FRONTEND_URL).
+    """
+
+    source_key: str
+    experiment_id: str | None = None
+    configured: bool
+    registered: bool
+    pid: str | None = None
+    dataset_url: str | None = None
+    version_hash: str | None = None
+    registered_at: str | None = None
+
+
 class HZDRDataProduct(BaseModel):
     product_id: str | None = None
     source: str

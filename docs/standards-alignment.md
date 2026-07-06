@@ -7,7 +7,7 @@ standards (DAPHNE4NFDI, HELPMI, NeXus, SciCat, Plasma-MDS, openPMD), a detailed
 field-level cross-walk, a gap analysis, and which alignment routes are realistic.
 
 Related docs: [event schema](event-schema.md) (the transport envelope these standards
-map onto) and [alignment implementation plan](alignment-implementation-plan.md) (the
+map onto) and [alignment implementation plan](plans/alignment-implementation-plan.md) (the
 phased *how/when* for the routes in §4).
 
 ---
@@ -253,7 +253,7 @@ captured anywhere in DAMNIT (transport envelope, emulator metadata, or NeXus out
 Many of the laser/environment/diagnostic rows below are produced by TANGO devices in the
 control system; a future TANGO device self-archiving path could carry them in per-device
 archived files, keyed to the shot context the archiver broadcasts — see
-[integration-roadmap.md](integration-roadmap.md#future-tango-device-self-archiving-as-a-metadata-source):
+[integration-roadmap.md](status/integration-roadmap.md#future-tango-device-self-archiving-as-a-metadata-source):
 
 | Missing field | Standard | Category | Effort to add |
 | --- | --- | --- | --- |
@@ -340,8 +340,8 @@ metadata only, never file contents** — a perfect fit for registering a campaig
 file by path. DAMNIT's builder `POST`s the file path + assembled `scientificMetadata` to
 `/scicat/from-json` (or `/scicat/push`, which also returns a deterministic `version_hash`
 for re-registration detection) and stores the returned `pid`. Full interface and wiring
-steps are in [integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration)
-and [Phase 4 of the alignment plan](alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
+steps are in [integration-roadmap.md §SciCat Registration](status/integration-roadmap.md#scicat-registration)
+and [Phase 4 of the alignment plan](plans/alignment-implementation-plan.md#phase-4--scicat-registration-via-the-existing-hzdr-plugin-).
 
 ### Route 4: NeXus Ontology annotation for federated search (higher effort)
 
@@ -381,6 +381,6 @@ writer and analysis tooling concern.
 | Per-product `NXdetector` sub-groups in NeXus bridge | ⬜ medium effort | §3.6, §3.7 |
 | Official `NXlaser` / `NXtarget` groups from HELPMI | ❌ cancelled 2026-07-02 — HELPMI finished | Route 2 |
 | HZDR-local `NXhzdr_target` profile / NXDL | 🟡 v0.1 profile doc + writer compatibility attrs done 2026-07-02 ([nxhzdr-target-profile.md](nxhzdr-target-profile.md)); NXDL formalization still open | Route 2, Route 4 |
-| SciCat registration + `scicat_pid` back-population (via existing HZDR SciCat plugin) | 🟡 plugin built (HTTP `/scicat/from-json` \| `/scicat/push`); DAMNIT builder post-step + API link not yet wired | Route 3, [roadmap §SciCat Registration](integration-roadmap.md#scicat-registration) |
+| SciCat registration + `scicat_pid` back-population (via existing HZDR SciCat plugin) | 🟡 plugin built (HTTP `/scicat/from-json` \| `/scicat/push`); DAMNIT builder post-step + API link not yet wired | Route 3, [roadmap §SciCat Registration](status/integration-roadmap.md#scicat-registration) |
 | NeXus Ontology annotation for federated search | ⬜ HZDR-owned design; no HELPMI blocker | Route 4 |
 | openPMD interoperability (simulation links) | ⬜ HZDR-owned link/manifest design; comparison tooling deferred | Route 5 |

@@ -1459,6 +1459,7 @@ def write_sources_catalog(
     nexus_path: Path,
     shots: list[dict[str, Any]],
     events: list[dict[str, Any]] | None = None,
+    scicat: dict[str, Any] | None = None,
 ) -> None:
     """Write DAMNIT-web's compact source catalog from canonical shots.
 
@@ -1484,6 +1485,20 @@ def write_sources_catalog(
         review_events, current_shots, decisions
     )
     match_summary = _build_match_summary(current_shots, review_events)
+    source_metadata: dict[str, Any] = {
+        "facility": "HZDR",
+        "source_type": "canonical-nexus",
+        "integration_profile": "hzdr-canonical-shot-v1",
+        "experiment_id": experiment_id,
+        "canonical_nexus_path": str(nexus_path),
+        "combined_hdf5_path": str(nexus_path),
+        "catalog_built_at": datetime.now(UTC).isoformat(),
+    }
+    # SciCat registration (scicat_pid, dataset URL, version hash, …) is stamped
+    # here so it flows to the /scicat API endpoint and back-populates
+    # payload_ref.scicat_pid via the NeXus bridge target reader.
+    if scicat:
+        source_metadata.update(scicat)
     payload = {
         "sources": [
             {
@@ -1491,15 +1506,7 @@ def write_sources_catalog(
                 "title": f"HZDR canonical campaign ({experiment_id})",
                 "damnit_path": str(sources_file.parent / "damnit" / source_key),
                 "data_paths": [str(nexus_path)],
-                "metadata": {
-                    "facility": "HZDR",
-                    "source_type": "canonical-nexus",
-                    "integration_profile": "hzdr-canonical-shot-v1",
-                    "experiment_id": experiment_id,
-                    "canonical_nexus_path": str(nexus_path),
-                    "combined_hdf5_path": str(nexus_path),
-                    "catalog_built_at": datetime.now(UTC).isoformat(),
-                },
+                "metadata": source_metadata,
                 "shots": [
                     {
                         **shot,

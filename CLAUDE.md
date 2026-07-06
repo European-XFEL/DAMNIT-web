@@ -68,7 +68,9 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
 ### API (`api/src/damnit_api/`)
 - `main.py` — FastAPI app + lifespan. The lifespan starts the durable **spool
   consumers** as background tasks when enabled (`DW_API_HZDR_SPOOL__ENABLED`,
-  `DW_API_HZDR_KAFKA_SPOOL__ENABLED`).
+  `DW_API_HZDR_KAFKA_SPOOL__ENABLED`) and, when `DW_API_HZDR_BUILDER__ENABLED`
+  is set, one shared **builder auto-trigger** task that all consumers notify
+  (`consumer/builder_trigger.py`).
 - `metadata/` — the heart of the HZDR integration:
   - `hzdr_event.py` — the **canonical `HZDREventV1` Pydantic model**. This is the
     authoritative source of the cross-repo event contract; its JSON-Schema + sample
@@ -83,7 +85,11 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
     fallbacks); the full order is in `docs/architecture.md`.
 - `consumer/` — durable spool consumers sharing one claim → write+fsync → ack →
   dedup loop: `spool.py` (`HZDRSpoolConsumer` base), `asapo.py` (`AsapoSpoolConsumer`),
-  `kafka.py` (`KafkaSpoolConsumer`, manual offset commit).
+  `kafka.py` (`KafkaSpoolConsumer`, manual offset commit). `builder_trigger.py`
+  (`BuilderTrigger`) coalesces `on_new_events` from *all* consumers into one
+  debounced subprocess rerun of `hzdr-hdf5-builder.py` — a single global trigger,
+  never one per consumer, so the builder's single-writer PID lock and atomic
+  publish are never contended by two concurrent builds for the same campaign.
 - `graphql/` (Strawberry), `db.py`/`_db/` (SQLAlchemy internal state), `auth/`
   (LDAP/no-auth), `shared/` (`routers.py` has `GET /config/health` liveness probes),
   `_mymdc/`, `contextfile/`, `data.py` — the original DAMNIT-web machinery.
@@ -110,7 +116,14 @@ Pydantic settings via `DW_API_*` env vars with `__` as the nested delimiter (e.g
 `DW_API_AUTH__MODE`). The deployment template is `api/.env.production.example`. Key
 knobs: `DW_API_DAMNIT_PATH` (data root), `DW_API_METADATA__PROVIDER` (`local` reads
 `hzdr_sources.json`, `mongo` reads a collection), and the `DW_API_HZDR_*SPOOL__*`
-consumer settings. Structured JSON logging turns on when `DW_API_DEBUG=false`.
+consumer settings. The builder auto-trigger is a single global block,
+`DW_API_HZDR_BUILDER__*` (`ENABLED`, `DEBOUNCE_SECONDS`, `OUTPUT_NEXUS` and the
+rest of the builder CLI as settings) — *not* per-consumer flags — because there
+is one builder per campaign; `OUTPUT_NEXUS` is required when `ENABLED=true`, and
+the event/trigger JSONL inputs are auto-derived from the running consumers' spool
+paths rather than reconfigured here. SciCat registration of the built NeXus file
+is the separate `DW_API_HZDR_SCICAT__*` block (best-effort, off by default).
+Structured JSON logging turns on when `DW_API_DEBUG=false`.
 `scripts/damnit-api.service` is the systemd unit (`Restart=on-failure`).
 
 ## Event schema contract (`hzdr-event-v1`)

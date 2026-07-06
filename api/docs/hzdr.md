@@ -298,14 +298,14 @@ reach, for example `127.0.0.1:9092`.
 
 - `README.md`: high-level project orientation.
 - `docs/architecture.md`: provider model, identity, and HZDR-vs-EXFEL notes.
-- `docs/integration-roadmap.md`: ordered cross-repository implementation plan.
-- `docs/local-development.md`: launcher, repository list, and integration commands.
-- `docs/handoff.md`: current status and the next session's starting point.
+- `docs/status/integration-roadmap.md`: ordered cross-repository implementation plan.
+- `docs/guides/local-development.md`: launcher, repository list, and integration commands.
+- `docs/status/handoff.md`: current status and the next session's starting point.
 - `scripts/hzdr-launch.config.example.json`: shared connection/config shape.
 - `api/scripts/verify-hzdr-watchdog.py`: Kafka/ASAPO/Mongo verifier.
 - `api/scripts/hzdr-local-acceptance.py`: local-only HTTP acceptance check
   (emulator events through Confirm Matches), no sibling repo or broker
-  required - see `docs/testing.md`.
+  required - see `docs/status/testing.md`.
 - `api/examples/*.example.json`: the shared normalized source-event contract,
   kept in sync by hand with `asapo-for-hzdr-damnit/examples/` and
   `planet-watchdog/testing/examples/normalized-events/`.

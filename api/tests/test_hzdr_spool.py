@@ -2,7 +2,7 @@
 
 These tests use the in-process harness from asapo-for-hzdr-damnit to provide
 a real broker (BrokerStore) without needing Docker, Kafka, or ASAPO.  The
-five properties from docs/integration-roadmap.md §Durable Spool Design are
+five properties from docs/status/integration-roadmap.md §Durable Spool Design are
 each covered by one test:
 
     1. claim does not advance position until ack

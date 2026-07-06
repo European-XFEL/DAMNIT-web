@@ -9,7 +9,7 @@ config · 🔴 needs a real broker / live deployment.
 
 **2026-07-01 update:** production deployment is live at
 [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)
-(see `docs/handoff.md` §Built 2026-07-01). Item 3 (ASAPO SDK swap) is now
+(see `docs/status/handoff.md` §Built 2026-07-01). Item 3 (ASAPO SDK swap) is now
 code-complete — `RealAsapoSpoolConsumer` is implemented and selected via
 `DW_API_HZDR_SPOOL__BROKER_KIND=asapo`; only pointing it at the real broker's
 endpoint/beamtime/token and the gated integration test remain, so it moves

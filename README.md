@@ -26,10 +26,10 @@ Open `http://127.0.0.1:5173/home` or the flow monitor at
 
 - [Documentation index](docs/README.md)
 - [System overview](docs/system-overview.md)
-- [Ordered integration roadmap](docs/integration-roadmap.md)
+- [Ordered integration roadmap](docs/status/integration-roadmap.md)
 - [Architecture and identity rules](docs/architecture.md)
-- [Local development and verification](docs/local-development.md)
-- [Current handoff notes](docs/handoff.md)
+- [Local development and verification](docs/guides/local-development.md)
+- [Current handoff notes](docs/status/handoff.md)
 
 API-specific documentation remains in [`api/docs`](api/docs), and frontend
 development commands remain in [`frontend/README.md`](frontend/README.md).

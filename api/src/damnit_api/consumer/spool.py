@@ -23,6 +23,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
+from collections.abc import Callable  # noqa: TC003
 from dataclasses import dataclass, field
 from pathlib import Path  # noqa: TC003
 from typing import Any
@@ -124,6 +125,9 @@ class HZDRSpoolConsumer(ABC):
         self.config = config
         self._staged: set[str] = set()
         self._loaded = False
+        # Optional dispatch hook; set by the lifespan wiring to notify the
+        # debounced builder trigger.  Left None (no-op) unless auto-trigger is on.
+        self.on_new_events_hook: Callable[[list[Path]], None] | None = None
 
     def _ensure_loaded(self) -> None:
         if not self._loaded:
@@ -155,8 +159,14 @@ class HZDRSpoolConsumer(ABC):
         logger.info("Spooled %s → %s", identity, path)
         return path
 
-    def on_new_events(self, paths: list[Path]) -> None:  # noqa: B027
-        """Called after a batch is written and acked.  Override to trigger builder."""
+    def on_new_events(self, paths: list[Path]) -> None:
+        """Called after a batch is written and acked.
+
+        Dispatches to ``on_new_events_hook`` when one is set (the debounced
+        builder trigger); a no-op otherwise.  Subclasses may still override.
+        """
+        if self.on_new_events_hook is not None:
+            self.on_new_events_hook(paths)
 
     @abstractmethod
     async def _claim(self) -> tuple[list[dict[str, Any]], Any]:

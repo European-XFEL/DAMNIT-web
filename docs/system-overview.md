@@ -6,7 +6,7 @@ hold the system together, and explains what the **end products** are and where
 they land (here, in DAMNIT-web-hzdr).
 
 For the precise data model and matching rules, see [architecture.md](architecture.md).
-For per-item status and remaining work, see [integration-roadmap.md](integration-roadmap.md).
+For per-item status and remaining work, see [integration-roadmap.md](status/integration-roadmap.md).
 This document stays at the "what talks to what, and why" level.
 
 ## One-Sentence Summary
@@ -27,7 +27,7 @@ web UI reads.
 | **kafka-broker-docker** | Single-node Kafka broker + helper scripts and examples | Docker Compose (KRaft) | Transport (local/dev message bus) |
 | **asapo-for-hzdr-damnit** | Local harness proving the event contract + ASAPO/Kafka staging semantics | Node + Python | Transport test rig + contract reference |
 | **DAMNIT-web-hzdr** | Reconciler/builder + FastAPI API + React frontend | Python + TS | Consumer; builds and serves the canonical outputs |
-| **scicat_plugin** | Registers file/path references + metadata in SciCat (reuses `scicat-ingestor` worker codepaths; no binary upload) | Flask + `scicat-ingestor` | Sink; SciCat catalog registration (producer-side per file, or DAMNIT-side per campaign NeXus file) — see [integration-roadmap.md §SciCat Registration](integration-roadmap.md#scicat-registration) |
+| **scicat_plugin** | Registers file/path references + metadata in SciCat (reuses `scicat-ingestor` worker codepaths; no binary upload) | Flask + `scicat-ingestor` | Sink; SciCat catalog registration (producer-side per file, or DAMNIT-side per campaign NeXus file) — see [integration-roadmap.md §SciCat Registration](status/integration-roadmap.md#scicat-registration) |
 
 A third producer, **LaserData** (`source = LaserData`, transported over ASAPO),
 exists in the wider HZDR setup but is not one of these repositories; it produces
@@ -265,7 +265,7 @@ ways in:
 - **A trigger producer:** `shotcounter` →
   `./scripts/start_local.sh --with-kafka --broker redpanda --test-mode`.
 - **The file watcher (safe demo):** `planet-watchdog` → `uv run watchdog_test.py`.
-- **This app (consumer + UI):** see [local-development.md](local-development.md).
+- **This app (consumer + UI):** see [local-development.md](guides/local-development.md).
 
 ## Production Deployment
 
@@ -278,16 +278,16 @@ spool consumers there still run against the local ASAPO/Kafka harness rather
 than the real facility brokers — the real ASAPO SDK client
 (`RealAsapoSpoolConsumer`, `DW_API_HZDR_SPOOL__BROKER_KIND=asapo`) is
 implemented, and pointing the deployment at real broker credentials is the
-next step (see [remaining-work-plan.md](remaining-work-plan.md) and
-[handoff.md](handoff.md)).
+next step (see [remaining-work-plan.md](plans/remaining-work-plan.md) and
+[handoff.md](status/handoff.md)).
 
 ## Where to Go Deeper
 
 | You want… | Read |
 | --- | --- |
 | The exact data model, fields, and matching order | [architecture.md](architecture.md) |
-| Per-repo status and the work remaining to go live | [integration-roadmap.md](integration-roadmap.md) |
-| Verified test coverage and acceptance tests | [testing.md](testing.md) |
-| Minimal build/test/launch for this app | [local-development.md](local-development.md) |
-| A current-state snapshot for the next session | [handoff.md](handoff.md) |
+| Per-repo status and the work remaining to go live | [integration-roadmap.md](status/integration-roadmap.md) |
+| Verified test coverage and acceptance tests | [testing.md](status/testing.md) |
+| Minimal build/test/launch for this app | [local-development.md](guides/local-development.md) |
+| A current-state snapshot for the next session | [handoff.md](status/handoff.md) |
 | How any single repo is built and run | that repo's `CLAUDE.md` and `README.md` |

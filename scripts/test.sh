@@ -37,7 +37,7 @@ API_ROOT="$REPO/api"
 
 # Run from api/, not the repo root: api/.env (auth/metadata config consumed
 # by Settings()) and api/ruff.toml are resolved relative to cwd, and
-# api/tests assumes that layout too (see docs/testing.md). pushd/popd so the
+# api/tests assumes that layout too (see docs/status/testing.md). pushd/popd so the
 # caller's shell returns to its starting folder.
 pushd "$API_ROOT" >/dev/null
 trap 'popd >/dev/null' EXIT

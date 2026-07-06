@@ -24,6 +24,7 @@ from .hzdr_sources import (
     HZDRDatasetPreview,
     HZDRMatchSummary,
     HZDRReviewEvent,
+    HZDRScicatInfo,
     HZDRShot,
     HZDRShotDetail,
     HZDRSource,
@@ -166,6 +167,39 @@ async def get_hzdr_producer_status(source_key: str) -> HZDRProducerStatus:
     if source is None:
         raise HTTPException(status_code=404, detail="HZDR source not found.")
     return derive_producer_status(source)
+
+
+@router.get("/hzdr/sources/{source_key}/scicat")
+async def get_hzdr_source_scicat(source_key: str) -> HZDRScicatInfo:
+    """Return the SciCat dataset link for one campaign source.
+
+    ``configured`` reflects DW_API_HZDR_SCICAT__ENABLED; ``registered`` is true
+    once the builder's SciCat post-step has stored a ``scicat_pid`` in the
+    catalog. ``dataset_url`` is a clickable link to the SciCat frontend when
+    DW_API_HZDR_SCICAT__FRONTEND_URL is set (or the builder stored one already).
+    Safe when SciCat is not configured: returns configured=false, registered=false.
+    """
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None:
+        raise HTTPException(status_code=404, detail="HZDR source not found.")
+
+    metadata = source.metadata
+    pid = _metadata_string(metadata, "scicat_pid")
+    dataset_url = _metadata_string(metadata, "scicat_dataset_url")
+    if dataset_url is None and pid is not None:
+        frontend = settings.hzdr_scicat.frontend_url.rstrip("/")
+        if frontend:
+            dataset_url = f"{frontend}/datasets/{quote(pid, safe='')}"
+    return HZDRScicatInfo(
+        source_key=source_key,
+        experiment_id=_metadata_string(metadata, "experiment_id"),
+        configured=settings.hzdr_scicat.enabled,
+        registered=pid is not None,
+        pid=pid,
+        dataset_url=dataset_url,
+        version_hash=_metadata_string(metadata, "scicat_version_hash"),
+        registered_at=_metadata_string(metadata, "scicat_registered_at"),
+    )
 
 
 @router.get("/hzdr/sources/{source_key}/wiki")

@@ -4,7 +4,7 @@ See CLAUDE.md
 
 - Before changing sibling repos, check each sibling's `git status --short` and
   treat existing dirty files as user-owned.
-- For the current HZDR coverage gaps, `docs/testing.md` maps "Needs attention"
+- For the current HZDR coverage gaps, `docs/status/testing.md` maps "Needs attention"
   to `asapo-for-hzdr-damnit` and the DAQ File Watchdog/laserdata side in
   `planet-watchdog`.
 - In `asapo-for-hzdr-damnit`, target tests at the local broker HTTP API and CLI
