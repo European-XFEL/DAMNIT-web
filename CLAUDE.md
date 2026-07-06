@@ -66,11 +66,13 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
 ## Architecture
 
 ### API (`api/src/damnit_api/`)
-- `main.py` — FastAPI app + lifespan. The lifespan starts the durable **spool
+- `main.py` — FastAPI app + lifespan. The lifespan enters
+  `consumer/bootstrap.py`'s `spool_lifespan`, which starts the durable **spool
   consumers** as background tasks when enabled (`DW_API_HZDR_SPOOL__ENABLED`,
   `DW_API_HZDR_KAFKA_SPOOL__ENABLED`) and, when `DW_API_HZDR_BUILDER__ENABLED`
   is set, one shared **builder auto-trigger** task that all consumers notify
-  (`consumer/builder_trigger.py`).
+  (`consumer/builder_trigger.py`). The fork-only wiring lives in `bootstrap.py`
+  so `main.py` stays close to upstream's — a single `async with` hook.
 - `metadata/` — the heart of the HZDR integration:
   - `hzdr_event.py` — the **canonical `HZDREventV1` Pydantic model**. This is the
     authoritative source of the cross-repo event contract; its JSON-Schema + sample
@@ -79,6 +81,10 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
     `/entry/source_events`, …) and does atomic writes (`write_json_atomic`).
   - `hzdr_sources.py` — the `hzdr_sources.json` source catalog: shot model with
     `hdf5_path`, dataset listing/preview, review-level merge (`VERIFIED > REVIEWED > BASE`).
+  - `scicat.py` — registers the canonical campaign NeXus file as a citable SciCat
+    dataset via the `scicat_plugin` HTTP boundary; runs as a best-effort builder
+    post-step (never fails a build) and stamps `scicat_pid`/`version_hash` into the
+    catalog. Gated by `DW_API_HZDR_SCICAT__*`.
   - `services.py`, `routers.py`, `models.py`, `gql.py` — the matcher/reconciler,
     REST + GraphQL surfaces, and API models. Matching is identity-first
     (`kafka_event_id` → transport position → same-day TANGO shot number → timestamp
@@ -90,6 +96,9 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
   debounced subprocess rerun of `hzdr-hdf5-builder.py` — a single global trigger,
   never one per consumer, so the builder's single-writer PID lock and atomic
   publish are never contended by two concurrent builds for the same campaign.
+  `bootstrap.py` (`spool_lifespan`) is the async-context-manager that starts/stops
+  the enabled consumers + trigger; `main.py`'s lifespan enters it so the fork-only
+  wiring lives here, not inline in `main.py`.
 - `graphql/` (Strawberry), `db.py`/`_db/` (SQLAlchemy internal state), `auth/`
   (LDAP/no-auth), `shared/` (`routers.py` has `GET /config/health` liveness probes),
   `_mymdc/`, `contextfile/`, `data.py` — the original DAMNIT-web machinery.

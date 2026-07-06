@@ -37,7 +37,7 @@ concrete gaps found, two fixed on the spot:
    builder. ✅ **closed 2026-07-04** — `consumer/builder_trigger.py`
    (`BuilderTrigger`) now overrides the `on_new_events()` dispatch and reruns
    the builder as a debounced subprocess; `DW_API_HZDR_BUILDER__ENABLED=true`.
-   See `docs/plans/auto-builder-trigger-plan.md`.
+   See `docs/plans/done/auto-builder-trigger-plan.md`.
 2. **No real-broker roundtrip test exists for ASAPO** — only Kafka has one
    (`test_hzdr_broker_roundtrip.py`, `-m integration_docker`, gated on
    `KAFKA_TEST_BROKER`). `RealAsapoSpoolConsumer` is exercised only against an
@@ -261,9 +261,9 @@ Branch: `main`
 | Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | Live production deployment reachable | ✅ **[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)** — `api/scripts/damnit-api-deploy.sh`/`.ps1`, `frontend/nginx` proxy templates, LDAP against `ldap.fz-rossendorf.de` |
 | ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` documents the setting. Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
-| Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `docs/plans/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
+| Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `docs/plans/done/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
-| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | ✅ committed 2026-07-04 — `metadata/scicat.py` + builder post-step (`_register_scicat`) POST the NeXus path to the plugin and stamp `scicat_pid`/`version_hash`/`dataset_url` into the catalog; `GET .../scicat` endpoint + Link Records UI card. Best-effort (never fails a build); unchanged rebuilds skip the re-POST. `DW_API_HZDR_SCICAT__*`. See `docs/plans/scicat-registration-plan.md` |
+| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | ✅ committed 2026-07-04 — `metadata/scicat.py` + builder post-step (`_register_scicat`) POST the NeXus path to the plugin and stamp `scicat_pid`/`version_hash`/`dataset_url` into the catalog; `GET .../scicat` endpoint + Link Records UI card. Best-effort (never fails a build); unchanged rebuilds skip the re-POST. `DW_API_HZDR_SCICAT__*`. See `docs/plans/done/scicat-registration-plan.md` |
 
 ### `GitLab/scicat_plugin`
 
@@ -448,9 +448,10 @@ The same ordering and durability properties must hold for the real production co
    `api/tests/test_hzdr_kafka_spool.py` (in-memory fake broker, no Docker).
 3. ✅ Supervised launch: `DW_API_HZDR_SPOOL__ENABLED=true` (ASAPO) and
    `DW_API_HZDR_KAFKA_SPOOL__ENABLED=true` (Kafka) each start a background
-   asyncio task in the FastAPI lifespan (`main.py`), sharing one stop event and
-   teardown; `scripts/damnit-api.service` systemd unit wraps the whole API
-   process with `Restart=on-failure`.
+   asyncio task, sharing one stop event and teardown. The startup/shutdown
+   wiring lives in `consumer/bootstrap.py` (`spool_lifespan`), which the FastAPI
+   lifespan in `main.py` enters as a single `async with`; `scripts/damnit-api.service`
+   systemd unit wraps the whole API process with `Restart=on-failure`.
 4. ✅ 11 integration tests in `api/tests/test_hzdr_spool.py` (ASAPO, live
    in-process harness broker) + 6 in `api/tests/test_hzdr_kafka_spool.py`
    (Kafka, in-memory fake). Remaining for Kafka go-live: deployment-broker
@@ -483,7 +484,7 @@ replay each consumer, then verify:
 ## SciCat Registration
 
 **Status:** ✅ DAMNIT-side wiring implemented 2026-07-04 (see
-`docs/plans/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
+`docs/plans/done/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
 + `PLUGIN_URL` · **Effort:** Low–Medium · **Added:** 2026-06-26
 
 This is a **post-pilot FAIR enhancement, off the go-live critical path** — the

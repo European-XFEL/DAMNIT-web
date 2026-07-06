@@ -57,11 +57,13 @@ Before Phase 1, enumerate the #204–#214 commits
 - `metadata/hzdr_event.py`, `hzdr_nexus.py`, `hzdr_sources.py`, `labfrog_sqlite.py`,
   `producer_status.py`, `metadata/scicat.py`, `shared/flow_activity.py`
 - `consumer/` (ASAPO/Kafka durable spool consumers, `builder_trigger.py`) and their
-  `main.py` lifespan wiring. The debounced auto-builder-trigger
-  (`consumer/builder_trigger.py`, the `on_new_events_hook` in `consumer/spool.py`) and
-  SciCat registration (`metadata/scicat.py`, its builder post-step + `/scicat` route)
-  landed 2026-07-04 — both fork-only, both to be absorbed by the `consumer.bootstrap`
-  extraction in C2 rather than left inline in `main.py`.
+  lifespan wiring, now in `consumer/bootstrap.py` (`spool_lifespan`) — the debounced
+  auto-builder-trigger (`consumer/builder_trigger.py`, the `on_new_events_hook` in
+  `consumer/spool.py`) landed 2026-07-04 and its startup/shutdown was extracted from
+  `main.py` in C2 (✅ done, 2026-07-06).
+- SciCat registration (`metadata/scicat.py`) — a fork-only builder post-step
+  (`_register_scicat`) plus a `/scicat` route; the route moves out with the rest of
+  the HZDR routes in C1.
 - The ~1,350 added lines of `/metadata/hzdr/*` routes in `metadata/routers.py`
 - All of `frontend/apps/app/src/hzdr/` (pages, components, utils, tests)
 - `api/scripts/hzdr-*`, launchers (`scripts/hzdr-launch.*`), `.env.*.example` profiles,
@@ -81,13 +83,16 @@ These upstream files currently mix generic and HZDR changes in one diff:
    everything HZDR into a new `metadata/hzdr_routers.py` (or an `hzdr/` subpackage)
    with its own `APIRouter`, mounted from `main.py`. Upstream file returns to ~its
    original content plus the generic views routes.
-2. **`main.py`** (+90/-4): unrelated changes coexist — conditional mymdc bootstrap
-   (belongs to the provider PR), auth-router selection change (`settings.is_local` →
-   `auth.is_disabled`, belongs to the LDAP PR), and fork-only lifespan wiring for the
-   HZDR spool consumers **and** the debounced builder auto-trigger (`BuilderTrigger`).
-   Extract all the fork-only startup/shutdown into one `consumer.bootstrap(app,
-   settings)` (owning spool consumers + trigger) so the fork's `main.py` diff shrinks
-   to one hook line.
+2. **`main.py`** (+90/-4 → now smaller): three unrelated changes coexisted —
+   conditional mymdc bootstrap (belongs to the provider PR), auth-router selection
+   change (`settings.is_local` → `auth.is_disabled`, belongs to the LDAP PR), and
+   fork-only lifespan wiring for the HZDR spool consumers **and** the debounced builder
+   auto-trigger. ✅ **Done (2026-07-06):** the fork-only startup/shutdown was extracted
+   into `consumer/bootstrap.py` (`spool_lifespan`, an async context manager owning both
+   consumers + trigger); `main.py`'s lifespan now wraps its `yield` in a single
+   `async with consumer_bootstrap.spool_lifespan(settings, logger)`. Characterization
+   test: `tests/test_hzdr_consumer_bootstrap.py`. The mymdc-bootstrap and auth-router
+   changes remain for the provider and LDAP PRs respectively.
 3. **`shared/settings.py`** (+490/-7): split generic settings (`LDAPSettings`,
    `DamnitSettings`, `MetadataSettings`, terminology) from HZDR-only ones
    (`hzdr_spool`, `hzdr_kafka_spool`, flow-monitor receivers, `HZDRBuilderSettings`,
@@ -152,6 +157,15 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
    `python api/scripts/hzdr-local-acceptance.py`, and `pwsh scripts/test-all.ps1`
    before the cross-repo-sensitive moves (the `hzdr_event.py` contract file must not
    move or change — it is vendored byte-identically into sibling repos).
+
+   Progress: **C2 done (2026-07-06)** — spool/trigger lifespan wiring extracted to
+   `consumer/bootstrap.py`; `main.py`'s fork-only diff is now one `async with`. The
+   trial merge confirmed the C1/C2/C3 API files merge cleanly against `upstream/main`,
+   so these can be done ahead of Phase 0 without rework. **Remaining:** C1
+   (`metadata/hzdr_routers.py` route split, incl. the `/scicat` route), C3
+   (`shared/settings.py` generic/HZDR split), C4 (frontend `app.tsx` route isolation —
+   this one *does* touch the conflict-prone `table.tsx`/frontend, so sequence it with
+   Phase 0).
 3. **Phase 2 — extract PR branches:** for each PR in §3, cherry-pick/re-implement
    onto `upstream/main` in a fresh branch; flip defaults back to EXFEL; strip HZDR
    naming; run upstream's own CI workflows locally where possible.

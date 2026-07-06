@@ -36,17 +36,24 @@ Real-broker ingestion end-to-end and the pilot replay remain — see the
 | [NXhzdr_target profile](nxhzdr-target-profile.md) | The `NXhzdr_target` NeXus application-definition profile for target metadata |
 | [MediaWiki integration](mediawiki-integration.md) | Read-only campaign-to-wiki link, configuration, and API endpoint |
 
-## Plans — per-feature execution
+## Plans — active
 
 | Document | Purpose |
 | --- | --- |
-| [Auto builder-trigger](plans/auto-builder-trigger-plan.md) | Debounced rebuild of the canonical NeXus + catalog after new spool events (✅ done) |
-| [SciCat registration](plans/scicat-registration-plan.md) | Register the campaign NeXus file as a citable SciCat dataset (✅ done) |
-| [Standards alignment plan](plans/alignment-implementation-plan.md) | Phased execution plan for enacting the standards alignment |
-| [Deployment plan](plans/deployment-plan.md) | Wiring the Kafka and ASAPO spool consumers into the running server |
-| [Remaining work](plans/remaining-work-plan.md) | Next-steps playbook for open items with ordered recommendations |
-| [UI optimization](plans/ui-optimization-plan.md) | Operator-UI space/usability critique and the WP1–WP4 plan (merged, PR #2) |
 | [Upstream PR plan](plans/upstream-pr-plan.md) | Split-PR strategy for contributing generic HZDR components back to XFEL DAMNIT-web |
+| [Deployment plan](plans/deployment-plan.md) | Wiring the Kafka and ASAPO spool consumers into the running server |
+| [Standards alignment plan](plans/alignment-implementation-plan.md) | Phased execution plan for enacting the standards alignment |
+| [Remaining work](plans/remaining-work-plan.md) | Next-steps playbook for open items with ordered recommendations |
+
+## Plans — delivered (`plans/done/`)
+
+Shipped features, kept for the design rationale and history.
+
+| Document | Purpose |
+| --- | --- |
+| [Auto builder-trigger](plans/done/auto-builder-trigger-plan.md) | Debounced rebuild of the canonical NeXus + catalog after new spool events (✅ done) |
+| [SciCat registration](plans/done/scicat-registration-plan.md) | Register the campaign NeXus file as a citable SciCat dataset (✅ done) |
+| [UI optimization](plans/done/ui-optimization-plan.md) | Operator-UI space/usability critique and the WP1–WP4 plan (✅ merged, PR #2) |
 
 ## Status & process
 

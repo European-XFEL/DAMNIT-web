@@ -3,8 +3,8 @@
 **Status:** ✅ implemented 2026-07-04 · **Roadmap item:** "Register the canonical
 campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid`" ·
 **Effort:** Low–Medium ·
-Companion to [integration-roadmap.md §SciCat Registration](../status/integration-roadmap.md#scicat-registration)
-and [standards-alignment.md §3.9](../standards-alignment.md).
+Companion to [integration-roadmap.md §SciCat Registration](../../status/integration-roadmap.md#scicat-registration)
+and [standards-alignment.md §3.9](../../standards-alignment.md).
 
 ## Problem
 

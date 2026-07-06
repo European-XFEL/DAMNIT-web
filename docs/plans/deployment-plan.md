@@ -17,9 +17,10 @@ Last updated: 2026-07-03
   (see `fwkt-webapps/docs/operations/deployment-plan.md`, Phases 1–2).
 - **Next steps, in order:** (1) enable Kafka spool consumer (Step 1) once the
   broker exists, (2) run the go-live gate (Step 3) and pilot capture with
-  dedup counts, (3) wire the HDF5 builder per campaign, (4) enable the ASAPO
-  path only when the LaserData sidecar is live (Step 2 stays harness-only
-  until then).
+  dedup counts, (3) enable the builder auto-trigger + (optional) SciCat
+  registration per campaign (Step 2b — landed 2026-07-04, replaces the manual
+  per-campaign builder run), (4) enable the ASAPO path only when the LaserData
+  sidecar is live (Step 2 stays harness-only until then).
 - **Demo mode:** local `scripts/hzdr-launch.ps1|.sh` with anonymized fixtures
   and the flow monitor; the GitHub Pages demo build (`build-demo.yml`) stays
   the shareable no-backend demo. Demo/prod differ only by `.env` — keep it
@@ -109,6 +110,11 @@ python api/scripts/hzdr-hdf5-builder.py \
     --output-nexus /data/damnit/hzdr/<campaign>/<campaign>.nxs
 ```
 
+> **This manual invocation is a one-off / fallback.** With the builder
+> auto-trigger enabled (Step 2b, `DW_API_HZDR_BUILDER__ENABLED=true`) the running
+> API reruns exactly this command as a debounced subprocess after each batch of
+> new spool events, so you do not have to invoke or schedule it by hand.
+
 ---
 
 ## Step 2: Enable the ASAPO HTTP harness spool consumer
@@ -163,6 +169,58 @@ ls -lh /data/damnit/hzdr/spool/asapo/<campaign>/events.jsonl
 
 ---
 
+## Step 2b: Enable the builder auto-trigger and SciCat registration
+
+Both landed 2026-07-04 and are **off by default**; enable them once a consumer is
+spooling events for the campaign.
+
+### Builder auto-trigger
+
+With this on, the API reruns `hzdr-hdf5-builder.py` as a debounced subprocess after
+each batch of new spool events — no cron/systemd timer or manual Step 1d run needed.
+It is a single global trigger (one build per campaign at a time), so the builder's
+single-writer PID lock is never contended. The settings mirror the builder CLI;
+`OUTPUT_NEXUS` is **required** when `ENABLED=true`.
+
+```ini
+DW_API_HZDR_BUILDER__ENABLED=true
+DW_API_HZDR_BUILDER__OUTPUT_NEXUS=/data/damnit/hzdr/<campaign>/<campaign>.nxs
+DW_API_HZDR_BUILDER__EXPERIMENT_ID=<campaign-slug>
+DW_API_HZDR_BUILDER__LABFROG_SQLITE=/data/damnit/hzdr/<campaign>/<campaign>.sqlite
+DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE=Europe/Berlin
+DW_API_HZDR_BUILDER__DEBOUNCE_SECONDS=10.0
+DW_API_HZDR_BUILDER__MATCH_TOLERANCE_S=120.0
+```
+
+The trigger derives its `--events-jsonl` / `--trigger-jsonl` inputs from the spool
+paths of whichever consumers are running, so it stays in sync with Steps 1–2.
+Restart and watch for `Builder auto-trigger started`. If `ENABLED=true` but no spool
+consumer is enabled, the API logs a warning and nothing triggers the builder.
+
+### SciCat registration
+
+A best-effort builder post-step that registers the campaign NeXus file as a citable
+SciCat dataset (path + metadata only — never file contents) and stamps
+`scicat_pid`/`version_hash` back into `hzdr_sources.json`. It is **off the go-live
+critical path** — the pipeline builds and serves without it — and never fails a
+build. The SciCat URL/token live in the plugin's own env; DAMNIT only knows the
+plugin URL.
+
+```ini
+DW_API_HZDR_SCICAT__ENABLED=true
+DW_API_HZDR_SCICAT__PLUGIN_URL=http://scicat-plugin.hzdr.de:5001
+DW_API_HZDR_SCICAT__ENDPOINT=from-json          # or "push" for rebuild dedup via version_hash
+DW_API_HZDR_SCICAT__INSTRUMENT_ID=<scicat-instrument-id>
+DW_API_HZDR_SCICAT__OWNER_GROUP=<scicat-owner-group>
+DW_API_HZDR_SCICAT__FRONTEND_URL=https://scicat.hzdr.de   # for the dataset link in the UI
+```
+
+Verify: after a build, `GET /metadata/hzdr/sources/<key>/scicat` returns the stored
+`scicat_pid`, and the Link Records page shows a SciCat card. A byte-identical rebuild
+skips the re-POST (sha256 short-circuit).
+
+---
+
 ## Step 3: Run the real-broker Kafka integration gate
 
 This step requires Docker and uses `test-all.ps1 -DockerTests`. Treat it as the
@@ -200,8 +258,12 @@ No manual offset reset or spool file manipulation is needed for a clean restart.
 When a new campaign starts:
 1. Update `DW_API_HZDR_KAFKA_SPOOL__CAMPAIGN` and `DW_API_HZDR_SPOOL__CAMPAIGN` in `.env`
 2. The spool consumers create a new `spool/<transport>/<new-campaign>/` directory automatically
-3. Restart the service: `sudo systemctl restart damnit-api`
-4. Update the builder invocation to point `--trigger-jsonl` at the new campaign's spool file
+3. If the builder auto-trigger is on, also update `DW_API_HZDR_BUILDER__OUTPUT_NEXUS`,
+   `__EXPERIMENT_ID`, and `__LABFROG_SQLITE` to the new campaign (and the SciCat
+   fields if registration is on); the trigger picks up the new spool paths on restart
+4. Restart the service: `sudo systemctl restart damnit-api`
+5. If instead you run the builder by hand, point `--trigger-jsonl` at the new
+   campaign's spool file per Step 1d
 
 Old campaign spool files are not removed automatically — archive them under
 `/data/damnit/hzdr/archive/<old-campaign>/` if disk space is a concern.

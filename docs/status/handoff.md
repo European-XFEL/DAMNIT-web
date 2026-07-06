@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-04
+Updated: 2026-07-06
 
 ## Current State
 
@@ -40,6 +40,23 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`
   schema-version string. All committed.
 
+## Built 2026-07-06
+
+- **Upstreaming prep (Phase 0/1 groundwork)** — a split-PR plan for contributing
+  the generic HZDR components (LDAP auth, runtime-config/terminology, saved views,
+  metadata-provider switch) back to XFEL DAMNIT-web, in
+  [upstream-pr-plan.md](../plans/upstream-pr-plan.md). It records the divergence
+  (195 files vs the `3f38e60` fork point), the current upstream HEAD (`d5a1081`,
+  #214), and a trial-merge conflict map (**6 files** conflict — `table.tsx`,
+  `graphql/models.py`, `.pre-commit-config.yaml`, root `README.md`,
+  `package.json`/`pnpm-lock.yaml`; the big HZDR API files merge cleanly).
+  **Phase 1 / C2 done:** the fork-only spool + builder-trigger lifespan wiring was
+  extracted from `main.py` into `consumer/bootstrap.py` (`spool_lifespan`, an async
+  context manager) with a characterization test
+  (`tests/test_hzdr_consumer_bootstrap.py`), shrinking `main.py`'s diff against
+  upstream to a single `async with`. Docs reorganized — delivered plans moved to
+  `docs/plans/done/`.
+
 ## Built 2026-07-04
 
 - **SciCat registration** — the FAIR "one citable dataset per campaign" record.
@@ -55,7 +72,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   Records page. `HZDRScicatSettings` (`DW_API_HZDR_SCICAT__*`; SciCat URL/token
   stay in the plugin's own env). 20 tests in `tests/test_hzdr_scicat.py`;
   end-to-end verified with a real builder run against a mock plugin. Plan in
-  `docs/plans/scicat-registration-plan.md`.
+  `docs/plans/done/scicat-registration-plan.md`.
 
 - **Builder auto-trigger** — closes the last durable-spool gap. New module
   `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's
@@ -70,14 +87,14 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   11 tests in `tests/test_hzdr_builder_trigger.py` (command assembly, debounce
   coalescing, re-arm, failure resilience, hook dispatch, settings validation);
   end-to-end verified against a real event → NeXus + catalog. Plans for this and
-  SciCat registration in `docs/plans/auto-builder-trigger-plan.md` and
-  `docs/plans/scicat-registration-plan.md`.
+  SciCat registration in `docs/plans/done/auto-builder-trigger-plan.md` and
+  `docs/plans/done/scicat-registration-plan.md`.
 
 ## Built 2026-07-03/04
 
 - **UI critique + space/usability optimization** — merged to `main` via PR #2
   (`claude/ui-critique-optimization-qs2bof` → `de0cfbc`). Frontend-only,
-  behavior-preserving; see [ui-optimization-plan.md](../plans/ui-optimization-plan.md)
+  behavior-preserving; see [ui-optimization-plan.md](../plans/done/ui-optimization-plan.md)
   for the full WP breakdown and per-WP commit hashes.
   - WP1 (`bbb2ec1`): client-side navigation (react-router `Link`/`useNavigate`
     instead of full-page `<a href>` reloads) + active-route indication and a
@@ -220,7 +237,7 @@ Mongo, no broker consumer group; each degrades safely) — see
    now dispatches to a debounced `BuilderTrigger` (`consumer/builder_trigger.py`)
    that reruns `hzdr-hdf5-builder.py` as a subprocess; enable with
    `DW_API_HZDR_BUILDER__ENABLED=true` (+ `OUTPUT_NEXUS`). See
-   [auto-builder-trigger-plan.md](../plans/auto-builder-trigger-plan.md). Set the
+   [auto-builder-trigger-plan.md](../plans/done/auto-builder-trigger-plan.md). Set the
    production builder env on the deployment when pointing at the real brokers.
 3. **Capture one real pilot sequence** and run the go-live gate in
    [integration-roadmap.md](integration-roadmap.md).
@@ -231,8 +248,13 @@ Mongo, no broker consumer group; each degrades safely) — see
    returned `scicat_pid`; enable with `DW_API_HZDR_SCICAT__ENABLED=true` +
    `PLUGIN_URL`. Surface the plugin's env (SciCat URL/token) on the deployment
    host, not in DAMNIT. See
-   [scicat-registration-plan.md](../plans/scicat-registration-plan.md); field mapping in
+   [scicat-registration-plan.md](../plans/done/scicat-registration-plan.md); field mapping in
    [standards-alignment.md §3.9](../standards-alignment.md#39-scicat-field-mapping).
+6. **Continue the upstream-PR prep** — Phase 1 disentanglement, next items C1
+   (move the HZDR routes, incl. `/scicat`, into `metadata/hzdr_routers.py`) and C3
+   (split `shared/settings.py` into generic vs HZDR-only), then Phase 0 (merge fork
+   `main` onto `upstream/main`, resolving the 6-file conflict set). C2 is done. See
+   [upstream-pr-plan.md](../plans/upstream-pr-plan.md).
 
 The canonical model is in [architecture.md](../architecture.md). Avoid adding new
 matching logic in producer repositories.
