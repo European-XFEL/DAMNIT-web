@@ -53,9 +53,12 @@ async def test_is_authenticated_with_oauth_user():
 
 
 @pytest.mark.asyncio
-async def test_is_proposal_member_no_database():
+async def test_is_proposal_member_missing_database():
+    """Database input is required for proposal authorization, if it's missing that
+    should be a specific error."""
     info = _info(_context())
-    assert await IsProposalMember().has_permission(None, info) is False
+    with pytest.raises(StrawberryGraphQLError, match="misconfigured"):
+        await IsProposalMember().has_permission(None, info)
 
 
 @pytest.mark.asyncio
