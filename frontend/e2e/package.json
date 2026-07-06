@@ -9,7 +9,10 @@
     "#examples/*": "./examples/*/index.ts"
   },
   "scripts": {
-    "test:e2e": "playwright test",
+    "test": "playwright test",
+    "setup": "playwright install chromium",
+    "ui": "playwright test --ui",
+    "report": "playwright show-report",
     "lint:eslint": "eslint .",
     "lint:prettier": "prettier --check --cache --ignore-path ../.prettierignore .",
     "lint:tsc": "tsc -b --noEmit"
