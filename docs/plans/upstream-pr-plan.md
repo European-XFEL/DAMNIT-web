@@ -1,7 +1,7 @@
 # Upstreaming plan: HZDR components → XFEL DAMNIT-web
 
-Status: proposal (2026-07-05). Companion to [PR_NOTES.md](../PR_NOTES.md), which is an
-earlier single-PR draft; this plan supersedes it with a split-PR strategy.
+Status: proposal (updated 2026-07-06). Companion to [PR_NOTES.md](../../PR_NOTES.md),
+which is an earlier single-PR draft; this plan supersedes it with a split-PR strategy.
 
 ## 1. Baseline and divergence
 
@@ -9,27 +9,34 @@ The fork's last common upstream commit is `3f38e60`
 (*feat(frontend/context-file): persist Monaco editor view state (#205)*). Everything
 after that is HZDR work:
 
-- **188 files changed** vs that base: **130 added, 58 modified**, ~35.8k insertions.
-- Additions are mostly self-contained (`api/.../metadata/hzdr_*`, `api/.../consumer/`,
-  `frontend/apps/app/src/hzdr/`, `api/scripts/hzdr-*`, `docs/`, tests).
+- **195 files changed** vs that base: **137 added, 58 modified**, ~37.6k insertions.
+- Additions are mostly self-contained (`api/.../metadata/hzdr_*`, `api/.../metadata/scicat.py`,
+  `api/.../consumer/`, `frontend/apps/app/src/hzdr/`, `api/scripts/hzdr-*`, `docs/`, tests).
 - The sensitive part is the **58 modified upstream files** — that is what an upstream
   PR series has to keep small and reviewable.
 
-Upstream `main` is currently at `89bc7e9`
-(*ci(frontend): add lint and test workflow (#213)*), i.e. eight merged PRs ahead of
-the fork point. Every PR below is cut against `upstream/main`, not against this
-fork's `main`. Two consequences of #213 specifically:
+Upstream `main` is currently at `d5a1081`
+(*chore: better pre-commit and easier contributor onboarding (#214)*), i.e. ~eleven
+merged PRs (#204, #210–#214 and the commits behind them) ahead of the fork point.
+Every PR below is cut against `upstream/main`, not against this fork's `main`. The
+newer upstream work adds three reconciliation points on top of the frontend changes:
 
-- Upstream CI now runs frontend lint and unit/browser tests on PRs, so PR 2–4's
+- **#213 CI** now runs frontend lint and unit/browser tests on PRs, so PR 2–4's
   frontend changes (`login-route.tsx`, `table.tsx`, `saved-views-popover.tsx`) must
   pass upstream's own workflow, not just the fork's local lint.
-- The fork independently added `frontend/apps/app/vitest.config.ts` and
-  `src/test-setup.ts` for the HZDR component tests. If #213 (or the commits behind
-  it) introduced its own vitest/test scaffolding, expect a conflict there when
-  merging upstream into the fork — reconcile toward upstream's config and port the
-  HZDR test setup onto it.
+- **#212 test scaffolding + #212/#211/#210/#204 table refactors** (upstream added
+  vitest, `bounds.ts`, "pure core" extractions from the column-visibility hook, base
+  cell tooltips, and tabler-icon error cells). The fork independently added
+  `frontend/apps/app/vitest.config.ts` and `src/test-setup.ts` for the HZDR component
+  tests, and the fork's `table.tsx` 2-line saved-views hook now sits on a `table.tsx`
+  that upstream has since rewritten — expect conflicts on both the vitest config and
+  `table.tsx`. Reconcile toward upstream's config/structure and re-apply the HZDR
+  hook + test setup on top.
+- **#214 onboarding/pre-commit** added `setup-dev.sh`, env templates, type-checks on
+  pre-push, and paused pyright. PRs must satisfy upstream's pre-commit, and the fork's
+  own `.pre-commit-config`/`.env.*.example` may conflict when merging upstream in.
 
-Before Phase 1, enumerate the remaining #206–#212 commits
+Before Phase 1, enumerate the #204–#214 commits
 (`git log --oneline 3f38e60..upstream/main`) and merge or rebase fork `main` onto
 `upstream/main` so the disentanglement refactors happen on a current base.
 
@@ -48,9 +55,14 @@ Before Phase 1, enumerate the remaining #206–#212 commits
 ### B. Fork-only — HZDR-specific, do not propose upstream
 
 - `metadata/hzdr_event.py`, `hzdr_nexus.py`, `hzdr_sources.py`, `labfrog_sqlite.py`,
-  `producer_status.py`, `shared/flow_activity.py`
-- `consumer/` (ASAPO/Kafka durable spool consumers) and their `main.py` lifespan wiring
-- The ~1,200 added lines of `/metadata/hzdr/*` routes in `metadata/routers.py`
+  `producer_status.py`, `metadata/scicat.py`, `shared/flow_activity.py`
+- `consumer/` (ASAPO/Kafka durable spool consumers, `builder_trigger.py`) and their
+  `main.py` lifespan wiring. The debounced auto-builder-trigger
+  (`consumer/builder_trigger.py`, the `on_new_events_hook` in `consumer/spool.py`) and
+  SciCat registration (`metadata/scicat.py`, its builder post-step + `/scicat` route)
+  landed 2026-07-04 — both fork-only, both to be absorbed by the `consumer.bootstrap`
+  extraction in C2 rather than left inline in `main.py`.
+- The ~1,350 added lines of `/metadata/hzdr/*` routes in `metadata/routers.py`
 - All of `frontend/apps/app/src/hzdr/` (pages, components, utils, tests)
 - `api/scripts/hzdr-*`, launchers (`scripts/hzdr-launch.*`), `.env.*.example` profiles,
   HZDR docs, examples, fixtures, `CLAUDE.md`/`AGENTS.md`/`PR_NOTES.md`
@@ -64,20 +76,23 @@ Before Phase 1, enumerate the remaining #206–#212 commits
 
 These upstream files currently mix generic and HZDR changes in one diff:
 
-1. **`metadata/routers.py`** (+1,316 lines): HZDR endpoints are interleaved into the
-   upstream router module. Move everything HZDR into a new `metadata/hzdr_routers.py`
-   (or an `hzdr/` subpackage) with its own `APIRouter`, mounted from `main.py`.
-   Upstream file returns to ~its original content plus the generic views routes.
-2. **`main.py`** (+63/-?): three unrelated changes coexist — conditional mymdc
-   bootstrap (belongs to the provider PR), auth-router selection change
-   (`settings.is_local` → `auth.is_disabled`, belongs to the LDAP PR), and HZDR spool
-   consumer startup/shutdown (fork-only; extract into e.g. `consumer.bootstrap(app,
-   settings)` so the fork's `main.py` diff shrinks to one hook line).
-3. **`shared/settings.py`** (+418 lines): split generic settings (`LDAPSettings`,
+1. **`metadata/routers.py`** (+1,348 lines): HZDR endpoints are interleaved into the
+   upstream router module (now including the `/scicat` registration route). Move
+   everything HZDR into a new `metadata/hzdr_routers.py` (or an `hzdr/` subpackage)
+   with its own `APIRouter`, mounted from `main.py`. Upstream file returns to ~its
+   original content plus the generic views routes.
+2. **`main.py`** (+90/-4): unrelated changes coexist — conditional mymdc bootstrap
+   (belongs to the provider PR), auth-router selection change (`settings.is_local` →
+   `auth.is_disabled`, belongs to the LDAP PR), and fork-only lifespan wiring for the
+   HZDR spool consumers **and** the debounced builder auto-trigger (`BuilderTrigger`).
+   Extract all the fork-only startup/shutdown into one `consumer.bootstrap(app,
+   settings)` (owning spool consumers + trigger) so the fork's `main.py` diff shrinks
+   to one hook line.
+3. **`shared/settings.py`** (+490/-7): split generic settings (`LDAPSettings`,
    `DamnitSettings`, `MetadataSettings`, terminology) from HZDR-only ones
-   (`hzdr_spool`, `hzdr_kafka_spool`, flow-monitor receivers), and restore
-   EXFEL-preserving defaults on anything upstreamed.
-4. **`frontend/apps/app/src/app.tsx`** (+66): HZDR routes, `AppHeader` replacement,
+   (`hzdr_spool`, `hzdr_kafka_spool`, flow-monitor receivers, `HZDRBuilderSettings`,
+   `HZDRScicatSettings`), and restore EXFEL-preserving defaults on anything upstreamed.
+4. **`frontend/apps/app/src/app.tsx`** (+55/-11): HZDR routes, `AppHeader` replacement,
    and `HeroPage` → `/home` redirect are fork-only. Isolate the HZDR route block
    (e.g. `hzdr/routes.tsx` exporting a fragment) so the fork's `app.tsx` diff is a
    few lines. The upstream PRs do not touch `app.tsx` at all.
@@ -113,10 +128,10 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
 
 ## 4. Work order in this fork
 
-1. **Phase 0 — sync with upstream:** upstream/main is at `89bc7e9` (#213). Review
-   the #206–#213 commits, then merge or rebase fork `main` onto `upstream/main` so
-   the refactors below happen on a current base. Watch for the vitest-config
-   conflict noted in §1.
+1. **Phase 0 — sync with upstream:** upstream/main is at `d5a1081` (#214). Review
+   the #204–#214 commits, then merge or rebase fork `main` onto `upstream/main` so
+   the refactors below happen on a current base. Watch for the three reconciliation
+   points in §1 (vitest config, the rewritten `table.tsx`, and #214 pre-commit/env).
 2. **Phase 1 — disentangle (no behavior change, characterization tests first per
    repo convention):** items C1–C4 above. Validate each step with
    `uv run pytest`, `uv run ruff check .`, `pnpm run lint`,

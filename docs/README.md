@@ -46,6 +46,7 @@ Real-broker ingestion end-to-end and the pilot replay remain — see the
 | [Deployment plan](plans/deployment-plan.md) | Wiring the Kafka and ASAPO spool consumers into the running server |
 | [Remaining work](plans/remaining-work-plan.md) | Next-steps playbook for open items with ordered recommendations |
 | [UI optimization](plans/ui-optimization-plan.md) | Operator-UI space/usability critique and the WP1–WP4 plan (merged, PR #2) |
+| [Upstream PR plan](plans/upstream-pr-plan.md) | Split-PR strategy for contributing generic HZDR components back to XFEL DAMNIT-web |
 
 ## Status & process
 
