@@ -24,9 +24,9 @@ export default defineConfig({
   ],
   webServer: {
     // CI serves the production build (a preceding `Build app` step runs
-    // `vite build`) to catch prod-only breakage and load faster; locally we
-    // use the dev server for HMR. Either way the browser intercepts every
-    // request, so the app never reaches a real backend.
+    // `vite build`) to catch prod-only breakage and load faster; locally we use
+    // the dev server for fast startup and HMR. Either way the browser intercepts
+    // every request, so the app never reaches a real backend.
     command: isCI
       ? `pnpm --filter @damnit-frontend/app exec vite preview --port ${PORT} --strictPort`
       : 'pnpm --filter @damnit-frontend/app dev',
@@ -37,11 +37,14 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
-      // Consumed by the dev server. Preview takes its port from --port above
-      // and bakes the base at build time. The browser intercepts every
-      // request, so VITE_API is never reached; it only satisfies vite.config,
-      // which throws without one.
+      // Consumed by the dev server; preview takes its port from --port above.
       VITE_PORT: String(PORT),
+      // Lets the dev server render Glide Data Grid's a11y tree; main.tsx explains
+      // why StrictMode blocks it. No-op for the production build CI serves.
+      VITE_DISABLE_STRICT_MODE: 'true',
+      // The browser intercepts every request, so the app never reaches these.
+      // They exist only to satisfy vite.config: a valid VITE_API (it throws
+      // without one) and the /app/ base that APP_BASE_URL expects.
       VITE_API: 'http://localhost',
       VITE_BASE_URL: '/app/',
     },

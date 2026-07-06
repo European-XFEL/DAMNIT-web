@@ -4,5 +4,12 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
     "types": ["node", "@playwright/test"]
   },
-  "include": ["playwright.config.ts", "tests", "fixtures", "mocks", "examples"]
+  "include": [
+    "playwright.config.ts",
+    "tests",
+    "fixtures",
+    "support",
+    "mocks",
+    "examples"
+  ]
 }
