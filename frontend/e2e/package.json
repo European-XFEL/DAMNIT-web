@@ -5,6 +5,7 @@
   "type": "module",
   "imports": {
     "#fixtures": "./fixtures/index.ts",
+    "#mocks": "./mocks/index.ts",
     "#examples/*": "./examples/*/index.ts"
   },
   "scripts": {

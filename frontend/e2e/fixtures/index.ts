@@ -1,6 +1,6 @@
 import { test as base, expect } from '@playwright/test'
 
-import { mockApi, type MockApi } from './mock-api'
+import { mockApi, type MockApi } from '#mocks'
 
 type Fixtures = {
   api: MockApi
