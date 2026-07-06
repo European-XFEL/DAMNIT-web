@@ -70,15 +70,12 @@ class ProposalsByYearHalf(RootModel):
 class User(BaseUserInfo):
     """Full user information including list of proposals."""
 
-    # TODO: use single proposals list
-    _damnit_proposals: list[int] = PrivateAttr(default_factory=list)
     _member_proposals: list[int] = PrivateAttr(default_factory=list)
     proposals_by_year_half: ProposalsByYearHalf
 
     @property
     def proposals(self) -> list[int]:
-        """Raw MyMdC membership; broader than the DAMNIT-narrowed set that
-        grants access to proposal data (`_damnit_proposals`)."""
+        """Proposals the user is a member of (raw MyMdC membership)."""
         return self._member_proposals
 
     @classmethod
@@ -119,14 +116,12 @@ class User(BaseUserInfo):
             p.proposal_number for p in proposals.root if p.proposal_number is not None
         ]
 
-        # only_with_damnit=True (the default) narrows the returned metadata
-        # to proposals with a DAMNIT path.
         proposals_meta = await _get_proposal_meta_many(
             mymdc,
             member_proposals,
             session,
+            only_with_damnit=True,  # filters metadata to proposals with a DAMNIT path
         )
-        damnit_proposals = [meta.number for meta in proposals_meta]
 
         proposals_by_year_half = {}
         for meta in proposals_meta:
@@ -143,7 +138,6 @@ class User(BaseUserInfo):
             "proposals_by_year_half": proposals_by_year_half,
         })
 
-        res._damnit_proposals = damnit_proposals
         res._member_proposals = member_proposals
 
         return res
