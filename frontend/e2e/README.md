@@ -6,28 +6,39 @@ intercepts every request and answers it from local data.
 
 ## Running
 
+From the `frontend/` root:
+
 ```
-pnpm --filter @damnit-frontend/e2e test:e2e
+pnpm e2e:setup   # once: install the Chromium browser
+pnpm e2e         # run the suite
+pnpm e2e:ui      # run in Playwright's watch UI
+pnpm e2e:report  # open the last HTML report
 ```
 
-Playwright starts the app on a dedicated port (5190). Install the browser once
-with `pnpm exec playwright install chromium`.
+Playwright starts the app on a dedicated port (6173). Locally it runs the dev
+server; in CI it serves the production `preview` build (a `Build app` step runs
+`vite build` first).
 
 ## Layout
 
 - `tests/<surface>/` - specs, one folder per app surface (`app`, later
   `site`). Each surface is its own Playwright project in
   `playwright.config.ts`.
-- `fixtures/` - Playwright fixtures (`test.extend`). `index.ts` exports the
-  extended `test` and `expect`; `mock-api.ts` is the route table the `api`
-  fixture installs.
+- `fixtures/` - Playwright harness glue (`test.extend`). `index.ts` exports the
+  extended `test` and `expect` and installs the auto-used `api` fixture.
+- `mocks/` - the network layer, mirroring the app's API. `index.ts` is the
+  route table the `api` fixture installs (auth, GraphQL, context file); it
+  splits into `graphql.ts` / `auth.ts` / `contextfile.ts` as it grows.
+- `support/` - imported driver and assertion helpers that take `page`, one
+  file per feature (mirrors `features/`), e.g. `support/table.ts`. Added when
+  the first spec needs one.
 - `examples/` - static wire responses per example (`examples/xpcs/`). The runs
   and context file are read straight from the demo's `examples/`, so the mocks
   cannot drift from the demo.
 
 Specs and fixtures import these through Node subpath aliases declared in
-`package.json` `imports` (`#fixtures`, `#examples/<example>`) rather than relative
-`../../` paths.
+`package.json` `imports` (`#fixtures`, `#mocks`, `#examples/<example>`) rather
+than relative `../../` paths.
 
 ## How the mocking works
 
