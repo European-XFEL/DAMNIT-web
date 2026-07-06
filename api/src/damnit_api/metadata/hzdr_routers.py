@@ -21,7 +21,8 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from ..auth.dependencies import OAuthUserInfo
-from ..shared.settings import HZDRWikiSettings, settings
+from ..shared.hzdr_settings import HZDRWikiSettings
+from ..shared.settings import settings
 from .hzdr_nexus import REVIEW_LEVELS, append_review_decision, write_json_atomic
 from .hzdr_sources import (
     HZDRDatasetPreview,

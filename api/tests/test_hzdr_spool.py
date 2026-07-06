@@ -305,7 +305,7 @@ async def test_real_asapo_consumer_claims_json_and_acks_after_spool(tmp_path):
 def test_hzdr_spool_settings_validate_real_asapo_required_fields():
     from pydantic import SecretStr, ValidationError
 
-    from damnit_api.shared.settings import HZDRSpoolSettings
+    from damnit_api.shared.hzdr_settings import HZDRSpoolSettings
 
     with pytest.raises(ValidationError, match="ASAPO_ENDPOINT"):
         HZDRSpoolSettings(enabled=True, broker_kind="asapo")

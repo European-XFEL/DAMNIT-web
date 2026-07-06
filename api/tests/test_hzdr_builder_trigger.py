@@ -15,7 +15,7 @@ import pytest
 
 from damnit_api.consumer.builder_trigger import BuilderTrigger
 from damnit_api.consumer.spool import HZDRSpoolConsumer, SpoolConfig
-from damnit_api.shared.settings import HZDRBuilderSettings
+from damnit_api.shared.hzdr_settings import HZDRBuilderSettings
 
 DEBOUNCE = 0.05
 

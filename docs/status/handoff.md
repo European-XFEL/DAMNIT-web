@@ -50,15 +50,21 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   #214), and a trial-merge conflict map (**6 files** conflict — `table.tsx`,
   `graphql/models.py`, `.pre-commit-config.yaml`, root `README.md`,
   `package.json`/`pnpm-lock.yaml`; the big HZDR API files merge cleanly).
-  **Phase 1 / C1 + C2 done:** C2 — the fork-only spool + builder-trigger lifespan
+  **Phase 1 / C1 + C2 + C3 done:** C2 — the fork-only spool + builder-trigger lifespan
   wiring was extracted from `main.py` into `consumer/bootstrap.py` (`spool_lifespan`,
   an async context manager) with a characterization test
   (`tests/test_hzdr_consumer_bootstrap.py`), shrinking `main.py`'s diff against
   upstream to a single `async with`. C1 — the 20 `/metadata/hzdr/*` routes (+ models
   and ~30 helpers) moved verbatim into `metadata/hzdr_routers.py` (`hzdr_router`),
   leaving `routers.py` at just the upstream `/proposal` route; route union verified
-  byte-identical to baseline, full suite 290 passed. Docs reorganized — delivered
-  plans moved to `docs/plans/done/`.
+  byte-identical to baseline. C3 — the HZDR-only setting classes (flow monitor +
+  spool/kafka/builder/health/asapo-activity/scicat/wiki) moved verbatim into
+  `shared/hzdr_settings.py`, so `shared/settings.py`'s diff against upstream is now
+  just the generic settings (auth, damnit, metadata, terminology; ~336 lines lighter);
+  the HZDR importers (`hzdr_routers`, `scicat`, `builder_trigger`, four `test_hzdr_*`)
+  repoint at `hzdr_settings`. All three verified behavior-preserving (full suite 290
+  passed; acceptance green). Docs reorganized — delivered plans moved to
+  `docs/plans/done/`.
 
 - **Fixed `hzdr-local-acceptance.py` stale fixture** — the acceptance script's
   duplicate-shot fixture expected an *ambiguous* review event but wrote an
@@ -262,12 +268,12 @@ Mongo, no broker consumer group; each degrades safely) — see
    host, not in DAMNIT. See
    [scicat-registration-plan.md](../plans/done/scicat-registration-plan.md); field mapping in
    [standards-alignment.md §3.9](../standards-alignment.md#39-scicat-field-mapping).
-6. **Continue the upstream-PR prep** — Phase 1 disentanglement: **C1 + C2 done**;
-   next is C3 (split `shared/settings.py` into generic vs HZDR-only), then C4
-   (isolate the HZDR route block in `frontend/apps/app/src/app.tsx`), then Phase 0
-   (merge fork `main` onto `upstream/main`, resolving the 6-file conflict set — C4
-   touches the conflict-prone `table.tsx`, so sequence it there). See
-   [upstream-pr-plan.md](../plans/upstream-pr-plan.md).
+6. **Continue the upstream-PR prep** — Phase 1 disentanglement: **C1 + C2 + C3 done**;
+   the only remaining item is C4 (isolate the HZDR route block in
+   `frontend/apps/app/src/app.tsx`, e.g. into `hzdr/routes.tsx`), then Phase 0
+   (merge fork `main` onto `upstream/main`, resolving the 6-file conflict set). C4
+   touches the conflict-prone `table.tsx`, so sequence it *with* Phase 0 rather than
+   ahead of it. See [upstream-pr-plan.md](../plans/upstream-pr-plan.md).
 
 The canonical model is in [architecture.md](../architecture.md). Avoid adding new
 matching logic in producer repositories.

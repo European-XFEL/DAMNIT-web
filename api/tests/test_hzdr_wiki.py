@@ -15,7 +15,8 @@ from pydantic import SecretStr
 from damnit_api.main import create_app
 from damnit_api.metadata.hzdr_routers import _fetch_wiki_page_info
 from damnit_api.metadata.hzdr_sources import HZDRWikiInfo
-from damnit_api.shared.settings import HZDRWikiSettings, settings
+from damnit_api.shared.hzdr_settings import HZDRWikiSettings
+from damnit_api.shared.settings import settings
 
 EXPERIMENT_ID = "Solenoid_Beamline_Tests_01.2025"
 SOURCE_KEY = "hzdr-solenoid-beamline-tests-01-2025"

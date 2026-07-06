@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import quote
 
 if TYPE_CHECKING:
-    from ..shared.settings import HZDRScicatSettings
+    from ..shared.hzdr_settings import HZDRScicatSettings
 
 logger = logging.getLogger(__name__)
 

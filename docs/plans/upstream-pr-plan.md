@@ -96,10 +96,21 @@ These upstream files currently mix generic and HZDR changes in one diff:
    `async with consumer_bootstrap.spool_lifespan(settings, logger)`. Characterization
    test: `tests/test_hzdr_consumer_bootstrap.py`. The mymdc-bootstrap and auth-router
    changes remain for the provider and LDAP PRs respectively.
-3. **`shared/settings.py`** (+490/-7): split generic settings (`LDAPSettings`,
-   `DamnitSettings`, `MetadataSettings`, terminology) from HZDR-only ones
-   (`hzdr_spool`, `hzdr_kafka_spool`, flow-monitor receivers, `HZDRBuilderSettings`,
-   `HZDRScicatSettings`), and restore EXFEL-preserving defaults on anything upstreamed.
+3. **`shared/settings.py`** (was +490/-7): generic settings (`LDAPSettings`,
+   `AuthSettings`, `DamnitSettings`, `MetadataSettings`, terminology/deployment,
+   `ContextWorkspaceSettings`, `UvicornSettings`, the `Settings` model) were mixed
+   in one module with the HZDR-only ones. ✅ **Done (2026-07-06):** the HZDR-only
+   setting classes (`FlowMonitorSettings` + its producer/option subtypes,
+   `HZDRSpoolSettings`, `HZDRKafkaSpoolSettings`, `HZDRBuilderSettings`,
+   `HZDRHealthSettings`, `HZDRAsapoActivitySettings`, `HZDRScicatSettings`,
+   `HZDRWikiSettings`) moved verbatim into a new `shared/hzdr_settings.py`;
+   `settings.py` imports the eight top-level ones to wire them onto `Settings`,
+   shrinking ~336 lines. The HZDR importers (`hzdr_routers.py`, `scicat.py`,
+   `builder_trigger.py`, four `test_hzdr_*` tests) now import from `hzdr_settings`,
+   so the boundary is real, not just a re-export. Behavior-preserving (full suite
+   290 passed, acceptance green). Still to do at PR-cut time (Phase 2): restore
+   EXFEL-preserving defaults on the *generic* settings that get upstreamed
+   (`deployment.profile`, `terminology.uses_proposals`, `metadata.provider`).
 4. **`frontend/apps/app/src/app.tsx`** (+55/-11): HZDR routes, `AppHeader` replacement,
    and `HeroPage` → `/home` redirect are fork-only. Isolate the HZDR route block
    (e.g. `hzdr/routes.tsx` exporting a fragment) so the fork's `app.tsx` diff is a
@@ -161,16 +172,17 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
    before the cross-repo-sensitive moves (the `hzdr_event.py` contract file must not
    move or change — it is vendored byte-identically into sibling repos).
 
-   Progress: **C1 + C2 done (2026-07-06).** C2 — spool/trigger lifespan wiring
+   Progress: **C1 + C2 + C3 done (2026-07-06).** C2 — spool/trigger lifespan wiring
    extracted to `consumer/bootstrap.py`; `main.py`'s fork-only diff is now one
    `async with`. C1 — all HZDR routes moved to `metadata/hzdr_routers.py`, so
-   `routers.py` is back to the upstream proposal route only. Both verified
-   behavior-preserving (full suite 290 passed; C1 route union byte-identical to
-   baseline). The trial merge confirmed these API files merge cleanly against
-   `upstream/main`, so they were safe to do ahead of Phase 0 without rework.
-   **Remaining:** C3 (`shared/settings.py` generic/HZDR split), C4 (frontend `app.tsx`
-   route isolation — this one *does* touch the conflict-prone `table.tsx`/frontend, so
-   sequence it with Phase 0).
+   `routers.py` is back to the upstream proposal route only. C3 — the HZDR-only
+   setting classes moved to `shared/hzdr_settings.py`, so `shared/settings.py`'s diff
+   against upstream is now just the generic settings (~336 lines lighter). All three
+   verified behavior-preserving (full suite 290 passed; C1 route union byte-identical
+   to baseline; C3 acceptance green). The trial merge confirmed these API files merge
+   cleanly against `upstream/main`, so they were safe to do ahead of Phase 0 without
+   rework. **Remaining:** C4 (frontend `app.tsx` route isolation — this one *does*
+   touch the conflict-prone `table.tsx`/frontend, so sequence it with Phase 0).
 3. **Phase 2 — extract PR branches:** for each PR in §3, cherry-pick/re-implement
    onto `upstream/main` in a fresh branch; flip defaults back to EXFEL; strip HZDR
    naming; run upstream's own CI workflows locally where possible.
