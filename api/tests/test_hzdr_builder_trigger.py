@@ -333,9 +333,11 @@ async def test_cancel_during_inflight_build_stops_promptly(tmp_path):
 @pytest.mark.asyncio
 async def test_subprocess_runner_reports_success(tmp_path):
     trigger = BuilderTrigger(_settings(tmp_path))
-    rc, output = await trigger._run_subprocess(
-        [sys.executable, "-c", "import sys; sys.exit(0)"]
-    )
+    rc, output = await trigger._run_subprocess([
+        sys.executable,
+        "-c",
+        "import sys; sys.exit(0)",
+    ])
     assert rc == 0
     assert output == ""
 
@@ -343,9 +345,11 @@ async def test_subprocess_runner_reports_success(tmp_path):
 @pytest.mark.asyncio
 async def test_subprocess_runner_reports_failure_with_output(tmp_path):
     trigger = BuilderTrigger(_settings(tmp_path))
-    rc, output = await trigger._run_subprocess(
-        [sys.executable, "-c", "print('nope'); import sys; sys.exit(3)"]
-    )
+    rc, output = await trigger._run_subprocess([
+        sys.executable,
+        "-c",
+        "print('nope'); import sys; sys.exit(3)",
+    ])
     assert rc == 3
     assert "nope" in output
 
