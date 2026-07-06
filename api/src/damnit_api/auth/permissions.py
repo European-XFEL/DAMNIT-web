@@ -28,7 +28,17 @@ class IsProposalMember(BasePermission):
     message = "Access to this proposal is forbidden."
 
     async def has_permission(self, source, info: Info, **kwargs) -> bool:
-        database = cast("DatabaseInput | None", kwargs.get("database"))
+        if "database" not in kwargs:
+            # Permission check on a field without a database doesn't make sense, so
+            # raise a specific error for these cases
+            logger.error(
+                "IsProposalMember applied to a field without a `database` argument",
+                field=getattr(info, "field_name", None),
+            )
+            msg = "Field is misconfigured for proposal authorization."
+            raise StrawberryGraphQLError(msg)
+
+        database = cast("DatabaseInput | None", kwargs["database"])
         proposal_str = database.proposal if database is not None else None
         if not proposal_str:
             return False
