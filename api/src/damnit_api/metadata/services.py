@@ -167,7 +167,7 @@ async def _check_user_allowed(
     if settings.is_local:
         return
 
-    if proposal_number not in user._damnit_proposals:
+    if proposal_number not in user.proposals:
         msg = (
             f"User not authorised for proposal {proposal_number}, or proposal does not "
             "exist."
