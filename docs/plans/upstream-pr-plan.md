@@ -132,6 +132,20 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
    the #204–#214 commits, then merge or rebase fork `main` onto `upstream/main` so
    the refactors below happen on a current base. Watch for the three reconciliation
    points in §1 (vitest config, the rewritten `table.tsx`, and #214 pre-commit/env).
+
+   A trial `git merge upstream/main` (2026-07-06, aborted) surfaced **exactly six
+   conflicts** — the big HZDR API files (`main.py`, `shared/settings.py`,
+   `metadata/routers.py`, `consumer/*`) and the fork's `vitest.config.ts` /
+   `test-setup.ts` merged cleanly:
+
+   | File | Cause | Resolution sketch |
+   | --- | --- | --- |
+   | `frontend/packages/ui/src/features/table/table.tsx` | upstream rewrote it (#210/#211/#212: pure-core extraction, base tooltip, tabler-icon error cells) under the fork's 2-line saved-views hook | take upstream's file, re-apply the saved-views hook on top — hardest of the six |
+   | `api/src/damnit_api/graphql/models.py` | #204 made `DamnitRun.resolve()` error-aware vs the fork's return-type tweak | keep upstream's error-aware body; drop the fork's cosmetic annotation change (was a §2.A "small fix" candidate — now redundant) |
+   | `.pre-commit-config.yaml` | #214 revamped hooks | union: upstream's hook set + the fork's extra hooks |
+   | `README.md` (root) | #214 rewrote the top-level README | keep the fork's HZDR README, fold in upstream's quick-start/contributing pointers |
+   | `frontend/package.json` | #212 added vitest/test deps | union the deps, then regenerate the lockfile |
+   | `frontend/pnpm-lock.yaml` | dependency drift | do not hand-merge — resolve `package.json`, then `pnpm install` to regenerate |
 2. **Phase 1 — disentangle (no behavior change, characterization tests first per
    repo convention):** items C1–C4 above. Validate each step with
    `uv run pytest`, `uv run ruff check .`, `pnpm run lint`,
