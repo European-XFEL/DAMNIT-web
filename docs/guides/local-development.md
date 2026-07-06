@@ -12,7 +12,9 @@ GitLab/planet-watchdog
 GitLab/shotcounter
 ```
 
-Launchers discover sibling checkouts or use `scripts/hzdr-launch.config.json`.
+Launchers discover sibling checkouts or use `scripts/hzdr-launch.config.json`
+(both `.ps1` and `.sh` honor its `auth.mode`; the launcher-config section of
+[api/docs/hzdr.md](../../api/docs/hzdr.md) has the full key list).
 
 ### ASAPO standalone image
 

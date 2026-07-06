@@ -333,6 +333,10 @@ $asapoPort = [int](Get-ConfigValue $config.ports.asapoBroker 8765)
 $kafkaPort = [int](Get-ConfigValue $config.ports.kafka 9092)
 $mongoPort = [int](Get-ConfigValue $config.ports.mongo 27018)
 
+# Parity with hzdr-launch.sh: config auth.mode wins, then an existing
+# DW_API_AUTH__MODE, then hzdr-dev.ps1's ldap default (empty = not forwarded).
+$authMode = [string](Get-ConfigValue $config.auth.mode "")
+
 $sourceKey = [string](Get-ConfigValue $config.emulator.sourceKey "hzdr-emulator")
 $experimentId = [string](Get-ConfigValue $config.emulator.experimentId "")
 $shotCount = [int](Get-ConfigValue $config.emulator.shotCount 6)
@@ -479,6 +483,9 @@ $devArguments = @(
     "-GuiPort",
     "$guiPort"
 )
+if ($authMode) {
+    $devArguments += @("-AuthMode", $authMode)
+}
 if (-not $NoGui) {
     $devArguments += "-WithGui"
 }

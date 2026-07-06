@@ -94,6 +94,11 @@ scripts/hzdr-launch.config.example.json
 Important sections:
 
 - `paths`: repo folders and generated output locations.
+- `auth.mode`: API auth mode, exported as `DW_API_AUTH__MODE` by both
+  launchers (`hzdr-launch.ps1` forwards it as `-AuthMode` to `hzdr-dev.ps1`).
+  Resolution order: this config value, then an already-set
+  `DW_API_AUTH__MODE`, then the `ldap` default. Use `noauth` (or `none` /
+  `disabled`) to skip login locally; `oauth` for the upstream flow.
 - `emulator`: source key, starting shot number, shot count, and increment.
 - `connections.kafka`: bootstrap server, default Watchdog topic, and optional
   topic map for enhancer sources.
