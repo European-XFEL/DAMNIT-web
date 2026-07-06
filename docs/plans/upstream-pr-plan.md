@@ -78,11 +78,14 @@ Before Phase 1, enumerate the #204–#214 commits
 
 These upstream files currently mix generic and HZDR changes in one diff:
 
-1. **`metadata/routers.py`** (+1,348 lines): HZDR endpoints are interleaved into the
-   upstream router module (now including the `/scicat` registration route). Move
-   everything HZDR into a new `metadata/hzdr_routers.py` (or an `hzdr/` subpackage)
-   with its own `APIRouter`, mounted from `main.py`. Upstream file returns to ~its
-   original content plus the generic views routes.
+1. **`metadata/routers.py`** (was +1,348 lines): HZDR endpoints were interleaved into
+   the upstream router module. ✅ **Done (2026-07-06):** all 20 `/metadata/hzdr/*`
+   routes (incl. `/scicat`) + their models/constants/helpers moved verbatim into a new
+   `metadata/hzdr_routers.py` (`hzdr_router`, same prefix/tags), mounted from `main.py`
+   right after `metadata.router`. `routers.py` is back to ~20 lines (just the upstream
+   `/proposal/{proposal_number}` route). Route union verified byte-identical to the
+   pre-split baseline; full suite 290 passed. The generic saved-views routes stay under
+   the `/hzdr/` prefix for now — they get renamed out when PR 4 (saved views) is cut.
 2. **`main.py`** (+90/-4 → now smaller): three unrelated changes coexisted —
    conditional mymdc bootstrap (belongs to the provider PR), auth-router selection
    change (`settings.is_local` → `auth.is_disabled`, belongs to the LDAP PR), and
@@ -158,14 +161,16 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
    before the cross-repo-sensitive moves (the `hzdr_event.py` contract file must not
    move or change — it is vendored byte-identically into sibling repos).
 
-   Progress: **C2 done (2026-07-06)** — spool/trigger lifespan wiring extracted to
-   `consumer/bootstrap.py`; `main.py`'s fork-only diff is now one `async with`. The
-   trial merge confirmed the C1/C2/C3 API files merge cleanly against `upstream/main`,
-   so these can be done ahead of Phase 0 without rework. **Remaining:** C1
-   (`metadata/hzdr_routers.py` route split, incl. the `/scicat` route), C3
-   (`shared/settings.py` generic/HZDR split), C4 (frontend `app.tsx` route isolation —
-   this one *does* touch the conflict-prone `table.tsx`/frontend, so sequence it with
-   Phase 0).
+   Progress: **C1 + C2 done (2026-07-06).** C2 — spool/trigger lifespan wiring
+   extracted to `consumer/bootstrap.py`; `main.py`'s fork-only diff is now one
+   `async with`. C1 — all HZDR routes moved to `metadata/hzdr_routers.py`, so
+   `routers.py` is back to the upstream proposal route only. Both verified
+   behavior-preserving (full suite 290 passed; C1 route union byte-identical to
+   baseline). The trial merge confirmed these API files merge cleanly against
+   `upstream/main`, so they were safe to do ahead of Phase 0 without rework.
+   **Remaining:** C3 (`shared/settings.py` generic/HZDR split), C4 (frontend `app.tsx`
+   route isolation — this one *does* touch the conflict-prone `table.tsx`/frontend, so
+   sequence it with Phase 0).
 3. **Phase 2 — extract PR branches:** for each PR in §3, cherry-pick/re-implement
    onto `upstream/main` in a fresh branch; flip defaults back to EXFEL; strip HZDR
    naming; run upstream's own CI workflows locally where possible.
