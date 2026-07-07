@@ -2,11 +2,15 @@ import { test, expect } from '#fixtures'
 
 import { XPCS } from '#examples/xpcs'
 import { columnOf, openProposal, titleOf } from '#support/table'
-import { openDataPlot, plotFigure, plotTab, selectCells } from '#support/plots'
+import {
+  openDataPlot,
+  PLOT_VIEWPORT,
+  plotFigure,
+  plotTab,
+  selectCells,
+} from '#support/plots'
 
-// A wide viewport keeps every column within the horizontal fold so the
-// coordinate cell clicks land on them.
-test.use({ viewport: { width: 1600, height: 900 } })
+test.use({ viewport: PLOT_VIEWPORT })
 
 // Variables chosen for the dtype of their *extracted* data, which differs from
 // the scalar shown in the table cell. One per render branch:

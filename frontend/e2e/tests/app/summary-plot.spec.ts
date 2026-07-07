@@ -7,14 +7,13 @@ import { columnOf, openProposal, titleOf } from '#support/table'
 import {
   closeTab,
   openSummaryPlot,
+  PLOT_VIEWPORT,
   plotFigure,
   plotTab,
   selectColumns,
 } from '#support/plots'
 
-// A wide viewport keeps the target columns within the horizontal fold so the
-// coordinate header clicks land on them.
-test.use({ viewport: { width: 1600, height: 900 } })
+test.use({ viewport: PLOT_VIEWPORT })
 
 // The example's numeric variables, in meta order, excluding Run. dtype lives on
 // the run data, not the metadata. The first two drive the plots below.
@@ -32,7 +31,7 @@ async function openSummaryPlots(page: Page, cols: number[]) {
     if (index > 0) {
       await page.getByRole('tab', { name: 'Table' }).click()
     }
-    await openSummaryPlot(page, { col })
+    await openSummaryPlot(page, col)
   }
 }
 
@@ -41,7 +40,7 @@ test('right-clicking a variable header and choosing "Plot: summary" plots it aga
 }) => {
   await openProposal(page)
 
-  await openSummaryPlot(page, { col: columnOf(xVar) })
+  await openSummaryPlot(page, columnOf(xVar))
 
   await expect(plotTab(page, `Summary: ${xTitle} vs. Run`)).toBeVisible()
   // Summary plots always mount a figure (their table data is never empty here),
@@ -56,7 +55,7 @@ test('selecting two variable headers plots the right-clicked one against the oth
 
   await selectColumns(page, [columnOf(xVar), columnOf(yVar)])
   // The right-clicked column is the Y axis, the other is X.
-  await openSummaryPlot(page, { col: columnOf(yVar) })
+  await openSummaryPlot(page, columnOf(yVar))
 
   await expect(plotTab(page, `Summary: ${yTitle} vs. ${xTitle}`)).toBeVisible()
   await expect(plotFigure(page)).toBeVisible()

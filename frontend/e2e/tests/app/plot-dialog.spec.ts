@@ -4,14 +4,13 @@ import { openProposal, titleOf } from '#support/table'
 import {
   chooseVariable,
   openPlotDialog,
+  PLOT_VIEWPORT,
   plotFigure,
   plotTab,
   submitPlot,
 } from '#support/plots'
 
-// Match the other plot specs' viewport; it is also above Mantine's `sm`
-// breakpoint, below which the tab bar (with the Display Plot button) is hidden.
-test.use({ viewport: { width: 1600, height: 900 } })
+test.use({ viewport: PLOT_VIEWPORT })
 
 test('submitting with no variable shows a validation error and keeps the dialog open', async ({
   page,

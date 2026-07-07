@@ -11,10 +11,18 @@ const COLUMN_WIDTH = 100
 const HEADER_HEIGHT = 36
 const ROW_HEIGHT = 34
 
+// Wide enough to keep the target columns within the horizontal fold so the
+// coordinate clicks land on them, and above Mantine's `sm` breakpoint, below
+// which the tab bar (with the Display Plot button) is hidden.
+export const PLOT_VIEWPORT = { width: 1600, height: 900 }
+
+type Box = { x: number; y: number; width: number; height: number }
+type Cell = { col: number; row: number }
+
 // Opening a plot switches to the Plots tab, which unmounts the table, so the
 // canvas may be absent when a later grid action runs. Wait for it before
 // reading its box.
-async function gridBox(page: Page) {
+async function gridBox(page: Page): Promise<Box> {
   const canvas = page.getByTestId('data-grid-canvas')
   await expect(canvas).toBeVisible()
   const box = await canvas.boundingBox()
@@ -24,9 +32,8 @@ async function gridBox(page: Page) {
   return box
 }
 
-// Horizontal center of a column. `col` is the a11y column index: row marker 0,
-// Run 1, first variable 2.
-function columnCenter(box: { x: number; width: number }, col: number) {
+// `col` is the a11y column index: row marker 0, Run 1, first variable 2.
+function columnCenter(box: Box, col: number) {
   const x =
     box.x + ROW_MARKER_WIDTH + (col - 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2
   if (x > box.x + box.width) {
@@ -37,26 +44,16 @@ function columnCenter(box: { x: number; width: number }, col: number) {
   return x
 }
 
-async function headerPoint(page: Page, col: number) {
-  const box = await gridBox(page)
+function headerPoint(box: Box, col: number) {
   return { x: columnCenter(box, col), y: box.y + HEADER_HEIGHT / 2 }
 }
 
-// Center of a data cell. Rows start below the fixed header; `row` is 0-based.
-async function cellPoint(
-  page: Page,
-  { col, row }: { col: number; row: number }
-) {
-  const box = await gridBox(page)
+// Rows start below the fixed header; `row` is 0-based.
+function cellPoint(box: Box, { col, row }: Cell) {
   return {
     x: columnCenter(box, col),
     y: box.y + HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2,
   }
-}
-
-export async function rightClickHeader(page: Page, col: number) {
-  const { x, y } = await headerPoint(page, col)
-  await page.mouse.click(x, y, { button: 'right' })
 }
 
 // Click the first point, then modifier-click the rest to build a multi-select.
@@ -73,34 +70,43 @@ async function multiClick(page: Page, points: { x: number; y: number }[]) {
   await page.keyboard.up('ControlOrMeta')
 }
 
-// Left-click the first header, then modifier-click the rest to build a
-// multi-column selection. The right-clicked column becomes the summary plot's
-// Y axis.
+const contextMenu = (page: Page) => page.locator('.mantine-contextmenu')
+
+async function rightClickHeader(page: Page, col: number) {
+  const box = await gridBox(page)
+  const { x, y } = headerPoint(box, col)
+  await page.mouse.click(x, y, { button: 'right' })
+}
+
+// The right-clicked column becomes the summary plot's Y axis.
 export async function selectColumns(page: Page, cols: number[]) {
-  const points = await Promise.all(cols.map((col) => headerPoint(page, col)))
-  await multiClick(page, points)
+  const box = await gridBox(page)
+  await multiClick(
+    page,
+    cols.map((col) => headerPoint(box, col))
+  )
 }
 
 // Right-click a header and pick "Plot: summary". Scope the click to the menu:
 // a bare "Plot" also matches the toolbar's "Display Plot" button.
-export async function openSummaryPlot(page: Page, { col }: { col: number }) {
+export async function openSummaryPlot(page: Page, col: number) {
   await rightClickHeader(page, col)
-  const menu = page.locator('.mantine-contextmenu')
-  await menu.getByText('Plot: summary').click()
+  await contextMenu(page).getByText('Plot: summary').click()
 }
 
-type Cell = { col: number; row: number }
-
-export async function rightClickCell(page: Page, cell: Cell) {
-  const { x, y } = await cellPoint(page, cell)
+async function rightClickCell(page: Page, cell: Cell) {
+  const box = await gridBox(page)
+  const { x, y } = cellPoint(box, cell)
   await page.mouse.click(x, y, { button: 'right' })
 }
 
-// Left-click the first cell, then modifier-click the rest to build a multi-run
-// range. The cells must share one column, or the grid clears the range stack.
+// The cells must share one column, or the grid clears the range stack.
 export async function selectCells(page: Page, cells: Cell[]) {
-  const points = await Promise.all(cells.map((cell) => cellPoint(page, cell)))
-  await multiClick(page, points)
+  const box = await gridBox(page)
+  await multiClick(
+    page,
+    cells.map((cell) => cellPoint(box, cell))
+  )
 }
 
 // Right-click a cell and pick "Plot: data". Right-clicking a cell that is not
@@ -108,8 +114,7 @@ export async function selectCells(page: Page, cells: Cell[]) {
 // with selectCells first, then right-click one of the selected cells.
 export async function openDataPlot(page: Page, cell: Cell) {
   await rightClickCell(page, cell)
-  const menu = page.locator('.mantine-contextmenu')
-  await menu.getByText('Plot: data').click()
+  await contextMenu(page).getByText('Plot: data').click()
 }
 
 // The plot dialog ("Display Plot" -> "Plot Settings" modal). Returns the dialog
@@ -146,7 +151,7 @@ export function plotTab(page: Page, name: string | RegExp): Locator {
 }
 
 // Both the inner plot tabs and the outer Plots tab carry a single close icon
-// (the only svg in the tab), wired to removePlot / removeTab respectively.
+// (the only svg in the tab).
 export async function closeTab(page: Page, name: string | RegExp) {
   await plotTab(page, name).locator('svg').click()
 }

@@ -28,12 +28,12 @@ export async function waitForCellLoaded(
   await expect(page.getByTestId(cellTestId({ col, row }))).not.toBeEmpty()
 }
 
-export async function openProposal(page: Page) {
-  // The canvas paints as soon as the metadata loads, but cell values arrive
-  // later via a separate table-data query. Wait for that response too, or a cell
-  // right-click can fire before its data lands. Set up before navigating so the
-  // response can't be missed.
-  const tableData = page.waitForResponse((response) => {
+// The canvas paints as soon as the metadata loads, but cell values arrive later
+// via a separate table-data query. Waiting on that response keeps a cell action
+// from firing before its data lands, and lets the api fixture's drift guard see
+// it. Start the wait before navigating so the response can't be missed.
+export function waitForTableData(page: Page) {
+  return page.waitForResponse((response) => {
     if (!response.url().includes('/graphql')) {
       return false
     }
@@ -42,7 +42,10 @@ export async function openProposal(page: Page) {
     }
     return (operationName ?? '').endsWith('TableDataQuery')
   })
+}
 
+export async function openProposal(page: Page) {
+  const tableData = waitForTableData(page)
   await page.goto(`proposal/${XPCS.proposalMetadata[0].number}`)
   await expect(page.getByTestId('data-grid-canvas')).toBeVisible()
   await tableData
