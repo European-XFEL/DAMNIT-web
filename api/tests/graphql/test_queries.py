@@ -255,7 +255,7 @@ async def test_runs_query_fetches_run_info_when_metadata_requested(
 @pytest.mark.asyncio
 async def test_metadata_query(graphql_schema):
     query = """
-        query TableMetadataQuery($proposal: String) {
+        query TableMetadataQuery($proposal: ProposalNo!) {
           metadata(database: { proposal: $proposal })
         }
     """

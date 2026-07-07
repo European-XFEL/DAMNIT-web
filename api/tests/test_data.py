@@ -14,6 +14,7 @@ from damnit_api.runs.preview import (
     to_dataarray,
 )
 from damnit_api.shared.const import DamnitType
+from damnit_api.shared.models import ProposalNumber
 
 # -----------------------------------------------------------------------------
 # get_damnit_type
@@ -243,7 +244,9 @@ def test_get_preview_data_ndarray(mocker):
     data = np.random.rand(4)
 
     mock_damnit_class(mocker, data=data, type_hint=None)
-    actual = get_preview_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(
+        proposal_number=ProposalNumber(1234), run=1, variable=name
+    )
 
     assert actual == {
         "name": name,
@@ -265,7 +268,9 @@ def test_get_preview_data_dataarray(mocker):
     )
 
     mock_damnit_class(mocker, data=data, type_hint=DataType.DataArray)
-    actual = get_preview_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(
+        proposal_number=ProposalNumber(1234), run=1, variable=name
+    )
 
     assert actual["name"] == name
     assert actual["dtype"] == dtype.value
@@ -282,7 +287,9 @@ def test_get_preview_data_png(mocker):
     data = np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8)
 
     mock_damnit_class(mocker, data=data, type_hint=DataType.Image)
-    actual = get_preview_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(
+        proposal_number=ProposalNumber(1234), run=1, variable=name
+    )
 
     assert actual["name"] == name
     assert actual["dtype"] == dtype.value

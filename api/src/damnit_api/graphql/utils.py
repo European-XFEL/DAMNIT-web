@@ -7,11 +7,14 @@ from sqlalchemy import or_, select
 
 from ..runs.sqlite import DamnitDBRegistry, async_table, get_session
 from ..shared.const import DEFAULT_PROPOSAL
+from ..shared.models import ProposalNumber
 
 
 @strawberry.input
 class DatabaseInput:
-    proposal: str | None = strawberry.field(default=DEFAULT_PROPOSAL)
+    proposal: ProposalNumber = strawberry.field(
+        default=ProposalNumber(DEFAULT_PROPOSAL)
+    )
     path: str | None = strawberry.field(default=strawberry.UNSET)
 
 

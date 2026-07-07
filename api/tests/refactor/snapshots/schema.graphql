@@ -35,7 +35,7 @@ type DamnitVariableError {
 }
 
 input DatabaseInput {
-  proposal: String = "2956"
+  proposal: ProposalNo! = 2956
   path: String
 }
 

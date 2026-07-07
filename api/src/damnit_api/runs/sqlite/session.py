@@ -14,9 +14,12 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from ...shared.const import DEFAULT_PROPOSAL
+from ...shared.errors import ProposalNotFoundError
+from ...shared.models import ProposalNumber
 from ...utils import find_proposal
 
 DAMNIT_PATH = "usr/Shared/amore/"
+_DEFAULT_PROPOSAL = ProposalNumber(DEFAULT_PROPOSAL)
 
 
 # -----------------------------------------------------------------------------
@@ -24,7 +27,7 @@ DAMNIT_PATH = "usr/Shared/amore/"
 
 
 class DatabaseSessionManager:
-    def __init__(self, proposal: str = DEFAULT_PROPOSAL):
+    def __init__(self, proposal: ProposalNumber = _DEFAULT_PROPOSAL):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
         self._engine = create_async_engine(
@@ -97,16 +100,16 @@ class DamnitDBRegistry:
     """Per-proposal DAMNIT database registry."""
 
     def __init__(self) -> None:
-        self._managers: dict[str, DatabaseSessionManager] = {}
+        self._managers: dict[ProposalNumber, DatabaseSessionManager] = {}
 
-    def get(self, proposal: str) -> DatabaseSessionManager:
+    def get(self, proposal: ProposalNumber) -> DatabaseSessionManager:
         if proposal not in self._managers:
             self._managers[proposal] = DatabaseSessionManager(proposal)
         return self._managers[proposal]
 
 
 def get_session(
-    registry: DamnitDBRegistry, proposal: str
+    registry: DamnitDBRegistry, proposal: ProposalNumber
 ) -> AbstractAsyncContextManager[AsyncSession]:
     return registry.get(proposal).session()
 
@@ -115,15 +118,15 @@ def get_session(
 # Etc.
 
 
-def get_damnit_path(proposal_number: str = DEFAULT_PROPOSAL) -> str:
+def get_damnit_path(proposal: ProposalNumber = _DEFAULT_PROPOSAL) -> str:
     """Returns the directory of the given proposal."""
     from ...shared.settings import settings
 
     if settings.is_local:
         return str(settings.damnit_path)
 
-    path = find_proposal(proposal_number)
+    path = find_proposal(proposal)
     if not path:
-        msg = f"Proposal '{proposal_number}' is not found."
-        raise RuntimeError(msg)
+        msg = f"Proposal '{proposal}' is not found."
+        raise ProposalNotFoundError(msg)
     return str(Path(path) / DAMNIT_PATH)

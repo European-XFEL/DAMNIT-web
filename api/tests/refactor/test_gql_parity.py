@@ -149,7 +149,7 @@ async def test_runs_query_wire_shape_unchanged(
 @pytest.mark.asyncio
 async def test_metadata_query_wire_shape_unchanged(graphql_schema):
     query = """
-        query($proposal: String) {
+        query($proposal: ProposalNo!) {
           metadata(database: { proposal: $proposal })
         }
     """
@@ -221,7 +221,7 @@ async def test_latest_data_subscription_wire_shape_unchanged(
     subscription = await graphql_schema.subscribe(
         """
         subscription(
-          $proposal: String,
+          $proposal: ProposalNo!,
           $timestamp: Timestamp!) {
           latest_data(
             database: { proposal: $proposal },

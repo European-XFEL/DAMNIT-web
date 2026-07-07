@@ -21,6 +21,9 @@ from damnit_api.runs.sqlite import (
     async_table,
     get_session,
 )
+from damnit_api.shared.models import ProposalNumber
+
+_TEST_PROPOSAL = ProposalNumber(999999)
 
 # -----------------------------------------------------------------------------
 # Fixtures
@@ -35,7 +38,7 @@ CREATE TABLE runs (
 
 
 @pytest.fixture
-def damnit_db(tmp_path):
+def damnit_db(mocker, tmp_path):
     root = tmp_path / DAMNIT_PATH
     root.mkdir(parents=True)
     db_file = root / "runs.sqlite"
@@ -45,7 +48,13 @@ def damnit_db(tmp_path):
         conn.commit()
     finally:
         conn.close()
-    return str(tmp_path)
+    # Path resolution is exercised in its own tests; here the manager just
+    # needs to point at the tmp DAMNIT directory holding runs.sqlite.
+    mocker.patch(
+        "damnit_api.runs.sqlite.session.get_damnit_path",
+        return_value=str(root),
+    )
+    return _TEST_PROPOSAL
 
 
 def _open_file_descriptors_to(db_file: Path):
@@ -81,8 +90,8 @@ def test_engine_uses_nullpool_and_autocommit(damnit_db):
 # this test verifies (no file descriptors leak after the loop dies).
 # alru_cached async_table sees that loop change; warning is intrinsic.
 @pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
-def test_no_lingering_file_descriptor_after_read(damnit_db, damnit_registry):
-    db_file = Path(damnit_db) / DAMNIT_PATH / "runs.sqlite"
+def test_no_lingering_file_descriptor_after_read(damnit_db, damnit_registry, tmp_path):
+    db_file = tmp_path / DAMNIT_PATH / "runs.sqlite"
 
     async def do_read():
         table = await async_table(damnit_registry, damnit_db, name="runs")
