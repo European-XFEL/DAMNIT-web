@@ -1,17 +1,22 @@
 import { test as base, expect } from '@playwright/test'
 
 import { mockApi, type MockApi } from '#mocks'
+import { XPCS, type Example } from '#examples/xpcs'
 
 type Fixtures = {
+  example: Example
   api: MockApi
 }
 
 // The `api` fixture installs the mock router on every test before its body
-// runs, so auth and GraphQL are stubbed before the first navigation.
+// runs, so auth and GraphQL are stubbed before the first navigation. It mocks
+// the `example` dataset, which defaults to XPCS; a spec that needs a different
+// dataset overrides it with test.use({ example: ... }).
 export const test = base.extend<Fixtures>({
+  example: [XPCS, { option: true }],
   api: [
-    async ({ page }, use) => {
-      const api = await mockApi(page)
+    async ({ page, example }, use) => {
+      const api = await mockApi(page, example)
       await use(api)
       if (api.unmockedRequests.length > 0) {
         const names = [...new Set(api.unmockedRequests)].join(', ')

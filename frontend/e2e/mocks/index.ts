@@ -7,7 +7,7 @@ import {
   unmockedOperationError,
 } from '@damnit-frontend/shared/mocks'
 
-import { XPCS, type Example } from '#examples/xpcs'
+import { type Example } from '#examples/xpcs'
 
 export type MockApi = {
   // GraphQL operations and REST paths the router had no mock for; the test
@@ -43,10 +43,7 @@ function resolveGraphql(
   }
 }
 
-export async function mockApi(
-  page: Page,
-  example: Example = XPCS
-): Promise<MockApi> {
+export async function mockApi(page: Page, example: Example): Promise<MockApi> {
   const api: MockApi = { unmockedRequests: [] }
 
   // Registered first so the specific routes below take precedence (Playwright
