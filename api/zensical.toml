@@ -6,15 +6,13 @@ repo_url = "https://github.com/European-XFEL/DAMNIT-web"
 
 nav = [
   "index.md",
-  { "Deployment" = "deployment.md" },
-  { "Development" = [
-    "dev/setup.md",
-    "dev/architecture.md",
-    "dev/security.md",
-    "dev/notes.md",
-    "dev/docs.md",
-    "dev/ci-cd.md",
-  ] },
+  "deployment.md",
+  "setup.md",
+  "architecture.md",
+  "security.md",
+  "notes.md",
+  "docs.md",
+  "ci-cd.md",
 ]
 
 extra_css = ["stylesheets/mkdocstrings.css"]
