@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import (
@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from ...shared.const import DEFAULT_PROPOSAL
-from ...utils import Registry, find_proposal
+from ...utils import find_proposal
 
 DAMNIT_PATH = "usr/Shared/amore/"
 
@@ -20,7 +20,7 @@ DAMNIT_PATH = "usr/Shared/amore/"
 # Asynchronous
 
 
-class DatabaseSessionManager(metaclass=Registry):
+class DatabaseSessionManager:
     def __init__(self, proposal: str = DEFAULT_PROPOSAL):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
@@ -73,12 +73,36 @@ class DatabaseSessionManager(metaclass=Registry):
             await session.close()
 
 
-def get_session(proposal) -> AsyncSession:
-    return DatabaseSessionManager(proposal).session()  # FIX: # pyright: ignore[reportReturnType]
+class DamnitDBRegistry:
+    """Per-proposal DAMNIT database registry."""
+
+    def __init__(self) -> None:
+        self._managers: dict[str, DatabaseSessionManager] = {}
+
+    def get(self, proposal: str) -> DatabaseSessionManager:
+        if proposal not in self._managers:
+            self._managers[proposal] = DatabaseSessionManager(proposal)
+        return self._managers[proposal]
+
+    def pop(
+        self, proposal: str, default: DatabaseSessionManager | None = None
+    ) -> DatabaseSessionManager | None:
+        return self._managers.pop(proposal, default)
+
+    def clear(self) -> None:
+        self._managers.clear()
 
 
-def get_connection(proposal) -> AsyncConnection:
-    return DatabaseSessionManager(proposal).connect()  # FIX: # pyright: ignore[reportReturnType]
+# TODO: remove, replace with app state (next commit)
+damnit_registry = DamnitDBRegistry()
+
+
+def get_session(proposal: str) -> AbstractAsyncContextManager[AsyncSession]:
+    return damnit_registry.get(proposal).session()
+
+
+def get_connection(proposal: str) -> AbstractAsyncContextManager[AsyncConnection]:
+    return damnit_registry.get(proposal).connect()
 
 
 # -----------------------------------------------------------------------------

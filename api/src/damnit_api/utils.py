@@ -1,10 +1,9 @@
 import io
 import os.path as osp
-from abc import ABCMeta
 from base64 import b64encode
 from glob import iglob
 from types import UnionType
-from typing import Any, ClassVar, Union, get_args, get_origin
+from typing import Union, get_args, get_origin
 
 import numpy as np
 
@@ -86,39 +85,6 @@ def find_proposal(propno):
         return d
 
     return ""
-
-
-# -----------------------------------------------------------------------------
-# Metaclasses
-
-
-class Singleton(ABCMeta):
-    _instances: ClassVar[dict[type, Any]] = {}
-
-    def __call__(cls, *args, **kwargs):
-        instance = cls._instances.get(cls)
-        if not instance:
-            instance = super(type(cls), cls).__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return instance
-
-
-class Registry(ABCMeta):
-    def __call__(cls, proposal, *args, **kwargs):
-        instance = cls.registry.get(  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-            proposal
-        )
-        if instance is None:
-            instance = super().__call__(proposal, *args, **kwargs)
-            cls.registry[  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-                proposal
-            ] = instance
-        return instance
-
-    def __new__(cls, name, bases, attrs):
-        new_class = super().__new__(cls, name, bases, attrs)
-        new_class.registry = {}  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-        return new_class
 
 
 # -----------------------------------------------------------------------------

@@ -1,12 +1,13 @@
 import pytest
 
-from damnit_api.runs.sqlite import DatabaseSessionManager, async_table
+from damnit_api.runs.sqlite import async_table
+from damnit_api.runs.sqlite.session import damnit_registry
 
 
 @pytest.fixture(autouse=True)
-def _clear_db_session_manager_registry():
-    DatabaseSessionManager.registry.clear()
+def _clear_damnit_registry():
+    damnit_registry.clear()
     async_table.cache_clear()
     yield
-    DatabaseSessionManager.registry.clear()
+    damnit_registry.clear()
     async_table.cache_clear()

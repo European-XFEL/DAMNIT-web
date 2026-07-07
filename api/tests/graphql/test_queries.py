@@ -3,6 +3,7 @@ import pytest_asyncio
 from sqlalchemy import text
 
 from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager
+from damnit_api.runs.sqlite.session import damnit_registry
 from damnit_api.runs.types import DamnitRun
 
 from .const import (
@@ -131,8 +132,7 @@ async def real_damnit_db(mocker, tmp_path):
         "damnit_api.runs.sqlite.session.find_proposal",
         return_value=str(proposal_root),
     )
-    # `registry` is injected by the `Registry` metaclass at class creation.
-    DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
+    damnit_registry.pop(proposal, None)
 
     manager = DatabaseSessionManager(proposal)
     async with manager.connect() as conn:
@@ -182,7 +182,7 @@ async def real_damnit_db(mocker, tmp_path):
     yield proposal
 
     await manager.close()
-    DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
+    damnit_registry.pop(proposal, None)
 
 
 @pytest.mark.asyncio
