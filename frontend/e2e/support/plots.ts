@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
-// Header interactions that must reach Glide's canvas mouse handler (the context
-// menu, column selection) are driven by real pointer coordinates: the
+// Grid interactions that must reach Glide's canvas mouse handler (the context
+// menus, column and cell selection) are driven by real pointer coordinates: the
 // accessibility mirror has no layout box, so it never receives these events.
 // The geometry mirrors the fixed column layout in support/table.ts; PR3's
 // hoverCell uses the same constants, so fold both into one shared helper once
@@ -9,21 +9,41 @@ import { expect, type Locator, type Page } from '@playwright/test'
 const ROW_MARKER_WIDTH = 44
 const COLUMN_WIDTH = 100
 const HEADER_HEIGHT = 36
+const ROW_HEIGHT = 34
 
 // Opening a plot switches to the Plots tab, which unmounts the table, so the
-// canvas may be absent when a later header action runs. Wait for it before
-// reading its box. `col` is the a11y column index: row marker 0, Run 1, first
-// variable 2.
-async function headerPoint(page: Page, col: number) {
+// canvas may be absent when a later grid action runs. Wait for it before
+// reading its box.
+async function gridBox(page: Page) {
   const canvas = page.getByTestId('data-grid-canvas')
   await expect(canvas).toBeVisible()
   const box = await canvas.boundingBox()
   if (!box) {
     throw new Error('grid canvas has no bounding box')
   }
+  return box
+}
+
+// Horizontal center of a column. `col` is the a11y column index: row marker 0,
+// Run 1, first variable 2.
+function columnCenter(box: { x: number }, col: number) {
+  return box.x + ROW_MARKER_WIDTH + (col - 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2
+}
+
+async function headerPoint(page: Page, col: number) {
+  const box = await gridBox(page)
+  return { x: columnCenter(box, col), y: box.y + HEADER_HEIGHT / 2 }
+}
+
+// Center of a data cell. Rows start below the fixed header; `row` is 0-based.
+async function cellPoint(
+  page: Page,
+  { col, row }: { col: number; row: number }
+) {
+  const box = await gridBox(page)
   return {
-    x: box.x + ROW_MARKER_WIDTH + (col - 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2,
-    y: box.y + HEADER_HEIGHT / 2,
+    x: columnCenter(box, col),
+    y: box.y + HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2,
   }
 }
 
@@ -53,6 +73,37 @@ export async function openSummaryPlot(page: Page, { col }: { col: number }) {
   await rightClickHeader(page, col)
   const menu = page.locator('.mantine-contextmenu')
   await menu.getByText('Plot: summary').click()
+}
+
+type Cell = { col: number; row: number }
+
+export async function rightClickCell(page: Page, cell: Cell) {
+  const { x, y } = await cellPoint(page, cell)
+  await page.mouse.click(x, y, { button: 'right' })
+}
+
+// Left-click the first cell, then Ctrl-click the rest to build a multi-run
+// range. The cells must share one column, or the grid clears the range stack.
+export async function selectCells(page: Page, cells: Cell[]) {
+  const [first, ...rest] = cells
+  const start = await cellPoint(page, first)
+  await page.mouse.click(start.x, start.y)
+
+  await page.keyboard.down('Control')
+  for (const cell of rest) {
+    const point = await cellPoint(page, cell)
+    await page.mouse.click(point.x, point.y)
+  }
+  await page.keyboard.up('Control')
+}
+
+// Right-click a cell and pick "Plot: data". Right-clicking a cell that is not
+// already selected resets the selection to it, so build any multi-run range
+// with selectCells first, then right-click one of the selected cells.
+export async function openDataPlot(page: Page, cell: Cell) {
+  await rightClickCell(page, cell)
+  const menu = page.locator('.mantine-contextmenu')
+  await menu.getByText('Plot: data').click()
 }
 
 // Plot tabs are ordinary DOM: the inner "Summary: ..." tabs and the outer

@@ -38,6 +38,18 @@ function resolveGraphql(
       }
     case 'ProposalMetadata':
       return { data: { proposal_metadata: example.proposalMetadata } }
+    // One query per run: a data plot over N runs fires N of these. The file is
+    // returned raw, mirroring the demo handler; the client splits data from
+    // metadata.
+    case 'ExtractedDataQuery':
+      return {
+        data: {
+          extracted_data: example.extractedData(
+            variables.run as number,
+            variables.variable as string
+          ),
+        },
+      }
     default:
       return null
   }
