@@ -21,6 +21,7 @@ def create_app():
         create_db_sessionmaker,
         create_mymdc_client,
         create_oauth_client,
+        create_token_store,
     )
 
     logger = get_logger("lifespan")
@@ -45,6 +46,7 @@ def create_app():
             db_sessionmaker=create_db_sessionmaker(db_engine),
             mymdc_client=create_mymdc_client(settings),
             oauth_client=oauth_client,
+            token_store=create_token_store(),
         )
 
         if settings.is_local:

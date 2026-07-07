@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from authlib.integrations.starlette_client import StarletteOAuth2App
 
     from ._mymdc.clients import MyMdCClient
+    from .auth.token_store import TokenStore
     from .shared.settings import Settings
 
 
@@ -30,6 +31,7 @@ class AppState:
     db_sessionmaker: async_sessionmaker[AsyncSession]
     mymdc_client: MyMdCClient
     oauth_client: StarletteOAuth2App | None  # None when auth is disabled
+    token_store: TokenStore
 
 
 def create_db_engine(settings: Settings) -> AsyncEngine:
@@ -71,6 +73,12 @@ def create_oauth_client(settings: Settings) -> StarletteOAuth2App | None:
         client_kwargs={"scope": "openid email groups"},
     )
     return oauth.damnit_web  # pyright: ignore[reportReturnType]
+
+
+def create_token_store() -> TokenStore:
+    from .auth.token_store import InMemoryTokenStore
+
+    return InMemoryTokenStore()
 
 
 def get_app_state(request: Request) -> AppState:
