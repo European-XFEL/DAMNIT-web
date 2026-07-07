@@ -4,4 +4,4 @@ export {
   shapeTableData,
   unmockedOperationError,
 } from './shape'
-export type { Runs } from './types'
+export type { RunData, Runs, VariableError } from './types'

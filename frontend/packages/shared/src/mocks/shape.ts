@@ -26,6 +26,7 @@ export function shapeTableData(
           name,
           value: variable.value,
           dtype: variable.dtype,
+          ...('error' in variable ? { error: variable.error } : {}),
         })),
     })),
   }
