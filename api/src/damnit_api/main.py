@@ -16,6 +16,12 @@ def create_app():
     from . import _db, _logging, _mymdc, auth, contextfile, get_logger, metadata
     from .shared import errors, gql
     from .shared.settings import settings
+    from .state import (
+        AppState,
+        create_db_engine,
+        create_db_sessionmaker,
+        create_mymdc_client,
+    )
 
     logger = get_logger("lifespan")
 
@@ -33,6 +39,13 @@ def create_app():
         async with TaskGroup() as tg:
             for bs in bootstraps:
                 tg.create_task(bs(settings))
+
+        db_engine = create_db_engine(settings)
+        app.state.app_state = AppState(
+            db_engine=db_engine,
+            db_sessionmaker=create_db_sessionmaker(db_engine),
+            mymdc_client=create_mymdc_client(settings),
+        )
 
         if settings.is_local:
             app.router.include_router(auth.noauth_router)
