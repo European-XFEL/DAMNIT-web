@@ -18,6 +18,19 @@ repos:
             stages: [pre-commit]
             exclude: ^frontend/apps/demo/public/
 
+    # Recorded HTTP cassettes are scrubbed at record time; this gate catches
+    # anything the scrubbing missed before it can be committed. Known-benign
+    # matches live in .secrets.baseline (regenerate with:
+    # uvx detect-secrets scan api/tests/mock/mymdc/mymdc.yaml \
+    #   api/tests/refactor/e2e/cassettes/*/*.yaml > .secrets.baseline).
+    - repo: https://github.com/Yelp/detect-secrets
+      rev: v1.5.0
+      hooks:
+          - id: detect-secrets
+            name: detect-secrets (recorded cassettes)
+            args: ["--baseline", ".secrets.baseline"]
+            files: ^api/tests/(mock/mymdc/.*\.ya?ml|refactor/e2e/cassettes/.*\.ya?ml)$
+
     # ruff walks up from each file to find api/ruff.toml automatically
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.14.13
