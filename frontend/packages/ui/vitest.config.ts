@@ -4,7 +4,9 @@ import { playwright } from '@vitest/browser-playwright'
 import { fileURLToPath } from 'node:url'
 
 const alias = {
-  '@/': fileURLToPath(new URL('./src/', import.meta.url)),
+  // Normalize to forward slashes: backslash paths break vite-node's alias
+  // resolution on Windows, so every unit-test file fails to load.
+  '@/': fileURLToPath(new URL('./src/', import.meta.url)).replace(/\\/g, '/'),
 }
 
 export default defineConfig({
