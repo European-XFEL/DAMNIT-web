@@ -5,15 +5,13 @@ repo_url = "https://github.com/European-XFEL/DAMNIT-web"
 
 nav = [
   "index.md",
-  { "Deployment" = "deployment.md" },
-  { "Development" = [
-    "dev/setup.md",
-    "dev/architecture.md",
-    "dev/security.md",
-    "dev/notes.md",
-    "dev/docs.md",
-    "dev/ci-cd.md",
-  ] },
+  "deployment.md",
+  "setup.md",
+  "architecture.md",
+  "security.md",
+  "notes.md",
+  "docs.md",
+  "ci-cd.md",
   # TODO: remove this once Zensical adds support/extensions
   # >>> BEGIN API-REFERENCE-NAV
   # Managed by scripts/gen_api_docs.py - run it to refresh.
