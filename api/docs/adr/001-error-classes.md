@@ -81,4 +81,4 @@ Subclasses are added per _caller-distinguishable situation_, not per call site.
    - Permission denials use the Strawberry permission mechanism (message on the permission class); `ForbiddenError` is the same concept for non-GraphQL paths.
 3. **Boundaries translate exceptions.** Infrastructure exceptions do not cross layer boundaries raw:
    - MyMdC client errors become `UpstreamServiceError`
-   - Locator/repository/filesystem failures become `ProposalNotFoundError`/`DataUnavailableError`, logged with context at the point of translation (log-then-raise).
+   - Locator/repository/filesystem failures become `ProposalNotFoundError`/`DataUnavailableError`, logged with context at the point of translation (log-then-raise). See [ADR-005](005-repository-pattern.md) for the repository boundary.
