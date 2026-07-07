@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
+    from authlib.integrations.starlette_client import StarletteOAuth2App
+
     from ._mymdc.clients import MyMdCClient
     from .shared.settings import Settings
 
@@ -27,6 +29,7 @@ class AppState:
     db_engine: AsyncEngine
     db_sessionmaker: async_sessionmaker[AsyncSession]
     mymdc_client: MyMdCClient
+    oauth_client: StarletteOAuth2App | None  # None when auth is disabled
 
 
 def create_db_engine(settings: Settings) -> AsyncEngine:
@@ -51,6 +54,23 @@ def create_mymdc_client(settings: Settings) -> MyMdCClient:
         case _:
             msg = "Invalid MyMdC configuration"
             raise ValueError(msg)
+
+
+def create_oauth_client(settings: Settings) -> StarletteOAuth2App | None:
+    if settings.auth is None:
+        return None
+
+    from authlib.integrations.starlette_client import OAuth
+
+    oauth = OAuth()
+    oauth.register(
+        name="damnit_web",
+        client_id=settings.auth.client_id,
+        client_secret=settings.auth.client_secret.get_secret_value(),
+        server_metadata_url=str(settings.auth.server_metadata_url),
+        client_kwargs={"scope": "openid email groups"},
+    )
+    return oauth.damnit_web  # pyright: ignore[reportReturnType]
 
 
 def get_app_state(request: Request) -> AppState:

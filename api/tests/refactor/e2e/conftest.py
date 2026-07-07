@@ -53,32 +53,6 @@ def vcr_config():
     }
 
 
-@pytest.fixture(autouse=True)
-def _reset_bootstrap_globals():
-    """Reset the clients/engines cached in module-level globals between tests.
-
-    !!! warning
-
-        Without the auth reset, only the first test's startup performs the OIDC
-        discovery fetch and later cassettes cannot replay standalone. Without the db
-        reset, later tests keep the first test's engine and ignore their own
-        `settings.db_path`.
-    """
-    import damnit_api._db
-    import damnit_api._mymdc
-    import damnit_api.auth
-
-    def _reset():
-        damnit_api.auth.__CLIENT = None
-        damnit_api._mymdc.CLIENT = None
-        damnit_api._db.__ENGINE = None
-        damnit_api._db.__SESSION_LOCAL = None
-
-    _reset()
-    yield
-    _reset()
-
-
 DATA_ROOT = Path(__file__).parents[2] / "mock" / "data" / "gpfs" / "exfel" / "exp"
 MYMDC_CASSETTE = Path(__file__).parents[2] / "mock" / "mymdc" / "mymdc.yaml"
 

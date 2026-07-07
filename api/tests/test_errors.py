@@ -87,10 +87,9 @@ def app(monkeypatch):
     )
     monkeypatch.setenv("DW_API_SESSION_SECRET", "test")
 
-    async def noop_bootstrap(settings):
-        pass
-
-    monkeypatch.setattr("damnit_api.auth.bootstrap", noop_bootstrap)
+    # No OAuth client: skips the OIDC metadata fetch at startup; these tests
+    # never exercise the oauth routes.
+    monkeypatch.setattr("damnit_api.state.create_oauth_client", lambda settings: None)
 
     app = create_app()
     yield app

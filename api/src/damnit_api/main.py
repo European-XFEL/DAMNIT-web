@@ -20,6 +20,7 @@ def create_app():
         create_db_engine,
         create_db_sessionmaker,
         create_mymdc_client,
+        create_oauth_client,
     )
 
     logger = get_logger("lifespan")
@@ -34,13 +35,16 @@ def create_app():
 
         logger.info("Starting application lifespan")
 
-        await auth.bootstrap(settings)
+        oauth_client = create_oauth_client(settings)
+        if oauth_client is not None:
+            await oauth_client.load_server_metadata()
 
         db_engine = create_db_engine(settings)
         app.state.app_state = AppState(
             db_engine=db_engine,
             db_sessionmaker=create_db_sessionmaker(db_engine),
             mymdc_client=create_mymdc_client(settings),
+            oauth_client=oauth_client,
         )
 
         if settings.is_local:
