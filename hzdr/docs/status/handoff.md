@@ -42,6 +42,22 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
 
 ## Built 2026-07-07
 
+- **Root reorganized into a `hzdr/` namespace** (`c368186`, plus `b2a14e0`,
+  `b5a17d5`): `docs/` → `hzdr/docs/`, the fork-only scripts → `hzdr/scripts/`,
+  `PR_NOTES.md` → `hzdr/docs/plans/done/`. `scripts/` is **upstream-owned from
+  now on** (exactly `ensure-node.sh` + `setup-dev.sh`; `ensure-node.sh` was
+  restored after the 51bb67c cleanup deleted it — upstream's `setup-dev.sh`
+  sources it). All moves are pure renames; the same commit fixed every moved
+  script's repo-root computation (one level deeper) and swept ~50 files of
+  references. Not swept (deliberate): the `docs/…` prose mentions inside the
+  vendored `hzdr_event.py` + generated fixtures — batch with the next real
+  contract change. The stale June root `screenshots/` were deleted and replaced
+  with five current captures under `hzdr/docs/screenshots/` (gallery:
+  [screenshots.md](../screenshots.md), linked from the docs index and root
+  README; the gallery notes how to re-capture). Rule going forward: never
+  hand-edit upstream-owned dirs; anything HZDR lives under `hzdr/` or an
+  `hzdr_` prefix.
+
 - **Phase 0 of the upstream-PR plan — merged `upstream/main` (`d5a1081`, #204–#214)**
   into the fork (merge commit `40d3e04` on `claude/hzdr-components-upstream-pr-ochddw`).
   The six mapped conflicts resolved per the plan's sketches: `table.tsx` (upstream's
