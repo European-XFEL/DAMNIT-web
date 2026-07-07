@@ -108,7 +108,7 @@ class MyMdCClientAsync(httpx.AsyncClient, ports.MyMdCPort):
         super().__init__(auth=auth, base_url=api_url)
 
     async def _get_proposal_by_number(self, no: models.ProposalNumber):
-        response = await self.get(f"proposals/by_number/{no}")
+        response = await self.get(f"proposals/by_number/{no:d}")
         response.raise_for_status()
         return response.json()
 
@@ -179,7 +179,7 @@ class MyMdCClientMock(MyMdCMockSettings, ports.MyMdCPort):
         return orjson.loads(body)
 
     async def _get_proposal_by_number(self, no: models.ProposalNumber):
-        return await self._replay(f"proposals/by_number/{no}")
+        return await self._replay(f"proposals/by_number/{no:d}")
 
     async def _get_user_by_id(self, id: models.UserId):
         return await self._replay(f"users/{id}")
