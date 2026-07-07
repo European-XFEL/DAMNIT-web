@@ -61,7 +61,7 @@ damnit_api/
 ├── app.py           # composition root: create_app(settings), lifespan,
 │                    #   DI wiring, exception handlers, middleware
 ├── state.py         # AppState + factories (no domain classes); see ADR-002
-├── settings.py      # Settings models only
+├── settings.py      # Settings models only; see ADR-003
 ├── logging.py       # structlog configuration + request-logging middleware
 │
 ├── core/            # framework-free, imports nothing app-specific:
