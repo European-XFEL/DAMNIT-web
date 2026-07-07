@@ -6,11 +6,11 @@ from pathlib import Path
 import h5py
 import pytest
 
-from damnit_api.metadata.hzdr_sources import load_sources_file
-from damnit_api.metadata.routers import (
+from damnit_api.metadata.hzdr_routers import (
     update_local_shot_metadata,
     update_local_shot_status,
 )
+from damnit_api.metadata.hzdr_sources import load_sources_file
 
 SCRIPT_PATH = Path(__file__).parents[1] / "scripts" / "hzdr-package-emulator.py"
 SPEC = importlib.util.spec_from_file_location("hzdr_package_emulator", SCRIPT_PATH)
@@ -177,7 +177,7 @@ def test_local_shot_metadata_correction_records_history(tmp_path: Path):
         shot_increment=1,
     )
 
-    # laser.pulse_energy is nested (see docs/target-ontology.md §5 / CLAUDE.md
+    # laser.pulse_energy is nested (see hzdr/docs/target-ontology.md §5 / CLAUDE.md
     # "Metadata key registry"); update_local_shot_metadata only corrects a
     # flat top-level key, so this exercises the correction/audit-trail
     # mechanism itself against a field that stays flat.

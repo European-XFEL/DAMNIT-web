@@ -1,0 +1,45 @@
+# systemd unit for the DAMNIT-web-hzdr API server.
+#
+# Installation:
+#   sudo cp hzdr/scripts/damnit-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now damnit-api
+#
+# Logs:
+#   journalctl -u damnit-api -f
+#
+# The API process emits structured JSON to stderr when DW_API_DEBUG=false
+# (set in .env).  journald captures stderr automatically.
+
+[Unit]
+Description=DAMNIT Web API (HZDR)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=damnit
+Group=damnit
+WorkingDirectory=/opt/damnit-web-hzdr/api
+
+# Load production env file.  All DW_API_* vars are read from here.
+EnvironmentFile=/opt/damnit-web-hzdr/api/.env
+
+# Run via uv so the project virtualenv is used automatically.
+ExecStart=/usr/local/bin/uv run python -m damnit_api.main
+
+# Restart on any non-zero exit; give it 5 s before retrying.
+Restart=on-failure
+RestartSec=5
+
+# The spool consumer (if enabled) must finish flushing before the process
+# exits.  Give it 30 s to drain cleanly before systemd sends SIGKILL.
+TimeoutStopSec=30
+
+# Prevent the service from writing outside its data directory.
+ReadWritePaths=/data/damnit/hzdr
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from damnit_api.metadata.hzdr_nexus import load_review_decisions
-from damnit_api.metadata.routers import (
+from damnit_api.metadata.hzdr_routers import (
     confirm_local_review_event,
     dismiss_local_review_event,
 )

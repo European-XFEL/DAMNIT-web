@@ -1,8 +1,5 @@
-import asyncio
-import contextlib
 from asyncio import TaskGroup
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -17,6 +14,7 @@ KNOWN_PATHS = ["/graphql"]
 
 def create_app():  # noqa: C901
     from . import _db, _logging, _mymdc, auth, contextfile, get_logger, metadata
+    from .consumer import bootstrap as consumer_bootstrap
     from .shared import errors, gql
     from .shared import routers as shared_routers
     from .shared.settings import settings
@@ -24,7 +22,7 @@ def create_app():  # noqa: C901
     logger = get_logger("lifespan")
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):  # noqa: C901
+    async def lifespan(app: FastAPI):
         _logging.configure(
             level=settings.log_level,
             debug=settings.debug,
@@ -46,83 +44,15 @@ def create_app():  # noqa: C901
             app.router.include_router(auth.router)
         app.router.include_router(auth.ldap_router)
         app.router.include_router(metadata.router)
+        app.router.include_router(metadata.hzdr_router)  # fork-only HZDR routes
         app.router.include_router(contextfile.router)
         app.router.include_router(shared_routers.router)
         app.router.include_router(gql.get_gql_app(), prefix="/graphql")
 
-        spool_root = settings.damnit_path or Path.cwd()
-        spool_stop = asyncio.Event()
-        spool_consumers = []
-        spool_tasks = []
-        # ASAPO spool writes events.jsonl (--events-jsonl); Kafka spool writes
-        # trigger.jsonl (--trigger-jsonl).  Collected here so the optional builder
-        # auto-trigger reruns the builder against exactly the running spool files.
-        builder_events_jsonl = []
-        builder_trigger_jsonl = []
-        if settings.hzdr_spool.enabled:
-            from .consumer.asapo import AsapoSpoolConsumer
-
-            asapo_consumer = AsapoSpoolConsumer.from_settings(spool_root)
-            spool_consumers.append(asapo_consumer)
-            builder_events_jsonl.append(asapo_consumer.config.events_jsonl)
-            spool_tasks.append(asyncio.create_task(asapo_consumer.run(spool_stop)))
-            logger.info(
-                "ASAPO spool consumer started",
-                campaign=settings.hzdr_spool.campaign,
-                broker_kind=settings.hzdr_spool.broker_kind,
-                broker=(
-                    settings.hzdr_spool.broker_url
-                    if settings.hzdr_spool.broker_kind == "http"
-                    else settings.hzdr_spool.asapo_endpoint
-                ),
-            )
-        if settings.hzdr_kafka_spool.enabled:
-            from .consumer.kafka import KafkaSpoolConsumer
-
-            kafka_consumer = KafkaSpoolConsumer.from_settings(spool_root)
-            spool_consumers.append(kafka_consumer)
-            builder_trigger_jsonl.append(kafka_consumer.config.events_jsonl)
-            spool_tasks.append(asyncio.create_task(kafka_consumer.run(spool_stop)))
-            logger.info(
-                "Kafka spool consumer started",
-                campaign=settings.hzdr_kafka_spool.campaign,
-                bootstrap_servers=settings.hzdr_kafka_spool.bootstrap_servers,
-                topics=settings.hzdr_kafka_spool.topics,
-            )
-
-        if settings.hzdr_builder.enabled and spool_consumers:
-            from .consumer.builder_trigger import BuilderTrigger
-
-            builder_trigger = BuilderTrigger(
-                settings.hzdr_builder,
-                events_jsonl=builder_events_jsonl,
-                trigger_jsonl=builder_trigger_jsonl,
-            )
-            for consumer in spool_consumers:
-                consumer.on_new_events_hook = builder_trigger.notify
-            spool_tasks.append(asyncio.create_task(builder_trigger.run(spool_stop)))
-            logger.info(
-                "Builder auto-trigger started",
-                output_nexus=str(settings.hzdr_builder.output_nexus),
-                debounce_seconds=settings.hzdr_builder.debounce_seconds,
-            )
-        elif settings.hzdr_builder.enabled:
-            logger.warning(
-                "DW_API_HZDR_BUILDER__ENABLED=true but no spool consumer is "
-                "enabled; nothing will trigger the builder"
-            )
-
-        yield
-
-        if spool_tasks:
-            spool_stop.set()
-            for task in spool_tasks:
-                task.cancel()
-            for task in spool_tasks:
-                with contextlib.suppress(asyncio.CancelledError, Exception):
-                    await task
-        for consumer in spool_consumers:
-            await consumer.aclose()
+        # Fork-only: run the HZDR spool consumers + debounced builder trigger for
+        # the app's lifetime.  Extracted so this file stays close to upstream's.
+        async with consumer_bootstrap.spool_lifespan(settings, logger):
+            yield
 
     swagger_oauth = (
         None

@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..shared.settings import HZDRBuilderSettings
+    from ..shared.hzdr_settings import HZDRBuilderSettings
 
 logger = logging.getLogger(__name__)
 

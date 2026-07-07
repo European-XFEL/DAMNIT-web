@@ -13,9 +13,10 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from damnit_api.main import create_app
+from damnit_api.metadata.hzdr_routers import _fetch_wiki_page_info
 from damnit_api.metadata.hzdr_sources import HZDRWikiInfo
-from damnit_api.metadata.routers import _fetch_wiki_page_info
-from damnit_api.shared.settings import HZDRWikiSettings, settings
+from damnit_api.shared.hzdr_settings import HZDRWikiSettings
+from damnit_api.shared.settings import settings
 
 EXPERIMENT_ID = "Solenoid_Beamline_Tests_01.2025"
 SOURCE_KEY = "hzdr-solenoid-beamline-tests-01-2025"
@@ -521,7 +522,7 @@ async def test_fetch_wiki_page_info_uses_configured_auth_headers():
 def test_wiki_endpoint_with_fetch_param_calls_api(local_app):
     """fetch=true triggers an API call; on failure the URL is still returned."""
     with patch(
-        "damnit_api.metadata.routers._fetch_wiki_page_info",
+        "damnit_api.metadata.hzdr_routers._fetch_wiki_page_info",
         new_callable=AsyncMock,
     ) as mock_fetch:
         mock_fetch.return_value = HZDRWikiInfo(

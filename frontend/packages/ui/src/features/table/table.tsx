@@ -11,13 +11,22 @@ import {
   type Rectangle,
 } from '@glideapps/glide-data-grid'
 import { allCells } from '@glideapps/glide-data-grid-cells'
-import { Group, Stack } from '@mantine/core'
+import { Group, Stack, useMantineTheme } from '@mantine/core'
 
-import { getCell, numberCell, textCell } from './cells'
+import {
+  errorCell,
+  getCell,
+  makeErrorCellRenderer,
+  numberCell,
+  textCell,
+  type ErrorColors,
+} from './cells'
 import { SavedViewsPopover } from './components/popovers/saved-views-popover'
 import { TagsPopover } from './components/popovers/tags-popover'
 import { VariablesPopover } from './components/popovers/variables-popover'
+import { type CellTooltip } from './components/tooltips/table-tooltip'
 import ContextMenu from './context-menu'
+import { useTableTooltip } from './hooks/use-table-tooltip'
 import { useTable } from './hooks/use-table'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
@@ -26,7 +35,7 @@ import { selectRun } from './table.slice'
 import { canPlotData } from '../plots/utils'
 import { addPlot } from '../plots/plots.slice'
 
-import { EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
+import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
 import { getExtractedValue } from '../../data/extracted'
 import { getTableData } from '../../data/table'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
@@ -75,6 +84,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
   const { columnVisibility } = useTable()
+  const theme = useMantineTheme()
 
   // Initialization: Memos
   const tableColumns = useMemo(
@@ -87,6 +97,20 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         )
         .map(({ name, title }) => ({ id: name, title: title || name })),
     [tableMetadata.variables, columnVisibility]
+  )
+
+  // Error-glyph colors resolved from the live theme; dark mode plugs in here.
+  const errorColors = useMemo<ErrorColors>(
+    () => ({
+      error: theme.colors.red[6],
+      missing: theme.colors.gray[5],
+      skipped: theme.colors.gray[5],
+    }),
+    [theme]
+  )
+  const renderers = useMemo(
+    () => [...allCells, makeErrorCellRenderer(errorColors)],
+    [errorColors]
   )
 
   // Data: Populate grid
@@ -104,6 +128,11 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         return textCell('')
       }
 
+      const cellError = rowData[variable].error
+      if (cellError) {
+        return errorCell(cellError)
+      }
+
       return getCell({
         value: rowData[variable].value,
         dtype: rowData[variable].dtype,
@@ -112,6 +141,38 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     },
     [tableColumns, tableMetadata.runs, tableData, tableLastUpdate]
   )
+
+  // Cell: tooltip. Errored cells show a card; image cells show a preview.
+  const resolveTooltip = useCallback(
+    (col: number, row: number): CellTooltip | undefined => {
+      const run = tableMetadata.runs[row]
+      const variable = tableColumns[col]?.id
+      if (run == null || !variable) {
+        return undefined
+      }
+      const item = tableData[run]?.[variable]
+      if (!item) {
+        return undefined
+      }
+      if (item.error) {
+        return { kind: 'error', error: item.error }
+      }
+      if (
+        item.dtype === DTYPES.image &&
+        typeof item.value === 'string' &&
+        item.value
+      ) {
+        return { kind: 'image', src: item.value }
+      }
+      return undefined
+    },
+    [tableColumns, tableMetadata.runs, tableData]
+  )
+  const {
+    onItemHovered: handleItemHovered,
+    dismissOnScroll: dismissTooltipOnScroll,
+    tooltip,
+  } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
 
   // Cell: Click event
   const [gridSelection, setGridSelection] = useState<GridSelection>({
@@ -330,12 +391,31 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     })
   }
 
-  const handleVisibleRegionchange = useCallback(
-    (rect: Rectangle) => {
+  const lastVisibleRegionRef = useRef<{
+    rect: Rectangle
+    tx: number
+    ty: number
+  } | null>(null)
+  const handleVisibleRegionChange = useCallback(
+    (rect: Rectangle, tx?: number, ty?: number) => {
       paginationHandler(rect)
       scrollToViewHandler(rect)
+      const previous = lastVisibleRegionRef.current
+      const nextTx = tx ?? 0
+      const nextTy = ty ?? 0
+      // tx/ty catch sub-cell smooth-scroll where rect.x/y stay unchanged.
+      const scrolled =
+        !previous ||
+        previous.rect.x !== rect.x ||
+        previous.rect.y !== rect.y ||
+        previous.tx !== nextTx ||
+        previous.ty !== nextTy
+      lastVisibleRegionRef.current = { rect, tx: nextTx, ty: nextTy }
+      if (scrolled) {
+        dismissTooltipOnScroll()
+      }
     },
-    [paginationHandler, scrollToViewHandler]
+    [paginationHandler, scrollToViewHandler, dismissTooltipOnScroll]
   )
 
   return (
@@ -362,12 +442,14 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               rangeSelect="multi-cell"
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
+              onItemHovered={handleItemHovered}
               freezeColumns={1}
-              customRenderers={allCells}
-              onVisibleRegionChanged={handleVisibleRegionchange}
+              customRenderers={renderers}
+              onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}
             />
+            {tooltip}
             <ContextMenu {...contextMenu} />
             <div id="portal" />
           </>

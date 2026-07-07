@@ -1,6 +1,6 @@
 """Base class for durable per-campaign spool consumers.
 
-The invariant every subclass must preserve (from docs/architecture.md):
+The invariant every subclass must preserve (from hzdr/docs/architecture.md):
 
     A message is acked if and only if its event file exists, is complete
     (written + fsync'd), and the builder has been triggered.  An unclean

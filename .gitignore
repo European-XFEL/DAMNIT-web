@@ -2,7 +2,7 @@
 .venv
 .env
 .pytest_cache/
-# Coverage artifacts (the coverage map in docs/status/testing.md is committed; raw data is not)
+# Coverage artifacts (the coverage map in hzdr/docs/status/testing.md is committed; raw data is not)
 cover/
 htmlcov/
 .coverage
@@ -18,6 +18,5 @@ certs/
 .ruff_cache/
 __pycache__/
 
-# notes
-AGENTS.md
-CLAUDE.md
+# Local launcher config -- created per machine via hzdr-launch.ps1/.sh -InitConfig
+hzdr/scripts/hzdr-launch.config.json

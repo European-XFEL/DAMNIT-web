@@ -57,7 +57,7 @@ dependencies = [
 #
 # Pinned to match the standalone broker image
 # (gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0) — client and server
-# versions must match. See docs/guides/local-development.md.
+# versions must match. See hzdr/docs/guides/local-development.md.
 asapo = ["asapo-consumer~=24.11.0; python_version < '3.13'"]
 
 [dependency-groups]
@@ -95,7 +95,7 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 # Note: coverage flags are not forced here so the documented plain
 # `cd api; uv run pytest` keeps working without the `test` group. The aggregate
-# HZDR coverage map (docs/status/testing.md) is produced by scripts/test-all.ps1, which
+# HZDR coverage map (hzdr/docs/status/testing.md) is produced by hzdr/scripts/test-all.ps1, which
 # runs `uv run --group test ... --cov=damnit_api --cov-report=json:...`.
 
 [tool.hatch.build.targets.sdist]

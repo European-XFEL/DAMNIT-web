@@ -55,3 +55,7 @@ export function createMap<T>(array: T[], by: keyof T): Map<T[keyof T], T> {
   })
   return map
 }
+
+export function assertNever(value: never): never {
+  throw new Error(`Unhandled case: ${JSON.stringify(value)}`)
+}

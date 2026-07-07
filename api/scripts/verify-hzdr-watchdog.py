@@ -193,7 +193,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config",
         type=Path,
-        default=Path("../scripts/hzdr-launch.config.json"),
+        default=Path("../hzdr/scripts/hzdr-launch.config.json"),
         help="Shared HZDR launcher/connection config JSON.",
     )
     parser.add_argument(

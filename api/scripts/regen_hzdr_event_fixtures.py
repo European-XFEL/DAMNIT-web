@@ -1,7 +1,7 @@
 """Regenerate the canonical ``hzdr-event-v1`` test fixtures from the model.
 
 DAMNIT-web-hzdr is the canonical source for the ``hzdr-event-v1`` contract (see
-``docs/architecture.md`` and ``api/src/damnit_api/metadata/hzdr_event.py``).
+``hzdr/docs/architecture.md`` and ``api/src/damnit_api/metadata/hzdr_event.py``).
 This script rewrites this repo's committed fixtures:
 
     api/tests/fixtures/hzdr-event-v1.schema.json

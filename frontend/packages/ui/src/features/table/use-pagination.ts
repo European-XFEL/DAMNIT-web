@@ -1,44 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { range } from '@mantine/hooks'
-
 import type { Rectangle } from './types'
+import { Pages, pageRangeForRegion } from './pagination'
 import { getDeferredTable } from '../../data/table/table-data.thunks'
 import { getTable } from '../../data/table'
 import { useAppDispatch } from '../../redux/hooks'
-import { sortedInsert, sortedSearch } from '../../utils/array'
-
-class Pages {
-  private loading: number[]
-  private loaded: number[]
-
-  constructor() {
-    this.loading = []
-    this.loaded = []
-  }
-
-  addToLoading(page: number) {
-    sortedInsert(this.loading, page)
-  }
-
-  isLoading(page: number) {
-    return sortedSearch(this.loading, page) !== -1
-  }
-
-  addToLoaded(page: number) {
-    // Remove from loading
-    const index = sortedSearch(this.loading, page)
-    if (index !== -1) {
-      this.loading.splice(index, 1)
-    }
-
-    sortedInsert(this.loaded, page)
-  }
-
-  isLoaded(page: number) {
-    return sortedSearch(this.loaded, page) !== -1
-  }
-}
 
 type UsePaginationOptions = {
   proposal: string
@@ -120,14 +86,7 @@ export const usePagination = ({
       return
     }
 
-    const firstPage = Math.max(
-      0,
-      Math.floor((visibleRegion.y - pageSize / 2) / pageSize)
-    )
-    const lastPage = Math.floor(
-      (visibleRegion.y + visibleRegion.height + pageSize / 2) / pageSize
-    )
-    range(firstPage + 1, lastPage + 2).map((page) => {
+    pageRangeForRegion(visibleRegion, pageSize).forEach((page) => {
       if (!pagesRef.current.isLoaded(page)) {
         loadPage(page)
       }

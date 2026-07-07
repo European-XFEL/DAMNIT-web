@@ -16,6 +16,7 @@ param(
     [string] $ShotsFiredAtField = "",
     [string] $SourceKey = "hzdr-labfrog",
     [string] $SourceTitle = "HZDR labfrog shots",
+    [string] $AuthMode = "",
 
     [switch] $WithGui,
     [switch] $NoApi,
@@ -52,7 +53,14 @@ function Set-HzdrDebugEnvironment {
         [int] $SelectedPort
     )
 
-    $env:DW_API_AUTH__MODE = "ldap"
+    # Parity with hzdr/scripts/hzdr-launch.sh: -AuthMode (launcher config) wins,
+    # then an already-exported DW_API_AUTH__MODE, then the ldap default.
+    if ($AuthMode) {
+        $env:DW_API_AUTH__MODE = $AuthMode
+    }
+    elseif (-not $env:DW_API_AUTH__MODE) {
+        $env:DW_API_AUTH__MODE = "ldap"
+    }
     $env:DW_API_DEBUG = "true"
     $env:DW_API_LOG_LEVEL = "DEBUG"
     $env:DW_API_METADATA__PROVIDER = $SelectedProvider

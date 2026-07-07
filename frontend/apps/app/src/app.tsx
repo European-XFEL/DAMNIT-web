@@ -31,14 +31,8 @@ import {
 } from '@damnit-frontend/ui'
 import { AppHeader } from './hzdr/components/AppHeader'
 import { useRuntimeConfig } from './hzdr/hooks'
-import {
-  HZDRFlowMonitorPage,
-  HZDRSourceHome,
-  HZDRDocsPage,
-  LinkExistingShotRecordsPage,
-  HZDRShotPage,
-  ContextBuilderPage,
-} from './hzdr'
+import { HZDRSourceHome } from './hzdr'
+import { hzdrRoutes } from './hzdr/routes'
 
 const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === 'test')
 
@@ -102,14 +96,6 @@ const App = () => {
           }
         />
         <Route
-          path="/docs"
-          element={
-            <PrivateRoute>
-              <HZDRDocsPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
           path="/proposal/:proposal_number"
           element={
             <PrivateRoute>
@@ -119,38 +105,7 @@ const App = () => {
             </PrivateRoute>
           }
         />
-        <Route
-          path="/flow-monitor"
-          element={
-            <PrivateRoute>
-              <HZDRFlowMonitorPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/link-shot-records"
-          element={
-            <PrivateRoute>
-              <LinkExistingShotRecordsPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/source/:source_key/context-builder"
-          element={
-            <PrivateRoute>
-              <ContextBuilderPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/source/:source_key"
-          element={
-            <PrivateRoute>
-              <HZDRShotPage />
-            </PrivateRoute>
-          }
-        />
+        {hzdrRoutes()}
         <Route path="/not-found" element={<NotFoundPage />} />
         <Route path="*" element={<Navigate to="/not-found" />} />
       </Routes>

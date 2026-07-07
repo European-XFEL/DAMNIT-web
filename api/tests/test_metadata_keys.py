@@ -2,7 +2,7 @@
 
 See CLAUDE.md "Metadata key registry (binding, signed off 2026-07-02)" for
 the authoritative human-readable table this module's constants must match,
-and docs/target-ontology.md §4/§5 for the `properties` exemption and units
+and hzdr/docs/target-ontology.md §4/§5 for the `properties` exemption and units
 convention this linter must respect.
 """
 

@@ -2,7 +2,7 @@
 
 These tests use the in-process harness from asapo-for-hzdr-damnit to provide
 a real broker (BrokerStore) without needing Docker, Kafka, or ASAPO.  The
-five properties from docs/status/integration-roadmap.md §Durable Spool Design are
+five properties from hzdr/docs/status/integration-roadmap.md §Durable Spool Design are
 each covered by one test:
 
     1. claim does not advance position until ack
@@ -305,7 +305,7 @@ async def test_real_asapo_consumer_claims_json_and_acks_after_spool(tmp_path):
 def test_hzdr_spool_settings_validate_real_asapo_required_fields():
     from pydantic import SecretStr, ValidationError
 
-    from damnit_api.shared.settings import HZDRSpoolSettings
+    from damnit_api.shared.hzdr_settings import HZDRSpoolSettings
 
     with pytest.raises(ValidationError, match="ASAPO_ENDPOINT"):
         HZDRSpoolSettings(enabled=True, broker_kind="asapo")

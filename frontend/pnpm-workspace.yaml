@@ -39,6 +39,12 @@ catalogs:
   redux:
     '@reduxjs/toolkit': 2.6.1
     react-redux: 9.2.0
+  testing:
+    '@vitest/browser': 4.1.9
+    '@vitest/browser-playwright': 4.1.9
+    playwright: 1.61.1
+    vitest: 4.1.9
+    vitest-browser-react: 2.2.0
   tooling:
     '@testing-library/jest-dom': 6.6.3
     '@testing-library/react': 16.0.0

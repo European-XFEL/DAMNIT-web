@@ -30,7 +30,10 @@ export const getDeferredTable =
       ...new Set(
         Object.values(data).flatMap((run) =>
           Object.entries(run)
-            .filter(([_, variables]) => variables?.value === null)
+            .filter(
+              ([_, variables]) =>
+                variables?.value === null && variables?.error == null
+            )
             .map(([variable]) => variable)
         )
       ),

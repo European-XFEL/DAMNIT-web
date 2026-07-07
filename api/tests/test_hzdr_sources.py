@@ -6,6 +6,7 @@ import orjson
 import pytest
 
 from damnit_api.metadata.hzdr_event import lint_metadata_keys
+from damnit_api.metadata.hzdr_routers import append_emulated_shot
 from damnit_api.metadata.hzdr_sources import (
     HZDRSourceProvider,
     _map_mongo_shot,
@@ -13,7 +14,6 @@ from damnit_api.metadata.hzdr_sources import (
     load_sources_file,
     preview_hdf5_dataset,
 )
-from damnit_api.metadata.routers import append_emulated_shot
 from damnit_api.shared.settings import MetadataSettings
 
 
@@ -384,7 +384,8 @@ def test_shotcounter_flow_monitor_event_uses_zmq_kafka_shape(tmp_path: Path):
 def test_flow_monitor_emulator_emits_namespaced_bare_keys(tmp_path: Path):
     """The emulator must emit registry keys, not legacy suffixed ones.
 
-    Characterization test for Phase 1 of docs/plans/alignment-implementation-plan.md:
+    Characterization test for Phase 1 of
+    hzdr/docs/plans/alignment-implementation-plan.md:
     `_build_flow_monitor_metadata` (via `append_emulated_shot`) writes numeric
     laser/vacuum/target fields under the namespaced bare-key convention (see
     CLAUDE.md "Metadata key registry"), and the warn-only legacy-key linter

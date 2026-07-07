@@ -20,7 +20,8 @@ from damnit_api.metadata.scicat import (
     read_previous_registration,
     register_campaign_nexus,
 )
-from damnit_api.shared.settings import HZDRScicatSettings, settings
+from damnit_api.shared.hzdr_settings import HZDRScicatSettings
+from damnit_api.shared.settings import settings
 
 EXPERIMENT_ID = "Solenoid_Beamline_Tests_01.2025"
 SOURCE_KEY = "hzdr-labfrog"

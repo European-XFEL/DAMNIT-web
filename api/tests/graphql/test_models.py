@@ -1,9 +1,12 @@
 import io
+import json
 
 import numpy as np
 import pytest
 
 from damnit_api.graphql.models import (
+    DamnitRun,
+    DamnitVariableError,
     resample_array,
     serialize,
     to_complex_string,
@@ -136,3 +139,49 @@ def test_serialize_image():
     assert dtype == DamnitType.IMAGE
     assert isinstance(value, str)
     assert value.startswith("data:image/png;base64,")
+
+
+# -----------------------------------------------------------------------------
+# Test DamnitVariableError.from_attrs
+
+ERROR_ATTRS = {"error": "IndexError: list index out of range", "error_cls": "Foo"}
+
+
+def test_extract_error_from_json_string():
+    error = DamnitVariableError.from_attrs(json.dumps(ERROR_ATTRS))
+    assert error == DamnitVariableError(message=ERROR_ATTRS["error"], cls="Foo")
+
+
+@pytest.mark.parametrize(
+    "attributes",
+    [
+        None,
+        {"error": "boom", "error_cls": "Foo"},
+        "not json",
+        "123",
+        "{}",
+        '{"error": "boom"}',
+        '{"error": "boom", "error_cls": 42}',
+    ],
+)
+def test_extract_error_returns_none(attributes):
+    assert DamnitVariableError.from_attrs(attributes) is None
+
+
+# -----------------------------------------------------------------------------
+# Test DamnitRun error path
+
+
+def test_resolve_includes_error_for_failed_variable():
+    record = {
+        "run": {"value": 1},
+        "broken": {"value": None, "attributes": json.dumps(ERROR_ATTRS)},
+    }
+    resolved = DamnitRun.resolve(record)
+
+    assert "error" not in resolved["run"]
+    assert resolved["broken"]["value"] is None
+    assert resolved["broken"]["error"] == {
+        "message": ERROR_ATTRS["error"],
+        "cls": "Foo",
+    }
