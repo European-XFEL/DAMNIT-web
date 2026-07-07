@@ -26,7 +26,7 @@ For more information, see [ADR-000](adr/000-vertical-slice-architecture.md).
 | `appdb/`                          | The app's own database (infrastructure) | Models, engine/session plumbing for `dw_api.sqlite`                                                                       | Planned | `_db/`                                                                    |
 | `mymdc/`                          | MyMdC client (infrastructure)           | Ports, clients, vendored models                                                                                           | Planned | `_mymdc/`                                                                 |
 | `core/`                           | Cross-cutting, framework-free           | Shared error classes (see [ADR-001](adr/001-error-classes.md)), `DamnitType`, value types, converters                     | Planned | `shared/` + `utils.py`                                                    |
-| `main.py` / `app.py` / `state.py` | Composition root                        | `AppState`, `create_*` factories (see [ADR-002](adr/002-no-global-mutable-state.md)), `create_app()` - the only place that may import everything and read settings | Partial | `main.py` only                                                            |
+| `main.py` / `app.py` / `state.py` | Composition root                        | `AppState`, `create_*` factories (see [ADR-002](adr/002-no-global-mutable-state.md)), `create_app()` - the only place that may import everything and read settings | Partial | `main.py` + `state.py`                                                            |
 
 Where new code goes:
 
