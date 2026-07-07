@@ -12,7 +12,9 @@ import { fileURLToPath } from 'node:url'
 // tsconfig.test.json, so they resolve for the test runtime and the editor but
 // not in production src, which imports relatively.
 const alias = {
-  '@/': fileURLToPath(new URL('./src/', import.meta.url)),
+  // Normalize to forward slashes: backslash paths break vite-node's alias
+  // resolution on Windows, so every unit-test file fails to load.
+  '@/': fileURLToPath(new URL('./src/', import.meta.url)).replace(/\\/g, '/'),
   '#tests/': fileURLToPath(new URL('./tests/', import.meta.url)),
 }
 
