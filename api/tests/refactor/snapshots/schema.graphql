@@ -1,0 +1,91 @@
+"""Only return lightweight values (e.g., scalars)"""
+directive @lightweight on FIELD
+
+scalar Any
+
+type DamnitRun {
+  variables(names: [String!] = null): [DamnitVariable!]!
+}
+
+enum DamnitType {
+  none
+  number
+  string
+  boolean
+  timestamp
+  complex
+  array
+  image
+  numpy
+  rgba
+  png
+  dataset
+}
+
+type DamnitVariable {
+  name: String!
+  value: Any
+  dtype: DamnitType!
+  error: DamnitVariableError
+}
+
+type DamnitVariableError {
+  message: String!
+  cls: String!
+}
+
+input DatabaseInput {
+  proposal: String = "2956"
+  path: String
+}
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
+"""
+scalar JSON @specifiedBy(url: "https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf")
+
+type ProposalMeta {
+  year_half: String
+  updated_at: DateTime
+  created_at: DateTime!
+  id: Int!
+  number: Int!
+  cycle: String!
+  instrument: String!
+  path: String!
+  title: String!
+  principal_investigator: String!
+  start_date: DateTime
+  end_date: DateTime
+  damnit_path: String
+  damnit_paths_searched: [String!]!
+  proposal_read_only: Boolean!
+  damnit_path_last_check: DateTime
+}
+
+type Query {
+  get_user: User!
+  runs(database: DatabaseInput!, page: Int! = 1, per_page: Int! = 10): [DamnitRun!]!
+  metadata(database: DatabaseInput!): JSON!
+  extracted_data(database: DatabaseInput!, run: Int!, variable: String!): JSON!
+  proposal_metadata(proposal_numbers: [Int!]!): [ProposalMeta!]
+}
+
+type Subscription {
+  latest_data(database: DatabaseInput!, timestamp: Timestamp!): JSON!
+}
+
+scalar Timestamp
+
+type User {
+  email: String!
+  family_name: String!
+  given_name: String!
+  groups: [String!]!
+  name: String!
+  preferred_username: String!
+  proposals(start_after: DateTime = null): [ProposalMeta!]!
+}
