@@ -23,7 +23,10 @@ FAKE_USER = {
 
 # Every entity the cassette may contain. User proposal lists are truncated to
 # RECORDED_PROPOSALS at scrub time.
-RECORDED_PROPOSALS = [900000, 900001, 900549]
+# 6996 is the fixture-data proposal (tests/mock/data/p6996); the 900xxx test
+# proposals have no data on disk.
+RECORDED_PROPOSALS = [6996, 900000, 900001, 900549]
 RECORDED_USERS = [1101]
 RECORDED_USERNAMES = ["roscar"]
-RECORDED_CYCLES = [1, 2, 474]
+# 356 is in cycle 6996, the rest are commissioning proposals/cycles
+RECORDED_CYCLES = [1, 2, 356, 474]

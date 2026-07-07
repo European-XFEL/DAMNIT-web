@@ -43,12 +43,17 @@ FAKE_HOST = "mymdc.example"
 
 # Keys whose values are replaced on any record that looks like a user.
 USER_KEYS = set(FAKE_USER)
-# Keys blanked everywhere: secrets and directory internals the app never reads.
+# Keys blanked everywhere: secrets, directory internals the app never reads, and
+# proposal text that is not otherwise published (abstracts, data plans)
 REDACT_KEYS = {
     "logbook_api_key",
     "ldap_description",
     "ldap_destination_indicator",
     "ldap_ou",
+    "abstract",
+    "data_plan_comments",
+    "logbook_url",
+    "logbook_identifier",
 }
 
 
