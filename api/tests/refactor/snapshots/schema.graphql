@@ -52,7 +52,7 @@ type ProposalMeta {
   updated_at: DateTime
   created_at: DateTime!
   id: Int!
-  number: Int!
+  number: ProposalNo!
   cycle: String!
   instrument: String!
   path: String!
@@ -65,6 +65,9 @@ type ProposalMeta {
   proposal_read_only: Boolean!
   damnit_path_last_check: DateTime
 }
+
+"""Proposal number (positive integer, 1-999999)"""
+scalar ProposalNo
 
 type Query {
   get_user: User!

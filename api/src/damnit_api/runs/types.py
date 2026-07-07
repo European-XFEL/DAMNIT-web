@@ -6,6 +6,7 @@ import strawberry
 
 from .. import get_logger
 from ..shared.const import DamnitType
+from ..shared.models import ProposalNumber
 from ..utils import (
     create_map,
     python_type_to_damnit_type,
@@ -41,6 +42,12 @@ SCALAR_MAP = {
     Timestamp: strawberry.scalar(
         name="Timestamp",
         parse_value=lambda value: value / 1000,
+    ),
+    ProposalNumber: strawberry.scalar(
+        name="ProposalNo",
+        serialize=int,
+        parse_value=ProposalNumber,
+        description="Proposal number (positive integer, 1-999999)",
     ),
 }
 
