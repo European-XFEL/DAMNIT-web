@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from .auth.token_store import TokenStore
     from .graphql.subscriptions import SubscriptionCursors
     from .runs.repository import DamnitRepositoryRegistry
-    from .runs.sqlite.session import DamnitDBRegistry
     from .shared.settings import Settings
 
 
@@ -35,7 +34,6 @@ class AppState:
     mymdc_client: MyMdCClient
     oauth_client: StarletteOAuth2App | None  # None when auth is disabled
     token_store: TokenStore
-    damnit_registry: DamnitDBRegistry
     repositories: DamnitRepositoryRegistry
     subscription_cursors: SubscriptionCursors
 
@@ -85,12 +83,6 @@ def create_token_store() -> TokenStore:
     from .auth.token_store import InMemoryTokenStore
 
     return InMemoryTokenStore()
-
-
-def create_damnit_registry() -> DamnitDBRegistry:
-    from .runs.sqlite.session import DamnitDBRegistry
-
-    return DamnitDBRegistry()
 
 
 def create_repositories() -> DamnitRepositoryRegistry:
