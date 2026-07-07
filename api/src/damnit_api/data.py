@@ -5,7 +5,7 @@ import xarray as xr
 from damnit.api import Damnit, DataType
 from PIL import Image
 
-from .db import get_damnit_path
+from .runs.sqlite import get_damnit_path
 from .shared.const import DamnitType
 from .utils import b64image
 

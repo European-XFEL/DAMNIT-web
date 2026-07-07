@@ -6,7 +6,7 @@ from async_lru import alru_cache
 from strawberry.scalars import JSON
 
 from ..auth.permissions import PROPOSAL_PERMISSIONS
-from ..db import async_latest_rows, async_max, async_table
+from ..runs.sqlite import async_latest_rows, async_max, async_table
 from ..utils import create_map
 from .metadata import fetch_metadata
 from .models import DamnitRun, Timestamp
