@@ -189,6 +189,7 @@ runs all sibling suites.
 - Do not read or print secrets, credentials, tokens, or auth files. Keep endpoints and tokens in env-specific config, never in API code.
 - Preserve HZDR-specific behavior; the builder is single-writer per campaign (PID lock) and publishes the NeXus file + catalog atomically — keep both invariants.
 - Mind private GitLab dependencies and Windows/Linux differences (PowerShell `.ps1` and bash `.sh` launchers are kept in parallel).
+- Root-level `scripts/` (and other upstream-owned paths) are touched only by upstream merges. Everything HZDR at the repo root lives under `hzdr/` (`hzdr/docs/`, `hzdr/scripts/`); inside `api/`/`frontend/`, HZDR code keeps the `hzdr_`/`hzdr/` naming.
 - Add characterization tests before risky refactors. Fix React hook-dependency warnings properly rather than suppressing them.
 - Python lint/format with ruff; frontend with eslint.
 
