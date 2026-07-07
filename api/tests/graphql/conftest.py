@@ -5,9 +5,9 @@ from strawberry.schema.config import StrawberryConfig
 from damnit_api.graphql import subscriptions
 from damnit_api.graphql.directives import lightweight
 from damnit_api.graphql.metadata import fetch_metadata
-from damnit_api.graphql.models import SCALAR_MAP, DamnitVariable
 from damnit_api.graphql.queries import Query
 from damnit_api.graphql.subscriptions import Subscription, poll_proposal
+from damnit_api.runs.types import SCALAR_MAP, DamnitVariable
 
 from .const import (
     EXAMPLE_TAGS,

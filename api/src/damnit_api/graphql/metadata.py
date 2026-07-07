@@ -3,8 +3,8 @@ import asyncio
 from async_lru import alru_cache
 
 from ..runs import sqlite as db
+from ..runs.types import DamnitRun
 from ..utils import create_map
-from .models import DamnitRun
 
 
 @alru_cache(ttl=10)
