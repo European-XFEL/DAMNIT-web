@@ -74,7 +74,7 @@ type Query {
   runs(database: DatabaseInput!, page: Int! = 1, per_page: Int! = 10): [DamnitRun!]!
   metadata(database: DatabaseInput!): JSON!
   extracted_data(database: DatabaseInput!, run: Int!, variable: String!): JSON!
-  proposal_metadata(proposal_numbers: [Int!]!): [ProposalMeta!]
+  proposal_metadata(proposal_numbers: [ProposalNo!]!): [ProposalMeta!]
 }
 
 type Subscription {
