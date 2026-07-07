@@ -2,6 +2,9 @@ from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from pathlib import Path
 
+from async_lru import alru_cache
+from sqlalchemy import MetaData, Table
+from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
@@ -30,6 +33,9 @@ class DatabaseSessionManager:
             poolclass=NullPool,
         )
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
+        # Owned by this manager, not the module:
+        # one reflection cache per proposal, cleared when the manager is.
+        self._table_cache = alru_cache(ttl=300)(self._reflect_table)
 
     @property
     def db_path(self):
@@ -72,6 +78,20 @@ class DatabaseSessionManager:
         finally:
             await session.close()
 
+    async def _reflect_table(self, name: str) -> Table | None:
+        async with self.connect() as conn:
+            try:
+                return await conn.run_sync(
+                    lambda conn: Table(name, MetaData(), autoload_with=conn)
+                )
+            except NoSuchTableError:
+                # Don't cache misses; the table may appear shortly.
+                self._table_cache.cache_invalidate(name)
+                return None
+
+    async def get_table(self, name: str = "runs") -> Table | None:
+        return await self._table_cache(name)
+
 
 class DamnitDBRegistry:
     """Per-proposal DAMNIT database registry."""
@@ -93,16 +113,16 @@ class DamnitDBRegistry:
         self._managers.clear()
 
 
-# TODO: remove, replace with app state (next commit)
-damnit_registry = DamnitDBRegistry()
+def get_session(
+    registry: DamnitDBRegistry, proposal: str
+) -> AbstractAsyncContextManager[AsyncSession]:
+    return registry.get(proposal).session()
 
 
-def get_session(proposal: str) -> AbstractAsyncContextManager[AsyncSession]:
-    return damnit_registry.get(proposal).session()
-
-
-def get_connection(proposal: str) -> AbstractAsyncContextManager[AsyncConnection]:
-    return damnit_registry.get(proposal).connect()
+def get_connection(
+    registry: DamnitDBRegistry, proposal: str
+) -> AbstractAsyncContextManager[AsyncConnection]:
+    return registry.get(proposal).connect()
 
 
 # -----------------------------------------------------------------------------

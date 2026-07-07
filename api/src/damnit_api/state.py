@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
     from ._mymdc.clients import MyMdCClient
     from .auth.token_store import TokenStore
+    from .runs.sqlite.session import DamnitDBRegistry
     from .shared.settings import Settings
 
 
@@ -32,6 +33,7 @@ class AppState:
     mymdc_client: MyMdCClient
     oauth_client: StarletteOAuth2App | None  # None when auth is disabled
     token_store: TokenStore
+    damnit_registry: DamnitDBRegistry
 
 
 def create_db_engine(settings: Settings) -> AsyncEngine:
@@ -79,6 +81,12 @@ def create_token_store() -> TokenStore:
     from .auth.token_store import InMemoryTokenStore
 
     return InMemoryTokenStore()
+
+
+def create_damnit_registry() -> DamnitDBRegistry:
+    from .runs.sqlite.session import DamnitDBRegistry
+
+    return DamnitDBRegistry()
 
 
 def get_app_state(request: Request) -> AppState:

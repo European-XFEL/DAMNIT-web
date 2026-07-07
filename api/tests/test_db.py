@@ -81,12 +81,12 @@ def test_engine_uses_nullpool_and_autocommit(damnit_db):
 # this test verifies (no file descriptors leak after the loop dies).
 # alru_cached async_table sees that loop change; warning is intrinsic.
 @pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
-def test_no_lingering_file_descriptor_after_read(damnit_db):
+def test_no_lingering_file_descriptor_after_read(damnit_db, damnit_registry):
     db_file = Path(damnit_db) / DAMNIT_PATH / "runs.sqlite"
 
     async def do_read():
-        table = await async_table(damnit_db, name="runs")
-        async with get_session(damnit_db) as session:
+        table = await async_table(damnit_registry, damnit_db, name="runs")
+        async with get_session(damnit_registry, damnit_db) as session:
             await session.execute(table.select())
 
     assert _open_file_descriptors_to(db_file) == []

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .._db.dependencies import DBSession
     from .._mymdc.clients import MyMdCClient
     from ..auth.dependencies import User
+    from ..runs.sqlite import DamnitDBRegistry
 
 
 LOCAL_CYCLE = "197001"
@@ -42,17 +43,17 @@ def _local_proposal_meta(proposal_number: ProposalNumber) -> ProposalMeta:
     )
 
 
-async def _local_proposal_number() -> int | None:
+async def _local_proposal_number(registry: "DamnitDBRegistry") -> int | None:
     from sqlalchemy import select
 
     from ..runs.sqlite import async_table, get_session
     from ..shared.const import DEFAULT_PROPOSAL
 
-    table = await async_table(DEFAULT_PROPOSAL, name="metameta")
+    table = await async_table(registry, DEFAULT_PROPOSAL, name="metameta")
     if table is None:
         return None
 
-    async with get_session(DEFAULT_PROPOSAL) as session:
+    async with get_session(registry, DEFAULT_PROPOSAL) as session:
         result = await session.execute(
             select(table.c.value).where(table.c.key == "proposal")
         )

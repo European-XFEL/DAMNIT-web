@@ -17,6 +17,7 @@ def create_app():
     from .shared.settings import settings
     from .state import (
         AppState,
+        create_damnit_registry,
         create_db_engine,
         create_db_sessionmaker,
         create_mymdc_client,
@@ -47,6 +48,7 @@ def create_app():
             mymdc_client=create_mymdc_client(settings),
             oauth_client=oauth_client,
             token_store=create_token_store(),
+            damnit_registry=create_damnit_registry(),
         )
 
         if settings.is_local:

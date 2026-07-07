@@ -142,11 +142,14 @@ noauth_router = APIRouter(prefix="/oauth", tags=["auth"])
 
 
 @noauth_router.get("/userinfo")
-async def noauth_userinfo():
+async def noauth_userinfo(request: Request):
     from ..metadata.services import LOCAL_CYCLE, _local_proposal_number
+    from ..state import get_app_state
 
     proposals = {}
-    proposal_number = await _local_proposal_number()
+    proposal_number = await _local_proposal_number(
+        get_app_state(request).damnit_registry
+    )
     if proposal_number:
         proposals = {LOCAL_CYCLE: [proposal_number]}
 

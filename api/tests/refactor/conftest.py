@@ -6,6 +6,7 @@ the fixtures are reused from that package's conftest rather than duplicated.
 
 from ..graphql.conftest import (  # noqa: F401
     bypass_proposal_permission,
+    graphql_context,
     graphql_schema,
     graphql_schema_no_auth,
     mocked_ensure_damnit_path,

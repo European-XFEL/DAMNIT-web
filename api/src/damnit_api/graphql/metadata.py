@@ -8,7 +8,7 @@ from ..utils import create_map
 
 
 @alru_cache(ttl=10)
-async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
+async def fetch_metadata(registry: db.DamnitDBRegistry, proposal=db.DEFAULT_PROPOSAL):
     """Fetch the per-proposal metadata snapshot from SQLite.
 
     Returns a dict with `runs`, `variables`, `tags`, and `timestamp`. Result
@@ -16,11 +16,11 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
     it observes new data so subsequent reads stay fresh.
     """
     tags, variables, variable_tags, runs, max_timestamp = await asyncio.gather(
-        db.async_all_tags(proposal),
-        db.async_variables(proposal),
-        db.async_variable_tags(proposal),
-        db.async_column(proposal, table="run_info", name="run"),
-        db.async_max(proposal, table="run_variables", column="timestamp"),
+        db.async_all_tags(registry, proposal),
+        db.async_variables(registry, proposal),
+        db.async_variable_tags(registry, proposal),
+        db.async_column(registry, proposal, table="run_info", name="run"),
+        db.async_max(registry, proposal, table="run_variables", column="timestamp"),
     )
 
     for name, var in variables.items():

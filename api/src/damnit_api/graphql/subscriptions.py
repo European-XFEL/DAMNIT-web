@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 import strawberry
 from async_lru import alru_cache
 from strawberry.scalars import JSON
+from strawberry.types import Info
 
 from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..runs.sqlite import async_latest_rows, async_max, async_table
@@ -22,18 +23,19 @@ _last_seen_timestamp: dict[str, float] = {}
 # Per-client cursor is deliberately omitted from the cache key so that
 # concurrent subscribers coalesce into a single DB read per tick.
 @alru_cache(maxsize=32, ttl=POLLING_INTERVAL)
-async def poll_proposal(proposal):
-    table = await async_table(proposal, name="run_variables")
+async def poll_proposal(registry, proposal):
+    table = await async_table(registry, proposal, name="run_variables")
     if table is None:
         return None
 
     if proposal not in _last_seen_timestamp:
         max_timestamp = await async_max(
-            proposal, table="run_variables", column="timestamp"
+            registry, proposal, table="run_variables", column="timestamp"
         )
         _last_seen_timestamp[proposal] = max_timestamp or 0
 
     rows = await async_latest_rows(
+        registry,
         proposal,
         table=table,
         by="timestamp",
@@ -44,11 +46,13 @@ async def poll_proposal(proposal):
 
     latest_data = LatestData.from_list(rows)
 
-    latest_runs = await fetch_info(proposal, runs=list(latest_data.runs.keys()))
+    latest_runs = await fetch_info(
+        registry, proposal, runs=list(latest_data.runs.keys())
+    )
     latest_runs = create_map(latest_runs, key="run")
 
-    fetch_metadata.cache_invalidate(proposal)
-    metadata = await fetch_metadata(proposal)
+    fetch_metadata.cache_invalidate(registry, proposal)
+    metadata = await fetch_metadata(registry, proposal)
 
     runs = {}
     run_timestamps = {}
@@ -109,13 +113,16 @@ class Subscription:
     @strawberry.subscription(permission_classes=PROPOSAL_PERMISSIONS)
     async def latest_data(
         self,
+        info: Info,
         database: DatabaseInput,
         timestamp: Timestamp,
     ) -> AsyncGenerator[JSON]:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         while True:
             await asyncio.sleep(POLLING_INTERVAL)
 
-            snapshot = await poll_proposal(proposal=database.proposal)
+            snapshot = await poll_proposal(
+                info.context.damnit_registry, proposal=database.proposal
+            )
             result = filter_for_client(snapshot, timestamp)
             if result is not None:
                 yield result  # FIX: # pyright: ignore[reportReturnType]
