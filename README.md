@@ -30,6 +30,7 @@ mode, and the plain frontend dev server — see
 ## Documentation
 
 - [Documentation index](hzdr/docs/README.md)
+- [Screenshots of the UI](hzdr/docs/screenshots.md)
 - [System overview](hzdr/docs/system-overview.md)
 - [Ordered integration roadmap](hzdr/docs/status/integration-roadmap.md)
 - [Architecture and identity rules](hzdr/docs/architecture.md)

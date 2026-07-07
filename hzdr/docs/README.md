@@ -25,6 +25,7 @@ Real-broker ingestion end-to-end and the pilot replay remain — see the
 | --- | --- |
 | [System overview](system-overview.md) | All seven repositories, the end-to-end data flow, shared contracts, and the end products |
 | [Architecture](architecture.md) | Canonical identity, event model, NeXus layout, and system boundaries |
+| [Screenshots](screenshots.md) | Current UI: home, shot table, flow monitor, link records, in-app docs |
 
 ## Reference — data model & standards
 
