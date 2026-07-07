@@ -248,7 +248,7 @@ can still read the file. HELPMI is finished (2026-07-02) and will publish no off
 
 Do **not** use the unqualified `NXtarget` name locally; it looks official and could
 conflict with a future upstream NeXus class. **Done 2026-07-02:** the v0.1 profile
-document, [docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md), defines the
+document, [hzdr/docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md), defines the
 semantic map and compatibility-attribute contract, and `write_nexus_sample()` stamps
 `damnit_nx_class="NXhzdr_target"` and `damnit_nxdl_version` (module constant
 `HZDR_TARGET_PROFILE_VERSION` in `hzdr_nexus.py`, currently `"0.1"`) on `/entry/sample`

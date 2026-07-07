@@ -12,9 +12,9 @@ GitLab/planet-watchdog
 GitLab/shotcounter
 ```
 
-Launchers discover sibling checkouts or use `scripts/hzdr-launch.config.json`
+Launchers discover sibling checkouts or use `hzdr/scripts/hzdr-launch.config.json`
 (both `.ps1` and `.sh` honor its `auth.mode`; the launcher-config section of
-[api/docs/hzdr.md](../../api/docs/hzdr.md) has the full key list).
+[api/docs/hzdr.md](../../../api/docs/hzdr.md) has the full key list).
 
 ### ASAPO standalone image
 
@@ -26,12 +26,12 @@ docker pull gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0
 ```
 
 ```powershell
-.\scripts\hzdr-launch.ps1 -InitConfig
-.\scripts\hzdr-launch.ps1 -ValidateOnly
-.\scripts\hzdr-launch.ps1
+.\hzdr\scripts\hzdr-launch.ps1 -InitConfig
+.\hzdr\scripts\hzdr-launch.ps1 -ValidateOnly
+.\hzdr\scripts\hzdr-launch.ps1
 ```
 
-Linux uses the equivalent `scripts/hzdr-launch.sh` commands.
+Linux uses the equivalent `hzdr/scripts/hzdr-launch.sh` commands.
 
 ## Build A Pilot File
 
@@ -68,5 +68,5 @@ Generated emulator files live under `.generated/hzdr-package-emulator`.
 To check the local vertical slice (emulator events through Confirm Matches)
 without building a real pilot file, run
 `uv run python scripts/hzdr-local-acceptance.py` from `api`, or
-`scripts/test.ps1 -WithAcceptance` from the repo root. Testing commands are
+`hzdr/scripts/test.ps1 -WithAcceptance` from the repo root. Testing commands are
 in [testing.md](../status/testing.md).

@@ -182,6 +182,6 @@ async def test_builder_enabled_without_consumers_warns(tmp_path, wired):
     async with bootstrap.spool_lifespan(_settings(tmp_path, builder=True), logger):
         assert wired.consumers == []
         assert wired.builders == []
-    assert any(
-        "no spool consumer is" in m for m, _ in logger.warning_calls
-    ), logger.warning_calls
+    assert any("no spool consumer is" in m for m, _ in logger.warning_calls), (
+        logger.warning_calls
+    )

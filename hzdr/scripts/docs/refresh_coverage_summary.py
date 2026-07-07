@@ -2,15 +2,15 @@
 # SPDX-FileCopyrightText: 2026 Helmholtz-Zentrum Dresden-Rossendorf e.V (HZDR)
 # SPDX-License-Identifier: Apache-2.0
 
-"""Refresh the aggregate cross-repo test coverage map in ``docs/status/testing.md``.
+"""Refresh the aggregate cross-repo test coverage map in ``hzdr/docs/status/testing.md``.
 
-``scripts/test-all.ps1`` runs every HZDR suite with pytest-cov and writes a
+``hzdr/scripts/test-all.ps1`` runs every HZDR suite with pytest-cov and writes a
 ``cover/coverage.json`` into each repo. This script reads the overall line
 coverage from each of those JSON files and renders one row per repo between the
-markers in ``docs/status/testing.md``.
+markers in ``hzdr/docs/status/testing.md``.
 
 Each sibling repo also keeps its own per-area coverage map (refreshed by its own
-``poe test-fast`` / ``scripts/docs/refresh_coverage_map.py``); this is the
+``poe test-fast`` / ``hzdr/scripts/docs/refresh_coverage_map.py``); this is the
 combined HZDR view that lives with the cross-repo "Verified" table.
 """
 
@@ -22,7 +22,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 GITLAB_ROOT = ROOT.parent
 DEFAULT_DOC = ROOT / "docs" / "status" / "testing.md"
 START_MARKER = "<!-- coverage-summary-start -->"
@@ -136,10 +136,10 @@ def build_summary() -> str:
         )
     return "\n".join(
         (
-            "Overall line coverage per repo, from the latest `scripts/test-all.ps1` run.",
+            "Overall line coverage per repo, from the latest `hzdr/scripts/test-all.ps1` run.",
             "Each suite writes a `cover/coverage.json`; rows show `No coverage data` until",
             "that repo has been run with coverage. Per-area detail lives in each repo's own",
-            "coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).",
+            "coverage map (`CONTRIBUTING.md` / `hzdr/docs/CONTRIBUTING.md`).",
             "",
             "| Repo | Coverage | Package | Suite |",
             "| --- | --- | --- | --- |",

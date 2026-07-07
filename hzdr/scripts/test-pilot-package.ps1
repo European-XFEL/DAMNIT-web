@@ -12,7 +12,7 @@
       * hzdr-event-v1 model/fixtures and Kafka topic defaults are in sync
       * pilot config files agree on campaign, topics, ASAPO-disabled policy,
         and temporary watchdog ZMQ-in/Kafka-out behavior
-      * selected repo suites pass via scripts/test-all.ps1
+      * selected repo suites pass via hzdr/scripts/test-all.ps1
 
     ASAPO is excluded by default for this pilot. Use -IncludeAsapo only when the
     deferred ASAPO/LaserData path is intentionally back in scope.
@@ -58,13 +58,13 @@
     not block a config-only package check.
 
 .EXAMPLE
-    pwsh scripts/test-pilot-package.ps1 -NoCoverage
+    pwsh hzdr/scripts/test-pilot-package.ps1 -NoCoverage
 
 .EXAMPLE
-    pwsh scripts/test-pilot-package.ps1 -NoCoverage -DockerTests -Broker localhost:9092
+    pwsh hzdr/scripts/test-pilot-package.ps1 -NoCoverage -DockerTests -Broker localhost:9092
 
 .EXAMPLE
-    pwsh scripts/test-pilot-package.ps1 -SkipSuites
+    pwsh hzdr/scripts/test-pilot-package.ps1 -SkipSuites
 #>
 param(
     [string[]] $Repos = @(),
@@ -82,7 +82,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $scriptDir = Split-Path $MyInvocation.MyCommand.Path -Parent
-$damnitRoot = Resolve-Path (Join-Path $scriptDir "..")
+$damnitRoot = Resolve-Path (Join-Path $scriptDir "..\..")
 $comboRoot = Split-Path $damnitRoot -Parent
 $campaign = "Pilot_Verification_07.2026"
 $dracoTopic = "draco.trigger"

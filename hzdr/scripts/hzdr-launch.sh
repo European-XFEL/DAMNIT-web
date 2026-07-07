@@ -11,7 +11,7 @@ VALIDATE_ONLY=false
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/hzdr-launch.sh [options]
+Usage: bash hzdr/scripts/hzdr-launch.sh [options]
 
 Options:
   --config PATH       Use a non-default launcher config JSON.
@@ -68,7 +68,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DEFAULT_CONFIG_PATH="$SCRIPT_DIR/hzdr-launch.config.json"
 EXAMPLE_CONFIG_PATH="$SCRIPT_DIR/hzdr-launch.config.example.json"
 SELECTED_CONFIG_PATH="${CONFIG_PATH:-$DEFAULT_CONFIG_PATH}"
@@ -91,7 +91,7 @@ if [[ "$INIT_CONFIG" == true ]]; then
     echo "Created config: $SELECTED_CONFIG_PATH"
   fi
   echo "Edit repository paths if your checkout does not use sibling directories, then run:"
-  echo "bash scripts/hzdr-launch.sh"
+  echo "bash hzdr/scripts/hzdr-launch.sh"
   exit 0
 fi
 

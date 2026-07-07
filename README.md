@@ -8,15 +8,15 @@ LaserData/ASAPO, DAQ File Watchdog, Kafka, and canonical NeXus campaign files.
 Windows:
 
 ```powershell
-.\scripts\hzdr-launch.ps1 -InitConfig
-.\scripts\hzdr-launch.ps1
+.\hzdr\scripts\hzdr-launch.ps1 -InitConfig
+.\hzdr\scripts\hzdr-launch.ps1
 ```
 
 Linux:
 
 ```bash
-bash scripts/hzdr-launch.sh --init-config
-bash scripts/hzdr-launch.sh
+bash hzdr/scripts/hzdr-launch.sh --init-config
+bash hzdr/scripts/hzdr-launch.sh
 ```
 
 Open `http://127.0.0.1:5173/home` or the flow monitor at
@@ -29,12 +29,12 @@ mode, and the plain frontend dev server — see
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
-- [System overview](docs/system-overview.md)
-- [Ordered integration roadmap](docs/status/integration-roadmap.md)
-- [Architecture and identity rules](docs/architecture.md)
-- [Local development and verification](docs/guides/local-development.md)
-- [Current handoff notes](docs/status/handoff.md)
+- [Documentation index](hzdr/docs/README.md)
+- [System overview](hzdr/docs/system-overview.md)
+- [Ordered integration roadmap](hzdr/docs/status/integration-roadmap.md)
+- [Architecture and identity rules](hzdr/docs/architecture.md)
+- [Local development and verification](hzdr/docs/guides/local-development.md)
+- [Current handoff notes](hzdr/docs/status/handoff.md)
 
 API-specific documentation remains in [`api/docs`](api/docs), and frontend
 development commands remain in [`frontend/README.md`](frontend/README.md).

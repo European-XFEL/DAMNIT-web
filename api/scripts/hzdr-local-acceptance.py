@@ -7,7 +7,7 @@ This script needs nothing outside this repository - no sibling checkout, no
 Docker, no Mongo/Kafka/ASAPO. It writes a couple of minimal HZDREventV1-shaped
 JSONL events (the staging step) plus a tiny synthetic LabFrog shot table (the
 same shape api/tests/test_hzdr_integration.py uses, not the real curated
-data - see docs/status/handoff.md for why), runs them through the same
+data - see hzdr/docs/status/handoff.md for why), runs them through the same
 reconcile/build functions hzdr-hdf5-builder.py uses, then boots the real
 FastAPI app in-process and exercises the actual HTTP review/confirm/dismiss
 routes against the rebuilt catalog.

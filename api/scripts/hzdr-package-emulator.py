@@ -132,7 +132,7 @@ def mutate_event_for_shot(
     if isinstance(metadata, dict):
         # Numeric laser/vacuum/target fields are namespaced bare keys per the
         # metadata key registry (CLAUDE.md "Metadata key registry", signed
-        # off 2026-07-02; see also docs/target-ontology.md §5) - no unit
+        # off 2026-07-02; see also hzdr/docs/target-ontology.md §5) - no unit
         # suffix in the key name, canonical unit fixed in
         # hzdr_event.METADATA_KEY_REGISTRY.
         energy = 12.4 + index * 0.17 + float(rng.normal(0, 0.06))

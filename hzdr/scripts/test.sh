@@ -5,7 +5,7 @@ WITH_ACCEPTANCE=false
 
 usage() {
   cat <<'EOF'
-Usage: bash scripts/test.sh [options]
+Usage: bash hzdr/scripts/test.sh [options]
 
 Options:
   --with-acceptance   Also run the local acceptance script (no broker).
@@ -32,12 +32,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO="$(cd "$SCRIPT_DIR/../.." && pwd)"
 API_ROOT="$REPO/api"
 
 # Run from api/, not the repo root: api/.env (auth/metadata config consumed
 # by Settings()) and api/ruff.toml are resolved relative to cwd, and
-# api/tests assumes that layout too (see docs/status/testing.md). pushd/popd so the
+# api/tests assumes that layout too (see hzdr/docs/status/testing.md). pushd/popd so the
 # caller's shell returns to its starting folder.
 pushd "$API_ROOT" >/dev/null
 trap 'popd >/dev/null' EXIT

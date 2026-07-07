@@ -6,7 +6,7 @@ As of 2026-07-03:
 
 | Repository | Result | Notes |
 | --- | --- | --- |
-| DAMNIT API | `239 passed, 5 skipped` | Via `scripts/test-pilot-package.ps1 -NoCoverage`; broker tests skipped unless `-DockerTests` is used. |
+| DAMNIT API | `239 passed, 5 skipped` | Via `hzdr/scripts/test-pilot-package.ps1 -NoCoverage`; broker tests skipped unless `-DockerTests` is used. |
 | LabFrog UI | `508 passed, 1 skipped, 9 deselected` | Included in the pilot package gate. |
 | LabFrog SQLite tools | `108 passed` | Included in the pilot package gate. |
 | DAQ File Watchdog | `247 passed, 3 skipped` | Included in the pilot package gate with ASAPO excluded by design. |
@@ -64,38 +64,38 @@ bounded full-GUI startup smoke test exists.
 
 ## Test Coverage Map
 
-`scripts/test-all.ps1` runs every HZDR suite with `pytest-cov`, refreshes each
+`hzdr/scripts/test-all.ps1` runs every HZDR suite with `pytest-cov`, refreshes each
 sibling repo's own per-area coverage map, and regenerates the combined table
 below. Coverage is on by default; pass `-NoCoverage` to skip it:
 
 ```powershell
-.\scripts\test-all.ps1            # run all suites, refresh coverage maps
-.\scripts\test-all.ps1 -NoCoverage
+.\hzdr\scripts\test-all.ps1            # run all suites, refresh coverage maps
+.\hzdr\scripts\test-all.ps1 -NoCoverage
 ```
 
-`scripts/test-pilot-package.ps1` is the deployment-facing package gate for the
+`hzdr/scripts/test-pilot-package.ps1` is the deployment-facing package gate for the
 `Pilot_Verification_07.2026` Kafka pilot. It excludes ASAPO by default, checks
 the sibling repo presence, git state, shared `hzdr-event-v1` contract, topic
 registry, DAMNIT pilot `.env`, broker pilot env, and watchdog ZMQ-in/Kafka-out
 pilot config, then delegates to `test-all.ps1` for the selected suites:
 
 ```powershell
-.\scripts\test-pilot-package.ps1 -NoCoverage
-.\scripts\test-pilot-package.ps1 -NoCoverage -DockerTests -Broker localhost:9092
-.\scripts\test-pilot-package.ps1 -SkipSuites
+.\hzdr\scripts\test-pilot-package.ps1 -NoCoverage
+.\hzdr\scripts\test-pilot-package.ps1 -NoCoverage -DockerTests -Broker localhost:9092
+.\hzdr\scripts\test-pilot-package.ps1 -SkipSuites
 ```
 
-Last local result (2026-07-03): `scripts/test-pilot-package.ps1 -NoCoverage`
+Last local result (2026-07-03): `hzdr/scripts/test-pilot-package.ps1 -NoCoverage`
 passed across DAMNIT, LabFrog, LabFrog SQLite tools, DAQ File Watchdog, and
 shotcounter. ASAPO is excluded by design for this pilot gate; the live broker
 variant with `-DockerTests` remains a deployment gate.
 
 <!-- coverage-summary-start -->
 
-Overall line coverage per repo, from the latest `scripts/test-all.ps1` run.
+Overall line coverage per repo, from the latest `hzdr/scripts/test-all.ps1` run.
 Each suite writes a `cover/coverage.json`; rows show `No coverage data` until
 that repo has been run with coverage. Per-area detail lives in each repo's own
-coverage map (`CONTRIBUTING.md` / `docs/CONTRIBUTING.md`).
+coverage map (`CONTRIBUTING.md` / `hzdr/docs/CONTRIBUTING.md`).
 
 | Repo | Coverage | Package | Suite |
 | --- | --- | --- | --- |
@@ -137,7 +137,7 @@ pnpm lint:tsc
 pnpm build:app
 ```
 
-`scripts/test.ps1` (repo root) runs the API ruff/pytest steps above in one
+`hzdr/scripts/test.ps1` (repo root) runs the API ruff/pytest steps above in one
 go — it `cd`s into `api/` and copies `.env.test.example` to `.env` if missing.
 Pass `-WithAcceptance` to also run `hzdr-local-acceptance.py`.
 

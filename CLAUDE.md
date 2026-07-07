@@ -9,8 +9,8 @@ family — it ingests `hzdr-event-v1` events from producers, matches them to Lab
 shot records, builds the canonical per-campaign NeXus file + source catalog, and
 serves them through a FastAPI/GraphQL API and a React frontend. For how the seven
 repos fit together and where the end products land, see
-[docs/system-overview.md](docs/system-overview.md); for the data model and matching
-rules, [docs/architecture.md](docs/architecture.md).
+[hzdr/docs/system-overview.md](hzdr/docs/system-overview.md); for the data model and matching
+rules, [hzdr/docs/architecture.md](hzdr/docs/architecture.md).
 
 `AGENTS.md` just points here — this file is authoritative.
 
@@ -39,15 +39,15 @@ pnpm run dev:app          # Vite dev server at http://localhost:5173
 
 **Whole stack (API + frontend + local broker):**
 ```
-pwsh scripts/hzdr-launch.ps1            # or: bash scripts/hzdr-launch.sh
-pwsh scripts/hzdr-launch.ps1 -? ; bash scripts/hzdr-launch.sh --help
+pwsh hzdr/scripts/hzdr-launch.ps1            # or: bash hzdr/scripts/hzdr-launch.sh
+pwsh hzdr/scripts/hzdr-launch.ps1 -? ; bash hzdr/scripts/hzdr-launch.sh --help
 # flags: --no-api / --no-gui / --no-broker / --no-smoke / --validate-only / --init-config
 ```
 
 **Tests:**
 ```
-pwsh scripts/test-all.ps1               # this repo + all sibling suites, with coverage maps
-pwsh scripts/test-all.ps1 -Repos damnit,planet-watchdog -WithAcceptance -NoCoverage
+pwsh hzdr/scripts/test-all.ps1               # this repo + all sibling suites, with coverage maps
+pwsh hzdr/scripts/test-all.ps1 -Repos damnit,planet-watchdog -WithAcceptance -NoCoverage
 cd api && uv run pytest                 # API suite only
 cd api && uv run pytest -k hzdr         # HZDR integration subset
 cd api && uv run pytest tests/test_hzdr_spool.py::test_name   # single test
@@ -88,7 +88,7 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
   - `services.py`, `routers.py`, `models.py`, `gql.py` — the matcher/reconciler,
     REST + GraphQL surfaces, and API models. Matching is identity-first
     (`kafka_event_id` → transport position → same-day TANGO shot number → timestamp
-    fallbacks); the full order is in `docs/architecture.md`.
+    fallbacks); the full order is in `hzdr/docs/architecture.md`.
 - `consumer/` — durable spool consumers sharing one claim → write+fsync → ack →
   dedup loop: `spool.py` (`HZDRSpoolConsumer` base), `asapo.py` (`AsapoSpoolConsumer`),
   `kafka.py` (`KafkaSpoolConsumer`, manual offset commit). `builder_trigger.py`
@@ -133,7 +133,7 @@ the event/trigger JSONL inputs are auto-derived from the running consumers' spoo
 paths rather than reconfigured here. SciCat registration of the built NeXus file
 is the separate `DW_API_HZDR_SCICAT__*` block (best-effort, off by default).
 Structured JSON logging turns on when `DW_API_DEBUG=false`.
-`scripts/damnit-api.service` is the systemd unit (`Restart=on-failure`).
+`hzdr/scripts/damnit-api.service` is the systemd unit (`Restart=on-failure`).
 
 ## Event schema contract (`hzdr-event-v1`)
 The `HZDREventV1` Pydantic model in `api/src/damnit_api/metadata/hzdr_event.py` is the
@@ -181,7 +181,7 @@ JSON-Schema + sample to `api/tests/fixtures/hzdr-event-v1.*`, vendored byte-iden
 the producer repos that emit the envelope (`shotcounter/`, `planet-watchdog/` under
 `tests/fixtures/`). Each of those repos' `tests/test_hzdr_event.py` asserts its payload
 conforms, so a contract change fails CI in every producer until the copies re-sync.
-`scripts/sync-hzdr-event.ps1` checks (or `-Apply` fixes) the copies; `scripts/test-all.ps1`
+`hzdr/scripts/sync-hzdr-event.ps1` checks (or `-Apply` fixes) the copies; `hzdr/scripts/test-all.ps1`
 runs all sibling suites.
 
 ## Conventions and boundaries
@@ -202,7 +202,7 @@ runs all sibling suites.
 
 ## Validation
 - `cd api && uv run ruff check .` and `cd api && uv run pytest -k hzdr` for API/integration changes.
-- `pwsh scripts/test-all.ps1` before a cross-repo change (it runs the sibling conformance suites).
+- `pwsh hzdr/scripts/test-all.ps1` before a cross-repo change (it runs the sibling conformance suites).
 - `python api/scripts/hzdr-local-acceptance.py` for an end-to-end check without a broker or sibling repos.
 - Frontend: `pnpm run dev:app` and verify in the browser; `pnpm run lint`.
 
@@ -276,8 +276,8 @@ keys, so the linter is silent on its output.
 | `run.*` | `facility`, `beamline`, `pi`, `start_utc`, `end_utc` | n/a (non-numeric) |
 | `diagnostic.*` | per-detector scalars | see detector-specific docs |
 
-See [docs/target-ontology.md §5](docs/target-ontology.md#5-units-convention) and
-[docs/standards-alignment.md §3.3/§3.5](docs/standards-alignment.md#33-laser-parameters)
+See [hzdr/docs/target-ontology.md §5](hzdr/docs/target-ontology.md#5-units-convention) and
+[hzdr/docs/standards-alignment.md §3.3/§3.5](hzdr/docs/standards-alignment.md#33-laser-parameters)
 for the full rationale and HELPMI cross-walk.
 
 ### NeXus bridge profile: `hzdr-canonical-shot-v1`

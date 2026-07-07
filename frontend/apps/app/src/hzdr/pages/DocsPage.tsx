@@ -72,17 +72,17 @@ export function HZDRDocsPage() {
               <DetailsSection title="Quick start" open>
                 <Stack gap="xs">
                   <Text size="sm">
-                    Create `scripts/hzdr-launch.config.json`, start the
+                    Create `hzdr/scripts/hzdr-launch.config.json`, start the
                     launcher, open the workspace, then use the flow monitor to
                     send test Shotcounter and Watchdog traffic.
                   </Text>
                   <Code block>
-                    bash scripts/hzdr-launch.sh --init-config{'\n'}
-                    bash scripts/hzdr-launch.sh{'\n\n'}
+                    bash hzdr/scripts/hzdr-launch.sh --init-config{'\n'}
+                    bash hzdr/scripts/hzdr-launch.sh{'\n\n'}
                     powershell -NoProfile -ExecutionPolicy Bypass -File
-                    .\scripts\hzdr-launch.ps1 -InitConfig{'\n'}
+                    .\hzdr\scripts\hzdr-launch.ps1 -InitConfig{'\n'}
                     powershell -NoProfile -ExecutionPolicy Bypass -File
-                    .\scripts\hzdr-launch.ps1
+                    .\hzdr\scripts\hzdr-launch.ps1
                   </Code>
                 </Stack>
               </DetailsSection>
@@ -129,8 +129,8 @@ export function HZDRDocsPage() {
                     around.
                   </Text>
                   <Code block>
-                    scripts/hzdr-launch.config.json{'\n'}
-                    scripts/hzdr-launch.config.example.json
+                    hzdr/scripts/hzdr-launch.config.json{'\n'}
+                    hzdr/scripts/hzdr-launch.config.example.json
                   </Code>
                 </Stack>
               </DetailsSection>
@@ -169,7 +169,7 @@ export function HZDRDocsPage() {
                   <Code block>
                     cd api{'\n'}# use `uv run` for local/dev verification
                     scripts uv run python scripts/verify-hzdr-watchdog.py
-                    --config ..\scripts\hzdr-launch.config.json --mode auto
+                    --config ..\hzdr\scripts\hzdr-launch.config.json --mode auto
                   </Code>
                 </Stack>
               </DetailsSection>

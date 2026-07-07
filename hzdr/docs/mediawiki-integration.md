@@ -173,7 +173,7 @@ could derive those links from the shot key. Not implemented; pattern would be
 | `DW_API_HZDR_WIKI__BASE_URL` configuration | ✅ implemented and committed |
 | `DW_API_HZDR_WIKI__NAMESPACE` / `metadata.wiki_page_title` + query-form, percent-encoded URLs | ✅ implemented and committed |
 | Tests for wiki link, optional API fetch, and configured auth headers | ✅ implemented and committed |
-| Operator: create `FWKT:Pilot_Verification_07.2026` page before the pilot | ⬜ operator action (see fwkt-webapps docs/operations/outstanding-work.md) |
+| Operator: create `FWKT:Pilot_Verification_07.2026` page before the pilot | ⬜ operator action (see fwkt-webapps hzdr/docs/operations/outstanding-work.md) |
 | `action=cargoquery` structured reads (beamtime fields, IonenTargetOrigin) | ⬜ optional, post-pilot |
 | `prop=extracts` campaign abstract in UI | ⬜ optional |
 | Authenticated write-back of run summary | ⬜ not planned (wiki is operator's record) |

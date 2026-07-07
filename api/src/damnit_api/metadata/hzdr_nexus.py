@@ -451,7 +451,7 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
     return shots
 
 
-# docs/target-ontology.md §2.3: the wiki `type` vocabulary doesn't match the
+# hzdr/docs/target-ontology.md §2.3: the wiki `type` vocabulary doesn't match the
 # §3 enum one-to-one. Map the obvious ones; anything else falls back to
 # "other" and the original wiki text is kept in properties.wiki_type.
 _WIKI_TARGET_TYPE_MAP = {
@@ -492,7 +492,7 @@ def _labfrog_target_metadata(record: dict[str, Any]) -> dict[str, Any]:
     """Build canonical ``metadata.target`` from LabFrog SQLite target columns.
 
     Wiki-catalog extras exported by labfrog-sqlite-tools map per
-    docs/target-ontology.md: ``target_wiki_page``/``target_wiki_ref`` become the
+    hzdr/docs/target-ontology.md: ``target_wiki_page``/``target_wiki_ref`` become the
     typed ``wiki_page``/``wiki_ref`` keys, ``target_type`` maps through the wiki
     vocabulary to the ontology ``type`` enum (original kept in
     ``properties.wiki_type``), and ``target_provider``/``target_status``/
@@ -1356,14 +1356,14 @@ def write_nexus_laser_group(entry_group: h5py.Group, laser: dict[str, Any]) -> N
 # HZDR-local NXhzdr_target profile version. Bump on any semantic-map change
 # (fields added/removed/retyped) to the metadata.target.* -> /entry/sample
 # mapping; the profile doc version must be bumped to match.
-# See docs/nxhzdr-target-profile.md.
+# See hzdr/docs/nxhzdr-target-profile.md.
 HZDR_TARGET_PROFILE_VERSION = "0.1"
 
 
 def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
     """Write `/entry/sample` (`NXsample`) from `metadata.target.*`.
 
-    Implements docs/target-ontology.md §8 exactly. Tolerates the legacy flat
+    Implements hzdr/docs/target-ontology.md §8 exactly. Tolerates the legacy flat
     string form of `metadata.target` (§7) by normalizing it first via
     `_normalize_target_metadata`. Missing/None fields are skipped entirely -
     never written as null/empty into HDF5 datasets or attributes. `@units`
@@ -1375,7 +1375,7 @@ def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
     so the group is `NXsample` permanently (no planned `NXtarget` wait). The
     group also carries the HZDR-local compatibility profile attrs
     `damnit_nx_class="NXhzdr_target"` and `damnit_nxdl_version` (see
-    docs/nxhzdr-target-profile.md) until a local NXDL ships and
+    hzdr/docs/nxhzdr-target-profile.md) until a local NXDL ships and
     `NX_class="NXhzdr_target"` can be set directly.
     """
     target = _normalize_target_metadata(target)
@@ -2214,7 +2214,7 @@ def _unique_nearest_shot(
 def _normalize_target_metadata(target: Any) -> Any:
     """Widen the legacy flat `metadata.target` string to the object form.
 
-    Per docs/target-ontology.md §7: the emulator and early exports set
+    Per hzdr/docs/target-ontology.md §7: the emulator and early exports set
     `metadata.target` to a plain string (e.g. "target-1"). Readers must
     tolerate both shapes, so a string is normalized here to
     `{"name": <string>, "type": "other", "provenance": "manual"}` before

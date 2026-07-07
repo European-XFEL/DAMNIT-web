@@ -12,7 +12,7 @@
 
 .PARAMETER NoCoverage
     Skip pytest-cov collection, per-repo coverage-map refresh, and the aggregate
-    HZDR coverage map in docs/status/testing.md. By default coverage is collected and
+    HZDR coverage map in hzdr/docs/status/testing.md. By default coverage is collected and
     the maps are refreshed.
 
 .PARAMETER DockerTests
@@ -37,8 +37,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$gitlabRoot = Resolve-Path "$PSScriptRoot\..\.."
-$damnitRoot = Resolve-Path "$PSScriptRoot\.."
+$gitlabRoot = Resolve-Path "$PSScriptRoot\..\..\.."
+$damnitRoot = Resolve-Path "$PSScriptRoot\..\.."
 $script:coverage = -not $NoCoverage
 
 # In PowerShell 5.1, $ErrorActionPreference = "Stop" does not apply to native
@@ -130,7 +130,7 @@ $allSuites = [ordered]@{
             $env:SKIP_MEDIAWIKI     = "1"
             $pa = @('run', '--group', 'testing', 'python', '-m', 'pytest', '-q', '-s', 'tests', '-k', 'not webkit') + (Get-CovArgs)
             Invoke-Exe uv @pa
-            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+            Update-RepoMap "hzdr/scripts/docs/refresh_coverage_map.py"
         }
     }
     "sqlite-tools" = @{
@@ -139,7 +139,7 @@ $allSuites = [ordered]@{
         run   = {
             $pa = @('run', 'python', '-m', 'pytest', '-q') + (Get-CovArgs)
             Invoke-Exe uv @pa
-            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+            Update-RepoMap "hzdr/scripts/docs/refresh_coverage_map.py"
         }
     }
     "planet-watchdog" = @{
@@ -148,7 +148,7 @@ $allSuites = [ordered]@{
         run   = {
             $pa = @('run', 'python', '-m', 'pytest', '-q') + (Get-CovArgs)
             Invoke-Exe uv @pa
-            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+            Update-RepoMap "hzdr/scripts/docs/refresh_coverage_map.py"
         }
     }
     "shotcounter" = @{
@@ -157,7 +157,7 @@ $allSuites = [ordered]@{
         run   = {
             $pa = @('run', 'python', '-m', 'pytest', '-q', '-k', 'not ntp') + (Get-CovArgs)
             Invoke-Exe uv @pa
-            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+            Update-RepoMap "hzdr/scripts/docs/refresh_coverage_map.py"
         }
     }
     "asapo" = @{
@@ -166,7 +166,7 @@ $allSuites = [ordered]@{
         run   = {
             $pa = @('run', 'python', '-m', 'pytest', '-q') + (Get-CovArgs)
             Invoke-Exe uv @pa
-            Update-RepoMap "scripts/docs/refresh_coverage_map.py"
+            Update-RepoMap "hzdr/scripts/docs/refresh_coverage_map.py"
         }
     }
 }
@@ -196,7 +196,7 @@ if ($Repos.Count -eq 0) {
         & "$PSScriptRoot\sync-hzdr-event.ps1"
     } catch {
         Write-Host "  Contract sync failed: $_" -ForegroundColor Red
-        Write-Host "  Run: pwsh scripts/sync-hzdr-event.ps1 -Apply  to fix." -ForegroundColor Yellow
+        Write-Host "  Run: pwsh hzdr/scripts/sync-hzdr-event.ps1 -Apply  to fix." -ForegroundColor Yellow
         exit 1
     }
 }
@@ -247,13 +247,13 @@ foreach ($key in $results.Keys) {
 
 # -- Aggregate coverage map ----------------------------------------------------
 # Reads each repo's cover/coverage.json and refreshes the combined HZDR table in
-# docs/status/testing.md. Non-fatal so it never flips the suite result.
+# hzdr/docs/status/testing.md. Non-fatal so it never flips the suite result.
 if ($script:coverage) {
     Write-Host ""
-    Write-Host "--- Coverage map (docs/status/testing.md) ---" -ForegroundColor Cyan
+    Write-Host "--- Coverage map (hzdr/docs/status/testing.md) ---" -ForegroundColor Cyan
     try {
         Set-Location $damnitRoot
-        uv run python scripts/docs/refresh_coverage_summary.py
+        uv run python hzdr/scripts/docs/refresh_coverage_summary.py
     } catch {
         Write-Host "  [coverage summary refresh failed: $_]" -ForegroundColor DarkGray
     } finally {

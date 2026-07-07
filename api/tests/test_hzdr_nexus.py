@@ -498,7 +498,7 @@ def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: 
 
     target_wiki_page/target_wiki_ref become typed wiki_page/wiki_ref keys and
     imply provenance=wiki; target_type maps through the wiki vocabulary to the
-    ontology type enum (docs/target-ontology.md §2.3); provider/status/amount/
+    ontology type enum (hzdr/docs/target-ontology.md §2.3); provider/status/amount/
     production_date/origin (IonenTargetOrigin columns) land in the properties
     bag as supplier/status/amount/production_date/origin, and the original
     wiki type text is kept in properties.wiki_type.
@@ -599,7 +599,7 @@ def test_reads_labfrog_sqlite_wiki_target_extras_into_metadata_target(tmp_path: 
 def test_labfrog_wiki_target_type_maps_unrecognized_vocab_to_other(tmp_path: Path):
     """Unmapped wiki target types fall back to "other", keeping the original text.
 
-    docs/target-ontology.md §2.3: foil->foil, wafer->foil, solution->liquid,
+    hzdr/docs/target-ontology.md §2.3: foil->foil, wafer->foil, solution->liquid,
     wire->other, anything unrecognized->other; the original wiki value is kept
     in properties.wiki_type so it is never silently discarded.
     """

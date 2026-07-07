@@ -21,7 +21,7 @@ Last updated: 2026-07-03
   registration per campaign (Step 2b — landed 2026-07-04, replaces the manual
   per-campaign builder run), (4) enable the ASAPO path only when the LaserData
   sidecar is live (Step 2 stays harness-only until then).
-- **Demo mode:** local `scripts/hzdr-launch.ps1|.sh` with anonymized fixtures
+- **Demo mode:** local `hzdr/scripts/hzdr-launch.ps1|.sh` with anonymized fixtures
   and the flow monitor; the GitHub Pages demo build (`build-demo.yml`) stays
   the shareable no-backend demo. Demo/prod differ only by `.env` — keep it
   that way.
@@ -30,7 +30,7 @@ Last updated: 2026-07-03
   campaign-rotation procedure.
 - **Pilot config exists:** `api/.env.pilot.example` (Kafka on/localhost:9092/pilot
   slug; ASAPO off).
-- **Tests:** `scripts/test-pilot-package.ps1 -NoCoverage` passed locally on 2026-07-03; broker-backed restart/replay checks still need to run against the deployment Kafka broker.
+- **Tests:** `hzdr/scripts/test-pilot-package.ps1 -NoCoverage` passed locally on 2026-07-03; broker-backed restart/replay checks still need to run against the deployment Kafka broker.
 
 The main application (FastAPI + frontend) is already running on the server. This
 document covers **wiring the data-transfer protocol pieces** — the Kafka and ASAPO
@@ -53,7 +53,7 @@ Before enabling any consumer, verify:
   copied from `.env.production.example`
 - [ ] `GET /config/health` returns 200 (even with all consumers off):
   `curl -s http://localhost:8000/config/health | python3 -m json.tool`
-- [ ] Local pilot package gate passed via `scripts/test-pilot-package.ps1 -NoCoverage`.
+- [ ] Local pilot package gate passed via `hzdr/scripts/test-pilot-package.ps1 -NoCoverage`.
 
 ---
 
@@ -229,7 +229,7 @@ broker that will carry `draco.trigger` and `planet.watchdog.events`.
 
 ```powershell
 $env:KAFKA_TEST_BROKER = "fwkt-webapps.fz-rossendorf.de:9092"   # or localhost:9092 when run on the VM
-pwsh scripts/test-all.ps1 -DockerTests
+pwsh hzdr/scripts/test-all.ps1 -DockerTests
 ```
 
 Expected: all 4 tests in `test_hzdr_broker_roundtrip.py` pass. Then run the manual
@@ -240,7 +240,7 @@ match/deduplication counts before calling the Kafka deployment ready.
 
 ## Step 4: Restart gate and shutdown behavior
 
-The systemd unit (`scripts/damnit-api.service`) is already configured with:
+The systemd unit (`hzdr/scripts/damnit-api.service`) is already configured with:
 - `Restart=on-failure` — restarts the API if it exits non-zero
 - `TimeoutStopSec=30` — gives the spool consumers 30 s to drain before SIGKILL
 

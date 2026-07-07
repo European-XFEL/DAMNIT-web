@@ -264,7 +264,7 @@ function Start-OptionalDockerService {
 }
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$repoRoot = (Resolve-Path (Join-Path $scriptRoot "..")).Path
+$repoRoot = (Resolve-Path (Join-Path $scriptRoot "..\..")).Path
 $defaultConfigPath = Join-Path $scriptRoot "hzdr-launch.config.json"
 $exampleConfigPath = Join-Path $scriptRoot "hzdr-launch.config.example.json"
 $selectedConfigPath = if ($ConfigPath) { $ConfigPath } else { $defaultConfigPath }
@@ -278,7 +278,7 @@ if ($InitConfig) {
         Write-Host "Created config: $selectedConfigPath" -ForegroundColor Green
     }
     Write-Host "Edit repository paths, then run:"
-    Write-Host "powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\hzdr-launch.ps1"
+    Write-Host "powershell -NoProfile -ExecutionPolicy Bypass -File .\hzdr\scripts\hzdr-launch.ps1"
     exit 0
 }
 

@@ -1,6 +1,6 @@
 """Tests for write_nexus_sample() (`/entry/sample`, NXsample).
 
-See docs/target-ontology.md §6 (examples) and §8 (NeXus mapping table) for
+See hzdr/docs/target-ontology.md §6 (examples) and §8 (NeXus mapping table) for
 the binding shapes this module writes against.
 """
 

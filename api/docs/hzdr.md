@@ -17,19 +17,19 @@ you are validating.
 1. Create the launcher config.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\hzdr-launch.ps1 -InitConfig
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\hzdr\scripts\hzdr-launch.ps1 -InitConfig
 ```
 
 2. Edit the generated config.
 
 ```text
-scripts/hzdr-launch.config.json
+hzdr/scripts/hzdr-launch.config.json
 ```
 
 3. Start the emulator, API, and frontend.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\hzdr-launch.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\hzdr\scripts\hzdr-launch.ps1
 ```
 
 4. Open the workspace.
@@ -82,13 +82,13 @@ combined HDF5 that DAMNIT can later read.
 The launcher reads:
 
 ```text
-scripts/hzdr-launch.config.json
+hzdr/scripts/hzdr-launch.config.json
 ```
 
 Use the example file as the shared shape for local and real-adjacent testing:
 
 ```text
-scripts/hzdr-launch.config.example.json
+hzdr/scripts/hzdr-launch.config.example.json
 ```
 
 Important sections:
@@ -125,8 +125,8 @@ The launcher generates:
 Useful launcher modes:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\hzdr-launch.ps1 -ValidateOnly
-powershell -NoProfile -ExecutionPolicy Bypass -File ..\scripts\hzdr-launch.ps1 -NoBroker -NoApi -NoGui
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\hzdr\scripts\hzdr-launch.ps1 -ValidateOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File ..\hzdr\scripts\hzdr-launch.ps1 -NoBroker -NoApi -NoGui
 ```
 
 </details>
@@ -266,14 +266,14 @@ broker and MongoDB:
 
 ```powershell
 cd api
-uv run python scripts/verify-hzdr-watchdog.py --config ..\scripts\hzdr-launch.config.json --mode auto
+uv run python scripts/verify-hzdr-watchdog.py --config ..\hzdr\scripts\hzdr-launch.config.json --mode auto
 ```
 
 To require every configured backend:
 
 ```powershell
 cd api
-uv run python scripts/verify-hzdr-watchdog.py --config ..\scripts\hzdr-launch.config.json --mode all
+uv run python scripts/verify-hzdr-watchdog.py --config ..\hzdr\scripts\hzdr-launch.config.json --mode all
 ```
 
 Docker Kafka is fine. The important part is that
@@ -302,15 +302,15 @@ reach, for example `127.0.0.1:9092`.
 ## Related Files
 
 - `README.md`: high-level project orientation.
-- `docs/architecture.md`: provider model, identity, and HZDR-vs-EXFEL notes.
-- `docs/status/integration-roadmap.md`: ordered cross-repository implementation plan.
-- `docs/guides/local-development.md`: launcher, repository list, and integration commands.
-- `docs/status/handoff.md`: current status and the next session's starting point.
-- `scripts/hzdr-launch.config.example.json`: shared connection/config shape.
+- `hzdr/docs/architecture.md`: provider model, identity, and HZDR-vs-EXFEL notes.
+- `hzdr/docs/status/integration-roadmap.md`: ordered cross-repository implementation plan.
+- `hzdr/docs/guides/local-development.md`: launcher, repository list, and integration commands.
+- `hzdr/docs/status/handoff.md`: current status and the next session's starting point.
+- `hzdr/scripts/hzdr-launch.config.example.json`: shared connection/config shape.
 - `api/scripts/verify-hzdr-watchdog.py`: Kafka/ASAPO/Mongo verifier.
 - `api/scripts/hzdr-local-acceptance.py`: local-only HTTP acceptance check
   (emulator events through Confirm Matches), no sibling repo or broker
-  required - see `docs/status/testing.md`.
+  required - see `hzdr/docs/status/testing.md`.
 - `api/examples/*.example.json`: the shared normalized source-event contract,
   kept in sync by hand with `asapo-for-hzdr-damnit/examples/` and
   `planet-watchdog/testing/examples/normalized-events/`.

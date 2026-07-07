@@ -36,7 +36,7 @@ protocols. See `integration-roadmap.md` for the full work-order history; see
 | **DAMNIT** | `test-all.ps1 -DockerTests` opt-in for real-broker integration suite | ✅ committed |
 | **DAMNIT** | Real restart/replay pass on deployment broker | 🟡 test infrastructure ready; manual pass not yet run |
 | **kafka-broker-docker** | `topics.env` topic registry (canonical reference for `draco.trigger`) | ✅ committed |
-| **kafka-broker-docker** | `scripts/sync-hzdr-event.ps1` conformance check for producer defaults | ✅ committed |
+| **kafka-broker-docker** | `hzdr/scripts/sync-hzdr-event.ps1` conformance check for producer defaults | ✅ committed |
 
 **Outstanding:** one human step — run `kafka_smoke_test.py` against the deployment
 broker, then merge the shotcounter branch.
@@ -125,7 +125,7 @@ broker, then merge the shotcounter branch.
 |------|--------|
 | Canonical `HZDREventV1` Pydantic model (authoritative in DAMNIT) | ✅ committed |
 | Vendored `hzdr_event.py` byte-identical in planet-watchdog; JSON-Schema fixtures in shotcounter | ✅ committed |
-| `scripts/sync-hzdr-event.ps1` checks (or `-Apply` fixes) all vendored copies and topic defaults | ✅ committed |
+| `hzdr/scripts/sync-hzdr-event.ps1` checks (or `-Apply` fixes) all vendored copies and topic defaults | ✅ committed |
 | `kafka-broker-docker/topics.env` — single canonical topic name registry | ✅ committed |
 | `test-pilot-package.ps1 -NoCoverage` is the offline pilot package gate for DAMNIT, LabFrog, LabFrog SQLite tools, DAQ File Watchdog, and shotcounter; ASAPO is excluded by default | ✅ committed and green locally 2026-07-03 |
 | `test-all.ps1` runs all 6 sibling suites + contract sync check in one command | ✅ committed |

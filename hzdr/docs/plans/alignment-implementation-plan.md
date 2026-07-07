@@ -26,7 +26,7 @@ canonical units, extended family-wide to `metadata.laser.*` and
 `metadata.vacuum.*` (not just `metadata.target.*`). See
 [target-ontology.md §5](../target-ontology.md#5-units-convention),
 [standards-alignment.md §3.3/§3.5](../standards-alignment.md#33-laser-parameters),
-and the registry in [CLAUDE.md](../../CLAUDE.md). No further naming decision is
+and the registry in [CLAUDE.md](../../../CLAUDE.md). No further naming decision is
 needed — the one remaining Phase 0 item is the code item below (test), now
 unblocked by this sign-off.
 
@@ -46,7 +46,7 @@ twice.
    event that flows through normalization) when a producer uses a legacy suffixed key
    (`pulse_energy_j`) instead of the namespaced bare one (`metadata.laser.pulse_energy`).
    Warn-only — does not reject, since the envelope stays open inside `metadata`. The
-   `properties` extras sub-object is exempt (docs/target-ontology.md §4).
+   `properties` extras sub-object is exempt (hzdr/docs/target-ontology.md §4).
 
 **Files:** `CLAUDE.md`, `api/src/damnit_api/metadata/hzdr_event.py`, a new
 `api/tests/test_metadata_keys.py`.
@@ -249,7 +249,7 @@ name.
 
 **Do:**
 1. ✅ **Done 2026-07-02:** defined the HZDR semantic map as a versioned doc first —
-   [docs/nxhzdr-target-profile.md](../nxhzdr-target-profile.md) v0.1 — mapping each
+   [hzdr/docs/nxhzdr-target-profile.md](../nxhzdr-target-profile.md) v0.1 — mapping each
    `metadata.target.*` key to its `/entry/sample` NeXus path/attribute, canonical unit,
    HELPMI DDC term, and whether it's a standard `NXsample` field or a profile extension.
    Includes the local target class definition, `NXhzdr_target`, with `NXsample` as its

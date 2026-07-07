@@ -316,7 +316,7 @@ only (§3.3, §3.4). This requires:
    `write_nexus_sample()` (`NXsample`) are wired into `write_nexus_bridge()`. Enrichment
    still depends on producers emitting the signed-off `metadata.laser.*` keys.
 3. ✅ **Done 2026-07-02:** drafted the v0.1 HZDR `NXhzdr_target` profile document
-   ([docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md)) and `write_nexus_sample()`
+   ([hzdr/docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md)) and `write_nexus_sample()`
    now stamps the compatibility attrs (`damnit_nx_class="NXhzdr_target"`,
    `damnit_nxdl_version`) on `/entry/sample` while keeping `NX_class="NXsample"`. NXDL
    formalization (an actual XML NXDL + validator) is still open.
@@ -354,7 +354,7 @@ now HZDR-owned: HELPMI will not provide the missing target class, so the first l
 ontology deliverable should be an `NXhzdr_target` profile with explicit mappings to
 `NXsample`, HELPMI DDC target terms, and NeXus Ontology URIs where they exist.
 **Done 2026-07-02:** the v0.1 profile document
-([docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md)) delivers that explicit
+([hzdr/docs/nxhzdr-target-profile.md](nxhzdr-target-profile.md)) delivers that explicit
 mapping; NeXus Ontology URI annotation itself remains open.
 
 ### Route 5: openPMD interoperability (for simulation comparisons)

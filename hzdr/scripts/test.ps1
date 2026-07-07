@@ -4,12 +4,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$repo = Resolve-Path "$PSScriptRoot\.."
+$repo = Resolve-Path "$PSScriptRoot\..\.."
 $apiRoot = Join-Path $repo "api"
 
 # Run from api/, not the repo root: api/.env (auth/metadata config consumed
 # by Settings()) and api/ruff.toml are resolved relative to cwd, and
-# api/tests assumes that layout too (see docs/status/testing.md). Push/Pop so the
+# api/tests assumes that layout too (see hzdr/docs/status/testing.md). Push/Pop so the
 # caller's shell returns to its starting folder.
 Push-Location $apiRoot
 try {

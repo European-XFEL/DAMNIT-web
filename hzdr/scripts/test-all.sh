@@ -2,17 +2,17 @@
 # Run test suites for DAMNIT-web-hzdr and HZDR sibling repos.
 #
 # Usage:
-#   ./scripts/test-all.sh
-#   ./scripts/test-all.sh --with-acceptance
-#   ./scripts/test-all.sh --repos damnit,planet-watchdog
+#   ./hzdr/scripts/test-all.sh
+#   ./hzdr/scripts/test-all.sh --with-acceptance
+#   ./hzdr/scripts/test-all.sh --repos damnit,planet-watchdog
 #
 # Valid repo names: damnit, labfrog, sqlite-tools, planet-watchdog, shotcounter, asapo
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GITLAB_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DAMNIT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+GITLAB_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+DAMNIT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 WITH_ACCEPTANCE=0
 SELECTED_REPOS=()

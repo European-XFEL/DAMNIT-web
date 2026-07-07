@@ -45,7 +45,7 @@ def build_shots(output_dir: Path, source_key: str) -> list[ExampleShot]:
                     },
                     # Namespaced bare key per the metadata key registry
                     # (CLAUDE.md "Metadata key registry", signed off
-                    # 2026-07-02; docs/target-ontology.md §5).
+                    # 2026-07-02; hzdr/docs/target-ontology.md §5).
                     "laser": {"pulse_energy": round(12.5 + index * 0.2, 2)},
                     "diagnostics": {
                         "lineout_dataset": "diagnostics/lineout",

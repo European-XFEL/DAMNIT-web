@@ -1,6 +1,6 @@
 # Upstreaming plan: HZDR components → XFEL DAMNIT-web
 
-Status: in progress — Phase 0 + Phase 1 complete (updated 2026-07-07). Companion to [PR_NOTES.md](../../PR_NOTES.md),
+Status: in progress — Phase 0 + Phase 1 complete (updated 2026-07-07). Companion to [PR_NOTES.md](done/PR_NOTES.md),
 which is an earlier single-PR draft; this plan supersedes it with a split-PR strategy.
 
 ## 1. Baseline and divergence
@@ -11,7 +11,7 @@ after that is HZDR work:
 
 - **195 files changed** vs that base: **137 added, 58 modified**, ~37.6k insertions.
 - Additions are mostly self-contained (`api/.../metadata/hzdr_*`, `api/.../metadata/scicat.py`,
-  `api/.../consumer/`, `frontend/apps/app/src/hzdr/`, `api/scripts/hzdr-*`, `docs/`, tests).
+  `api/.../consumer/`, `frontend/apps/app/src/hzdr/`, `api/scripts/hzdr-*`, `hzdr/docs/`, tests).
 - The sensitive part is the **58 modified upstream files** — that is what an upstream
   PR series has to keep small and reviewable.
 
@@ -66,7 +66,7 @@ Before Phase 1, enumerate the #204–#214 commits
   the HZDR routes in C1.
 - The ~1,350 added lines of `/metadata/hzdr/*` routes in `metadata/routers.py`
 - All of `frontend/apps/app/src/hzdr/` (pages, components, utils, tests)
-- `api/scripts/hzdr-*`, launchers (`scripts/hzdr-launch.*`), `.env.*.example` profiles,
+- `api/scripts/hzdr-*`, launchers (`hzdr/scripts/hzdr-launch.*`), `.env.*.example` profiles,
   HZDR docs, examples, fixtures, `CLAUDE.md`/`AGENTS.md`/`PR_NOTES.md`
 - HZDR-flavored parts of `contextfile/routers.py` (+425 lines): the per-user
   context-workspace endpoints run against `HZDRShot`/`HZDRSourceProvider`. The
@@ -188,7 +188,7 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
 2. **Phase 1 — disentangle (no behavior change, characterization tests first per
    repo convention):** items C1–C4 above. Validate each step with
    `uv run pytest`, `uv run ruff check .`, `pnpm run lint`,
-   `python api/scripts/hzdr-local-acceptance.py`, and `pwsh scripts/test-all.ps1`
+   `python api/scripts/hzdr-local-acceptance.py`, and `pwsh hzdr/scripts/test-all.ps1`
    before the cross-repo-sensitive moves (the `hzdr_event.py` contract file must not
    move or change — it is vendored byte-identically into sibling repos).
 

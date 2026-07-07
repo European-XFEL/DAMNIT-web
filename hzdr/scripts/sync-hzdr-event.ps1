@@ -47,7 +47,7 @@ $ErrorActionPreference = "Stop"
 # Use Split-Path on the script's own path for reliable root computation
 # (avoids $PSScriptRoot edge cases in PS 5.1).
 $scriptDir  = Split-Path $MyInvocation.MyCommand.Path -Parent
-$damnitRoot = Split-Path $scriptDir  -Parent
+$damnitRoot = Split-Path (Split-Path $scriptDir -Parent) -Parent
 $gitlabRoot = Split-Path $damnitRoot -Parent   # ..\HZDR_combo
 
 $script:driftFound = $false
@@ -234,7 +234,7 @@ if (Test-Path $topicsEnv) {
 if ($script:driftFound) {
     Write-Host ""
     Write-Host "Contract drift detected." -ForegroundColor Red
-    Write-Host "To sync model+fixtures: pwsh scripts/sync-hzdr-event.ps1 -Apply" -ForegroundColor Yellow
+    Write-Host "To sync model+fixtures: pwsh hzdr/scripts/sync-hzdr-event.ps1 -Apply" -ForegroundColor Yellow
     Write-Host "If the model changed: run api/scripts/regen_hzdr_event_fixtures.py first, then -Apply." -ForegroundColor Yellow
     Write-Host "For topic mismatches: update kafka-broker-docker/topics.env and each repo's default." -ForegroundColor Yellow
     exit 1

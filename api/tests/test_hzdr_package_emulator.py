@@ -177,7 +177,7 @@ def test_local_shot_metadata_correction_records_history(tmp_path: Path):
         shot_increment=1,
     )
 
-    # laser.pulse_energy is nested (see docs/target-ontology.md §5 / CLAUDE.md
+    # laser.pulse_energy is nested (see hzdr/docs/target-ontology.md §5 / CLAUDE.md
     # "Metadata key registry"); update_local_shot_metadata only corrects a
     # flat top-level key, so this exercises the correction/audit-trail
     # mechanism itself against a field that stays flat.

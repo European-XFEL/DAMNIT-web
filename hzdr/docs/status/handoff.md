@@ -23,7 +23,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   anonymized SQLite fixture; `hzdr_sources.review.jsonl` sidecar (confirm/dismiss
   survives rebuilds, `VERIFIED > REVIEWED > BASE`); `normalize_processed_trigger_message`
   accepts both the legacy `processed_message` wrapper and the flat `hzdr-event-v1`
-  Kafka envelope that shotcounter emits; `scripts/test-all.ps1` cross-repo test
+  Kafka envelope that shotcounter emits; `hzdr/scripts/test-all.ps1` cross-repo test
   runner (all six suites in one command, `-WithAcceptance` flag for local
   acceptance script).
 - **labfrog** (`develop`): `experiment_id` derived from MediaWiki campaign
@@ -89,7 +89,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   verified behavior-preserving (API suite 290 passed, acceptance green; frontend
   `tsc -b` + eslint + prettier + vitest 124-passed + `vite build`). **Phase 1 of the
   upstream-PR disentanglement is now complete** — next is Phase 0 (merge onto
-  `upstream/main`). Docs reorganized — delivered plans moved to `docs/plans/done/`.
+  `upstream/main`). Docs reorganized — delivered plans moved to `hzdr/docs/plans/done/`.
 
 - **Fixed `hzdr-local-acceptance.py` stale fixture** — the acceptance script's
   duplicate-shot fixture expected an *ambiguous* review event but wrote an
@@ -115,7 +115,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   Records page. `HZDRScicatSettings` (`DW_API_HZDR_SCICAT__*`; SciCat URL/token
   stay in the plugin's own env). 20 tests in `tests/test_hzdr_scicat.py`;
   end-to-end verified with a real builder run against a mock plugin. Plan in
-  `docs/plans/done/scicat-registration-plan.md`.
+  `hzdr/docs/plans/done/scicat-registration-plan.md`.
 
 - **Builder auto-trigger** — closes the last durable-spool gap. New module
   `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's
@@ -130,8 +130,8 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   11 tests in `tests/test_hzdr_builder_trigger.py` (command assembly, debounce
   coalescing, re-arm, failure resilience, hook dispatch, settings validation);
   end-to-end verified against a real event → NeXus + catalog. Plans for this and
-  SciCat registration in `docs/plans/done/auto-builder-trigger-plan.md` and
-  `docs/plans/done/scicat-registration-plan.md`.
+  SciCat registration in `hzdr/docs/plans/done/auto-builder-trigger-plan.md` and
+  `hzdr/docs/plans/done/scicat-registration-plan.md`.
 
 ## Built 2026-07-03/04
 
@@ -159,7 +159,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   [target-ontology.md](../target-ontology.md). Wiki-test fixtures no longer embed
   real secret strings (`13d7641`).
 - **Pilot package readiness gate** (`5ec1a85`, `a0edd37`) —
-  `scripts/test-pilot-package.ps1` and a `test_contextfile.py` check; the gate
+  `hzdr/scripts/test-pilot-package.ps1` and a `test_contextfile.py` check; the gate
   is documented in [testing.md](testing.md).
 
 ## Built 2026-07-01
@@ -169,7 +169,7 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
   `api/scripts/damnit-api-deploy.sh` (bash) added alongside the existing
   `.ps1`, with safer env-file/host/port/worker-count checks; `frontend/nginx`
   templates gained proxy config for the app and frontend hosts;
-  `scripts/hzdr-launch.config.json` updated for the deployment.
+  `hzdr/scripts/hzdr-launch.config.json` updated for the deployment.
 - **LDAP fixed for the real HZDR/FZR directory** — `.env.production.example`
   now points at `ldaps://ldap.fz-rossendorf.de:636` with the actual
   `ou=users,ou=FZR-NIS,ou=it,o=FSR,dc=de` bind DN / search base (previously a
@@ -241,7 +241,7 @@ Mongo, no broker consumer group; each degrades safely) — see
 - `metadata/hzdr_sources.py` — `HZDRWikiInfo` response model; `get_shot_by_key` / `get_shot_detail_by_key` / `_shot_detail` on `HZDRSourceProvider`
 - `metadata/routers.py` — `GET /metadata/hzdr/sources/{key}/wiki` and `?fetch=true` (live MediaWiki Action API call); `_fetch_wiki_page_info` helper
 - `api/tests/test_hzdr_wiki.py` — 10 new tests (URL derivation, unconfigured wiki, explicit override, fallback to source_key, 404, async fetch mock, missing-page flag, network error, `fetch=true` param, settings defaults)
-- `docs/` — split into focused docs: `event-schema.md`, `mediawiki-integration.md`, `standards-alignment.md`, `alignment-implementation-plan.md`; README index updated
+- `hzdr/docs/` — split into focused docs: `event-schema.md`, `mediawiki-integration.md`, `standards-alignment.md`, `alignment-implementation-plan.md`; README index updated
 - Suite: **196 passed, 15 skipped** (15 skips are broker integration tests requiring `KAFKA_TEST_BROKER`; there is no ASAPO equivalent yet — see `integration-roadmap.md`'s 2026-07-01 verification pass)
 
 ## Built 2026-06-22/23
@@ -249,7 +249,7 @@ Mongo, no broker consumer group; each degrades safely) — see
 - **Frontend restructured** — HZDR-specific UI moved from monolithic `app.tsx` into `apps/app/src/hzdr/` subfolders: `pages/` (ShotPage, LinkRecordsPage, FlowMonitorPage, ContextBuilderPage, DocsPage, SourceHome), `components/` (ShotTable, FlowDiagram, AppHeader, previews), `utils/`, `types.ts`, `hooks.ts`
 - **Saved views sidecar** — `hzdr_sources.views.json` persists durable UI table views (column visibility, sorting, filters) alongside `hzdr_sources.json`; managed via `GET/POST/DELETE /metadata/hzdr/views`; the review sidecar (`hzdr_sources.review.jsonl`) remains separate and builder-owned
 - `shared/routers.py` — guard `settings.auth is None` before accessing `auth.mode` / `auth.ldap` (allows auth-disabled local mode without crashing `GET /config/runtime`)
-- `scripts/test-all.sh` — bash equivalent of `test-all.ps1` for Linux CI
+- `hzdr/scripts/test-all.sh` — bash equivalent of `test-all.ps1` for Linux CI
 
 ## Built 2026-06-18
 
@@ -259,7 +259,7 @@ Mongo, no broker consumer group; each degrades safely) — see
 - `main.py` — lifespan wires spool consumer as background asyncio task when enabled
 - `shared/routers.py` — `GET /config/health` returns `FlowMonitorHealth` with async ASAPO/Kafka/Mongo probes (2 s timeout each)
 - `api/.env.production.example` — full production env template
-- `scripts/damnit-api.service` — systemd unit template
+- `hzdr/scripts/damnit-api.service` — systemd unit template
 - `api/tests/test_hzdr_spool.py` — 11 new tests (unit + integration against live harness broker)
 
 ## Start Next

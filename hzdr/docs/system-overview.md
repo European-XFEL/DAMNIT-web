@@ -256,7 +256,7 @@ disabled.
 Each repo has its own `CLAUDE.md` and `README.md` with exact commands. The fastest
 ways in:
 
-- **Everything at once (tests):** `scripts/test-all.ps1` in this repo runs all six
+- **Everything at once (tests):** `hzdr/scripts/test-all.ps1` in this repo runs all six
   sibling test suites in one command.
 - **The contract + transport, no real broker:** `asapo-for-hzdr-damnit` →
   `launch-testing-suite.cmd` (local broker + GUI at `http://127.0.0.1:8765/`).

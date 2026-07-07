@@ -54,7 +54,7 @@ repos:
 
           - id: frontend-eslint
             name: frontend-eslint
-            entry: uv run python scripts/run_frontend_hook.py eslint
+            entry: uv run python hzdr/scripts/run_frontend_hook.py eslint
             language: system
             files: ^frontend/
             exclude: ^frontend/apps/demo/public/
@@ -62,7 +62,7 @@ repos:
 
           - id: frontend-prettier
             name: frontend-prettier
-            entry: uv run python scripts/run_frontend_hook.py prettier
+            entry: uv run python hzdr/scripts/run_frontend_hook.py prettier
             language: system
             files: ^frontend/
             exclude: ^frontend/apps/demo/public/
@@ -70,7 +70,7 @@ repos:
 
           - id: frontend-tsc
             name: frontend-tsc
-            entry: uv run python scripts/run_frontend_hook.py tsc
+            entry: uv run python hzdr/scripts/run_frontend_hook.py tsc
             language: system
             files: ^frontend/
             types_or: [ts, tsx]

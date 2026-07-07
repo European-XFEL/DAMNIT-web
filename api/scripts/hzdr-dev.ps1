@@ -53,7 +53,7 @@ function Set-HzdrDebugEnvironment {
         [int] $SelectedPort
     )
 
-    # Parity with scripts/hzdr-launch.sh: -AuthMode (launcher config) wins,
+    # Parity with hzdr/scripts/hzdr-launch.sh: -AuthMode (launcher config) wins,
     # then an already-exported DW_API_AUTH__MODE, then the ldap default.
     if ($AuthMode) {
         $env:DW_API_AUTH__MODE = $AuthMode

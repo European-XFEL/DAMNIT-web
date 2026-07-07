@@ -1,7 +1,7 @@
 # systemd unit for the DAMNIT-web-hzdr API server.
 #
 # Installation:
-#   sudo cp scripts/damnit-api.service /etc/systemd/system/
+#   sudo cp hzdr/scripts/damnit-api.service /etc/systemd/system/
 #   sudo systemctl daemon-reload
 #   sudo systemctl enable --now damnit-api
 #

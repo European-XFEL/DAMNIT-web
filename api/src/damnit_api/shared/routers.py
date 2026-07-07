@@ -168,7 +168,7 @@ async def get_runtime_config() -> RuntimeConfig:
 
     settings.auth is None in true local/offline mode (damnit_path set, no
     DW_API_AUTH__* env at all - see Settings._apply_local_mode) - the local
-    HZDR acceptance script and scripts/test.ps1 both run this way, so this
+    HZDR acceptance script and hzdr/scripts/test.ps1 both run this way, so this
     must not assume settings.auth is always an object.
     """
     terminology = settings.deployment.terminology.model_copy(

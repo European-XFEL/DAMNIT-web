@@ -9,7 +9,7 @@ config · 🔴 needs a real broker / live deployment.
 
 **2026-07-01 update:** production deployment is live at
 [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)
-(see `docs/status/handoff.md` §Built 2026-07-01). Item 3 (ASAPO SDK swap) is now
+(see `hzdr/docs/status/handoff.md` §Built 2026-07-01). Item 3 (ASAPO SDK swap) is now
 code-complete — `RealAsapoSpoolConsumer` is implemented and selected via
 `DW_API_HZDR_SPOOL__BROKER_KIND=asapo`; only pointing it at the real broker's
 endpoint/beamtime/token and the gated integration test remain, so it moves
@@ -67,7 +67,7 @@ added to `test-all.ps1` to opt into running them.
 
 **Do:**
 1. `cd kafka-broker-docker && docker compose up -d` (wait for broker ready)
-2. `$env:KAFKA_TEST_BROKER="localhost:9092"; pwsh scripts/test-all.ps1 -DockerTests`
+2. `$env:KAFKA_TEST_BROKER="localhost:9092"; pwsh hzdr/scripts/test-all.ps1 -DockerTests`
 3. Manual restart/replay pass: produce a captured pilot campaign verification
    sequence, kill+restart the spool consumer mid-stream, confirm no lost acks and no
    duplicate spool lines. Gate criteria are listed under "Go-Live Gate" in the roadmap.

@@ -4,7 +4,7 @@ Updated: 2026-07-03
 
 **2026-07-01:** production deployment is live at
 [https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/);
-see `docs/status/handoff.md` §Built 2026-07-01. The ASAPO SDK swap (Work Order step 3
+see `hzdr/docs/status/handoff.md` §Built 2026-07-01. The ASAPO SDK swap (Work Order step 3
 below / `asapo-for-hzdr-damnit` §"Carry claim/flush/ack/replay-dedup pattern
 into real ASAPO SDK consumer") is now code-complete via
 `RealAsapoSpoolConsumer`; wiring the deployment's real broker credentials and
@@ -18,7 +18,7 @@ producer paths; the separate sidecar/producers should emit the URI directly for
 real LaserData rollout.
 
 **2026-07-03:** the offline/local pilot package gate is now committed and green:
-`scripts/test-pilot-package.ps1 -NoCoverage` validates sibling repo presence,
+`hzdr/scripts/test-pilot-package.ps1 -NoCoverage` validates sibling repo presence,
 git-state visibility, shared contract/topic sync, pilot env/config, and the
 selected DAMNIT, LabFrog, LabFrog SQLite tools, DAQ File Watchdog, and
 shotcounter suites. ASAPO remains excluded for the Kafka pilot; the live broker
@@ -37,11 +37,11 @@ concrete gaps found, two fixed on the spot:
    builder. ✅ **closed 2026-07-04** — `consumer/builder_trigger.py`
    (`BuilderTrigger`) now overrides the `on_new_events()` dispatch and reruns
    the builder as a debounced subprocess; `DW_API_HZDR_BUILDER__ENABLED=true`.
-   See `docs/plans/done/auto-builder-trigger-plan.md`.
+   See `hzdr/docs/plans/done/auto-builder-trigger-plan.md`.
 2. **No real-broker roundtrip test exists for ASAPO** — only Kafka has one
    (`test_hzdr_broker_roundtrip.py`, `-m integration_docker`, gated on
    `KAFKA_TEST_BROKER`). `RealAsapoSpoolConsumer` is exercised only against an
-   in-process fake SDK stub in `test_hzdr_spool.py`. `docs/status/handoff.md`'s
+   in-process fake SDK stub in `test_hzdr_spool.py`. `hzdr/docs/status/handoff.md`'s
    2026-06-26 note about `ASAPO_TEST_BROKER`-gated skips does not correspond
    to anything in the current code — no such env var or test exists. 🔴 still
    open.
@@ -112,9 +112,9 @@ Committed and tested:
 - `GET /config/health` endpoint: async ASAPO/Kafka/Mongo liveness probes with
   per-service `reachable` + `latency_ms`; configured via `DW_API_HZDR_HEALTH__*`.
 - Production deployment templates: `api/.env.production.example`,
-  `scripts/damnit-api.service` systemd unit.
-- Cross-repo test runner `scripts/test-all.ps1` (all six suites, one command).
-- Pilot package gate (`scripts/test-pilot-package.ps1`) for the Kafka pilot, with ASAPO excluded by default and live broker tests still opt-in via `-DockerTests`.
+  `hzdr/scripts/damnit-api.service` systemd unit.
+- Cross-repo test runner `hzdr/scripts/test-all.ps1` (all six suites, one command).
+- Pilot package gate (`hzdr/scripts/test-pilot-package.ps1`) for the Kafka pilot, with ASAPO excluded by default and live broker tests still opt-in via `-DockerTests`.
 
 ## Work Order
 
@@ -158,7 +158,7 @@ The sequence below is ordered by dependency, not effort.
    `pytest.mark.integration_docker` tests (commit-before-ack via
    `list_consumer_group_offsets`, restart-resume from committed offset,
    replay-dedup via fresh group sharing spool dir, golden-path 10-event
-   roundtrip). Activate with `pwsh scripts/test-all.ps1 -DockerTests` or
+   roundtrip). Activate with `pwsh hzdr/scripts/test-all.ps1 -DockerTests` or
    `KAFKA_TEST_BROKER=<host:9092> pytest -m integration_docker`. Tests are
    skipped, not failed, when no broker is reachable. The go-live gate still
    needs an actual run: produce a captured sequence, kill+restart the consumer
@@ -251,19 +251,19 @@ Branch: `main`
 | Ambiguous/unmatched events in API; real Confirm Matches UI | ✅ committed |
 | Local acceptance script; offline four-source integration test | ✅ committed |
 | Shared example payloads and anonymized SQLite fixture | ✅ committed |
-| Pilot package gate (`scripts/test-pilot-package.ps1`) | ✅ committed and green locally on 2026-07-03 with `-NoCoverage`; ASAPO excluded by default; live broker `-DockerTests` still separate |
-| Cross-repo test runner (`scripts/test-all.ps1`) — runs all six suites in one command; `-DockerTests` flag adds `pytest.mark.integration_docker` broker roundtrip suite | ✅ committed |
+| Pilot package gate (`hzdr/scripts/test-pilot-package.ps1`) | ✅ committed and green locally on 2026-07-03 with `-NoCoverage`; ASAPO excluded by default; live broker `-DockerTests` still separate |
+| Cross-repo test runner (`hzdr/scripts/test-all.ps1`) — runs all six suites in one command; `-DockerTests` flag adds `pytest.mark.integration_docker` broker roundtrip suite | ✅ committed |
 | Real-broker restart/replay integration test (`api/tests/test_hzdr_broker_roundtrip.py`) — 4 docker-gated tests; skipped not failed when broker absent | ✅ committed |
 | Catalog-edit persistence across rebuilds (confirm/dismiss survives builder rerun) | ✅ committed — `hzdr_sources.review.jsonl` sidecar, `VERIFIED>REVIEWED>BASE` precedence |
 | Versioned JSON Schema publication from `HZDREventV1` | ⬜ lower priority while only one schema version exists |
 | Durable per-campaign spool with transport positions and dedup state | ✅ committed — `consumer/spool.py` + `consumer/asapo.py` (ASAPO) + `consumer/kafka.py` (Kafka trigger events); `DW_API_HZDR_SPOOL__ENABLED` / `DW_API_HZDR_KAFKA_SPOOL__ENABLED` activate background tasks in lifespan |
 | Real flow-monitor backend health (Kafka/ASAPO/Mongo) | ✅ committed — `GET /config/health`; async probes with 2 s timeout, `reachable+latency_ms` per service |
-| Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
+| Production auth, storage, backup, logging, restart configuration | ✅ committed — `api/.env.production.example`, `hzdr/scripts/damnit-api.service` systemd unit; JSON logging already active when `DW_API_DEBUG=false` |
 | Live production deployment reachable | ✅ **[https://fwkt-damnit.fz-rossendorf.de/](https://fwkt-damnit.fz-rossendorf.de/)** — `api/scripts/damnit-api-deploy.sh`/`.ps1`, `frontend/nginx` proxy templates, LDAP against `ldap.fz-rossendorf.de` |
 | ASAPO SDK spool consumer wired to real broker | 🟡 `RealAsapoSpoolConsumer` implemented and selectable (`DW_API_HZDR_SPOOL__BROKER_KIND=asapo`); `.env.production.example` documents the setting. Still open: point the deployment at real broker credentials, and there is no real-broker roundtrip test for ASAPO yet (only Kafka has one) |
-| Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `docs/plans/done/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
+| Builder auto-triggered after new spool events | ✅ committed — `consumer/builder_trigger.py` (`BuilderTrigger`): each spool consumer's `on_new_events_hook` signals a shared, debounced trigger that reruns `hzdr-hdf5-builder.py` as a subprocess (preserving its single-writer PID lock). Activated by `DW_API_HZDR_BUILDER__ENABLED=true`; starts as a lifespan background task. Events/trigger JSONL inputs derived from the running consumers' spool paths. Plan + tests in `hzdr/docs/plans/done/auto-builder-trigger-plan.md` / `tests/test_hzdr_builder_trigger.py`. A standalone systemd timer remains an optional alternative |
 | `runs.sqlite` projection for legacy table workflows | ⬜ optional; deferred |
-| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | ✅ committed 2026-07-04 — `metadata/scicat.py` + builder post-step (`_register_scicat`) POST the NeXus path to the plugin and stamp `scicat_pid`/`version_hash`/`dataset_url` into the catalog; `GET .../scicat` endpoint + Link Records UI card. Best-effort (never fails a build); unchanged rebuilds skip the re-POST. `DW_API_HZDR_SCICAT__*`. See `docs/plans/done/scicat-registration-plan.md` |
+| Register the canonical campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid` | ✅ committed 2026-07-04 — `metadata/scicat.py` + builder post-step (`_register_scicat`) POST the NeXus path to the plugin and stamp `scicat_pid`/`version_hash`/`dataset_url` into the catalog; `GET .../scicat` endpoint + Link Records UI card. Best-effort (never fails a build); unchanged rebuilds skip the re-POST. `DW_API_HZDR_SCICAT__*`. See `hzdr/docs/plans/done/scicat-registration-plan.md` |
 
 ### `GitLab/scicat_plugin`
 
@@ -388,7 +388,7 @@ suite 100 tests with `-k hzdr`, `ruff` clean on all touched modules):
   defensive `metadata` fallback is harmless but no longer exercised for curated
   SQLite. (was follow-up 3)
 - **Transport-position uniqueness assumption documented.**
-  `_shots_matching_transport_position()` and `docs/architecture.md` now state
+  `_shots_matching_transport_position()` and `hzdr/docs/architecture.md` now state
   that the `(topic, partition, offset)` match is intentionally not date-scoped
   and trusts curated export writers never to rewrite/renumber committed offsets;
   if a topic is recreated/compacted so offsets are reused, drop to
@@ -450,7 +450,7 @@ The same ordering and durability properties must hold for the real production co
    `DW_API_HZDR_KAFKA_SPOOL__ENABLED=true` (Kafka) each start a background
    asyncio task, sharing one stop event and teardown. The startup/shutdown
    wiring lives in `consumer/bootstrap.py` (`spool_lifespan`), which the FastAPI
-   lifespan in `main.py` enters as a single `async with`; `scripts/damnit-api.service`
+   lifespan in `main.py` enters as a single `async with`; `hzdr/scripts/damnit-api.service`
    systemd unit wraps the whole API process with `Restart=on-failure`.
 4. ✅ 11 integration tests in `api/tests/test_hzdr_spool.py` (ASAPO, live
    in-process harness broker) + 6 in `api/tests/test_hzdr_kafka_spool.py`
@@ -484,7 +484,7 @@ replay each consumer, then verify:
 ## SciCat Registration
 
 **Status:** ✅ DAMNIT-side wiring implemented 2026-07-04 (see
-`docs/plans/done/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
+`hzdr/docs/plans/done/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
 + `PLUGIN_URL` · **Effort:** Low–Medium · **Added:** 2026-06-26
 
 This is a **post-pilot FAIR enhancement, off the go-live critical path** — the
