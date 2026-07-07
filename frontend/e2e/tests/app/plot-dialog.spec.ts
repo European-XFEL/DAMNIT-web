@@ -1,7 +1,6 @@
 import { test, expect } from '#fixtures'
 
-import { XPCS } from '#examples/xpcs'
-import { openProposal } from '#support/table'
+import { openProposal, titleOf } from '#support/table'
 import {
   chooseVariable,
   openPlotDialog,
@@ -14,10 +13,6 @@ import {
 // breakpoint, below which the tab bar (with the Display Plot button) is hidden.
 test.use({ viewport: { width: 1600, height: 900 } })
 
-function titleOf(name: string): string {
-  return XPCS.meta.variables[name].title
-}
-
 test('submitting with no variable shows a validation error and keeps the dialog open', async ({
   page,
 }) => {
@@ -28,6 +23,8 @@ test('submitting with no variable shows a validation error and keeps the dialog 
 
   await expect(dialog.getByText('Please enter a valid variable')).toBeVisible()
   await expect(dialog).toBeVisible()
+  // The submit was blocked, not just flagged: no figure was plotted.
+  await expect(plotFigure(page)).toHaveCount(0)
 })
 
 test('choosing a Y variable plots a summary against Run', async ({ page }) => {
@@ -50,6 +47,23 @@ test('plotting data for a custom run set opens a data plot for those runs', asyn
   await openProposal(page)
   const dialog = await openPlotDialog(page)
 
+  // The "run 7-9" subtitle only shows first-last, so collect the runs actually
+  // fetched: the comma input is a discrete set, so exactly runs 7 and 9 should
+  // fire an ExtractedDataQuery, not the range 7..9.
+  const requestedRuns: number[] = []
+  page.on('request', (request) => {
+    if (!request.url().includes('/graphql')) {
+      return
+    }
+    const { operationName, variables } = (request.postDataJSON() ?? {}) as {
+      operationName?: string
+      variables?: { run?: number }
+    }
+    if (operationName === 'ExtractedDataQuery') {
+      requestedRuns.push(variables?.run as number)
+    }
+  })
+
   // Switching to "Plot data" reveals the Variable combobox and the custom-runs
   // input; the dialog is the only path to plotting an arbitrary run set.
   await dialog.getByText('Plot data').click()
@@ -64,4 +78,5 @@ test('plotting data for a custom run set opens a data plot for those runs', asyn
   await expect(tab).toBeVisible()
   await expect(tab).toContainText('run 7-9')
   await expect(plotFigure(page)).toBeVisible()
+  expect([...new Set(requestedRuns)].sort((a, b) => a - b)).toEqual([7, 9])
 })

@@ -1,7 +1,7 @@
 import { test, expect } from '#fixtures'
 
 import { XPCS } from '#examples/xpcs'
-import { openProposal } from '#support/table'
+import { columnOf, openProposal, titleOf } from '#support/table'
 import { openDataPlot, plotFigure, plotTab, selectCells } from '#support/plots'
 
 // A wide viewport keeps every column within the horizontal fold so the
@@ -13,20 +13,6 @@ test.use({ viewport: { width: 1600, height: 900 } })
 const SCATTER_VAR = 'xgm_intensity' // 1-D array -> Plotly scatter
 const SCALAR_VAR = 'n_trains' // scalar number -> "unable to display" notice
 const IMAGE_VAR = 'xpcs_g2_plot' // png -> plain <img>
-
-// The a11y column index of a variable: its position in meta order, plus one for
-// the row-marker column. A rename or reorder fails here loudly.
-function columnOf(name: string): number {
-  const index = Object.keys(XPCS.meta.variables).indexOf(name)
-  if (index === -1) {
-    throw new Error(`'${name}' is not a column in the example`)
-  }
-  return index + 1
-}
-
-function titleOf(name: string): string {
-  return XPCS.meta.variables[name].title
-}
 
 test('right-clicking a cell and choosing "Plot: data" plots its extracted data', async ({
   page,

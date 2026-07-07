@@ -3,7 +3,7 @@ import { type Page } from '@playwright/test'
 import { test, expect } from '#fixtures'
 
 import { XPCS } from '#examples/xpcs'
-import { openProposal } from '#support/table'
+import { columnOf, openProposal, titleOf } from '#support/table'
 import {
   closeTab,
   openSummaryPlot,
@@ -16,24 +16,14 @@ import {
 // coordinate header clicks land on them.
 test.use({ viewport: { width: 1600, height: 900 } })
 
-// The a11y column index of a variable: its position in meta order, plus one for
-// the row-marker column. A rename or reorder fails here loudly.
-function columnOf(name: string): number {
-  const index = Object.keys(XPCS.meta.variables).indexOf(name)
-  if (index === -1) {
-    throw new Error(`'${name}' is not a column in the example`)
-  }
-  return index + 1
-}
-
 // The example's numeric variables, in meta order, excluding Run. dtype lives on
 // the run data, not the metadata. The first two drive the plots below.
 const numberVars = Object.keys(XPCS.meta.variables).filter(
   (name) => name !== 'run' && XPCS.data[0].variables[name]?.dtype === 'number'
 )
 const [xVar, yVar] = numberVars
-const xTitle = XPCS.meta.variables[xVar].title
-const yTitle = XPCS.meta.variables[yVar].title
+const xTitle = titleOf(xVar)
+const yTitle = titleOf(yVar)
 
 // Opening a summary plot switches to the Plots tab, which unmounts the table.
 // Return to the Table tab between plots so the next header click has a canvas.
@@ -54,6 +44,8 @@ test('right-clicking a variable header and choosing "Plot: summary" plots it aga
   await openSummaryPlot(page, { col: columnOf(xVar) })
 
   await expect(plotTab(page, `Summary: ${xTitle} vs. Run`)).toBeVisible()
+  // Summary plots always mount a figure (their table data is never empty here),
+  // so this is a render smoke-check; the tab title above is the real assertion.
   await expect(plotFigure(page)).toBeVisible()
 })
 

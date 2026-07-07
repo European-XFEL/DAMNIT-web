@@ -3,10 +3,10 @@ import { expect, type Locator, type Page } from '@playwright/test'
 // Grid interactions that must reach Glide's canvas mouse handler (the context
 // menus, column and cell selection) are driven by real pointer coordinates: the
 // accessibility mirror has no layout box, so it never receives these events.
-// The geometry mirrors the fixed column layout in support/table.ts; PR3's
-// hoverCell uses the same constants, so fold both into one shared helper once
-// they land together.
-const ROW_MARKER_WIDTH = 44
+// COLUMN_WIDTH matches formatColumns (width: 100) in features/table/table.tsx.
+// HEADER_HEIGHT and ROW_HEIGHT are Glide's defaults; ROW_MARKER_WIDTH is Glide's
+// auto width for a clickable-number marker at this row count (<=100 rows -> 32).
+const ROW_MARKER_WIDTH = 32
 const COLUMN_WIDTH = 100
 const HEADER_HEIGHT = 36
 const ROW_HEIGHT = 34
@@ -26,8 +26,15 @@ async function gridBox(page: Page) {
 
 // Horizontal center of a column. `col` is the a11y column index: row marker 0,
 // Run 1, first variable 2.
-function columnCenter(box: { x: number }, col: number) {
-  return box.x + ROW_MARKER_WIDTH + (col - 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2
+function columnCenter(box: { x: number; width: number }, col: number) {
+  const x =
+    box.x + ROW_MARKER_WIDTH + (col - 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2
+  if (x > box.x + box.width) {
+    throw new Error(
+      `column ${col} center (${x}) is outside the grid width ${box.width}; is the aside open?`
+    )
+  }
+  return x
 }
 
 async function headerPoint(page: Page, col: number) {
@@ -52,19 +59,26 @@ export async function rightClickHeader(page: Page, col: number) {
   await page.mouse.click(x, y, { button: 'right' })
 }
 
-// Left-click the first header, then Ctrl-click the rest to build a multi-column
-// selection. The right-clicked column becomes the summary plot's Y axis.
-export async function selectColumns(page: Page, cols: number[]) {
-  const [first, ...rest] = cols
-  const start = await headerPoint(page, first)
-  await page.mouse.click(start.x, start.y)
+// Click the first point, then modifier-click the rest to build a multi-select.
+// Glide reads Cmd on macOS and Ctrl elsewhere; ControlOrMeta lets Playwright
+// send the modifier the current platform expects, so this works on every host.
+async function multiClick(page: Page, points: { x: number; y: number }[]) {
+  const [first, ...rest] = points
+  await page.mouse.click(first.x, first.y)
 
-  await page.keyboard.down('Control')
-  for (const col of rest) {
-    const point = await headerPoint(page, col)
+  await page.keyboard.down('ControlOrMeta')
+  for (const point of rest) {
     await page.mouse.click(point.x, point.y)
   }
-  await page.keyboard.up('Control')
+  await page.keyboard.up('ControlOrMeta')
+}
+
+// Left-click the first header, then modifier-click the rest to build a
+// multi-column selection. The right-clicked column becomes the summary plot's
+// Y axis.
+export async function selectColumns(page: Page, cols: number[]) {
+  const points = await Promise.all(cols.map((col) => headerPoint(page, col)))
+  await multiClick(page, points)
 }
 
 // Right-click a header and pick "Plot: summary". Scope the click to the menu:
@@ -82,19 +96,11 @@ export async function rightClickCell(page: Page, cell: Cell) {
   await page.mouse.click(x, y, { button: 'right' })
 }
 
-// Left-click the first cell, then Ctrl-click the rest to build a multi-run
+// Left-click the first cell, then modifier-click the rest to build a multi-run
 // range. The cells must share one column, or the grid clears the range stack.
 export async function selectCells(page: Page, cells: Cell[]) {
-  const [first, ...rest] = cells
-  const start = await cellPoint(page, first)
-  await page.mouse.click(start.x, start.y)
-
-  await page.keyboard.down('Control')
-  for (const cell of rest) {
-    const point = await cellPoint(page, cell)
-    await page.mouse.click(point.x, point.y)
-  }
-  await page.keyboard.up('Control')
+  const points = await Promise.all(cells.map((cell) => cellPoint(page, cell)))
+  await multiClick(page, points)
 }
 
 // Right-click a cell and pick "Plot: data". Right-clicking a cell that is not

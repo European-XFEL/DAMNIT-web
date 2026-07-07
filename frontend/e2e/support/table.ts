@@ -29,9 +29,38 @@ export async function waitForCellLoaded(
 }
 
 export async function openProposal(page: Page) {
+  // The canvas paints as soon as the metadata loads, but cell values arrive
+  // later via a separate table-data query. Wait for that response too, or a cell
+  // right-click can fire before its data lands. Set up before navigating so the
+  // response can't be missed.
+  const tableData = page.waitForResponse((response) => {
+    if (!response.url().includes('/graphql')) {
+      return false
+    }
+    const { operationName } = (response.request().postDataJSON() ?? {}) as {
+      operationName?: string
+    }
+    return (operationName ?? '').endsWith('TableDataQuery')
+  })
+
   await page.goto(`proposal/${XPCS.proposalMetadata[0].number}`)
-  // Wait for the canvas to paint so column assertions don't race the data load.
   await expect(page.getByTestId('data-grid-canvas')).toBeVisible()
+  await tableData
+}
+
+// The a11y column index of a variable: its position in meta order, plus one for
+// the row-marker column. A rename or reorder fails here loudly.
+export function columnOf(name: string): number {
+  const index = Object.keys(XPCS.meta.variables).indexOf(name)
+  if (index === -1) {
+    throw new Error(`'${name}' is not a column in the example`)
+  }
+  return index + 1
+}
+
+// The display title the table header and plot tabs render for a variable.
+export function titleOf(name: string): string {
+  return XPCS.meta.variables[name].title
 }
 
 // aria-colcount is the live data-column count, excluding the row-marker column.
