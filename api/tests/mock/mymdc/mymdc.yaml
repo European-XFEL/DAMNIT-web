@@ -1,0 +1,237 @@
+interactions:
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/proposals/by_number/900000
+  response:
+    body:
+      string: '{"id": 4, "number": 900000, "title": "HERA-South SPB/AGIPD Comissioning",
+        "abstract": null, "proposal_folder": "p900000", "def_proposal_path": "/gpfs/exfel/d/raw/HSLAB/201730/p900000",
+        "doi": "10.22003/XFEL.EU-DATA-900000-00", "url": null, "instrument_id": 101,
+        "instrument_cycle_id": 1, "principal_investigator_id": 204, "main_proposer_id":
+        146, "local_contact_id": 146, "local_data_contact_id": null, "experiment_data_contact_id":
+        146, "orig_repository_id": 11, "last_run": 0, "begin_at": "2017-06-29T18:13:51.000+02:00",
+        "end_at": "2017-07-06T18:13:51.000+02:00", "release_at": "2020-07-06T18:13:51.000+02:00",
+        "num_delivered_shifts": null, "num_preparation_shifts": 0, "num_scheduled_shifts":
+        null, "flg_public": true, "flg_proposal_system": "L", "flg_preferred_data_output":
+        "R", "flg_available": true, "flg_auto_run_quality": -1, "flg_beamtime_status":
+        "CLO", "beamtime_start_at": null, "beamtime_end_at": null, "flg_cloneable_status":
+        "NC", "flg_data_archived_notification": "S", "expected_data_archive_at": "2024-09-06T02:00:00.000+02:00",
+        "data_archived_at": "2024-10-02T12:00:00.000+02:00", "description": null,
+        "data_plan_comments": null, "flg_visibility_status": "default", "logbook_info":
+        {}, "beamtimes": [{"id": 1, "begin_at": "2017-06-29T18:13:51.000+02:00", "end_at":
+        "2017-07-06T18:13:51.000+02:00", "flg_available": true, "description": null}],
+        "instrument_identifier": "HSLAB", "meeting": null, "team": [{"id": 10, "user_id":
+        204, "data_access_role": 1, "flg_lab_access": false, "flg_support": false,
+        "flg_deputy_local_contact": false, "role_description": null}, {"id": 11, "user_id":
+        146, "data_access_role": 1, "flg_lab_access": false, "flg_support": false,
+        "flg_deputy_local_contact": false, "role_description": null}], "users_ids":
+        [[204, "user-204", "ldap"], [146, "user-146", "ldap"]], "openly_released_at":
+        "2020-07-06T18:13:51.000+02:00", "techniques": [], "data_groups_ids": [],
+        "data_management_plan_id": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/proposals/by_number/900001
+  response:
+    body:
+      string: '{"id": 5, "number": 900001, "title": "FXE commissioning", "abstract":
+        null, "proposal_folder": "p900001", "def_proposal_path": "/gpfs/exfel/exp/FXE/201730/p900001/raw",
+        "doi": "10.22003/XFEL.EU-DATA-900001-00", "url": null, "instrument_id": 2,
+        "instrument_cycle_id": 2, "principal_investigator_id": 53, "main_proposer_id":
+        5, "local_contact_id": 53, "local_data_contact_id": null, "experiment_data_contact_id":
+        5, "orig_repository_id": 1, "last_run": 131, "begin_at": "2017-07-04T14:23:52.000+02:00",
+        "end_at": "2017-07-11T14:23:52.000+02:00", "release_at": "2020-07-11T14:23:52.000+02:00",
+        "num_delivered_shifts": null, "num_preparation_shifts": 0, "num_scheduled_shifts":
+        null, "flg_public": true, "flg_proposal_system": "L", "flg_preferred_data_output":
+        "R", "flg_available": true, "flg_auto_run_quality": -1, "flg_beamtime_status":
+        "CLO", "beamtime_start_at": null, "beamtime_end_at": null, "flg_cloneable_status":
+        "NC", "flg_data_archived_notification": "S", "expected_data_archive_at": "2024-09-06T02:00:00.000+02:00",
+        "data_archived_at": "2024-09-27T12:40:00.000+02:00", "description": null,
+        "data_plan_comments": null, "flg_visibility_status": "default", "logbook_info":
+        {}, "beamtimes": [{"id": 2, "begin_at": "2017-07-04T14:23:52.000+02:00", "end_at":
+        "2017-07-11T14:23:52.000+02:00", "flg_available": true, "description": null}],
+        "instrument_identifier": "FXE", "meeting": null, "team": [{"id": 12, "user_id":
+        53, "data_access_role": 1, "flg_lab_access": false, "flg_support": false,
+        "flg_deputy_local_contact": false, "role_description": null}, {"id": 13, "user_id":
+        5, "data_access_role": 1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 328, "user_id": 399, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 329, "user_id": 180, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 330, "user_id": 215, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 331, "user_id": 120, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 332, "user_id": 54, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 333, "user_id": 346, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 334, "user_id": 192, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 335, "user_id": 198, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 336, "user_id": 114, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 14, "user_id": 2, "data_access_role":
+        2, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}], "users_ids": [[53, "user-53", "keycloak_openid"],
+        [5, "user-5", "ldap"], [399, "user-399", "ldap"], [180, "user-180", "ldap"],
+        [215, "user-215", "ldap"], [120, "user-120", "ldap"], [54, "user-54", "ldap"],
+        [346, "user-346", "ldap"], [192, "user-192", "keycloak_openid"], [198, "user-198",
+        "ldap"], [114, "user-114", "ldap"], [2, "user-2", "ldap"]], "openly_released_at":
+        "2020-07-11T14:23:52.000+02:00", "techniques": [], "data_groups_ids": [],
+        "data_management_plan_id": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/proposals/by_number/900549
+  response:
+    body:
+      string: '{"id": 1413, "number": 900549, "title": "LASER SASE3 commissioning",
+        "abstract": null, "proposal_folder": "p900549", "def_proposal_path": "/gpfs/exfel/exp/LA3/202531/p900549/raw",
+        "doi": "10.22003/XFEL.EU-DATA-900549-00", "url": null, "instrument_id": 113,
+        "instrument_cycle_id": 474, "principal_investigator_id": 210, "main_proposer_id":
+        175, "local_contact_id": 175, "local_data_contact_id": null, "experiment_data_contact_id":
+        175, "orig_repository_id": 3, "last_run": 8, "begin_at": "2025-07-25T00:00:01.000+02:00",
+        "end_at": "2026-01-31T23:59:58.000+01:00", "release_at": "2028-12-31T23:59:58.000+01:00",
+        "num_delivered_shifts": null, "num_preparation_shifts": null, "num_scheduled_shifts":
+        null, "flg_public": false, "flg_proposal_system": "L", "flg_preferred_data_output":
+        "R", "flg_available": true, "flg_auto_run_quality": -1, "flg_beamtime_status":
+        "FR", "beamtime_start_at": null, "beamtime_end_at": null, "flg_cloneable_status":
+        "SC", "flg_data_archived_notification": "R", "expected_data_archive_at": "2029-02-12T00:00:00.000+01:00",
+        "data_archived_at": null, "description": null, "data_plan_comments": null,
+        "flg_visibility_status": "", "logbook_info": {}, "beamtimes": [{"id": 1650,
+        "begin_at": "2025-07-25T00:00:01.000+02:00", "end_at": "2025-12-31T23:59:58.000+01:00",
+        "flg_available": true, "description": null}], "instrument_identifier": "LA3",
+        "meeting": null, "team": [{"id": 29373, "user_id": 91, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29374, "user_id": 175, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29375, "user_id": 210, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29376, "user_id": 217, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29377, "user_id": 363, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29378, "user_id": 373, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29379, "user_id": 377, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29380, "user_id": 381, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29381, "user_id": 818, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29382, "user_id": 856, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29383, "user_id": 875, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29384, "user_id": 980, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29385, "user_id": 995, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}, {"id": 29386, "user_id": 1011, "data_access_role":
+        1, "flg_lab_access": false, "flg_support": false, "flg_deputy_local_contact":
+        false, "role_description": null}], "users_ids": [[91, "user-91", "ldap"],
+        [175, "user-175", "keycloak_openid"], [210, "user-210", "keycloak_openid"],
+        [217, "user-217", "keycloak_openid"], [363, "user-363", "ldap"], [373, "user-373",
+        "ldap"], [377, "user-377", "ldap"], [381, "user-381", "keycloak_openid"],
+        [818, "user-818", "keycloak_openid"], [856, "user-856", "keycloak_openid"],
+        [875, "user-875", "ldap"], [980, "user-980", "keycloak_openid"], [995, "user-995",
+        "ldap"], [1011, "user-1011", "ldap"]], "openly_released_at": null, "techniques":
+        [], "data_groups_ids": [], "data_management_plan_id": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/1101
+  response:
+    body:
+      string: '{"id": 1101, "email": "e2e-tester@example.org", "created_at": "2019-01-11T14:38:50.000+01:00",
+        "updated_at": "2026-07-07T10:30:29.000+02:00", "provider": "keycloak_openid",
+        "uid": "e2etester", "name": "E2e Tester", "first_name": "E2e", "last_name":
+        "Tester", "nickname": "e2etester", "contact_email": "e2e-tester@example.org",
+        "flg_upex_acceptances": true, "upex_synced_at": "2026-07-07T10:30:29.000+02:00",
+        "ldap_synced_at": "2026-07-07T08:38:30.000+02:00", "flg_ldap_account_valid":
+        true, "logbook_api_key": null, "logbook_user_id": 375, "flg_service_account":
+        false, "ldap_description": null, "ldap_destination_indicator": null, "ldap_ou":
+        null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/e2etester/proposals
+  response:
+    body:
+      string: '[{"proposal_id": 4, "proposal_number": 900000}, {"proposal_id": 5,
+        "proposal_number": 900001}, {"proposal_id": 1413, "proposal_number": 900549}]'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/instrument_cycles/1
+  response:
+    body:
+      string: '{"id": 1, "identifier": "201730", "url": "", "instrument_id": 101,
+        "instrument_identifier": "HSLAB", "begin_at": "2017-01-01T00:00:00.000+01:00",
+        "end_at": "2017-12-31T23:59:59.000+01:00", "start_call_at": null, "close_call_at":
+        null, "flg_available": true, "flg_proposal_system": null, "description": ""}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/instrument_cycles/2
+  response:
+    body:
+      string: '{"id": 2, "identifier": "201730", "url": "", "instrument_id": 2, "instrument_identifier":
+        "FXE", "begin_at": "2017-01-01T00:00:00.000+01:00", "end_at": "2017-12-31T23:59:59.000+01:00",
+        "start_call_at": null, "close_call_at": null, "flg_available": true, "flg_proposal_system":
+        null, "description": ""}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/instrument_cycles/474
+  response:
+    body:
+      string: '{"id": 474, "identifier": "202531", "url": null, "instrument_id": 113,
+        "instrument_identifier": "LA3", "begin_at": "2025-07-01T00:00:00.000+02:00",
+        "end_at": "2026-01-31T23:59:59.000+01:00", "start_call_at": null, "close_call_at":
+        null, "flg_available": true, "flg_proposal_system": "local", "description":
+        null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+version: 1
