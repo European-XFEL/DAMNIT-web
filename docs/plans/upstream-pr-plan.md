@@ -1,6 +1,6 @@
 # Upstreaming plan: HZDR components → XFEL DAMNIT-web
 
-Status: proposal (updated 2026-07-06). Companion to [PR_NOTES.md](../../PR_NOTES.md),
+Status: in progress — Phase 0 + Phase 1 complete (updated 2026-07-07). Companion to [PR_NOTES.md](../../PR_NOTES.md),
 which is an earlier single-PR draft; this plan supersedes it with a split-PR strategy.
 
 ## 1. Baseline and divergence
@@ -134,8 +134,11 @@ These upstream files currently mix generic and HZDR changes in one diff:
    (b) appetite for the metadata-provider abstraction and, longer-term, a
    facility-extension mechanism (which would let the whole `hzdr/` tree live as a
    plugin instead of a fork).
-1. **PR 1 — misc small fixes** (`_logging`, graphql tweaks, root→`/docs` redirect).
-   Trivial review, establishes the contribution relationship.
+1. **PR 1 — misc small fixes** (`_logging`, graphql tweaks, root→`/docs` redirect,
+   and the Windows fix for `packages/ui/vitest.config.ts` — normalize the `@/`
+   alias path to forward slashes, found during Phase 0; without it every unit
+   test file fails to load on Windows). Trivial review, establishes the
+   contribution relationship.
 2. **PR 2 — `GET /config/runtime` + `GET /config/health` + terminology settings.**
    Defaults: `uses_proposals=true`, EXFEL labels. Frontend consumes nothing yet;
    pure additive API.
@@ -155,15 +158,24 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
 
 ## 4. Work order in this fork
 
-1. **Phase 0 — sync with upstream:** upstream/main is at `d5a1081` (#214). Review
-   the #204–#214 commits, then merge or rebase fork `main` onto `upstream/main` so
-   the refactors below happen on a current base. Watch for the three reconciliation
-   points in §1 (vitest config, the rewritten `table.tsx`, and #214 pre-commit/env).
+1. **Phase 0 — sync with upstream:** ✅ **Done (2026-07-07, merge commit
+   `40d3e04`).** `upstream/main` (`d5a1081`, #214) merged into the fork on the
+   upstream-PR branch. The six conflicts landed exactly as mapped below and were
+   resolved per the sketches; `table.tsx` turned out easy — the fork's JSX line
+   auto-merged, only the import block conflicted (union). The pre-commit pyright
+   hook was kept active but moved to `stages: [pre-push]` (upstream paused it;
+   the fork adopts upstream's pre-push staging instead). One semantic issue
+   surfaced beyond the map: **upstream's `packages/ui/vitest.config.ts` alias is
+   broken on Windows** (backslash paths from `fileURLToPath` make vite-node skip
+   the `@/` alias, so all 12 unit-test files fail to load) — reproduced on
+   pristine `upstream/main`, so it is an upstream bug, not a merge defect; fixed
+   in the fork by normalizing to forward slashes, and **added to the PR 1
+   misc-fixes bundle**. Validated post-merge: ruff clean; API suite 299 passed /
+   5 skipped; `tsc` all projects; eslint 0 errors; `packages/ui` unit 79 passed;
+   `apps/app` 124 passed; `vite build` succeeds. (Browser tests not run locally —
+   upstream's #213 CI covers them.)
 
-   A trial `git merge upstream/main` (2026-07-06, aborted) surfaced **exactly six
-   conflicts** — the big HZDR API files (`main.py`, `shared/settings.py`,
-   `metadata/routers.py`, `consumer/*`) and the fork's `vitest.config.ts` /
-   `test-setup.ts` merged cleanly:
+   The original conflict map, for reference:
 
    | File | Cause | Resolution sketch |
    | --- | --- | --- |
@@ -192,10 +204,9 @@ under ~500 changed lines, no behavior change for a default EXFEL deployment.
    baseline; C3 acceptance green; C4 tsc/eslint/prettier/vitest 124-passed/vite build).
    The trial merge confirmed the API files (C1–C3) merge cleanly against
    `upstream/main`, and `app.tsx` (C4) is untouched by upstream — so all four were
-   safe to do ahead of Phase 0 without rework. **Next: Phase 0** — merge fork `main`
-   onto `upstream/main`, resolving the six-file conflict set below (`table.tsx` is the
-   only hard one; C4 did *not* touch it, so the saved-views hook re-application is
-   unchanged from the reconnaissance).
+   safe to do ahead of Phase 0 without rework. Phase 0 (the actual merge) followed
+   on 2026-07-07 — see above. **Next: Phase 2** — cut the PR branches off
+   `upstream/main`, starting with step 0 (the upstream issue/discussion) and PR 1.
 3. **Phase 2 — extract PR branches:** for each PR in §3, cherry-pick/re-implement
    onto `upstream/main` in a fresh branch; flip defaults back to EXFEL; strip HZDR
    naming; run upstream's own CI workflows locally where possible.

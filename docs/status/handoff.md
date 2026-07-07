@@ -1,6 +1,6 @@
 # Handoff
 
-Updated: 2026-07-06
+Updated: 2026-07-07
 
 ## Current State
 
@@ -39,6 +39,24 @@ broker roundtrip tests needing `KAFKA_TEST_BROKER`, 14 ASAPO sibling-repo tests)
 - **asapo-for-hzdr-damnit** (`main`): local harness proves correct
   claim/flush/ack/dedup pattern; example files use canonical `hzdr-event-v1`
   schema-version string. All committed.
+
+## Built 2026-07-07
+
+- **Phase 0 of the upstream-PR plan — merged `upstream/main` (`d5a1081`, #204–#214)**
+  into the fork (merge commit `40d3e04` on `claude/hzdr-components-upstream-pr-ochddw`).
+  The six mapped conflicts resolved per the plan's sketches: `table.tsx` (upstream's
+  #210–#212 rewrite taken, the fork's 2-line saved-views hook re-applied — the JSX
+  line auto-merged, only the import union was needed), `graphql/models.py` (upstream's
+  error-aware body kept), `.pre-commit-config.yaml` (union; pyright kept active but
+  moved to pre-push), root `README.md` (fork's kept + CONTRIBUTING.md pointers),
+  `frontend/package.json` (upstream's test scripts), `pnpm-lock.yaml` (regenerated).
+  One find beyond the map: **upstream's `packages/ui/vitest.config.ts` `@/` alias is
+  broken on Windows** (backslash paths from `fileURLToPath` → vite-node skips the
+  alias → all 12 unit-test files fail to load); reproduced on pristine
+  `upstream/main`, fixed in the fork by normalizing to forward slashes, and queued
+  into the PR 1 misc-fixes bundle. Validated: ruff clean; API suite **299 passed,
+  5 skipped**; `tsc` all projects; eslint 0 errors; upstream's `packages/ui` unit
+  suite 79 passed; the fork's `apps/app` suite 124 passed; `vite build:app` succeeds.
 
 ## Built 2026-07-06
 
@@ -275,14 +293,14 @@ Mongo, no broker consumer group; each degrades safely) — see
    host, not in DAMNIT. See
    [scicat-registration-plan.md](../plans/done/scicat-registration-plan.md); field mapping in
    [standards-alignment.md §3.9](../standards-alignment.md#39-scicat-field-mapping).
-6. **Continue the upstream-PR prep** — Phase 1 disentanglement (C1–C4) is **complete**.
-   Next is **Phase 0**: merge fork `main` onto `upstream/main` (currently `d5a1081`,
-   #214), resolving the six-file conflict set in
-   [upstream-pr-plan.md §4](../plans/upstream-pr-plan.md) — `table.tsx` (re-apply the
-   saved-views hook onto upstream's rewrite; C4 did not touch it), `graphql/models.py`,
-   `.pre-commit-config.yaml`, root `README.md`, `frontend/package.json`, and
-   `pnpm-lock.yaml` (regenerate via `pnpm install`, don't hand-merge). After Phase 0,
-   Phase 2 cuts the individual PR branches off `upstream/main`.
+6. **Continue the upstream-PR prep** — Phases 0 and 1 are **complete** (see Built
+   2026-07-06/07). Next is **Phase 2** per
+   [upstream-pr-plan.md §3](../plans/upstream-pr-plan.md): open the upstream
+   issue/discussion (step 0), then cut PR 1 (misc small fixes: `_logging`, graphql
+   tweaks, root→`/docs` redirect, the Windows vitest-alias fix) from
+   `upstream/main` — each PR on a fresh branch, defaults flipped back to EXFEL,
+   HZDR naming stripped. Also merge the upstream-PR branch
+   (`claude/hzdr-components-upstream-pr-ochddw`) back to fork `main` when ready.
 
 The canonical model is in [architecture.md](../architecture.md). Avoid adding new
 matching logic in producer repositories.
