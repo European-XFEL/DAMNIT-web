@@ -13,7 +13,7 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import _db, _logging, _mymdc, auth, contextfile, get_logger, metadata
+    from . import _logging, _mymdc, auth, contextfile, get_logger, metadata
     from .shared import errors, gql
     from .shared.settings import settings
     from .state import (
@@ -35,7 +35,7 @@ def create_app():
 
         logger.info("Starting application lifespan")
 
-        bootstraps = [_mymdc.bootstrap, auth.bootstrap, _db.bootstrap]
+        bootstraps = [_mymdc.bootstrap, auth.bootstrap]
         async with TaskGroup() as tg:
             for bs in bootstraps:
                 tg.create_task(bs(settings))
