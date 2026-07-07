@@ -53,23 +53,56 @@ def vcr_config():
 
 
 @pytest.fixture(autouse=True)
-def _reset_auth_bootstrap():
-    """Reset the OAuth client cached in a module-level global.
+def _reset_bootstrap_globals():
+    """Reset the clients/engines cached in module-level globals between tests.
 
     !!! warning
 
-        Without this, only the first test's startup performs the OIDC discovery fetch
-        and later cassettes cannot replay standalone.
+        Without the auth reset, only the first test's startup performs the OIDC
+        discovery fetch and later cassettes cannot replay standalone. Without the db
+        reset, later tests keep the first test's engine and ignore their own
+        `settings.db_path`.
     """
+    import damnit_api._db
+    import damnit_api._mymdc
     import damnit_api.auth
 
-    damnit_api.auth.__CLIENT = None
+    def _reset():
+        damnit_api.auth.__CLIENT = None
+        damnit_api._mymdc.CLIENT = None
+        damnit_api._db.__ENGINE = None
+        damnit_api._db.__SESSION_LOCAL = None
+
+    _reset()
     yield
-    damnit_api.auth.__CLIENT = None
+    _reset()
+
+
+@pytest.fixture
+def _fresh_app_db(tmp_path):
+    """Point the app at a fresh, empty application database.
+
+    Keeps e2e tests from writing proposal metadata into the repo's dev
+    `dw_api.sqlite`, and keeps them independent of its contents. Schema creation
+    mirrors `_db.bootstrap.init_db`, which is only runnable as a script.
+    """
+    from sqlalchemy import create_engine
+    from sqlmodel import SQLModel
+
+    from damnit_api.metadata import models  # noqa: F401 - registers the tables
+    from damnit_api.shared.settings import settings
+
+    db_path = tmp_path / "dw_api.sqlite"
+    SQLModel.metadata.create_all(create_engine(f"sqlite:///{db_path}"))
+
+    original = settings.db_path
+    settings.db_path = db_path
+    yield
+    settings.db_path = original
 
 
 @pytest_asyncio.fixture
-async def e2e_client(vcr):
+async def e2e_client(vcr, _fresh_app_db):
     """HTTPX client for the ASGI app.
 
     Depends on the `vcr` fixture so the cassette is active while the lifespan runs. App
