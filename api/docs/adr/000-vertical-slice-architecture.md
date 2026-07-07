@@ -65,7 +65,7 @@ damnit_api/
 ├── logging.py       # structlog configuration + request-logging middleware
 │
 ├── core/            # framework-free, imports nothing app-specific:
-│   ├── errors.py    #   Shared error types
+│   ├── errors.py    #   Shared error classes; see ADR-001
 │   ├── types.py     #   `ProposalNumber`, pure value types (no I/O)
 │   ├── const.py     #   DamnitType etc.
 │   └── conversions.py  # b64image, blob2numpy, type mapping
