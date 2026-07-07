@@ -2,8 +2,8 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import text
 
-from damnit_api.graphql.models import DamnitRun
 from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager
+from damnit_api.runs.types import DamnitRun
 
 from .const import (
     EXAMPLE_DATA,
