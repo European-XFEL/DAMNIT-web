@@ -41,7 +41,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-test = ["pytest~=8.2", "pytest-asyncio~=0.24", "pytest-mock~=3.11"]
+test = [
+    "faker>=40.28.1",
+    "pytest~=8.2",
+    "pytest-asyncio~=0.24",
+    "pytest-mock~=3.11",
+    "pytest-recording>=0.13.4",
+]
 lint = ["pyright>=1.1.406", "ruff>=0.7"]
 docs = [
     "zensical>=0.0.47",
