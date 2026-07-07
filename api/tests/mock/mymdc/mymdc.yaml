@@ -9,7 +9,7 @@ interactions:
       string: '{"id": 1101, "number": 6996, "title": "LTP - MHz XPCS enabled studies
         of dynamics, interactions and aggregation phenomena in protein solutions (derived
         from 3348)", "abstract": null, "proposal_folder": "p006996", "def_proposal_path":
-        "/gpfs/exfel/exp/MID/202401/p006996/raw", "doi": "10.22003/XFEL.EU-DATA-006996-00",
+        "tests/mock/data/gpfs/exfel/exp/MID/202401/p006996/raw", "doi": "10.22003/XFEL.EU-DATA-006996-00",
         "url": "https://in.xfel.eu/upex/proposal/6996/view", "instrument_id": 5, "instrument_cycle_id":
         356, "principal_investigator_id": 1271, "main_proposer_id": 1271, "local_contact_id":
         250, "local_data_contact_id": null, "experiment_data_contact_id": 3214, "orig_repository_id":
@@ -103,7 +103,7 @@ interactions:
   response:
     body:
       string: '{"id": 4, "number": 900000, "title": "HERA-South SPB/AGIPD Comissioning",
-        "abstract": null, "proposal_folder": "p900000", "def_proposal_path": "/gpfs/exfel/d/raw/HSLAB/201730/p900000",
+        "abstract": null, "proposal_folder": "p900000", "def_proposal_path": "tests/mock/data/gpfs/exfel/d/raw/HSLAB/201730/p900000",
         "doi": "10.22003/XFEL.EU-DATA-900000-00", "url": null, "instrument_id": 101,
         "instrument_cycle_id": 1, "principal_investigator_id": 204, "main_proposer_id":
         146, "local_contact_id": 146, "local_data_contact_id": null, "experiment_data_contact_id":
@@ -138,7 +138,7 @@ interactions:
   response:
     body:
       string: '{"id": 5, "number": 900001, "title": "FXE commissioning", "abstract":
-        null, "proposal_folder": "p900001", "def_proposal_path": "/gpfs/exfel/exp/FXE/201730/p900001/raw",
+        null, "proposal_folder": "p900001", "def_proposal_path": "tests/mock/data/gpfs/exfel/exp/FXE/201730/p900001/raw",
         "doi": "10.22003/XFEL.EU-DATA-900001-00", "url": null, "instrument_id": 2,
         "instrument_cycle_id": 2, "principal_investigator_id": 53, "main_proposer_id":
         5, "local_contact_id": 53, "local_data_contact_id": null, "experiment_data_contact_id":
@@ -196,7 +196,7 @@ interactions:
   response:
     body:
       string: '{"id": 1413, "number": 900549, "title": "LASER SASE3 commissioning",
-        "abstract": null, "proposal_folder": "p900549", "def_proposal_path": "/gpfs/exfel/exp/LA3/202531/p900549/raw",
+        "abstract": null, "proposal_folder": "p900549", "def_proposal_path": "tests/mock/data/gpfs/exfel/exp/LA3/202531/p900549/raw",
         "doi": "10.22003/XFEL.EU-DATA-900549-00", "url": null, "instrument_id": 113,
         "instrument_cycle_id": 474, "principal_investigator_id": 210, "main_proposer_id":
         175, "local_contact_id": 175, "local_data_contact_id": null, "experiment_data_contact_id":
@@ -255,16 +255,188 @@ interactions:
     body: ''
     headers: {}
     method: GET
+    uri: https://mymdc.example/metadata/api/users/5
+  response:
+    body:
+      string: '{"id": 5, "email": "user-5@example.org", "created_at": "2017-06-29T13:49:34.000+02:00",
+        "updated_at": "2026-07-07T12:20:09.000+02:00", "provider": "ldap", "uid":
+        "user-5", "name": "User 5", "first_name": "User", "last_name": "5", "nickname":
+        "user-5", "contact_email": "user-5@example.org", "flg_upex_acceptances": true,
+        "upex_synced_at": "2026-07-07T12:20:09.000+02:00", "ldap_synced_at": "2026-07-07T08:44:39.000+02:00",
+        "flg_ldap_account_valid": true, "logbook_api_key": null, "logbook_user_id":
+        567, "flg_service_account": false, "ldap_description": null, "ldap_destination_indicator":
+        null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/53
+  response:
+    body:
+      string: '{"id": 53, "email": "user-53@example.org", "created_at": "2017-06-29T13:49:45.000+02:00",
+        "updated_at": "2026-07-07T12:20:09.000+02:00", "provider": "keycloak_openid",
+        "uid": "user-53", "name": "User 53", "first_name": "User", "last_name": "53",
+        "nickname": "user-53", "contact_email": "user-53@example.org", "flg_upex_acceptances":
+        true, "upex_synced_at": "2026-07-07T12:20:09.000+02:00", "ldap_synced_at":
+        "2026-07-07T08:45:12.000+02:00", "flg_ldap_account_valid": true, "logbook_api_key":
+        null, "logbook_user_id": 2601, "flg_service_account": false, "ldap_description":
+        null, "ldap_destination_indicator": null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/146
+  response:
+    body:
+      string: '{"id": 146, "email": "user-146@example.org", "created_at": "2017-06-29T13:51:11.000+02:00",
+        "updated_at": "2026-07-07T12:20:10.000+02:00", "provider": "ldap", "uid":
+        "user-146", "name": "User 146", "first_name": "User", "last_name": "146",
+        "nickname": "user-146", "contact_email": "user-146@example.org", "flg_upex_acceptances":
+        true, "upex_synced_at": "2026-07-07T12:20:10.000+02:00", "ldap_synced_at":
+        "2026-07-07T08:44:35.000+02:00", "flg_ldap_account_valid": true, "logbook_api_key":
+        null, "logbook_user_id": 328, "flg_service_account": false, "ldap_description":
+        null, "ldap_destination_indicator": null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/175
+  response:
+    body:
+      string: '{"id": 175, "email": "user-175@example.org", "created_at": "2017-06-29T13:51:18.000+02:00",
+        "updated_at": "2026-07-07T12:20:11.000+02:00", "provider": "keycloak_openid",
+        "uid": "user-175", "name": "User 175", "first_name": "User", "last_name":
+        "175", "nickname": "user-175", "contact_email": "user-175@example.org", "flg_upex_acceptances":
+        true, "upex_synced_at": "2026-07-07T12:20:11.000+02:00", "ldap_synced_at":
+        "2026-07-07T08:38:20.000+02:00", "flg_ldap_account_valid": true, "logbook_api_key":
+        null, "logbook_user_id": 311, "flg_service_account": false, "ldap_description":
+        null, "ldap_destination_indicator": null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/204
+  response:
+    body:
+      string: '{"id": 204, "email": "user-204@example.org", "created_at": "2017-06-29T13:51:24.000+02:00",
+        "updated_at": "2026-07-07T12:20:11.000+02:00", "provider": "ldap", "uid":
+        "user-204", "name": "User 204", "first_name": "User", "last_name": "204",
+        "nickname": "user-204", "contact_email": "user-204@example.org", "flg_upex_acceptances":
+        true, "upex_synced_at": "2026-07-07T12:20:11.000+02:00", "ldap_synced_at":
+        "2026-07-07T08:38:21.000+02:00", "flg_ldap_account_valid": true, "logbook_api_key":
+        null, "logbook_user_id": 1120, "flg_service_account": false, "ldap_description":
+        null, "ldap_destination_indicator": null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/210
+  response:
+    body:
+      string: '{"id": 210, "email": "user-210@example.org", "created_at": "2017-06-29T13:51:25.000+02:00",
+        "updated_at": "2026-07-07T12:20:11.000+02:00", "provider": "keycloak_openid",
+        "uid": "user-210", "name": "User 210", "first_name": "User", "last_name":
+        "210", "nickname": "user-210", "contact_email": "user-210@example.org", "flg_upex_acceptances":
+        true, "upex_synced_at": "2026-07-07T12:20:11.000+02:00", "ldap_synced_at":
+        "2026-07-07T08:44:46.000+02:00", "flg_ldap_account_valid": true, "logbook_api_key":
+        null, "logbook_user_id": 1584, "flg_service_account": false, "ldap_description":
+        null, "ldap_destination_indicator": null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/250
+  response:
+    body:
+      string: '{"id": 250, "email": "user-250@example.org", "created_at": "2017-06-29T13:51:33.000+02:00",
+        "updated_at": "2026-07-07T12:20:12.000+02:00", "provider": "keycloak_openid",
+        "uid": "user-250", "name": "User 250", "first_name": "User", "last_name":
+        "250", "nickname": "user-250", "contact_email": "user-250@example.org", "flg_upex_acceptances":
+        true, "upex_synced_at": "2026-07-07T12:20:12.000+02:00", "ldap_synced_at":
+        "2026-07-07T08:44:48.000+02:00", "flg_ldap_account_valid": true, "logbook_api_key":
+        null, "logbook_user_id": 104, "flg_service_account": false, "ldap_description":
+        null, "ldap_destination_indicator": null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
     uri: https://mymdc.example/metadata/api/users/1101
   response:
     body:
       string: '{"id": 1101, "email": "e2e-tester@example.org", "created_at": "2019-01-11T14:38:50.000+01:00",
-        "updated_at": "2026-07-07T12:00:24.000+02:00", "provider": "keycloak_openid",
+        "updated_at": "2026-07-07T12:20:24.000+02:00", "provider": "keycloak_openid",
         "uid": "e2etester", "name": "E2e Tester", "first_name": "E2e", "last_name":
         "Tester", "nickname": "e2etester", "contact_email": "e2e-tester@example.org",
-        "flg_upex_acceptances": true, "upex_synced_at": "2026-07-07T12:00:24.000+02:00",
+        "flg_upex_acceptances": true, "upex_synced_at": "2026-07-07T12:20:24.000+02:00",
         "ldap_synced_at": "2026-07-07T08:38:30.000+02:00", "flg_ldap_account_valid":
         true, "logbook_api_key": null, "logbook_user_id": 375, "flg_service_account":
+        false, "ldap_description": null, "ldap_destination_indicator": null, "ldap_ou":
+        null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/1271
+  response:
+    body:
+      string: '{"id": 1271, "email": "user-1271@example.org", "created_at": "2019-03-26T11:20:41.000+01:00",
+        "updated_at": "2026-07-07T12:20:27.000+02:00", "provider": "ldap", "uid":
+        "user-1271", "name": "User 1271", "first_name": "User", "last_name": "1271",
+        "nickname": "user-1271", "contact_email": "user-1271@example.org", "flg_upex_acceptances":
+        true, "upex_synced_at": "2026-07-07T12:20:27.000+02:00", "ldap_synced_at":
+        "2026-07-07T08:39:59.000+02:00", "flg_ldap_account_valid": true, "logbook_api_key":
+        null, "logbook_user_id": 121, "flg_service_account": false, "ldap_description":
+        null, "ldap_destination_indicator": null, "ldap_ou": null}'
+    headers: {}
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers: {}
+    method: GET
+    uri: https://mymdc.example/metadata/api/users/3214
+  response:
+    body:
+      string: '{"id": 3214, "email": "user-3214@example.org", "created_at": "2022-10-06T13:31:45.000+02:00",
+        "updated_at": "2026-07-07T12:20:54.000+02:00", "provider": "keycloak_openid",
+        "uid": "user-3214", "name": "User 3214", "first_name": "User", "last_name":
+        "3214", "nickname": "user-3214", "contact_email": "user-3214@example.org",
+        "flg_upex_acceptances": true, "upex_synced_at": "2026-07-07T12:20:54.000+02:00",
+        "ldap_synced_at": "2026-07-07T08:41:17.000+02:00", "flg_ldap_account_valid":
+        true, "logbook_api_key": null, "logbook_user_id": 799, "flg_service_account":
         false, "ldap_description": null, "ldap_destination_indicator": null, "ldap_ou":
         null}'
     headers: {}

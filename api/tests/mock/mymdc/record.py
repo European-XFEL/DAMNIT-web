@@ -30,19 +30,17 @@ from urllib.parse import urlsplit, urlunsplit
 
 import vcr
 from identity_map import (
-    FAKE_USER,
     RECORDED_CYCLES,
     RECORDED_PROPOSALS,
     RECORDED_USERNAMES,
     RECORDED_USERS,
     USERNAMES,
+    fake_user_fields,
 )
 
 CASSETTE = Path(__file__).parent / "mymdc.yaml"
 FAKE_HOST = "mymdc.example"
 
-# Keys whose values are replaced on any record that looks like a user.
-USER_KEYS = set(FAKE_USER)
 # Keys blanked everywhere: secrets, directory internals the app never reads, and
 # proposal text that is not otherwise published (abstracts, data plans)
 REDACT_KEYS = {
@@ -57,8 +55,22 @@ REDACT_KEYS = {
 }
 
 
+# GPFS paths are rewritten to the committed fixture tree, which mirrors the
+# real /gpfs layout (relative to `api/`, where the test suite runs). Proposals
+# with data on disk then resolve; the rest cleanly fail the probe
+PATH_PREFIXES = {
+    "/gpfs/": "tests/mock/data/gpfs/",
+}
+
+
 def _map_username(value: str) -> str:
     for real, fake in USERNAMES.items():
+        value = value.replace(real, fake)
+    return value
+
+
+def _map_paths(value: str) -> str:
+    for real, fake in PATH_PREFIXES.items():
         value = value.replace(real, fake)
     return value
 
@@ -66,16 +78,18 @@ def _map_username(value: str) -> str:
 def _scrub_value(key: str, value):
     if key in REDACT_KEYS:
         return None
-    if key in USER_KEYS:
-        return FAKE_USER[key]
     if isinstance(value, str):
-        return _map_username(value)
+        return _map_paths(_map_username(value))
     return value
 
 
 def _scrub_body(data):
     """Recursively scrub parsed JSON, preserving structure."""
     if isinstance(data, dict):
+        # A user record gets that user's fake personal fields; `uid` + `email`
+        # + `id` together only occur on user records
+        if {"id", "uid", "email"} <= set(data):
+            data = {**data, **fake_user_fields(data["id"])}
         return {
             key: _scrub_body(_scrub_value(key, value)) for key, value in data.items()
         }

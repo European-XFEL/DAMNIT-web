@@ -16,7 +16,9 @@ import pytest
 
 pytestmark = [pytest.mark.vcr, pytest.mark.asyncio]
 
-MEMBER_PROPOSAL = 900000
+# The fixture proposal: e2etester is a member AND its data exists on disk
+# (tests/mock/data/gpfs/, wired in by the conftest)
+MEMBER_PROPOSAL = 6996
 NON_MEMBER_PROPOSAL = 700000
 
 FORBIDDEN_MESSAGE = "Access to this proposal is forbidden."
@@ -61,20 +63,18 @@ async def test_metadata_query_forbidden_for_non_member_unchanged(logged_in_clien
 
 
 async def test_member_passes_authorization_unchanged(logged_in_client):
-    """A member is not blocked by the permission layer.
+    """A member is not blocked by the permission layer and the query succeeds.
 
-    !!! todo
-
-        The proposal's data directory does not exist on the test machine, so the
-        query fails further down - but it must NOT fail with the authorization
-        denial. Positive-path assertions arrive with the fixture dataset.
+    The fixture data tree serves the proposal's DAMNIT database, so this proves
+    the whole path: session -> membership -> path resolution -> run data.
+    Detailed wire-shape assertions live in the data parity tests.
     """
     response = await logged_in_client.post("/graphql", json=runs_query(MEMBER_PROPOSAL))
 
     assert response.status_code == 200
     payload = response.json()
-    messages = [e["message"] for e in payload.get("errors") or []]
-    assert FORBIDDEN_MESSAGE not in messages
+    assert payload.get("errors") is None
+    assert payload["data"]["runs"]
 
 
 async def test_graphql_query_without_session_unchanged(e2e_client):

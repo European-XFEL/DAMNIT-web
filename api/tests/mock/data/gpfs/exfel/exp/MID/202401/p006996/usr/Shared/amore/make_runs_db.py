@@ -15,7 +15,10 @@ published subset and is used as the spec here:
 
 Regenerate with:
 
-    uv run python tests/mock/data/p6996/make_runs_db.py
+```bash
+uv run python \
+  tests/mock/data/gpfs/exfel/exp/MID/202401/p006996/usr/Shared/amore/make_runs_db.py
+```
 """
 
 import json
@@ -23,10 +26,10 @@ import sqlite3
 from pathlib import Path
 
 HERE = Path(__file__).parent
-RAW = HERE / "runs-raw.sqlite"
+RAW = Path("/gpfs/exfel/exp/MID/202401/p006996/usr/Shared/amore/runs.sqlite")
 OUT = HERE / "runs.sqlite"
 RUNS_JSON = (
-    HERE.parents[4]
+    HERE.parents[12]
     / "frontend"
     / "apps"
     / "demo"
@@ -38,7 +41,7 @@ RUNS_JSON = (
 
 PROPOSAL = 6996
 
-# Demo variable name -> raw database variable name.
+# Demo variable name -> raw database variable name
 RENAMED = {
     "n_pulses": "pulses",
     "sample_type": "sample",
@@ -51,11 +54,11 @@ def main():
     spec = json.loads(RUNS_JSON.read_text())
     meta = spec["meta"]
 
-    # Demo `run` is implicit in the database; every other variable maps to a row.
+    # Demo `run` is implicit in the database - every other variable maps to a row
     demo_names = [name for name in meta["variables"] if name != "run"]
     raw_names = {name: RENAMED.get(name, name) for name in demo_names}
 
-    # source.run_number is the real run; variables.run.value the demo number.
+    # source.run_number is the real run; variables.run.value the demo number
     run_map = {
         entry["source"]["run_number"]: entry["variables"]["run"]["value"]
         for entry in spec["data"]
@@ -98,7 +101,7 @@ def main():
         (
             (PROPOSAL, run_map[run], start_time, added_at)
             for run, start_time, added_at in raw.execute(
-                f"SELECT run, start_time, added_at FROM run_info"  # noqa: S608 - dynamic part is placeholders only
+                f"SELECT run, start_time, added_at FROM run_info"  # noqa: S608
                 f" WHERE proposal = ? AND run IN ({','.join('?' * len(run_map))})",
                 (PROPOSAL, *run_map),
             )
@@ -111,7 +114,7 @@ def main():
             (
                 (PROPOSAL, run_map[run], demo_name, *rest)
                 for run, *rest in raw.execute(
-                    f"SELECT run, version, value, timestamp, max_diff, provenance,"  # noqa: S608 - dynamic part is placeholders only
+                    f"SELECT run, version, value, timestamp, max_diff, provenance,"  # noqa: S608
                     f" summary_type, summary_method, attributes FROM run_variables"
                     f" WHERE proposal = ? AND name = ?"
                     f" AND run IN ({','.join('?' * len(run_map))})",
@@ -137,7 +140,7 @@ def main():
     out.commit()
 
     counts = {
-        table: out.execute(f"SELECT count(*) FROM {table}").fetchone()[0]  # noqa: S608 - table names from sqlite_master
+        table: out.execute(f"SELECT count(*) FROM {table}").fetchone()[0]  # noqa: S608
         for (table,) in out.execute("SELECT name FROM sqlite_master WHERE type='table'")
     }
     print(f"Created {OUT}: {counts}")

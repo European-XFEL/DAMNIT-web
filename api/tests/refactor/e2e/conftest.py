@@ -20,6 +20,7 @@ headers and OAuth client credentials at record time, but you should still check.
 
 import base64
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -76,6 +77,46 @@ def _reset_bootstrap_globals():
     _reset()
     yield
     _reset()
+
+
+DATA_ROOT = Path(__file__).parents[2] / "mock" / "data" / "gpfs" / "exfel" / "exp"
+MYMDC_CASSETTE = Path(__file__).parents[2] / "mock" / "mymdc" / "mymdc.yaml"
+
+
+@pytest.fixture(autouse=True)
+def _force_mock_mymdc(monkeypatch):
+    """Always run against the cassette-backed MyMdC mock.
+
+    If `DW_API_MYMDC__*` is set `Settings()` will pick it up, select the real HTTP
+    client, and the app would try to talk to MyMdC over HTTP instead of the mock.
+    """
+    from damnit_api._mymdc.settings import MyMdCMockSettings
+    from damnit_api.shared.settings import settings
+
+    if not isinstance(settings.mymdc, MyMdCMockSettings):
+        monkeypatch.setattr(
+            settings, "mymdc", MyMdCMockSettings(cassette_file=MYMDC_CASSETTE)
+        )
+
+
+@pytest.fixture(autouse=True)
+def _fixture_data_root(monkeypatch):
+    """Point proposal path resolution at the committed fixture data tree.
+
+    `tests/mock/data/gpfs/` mirrors the real `/gpfs` layout
+    (`exfel/exp/<instrument>/<cycle>/p<number>/usr/Shared/amore/`); the
+    recorded mymdc cassette rewrites `/gpfs/` paths to the same tree (relative
+    to `api/`), so both path seams resolve to the same committed data.
+
+    !!! warning
+
+        `find_proposal` globs the module-level `DATA_ROOT_DIR` constant at call
+        time; patching it is the whole seam. Temporary exception to the
+        no-internals rule until the path locator becomes injectable (ADR-006).
+    """
+    from damnit_api import utils
+
+    monkeypatch.setattr(utils, "DATA_ROOT_DIR", str(DATA_ROOT.resolve()))
 
 
 @pytest.fixture
