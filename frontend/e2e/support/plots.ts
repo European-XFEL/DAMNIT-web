@@ -106,6 +106,32 @@ export async function openDataPlot(page: Page, cell: Cell) {
   await menu.getByText('Plot: data').click()
 }
 
+// The plot dialog ("Display Plot" -> "Plot Settings" modal). Returns the dialog
+// locator so callers scope field interactions to it.
+export async function openPlotDialog(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: 'Display Plot' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Plot Settings' })
+  await expect(dialog).toBeVisible()
+  return dialog
+}
+
+// Pick a variable in one of the dialog's comboboxes (X-axis, Y-axis, Variable):
+// type its title to filter the options, then click the match.
+export async function chooseVariable(
+  dialog: Locator,
+  { label, title }: { label: string; title: string }
+) {
+  const input = dialog.getByLabel(label)
+  await input.click()
+  await input.fill(title)
+  await dialog.getByRole('option', { name: title }).click()
+}
+
+// Submit the dialog. Exact match keeps it off the toolbar's "Display Plot".
+export async function submitPlot(dialog: Locator) {
+  await dialog.getByRole('button', { name: 'Plot', exact: true }).click()
+}
+
 // Plot tabs are ordinary DOM: the inner "Summary: ..." tabs and the outer
 // "Plots" main tab. The inner tab title spans two lines (label + runs
 // subtitle), so match on the accessible name rather than exact text.
