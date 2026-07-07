@@ -150,6 +150,7 @@ async def real_damnit_db(mocker, tmp_path):
                 "  name TEXT NOT NULL,"
                 "  value BLOB,"
                 "  summary_type TEXT,"
+                "  attributes BLOB,"
                 "  timestamp REAL NOT NULL,"
                 "  PRIMARY KEY (proposal, run, name, timestamp)"
                 ")"

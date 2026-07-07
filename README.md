@@ -22,6 +22,11 @@ bash scripts/hzdr-launch.sh
 Open `http://127.0.0.1:5173/home` or the flow monitor at
 `http://127.0.0.1:5173/flow-monitor`.
 
+For the upstream (non-HZDR) development setup — installing dependencies and
+git hooks via `./scripts/setup-dev.sh`, running the API in auth or local
+mode, and the plain frontend dev server — see
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Documentation
 
 - [Documentation index](docs/README.md)
@@ -33,3 +38,8 @@ Open `http://127.0.0.1:5173/home` or the flow monitor at
 
 API-specific documentation remains in [`api/docs`](api/docs), and frontend
 development commands remain in [`frontend/README.md`](frontend/README.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how checks run and how to
+contribute upstream-compatible changes.

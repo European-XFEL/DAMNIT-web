@@ -6,14 +6,14 @@ import {
   TABLE_DATA_QUERY_NAME,
 } from './table-data.constants'
 import {
-  type TableData,
   type TableDataOptions,
+  type TableData,
   type TableInfo,
   type TableMetadata,
   type TableMetadataOptions,
 } from './table-data.types'
+import { type DamnitRun, flattenRuns } from './table-data.transforms'
 import { client } from '../../graphql/apollo'
-import { type VariableDataItem, type VariableValue } from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
 /*
@@ -41,6 +41,10 @@ const buildTableDataQuery = (
         name
         value
         dtype
+        error {
+          message
+          cls
+        }
       }
     }
   }
@@ -55,39 +59,6 @@ const DEFERRED_TABLE_DATA_QUERY = buildTableDataQuery(
   DEFERRED_TABLE_DATA_QUERY_NAME,
   false
 )
-
-type DamnitVariable = {
-  name: string
-  value: VariableValue
-  dtype: string
-}
-
-type DamnitRun = {
-  variables: DamnitVariable[]
-}
-
-export function flattenRuns(runs: DamnitRun[]): TableData {
-  const table: TableData = {}
-
-  for (const run of runs) {
-    const runVariable = run.variables.find((v) => v.name === 'run')
-    if (runVariable === undefined || runVariable.value == null) {
-      continue
-    }
-
-    const row: Record<string, VariableDataItem> = {}
-    for (const variable of run.variables) {
-      row[variable.name] = {
-        value: variable.value,
-        dtype: variable.dtype,
-      }
-    }
-
-    table[String(runVariable.value)] = row
-  }
-
-  return table
-}
 
 function pickTableDataQuery(lightweight: boolean, deferred: boolean) {
   if (deferred) {
