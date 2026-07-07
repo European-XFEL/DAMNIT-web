@@ -17,6 +17,7 @@ from ..auth.models import User
 from ..graphql.dependencies import SubscriptionCursorsDep
 from ..metadata import gql as metadata
 from ..runs import types as run_types
+from ..runs.dependencies import Repositories
 from ..runs.sqlite.dependencies import DamnitRegistry
 
 SUBSCRIPTION_PROTOCOLS = [
@@ -58,6 +59,7 @@ class Context(BaseContext):
     oauth_user: OAuthUserInfo
     session: DBSession
     damnit_registry: DamnitRegistry
+    repositories: Repositories
     subscription_cursors: SubscriptionCursorsDep
     _user: User | None = None
 
@@ -75,6 +77,7 @@ async def get_context(  # noqa: RUF029
     mymdc: MyMdCClient,
     session: DBSession,
     damnit_registry: DamnitRegistry,
+    repositories: Repositories,
     subscription_cursors: SubscriptionCursorsDep,
 ):
     return Context(
@@ -82,6 +85,7 @@ async def get_context(  # noqa: RUF029
         mymdc=mymdc,
         session=session,
         damnit_registry=damnit_registry,
+        repositories=repositories,
         subscription_cursors=subscription_cursors,
     )
 
