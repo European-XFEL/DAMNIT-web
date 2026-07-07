@@ -34,6 +34,7 @@ class DatabaseSessionManager:
             self.db_path,
             isolation_level="AUTOCOMMIT",
             poolclass=NullPool,
+            connect_args={"timeout": 30},
         )
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
         # Owned by this manager, not the module:
