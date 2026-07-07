@@ -12,6 +12,10 @@ nav = [
   "notes.md",
   "docs.md",
   "ci-cd.md",
+  { "ADRs" = [
+    "adr/README.md",
+    "adr/000-vertical-slice-architecture.md",
+  ] },
   # TODO: remove this once Zensical adds support/extensions
   # >>> BEGIN API-REFERENCE-NAV
   # Managed by scripts/gen_api_docs.py - run it to refresh.

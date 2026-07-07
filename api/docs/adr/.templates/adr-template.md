@@ -16,16 +16,16 @@ informed: {list everyone who is kept up-to-date on progress; and with whom there
 <!-- This is an optional element. Feel free to remove. -->
 ## Decision Drivers
 
-* {decision driver 1, for instance, a desired software quality, faced concern, constraint or force}
-* {decision driver 2}
-* … <!-- numbers of drivers can vary -->
+- {decision driver 1, for instance, a desired software quality, faced concern, constraint or force}
+- {decision driver 2}
+- … <!-- numbers of drivers can vary -->
 
 ## Considered Options
 
-* {title of option 1}
-* {title of option 2}
-* {title of option 3}
-* … <!-- numbers of options can vary -->
+- {title of option 1}
+- {title of option 2}
+- {title of option 3}
+- … <!-- numbers of options can vary -->
 
 ## Decision Outcome
 
@@ -34,9 +34,9 @@ Chosen option: "{title of option 1}", because {justification. e.g., only option,
 <!-- This is an optional element. Feel free to remove. -->
 ### Consequences
 
-* Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
-* Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
-* … <!-- numbers of consequences can vary -->
+- Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
+- Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
+- … <!-- numbers of consequences can vary -->
 
 <!-- This is an optional element. Feel free to remove. -->
 ### Confirmation
@@ -51,21 +51,21 @@ Chosen option: "{title of option 1}", because {justification. e.g., only option,
 <!-- This is an optional element. Feel free to remove. -->
 {example | description | pointer to more information | …}
 
-* Good, because {argument a}
-* Good, because {argument b}
+- Good, because {argument a}
+- Good, because {argument b}
 <!-- use "neutral" if the given argument weights neither for good nor bad -->
-* Neutral, because {argument c}
-* Bad, because {argument d}
-* … <!-- numbers of pros and cons can vary -->
+- Neutral, because {argument c}
+- Bad, because {argument d}
+- … <!-- numbers of pros and cons can vary -->
 
 ### {title of other option}
 
 {example | description | pointer to more information | …}
 
-* Good, because {argument a}
-* Neutral, because {argument b}
-* Bad, because {argument c}
-* …
+- Good, because {argument a}
+- Neutral, because {argument b}
+- Bad, because {argument c}
+- …
 
 <!-- This is an optional element. Feel free to remove. -->
 ## More Information
