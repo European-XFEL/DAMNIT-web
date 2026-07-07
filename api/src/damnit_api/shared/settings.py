@@ -85,7 +85,11 @@ class Settings(BaseSettings):
         return self
 
     mymdc: MyMdCClientSettings = MyMdCMockSettings(
-        mock_responses_file=Path(__file__).parents[3] / "tests" / "mock" / "_mymdc.json"
+        cassette_file=Path(__file__).parents[3]
+        / "tests"
+        / "mock"
+        / "mymdc"
+        / "mymdc.yaml"
     )
 
     model_config = SettingsConfigDict(
