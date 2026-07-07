@@ -1,6 +1,5 @@
 ---
 # These are optional metadata elements. Feel free to remove any of them.
-status: "{proposed | rejected | accepted | deprecated | … | superseded by ADR-0123}"
 date: {YYYY-MM-DD when the decision was last updated}
 decision-makers: {list everyone involved in the decision}
 consulted: {list everyone whose opinions are sought (typically subject-matter experts); and with whom there is a two-way communication}
@@ -34,8 +33,8 @@ Chosen option: "{title of option 1}", because {justification. e.g., only option,
 <!-- This is an optional element. Feel free to remove. -->
 ### Consequences
 
-- Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
-- Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
+- Good: {positive consequence, e.g., improvement of one or more desired qualities, …}
+- Bad: {negative consequence, e.g., compromising one or more desired qualities, …}
 - … <!-- numbers of consequences can vary -->
 
 <!-- This is an optional element. Feel free to remove. -->
@@ -51,20 +50,20 @@ Chosen option: "{title of option 1}", because {justification. e.g., only option,
 <!-- This is an optional element. Feel free to remove. -->
 {example | description | pointer to more information | …}
 
-- Good, because {argument a}
-- Good, because {argument b}
+- Good: {argument a}
+- Good: {argument b}
 <!-- use "neutral" if the given argument weights neither for good nor bad -->
-- Neutral, because {argument c}
-- Bad, because {argument d}
+- Neutral: {argument c}
+- Bad: {argument d}
 - … <!-- numbers of pros and cons can vary -->
 
 ### {title of other option}
 
 {example | description | pointer to more information | …}
 
-- Good, because {argument a}
-- Neutral, because {argument b}
-- Bad, because {argument c}
+- Good: {argument a}
+- Neutral: {argument b}
+- Bad: {argument c}
 - …
 
 <!-- This is an optional element. Feel free to remove. -->

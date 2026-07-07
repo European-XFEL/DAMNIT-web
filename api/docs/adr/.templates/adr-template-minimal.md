@@ -18,9 +18,9 @@ Chosen option: "{title of option 1}", because {justification. e.g., only option,
 <!-- This is an optional element. Feel free to remove. -->
 ### Consequences
 
-- Good, because {positive consequence, e.g., improvement of one or more desired qualities, …}
-- Bad, because {negative consequence, e.g., compromising one or more desired qualities, …}
-- … <!-- numbers of consequences can vary -->
+- Good: {positive consequence, e.g., improvement of one or more desired qualities, …}
+- Bad: {negative consequence, e.g., compromising one or more desired qualities, …}
+- ... <!-- numbers of consequences can vary -->
 
 <!-- This is an optional element. Feel free to remove. -->
 ## Details
