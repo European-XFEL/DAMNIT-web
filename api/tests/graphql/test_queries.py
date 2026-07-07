@@ -2,8 +2,8 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import text
 
-from damnit_api.db import DAMNIT_PATH, DatabaseSessionManager
 from damnit_api.graphql.models import DamnitRun
+from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager
 
 from .const import (
     EXAMPLE_DATA,
@@ -127,7 +127,10 @@ async def real_damnit_db(mocker, tmp_path):
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
 
-    mocker.patch("damnit_api.db.find_proposal", return_value=str(proposal_root))
+    mocker.patch(
+        "damnit_api.runs.sqlite.session.find_proposal",
+        return_value=str(proposal_root),
+    )
     # `registry` is injected by the `Registry` metaclass at class creation.
     DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
 
