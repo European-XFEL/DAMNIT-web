@@ -6,14 +6,11 @@ the fixtures are reused from that package's conftest rather than duplicated.
 
 from ..graphql.conftest import (  # noqa: F401
     bypass_proposal_permission,
+    csv_fixture_dir,
     graphql_context,
     graphql_schema,
     graphql_schema_no_auth,
+    mock_repositories,
     mocked_ensure_damnit_path,
-    mocked_metadata_all_tags,
-    mocked_metadata_column,
-    mocked_metadata_max,
-    mocked_metadata_variable_tags,
-    mocked_metadata_variables,
     reset_caches,
 )

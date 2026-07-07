@@ -1,6 +1,6 @@
 import json
 from dataclasses import asdict
-from typing import NewType
+from typing import TYPE_CHECKING, NewType
 
 import strawberry
 
@@ -14,6 +14,9 @@ from ..utils import (
 )
 from .models import KNOWN_VARIABLES
 from .serialization import serialize
+
+if TYPE_CHECKING:
+    from .models import RunRecord
 
 logger = get_logger()
 
@@ -105,8 +108,33 @@ class DamnitRun:
             yield DamnitVariable(name=name, value=Any(value), dtype=dtype, error=error)
 
     @classmethod
+    def _flatten_record(cls, record: "RunRecord") -> dict:
+        """Flatten a `RunRecord` into the legacy `{name: {value, summary_type}}`
+        dict shape `_iter_variables` expects. Shared by `from_record` (queries)
+        and `resolve_record` (subscriptions) so there is one RunRecord -> dict path.
+        """
+        flat: dict = {
+            "proposal": record.proposal,
+            "run": record.run,
+            "start_time": record.start_time,
+            "added_at": record.added_at,
+        }
+        for name, vv in record.variables.items():
+            flat[name] = {
+                "value": vv.value,
+                "summary_type": vv.summary_type,
+                "attributes": vv.attributes,
+            }
+        return flat
+
+    @classmethod
     def from_db(cls, record):
         return cls(_variables=list(cls._iter_variables(record)))
+
+    @classmethod
+    def from_record(cls, record: "RunRecord") -> "DamnitRun":
+        """Build a `DamnitRun` from a `RunRecord` (repository layer)."""
+        return cls.from_db(cls._flatten_record(record))
 
     @classmethod
     def resolve(cls, record):
@@ -125,6 +153,14 @@ class DamnitRun:
 
             out[v.name] = resolved
         return out
+
+    @classmethod
+    def resolve_record(cls, record: "RunRecord") -> dict:
+        """Build the raw JSON-scalar payload shape for a `RunRecord`.
+
+        Subscriptions stream `JSON` rather than the `DamnitRun` GraphQL type.
+        """
+        return cls.resolve(cls._flatten_record(record))
 
     @staticmethod
     def known_variables():

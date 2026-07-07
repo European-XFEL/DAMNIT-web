@@ -1,0 +1,7 @@
+name,title,tags
+n_trains,Trains,
+run_length,Run length,
+xgm_intensity,XGM intensity [uJ],
+etof_settings.ret0,"eTOF settings/Retardation, sector 0",eTOF setting
+etof.eTOF_calibration,eTOF calib./eTOF calibration,eTOF
+etof.eTOF_response_width,eTOF calib./eTOF response FWHM,eTOF

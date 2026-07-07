@@ -1,11 +1,5 @@
-from collections import defaultdict
-from dataclasses import dataclass
-from typing import Any
-
 import strawberry
-from sqlalchemy import or_, select
 
-from ..runs.sqlite import DamnitDBRegistry, async_table, get_session
 from ..shared.const import DEFAULT_PROPOSAL
 from ..shared.models import ProposalNumber
 
@@ -16,67 +10,3 @@ class DatabaseInput:
         default=ProposalNumber(DEFAULT_PROPOSAL)
     )
     path: str | None = strawberry.field(default=strawberry.UNSET)
-
-
-@dataclass
-class MetaData:
-    timestamp: float = 0
-
-
-@dataclass
-class Data(MetaData):
-    value: Any = None
-    summary_type: str | None = None
-    attributes: str | None = None
-
-
-class LatestData:
-    def __init__(self):
-        self.runs = defaultdict(lambda: defaultdict(Data))
-        self.variables = defaultdict(MetaData)
-
-    def add(self, data):
-        timestamp = data["timestamp"]
-
-        # Bookkeep by runs
-        run = self.runs[data["run"]]
-        if run[data["name"]].timestamp < timestamp:
-            run[data["name"]] = Data(
-                value=data["value"],
-                summary_type=data.get("summary_type"),
-                attributes=data.get("attributes"),
-                timestamp=timestamp,
-            )
-
-        # Bookkeep by variables
-        variable = self.variables[data["name"]]
-        if variable.timestamp < timestamp:
-            variable.timestamp = timestamp
-
-    @property
-    def timestamp(self):
-        timestamps = [data.timestamp for data in self.variables.values()]
-        return max(timestamps) if len(timestamps) else None
-
-    @classmethod
-    def from_list(cls, sequence):
-        instance = cls()
-        for seq in sequence:
-            instance.add(seq)
-
-        return instance
-
-
-async def fetch_info(registry: DamnitDBRegistry, proposal, *, runs):
-    table = await async_table(registry, proposal, name="run_info")
-    if table is None:
-        return []
-    conditions = [table.c.run == run for run in runs]
-    query = select(table).where(or_(*conditions)).order_by(table.c.run)
-
-    async with get_session(registry, proposal) as session:
-        result = await session.execute(query)
-        if not result:
-            raise ValueError  # TODO: Better error handling
-
-        return result.mappings().all()

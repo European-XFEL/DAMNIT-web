@@ -148,7 +148,7 @@ async def noauth_userinfo(request: Request):
 
     proposals = {}
     proposal_number = await _local_proposal_number(
-        get_app_state(request).damnit_registry
+        get_app_state(request).repositories
     )
     if proposal_number:
         proposals = {LOCAL_CYCLE: [proposal_number]}
