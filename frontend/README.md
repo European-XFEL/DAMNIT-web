@@ -43,6 +43,28 @@ running web server. Add an `.env` file on `apps/app` with the following:
 VITE_API = "http://127.0.0.1:30200"
 ```
 
+## Testing
+
+Tests live in `packages/ui/tests`. The file extension decides where a test
+runs, and that is the only rule to remember:
+
+- `*.test.ts` runs in Node. Use it for pure logic (functions, reducers,
+  selectors). Fast, no DOM.
+- `*.test.tsx` runs in a real browser (Chromium). Use it for anything that
+  renders or touches the DOM (components, hooks). If it needs a DOM, name it
+  `.tsx`.
+
+Run the suite from the `frontend` folder:
+
+```sh
+pnpm test           # everything
+pnpm test:node      # just the Node logic tests
+pnpm test:browser   # just the browser tests
+```
+
+Shared test helpers (the render wrapper, the Node setup) live in
+`packages/ui/tests/support` and are imported via `#tests/support/...`.
+
 ## Deployment
 
 Deployments are done on DMZ hosts, which server static files via nginx running in a docker container managed via compose.
