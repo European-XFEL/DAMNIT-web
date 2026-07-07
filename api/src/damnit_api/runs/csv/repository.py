@@ -55,7 +55,7 @@ class CsvDamnitRepository(DamnitRepository):
         if not path.exists():
             return {}
         result: dict[int, dict[str, float | None]] = {}
-        with Path(path).open(newline="", encoding="utf-8") as f:
+        with path.open(newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 try:
                     run = int(row["run"])
@@ -81,7 +81,7 @@ class CsvDamnitRepository(DamnitRepository):
         if not path.exists():
             return {}
         result: dict[int, dict[str, VariableValue]] = defaultdict(dict)
-        with Path(path).open(newline="", encoding="utf-8") as f:
+        with path.open(newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 try:
                     run = int(row["run"])
@@ -113,7 +113,7 @@ class CsvDamnitRepository(DamnitRepository):
         if not path.exists():
             return {}
         result: dict[int, dict[str, VariableValue]] = defaultdict(dict)
-        with Path(path).open(newline="", encoding="utf-8") as f:
+        with path.open(newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 try:
                     ts = float(row.get("timestamp") or 0.0)
@@ -143,7 +143,7 @@ class CsvDamnitRepository(DamnitRepository):
         if not path.exists():
             return {}
         result: dict[str, VariableInfo] = {}
-        with Path(path).open(newline="", encoding="utf-8") as f:
+        with path.open(newline="", encoding="utf-8") as f:
             for row in csv.DictReader(f):
                 name = row["name"]
                 title: str | None = row.get("title") or None

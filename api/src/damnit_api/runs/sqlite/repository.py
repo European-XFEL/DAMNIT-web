@@ -13,7 +13,6 @@ from sqlalchemy import (
     and_,
     desc,
     func,
-    or_,
     select,
     text,
 )
@@ -176,10 +175,11 @@ class SQLiteDamnitRepository(DamnitRepository):
         info_table = await self._get_table("run_info")
         if info_table is None:
             return info_map
-        conditions = [info_table.c.run == r for r in run_ids]
         async with self._session() as session:
             result = await session.execute(
-                select(info_table).where(or_(*conditions)).order_by(info_table.c.run)
+                select(info_table)
+                .where(info_table.c.run.in_(run_ids))
+                .order_by(info_table.c.run)
             )
             for row in result.mappings().all():
                 info_map[row["run"]] = row
