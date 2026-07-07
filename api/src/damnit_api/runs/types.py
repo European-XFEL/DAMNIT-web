@@ -1,5 +1,5 @@
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import NewType
 
 import strawberry
@@ -12,24 +12,10 @@ from ..utils import (
     python_type_to_damnit_type,
     summary_type_to_damnit_type,
 )
+from .models import KNOWN_VARIABLES
 from .serialization import serialize
 
 logger = get_logger()
-
-
-@dataclass(frozen=True)
-class KnownVariable:
-    name: str
-    title: str
-    dtype: DamnitType
-
-
-KNOWN_VARIABLES = (
-    KnownVariable(name="proposal", title="Proposal", dtype=DamnitType.NUMBER),
-    KnownVariable(name="run", title="Run", dtype=DamnitType.NUMBER),
-    KnownVariable(name="start_time", title="Timestamp", dtype=DamnitType.TIMESTAMP),
-    KnownVariable(name="added_at", title="Added at", dtype=DamnitType.TIMESTAMP),
-)
 
 KNOWN_DTYPES = {v.name: v.dtype for v in KNOWN_VARIABLES}
 
