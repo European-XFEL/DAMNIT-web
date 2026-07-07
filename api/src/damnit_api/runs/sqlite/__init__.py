@@ -12,7 +12,6 @@ from .session import (
     DAMNIT_PATH,
     DamnitDBRegistry,
     DatabaseSessionManager,
-    get_connection,
     get_damnit_path,
     get_session,
 )
@@ -29,7 +28,6 @@ __all__ = [
     "async_table",
     "async_variable_tags",
     "async_variables",
-    "get_connection",
     "get_damnit_path",
     "get_session",
 ]

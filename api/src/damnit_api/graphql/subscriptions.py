@@ -33,9 +33,6 @@ class SubscriptionCursors:
     def __setitem__(self, proposal: str, value: float) -> None:
         self._data[proposal] = value
 
-    def clear(self) -> None:
-        self._data.clear()
-
 
 # Per-client cursor is deliberately omitted from the cache key so that
 # concurrent subscribers coalesce into a single DB read per tick.

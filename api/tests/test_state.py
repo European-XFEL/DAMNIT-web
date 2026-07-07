@@ -56,10 +56,6 @@ def test_registry_memoizes_managers_per_proposal(monkeypatch):
     assert registry.get("5678") is not first
     assert created == ["1234", "5678"]
 
-    assert registry.pop("1234") is first
-    assert registry.pop("1234") is None  # already removed
-    assert registry.get("1234") is not first  # rebuilt after pop
-
 
 def test_token_store_stores_and_pops_fields():
     store = InMemoryTokenStore()

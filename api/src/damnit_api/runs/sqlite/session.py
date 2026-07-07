@@ -104,25 +104,11 @@ class DamnitDBRegistry:
             self._managers[proposal] = DatabaseSessionManager(proposal)
         return self._managers[proposal]
 
-    def pop(
-        self, proposal: str, default: DatabaseSessionManager | None = None
-    ) -> DatabaseSessionManager | None:
-        return self._managers.pop(proposal, default)
-
-    def clear(self) -> None:
-        self._managers.clear()
-
 
 def get_session(
     registry: DamnitDBRegistry, proposal: str
 ) -> AbstractAsyncContextManager[AsyncSession]:
     return registry.get(proposal).session()
-
-
-def get_connection(
-    registry: DamnitDBRegistry, proposal: str
-) -> AbstractAsyncContextManager[AsyncConnection]:
-    return registry.get(proposal).connect()
 
 
 # -----------------------------------------------------------------------------
