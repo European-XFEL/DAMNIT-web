@@ -14,6 +14,7 @@ from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
 from ..auth.models import User
+from ..graphql.dependencies import SubscriptionCursorsDep
 from ..metadata import gql as metadata
 from ..runs import types as run_types
 from ..runs.sqlite.dependencies import DamnitRegistry
@@ -57,6 +58,7 @@ class Context(BaseContext):
     oauth_user: OAuthUserInfo
     session: DBSession
     damnit_registry: DamnitRegistry
+    subscription_cursors: SubscriptionCursorsDep
     _user: User | None = None
 
     async def get_user(self) -> User:
@@ -73,12 +75,14 @@ async def get_context(  # noqa: RUF029
     mymdc: MyMdCClient,
     session: DBSession,
     damnit_registry: DamnitRegistry,
+    subscription_cursors: SubscriptionCursorsDep,
 ):
     return Context(
         oauth_user=oauth_user,
         mymdc=mymdc,
         session=session,
         damnit_registry=damnit_registry,
+        subscription_cursors=subscription_cursors,
     )
 
 

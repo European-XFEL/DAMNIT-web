@@ -22,6 +22,7 @@ def create_app():
         create_db_sessionmaker,
         create_mymdc_client,
         create_oauth_client,
+        create_subscription_cursors,
         create_token_store,
     )
 
@@ -49,6 +50,7 @@ def create_app():
             oauth_client=oauth_client,
             token_store=create_token_store(),
             damnit_registry=create_damnit_registry(),
+            subscription_cursors=create_subscription_cursors(),
         )
 
         if settings.is_local:

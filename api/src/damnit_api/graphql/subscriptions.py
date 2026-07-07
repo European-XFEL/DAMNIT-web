@@ -15,31 +15,48 @@ from .utils import DatabaseInput, LatestData, fetch_info
 
 POLLING_INTERVAL = 1  # seconds
 
-# Server-side high-water mark per proposal so each tick only fetches rows
-# newer than what the previous tick already shipped.
-_last_seen_timestamp: dict[str, float] = {}
+
+class SubscriptionCursors:
+    """Server-side high-water mark per proposal so each tick only fetches rows
+    newer than what the previous tick already shipped. Hashable by identity
+    for alru_cache."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, float] = {}
+
+    def __contains__(self, proposal: str) -> bool:
+        return proposal in self._data
+
+    def __getitem__(self, proposal: str) -> float:
+        return self._data[proposal]
+
+    def __setitem__(self, proposal: str, value: float) -> None:
+        self._data[proposal] = value
+
+    def clear(self) -> None:
+        self._data.clear()
 
 
 # Per-client cursor is deliberately omitted from the cache key so that
 # concurrent subscribers coalesce into a single DB read per tick.
 @alru_cache(maxsize=32, ttl=POLLING_INTERVAL)
-async def poll_proposal(registry, proposal):
+async def poll_proposal(registry, proposal, cursors: SubscriptionCursors):
     table = await async_table(registry, proposal, name="run_variables")
     if table is None:
         return None
 
-    if proposal not in _last_seen_timestamp:
+    if proposal not in cursors:
         max_timestamp = await async_max(
             registry, proposal, table="run_variables", column="timestamp"
         )
-        _last_seen_timestamp[proposal] = max_timestamp or 0
+        cursors[proposal] = max_timestamp or 0
 
     rows = await async_latest_rows(
         registry,
         proposal,
         table=table,
         by="timestamp",
-        start_at=_last_seen_timestamp[proposal],
+        start_at=cursors[proposal],
     )
     if not rows:
         return None
@@ -80,7 +97,7 @@ async def poll_proposal(registry, proposal):
         msg = "Latest data has no timestamp."
         raise ValueError(msg)
 
-    _last_seen_timestamp[proposal] = latest_data.timestamp
+    cursors[proposal] = latest_data.timestamp
 
     metadata = {
         "runs": sorted(set(metadata["runs"]) | set(runs.keys())),
@@ -121,7 +138,9 @@ class Subscription:
             await asyncio.sleep(POLLING_INTERVAL)
 
             snapshot = await poll_proposal(
-                info.context.damnit_registry, proposal=database.proposal
+                info.context.damnit_registry,
+                proposal=database.proposal,
+                cursors=info.context.subscription_cursors,
             )
             result = filter_for_client(snapshot, timestamp)
             if result is not None:
