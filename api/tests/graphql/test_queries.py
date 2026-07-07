@@ -4,6 +4,7 @@ from sqlalchemy import text
 
 from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager
 from damnit_api.runs.types import DamnitRun
+from damnit_api.shared.models import ProposalNumber
 
 from .const import (
     EXAMPLE_DATA,
@@ -123,7 +124,7 @@ async def real_damnit_db(mocker, tmp_path):
     """Real on-disk sqlite with a populated `run_variables` table, wired
     via `find_proposal`. Yields the proposal id.
     """
-    proposal = "999999"
+    proposal = ProposalNumber(999999)
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
 
@@ -331,3 +332,36 @@ async def test_extracted_data_unauthorized(graphql_schema_no_auth):
 
     assert result.errors is not None
     assert result.errors[0].message == "Authentication required."
+
+
+# -----------------------------------------------------------------------------
+# ProposalNo scalar boundary: out-of-range proposals are rejected at input
+# coercion, before any resolver or permission runs.
+
+
+@pytest.mark.asyncio
+async def test_runs_rejects_out_of_range_proposal(graphql_schema):
+    query = """
+        query {
+          runs(database: {proposal: 1000000}) {
+            variables { name }
+          }
+        }
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is not None
+
+
+@pytest.mark.asyncio
+async def test_runs_rejects_negative_proposal(graphql_schema):
+    query = """
+        query {
+          runs(database: {proposal: -1}) {
+            variables { name }
+          }
+        }
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is not None

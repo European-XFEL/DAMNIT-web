@@ -19,8 +19,10 @@ from damnit_api.runs.sqlite import (
     DAMNIT_PATH,
     DatabaseSessionManager,
     async_table,
+    get_damnit_path,
     get_session,
 )
+from damnit_api.shared.errors import ProposalNotFoundError
 from damnit_api.shared.models import ProposalNumber
 
 _TEST_PROPOSAL = ProposalNumber(999999)
@@ -90,6 +92,16 @@ def test_engine_uses_nullpool_and_autocommit(damnit_db):
 # this test verifies (no file descriptors leak after the loop dies).
 # alru_cached async_table sees that loop change; warning is intrinsic.
 @pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
+def test_get_damnit_path_raises_when_proposal_not_found(mocker):
+    """A proposal with no resolvable directory raises ProposalNotFoundError."""
+    mocker.patch("damnit_api.runs.sqlite.session.find_proposal", return_value="")
+    # Force non-local mode so resolution falls through to find_proposal.
+    mocker.patch("damnit_api.shared.settings.settings.damnit_path", new=None)
+
+    with pytest.raises(ProposalNotFoundError):
+        get_damnit_path(_TEST_PROPOSAL)
+
+
 def test_no_lingering_file_descriptor_after_read(damnit_db, damnit_registry, tmp_path):
     db_file = tmp_path / DAMNIT_PATH / "runs.sqlite"
 
