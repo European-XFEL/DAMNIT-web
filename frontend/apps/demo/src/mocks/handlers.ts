@@ -13,10 +13,7 @@ import { getExampleIndex } from '../utils'
 const api = graphql.link(`${BASE_URL}graphql`)
 const exampleIndex = await getExampleIndex()
 
-async function fetchExample(
-  proposal: string,
-  { path, label }: { path: string; label: string }
-) {
+async function fetchExample(proposal: string, { path }: { path: string }) {
   const entry = exampleIndex[proposal]
   if (entry === undefined) {
     throw new MockDataNotFound()
@@ -28,7 +25,9 @@ async function fetchExample(
     throw new MockDataNotFound()
   }
   if (!result.ok) {
-    throw new Error(`Failed to fetch ${label} (${result.status})`)
+    throw new Error(
+      `Failed to fetch "${path}" for "${proposal}" (${result.status})`
+    )
   }
   return result.json()
 }
@@ -40,17 +39,14 @@ type FetchDataOptions = {
 }
 
 const fetchRuns = (proposal: string): Promise<Runs> =>
-  fetchExample(proposal, { path: 'runs.json', label: `runs for "${proposal}"` })
+  fetchExample(proposal, { path: 'runs.json' })
 
 const fetchData = ({
   proposal,
   run,
   variable,
 }: FetchDataOptions): Promise<unknown> =>
-  fetchExample(proposal, {
-    path: `data/${run}/${variable}.json`,
-    label: `data for "${proposal}:${run}:${variable}"`,
-  })
+  fetchExample(proposal, { path: `data/${run}/${variable}.json` })
 
 const seed: MockSeed = {
   runs: fetchRuns,
