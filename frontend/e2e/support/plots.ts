@@ -1,60 +1,12 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
-// Grid interactions that must reach Glide's canvas mouse handler (the context
-// menus, column and cell selection) are driven by real pointer coordinates: the
-// accessibility mirror has no layout box, so it never receives these events.
-// COLUMN_WIDTH matches formatColumns (width: 100) in features/table/table.tsx.
-// HEADER_HEIGHT and ROW_HEIGHT are Glide's defaults; ROW_MARKER_WIDTH is Glide's
-// auto width for a clickable-number marker at this row count (<=100 rows -> 32).
-const ROW_MARKER_WIDTH = 32
-const COLUMN_WIDTH = 100
-const HEADER_HEIGHT = 36
-const ROW_HEIGHT = 34
+import { type Cell, cellPoint, gridBox, headerPoint } from '#support/grid'
+import { rightClickCell } from '#support/table'
 
 // Wide enough to keep the target columns within the horizontal fold so the
 // coordinate clicks land on them, and above Mantine's `sm` breakpoint, below
 // which the tab bar (with the Display Plot button) is hidden.
 export const PLOT_VIEWPORT = { width: 1600, height: 900 }
-
-type Box = { x: number; y: number; width: number; height: number }
-type Cell = { col: number; row: number }
-
-// Opening a plot switches to the Plots tab, which unmounts the table, so the
-// canvas may be absent when a later grid action runs. Wait for it before
-// reading its box.
-async function gridBox(page: Page): Promise<Box> {
-  const canvas = page.getByTestId('data-grid-canvas')
-  await expect(canvas).toBeVisible()
-  const box = await canvas.boundingBox()
-  if (!box) {
-    throw new Error('grid canvas has no bounding box')
-  }
-  return box
-}
-
-// `col` is the a11y column index: row marker 0, Run 1, first variable 2.
-function columnCenter(box: Box, col: number) {
-  const x =
-    box.x + ROW_MARKER_WIDTH + (col - 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2
-  if (x > box.x + box.width) {
-    throw new Error(
-      `column ${col} center (${x}) is outside the grid width ${box.width}; is the aside open?`
-    )
-  }
-  return x
-}
-
-function headerPoint(box: Box, col: number) {
-  return { x: columnCenter(box, col), y: box.y + HEADER_HEIGHT / 2 }
-}
-
-// Rows start below the fixed header; `row` is 0-based.
-function cellPoint(box: Box, { col, row }: Cell) {
-  return {
-    x: columnCenter(box, col),
-    y: box.y + HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2,
-  }
-}
 
 // Click the first point, then modifier-click the rest to build a multi-select.
 // Glide reads Cmd on macOS and Ctrl elsewhere; ControlOrMeta lets Playwright
@@ -92,12 +44,6 @@ export async function selectColumns(page: Page, cols: number[]) {
 export async function openSummaryPlot(page: Page, col: number) {
   await rightClickHeader(page, col)
   await contextMenu(page).getByText('Plot: summary').click()
-}
-
-async function rightClickCell(page: Page, cell: Cell) {
-  const box = await gridBox(page)
-  const { x, y } = cellPoint(box, cell)
-  await page.mouse.click(x, y, { button: 'right' })
 }
 
 // The cells must share one column, or the grid clears the range stack.

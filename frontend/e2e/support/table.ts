@@ -1,6 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
 import { XPCS } from '#examples/xpcs'
+import { cellPoint, gridBox, headerPoint } from '#support/grid'
 
 // The grid is a <canvas>. Glide Data Grid mirrors the visible columns into a
 // <table role="grid"> as canvas fallback content, which the browser never
@@ -111,36 +112,10 @@ export function selectedRunTab(page: Page): Locator {
   return page.getByRole('tab', { name: /Run:\s*\d+/ })
 }
 
-// Glide sizes the clickable-number row marker by row count; at the demo's row
-// count (100 or fewer) it is 32px wide. Cell hovers aim at the column center,
-// so the 100px column absorbs any slop and this never has to be exact.
-const ROW_MARKER_WIDTH = 32
-const COLUMN_WIDTH = 100
-const HEADER_HEIGHT = 36
-const ROW_HEIGHT = 34
-
 // Hover a cell by real pointer coordinates over the canvas. Selection can go
 // through the a11y mirror, but the hover tooltip fires from Glide's canvas mouse
 // callback, which the layout-box-less mirror never receives. `col` is the a11y
-// column index (row marker is 0, Run is 1), matching selectRun. The math assumes
-// no horizontal scroll and that the nav and aside are collapsed so the grid
-// spans the viewport, so `col` must be within the painted horizontal fold and
-// `row` within the initial vertical fold.
-async function cellCenter(
-  page: Page,
-  { col, row }: { col: number; row: number }
-) {
-  const box = await page.getByTestId('data-grid-canvas').boundingBox()
-  if (!box) {
-    throw new Error('grid canvas has no bounding box')
-  }
-  return {
-    x: box.x + ROW_MARKER_WIDTH + (col - 1) * COLUMN_WIDTH + COLUMN_WIDTH / 2,
-    y: box.y + HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2,
-    header: { x: box.x + COLUMN_WIDTH, y: box.y + HEADER_HEIGHT / 2 },
-  }
-}
-
+// column index (row marker is 0, Run is 1), matching selectRun.
 export async function hoverCell(
   page: Page,
   { col, row }: { col: number; row: number },
@@ -154,11 +129,13 @@ export async function hoverCell(
     await waitForCellLoaded(page, { col, row })
   }
 
-  const { x, y, header } = await cellCenter(page, { col, row })
+  const box = await gridBox(page)
+  const header = headerPoint(box, col)
+  const cell = cellPoint(box, { col, row })
   // Rest on the header first so the move onto the cell always reads as a hover
   // transition, then settle on the cell center for the open delay to elapse.
   await page.mouse.move(header.x, header.y)
-  await page.mouse.move(x, y)
+  await page.mouse.move(cell.x, cell.y)
 }
 
 // Right-click a cell by real pointer coordinates, mirroring hoverCell. Glide's
@@ -168,7 +145,8 @@ export async function rightClickCell(
   page: Page,
   { col, row }: { col: number; row: number }
 ) {
-  const { x, y } = await cellCenter(page, { col, row })
+  const box = await gridBox(page)
+  const { x, y } = cellPoint(box, { col, row })
   await page.mouse.click(x, y, { button: 'right' })
 }
 
