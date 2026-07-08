@@ -21,6 +21,8 @@ nav = [
       "adr/007-graphql-transport-only.md",
       "adr/008-local-mode-composition.md",
       "adr/009-channels-subscriptions.md",
+      "adr/010-two-databases.md",
+      "adr/011-authorisation-at-the-edge.md",
     ]}
   ] },
   { "Development" = [

@@ -83,7 +83,7 @@ damnit_api/
 │   ├── serialization.py, preview.py
 │   └── gql.py       #   Strawberry types + Query/Subscription contributions
 │
-├── auth/            # OIDC flow, sessions, tokens, users, authz policy
+├── auth/            # OIDC flow, sessions, tokens, users, authz policy; see ADR-011
 ├── contextfile/     # context-file (REST) endpoints
 ├── mymdc/           # MyMdC port
 ├── appdb/           # application-DB engine/session/models; see ADR-010
