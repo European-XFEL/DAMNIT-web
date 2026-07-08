@@ -3,7 +3,7 @@ import { http, HttpResponse, graphql } from 'msw'
 import {
   MockDataNotFound,
   resolveOperation,
-  type MockSeed,
+  type MockDataSource,
   type Runs,
 } from '@damnit-frontend/shared/mocks'
 import { BASE_URL } from '@damnit-frontend/ui'
@@ -48,7 +48,7 @@ const fetchData = ({
 }: FetchDataOptions): Promise<unknown> =>
   fetchExample(proposal, { path: `data/${run}/${variable}.json` })
 
-const seed: MockSeed = {
+const source: MockDataSource = {
   runs: fetchRuns,
   extractedData: fetchData,
   // The demo does not mock proposal metadata; report it as drift.
@@ -61,7 +61,7 @@ const gqlHandlers = [
   api.operation(async ({ operationName, variables }) => {
     const resolution = await resolveOperation(operationName, {
       variables: variables as Record<string, unknown>,
-      seed,
+      source,
     })
     return HttpResponse.json(resolution.body)
   }),

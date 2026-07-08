@@ -1,14 +1,14 @@
 import { shapeMetadata, shapeTableData, unmockedOperationError } from './shape'
 import type { Runs } from './types'
 
-// Thrown by a seed when the requested example data does not exist, so the
-// resolver reports the operation as unmocked drift instead of a hard error.
+// Thrown by a data source when the requested example data does not exist, so
+// the resolver reports the operation as unmocked drift instead of a hard error.
 export class MockDataNotFound extends Error {}
 
 // How resolveOperation reads example data. Each transport implements it its own
-// way: the demo fetches over HTTP, the e2e suite reads the filesystem. A seed
+// way: the demo fetches over HTTP, the e2e suite reads the filesystem. A source
 // throws MockDataNotFound when the requested data is absent.
-export type MockSeed = {
+export type MockDataSource = {
   runs(proposal: string): Promise<Runs>
   extractedData(options: {
     proposal: string
@@ -25,25 +25,28 @@ export type Resolution = {
 
 export async function resolveOperation(
   operationName: string,
-  { variables, seed }: { variables: Record<string, unknown>; seed: MockSeed }
+  {
+    variables,
+    source,
+  }: { variables: Record<string, unknown>; source: MockDataSource }
 ): Promise<Resolution> {
   const proposal = variables.proposal as string
 
   try {
     switch (operationName) {
       case 'TableMetadataQuery': {
-        const { meta } = await seed.runs(proposal)
+        const { meta } = await source.runs(proposal)
         return resolved({ metadata: shapeMetadata(meta) })
       }
       case 'TableDataQuery':
       case 'LightweightTableDataQuery':
       case 'DeferredTableDataQuery': {
-        const { data } = await seed.runs(proposal)
+        const { data } = await source.runs(proposal)
         const names = variables.names as string[] | null | undefined
         return resolved(shapeTableData(data, { names }))
       }
       case 'ExtractedDataQuery': {
-        const extracted = await seed.extractedData({
+        const extracted = await source.extractedData({
           proposal,
           run: variables.run as number,
           variable: variables.variable as string,
@@ -51,7 +54,7 @@ export async function resolveOperation(
         return resolved({ extracted_data: extracted })
       }
       case 'ProposalMetadata': {
-        const metadata = await seed.proposalMetadata()
+        const metadata = await source.proposalMetadata()
         return resolved({ proposal_metadata: metadata })
       }
     }

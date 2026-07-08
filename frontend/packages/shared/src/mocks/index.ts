@@ -4,5 +4,9 @@ export {
   shapeTableData,
   unmockedOperationError,
 } from './shape'
-export { MockDataNotFound, resolveOperation, type MockSeed } from './resolve'
+export {
+  MockDataNotFound,
+  resolveOperation,
+  type MockDataSource,
+} from './resolve'
 export type { RunData, Runs, VariableError } from './types'

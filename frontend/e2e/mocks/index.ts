@@ -5,7 +5,7 @@ import {
   REST_API_PREFIXES,
   resolveOperation,
   unmockedOperationError,
-  type MockSeed,
+  type MockDataSource,
 } from '@damnit-frontend/shared/mocks'
 
 import { type Example } from '#examples/xpcs'
@@ -20,11 +20,12 @@ export type MockApi = {
 export async function mockApi(page: Page, example: Example): Promise<MockApi> {
   const api: MockApi = { unmockedRequests: [] }
 
-  // One example per test, so the seed ignores the requested proposal. A missing
-  // (run, variable) file surfaces as ENOENT; translate it to MockDataNotFound so
-  // the resolver reports it as clean drift. Any other error falls through to the
-  // route handler's catch below, which fails the test loudly instead of stalling.
-  const seed: MockSeed = {
+  // One example per test, so the source ignores the requested proposal. A
+  // missing (run, variable) file surfaces as ENOENT; translate it to
+  // MockDataNotFound so the resolver reports it as clean drift. Any other error
+  // falls through to the route handler's catch below, which fails the test
+  // loudly instead of stalling.
+  const source: MockDataSource = {
     runs: async () => ({ meta: example.meta, data: example.data }),
     extractedData: async ({ run, variable }) => {
       try {
@@ -75,7 +76,7 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
     try {
       const resolution = await resolveOperation(operationName, {
         variables: variables ?? {},
-        seed,
+        source,
       })
       if (!resolution.resolved) {
         api.unmockedRequests.push(operationName)
