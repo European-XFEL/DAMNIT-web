@@ -51,9 +51,6 @@ class Query:
         """
         from ..shared.settings import settings
 
-        if info.context.request is None:
-            return None
-
         if settings.is_local:
             return [
                 ProposalMeta.from_pydantic(services._local_proposal_meta(n))

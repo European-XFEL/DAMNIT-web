@@ -1,10 +1,8 @@
-from dataclasses import dataclass
-
 import numpy as np
 import orjson
 import strawberry
-from strawberry.fastapi import BaseContext, GraphQLRouter
 from strawberry.http import GraphQLHTTPResponse
+from strawberry.litestar import BaseContext, make_graphql_controller
 from strawberry.schema.config import StrawberryConfig
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL
 
@@ -29,21 +27,6 @@ class Query(auth.Query, gql_main.queries.Query, metadata.Query):
     pass
 
 
-class Router(GraphQLRouter):
-    def encode_json(self, data: GraphQLHTTPResponse) -> str | bytes:  # pyright: ignore[reportIncompatibleMethodOverride]
-        encoded = orjson.dumps(
-            data,
-            default=lambda x: None if isinstance(x, float) and np.isnan(x) else x,
-            option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_NON_STR_KEYS,
-        )
-
-        # WebSocket protocol messages are strings
-        if isinstance(data, dict) and "type" in data:
-            return encoded.decode("utf-8")
-
-        return encoded
-
-
 class Schema(strawberry.Schema):
     pass
 
@@ -52,7 +35,6 @@ class Subscription(gql_main.subscriptions.Subscription):
     pass
 
 
-@dataclass(slots=True)
 class Context(BaseContext):
     mymdc: MyMdCClient
     oauth_user: OAuthUserInfo
@@ -76,7 +58,7 @@ async def get_context(  # noqa: RUF029
     session: DBSession,
     repositories: Repositories,
     subscription_cursors: SubscriptionCursorsDep,
-):
+) -> Context:
     return Context(
         oauth_user=oauth_user,
         mymdc=mymdc,
@@ -86,7 +68,7 @@ async def get_context(  # noqa: RUF029
     )
 
 
-def get_gql_app():
+def get_gql_controller() -> type:
     schema = Schema(
         query=Query,
         subscription=Subscription,
@@ -98,8 +80,23 @@ def get_gql_app():
         ),
     )
 
-    return Router(
+    base_controller = make_graphql_controller(
         schema=schema,
-        subscription_protocols=SUBSCRIPTION_PROTOCOLS,
-        context_getter=get_context,  # pyright: ignore[reportArgumentType]
+        path="/graphql",
+        context_getter=get_context,
+        subscription_protocols=tuple(SUBSCRIPTION_PROTOCOLS),
     )
+
+    class GraphQLController(base_controller):  # ty: ignore[unsupported-base]
+        def encode_json(self, data: GraphQLHTTPResponse) -> str | bytes:  # type: ignore[override]
+            encoded = orjson.dumps(
+                data,
+                default=lambda x: None if isinstance(x, float) and np.isnan(x) else x,
+                option=orjson.OPT_SERIALIZE_NUMPY | orjson.OPT_NON_STR_KEYS,
+            )
+            # WebSocket protocol messages are strings
+            if isinstance(data, dict) and "type" in data:
+                return encoded.decode("utf-8")
+            return encoded
+
+    return GraphQLController
