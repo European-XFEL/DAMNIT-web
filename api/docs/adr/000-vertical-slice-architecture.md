@@ -104,7 +104,7 @@ damnit_api/
 - Feature packages (`runs`, `proposals`, `auth`, `contextfile`) may import `core` and infrastructure (`mymdc`, `appdb`), never each other's internals. Allowed cross-feature edges are explicit and narrow: `auth → proposals` (membership needs proposal metadata) - never the reverse.
 - Infrastructure (`mymdc`, `appdb`) imports only `core` and `settings`.
 - `graphql/schema.py` and `app.py` may import everything (composition).
-- Domain and service modules never import Litestar or Strawberry; framework types appear only in `routers.py`, `gql.py`, `dependencies.py`, and permission classes.
+- Domain and service modules never import Litestar (see [ADR-006](006-litestar.md)) or Strawberry; framework types appear only in `routers.py`, `gql.py`, `dependencies.py`, and permission classes.
 - Private (`_`-prefixed) functions are module-internal. Anything imported across module boundaries is public API and named accordingly.
 - Function-body imports are allowed only in the composition root and for documented, cycle-free lazy loading.
 
