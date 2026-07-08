@@ -20,6 +20,7 @@ nav = [
       "adr/006-litestar.md",
       "adr/007-graphql-transport-only.md",
       "adr/008-local-mode-composition.md",
+      "adr/009-channels-subscriptions.md",
     ]}
   ] },
   { "Development" = [
