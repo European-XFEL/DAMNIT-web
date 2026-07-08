@@ -14,12 +14,13 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    import hashlib
-
     from litestar import Request, Response
-    from litestar.middleware.session.client_side import CookieBackendConfig
+    from litestar.middleware.session.server_side import ServerSideSessionConfig
     from litestar.openapi import OpenAPIConfig
     from litestar.response import Redirect
+    from litestar.stores.file import FileStore
+    from litestar.stores.memory import MemoryStore
+    from litestar.stores.registry import StoreRegistry
 
     from . import _logging, auth, get_logger
     from .auth.oauth import SESSION_COOKIE_KEY, create_oauth_client
@@ -41,14 +42,12 @@ def create_app():
 
     logger = get_logger("lifespan")
 
-    # ── Session middleware ────────────────────────────────────────────────────
-    # Derive a 32-byte AES key from the session secret via SHA-256.
-    session_secret = settings.session_secret
-    assert session_secret is not None  # enforced by Settings validator  # noqa: S101
-    session_config = CookieBackendConfig(
-        secret=hashlib.sha256(session_secret.get_secret_value().encode()).digest(),
-        key=SESSION_COOKIE_KEY,
-    )
+    # ── Stores + server-side sessions ─────────────────────────────────────────
+    # Sessions are server-side: the cookie carries only an opaque session id;
+    # session data lives in a Litestar store. The same registry backs every
+    # named store (sessions, response cache); the backend is mode-dependent
+    # (in-memory locally, file-backed otherwise) and selected below.
+    session_config = ServerSideSessionConfig(key=SESSION_COOKIE_KEY)
 
     # ── Exception handlers ────────────────────────────────────────────────────
     def dw_error_handler(request: Request, exc: DamnitWebError) -> Response:
@@ -109,10 +108,22 @@ def create_app():
         finally:
             await engine.dispose()
 
-    # ── Auth controller (mode-dependent, ADR-008 composition) ───────────────
-    auth_controller = (
-        auth.NoAuthOAuthController if settings.is_local else auth.OAuthController
-    )
+    def _file_store(name: str) -> FileStore:
+        # FileStore does not create its directory on write; the session read
+        # path (and forged test writes) need it to exist up front.
+        path = settings.store_path / name
+        path.mkdir(parents=True, exist_ok=True)
+        return FileStore(path)
+
+    # ── Mode-dependent composition: controller and stores ───────────────────
+    # In-memory stores are process-local: local mode is single-worker, and the
+    # file-backed stores serve the deployed (potentially multi-worker) case.
+    if settings.is_local:
+        auth_controller = auth.NoAuthOAuthController
+        stores = StoreRegistry(default_factory=lambda name: MemoryStore())
+    else:
+        auth_controller = auth.OAuthController
+        stores = StoreRegistry(default_factory=_file_store)
 
     # ── GraphQL controller ────────────────────────────────────────────────────
     gql_controller = get_gql_controller()
@@ -143,6 +154,7 @@ def create_app():
             ),
             "repositories": Provide(get_repositories, sync_to_thread=False),
         },
+        stores=stores,
         middleware=[
             session_config.middleware,
             _logging.RequestLoggingMiddleware,

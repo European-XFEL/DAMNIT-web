@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from litestar.di import Provide
-from litestar.middleware.session.client_side import CookieBackendConfig
+from litestar.middleware.session.server_side import ServerSideSessionConfig
 from litestar.testing import create_test_client
 
+from damnit_api.auth.oauth import SESSION_COOKIE_KEY, OAuthClient
 from damnit_api.auth.routers import OAuthController
 from damnit_api.auth.token_store import InMemoryTokenStore
-from damnit_api.auth.oauth import SESSION_COOKIE_KEY, OAuthClient
 
 SERVER_METADATA = {
     "authorization_endpoint": "https://idp.example/authorize",
@@ -47,7 +47,7 @@ def token_store():
 
 @pytest.fixture
 def session_config():
-    return CookieBackendConfig(secret=b"0" * 32, key=SESSION_COOKIE_KEY)
+    return ServerSideSessionConfig(key=SESSION_COOKIE_KEY)
 
 
 @pytest.fixture
