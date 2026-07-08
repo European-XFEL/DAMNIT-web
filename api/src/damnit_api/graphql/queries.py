@@ -6,10 +6,10 @@ from strawberry.types import Info
 from strawberry.types.nodes import SelectedField
 
 from .. import get_logger
-from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..metadata.services import _get_proposal_meta, _update_proposal_meta
 from ..runs.types import DamnitRun
 from ..shared.models import ProposalNumber
+from ..shared.permissions import PROPOSAL_PERMISSIONS
 from .utils import DatabaseInput
 
 logger = get_logger()

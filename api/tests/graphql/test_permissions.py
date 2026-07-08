@@ -11,9 +11,9 @@ from unittest.mock import AsyncMock
 import pytest
 from strawberry.exceptions import StrawberryGraphQLError
 
-from damnit_api.auth.permissions import IsAuthenticated, IsProposalMember
 from damnit_api.shared.errors import ForbiddenError
 from damnit_api.shared.models import ProposalNumber
+from damnit_api.shared.permissions import IsAuthenticated, IsProposalMember
 
 
 def _info(context: Any) -> Any:
@@ -72,7 +72,7 @@ async def test_is_proposal_member_none_proposal():
 @pytest.mark.asyncio
 async def test_is_proposal_member_allowed(mocker):
     check = mocker.patch(
-        "damnit_api.auth.permissions._check_user_allowed",
+        "damnit_api.shared.permissions.require_proposal_member",
         new_callable=mocker.AsyncMock,
     )
     ctx = _context(user="resolved-user")
@@ -83,7 +83,7 @@ async def test_is_proposal_member_allowed(mocker):
     )
     assert result is True
     ctx.get_user.assert_awaited_once()
-    check.assert_awaited_once_with(ProposalNumber(1234), "resolved-user")
+    check.assert_awaited_once_with("resolved-user", ProposalNumber(1234))
 
 
 @pytest.mark.asyncio
@@ -103,7 +103,7 @@ async def test_is_proposal_member_safe_upstream_error():
 @pytest.mark.asyncio
 async def test_is_proposal_member_forbidden(mocker):
     mocker.patch(
-        "damnit_api.auth.permissions._check_user_allowed",
+        "damnit_api.shared.permissions.require_proposal_member",
         new_callable=mocker.AsyncMock,
         side_effect=ForbiddenError("nope"),
     )

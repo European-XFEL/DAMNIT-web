@@ -8,10 +8,10 @@ import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
 from .. import get_logger
-from ..auth.permissions import IsAuthenticated
 from ..shared.models import (
     ProposalNumber,  # noqa: TC001  (Strawberry resolves at runtime)
 )
+from ..shared.permissions import IsAuthenticated
 from . import models, services
 
 if TYPE_CHECKING:

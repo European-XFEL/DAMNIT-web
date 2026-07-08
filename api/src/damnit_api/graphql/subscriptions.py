@@ -7,9 +7,9 @@ from strawberry.scalars import JSON
 from strawberry.types import Info
 
 from .. import get_logger
-from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..runs.types import Timestamp
 from ..shared.errors import DataUnavailableError
+from ..shared.permissions import PROPOSAL_PERMISSIONS
 from .publisher import proposal_channel
 from .utils import DatabaseInput
 
