@@ -6,7 +6,7 @@ from authlib.integrations import httpx_client
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from litestar import Request
 from litestar.datastructures import State
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .._mymdc.dependencies import MyMdCClient
 from .models import OAuthUserInfo as _OAuthUserInfo

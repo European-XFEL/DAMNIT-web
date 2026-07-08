@@ -2,7 +2,7 @@
 
 from litestar import Router, get
 from litestar.di import Provide
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .._mymdc.dependencies import MyMdCClient
 from ..auth.models import User

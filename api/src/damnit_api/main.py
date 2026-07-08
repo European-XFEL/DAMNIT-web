@@ -5,7 +5,6 @@ from litestar.di import Provide
 from litestar.exceptions import HTTPException
 
 from . import contextfile, metadata
-from ._db.dependencies import get_session
 from ._mymdc.dependencies import get_mymdc_client
 from .auth.dependencies import get_oauth_user_info, get_user
 
@@ -14,6 +13,11 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
+    from advanced_alchemy.extensions.litestar import (
+        AsyncSessionConfig,
+        SQLAlchemyAsyncConfig,
+        SQLAlchemyPlugin,
+    )
     from litestar import Request, Response
     from litestar.channels import ChannelsPlugin
     from litestar.channels.backends.memory import MemoryChannelsBackend
@@ -23,6 +27,7 @@ def create_app():
     from litestar.stores.file import FileStore
     from litestar.stores.memory import MemoryStore
     from litestar.stores.registry import StoreRegistry
+    from sqlmodel import SQLModel
 
     from . import _logging, auth, get_logger
     from .auth.oauth import SESSION_COOKIE_KEY, create_oauth_client
@@ -34,8 +39,6 @@ def create_app():
     from .shared.settings import settings
     from .state import (
         AppState,
-        create_db_engine,
-        create_db_sessionmaker,
         create_mymdc_client,
         create_repositories,
         provide_app_state,
@@ -49,6 +52,20 @@ def create_app():
     # named store (sessions, response cache); the backend is mode-dependent
     # (in-memory locally, file-backed otherwise) and selected below.
     session_config = ServerSideSessionConfig(key=SESSION_COOKIE_KEY)
+
+    # ── App database (ADR-010: `appdb`, dw_api.sqlite) ───────────────────────
+    # Advanced Alchemy owns engine/session lifecycle and provides the
+    # per-request `session` dependency (commit-on-success). Distinct
+    # dependency/state keys so a second config (e.g. a future DAMNIT
+    # Postgres) can coexist.
+    alchemy_config = SQLAlchemyAsyncConfig(
+        connection_string=f"sqlite+aiosqlite:///{settings.db_path}",
+        session_config=AsyncSessionConfig(expire_on_commit=False),
+        session_dependency_key="session",
+        engine_dependency_key="appdb_engine",
+        metadata=SQLModel.metadata,
+        create_all=True,
+    )
 
     # ── Channels (run-update pub/sub) ─────────────────────────────────────────
     # Subscribers consume per-proposal channels; the composition-selected
@@ -114,8 +131,6 @@ def create_app():
 
         logger.info("Starting application lifespan")
 
-        engine = create_db_engine(settings)
-
         oauth_client = create_oauth_client(settings)
         if oauth_client is not None:
             await oauth_client.load_server_metadata()
@@ -127,8 +142,7 @@ def create_app():
         )
 
         app.state.app_state = AppState(
-            db_engine=engine,
-            db_sessionmaker=create_db_sessionmaker(engine),
+            db_sessionmaker=alchemy_config.create_session_maker(),
             mymdc_client=create_mymdc_client(settings),
             oauth_client=oauth_client,
             repositories=repositories,
@@ -140,7 +154,6 @@ def create_app():
             yield
         finally:
             await run_update_publisher.aclose()
-            await engine.dispose()
 
     def _file_store(name: str) -> FileStore:
         # FileStore does not create its directory on write; the session read
@@ -176,7 +189,7 @@ def create_app():
             "oauth_config": Provide(
                 auth.dependencies.get_oauth_client, sync_to_thread=False
             ),
-            "session": Provide(get_session),
+            # The `session` dependency comes from the Advanced Alchemy plugin.
             "mymdc": Provide(get_mymdc_client, sync_to_thread=False),
             "user": Provide(get_user),
             "oauth_user": Provide(get_oauth_user_info, sync_to_thread=False),
@@ -186,7 +199,7 @@ def create_app():
             ),
             "repositories": Provide(get_repositories, sync_to_thread=False),
         },
-        plugins=[channels_plugin],
+        plugins=[channels_plugin, SQLAlchemyPlugin(config=alchemy_config)],
         stores=stores,
         middleware=[
             session_config.middleware,

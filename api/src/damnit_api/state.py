@@ -14,11 +14,12 @@ from typing import TYPE_CHECKING
 from litestar.datastructures import (
     State as LitestarState,  # noqa: TC002 - Litestar inspects annotations at runtime via get_type_hints
 )
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from litestar.channels import ChannelsPlugin
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from ._mymdc.clients import MyMdCClient
     from .auth.oauth import OAuthClient
@@ -29,22 +30,17 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class AppState:
-    db_engine: AsyncEngine
-    db_sessionmaker: async_sessionmaker[AsyncSession]
+    # Session factory from the Advanced Alchemy config (main.py); held here
+    # for non-request contexts (e.g. the proposal-membership guard).
+    # Advanced Alchemy's create_session_maker() is typed as this Callable,
+    # not as async_sessionmaker[AsyncSession] (its actual runtime type in
+    # the non-routing case) - match its declared type here.
+    db_sessionmaker: Callable[[], AsyncSession]
     mymdc_client: MyMdCClient
     oauth_client: OAuthClient | None  # None when auth is disabled
     repositories: DamnitRepositoryRegistry
     channels: ChannelsPlugin
     run_update_publisher: RunUpdatePublisher
-
-
-def create_db_engine(settings: Settings) -> AsyncEngine:
-    db_url = f"sqlite+aiosqlite:///{settings.db_path}"
-    return create_async_engine(db_url, echo=False, future=True)
-
-
-def create_db_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
-    return async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 
 def create_mymdc_client(settings: Settings) -> MyMdCClient:
