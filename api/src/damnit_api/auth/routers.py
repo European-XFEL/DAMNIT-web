@@ -18,7 +18,6 @@ from .._mymdc.dependencies import MyMdCClient
 from ..runs.dependencies import Repositories
 from . import dependencies, models
 from .oauth import SESSION_COOKIE_KEY, OAuthClient
-from .token_store import TokenStore
 
 logger = get_logger()
 
@@ -122,7 +121,6 @@ class OAuthController(Controller):
         self,
         request: Request,
         oauth_config: OAuthClient,
-        token_store: TokenStore,
         oauth_http_client: Annotated[
             AsyncOAuth2Client, Dependency(skip_validation=True)
         ],
@@ -159,8 +157,10 @@ class OAuthController(Controller):
         # session and is re-validated against the relative-path allow-list.
         target = _sanitize_redirect_target(request.session.pop("_login_redirect", None))
 
+        # Tokens live in the session: server-side only, keyed by the session
+        # id, with no parallel store to keep consistent.
         request.session["user"] = user
-        token_store.store(str(user["sub"]), token)
+        request.session["tokens"] = token
 
         return Redirect(path=target)
 
@@ -169,14 +169,14 @@ class OAuthController(Controller):
         self,
         request: Request,
         oauth_config: OAuthClient,
-        token_store: TokenStore,
     ) -> Response:
         """Clear the session; revoke tokens in the background."""
-        user_sub = request.session.get("user", {}).get("sub")
         revocation_endpoint = oauth_config.server_metadata.get("revocation_endpoint")
         end_session_endpoint = oauth_config.server_metadata.get(
             "end_session_endpoint"
         )
+
+        tokens = request.session.pop("tokens", None) or {}
 
         tokens_to_revoke: list[tuple[str, str]] = []
         if (
@@ -187,10 +187,10 @@ class OAuthController(Controller):
             tokens_to_revoke = [
                 (k, token)
                 for k in ("refresh_token", "access_token")
-                if (token := token_store.pop_token_field(user_sub, k))
+                if (token := tokens.get(k))
             ]
 
-        token_id = token_store.pop_token_field(user_sub, "id_token")
+        token_id = tokens.get("id_token")
         logout_url = None
         if token_id and end_session_endpoint:
             params = {"id_token_hint": token_id}

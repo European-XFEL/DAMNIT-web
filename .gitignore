@@ -7,3 +7,6 @@ certs/
 *.crt
 *.key
 *.pem
+
+# Litestar file-backed stores (server-side sessions, response cache)
+/api/stores/

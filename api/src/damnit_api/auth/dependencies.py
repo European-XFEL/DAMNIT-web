@@ -12,7 +12,6 @@ from .._mymdc.dependencies import MyMdCClient
 from .models import OAuthUserInfo as _OAuthUserInfo
 from .models import User as _User
 from .oauth import OAuthClient
-from .token_store import TokenStore
 
 
 def get_oauth_client(state: State) -> OAuthClient:
@@ -39,10 +38,6 @@ async def get_oauth_http_client(
         yield client
     finally:
         await client.aclose()
-
-
-def get_token_store(state: State) -> TokenStore:
-    return state.app_state.token_store  # type: ignore[attr-defined]
 
 
 def get_oauth_user_info(request: Request) -> _OAuthUserInfo:

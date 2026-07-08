@@ -36,7 +36,6 @@ def create_app():
         create_mymdc_client,
         create_repositories,
         create_subscription_cursors,
-        create_token_store,
         provide_app_state,
     )
 
@@ -98,7 +97,6 @@ def create_app():
             db_sessionmaker=create_db_sessionmaker(engine),
             mymdc_client=create_mymdc_client(settings),
             oauth_client=oauth_client,
-            token_store=create_token_store(),
             repositories=create_repositories(),
             subscription_cursors=create_subscription_cursors(),
         )
@@ -141,9 +139,6 @@ def create_app():
             # Shared across all routes; resolved on demand.
             "oauth_config": Provide(
                 auth.dependencies.get_oauth_client, sync_to_thread=False
-            ),
-            "token_store": Provide(
-                auth.dependencies.get_token_store, sync_to_thread=False
             ),
             "session": Provide(get_session),
             "mymdc": Provide(get_mymdc_client, sync_to_thread=False),

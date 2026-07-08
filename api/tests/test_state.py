@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 import pytest
 
 from damnit_api.auth.oauth import create_oauth_client
-from damnit_api.auth.token_store import InMemoryTokenStore
 from damnit_api.runs.repository import DamnitRepositoryRegistry
 from damnit_api.shared.models import ProposalNumber
 from damnit_api.shared.settings import Settings
@@ -79,21 +78,3 @@ def test_repository_registry_memoizes_per_proposal():
     assert registry.get(ProposalNumber(1234)) is first
     assert registry.get(ProposalNumber(5678)) is not first
     assert created == [ProposalNumber(1234), ProposalNumber(5678)]
-
-
-def test_token_store_stores_and_pops_fields():
-    store = InMemoryTokenStore()
-    store.store("sub-1", {"access_token": "a", "id_token": "i"})
-
-    assert store.pop_token_field("sub-1", "access_token") == "a"
-    assert store.pop_token_field("sub-1", "access_token") is None  # popped
-    assert store.pop_token_field("unknown-sub", "id_token") is None
-
-
-def test_token_store_drops_entry_once_empty():
-    store = InMemoryTokenStore()
-    store.store("sub-1", {"access_token": "a"})
-
-    assert store.pop_token_field("sub-1", "access_token") == "a"
-    # The now-empty entry is removed, not left as a dangling empty dict.
-    assert "sub-1" not in store._tokens

@@ -20,7 +20,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 if TYPE_CHECKING:
     from ._mymdc.clients import MyMdCClient
     from .auth.oauth import OAuthClient
-    from .auth.token_store import TokenStore
     from .graphql.subscriptions import SubscriptionCursors
     from .runs.repository import DamnitRepositoryRegistry
     from .shared.settings import Settings
@@ -32,7 +31,6 @@ class AppState:
     db_sessionmaker: async_sessionmaker[AsyncSession]
     mymdc_client: MyMdCClient
     oauth_client: OAuthClient | None  # None when auth is disabled
-    token_store: TokenStore
     repositories: DamnitRepositoryRegistry
     subscription_cursors: SubscriptionCursors
 
@@ -59,12 +57,6 @@ def create_mymdc_client(settings: Settings) -> MyMdCClient:
         case _:
             msg = "Invalid MyMdC configuration"
             raise ValueError(msg)
-
-
-def create_token_store() -> TokenStore:
-    from .auth.token_store import InMemoryTokenStore
-
-    return InMemoryTokenStore()
 
 
 def create_repositories() -> DamnitRepositoryRegistry:
