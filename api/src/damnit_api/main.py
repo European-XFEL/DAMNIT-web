@@ -59,6 +59,23 @@ def create_app():
         arbitrary_channels_allowed=True,
     )
 
+    # ── Multi-worker guard ────────────────────────────────────────────────────
+    # The channels backend (and, in local mode, the session store) are
+    # process-local, so run-update events and sessions are not shared across
+    # workers. Refuse to start multi-worker until shared backends are wired
+    # (ADR-009).
+    process_local = ["channels: MemoryChannelsBackend"]
+    if settings.is_local:
+        process_local.append("stores: MemoryStore")
+    workers = getattr(settings.uvicorn, "workers", None) or 1
+    if workers > 1:
+        msg = (
+            f"uvicorn workers={workers} requires shared backends, but these "
+            f"are process-local: {', '.join(process_local)}. Run a single "
+            "worker, or wire shared channels/store backends (ADR-009)."
+        )
+        raise RuntimeError(msg)
+
     # ── Exception handlers ────────────────────────────────────────────────────
     def dw_error_handler(request: Request, exc: DamnitWebError) -> Response:
         code = getattr(exc, "code", None) or 500

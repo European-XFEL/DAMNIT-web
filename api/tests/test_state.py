@@ -65,6 +65,19 @@ def test_create_mymdc_client_builds_mock_client(tmp_path):
     assert create_mymdc_client(settings) is not None
 
 
+def test_create_app_refuses_multiworker_with_process_local_backends(monkeypatch):
+    """Process-local channels/store backends cannot be shared across workers,
+    so the composition root refuses to start multi-worker (ADR-009)."""
+    from damnit_api.main import create_app
+    from damnit_api.shared import settings as settings_module
+
+    monkeypatch.setattr(
+        settings_module.settings.uvicorn, "workers", 2, raising=False
+    )
+    with pytest.raises(RuntimeError, match="process-local"):
+        create_app()
+
+
 def test_repository_registry_memoizes_per_proposal():
     created = []
 
