@@ -4,4 +4,10 @@ export {
   shapeTableData,
   unmockedOperationError,
 } from './shape'
+export {
+  MockSeedMiss,
+  resolveOperation,
+  type MockSeed,
+  type Resolution,
+} from './resolve'
 export type { RunData, Runs, VariableError } from './types'
