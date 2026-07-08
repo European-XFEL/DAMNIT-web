@@ -1,9 +1,9 @@
 import { http, HttpResponse, graphql } from 'msw'
 
 import {
-  shapeMetadata,
-  shapeTableData,
-  unmockedOperationError,
+  MockSeedMiss,
+  resolveOperation,
+  type MockSeed,
   type Runs,
 } from '@damnit-frontend/shared/mocks'
 import { BASE_URL } from '@damnit-frontend/ui'
@@ -18,10 +18,11 @@ async function fetchRuns(proposal: string): Promise<Runs> {
     `${BASE_URL}${exampleIndex[proposal].base_path}/runs.json`
   )
 
+  if (result.status === 404) {
+    throw new MockSeedMiss()
+  }
   if (!result.ok) {
-    throw new Response(`Failed to fetch runs for "${proposal}"`, {
-      status: result.status,
-    })
+    throw new Error(`Failed to fetch runs for "${proposal}" (${result.status})`)
   }
   return await result.json()
 }
@@ -37,61 +38,34 @@ async function fetchData({ proposal, run, variable }: FetchDataOptions) {
     `${BASE_URL}${exampleIndex[proposal].base_path}/data/${run}/${variable}.json`
   )
 
+  if (result.status === 404) {
+    throw new MockSeedMiss()
+  }
   if (!result.ok) {
-    throw new Response(
-      `Failed to fetch data for "${proposal}:${run}:${variable}"`,
-      {
-        status: result.status,
-      }
+    throw new Error(
+      `Failed to fetch data for "${proposal}:${run}:${variable}" (${result.status})`
     )
   }
   return await result.json()
 }
 
-async function buildTableData(proposal: string, names?: string[] | null) {
-  const { data } = await fetchRuns(proposal)
-  return shapeTableData(data, { names })
+const seed: MockSeed = {
+  runs: fetchRuns,
+  extractedData: fetchData,
+  // No proposalMetadata: the demo does not mock it, so ProposalMetadata stays a
+  // miss and the resolver returns the unmocked-operation error the old
+  // catch-all produced.
 }
 
 const gqlHandlers = [
-  api.query('TableMetadataQuery', async ({ variables }) => {
-    const { meta } = await fetchRuns(variables.proposal)
-
-    return HttpResponse.json({
-      data: {
-        metadata: shapeMetadata(meta),
-      },
-    })
+  api.operation(async ({ operationName, variables }) => {
+    const resolution = await resolveOperation(
+      operationName,
+      variables as Record<string, unknown>,
+      seed
+    )
+    return HttpResponse.json(resolution.body as Record<string, unknown>)
   }),
-  api.query('TableDataQuery', async ({ variables }) => {
-    const data = await buildTableData(variables.proposal, variables.names)
-    return HttpResponse.json({ data })
-  }),
-  api.query('LightweightTableDataQuery', async ({ variables }) => {
-    const data = await buildTableData(variables.proposal, variables.names)
-    return HttpResponse.json({ data })
-  }),
-  api.query('DeferredTableDataQuery', async ({ variables }) => {
-    const data = await buildTableData(variables.proposal, variables.names)
-    return HttpResponse.json({ data })
-  }),
-  api.query('ExtractedDataQuery', async ({ variables }) => {
-    const data = await fetchData({
-      proposal: variables.proposal,
-      run: variables.run,
-      variable: variables.variable,
-    })
-
-    return HttpResponse.json({
-      data: {
-        extracted_data: data,
-      },
-    })
-  }),
-  // Catch-all for operations the mocks don't cover.
-  api.operation(({ operationName }) =>
-    HttpResponse.json(unmockedOperationError(operationName))
-  ),
 ]
 
 type FetchContextFileOptions = {
