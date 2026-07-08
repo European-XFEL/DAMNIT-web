@@ -5,7 +5,6 @@ from litestar.di import Provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .._mymdc.dependencies import MyMdCClient
-from ..auth.models import User
 from ..shared.models import ProposalNumber
 from . import services
 from .models import ProposalMeta
@@ -14,11 +13,10 @@ from .models import ProposalMeta
 async def get_proposal_meta(
     proposal_number: ProposalNumber,
     mymdc: MyMdCClient,
-    user: User,
     session: AsyncSession,
 ) -> ProposalMeta:
     """Dependency: resolve ProposalMeta from path/query parameter."""
-    return await services.get_proposal_meta(mymdc, proposal_number, user, session)
+    return await services.get_proposal_meta(mymdc, proposal_number, session)
 
 
 @get("/proposal/{proposal_number:int}", sync_to_thread=False)

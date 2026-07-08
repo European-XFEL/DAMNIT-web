@@ -9,7 +9,6 @@ from advanced_alchemy.filters import CollectionFilter
 from anyio import Path as APath
 
 from .. import get_logger
-from ..shared.errors import ForbiddenError
 from ..shared.models import ProposalNumber
 from .models import ProposalMeta, ProposalMetaBase
 from .repository import ProposalMetaRepository
@@ -19,7 +18,6 @@ logger = get_logger()
 if TYPE_CHECKING:
     from .._db.dependencies import DBSession
     from .._mymdc.clients import MyMdCClient
-    from ..auth.dependencies import User
     from ..runs.repository import DamnitRepositoryRegistry
 
 
@@ -162,30 +160,6 @@ async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
     return None, searched_paths
 
 
-async def _check_user_allowed(
-    proposal_number: ProposalNumber,
-    user: "User",
-) -> None:
-    """Check if the user is allowed to access the given proposal number.
-
-    Raises `ForbiddenError` if not allowed.
-    """
-    from ..shared.settings import settings
-
-    if settings.is_local:
-        return
-
-    if proposal_number not in user.proposals:
-        msg = (
-            f"User not authorised for proposal {proposal_number}, or proposal does not "
-            "exist."
-        )
-        await logger.ainfo("Forbidden", message=msg)
-        raise ForbiddenError(msg)
-
-    return
-
-
 async def _get_proposal_meta(
     client: "MyMdCClient",
     proposal_number: ProposalNumber,
@@ -255,7 +229,6 @@ async def _get_proposal_meta_many(
 async def get_proposal_meta(
     client: "MyMdCClient",
     proposal_number: ProposalNumber,
-    user: "User",
     session: "DBSession",
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number, using the repository and/or provided
@@ -264,8 +237,6 @@ async def get_proposal_meta(
 
     if settings.is_local:
         return _local_proposal_meta(proposal_number)
-
-    await _check_user_allowed(proposal_number, user)
 
     return await _get_proposal_meta(client, proposal_number, session)
 
@@ -286,29 +257,20 @@ async def _update_proposal_meta(
 async def update_proposal_meta(
     client: "MyMdCClient",
     proposal_number: ProposalNumber,
-    user: "User",
     session: "DBSession",
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number, using the repository and/or provided
     MyMdC Client."""
-
-    await _check_user_allowed(proposal_number, user)
-
     return await _update_proposal_meta(client, proposal_number, session)
 
 
 async def update_proposal_meta_many(
     client: "MyMdCClient",
     proposal_numbers: list[ProposalNumber],
-    user: "User",
     session: "DBSession",
 ) -> list[ProposalMeta]:
     """Get proposal metadata by proposal number, using the repository and/or provided
     MyMdC Client."""
-
-    for proposal_number in proposal_numbers:
-        await _check_user_allowed(proposal_number, user)
-
     results = []
     for chunk in _chunks(proposal_numbers, n=10):
         new_fetched = await asyncio.gather(
