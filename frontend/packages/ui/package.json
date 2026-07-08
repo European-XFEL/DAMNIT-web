@@ -25,7 +25,7 @@
     "lint:prettier": "prettier --check --cache .",
     "lint:tsc": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:unit": "vitest run --project unit",
+    "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser",
     "test:watch": "vitest"
   },

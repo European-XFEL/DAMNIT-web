@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import type { Runs } from '@damnit-frontend/shared/mocks'
+import type {
+  RunData,
+  Runs,
+  VariableError,
+} from '@damnit-frontend/shared/mocks'
 
 // Wire shape returned by GET /oauth/userinfo (the app renames
 // proposals_by_year_half -> proposals).
@@ -49,3 +53,123 @@ export const XPCS = {
 }
 
 export type Example = typeof XPCS
+
+// Run 1 fails in three ways, one per status-card kind: xgm_intensity errors on
+// its own, opt_transmission loses its source, and total_transmission is skipped
+// for that missing dependency (see context.py for the chain).
+const TRANSMISSION_SOURCE = 'MID_AUXT2_ATT/MDL/ATT'
+const XGM_SOURCE = 'SA2_XTD1_XGM/XGM/DOOCS'
+
+const ERRORED_RUN = 1
+
+type Failure = {
+  variable: string
+  title: string
+  error: VariableError
+}
+
+const FAILURES: Failure[] = [
+  {
+    variable: 'xgm_intensity',
+    title: 'Error',
+    error: {
+      cls: 'ValueError',
+      message: `No pulse energy recorded for ${XGM_SOURCE}:output in this run.`,
+    },
+  },
+  {
+    variable: 'opt_transmission',
+    title: 'Missing data',
+    error: {
+      cls: 'SourceNameError',
+      message:
+        `This data has no source named '${TRANSMISSION_SOURCE}'.\n` +
+        'See data.all_sources for available sources.',
+    },
+  },
+  {
+    variable: 'total_transmission',
+    title: 'Missing dependency',
+    error: {
+      cls: 'Skip',
+      message:
+        'Skipped due to missing dependency:\n' +
+        `└ (opt_transmission) failed: SourceNameError: This data has no ` +
+        `source named '${TRANSMISSION_SOURCE}'`,
+    },
+  },
+]
+
+// opt_transmission has no base variable, so append it as a trailing column.
+// ERROR_CELLS resolves each hover column by name, so its position is free.
+const erroredMeta: Example['meta'] = {
+  ...XPCS.meta,
+  variables: {
+    ...XPCS.meta.variables,
+    opt_transmission: {
+      name: 'opt_transmission',
+      title: 'Opt. trans.',
+      tags: [],
+    },
+  },
+}
+
+// a11y grid column of a variable: its index among the meta columns, offset by
+// one for the row-marker column. The demo data carries none of the app's
+// EXCLUDED_VARIABLES, so every meta variable is a rendered column.
+function columnOf(order: string[], name: string): number {
+  const index = order.indexOf(name)
+  if (index === -1) {
+    throw new Error(
+      `'${name}' is not a column in the example; update the fixture or the demo data`
+    )
+  }
+  return index + 1
+}
+
+export const ERROR_CELLS = FAILURES.map((failure) => ({
+  ...failure,
+  col: columnOf(Object.keys(erroredMeta.variables), failure.variable),
+}))
+
+// Grid row of the errored run, derived so a reordered demo still hovers it.
+export const ERROR_ROW = XPCS.meta.runs.indexOf(ERRORED_RUN)
+if (ERROR_ROW === -1) {
+  throw new Error(
+    `run ${ERRORED_RUN} is not in the example; update the fixture or the demo data`
+  )
+}
+
+// First image column of the plain XPCS example. Row 0 is run 1, whose image
+// cells hold real base64 PNGs.
+const imageVariable = Object.entries(XPCS.data[0].variables).find(
+  ([, variable]) => variable.dtype === 'image'
+)?.[0]
+if (imageVariable === undefined) {
+  throw new Error('the XPCS example has no image column for the preview test')
+}
+export const IMAGE_CELL = {
+  col: columnOf(Object.keys(XPCS.meta.variables), imageVariable),
+  row: 0,
+}
+
+function withErrorCells(run: RunData): RunData {
+  const variables = { ...run.variables }
+  for (const { variable, error } of FAILURES) {
+    // Errored cells render from `error`; the backend nulls the value and falls
+    // back to the string dtype, so mirror that.
+    variables[variable] = { dtype: 'string', value: null, error }
+  }
+  return { ...run, variables }
+}
+
+// XPCS with run 1's transmission and XGM cells failed, so the status tooltips
+// have real errors to explain. The global XPCS export stays pristine for the
+// other specs.
+export const xpcsWithErrors: Example = {
+  ...XPCS,
+  meta: erroredMeta,
+  data: XPCS.data.map((run) =>
+    run.variables.run.value === ERRORED_RUN ? withErrorCells(run) : run
+  ),
+}

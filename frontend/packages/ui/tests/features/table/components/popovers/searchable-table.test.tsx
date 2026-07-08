@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import { SearchableTable } from '@/features/table/components/popovers/searchable-table'
-import { renderWithProviders } from '../../../../test-utils'
+import { renderWithProviders } from '#tests/support/render'
 
 type Row = { id: string; title: string }
 

@@ -12,7 +12,7 @@
     "lint:eslint": "pnpm -r lint:eslint",
     "lint:tsc": "pnpm -r lint:tsc",
     "test": "pnpm -r --filter=!@damnit-frontend/e2e test",
-    "test:unit": "pnpm -r test:unit",
+    "test:node": "pnpm -r test:node",
     "test:browser": "pnpm -r test:browser",
     "e2e": "pnpm --filter @damnit-frontend/e2e run test",
     "e2e:setup": "pnpm --filter @damnit-frontend/e2e run setup",
