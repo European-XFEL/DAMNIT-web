@@ -132,20 +132,21 @@ async def test_metadata_query_wire_shape_unchanged(graphql_schema):
 @pytest.mark.asyncio
 async def test_latest_data_subscription_wire_shape_unchanged(mock_repositories):
     """The subscription's client payload shape, exercised through the same
-    poll_proposal/filter_for_client path the resolver drives."""
-    from damnit_api.graphql.subscriptions import (
-        SubscriptionCursors,
-        filter_for_client,
-        poll_proposal,
-    )
+    publisher `_poll`/`filter_for_client` path that feeds the resolver's
+    channel."""
+    from unittest.mock import MagicMock
+
+    from damnit_api.graphql.publisher import SqlitePollingRunUpdatePublisher
+    from damnit_api.graphql.subscriptions import filter_for_client
     from damnit_api.shared.models import ProposalNumber
 
     proposal = ProposalNumber(PROPOSAL)
-    cursors = SubscriptionCursors()
-    cursors[proposal] = 0.0  # seed below the fixture timestamps so a run surfaces
-    repo = mock_repositories.get(proposal)
+    publisher = SqlitePollingRunUpdatePublisher(
+        channels=MagicMock(), repositories=mock_repositories
+    )
+    publisher._cursors[proposal] = 0.0  # seed below the fixture timestamps
 
-    snapshot = await poll_proposal(proposal, cursors, repo)
+    snapshot = await publisher._poll(proposal)
     result = filter_for_client(snapshot, since=500.0)
 
     assert result is not None

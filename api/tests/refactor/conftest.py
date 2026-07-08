@@ -12,5 +12,4 @@ from ..graphql.conftest import (  # noqa: F401
     graphql_schema_no_auth,
     mock_repositories,
     mocked_ensure_damnit_path,
-    reset_caches,
 )

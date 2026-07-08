@@ -12,7 +12,7 @@ from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
 from ..auth.models import User
-from ..graphql.dependencies import SubscriptionCursorsDep
+from ..graphql.dependencies import ChannelsDep, RunUpdatePublisherDep
 from ..metadata import gql as metadata
 from ..runs import types as run_types
 from ..runs.dependencies import Repositories
@@ -40,7 +40,8 @@ class Context(BaseContext):
     oauth_user: OAuthUserInfo
     session: DBSession
     repositories: Repositories
-    subscription_cursors: SubscriptionCursorsDep
+    channels: ChannelsDep
+    run_update_publisher: RunUpdatePublisherDep
     _user: User | None = None
 
     async def get_user(self) -> User:
@@ -57,14 +58,16 @@ async def get_context(  # noqa: RUF029
     mymdc: MyMdCClient,
     session: DBSession,
     repositories: Repositories,
-    subscription_cursors: SubscriptionCursorsDep,
+    channels: ChannelsDep,
+    run_update_publisher: RunUpdatePublisherDep,
 ) -> Context:
     return Context(
         oauth_user=oauth_user,
         mymdc=mymdc,
         session=session,
         repositories=repositories,
-        subscription_cursors=subscription_cursors,
+        channels=channels,
+        run_update_publisher=run_update_publisher,
     )
 
 
