@@ -24,7 +24,7 @@ Chosen option: a combination of **Vertical Slice Architecture** and **Ports and 
 
 Slices give change-locality, a feature change touches one directory, and a reviewer can hold a slice in their head. Ports are applied only at the I/O boundaries (the external DAMNIT databases, MyMdC, auth, etc...), where swappability is useful (e.g. local dev vs. production, potential use at other facilities).
 
-The dependency-direction rules that layering-style architectures enforce through folder structure can instead be enforced by a linter (e.g. import linter).
+The dependency-direction rules that layering-style architectures enforce through folder structure are instead enforced by an import linter (tach).
 
 Full layering, Clean/Onion, and DDD, were rejected as they add a lot of boilerplate/abstraction/overhead to the codebase which is (at least currently) not needed, as the API server is a relatively thin, read-mostly viewer over externally-owned data, so patterns like aggregates, domain events, and use-case classes solve problems this service doesn't have.
 
@@ -32,8 +32,8 @@ Full layering, Clean/Onion, and DDD, were rejected as they add a lot of boilerpl
 
 - Good: a feature change touches one directory; PRs map to slices.
 - Good: new domains get a package with a standard internal shape (`models`, `services`, `routers`/`gql`, `dependencies`), so structure decisions don't recur per feature.
-- Good: once import linting lands, contract changes (a new allowed edge) become deliberate, reviewed edits to the linter config rather than drive-by imports.
-- Bad: the layout alone guarantees nothing, developers have to ensure that they follow the architecture (although an import linter can be added to enforce the rules).
+- Good: contract changes (a new allowed edge) are deliberate, reviewed edits to the tach config rather than drive-by imports.
+- Bad: the layout alone guarantees nothing. The rules hold because tach enforces them, not because of the folder structure.
 
 ## Details
 
@@ -95,7 +95,7 @@ damnit_api/
 
 ### Naming Rules
 
-- No `_underscore` package names: the prefix tracks no real boundary - a package is internal because nothing outside imports it, which import linting can enforce. (This is why `_db/` and `_mymdc/` become `appdb/` and `mymdc/`.)
+- No `_underscore` package names: the prefix tracks no real boundary - a package is internal because nothing outside imports it, which tach enforces. (This is why `_db/` and `_mymdc/` become `appdb/` and `mymdc/`.)
 - No generic junk-drawer modules (`shared/`, `utils.py`): code either belongs to a feature slice, to `core/` (framework-free, shared), or to infrastructure.
 
 ### Dependency Direction
@@ -110,5 +110,4 @@ damnit_api/
 
 ### Follow-up / TODOs
 
-- Import linting
 - `appdb` naming
