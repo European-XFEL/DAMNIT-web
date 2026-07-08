@@ -58,6 +58,13 @@ class Settings(BaseSettings):
 
     session_secret: SecretStr | None = None
 
+    # Whether the OAuth callback URL may be built from the `x-forwarded-host`
+    # header. Only safe behind a reverse proxy that sets (and strips any
+    # client-supplied copy of) this header — otherwise a client could spoof
+    # it to redirect the OAuth callback. Off by default; a single flag is
+    # enough since the app either sits behind one trusted proxy layer or none.
+    trust_forwarded_host: bool = False
+
     uvicorn: UvicornSettings = UvicornSettings()
 
     @property

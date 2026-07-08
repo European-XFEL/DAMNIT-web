@@ -1,20 +1,34 @@
 """Metadata routers."""
 
-from fastapi import APIRouter
+from litestar import Router, get
+from litestar.di import Provide
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
-from ..auth.dependencies import User
+from ..auth.models import User
 from ..shared.models import ProposalNumber
 from . import services
 from .models import ProposalMeta
 
-router = APIRouter(prefix="/metadata", tags=["metadata"])
 
-
-@router.get("/proposal/{proposal_number}")
 async def get_proposal_meta(
-    proposal_number: ProposalNumber, mymdc: MyMdCClient, user: User, session: DBSession
+    proposal_number: ProposalNumber,
+    mymdc: MyMdCClient,
+    user: User,
+    session: AsyncSession,
 ) -> ProposalMeta:
-    """Get proposal metadata by proposal number."""
+    """Dependency: resolve ProposalMeta from path/query parameter."""
     return await services.get_proposal_meta(mymdc, proposal_number, user, session)
+
+
+@get("/proposal/{proposal_number:int}", sync_to_thread=False)
+def get_proposal(proposal_meta: ProposalMeta) -> ProposalMeta:
+    return proposal_meta
+
+
+router = Router(
+    path="/metadata",
+    route_handlers=[get_proposal],
+    dependencies={"proposal_meta": Provide(get_proposal_meta)},
+    tags=["metadata"],
+)
