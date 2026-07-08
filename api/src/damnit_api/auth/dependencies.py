@@ -1,50 +1,64 @@
-"""Dependency type aliases for the auth module."""
+"""Dependency functions and type aliases for the auth module."""
 
-from typing import Annotated
+from collections.abc import AsyncIterator
 
-from authlib.integrations.starlette_client import StarletteOAuth2App
-from fastapi import Depends, Request
+from authlib.integrations import httpx_client
+from authlib.integrations.httpx_client import AsyncOAuth2Client
+from litestar import Request
+from litestar.datastructures import State
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..state import get_app_state
+from .._mymdc.dependencies import MyMdCClient
+from ..state import OAuthClient
 from .models import OAuthUserInfo as _OAuthUserInfo
 from .models import User as _User
 from .token_store import TokenStore
 
 
-# TODO: Get from settings
-def _get_default_redirect_login_uri() -> str:
-    return "/app/home"
-
-
-def get_oauth_client(request: Request) -> StarletteOAuth2App:
-    """Provide the OAuth client from the application state.
-
-    Raises:
-        RuntimeError: If auth is disabled and no client was built.
-    """
-    client = get_app_state(request).oauth_client
+def get_oauth_client(state: State) -> OAuthClient:
+    client = state.app_state.oauth_client  # type: ignore[attr-defined]
     if client is None:
-        msg = "OAuth client is not configured (auth is disabled)."
+        msg = (
+            "OAuth client is not configured (settings.auth is None); "
+            "enable auth settings to use OAuth endpoints."
+        )
         raise RuntimeError(msg)
     return client
 
 
-def get_token_store(request: Request) -> TokenStore:
-    """Provide the token store from the application state."""
-    return get_app_state(request).token_store
+async def get_oauth_http_client(
+    oauth_config: OAuthClient,
+) -> AsyncIterator[AsyncOAuth2Client]:
+    """Litestar dependency: a short-lived OAuth2 HTTP client, closed by DI."""
+    client = httpx_client.AsyncOAuth2Client(
+        client_id=oauth_config.client_id,
+        client_secret=oauth_config.client_secret,
+        scope=oauth_config.scope,
+    )
+    try:
+        yield client
+    finally:
+        await client.aclose()
 
 
-RedirectURI = Annotated[str, Depends(_get_default_redirect_login_uri)]
-"""Type alias for the redirect URI dependency."""
+def get_token_store(state: State) -> TokenStore:
+    return state.app_state.token_store  # type: ignore[attr-defined]
 
-TokenStoreDep = Annotated[TokenStore, Depends(get_token_store)]
-"""Type alias for the token store dependency."""
 
-Client = Annotated[StarletteOAuth2App, Depends(get_oauth_client)]
-"""Type alias for the OAuth client dependency."""
+def get_oauth_user_info(request: Request) -> _OAuthUserInfo:
+    """Litestar dependency: resolve OAuthUserInfo from the session."""
+    return _OAuthUserInfo.from_connection(request)  # type: ignore[arg-type]
 
-OAuthUserInfo = Annotated[_OAuthUserInfo, Depends(_OAuthUserInfo.from_connection)]
-"""Type alias for the OAuth user info dependency."""
 
-User = Annotated[_User, Depends(_User.from_connection)]
-"""Type alias for the full User dependency."""
+async def get_user(
+    request: Request,
+    mymdc: MyMdCClient,
+    session: AsyncSession,
+) -> _User:
+    """Litestar dependency: resolve full User (with proposals) from session + DB."""
+    return await _User.from_connection(request, mymdc, session)  # type: ignore[arg-type]
+
+
+# Plain type re-exports; consumed by other modules as annotations.
+OAuthUserInfo = _OAuthUserInfo
+User = _User

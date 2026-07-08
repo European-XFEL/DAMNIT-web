@@ -1,3 +1,4 @@
-from .routers import noauth_router, router
+from . import dependencies
+from .routers import NoAuthOAuthController, OAuthController
 
-__all__ = ["noauth_router", "router"]
+__all__ = ["NoAuthOAuthController", "OAuthController", "dependencies"]
