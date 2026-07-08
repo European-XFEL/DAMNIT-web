@@ -1,15 +1,16 @@
-from typing import Annotated
+from litestar.datastructures import State
+from litestar.params import SkipValidation
 
-from fastapi import Depends, Request
-
-from ..state import get_app_state
 from . import clients
 
 
-def get_mymdc_client(request: Request) -> "clients.MyMdCClient":
+def get_mymdc_client(state: State) -> "clients.MyMdCClient":
     """Provide the MyMdC client from the application state."""
-    return get_app_state(request).mymdc_client
+    return state.app_state.mymdc_client  # type: ignore[attr-defined]
 
 
-MyMdCClient = Annotated[clients.MyMdCClient, Depends(get_mymdc_client)]
+# `MyMdCClient` is a union of two concrete clients; Litestar's msgspec-based
+# signature validation cannot build a decoder for a union of custom types, so
+# injection sites skip validation of this app-provided collaborator.
+MyMdCClient = SkipValidation[clients.MyMdCClient]
 """Type alias for the MyMdC client dependency."""
