@@ -1,23 +1,30 @@
 # Documentation
 
-Documentation is generated using [MkDocs](https://www.mkdocs.org/) with the following plugins/extensions:
+Documentation is generated using [Zensical](https://zensical.org/).
 
-- [MkDocs Material](https://github.com/squidfunk/mkdocs-material) - main theme.
-- [MkDocs API Auto-Nav](https://github.com/tlambert03/mkdocs-api-autonav) - builds the [API Reference](/reference/damnit_api) page automatically from source code docstrings.
+- [mkdocstrings](https://mkdocstrings.github.io/) (with the [Python handler](https://mkdocstrings.github.io/python/)) renders API documentation from source-code docstrings.
 
 ## Tips
 
-As documentation is automatically generated from source code, you should write the docs as close to the code to the code as possible where relevant - only a few overarching/'meta' topics (this, setup, architecture, deployment, etc...) should have to be written into the `./docs` directory directly.
+Write documentation as close to the code as possible. Only a few overarching/'meta' topics (this, setup, architecture, deployment, etc...) need to be written into the `./docs` directory directly.
 
 Aim to:
 
-- Use module level docstrings
-- Use references where applicable, e.g. [`damnit_api.main.create_app`][]
+- Use module-level docstrings.
+- Use cross-references where applicable, e.g. [`damnit_api.main.create_app`][].
+- Pull docstrings into a page with an inline `mkdocstrings` block, e.g.:
+
+    ```markdown
+    ::: damnit_api.main
+        options:
+          heading_level: 2
+    ```
 
 ## Setup
 
-## Configuration
+Build or serve the site (all commands use the `docs` dependency group):
 
-```yaml
---8<-- "./mkdocs.yml"
+```sh
+uv run --group docs zensical build  # build the static site into ./site
+uv run --group docs zensical serve  # live-reloading preview on :8000
 ```
