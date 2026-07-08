@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { Container, Title } from '@mantine/core'
 
-import { history } from '#src/app/routes/history'
+import { history } from '#src/lib/history'
 
 import classes from './hero-page.module.css'
 
