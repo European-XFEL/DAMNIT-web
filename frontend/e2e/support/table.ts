@@ -150,6 +150,20 @@ export async function rightClickCell(
   await page.mouse.click(x, y, { button: 'right' })
 }
 
+// Activate a cell by double-clicking it, the gesture that narrows the sidebar to
+// just that cell's variable. Like rightClickCell this drives real pointer
+// coordinates over the canvas, because onCellActivated fires from Glide's canvas
+// mouse handler: focusing the a11y mirror selects the row but never carries the
+// column through to activation.
+export async function activateCell(
+  page: Page,
+  { col, row }: { col: number; row: number }
+) {
+  const box = await gridBox(page)
+  const { x, y } = cellPoint(box, { col, row })
+  await page.mouse.dblclick(x, y)
+}
+
 // The hover tooltip renders into the table's #portal container with no role or
 // testid, so scope card assertions here and match on text.
 export function tooltipCard(page: Page): Locator {
