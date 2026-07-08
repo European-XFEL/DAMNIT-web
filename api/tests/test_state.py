@@ -6,11 +6,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from damnit_api.auth.oauth import create_oauth_client
 from damnit_api.auth.token_store import InMemoryTokenStore
 from damnit_api.runs.repository import DamnitRepositoryRegistry
 from damnit_api.shared.models import ProposalNumber
 from damnit_api.shared.settings import Settings
-from damnit_api.state import create_mymdc_client, create_oauth_client
+from damnit_api.state import create_mymdc_client
 
 
 def test_appstate_only_imported_by_composition_root():

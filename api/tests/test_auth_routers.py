@@ -9,7 +9,7 @@ from litestar.testing import create_test_client
 
 from damnit_api.auth.routers import OAuthController
 from damnit_api.auth.token_store import InMemoryTokenStore
-from damnit_api.state import SESSION_COOKIE_KEY, OAuthClient
+from damnit_api.auth.oauth import SESSION_COOKIE_KEY, OAuthClient
 
 SERVER_METADATA = {
     "authorization_endpoint": "https://idp.example/authorize",

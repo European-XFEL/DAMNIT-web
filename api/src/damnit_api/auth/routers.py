@@ -16,8 +16,8 @@ from .. import get_logger
 from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
 from ..runs.dependencies import Repositories
-from ..state import SESSION_COOKIE_KEY, OAuthClient
 from . import dependencies, models
+from .oauth import SESSION_COOKIE_KEY, OAuthClient
 from .token_store import TokenStore
 
 logger = get_logger()

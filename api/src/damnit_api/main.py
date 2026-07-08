@@ -22,18 +22,17 @@ def create_app():
     from litestar.response import Redirect
 
     from . import _logging, auth, get_logger
+    from .auth.oauth import SESSION_COOKIE_KEY, create_oauth_client
     from .graphql.dependencies import get_subscription_cursors
     from .runs.dependencies import get_repositories
     from .shared.errors import DamnitWebError
     from .shared.gql import get_gql_controller
     from .shared.settings import settings
     from .state import (
-        SESSION_COOKIE_KEY,
         AppState,
         create_db_engine,
         create_db_sessionmaker,
         create_mymdc_client,
-        create_oauth_client,
         create_repositories,
         create_subscription_cursors,
         create_token_store,

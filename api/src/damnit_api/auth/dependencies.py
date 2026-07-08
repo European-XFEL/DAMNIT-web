@@ -9,9 +9,9 @@ from litestar.datastructures import State
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .._mymdc.dependencies import MyMdCClient
-from ..state import OAuthClient
 from .models import OAuthUserInfo as _OAuthUserInfo
 from .models import User as _User
+from .oauth import OAuthClient
 from .token_store import TokenStore
 
 
