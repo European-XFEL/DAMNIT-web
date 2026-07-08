@@ -2,12 +2,15 @@
 
 import ast
 from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
 
 from damnit_api.auth.token_store import InMemoryTokenStore
 from damnit_api.runs.repository import DamnitRepositoryRegistry
 from damnit_api.shared.models import ProposalNumber
 from damnit_api.shared.settings import Settings
-from damnit_api.state import create_oauth_client
+from damnit_api.state import create_mymdc_client, create_oauth_client
 
 
 def test_appstate_only_imported_by_composition_root():
@@ -39,6 +42,29 @@ def test_create_oauth_client_returns_none_when_auth_disabled(tmp_path):
     assert create_oauth_client(settings) is None
 
 
+def test_create_oauth_client_returns_populated_client_when_auth_set():
+    # The repo's `.env` provides valid auth settings; non-local mode requires them.
+    settings = Settings()
+    assert settings.auth is not None
+    client = create_oauth_client(settings)
+    assert client is not None
+    assert client.client_id == settings.auth.client_id
+    assert client.scope == "openid email groups"
+
+
+def test_create_mymdc_client_raises_on_unsupported_config(tmp_path):
+    settings = Settings(damnit_path=tmp_path)
+    # Neither MyMdCHTTPSettings nor MyMdCMockSettings.
+    object.__setattr__(settings, "mymdc", MagicMock())
+    with pytest.raises(ValueError, match="Invalid MyMdC configuration"):
+        create_mymdc_client(settings)
+
+
+def test_create_mymdc_client_builds_mock_client(tmp_path):
+    settings = Settings(damnit_path=tmp_path)  # default mymdc is the mock backend
+    assert create_mymdc_client(settings) is not None
+
+
 def test_repository_registry_memoizes_per_proposal():
     created = []
 
@@ -61,3 +87,12 @@ def test_token_store_stores_and_pops_fields():
     assert store.pop_token_field("sub-1", "access_token") == "a"
     assert store.pop_token_field("sub-1", "access_token") is None  # popped
     assert store.pop_token_field("unknown-sub", "id_token") is None
+
+
+def test_token_store_drops_entry_once_empty():
+    store = InMemoryTokenStore()
+    store.store("sub-1", {"access_token": "a"})
+
+    assert store.pop_token_field("sub-1", "access_token") == "a"
+    # The now-empty entry is removed, not left as a dangling empty dict.
+    assert "sub-1" not in store._tokens

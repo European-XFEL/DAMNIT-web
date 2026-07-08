@@ -1,36 +1,45 @@
 import asyncio
 import time
-from types import SimpleNamespace
 
 import pytest
-from fastapi.testclient import TestClient
+from litestar import Router
+from litestar.di import Provide
+from litestar.testing import create_test_client
 
 from damnit_api.contextfile import models
-from damnit_api.main import create_app
-from damnit_api.metadata.routers import get_proposal_meta
+from damnit_api.contextfile.routers import get_content, get_modified
+from damnit_api.metadata.models import ProposalMeta
 
 
-@pytest.fixture
-def app(monkeypatch):
-    monkeypatch.setenv("DW_API_AUTH__CLIENT_ID", "test")
-    monkeypatch.setenv("DW_API_AUTH__CLIENT_SECRET", "test")
-    monkeypatch.setenv(
-        "DW_API_AUTH__SERVER_METADATA_URL", "https://example.com/.well-known"
+def _stub_proposal(damnit_path: str) -> ProposalMeta:
+    """Create a minimal ProposalMeta for tests (transient, no DB required)."""
+    return ProposalMeta(
+        number=1,
+        cycle="202401",
+        instrument="TEST",
+        path="/fake",
+        title="Test",
+        principal_investigator="Test PI",
+        start_date=None,
+        end_date=None,
+        updated_at=None,
+        damnit_path=damnit_path,
     )
-    monkeypatch.setenv("DW_API_SESSION_SECRET", "test")
-
-    # No OAuth client: skips the OIDC metadata fetch at startup; these tests
-    # never exercise the oauth routes.
-    monkeypatch.setattr("damnit_api.state.create_oauth_client", lambda settings: None)
-
-    app = create_app()
-    yield app
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def client(app):
-    with TestClient(app) as c:
+def client(temp_dir):
+    test_router = Router(
+        path="/contextfile",
+        route_handlers=[get_content, get_modified],
+        dependencies={
+            "proposal": Provide(
+                lambda: _stub_proposal(str(temp_dir)),
+                sync_to_thread=False,
+            )
+        },
+    )
+    with create_test_client(route_handlers=[test_router]) as c:
         yield c
 
 
@@ -49,11 +58,8 @@ def clear_cache():
 
 
 @pytest.mark.asyncio
-async def test_watcher_detects_change(app, client, temp_dir):
+async def test_watcher_detects_change(client, temp_dir):
     temp_path = temp_dir / "context.py"
-    app.dependency_overrides[get_proposal_meta] = lambda: SimpleNamespace(
-        damnit_path=str(temp_dir)
-    )
 
     resp = client.get("/contextfile/last_modified")
     assert resp.status_code == 200
@@ -64,15 +70,8 @@ async def test_watcher_detects_change(app, client, temp_dir):
     assert await wait_for_change(client, "/contextfile/last_modified", initial_modified)
 
 
-# FastAPI's TestClient creates a fresh event loop per request, so any
-# alru_cached helper called by the handler binds to that loop. The
-# loop-reset warning is intrinsic to this testing pattern.
 @pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
-def test_file_fetching(app, client, temp_dir):
-    app.dependency_overrides[get_proposal_meta] = lambda: SimpleNamespace(
-        damnit_path=str(temp_dir)
-    )
-
+def test_file_fetching(client):
     resp = client.get("/contextfile/content")
     assert resp.status_code == 200
     assert resp.json()["fileContent"] == "initial content"
