@@ -12,6 +12,13 @@ nav = [
     {"ADRs" = [
       "adr/README.md",
       "adr/000-vertical-slice-architecture.md",
+      "adr/001-error-classes.md",
+      "adr/002-no-global-mutable-state.md",
+      "adr/003-injected-settings.md",
+      "adr/004-proposal-path-locator.md",
+      "adr/005-repository-pattern.md",
+      "adr/006-litestar.md",
+      "adr/007-graphql-transport-only.md",
     ]}
   ] },
   { "Development" = [
