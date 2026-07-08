@@ -88,7 +88,7 @@ damnit_api/
 ├── mymdc/           # MyMdC port
 ├── appdb/           # application-DB engine/session/models
 │
-└── graphql/         # transport composition:
+└── graphql/         # transport composition only (ADR-007):
     ├── schema.py    #   assemble Query/Subscription from feature gql modules
     └── directives.py
 ```
