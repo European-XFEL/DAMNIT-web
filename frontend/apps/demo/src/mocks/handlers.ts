@@ -1,7 +1,7 @@
 import { http, HttpResponse, graphql } from 'msw'
 
 import {
-  MockSeedMiss,
+  MockDataNotFound,
   resolveOperation,
   type MockSeed,
   type Runs,
@@ -13,18 +13,24 @@ import { getExampleIndex } from '../utils'
 const api = graphql.link(`${BASE_URL}graphql`)
 const exampleIndex = await getExampleIndex()
 
-async function fetchRuns(proposal: string): Promise<Runs> {
-  const result = await fetch(
-    `${BASE_URL}${exampleIndex[proposal].base_path}/runs.json`
-  )
+async function fetchExample(
+  proposal: string,
+  { path, label }: { path: string; label: string }
+) {
+  const entry = exampleIndex[proposal]
+  if (entry === undefined) {
+    throw new MockDataNotFound()
+  }
+
+  const result = await fetch(`${BASE_URL}${entry.base_path}/${path}`)
 
   if (result.status === 404) {
-    throw new MockSeedMiss()
+    throw new MockDataNotFound()
   }
   if (!result.ok) {
-    throw new Error(`Failed to fetch runs for "${proposal}" (${result.status})`)
+    throw new Error(`Failed to fetch ${label} (${result.status})`)
   }
-  return await result.json()
+  return result.json()
 }
 
 type FetchDataOptions = {
@@ -33,38 +39,35 @@ type FetchDataOptions = {
   variable: string
 }
 
-async function fetchData({ proposal, run, variable }: FetchDataOptions) {
-  const result = await fetch(
-    `${BASE_URL}${exampleIndex[proposal].base_path}/data/${run}/${variable}.json`
-  )
+const fetchRuns = (proposal: string): Promise<Runs> =>
+  fetchExample(proposal, { path: 'runs.json', label: `runs for "${proposal}"` })
 
-  if (result.status === 404) {
-    throw new MockSeedMiss()
-  }
-  if (!result.ok) {
-    throw new Error(
-      `Failed to fetch data for "${proposal}:${run}:${variable}" (${result.status})`
-    )
-  }
-  return await result.json()
-}
+const fetchData = ({
+  proposal,
+  run,
+  variable,
+}: FetchDataOptions): Promise<unknown> =>
+  fetchExample(proposal, {
+    path: `data/${run}/${variable}.json`,
+    label: `data for "${proposal}:${run}:${variable}"`,
+  })
 
 const seed: MockSeed = {
   runs: fetchRuns,
   extractedData: fetchData,
-  // No proposalMetadata: the demo does not mock it, so ProposalMetadata stays a
-  // miss and the resolver returns the unmocked-operation error the old
-  // catch-all produced.
+  // The demo does not mock proposal metadata; report it as drift.
+  proposalMetadata: async () => {
+    throw new MockDataNotFound()
+  },
 }
 
 const gqlHandlers = [
   api.operation(async ({ operationName, variables }) => {
-    const resolution = await resolveOperation(
-      operationName,
-      variables as Record<string, unknown>,
-      seed
-    )
-    return HttpResponse.json(resolution.body as Record<string, unknown>)
+    const resolution = await resolveOperation(operationName, {
+      variables: variables as Record<string, unknown>,
+      seed,
+    })
+    return HttpResponse.json(resolution.body)
   }),
 ]
 

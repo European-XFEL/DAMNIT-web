@@ -5,7 +5,7 @@ export {
   unmockedOperationError,
 } from './shape'
 export {
-  MockSeedMiss,
+  MockDataNotFound,
   resolveOperation,
   type MockSeed,
   type Resolution,

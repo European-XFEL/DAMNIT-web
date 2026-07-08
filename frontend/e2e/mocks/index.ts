@@ -1,9 +1,10 @@
 import type { Page } from '@playwright/test'
 
 import {
-  MockSeedMiss,
+  MockDataNotFound,
   REST_API_PREFIXES,
   resolveOperation,
+  unmockedOperationError,
   type MockSeed,
 } from '@damnit-frontend/shared/mocks'
 
@@ -20,8 +21,9 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
   const api: MockApi = { unmockedRequests: [] }
 
   // One example per test, so the seed ignores the requested proposal. A missing
-  // (run, variable) file surfaces as ENOENT; translate it to MockSeedMiss so
-  // the resolver reports drift instead of letting readFileSync hang the route.
+  // (run, variable) file surfaces as ENOENT; translate it to MockDataNotFound so
+  // the resolver reports it as clean drift. Any other error falls through to the
+  // route handler's catch below, which fails the test loudly instead of stalling.
   const seed: MockSeed = {
     runs: async () => ({ meta: example.meta, data: example.data }),
     extractedData: async ({ run, variable }) => {
@@ -33,7 +35,7 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
           'code' in error &&
           error.code === 'ENOENT'
         ) {
-          throw new MockSeedMiss()
+          throw new MockDataNotFound()
         }
         throw error
       }
@@ -70,15 +72,21 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
       operationName: string
       variables?: Record<string, unknown>
     }
-    const resolution = await resolveOperation(
-      operationName,
-      variables ?? {},
-      seed
-    )
-    if (!resolution.resolved) {
-      api.unmockedRequests.push(resolution.operationName)
+    try {
+      const resolution = await resolveOperation(operationName, {
+        variables: variables ?? {},
+        seed,
+      })
+      if (!resolution.resolved) {
+        api.unmockedRequests.push(operationName)
+      }
+      return route.fulfill({ json: resolution.body })
+    } catch (error) {
+      api.unmockedRequests.push(
+        `${operationName} (${(error as Error).message})`
+      )
+      return route.fulfill({ json: unmockedOperationError(operationName) })
     }
-    return route.fulfill({ json: resolution.body })
   })
 
   await page.route('**/contextfile/content**', (route) => {
