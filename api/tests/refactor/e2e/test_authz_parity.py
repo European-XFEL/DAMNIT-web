@@ -78,16 +78,11 @@ async def test_member_passes_authorization_unchanged(logged_in_client):
 
 
 async def test_graphql_query_without_session_rejected(e2e_client):
-    """An unauthenticated GraphQL request is rejected, not served.
+    """An unauthenticated GraphQL request is rejected with 401, not served.
 
-    The session lookup raises `ValueError` ("No user info in session") while
-    building the GraphQL context. Litestar's exception handling turns that into
-    a 500 response; under FastAPI the same error propagated unhandled through the
-    raw ASGI transport instead.
-
-    !!! todo
-
-        This should become a proper 401 error; update this test when it does.
+    The session lookup raises `UnauthenticatedError` ("No user info in
+    session") while building the GraphQL context; the DamnitWebError handler turns
+    that into a clean 401 the SPA can act on (redirect to login).
     """
     response = await e2e_client.post("/graphql", json=runs_query(MEMBER_PROPOSAL))
-    assert response.status_code == 500
+    assert response.status_code == 401

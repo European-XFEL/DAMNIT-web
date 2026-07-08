@@ -9,7 +9,7 @@ no authorization.
 from typing import TYPE_CHECKING
 
 from .. import get_logger
-from ..shared.errors import ForbiddenError, UnauthenticatedError
+from ..shared.errors import ForbiddenError
 from ..shared.models import ProposalNumber
 from . import models
 
@@ -59,12 +59,9 @@ async def proposal_member_guard(
     proposal_number = ProposalNumber(int(raw))
 
     app_state = connection.app.state.app_state
-    try:
-        async with app_state.db_sessionmaker() as session:
-            user = await models.User.from_connection(
-                connection, app_state.mymdc_client, session
-            )
-    except ValueError as exc:
-        raise UnauthenticatedError(str(exc)) from exc
+    async with app_state.db_sessionmaker() as session:
+        user = await models.User.from_connection(
+            connection, app_state.mymdc_client, session
+        )
 
     await require_proposal_member(user, proposal_number)
