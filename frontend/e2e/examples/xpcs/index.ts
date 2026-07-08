@@ -28,6 +28,16 @@ type ProposalMetadata = {
   damnit_path: string
 }
 
+// Wire shape of a per-run extracted-data file: the raw values plus their
+// metadata (dtype, dims, coords, attrs). Served verbatim as the ExtractedData
+// query's extracted_data field, exactly as the demo's own handler serves it.
+type ExtractedData = {
+  data: unknown
+  dtype: string
+  name: string
+  [key: string]: unknown
+}
+
 const here = dirname(fileURLToPath(import.meta.url))
 
 // The base data (runs + context file) is the demo's canonical example, read
@@ -50,6 +60,16 @@ export const XPCS = {
     'proposal-metadata.json'
   ),
   contextFile: readFileSync(join(base, 'context.py'), 'utf-8'),
+
+  // Per-run extracted data lives beside runs.json, one file per table variable.
+  // Read lazily per query: some png payloads are ~190 KB, so only the requested
+  // (run, variable) is loaded when the ExtractedData query fires.
+  extractedData(run: number | string, variable: string): ExtractedData {
+    return readJson<ExtractedData>(
+      join(base, 'data', String(run)),
+      `${variable}.json`
+    )
+  },
 }
 
 export type Example = typeof XPCS

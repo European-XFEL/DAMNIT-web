@@ -1,20 +1,10 @@
 import { test, expect } from '#fixtures'
 
 import { XPCS } from '#examples/xpcs'
+import { waitForTableData } from '#support/table'
 
 test('opening a proposal loads the dashboard header', async ({ page }) => {
-  // Set up before navigating so the table-data response can't be missed. It
-  // must arrive before teardown for the api fixture's drift guard to see it,
-  // and waiting on the real request keeps this off the mock's internals.
-  const tableData = page.waitForResponse((response) => {
-    if (!response.url().includes('/graphql')) {
-      return false
-    }
-    const { operationName } = (response.request().postDataJSON() ?? {}) as {
-      operationName?: string
-    }
-    return (operationName ?? '').endsWith('TableDataQuery')
-  })
+  const tableData = waitForTableData(page)
 
   await page.goto('proposal/6996')
 
