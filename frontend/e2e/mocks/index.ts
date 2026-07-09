@@ -40,9 +40,7 @@ function resolveGraphql(
       return { data: { proposal_metadata: example.proposalMetadata } }
     // One query per run: a data plot over N runs fires N of these. The file is
     // returned raw, mirroring the demo handler; the client splits data from
-    // metadata. A missing (run, variable) file means the example drifted from
-    // the test, so fall through to the unmocked-request path (which fails the
-    // test loudly) instead of letting readFileSync throw and hang the route.
+    // metadata.
     case 'ExtractedDataQuery':
       try {
         return {
@@ -53,8 +51,20 @@ function resolveGraphql(
             ),
           },
         }
-      } catch {
-        return null
+      } catch (error) {
+        // A missing file means the example drifted from the test: return null so
+        // it flows through the unmocked-request path and fails the test loudly.
+        // Any other error (malformed json, a bug in extractedData) is a real
+        // fault, so let it surface with its own stack instead of reading as
+        // drift.
+        if (
+          error instanceof Error &&
+          'code' in error &&
+          error.code === 'ENOENT'
+        ) {
+          return null
+        }
+        throw error
       }
     default:
       return null
