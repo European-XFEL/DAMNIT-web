@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test'
 
 import {
+  MockDataNotFound,
   REST_API_PREFIXES,
-  shapeMetadata,
-  shapeTableData,
+  resolveOperation,
   unmockedOperationError,
+  type MockDataSource,
 } from '@damnit-frontend/shared/mocks'
 
 import { type Example } from '#examples/xpcs'
@@ -16,63 +17,32 @@ export type MockApi = {
   unmockedRequests: string[]
 }
 
-function resolveGraphql(
-  operationName: string,
-  variables: Record<string, unknown>,
-  example: Example
-) {
-  switch (operationName) {
-    case 'TableMetadataQuery':
-      return { data: { metadata: shapeMetadata(example.meta) } }
-    // All three table queries return the same full payload. This mock does not
-    // reproduce the server's @lightweight null-out of heavy values or its
-    // page/per_page slicing; add that to shapeTableData when a table,
-    // deferred, or pagination test needs it.
-    case 'TableDataQuery':
-    case 'LightweightTableDataQuery':
-    case 'DeferredTableDataQuery':
-      return {
-        data: shapeTableData(example.data, {
-          names: variables.names as string[] | null | undefined,
-        }),
-      }
-    case 'ProposalMetadata':
-      return { data: { proposal_metadata: example.proposalMetadata } }
-    // One query per run: a data plot over N runs fires N of these. The file is
-    // returned raw, mirroring the demo handler; the client splits data from
-    // metadata.
-    case 'ExtractedDataQuery':
+export async function mockApi(page: Page, example: Example): Promise<MockApi> {
+  const api: MockApi = { unmockedRequests: [] }
+
+  // One example per test, so the source ignores the requested proposal. A
+  // missing (run, variable) file surfaces as ENOENT; translate it to
+  // MockDataNotFound so the resolver reports it as clean drift. Any other error
+  // falls through to the route handler's catch below, which fails the test
+  // loudly instead of stalling.
+  const source: MockDataSource = {
+    runs: async () => ({ meta: example.meta, data: example.data }),
+    extractedData: async ({ run, variable }) => {
       try {
-        return {
-          data: {
-            extracted_data: example.extractedData(
-              variables.run as number,
-              variables.variable as string
-            ),
-          },
-        }
+        return example.extractedData(run, variable)
       } catch (error) {
-        // A missing file means the example drifted from the test: return null so
-        // it flows through the unmocked-request path and fails the test loudly.
-        // Any other error (malformed json, a bug in extractedData) is a real
-        // fault, so let it surface with its own stack instead of reading as
-        // drift.
         if (
           error instanceof Error &&
           'code' in error &&
           error.code === 'ENOENT'
         ) {
-          return null
+          throw new MockDataNotFound()
         }
         throw error
       }
-    default:
-      return null
+    },
+    proposalMetadata: async () => example.proposalMetadata,
   }
-}
-
-export async function mockApi(page: Page, example: Example): Promise<MockApi> {
-  const api: MockApi = { unmockedRequests: [] }
 
   // Registered first so the specific routes below take precedence (Playwright
   // runs the last-registered matching handler first). A REST call none of them
@@ -97,18 +67,27 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
     return route.fulfill({ json: example.userInfo })
   })
 
-  await page.route('**/graphql', (route) => {
+  await page.route('**/graphql', async (route) => {
     const { operationName, variables } = (route.request().postDataJSON() ??
       {}) as {
       operationName: string
       variables?: Record<string, unknown>
     }
-    const json = resolveGraphql(operationName, variables ?? {}, example)
-    if (json === null) {
-      api.unmockedRequests.push(operationName)
+    try {
+      const resolution = await resolveOperation(operationName, {
+        variables: variables ?? {},
+        source,
+      })
+      if (!resolution.resolved) {
+        api.unmockedRequests.push(operationName)
+      }
+      return route.fulfill({ json: resolution.body })
+    } catch (error) {
+      api.unmockedRequests.push(
+        `${operationName} (${(error as Error).message})`
+      )
       return route.fulfill({ json: unmockedOperationError(operationName) })
     }
-    return route.fulfill({ json })
   })
 
   await page.route('**/contextfile/content**', (route) => {
