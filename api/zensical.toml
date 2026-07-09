@@ -7,15 +7,19 @@ repo_url = "https://github.com/European-XFEL/DAMNIT-web"
 nav = [
   "index.md",
   "deployment.md",
-  "setup.md",
-  "architecture.md",
-  "security.md",
-  "notes.md",
-  "docs.md",
-  "ci-cd.md",
-  { "ADRs" = [
-    "adr/README.md",
-    "adr/000-vertical-slice-architecture.md",
+  { "Architecture" = [
+    "architecture.md",
+    {"ADRs" = [
+      "adr/README.md",
+      "adr/000-vertical-slice-architecture.md",
+    ]}
+  ] },
+  { "Development" = [
+    "setup.md",
+    "security.md",
+    "notes.md",
+    "docs.md",
+    "ci-cd.md",
   ] },
 ]
 
