@@ -193,3 +193,57 @@ export const xpcsWithErrors: Example = {
     run.variables.run.value === ERRORED_RUN ? withErrorCells(run) : run
   ),
 }
+
+// The home page shows one table per semester, so this example spreads proposals
+// across a few. It keeps 6996 (so the dashboard link still works) and adds the
+// real XFEL example proposals 700002/700003/700004.
+//
+// Grouping and the semester label come from the proposals_by_year_half key.
+// Don't read the semester off start_date or damnit_path: the real paths and
+// dates won't always line up with the semester a proposal sits under. (The app
+// calls this key a "cycle", but it's really the semester.)
+//
+// 6996 and 700004 share the 202401 semester, so the sub-table has two rows to
+// sort: 6996 is May 30, 700004 is May 31, and start_date-desc puts 700004 first.
+const homeProposals: ProposalMetadata[] = [
+  ...XPCS.proposalMetadata,
+  {
+    number: 700004,
+    instrument: 'SQS',
+    principal_investigator: 'Michael Meyer',
+    start_date: '2024-05-31',
+    title: 'SQS example data',
+    damnit_path: '/gpfs/exfel/d/raw/XMPL/202450/p700004/usr/damnit',
+  },
+  {
+    number: 700003,
+    instrument: 'SCS',
+    principal_investigator: 'Andreas Scherz',
+    start_date: '2023-01-30',
+    title: 'SCS example data',
+    damnit_path: '/gpfs/exfel/d/raw/XMPL/202350/p700003/usr/damnit',
+  },
+  {
+    number: 700002,
+    instrument: 'FXE',
+    principal_investigator: 'Christopher Milne',
+    start_date: '2021-09-27',
+    title: 'FXE example data',
+    damnit_path: '/gpfs/exfel/d/raw/XMPL/202150/p700002/usr/damnit',
+  },
+]
+
+// XPCS whose user owns proposals across three semesters, for the home page's
+// semester-grouped proposal list.
+export const xpcsWithProposals: Example = {
+  ...XPCS,
+  userInfo: {
+    ...XPCS.userInfo,
+    proposals_by_year_half: {
+      '202401': [6996, 700004],
+      '202350': [700003],
+      '202150': [700002],
+    },
+  },
+  proposalMetadata: homeProposals,
+}
