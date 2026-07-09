@@ -13,3 +13,16 @@ test('an unknown URL shows the not-found page and returns home', async ({
   await page.getByRole('button', { name: 'Return home' }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
 })
+
+// The frontend has no per-proposal guard: a proposal the user cannot access is
+// not blocked client-side. ProposalWrapper fires its metadata query, the backend
+// (here the router) errors, and useProposal redirects to /not-found. The default
+// XPCS user can access only 6996, so 9999 models "no access".
+test('opening a proposal you cannot access lands on not-found', async ({
+  page,
+}) => {
+  await page.goto('proposal/9999')
+  await expect(
+    page.getByRole('heading', { name: 'DAMNIT! Page not found.' })
+  ).toBeVisible()
+})
