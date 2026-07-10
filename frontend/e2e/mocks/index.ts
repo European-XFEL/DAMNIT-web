@@ -41,7 +41,13 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
         throw error
       }
     },
-    proposalMetadata: async () => example.proposalMetadata,
+    // The home page fires one ProposalMetadata query per semester, so filter to
+    // the requested numbers; otherwise a multi-semester example would leak every
+    // proposal into every sub-table.
+    proposalMetadata: async ({ proposalNumbers }) =>
+      example.proposalMetadata.filter((proposal) =>
+        (proposalNumbers ?? []).includes(proposal.number)
+      ),
   }
 
   // Registered first so the specific routes below take precedence (Playwright

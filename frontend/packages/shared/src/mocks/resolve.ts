@@ -15,7 +15,7 @@ export type MockDataSource = {
     run: number
     variable: string
   }): Promise<unknown>
-  proposalMetadata(): Promise<unknown>
+  proposalMetadata(options: { proposalNumbers?: number[] }): Promise<unknown>
 }
 
 export type Resolution = {
@@ -54,7 +54,9 @@ export async function resolveOperation(
         return resolved({ extracted_data: extracted })
       }
       case 'ProposalMetadata': {
-        const metadata = await source.proposalMetadata()
+        const metadata = await source.proposalMetadata({
+          proposalNumbers: variables.proposalNumbers as number[] | undefined,
+        })
         return resolved({ proposal_metadata: metadata })
       }
     }
