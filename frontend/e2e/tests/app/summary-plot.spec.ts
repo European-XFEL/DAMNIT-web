@@ -2,7 +2,7 @@ import { type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
 
-import { XPCS } from '#examples/xpcs'
+import { numberVars } from '#examples/xpcs'
 import { columnOf, openProposal, titleOf } from '#support/table'
 import {
   closeTab,
@@ -11,15 +11,12 @@ import {
   plotFigure,
   plotTab,
   selectColumns,
+  showTable,
 } from '#support/plots'
 
 test.use({ viewport: PLOT_VIEWPORT })
 
-// The example's numeric variables, in meta order, excluding Run. dtype lives on
-// the run data, not the metadata. The first two drive the plots below.
-const numberVars = Object.keys(XPCS.meta.variables).filter(
-  (name) => name !== 'run' && XPCS.data[0].variables[name]?.dtype === 'number'
-)
+// The first two numeric variables drive the plots below.
 const [xVar, yVar] = numberVars
 const xTitle = titleOf(xVar)
 const yTitle = titleOf(yVar)
@@ -29,7 +26,7 @@ const yTitle = titleOf(yVar)
 async function openSummaryPlots(page: Page, cols: number[]) {
   for (const [index, col] of cols.entries()) {
     if (index > 0) {
-      await page.getByRole('tab', { name: 'Table' }).click()
+      await showTable(page)
     }
     await openSummaryPlot(page, col)
   }

@@ -74,6 +74,13 @@ export const XPCS = {
 
 export type Example = typeof XPCS
 
+// The example's numeric variables in meta order, excluding Run. dtype lives on
+// the run data, not the metadata, so read it from the first run. The plot specs
+// pick their plotted columns from here.
+export const numberVars = Object.keys(XPCS.meta.variables).filter(
+  (name) => name !== 'run' && XPCS.data[0].variables[name]?.dtype === 'number'
+)
+
 // The proposal numbers the example's user can access, flattened out of the
 // semester buckets. The mock rejects any proposal outside this set.
 export function accessibleProposals(example: Example): number[] {

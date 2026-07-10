@@ -46,6 +46,13 @@ export async function openSummaryPlot(page: Page, col: number) {
   await contextMenu(page).getByText('Plot: summary').click()
 }
 
+// Opening a plot switches to the Plots tab, which unmounts the table. Switch
+// back to the Table tab and wait for the grid before the next canvas action.
+export async function showTable(page: Page) {
+  await page.getByRole('tab', { name: 'Table' }).click()
+  await expect(page.getByTestId('data-grid-canvas')).toBeVisible()
+}
+
 // The cells must share one column, or the grid clears the range stack.
 export async function selectCells(page: Page, cells: Cell[]) {
   const box = await gridBox(page)
