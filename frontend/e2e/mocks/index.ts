@@ -8,7 +8,7 @@ import {
   type MockDataSource,
 } from '@damnit-frontend/shared/mocks'
 
-import { type Example } from '#examples/xpcs'
+import { accessibleProposals, type Example } from '#examples/xpcs'
 
 export type MockApi = {
   // GraphQL operations and REST paths the router had no mock for; the test
@@ -17,8 +17,23 @@ export type MockApi = {
   unmockedRequests: string[]
 }
 
-export async function mockApi(page: Page, example: Example): Promise<MockApi> {
+type MockApiOptions = {
+  authenticated: boolean
+}
+
+export async function mockApi(
+  page: Page,
+  example: Example,
+  { authenticated }: MockApiOptions
+): Promise<MockApi> {
   const api: MockApi = { unmockedRequests: [] }
+
+  // Session state the routes read: userinfo answers by it, and logout flips it
+  // off so the LoggedOutPage re-fetch takes the "logged out" branch.
+  let authed = authenticated
+
+  // variables.proposal arrives as a string, so hold the accessible set as strings.
+  const accessible = accessibleProposals(example).map(String)
 
   // One example per test, so the source ignores the requested proposal. A
   // missing (run, variable) file surfaces as ENOENT; translate it to
@@ -69,8 +84,32 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
     return route.fallback()
   })
 
-  await page.route('**/oauth/userinfo', (route) => {
-    return route.fulfill({ json: example.userInfo })
+  // The real endpoint 500s with "No user info in session" when the cookie is
+  // gone, which PrivateRoute reads as isError and the LoggedOutPage reads as
+  // logged out. Mirror that shape rather than a 401.
+  await page.route('**/oauth/userinfo**', (route) =>
+    authed
+      ? route.fulfill({ json: example.userInfo })
+      : route.fulfill({
+          status: 500,
+          json: { error: 'No user info in session' },
+        })
+  )
+
+  // Login is a full-page navigation to a same-origin URL. Fulfil it empty so the
+  // navigation completes (and the catch-all does not log it as drift); the login
+  // spec asserts the request itself, not the resulting blank page.
+  await page.route('**/oauth/login**', (route) =>
+    route.fulfill({ status: 200, body: '' })
+  )
+
+  // Logout returns no logout_url, so the app takes its in-app branch: reset the
+  // store and navigate to /logged-out. Flip the session off so the LoggedOutPage
+  // re-fetch of userinfo 500s and the "You have been logged out" branch renders,
+  // modelling the cleared session cookie.
+  await page.route('**/oauth/logout**', (route) => {
+    authed = false
+    return route.fulfill({ json: {} })
   })
 
   await page.route('**/graphql', async (route) => {
@@ -79,6 +118,20 @@ export async function mockApi(page: Page, example: Example): Promise<MockApi> {
       operationName: string
       variables?: Record<string, unknown>
     }
+
+    // A query for a proposal the user cannot access errors, the way the backend
+    // rejects one outside the session. useProposal reads that error as notFound
+    // and ProposalWrapper redirects to /not-found. Handled here, so it is not
+    // drift. Operations without a proposal (e.g. ProposalMetadata) skip.
+    const proposal = variables?.proposal
+    if (proposal != null && !accessible.includes(String(proposal))) {
+      return route.fulfill({
+        json: {
+          errors: [{ message: `No access to proposal ${proposal}` }],
+        },
+      })
+    }
+
     try {
       const resolution = await resolveOperation(operationName, {
         variables: variables ?? {},

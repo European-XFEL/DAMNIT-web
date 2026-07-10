@@ -74,6 +74,22 @@ export const XPCS = {
 
 export type Example = typeof XPCS
 
+// The proposal numbers the example's user can access, flattened out of the
+// semester buckets. The mock rejects any proposal outside this set.
+export function accessibleProposals(example: Example): number[] {
+  return Object.values(example.userInfo.proposals_by_year_half).flat()
+}
+
+// openProposal() opens proposalMetadata[0], so it must be accessible or every
+// dashboard spec silently redirects to /not-found.
+if (!accessibleProposals(XPCS).includes(XPCS.proposalMetadata[0].number)) {
+  throw new Error(
+    `proposalMetadata[0] (${XPCS.proposalMetadata[0].number}) is not accessible; ` +
+      `update userinfo.json or proposal-metadata.json so openProposal() lands ` +
+      `on an accessible proposal`
+  )
+}
+
 // Run 1 fails in three ways, one per status-card kind: xgm_intensity errors on
 // its own, opt_transmission loses its source, and total_transmission is skipped
 // for that missing dependency (see context.py for the chain).
