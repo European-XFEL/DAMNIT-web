@@ -247,3 +247,39 @@ def test_filter_for_client_excludes_equal_timestamp():
 def test_filter_for_client_since_above_all_returns_none():
     snapshot = _snapshot({1: 100.0, 2: 200.0})
     assert filter_for_client(snapshot, since=300.0) is None
+
+
+# -----------------------------------------------------------------------------
+# Authorization
+
+
+@pytest.mark.asyncio
+async def test_latest_data_unauthorized(graphql_schema_no_auth, current_timestamp):
+    gen = await graphql_schema_no_auth.subscribe(
+        """
+        subscription {
+          latest_data(database: { proposal: "999999" }, timestamp: 0)
+        }
+        """,
+    )
+    # Subscription permission failures surface as a PreExecutionError on the
+    # first iteration rather than immediately from subscribe().
+    first = await gen.__anext__()
+    assert first.errors is not None
+    assert first.errors[0].message == "Authentication required."
+
+
+@pytest.mark.asyncio
+async def test_latest_data_forbidden(graphql_schema_authenticated_non_member):
+    gen = await graphql_schema_authenticated_non_member.subscribe(
+        f"""
+        subscription {{
+          latest_data(database: {{ proposal: "{PROPOSAL}" }}, timestamp: 0)
+        }}
+        """,
+    )
+    # Subscription permission failures surface as a PreExecutionError on the
+    # first iteration rather than immediately from subscribe().
+    first = await gen.__anext__()
+    assert first.errors is not None
+    assert first.errors[0].message == "Access to this proposal is forbidden."

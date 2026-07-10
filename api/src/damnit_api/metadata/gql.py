@@ -7,10 +7,14 @@ from typing import TYPE_CHECKING
 import strawberry
 import strawberry.experimental.pydantic as st_pydantic
 
+from .. import get_logger
+from ..auth.permissions import IsAuthenticated
 from . import models, services
 
 if TYPE_CHECKING:
     from ..shared.gql import Context
+
+logger = get_logger()
 
 
 @st_pydantic.type(model=models.ProposalMeta, all_fields=True)
@@ -29,13 +33,19 @@ class ProposalMeta:
 
 @strawberry.type
 class Query:
-    @strawberry.field
+    @strawberry.field(permission_classes=[IsAuthenticated])
     async def proposal_metadata(
         self,
         info: strawberry.Info[Context],
         proposal_numbers: list[int],
     ) -> list[ProposalMeta] | None:
-        """Fetch metadata for the provided proposal number."""
+        """Fetch metadata for the given proposal numbers.
+
+        !!! warning
+
+            Proposals the user is not a member of are silently dropped from the result
+            rather than raising an error.
+        """
         from ..shared.settings import settings
 
         if info.context.request is None:
@@ -49,9 +59,18 @@ class Query:
 
         mymdc, session = info.context.mymdc, info.context.session
 
+        user = await info.context.get_user()
+        allowed_proposal_numbers = [n for n in proposal_numbers if n in user.proposals]
+        if dropped := set(proposal_numbers) - set(allowed_proposal_numbers):
+            await logger.ainfo(
+                "Dropping proposals the user is not a member of",
+                proposals=sorted(dropped),
+                user=user.preferred_username,
+            )
+
         proposals_meta = await services._get_proposal_meta_many(
             mymdc,
-            proposal_numbers,
+            allowed_proposal_numbers,
             session,
         )
 

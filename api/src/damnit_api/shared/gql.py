@@ -13,6 +13,7 @@ from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
+from ..auth.models import User
 from ..metadata import gql as metadata
 
 SUBSCRIPTION_PROTOCOLS = [
@@ -53,6 +54,15 @@ class Context(BaseContext):
     mymdc: MyMdCClient
     oauth_user: OAuthUserInfo
     session: DBSession
+    _user: User | None = None
+
+    async def get_user(self) -> User:
+        """Resolve and memoize the full `User` for this request."""
+        if self._user is None:
+            self._user = await User.from_oauth_user(
+                self.mymdc, self.session, self.oauth_user
+            )
+        return self._user
 
 
 async def get_context(  # noqa: RUF029

@@ -42,15 +42,6 @@ def mocked_fetch_info(mocker):
     )
 
 
-@pytest.fixture(autouse=True)
-def mocked_proposal_auth(mocker):
-    """Bypass the proposal check; tests run without a request context."""
-    mocker.patch(
-        "damnit_api.graphql.queries._ensure_proposal_damnit_path",
-        return_value=None,
-    )
-
-
 @pytest.mark.asyncio
 async def test_runs_query(graphql_schema, mocked_fetch_variables, mocked_fetch_info):
     query = f"""
@@ -284,3 +275,59 @@ async def test_metadata_query(graphql_schema):
     }
     assert "(Untagged)" in metadata["tags"]
     assert "eTOF" in metadata["tags"]
+
+
+@pytest.mark.asyncio
+async def test_runs_forbidden(graphql_schema_authenticated_non_member):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}) {{
+            variables {{ name }}
+          }}
+        }}
+    """
+    result = await graphql_schema_authenticated_non_member.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Access to this proposal is forbidden."
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_forbidden(graphql_schema_authenticated_non_member):
+    query = f"""
+        query {{
+          extracted_data(database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "x")
+        }}
+    """
+    result = await graphql_schema_authenticated_non_member.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Access to this proposal is forbidden."
+
+
+@pytest.mark.asyncio
+async def test_runs_unauthorized(graphql_schema_no_auth):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}) {{
+            variables {{ name }}
+          }}
+        }}
+    """
+    result = await graphql_schema_no_auth.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Authentication required."
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_unauthorized(graphql_schema_no_auth):
+    query = f"""
+        query {{
+          extracted_data(database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "x")
+        }}
+    """
+    result = await graphql_schema_no_auth.execute(query)
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Authentication required."

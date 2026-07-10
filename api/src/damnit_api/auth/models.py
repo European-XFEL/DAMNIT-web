@@ -3,7 +3,7 @@
 from typing import Self
 
 from fastapi.requests import HTTPConnection
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, RootModel
 
 from .. import get_logger
 from .._db.dependencies import DBSession
@@ -70,8 +70,13 @@ class ProposalsByYearHalf(RootModel):
 class User(BaseUserInfo):
     """Full user information including list of proposals."""
 
-    _proposals: list[int]
+    _member_proposals: list[int] = PrivateAttr(default_factory=list)
     proposals_by_year_half: ProposalsByYearHalf
+
+    @property
+    def proposals(self) -> list[int]:
+        """Proposals the user is a member of (raw MyMdC membership)."""
+        return self._member_proposals
 
     @classmethod
     async def from_connection(
@@ -98,33 +103,28 @@ class User(BaseUserInfo):
     ) -> Self:
         from ..shared.settings import settings
 
-        if settings.is_local:
-            res = cls.model_validate({
+        if settings.is_local:  # TODO: decouple local from auth
+            return cls.model_validate({
                 **oauth.model_dump(),
                 "proposals_by_year_half": {},
             })
-            res._proposals = []
-            return res
 
         from ..metadata.services import _get_proposal_meta_many
 
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
-        proposal_numbers = [
+        member_proposals = [
             p.proposal_number for p in proposals.root if p.proposal_number is not None
         ]
 
         proposals_meta = await _get_proposal_meta_many(
             mymdc,
-            proposal_numbers,
+            member_proposals,
             session,
+            only_with_damnit=True,  # filters metadata to proposals with a DAMNIT path
         )
 
         proposals_by_year_half = {}
         for meta in proposals_meta:
-            if meta.damnit_path is None:
-                proposal_numbers.remove(meta.number)
-                continue
-
             if meta.start_date is None:
                 continue
 
@@ -138,6 +138,6 @@ class User(BaseUserInfo):
             "proposals_by_year_half": proposals_by_year_half,
         })
 
-        res._proposals = proposal_numbers
+        res._member_proposals = member_proposals
 
         return res

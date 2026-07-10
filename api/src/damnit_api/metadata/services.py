@@ -167,20 +167,13 @@ async def _check_user_allowed(
     if settings.is_local:
         return
 
-    if proposal_number not in user._proposals:
+    if proposal_number not in user.proposals:
         msg = (
             f"User not authorised for proposal {proposal_number}, or proposal does not "
             "exist."
         )
-        details = None
-        if user._proposals is None:
-            details = "User has no authorised proposals."
-        await logger.ainfo(
-            "Forbidden",
-            message=msg,
-            details=details,
-        )
-        raise ForbiddenError(msg, details=details)
+        await logger.ainfo("Forbidden", message=msg)
+        raise ForbiddenError(msg)
 
     return
 

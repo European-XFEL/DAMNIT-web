@@ -25,6 +25,25 @@ def reset_caches():
     return
 
 
+def _patch_permissions(mocker, *, authenticated: bool, member: bool) -> None:
+    mocker.patch(
+        "damnit_api.auth.permissions.IsAuthenticated.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=authenticated,
+    )
+    mocker.patch(
+        "damnit_api.auth.permissions.IsProposalMember.has_permission",
+        new_callable=mocker.AsyncMock,
+        return_value=member,
+    )
+
+
+@pytest.fixture
+def bypass_proposal_permission(mocker):
+    """Bypass all proposal permission checks so tests focus on resolver logic."""
+    _patch_permissions(mocker, authenticated=True, member=True)
+
+
 @pytest.fixture
 def mocked_metadata_variables(mocker):
     mocker.patch(
@@ -66,20 +85,46 @@ def mocked_metadata_max(mocker):
 
 
 @pytest.fixture
-def graphql_schema(
+def mocked_ensure_damnit_path(mocker):
+    """Bypass the damnit_path validation; tests run without a request context."""
+    mocker.patch(
+        "damnit_api.graphql.queries._ensure_damnit_path",
+        return_value=None,
+    )
+
+
+@pytest.fixture
+def graphql_schema_no_auth(
     mocked_metadata_variables,
     mocked_metadata_column,
     mocked_metadata_all_tags,
     mocked_metadata_variable_tags,
-    mocked_metadata_max,
 ):
+    """Schema without the bypass_proposal_permission fixture, so permission
+    checks run normally (and fail since there is no real request context)."""
     return strawberry.Schema(
         query=Query,
         subscription=Subscription,
         types=[DamnitVariable],
         directives=[lightweight],
-        config=StrawberryConfig(
-            auto_camel_case=False,
-            scalar_map=SCALAR_MAP,
-        ),
+        config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
     )
+
+
+@pytest.fixture
+def graphql_schema(
+    bypass_proposal_permission,
+    mocked_ensure_damnit_path,
+    mocked_metadata_max,
+    graphql_schema_no_auth,
+):
+    """Same schema as graphql_schema_no_auth, with permission and damnit-path
+    checks bypassed so tests exercise resolver logic only."""
+    return graphql_schema_no_auth
+
+
+@pytest.fixture
+def graphql_schema_authenticated_non_member(mocker, graphql_schema_no_auth):
+    """Schema where the user is authenticated but not a proposal member."""
+    _patch_permissions(mocker, authenticated=True, member=False)
+    return graphql_schema_no_auth
