@@ -217,6 +217,16 @@ export const xpcsWithErrors: Example = {
   ),
 }
 
+// Same proposal as XPCS but before any runs landed: the variables and tags are
+// defined, so the table draws its column headers, but there are zero runs. This
+// drives the empty-proposal state: headers over a blank area, with no empty
+// message. userInfo and proposalMetadata are reused, so 6996 stays accessible.
+export const EMPTY: Example = {
+  ...XPCS,
+  meta: { ...XPCS.meta, runs: [] },
+  data: [],
+}
+
 // The home page shows one table per semester, so this example spreads proposals
 // across a few. It keeps 6996 (so the dashboard link still works) and adds the
 // real XFEL example proposals 700002/700003/700004.
