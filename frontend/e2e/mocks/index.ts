@@ -29,6 +29,10 @@ export type MockApi = {
   // fixture fails the test when any were seen, so mock drift surfaces loudly
   // instead of as an empty response or a silent request to the real network.
   unmockedRequests: string[]
+  // Swap the served context.py and bump its last-modified stamp, modelling the
+  // file being edited on disk between polls. The next poll then sees a newer
+  // stamp than the loaded content and triggers a refetch.
+  touchContextFile: (content: string) => void
 }
 
 type MockApiOptions = {
@@ -40,11 +44,23 @@ export async function mockApi(
   example: Example,
   { authenticated }: MockApiOptions
 ): Promise<MockApi> {
-  const api: MockApi = { unmockedRequests: [] }
-
   // Session state the routes read: userinfo answers by it, and logout flips it
   // off so the LoggedOutPage re-fetch takes the "logged out" branch.
   let authed = authenticated
+
+  // Content and last_modified routes share this state. A realistic epoch keeps
+  // the "Last updated" label out of 1970; only the before/after delta matters to
+  // the refetch logic.
+  let contextContent = example.contextFile
+  let contextLastModified = 1_700_000_000
+
+  const api: MockApi = {
+    unmockedRequests: [],
+    touchContextFile: (content) => {
+      contextContent = content
+      contextLastModified += 1
+    },
+  }
 
   // variables.proposal arrives as a string, so hold the accessible set as strings.
   const accessible = accessibleProposals(example).map(String)
@@ -175,15 +191,15 @@ export async function mockApi(
     }
   })
 
-  await page.route('**/contextfile/content**', (route) => {
-    return route.fulfill({
-      json: { fileContent: example.contextFile, lastModified: 0 },
+  await page.route('**/contextfile/content**', (route) =>
+    route.fulfill({
+      json: { fileContent: contextContent, lastModified: contextLastModified },
     })
-  })
+  )
 
-  await page.route('**/contextfile/last_modified**', (route) => {
-    return route.fulfill({ json: { lastModified: 0 } })
-  })
+  await page.route('**/contextfile/last_modified**', (route) =>
+    route.fulfill({ json: { lastModified: contextLastModified } })
+  )
 
   // Silence the graphql-ws subscription: accept the socket but never answer, so
   // the client stays connected instead of reconnecting forever.
