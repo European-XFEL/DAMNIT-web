@@ -1,3 +1,6 @@
+import { createRequire } from 'node:module'
+import path from 'node:path'
+
 import type { Page } from '@playwright/test'
 
 import {
@@ -9,6 +12,17 @@ import {
 } from '@damnit-frontend/shared/mocks'
 
 import { accessibleProposals, type Example } from '#examples/xpcs'
+
+// @monaco-editor/react does not bundle the editor; at runtime its loader fetches
+// monaco from jsDelivr. Resolve the monaco-editor package we already install and
+// serve its min/vs tree instead, so the editor loads with no network and the
+// suite keeps its "answer every request from local data" guarantee.
+const monacoVsDir = path.join(
+  path.dirname(
+    createRequire(import.meta.url).resolve('monaco-editor/package.json')
+  ),
+  'min/vs'
+)
 
 export type MockApi = {
   // GraphQL operations and REST paths the router had no mock for; the test
@@ -83,6 +97,18 @@ export async function mockApi(
     }
     return route.fallback()
   })
+
+  // After the catch-all so it wins; otherwise the editor's assets fall through
+  // to the real jsDelivr CDN. Serve them from the local min/vs tree, keyed off
+  // the path after min/vs.
+  await page.route(
+    '**/cdn.jsdelivr.net/npm/monaco-editor@*/min/vs/**',
+    (route) => {
+      const { pathname } = new URL(route.request().url())
+      const asset = pathname.split('/min/vs/')[1]
+      return route.fulfill({ path: path.join(monacoVsDir, asset) })
+    }
+  )
 
   // The real endpoint 500s with "No user info in session" when the cookie is
   // gone, which PrivateRoute reads as isError and the LoggedOutPage reads as
