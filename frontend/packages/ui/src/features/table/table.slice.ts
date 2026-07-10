@@ -21,6 +21,7 @@ type TableState = {
   }
   variables: Record<string, VariableOptions>
   tags: Record<string, TagSettings>
+  isActive: boolean
 }
 
 const initialState: TableState = {
@@ -28,6 +29,7 @@ const initialState: TableState = {
   variables: {},
   tags: {},
   view: { scroll: { x: 0, y: 0 } },
+  isActive: false,
 }
 
 const slice = createSlice({
@@ -35,6 +37,9 @@ const slice = createSlice({
   initialState,
   reducers: {
     reset: () => initialState,
+    setActive: (state, action: PayloadAction<boolean>) => {
+      state.isActive = action.payload
+    },
     selectRun: ({ selection }, action) => {
       const { run, variables } = action.payload
       if (selection.run !== run) {
@@ -81,6 +86,7 @@ export const {
   clearTagSelection,
   reset,
   selectRun,
+  setActive,
   setTagSelection,
   setVariableVisibility,
   setViewScroll,

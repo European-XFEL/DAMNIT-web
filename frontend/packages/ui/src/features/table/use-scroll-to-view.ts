@@ -9,7 +9,7 @@ import {
 import { debounce } from 'lodash'
 import { type DataEditorRef } from '@glideapps/glide-data-grid'
 
-import { setViewScroll } from './table.slice'
+import { setActive, setViewScroll } from './table.slice'
 import type { Rectangle, Scroll } from './types'
 import { useAppDispatch, useAppStore } from '../../redux/hooks'
 
@@ -24,17 +24,27 @@ export function useScrollToView(ref: RefObject<DataEditorRef>) {
   const setViewScrollDebounced = useMemo(
     () =>
       debounce((scroll: Scroll) => {
+        // React runs a removed subtree's parent cleanup before the child's, so
+        // leaving a proposal resets this slice (clearing isActive) before this
+        // flush runs. Bail so we don't resave stale scroll. A tab switch leaves
+        // the proposal mounted, so isActive stays true and the scroll is kept.
+        if (!store.getState().table.isActive) {
+          return
+        }
         dispatch(setViewScroll(scroll))
       }, 500),
-    [dispatch]
+    [dispatch, store]
   )
 
-  // Clean up: Debounce
+  // Mark the table active for the guard above, then on unmount (e.g. switching
+  // tabs) flush any pending scroll save instead of cancelling it, so a scroll
+  // followed by a fast tab switch is not lost.
   useEffect(() => {
+    dispatch(setActive(true))
     return () => {
-      setViewScrollDebounced.cancel()
+      setViewScrollDebounced.flush()
     }
-  }, [setViewScrollDebounced])
+  }, [dispatch, setViewScrollDebounced])
 
   // Don't expose the debounced function, wrap it instead
   const onVisibleRegionChanged = useCallback(
