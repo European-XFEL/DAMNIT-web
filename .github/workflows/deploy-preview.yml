@@ -16,9 +16,12 @@ on:
 permissions:
   contents: write
 
+# Serialize writes to the gh-pages branch. Keep this false: an arriving
+# run's cancel-in-progress policy applies to the whole shared group, so a
+# canceling run would otherwise kill an in-progress publish.
 concurrency:
   group: gh-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   vars:
