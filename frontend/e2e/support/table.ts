@@ -15,8 +15,16 @@ const RUN_COLUMN = 1
 
 // The testid Glide assigns each mirrored cell. One owner because the format
 // tracks Glide's version.
+const CELL_TESTID_PREFIX = 'glide-cell-'
+
 function cellTestId({ col, row }: { col: number; row: number }): string {
-  return `glide-cell-${col}-${row}`
+  return `${CELL_TESTID_PREFIX}${col}-${row}`
+}
+
+// Every mirrored data cell, for asserting an empty grid. Shares cellTestId's
+// single owner so the testid format stays in one place.
+export function dataCells(page: Page): Locator {
+  return page.locator(`[data-testid^="${CELL_TESTID_PREFIX}"]`)
 }
 
 // Wait for a cell's deferred data to load. Glide mirrors a loaded error or image
@@ -45,11 +53,23 @@ export function waitForTableData(page: Page) {
   })
 }
 
-export async function openProposal(page: Page) {
+// Navigate to a dashboard and wait for its grid to paint and its cell data to
+// land. Callers pass the navigation itself, so this covers both a direct goto
+// and a click through the home list.
+export async function openDashboard(
+  page: Page,
+  navigate: () => Promise<unknown>
+) {
   const tableData = waitForTableData(page)
-  await page.goto(`proposal/${XPCS.proposalMetadata[0].number}`)
+  await navigate()
   await expect(page.getByTestId('data-grid-canvas')).toBeVisible()
   await tableData
+}
+
+export async function openProposal(page: Page) {
+  await openDashboard(page, () =>
+    page.goto(`proposal/${XPCS.proposalMetadata[0].number}`)
+  )
 }
 
 // The a11y column index of a variable: its position in meta order, plus one for
