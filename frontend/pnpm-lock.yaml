@@ -33,6 +33,9 @@ catalogs:
     mantine-datatable:
       specifier: 7.17.1
       version: 7.17.1
+    monaco-editor:
+      specifier: 0.55.1
+      version: 0.55.1
     postcss-preset-mantine:
       specifier: 1.17.0
       version: 1.17.0
@@ -465,6 +468,9 @@ importers:
       globals:
         specifier: catalog:linting
         version: 16.0.0
+      monaco-editor:
+        specifier: catalog:components
+        version: 0.55.1
       prettier:
         specifier: catalog:linting
         version: 3.6.2
