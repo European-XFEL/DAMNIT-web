@@ -21,9 +21,29 @@ server; in CI it serves the production `preview` build (a `Build app` step runs
 
 ## Layout
 
-- `tests/<surface>/` - specs, one folder per app surface (`app`, later
-  `site`). Each surface is its own Playwright project in
-  `playwright.config.ts`.
+- `tests/<project>/` - specs for one app, a Playwright **project** (`app`
+  now, `site` later), defined in `playwright.config.ts`. Under a project,
+  specs live in **domain folders** grouped by the capability a user exercises,
+  so a newcomer finds a test by asking "what can a user do here" and reading
+  the behavioral filename:
+
+  ```
+  tests/app/
+    auth/           login, logout
+    proposals/      browse and open a proposal (home)
+    dashboard/      the workspace frame and navigation between views
+    table/          the run table: cells, columns, tags, run detail, tooltips
+    plots/          data plots, the plot dialog, summary plots
+    live-updates/   live pushes over the websocket
+    context-file/   the context file editor
+    pages/          standalone routes with no real capability (not-found)
+  ```
+
+  A spec's folder follows the capability it tests, not where the code lives or
+  which driver it imports. `dashboard/` owns the frame and the navigation
+  between destinations; each capability folder owns the behavior at a
+  destination.
+
 - `fixtures/` - Playwright harness glue (`test.extend`). `index.ts` exports the
   extended `test` and `expect` and installs the auto-used `api` fixture.
 - `mocks/` - the network layer, mirroring the app's API. `index.ts` is the
