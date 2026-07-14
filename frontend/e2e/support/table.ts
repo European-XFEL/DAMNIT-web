@@ -27,6 +27,15 @@ export function dataCells(page: Page): Locator {
   return page.locator(`[data-testid^="${CELL_TESTID_PREFIX}"]`)
 }
 
+// A single mirrored cell by its a11y column/row index (row marker 0, Run 1).
+// Shares cellTestId so the testid format stays in one place.
+export function cell(
+  page: Page,
+  { col, row }: { col: number; row: number }
+): Locator {
+  return page.getByTestId(cellTestId({ col, row }))
+}
+
 // Wait for a cell's deferred data to load. Glide mirrors a loaded error or image
 // cell as non-empty accessibility text; ordinary cells stay empty, so only call
 // this for a cell that mirrors content.
@@ -34,7 +43,7 @@ export async function waitForCellLoaded(
   page: Page,
   { col, row }: { col: number; row: number }
 ) {
-  await expect(page.getByTestId(cellTestId({ col, row }))).not.toBeEmpty()
+  await expect(cell(page, { col, row })).not.toBeEmpty()
 }
 
 // The canvas paints as soon as the metadata loads, but cell values arrive later
@@ -118,11 +127,11 @@ export function rowCheckbox(page: Page, name: string): Locator {
 export async function selectRun(page: Page, { row }: { row: number }) {
   // The a11y tree renders a beat after the canvas, and Glide only mirrors rows
   // in the current vertical window, so wait for the target cell itself.
-  const cell = page.getByTestId(cellTestId({ col: RUN_COLUMN, row }))
-  await expect(cell).toBeAttached()
+  const runCell = cell(page, { col: RUN_COLUMN, row })
+  await expect(runCell).toBeAttached()
   // Shift+Space is Glide's selectRow keybinding: it selects the focused cell's
   // row, so the column is irrelevant.
-  await cell.focus()
+  await runCell.focus()
   await page.keyboard.press('Shift+Space')
 }
 
