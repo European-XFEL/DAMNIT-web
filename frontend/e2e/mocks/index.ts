@@ -13,6 +13,8 @@ import {
 
 import { accessibleProposals, type Example } from '#examples/xpcs'
 
+import { mockWebSocket, type PushLatestData } from './websocket'
+
 // @monaco-editor/react does not bundle the editor; at runtime its loader fetches
 // monaco from jsDelivr. Resolve the monaco-editor package we already install and
 // serve its min/vs tree instead, so the editor loads with no network and the
@@ -33,6 +35,10 @@ export type MockApi = {
   // file being edited on disk between polls. The next poll then sees a newer
   // stamp than the loaded content and triggers a refetch.
   touchContextFile: (content: string) => void
+  // Deliver a graphql-ws subscription message, modelling the backend pushing new
+  // table data. A spec calls this after the grid has loaded to drive a live
+  // update (a new run, an updated cell, or a deferred image resolving).
+  pushLatestData: PushLatestData
 }
 
 type MockApiOptions = {
@@ -60,6 +66,7 @@ export async function mockApi(
       contextContent = content
       contextLastModified += 1
     },
+    pushLatestData: await mockWebSocket(page),
   }
 
   // variables.proposal arrives as a string, so hold the accessible set as strings.
@@ -200,10 +207,6 @@ export async function mockApi(
   await page.route('**/contextfile/last_modified**', (route) =>
     route.fulfill({ json: { lastModified: contextLastModified } })
   )
-
-  // Silence the graphql-ws subscription: accept the socket but never answer, so
-  // the client stays connected instead of reconnecting forever.
-  await page.routeWebSocket('**/graphql', () => {})
 
   return api
 }
