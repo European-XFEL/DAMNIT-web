@@ -11,7 +11,7 @@ import { type DataEditorRef } from '@glideapps/glide-data-grid'
 
 import { setActive, setViewScroll } from './table.slice'
 import type { Rectangle, Scroll } from './types'
-import { useAppDispatch, useAppStore } from '../../redux/hooks'
+import { useAppDispatch, useAppStore } from '#src/redux/hooks'
 
 export function useScrollToView(ref: RefObject<DataEditorRef>) {
   const dispatch = useAppDispatch()

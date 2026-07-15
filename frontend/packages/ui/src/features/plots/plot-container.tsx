@@ -9,16 +9,16 @@ import {
   type PlotMetadata,
   type PlotInfo,
 } from './plots.types'
-import { DTYPES } from '../../constants'
-import { createTypedSelector } from '../../redux/selectors'
-import { useAppSelector } from '../../redux/hooks'
+import { DTYPES } from '#src/constants'
+import { createTypedSelector } from '#src/redux/selectors'
+import { useAppSelector } from '#src/redux/hooks'
 import {
   type ExtractedDataItem,
   type ExtractedMetadataItem,
   type VariableDataItem,
   type VariableMetadataItem,
-} from '../../types'
-import { formatRunsSubtitle } from '../../utils/helpers'
+} from '#src/types'
+import { formatRunsSubtitle } from '#src/utils/helpers'
 
 type Variable = {
   data: number[]

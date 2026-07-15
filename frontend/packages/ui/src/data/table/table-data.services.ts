@@ -13,8 +13,8 @@ import {
   type TableMetadataOptions,
 } from './table-data.types'
 import { type DamnitRun, flattenRuns } from './table-data.transforms'
-import { client } from '../../graphql/apollo'
-import { isEmpty } from '../../utils/helpers'
+import { client } from '#src/graphql/apollo'
+import { isEmpty } from '#src/utils/helpers'
 
 /*
  * -----------------------------

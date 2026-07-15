@@ -14,13 +14,13 @@ import { useForm } from '@mantine/form'
 import { addPlot } from './plots.slice'
 import TextCombobox, {
   type TextComboboxOptions,
-} from '../../components/comboboxes/text-combobox'
-import { getExtractedValue } from '../../data/extracted/extracted-data.slice'
-import { getTableData } from '../../data/table/table-data.slice'
-import { selectVariables } from '../../data/table/table-data.selectors'
-import { getAllExtractedValues } from '../../data/thunks'
-import { useAppDispatch, useAppSelector } from '../../redux/hooks'
-import { getVariableTitle } from '../../utils/variables'
+} from '#src/components/comboboxes/text-combobox'
+import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
+import { getTableData } from '#src/data/table/table-data.slice'
+import { selectVariables } from '#src/data/table/table-data.selectors'
+import { getAllExtractedValues } from '#src/data/thunks'
+import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
+import { getVariableTitle } from '#src/utils/variables'
 
 type PlotDialogForm = {
   runSelection: string

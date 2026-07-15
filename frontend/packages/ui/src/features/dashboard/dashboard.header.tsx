@@ -2,14 +2,14 @@ import { Burger, Flex, Group, Stack, Text, Title, rem } from '@mantine/core'
 
 import { openNav, closeNav } from './dashboard.slice'
 
-import Header from '../../components/headers/header'
-import Logo from '../../components/headers/logo'
-import { UserMenu } from '../../components/headers/user-menu'
-import InstrumentBadge from '../../components/badges/instrument-badge'
-import { selectUserFullName } from '../../auth/auth.slice'
-import { useAppDispatch, useAppSelector } from '../../redux/hooks'
-import { history } from '../../routes/history'
-import { type ProposalInfo } from '../../types'
+import Header from '#src/components/headers/header'
+import Logo from '#src/components/headers/logo'
+import { UserMenu } from '#src/components/headers/user-menu'
+import InstrumentBadge from '#src/components/badges/instrument-badge'
+import { selectUserFullName } from '#src/auth/auth.slice'
+import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
+import { history } from '#src/routes/history'
+import { type ProposalInfo } from '#src/types'
 
 type DashboardHeaderProps = {
   proposal: ProposalInfo

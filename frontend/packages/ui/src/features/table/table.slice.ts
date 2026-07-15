@@ -1,8 +1,8 @@
 import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import type { Scroll } from './types'
-import { resetProposal } from '../../redux/actions'
-import { isArrayEqual } from '../../utils/array'
+import { resetProposal } from '#src/redux/actions'
+import { isArrayEqual } from '#src/utils/array'
 
 type VariableOptions = {
   visibility: boolean

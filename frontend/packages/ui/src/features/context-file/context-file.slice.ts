@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { OnMount } from '@monaco-editor/react'
 
-import { resetProposal } from '../../redux/actions'
+import { resetProposal } from '#src/redux/actions'
 
 type EditorView = ReturnType<Parameters<OnMount>[0]['saveViewState']>
 

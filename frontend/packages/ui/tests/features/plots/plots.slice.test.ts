@@ -4,7 +4,7 @@ import reducer, {
   addPlot,
   removePlot,
   setCurrentPlot,
-} from '@/features/plots/plots.slice'
+} from '#src/features/plots/plots.slice'
 
 const plot = (variables: string[]) => ({
   variables,

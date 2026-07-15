@@ -2,7 +2,7 @@ import {
   type VariableDataItem,
   type VariableMetadataItem,
   type TagItem,
-} from '../../types'
+} from '#src/types'
 
 export type TableData = {
   [run: string]: { [variable: string]: VariableDataItem }

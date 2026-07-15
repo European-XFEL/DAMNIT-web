@@ -12,9 +12,9 @@ import {
 } from '@glideapps/glide-data-grid'
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
-import { DTYPES } from '../../constants'
-import { type VariableError, type VariableValue } from '../../types'
-import { formatDate, formatNumber } from '../../utils/helpers'
+import { DTYPES } from '#src/constants'
+import { type VariableError, type VariableValue } from '#src/types'
+import { formatDate, formatNumber } from '#src/utils/helpers'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
 // error cell renderer so a no-data cell and an errored cell line up.

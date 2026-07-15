@@ -1,6 +1,6 @@
-import type { RootState } from '../../redux/types'
-import { createTypedSelector } from '../../redux/selectors'
-import { EXCLUDED_VARIABLES } from '../../constants'
+import type { RootState } from '#src/redux/types'
+import { createTypedSelector } from '#src/redux/selectors'
+import { EXCLUDED_VARIABLES } from '#src/constants'
 
 const selectTableData = (state: RootState) => state.tableData
 

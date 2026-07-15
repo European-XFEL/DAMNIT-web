@@ -1,7 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit'
 
+import { resetProposal } from '#src/redux/actions'
+
 import { generateUID } from './utils'
-import { resetProposal } from '../../redux/actions'
 
 type PlotItem = {
   variables: string[]

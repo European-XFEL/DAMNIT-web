@@ -1,8 +1,8 @@
 import { type ReactNode } from 'react'
 import { AppShell, CloseButton, Skeleton } from '@mantine/core'
 
-import Tabs from '../../components/tabs/tabs'
-import { useAppDispatch, useAppSelector } from '../../redux/hooks'
+import Tabs from '#src/components/tabs/tabs'
+import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
 import { closeAside } from './dashboard.slice'
 import Run from './run'
 

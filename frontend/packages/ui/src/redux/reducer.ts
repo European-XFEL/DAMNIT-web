@@ -1,16 +1,14 @@
 import { combineReducers } from '@reduxjs/toolkit'
 
-import { authApi } from '../auth/auth.api'
-
-import contextFile from '../features/context-file/context-file.slice'
-import { contextfileApi } from '../features/context-file/context-file.api'
-import extractedData from '../data/extracted/extracted-data.slice'
-import metadata from '../data/metadata/metadata.slice'
-import tableData from '../data/table/table-data.slice'
-
-import dashboard from '../features/dashboard/dashboard.slice'
-import plots from '../features/plots/plots.slice'
-import table from '../features/table/table.slice'
+import { authApi } from '#src/auth/auth.api'
+import contextFile from '#src/features/context-file/context-file.slice'
+import { contextfileApi } from '#src/features/context-file/context-file.api'
+import extractedData from '#src/data/extracted/extracted-data.slice'
+import metadata from '#src/data/metadata/metadata.slice'
+import tableData from '#src/data/table/table-data.slice'
+import dashboard from '#src/features/dashboard/dashboard.slice'
+import plots from '#src/features/plots/plots.slice'
+import table from '#src/features/table/table.slice'
 
 const reducer = combineReducers({
   contextFile,

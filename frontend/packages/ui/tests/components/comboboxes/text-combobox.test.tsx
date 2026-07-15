@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 
-import TextCombobox from '@/components/comboboxes/text-combobox'
+import TextCombobox from '#src/components/comboboxes/text-combobox'
 import { renderWithProviders } from '#tests/support/render'
 
 const options = [

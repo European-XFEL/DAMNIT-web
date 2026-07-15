@@ -3,8 +3,8 @@ import { type PayloadAction } from '@reduxjs/toolkit'
 import { getTable, getTableData } from './table-data.slice'
 import { type TableInfo } from './table-data.types'
 
-import { type AppDispatch } from '../../redux/types'
-import { isEmpty } from '../../utils/helpers'
+import { type AppDispatch } from '#src/redux/types'
+import { isEmpty } from '#src/utils/helpers'
 
 export const getDeferredTable =
   ({

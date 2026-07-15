@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router'
 
-import useUmami from '../analytics/umami/useUmami'
+import useUmami from '#src/analytics/umami/useUmami'
 function RootRoute() {
   useUmami()
 

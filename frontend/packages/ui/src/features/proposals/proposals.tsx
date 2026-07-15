@@ -21,11 +21,11 @@ import { DataTable } from 'mantine-datatable'
 
 import InstrumentBadge, {
   type InstrumentBadgeProps,
-} from '../../components/badges/instrument-badge'
-import CenteredLoader from '../../components/feedback/centered-loader'
-import useProposals from '../../data/metadata/use-proposals'
-import { isEmpty } from '../../utils/helpers'
-import { orderBy } from '../../utils/objects'
+} from '#src/components/badges/instrument-badge'
+import CenteredLoader from '#src/components/feedback/centered-loader'
+import useProposals from '#src/data/metadata/use-proposals'
+import { isEmpty } from '#src/utils/helpers'
+import { orderBy } from '#src/utils/objects'
 import styles from './proposals.module.css'
 
 const formatRunCycle = (date: string) => {

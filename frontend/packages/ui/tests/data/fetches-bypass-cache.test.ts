@@ -1,15 +1,15 @@
 import { afterEach, expect, test, vi } from 'vitest'
 
-import TableDataServices from '@/data/table/table-data.services'
-import ExtractedDataServices from '@/data/extracted/extracted-data.services'
-import { cache } from '@/graphql/apollo'
+import TableDataServices from '#src/data/table/table-data.services'
+import ExtractedDataServices from '#src/data/extracted/extracted-data.services'
+import { cache } from '#src/graphql/apollo'
 
 // Redux is the render source for runs and extracted_data, so their fetches run
 // no-cache and must leave the Apollo cache untouched. That is what makes
 // resetProposal's eviction stick: a fetch that resolves after teardown has
 // nothing to write back into ROOT_QUERY, so reopening the proposal can't read a
 // stale field. A real cache behind a stub link makes the write observable.
-vi.mock('@/graphql/apollo', async () => {
+vi.mock('#src/graphql/apollo', async () => {
   const { ApolloClient, ApolloLink, InMemoryCache, Observable } = await import(
     '@apollo/client'
   )

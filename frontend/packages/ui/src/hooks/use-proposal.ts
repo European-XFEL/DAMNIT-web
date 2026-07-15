@@ -2,18 +2,18 @@ import { useEffect } from 'react'
 
 import { useQuery, useSubscription } from '@apollo/client/react'
 
-import { updateTable } from '../data/table/table-data.slice'
+import { updateTable } from '#src/data/table/table-data.slice'
 import {
   setProposalNotFound,
   setProposalSuccess,
-} from '../data/metadata/metadata.slice'
-import { LATEST_DATA_FIELD_NAME } from '../data/table/table-data.constants'
+} from '#src/data/metadata/metadata.slice'
+import { LATEST_DATA_FIELD_NAME } from '#src/data/table/table-data.constants'
 import {
   LATEST_DATA_SUBSCRIPTION,
   TABLE_METADATA_QUERY,
-} from '../data/table/table-data.services'
-import { useAppDispatch, useAppSelector, useAppStore } from '../redux/hooks'
-import { isStaleProposal } from '../redux/actions'
+} from '#src/data/table/table-data.services'
+import { useAppDispatch, useAppSelector, useAppStore } from '#src/redux/hooks'
+import { isStaleProposal } from '#src/redux/actions'
 
 type UseProposalOptions = {
   subscribe: boolean

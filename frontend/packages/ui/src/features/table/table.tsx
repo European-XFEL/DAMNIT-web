@@ -32,12 +32,12 @@ import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
 import { plotRequested, selectRun } from './table.slice'
 
-import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
-import { getExtractedValue } from '../../data/extracted/extracted-data.slice'
-import { getTableData } from '../../data/table/table-data.slice'
-import { useAppDispatch, useAppSelector } from '../../redux/hooks'
-import { isArrayEqual, sorted } from '../../utils/array'
-import { isEmpty } from '../../utils/helpers'
+import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '#src/constants'
+import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
+import { getTableData } from '#src/data/table/table-data.slice'
+import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
+import { isArrayEqual, sorted } from '#src/utils/array'
+import { isEmpty } from '#src/utils/helpers'
 
 type Column = {
   id: string

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
-import { logout } from '../auth/auth.thunks'
-import { useAppDispatch } from '../redux/hooks'
+import { logout } from '#src/auth/auth.thunks'
+import { useAppDispatch } from '#src/redux/hooks'
 
 const LogoutRoute = () => {
   const dispatch = useAppDispatch()

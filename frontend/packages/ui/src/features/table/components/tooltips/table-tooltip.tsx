@@ -1,8 +1,8 @@
 import { Image, useComputedColorScheme, useMantineTheme } from '@mantine/core'
 import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
-import { type VariableError } from '../../../../types'
-import { assertNever } from '../../../../utils/helpers'
+import { type VariableError } from '#src/types'
+import { assertNever } from '#src/utils/helpers'
 import { ErrorContent } from './error-content'
 
 export type CellTooltip =

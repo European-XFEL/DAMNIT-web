@@ -3,18 +3,18 @@ import {
   closeAside,
   openAside,
   removeTab,
-} from '../features/dashboard/dashboard.slice'
+} from '#src/features/dashboard/dashboard.slice'
 import {
   addPlot,
   removePlot,
   reset as resetPlots,
-} from '../features/plots/plots.slice'
-import { plotRequested, selectRun } from '../features/table/table.slice'
-import { contextfileApi } from '../features/context-file/context-file.api'
-import { cache } from '../graphql/apollo'
+} from '#src/features/plots/plots.slice'
+import { plotRequested, selectRun } from '#src/features/table/table.slice'
+import { contextfileApi } from '#src/features/context-file/context-file.api'
+import { cache } from '#src/graphql/apollo'
 import { resetProposal } from './actions'
 import { startAppListening } from './listener-middleware'
-import { isEmpty } from '../utils/helpers'
+import { isEmpty } from '#src/utils/helpers'
 
 export function registerAppListeners() {
   startAppListening({

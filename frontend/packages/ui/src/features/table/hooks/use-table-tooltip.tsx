@@ -12,9 +12,9 @@ import { type IBounds, useLayer } from 'react-laag'
 import {
   TableTooltip,
   type CellTooltip,
-} from '../components/tooltips/table-tooltip'
-import { ZERO_BOUNDS, toBounds } from '../bounds'
-import { assertNever } from '../../../utils/helpers'
+} from '#src/features/table/components/tooltips/table-tooltip'
+import { ZERO_BOUNDS, toBounds } from '#src/features/table/bounds'
+import { assertNever } from '#src/utils/helpers'
 
 const DELAY = { open: 200, switch: 60, close: 200 }
 const TRIGGER_OFFSET = 8

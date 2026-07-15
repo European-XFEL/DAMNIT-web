@@ -1,11 +1,11 @@
 import { Image, ScrollArea, Text } from '@mantine/core'
 
 import classes from './run.module.css'
-import { selectVariableVisibility } from '../table/store/selectors'
-import { DTYPES } from '../../constants'
-import { useAppSelector } from '../../redux/hooks'
-import { type VariableValue } from '../../types'
-import { formatDate, isEmpty } from '../../utils/helpers'
+import { selectVariableVisibility } from '#src/features/table/store/selectors'
+import { DTYPES } from '#src/constants'
+import { useAppSelector } from '#src/redux/hooks'
+import { type VariableValue } from '#src/types'
+import { formatDate, isEmpty } from '#src/utils/helpers'
 
 const EXCLUDED_VARIABLES = ['proposal', 'run', 'added_at']
 

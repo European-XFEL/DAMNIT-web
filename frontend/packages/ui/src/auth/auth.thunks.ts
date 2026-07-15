@@ -1,5 +1,5 @@
-import { HTTP_URL } from '../constants'
-import { type AppThunk } from '../redux/thunks'
+import { HTTP_URL } from '#src/constants'
+import { type AppThunk } from '#src/redux/thunks'
 
 export const login = (): AppThunk => (_) => {
   window.location.href = `${HTTP_URL}oauth/login?redirect_uri=${HTTP_URL}home`

@@ -1,5 +1,5 @@
-import type { RootState } from '../../../redux/types'
-import { createTypedSelector } from '../../../redux/selectors'
+import type { RootState } from '#src/redux/types'
+import { createTypedSelector } from '#src/redux/selectors'
 
 // ----------------------------------------------------------------------------
 // Variables

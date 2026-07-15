@@ -4,7 +4,7 @@ import reducer, {
   addTab,
   removeTab,
   setCurrentTab,
-} from '@/features/dashboard/dashboard.slice'
+} from '#src/features/dashboard/dashboard.slice'
 
 describe('setCurrentTab', () => {
   test('activates a tab and records the previous one', () => {

@@ -1,4 +1,4 @@
-import { type TabItem } from '../../types'
+import { type TabItem } from '#src/types'
 
 interface TabContent extends Omit<TabItem, 'title'> {
   title: string | React.ReactNode // override type
