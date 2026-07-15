@@ -24,7 +24,7 @@ export {
 export { Proposals } from './features/proposals'
 
 // Auth
-export { selectUserFullName } from './auth'
+export { selectAvailableProposals, selectUserFullName } from './auth'
 
 // Hooks
 export { useProposal } from './hooks'
