@@ -9,4 +9,4 @@ export {
   resolveOperation,
   type MockDataSource,
 } from './resolve'
-export type { RunData, Runs, VariableError } from './types'
+export type { Meta, RunData, Runs, VariableError } from './types'

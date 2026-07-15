@@ -184,17 +184,27 @@ if (ERROR_ROW === -1) {
 }
 
 // First image column of the plain XPCS example. Row 0 is run 1, whose image
-// cells hold real base64 PNGs.
-const imageVariable = Object.entries(XPCS.data[0].variables).find(
+// cells hold real base64 PNGs. Keep the whole entry so the live-update spec can
+// read that run's image value without re-finding it. The dtype re-check narrows
+// the value's type; `.find` alone leaves it a union.
+const imageEntry = Object.entries(XPCS.data[0].variables).find(
   ([, variable]) => variable.dtype === 'image'
-)?.[0]
-if (imageVariable === undefined) {
+)
+if (imageEntry === undefined || imageEntry[1].dtype !== 'image') {
   throw new Error('the XPCS example has no image column for the preview test')
 }
+const imageVariable = imageEntry[0]
+
 export const IMAGE_CELL = {
   col: columnOf(Object.keys(XPCS.meta.variables), imageVariable),
   row: 0,
 }
+
+// The image variable's name and run 1's real base64 value. The live-update spec
+// seeds run 1 with this image absent (still extracting) and then pushes this
+// value to model the extraction completing.
+export const IMAGE_VARIABLE = imageVariable
+export const IMAGE_VALUE = imageEntry[1].value
 
 function withErrorCells(run: RunData): RunData {
   const variables = { ...run.variables }
@@ -225,6 +235,25 @@ export const EMPTY: Example = {
   ...XPCS,
   meta: { ...XPCS.meta, runs: [] },
   data: [],
+}
+
+// The run at grid row 0, whose image cell the live-update spec drives. Derived
+// from meta order (like ERROR_ROW) so a reordered demo cannot point this example
+// at a different run than IMAGE_CELL (row 0) targets.
+const PENDING_IMAGE_RUN = XPCS.meta.runs[0]
+
+// XPCS with that run's image still extracting: the image variable is absent from
+// its data, so its cell renders as a loading skeleton until a subscription push
+// delivers the value. The live-update spec drives that push.
+export const xpcsWithPendingImage: Example = {
+  ...XPCS,
+  data: XPCS.data.map((run) => {
+    if (run.variables.run.value !== PENDING_IMAGE_RUN) {
+      return run
+    }
+    const { [imageVariable]: _, ...variables } = run.variables
+    return { ...run, variables }
+  }),
 }
 
 // The home page shows one table per semester, so this example spreads proposals

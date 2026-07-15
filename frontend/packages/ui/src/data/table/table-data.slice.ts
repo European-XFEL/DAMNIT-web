@@ -86,8 +86,10 @@ const slice = createSlice({
         state.lastUpdate = updatedTimestamp
       }
 
-      // Update metadata
-      state.metadata = metadata
+      // A subscription push resends runs, variables, and timestamp but never
+      // tags, so replacing wholesale would drop them and crash the tag-driven
+      // column visibility. Merge so unsent fields (tags) survive.
+      state.metadata = { ...state.metadata, ...metadata }
     },
   },
   extraReducers: (builder) => {
