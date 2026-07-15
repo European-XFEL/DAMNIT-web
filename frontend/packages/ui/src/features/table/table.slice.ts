@@ -1,4 +1,4 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import type { Scroll } from './types'
 import { resetProposal } from '../../redux/actions'
@@ -93,3 +93,13 @@ export const {
   setVariableVisibility,
   setViewScroll,
 } = slice.actions
+
+type PlotRequest = {
+  variables: string[]
+  runs?: string[]
+  source: string
+  title?: string
+}
+
+// No reducer handles this: a store listener turns the request into a plot.
+export const plotRequested = createAction<PlotRequest>('table/plotRequested')

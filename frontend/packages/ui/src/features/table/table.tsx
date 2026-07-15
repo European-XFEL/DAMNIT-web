@@ -30,9 +30,7 @@ import { useTable } from './hooks/use-table'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
-import { selectRun } from './table.slice'
-import { canPlotData } from '../plots/utils'
-import { addPlot } from '../plots/plots.slice'
+import { plotRequested, selectRun } from './table.slice'
 
 import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
 import { getExtractedValue } from '../../data/extracted'
@@ -256,10 +254,8 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     const column = tableColumns[col]?.id
     const rowData = tableData[tableMetadata.runs[row]]
 
-    if (
-      col !== -1 &&
-      canPlotData(rowData[column]?.value, rowData[column]?.dtype)
-    ) {
+    // TODO: Use extracted data type from the database
+    if (col !== -1 && rowData[column]?.value != null) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 
@@ -353,7 +349,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     label: string
   }) => {
     dispatch(
-      addPlot({
+      plotRequested({
         variables,
         source: 'table',
         title: `Summary: ${label}`,
@@ -378,7 +374,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     runs: string[]
   }) => {
     dispatch(
-      addPlot({
+      plotRequested({
         runs,
         variables: [variable],
         source: 'extracted',

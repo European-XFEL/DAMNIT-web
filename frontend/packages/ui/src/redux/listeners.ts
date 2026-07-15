@@ -9,7 +9,7 @@ import {
   removePlot,
   reset as resetPlots,
 } from '../features/plots/plots.slice'
-import { selectRun } from '../features/table/table.slice'
+import { plotRequested, selectRun } from '../features/table/table.slice'
 import { contextfileApi } from '../features/context-file/context-file.api'
 import { cache } from '../graphql/apollo'
 import { resetProposal } from './actions'
@@ -46,6 +46,13 @@ export function registerAppListeners() {
 
       const sideEffect = run != null ? openAside : closeAside
       dispatch(sideEffect())
+    },
+  })
+
+  startAppListening({
+    actionCreator: plotRequested,
+    effect: (action, { dispatch }) => {
+      dispatch(addPlot(action.payload))
     },
   })
 
