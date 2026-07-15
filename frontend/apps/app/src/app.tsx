@@ -77,16 +77,14 @@ function ProposalRoute({ children }: PropsWithChildren) {
 function HomeRoute() {
   const userName = useAppSelector(selectUserFullName)
   const proposals = useAppSelector(selectAvailableProposals)
+  const navigate = useNavigate()
 
   return (
     <HomePage
       header={
         <Header px={20}>
           <Logo linkTo="/home" />
-          <UserMenu
-            userName={userName}
-            onLogout={() => history.navigate('/logout')}
-          />
+          <UserMenu userName={userName} onLogout={() => navigate('/logout')} />
         </Header>
       }
       main={
