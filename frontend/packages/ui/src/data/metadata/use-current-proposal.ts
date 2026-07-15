@@ -1,6 +1,7 @@
-import useProposals from './use-proposals'
 import { useAppSelector } from '#src/app/store/hooks'
 import { isEmpty } from '#src/utils/helpers'
+
+import useProposals from './use-proposals'
 
 const useCurrentProposal = () => {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)

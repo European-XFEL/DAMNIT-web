@@ -1,5 +1,8 @@
 import { gql } from '@apollo/client'
 
+import { client } from '#src/graphql/apollo'
+import { isEmpty } from '#src/utils/helpers'
+
 import {
   DEFERRED_TABLE_DATA_QUERY_NAME,
   LATEST_DATA_FIELD_NAME,
@@ -13,8 +16,6 @@ import {
   type TableMetadataOptions,
 } from './table-data.types'
 import { type DamnitRun, flattenRuns } from './table-data.transforms'
-import { client } from '#src/graphql/apollo'
-import { isEmpty } from '#src/utils/helpers'
 
 /*
  * -----------------------------

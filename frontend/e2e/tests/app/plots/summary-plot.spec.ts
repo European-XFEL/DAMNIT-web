@@ -1,7 +1,6 @@
 import { type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
-
 import { numberVars } from '#examples/xpcs'
 import { columnOf, openProposal, titleOf } from '#support/table'
 import {

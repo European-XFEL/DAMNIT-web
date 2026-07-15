@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { openProposal, titleOf } from '#support/table'
 import {
   chooseVariable,

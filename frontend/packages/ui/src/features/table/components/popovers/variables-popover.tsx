@@ -3,9 +3,6 @@ import lodashSize from 'lodash/size'
 import { Checkbox, rem } from '@mantine/core'
 import { IconCheck, IconList, IconCircle } from '@tabler/icons-react'
 
-import { BasePopover } from './base-popover'
-import { RowDetails, RowItemCheckbox } from './row-details'
-import { SearchableTable } from './searchable-table'
 import { ControlButton } from '#src/features/table/components/control-button'
 import {
   useColumnVisibilityFromTags,
@@ -13,8 +10,11 @@ import {
 } from '#src/features/table/hooks/use-column-visibility'
 import { selectTagSelection } from '#src/features/table/store/selectors'
 import { setVariableVisibility } from '#src/features/table/table.slice'
-
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+
+import { SearchableTable } from './searchable-table'
+import { RowDetails, RowItemCheckbox } from './row-details'
+import { BasePopover } from './base-popover'
 
 type VariableVisibility = Record<string, boolean>
 

@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-
 import { useQuery, useSubscription } from '@apollo/client/react'
 
 import { updateTable } from '#src/data/table/table-data.slice'

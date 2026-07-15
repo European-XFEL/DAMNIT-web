@@ -77,6 +77,28 @@ export default defineConfig(
       'import-x/no-cycle': ['error', { ignoreExternal: true }],
       'import-x/no-self-import': 'error',
       'import-x/no-useless-path-segments': 'error',
+      'import-x/order': [
+        'error',
+        {
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index',
+          ],
+          // Workspace packages and package.json subpath imports ('#src/...',
+          // '#fixtures', ...) are internal, whichever package defines them.
+          pathGroups: [
+            { pattern: '@damnit-frontend/**', group: 'internal' },
+            { pattern: '#*', group: 'internal' },
+            { pattern: '#*/**', group: 'internal' },
+          ],
+          pathGroupsExcludedImportTypes: ['builtin'],
+          'newlines-between': 'always',
+        },
+      ],
     },
   },
   eslintConfigPrettier

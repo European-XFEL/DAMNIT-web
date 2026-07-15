@@ -10,7 +10,6 @@ import {
   unmockedOperationError,
   type MockDataSource,
 } from '@damnit-frontend/shared/mocks'
-
 import { accessibleProposals, type Example } from '#examples/xpcs'
 
 import { mockWebSocket, type PushLatestData } from './websocket'

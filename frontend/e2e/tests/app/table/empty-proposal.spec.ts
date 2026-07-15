@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { EMPTY } from '#examples/xpcs'
 import { dataCells, expectVisibleColumns, openProposal } from '#support/table'
 

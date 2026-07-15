@@ -26,6 +26,7 @@ import CenteredLoader from '#src/components/feedback/centered-loader'
 import useProposals from '#src/data/metadata/use-proposals'
 import { isEmpty } from '#src/utils/helpers'
 import { orderBy } from '#src/utils/objects'
+
 import styles from './proposals.module.css'
 
 const formatRunCycle = (date: string) => {

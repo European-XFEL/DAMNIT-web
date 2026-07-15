@@ -6,7 +6,6 @@ import {
   selectTagSelection,
   selectVariableVisibility,
 } from '#src/features/table/store/selectors'
-
 import { useAppSelector } from '#src/app/store/hooks'
 
 type ColumnVisibilityInputs = {

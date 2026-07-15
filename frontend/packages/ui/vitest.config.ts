@@ -1,6 +1,6 @@
-import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
+import { defineConfig } from 'vitest/config'
 
 // The file extension picks the runtime: *.test.ts runs in Node (pure logic),
 // *.test.tsx runs in a real browser (anything that touches the DOM). The only

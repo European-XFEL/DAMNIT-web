@@ -13,6 +13,13 @@ import {
 import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack, useMantineTheme } from '@mantine/core'
 
+import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '#src/constants'
+import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
+import { getTableData } from '#src/data/table/table-data.slice'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { isArrayEqual, sorted } from '#src/utils/array'
+import { isEmpty } from '#src/utils/helpers'
+
 import {
   errorCell,
   getCell,
@@ -31,13 +38,6 @@ import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
 import { plotRequested, selectRun } from './table.slice'
-
-import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '#src/constants'
-import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
-import { getTableData } from '#src/data/table/table-data.slice'
-import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
-import { isArrayEqual, sorted } from '#src/utils/array'
-import { isEmpty } from '#src/utils/helpers'
 
 type Column = {
   id: string

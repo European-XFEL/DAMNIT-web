@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { ERROR_CELLS, ERROR_ROW, xpcsWithErrors } from '#examples/xpcs'
 import { hoverCell, openProposal, tooltipCard } from '#support/table'
 

@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { XPCS } from '#examples/xpcs'
 import { waitForTableData } from '#support/table'
 

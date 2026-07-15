@@ -1,14 +1,7 @@
 import { useEffect, useState, type PropsWithChildren } from 'react'
-
 import { Alert, Code, Image, Skeleton, Stack, Text } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
 
-import Plot from './plot'
-import {
-  type PlotDataItem,
-  type PlotMetadata,
-  type PlotInfo,
-} from './plots.types'
 import { DTYPES } from '#src/constants'
 import { createTypedSelector } from '#src/app/store/selectors'
 import { useAppSelector } from '#src/app/store/hooks'
@@ -19,6 +12,13 @@ import {
   type VariableMetadataItem,
 } from '#src/types'
 import { formatRunsSubtitle } from '#src/utils/helpers'
+
+import {
+  type PlotDataItem,
+  type PlotMetadata,
+  type PlotInfo,
+} from './plots.types'
+import Plot from './plot'
 
 type Variable = {
   data: number[]

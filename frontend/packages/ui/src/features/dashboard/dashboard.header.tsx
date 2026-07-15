@@ -1,7 +1,5 @@
 import { Burger, Flex, Group, Stack, Text, Title, rem } from '@mantine/core'
 
-import { openNav, closeNav } from './dashboard.slice'
-
 import Header from '#src/components/headers/header'
 import Logo from '#src/components/headers/logo'
 import { UserMenu } from '#src/components/headers/user-menu'
@@ -10,6 +8,8 @@ import { selectUserFullName } from '#src/features/auth/auth.slice'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { history } from '#src/app/routes/history'
 import { type ProposalInfo } from '#src/types'
+
+import { openNav, closeNav } from './dashboard.slice'
 
 type DashboardHeaderProps = {
   proposal: ProposalInfo

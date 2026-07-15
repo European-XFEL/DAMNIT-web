@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { Rectangle } from './types'
-import { Pages, pageRangeForRegion } from './pagination'
 import { getDeferredTable } from '#src/data/table/table-data.thunks'
 import { getTable } from '#src/data/table/table-data.slice'
 import { useAppDispatch } from '#src/app/store/hooks'
+
+import { Pages, pageRangeForRegion } from './pagination'
+import type { Rectangle } from './types'
 
 type UsePaginationOptions = {
   proposal: string

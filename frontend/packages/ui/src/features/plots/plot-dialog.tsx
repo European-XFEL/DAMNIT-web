@@ -11,7 +11,6 @@ import {
 import { TextInput, Text, Blockquote } from '@mantine/core'
 import { useForm } from '@mantine/form'
 
-import { addPlot } from './plots.slice'
 import TextCombobox, {
   type TextComboboxOptions,
 } from '#src/components/comboboxes/text-combobox'
@@ -21,6 +20,8 @@ import { selectVariables } from '#src/data/table/table-data.selectors'
 import { getAllExtractedValues } from '#src/data/thunks'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { getVariableTitle } from '#src/utils/variables'
+
+import { addPlot } from './plots.slice'
 
 type PlotDialogForm = {
   runSelection: string

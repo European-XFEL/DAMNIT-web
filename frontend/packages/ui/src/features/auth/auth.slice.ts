@@ -1,4 +1,5 @@
 import { createSelector } from '@reduxjs/toolkit'
+
 import { authApi } from './auth.api'
 
 export const selectUserInfoResult = authApi.endpoints.getUserInfo.select()

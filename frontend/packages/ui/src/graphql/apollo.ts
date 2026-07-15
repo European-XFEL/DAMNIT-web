@@ -18,10 +18,10 @@ import {
 import { RetryLink } from '@apollo/client/link/retry'
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions'
 import { getMainDefinition } from '@apollo/client/utilities'
-
 import { createClient } from 'graphql-ws'
 
 import { BASE_URL, WS_URL } from '#src/constants'
+
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from './operation-names'
 
 const removeTypenameLink = removeTypenameFromVariables({

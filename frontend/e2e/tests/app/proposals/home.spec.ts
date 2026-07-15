@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { XPCS, xpcsWithProposals } from '#examples/xpcs'
 import {
   semesterLabels,

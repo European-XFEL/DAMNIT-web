@@ -1,12 +1,12 @@
 import { Box, Stack, Text } from '@mantine/core'
 
-import { removePlot, setCurrentPlot } from './plots.slice'
-import PlotContainer from './plot-container'
-
 import Tabs from '#src/components/tabs/tabs'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { sorted } from '#src/utils/array'
 import { formatRunsSubtitle, isEmpty } from '#src/utils/helpers'
+
+import PlotContainer from './plot-container'
+import { removePlot, setCurrentPlot } from './plots.slice'
 
 const PlotsTab = () => {
   const dispatch = useAppDispatch()

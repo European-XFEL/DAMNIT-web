@@ -10,20 +10,19 @@ import {
   type ElementProps,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-
 import { IconGraph, IconX } from '@tabler/icons-react'
 import cx from 'clsx'
 
-import { setCurrentTab, removeTab } from './dashboard.slice'
 import { type ContextFileProps } from '#src/features/context-file/context-file'
 import PlotDialog from '#src/features/plots/plot-dialog'
 import { type TableProps } from '#src/features/table/table'
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import { type TabsProps } from '#src/components/tabs/tabs'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import headerStyles from '#src/styles/header.module.css'
 
 import styles from './dashboard.module.css'
-import headerStyles from '#src/styles/header.module.css'
+import { setCurrentTab, removeTab } from './dashboard.slice'
 
 const PlotsTab = lazy(() => import('#src/features/plots/plots-tab'))
 const ContextFile = lazy(

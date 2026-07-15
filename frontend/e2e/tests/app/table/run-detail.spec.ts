@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { openProposal, selectRun, selectedRunTab } from '#support/table'
 
 test('selecting a run shows all its variables', async ({ page, example }) => {

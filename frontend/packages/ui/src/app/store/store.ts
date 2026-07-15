@@ -1,10 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit'
 
+import { authApi } from '#src/features/auth/auth.api'
+import { contextfileApi } from '#src/features/context-file/context-file.api'
+
 import { listenerMiddleware } from './listener-middleware'
 import { registerAppListeners } from './listeners'
 import reducer, { type RootState } from './reducer'
-import { authApi } from '#src/features/auth/auth.api'
-import { contextfileApi } from '#src/features/context-file/context-file.api'
 
 registerAppListeners()
 

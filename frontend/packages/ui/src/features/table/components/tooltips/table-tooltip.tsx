@@ -3,6 +3,7 @@ import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
 import { type VariableError } from '#src/types'
 import { assertNever } from '#src/utils/helpers'
+
 import { ErrorContent } from './error-content'
 
 export type CellTooltip =

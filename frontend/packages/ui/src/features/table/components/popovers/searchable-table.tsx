@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Divider, Group, ScrollArea, Stack, TextInput } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
-
 import { IconSearch } from '@tabler/icons-react'
 import {
   DataTable,

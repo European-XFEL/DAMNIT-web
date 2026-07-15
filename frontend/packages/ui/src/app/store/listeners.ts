@@ -12,9 +12,10 @@ import {
 import { plotRequested, selectRun } from '#src/features/table/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
 import { cache } from '#src/graphql/apollo'
+import { isEmpty } from '#src/utils/helpers'
+
 import { resetProposal } from './actions'
 import { startAppListening } from './listener-middleware'
-import { isEmpty } from '#src/utils/helpers'
 
 export function registerAppListeners() {
   startAppListening({

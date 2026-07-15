@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import {
   XPCS,
   IMAGE_CELL,

@@ -9,9 +9,10 @@ import {
 import { debounce } from 'lodash'
 import { type DataEditorRef } from '@glideapps/glide-data-grid'
 
+import { useAppDispatch, useAppStore } from '#src/app/store/hooks'
+
 import { setActive, setViewScroll } from './table.slice'
 import type { Rectangle, Scroll } from './types'
-import { useAppDispatch, useAppStore } from '#src/app/store/hooks'
 
 export function useScrollToView(ref: RefObject<DataEditorRef>) {
   const dispatch = useAppDispatch()

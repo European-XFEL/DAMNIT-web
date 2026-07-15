@@ -1,18 +1,18 @@
 import { useEffect, useRef } from 'react'
-
 import { Box, Stack } from '@mantine/core'
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
-import {
-  useCheckFileLastModifiedQuery,
-  useGetFileContentQuery,
-} from './context-file.api'
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import ConnectionStatus from '#src/components/statuses/connection-status'
 import LabelStatus from '#src/components/statuses/label-status'
 import StatusBar from '#src/components/statuses/status-bar'
 import { useAppSelector } from '#src/app/store/hooks'
+
+import {
+  useCheckFileLastModifiedQuery,
+  useGetFileContentQuery,
+} from './context-file.api'
 import ContextFileEditor from './context-file-editor'
 
 function formatRelativeTime(date: Date | number | undefined) {
