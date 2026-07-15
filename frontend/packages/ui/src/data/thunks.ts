@@ -1,6 +1,5 @@
-import { getExtractedValue } from './extracted'
-import { getTableData } from './table'
-
+import { getExtractedValue } from './extracted/extracted-data.slice'
+import { getTableData } from './table/table-data.slice'
 import { type AppDispatch, type RootState } from '../redux/types'
 
 type GetAllExtractedValuesOptions = {

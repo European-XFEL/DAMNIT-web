@@ -1,9 +1,8 @@
 import { type ReactNode } from 'react'
 import { AppShell, Stack } from '@mantine/core'
 
-import { ContactButton } from '../../components/buttons'
-import { SiteFooter } from '../../components/footers'
-
+import ContactButton from '../../components/buttons/contact-button'
+import SiteFooter from '../../components/footers/site-footer'
 type HomePageProps = {
   main: ReactNode
   header: ReactNode

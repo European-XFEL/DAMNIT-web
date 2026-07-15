@@ -12,13 +12,12 @@ import { TextInput, Text, Blockquote } from '@mantine/core'
 import { useForm } from '@mantine/form'
 
 import { addPlot } from './plots.slice'
-import {
-  TextCombobox,
+import TextCombobox, {
   type TextComboboxOptions,
-} from '../../components/comboboxes'
-import { getExtractedValue } from '../../data/extracted'
-import { getTableData } from '../../data/table'
-import { selectVariables } from '../../data/table'
+} from '../../components/comboboxes/text-combobox'
+import { getExtractedValue } from '../../data/extracted/extracted-data.slice'
+import { getTableData } from '../../data/table/table-data.slice'
+import { selectVariables } from '../../data/table/table-data.selectors'
 import { getAllExtractedValues } from '../../data/thunks'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
 import { getVariableTitle } from '../../utils/variables'

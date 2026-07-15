@@ -1,9 +1,8 @@
 import { Container, Text, Title } from '@mantine/core'
 
-import { useUserInfo } from '../../auth'
-import { history } from '../../routes'
-import { MainNavButton } from '../../components/buttons'
-
+import useUserInfo from '../../auth/use-user-info'
+import { history } from '../../routes/history'
+import MainNavButton from '../../components/buttons/main-nav-button'
 import classes from './logged-out-page.module.css'
 
 const LoggedOutPage = () => {

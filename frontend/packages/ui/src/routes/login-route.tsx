@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 
-import { login } from '../auth'
+import { login } from '../auth/auth.thunks'
 import { useAppDispatch } from '../redux/hooks'
 
 const LoginRoute = () => {

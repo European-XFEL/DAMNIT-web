@@ -2,13 +2,16 @@ import { useEffect } from 'react'
 
 import { useQuery, useSubscription } from '@apollo/client/react'
 
-import { updateTable } from '../data/table'
-import { setProposalNotFound, setProposalSuccess } from '../data/metadata'
+import { updateTable } from '../data/table/table-data.slice'
 import {
-  TABLE_METADATA_QUERY,
-  LATEST_DATA_FIELD_NAME,
+  setProposalNotFound,
+  setProposalSuccess,
+} from '../data/metadata/metadata.slice'
+import { LATEST_DATA_FIELD_NAME } from '../data/table/table-data.constants'
+import {
   LATEST_DATA_SUBSCRIPTION,
-} from '../data/table'
+  TABLE_METADATA_QUERY,
+} from '../data/table/table-data.services'
 import { useAppDispatch, useAppSelector, useAppStore } from '../redux/hooks'
 import { isStaleProposal } from '../redux/actions'
 

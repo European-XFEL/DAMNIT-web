@@ -19,12 +19,11 @@ import cx from 'clsx'
 import dayjs from 'dayjs'
 import { DataTable } from 'mantine-datatable'
 
-import {
-  InstrumentBadge,
+import InstrumentBadge, {
   type InstrumentBadgeProps,
-} from '../../components/badges'
-import { CenteredLoader } from '../../components/feedback'
-import { useProposals } from '../../data/metadata'
+} from '../../components/badges/instrument-badge'
+import CenteredLoader from '../../components/feedback/centered-loader'
+import useProposals from '../../data/metadata/use-proposals'
 import { isEmpty } from '../../utils/helpers'
 import { orderBy } from '../../utils/objects'
 import styles from './proposals.module.css'

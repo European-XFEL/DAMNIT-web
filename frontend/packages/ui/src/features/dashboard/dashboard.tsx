@@ -1,8 +1,7 @@
 import DashboardBase from './dashboard.base'
 import DashboardHeader from './dashboard.header'
 import DashboardMain from './dashboard.main'
-import { useCurrentProposal } from '../../data/metadata'
-
+import useCurrentProposal from '../../data/metadata/use-current-proposal'
 export default function Dashboard() {
   const { proposal, isLoading } = useCurrentProposal()
   if (isLoading) {

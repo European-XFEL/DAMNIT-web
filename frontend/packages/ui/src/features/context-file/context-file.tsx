@@ -8,12 +8,10 @@ import {
   useCheckFileLastModifiedQuery,
   useGetFileContentQuery,
 } from './context-file.api'
-import { CenteredLoader } from '../../components/feedback'
-import {
-  ConnectionStatus,
-  LabelStatus,
-  StatusBar,
-} from '../../components/statuses'
+import CenteredLoader from '../../components/feedback/centered-loader'
+import ConnectionStatus from '../../components/statuses/connection-status'
+import LabelStatus from '../../components/statuses/label-status'
+import StatusBar from '../../components/statuses/status-bar'
 import { useAppSelector } from '../../redux/hooks'
 import ContextFileEditor from './context-file-editor'
 
