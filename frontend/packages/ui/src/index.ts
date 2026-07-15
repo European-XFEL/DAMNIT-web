@@ -27,7 +27,7 @@ export {
 } from './features/auth/auth.slice'
 
 // Hooks
-export { default as useProposal } from './hooks/use-proposal'
+export { default as useProposal } from './data/use-proposal'
 
 // Redux
 export { resetProposal } from './app/store/actions'
