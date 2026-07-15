@@ -4,10 +4,10 @@ import { renderHook } from 'vitest-browser-react'
 import { describe, expect, test } from 'vitest'
 import type { DataEditorRef } from '@glideapps/glide-data-grid'
 
-import { resetProposal } from '#src/redux/actions'
+import { resetProposal } from '#src/app/store/actions'
 import type { Rectangle, Scroll } from '#src/features/table/types'
 import { useScrollToView } from '#src/features/table/use-scroll-to-view'
-import { setupStore, type AppStore } from '#src/redux/store'
+import { setupStore, type AppStore } from '#src/app/store/store'
 
 function makeWrapper(store: AppStore) {
   return function ReduxWrapper({ children }: PropsWithChildren) {

@@ -6,9 +6,9 @@ import Header from '#src/components/headers/header'
 import Logo from '#src/components/headers/logo'
 import { UserMenu } from '#src/components/headers/user-menu'
 import InstrumentBadge from '#src/components/badges/instrument-badge'
-import { selectUserFullName } from '#src/auth/auth.slice'
-import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
-import { history } from '#src/routes/history'
+import { selectUserFullName } from '#src/features/auth/auth.slice'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { history } from '#src/app/routes/history'
 import { type ProposalInfo } from '#src/types'
 
 type DashboardHeaderProps = {

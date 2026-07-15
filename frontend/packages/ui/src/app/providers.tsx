@@ -4,7 +4,7 @@ import { ApolloProvider } from '@apollo/client/react'
 import { MantineProvider } from '@mantine/core'
 
 import { client } from '#src/graphql/apollo'
-import { setupStore } from '#src/redux/store'
+import { setupStore } from '#src/app/store/store'
 
 type ProvidersProps = {
   children: ReactNode

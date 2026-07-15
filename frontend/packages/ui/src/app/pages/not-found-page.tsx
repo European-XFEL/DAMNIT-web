@@ -1,6 +1,6 @@
 import { Container, Title } from '@mantine/core'
 
-import { history } from '#src/routes/history'
+import { history } from '#src/app/routes/history'
 import MainNavButton from '#src/components/buttons/main-nav-button'
 import styles from './not-found-page.module.css'
 

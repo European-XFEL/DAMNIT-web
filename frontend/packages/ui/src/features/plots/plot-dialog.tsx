@@ -19,7 +19,7 @@ import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
 import { getTableData } from '#src/data/table/table-data.slice'
 import { selectVariables } from '#src/data/table/table-data.selectors'
 import { getAllExtractedValues } from '#src/data/thunks'
-import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { getVariableTitle } from '#src/utils/variables'
 
 type PlotDialogForm = {

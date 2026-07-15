@@ -4,7 +4,7 @@ import type { Rectangle } from './types'
 import { Pages, pageRangeForRegion } from './pagination'
 import { getDeferredTable } from '#src/data/table/table-data.thunks'
 import { getTable } from '#src/data/table/table-data.slice'
-import { useAppDispatch } from '#src/redux/hooks'
+import { useAppDispatch } from '#src/app/store/hooks'
 
 type UsePaginationOptions = {
   proposal: string

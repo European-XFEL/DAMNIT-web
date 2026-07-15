@@ -12,7 +12,7 @@ import CenteredLoader from '#src/components/feedback/centered-loader'
 import ConnectionStatus from '#src/components/statuses/connection-status'
 import LabelStatus from '#src/components/statuses/label-status'
 import StatusBar from '#src/components/statuses/status-bar'
-import { useAppSelector } from '#src/redux/hooks'
+import { useAppSelector } from '#src/app/store/hooks'
 import ContextFileEditor from './context-file-editor'
 
 function formatRelativeTime(date: Date | number | undefined) {

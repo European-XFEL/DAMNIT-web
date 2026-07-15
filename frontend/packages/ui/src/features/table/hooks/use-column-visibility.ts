@@ -7,7 +7,7 @@ import {
   selectVariableVisibility,
 } from '#src/features/table/store/selectors'
 
-import { useAppSelector } from '#src/redux/hooks'
+import { useAppSelector } from '#src/app/store/hooks'
 
 type ColumnVisibilityInputs = {
   variableNames: string[]

@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 
-import { resetProposal } from '#src/redux/actions'
+import { resetProposal } from '#src/app/store/actions'
 
 import { generateUID } from './utils'
 

@@ -14,7 +14,7 @@ import {
 import { selectTagSelection } from '#src/features/table/store/selectors'
 import { setVariableVisibility } from '#src/features/table/table.slice'
 
-import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
 type VariableVisibility = Record<string, boolean>
 

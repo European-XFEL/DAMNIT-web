@@ -1,5 +1,5 @@
 // Providers
-export { Providers } from './providers'
+export { Providers } from './app/providers'
 
 // Components
 export { default as ContactButton } from './components/buttons/contact-button'
@@ -14,28 +14,31 @@ export { default as Dashboard } from './features/dashboard/dashboard'
 export { default as DashboardBase } from './features/dashboard/dashboard.base'
 export { default as DashboardMain } from './features/dashboard/dashboard.main'
 export { openNav, closeNav } from './features/dashboard/dashboard.slice'
-export { default as HeroPage } from './features/pages/hero-page'
-export { default as HomePage } from './features/pages/home-page'
-export { default as LoggedOutPage } from './features/pages/logged-out-page'
-export { default as NotFoundPage } from './features/pages/not-found-page'
+export { default as HeroPage } from './app/pages/hero-page'
+export { default as HomePage } from './app/pages/home-page'
+export { default as LoggedOutPage } from './app/pages/logged-out-page'
+export { default as NotFoundPage } from './app/pages/not-found-page'
 export { default as Proposals } from './features/proposals/proposals'
 
 // Auth
-export { selectAvailableProposals, selectUserFullName } from './auth/auth.slice'
+export {
+  selectAvailableProposals,
+  selectUserFullName,
+} from './features/auth/auth.slice'
 
 // Hooks
 export { default as useProposal } from './hooks/use-proposal'
 
 // Redux
-export { resetProposal } from './redux/actions'
-export { useAppDispatch, useAppSelector } from './redux/hooks'
+export { resetProposal } from './app/store/actions'
+export { useAppDispatch, useAppSelector } from './app/store/hooks'
 
 // Routes
-export { default as LoginRoute } from './routes/login-route'
-export { default as LogoutRoute } from './routes/logout-route'
-export { default as PrivateRoute } from './routes/private-route'
-export { default as RootRoute } from './routes/root-route'
-export { history } from './routes/history'
+export { default as LoginRoute } from './app/routes/login-route'
+export { default as LogoutRoute } from './app/routes/logout-route'
+export { default as PrivateRoute } from './app/routes/private-route'
+export { default as RootRoute } from './app/routes/root-route'
+export { history } from './app/routes/history'
 
 // Data
 export { setMetadata, setProposalPending } from './data/metadata/metadata.slice'

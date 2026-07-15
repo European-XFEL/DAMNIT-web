@@ -12,8 +12,12 @@ import {
   LATEST_DATA_SUBSCRIPTION,
   TABLE_METADATA_QUERY,
 } from '#src/data/table/table-data.services'
-import { useAppDispatch, useAppSelector, useAppStore } from '#src/redux/hooks'
-import { isStaleProposal } from '#src/redux/actions'
+import {
+  useAppDispatch,
+  useAppSelector,
+  useAppStore,
+} from '#src/app/store/hooks'
+import { isStaleProposal } from '#src/app/store/actions'
 
 type UseProposalOptions = {
   subscribe: boolean

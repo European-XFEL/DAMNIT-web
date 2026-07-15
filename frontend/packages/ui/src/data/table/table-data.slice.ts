@@ -11,7 +11,7 @@ import {
 
 import TableDataServices from './table-data.services'
 import { type TableDataOptions, type TableInfo } from './table-data.types'
-import { isStaleProposal, resetProposal } from '#src/redux/actions'
+import { isStaleProposal, resetProposal } from '#src/app/store/actions'
 import { type Maybe } from '#src/types'
 import { isEmpty } from '#src/utils/helpers'
 

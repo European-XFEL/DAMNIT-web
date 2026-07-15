@@ -10,8 +10,8 @@ import {
   type PlotInfo,
 } from './plots.types'
 import { DTYPES } from '#src/constants'
-import { createTypedSelector } from '#src/redux/selectors'
-import { useAppSelector } from '#src/redux/hooks'
+import { createTypedSelector } from '#src/app/store/selectors'
+import { useAppSelector } from '#src/app/store/hooks'
 import {
   type ExtractedDataItem,
   type ExtractedMetadataItem,

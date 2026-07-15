@@ -20,7 +20,7 @@ import PlotDialog from '#src/features/plots/plot-dialog'
 import { type TableProps } from '#src/features/table/table'
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import { type TabsProps } from '#src/components/tabs/tabs'
-import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
 import styles from './dashboard.module.css'
 import headerStyles from '#src/styles/header.module.css'

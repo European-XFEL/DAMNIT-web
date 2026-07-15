@@ -1,7 +1,7 @@
 import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import type { Scroll } from './types'
-import { resetProposal } from '#src/redux/actions'
+import { resetProposal } from '#src/app/store/actions'
 import { isArrayEqual } from '#src/utils/array'
 
 type VariableOptions = {

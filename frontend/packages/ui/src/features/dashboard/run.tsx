@@ -3,7 +3,7 @@ import { Image, ScrollArea, Text } from '@mantine/core'
 import classes from './run.module.css'
 import { selectVariableVisibility } from '#src/features/table/store/selectors'
 import { DTYPES } from '#src/constants'
-import { useAppSelector } from '#src/redux/hooks'
+import { useAppSelector } from '#src/app/store/hooks'
 import { type VariableValue } from '#src/types'
 import { formatDate, isEmpty } from '#src/utils/helpers'
 

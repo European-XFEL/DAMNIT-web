@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
 import { selectVariables } from '#src/data/table/table-data.selectors'
-import type { RootState } from '#src/redux/reducer'
+import type { RootState } from '#src/app/store/reducer'
 import type { VariableMetadataItem } from '#src/types'
 
 function stateWithVariables(names: string[]): RootState {

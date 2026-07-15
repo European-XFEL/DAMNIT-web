@@ -1,5 +1,5 @@
 import useProposals from './use-proposals'
-import { useAppSelector } from '#src/redux/hooks'
+import { useAppSelector } from '#src/app/store/hooks'
 import { isEmpty } from '#src/utils/helpers'
 
 const useCurrentProposal = () => {

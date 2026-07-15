@@ -2,13 +2,13 @@ import { expect, test, vi } from 'vitest'
 import { gql } from '@apollo/client'
 
 import { cache } from '#src/graphql/apollo'
-import { authApi, type UserInfo } from '#src/auth/auth.api'
-import { selectUserFullName } from '#src/auth/auth.slice'
+import { authApi, type UserInfo } from '#src/features/auth/auth.api'
+import { selectUserFullName } from '#src/features/auth/auth.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
 import { getTable, updateTable } from '#src/data/table/table-data.slice'
-import { resetProposal } from '#src/redux/actions'
-import type { RootState } from '#src/redux/reducer'
-import { setupStore } from '#src/redux/store'
+import { resetProposal } from '#src/app/store/actions'
+import type { RootState } from '#src/app/store/reducer'
+import { setupStore } from '#src/app/store/store'
 
 // Leaving a proposal drops every proposal-scoped cache, in both Apollo and RTK
 // Query. Only the session (authApi) and the proposal list (proposal_metadata)

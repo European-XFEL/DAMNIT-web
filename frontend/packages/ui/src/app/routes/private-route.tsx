@@ -2,7 +2,7 @@ import { type PropsWithChildren } from 'react'
 import { Navigate } from 'react-router'
 
 import { history } from './history'
-import useUserInfo from '#src/auth/use-user-info'
+import useUserInfo from '#src/features/auth/use-user-info'
 function PrivateRoute({ children }: PropsWithChildren) {
   const { userInfo, isLoading, isError } = useUserInfo()
 

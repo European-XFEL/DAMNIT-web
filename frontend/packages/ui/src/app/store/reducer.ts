@@ -1,6 +1,6 @@
 import { combineReducers } from '@reduxjs/toolkit'
 
-import { authApi } from '#src/auth/auth.api'
+import { authApi } from '#src/features/auth/auth.api'
 import contextFile from '#src/features/context-file/context-file.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
 import extractedData from '#src/data/extracted/extracted-data.slice'

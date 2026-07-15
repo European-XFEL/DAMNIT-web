@@ -35,7 +35,7 @@ import { plotRequested, selectRun } from './table.slice'
 import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '#src/constants'
 import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
 import { getTableData } from '#src/data/table/table-data.slice'
-import { useAppDispatch, useAppSelector } from '#src/redux/hooks'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 
