@@ -11,7 +11,7 @@ import {
 
 import TableDataServices from './table-data.services'
 import { type TableDataOptions, type TableInfo } from './table-data.types'
-import { resetProposal } from '../../redux/actions'
+import { isStaleProposal, resetProposal } from '../../redux/actions'
 import { type Maybe } from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
@@ -29,7 +29,10 @@ type TableOptions = Omit<TableDataOptions, 'deferred'>
 
 export const getTable = createAsyncThunk(
   'tableData/get',
-  async ({ proposal, page, pageSize, lightweight = false }: TableOptions) => {
+  async (
+    { proposal, page, pageSize, lightweight = false }: TableOptions,
+    thunkAPI
+  ) => {
     const result = await TableDataServices.getTable({
       proposal,
       page,
@@ -37,26 +40,42 @@ export const getTable = createAsyncThunk(
       lightweight,
     })
 
+    // Drop the result if the user left this proposal while it was in flight:
+    // Redux is the table's render source, so a late fulfillment would flash
+    // the departed proposal's rows back into the just-reset slice.
+    if (isStaleProposal(thunkAPI.getState(), proposal)) {
+      return thunkAPI.rejectWithValue('stale')
+    }
+
     return result
   }
 )
 
 export const getTableData = createAsyncThunk(
   'tableData/getData',
-  async ({
-    proposal,
-    variables,
-    page = 1,
-    pageSize = 10000,
-    deferred = false,
-  }: TableDataOptions & { variables: string[] }) => {
-    return await TableDataServices.getTableData({
+  async (
+    {
+      proposal,
+      variables,
+      page = 1,
+      pageSize = 10000,
+      deferred = false,
+    }: TableDataOptions & { variables: string[] },
+    thunkAPI
+  ) => {
+    const result = await TableDataServices.getTableData({
       proposal,
       variables: ['run', ...variables],
       page,
       pageSize,
       deferred,
     })
+
+    if (isStaleProposal(thunkAPI.getState(), proposal)) {
+      return thunkAPI.rejectWithValue('stale')
+    }
+
+    return result
   }
 )
 

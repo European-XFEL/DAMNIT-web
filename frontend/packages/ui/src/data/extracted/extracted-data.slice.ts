@@ -6,7 +6,7 @@ Apollo Client store
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
 import ExtractedDataServices from './extracted-data.services'
-import { resetProposal } from '../../redux/actions'
+import { isStaleProposal, resetProposal } from '../../redux/actions'
 import { type ExtractedDataItem, type ExtractedMetadataItem } from '../../types'
 
 type ExtractedDataState = {
@@ -27,12 +27,19 @@ type GetExtractedValueOptions = {
 
 export const getExtractedValue = createAsyncThunk(
   'extractedData/getValue',
-  async ({ proposal, run, variable }: GetExtractedValueOptions) => {
+  async ({ proposal, run, variable }: GetExtractedValueOptions, thunkAPI) => {
     const result = await ExtractedDataServices.getExtractedValue({
       proposal,
       run,
       variable,
     })
+
+    // Drop the result if the user left this proposal while it was in flight,
+    // so a late fulfillment can't refill the just-reset slice.
+    if (isStaleProposal(thunkAPI.getState(), proposal)) {
+      return thunkAPI.rejectWithValue('stale')
+    }
+
     return { run, variable, ...result }
   }
 )
