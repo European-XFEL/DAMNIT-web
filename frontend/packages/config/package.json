@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "lint:eslint": "eslint .",
+    "lint:eslint": "eslint . --max-warnings 0",
     "lint:prettier": "prettier --check --cache ."
   },
   "exports": {
@@ -23,6 +23,8 @@
   "dependencies": {
     "@eslint/js": "catalog:linting",
     "eslint-config-prettier": "catalog:linting",
+    "eslint-import-resolver-typescript": "catalog:linting",
+    "eslint-plugin-import-x": "catalog:linting",
     "eslint-plugin-react-hooks": "catalog:linting",
     "eslint-plugin-react-refresh": "catalog:linting",
     "typescript-eslint": "catalog:linting",
