@@ -19,8 +19,12 @@ async function getExtractedValue({
   run,
   variable,
 }: ExtractedDataOptions) {
+  // Redux renders this data, not the Apollo cache. no-cache stops a fetch that
+  // resolves after resetProposal from writing the departed proposal's
+  // extracted_data back into the just-evicted ROOT_QUERY.
   const result = await client.query({
     query: EXTRACTED_DATA_QUERY,
+    fetchPolicy: 'no-cache',
     variables: {
       proposal: String(proposal),
       run: Number(run),
