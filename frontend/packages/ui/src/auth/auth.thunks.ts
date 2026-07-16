@@ -1,19 +1,11 @@
-import { authApi } from './auth.api'
-
 import { HTTP_URL } from '../constants'
-import { resetExtractedData } from '../data/extracted'
-import { resetTable as resetTableData } from '../data/table'
-import { resetContextFile } from '../features/context-file'
-import { resetTable as resetTableView } from '../features/table'
-import { resetPlots } from '../features/plots'
 import { type AppThunk } from '../redux/thunks'
-import { history } from '../routes/history'
 
 export const login = (): AppThunk => (_) => {
   window.location.href = `${HTTP_URL}oauth/login?redirect_uri=${HTTP_URL}home`
 }
 
-export const logout = (): AppThunk => (dispatch) => {
+export const logout = (): AppThunk => (_) => {
   fetch(`${HTTP_URL}oauth/logout?redirect_uri=${HTTP_URL}logged-out`, {
     method: 'POST',
     credentials: 'include', // Include cookies in the request
@@ -21,22 +13,9 @@ export const logout = (): AppThunk => (dispatch) => {
   })
     .then((response) => response.json())
     .then((data) => {
-      const logoutUrl = data?.logout_url
-      if (logoutUrl) {
-        // Navigate to end session endpoint
-        window.location.assign(logoutUrl)
-      } else {
-        // Reset the application
-        dispatch(resetTableData())
-        dispatch(resetTableView())
-        dispatch(resetExtractedData())
-        dispatch(resetPlots())
-        dispatch(resetContextFile())
-
-        dispatch(authApi.util.resetApiState())
-
-        history.navigate('/logged-out')
-      }
+      // Both paths leave the SPA, so the browser drops the Redux store, the
+      // Apollo cache and the RTK Query caches along with the page.
+      window.location.assign(data?.logout_url || `${HTTP_URL}logged-out`)
     })
     .catch((error) => {
       console.error('Error logging out:', error)
