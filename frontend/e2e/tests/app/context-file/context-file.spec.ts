@@ -17,8 +17,9 @@ const lastLine = lines[lines.length - 1]
 
 test('the Context File tab shows the proposal code, read-only', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   await openContextFile(page)
 
   await expect(editorLine(page, firstLine)).toBeVisible()
@@ -41,8 +42,9 @@ test('the Context File tab shows the proposal code, read-only', async ({
 
 test('opening the tab focuses the editor so Ctrl+F opens Monaco search', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   await openContextFile(page)
 
   // No click into the editor first: if the tab handed focus to Monaco, Ctrl+F
@@ -54,8 +56,9 @@ test('opening the tab focuses the editor so Ctrl+F opens Monaco search', async (
 
 test('the editor keeps its scroll position across a tab switch', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   await openContextFile(page)
   await expect(editorLine(page, firstLine)).toBeVisible()
 
@@ -77,12 +80,13 @@ test('the editor keeps its scroll position across a tab switch', async ({
 test('polling picks up an edited file and refreshes the editor', async ({
   page,
   api,
+  example,
 }) => {
   // Fake clock (spike-confirmed: Monaco paints and repaints, and RTK Query's
   // poll fires, under faked timers) so fastForward drives the 5s poll instantly.
   await page.clock.install()
 
-  await openProposal(page)
+  await openProposal(page, example)
   await openContextFile(page)
   await expect(editorLine(page, firstLine)).toBeVisible()
 
@@ -98,7 +102,10 @@ test('polling picks up an edited file and refreshes the editor', async ({
   await expect(editorLine(page, firstLine)).toHaveCount(0)
 })
 
-test('a failed content load shows the editor error', async ({ page }) => {
+test('a failed content load shows the editor error', async ({
+  page,
+  example,
+}) => {
   // Registered after the fixture's routes, so Playwright's last-wins order lets
   // this 500 override the mocked content. It fulfils the request itself, so the
   // catch-all never sees it and the drift guard stays clean. No `detail` field,
@@ -107,7 +114,7 @@ test('a failed content load shows the editor error', async ({ page }) => {
     route.fulfill({ status: 500, json: { error: 'Internal Server Error' } })
   )
 
-  await openProposal(page)
+  await openProposal(page, example)
   await contextFileTab(page).click()
 
   await expect(page.getByText('Failed to load file content')).toBeVisible()
@@ -115,6 +122,7 @@ test('a failed content load shows the editor error', async ({ page }) => {
 
 test('a failed content load surfaces the backend error detail', async ({
   page,
+  example,
 }) => {
   // Same last-wins override as the fallback test, but the body carries a `detail`
   // field, so the component shows the backend's own message instead of the
@@ -126,7 +134,7 @@ test('a failed content load surfaces the backend error detail', async ({
     })
   )
 
-  await openProposal(page)
+  await openProposal(page, example)
   await contextFileTab(page).click()
 
   await expect(page.getByText('context.py has a syntax error')).toBeVisible()

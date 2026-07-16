@@ -7,8 +7,9 @@ test.use({ example: EMPTY })
 
 test('a proposal with no runs shows column headers over an empty table', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   // Every variable still contributes a column header...
   await expectVisibleColumns(page, 13)

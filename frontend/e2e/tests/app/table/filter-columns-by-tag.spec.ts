@@ -8,8 +8,11 @@ import {
   rowCheckbox,
 } from '#support/table'
 
-test("selecting a tag shows only that tag's columns", async ({ page }) => {
-  await openProposal(page)
+test("selecting a tag shows only that tag's columns", async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
   await expectVisibleColumns(page, 13)
 
   const tags = await openPopover(page, 'Tags')
@@ -21,8 +24,11 @@ test("selecting a tag shows only that tag's columns", async ({ page }) => {
   await expect(columnHeader(page, 'Trains')).toHaveCount(0)
 })
 
-test('selecting more tags widens the visible columns', async ({ page }) => {
-  await openProposal(page)
+test('selecting more tags widens the visible columns', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
 
   const tags = await openPopover(page, 'Tags')
   await rowCheckbox(page, 'Beam properties').check()
@@ -33,8 +39,8 @@ test('selecting more tags widens the visible columns', async ({ page }) => {
   await expect(columnHeader(page, 'Trains')).toHaveCount(1)
 })
 
-test('clearing all tags restores every column', async ({ page }) => {
-  await openProposal(page)
+test('clearing all tags restores every column', async ({ page, example }) => {
+  await openProposal(page, example)
 
   // Select a tag
   const tags = await openPopover(page, 'Tags')

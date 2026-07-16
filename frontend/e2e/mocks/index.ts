@@ -152,10 +152,10 @@ export async function mockApi(
     route.fulfill({ status: 200, body: '' })
   )
 
-  // Logout returns no logout_url, so the app takes its in-app branch: reset the
-  // store and navigate to /logged-out. Flip the session off so the LoggedOutPage
-  // re-fetch of userinfo 500s and the "You have been logged out" branch renders,
-  // modelling the cleared session cookie.
+  // Logout returns no logout_url, so the app full-page navigates to /logged-out.
+  // Flip the session off so the LoggedOutPage re-fetch of userinfo 500s and the
+  // "You have been logged out" branch renders, modelling the cleared session
+  // cookie.
   await page.route('**/oauth/logout**', (route) => {
     authed = false
     return route.fulfill({ json: {} })

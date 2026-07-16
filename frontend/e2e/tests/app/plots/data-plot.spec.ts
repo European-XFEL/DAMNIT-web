@@ -20,8 +20,9 @@ const IMAGE_VAR = 'xpcs_g2_plot' // png -> plain <img>
 
 test('right-clicking a cell and choosing "Plot: data" plots its extracted data', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   await openDataPlot(page, { col: columnOf(SCATTER_VAR), row: 0 })
 
@@ -31,8 +32,9 @@ test('right-clicking a cell and choosing "Plot: data" plots its extracted data',
 
 test('selecting cells from two runs plots both in one figure', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   const col = columnOf(SCATTER_VAR)
   // Ctrl-click builds the run range; right-clicking a selected cell plots it.
@@ -50,8 +52,9 @@ test('selecting cells from two runs plots both in one figure', async ({
 
 test('right-clicking a scalar cell shows the unable-to-display notice', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   // The extracted value equals the scalar the table already shows for run 1.
   const scalarValue = XPCS.data[0].variables[SCALAR_VAR].value
@@ -65,8 +68,9 @@ test('right-clicking a scalar cell shows the unable-to-display notice', async ({
 
 test('right-clicking a png cell renders the image instead of a figure', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   await openDataPlot(page, { col: columnOf(IMAGE_VAR), row: 0 })
 

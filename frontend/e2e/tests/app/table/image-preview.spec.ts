@@ -19,8 +19,9 @@ const PLAIN_CELL = { col: 1, row: 0 }
 
 test('hovering an image cell shows a preview that clears on mouse-out', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   const preview = tooltipCard(page).locator('img')
 
   // Hover the thumbnail: the enlarged preview appears.
@@ -34,8 +35,9 @@ test('hovering an image cell shows a preview that clears on mouse-out', async ({
 
 test('right-clicking an image cell dismisses the preview and opens the context menu', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   const preview = tooltipCard(page).locator('img')
 
   // Hover the thumbnail so the preview is showing.
@@ -50,8 +52,9 @@ test('right-clicking an image cell dismisses the preview and opens the context m
 
 test('hovering a cell with no supported tooltip shows nothing', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   const card = tooltipCard(page)
 
   // Wait for table data to load; the image cell mirrors its src once ready.

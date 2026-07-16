@@ -2,8 +2,8 @@ import { test, expect } from '#fixtures'
 
 import { openProposal, selectRun, selectedRunTab } from '#support/table'
 
-test('selecting a run shows all its variables', async ({ page }) => {
-  await openProposal(page)
+test('selecting a run shows all its variables', async ({ page, example }) => {
+  await openProposal(page, example)
   await expect(selectedRunTab(page)).toHaveCount(0)
 
   // The first row is run 1 in the XPCS example.
@@ -18,8 +18,11 @@ test('selecting a run shows all its variables', async ({ page }) => {
   await expect(panel.locator('img')).toHaveCount(4)
 })
 
-test('selecting another run replaces the selection', async ({ page }) => {
-  await openProposal(page)
+test('selecting another run replaces the selection', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
 
   // Select the first run
   await selectRun(page, { row: 0 })

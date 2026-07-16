@@ -9,8 +9,11 @@ import {
   titleOf,
 } from '#support/table'
 
-test('activating a single cell shows only that variable', async ({ page }) => {
-  await openProposal(page)
+test('activating a single cell shows only that variable', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
 
   // The first row is run 1 in the XPCS example.
   await activateCell(page, { col: columnOf('sample_type'), row: 0 })
@@ -29,8 +32,9 @@ test.describe('errored cell', () => {
 
   test('activating an errored cell opens the sidebar but shows no value', async ({
     page,
+    example,
   }) => {
-    await openProposal(page)
+    await openProposal(page, example)
 
     // xgm_intensity failed for run 1, so its cell carries value null.
     const errored = ERROR_CELLS[0]

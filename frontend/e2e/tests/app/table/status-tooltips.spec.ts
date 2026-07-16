@@ -10,8 +10,9 @@ test.use({ example: xpcsWithErrors, viewport: { width: 1600, height: 900 } })
 for (const cell of ERROR_CELLS) {
   test(`hovering the failed ${cell.variable} cell shows its "${cell.title}" card`, async ({
     page,
+    example,
   }) => {
-    await openProposal(page)
+    await openProposal(page, example)
 
     await hoverCell(page, { col: cell.col, row: ERROR_ROW })
 
@@ -29,8 +30,9 @@ const [first, second] = ERROR_CELLS
 
 test(`moving from the ${first.variable} cell to the ${second.variable} cell swaps the card content`, async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   const card = tooltipCard(page)
 
   // Hover the first errored cell: its card shows.
