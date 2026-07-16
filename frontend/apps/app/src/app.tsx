@@ -21,6 +21,7 @@ import {
   NotFoundPage,
   PrivateRoute,
   Proposals,
+  UserMenu,
   history,
   resetContextFile,
   resetDashboard,
@@ -29,8 +30,10 @@ import {
   resetPlots,
   resetTableData,
   resetTableView,
+  selectUserFullName,
   setProposalPending,
   useAppDispatch,
+  useAppSelector,
   useProposal,
 } from '@damnit-frontend/ui'
 
@@ -66,6 +69,20 @@ function ProposalWrapper({ children }: PropsWithChildren) {
   )
 }
 
+function HomeHeader() {
+  const userName = useAppSelector(selectUserFullName)
+
+  return (
+    <Header px={20}>
+      <Logo linkTo="/home" />
+      <UserMenu
+        userName={userName}
+        onLogout={() => history.navigate('/logout')}
+      />
+    </Header>
+  )
+}
+
 const App = () => {
   // Initialize routers
   history.setNavigate(useNavigate())
@@ -83,11 +100,7 @@ const App = () => {
           element={
             <PrivateRoute>
               <HomePage
-                header={
-                  <Header px={20}>
-                    <Logo linkTo="/home" />
-                  </Header>
-                }
+                header={<HomeHeader />}
                 main={
                   <Container>
                     <Proposals />
