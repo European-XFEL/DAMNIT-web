@@ -1,43 +1,50 @@
-import { createListenerMiddleware } from '@reduxjs/toolkit'
-
-import { addTab, removeTab, openAside, closeAside } from '../features/dashboard'
-import { addPlot, removePlot, resetPlots } from '../features/plots'
-import { selectRun } from '../features/table'
-import { type RootState } from './reducer'
+import {
+  addTab,
+  closeAside,
+  openAside,
+  removeTab,
+} from '../features/dashboard/dashboard.slice'
+import {
+  addPlot,
+  removePlot,
+  reset as resetPlots,
+} from '../features/plots/plots.slice'
+import { selectRun } from '../features/table/table.slice'
+import { startAppListening } from './listener-middleware'
 import { isEmpty } from '../utils/helpers'
 
-export const listenerMiddleware = createListenerMiddleware()
+export function registerAppListeners() {
+  startAppListening({
+    actionCreator: selectRun,
+    effect: (action, { dispatch }) => {
+      const { run } = action.payload
 
-listenerMiddleware.startListening({
-  actionCreator: selectRun,
-  effect: (action, { dispatch }) => {
-    const { run } = action.payload
+      const sideEffect = run != null ? openAside : closeAside
+      dispatch(sideEffect())
+    },
+  })
 
-    const sideEffect = run != null ? openAside : closeAside
-    dispatch(sideEffect())
-  },
-})
+  startAppListening({
+    actionCreator: addPlot,
+    effect: (_, { dispatch }) => {
+      dispatch(addTab({ id: 'plots', title: 'Plots', isClosable: true }))
+    },
+  })
 
-listenerMiddleware.startListening({
-  actionCreator: addPlot,
-  effect: (_, { dispatch }) => {
-    dispatch(addTab({ id: 'plots', title: 'Plots', isClosable: true }))
-  },
-})
+  startAppListening({
+    actionCreator: removePlot,
+    effect: (_, { dispatch, getState }) => {
+      const { plots } = getState()
+      if (isEmpty(plots.data)) {
+        dispatch(removeTab('plots'))
+      }
+    },
+  })
 
-listenerMiddleware.startListening({
-  actionCreator: removePlot,
-  effect: (_, { dispatch, getState }) => {
-    const { plots } = getState() as RootState
-    if (isEmpty(plots.data)) {
-      dispatch(removeTab('plots'))
-    }
-  },
-})
-
-listenerMiddleware.startListening({
-  actionCreator: removeTab,
-  effect: (_, { dispatch }) => {
-    dispatch(resetPlots())
-  },
-})
+  startAppListening({
+    actionCreator: removeTab,
+    effect: (_, { dispatch }) => {
+      dispatch(resetPlots())
+    },
+  })
+}

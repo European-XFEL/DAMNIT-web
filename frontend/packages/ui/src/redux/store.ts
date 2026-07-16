@@ -1,9 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit'
 
-import { listenerMiddleware } from './listeners'
+import { listenerMiddleware } from './listener-middleware'
+import { registerAppListeners } from './listeners'
 import reducer, { type RootState } from './reducer'
-import { authApi } from '../auth'
+import { authApi } from '../auth/auth.api'
 import { contextfileApi } from '../features/context-file/context-file.api'
+
+registerAppListeners()
 
 export const setupStore = (preloadedState?: Partial<RootState>) => {
   return configureStore({
