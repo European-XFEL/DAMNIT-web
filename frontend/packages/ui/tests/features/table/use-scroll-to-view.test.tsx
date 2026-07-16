@@ -4,7 +4,7 @@ import { renderHook } from 'vitest-browser-react'
 import { describe, expect, test } from 'vitest'
 import type { DataEditorRef } from '@glideapps/glide-data-grid'
 
-import { reset } from '@/features/table/table.slice'
+import { resetProposal } from '@/redux/actions'
 import type { Rectangle, Scroll } from '@/features/table/types'
 import { useScrollToView } from '@/features/table/use-scroll-to-view'
 import { setupStore, type AppStore } from '@/redux/store'
@@ -65,7 +65,7 @@ describe('useScrollToView', () => {
 
     // Leaving the dashboard resets the slice before the child flush runs.
     await act(() => {
-      store.dispatch(reset())
+      store.dispatch(resetProposal())
     })
     await unmount()
 

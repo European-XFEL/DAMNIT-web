@@ -1,5 +1,4 @@
 export {
-  resetMetadata,
   setMetadata,
   setProposalPending,
   setProposalSuccess,

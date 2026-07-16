@@ -1,6 +1,8 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import type { OnMount } from '@monaco-editor/react'
 
+import { resetProposal } from '../../redux/actions'
+
 type EditorView = ReturnType<Parameters<OnMount>[0]['saveViewState']>
 
 type ContextFileState = {
@@ -15,12 +17,14 @@ const slice = createSlice({
   name: 'contextFile',
   initialState,
   reducers: {
-    reset: () => initialState,
     setView: (state, action: PayloadAction<EditorView>) => {
       state.view = action.payload
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase(resetProposal, () => initialState)
+  },
 })
 
 export default slice.reducer
-export const { reset, setView } = slice.actions
+export const { setView } = slice.actions

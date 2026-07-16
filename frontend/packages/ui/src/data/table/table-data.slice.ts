@@ -11,6 +11,7 @@ import {
 
 import TableDataServices from './table-data.services'
 import { type TableDataOptions, type TableInfo } from './table-data.types'
+import { resetProposal } from '../../redux/actions'
 import { type Maybe } from '../../types'
 import { isEmpty } from '../../utils/helpers'
 
@@ -67,7 +68,6 @@ const slice = createSlice({
   name: 'tableData',
   initialState,
   reducers: {
-    reset: () => initialState,
     update: (state, action: PayloadAction<UpdateInfo>) => {
       const { data, metadata } = action.payload
 
@@ -93,6 +93,7 @@ const slice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    builder.addCase(resetProposal, () => initialState)
     builder.addCase(
       getTable.fulfilled,
       (state, action: PayloadAction<TableInfo>) => {
@@ -119,4 +120,4 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { update: updateTable, reset: resetTable } = slice.actions
+export const { update: updateTable } = slice.actions

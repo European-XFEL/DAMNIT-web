@@ -28,7 +28,7 @@ const ContextFileEditor = ({ content }: ContextFileEditorProps) => {
   }
 
   // Save the view state in a layout-effect cleanup to avoid race with a parent
-  // useEffect cleanup (e.g. resetContextFile on proposal change).
+  // useEffect cleanup (e.g. resetProposal on proposal change).
   useLayoutEffect(() => {
     return () => {
       const viewState = editorRef.current?.saveViewState()

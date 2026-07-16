@@ -6,6 +6,7 @@ Apollo Client store
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
 import ExtractedDataServices from './extracted-data.services'
+import { resetProposal } from '../../redux/actions'
 import { type ExtractedDataItem, type ExtractedMetadataItem } from '../../types'
 
 type ExtractedDataState = {
@@ -39,10 +40,9 @@ export const getExtractedValue = createAsyncThunk(
 const slice = createSlice({
   name: 'extractedData',
   initialState,
-  reducers: {
-    reset: () => initialState,
-  },
+  reducers: {},
   extraReducers: (builder) => {
+    builder.addCase(resetProposal, () => initialState)
     builder.addCase(getExtractedValue.fulfilled, (state, action) => {
       // TODO: Add pending and rejected
       const { run, variable, data, ...metadata } = action.payload
@@ -59,4 +59,3 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { reset: resetExtractedData } = slice.actions
