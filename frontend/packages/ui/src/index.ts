@@ -26,10 +26,7 @@ export {
   selectUserFullName,
 } from './features/auth/auth.slice'
 
-// Hooks
-export { default as useProposal } from './data/use-proposal'
-
-// Redux
+// Store
 export { resetProposal } from './app/store/actions'
 export { useAppDispatch, useAppSelector } from './app/store/hooks'
 
@@ -41,6 +38,7 @@ export { default as RootRoute } from './app/routes/root-route'
 export { history } from './app/routes/history'
 
 // Data
+export { default as useProposal } from './data/use-proposal'
 export { setMetadata, setProposalPending } from './data/metadata/metadata.slice'
 
 // Utilities
