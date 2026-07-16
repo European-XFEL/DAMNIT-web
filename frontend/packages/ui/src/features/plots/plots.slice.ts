@@ -1,18 +1,12 @@
-import { createSlice } from '@reduxjs/toolkit'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import { resetProposal } from '#src/app/store/actions'
+import { type PlotSpec } from '#src/types'
 
 import { generateUID } from './utils'
 
-type PlotItem = {
-  variables: string[]
-  runs: string[]
-  source: string
-  title?: string
-}
-
 type PlotsState = {
-  data: Record<string, PlotItem>
+  data: Record<string, PlotSpec>
   currentPlot: string | null
 }
 
@@ -31,7 +25,7 @@ const slice = createSlice({
         state.currentPlot = id
       }
     },
-    addPlot: (state, action) => {
+    addPlot: (state, action: PayloadAction<PlotSpec>) => {
       const { variables, runs, source, title } = action.payload
       const id = generateUID()
       state.currentPlot = id

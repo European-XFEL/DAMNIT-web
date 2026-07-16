@@ -127,7 +127,7 @@ const PlotDialog = (props: PlotDialogProps) => {
             title: `Data: ${getVariableTitle(yMetadata)}`,
           }
 
-    dispatch(addPlot({ ...plotOptions, runs: runs }))
+    dispatch(addPlot({ ...plotOptions, runs: runs ?? undefined }))
 
     if (submitedFormValues.plotType === 'summary') {
       dispatch(getTableData({ proposal, variables: [xVariable, yVariable] }))

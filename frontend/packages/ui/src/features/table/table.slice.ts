@@ -1,6 +1,7 @@
 import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import { resetProposal } from '#src/app/store/actions'
+import { type PlotSpec } from '#src/types'
 import { isArrayEqual } from '#src/utils/array'
 
 import type { Scroll } from './types'
@@ -95,12 +96,5 @@ export const {
   setViewScroll,
 } = slice.actions
 
-type PlotRequest = {
-  variables: string[]
-  runs?: string[]
-  source: string
-  title?: string
-}
-
 // No reducer handles this: a store listener turns the request into a plot.
-export const plotRequested = createAction<PlotRequest>('table/plotRequested')
+export const plotRequested = createAction<PlotSpec>('table/plotRequested')
