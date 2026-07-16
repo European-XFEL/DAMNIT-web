@@ -24,6 +24,7 @@ import InstrumentBadge, {
 } from '#src/components/badges/instrument-badge'
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import useProposals from '#src/data/metadata/use-proposals'
+import { type AvailableProposals } from '#src/types'
 import { isEmpty } from '#src/utils/helpers'
 import { orderBy } from '#src/utils/objects'
 
@@ -300,7 +301,7 @@ const ProposalHeader = () => {
 }
 
 type ProposalsProps = {
-  proposals: Record<string, number[]>
+  proposals: AvailableProposals
 }
 
 const Proposals = ({ proposals }: ProposalsProps) => {

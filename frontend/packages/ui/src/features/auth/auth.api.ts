@@ -1,21 +1,18 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 import { BASE_URL } from '#src/constants'
-
-type Proposals = {
-  [cycle: string]: number[]
-}
+import { type AvailableProposals } from '#src/types'
 
 export type UserInfo = {
   uid: number
   username: string
   name: string
   email: string
-  proposals: Proposals
+  proposals: AvailableProposals
 }
 
 type UserInfoResponse = Omit<UserInfo, 'proposals'> & {
-  proposals_by_year_half: Proposals
+  proposals_by_year_half: AvailableProposals
 }
 
 export const authApi = createApi({
