@@ -58,6 +58,9 @@ permalink = true
 [project.markdown_extensions.pymdownx.snippets]
 base_path = ["."]
 
+[project.plugins.macros]
+module_name = "docs/macros"
+
 [project.plugins.mkdocstrings.handlers.python]
 paths = ["src"]
 inventories = [
