@@ -86,13 +86,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download site artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: site-dist
           path: pages
 
       - name: Download demo artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: demo-dist
           path: pages/demo
