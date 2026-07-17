@@ -1,14 +1,14 @@
 import { expect, test, vi } from 'vitest'
 import { gql } from '@apollo/client'
 
-import { cache } from '@/graphql/apollo'
-import { authApi, type UserInfo } from '@/auth/auth.api'
-import { selectUserFullName } from '@/auth/auth.slice'
-import { contextfileApi } from '@/features/context-file/context-file.api'
-import { getTable, updateTable } from '@/data/table/table-data.slice'
-import { resetProposal } from '@/redux/actions'
-import type { RootState } from '@/redux/reducer'
-import { setupStore } from '@/redux/store'
+import { cache } from '#src/graphql/apollo'
+import { authApi, type UserInfo } from '#src/features/auth/auth.api'
+import { selectUserFullName } from '#src/features/auth/auth.slice'
+import { contextfileApi } from '#src/features/context-file/context-file.api'
+import { getTable, updateTable } from '#src/data/table/table-data.slice'
+import { resetProposal } from '#src/app/store/actions'
+import type { RootState } from '#src/app/store/reducer'
+import { setupStore } from '#src/app/store/store'
 
 // Leaving a proposal drops every proposal-scoped cache, in both Apollo and RTK
 // Query. Only the session (authApi) and the proposal list (proposal_metadata)
@@ -17,14 +17,14 @@ import { setupStore } from '@/redux/store'
 // A real cache, so the eviction below is observable. The slices reach the
 // client through their services, and importing the real one opens a websocket
 // from a Node test.
-vi.mock('@/graphql/apollo', async () => {
+vi.mock('#src/graphql/apollo', async () => {
   const { InMemoryCache } = await import('@apollo/client')
   return { cache: new InMemoryCache(), client: {} }
 })
 
 // getTable normally reaches the network through the client; stub the service so
 // the thunk resolves without one, letting the stale-fetch guard be exercised.
-vi.mock('@/data/table/table-data.services', () => ({
+vi.mock('#src/data/table/table-data.services', () => ({
   default: {
     getTable: vi.fn(async () => ({
       data: { '7': { run: { value: 7, dtype: 'number' } } },

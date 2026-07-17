@@ -11,8 +11,8 @@ import {
   imageCell,
   numberCell,
   textCell,
-} from '@/features/table/cells'
-import { DTYPES } from '@/constants'
+} from '#src/features/table/cells'
+import { DTYPES } from '#src/constants'
 
 describe('getCell', () => {
   // A missing value (null or undefined) always renders a loading skeleton,

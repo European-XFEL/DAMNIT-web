@@ -1,4 +1,5 @@
 import { Flex, Box, Stack, Title, Group, Button } from '@mantine/core'
+
 import { SiteFooter, formatUrl } from '@damnit-frontend/ui'
 
 const APP_URL = formatUrl(

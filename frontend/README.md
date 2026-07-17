@@ -17,6 +17,41 @@ The application enables visualization and interaction with the DAMNIT table.
 - Vite (build tool)
 - Vitest (testing)
 
+### Architecture
+
+`packages/ui` holds the product; the apps are thin shells around it. The tree is
+layered, and ESLint enforces the layering, so a mistake fails lint rather than
+review:
+
+```
+packages/ui/src/
+  app/          wiring: providers, routes, pages, store (the only layer that
+                knows everything)
+  features/     auth, context-file, dashboard, plots, proposals, table
+  components/   presentational only: no store, auth, or Apollo
+  graphql/      Apollo client, shared documents, operation names
+  lib/  utils/  styles/   shared leaves
+  data/         temporary: server state in Redux, being migrated to Apollo
+```
+
+Imports run one way: `components / lib / utils / graphql` <- `features` <-
+`app`. Two rules are worth knowing before you write an import:
+
+- **Features do not import each other.** The single exception is `dashboard`,
+  which is the workspace composite: it may compose `table`, `plots`,
+  `context-file`, and `auth`. That exception is enumerated in the boundaries
+  config; leaf-to-leaf stays banned. Cross-feature reactions belong in
+  `app/store/listeners.ts`, next to the existing ones.
+- **A feature may only reach the store's typed surface**
+  (`app/store/hooks|selectors|thunks|actions|types`), never the reducer
+  assembly or the store itself. Read another feature's state through the
+  selectors it exports, never with an inline `useAppSelector((s) => s.other)`:
+  ESLint sees imports, not state reads, so that one is on you.
+
+Imports outside a file's own folder use the `#src/*` subpath import
+(`#src/utils/array`), never `../`. Same-folder imports stay relative (`./`).
+That keeps a file's imports stable when the tree moves, and it is enforced.
+
 ## Installation
 
 Clone the project and run the following on the root folder:

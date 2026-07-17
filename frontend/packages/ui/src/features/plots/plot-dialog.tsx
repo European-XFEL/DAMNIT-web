@@ -11,17 +11,17 @@ import {
 import { TextInput, Text, Blockquote } from '@mantine/core'
 import { useForm } from '@mantine/form'
 
-import { addPlot } from './plots.slice'
-import {
-  TextCombobox,
+import TextCombobox, {
   type TextComboboxOptions,
-} from '../../components/comboboxes'
-import { getExtractedValue } from '../../data/extracted'
-import { getTableData } from '../../data/table'
-import { selectVariables } from '../../data/table'
-import { getAllExtractedValues } from '../../data/thunks'
-import { useAppDispatch, useAppSelector } from '../../redux/hooks'
-import { getVariableTitle } from '../../utils/variables'
+} from '#src/components/comboboxes/text-combobox'
+import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
+import { getTableData } from '#src/data/table/table-data.slice'
+import { selectVariables } from '#src/data/table/table-data.selectors'
+import { getAllExtractedValues } from '#src/data/thunks'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { getVariableTitle } from '#src/utils/variables'
+
+import { addPlot } from './plots.slice'
 
 type PlotDialogForm = {
   runSelection: string
@@ -127,7 +127,7 @@ const PlotDialog = (props: PlotDialogProps) => {
             title: `Data: ${getVariableTitle(yMetadata)}`,
           }
 
-    dispatch(addPlot({ ...plotOptions, runs: runs }))
+    dispatch(addPlot({ ...plotOptions, runs: runs ?? undefined }))
 
     if (submitedFormValues.plotType === 'summary') {
       dispatch(getTableData({ proposal, variables: [xVariable, yVariable] }))

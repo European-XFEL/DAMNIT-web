@@ -5,9 +5,10 @@ Apollo Client store
 
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 
+import { isStaleProposal, resetProposal } from '#src/app/store/actions'
+import { type ExtractedDataItem, type ExtractedMetadataItem } from '#src/types'
+
 import ExtractedDataServices from './extracted-data.services'
-import { isStaleProposal, resetProposal } from '../../redux/actions'
-import { type ExtractedDataItem, type ExtractedMetadataItem } from '../../types'
 
 type ExtractedDataState = {
   data: { [run: string]: { [variable: string]: ExtractedDataItem } }

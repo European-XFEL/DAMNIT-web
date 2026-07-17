@@ -3,7 +3,7 @@ import { UnstyledButton, Group, Text, Menu, rem } from '@mantine/core'
 import { IconLogout, IconMail, IconChevronDown } from '@tabler/icons-react'
 import cx from 'clsx'
 
-import { CONTACT_EMAIL } from '../../constants'
+import { CONTACT_EMAIL } from '#src/constants'
 
 import classes from './header.module.css'
 

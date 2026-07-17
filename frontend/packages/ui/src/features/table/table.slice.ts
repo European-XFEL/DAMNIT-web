@@ -1,8 +1,10 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+
+import { resetProposal } from '#src/app/store/actions'
+import { type PlotSpec } from '#src/types'
+import { isArrayEqual } from '#src/utils/array'
 
 import type { Scroll } from './types'
-import { resetProposal } from '../../redux/actions'
-import { isArrayEqual } from '../../utils/array'
 
 type VariableOptions = {
   visibility: boolean
@@ -93,3 +95,6 @@ export const {
   setVariableVisibility,
   setViewScroll,
 } = slice.actions
+
+// No reducer handles this: a store listener turns the request into a plot.
+export const plotRequested = createAction<PlotSpec>('table/plotRequested')

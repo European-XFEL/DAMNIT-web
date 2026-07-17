@@ -1,22 +1,13 @@
-import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
-import { fileURLToPath } from 'node:url'
+import { defineConfig } from 'vitest/config'
 
 // The file extension picks the runtime: *.test.ts runs in Node (pure logic),
 // *.test.tsx runs in a real browser (anything that touches the DOM). The only
 // rule a contributor learns is "needs a DOM => name it .tsx".
 //
-// Two tests-only aliases: '@/' resolves a source module (src/), '#tests/'
-// resolves a test helper (tests/). Both are defined only here and in
-// tsconfig.test.json, so they resolve for the test runtime and the editor but
-// not in production src, which imports relatively.
-const alias = {
-  // Normalize to forward slashes: backslash paths break vite-node's alias
-  // resolution on Windows, so every unit-test file fails to load.
-  '@/': fileURLToPath(new URL('./src/', import.meta.url)).replace(/\\/g, '/'),
-  '#tests/': fileURLToPath(new URL('./tests/', import.meta.url)),
-}
+// Tests reach source through '#src/' and helpers through '#tests/', the same
+// package.json subpath imports production code uses. No aliases live here.
 
 export default defineConfig({
   test: {
@@ -24,7 +15,6 @@ export default defineConfig({
       {
         test: {
           name: 'node',
-          alias,
           include: ['tests/**/*.test.ts'],
           environment: 'node',
           env: { TZ: 'UTC' },
@@ -46,7 +36,6 @@ export default defineConfig({
         },
         test: {
           name: 'browser',
-          alias,
           include: ['tests/**/*.test.tsx'],
           browser: {
             enabled: true,

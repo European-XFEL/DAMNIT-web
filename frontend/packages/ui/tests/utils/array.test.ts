@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest'
 
-import { isArrayEqual, sorted, sortedInsert, sortedSearch } from '@/utils/array'
+import {
+  isArrayEqual,
+  sorted,
+  sortedInsert,
+  sortedSearch,
+} from '#src/utils/array'
 
 describe('sortedSearch', () => {
   test('returns the index of a value that is present', () => {

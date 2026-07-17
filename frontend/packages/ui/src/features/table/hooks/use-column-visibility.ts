@@ -1,13 +1,12 @@
 import { useMemo } from 'react'
 
-import type { TagItem } from '../../../types'
-import { NONCONFIGURABLE_VARIABLES } from '../constants'
+import type { TagItem } from '#src/types'
+import { NONCONFIGURABLE_VARIABLES } from '#src/features/table/constants'
 import {
   selectTagSelection,
   selectVariableVisibility,
-} from '../store/selectors'
-
-import { useAppSelector } from '../../../redux/hooks'
+} from '#src/features/table/store/selectors'
+import { useAppSelector } from '#src/app/store/hooks'
 
 type ColumnVisibilityInputs = {
   variableNames: string[]

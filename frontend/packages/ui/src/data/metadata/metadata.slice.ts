@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import { resetProposal } from '../../redux/actions'
-import type { DeepPartial } from '../../types'
+import { resetProposal } from '#src/app/store/actions'
+import type { DeepPartial } from '#src/types'
 
 interface Proposal {
   value: string

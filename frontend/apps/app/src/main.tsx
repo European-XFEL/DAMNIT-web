@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router'
 
 import '@damnit-frontend/ui/styles'
 import { Providers, RootRoute, BASE_URL } from '@damnit-frontend/ui'
+
 import App from './app'
 
 const container = document.getElementById('root') as HTMLElement

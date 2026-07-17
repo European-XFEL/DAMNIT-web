@@ -1,12 +1,13 @@
 import { type RouteObject, createHashRouter } from 'react-router'
 
+import { RootRoute } from '@damnit-frontend/ui'
+
 import {
   ExampleRoute,
   loadExampleData,
   HomeRoute,
   loadHomeData,
 } from './routes'
-import { RootRoute } from '@damnit-frontend/ui'
 
 const routes: RouteObject[] = [
   {

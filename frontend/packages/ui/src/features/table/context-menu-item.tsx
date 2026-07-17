@@ -1,5 +1,4 @@
 import { Stack, Text } from '@mantine/core'
-
 import {
   ContextMenuItem as MantineContextMenuItem,
   type ContextMenuItemOptions as MantineContextMenuItemOptions,

@@ -1,4 +1,5 @@
 import { DashboardBase, DashboardMain } from '@damnit-frontend/ui'
+
 import DashboardHeader, { type DashboardHeaderProps } from './dashboard-header'
 
 type DashboardProps = {

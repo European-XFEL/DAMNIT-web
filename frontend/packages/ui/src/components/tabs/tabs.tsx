@@ -4,6 +4,7 @@ import {
   type TabsProps as MantineTabsProps,
 } from '@mantine/core'
 import { IconX } from '@tabler/icons-react'
+
 import { type TabContents } from './tabs.types'
 
 export interface TabsProps extends MantineTabsProps {

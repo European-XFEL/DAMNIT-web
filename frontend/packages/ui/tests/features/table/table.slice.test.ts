@@ -5,7 +5,7 @@ import reducer, {
   selectRun,
   setTagSelection,
   setVariableVisibility,
-} from '@/features/table/table.slice'
+} from '#src/features/table/table.slice'
 
 describe('selectRun', () => {
   test('sets the run and its variables', () => {

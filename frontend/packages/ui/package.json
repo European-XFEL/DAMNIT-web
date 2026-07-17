@@ -16,6 +16,18 @@
     ".": "./src/index.ts",
     "./styles": "./src/styles.ts"
   },
+  "imports": {
+    "#src/*": [
+      "./src/*",
+      "./src/*.ts",
+      "./src/*.tsx"
+    ],
+    "#tests/*": [
+      "./tests/*",
+      "./tests/*.ts",
+      "./tests/*.tsx"
+    ]
+  },
   "sideEffects": [
     "./src/styles.ts",
     "**/*.css"

@@ -1,49 +1,45 @@
 // Providers
-export { Providers } from './providers'
+export { Providers } from './app/providers'
 
 // Components
-export { ContactButton } from './components/buttons'
-export { Header, Logo, UserMenu } from './components/headers'
-export { SiteFooter } from './components/footers'
-export { InstrumentBadge } from './components/badges'
+export { default as ContactButton } from './components/buttons/contact-button'
+export { default as Header } from './components/headers/header'
+export { default as Logo } from './components/headers/logo'
+export { UserMenu } from './components/headers/user-menu'
+export { default as SiteFooter } from './components/footers/site-footer'
+export { default as InstrumentBadge } from './components/badges/instrument-badge'
 
 // Features
-export {
-  default as Dashboard,
-  DashboardBase,
-  DashboardMain,
-  openNav,
-  closeNav,
-} from './features/dashboard'
-export {
-  HeroPage,
-  HomePage,
-  LoggedOutPage,
-  NotFoundPage,
-} from './features/pages'
-export { Proposals } from './features/proposals'
+export { default as Dashboard } from './features/dashboard/dashboard'
+export { default as DashboardBase } from './features/dashboard/dashboard.base'
+export { default as DashboardMain } from './features/dashboard/dashboard.main'
+export { openNav, closeNav } from './features/dashboard/dashboard.slice'
+export { default as HeroPage } from './app/pages/hero-page'
+export { default as HomePage } from './app/pages/home-page'
+export { default as LoggedOutPage } from './app/pages/logged-out-page'
+export { default as NotFoundPage } from './app/pages/not-found-page'
+export { default as Proposals } from './features/proposals/proposals'
 
 // Auth
-export { selectUserFullName } from './auth'
+export {
+  selectAvailableProposals,
+  selectUserFullName,
+} from './features/auth/auth.slice'
 
-// Hooks
-export { useProposal } from './hooks'
-
-// Redux
-export { resetProposal } from './redux/actions'
-export { useAppDispatch, useAppSelector } from './redux/hooks'
+// Store
+export { resetProposal } from './app/store/actions'
+export { useAppDispatch, useAppSelector } from './app/store/hooks'
 
 // Routes
-export {
-  LoginRoute,
-  LogoutRoute,
-  PrivateRoute,
-  RootRoute,
-  history,
-} from './routes'
+export { default as LoginRoute } from './app/routes/login-route'
+export { default as LogoutRoute } from './app/routes/logout-route'
+export { default as PrivateRoute } from './app/routes/private-route'
+export { default as RootRoute } from './app/routes/root-route'
+export { history } from './app/routes/history'
 
 // Data
-export { setMetadata, setProposalPending } from './data/metadata'
+export { default as useProposal } from './data/use-proposal'
+export { setMetadata, setProposalPending } from './data/metadata/metadata.slice'
 
 // Utilities
 export { formatUrl } from './utils/helpers'

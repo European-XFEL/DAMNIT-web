@@ -4,16 +4,19 @@ import lodashSize from 'lodash/size'
 import { Anchor, rem } from '@mantine/core'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
 
-import { BasePopover } from './base-popover'
-import { RowDetails, RowItemCheckbox } from './row-details'
-import { SearchableTable } from './searchable-table'
-import { ControlButton } from '../control-button'
-import { NONCONFIGURABLE_VARIABLES } from '../../constants'
-import { useColumnVisibility } from '../../hooks/use-column-visibility'
-import { selectTagSelection } from '../../store/selectors'
-import { clearTagSelection, setTagSelection } from '../../table.slice'
+import { ControlButton } from '#src/features/table/components/control-button'
+import { NONCONFIGURABLE_VARIABLES } from '#src/features/table/constants'
+import { useColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
+import { selectTagSelection } from '#src/features/table/store/selectors'
+import {
+  clearTagSelection,
+  setTagSelection,
+} from '#src/features/table/table.slice'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
-import { useAppDispatch, useAppSelector } from '../../../../redux/hooks'
+import { SearchableTable } from './searchable-table'
+import { RowDetails, RowItemCheckbox } from './row-details'
+import { BasePopover } from './base-popover'
 
 type TagRecord = {
   name: string

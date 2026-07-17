@@ -9,11 +9,12 @@ import {
   type PayloadAction,
 } from '@reduxjs/toolkit'
 
-import TableDataServices from './table-data.services'
+import { isStaleProposal, resetProposal } from '#src/app/store/actions'
+import { type Maybe } from '#src/types'
+import { isEmpty } from '#src/utils/helpers'
+
 import { type TableDataOptions, type TableInfo } from './table-data.types'
-import { isStaleProposal, resetProposal } from '../../redux/actions'
-import { type Maybe } from '../../types'
-import { isEmpty } from '../../utils/helpers'
+import TableDataServices from './table-data.services'
 
 interface TableDataState extends TableInfo {
   lastUpdate: Record<string, Maybe<number>>

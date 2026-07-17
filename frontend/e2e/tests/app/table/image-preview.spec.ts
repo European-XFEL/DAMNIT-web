@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { IMAGE_CELL } from '#examples/xpcs'
 import {
   hoverCell,

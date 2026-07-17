@@ -1,8 +1,9 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Editor as Monaco, type OnMount } from '@monaco-editor/react'
 
-import { CenteredLoader } from '../../components/feedback'
-import { useAppDispatch, useAppStore } from '../../redux/hooks'
+import CenteredLoader from '#src/components/feedback/centered-loader'
+import { useAppDispatch, useAppStore } from '#src/app/store/hooks'
+
 import { setView } from './context-file.slice'
 
 type MonacoEditor = Parameters<OnMount>[0]

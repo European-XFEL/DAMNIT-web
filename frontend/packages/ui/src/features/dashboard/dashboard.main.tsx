@@ -10,31 +10,25 @@ import {
   type ElementProps,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
-
 import { IconGraph, IconX } from '@tabler/icons-react'
 import cx from 'clsx'
 
-import { setCurrentTab, removeTab } from './dashboard.slice'
-import { type ContextFileProps } from '../context-file'
-import { PlotDialog } from '../plots'
-import { type TableProps } from '../table'
-
-import { CenteredLoader } from '../../components/feedback'
-import { type TabsProps } from '../../components/tabs'
-import { useAppDispatch, useAppSelector } from '../../redux/hooks'
+import { type ContextFileProps } from '#src/features/context-file/context-file'
+import PlotDialog from '#src/features/plots/plot-dialog'
+import { type TableProps } from '#src/features/table/table'
+import CenteredLoader from '#src/components/feedback/centered-loader'
+import { type TabsProps } from '#src/components/tabs/tabs'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import headerStyles from '#src/styles/header.module.css'
 
 import styles from './dashboard.module.css'
-import headerStyles from '../../styles/header.module.css'
+import { setCurrentTab, removeTab } from './dashboard.slice'
 
-const PlotsTab = lazy(() =>
-  import('../plots').then((module) => ({ default: module.PlotsTab }))
+const PlotsTab = lazy(() => import('#src/features/plots/plots-tab'))
+const ContextFile = lazy(
+  () => import('#src/features/context-file/context-file')
 )
-const ContextFile = lazy(() =>
-  import('../context-file').then((module) => ({
-    default: module.ContextFile,
-  }))
-)
-const Table = lazy(() => import('../table'))
+const Table = lazy(() => import('#src/features/table/table'))
 
 interface ButtonProps
   extends MantineButtonProps,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { Pages, pageRangeForRegion } from '@/features/table/pagination'
+import { Pages, pageRangeForRegion } from '#src/features/table/pagination'
 
 describe('Pages', () => {
   test('a page marked loading reads as loading, not loaded', () => {

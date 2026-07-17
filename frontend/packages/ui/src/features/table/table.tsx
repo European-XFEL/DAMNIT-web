@@ -13,6 +13,13 @@ import {
 import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack, useMantineTheme } from '@mantine/core'
 
+import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '#src/constants'
+import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
+import { getTableData } from '#src/data/table/table-data.slice'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { isArrayEqual, sorted } from '#src/utils/array'
+import { isEmpty } from '#src/utils/helpers'
+
 import {
   errorCell,
   getCell,
@@ -30,16 +37,7 @@ import { useTable } from './hooks/use-table'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
-import { selectRun } from './table.slice'
-import { canPlotData } from '../plots/utils'
-import { addPlot } from '../plots/plots.slice'
-
-import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '../../constants'
-import { getExtractedValue } from '../../data/extracted'
-import { getTableData } from '../../data/table'
-import { useAppDispatch, useAppSelector } from '../../redux/hooks'
-import { isArrayEqual, sorted } from '../../utils/array'
-import { isEmpty } from '../../utils/helpers'
+import { plotRequested, selectRun } from './table.slice'
 
 type Column = {
   id: string
@@ -256,10 +254,8 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     const column = tableColumns[col]?.id
     const rowData = tableData[tableMetadata.runs[row]]
 
-    if (
-      col !== -1 &&
-      canPlotData(rowData[column]?.value, rowData[column]?.dtype)
-    ) {
+    // TODO: Use extracted data type from the database
+    if (col !== -1 && rowData[column]?.value != null) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 
@@ -353,7 +349,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     label: string
   }) => {
     dispatch(
-      addPlot({
+      plotRequested({
         variables,
         source: 'table',
         title: `Summary: ${label}`,
@@ -378,7 +374,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     runs: string[]
   }) => {
     dispatch(
-      addPlot({
+      plotRequested({
         runs,
         variables: [variable],
         source: 'extracted',

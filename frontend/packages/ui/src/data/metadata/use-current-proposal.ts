@@ -1,6 +1,7 @@
+import { useAppSelector } from '#src/app/store/hooks'
+import { isEmpty } from '#src/utils/helpers'
+
 import useProposals from './use-proposals'
-import { useAppSelector } from '../../redux/hooks'
-import { isEmpty } from '../../utils/helpers'
 
 const useCurrentProposal = () => {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)

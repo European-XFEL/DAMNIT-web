@@ -1,7 +1,8 @@
 import { gql } from '@apollo/client'
 
+import { client } from '#src/graphql/apollo'
+
 import { type ExtractedDataOptions } from './extracted-data.types'
-import { client } from '../../graphql/apollo'
 
 const EXTRACTED_DATA = 'extracted_data'
 

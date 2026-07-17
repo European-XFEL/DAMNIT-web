@@ -19,16 +19,15 @@ import cx from 'clsx'
 import dayjs from 'dayjs'
 import { DataTable } from 'mantine-datatable'
 
-import { selectAvailableProposals } from '../../auth/auth.slice'
-import {
-  InstrumentBadge,
+import InstrumentBadge, {
   type InstrumentBadgeProps,
-} from '../../components/badges'
-import { CenteredLoader } from '../../components/feedback'
-import { useProposals } from '../../data/metadata'
-import { useAppSelector } from '../../redux/hooks'
-import { isEmpty } from '../../utils/helpers'
-import { orderBy } from '../../utils/objects'
+} from '#src/components/badges/instrument-badge'
+import CenteredLoader from '#src/components/feedback/centered-loader'
+import useProposals from '#src/data/metadata/use-proposals'
+import { type AvailableProposals } from '#src/types'
+import { isEmpty } from '#src/utils/helpers'
+import { orderBy } from '#src/utils/objects'
+
 import styles from './proposals.module.css'
 
 const formatRunCycle = (date: string) => {
@@ -301,8 +300,11 @@ const ProposalHeader = () => {
   )
 }
 
-const Proposals = () => {
-  const proposals = useAppSelector(selectAvailableProposals)
+type ProposalsProps = {
+  proposals: AvailableProposals
+}
+
+const Proposals = ({ proposals }: ProposalsProps) => {
   const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
 
   return (

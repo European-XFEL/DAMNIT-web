@@ -1,7 +1,7 @@
 import { type PropsWithChildren } from 'react'
 import { Group } from '@mantine/core'
 
-import headerClasses from '../../styles/header.module.css'
+import headerClasses from '#src/styles/header.module.css'
 
 type HeaderProps = {
   px: number

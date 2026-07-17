@@ -1,9 +1,6 @@
+import type { VariableDataItem, VariableError, VariableValue } from '#src/types'
+
 import type { TableData } from './table-data.types'
-import type {
-  VariableDataItem,
-  VariableError,
-  VariableValue,
-} from '../../types'
 
 type DamnitVariable = {
   name: string

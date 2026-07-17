@@ -24,6 +24,7 @@ import {
   UserMenu,
   history,
   resetProposal,
+  selectAvailableProposals,
   selectUserFullName,
   setProposalPending,
   useAppDispatch,
@@ -73,17 +74,25 @@ function ProposalRoute({ children }: PropsWithChildren) {
   )
 }
 
-function HomeHeader() {
+function HomeRoute() {
   const userName = useAppSelector(selectUserFullName)
+  const proposals = useAppSelector(selectAvailableProposals)
+  const navigate = useNavigate()
 
   return (
-    <Header px={20}>
-      <Logo linkTo="/home" />
-      <UserMenu
-        userName={userName}
-        onLogout={() => history.navigate('/logout')}
-      />
-    </Header>
+    <HomePage
+      header={
+        <Header px={20}>
+          <Logo linkTo="/home" />
+          <UserMenu userName={userName} onLogout={() => navigate('/logout')} />
+        </Header>
+      }
+      main={
+        <Container>
+          <Proposals proposals={proposals} />
+        </Container>
+      }
+    />
   )
 }
 
@@ -103,14 +112,7 @@ const App = () => {
           path="/home"
           element={
             <PrivateRoute>
-              <HomePage
-                header={<HomeHeader />}
-                main={
-                  <Container>
-                    <Proposals />
-                  </Container>
-                }
-              />
+              <HomeRoute />
             </PrivateRoute>
           }
         />

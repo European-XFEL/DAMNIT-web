@@ -1,5 +1,4 @@
 import { test, expect } from '#fixtures'
-
 import { XPCS } from '#examples/xpcs'
 import { columnOf, openProposal, titleOf } from '#support/table'
 import {

@@ -65,3 +65,17 @@ export type ProposalInfo = {
   proposal_path: string
   damnit_path: string
 }
+
+// The proposals available to a user, keyed by cycle.
+export type AvailableProposals = {
+  [cycle: string]: number[]
+}
+
+// A plot's definition: the plotRequested action payload and the shape plots
+// stores. Lives here so table (requester) and plots (store) can share it.
+export type PlotSpec = {
+  variables: string[]
+  runs?: string[]
+  source: string
+  title?: string
+}

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 
-import { flattenRuns } from '@/data/table/table-data.transforms'
-import type { VariableError, VariableValue } from '@/types'
+import { flattenRuns } from '#src/data/table/table-data.transforms'
+import type { VariableError, VariableValue } from '#src/types'
 
 function variable(
   name: string,

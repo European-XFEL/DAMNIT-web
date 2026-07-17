@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import { resetProposal } from '../../redux/actions'
-import { type TabItem } from '../../types'
+import { resetProposal } from '#src/app/store/actions'
+import { type TabItem } from '#src/types'
 
 type MainState = {
   tabs: Record<string, TabItem>

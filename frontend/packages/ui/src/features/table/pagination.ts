@@ -1,7 +1,8 @@
 import { range } from '@mantine/hooks'
 
+import { sortedInsert, sortedSearch } from '#src/utils/array'
+
 import type { Rectangle } from './types'
-import { sortedInsert, sortedSearch } from '../../utils/array'
 
 // Tracks which table pages are in-flight or already loaded, so the pagination
 // effect never requests the same page twice. Kept free of store/network
