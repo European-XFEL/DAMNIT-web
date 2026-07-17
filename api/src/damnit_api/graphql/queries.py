@@ -6,11 +6,11 @@ from strawberry.types.nodes import SelectedField
 
 from .. import get_logger
 from ..auth.permissions import PROPOSAL_PERMISSIONS
-from ..data import get_preview_data
-from ..db import async_table, get_session
 from ..metadata.services import _get_proposal_meta, _update_proposal_meta
+from ..runs.preview import get_preview_data
+from ..runs.sqlite import async_table, get_session
+from ..runs.types import KNOWN_DTYPES, DamnitRun
 from .metadata import fetch_metadata
-from .models import KNOWN_DTYPES, DamnitRun
 from .utils import DatabaseInput, fetch_info
 
 logger = get_logger()

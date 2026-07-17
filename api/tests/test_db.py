@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy.pool import NullPool
 
-from damnit_api.db import (
+from damnit_api.runs.sqlite import (
     DAMNIT_PATH,
     DatabaseSessionManager,
     async_table,

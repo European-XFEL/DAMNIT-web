@@ -5,7 +5,7 @@ from typing import Any
 import strawberry
 from sqlalchemy import or_, select
 
-from ..db import async_table, get_session
+from ..runs.sqlite import async_table, get_session
 from ..shared.const import DEFAULT_PROPOSAL
 
 
