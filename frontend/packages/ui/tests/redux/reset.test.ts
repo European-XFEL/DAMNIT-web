@@ -5,7 +5,8 @@ import { cache } from '#src/graphql/apollo'
 import { authApi, type UserInfo } from '#src/features/auth/auth.api'
 import { selectUserFullName } from '#src/features/auth/auth.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
-import { getTable, updateTable } from '#src/data/table/table-data.slice'
+import { updateTable } from '#src/data/table/table-data.slice'
+import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { resetProposal } from '#src/app/store/actions'
 import type { RootState } from '#src/app/store/reducer'
 import { setupStore } from '#src/app/store/store'
@@ -14,24 +15,12 @@ import { setupStore } from '#src/app/store/store'
 // Query. Only the session (authApi) and the proposal list (proposal_metadata)
 // survive.
 
-// A real cache, so the eviction below is observable. The slices reach the
-// client through their services, and importing the real one opens a websocket
-// from a Node test.
+// A real cache, so the eviction below is observable. Importing the real module
+// opens a websocket from a Node test.
 vi.mock('#src/graphql/apollo', async () => {
   const { InMemoryCache } = await import('@apollo/client')
   return { cache: new InMemoryCache(), client: {} }
 })
-
-// getTable normally reaches the network through the client; stub the service so
-// the thunk resolves without one, letting the stale-fetch guard be exercised.
-vi.mock('#src/data/table/table-data.services', () => ({
-  default: {
-    getTable: vi.fn(async () => ({
-      data: { '7': { run: { value: 7, dtype: 'number' } } },
-      metadata: { variables: {}, runs: ['7'], timestamp: 1, tags: {} },
-    })),
-  },
-}))
 
 // upsertQueryData pipes the value through transformResponse, so the fixture
 // feeds the wire shape. Handing it a UserInfo instead leaves proposals
@@ -100,10 +89,10 @@ const CACHED_FIELDS = gql`
   }
 `
 
-test('resetProposal drops the proposal-scoped fields but keeps the proposal list', () => {
+function cacheProposal(proposal: string) {
   cache.writeQuery({
     query: CACHED_FIELDS,
-    variables: { proposal: '6996' },
+    variables: { proposal },
     data: {
       runs: { '5': { run: 5 } },
       metadata: { runs: ['5'] },
@@ -111,15 +100,45 @@ test('resetProposal drops the proposal-scoped fields but keeps the proposal list
       proposal_metadata: [{ __typename: 'ProposalMetadata', number: 6996 }],
     },
   })
+}
+
+const cachedFields = () =>
+  Object.keys(cache.extract().ROOT_QUERY ?? {}).filter(
+    (key) => key !== '__typename'
+  )
+
+// The eviction is deferred past the departing watchers' unsubscribes, so it
+// lands a macrotask later rather than within the dispatch.
+async function leaveProposal(proposal: string) {
   const store = setupStore()
+  store.dispatch(setProposalPending(proposal))
+  cacheProposal(proposal)
 
   store.dispatch(resetProposal())
+  await vi.waitFor(() =>
+    expect(cachedFields()).not.toContain(
+      `metadata({"database":{"proposal":"${proposal}"}})`
+    )
+  )
+}
 
-  const rootQuery = cache.extract().ROOT_QUERY ?? {}
-  const survivors = Object.keys(rootQuery)
-    .filter((key) => key !== '__typename')
-    .map((key) => key.split('(')[0])
-  expect(survivors).toEqual(['proposal_metadata'])
+test('resetProposal drops the departed proposal, keeping the proposal list', async () => {
+  await leaveProposal('6996')
+
+  expect(cachedFields().map((key) => key.split('(')[0])).toEqual([
+    'proposal_metadata',
+  ])
+})
+
+test('resetProposal leaves another proposal cached', async () => {
+  // What makes the deferred eviction safe: by the time it runs, the proposal
+  // being opened may already have cached data of its own, and dropping that
+  // would send it straight back to the network.
+  cacheProposal('7777')
+
+  await leaveProposal('6996')
+
+  expect(cachedFields()).toContain('metadata({"database":{"proposal":"7777"}})')
 })
 
 test('resetProposal clears the table but keeps the user signed in', async () => {
@@ -129,36 +148,4 @@ test('resetProposal clears the table but keeps the user signed in', async () => 
 
   expect(store.getState().tableData.data).toEqual({})
   expect(selectUserFullName(store.getState())).toBe('Ada Lovelace')
-})
-
-const PROPOSAL = '6996'
-
-function storeOnProposal(value: string) {
-  return setupStore({
-    metadata: { proposal: { value, loading: false, notFound: false } },
-  })
-}
-
-test('a table fetch still on the open proposal populates the table', async () => {
-  const store = storeOnProposal(PROPOSAL)
-
-  await store.dispatch(getTable({ proposal: PROPOSAL, page: 1, pageSize: 10 }))
-
-  expect(store.getState().tableData.data).toEqual({
-    '7': { run: { value: 7, dtype: 'number' } },
-  })
-})
-
-test('a table fetch that resolves after leaving the proposal is dropped', async () => {
-  const store = storeOnProposal(PROPOSAL)
-
-  // The fetch is in flight when the user leaves, so resetProposal runs first
-  // and the late fulfillment must not repopulate the reset slice.
-  const pending = store.dispatch(
-    getTable({ proposal: PROPOSAL, page: 1, pageSize: 10 })
-  )
-  store.dispatch(resetProposal())
-  await pending
-
-  expect(store.getState().tableData.data).toEqual({})
 })
