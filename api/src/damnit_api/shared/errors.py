@@ -1,6 +1,7 @@
 """Shared error classes for the DW API.
 
-Application code raises `DWError` subclasses for any failure that can reach a client.
+Application code raises `DamnitWebError` subclasses for any failure that can
+reach a client.
 
 Any other exceptions will become a 500/internal errors.
 """
@@ -8,7 +9,7 @@ Any other exceptions will become a 500/internal errors.
 import structlog
 
 
-class DWError(Exception):
+class DamnitWebError(Exception):
     """Base class for all DW errors.
 
     Subclasses set `code` to the HTTP status code that best describes the failure.
@@ -29,26 +30,26 @@ class DWError(Exception):
         self.request_id = structlog.contextvars.get_contextvars().get("request_id")
 
 
-class InvalidInputError(DWError):
+class InvalidInputError(DamnitWebError):
     """Error for malformed or invalid caller input."""
 
     code = 400
 
 
-class UnauthenticatedError(DWError):
+class UnauthenticatedError(DamnitWebError):
     """Error for missing or invalid authentication."""
 
     code = 401
 
 
-class ForbiddenError(DWError):
+class ForbiddenError(DamnitWebError):
     """Error for forbidden access."""
 
     message: str = "Forbidden"
     code = 403
 
 
-class NotFoundError(DWError):
+class NotFoundError(DamnitWebError):
     """Error for a resource that does not exist."""
 
     code = 404
@@ -58,13 +59,13 @@ class ProposalNotFoundError(NotFoundError):
     """Error for a proposal number that does not exist or is not resolvable."""
 
 
-class UpstreamServiceError(DWError):
+class UpstreamServiceError(DamnitWebError):
     """Error for a failure in an upstream service (MyMdC, OIDC provider)."""
 
     code = 502
 
 
-class DataUnavailableError(DWError):
+class DataUnavailableError(DamnitWebError):
     """Error for data that is temporarily unreadable.
 
     E.g. GPFS timeouts, unreadable runs.sqlite.

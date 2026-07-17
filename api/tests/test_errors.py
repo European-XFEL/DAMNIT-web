@@ -1,4 +1,4 @@
-"""Unit tests for the DWError hierarchy (ADR-001)."""
+"""Unit tests for the DamnitWebError hierarchy (ADR-001)."""
 
 import pytest
 import structlog
@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 
 from damnit_api.main import create_app
 from damnit_api.shared.errors import (
+    DamnitWebError,
     DataUnavailableError,
-    DWError,
     ForbiddenError,
     InvalidInputError,
     NotFoundError,
@@ -23,7 +23,7 @@ from damnit_api.shared.errors import (
 @pytest.mark.parametrize(
     ("exc_class", "expected_code"),
     [
-        (DWError, 500),
+        (DamnitWebError, 500),
         (InvalidInputError, 400),
         (UnauthenticatedError, 401),
         (ForbiddenError, 403),

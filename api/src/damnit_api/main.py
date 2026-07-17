@@ -67,8 +67,8 @@ def create_app():
             content={"detail": exc.detail},
         )
 
-    @app.exception_handler(errors.DWError)
-    async def base_exception_handler(request: Request, exc: errors.DWError):  # noqa: RUF029
+    @app.exception_handler(errors.DamnitWebError)
+    async def base_exception_handler(request: Request, exc: errors.DamnitWebError):  # noqa: RUF029
         status_code = exc.code or status.HTTP_500_INTERNAL_SERVER_ERROR
 
         content: dict[str, str | int | dict] = {
