@@ -1,6 +1,7 @@
 [project]
 site_name = "DAMNIT Web API"
 site_description = "DAMNIT Web API Documentation"
+site_url = "https://european-xfel.github.io/DAMNIT-web/docs/api/"
 repo_url = "https://github.com/European-XFEL/DAMNIT-web"
 
 nav = [

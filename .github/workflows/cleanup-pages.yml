@@ -8,6 +8,13 @@ on:
 permissions:
   contents: write
 
+# Serialize writes to the gh-pages branch. Keep this false: an arriving
+# run's cancel-in-progress policy applies to the whole shared group, so a
+# canceling run would otherwise kill an in-progress publish.
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
 jobs:
   cleanup-branch:
     if: github.event_name == 'delete' && github.event.ref_type == 'branch'
