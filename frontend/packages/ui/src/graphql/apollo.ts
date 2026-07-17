@@ -1,15 +1,9 @@
 import {
   ApolloClient,
-  ApolloLink,
   HttpLink,
   InMemoryCache,
-  Observable,
   from,
   split,
-  type NextLink,
-  type Observer,
-  type Operation,
-  type FetchResult,
 } from '@apollo/client'
 import {
   removeTypenameFromVariables,
@@ -23,6 +17,7 @@ import { createClient } from 'graphql-ws'
 import { BASE_URL, WS_URL } from '#src/constants'
 
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from './operation-names'
+import { createPriorityLink } from './priority-link'
 
 const removeTypenameLink = removeTypenameFromVariables({
   except: {
@@ -39,76 +34,12 @@ const retryLink = new RetryLink({
 
 const httpLink = new HttpLink({ uri: `${BASE_URL}graphql` })
 
-type PendingOperation = {
-  execute: () => Observable<FetchResult>
-  observer: Observer<FetchResult>
-}
-
-const createPriorityLink = (maxActive = 3) => {
-  const pendingOperations: PendingOperation[] = []
-  const activeOperations: Set<PendingOperation> = new Set()
-
-  const processNextOperation = () => {
-    while (activeOperations.size < maxActive && pendingOperations.length > 0) {
-      const nextOperation = pendingOperations.shift()
-      if (!nextOperation) {
-        break
-      }
-
-      activeOperations.add(nextOperation)
-      nextOperation.execute().subscribe({
-        next: (response) => {
-          activeOperations.delete(nextOperation)
-          nextOperation.observer.next?.(response)
-          processNextOperation()
-        },
-        error: (error) => {
-          activeOperations.delete(nextOperation)
-          nextOperation.observer.error?.(error)
-          processNextOperation()
-        },
-        complete: () => {
-          activeOperations.delete(nextOperation)
-          nextOperation.observer.complete?.()
-        },
-      })
-    }
-  }
-
-  return new ApolloLink((operation: Operation, forward: NextLink) => {
-    const nonPriorityOperations = [DEFERRED_TABLE_DATA_QUERY_NAME]
-    const definition = getMainDefinition(operation.query)
-    const operationName =
-      operation.operationName ||
-      (definition.kind === 'OperationDefinition' && definition.name?.value) ||
-      ''
-
-    return new Observable((observer) => {
-      if (nonPriorityOperations.includes(operationName)) {
-        pendingOperations.push({
-          execute: () => forward(operation) as Observable<FetchResult>,
-          observer,
-        })
-
-        processNextOperation()
-      } else {
-        forward(operation).subscribe({
-          next: (response) => {
-            observer.next(response)
-          },
-          error: (error) => {
-            observer.error(error)
-          },
-          complete: () => {
-            observer.complete()
-          },
-        })
-      }
-    })
-  })
-}
-
-const priorityLink = createPriorityLink(1)
+// The deferred pass fetches a page's heavy values, so letting several run at
+// once would hold up the lighter queries the user is actually waiting to see.
+const priorityLink = createPriorityLink({
+  maxActive: 1,
+  queuedOperations: [DEFERRED_TABLE_DATA_QUERY_NAME],
+})
 
 const wsLink = new GraphQLWsLink(
   createClient({
