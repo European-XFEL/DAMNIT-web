@@ -36,6 +36,11 @@ export default defineConfig({
             '@glideapps/glide-data-grid',
             '@apollo/client',
             '@apollo/client/react',
+            '@apollo/client/utilities',
+            '@apollo/client/link/retry',
+            '@apollo/client/link/subscriptions',
+            '@apollo/client/link/remove-typename',
+            'graphql',
           ],
         },
         test: {
