@@ -1,0 +1,82 @@
+[project]
+site_name = "DAMNIT Web API"
+site_description = "DAMNIT Web API Documentation"
+repo_url = "https://github.com/European-XFEL/DAMNIT-web"
+
+nav = [
+  "index.md",
+  { "Deployment" = "deployment.md" },
+  { "Development" = [
+    "dev/setup.md",
+    "dev/architecture.md",
+    "dev/security.md",
+    "dev/notes.md",
+    "dev/docs.md",
+    "dev/ci-cd.md",
+  ] },
+]
+
+extra_css = ["stylesheets/mkdocstrings.css"]
+
+[project.theme]
+language = "en"
+features = [
+  "content.code.annotate",
+  "content.code.copy",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.sections",
+  "navigation.tabs",
+  "navigation.top",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.toc]
+permalink = true
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.superfences]
+[project.markdown_extensions.pymdownx.snippets]
+base_path = ["."]
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+inventories = [
+  "https://docs.python.org/3/objects.inv",
+  "https://docs.pydantic.dev/latest/objects.inv",
+  "https://python-dependency-injector.ets-labs.org/objects.inv",
+]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_section_style = "spacy"
+docstring_style = "google"
+heading_level = 1
+inherited_members = true
+merge_init_into_class = true
+modernize_annotations = true
+parameter_headings = true
+separate_signature = true
+show_bases = true
+show_if_no_docstring = true
+show_root_full_path = false
+show_root_heading = true
+show_signature_annotations = true
+show_signature_type_parameters = true
+show_symbol_type_heading = true
+show_symbol_type_toc = true
+signature_crossrefs = true
+summary = true
+type_parameter_headings = true
+unwrap_annotated = true
