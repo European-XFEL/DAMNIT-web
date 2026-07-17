@@ -6,14 +6,20 @@ repo_url = "https://github.com/European-XFEL/DAMNIT-web"
 
 nav = [
   "index.md",
-  { "Deployment" = "deployment.md" },
+  "deployment.md",
+  { "Architecture" = [
+    "architecture.md",
+    {"ADRs" = [
+      "adr/README.md",
+      "adr/000-vertical-slice-architecture.md",
+    ]}
+  ] },
   { "Development" = [
-    "dev/setup.md",
-    "dev/architecture.md",
-    "dev/security.md",
-    "dev/notes.md",
-    "dev/docs.md",
-    "dev/ci-cd.md",
+    "setup.md",
+    "security.md",
+    "notes.md",
+    "docs.md",
+    "ci-cd.md",
   ] },
 ]
 
@@ -51,6 +57,9 @@ permalink = true
 [project.markdown_extensions.pymdownx.superfences]
 [project.markdown_extensions.pymdownx.snippets]
 base_path = ["."]
+
+[project.plugins.macros]
+module_name = "docs/macros"
 
 [project.plugins.mkdocstrings.handlers.python]
 paths = ["src"]
