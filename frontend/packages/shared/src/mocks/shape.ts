@@ -14,9 +14,14 @@ export function shapeMetadata(meta: Meta) {
   }
 }
 
+// What the server's @lightweight directive holds back: the dtypes whose values
+// are too big to send with the first pass. It nulls their value and leaves
+// dtype and error alone, so the client can see which cells to ask for again.
+const HEAVY_DTYPES = ['image', 'rgba', 'array']
+
 export function shapeTableData(
   data: RunData[],
-  { names }: { names?: string[] | null } = {}
+  { names, lightweight = false }: ShapeTableDataOptions = {}
 ) {
   return {
     runs: data.map((run) => ({
@@ -24,12 +29,23 @@ export function shapeTableData(
         .filter(([name]) => names == null || names.includes(name))
         .map(([name, variable]) => ({
           name,
-          value: variable.value,
+          value:
+            lightweight && HEAVY_DTYPES.includes(variable.dtype)
+              ? null
+              : variable.value,
           dtype: variable.dtype,
-          ...('error' in variable ? { error: variable.error } : {}),
+          // Always sent, even absent from the example: the query selects it, so
+          // omitting it leaves the client's cache read incomplete and every
+          // cached replay silently refetches.
+          error: 'error' in variable ? variable.error : null,
         })),
     })),
   }
+}
+
+type ShapeTableDataOptions = {
+  names?: string[] | null
+  lightweight?: boolean
 }
 
 // A GraphQL error response (not a network error) surfaces mock drift

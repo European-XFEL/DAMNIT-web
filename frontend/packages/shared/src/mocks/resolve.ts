@@ -1,3 +1,5 @@
+import { Kind, parse } from 'graphql'
+
 import { shapeMetadata, shapeTableData, unmockedOperationError } from './shape'
 import type { Runs } from './types'
 
@@ -23,12 +25,49 @@ export type Resolution = {
   body: Record<string, unknown>
 }
 
+// A preview asks for many runs at once by aliasing extracted_data per run, with
+// the run inlined as a literal. Reading them back means reading the document:
+// unlike every other operation here, the runs are not in `variables`. Exported
+// because the e2e suite asserts on which runs a preview actually asked for.
+export function previewRunFields(query: string) {
+  const fields: { alias: string; run: number }[] = []
+
+  for (const definition of parse(query).definitions) {
+    if (definition.kind !== Kind.OPERATION_DEFINITION) {
+      continue
+    }
+    for (const selection of definition.selectionSet.selections) {
+      if (
+        selection.kind !== Kind.FIELD ||
+        selection.name.value !== 'extracted_data'
+      ) {
+        continue
+      }
+      const run = selection.arguments?.find((arg) => arg.name.value === 'run')
+      if (run?.value.kind !== Kind.INT) {
+        continue
+      }
+      fields.push({
+        alias: selection.alias?.value ?? selection.name.value,
+        run: Number(run.value.value),
+      })
+    }
+  }
+
+  return fields
+}
+
 export async function resolveOperation(
   operationName: string,
   {
+    query,
     variables,
     source,
-  }: { variables: Record<string, unknown>; source: MockDataSource }
+  }: {
+    query: string
+    variables: Record<string, unknown>
+    source: MockDataSource
+  }
 ): Promise<Resolution> {
   const proposal = variables.proposal as string
 
@@ -43,15 +82,37 @@ export async function resolveOperation(
       case 'DeferredTableDataQuery': {
         const { data } = await source.runs(proposal)
         const names = variables.names as string[] | null | undefined
-        return resolved(shapeTableData(data, { names }))
+        return resolved(
+          shapeTableData(data, {
+            names,
+            lightweight: operationName === 'LightweightTableDataQuery',
+          })
+        )
       }
-      case 'ExtractedDataQuery': {
-        const extracted = await source.extractedData({
-          proposal,
-          run: variables.run as number,
-          variable: variables.variable as string,
-        })
-        return resolved({ extracted_data: extracted })
+      case 'PreviewDataQuery': {
+        const fields = previewRunFields(query)
+        // Every caller skips an empty run set, so a preview asking for no runs
+        // means the builder drifted rather than the plot being empty.
+        if (!fields.length) {
+          return unresolved(operationName)
+        }
+        // A run with no example data throws MockDataNotFound and takes the
+        // whole chunk down as drift. That is deliberate: answering the missing
+        // run with a silent null is the quiet drift this mock exists to catch.
+        const values = await Promise.all(
+          fields.map(({ run }) =>
+            source.extractedData({
+              proposal,
+              run,
+              variable: variables.variable as string,
+            })
+          )
+        )
+        return resolved(
+          Object.fromEntries(
+            fields.map(({ alias }, index) => [alias, values[index]])
+          )
+        )
       }
       case 'ProposalMetadata': {
         const metadata = await source.proposalMetadata({

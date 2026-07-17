@@ -6,6 +6,7 @@ export {
 } from './shape'
 export {
   MockDataNotFound,
+  previewRunFields,
   resolveOperation,
   type MockDataSource,
 } from './resolve'
