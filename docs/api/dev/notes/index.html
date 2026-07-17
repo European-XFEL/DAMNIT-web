@@ -1,0 +1,4872 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="DAMNIT Web API Documentation">
+      
+      
+      
+        <link rel="canonical" href="https://european-xfel.github.io/DAMNIT-web/docs/api/dev/notes/">
+      
+      
+        <link rel="prev" href="../security/">
+      
+      
+        <link rel="next" href="../docs/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="zensical-0.0.47">
+    
+    
+      
+        <title>Notes - DAMNIT Web API</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.5e19f6ca.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#notes" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="DAMNIT Web API" class="md-header__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DAMNIT Web API
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Notes
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/European-XFEL/DAMNIT-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  DAMNIT - API
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../deployment/" class="md-tabs__link">
+        
+  
+  Deployment
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+      
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../setup/" class="md-tabs__link">
+          
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="DAMNIT Web API" class="md-nav__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
+
+    </a>
+    DAMNIT Web API
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/European-XFEL/DAMNIT-web" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  DAMNIT - API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Deployment
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Development
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Setup
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Architecture
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Security
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Notes
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Notes
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Vendored MyMdC Model Generation
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Vendored MyMdC Model Generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        __all__
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        GetProposals
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GetProposals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        abstract
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.beamtime_end_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        beamtime_end_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.beamtime_start_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        beamtime_start_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.beamtimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        beamtimes
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.begin_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        begin_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.data_archived_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        data_archived_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.def_proposal_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        def_proposal_path
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.description" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        description
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.end_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        end_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.expected_data_archive_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        expected_data_archive_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.experiment_data_contact_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        experiment_data_contact_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_auto_run_quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_auto_run_quality
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_available" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_available
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_beamtime_status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_beamtime_status
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_cloneable_status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_cloneable_status
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_data_archived_notification" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_data_archived_notification
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_preferred_data_output" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_preferred_data_output
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_proposal_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_proposal_system
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_public" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_public
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.instrument_cycle_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_cycle_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.instrument_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.instrument_identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.last_run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        last_run
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.local_contact_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        local_contact_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.local_data_contact_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        local_data_contact_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.logbook_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_info
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.main_proposer_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        main_proposer_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.meeting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        meeting
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.num_delivered_shifts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        num_delivered_shifts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.num_preparation_shifts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        num_preparation_shifts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.num_scheduled_shifts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        num_scheduled_shifts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.number" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        number
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.openly_released_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        openly_released_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.orig_repository_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        orig_repository_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.principal_investigator_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        principal_investigator_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.proposal_folder" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        proposal_folder
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.release_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        release_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.team" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        team
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        techniques
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.title" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        title
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.users_ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        users_ids
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.users_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        users_info
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        InstrumentCycles
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="InstrumentCycles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.begin_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        begin_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.close_call_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        close_call_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.description" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        description
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.end_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        end_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.flg_available" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_available
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.flg_proposal_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_proposal_system
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.instrument_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.instrument_identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.start_call_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        start_call_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        LogbookInfo
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LogbookInfo">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_base_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_base_url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.using_zulip_logbook" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        using_zulip_logbook
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Users
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Users">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.contact_email" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        contact_email
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.created_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        created_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.current_sign_in_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        current_sign_in_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.email" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        email
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.first_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        first_name
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.flg_ldap_account_valid" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_ldap_account_valid
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.flg_upex_acceptances" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_upex_acceptances
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.last_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        last_name
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.ldap_synced_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ldap_synced_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        name
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.nickname" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        nickname
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        provider
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.uid" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        uid
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.updated_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        updated_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.upex_synced_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        upex_synced_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposal" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        UsersProposal
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UsersProposal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposal.proposal_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        proposal_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposal.proposal_number" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        proposal_number
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposals" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        UsersProposals
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UsersProposals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposals.root" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        root
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Documentation
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ci-cd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CI/CD
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Vendored MyMdC Model Generation
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Vendored MyMdC Model Generation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.__all__" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        __all__
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        GetProposals
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GetProposals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        abstract
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.beamtime_end_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        beamtime_end_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.beamtime_start_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        beamtime_start_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.beamtimes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        beamtimes
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.begin_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        begin_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.data_archived_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        data_archived_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.def_proposal_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        def_proposal_path
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.description" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        description
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.end_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        end_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.expected_data_archive_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        expected_data_archive_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.experiment_data_contact_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        experiment_data_contact_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_auto_run_quality" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_auto_run_quality
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_available" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_available
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_beamtime_status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_beamtime_status
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_cloneable_status" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_cloneable_status
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_data_archived_notification" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_data_archived_notification
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_preferred_data_output" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_preferred_data_output
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_proposal_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_proposal_system
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.flg_public" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_public
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.instrument_cycle_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_cycle_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.instrument_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.instrument_identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.last_run" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        last_run
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.local_contact_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        local_contact_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.local_data_contact_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        local_data_contact_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.logbook_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_info
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.main_proposer_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        main_proposer_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.meeting" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        meeting
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.num_delivered_shifts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        num_delivered_shifts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.num_preparation_shifts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        num_preparation_shifts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.num_scheduled_shifts" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        num_scheduled_shifts
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.number" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        number
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.openly_released_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        openly_released_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.orig_repository_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        orig_repository_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.principal_investigator_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        principal_investigator_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.proposal_folder" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        proposal_folder
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.release_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        release_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.team" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        team
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        techniques
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.title" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        title
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.users_ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        users_ids
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.GetProposals.users_info" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        users_info
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        InstrumentCycles
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="InstrumentCycles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.begin_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        begin_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.close_call_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        close_call_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.description" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        description
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.end_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        end_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.flg_available" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_available
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.flg_proposal_system" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_proposal_system
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.instrument_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.instrument_identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        instrument_identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.start_call_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        start_call_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.InstrumentCycles.url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        LogbookInfo
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="LogbookInfo">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_base_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_base_url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_identifier" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_identifier
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        logbook_url
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.LogbookInfo.using_zulip_logbook" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        using_zulip_logbook
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Users
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Users">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.contact_email" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        contact_email
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.created_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        created_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.current_sign_in_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        current_sign_in_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.email" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        email
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.first_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        first_name
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.flg_ldap_account_valid" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_ldap_account_valid
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.flg_upex_acceptances" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        flg_upex_acceptances
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.last_name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        last_name
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.ldap_synced_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ldap_synced_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.name" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        name
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.nickname" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        nickname
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.provider" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        provider
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.uid" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        uid
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.updated_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        updated_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.Users.upex_synced_at" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        upex_synced_at
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposal" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        UsersProposal
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UsersProposal">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposal.proposal_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        proposal_id
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposal.proposal_number" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        proposal_number
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposals" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        UsersProposals
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="UsersProposals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#damnit_api._mymdc.vendor.UsersProposals.root" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        root
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+  
+  
+
+
+<h1 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="damnit_api._mymdc.vendor" class="doc doc-heading">
+            Vendored MyMdC Model Generation
+
+
+<a href="#damnit_api._mymdc.vendor" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Models generated from the OpenAPI specification for MyMDC.</p>
+<p>This is done by:</p>
+<ol>
+<li>Fetching the OpenAPI spec from MyMDC using <code>redocly</code>.</li>
+<li>Filtering the spec to only include models we're interested in by using a wrapper spec
+  and <code>redocly bundle</code>.</li>
+<li>Generating pydantic models using <code>datamodel-codegen</code>.</li>
+</ol>
+<p>Running <code>generate.sh</code> will regenerate these models.</p>
+<p>To add new models, update the wrapper spec in <code>wrapper.yaml</code> by adding in additional
+schemas.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Some corrections are applied to the generated models in [<code>damnit_api._mymdc.vendor</code>]</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="damnit_api._mymdc.vendor.__all__" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">__all__</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.__all__" class="headerlink" title="Permanent link">&para;</a></h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;GetProposals&#39;</span><span class="p">,</span> <span class="s1">&#39;InstrumentCycles&#39;</span><span class="p">,</span> <span class="s1">&#39;Users&#39;</span><span class="p">,</span> <span class="s1">&#39;UsersProposal&#39;</span><span class="p">,</span> <span class="s1">&#39;UsersProposals&#39;</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="damnit_api._mymdc.vendor.GetProposals" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">GetProposals</span>
+
+
+<a href="#damnit_api._mymdc.vendor.GetProposals" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="damnit_api._mymdc.vendor.models.GetProposals">GetProposals</span></code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.abstract" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">abstract</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.abstract" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">abstract</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.beamtime_end_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">beamtime_end_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.beamtime_end_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">beamtime_end_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.beamtime_start_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">beamtime_start_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.beamtime_start_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">beamtime_start_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.beamtimes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">beamtimes</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.beamtimes" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">beamtimes</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><span title="damnit_api._mymdc.vendor.models.Beamtime">Beamtime</span></span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.begin_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">begin_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.begin_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">begin_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.data_archived_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">data_archived_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.data_archived_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">data_archived_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.def_proposal_path" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">def_proposal_path</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.def_proposal_path" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">def_proposal_path</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.description" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">description</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.description" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">description</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.end_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">end_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.end_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">end_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.expected_data_archive_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">expected_data_archive_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.expected_data_archive_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">expected_data_archive_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.experiment_data_contact_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">experiment_data_contact_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.experiment_data_contact_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">experiment_data_contact_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_auto_run_quality" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_auto_run_quality</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_auto_run_quality" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_auto_run_quality</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_available" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_available</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_available" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_available</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">True</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_beamtime_status" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_beamtime_status</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_beamtime_status" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_beamtime_status</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_cloneable_status" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_cloneable_status</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_cloneable_status" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_cloneable_status</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s1">&#39;NC&#39;</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_data_archived_notification" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_data_archived_notification</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_data_archived_notification" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_data_archived_notification</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_preferred_data_output" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_preferred_data_output</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_preferred_data_output" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_preferred_data_output</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s1">&#39;R&#39;</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_proposal_system" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_proposal_system</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_proposal_system" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_proposal_system</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.flg_public" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_public</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.flg_public" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_public</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">False</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nb">id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.instrument_cycle_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">instrument_cycle_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.instrument_cycle_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">instrument_cycle_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.instrument_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">instrument_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.instrument_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">instrument_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.instrument_identifier" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">instrument_identifier</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.instrument_identifier" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">instrument_identifier</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.last_run" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">last_run</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.last_run" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">last_run</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.local_contact_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">local_contact_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.local_contact_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">local_contact_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.local_data_contact_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">local_data_contact_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.local_data_contact_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">local_data_contact_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.logbook_info" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">logbook_info</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.logbook_info" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">logbook_info</span><span class="p">:</span> <span class="n"><span title="damnit_api._mymdc.vendor.LogbookInfo">LogbookInfo</span></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.main_proposer_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">main_proposer_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.main_proposer_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">main_proposer_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.meeting" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">meeting</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.meeting" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">meeting</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#dict">dict</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.num_delivered_shifts" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">num_delivered_shifts</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.num_delivered_shifts" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">num_delivered_shifts</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.num_preparation_shifts" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">num_preparation_shifts</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.num_preparation_shifts" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">num_preparation_shifts</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.num_scheduled_shifts" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">num_scheduled_shifts</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.num_scheduled_shifts" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">num_scheduled_shifts</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.number" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">number</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.number" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">number</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.openly_released_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">openly_released_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.openly_released_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">openly_released_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.orig_repository_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">orig_repository_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.orig_repository_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">orig_repository_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.principal_investigator_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">principal_investigator_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.principal_investigator_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">principal_investigator_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.proposal_folder" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">proposal_folder</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.proposal_folder" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">proposal_folder</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.release_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">release_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.release_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">release_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.team" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">team</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.team" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">team</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><span title="damnit_api._mymdc.vendor.models.TeamItem">TeamItem</span></span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.techniques" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">techniques</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.techniques" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">techniques</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><span title="damnit_api._mymdc.vendor.models.Technique">Technique</span></span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.title" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">title</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.title" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">title</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.url" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">url</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.url" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.users_ids" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">users_ids</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.users_ids" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">users_ids</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a></span><span class="p">[</span><span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">,</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.GetProposals.users_info" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">users_info</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.GetProposals.users_info" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">users_info</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><span title="damnit_api._mymdc.vendor.models.UsersInfoItem">UsersInfoItem</span></span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="damnit_api._mymdc.vendor.InstrumentCycles" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">InstrumentCycles</span>
+
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="pydantic.BaseModel" href="https://docs.pydantic.dev/latest/api/pydantic/base_model/#pydantic.BaseModel">BaseModel</a></code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.begin_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">begin_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.begin_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">begin_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.close_call_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">close_call_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.close_call_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">close_call_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.description" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">description</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.description" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">description</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.end_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">end_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.end_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">end_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.flg_available" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_available</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.flg_available" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_available</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">True</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.flg_proposal_system" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_proposal_system</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.flg_proposal_system" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_proposal_system</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.identifier" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">identifier</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.identifier" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">identifier</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.instrument_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">instrument_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.instrument_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">instrument_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.instrument_identifier" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">instrument_identifier</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.instrument_identifier" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">instrument_identifier</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.start_call_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">start_call_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.start_call_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">start_call_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.InstrumentCycles.url" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">url</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.InstrumentCycles.url" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="damnit_api._mymdc.vendor.LogbookInfo" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">LogbookInfo</span>
+
+
+<a href="#damnit_api._mymdc.vendor.LogbookInfo" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="damnit_api._mymdc.vendor.models.LogbookInfo">LogbookInfo</span></code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.LogbookInfo.logbook_base_url" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">logbook_base_url</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_base_url" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">logbook_base_url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.LogbookInfo.logbook_identifier" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">logbook_identifier</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_identifier" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">logbook_identifier</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.LogbookInfo.logbook_url" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">logbook_url</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.LogbookInfo.logbook_url" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">logbook_url</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.LogbookInfo.using_zulip_logbook" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">using_zulip_logbook</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.LogbookInfo.using_zulip_logbook" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">using_zulip_logbook</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="damnit_api._mymdc.vendor.Users" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">Users</span>
+
+
+<a href="#damnit_api._mymdc.vendor.Users" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="pydantic.BaseModel" href="https://docs.pydantic.dev/latest/api/pydantic/base_model/#pydantic.BaseModel">BaseModel</a></code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.contact_email" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">contact_email</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.contact_email" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">contact_email</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.created_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">created_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.created_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">created_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.current_sign_in_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">current_sign_in_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.current_sign_in_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">current_sign_in_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.email" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">email</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.email" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">email</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.first_name" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">first_name</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.first_name" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">first_name</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.flg_ldap_account_valid" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_ldap_account_valid</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.flg_ldap_account_valid" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_ldap_account_valid</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">False</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.flg_upex_acceptances" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">flg_upex_acceptances</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.flg_upex_acceptances" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">flg_upex_acceptances</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">False</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.last_name" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">last_name</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.last_name" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">last_name</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.ldap_synced_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">ldap_synced_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.ldap_synced_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">ldap_synced_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.name" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">name</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.name" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">name</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.nickname" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">nickname</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.nickname" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">nickname</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.provider" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">provider</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.provider" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">provider</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s1">&#39;local&#39;</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.uid" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">uid</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.uid" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">uid</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.updated_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">updated_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.updated_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">updated_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.Users.upex_synced_at" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">upex_synced_at</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.Users.upex_synced_at" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">upex_synced_at</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="damnit_api._mymdc.vendor.UsersProposal" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">UsersProposal</span>
+
+
+<a href="#damnit_api._mymdc.vendor.UsersProposal" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="pydantic.BaseModel" href="https://docs.pydantic.dev/latest/api/pydantic/base_model/#pydantic.BaseModel">BaseModel</a></code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.UsersProposal.proposal_id" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">proposal_id</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.UsersProposal.proposal_id" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">proposal_id</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.UsersProposal.proposal_number" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">proposal_number</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.UsersProposal.proposal_number" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">proposal_number</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="damnit_api._mymdc.vendor.UsersProposals" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">UsersProposals</span>
+
+
+<a href="#damnit_api._mymdc.vendor.UsersProposals" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-external" title="pydantic.RootModel" href="https://docs.pydantic.dev/latest/api/pydantic/root_model/#pydantic.root_model.RootModel">RootModel</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<span title="damnit_api._mymdc.vendor.models.UsersProposal">UsersProposal</span>]]</code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="damnit_api._mymdc.vendor.UsersProposals.root" class="doc doc-heading">
+            <span class="doc doc-object-name doc-attribute-name">root</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+<a href="#damnit_api._mymdc.vendor.UsersProposals.root" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">root</span><span class="p">:</span> <span class="n"><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a></span><span class="p">[</span><span class="n"><span title="damnit_api._mymdc.vendor.models.UsersProposal">UsersProposal</span></span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div><details class="info">
+<summary>Generate script</summary>
+<div class="highlight"><pre><span></span><code><span class="ch">#!/bin/env sh</span>
+
+<span class="c1"># Fetch latest spec</span>
+pnpm<span class="w"> </span>--package<span class="o">=</span>@redocly/cli<span class="w"> </span>dlx<span class="w"> </span>--<span class="w"> </span>redocly<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>bundle<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>https://in.xfel.eu/metadata/api-docs/v1/swagger.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>openapi.yaml
+
+<span class="c1"># Create slimmed down version with only relevant schemas</span>
+pnpm<span class="w"> </span>--package<span class="o">=</span>@redocly/cli<span class="w"> </span>dlx<span class="w"> </span>--<span class="w"> </span>redocly<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>bundle<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>wrapper.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span>openapi.slim.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--dereferenced
+
+<span class="c1"># Generate models</span>
+datamodel-codegen<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--input<span class="w"> </span>openapi.slim.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--input-file-type<span class="w"> </span>openapi<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--formatters<span class="w"> </span>ruff-format<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--use-annotated<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--use-union-operator<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--use-standard-collections<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--reuse-model<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--target-python-version<span class="w"> </span><span class="m">3</span>.13<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span>models.py
+
+<span class="c1"># Second pass to format with ruff</span>
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>format<span class="w"> </span>models.py
+uv<span class="w"> </span>run<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>--fix<span class="w"> </span>models.py
+</code></pre></div>
+</details>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.code.annotate","content.code.copy","navigation.indexes","navigation.instant","navigation.sections","navigation.tabs","navigation.top","search.highlight"],"search":"../../assets/javascripts/workers/search.b6b7e04f.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.0df4f2d0.min.js"></script>
+      
+    
+  </body>
+</html>
