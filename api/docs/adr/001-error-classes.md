@@ -29,24 +29,43 @@ Chosen option: a single `DamnitWebError` hierarchy in `shared/errors.py`, becaus
 
 ## Details
 
-### The error classes
+### The Error Classes
 
 Defined in `shared/errors.py`, framework-free:
 
 ```python
 class DamnitWebError(Exception):
-    code: int = 500            # class attribute, always defined
+    code: int = 500  # class attribute, always defined
     message: str
     details: str | dict | None
-    request_id: str | None     # from structlog contextvars
+    request_id: str | None  # from structlog contextvars
 
-class InvalidInputError(DamnitWebError):              code = 400
-class UnauthenticatedError(DamnitWebError):           code = 401
-class ForbiddenError(DamnitWebError):                 code = 403
-class NotFoundError(DamnitWebError):                  code = 404
-class ProposalNotFoundError(NotFoundError):    ...
-class UpstreamServiceError(DamnitWebError):           code = 502   # MyMdC, OIDC provider
-class DataUnavailableError(DamnitWebError):           code = 503   # GPFS timeouts, unreadable runs.sqlite
+
+class InvalidInputError(DamnitWebError):
+    code = 400
+
+
+class UnauthenticatedError(DamnitWebError):
+    code = 401
+
+
+class ForbiddenError(DamnitWebError):
+    code = 403
+
+
+class NotFoundError(DamnitWebError):
+    code = 404
+
+
+class ProposalNotFoundError(NotFoundError): ...
+
+
+class UpstreamServiceError(DamnitWebError):
+    code = 502  # MyMdC, OIDC provider
+
+
+class DataUnavailableError(DamnitWebError):
+    code = 503  # GPFS timeouts, unreadable runs.sqlite
 ```
 
 Subclasses are added per _caller-distinguishable situation_, not per call site.
