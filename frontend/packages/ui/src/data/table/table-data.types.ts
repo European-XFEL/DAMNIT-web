@@ -19,16 +19,3 @@ export type TableInfo = {
   data: TableData
   metadata: TableMetadata
 }
-
-export type TableDataOptions = {
-  proposal: string
-  page?: number
-  pageSize?: number
-  lightweight?: boolean
-  deferred?: boolean
-  variables?: string[]
-}
-
-export type TableMetadataOptions = {
-  proposal: string
-}

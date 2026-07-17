@@ -1,49 +1,49 @@
 import { describe, expect, test } from 'vitest'
 
-import { Pages, pageRangeForRegion } from '#src/features/table/pagination'
+import {
+  pageRangeForRegion,
+  pagesForRegion,
+} from '#src/features/table/pagination'
 
-describe('Pages', () => {
-  test('a page marked loading reads as loading, not loaded', () => {
-    const pages = new Pages()
-    pages.addToLoading(3)
-    expect(pages.isLoading(3)).toBe(true)
-    expect(pages.isLoaded(3)).toBe(false)
-  })
-
-  test('moving a page to loaded clears its loading state', () => {
-    const pages = new Pages()
-    pages.addToLoading(3)
-    pages.addToLoaded(3)
-    expect(pages.isLoaded(3)).toBe(true)
-    expect(pages.isLoading(3)).toBe(false)
-  })
-
-  test('duplicate inserts are not double-counted', () => {
-    const pages = new Pages()
-    pages.addToLoading(3)
-    pages.addToLoading(3)
-    // A single loading entry means addToLoaded removes it cleanly, leaving
-    // nothing behind as still-loading.
-    pages.addToLoaded(3)
-    expect(pages.isLoading(3)).toBe(false)
-    expect(pages.isLoaded(3)).toBe(true)
-  })
-})
+const region = (y: number, height: number) => ({ x: 0, y, width: 0, height })
 
 describe('pageRangeForRegion', () => {
   test('returns the padded page window for a scroll region', () => {
     // Rows 100-150 live on pages 11-16 (1-based); the window adds a page of
     // overscan on each side so rows are loaded before they scroll into view.
-    expect(
-      pageRangeForRegion({ x: 0, y: 100, width: 0, height: 50 }, 10)
-    ).toEqual([10, 11, 12, 13, 14, 15, 16, 17])
+    expect(pageRangeForRegion(region(100, 50), 10)).toEqual([
+      10, 11, 12, 13, 14, 15, 16, 17,
+    ])
   })
 
   test('pins the first page at the top boundary', () => {
     // At the top of the table the upward overscan is clamped: the window
     // never asks for a page below page 1.
-    expect(
-      pageRangeForRegion({ x: 0, y: 0, width: 0, height: 20 }, 10)
-    ).toEqual([1, 2, 3, 4])
+    expect(pageRangeForRegion(region(0, 20), 10)).toEqual([1, 2, 3, 4])
+  })
+})
+
+describe('pagesForRegion', () => {
+  test('wants the pages a first scroll window needs', () => {
+    expect(pagesForRegion([], region(0, 20), 10)).toEqual([1, 2, 3, 4])
+  })
+
+  test('drops the pages scrolled away from', () => {
+    const top = pagesForRegion([], region(0, 20), 10)
+
+    // Only the window is wanted. The rows left behind keep rendering from the
+    // table slice, so holding their loaders mounted would buy nothing but a
+    // watcher per page scrolled past for the life of the proposal.
+    expect(pagesForRegion(top, region(100, 50), 10)).toEqual([
+      10, 11, 12, 13, 14, 15, 16, 17,
+    ])
+  })
+
+  test('returns the same array when the window is unchanged', () => {
+    const pages = pagesForRegion([], region(0, 20), 10)
+
+    // Identity, not just equality: an unchanged reference is what lets React
+    // bail out instead of rebuilding every loader on each scroll event.
+    expect(pagesForRegion(pages, region(1, 18), 10)).toBe(pages)
   })
 })

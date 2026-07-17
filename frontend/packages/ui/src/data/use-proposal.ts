@@ -10,7 +10,9 @@ import { LATEST_DATA_FIELD_NAME } from '#src/data/table/table-data.constants'
 import {
   LATEST_DATA_SUBSCRIPTION,
   TABLE_METADATA_QUERY,
-} from '#src/data/table/table-data.services'
+  type TableMetadataResult,
+  type TableMetadataVariables,
+} from '#src/data/table/table-data.queries'
 import {
   useAppDispatch,
   useAppSelector,
@@ -39,20 +41,20 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
         return
       }
       const { runs, metadata } = data.data[LATEST_DATA_FIELD_NAME]
-      dispatch(updateTable({ data: runs, metadata, notify: true }))
+      dispatch(updateTable({ data: runs, metadata, live: true }))
     },
     skip: !subscribe || proposal.loading || proposal.notFound,
   })
 
   // Synchronize the server and the client table metadata
-  const { data: metadataResult, error: metadataError } = useQuery(
-    TABLE_METADATA_QUERY,
-    {
-      variables: { proposal: proposal.value },
-      skip: !proposal.value,
-      fetchPolicy: 'cache-and-network',
-    }
-  )
+  const { data: metadataResult, error: metadataError } = useQuery<
+    TableMetadataResult,
+    TableMetadataVariables
+  >(TABLE_METADATA_QUERY, {
+    variables: { proposal: proposal.value },
+    skip: !proposal.value,
+    fetchPolicy: 'cache-and-network',
+  })
 
   useEffect(() => {
     if (metadataError) {
@@ -65,11 +67,7 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
       return
     }
 
-    const normalized = {
-      ...metadata,
-      runs: metadata.runs.map(String),
-    }
-    dispatch(updateTable({ data: {}, metadata: normalized }))
+    dispatch(updateTable({ data: {}, metadata }))
     dispatch(setProposalSuccess())
   }, [metadataResult, metadataError, dispatch])
 

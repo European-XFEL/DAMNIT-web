@@ -14,9 +14,8 @@ import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '#src/constants'
-import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
-import { getTableData } from '#src/data/table/table-data.slice'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 
@@ -34,6 +33,7 @@ import { type CellTooltip } from './components/tooltips/table-tooltip'
 import ContextMenu from './context-menu'
 import { useTableTooltip } from './hooks/use-table-tooltip'
 import { useTable } from './hooks/use-table'
+import TablePageLoader from './table-page-loader'
 import { useContextMenu } from './use-context-menu'
 import { usePagination } from './use-pagination'
 import { useScrollToView } from './use-scroll-to-view'
@@ -56,6 +56,8 @@ export type TableProps = {
   paginated?: boolean
 }
 
+const PAGE_SIZE = 10
+
 const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
@@ -70,9 +72,9 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
-  const { onVisibleRegionChanged: paginationHandler } = usePagination({
-    proposal,
+  const { pages, onVisibleRegionChanged: paginationHandler } = usePagination({
     enabled: paginated,
+    pageSize: PAGE_SIZE,
   })
   const {
     onVisibleRegionChanged: scrollToViewHandler,
@@ -254,8 +256,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     const column = tableColumns[col]?.id
     const rowData = tableData[tableMetadata.runs[row]]
 
+    // A row whose page has not loaded yet has no data at all, not merely no
+    // value: it has nothing to offer a plot either way.
     // TODO: Use extracted data type from the database
-    if (col !== -1 && rowData[column]?.value != null) {
+    if (col !== -1 && rowData?.[column]?.value != null) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 
@@ -268,10 +272,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         contents: [
           {
             key: 'plot',
-            title: 'Plot: data',
+            title: 'Plot: preview',
             subtitle,
             onClick: () =>
-              addDataPlot({ variable: variable.id, label: subtitle, runs }),
+              addPreviewPlot({ variable: variable.id, label: subtitle, runs }),
           },
         ],
       })
@@ -351,20 +355,13 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     dispatch(
       plotRequested({
         variables,
-        source: 'table',
+        source: 'summary',
         title: `Summary: ${label}`,
-      })
-    )
-
-    dispatch(
-      getTableData({
-        proposal,
-        variables,
       })
     )
   }
 
-  const addDataPlot = ({
+  const addPreviewPlot = ({
     variable,
     label,
     runs,
@@ -377,13 +374,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       plotRequested({
         runs,
         variables: [variable],
-        source: 'extracted',
-        title: `Data: ${label}`,
+        source: 'preview',
+        title: `Preview: ${label}`,
       })
     )
-    runs.forEach((run) => {
-      dispatch(getExtractedValue({ proposal, run, variable }))
-    })
   }
 
   const lastVisibleRegionRef = useRef<{
@@ -415,6 +409,22 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
   return (
     <>
+      {paginated ? (
+        pages.map((page) => (
+          <TablePageLoader
+            key={page}
+            proposal={proposal}
+            page={page}
+            pageSize={PAGE_SIZE}
+          />
+        ))
+      ) : (
+        <TablePageLoader
+          proposal={proposal}
+          page={1}
+          pageSize={ALL_RUNS_PAGE_SIZE}
+        />
+      )}
       {!tableColumns.length ? null : (
         <Stack w="100%" h="100%" gap="sm">
           <Group px={6}>

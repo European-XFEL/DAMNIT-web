@@ -1,43 +1,8 @@
 import { range } from '@mantine/hooks'
 
-import { sortedInsert, sortedSearch } from '#src/utils/array'
+import { isArrayEqual } from '#src/utils/array'
 
 import type { Rectangle } from './types'
-
-// Tracks which table pages are in-flight or already loaded, so the pagination
-// effect never requests the same page twice. Kept free of store/network
-// imports so its logic can be unit-tested in Node.
-export class Pages {
-  private loading: number[]
-  private loaded: number[]
-
-  constructor() {
-    this.loading = []
-    this.loaded = []
-  }
-
-  addToLoading(page: number) {
-    sortedInsert(this.loading, page)
-  }
-
-  isLoading(page: number) {
-    return sortedSearch(this.loading, page) !== -1
-  }
-
-  addToLoaded(page: number) {
-    // Remove from loading
-    const index = sortedSearch(this.loading, page)
-    if (index !== -1) {
-      this.loading.splice(index, 1)
-    }
-
-    sortedInsert(this.loaded, page)
-  }
-
-  isLoaded(page: number) {
-    return sortedSearch(this.loaded, page) !== -1
-  }
-}
 
 // The pages to ensure-loaded for a scroll window, padding half a page on each
 // side so rows just outside the viewport are ready before they scroll in.
@@ -50,4 +15,19 @@ export function pageRangeForRegion(region: Rectangle, pageSize: number) {
     (region.y + region.height + pageSize / 2) / pageSize
   )
   return range(firstPage + 1, lastPage + 2)
+}
+
+// The pages the table wants loaded: exactly the current window, nothing more.
+// Rows keep rendering once scrolled away from because they live in the table
+// slice, which only a proposal switch clears, so a page needs a mounted loader
+// only while it is on screen. Returns the array unchanged when the window is
+// the same, so React bails out of the update rather than rebuilding the loader
+// list on every scroll event.
+export function pagesForRegion(
+  current: number[],
+  region: Rectangle,
+  pageSize: number
+): number[] {
+  const next = pageRangeForRegion(region, pageSize)
+  return isArrayEqual(current, next) ? current : next
 }

@@ -25,13 +25,17 @@ export default defineConfig({
         plugins: [react()],
         // Pre-bundle the heavy deps the components pull in so the optimizer
         // does not discover them mid-run and reload (which Vitest warns can
-        // make browser tests flaky).
+        // make browser tests flaky). Apollo is here for a second reason: left
+        // unbundled its CommonJS interop hands the React namespace back as
+        // null, and ApolloProvider dies on the first useContext.
         optimizeDeps: {
           include: [
             'react-laag',
             'mantine-contextmenu',
             'mantine-datatable',
             '@glideapps/glide-data-grid',
+            '@apollo/client',
+            '@apollo/client/react',
           ],
         },
         test: {
