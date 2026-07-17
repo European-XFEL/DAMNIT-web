@@ -1,5 +1,5 @@
 """Reproduce the writer-side `database is locked` error against the
-production read path in `damnit_api.db`.
+production read path in `damnit_api.runs.sqlite`.
 """
 
 from __future__ import annotations
@@ -100,7 +100,7 @@ sys.stdout.flush()
 
 
 async def _single_reader(deadline):
-    from damnit_api.db import (
+    from damnit_api.runs.sqlite import (
         async_all_tags,
         async_latest_rows,
         async_table,
@@ -177,13 +177,13 @@ def stage_copy(damnit_dir, scratch_dir):
 
 
 def patch_path(staging):
-    """Point damnit_api.db at the staged copy."""
-    import damnit_api.db as db_module
+    """Point the runs read path at the staged copy."""
+    import damnit_api.runs.sqlite.session as session_module
     import damnit_api.utils as utils_module
 
     staged_path = str(staging)
-    db_module.get_damnit_path = lambda *_a, **_kw: staged_path
-    db_module.find_proposal = lambda *_a, **_kw: staged_path
+    session_module.get_damnit_path = lambda *_a, **_kw: staged_path
+    session_module.find_proposal = lambda *_a, **_kw: staged_path
     utils_module.find_proposal = lambda *_a, **_kw: staged_path
 
 

@@ -15,6 +15,7 @@ from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
 from ..auth.models import User
 from ..metadata import gql as metadata
+from ..runs import types as run_types
 
 SUBSCRIPTION_PROTOCOLS = [
     GRAPHQL_TRANSPORT_WS_PROTOCOL,
@@ -75,11 +76,11 @@ def get_gql_app():
     schema = Schema(
         query=Query,
         subscription=Subscription,
-        types=[gql_main.models.DamnitVariable],
+        types=[run_types.DamnitVariable],
         directives=[gql_main.directives.lightweight],
         config=StrawberryConfig(
             auto_camel_case=False,
-            scalar_map=gql_main.models.SCALAR_MAP,
+            scalar_map=run_types.SCALAR_MAP,
         ),
     )
 

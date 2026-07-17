@@ -1,7 +1,8 @@
 import strawberry
 from strawberry.directive import DirectiveLocation, DirectiveValue
 
-from .models import DamnitRun, DamnitType, DamnitVariable
+from ..runs.types import DamnitRun, DamnitVariable
+from ..shared.const import DamnitType
 
 HEAVY_DATA = (
     DamnitType.IMAGE,
