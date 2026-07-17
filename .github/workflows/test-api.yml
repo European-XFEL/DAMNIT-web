@@ -56,5 +56,5 @@ jobs:
         env:
           DW_API_AUTH__CLIENT_ID: test
           DW_API_AUTH__CLIENT_SECRET: test
-          DW_API_AUTH__SERVER_METADATA_URL: https://example.com/.well-known
+          DW_API_AUTH__SERVER_METADATA_URL: ${{ vars.KEYCLOAK_METADATA_URL }}
           DW_API_SESSION_SECRET: test
