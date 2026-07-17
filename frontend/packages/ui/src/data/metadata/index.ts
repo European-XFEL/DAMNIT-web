@@ -1,5 +1,4 @@
 export {
-  default as metadataReducer,
   resetMetadata,
   setMetadata,
   setProposalPending,

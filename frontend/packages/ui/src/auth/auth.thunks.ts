@@ -7,7 +7,7 @@ import { resetContextFile } from '../features/context-file'
 import { resetTable as resetTableView } from '../features/table'
 import { resetPlots } from '../features/plots'
 import { type AppThunk } from '../redux/thunks'
-import { history } from '../routes'
+import { history } from '../routes/history'
 
 export const login = (): AppThunk => (_) => {
   window.location.href = `${HTTP_URL}oauth/login?redirect_uri=${HTTP_URL}home`

@@ -7,7 +7,7 @@
     "./mocks": "./src/mocks/index.ts"
   },
   "scripts": {
-    "lint:eslint": "eslint .",
+    "lint:eslint": "eslint . --max-warnings 0",
     "lint:prettier": "prettier --check --cache --ignore-path ../../.prettierignore .",
     "lint:tsc": "tsc -b --noEmit"
   },

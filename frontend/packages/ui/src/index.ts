@@ -3,7 +3,7 @@ export { Providers } from './providers'
 
 // Components
 export { ContactButton } from './components/buttons'
-export { Header, Logo } from './components/headers'
+export { Header, Logo, UserMenu } from './components/headers'
 export { SiteFooter } from './components/footers'
 export { InstrumentBadge } from './components/badges'
 
@@ -26,6 +26,9 @@ export { resetContextFile } from './features/context-file'
 export { resetPlots } from './features/plots'
 export { Proposals } from './features/proposals'
 export { resetTable as resetTableView } from './features/table'
+
+// Auth
+export { selectUserFullName } from './auth'
 
 // Hooks
 export { useProposal } from './hooks'

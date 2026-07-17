@@ -4,7 +4,6 @@ export {
 } from './table-data.constants'
 export { selectVariables } from './table-data.selectors'
 export {
-  default as tableDataReducer,
   getTable,
   getTableData,
   resetTable,

@@ -2,9 +2,11 @@ import { Burger, Flex, Group, Stack, Text, Title, rem } from '@mantine/core'
 
 import { openNav, closeNav } from './dashboard.slice'
 
-import { Header, Logo } from '../../components/headers'
+import { Header, Logo, UserMenu } from '../../components/headers'
 import { InstrumentBadge } from '../../components/badges'
+import { selectUserFullName } from '../../auth'
 import { useAppDispatch, useAppSelector } from '../../redux/hooks'
+import { history } from '../../routes/history'
 import { type ProposalInfo } from '../../types'
 
 type DashboardHeaderProps = {
@@ -14,6 +16,7 @@ type DashboardHeaderProps = {
 function DashboardHeader({ proposal }: DashboardHeaderProps) {
   const dispatch = useAppDispatch()
   const nav = useAppSelector((state) => state.dashboard.nav)
+  const userName = useAppSelector(selectUserFullName)
 
   return (
     <Header px={8}>
@@ -37,6 +40,10 @@ function DashboardHeader({ proposal }: DashboardHeaderProps) {
           </Text>
         </Stack>
       </Group>
+      <UserMenu
+        userName={userName}
+        onLogout={() => history.navigate('/logout')}
+      />
     </Header>
   )
 }

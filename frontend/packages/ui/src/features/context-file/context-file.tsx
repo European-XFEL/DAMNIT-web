@@ -13,7 +13,7 @@ import {
   ConnectionStatus,
   LabelStatus,
   StatusBar,
-} from '../../components/statuses/'
+} from '../../components/statuses'
 import { useAppSelector } from '../../redux/hooks'
 import ContextFileEditor from './context-file-editor'
 
