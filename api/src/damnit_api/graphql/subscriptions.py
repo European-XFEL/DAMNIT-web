@@ -6,10 +6,10 @@ from async_lru import alru_cache
 from strawberry.scalars import JSON
 
 from ..auth.permissions import PROPOSAL_PERMISSIONS
-from ..db import async_latest_rows, async_max, async_table
+from ..runs.sqlite import async_latest_rows, async_max, async_table
+from ..runs.types import DamnitRun, Timestamp
 from ..utils import create_map
 from .metadata import fetch_metadata
-from .models import DamnitRun, Timestamp
 from .utils import DatabaseInput, LatestData, fetch_info
 
 POLLING_INTERVAL = 1  # seconds

@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from damnit_api.graphql.models import DamnitRun
 from damnit_api.graphql.subscriptions import POLLING_INTERVAL, filter_for_client
+from damnit_api.runs.types import DamnitRun
 from damnit_api.shared.const import DamnitType
 
 from .const import (

@@ -1,6 +1,6 @@
 import pytest
 
-from damnit_api.db import DatabaseSessionManager, async_table
+from damnit_api.runs.sqlite import DatabaseSessionManager, async_table
 
 
 @pytest.fixture(autouse=True)

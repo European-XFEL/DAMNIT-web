@@ -4,13 +4,12 @@ import json
 import numpy as np
 import pytest
 
-from damnit_api.graphql.models import (
-    DamnitRun,
-    DamnitVariableError,
+from damnit_api.runs.serialization import (
     resample_array,
     serialize,
     to_complex_string,
 )
+from damnit_api.runs.types import DamnitRun, DamnitVariableError
 from damnit_api.shared.const import DamnitType
 
 
