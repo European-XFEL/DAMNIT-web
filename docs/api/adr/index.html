@@ -10,30 +10,36 @@
       
       
       
+        <link rel="canonical" href="https://european-xfel.github.io/DAMNIT-web/docs/api/adr/">
       
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="./000-vertical-slice-architecture/">
       
       
         
       
       
-      <link rel="icon" href="/DAMNIT-web/docs/api/assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.47">
     
     
       
-        <title>DAMNIT Web API</title>
+        <title>Architecture Decision Records - DAMNIT Web API</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="/DAMNIT-web/docs/api/assets/stylesheets/modern/main.5e19f6ca.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.5e19f6ca.min.css">
       
         
           
         
-        <link rel="stylesheet" href="/DAMNIT-web/docs/api/assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
 
@@ -52,9 +58,9 @@
       
     
     
-      <link rel="stylesheet" href="/DAMNIT-web/docs/api/stylesheets/mkdocstrings.css">
+      <link rel="stylesheet" href="../stylesheets/mkdocstrings.css">
     
-    <script>__md_scope=new URL("/DAMNIT-web/docs/api",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -78,7 +84,8 @@
     <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
     <div data-md-component="skip">
       
-        <a href="#__skip" class="md-skip">
+        
+        <a href="#architecture-decision-records" class="md-skip">
           Skip to content
         </a>
       
@@ -92,7 +99,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="/DAMNIT-web/docs/api/" title="DAMNIT Web API" class="md-header__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
+    <a href="./.." title="DAMNIT Web API" class="md-header__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -112,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              
+              Architecture Decision Records
             
           </span>
         </div>
@@ -196,7 +203,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="/DAMNIT-web/docs/api/" class="md-tabs__link">
+      <a href="./.." class="md-tabs__link">
         
   
   DAMNIT - API
@@ -212,7 +219,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="/DAMNIT-web/docs/api/deployment/" class="md-tabs__link">
+      <a href="../deployment/" class="md-tabs__link">
         
   
   Deployment
@@ -226,6 +233,8 @@
   
   
   
+    
+  
   
     
       
@@ -238,8 +247,8 @@
     
     
     
-      <li class="md-tabs__item">
-        <a href="/DAMNIT-web/docs/api/architecture/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../architecture/" class="md-tabs__link">
           
   
   Architecture
@@ -273,7 +282,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="/DAMNIT-web/docs/api/setup/" class="md-tabs__link">
+        <a href="../setup/" class="md-tabs__link">
           
   
   Development
@@ -306,7 +315,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="/DAMNIT-web/docs/api/" title="DAMNIT Web API" class="md-nav__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
+    <a href="./.." title="DAMNIT Web API" class="md-nav__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -336,7 +345,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/" class="md-nav__link">
+      <a href="./.." class="md-nav__link">
         
   
   
@@ -362,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/deployment/" class="md-nav__link">
+      <a href="../deployment/" class="md-nav__link">
         
   
   
@@ -385,8 +394,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -398,19 +409,22 @@
     
     
       
+        
+        
+      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
             
   
   
@@ -427,7 +441,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -444,7 +458,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/architecture/" class="md-nav__link">
+      <a href="../architecture/" class="md-nav__link">
         
   
   
@@ -468,6 +482,8 @@
                 
   
   
+    
+  
   
   
     
@@ -485,18 +501,21 @@
       
       
         
+          
+          
+        
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="/DAMNIT-web/docs/api/adr/" class="md-nav__link ">
+            <a href="././" class="md-nav__link md-nav__link--active">
               
   
   
@@ -513,13 +532,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+              <label class="md-nav__link md-nav__link--active" for="__nav_3_2" id="__nav_3_2_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -538,7 +557,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/adr/000-vertical-slice-architecture/" class="md-nav__link">
+      <a href="./000-vertical-slice-architecture/" class="md-nav__link">
         
   
   
@@ -642,7 +661,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/setup/" class="md-nav__link">
+      <a href="../setup/" class="md-nav__link">
         
   
   
@@ -669,7 +688,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -696,7 +715,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/notes/" class="md-nav__link">
+      <a href="../notes/" class="md-nav__link">
         
   
   
@@ -723,7 +742,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/docs/" class="md-nav__link">
+      <a href="../docs/" class="md-nav__link">
         
   
   
@@ -750,7 +769,7 @@
   
   
     <li class="md-nav__item">
-      <a href="/DAMNIT-web/docs/api/ci-cd/" class="md-nav__link">
+      <a href="../ci-cd/" class="md-nav__link">
         
   
   
@@ -791,6 +810,13 @@
                     
                     
                     
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
                     
                   
                   <div class="md-sidebar__inner">
@@ -801,6 +827,55 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Templates
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Templates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#minimal" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Minimal
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Full
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -813,8 +888,164 @@
               
               <article class="md-content__inner md-typeset">
                 
-  <h1>404 - Not found</h1>
+                  
+  
+  
 
+
+<h1 id="architecture-decision-records">Architecture Decision Records<a class="headerlink" href="#architecture-decision-records" title="Permanent link">&para;</a></h1>
+<p>This directory records the key architecture and design decisions for the DAMNIT web API.</p>
+<h2 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h2>
+<p>Lightweight <a href="https://adr.github.io/madr/">MADR</a>-style, based on the templates in <code>.templates/</code>. ADRs are living documents: they are updated as decisions evolve.</p>
+<h3 id="minimal">Minimal<a class="headerlink" href="#minimal" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="gh"># {short title, representative of solved problem and found solution}</span>
+
+<span class="gu">## Context and Problem Statement</span>
+
+{Describe the context and problem statement, e.g., in free form using two to
+three sentences or in the form of an illustrative story. You may want to
+articulate the problem in form of a question. Consider adding links to
+collaboration boards or issue management systems. Make the scope of the decision
+explicit, for instance, by calling out or pointing at structural architecture
+elements (components, connectors, ...).}
+
+<span class="gu">## Considered Options</span>
+
+<span class="k">-</span><span class="w"> </span>{title of option 1}
+<span class="k">-</span><span class="w"> </span>{title of option 2}
+<span class="k">-</span><span class="w"> </span>{title of option 3}
+<span class="k">-</span><span class="w"> </span>… &lt;!-- numbers of options can vary --&gt;
+
+<span class="gu">## Decision Outcome</span>
+
+Chosen option: &quot;{title of option 1}&quot;, because {justification. e.g., only option,
+which meets k.o. criterion decision driver | which resolves force {force} | … |
+comes out best (see below)}.
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+<span class="gu">### Consequences</span>
+
+<span class="k">-</span><span class="w"> </span>Good: {positive consequence, e.g., improvement of one or more desired
+qualities, …}
+<span class="k">-</span><span class="w"> </span>Bad: {negative consequence, e.g., compromising one or more desired qualities,
+…}
+<span class="k">-</span><span class="w"> </span>... &lt;!-- numbers of consequences can vary --&gt;
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+<span class="gu">## Details</span>
+
+Additional details about the decision, e.g., references to other ADRs,
+implementation details, etc.
+</code></pre></div>
+<h3 id="full">Full<a class="headerlink" href="#full" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>---
+<span class="gh"># These are optional metadata elements. Feel free to remove any of them.</span>
+date: {YYYY-MM-DD when the decision was last updated}
+decision-makers: {list everyone involved in the decision}
+consulted: {list everyone whose opinions are sought (typically subject-matter
+experts); and with whom there is a two-way communication}
+informed: {list everyone who is kept up-to-date on progress; and with whom there
+<span class="gu">is a one-way communication}</span>
+<span class="gu">---</span>
+
+<span class="gh"># {short title, representative of solved problem and found solution}</span>
+
+<span class="gu">## Context and Problem Statement</span>
+
+{Describe the context and problem statement, e.g., in free form using two to
+three sentences or in the form of an illustrative story. You may want to
+articulate the problem in form of a question. Consider adding links to
+collaboration boards or issue management systems. Make the scope of the decision
+explicit, for instance, by calling out or pointing at structural architecture
+elements (components, connectors, ...).}
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+<span class="gu">## Decision Drivers</span>
+
+<span class="k">-</span><span class="w"> </span>{decision driver 1, for instance, a desired software quality, faced concern,
+constraint or force}
+<span class="k">-</span><span class="w"> </span>{decision driver 2}
+<span class="k">-</span><span class="w"> </span>… &lt;!-- numbers of drivers can vary --&gt;
+
+<span class="gu">## Considered Options</span>
+
+<span class="k">-</span><span class="w"> </span>{title of option 1}
+<span class="k">-</span><span class="w"> </span>{title of option 2}
+<span class="k">-</span><span class="w"> </span>{title of option 3}
+<span class="k">-</span><span class="w"> </span>… &lt;!-- numbers of options can vary --&gt;
+
+<span class="gu">## Decision Outcome</span>
+
+Chosen option: &quot;{title of option 1}&quot;, because {justification. e.g., only option,
+which meets k.o. criterion decision driver | which resolves force {force} | … |
+comes out best (see below)}.
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+<span class="gu">### Consequences</span>
+
+<span class="k">-</span><span class="w"> </span>Good: {positive consequence, e.g., improvement of one or more desired
+qualities, …}
+<span class="k">-</span><span class="w"> </span>Bad: {negative consequence, e.g., compromising one or more desired qualities,
+…}
+<span class="k">-</span><span class="w"> </span>… &lt;!-- numbers of consequences can vary --&gt;
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+<span class="gu">### Confirmation</span>
+
+{Describe how the implementation / compliance of the ADR can/will be confirmed.
+Is there any automated or manual fitness function? If so, list it and explain
+how it is applied. Is the chosen design and its implementation in line with the
+decision? E.g., a design/code review or a test with a library such as ArchUnit
+can help validate this. Note that although we classify this element as optional,
+it is included in many ADRs.}
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+<span class="gu">## Pros and Cons of the Options</span>
+
+<span class="gu">### {title of option 1}</span>
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+{example | description | pointer to more information | …}
+
+<span class="k">-</span><span class="w"> </span>Good: {argument a}
+<span class="k">-</span><span class="w"> </span>Good: {argument b}
+&lt;!-- use &quot;neutral&quot; if the given argument weights neither for good nor bad --&gt;
+<span class="k">-</span><span class="w"> </span>Neutral: {argument c}
+<span class="k">-</span><span class="w"> </span>Bad: {argument d}
+<span class="k">-</span><span class="w"> </span>… &lt;!-- numbers of pros and cons can vary --&gt;
+
+<span class="gu">### {title of other option}</span>
+
+{example | description | pointer to more information | …}
+
+<span class="k">-</span><span class="w"> </span>Good: {argument a}
+<span class="k">-</span><span class="w"> </span>Neutral: {argument b}
+<span class="k">-</span><span class="w"> </span>Bad: {argument c}
+<span class="k">-</span><span class="w"> </span>…
+
+&lt;!-- This is an optional element. Feel free to remove. --&gt;
+<span class="gu">## More Information</span>
+
+{You might want to provide additional evidence/confidence for the decision
+outcome here and/or document the team agreement on the decision and/or define
+when/how this decision the decision should be realized and if/when it should be
+re-visited. Links to other decisions and resources might appear here as well.}
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
               </article>
             </div>
           
@@ -857,10 +1088,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"/DAMNIT-web/docs/api","features":["content.code.annotate","content.code.copy","navigation.indexes","navigation.instant","navigation.sections","navigation.tabs","navigation.top","search.highlight"],"search":"/DAMNIT-web/docs/api/assets/javascripts/workers/search.b6b7e04f.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.annotate","content.code.copy","navigation.indexes","navigation.instant","navigation.sections","navigation.tabs","navigation.top","search.highlight"],"search":"../assets/javascripts/workers/search.b6b7e04f.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="/DAMNIT-web/docs/api/assets/javascripts/bundle.0df4f2d0.min.js"></script>
+      <script src="../assets/javascripts/bundle.0df4f2d0.min.js"></script>
       
     
   </body>

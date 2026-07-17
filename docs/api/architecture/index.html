@@ -10,34 +10,36 @@
       
       
       
-        <link rel="canonical" href="https://european-xfel.github.io/DAMNIT-web/docs/api/dev/ci-cd/">
+        <link rel="canonical" href="https://european-xfel.github.io/DAMNIT-web/docs/api/architecture/">
       
       
-        <link rel="prev" href="../docs/">
+        <link rel="prev" href="../deployment/">
       
+      
+        <link rel="next" href="../adr/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/images/favicon.png">
+      <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.47">
     
     
       
-        <title>CI/CD - DAMNIT Web API</title>
+        <title>Architecture - DAMNIT Web API</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.5e19f6ca.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.5e19f6ca.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
 
@@ -56,9 +58,9 @@
       
     
     
-      <link rel="stylesheet" href="../../stylesheets/mkdocstrings.css">
+      <link rel="stylesheet" href="../stylesheets/mkdocstrings.css">
     
-    <script>__md_scope=new URL("../..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -83,7 +85,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cicd" class="md-skip">
+        <a href="#architecture" class="md-skip">
           Skip to content
         </a>
       
@@ -97,7 +99,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="DAMNIT Web API" class="md-header__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
+    <a href="./.." title="DAMNIT Web API" class="md-header__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -117,7 +119,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              CI/CD
+              Architecture
             
           </span>
         </div>
@@ -201,7 +203,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href="./.." class="md-tabs__link">
         
   
   DAMNIT - API
@@ -217,7 +219,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../deployment/" class="md-tabs__link">
+      <a href="../deployment/" class="md-tabs__link">
         
   
   Deployment
@@ -241,19 +243,45 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
     
     
     
     
       <li class="md-tabs__item md-tabs__item--active">
+        <a href="././" class="md-tabs__link">
+          
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+      
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-tabs__item">
         <a href="../setup/" class="md-tabs__link">
           
   
@@ -287,7 +315,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="DAMNIT Web API" class="md-nav__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
+    <a href="./.." title="DAMNIT Web API" class="md-nav__button md-logo" aria-label="DAMNIT Web API" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -317,7 +345,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href="./.." class="md-nav__link">
         
   
   
@@ -343,7 +371,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../deployment/" class="md-nav__link">
+      <a href="../deployment/" class="md-nav__link">
         
   
   
@@ -377,14 +405,6 @@
       
         
       
-        
-      
-        
-      
-        
-      
-        
-      
     
     
     
@@ -411,7 +431,7 @@
   <span class="md-ellipsis">
     
   
-  Development
+  Architecture
 
     
   </span>
@@ -423,6 +443,276 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  Architecture
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Architecture
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Architecture
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#package-map" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Package map
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#import-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Import direction
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../adr/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ADRs
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+  ADRs
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/000-vertical-slice-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  ADR-000 - Package Architecture: Vertical Feature Slices with Enforced Boundaries
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -446,33 +736,6 @@
     
   
   Setup
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Architecture
 
     
   </span>
@@ -570,36 +833,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  CI/CD
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../ci-cd/" class="md-nav__link">
         
   
   
@@ -614,49 +851,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Testing
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Documentation
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -710,10 +904,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
+  <a href="#package-map" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Testing
+        Package map
       </span>
     </span>
   </a>
@@ -721,10 +915,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#import-direction" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Documentation
+        Import direction
       </span>
     </span>
   </a>
@@ -749,31 +943,132 @@
   
 
 
-<h1 id="cicd">CI/CD<a class="headerlink" href="#cicd" title="Permanent link">&para;</a></h1>
-<p>GitHub Actions run the API's checks and publish its documentation. The
-workflows live in <code>.github/workflows/</code>.</p>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<p><code>test-api.yml</code> runs on pull requests and pushes to <code>main</code> that change files
-under <code>api/</code>, <code>pyproject.toml</code>, or <code>uv.lock</code>.</p>
-<p>It runs three checks with <code>uv</code> on Python 3.13:</p>
+<h1 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This document summarises the <strong>target</strong> architectural pattern for the DAMNIT web API.</p>
+<p>Code may not have been refactored to match this pattern yet.</p>
+</div>
+<p><code>damnit_api</code> is organised as vertical feature slices with port/adapter edges.</p>
+<p>Vertical slices means that each capability owns a module containing everything from its HTTP/GraphQL surface down to its data access.</p>
+<p>Port/adapter edges means that I/O boundaries (external databases, MyMdC, etc...) are abstracted behind repositories and ports.</p>
+<p>For more information, see <a href="../adr/000-vertical-slice-architecture/">ADR-000</a>.</p>
+<h2 id="package-map">Package map<a class="headerlink" href="#package-map" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Capability</th>
+<th>What belongs there</th>
+<th>Status</th>
+<th>Today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runs/</code></td>
+<td>Run/variable data - the core domain</td>
+<td>Domain models, repository interface + implementations, serialisation, preview extraction, its GraphQL types and resolvers</td>
+<td>Planned</td>
+<td><code>db.py</code> + <code>data.py</code>; resolvers in <code>graphql/queries.py</code>/<code>subscriptions.py</code></td>
+</tr>
+<tr>
+<td><code>proposals/</code></td>
+<td>Proposal metadata and lookup</td>
+<td>Proposal models, MyMdC-backed metadata services, path locator</td>
+<td>Planned</td>
+<td><code>metadata/</code></td>
+</tr>
+<tr>
+<td><code>auth/</code></td>
+<td>Authentication and authorisation</td>
+<td>OAuth flow, sessions, token store, <code>User</code>, permission classes, the membership policy</td>
+<td>Partial</td>
+<td>Policy still in <code>metadata/services.py</code></td>
+</tr>
+<tr>
+<td><code>contextfile/</code></td>
+<td>Context-file viewing</td>
+<td>File reading, watching, its routes</td>
+<td>Done</td>
+<td>As-is</td>
+</tr>
+<tr>
+<td><code>graphql/</code></td>
+<td>GraphQL transport only</td>
+<td>Schema assembly, context, directives, controller binding - no resolvers, no domain logic</td>
+<td>Partial</td>
+<td>Assembly still in <code>shared/gql.py</code>; resolvers still here</td>
+</tr>
+<tr>
+<td><code>appdb/</code></td>
+<td>The app's own database (infrastructure)</td>
+<td>Models, engine/session plumbing for <code>dw_api.sqlite</code></td>
+<td>Planned</td>
+<td><code>_db/</code></td>
+</tr>
+<tr>
+<td><code>mymdc/</code></td>
+<td>MyMdC client (infrastructure)</td>
+<td>Ports, clients, vendored models</td>
+<td>Planned</td>
+<td><code>_mymdc/</code></td>
+</tr>
+<tr>
+<td><code>core/</code></td>
+<td>Cross-cutting, framework-free</td>
+<td>Shared error types, <code>DamnitType</code>, value types, converters</td>
+<td>Planned</td>
+<td><code>shared/</code> + <code>utils.py</code></td>
+</tr>
+<tr>
+<td><code>main.py</code> / <code>app.py</code> / <code>state.py</code></td>
+<td>Composition root</td>
+<td><code>AppState</code>, <code>create_*</code> factories, <code>create_app()</code> - the only place that may import everything and read settings</td>
+<td>Partial</td>
+<td><code>main.py</code> only</td>
+</tr>
+</tbody>
+</table>
+<p>Where new code goes:</p>
 <ul>
-<li><strong>Lint</strong>: <code>ruff check</code></li>
-<li><strong>Format</strong>: <code>ruff format --check</code></li>
-<li><strong>Tests</strong>: <code>pytest</code></li>
+<li>Business logic: the slice that owns the capability.</li>
+<li>Code (not tied to a specific framework) needed by several slices: <code>core/</code> (<code>shared/</code> for now).</li>
+<li>Code that talks to an external system: behind a port/repository in the infrastructure package.</li>
+<li>Wiring: the composition root.</li>
+<li>If none of these fit, check <a href="../adr/000-vertical-slice-architecture/">ADR-000</a> rather than extending <code>utils.py</code>.</li>
 </ul>
-<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
-<p><code>deploy-docs.yml</code> builds this site and publishes it to GitHub Pages.</p>
+<h2 id="import-direction">Import direction<a class="headerlink" href="#import-direction" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code>flowchart LR
+    root[&quot;&lt;b&gt;composition root&lt;/b&gt; (main/state)&lt;br/&gt;may import everything; nothing imports it&quot;]
+    slices[&quot;&lt;b&gt;slices&lt;/b&gt;: runs, proposals, auth, contextfile, graphql (transport)&lt;br/&gt;no slice → slice imports, except via a slice&#39;s public interface&quot;]
+    infra[&quot;&lt;b&gt;infrastructure&lt;/b&gt;: appdb, mymdc&lt;br/&gt;never import slices&quot;]
+    core[&quot;&lt;b&gt;core&lt;/b&gt;: errors, types, converters&lt;br/&gt;imports nothing app-specific&quot;]
+
+    root --&gt; slices --&gt; infra --&gt; core
+</code></pre></div>
+<p>The key rules are:</p>
+<ol>
+<li><strong>Downward only:</strong> Slices import <code>core</code> and infrastructure</li>
+<li>Slices never import the composition root or another slice's internals.</li>
+<li>Importing another package's <code>_underscore</code> name is always wrong.</li>
+<li><strong>Composition root is the top:</strong> it may import everything, but nothing is allowed to import it.</li>
+<li>If importing a slice from the composition root forces a function-body import to avoid cycles, the type probably belongs in <code>core/</code>.</li>
+<li><strong>Composition root reads settings:</strong> everything else receives configuration as parameters.</li>
+<li><strong>Authorisation applied at the edge:</strong> routes and resolvers use dependencies and permission classes.</li>
+<li>This means that services should not apply authorisation rules themselves.</li>
+<li><strong>No <code>if settings.is_local:</code> outside the composition root:</strong> Local mode is selected by composition, not conditionals throughout the codebase.</li>
+</ol>
+<p>Note that these are currently only enforced by convention/review. Import linter/archetecture check tool is planned to be added.</p>
+<div class="admonition warning">
+<p class="admonition-title">Current issues</p>
 <ul>
-<li><strong>Build</strong>: <code>zensical build</code> renders the site from the Markdown pages and
-  from source docstrings.</li>
-<li><strong>Publish</strong>: the output is pushed to the <code>docs/api/</code> folder on the
-  <code>gh-pages</code> branch, served at
-  <a href="https://european-xfel.github.io/DAMNIT-web/docs/api/">https://european-xfel.github.io/DAMNIT-web/docs/api/</a>.</li>
+<li><code>auth</code> &lt;--&gt; <code>metadata</code> import cycle</li>
+<li><code>shared/gql.py</code>'s import-everything role</li>
+<li>Function-body imports working around circular imports</li>
+<li>Imports 'across' many modules and their files</li>
 </ul>
-<p>It runs on pushes to <code>main</code> that change the docs, the API source, or the
-build dependencies (<code>api/pyproject.toml</code>, <code>uv.lock</code>), and can also be run by
-hand from the Actions tab. Because the reference is built from docstrings, a
-change under <code>api/src/**</code> rebuilds the docs too.</p>
+</div>
 
 
 
@@ -831,10 +1126,10 @@ change under <code>api/src/**</code> rebuilds the docs too.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.code.annotate","content.code.copy","navigation.indexes","navigation.instant","navigation.sections","navigation.tabs","navigation.top","search.highlight"],"search":"../../assets/javascripts/workers/search.b6b7e04f.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.annotate","content.code.copy","navigation.indexes","navigation.instant","navigation.sections","navigation.tabs","navigation.top","search.highlight"],"search":"../assets/javascripts/workers/search.b6b7e04f.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.0df4f2d0.min.js"></script>
+      <script src="../assets/javascripts/bundle.0df4f2d0.min.js"></script>
       
     
   </body>

@@ -7,21 +7,27 @@
         <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/deployment/</loc>
       </url>
       <url>
-        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/dev/setup/</loc>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/architecture/</loc>
       </url>
       <url>
-        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/dev/architecture/</loc>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/adr/</loc>
       </url>
       <url>
-        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/dev/security/</loc>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/adr/000-vertical-slice-architecture/</loc>
       </url>
       <url>
-        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/dev/notes/</loc>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/setup/</loc>
       </url>
       <url>
-        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/dev/docs/</loc>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/security/</loc>
       </url>
       <url>
-        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/dev/ci-cd/</loc>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/notes/</loc>
+      </url>
+      <url>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/docs/</loc>
+      </url>
+      <url>
+        <loc>https://european-xfel.github.io/DAMNIT-web/docs/api/ci-cd/</loc>
       </url>
 </urlset>
