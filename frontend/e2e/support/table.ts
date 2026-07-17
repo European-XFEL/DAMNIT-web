@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { XPCS } from '#examples/xpcs'
+import { XPCS, accessibleProposals, type Example } from '#examples/xpcs'
 import { cellPoint, gridBox, headerPoint } from '#support/grid'
 
 // The grid is a <canvas>. Glide Data Grid mirrors the visible columns into a
@@ -75,10 +75,20 @@ export async function openDashboard(
   await tableData
 }
 
-export async function openProposal(page: Page) {
-  await openDashboard(page, () =>
-    page.goto(`proposal/${XPCS.proposalMetadata[0].number}`)
-  )
+export async function openProposal(page: Page, example: Example) {
+  // openProposal navigates to proposalMetadata[0], so the example's own user
+  // must be able to access it or the dashboard silently redirects to
+  // /not-found. Fail loudly here, scoped to the specs that actually open one.
+  const proposal = example.proposalMetadata[0].number
+  if (!accessibleProposals(example).includes(proposal)) {
+    throw new Error(
+      `proposalMetadata[0] (${proposal}) is not accessible to this example's ` +
+        `user; update its userInfo or proposalMetadata so openProposal lands ` +
+        `on an accessible proposal`
+    )
+  }
+
+  await openDashboard(page, () => page.goto(`proposal/${proposal}`))
 }
 
 // The a11y column index of a variable: its position in meta order, plus one for

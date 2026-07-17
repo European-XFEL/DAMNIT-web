@@ -1,6 +1,6 @@
 import { test, expect } from '#fixtures'
 
-import { XPCS, numberVars } from '#examples/xpcs'
+import { XPCS, numberVars, xpcsWithProposals } from '#examples/xpcs'
 import {
   columnHeader,
   columnOf,
@@ -23,12 +23,19 @@ import { proposalLink } from '#support/proposals'
 // Both tests build dashboard state through the grid toolbar and the plot tabs,
 // which the narrow layout hides; the wide viewport also keeps every column in
 // the horizontal fold so the coordinate-driven plot clicks land.
-test.use({ viewport: PLOT_VIEWPORT })
+//
+// The multi-semester example makes the home page issue one proposal query per
+// semester. A single-proposal user only issues one, which is enough to hide a
+// teardown that wipes the shared Apollo cache out from under it.
+test.use({ viewport: PLOT_VIEWPORT, example: xpcsWithProposals })
 
 const PROPOSAL = XPCS.proposalMetadata[0].number
 
-test('clicking the logo tears down the dashboard state', async ({ page }) => {
-  await openProposal(page)
+test('clicking the logo tears down the dashboard state', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
 
   // Open a summary plot while the grid is still pristine: the plot clicks are
   // coordinate-driven and assume uniform columns, so this must precede the hide.
@@ -64,8 +71,9 @@ test('clicking the logo tears down the dashboard state', async ({ page }) => {
 
 test('switching dashboard tabs keeps the run selection and sidebar', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   // Select a run and confirm the sidebar shows its values.
   await selectRun(page, { row: 0 })

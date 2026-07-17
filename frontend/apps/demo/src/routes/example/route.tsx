@@ -3,23 +3,23 @@ import { useLoaderData } from 'react-router'
 
 import {
   NotFoundPage,
-  resetContextFile,
-  resetExtractedData,
-  resetMetadata,
-  resetPlots,
-  resetTableData,
-  resetTableView,
+  resetProposal,
   setMetadata,
   useAppDispatch,
   useProposal,
 } from '@damnit-frontend/ui'
 
 import { Dashboard } from '../../features/dashboard'
+import { type ExampleInfo } from '../../features/examples/examples'
 
-function ExampleRoute() {
+type ExampleDashboardProps = { info?: ExampleInfo }
+
+// ExampleRoute keys this on the example, so switching examples remounts the
+// subtree instead of updating it in place. Unmount dispatches resetProposal;
+// see its listener for why the Apollo evict is safe to run during the switch.
+function ExampleDashboard({ info }: ExampleDashboardProps) {
   const proposal = useProposal({ subscribe: false })
   const dispatch = useAppDispatch()
-  const { info } = useLoaderData()
 
   useEffect(() => {
     if (info?.id) {
@@ -29,16 +29,11 @@ function ExampleRoute() {
     }
 
     return () => {
-      dispatch(resetTableData())
-      dispatch(resetTableView())
-      dispatch(resetExtractedData())
-      dispatch(resetPlots())
-      dispatch(resetMetadata())
-      dispatch(resetContextFile())
+      dispatch(resetProposal())
     }
   }, [info?.id, dispatch])
 
-  return proposal.notFound ? (
+  return proposal.notFound || !info ? (
     <NotFoundPage />
   ) : (
     <Dashboard
@@ -49,6 +44,12 @@ function ExampleRoute() {
       }}
     />
   )
+}
+
+function ExampleRoute() {
+  const { info } = useLoaderData()
+
+  return <ExampleDashboard key={info?.id} info={info} />
 }
 
 export default ExampleRoute

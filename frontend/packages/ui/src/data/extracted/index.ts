@@ -1,1 +1,1 @@
-export { getExtractedValue, resetExtractedData } from './extracted-data.slice'
+export { getExtractedValue } from './extracted-data.slice'

@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import type { Scroll } from './types'
+import { resetProposal } from '../../redux/actions'
 import { isArrayEqual } from '../../utils/array'
 
 type VariableOptions = {
@@ -36,7 +37,6 @@ const slice = createSlice({
   name: 'table',
   initialState,
   reducers: {
-    reset: () => initialState,
     setActive: (state, action: PayloadAction<boolean>) => {
       state.isActive = action.payload
     },
@@ -79,12 +79,14 @@ const slice = createSlice({
       state.view.scroll = action.payload
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase(resetProposal, () => initialState)
+  },
 })
 
 export default slice.reducer
 export const {
   clearTagSelection,
-  reset,
   selectRun,
   setActive,
   setTagSelection,

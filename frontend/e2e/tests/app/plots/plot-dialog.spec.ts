@@ -14,8 +14,9 @@ test.use({ viewport: PLOT_VIEWPORT })
 
 test('submitting with no variable shows a validation error and keeps the dialog open', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   const dialog = await openPlotDialog(page)
 
   await submitPlot(dialog)
@@ -26,8 +27,11 @@ test('submitting with no variable shows a validation error and keeps the dialog 
   await expect(plotFigure(page)).toHaveCount(0)
 })
 
-test('choosing a Y variable plots a summary against Run', async ({ page }) => {
-  await openProposal(page)
+test('choosing a Y variable plots a summary against Run', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
   const dialog = await openPlotDialog(page)
 
   // X defaults to Run, so choosing only Y plots the variable against the run.
@@ -42,8 +46,9 @@ test('choosing a Y variable plots a summary against Run', async ({ page }) => {
 
 test('plotting data for a custom run set opens a data plot for those runs', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   const dialog = await openPlotDialog(page)
 
   // The "run 7-9" subtitle only shows first-last, so collect the runs actually

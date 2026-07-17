@@ -1,5 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit'
+
 import { generateUID } from './utils'
+import { resetProposal } from '../../redux/actions'
 
 type PlotItem = {
   variables: string[]
@@ -42,10 +44,10 @@ const slice = createSlice({
       state.currentPlot = plots.length ? plots.slice(-1)[0] : null
       state.data = plots.length ? rest : {}
     },
-    reset: (state) => {
-      state.currentPlot = initialState.currentPlot
-      state.data = initialState.data
-    },
+    reset: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(resetProposal, () => initialState)
   },
 })
 

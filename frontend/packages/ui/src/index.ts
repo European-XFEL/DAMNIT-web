@@ -12,7 +12,6 @@ export {
   default as Dashboard,
   DashboardBase,
   DashboardMain,
-  resetDashboard,
   openNav,
   closeNav,
 } from './features/dashboard'
@@ -22,10 +21,7 @@ export {
   LoggedOutPage,
   NotFoundPage,
 } from './features/pages'
-export { resetContextFile } from './features/context-file'
-export { resetPlots } from './features/plots'
 export { Proposals } from './features/proposals'
-export { resetTable as resetTableView } from './features/table'
 
 // Auth
 export { selectUserFullName } from './auth'
@@ -34,6 +30,7 @@ export { selectUserFullName } from './auth'
 export { useProposal } from './hooks'
 
 // Redux
+export { resetProposal } from './redux/actions'
 export { useAppDispatch, useAppSelector } from './redux/hooks'
 
 // Routes
@@ -46,9 +43,7 @@ export {
 } from './routes'
 
 // Data
-export { resetExtractedData } from './data/extracted'
-export { resetMetadata, setMetadata, setProposalPending } from './data/metadata'
-export { resetTable as resetTableData } from './data/table'
+export { setMetadata, setProposalPending } from './data/metadata'
 
 // Utilities
 export { formatUrl } from './utils/helpers'

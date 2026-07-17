@@ -34,8 +34,9 @@ async function openSummaryPlots(page: Page, cols: number[]) {
 
 test('right-clicking a variable header and choosing "Plot: summary" plots it against Run', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   await openSummaryPlot(page, columnOf(xVar))
 
@@ -47,8 +48,9 @@ test('right-clicking a variable header and choosing "Plot: summary" plots it aga
 
 test('selecting two variable headers plots the right-clicked one against the other', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   await selectColumns(page, [columnOf(xVar), columnOf(yVar)])
   // The right-clicked column is the Y axis, the other is X.
@@ -60,8 +62,9 @@ test('selecting two variable headers plots the right-clicked one against the oth
 
 test('closing one plot removes it and leaves the other open', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   await openSummaryPlots(page, [columnOf(xVar), columnOf(yVar)])
 
   const first = plotTab(page, `Summary: ${xTitle} vs. Run`)
@@ -77,8 +80,9 @@ test('closing one plot removes it and leaves the other open', async ({
 
 test('closing the Plots tab discards the plots and returns to the table', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   await openSummaryPlots(page, [columnOf(xVar), columnOf(yVar)])
   await expect(plotTab(page, 'Plots')).toBeVisible()
 

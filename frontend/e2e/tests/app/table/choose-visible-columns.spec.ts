@@ -10,8 +10,9 @@ import {
 
 test('hiding a variable removes its column from the table', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
   // Baseline: every column is visible
   await expectVisibleColumns(page, 13)
   await expect(columnHeader(page, 'Trains')).toHaveCount(1)
@@ -28,8 +29,8 @@ test('hiding a variable removes its column from the table', async ({
   await expect(columnHeader(page, 'Trains')).toHaveCount(0)
 })
 
-test('searching filters the variable list', async ({ page }) => {
-  await openProposal(page)
+test('searching filters the variable list', async ({ page, example }) => {
+  await openProposal(page, example)
   await openPopover(page, 'Variables')
 
   // Filter the list
@@ -47,8 +48,9 @@ test('searching filters the variable list', async ({ page }) => {
 
 test('a hidden column stays hidden after the popover closes', async ({
   page,
+  example,
 }) => {
-  await openProposal(page)
+  await openProposal(page, example)
 
   // Hide the column
   const variables = await openPopover(page, 'Variables')

@@ -1,4 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+
+import { resetProposal } from '../../redux/actions'
 import { type TabItem } from '../../types'
 
 type MainState = {
@@ -40,8 +42,6 @@ const slice = createSlice({
   name: 'dashboard',
   initialState,
   reducers: {
-    reset: () => initialState,
-
     // Main
     setCurrentTab: (state, action) => {
       const id = action.payload
@@ -91,6 +91,9 @@ const slice = createSlice({
       state.aside.isOpened = false
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase(resetProposal, () => initialState)
+  },
 })
 
 export default slice.reducer
@@ -102,5 +105,4 @@ export const {
   closeNav,
   openAside,
   closeAside,
-  reset,
 } = slice.actions

@@ -9,7 +9,8 @@ import {
   LATEST_DATA_FIELD_NAME,
   LATEST_DATA_SUBSCRIPTION,
 } from '../data/table'
-import { useAppDispatch, useAppSelector } from '../redux/hooks'
+import { useAppDispatch, useAppSelector, useAppStore } from '../redux/hooks'
+import { isStaleProposal } from '../redux/actions'
 
 type UseProposalOptions = {
   subscribe: boolean
@@ -20,10 +21,17 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
   const proposal = useAppSelector((state) => state.metadata.proposal)
   const { timestamp } = useAppSelector((state) => state.tableData.metadata)
   const dispatch = useAppDispatch()
+  const store = useAppStore()
 
   useSubscription(LATEST_DATA_SUBSCRIPTION, {
     variables: { proposal: proposal.value, timestamp },
     onData: ({ data }) => {
+      // A push can arrive after the user left this proposal, since Apollo
+      // defers the unsubscribe. Drop it so it can't write the departed
+      // proposal's runs into the shared table slice.
+      if (isStaleProposal(store.getState(), proposal.value)) {
+        return
+      }
       const { runs, metadata } = data.data[LATEST_DATA_FIELD_NAME]
       dispatch(updateTable({ data: runs, metadata, notify: true }))
     },

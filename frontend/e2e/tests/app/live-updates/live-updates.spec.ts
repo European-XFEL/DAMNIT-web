@@ -29,8 +29,8 @@ function fullMetadata(runs: number[]) {
   return { runs, variables: XPCS.meta.variables }
 }
 
-test('a finished run appears as a new row', async ({ page, api }) => {
-  await openProposal(page)
+test('a finished run appears as a new row', async ({ page, api, example }) => {
+  await openProposal(page, example)
   const grid = page.locator('[role="grid"]')
   const seedRuns = XPCS.meta.runs.length
 
@@ -63,8 +63,8 @@ test('a finished run appears as a new row', async ({ page, api }) => {
   await expect(grid).toHaveAttribute('aria-rowcount', String(seedRuns + 2))
 })
 
-test("an existing run's value updates live", async ({ page, api }) => {
-  await openProposal(page)
+test("an existing run's value updates live", async ({ page, api, example }) => {
+  await openProposal(page, example)
   const trains = cell(page, { col: columnOf('n_trains'), row: 0 })
 
   // Wait for the seed value to land before pushing, so getTable.fulfilled cannot
@@ -88,8 +88,9 @@ test.describe('a deferred image resolves after its run finished', () => {
   test('a still-extracting image cell fills in when the value arrives', async ({
     page,
     api,
+    example,
   }) => {
-    await openProposal(page)
+    await openProposal(page, example)
     const imageCell = cell(page, IMAGE_CELL)
     const card = tooltipCard(page)
     const preview = card.locator('img')

@@ -80,8 +80,12 @@ async function getTableData(options: TableDataOptions): Promise<TableData> {
     variables,
   } = options
 
+  // Redux renders this data, not the Apollo cache. Keeping the query off the
+  // cache stops a fetch that resolves after resetProposal from writing the
+  // departed proposal's runs back into the just-evicted ROOT_QUERY.
   const { data } = await client.query({
     query: pickTableDataQuery(lightweight, deferred),
+    fetchPolicy: 'no-cache',
     variables: {
       proposal: String(proposal),
       page,
@@ -110,8 +114,11 @@ export const TABLE_METADATA_QUERY = gql`
 `
 
 async function getTableMetadata({ proposal }: TableMetadataOptions) {
+  // See getTableData: no-cache so a late fetch can't repopulate ROOT_QUERY
+  // after teardown. useProposal keeps the watched cache-and-network copy.
   const result = await client.query({
     query: TABLE_METADATA_QUERY,
+    fetchPolicy: 'no-cache',
     variables: {
       proposal: String(proposal),
     },
