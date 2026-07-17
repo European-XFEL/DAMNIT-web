@@ -2,7 +2,7 @@
 date: 2026-06-29
 ---
 
-# ADR-000 - Package architecture: vertical feature slices with enforced boundaries
+# ADR-000 - Package Architecture: Vertical Feature Slices with Enforced Boundaries
 
 ## Context and Problem Statement
 
@@ -53,7 +53,7 @@ A slice can have more or less modules in it depending on what it needs to do.
 
 `models.py` and `services.py` are pretty much always required, with entrypoints and `dependencies.py` depending on the use case.
 
-### Target layout
+### Target Layout
 
 ```text
 damnit_api/
@@ -93,7 +93,7 @@ damnit_api/
     └── directives.py
 ```
 
-### Naming rules
+### Naming Rules
 
 - No `_underscore` package names: the prefix tracks no real boundary - a package is internal because nothing outside imports it, which import linting can enforce. (This is why `_db/` and `_mymdc/` become `appdb/` and `mymdc/`.)
 - No generic junk-drawer modules (`shared/`, `utils.py`): code either belongs to a feature slice, to `core/` (framework-free, shared), or to infrastructure.
