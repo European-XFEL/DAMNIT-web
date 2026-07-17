@@ -37,6 +37,22 @@ Full layering, Clean/Onion, and DDD, were rejected as they add a lot of boilerpl
 
 ## Details
 
+### Creating a New Slice
+
+A 'slice' is a single sub-package which owns a feature end to end. A slice imports `core` and infrastructure, never another slice's internals. The (rough) shape is:
+
+```text
+{slice}/               # new sub-package
+├── models.py          # domain types: plain dataclasses/pydantic models (no framework imports)
+├── services.py        # behaviour: fetch/compute/store/etc..., takes dependencies as arguments (DI)
+├── dependencies.py    # aliases that hand services what they need
+└── {routers,gql}.py  # entrypoints: (REST, GQL)
+```
+
+A slice can have more or less modules in it depending on what it needs to do.
+
+`models.py` and `services.py` are pretty much always required, with entrypoints and `dependencies.py` depending on the use case.
+
 ### Target layout
 
 ```text
