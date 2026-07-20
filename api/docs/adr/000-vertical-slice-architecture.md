@@ -66,14 +66,14 @@ damnit_api/
 │
 ├── core/            # framework-free, imports nothing app-specific:
 │   ├── errors.py    #   Shared error classes; see ADR-001
-│   ├── types.py     #   `ProposalNumber`, pure value types (no I/O)
+│   ├── types.py     #   `ProposalNumber`, pure value types (no I/O); see ADR-004
 │   ├── const.py     #   DamnitType etc.
 │   └── conversions.py  # b64image, blob2numpy, type mapping
 │
 ├── proposals/       # proposal identity, metadata, discovery
 │   ├── models.py    #   `ProposalMeta` + domain models
 │   ├── services.py  #   fetch/cache/upsert proposal metadata (auth-free)
-│   ├── locator.py   #   `ProposalPathLocator` implementations
+│   ├── locator.py   #   `ProposalPathLocator` implementations; see ADR-004
 │   ├── routers.py
 │   └── gql.py
 │

@@ -8,6 +8,7 @@ from typing import Union, get_args, get_origin
 import numpy as np
 
 from .shared.const import DamnitType
+from .shared.models import ProposalNumber
 
 DEFAULT_ARRAY_NAME = "__xarray_dataarray_variable__"
 
@@ -57,31 +58,13 @@ def blob2numpy(data: bytes) -> np.ndarray:
 DATA_ROOT_DIR = "/gpfs/exfel/exp"
 
 
-def format_proposal_number(proposal):
-    """Format a given unformatted proposal number."
-
-    Lifted and modified from extra_data.reader.py
-    https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/reader.py
-    """
-    if not proposal.startswith("p"):
-        proposal = "p" + proposal.rjust(6, "0")
-
-    return proposal
-
-
-def find_proposal(propno):
-    """Find the proposal directory for a given proposal on Maxwell
+def find_proposal(proposal: ProposalNumber) -> str:
+    """Find the proposal directory for a given proposal on Maxwell.
 
     Lifted and modified from extra_data.read_machinery.py
     https://github.com/European-XFEL/EXtra-data/blob/master/extra_data/read_machinery.py
     """
-
-    if "/" in propno:
-        # Already passed a proposal directory
-        return propno
-
-    propno = format_proposal_number(propno)
-    for d in iglob(osp.join(DATA_ROOT_DIR, f"*/*/{propno}")):  # noqa: PTH118, PTH207
+    for d in iglob(osp.join(DATA_ROOT_DIR, f"*/*/{proposal}")):  # noqa: PTH118, PTH207
         return d
 
     return ""

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, RootModel
 from .. import get_logger
 from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
+from ..shared.models import ProposalNumber
 
 logger = get_logger()
 
@@ -64,17 +65,17 @@ DEV_USER = OAuthUserInfo(
 class ProposalsByYearHalf(RootModel):
     """Mapping of year half (e.g. 202401, 202402) to list of proposal numbers."""
 
-    root: dict[int, list[int]]
+    root: dict[int, list[ProposalNumber]]
 
 
 class User(BaseUserInfo):
     """Full user information including list of proposals."""
 
-    _member_proposals: list[int] = PrivateAttr(default_factory=list)
+    _member_proposals: list[ProposalNumber] = PrivateAttr(default_factory=list)
     proposals_by_year_half: ProposalsByYearHalf
 
     @property
-    def proposals(self) -> list[int]:
+    def proposals(self) -> list[ProposalNumber]:
         """Proposals the user is a member of (raw MyMdC membership)."""
         return self._member_proposals
 
@@ -113,7 +114,9 @@ class User(BaseUserInfo):
 
         proposals = await mymdc.get_user_proposals(oauth.preferred_username)
         member_proposals = [
-            p.proposal_number for p in proposals.root if p.proposal_number is not None
+            ProposalNumber(p.proposal_number)
+            for p in proposals.root
+            if p.proposal_number is not None
         ]
 
         proposals_meta = await _get_proposal_meta_many(

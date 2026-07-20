@@ -35,7 +35,7 @@ type DamnitVariableError {
 }
 
 input DatabaseInput {
-  proposal: String = "2956"
+  proposal: ProposalNo! = 2956
   path: String
 }
 
@@ -52,7 +52,7 @@ type ProposalMeta {
   updated_at: DateTime
   created_at: DateTime!
   id: Int!
-  number: Int!
+  number: ProposalNo!
   cycle: String!
   instrument: String!
   path: String!
@@ -66,12 +66,15 @@ type ProposalMeta {
   damnit_path_last_check: DateTime
 }
 
+"""Proposal number (positive integer, 1-999999)"""
+scalar ProposalNo
+
 type Query {
   get_user: User!
   runs(database: DatabaseInput!, page: Int! = 1, per_page: Int! = 10): [DamnitRun!]!
   metadata(database: DatabaseInput!): JSON!
   extracted_data(database: DatabaseInput!, run: Int!, variable: String!): JSON!
-  proposal_metadata(proposal_numbers: [Int!]!): [ProposalMeta!]
+  proposal_metadata(proposal_numbers: [ProposalNo!]!): [ProposalMeta!]
 }
 
 type Subscription {

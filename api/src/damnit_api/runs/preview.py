@@ -6,14 +6,15 @@ from damnit.api import Damnit, DataType
 from PIL import Image
 
 from ..shared.const import DamnitType
+from ..shared.models import ProposalNumber
 from ..utils import b64image
 from .sqlite import get_damnit_path
 
 NOT_SUPPORTED_MESSAGE = "Not supported."
 
 
-def get_preview_data(proposal, run, variable):
-    path = get_damnit_path(str(proposal))
+def get_preview_data(proposal_number: ProposalNumber, run, variable):
+    path = get_damnit_path(proposal_number)
     try:
         var_data = Damnit(path)[run, variable]
     except KeyError:

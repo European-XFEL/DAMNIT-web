@@ -7,6 +7,7 @@ import strawberry
 
 from ..metadata.gql import ProposalMeta
 from ..metadata.services import _get_proposal_meta_many
+from ..shared.models import ProposalNumber
 from .models import OAuthUserInfo
 
 if TYPE_CHECKING:
@@ -43,7 +44,9 @@ class User:
 
         proposals = await mymdc.get_user_proposals(self.preferred_username)
         proposal_numbers = [
-            p.proposal_number for p in proposals.root if p.proposal_number is not None
+            ProposalNumber(p.proposal_number)
+            for p in proposals.root
+            if p.proposal_number is not None
         ]
 
         proposals_meta = await _get_proposal_meta_many(

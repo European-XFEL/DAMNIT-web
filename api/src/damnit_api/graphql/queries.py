@@ -10,6 +10,7 @@ from ..metadata.services import _get_proposal_meta, _update_proposal_meta
 from ..runs.preview import get_preview_data
 from ..runs.sqlite import async_table, get_session
 from ..runs.types import KNOWN_DTYPES, DamnitRun
+from ..shared.models import ProposalNumber
 from .metadata import fetch_metadata
 from .utils import DatabaseInput, fetch_info
 
@@ -20,7 +21,7 @@ logger = get_logger()
 RUN_INFO_NAMES = frozenset(KNOWN_DTYPES) - {"proposal", "run"}
 
 
-async def _ensure_damnit_path(info: Info, proposal: str) -> None:
+async def _ensure_damnit_path(info: Info, proposal: ProposalNumber) -> None:
     """Ensure the proposal has a DAMNIT path, refreshing from MyMdC if needed.
 
     Authorization is handled separately by IsProposalMember before this runs.
@@ -31,12 +32,12 @@ async def _ensure_damnit_path(info: Info, proposal: str) -> None:
         return
 
     meta = await _get_proposal_meta(
-        info.context.mymdc, int(proposal), info.context.session
+        info.context.mymdc, proposal, info.context.session
     )
     if not meta.damnit_path:
         logger.info("No damnit path found, updating proposal metadata")
         meta = await _update_proposal_meta(
-            info.context.mymdc, int(proposal), info.context.session
+            info.context.mymdc, proposal, info.context.session
         )
         if not meta.damnit_path:
             msg = "No damnit path found after updating proposal metadata."
@@ -210,11 +211,6 @@ class Query:
         database: DatabaseInput,
     ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         proposal = database.proposal
-        if not proposal:
-            msg = "Proposal number is required."
-            # TODO: custom exceptions
-            raise ValueError(msg)
-
         await _ensure_damnit_path(info, proposal)
 
         snapshot = await fetch_metadata(info.context.damnit_registry, proposal)
@@ -235,7 +231,7 @@ class Query:
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`
         return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
-            proposal=database.proposal,
+            proposal_number=database.proposal,
             run=run,
             variable=variable,
         )

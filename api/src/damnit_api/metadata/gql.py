@@ -9,6 +9,9 @@ import strawberry.experimental.pydantic as st_pydantic
 
 from .. import get_logger
 from ..auth.permissions import IsAuthenticated
+from ..shared.models import (
+    ProposalNumber,  # noqa: TC001  (Strawberry resolves at runtime)
+)
 from . import models, services
 
 if TYPE_CHECKING:
@@ -37,7 +40,7 @@ class Query:
     async def proposal_metadata(
         self,
         info: strawberry.Info[Context],
-        proposal_numbers: list[int],
+        proposal_numbers: list[ProposalNumber],
     ) -> list[ProposalMeta] | None:
         """Fetch metadata for the given proposal numbers.
 

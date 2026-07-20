@@ -5,6 +5,7 @@ from pathlib import Path
 
 from damnit_api.auth.token_store import InMemoryTokenStore
 from damnit_api.runs.sqlite import DamnitDBRegistry
+from damnit_api.shared.models import ProposalNumber
 from damnit_api.shared.settings import Settings
 from damnit_api.state import create_oauth_client
 
@@ -51,10 +52,10 @@ def test_registry_memoizes_managers_per_proposal(monkeypatch):
     )
 
     registry = DamnitDBRegistry()
-    first = registry.get("1234")
-    assert registry.get("1234") is first
-    assert registry.get("5678") is not first
-    assert created == ["1234", "5678"]
+    first = registry.get(ProposalNumber(1234))
+    assert registry.get(ProposalNumber(1234)) is first
+    assert registry.get(ProposalNumber(5678)) is not first
+    assert created == [ProposalNumber(1234), ProposalNumber(5678)]
 
 
 def test_token_store_stores_and_pops_fields():

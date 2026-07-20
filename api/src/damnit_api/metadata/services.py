@@ -43,23 +43,24 @@ def _local_proposal_meta(proposal_number: ProposalNumber) -> ProposalMeta:
     )
 
 
-async def _local_proposal_number(registry: "DamnitDBRegistry") -> int | None:
+async def _local_proposal_number(registry: "DamnitDBRegistry") -> ProposalNumber | None:
     from sqlalchemy import select
 
     from ..runs.sqlite import async_table, get_session
     from ..shared.const import DEFAULT_PROPOSAL
 
-    table = await async_table(registry, DEFAULT_PROPOSAL, name="metameta")
+    proposal = ProposalNumber(DEFAULT_PROPOSAL)
+    table = await async_table(registry, proposal, name="metameta")
     if table is None:
         return None
 
-    async with get_session(registry, DEFAULT_PROPOSAL) as session:
+    async with get_session(registry, proposal) as session:
         result = await session.execute(
             select(table.c.value).where(table.c.key == "proposal")
         )
         value = result.scalar()
 
-    return int(value) if value else None
+    return ProposalNumber(int(value)) if value else None
 
 
 async def _fetch_proposal_meta(

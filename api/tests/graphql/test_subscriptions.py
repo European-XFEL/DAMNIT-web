@@ -76,7 +76,7 @@ async def test_latest_data(
     subscription = await graphql_schema.subscribe(
         """
         subscription LatestDataSubscription(
-          $proposal: String,
+          $proposal: ProposalNo!,
           $timestamp: Timestamp!) {
           latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
         }
@@ -133,7 +133,7 @@ async def test_latest_data_with_concurrent_subscriptions(
 ):
     query = """
         subscription LatestDataSubscription(
-          $proposal: String,
+          $proposal: ProposalNo!,
           $timestamp: Timestamp!) {
           latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
         }
@@ -178,7 +178,7 @@ async def test_latest_data_with_nonconcurrent_subscriptions(
 ):
     query = """
         subscription LatestDataSubscription(
-          $proposal: String,
+          $proposal: ProposalNo!,
           $timestamp: Timestamp!) {
           latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
         }

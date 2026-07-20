@@ -13,6 +13,7 @@ from strawberry.exceptions import StrawberryGraphQLError
 
 from damnit_api.auth.permissions import IsAuthenticated, IsProposalMember
 from damnit_api.shared.errors import ForbiddenError
+from damnit_api.shared.models import ProposalNumber
 
 
 def _info(context: Any) -> Any:
@@ -69,32 +70,20 @@ async def test_is_proposal_member_none_proposal():
 
 
 @pytest.mark.asyncio
-async def test_is_proposal_member_malformed_proposal():
-    # Parsing fails before any user resolution / network call, so no mocks needed.
-    perm = IsProposalMember()
-    info = _info(_context())
-    database = SimpleNamespace(proposal="not-a-number")
-
-    with pytest.raises(StrawberryGraphQLError, match=r"Invalid proposal identifier\."):
-        await perm.has_permission(None, info, database=database)
-    assert perm.message == "Access to this proposal is forbidden."
-
-
-@pytest.mark.asyncio
 async def test_is_proposal_member_allowed(mocker):
     check = mocker.patch(
         "damnit_api.auth.permissions._check_user_allowed",
         new_callable=mocker.AsyncMock,
     )
     ctx = _context(user="resolved-user")
-    database = SimpleNamespace(proposal="p1234")
+    database = SimpleNamespace(proposal=ProposalNumber(1234))
 
     result = await IsProposalMember().has_permission(
         None, _info(ctx), database=database
     )
     assert result is True
     ctx.get_user.assert_awaited_once()
-    check.assert_awaited_once_with(1234, "resolved-user")
+    check.assert_awaited_once_with(ProposalNumber(1234), "resolved-user")
 
 
 @pytest.mark.asyncio
@@ -104,7 +93,7 @@ async def test_is_proposal_member_safe_upstream_error():
     ctx.get_user.side_effect = RuntimeError(
         "https://in.xfel.eu/metadata/api/ sensitive error beep boop"
     )
-    database = SimpleNamespace(proposal="p1234")
+    database = SimpleNamespace(proposal=ProposalNumber(1234))
 
     with pytest.raises(StrawberryGraphQLError) as excinfo:
         await IsProposalMember().has_permission(None, _info(ctx), database=database)
@@ -118,7 +107,7 @@ async def test_is_proposal_member_forbidden(mocker):
         new_callable=mocker.AsyncMock,
         side_effect=ForbiddenError("nope"),
     )
-    database = SimpleNamespace(proposal="1234")
+    database = SimpleNamespace(proposal=ProposalNumber(1234))
 
     result = await IsProposalMember().has_permission(
         None, _info(_context()), database=database

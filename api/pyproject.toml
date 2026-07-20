@@ -51,7 +51,11 @@ test = [
     "pytest-recording>=0.13.4",
     "syrupy>=5.5.2",
 ]
-lint = ["pyright>=1.1.406", "ruff>=0.7"]
+lint = [
+    "pyright>=1.1.406",
+    "ruff>=0.7",
+    "ty>=0.0.42",
+]
 docs = [
     "zensical>=0.0.47",
     "mkdocstrings-python>=2.0.3",

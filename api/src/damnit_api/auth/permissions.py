@@ -32,18 +32,9 @@ class IsProposalMember(BasePermission):
             msg = "Field is misconfigured for proposal authorization."
             raise StrawberryGraphQLError(msg)
 
-        proposal_str = getattr(kwargs["database"], "proposal", None)
-        if not proposal_str:
+        proposal = getattr(kwargs["database"], "proposal", None)
+        if not proposal:
             return False
-
-        try:
-            proposal = int(proposal_str.strip("p"))
-        except (ValueError, TypeError):
-            logger.info("Invalid proposal identifier", proposal=proposal_str)
-            # NOTE: Strawberry shares one permission instance across all requests, so a
-            # per-call message must be raised, not stored on `self`.
-            msg = "Invalid proposal identifier."
-            raise StrawberryGraphQLError(msg) from None
 
         try:
             user = await info.context.get_user()
@@ -51,7 +42,7 @@ class IsProposalMember(BasePermission):
             # Do not respond with upstream errors directly, might contain internal
             # info that shouldn't be sent to client.
             msg = "Could not verify proposal access"
-            logger.exception(msg, proposal=proposal_str)
+            logger.exception(msg, proposal=proposal)
             raise StrawberryGraphQLError(msg) from exc
 
         try:
