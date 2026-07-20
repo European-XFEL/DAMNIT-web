@@ -20,7 +20,7 @@ For more information, see [ADR-000](adr/000-vertical-slice-architecture.md).
 | --------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------- |
 | `runs/`                           | Run/variable data - the core domain     | Domain models, repository interface + implementations (see [ADR-005](adr/005-repository-pattern.md)), serialisation, preview extraction, its GraphQL types and resolvers | Partial | `runs/` (repository, models, sqlite + csv backends); resolvers still in `graphql/queries.py`/`subscriptions.py` |
 | `proposals/`                      | Proposal metadata and lookup            | Proposal models, MyMdC-backed metadata services, path locator (see [ADR-004](adr/004-proposal-path-locator.md))            | Planned | `metadata/`                                                               |
-| `auth/`                           | Authentication and authorisation        | OAuth flow, sessions, token store, `User`, permission classes, the membership policy                                      | Partial | Policy still in `metadata/services.py`                                    |
+| `auth/`                           | Authentication and authorisation        | OAuth flow, sessions, token store, `User`, the membership policy (see [ADR-011](adr/011-authorisation-at-the-edge.md))     | Partial | Policy in `auth/policy.py`; permission adapters in `shared/permissions.py` |
 | `contextfile/`                    | Context-file viewing                    | File reading, watching, its routes                                                                                        | Done    | As-is                                                                     |
 | `graphql/`                        | GraphQL transport only                  | Schema assembly, context, directives, controller binding - no resolvers, no domain logic (see [ADR-007](adr/007-graphql-transport-only.md)) | Partial | Assembly still in `shared/gql.py`; resolvers still here                   |
 | `appdb/`                          | The app's own database (infrastructure) | Models, engine/session plumbing for `dw_api.sqlite` (see [ADR-010](adr/010-two-databases.md))                            | Partial | `_db/` (Advanced Alchemy `SQLAlchemyPlugin`); `metadata/repository.py`    |
@@ -56,7 +56,7 @@ The key rules are:
 2. **Composition root is the top:** it may import everything, but nothing is allowed to import it.
   - If importing a slice from the composition root forces a function-body import to avoid cycles, the type probably belongs in `core/`.
 3. **Composition root reads settings:** everything else receives configuration as parameters (see [ADR-003](adr/003-injected-settings.md)).
-4. **Authorisation applied at the edge:** routes and resolvers use dependencies and permission classes.
+4. **Authorisation applied at the edge:** routes and resolvers use dependencies and permission classes (see [ADR-011](adr/011-authorisation-at-the-edge.md)).
   - This means that services should not apply authorisation rules themselves.
 5. **No `if settings.is_local:` outside the composition root:** Local mode is selected by composition, not conditionals throughout the codebase (see [ADR-008](adr/008-local-mode-composition.md)).
 
@@ -64,7 +64,6 @@ Note that these are currently only enforced by convention/review. Import linter/
 
 !!! warning "Current issues"
 
-    - `auth` <--> `metadata` import cycle
     - `shared/gql.py`'s import-everything role
     - Function-body imports working around circular imports
     - Imports 'across' many modules and their files

@@ -1,12 +1,18 @@
-"""Strawberry permissions for GraphQL authorization."""
+"""Strawberry permissions: transport adapters over the auth policy (ADR-011).
+
+Lives in `shared/` so any slice's GraphQL contribution can attach them without
+importing the `auth` slice (which the import-direction rules forbid). The
+membership decision itself lives in `auth/policy.py`; these classes only adapt
+it to the Strawberry field-permission protocol.
+"""
 
 from strawberry.exceptions import StrawberryGraphQLError
 from strawberry.permission import BasePermission
 from strawberry.types import Info
 
 from .. import get_logger
-from ..metadata.services import _check_user_allowed
-from ..shared.errors import ForbiddenError
+from ..auth.policy import require_proposal_member
+from .errors import ForbiddenError
 
 logger = get_logger()
 
@@ -46,7 +52,7 @@ class IsProposalMember(BasePermission):
             raise StrawberryGraphQLError(msg) from exc
 
         try:
-            await _check_user_allowed(proposal, user)
+            await require_proposal_member(user, proposal)
             return True
         except ForbiddenError:
             return False

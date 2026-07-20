@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 
-from litestar import Litestar
+from litestar import Litestar, Router
 from litestar.di import Provide
 from litestar.exceptions import HTTPException
 
 from . import contextfile, metadata
 from ._mymdc.dependencies import get_mymdc_client
-from .auth.dependencies import get_oauth_user_info, get_user
+from .auth.dependencies import get_oauth_user_info
+from .auth.policy import proposal_member_guard
 
 # Known paths are redirected to the login page after a 401.
 KNOWN_PATHS = ["/graphql"]
@@ -172,13 +173,23 @@ def create_app():
         auth_controller = auth.OAuthController
         stores = StoreRegistry(default_factory=_file_store)
 
+    # Proposal-membership authorization is enforced at the REST edge (ADR-011)
+    # by a single guard on the proposal-scoped routers; local mode composes it
+    # out (ADR-008), so the slices themselves stay authorization-free.
+    proposal_guards = [] if settings.is_local else [proposal_member_guard]
+
     # ── GraphQL controller ────────────────────────────────────────────────────
     gql_controller = get_gql_controller()
 
+    proposal_router = Router(
+        path="",
+        route_handlers=[metadata.router, contextfile.router],
+        guards=proposal_guards,
+    )
+
     return Litestar(
         route_handlers=[
-            metadata.router,
-            contextfile.router,
+            proposal_router,
             auth_controller,
             gql_controller,
         ],
@@ -191,7 +202,6 @@ def create_app():
             ),
             # The `session` dependency comes from the Advanced Alchemy plugin.
             "mymdc": Provide(get_mymdc_client, sync_to_thread=False),
-            "user": Provide(get_user),
             "oauth_user": Provide(get_oauth_user_info, sync_to_thread=False),
             "channels": Provide(get_channels, sync_to_thread=False),
             "run_update_publisher": Provide(

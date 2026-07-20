@@ -60,12 +60,12 @@ def make_publisher(channels_plugin, repositories, **kwargs):
 
 def _patch_permissions(mocker, *, authenticated: bool, member: bool) -> None:
     mocker.patch(
-        "damnit_api.auth.permissions.IsAuthenticated.has_permission",
+        "damnit_api.shared.permissions.IsAuthenticated.has_permission",
         new_callable=mocker.AsyncMock,
         return_value=authenticated,
     )
     mocker.patch(
-        "damnit_api.auth.permissions.IsProposalMember.has_permission",
+        "damnit_api.shared.permissions.IsProposalMember.has_permission",
         new_callable=mocker.AsyncMock,
         return_value=member,
     )

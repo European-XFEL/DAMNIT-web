@@ -11,6 +11,7 @@ import {
   type Operation,
   type FetchResult,
 } from '@apollo/client'
+import { onError } from '@apollo/client/link/error'
 import {
   removeTypenameFromVariables,
   KEEP,
@@ -21,6 +22,7 @@ import { getMainDefinition } from '@apollo/client/utilities'
 import { createClient } from 'graphql-ws'
 
 import { BASE_URL, WS_URL } from '#src/constants'
+import { history } from '#src/lib/history'
 
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from './operation-names'
 
@@ -35,6 +37,25 @@ const retryLink = new RetryLink({
     initial: 1000,
     max: 1000,
   },
+  attempts: {
+    max: 5,
+    // Don't retry unauthenticated responses; surface them so `errorLink`
+    // can redirect to login instead of hammering the API.
+    retryIf: (error) => !!error && error.statusCode !== 401,
+  },
+})
+
+// Redirect to the login route when the API reports the session is missing or
+// invalid (401), e.g. an expired session mid-use. Route-level auth gating is
+// handled separately by PrivateRoute (via /oauth/userinfo).
+const errorLink = onError(({ networkError }) => {
+  if (
+    networkError &&
+    'statusCode' in networkError &&
+    networkError.statusCode === 401
+  ) {
+    history.navigate('/login')
+  }
 })
 
 const httpLink = new HttpLink({ uri: `${BASE_URL}graphql` })
@@ -133,5 +154,5 @@ export const cache = new InMemoryCache()
 
 export const client = new ApolloClient({
   cache,
-  link: from([retryLink, removeTypenameLink, splitLink]),
+  link: from([errorLink, retryLink, removeTypenameLink, splitLink]),
 })

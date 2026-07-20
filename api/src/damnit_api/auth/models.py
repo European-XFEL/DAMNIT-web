@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, RootModel
 from .. import get_logger
 from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
+from ..shared.errors import UnauthenticatedError
 from ..shared.models import ProposalNumber
 
 logger = get_logger()
@@ -47,7 +48,7 @@ class OAuthUserInfo(BaseUserInfo):
             if settings.is_local:
                 return DEV_USER  # type: ignore[return-value]
             msg = "No user info in session"
-            raise ValueError(msg)
+            raise UnauthenticatedError(msg)
 
         return cls.model_validate(user_dict)
 
