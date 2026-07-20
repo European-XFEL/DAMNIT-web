@@ -1,0 +1,264 @@
+# serializer version: 1
+# name: test_get_user_proposals_wire_shape_unchanged
+  dict({
+    'cycle': '202401',
+    'damnit_path': '<fixture-path>/usr/Shared/amore',
+    'damnit_paths_searched': list([
+      '<fixture-path>/usr/Shared/amore',
+    ]),
+    'instrument': 'MID',
+    'number': 6996,
+    'principal_investigator': 'User 1271',
+    'proposal_read_only': False,
+    'title': 'LTP - MHz XPCS enabled studies of dynamics, interactions and aggregation phenomena in protein solutions (derived from 3348)',
+    'year_half': '202401',
+  })
+# ---
+# name: test_metadata_query_wire_shape_unchanged
+  dict({
+    'runs': list([
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+    ]),
+    'tags': dict({
+      '(Untagged)': dict({
+        'id': 0,
+        'name': '(Untagged)',
+        'variables': list([
+          'added_at',
+          'proposal',
+          'run',
+          'start_time',
+        ]),
+      }),
+      'Beam properties': dict({
+        'id': 2,
+        'name': 'Beam properties',
+        'variables': list([
+          'total_transmission',
+          'xgm_intensity',
+        ]),
+      }),
+      'Run details': dict({
+        'id': 1,
+        'name': 'Run details',
+        'variables': list([
+          'n_pulses',
+          'n_trains',
+          'sample_type',
+          'sample_x',
+          'sample_y',
+          'scan_type',
+        ]),
+      }),
+      'XPCS': dict({
+        'id': 3,
+        'name': 'XPCS',
+        'variables': list([
+          'xpcs_g2_plot',
+          'xpcs_intensity_outliers_plot',
+          'xpcs_q_rings_plot',
+          'xpcs_saxs_plot',
+        ]),
+      }),
+    }),
+    'timestamp': 1725552555671.8381,
+    'variables': dict({
+      'added_at': dict({
+        'name': 'added_at',
+        'tags': list([
+        ]),
+        'title': 'Added at',
+      }),
+      'n_pulses': dict({
+        'name': 'n_pulses',
+        'tags': list([
+          'Run details',
+        ]),
+        'title': 'Pulses',
+      }),
+      'n_trains': dict({
+        'name': 'n_trains',
+        'tags': list([
+          'Run details',
+        ]),
+        'title': 'Trains',
+      }),
+      'proposal': dict({
+        'name': 'proposal',
+        'tags': list([
+        ]),
+        'title': 'Proposal',
+      }),
+      'run': dict({
+        'name': 'run',
+        'tags': list([
+        ]),
+        'title': 'Run',
+      }),
+      'sample_type': dict({
+        'name': 'sample_type',
+        'tags': list([
+          'Run details',
+        ]),
+        'title': 'Sample',
+      }),
+      'sample_x': dict({
+        'name': 'sample_x',
+        'tags': list([
+          'Run details',
+        ]),
+        'title': 'Sample X [mm]',
+      }),
+      'sample_y': dict({
+        'name': 'sample_y',
+        'tags': list([
+          'Run details',
+        ]),
+        'title': 'Sample Y [mm]',
+      }),
+      'scan_type': dict({
+        'name': 'scan_type',
+        'tags': list([
+          'Run details',
+        ]),
+        'title': 'Scan type',
+      }),
+      'start_time': dict({
+        'name': 'start_time',
+        'tags': list([
+        ]),
+        'title': 'Timestamp',
+      }),
+      'total_transmission': dict({
+        'name': 'total_transmission',
+        'tags': list([
+          'Beam properties',
+        ]),
+        'title': 'Total trans.',
+      }),
+      'xgm_intensity': dict({
+        'name': 'xgm_intensity',
+        'tags': list([
+          'Beam properties',
+        ]),
+        'title': 'XGM intensity [uJ]',
+      }),
+      'xpcs_g2_plot': dict({
+        'name': 'xpcs_g2_plot',
+        'tags': list([
+          'XPCS',
+        ]),
+        'title': 'XPCS g2',
+      }),
+      'xpcs_intensity_outliers_plot': dict({
+        'name': 'xpcs_intensity_outliers_plot',
+        'tags': list([
+          'XPCS',
+        ]),
+        'title': 'XPCS intensity outliers',
+      }),
+      'xpcs_q_rings_plot': dict({
+        'name': 'xpcs_q_rings_plot',
+        'tags': list([
+          'XPCS',
+        ]),
+        'title': 'XPCS q-rings',
+      }),
+      'xpcs_saxs_plot': dict({
+        'name': 'xpcs_saxs_plot',
+        'tags': list([
+          'XPCS',
+        ]),
+        'title': 'XPCS SAXS overview',
+      }),
+    }),
+  })
+# ---
+# name: test_runs_query_wire_shapes_unchanged
+  dict({
+    'added_at': dict({
+      'dtype': 'timestamp',
+      'error': None,
+      'name': 'added_at',
+      'value': 1717058767016,
+    }),
+    'n_pulses': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'n_pulses',
+      'value': 290.0,
+    }),
+    'n_trains': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'n_trains',
+      'value': 2679,
+    }),
+    'proposal': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'proposal',
+      'value': 6996,
+    }),
+    'run': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'run',
+      'value': 1,
+    }),
+    'sample_type': dict({
+      'dtype': 'string',
+      'error': None,
+      'name': 'sample_type',
+      'value': 'Silica nanoparticle',
+    }),
+    'sample_x': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'sample_x',
+      'value': 1.780738354,
+    }),
+    'sample_y': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'sample_y',
+      'value': 21.00022591,
+    }),
+    'start_time': dict({
+      'dtype': 'timestamp',
+      'error': None,
+      'name': 'start_time',
+      'value': 1717058356866,
+    }),
+    'total_transmission': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'total_transmission',
+      'value': 0.000114891,
+    }),
+    'xgm_intensity': dict({
+      'dtype': 'number',
+      'error': None,
+      'name': 'xgm_intensity',
+      'value': 470.959655762,
+    }),
+    'xpcs_g2_plot': dict({
+      'dtype': 'image',
+      'error': None,
+      'name': 'xpcs_g2_plot',
+      'value': '<png-data-uri>',
+    }),
+  })
+# ---

@@ -3,9 +3,11 @@
 import datetime as dt
 from collections.abc import AsyncGenerator
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import orjson
+import yaml
 from anyio import Path as APath
 from async_lru import alru_cache
 from structlog import get_logger
@@ -126,34 +128,67 @@ class MyMdCClientAsync(httpx.AsyncClient, ports.MyMdCPort):
         return response.json()
 
 
+class MyMdCMockMissError(LookupError):
+    """The cassette has no recording for the requested path."""
+
+
 class MyMdCClientMock(MyMdCMockSettings, ports.MyMdCPort):
-    """Mock MyMdC provider for testing and local development."""
+    """Mock MyMdC provider for testing and local development.
+
+    Replays responses from the recorded, scrubbed cassette
+    (`tests/mock/mymdc/mymdc.yaml`). The cassette is indexed by request path relative to
+    `api/`, built with the same path strings as `MyMdCClientAsync` uses, so the
+    mock and the real client cannot drift on URL shape.
+    """
+
+    # Port methods should be cached, which requires the class to be
+    # hashable. Pydantic models are unhashable by default, which
+    # means `self` cannot be hashed, breaking the cache decorators.
+    # Since a single client is used for the application, the hash value
+    # doesn't really matter, so this can just be set to id-derived hash
+    __hash__ = object.__hash__
 
     @staticmethod
     @alru_cache(ttl=5)
-    async def _data(file_path: str) -> dict:
-        return orjson.loads(await APath(file_path).read_bytes())
+    async def _index(file_path: str) -> dict[tuple[str, str], str]:
+        cassette = yaml.safe_load(await APath(file_path).read_bytes())
+        return {
+            (
+                interaction["request"]["method"],
+                urlsplit(interaction["request"]["uri"]).path.split("/api/", 1)[-1],
+            ): interaction["response"]["body"]["string"]
+            for interaction in cassette["interactions"]
+            if interaction["response"]["status"]["code"] == 200
+        }
 
-    @property
-    async def data(self) -> dict:
-        """Load mock data from file if provided, else return empty dict."""
-        return await self._data(self.mock_responses_file)
+    async def _replay(self, path: str) -> dict:
+        if self.cassette_file is None:
+            msg = "MyMdC mock has no cassette file configured"
+            raise MyMdCMockMissError(msg)
+
+        index = await self._index(str(self.cassette_file))
+        try:
+            body = index["GET", path]
+        except KeyError:
+            msg = (
+                f"MyMdC mock has no recording for GET {path}. Add the entity "
+                "to tests/mock/mymdc/identity_map.py and re-record: "
+                "uv run --group test python tests/mock/mymdc/record.py"
+            )
+            raise MyMdCMockMissError(msg) from None
+        return orjson.loads(body)
 
     async def _get_proposal_by_number(self, no: models.ProposalNumber):
-        """Mock method to get proposals by number."""
-        return (await self.data)["proposals_by_number"][str(no)]
+        return await self._replay(f"proposals/by_number/{no}")
 
     async def _get_user_by_id(self, id: models.UserId):
-        """Mock method to get user information."""
-        return (await self.data)["users"][str(id)]
+        return await self._replay(f"users/{id}")
 
     async def _get_cycle_by_id(self, id: int):
-        """Mock method to get instrument cycles by ID."""
-        return (await self.data)["instrument_cycles"][str(id)]
+        return await self._replay(f"instrument_cycles/{id}")
 
     async def _get_user_proposals(self, id: models.UserId):
-        """Mock method to get all proposals associated with a user ID."""
-        return (await self.data)["user_proposals"][str(id)]
+        return await self._replay(f"users/{id}/proposals")
 
 
 type MyMdCClient = MyMdCClientAsync | MyMdCClientMock
