@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://european-xfel.github.io/DAMNIT-web/docs/api/adr/000-vertical-slice-architecture/">
+        <link rel="canonical" href="https://european-xfel.github.io/DAMNIT-web/docs/api/adr/001-error-classes/">
       
       
-        <link rel="prev" href="../">
-      
-      
-        <link rel="next" href="../../setup/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>ADR-000 - Package Architecture: Vertical Feature Slices with Enforced Boundaries - DAMNIT Web API</title>
+        <title>ADR-001 - Error Classes: DamnitWebError and Transport Mapping - DAMNIT Web API</title>
       
     
     
@@ -85,7 +81,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#adr-000-package-architecture-vertical-feature-slices-with-enforced-boundaries" class="md-skip">
+        <a href="#adr-001-error-classes-damnitweberror-and-transport-mapping" class="md-skip">
           Skip to content
         </a>
       
@@ -119,7 +115,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ADR-000 - Package Architecture: Vertical Feature Slices with Enforced Boundaries
+              ADR-001 - Error Classes: DamnitWebError and Transport Mapping
             
           </span>
         </div>
@@ -233,8 +229,6 @@
   
   
   
-    
-  
   
     
       
@@ -247,7 +241,7 @@
     
     
     
-      <li class="md-tabs__item md-tabs__item--active">
+      <li class="md-tabs__item">
         <a href="../../architecture/" class="md-tabs__link">
           
   
@@ -394,10 +388,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -409,22 +401,19 @@
     
     
       
-        
-        
-      
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
         
           
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   
@@ -441,7 +430,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -482,8 +471,6 @@
                 
   
   
-    
-  
   
   
     
@@ -501,17 +488,14 @@
       
       
         
-          
-          
-        
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
         
           
           <div class="md-nav__link md-nav__container">
@@ -532,13 +516,13 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="">
+              <label class="md-nav__link " for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -554,36 +538,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  ADR-000 - Package Architecture: Vertical Feature Slices with Enforced Boundaries
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../000-vertical-slice-architecture/" class="md-nav__link">
         
   
   
@@ -598,149 +556,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#context-and-problem-statement" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Context and Problem Statement
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#considered-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Considered Options
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#decision-outcome" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Decision Outcome
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Decision Outcome">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#consequences" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Consequences
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#details" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Details
-      </span>
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Details">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#creating-a-new-slice" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Creating a New Slice
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#target-layout" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Target Layout
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#naming-rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Naming Rules
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dependency-direction" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Dependency Direction
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#follow-up-todos" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Follow-up / TODOs
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1068,10 +883,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#creating-a-new-slice" class="md-nav__link">
+  <a href="#the-error-classes" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Creating a New Slice
+        The Error Classes
       </span>
     </span>
   </a>
@@ -1079,43 +894,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#target-layout" class="md-nav__link">
+  <a href="#rules" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Target Layout
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#naming-rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Naming Rules
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dependency-direction" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Dependency Direction
-      </span>
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#follow-up-todos" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Follow-up / TODOs
+        Rules
       </span>
     </span>
   </a>
@@ -1145,98 +927,74 @@
   
 
 
-<h1 id="adr-000-package-architecture-vertical-feature-slices-with-enforced-boundaries">ADR-000 - Package Architecture: Vertical Feature Slices with Enforced Boundaries<a class="headerlink" href="#adr-000-package-architecture-vertical-feature-slices-with-enforced-boundaries" title="Permanent link">&para;</a></h1>
+<h1 id="adr-001-error-classes-damnitweberror-and-transport-mapping">ADR-001 - Error Classes: DamnitWebError and Transport Mapping<a class="headerlink" href="#adr-001-error-classes-damnitweberror-and-transport-mapping" title="Permanent link">&para;</a></h1>
 <h2 id="context-and-problem-statement">Context and Problem Statement<a class="headerlink" href="#context-and-problem-statement" title="Permanent link">&para;</a></h2>
-<p>The API backend in its current state (<a href="https://github.com/European-XFEL/DAMNIT-web/tree/f63f49564b195a2546f8ba6ee6ff0388603eba93">2026-06-16</a>) is difficult to reason about as behaviour is spread across modules, singletons, and import-time side effects, with features split between generic modules (<code>shared/</code>, <code>utils.py</code>, a monolithic <code>graphql/</code>) rather than owned in one place. Modules import each other in unexpected ways, and a change to one feature often requires touching several unrelated modules.</p>
-<p>To try and improve this, we decided to formally define the architecture of the project, targeting a specific package layout, and defining some rules and best practices.</p>
+<p>The API has a few distinct (expected) failure modes/errors, such as unknown/missing proposals, upstream service errors, expected/unexpected permission errors, etc...</p>
+<p>Using standard/builtin/re-raising exceptions makes it harder to distinguish between these, and harder to dispatch to the appropriate error handler.</p>
+<p>To address this, we define a single <code>DamnitWebError</code> class hierarchy in <code>shared/errors.py</code>, and raise application-specific subclasses from application code.</p>
 <h2 id="considered-options">Considered Options<a class="headerlink" href="#considered-options" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html">Clean Architecture</a> / <a href="https://jeffreypalermo.com/2008/07/the-onion-architecture-part-1/">Onion Architecture</a> - dependency-inverted layering around a domain core</li>
-<li><a href="https://martinfowler.com/bliki/DomainDrivenDesign.html">Domain-Driven Design (tactical patterns)</a> - application services, aggregates, domain events</li>
-<li><a href="https://alistair.cockburn.us/hexagonal-architecture/">Hexagonal Architecture (Ports and Adapters)</a> - isolate the application core from external systems behind ports, with swappable adapters</li>
-<li><a href="https://martinfowler.com/bliki/PresentationDomainDataLayering.html">Layered architecture</a> - horizontal technical layers (<code>api/services/domain/infrastructure</code>)</li>
-<li><a href="https://www.jimmybogard.com/vertical-slice-architecture/">Vertical Slice Architecture</a> - organise by feature; each slice owns everything from transport binding down to data access</li>
+<li>Keep raising builtin exceptions and map them ad hoc at each transport boundary</li>
+<li>A single <code>DamnitWebError</code> class hierarchy, raised by application code and mapped to transport responses once, at the edge</li>
 </ul>
 <h2 id="decision-outcome">Decision Outcome<a class="headerlink" href="#decision-outcome" title="Permanent link">&para;</a></h2>
-<p>Chosen option: a combination of <strong>Vertical Slice Architecture</strong> and <strong>Ports and Adapters</strong>.</p>
-<p>Slices give change-locality, a feature change touches one directory, and a reviewer can hold a slice in their head. Ports are applied only at the I/O boundaries (the external DAMNIT databases, MyMdC, auth, etc...), where swappability is useful (e.g. local dev vs. production, potential use at other facilities).</p>
-<p>The dependency-direction rules that layering-style architectures enforce through folder structure can instead be enforced by a linter (e.g. import linter).</p>
-<p>Full layering, Clean/Onion, and DDD, were rejected as they add a lot of boilerplate/abstraction/overhead to the codebase which is (at least currently) not needed, as the API server is a relatively thin, read-mostly viewer over externally-owned data, so patterns like aggregates, domain events, and use-case classes solve problems this service doesn't have.</p>
+<p>Chosen option: a single <code>DamnitWebError</code> hierarchy in <code>shared/errors.py</code>, because it makes caller-distinguishable failures easy to identify in application code and lets each transport map errors to a response exactly once, rather than re-deriving the mapping at every call site.</p>
 <h3 id="consequences">Consequences<a class="headerlink" href="#consequences" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Good: a feature change touches one directory; PRs map to slices.</li>
-<li>Good: new domains get a package with a standard internal shape (<code>models</code>, <code>services</code>, <code>routers</code>/<code>gql</code>, <code>dependencies</code>), so structure decisions don't recur per feature.</li>
-<li>Good: once import linting lands, contract changes (a new allowed edge) become deliberate, reviewed edits to the linter config rather than drive-by imports.</li>
-<li>Bad: the layout alone guarantees nothing, developers have to ensure that they follow the architecture (although an import linter can be added to enforce the rules).</li>
+<li>Good: the frontend gets stable, machine-readable error codes; support gets <code>request_id</code> correlation for every failure response.</li>
+<li>Good: "what can go wrong here" is visible (<code>raise ProposalNotFoundError</code> vs anonymous <code>ValueError</code>s).</li>
+<li>Bad: a small ongoing tax, new failure modes require choosing (or adding) a subclass; that is the review conversation working as intended.</li>
 </ul>
 <h2 id="details">Details<a class="headerlink" href="#details" title="Permanent link">&para;</a></h2>
-<h3 id="creating-a-new-slice">Creating a New Slice<a class="headerlink" href="#creating-a-new-slice" title="Permanent link">&para;</a></h3>
-<p>A 'slice' is a single sub-package which owns a feature end to end. A slice imports <code>core</code> and infrastructure, never another slice's internals. The (rough) shape is:</p>
-<div class="highlight"><pre><span></span><code>{slice}/               # new sub-package
-├── models.py          # domain types: plain dataclasses/pydantic models (no framework imports)
-├── services.py        # behaviour: fetch/compute/store/etc..., takes dependencies as arguments (DI)
-├── dependencies.py    # aliases that hand services what they need
-└── {routers,gql}.py  # entrypoints: (REST, GQL)
+<h3 id="the-error-classes">The Error Classes<a class="headerlink" href="#the-error-classes" title="Permanent link">&para;</a></h3>
+<p>Defined in <code>shared/errors.py</code>, framework-free:</p>
+<div class="highlight"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DamnitWebError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="n">code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span>  <span class="c1"># class attribute, always defined</span>
+    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">details</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">request_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span>  <span class="c1"># from structlog contextvars</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">InvalidInputError</span><span class="p">(</span><span class="n">DamnitWebError</span><span class="p">):</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="mi">400</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">UnauthenticatedError</span><span class="p">(</span><span class="n">DamnitWebError</span><span class="p">):</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="mi">401</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ForbiddenError</span><span class="p">(</span><span class="n">DamnitWebError</span><span class="p">):</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="mi">403</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">NotFoundError</span><span class="p">(</span><span class="n">DamnitWebError</span><span class="p">):</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="mi">404</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">ProposalNotFoundError</span><span class="p">(</span><span class="n">NotFoundError</span><span class="p">):</span> <span class="o">...</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">UpstreamServiceError</span><span class="p">(</span><span class="n">DamnitWebError</span><span class="p">):</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="mi">502</span>  <span class="c1"># MyMdC, OIDC provider</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DataUnavailableError</span><span class="p">(</span><span class="n">DamnitWebError</span><span class="p">):</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="mi">503</span>  <span class="c1"># GPFS timeouts, unreadable runs.sqlite</span>
 </code></pre></div>
-<p>A slice can have more or less modules in it depending on what it needs to do.</p>
-<p><code>models.py</code> and <code>services.py</code> are pretty much always required, with entrypoints and <code>dependencies.py</code> depending on the use case.</p>
-<h3 id="target-layout">Target Layout<a class="headerlink" href="#target-layout" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>damnit_api/
-├── main.py          # entrypoint: env/args → Settings → create_app
-├── app.py           # composition root: create_app(settings), lifespan,
-│                    #   DI wiring, exception handlers, middleware
-├── state.py         # AppState + factories (no domain classes)
-├── settings.py      # Settings models only
-├── logging.py       # structlog configuration + request-logging middleware
-│
-├── core/            # framework-free, imports nothing app-specific:
-│   ├── errors.py    #   Shared error classes; see ADR-001
-│   ├── types.py     #   `ProposalNumber`, pure value types (no I/O)
-│   ├── const.py     #   DamnitType etc.
-│   └── conversions.py  # b64image, blob2numpy, type mapping
-│
-├── proposals/       # proposal identity, metadata, discovery
-│   ├── models.py    #   `ProposalMeta` + domain models
-│   ├── services.py  #   fetch/cache/upsert proposal metadata (auth-free)
-│   ├── locator.py   #   `ProposalPathLocator` implementations
-│   ├── routers.py
-│   └── gql.py
-│
-├── runs/            # the core domain: runs, variables, previews
-│   ├── models.py    #   plain dataclasses
-│   ├── repository.py
-│   ├── serialization.py, preview.py
-│   └── gql.py       #   Strawberry types + Query/Subscription contributions
-│
-├── auth/            # OIDC flow, sessions, tokens, users, authz policy
-├── contextfile/     # context-file (REST) endpoints
-├── mymdc/           # MyMdC port
-├── appdb/           # application-DB engine/session/models
-│
-└── graphql/         # transport composition:
-    ├── schema.py    #   assemble Query/Subscription from feature gql modules
-    └── directives.py
-</code></pre></div>
-<h3 id="naming-rules">Naming Rules<a class="headerlink" href="#naming-rules" title="Permanent link">&para;</a></h3>
-<ul>
-<li>No <code>_underscore</code> package names: the prefix tracks no real boundary - a package is internal because nothing outside imports it, which import linting can enforce. (This is why <code>_db/</code> and <code>_mymdc/</code> become <code>appdb/</code> and <code>mymdc/</code>.)</li>
-<li>No generic junk-drawer modules (<code>shared/</code>, <code>utils.py</code>): code either belongs to a feature slice, to <code>core/</code> (framework-free, shared), or to infrastructure.</li>
-</ul>
-<h3 id="dependency-direction">Dependency Direction<a class="headerlink" href="#dependency-direction" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>core</code> imports nothing from the application.</li>
-<li>Feature packages (<code>runs</code>, <code>proposals</code>, <code>auth</code>, <code>contextfile</code>) may import <code>core</code> and infrastructure (<code>mymdc</code>, <code>appdb</code>), never each other's internals. Allowed cross-feature edges are explicit and narrow: <code>auth → proposals</code> (membership needs proposal metadata) - never the reverse.</li>
-<li>Infrastructure (<code>mymdc</code>, <code>appdb</code>) imports only <code>core</code> and <code>settings</code>.</li>
-<li><code>graphql/schema.py</code> and <code>app.py</code> may import everything (composition).</li>
-<li>Domain and service modules never import Litestar or Strawberry; framework types appear only in <code>routers.py</code>, <code>gql.py</code>, <code>dependencies.py</code>, and permission classes.</li>
-<li>Private (<code>_</code>-prefixed) functions are module-internal. Anything imported across module boundaries is public API and named accordingly.</li>
-<li>Function-body imports are allowed only in the composition root and for documented, cycle-free lazy loading.</li>
-</ul>
-<h3 id="follow-up-todos">Follow-up / TODOs<a class="headerlink" href="#follow-up-todos" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Import linting</li>
-<li><code>appdb</code> naming</li>
-</ul>
+<p>Subclasses are added per <em>caller-distinguishable situation</em>, not per call site.</p>
+<h3 id="rules">Rules<a class="headerlink" href="#rules" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Application code raises <code>DamnitWebError</code> subclasses</strong> for any failure that can reach a client.</li>
+<li>Builtin exceptions in routers/resolvers/services are reserved for programming errors</li>
+<li>Any builtin (not custom) exceptions will become a 500/internal error.</li>
+<li><strong>Mapping happens once, at the edge:</strong></li>
+<li>REST: a <code>DamnitWebError</code> exception handler returns <code>{"message", "details", "request_id"}</code> with <code>exc.code</code>.</li>
+<li>GraphQL: the intent is for <code>DamnitWebError</code>s raised in resolvers to surface as GraphQL errors with <code>extensions: {"code": &lt;name&gt;, "request_id": ...}</code> via an error formatter, so the frontend branches on <code>code</code>, not message text (<em>planned, not yet implemented</em>). <!--TODO--></li>
+<li>Permission denials use the Strawberry permission mechanism (message on the permission class); <code>ForbiddenError</code> is the same concept for non-GraphQL paths.</li>
+<li><strong>Boundaries translate exceptions.</strong> Infrastructure exceptions do not cross layer boundaries raw:</li>
+<li>MyMdC client errors become <code>UpstreamServiceError</code></li>
+<li>Locator/repository/filesystem failures become <code>ProposalNotFoundError</code>/<code>DataUnavailableError</code>, logged with context at the point of translation (log-then-raise).</li>
+</ol>
 
 
 
