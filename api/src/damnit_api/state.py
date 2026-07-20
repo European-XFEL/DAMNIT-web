@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from ._mymdc.clients import MyMdCClient
     from .auth.token_store import TokenStore
     from .graphql.subscriptions import SubscriptionCursors
-    from .runs.sqlite.session import DamnitDBRegistry
+    from .runs.repository import DamnitRepositoryRegistry
     from .shared.settings import Settings
 
 
@@ -34,7 +34,7 @@ class AppState:
     mymdc_client: MyMdCClient
     oauth_client: StarletteOAuth2App | None  # None when auth is disabled
     token_store: TokenStore
-    damnit_registry: DamnitDBRegistry
+    repositories: DamnitRepositoryRegistry
     subscription_cursors: SubscriptionCursors
 
 
@@ -85,10 +85,16 @@ def create_token_store() -> TokenStore:
     return InMemoryTokenStore()
 
 
-def create_damnit_registry() -> DamnitDBRegistry:
-    from .runs.sqlite.session import DamnitDBRegistry
+def create_repositories() -> DamnitRepositoryRegistry:
+    """Registry of per-proposal `DamnitRepository` objects (ADR-005).
 
-    return DamnitDBRegistry()
+    The SQLite backend is passed directly as the factory; its `metadata_ttl`
+    keeps its default (see ADR-005 - TTLs are an implementation concern).
+    """
+    from .runs.repository import DamnitRepositoryRegistry
+    from .runs.sqlite.repository import SQLiteDamnitRepository
+
+    return DamnitRepositoryRegistry(SQLiteDamnitRepository)
 
 
 def create_subscription_cursors() -> SubscriptionCursors:

@@ -1,17 +1,21 @@
 import asyncio
+import dataclasses
 from collections.abc import AsyncGenerator
+from typing import Any
 
 import strawberry
 from async_lru import alru_cache
 from strawberry.scalars import JSON
 from strawberry.types import Info
 
+from .. import get_logger
 from ..auth.permissions import PROPOSAL_PERMISSIONS
-from ..runs.sqlite import async_latest_rows, async_max, async_table
+from ..runs.repository import DamnitRepository
 from ..runs.types import DamnitRun, Timestamp
-from ..utils import create_map
-from .metadata import fetch_metadata
-from .utils import DatabaseInput, LatestData, fetch_info
+from ..shared.models import ProposalNumber
+from .utils import DatabaseInput
+
+logger = get_logger()
 
 POLLING_INTERVAL = 1  # seconds
 
@@ -22,94 +26,80 @@ class SubscriptionCursors:
     for alru_cache."""
 
     def __init__(self) -> None:
-        self._data: dict[str, float] = {}
+        self._data: dict[ProposalNumber, float] = {}
 
-    def __contains__(self, proposal: str) -> bool:
-        return proposal in self._data
+    def __contains__(self, proposal_number: ProposalNumber) -> bool:
+        return proposal_number in self._data
 
-    def __getitem__(self, proposal: str) -> float:
-        return self._data[proposal]
+    def __getitem__(self, proposal_number: ProposalNumber) -> float:
+        return self._data[proposal_number]
 
-    def __setitem__(self, proposal: str, value: float) -> None:
-        self._data[proposal] = value
+    def __setitem__(self, proposal_number: ProposalNumber, value: float) -> None:
+        self._data[proposal_number] = value
+
+    def clear(self) -> None:
+        self._data.clear()
 
 
 # Per-client cursor is deliberately omitted from the cache key so that
 # concurrent subscribers coalesce into a single DB read per tick.
 @alru_cache(maxsize=32, ttl=POLLING_INTERVAL)
-async def poll_proposal(registry, proposal, cursors: SubscriptionCursors):
-    table = await async_table(registry, proposal, name="run_variables")
-    if table is None:
+async def poll_proposal(
+    proposal_number: ProposalNumber,
+    cursors: SubscriptionCursors,
+    repo: DamnitRepository,
+) -> dict[str, Any] | None:
+    # Initialise cursor from the current max timestamp on first visit.
+    if proposal_number not in cursors:
+        try:
+            metadata = await repo.get_metadata()
+            cursors[proposal_number] = metadata.timestamp
+        except Exception:
+            return None
+
+    start_at = cursors[proposal_number]
+    records = await repo.get_latest_runs(start_at=start_at)
+    if not records:
         return None
 
-    if proposal not in cursors:
-        max_timestamp = await async_max(
-            registry, proposal, table="run_variables", column="timestamp"
-        )
-        cursors[proposal] = max_timestamp or 0
-
-    rows = await async_latest_rows(
-        registry,
-        proposal,
-        table=table,
-        by="timestamp",
-        start_at=cursors[proposal],
-    )
-    if not rows:
-        return None
-
-    latest_data = LatestData.from_list(rows)
-
-    latest_runs = await fetch_info(
-        registry, proposal, runs=list(latest_data.runs.keys())
-    )
-    latest_runs = create_map(latest_runs, key="run")
-
-    fetch_metadata.cache_invalidate(registry, proposal)
-    metadata = await fetch_metadata(registry, proposal)
-
-    runs = {}
-    run_timestamps = {}
-    for run, variables in latest_data.runs.items():
-        run_values = {
-            name: {
-                "value": data.value,
-                "summary_type": data.summary_type,
-                "attributes": data.attributes,
-            }
-            for name, data in variables.items()
-        }
-        run_values.setdefault("run", {"value": run})
-
-        if run_info := latest_runs.get(run):
-            run_values.update(run_info)
-
-        runs[run] = DamnitRun.resolve(run_values)
-        run_timestamps[run] = max(data.timestamp for data in variables.values())
+    runs: dict[int, Any] = {}
+    run_timestamps: dict[int, float] = {}
+    for record in records:
+        runs[record.run] = DamnitRun.resolve_record(record)
+        if record.variables:
+            run_timestamps[record.run] = max(
+                vv.timestamp for vv in record.variables.values()
+            )
 
     if not runs:
         return None
 
-    if latest_data.timestamp is None:
-        msg = "Latest data has no timestamp."
-        raise ValueError(msg)
+    latest_ts = max(run_timestamps.values(), default=start_at)
 
-    cursors[proposal] = latest_data.timestamp
+    repo.invalidate_metadata_cache()
+    try:
+        metadata = await repo.get_metadata()
+    except Exception:
+        return None
+    cursors[proposal_number] = latest_ts
+    meta_dict = dataclasses.asdict(metadata)
 
-    metadata = {
-        "runs": sorted(set(metadata["runs"]) | set(runs.keys())),
-        "variables": metadata["variables"],
-        "timestamp": latest_data.timestamp * 1000,  # ms for JS
-    }
     return {
         "runs": runs,
         "run_timestamps": run_timestamps,
-        "max_timestamp": max(run_timestamps.values()),
-        "metadata": metadata,
+        "max_timestamp": latest_ts,
+        "metadata": {
+            "runs": sorted(set(metadata.runs) | set(runs.keys())),
+            "variables": meta_dict["variables"],
+            "timestamp": latest_ts * 1000,  # ms for JS
+        },
     }
 
 
-def filter_for_client(snapshot, since):
+def filter_for_client(
+    snapshot: dict[str, Any] | None,
+    since: float | None,
+) -> dict[str, Any] | None:
     if snapshot is None or not since or snapshot["max_timestamp"] <= since:
         return None
     runs = {
@@ -130,15 +120,23 @@ class Subscription:
         info: Info,
         database: DatabaseInput,
         timestamp: Timestamp,
-    ) -> AsyncGenerator[JSON]:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+    ) -> AsyncGenerator[JSON]:
+        cursors: SubscriptionCursors = info.context.subscription_cursors
         while True:
             await asyncio.sleep(POLLING_INTERVAL)
 
-            snapshot = await poll_proposal(
-                info.context.damnit_registry,
-                proposal=database.proposal,
-                cursors=info.context.subscription_cursors,
-            )
+            proposal = database.proposal
+            try:
+                repo = info.context.repositories.get(proposal)
+                snapshot = await poll_proposal(
+                    proposal_number=proposal,
+                    cursors=cursors,
+                    repo=repo,
+                )
+            except Exception:
+                logger.exception("Subscription poll failed", proposal=proposal)
+                raise
+
             result = filter_for_client(snapshot, timestamp)
             if result is not None:
-                yield result  # FIX: # pyright: ignore[reportReturnType]
+                yield result  # ty: ignore[invalid-yield]

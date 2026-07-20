@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from .._db.dependencies import DBSession
     from .._mymdc.clients import MyMdCClient
     from ..auth.dependencies import User
-    from ..runs.sqlite import DamnitDBRegistry
+    from ..runs.repository import DamnitRepositoryRegistry
 
 
 LOCAL_CYCLE = "197001"
@@ -43,24 +43,29 @@ def _local_proposal_meta(proposal_number: ProposalNumber) -> ProposalMeta:
     )
 
 
-async def _local_proposal_number(registry: "DamnitDBRegistry") -> ProposalNumber | None:
-    from sqlalchemy import select
+async def _local_proposal_number(
+    repositories: "DamnitRepositoryRegistry",
+) -> ProposalNumber | None:
+    from ..runs.sqlite.repository import SQLiteDamnitRepository
 
-    from ..runs.sqlite import async_table, get_session
-    from ..shared.const import DEFAULT_PROPOSAL
-
-    proposal = ProposalNumber(DEFAULT_PROPOSAL)
-    table = await async_table(registry, proposal, name="metameta")
-    if table is None:
+    # In local mode every session uses the proposal at settings.damnit_path
+    # regardless of proposal number, so any ProposalNumber works as the key.
+    repo = repositories.get(ProposalNumber(1))
+    if not isinstance(repo, SQLiteDamnitRepository):
+        # get_proposal_number() reads the DAMNIT-sqlite-specific `metameta`
+        # table; it has no equivalent on other repository backends.
         return None
 
-    async with get_session(registry, proposal) as session:
-        result = await session.execute(
-            select(table.c.value).where(table.c.key == "proposal")
+    value = await repo.get_proposal_number()
+    if not value:
+        return None
+    try:
+        return ProposalNumber(value)
+    except ValueError:
+        await logger.aerror(
+            "Invalid proposal number in metameta table", raw_value=value
         )
-        value = result.scalar()
-
-    return ProposalNumber(int(value)) if value else None
+        return None
 
 
 async def _fetch_proposal_meta(

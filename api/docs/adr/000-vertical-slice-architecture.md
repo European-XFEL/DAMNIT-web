@@ -79,7 +79,7 @@ damnit_api/
 │
 ├── runs/            # the core domain: runs, variables, previews
 │   ├── models.py    #   plain dataclasses
-│   ├── repository.py
+│   ├── repository.py   #   `DamnitRepository` interface + backends; see ADR-005
 │   ├── serialization.py, preview.py
 │   └── gql.py       #   Strawberry types + Query/Subscription contributions
 │

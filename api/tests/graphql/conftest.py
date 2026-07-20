@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -5,28 +6,48 @@ import strawberry
 from strawberry.schema.config import StrawberryConfig
 
 from damnit_api.graphql.directives import lightweight
-from damnit_api.graphql.metadata import fetch_metadata
 from damnit_api.graphql.queries import Query
 from damnit_api.graphql.subscriptions import (
     Subscription,
     SubscriptionCursors,
     poll_proposal,
 )
+from damnit_api.runs.csv import CsvDamnitRepository
+from damnit_api.runs.repository import DamnitRepositoryRegistry
 from damnit_api.runs.types import SCALAR_MAP, DamnitVariable
 
-from .const import (
-    EXAMPLE_TAGS,
-    EXAMPLE_VARIABLE_TAGS,
-    EXAMPLE_VARIABLES,
-    RUNS,
-)
+
+class SchemaWithContext:
+    """Wraps a Strawberry Schema and injects a default context_value.
+
+    An explicit `context_value` at the call site still wins.
+    """
+
+    def __init__(self, schema, default_context) -> None:
+        self._schema = schema
+        self._context = default_context
+
+    async def execute(self, query, *, context_value=None, variable_values=None):
+        ctx = context_value if context_value is not None else self._context
+        return await self._schema.execute(
+            query, context_value=ctx, variable_values=variable_values
+        )
+
+    async def subscribe(self, query, *, context_value=None, variable_values=None):
+        ctx = context_value if context_value is not None else self._context
+        return await self._schema.subscribe(
+            query, context_value=ctx, variable_values=variable_values
+        )
+
+
+@pytest.fixture
+def subscription_cursors() -> SubscriptionCursors:
+    return SubscriptionCursors()
 
 
 @pytest.fixture(autouse=True)
 def reset_caches():
-    fetch_metadata.cache_clear()
     poll_proposal.cache_clear()
-    return
 
 
 def _patch_permissions(mocker, *, authenticated: bool, member: bool) -> None:
@@ -49,46 +70,6 @@ def bypass_proposal_permission(mocker):
 
 
 @pytest.fixture
-def mocked_metadata_variables(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_variables",
-        return_value=EXAMPLE_VARIABLES,
-    )
-
-
-@pytest.fixture
-def mocked_metadata_all_tags(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_all_tags",
-        return_value=EXAMPLE_TAGS,
-    )
-
-
-@pytest.fixture
-def mocked_metadata_variable_tags(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_variable_tags",
-        return_value=EXAMPLE_VARIABLE_TAGS,
-    )
-
-
-@pytest.fixture
-def mocked_metadata_column(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_column",
-        return_value=RUNS,
-    )
-
-
-@pytest.fixture
-def mocked_metadata_max(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_max",
-        return_value=0,
-    )
-
-
-@pytest.fixture
 def mocked_ensure_damnit_path(mocker):
     """Bypass the damnit_path validation; tests run without a request context."""
     mocker.patch(
@@ -98,60 +79,50 @@ def mocked_ensure_damnit_path(mocker):
 
 
 @pytest.fixture
-def graphql_schema_no_auth(
-    mocked_metadata_variables,
-    mocked_metadata_column,
-    mocked_metadata_all_tags,
-    mocked_metadata_variable_tags,
-):
-    """Schema without the bypass_proposal_permission fixture, so permission
-    checks run normally (and fail since there is no real request context)."""
-    return strawberry.Schema(
+def csv_fixture_dir() -> Path:
+    """Path to the graphql test CSV fixture files."""
+    return Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def mock_repositories(csv_fixture_dir):
+    """A repository registry backed by CsvDamnitRepository over the fixtures."""
+    return DamnitRepositoryRegistry(
+        lambda proposal: CsvDamnitRepository(proposal, csv_fixture_dir)
+    )
+
+
+@pytest.fixture
+def graphql_context(mock_repositories):
+    return SimpleNamespace(
+        repositories=mock_repositories,
+        subscription_cursors=SubscriptionCursors(),
+        oauth_user=None,
+    )
+
+
+@pytest.fixture
+def graphql_schema_no_auth(graphql_context):
+    """Schema without permission bypass, so permission checks run normally."""
+    schema = strawberry.Schema(
         query=Query,
         subscription=Subscription,
         types=[DamnitVariable],
         directives=[lightweight],
         config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
     )
-
-
-class _SchemaWithDefaultContext:
-    """Wraps a strawberry `Schema` so resolvers see a default context (with
-    a fresh `damnit_registry`) without every test passing `context_value`;
-    an explicit `context_value` at the call site still wins."""
-
-    def __init__(self, schema, context):
-        self._schema = schema
-        self._context = context
-
-    def execute(self, query, **kwargs):
-        kwargs.setdefault("context_value", self._context)
-        return self._schema.execute(query, **kwargs)
-
-    def subscribe(self, query, **kwargs):
-        kwargs.setdefault("context_value", self._context)
-        return self._schema.subscribe(query, **kwargs)
-
-
-@pytest.fixture
-def graphql_context(damnit_registry):
-    return SimpleNamespace(
-        damnit_registry=damnit_registry,
-        subscription_cursors=SubscriptionCursors(),
-    )
+    return SchemaWithContext(schema, graphql_context)
 
 
 @pytest.fixture
 def graphql_schema(
     bypass_proposal_permission,
     mocked_ensure_damnit_path,
-    mocked_metadata_max,
     graphql_schema_no_auth,
-    graphql_context,
 ):
     """Same schema as graphql_schema_no_auth, with permission and damnit-path
     checks bypassed so tests exercise resolver logic only."""
-    return _SchemaWithDefaultContext(graphql_schema_no_auth, graphql_context)
+    return graphql_schema_no_auth
 
 
 @pytest.fixture

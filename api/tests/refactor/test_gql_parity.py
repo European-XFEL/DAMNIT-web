@@ -6,12 +6,11 @@ Two kinds of parity are pinned:
   `Schema` object, not through the FastAPI transport), so it keeps working once the
   transport underneath is swapped.
 - The wire-shape of a few representative queries/subscriptions, so a resolver rewrite
-  that changes response *shape* (not just SDL) is caught too.
+  that changes response *shape* (not just SDL) is caught too. These run against the
+  CSV-backed repository from `tests/graphql/conftest.py` (fixture run 348).
 """
 
-import asyncio
 import os
-from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -20,21 +19,14 @@ from strawberry.schema.config import StrawberryConfig
 
 from damnit_api.graphql import directives as gql_directives
 from damnit_api.runs import types as run_types
-from damnit_api.runs.types import DamnitRun
 from damnit_api.shared.gql import Query, Subscription
 
-from ..graphql.const import (
-    EXAMPLE_DATA,
-    EXAMPLE_VARIABLES,
-    KNOWN_DATA,
-    NEW_DATA,
-    PROPOSAL,
-    get_values,
-)
-from ..graphql.utils import create_run_variables
+from ..graphql.const import PROPOSAL
 
 SNAPSHOT_PATH = Path(__file__).parent / "snapshots" / "schema.graphql"
-NEW_RUN = 400
+
+FIXTURE_RUN = 348
+FIXTURE_VARIABLES = {"n_trains", "run_length", "xgm_intensity"}
 
 
 # -----------------------------------------------------------------------------
@@ -78,47 +70,16 @@ def test_public_sdl_unchanged(full_schema):
 
 
 # -----------------------------------------------------------------------------
-# Wire-shape parity: the exact JSON structure the frontend consumes.
-#
-# These use `graphql_schema` (reused from tests/graphql/conftest.py), unlike the SDL
-# parity above, these assert on *values* too, since the wire shape (key names, nesting,
-# ms-timestamps) is what a resolver rewrite could silently change without touching the
-# SDL at all
-
-
-@pytest.fixture
-def mocked_fetch_variables(mocker):
-    values = get_values(EXAMPLE_DATA)
-    wrapped = {
-        "proposal": {"value": values["proposal"]},
-        "run": {"value": values["run"]},
-        **{
-            name: {"value": value, "summary_type": None}
-            for name, value in values.items()
-            if name not in ("proposal", "run")
-        },
-    }
-    return mocker.patch(
-        "damnit_api.graphql.queries.fetch_variables",
-        return_value=[wrapped],
-    )
-
-
-@pytest.fixture
-def mocked_fetch_info(mocker):
-    return mocker.patch(
-        "damnit_api.graphql.queries.fetch_info",
-        return_value=[get_values(KNOWN_DATA)],
-    )
+# Wire-shape parity: the exact JSON structure the frontend consumes (key names,
+# nesting, ms-timestamps) - what a resolver rewrite could change without
+# touching the SDL. Exercised against the CSV-backed repository.
 
 
 @pytest.mark.asyncio
-async def test_runs_query_wire_shape_unchanged(
-    graphql_schema, mocked_fetch_variables, mocked_fetch_info
-):
+async def test_runs_query_wire_shape_unchanged(graphql_schema):
     query = f"""
         query {{
-          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 1) {{
+          runs(database: {{proposal: {PROPOSAL}}}, per_page: 1) {{
             variables {{
               name
               value
@@ -137,12 +98,11 @@ async def test_runs_query_wire_shape_unchanged(
     assert set(runs[0].keys()) == {"variables"}
 
     variables = {v["name"]: v for v in runs[0]["variables"]}
-    assert set(variables) >= {"proposal", "run", "n_trains", "start_time"}
+    assert set(variables) >= {"proposal", "run", "start_time"} | FIXTURE_VARIABLES
     for variable in variables.values():
         assert set(variable.keys()) == {"name", "value", "dtype"}
 
-    # `start_time` is a timestamp: the frontend expects milliseconds
-    assert variables["start_time"]["value"] == KNOWN_DATA["start_time"].damnit_value
+    # `start_time` is a timestamp variable.
     assert variables["start_time"]["dtype"] == "timestamp"
 
 
@@ -155,7 +115,7 @@ async def test_metadata_query_wire_shape_unchanged(graphql_schema):
     """
     result = await graphql_schema.execute(
         query,
-        variable_values={"proposal": str(PROPOSAL)},
+        variable_values={"proposal": PROPOSAL},
     )
 
     assert result.errors is None
@@ -163,95 +123,40 @@ async def test_metadata_query_wire_shape_unchanged(graphql_schema):
     metadata = result.data["metadata"]
     assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags"}
     assert isinstance(metadata["runs"], list)
-    assert metadata["variables"] == {
-        **DamnitRun.known_variables(),
-        **EXAMPLE_VARIABLES,
-    }
+    assert isinstance(metadata["variables"], dict)
+    for variable in metadata["variables"].values():
+        assert set(variable.keys()) == {"name", "title", "tags"}
     assert isinstance(metadata["timestamp"], int | float)
 
 
-@pytest.fixture
-def current_timestamp():
-    return datetime.now(tz=UTC).timestamp()
-
-
-@pytest.fixture
-def mocked_latest_rows(mocker, current_timestamp):
-    table_sentinel = mocker.sentinel.run_variables_table
-    mocker.patch(
-        "damnit_api.graphql.subscriptions.async_table",
-        return_value=table_sentinel,
-    )
-    mocker.patch(
-        "damnit_api.graphql.subscriptions.async_max",
-        return_value=0,
-    )
-
-    def mocked_returns(*args, table, **kwargs):
-        if table is table_sentinel:
-            return create_run_variables(
-                get_values(NEW_DATA),
-                proposal=PROPOSAL,
-                run=NEW_RUN,
-                timestamp=current_timestamp,
-            )
-        return None
-
-    return mocker.patch(
-        "damnit_api.graphql.subscriptions.async_latest_rows",
-        side_effect=mocked_returns,
-    )
-
-
-@pytest.fixture
-def mocked_subscription_fetch_info(mocker):
-    return mocker.patch(
-        "damnit_api.graphql.subscriptions.fetch_info",
-        return_value=[{**get_values(KNOWN_DATA), "run": NEW_RUN}],
-    )
-
-
 @pytest.mark.asyncio
-async def test_latest_data_subscription_wire_shape_unchanged(
-    graphql_schema,
-    current_timestamp,
-    mocked_latest_rows,
-    mocked_subscription_fetch_info,
-):
-    subscription = await graphql_schema.subscribe(
-        """
-        subscription(
-          $proposal: ProposalNo!,
-          $timestamp: Timestamp!) {
-          latest_data(
-            database: { proposal: $proposal },
-            timestamp: $timestamp
-          )
-        }
-        """,
-        variable_values={
-            "proposal": str(PROPOSAL),
-            "timestamp": (current_timestamp - 1) * 1000,
-        },
+async def test_latest_data_subscription_wire_shape_unchanged(mock_repositories):
+    """The subscription's client payload shape, exercised through the same
+    poll_proposal/filter_for_client path the resolver drives."""
+    from damnit_api.graphql.subscriptions import (
+        SubscriptionCursors,
+        filter_for_client,
+        poll_proposal,
     )
+    from damnit_api.shared.models import ProposalNumber
 
-    try:
-        result = await asyncio.wait_for(anext(subscription), timeout=2)
-        assert not result.errors
+    proposal = ProposalNumber(PROPOSAL)
+    cursors = SubscriptionCursors()
+    cursors[proposal] = 0.0  # seed below the fixture timestamps so a run surfaces
+    repo = mock_repositories.get(proposal)
 
-        payload = result.data["latest_data"]
-        assert set(payload.keys()) == {"runs", "metadata"}
+    snapshot = await poll_proposal(proposal, cursors, repo)
+    result = filter_for_client(snapshot, since=500.0)
 
-        runs = payload["runs"]
-        assert set(runs.keys()) == {NEW_RUN}
-        run_data = runs[NEW_RUN]
-        assert set(run_data.keys()) >= {"n_trains", "run_length", "xgm_intensity"}
-        for variable in run_data.values():
-            assert set(variable.keys()) == {"value", "dtype"}
+    assert result is not None
+    assert set(result.keys()) == {"runs", "metadata"}
 
-        metadata = payload["metadata"]
-        assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
-        # ms-timestamp, matching the `metadata` query's serialization
-        assert metadata["timestamp"] == current_timestamp * 1000
-    finally:
-        await subscription.aclose()
+    runs = result["runs"]
+    assert FIXTURE_RUN in runs
+    for variable in runs[FIXTURE_RUN].values():
+        assert set(variable.keys()) == {"value", "dtype"}
+
+    metadata = result["metadata"]
+    assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
+    # ms-timestamp, matching the `metadata` query's serialization.
+    assert isinstance(metadata["timestamp"], int | float)

@@ -1,0 +1,5 @@
+run,name,value,summary_type,timestamp
+348,n_trains,3641,,1000.0
+348,run_length,0:06:03,,1000.0
+348,xgm_intensity,2.073,,1000.0
+348,etof_settings.ret0,-77.0,,1000.0

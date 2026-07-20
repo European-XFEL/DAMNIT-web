@@ -13,14 +13,13 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.pool import NullPool
 
 from damnit_api.runs.sqlite import (
     DAMNIT_PATH,
     DatabaseSessionManager,
-    async_table,
     get_damnit_path,
-    get_session,
 )
 from damnit_api.shared.errors import ProposalNotFoundError
 from damnit_api.shared.models import ProposalNumber
@@ -78,6 +77,7 @@ def _open_file_descriptors_to(db_file: Path):
 
 def test_engine_uses_nullpool_and_autocommit(damnit_db):
     mgr = DatabaseSessionManager(damnit_db)
+    assert mgr._engine is not None
     assert isinstance(mgr._engine.pool, NullPool)
     # Private attribute: the public get_execution_options() does not
     # surface the engine-level isolation_level for async engines.
@@ -88,10 +88,6 @@ def test_engine_uses_nullpool_and_autocommit(damnit_db):
 # File descriptor lifetime
 
 
-# asyncio.run() creates and tears down a fresh event loop, which is what
-# this test verifies (no file descriptors leak after the loop dies).
-# alru_cached async_table sees that loop change; warning is intrinsic.
-@pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
 def test_get_damnit_path_raises_when_proposal_not_found(mocker):
     """A proposal with no resolvable directory raises ProposalNotFoundError."""
     mocker.patch("damnit_api.runs.sqlite.session.find_proposal", return_value="")
@@ -102,13 +98,16 @@ def test_get_damnit_path_raises_when_proposal_not_found(mocker):
         get_damnit_path(_TEST_PROPOSAL)
 
 
-def test_no_lingering_file_descriptor_after_read(damnit_db, damnit_registry, tmp_path):
+# asyncio.run() creates and tears down a fresh event loop; this test verifies
+# no file descriptors leak after the loop dies (NullPool disposes per checkout).
+def test_no_lingering_file_descriptor_after_read(damnit_db, tmp_path):
     db_file = tmp_path / DAMNIT_PATH / "runs.sqlite"
 
     async def do_read():
-        table = await async_table(damnit_registry, damnit_db, name="runs")
-        async with get_session(damnit_registry, damnit_db) as session:
-            await session.execute(table.select())
+        manager = DatabaseSessionManager(damnit_db)
+        async with manager.session() as session:
+            await session.execute(text("SELECT * FROM runs"))
+        await manager.close()
 
     assert _open_file_descriptors_to(db_file) == []
     asyncio.run(do_read())

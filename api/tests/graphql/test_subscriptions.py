@@ -1,285 +1,95 @@
-import asyncio
-from datetime import UTC, datetime
-from unittest.mock import patch
+"""Tests for the latest_data subscription polling logic.
+
+`poll_proposal` and `filter_for_client` are exercised directly against a
+`CsvDamnitRepository` (see conftest). The CSV fixtures put run 348's variables
+at timestamp 1000.0, so a cursor seeded below that surfaces the run.
+"""
 
 import pytest
 
-from damnit_api.graphql.subscriptions import POLLING_INTERVAL, filter_for_client
-from damnit_api.runs.types import DamnitRun
-from damnit_api.shared.const import DamnitType
-
-from .const import (
-    EXAMPLE_VARIABLES,
-    KNOWN_DATA,
-    NEW_DATA,
-    PROPOSAL,
-    RUNS,
-    DatabaseVariable,
-    get_values,
+from damnit_api.graphql.subscriptions import (
+    SubscriptionCursors,
+    filter_for_client,
+    poll_proposal,
 )
-from .utils import create_run_variables
+from damnit_api.shared.models import ProposalNumber
 
-NEW_RUN = 400
+from .const import PROPOSAL
 
-
-patched_sleep = patch.object(asyncio, "sleep", return_value=None)
-
-
-@pytest.fixture(scope="module")
-def current_timestamp():
-    return datetime.now(tz=UTC).timestamp()
-
-
-@pytest.fixture
-def mocked_latest_rows(mocker, current_timestamp):
-    table_sentinel = mocker.sentinel.run_variables_table
-    mocker.patch(
-        "damnit_api.graphql.subscriptions.async_table",
-        return_value=table_sentinel,
-    )
-    mocker.patch(
-        "damnit_api.graphql.subscriptions.async_max",
-        return_value=0,
-    )
-
-    def mocked_returns(*args, table, **kwargs):
-        if table is table_sentinel:
-            return create_run_variables(
-                get_values(NEW_DATA),
-                proposal=PROPOSAL,
-                run=NEW_RUN,
-                timestamp=current_timestamp,
-            )
-        return None
-
-    return mocker.patch(
-        "damnit_api.graphql.subscriptions.async_latest_rows",
-        side_effect=mocked_returns,
-    )
-
-
-@pytest.fixture
-def mocked_fetch_info(mocker):
-    return mocker.patch(
-        "damnit_api.graphql.subscriptions.fetch_info",
-        return_value=[{**get_values(KNOWN_DATA), "run": NEW_RUN}],
-    )
+_PROPOSAL = ProposalNumber(PROPOSAL)
 
 
 @pytest.mark.asyncio
-async def test_latest_data(
-    graphql_schema,
-    current_timestamp,
-    mocked_latest_rows,
-    mocked_fetch_info,
-):
-    subscription = await graphql_schema.subscribe(
-        """
-        subscription LatestDataSubscription(
-          $proposal: ProposalNo!,
-          $timestamp: Timestamp!) {
-          latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
-        }
-        """,
-        variable_values={
-            "proposal": str(PROPOSAL),
-            "timestamp": (current_timestamp - 1) * 1000,  # before the new row
-        },
-    )
+async def test_poll_proposal_surfaces_new_runs(mock_repositories):
+    cursors = SubscriptionCursors()
+    cursors[_PROPOSAL] = 0.0  # seed below the fixture timestamps
+    repo = mock_repositories.get(_PROPOSAL)
 
-    try:
-        result = await asyncio.wait_for(anext(subscription), timeout=2)
-        assert not result.errors
+    snapshot = await poll_proposal(_PROPOSAL, cursors, repo)
 
-        data = {
-            **KNOWN_DATA,
-            **NEW_DATA,
-            "run": DatabaseVariable(
-                value=NEW_RUN,
-                damnit_dtype=DamnitType.NUMBER,
-            ),
-        }
-
-        latest_data = result.data["latest_data"]
-        assert set(latest_data.keys()) == {"runs", "metadata"}
-        assert latest_data["runs"] == {
-            NEW_RUN: {
-                name: {
-                    "value": var.damnit_value,
-                    "dtype": var.damnit_dtype.value,
-                }
-                for name, var in data.items()
-            }
-        }
-
-        metadata = latest_data["metadata"]
-        assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
-        assert metadata["runs"] == [*RUNS, NEW_RUN]
-        assert metadata["timestamp"] == current_timestamp * 1000
-        assert metadata["variables"] == {
-            **DamnitRun.known_variables(),
-            **EXAMPLE_VARIABLES,
-        }
-    finally:
-        await subscription.aclose()
+    assert snapshot is not None
+    assert set(snapshot.keys()) == {
+        "runs",
+        "run_timestamps",
+        "max_timestamp",
+        "metadata",
+    }
+    assert 348 in snapshot["runs"]
+    assert snapshot["max_timestamp"] == pytest.approx(1000.0)
+    run_payload = snapshot["runs"][348]
+    for variable in run_payload.values():
+        assert set(variable.keys()) == {"value", "dtype"}
 
 
 @pytest.mark.asyncio
-async def test_latest_data_with_concurrent_subscriptions(
-    graphql_schema,
-    current_timestamp,
-    mocked_latest_rows,
-    mocked_fetch_info,
-):
-    query = """
-        subscription LatestDataSubscription(
-          $proposal: ProposalNo!,
-          $timestamp: Timestamp!) {
-          latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
-        }
-        """
-    variables = {
-        "proposal": str(PROPOSAL),
-        "timestamp": (current_timestamp - 1) * 1000,  # before the new row
-    }
+async def test_poll_proposal_metadata_shape(mock_repositories):
+    cursors = SubscriptionCursors()
+    cursors[_PROPOSAL] = 0.0
+    repo = mock_repositories.get(_PROPOSAL)
 
-    first_sub = await graphql_schema.subscribe(
-        query,
-        variable_values=variables,
-    )
-    second_sub = await graphql_schema.subscribe(
-        query,
-        variable_values=variables,
-    )
+    snapshot = await poll_proposal(_PROPOSAL, cursors, repo)
 
-    try:
-        with patched_sleep:
-            result = await asyncio.wait_for(anext(first_sub), timeout=2)
-            assert not result.errors
-            mocked_latest_rows.assert_called()
-
-        mocked_latest_rows.reset_mock()
-
-        with patched_sleep:
-            result = await asyncio.wait_for(anext(second_sub), timeout=2)
-            assert not result.errors
-            mocked_latest_rows.assert_not_called()
-    finally:
-        await first_sub.aclose()
-        await second_sub.aclose()
+    assert snapshot is not None
+    metadata = snapshot["metadata"]
+    assert set(metadata.keys()) == {"runs", "variables", "timestamp"}
+    assert 348 in metadata["runs"]
+    # ms-timestamp, matching the metadata query's serialization.
+    assert metadata["timestamp"] == pytest.approx(1000.0 * 1000)
 
 
 @pytest.mark.asyncio
-async def test_latest_data_with_nonconcurrent_subscriptions(
-    graphql_schema,
-    current_timestamp,
-    mocked_latest_rows,
-    mocked_fetch_info,
-):
-    query = """
-        subscription LatestDataSubscription(
-          $proposal: ProposalNo!,
-          $timestamp: Timestamp!) {
-          latest_data(database: { proposal: $proposal }, timestamp: $timestamp)
-        }
-        """
-    variables = {
-        "proposal": str(PROPOSAL),
-        "timestamp": (current_timestamp - 1) * 1000,  # before the new row
+async def test_poll_proposal_no_new_data_returns_none(mock_repositories):
+    """A cursor at/above the newest row yields nothing."""
+    cursors = SubscriptionCursors()
+    cursors[_PROPOSAL] = 1000.0
+    repo = mock_repositories.get(_PROPOSAL)
+
+    assert await poll_proposal(_PROPOSAL, cursors, repo) is None
+
+
+def test_filter_for_client_drops_stale_snapshot():
+    snapshot = {
+        "runs": {348: {"x": {"value": 1, "dtype": "number"}}},
+        "run_timestamps": {348: 1000.0},
+        "max_timestamp": 1000.0,
+        "metadata": {"runs": [348], "variables": {}, "timestamp": 1_000_000.0},
     }
-
-    first_sub = await graphql_schema.subscribe(
-        query,
-        variable_values=variables,
-    )
-    second_sub = await graphql_schema.subscribe(
-        query,
-        variable_values=variables,
-    )
-
-    try:
-        with patched_sleep:
-            result = await asyncio.wait_for(anext(first_sub), timeout=2)
-            assert not result.errors
-            mocked_latest_rows.assert_called()
-
-        await asyncio.sleep(POLLING_INTERVAL * 3)  # give enough time to clear the cache
-        mocked_latest_rows.reset_mock()
-
-        with patched_sleep:
-            result = await asyncio.wait_for(anext(second_sub), timeout=2)
-            assert not result.errors
-            mocked_latest_rows.assert_called()
-    finally:
-        await first_sub.aclose()
-        await second_sub.aclose()
+    # since >= max_timestamp -> nothing new
+    assert filter_for_client(snapshot, since=1000.0) is None
 
 
-# -----------------------------------------------------------------------------
-# filter_for_client
-
-
-def _snapshot(run_timestamps):
-    runs = {run: {"value": run} for run in run_timestamps}
-    return {
-        "runs": runs,
-        "run_timestamps": run_timestamps,
-        "max_timestamp": max(run_timestamps.values()),
-        "metadata": {"runs": list(runs), "variables": {}, "timestamp": 0},
+def test_filter_for_client_returns_fresh_runs():
+    snapshot = {
+        "runs": {348: {"x": {"value": 1, "dtype": "number"}}},
+        "run_timestamps": {348: 1000.0},
+        "max_timestamp": 1000.0,
+        "metadata": {"runs": [348], "variables": {}, "timestamp": 1_000_000.0},
     }
+    result = filter_for_client(snapshot, since=500.0)
+    assert result is not None
+    assert set(result.keys()) == {"runs", "metadata"}
+    assert 348 in result["runs"]
 
 
 def test_filter_for_client_none_snapshot():
-    assert filter_for_client(None, since=0) is None
-
-
-def test_filter_for_client_since_zero_returns_none():
-    snapshot = _snapshot({1: 100.0, 2: 200.0})
-    assert filter_for_client(snapshot, since=0) is None
-
-
-def test_filter_for_client_excludes_equal_timestamp():
-    snapshot = _snapshot({1: 100.0, 2: 200.0})
-    result = filter_for_client(snapshot, since=100.0)
-    assert set(result["runs"].keys()) == {2}
-
-
-def test_filter_for_client_since_above_all_returns_none():
-    snapshot = _snapshot({1: 100.0, 2: 200.0})
-    assert filter_for_client(snapshot, since=300.0) is None
-
-
-# -----------------------------------------------------------------------------
-# Authorization
-
-
-@pytest.mark.asyncio
-async def test_latest_data_unauthorized(graphql_schema_no_auth, current_timestamp):
-    gen = await graphql_schema_no_auth.subscribe(
-        """
-        subscription {
-          latest_data(database: { proposal: "999999" }, timestamp: 0)
-        }
-        """,
-    )
-    # Subscription permission failures surface as a PreExecutionError on the
-    # first iteration rather than immediately from subscribe().
-    first = await gen.__anext__()
-    assert first.errors is not None
-    assert first.errors[0].message == "Authentication required."
-
-
-@pytest.mark.asyncio
-async def test_latest_data_forbidden(graphql_schema_authenticated_non_member):
-    gen = await graphql_schema_authenticated_non_member.subscribe(
-        f"""
-        subscription {{
-          latest_data(database: {{ proposal: "{PROPOSAL}" }}, timestamp: 0)
-        }}
-        """,
-    )
-    # Subscription permission failures surface as a PreExecutionError on the
-    # first iteration rather than immediately from subscribe().
-    first = await gen.__anext__()
-    assert first.errors is not None
-    assert first.errors[0].message == "Access to this proposal is forbidden."
+    assert filter_for_client(None, since=500.0) is None

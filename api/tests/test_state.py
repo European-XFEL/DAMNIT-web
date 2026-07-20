@@ -4,7 +4,7 @@ import ast
 from pathlib import Path
 
 from damnit_api.auth.token_store import InMemoryTokenStore
-from damnit_api.runs.sqlite import DamnitDBRegistry
+from damnit_api.runs.repository import DamnitRepositoryRegistry
 from damnit_api.shared.models import ProposalNumber
 from damnit_api.shared.settings import Settings
 from damnit_api.state import create_oauth_client
@@ -39,19 +39,15 @@ def test_create_oauth_client_returns_none_when_auth_disabled(tmp_path):
     assert create_oauth_client(settings) is None
 
 
-def test_registry_memoizes_managers_per_proposal(monkeypatch):
+def test_repository_registry_memoizes_per_proposal():
     created = []
 
-    class DummyManager:
+    class DummyRepo:
         def __init__(self, proposal):
             self.proposal = proposal
             created.append(proposal)
 
-    monkeypatch.setattr(
-        "damnit_api.runs.sqlite.session.DatabaseSessionManager", DummyManager
-    )
-
-    registry = DamnitDBRegistry()
+    registry = DamnitRepositoryRegistry(DummyRepo)  # ty: ignore[invalid-argument-type]
     first = registry.get(ProposalNumber(1234))
     assert registry.get(ProposalNumber(1234)) is first
     assert registry.get(ProposalNumber(5678)) is not first

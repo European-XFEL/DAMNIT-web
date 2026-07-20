@@ -1,10 +1,7 @@
 from collections.abc import AsyncIterator
-from contextlib import AbstractAsyncContextManager, asynccontextmanager
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from async_lru import alru_cache
-from sqlalchemy import MetaData, Table
-from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
@@ -22,11 +19,12 @@ DAMNIT_PATH = "usr/Shared/amore/"
 _DEFAULT_PROPOSAL = ProposalNumber(DEFAULT_PROPOSAL)
 
 
-# -----------------------------------------------------------------------------
-# Asynchronous
-
-
 class DatabaseSessionManager:
+    """Async SQLAlchemy session manager for a single DAMNIT proposal DB.
+
+    One instance per proposal, held by `SQLiteDamnitRepository`.
+    """
+
     def __init__(self, proposal: ProposalNumber = _DEFAULT_PROPOSAL):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
@@ -34,11 +32,9 @@ class DatabaseSessionManager:
             self.db_path,
             isolation_level="AUTOCOMMIT",
             poolclass=NullPool,
+            connect_args={"timeout": 30},
         )
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
-        # Owned by this manager, not the module:
-        # one reflection cache per proposal, cleared when the manager is.
-        self._table_cache = alru_cache(ttl=300)(self._reflect_table)
 
     @property
     def db_path(self):
@@ -80,42 +76,6 @@ class DatabaseSessionManager:
             raise
         finally:
             await session.close()
-
-    async def _reflect_table(self, name: str) -> Table | None:
-        async with self.connect() as conn:
-            try:
-                return await conn.run_sync(
-                    lambda conn: Table(name, MetaData(), autoload_with=conn)
-                )
-            except NoSuchTableError:
-                # Don't cache misses; the table may appear shortly.
-                self._table_cache.cache_invalidate(name)
-                return None
-
-    async def get_table(self, name: str = "runs") -> Table | None:
-        return await self._table_cache(name)
-
-
-class DamnitDBRegistry:
-    """Per-proposal DAMNIT database registry."""
-
-    def __init__(self) -> None:
-        self._managers: dict[ProposalNumber, DatabaseSessionManager] = {}
-
-    def get(self, proposal: ProposalNumber) -> DatabaseSessionManager:
-        if proposal not in self._managers:
-            self._managers[proposal] = DatabaseSessionManager(proposal)
-        return self._managers[proposal]
-
-
-def get_session(
-    registry: DamnitDBRegistry, proposal: ProposalNumber
-) -> AbstractAsyncContextManager[AsyncSession]:
-    return registry.get(proposal).session()
-
-
-# -----------------------------------------------------------------------------
-# Etc.
 
 
 def get_damnit_path(proposal: ProposalNumber = _DEFAULT_PROPOSAL) -> str:
