@@ -110,5 +110,12 @@ def test_no_lingering_file_descriptor_after_read(damnit_db, tmp_path):
         await manager.close()
 
     assert _open_file_descriptors_to(db_file) == []
-    asyncio.run(do_read())
+    # asyncio.run() clears the thread's "current" event loop on exit, which
+    # breaks pytest-asyncio's session-scoped loop for any async test that
+    # runs afterwards; restore it so later tests aren't affected.
+    current_loop = asyncio.get_event_loop()
+    try:
+        asyncio.run(do_read())
+    finally:
+        asyncio.set_event_loop(current_loop)
     assert _open_file_descriptors_to(db_file) == []

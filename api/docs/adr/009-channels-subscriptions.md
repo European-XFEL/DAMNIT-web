@@ -8,7 +8,7 @@ date: 2026-07-08
 
 The frontend's live table updates use a GraphQL subscription (`latest_data`) over `graphql-transport-ws`. DAMNIT proposal databases are plain SQLite files written by an external process. There is no change feed to subscribe to today, so the server must produce one by polling.
 
-That will not stay true. Candidate event sources exist on the horizon: the facility Kafka bus, or Postgres `LISTEN/NOTIFY` should the application database move to Postgres. The subscription design must not weld resolvers to any one change-detection mechanism.
+That will not stay true. Candidate event sources exist on the horizon: the facility Kafka bus, or Postgres `LISTEN/NOTIFY` should the application database ([ADR-010](010-two-databases.md)) move to Postgres. The subscription design must not weld resolvers to any one change-detection mechanism.
 
 Two forces shape the design. Naive per-client polling multiplies identical reads: N subscribers to one proposal would issue N queries per tick against a GPFS-hosted SQLite file. And any process-local coordination state is a deployment constraint that must be a recorded decision with a retirement path, not an accident.
 

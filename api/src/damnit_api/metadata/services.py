@@ -5,13 +5,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from advanced_alchemy.filters import CollectionFilter
 from anyio import Path as APath
-from sqlmodel import col, select
 
 from .. import get_logger
 from ..shared.errors import ForbiddenError
 from ..shared.models import ProposalNumber
 from .models import ProposalMeta, ProposalMetaBase
+from .repository import ProposalMetaRepository
 
 logger = get_logger()
 
@@ -192,10 +193,9 @@ async def _get_proposal_meta(
 ) -> ProposalMeta:
     """Get proposal metadata by proposal number, using the repository and/or provided
     MyMdC Client."""
+    repo = ProposalMetaRepository(session=session, auto_commit=True)
 
-    statement = select(ProposalMeta).where(ProposalMeta.number == proposal_number)
-    result = (await session.exec(statement)).one_or_none()
-
+    result = await repo.get_one_or_none(number=proposal_number)
     if result:
         await logger.ainfo(
             "Loaded proposal metadata from repository", proposal=proposal_number
@@ -203,10 +203,7 @@ async def _get_proposal_meta(
         return result
 
     fetched = await _fetch_proposal_meta(client, proposal_number)
-    result = ProposalMeta(**fetched.model_dump())
-    session.add(result)
-    await session.commit()
-    return result
+    return await repo.add(ProposalMeta(**fetched.model_dump()))
 
 
 def _chunks(list_, n=10):
@@ -221,9 +218,7 @@ async def _get_proposal_meta_many(
     only_with_damnit: bool = True,
     start_after: datetime | None = None,
 ) -> list[ProposalMeta]:
-    statement = select(ProposalMeta).where(
-        col(ProposalMeta.number).in_(proposal_numbers)
-    )
+    repo = ProposalMetaRepository(session=session, auto_commit=True)
 
     filters = []
     if only_with_damnit:
@@ -232,7 +227,11 @@ async def _get_proposal_meta_many(
     if start_after:
         filters.append(lambda p: p.start_date and p.start_date >= start_after)
 
-    results = list((await session.exec(statement)).all())
+    results = list(
+        await repo.get_many(
+            CollectionFilter(field_name="number", values=proposal_numbers)
+        )
+    )
     missing = set(proposal_numbers) - {p.number for p in results}
 
     if not missing:
@@ -248,9 +247,7 @@ async def _get_proposal_meta_many(
             for p in new_fetched
             if not isinstance(p, BaseException)
         ]
-        session.add_all(new)
-        await session.commit()
-        results.extend(new)
+        results.extend(await repo.add_many(new))
 
     return [p for p in results if all(f(p) for f in filters)]
 
@@ -280,24 +277,10 @@ async def _update_proposal_meta(
 ) -> ProposalMeta:
     fetched = await _fetch_proposal_meta(client, proposal_number)
 
-    # Upsert into DB
-    statement = select(ProposalMeta).where(ProposalMeta.number == proposal_number)
-    result = (await session.exec(statement)).one_or_none()
-
-    if not result:
-        new = ProposalMeta(**fetched.model_dump())
-        session.add(new)
-        await session.commit()
-        return new
-
-    for key, value in fetched.model_dump().items():
-        if getattr(result, key) != value:
-            setattr(result, key, value)
-
-    await session.commit()
-    await session.refresh(result)
-
-    return result
+    repo = ProposalMetaRepository(session=session, auto_commit=True)
+    return await repo.upsert(
+        ProposalMeta(**fetched.model_dump()), match_fields=["number"]
+    )
 
 
 async def update_proposal_meta(

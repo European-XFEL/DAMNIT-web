@@ -86,7 +86,7 @@ damnit_api/
 ├── auth/            # OIDC flow, sessions, tokens, users, authz policy
 ├── contextfile/     # context-file (REST) endpoints
 ├── mymdc/           # MyMdC port
-├── appdb/           # application-DB engine/session/models
+├── appdb/           # application-DB engine/session/models; see ADR-010
 │
 └── graphql/         # transport composition only (ADR-007):
     ├── schema.py    #   assemble Query/Subscription from feature gql modules
