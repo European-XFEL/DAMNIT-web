@@ -79,8 +79,8 @@ dev = [
 default-groups = []
 
 [tool.pytest.ini_options]
-# Session-scoped event loop so alru_cache instances bind once and never
-# see a loop change between tests (no AlruCacheLoopResetWarning).
+# Session-scoped event loop so async fixtures (e.g. the channels plugin) and
+# tests share one loop across the suite, with no loop change between tests.
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 

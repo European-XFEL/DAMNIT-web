@@ -58,7 +58,7 @@ The key rules are:
 3. **Composition root reads settings:** everything else receives configuration as parameters (see [ADR-003](adr/003-injected-settings.md)).
 4. **Authorisation applied at the edge:** routes and resolvers use dependencies and permission classes.
   - This means that services should not apply authorisation rules themselves.
-5. **No `if settings.is_local:` outside the composition root:** Local mode is selected by composition, not conditionals throughout the codebase.
+5. **No `if settings.is_local:` outside the composition root:** Local mode is selected by composition, not conditionals throughout the codebase (see [ADR-008](adr/008-local-mode-composition.md)).
 
 Note that these are currently only enforced by convention/review. Import linter/archetecture check tool is planned to be added.
 

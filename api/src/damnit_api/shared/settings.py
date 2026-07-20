@@ -30,6 +30,12 @@ class UvicornSettings(BaseModel):
     ssl_keyfile: FilePath | None = None
     ssl_certfile: FilePath | None = None
 
+    # NOTE (ops): `workers` may be set here (extra fields are allowed and
+    # passed straight to uvicorn), but workers > 1 requires shared channels
+    # and store backends. With the current process-local backends
+    # (MemoryChannelsBackend; MemoryStore in local mode) the app refuses to
+    # start multi-worker; see the guard in main.create_app (ADR-009).
+
     @field_validator("factory", mode="after")
     @classmethod
     def factory_must_be_true(cls, v, values):

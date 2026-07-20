@@ -15,6 +15,8 @@ KNOWN_PATHS = ["/graphql"]
 
 def create_app():
     from litestar import Request, Response
+    from litestar.channels import ChannelsPlugin
+    from litestar.channels.backends.memory import MemoryChannelsBackend
     from litestar.middleware.session.server_side import ServerSideSessionConfig
     from litestar.openapi import OpenAPIConfig
     from litestar.response import Redirect
@@ -24,7 +26,8 @@ def create_app():
 
     from . import _logging, auth, get_logger
     from .auth.oauth import SESSION_COOKIE_KEY, create_oauth_client
-    from .graphql.dependencies import get_subscription_cursors
+    from .graphql.dependencies import get_channels, get_run_update_publisher
+    from .graphql.publisher import SqlitePollingRunUpdatePublisher
     from .runs.dependencies import get_repositories
     from .shared.errors import DamnitWebError
     from .shared.gql import get_gql_controller
@@ -35,7 +38,6 @@ def create_app():
         create_db_sessionmaker,
         create_mymdc_client,
         create_repositories,
-        create_subscription_cursors,
         provide_app_state,
     )
 
@@ -47,6 +49,32 @@ def create_app():
     # named store (sessions, response cache); the backend is mode-dependent
     # (in-memory locally, file-backed otherwise) and selected below.
     session_config = ServerSideSessionConfig(key=SESSION_COOKIE_KEY)
+
+    # ── Channels (run-update pub/sub) ─────────────────────────────────────────
+    # Subscribers consume per-proposal channels; the composition-selected
+    # publisher (built in the lifespan) produces the events. The in-memory
+    # backend is process-local (ADR-009).
+    channels_plugin = ChannelsPlugin(
+        backend=MemoryChannelsBackend(),
+        arbitrary_channels_allowed=True,
+    )
+
+    # ── Multi-worker guard ────────────────────────────────────────────────────
+    # The channels backend (and, in local mode, the session store) are
+    # process-local, so run-update events and sessions are not shared across
+    # workers. Refuse to start multi-worker until shared backends are wired
+    # (ADR-009).
+    process_local = ["channels: MemoryChannelsBackend"]
+    if settings.is_local:
+        process_local.append("stores: MemoryStore")
+    workers = getattr(settings.uvicorn, "workers", None) or 1
+    if workers > 1:
+        msg = (
+            f"uvicorn workers={workers} requires shared backends, but these "
+            f"are process-local: {', '.join(process_local)}. Run a single "
+            "worker, or wire shared channels/store backends (ADR-009)."
+        )
+        raise RuntimeError(msg)
 
     # ── Exception handlers ────────────────────────────────────────────────────
     def dw_error_handler(request: Request, exc: DamnitWebError) -> Response:
@@ -92,18 +120,26 @@ def create_app():
         if oauth_client is not None:
             await oauth_client.load_server_metadata()
 
+        repositories = create_repositories()
+        run_update_publisher = SqlitePollingRunUpdatePublisher(
+            channels=channels_plugin,
+            repositories=repositories,
+        )
+
         app.state.app_state = AppState(
             db_engine=engine,
             db_sessionmaker=create_db_sessionmaker(engine),
             mymdc_client=create_mymdc_client(settings),
             oauth_client=oauth_client,
-            repositories=create_repositories(),
-            subscription_cursors=create_subscription_cursors(),
+            repositories=repositories,
+            channels=channels_plugin,
+            run_update_publisher=run_update_publisher,
         )
 
         try:
             yield
         finally:
+            await run_update_publisher.aclose()
             await engine.dispose()
 
     def _file_store(name: str) -> FileStore:
@@ -144,11 +180,13 @@ def create_app():
             "mymdc": Provide(get_mymdc_client, sync_to_thread=False),
             "user": Provide(get_user),
             "oauth_user": Provide(get_oauth_user_info, sync_to_thread=False),
-            "subscription_cursors": Provide(
-                get_subscription_cursors, sync_to_thread=False
+            "channels": Provide(get_channels, sync_to_thread=False),
+            "run_update_publisher": Provide(
+                get_run_update_publisher, sync_to_thread=False
             ),
             "repositories": Provide(get_repositories, sync_to_thread=False),
         },
+        plugins=[channels_plugin],
         stores=stores,
         middleware=[
             session_config.middleware,

@@ -18,9 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
+    from litestar.channels import ChannelsPlugin
+
     from ._mymdc.clients import MyMdCClient
     from .auth.oauth import OAuthClient
-    from .graphql.subscriptions import SubscriptionCursors
+    from .graphql.publisher import RunUpdatePublisher
     from .runs.repository import DamnitRepositoryRegistry
     from .shared.settings import Settings
 
@@ -32,7 +34,8 @@ class AppState:
     mymdc_client: MyMdCClient
     oauth_client: OAuthClient | None  # None when auth is disabled
     repositories: DamnitRepositoryRegistry
-    subscription_cursors: SubscriptionCursors
+    channels: ChannelsPlugin
+    run_update_publisher: RunUpdatePublisher
 
 
 def create_db_engine(settings: Settings) -> AsyncEngine:
@@ -69,12 +72,6 @@ def create_repositories() -> DamnitRepositoryRegistry:
     from .runs.sqlite.repository import SQLiteDamnitRepository
 
     return DamnitRepositoryRegistry(SQLiteDamnitRepository)
-
-
-def create_subscription_cursors() -> SubscriptionCursors:
-    from .graphql.subscriptions import SubscriptionCursors
-
-    return SubscriptionCursors()
 
 
 def provide_app_state(state: LitestarState) -> AppState:

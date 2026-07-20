@@ -1,15 +1,23 @@
 """Litestar dependency helpers for GraphQL subscription state."""
 
+from litestar.channels import ChannelsPlugin
 from litestar.datastructures import State
 
-from .subscriptions import SubscriptionCursors
+from .publisher import RunUpdatePublisher
 
 
-def get_subscription_cursors(state: State) -> SubscriptionCursors:
-    """Provide the subscription cursors from the application state."""
-    return state.app_state.subscription_cursors  # type: ignore[attr-defined]
+def get_channels(state: State) -> ChannelsPlugin:
+    """Provide the channels plugin from the application state."""
+    return state.app_state.channels  # type: ignore[attr-defined]
 
 
-# Plain type alias; Litestar injects by the parameter name `subscription_cursors`.
-SubscriptionCursorsDep = SubscriptionCursors
-"""Type alias for the subscription cursors dependency."""
+def get_run_update_publisher(state: State) -> RunUpdatePublisher:
+    """Provide the run-update publisher from the application state."""
+    return state.app_state.run_update_publisher  # type: ignore[attr-defined]
+
+
+# Plain type aliases; Litestar injects by the parameter name.
+ChannelsDep = ChannelsPlugin
+"""Type alias for the channels-plugin dependency."""
+RunUpdatePublisherDep = RunUpdatePublisher
+"""Type alias for the run-update-publisher dependency."""

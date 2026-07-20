@@ -2,16 +2,14 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import pytest_asyncio
 import strawberry
 from strawberry.schema.config import StrawberryConfig
 
 from damnit_api.graphql.directives import lightweight
+from damnit_api.graphql.publisher import SqlitePollingRunUpdatePublisher
 from damnit_api.graphql.queries import Query
-from damnit_api.graphql.subscriptions import (
-    Subscription,
-    SubscriptionCursors,
-    poll_proposal,
-)
+from damnit_api.graphql.subscriptions import Subscription
 from damnit_api.runs.csv import CsvDamnitRepository
 from damnit_api.runs.repository import DamnitRepositoryRegistry
 from damnit_api.runs.types import SCALAR_MAP, DamnitVariable
@@ -40,14 +38,24 @@ class SchemaWithContext:
         )
 
 
-@pytest.fixture
-def subscription_cursors() -> SubscriptionCursors:
-    return SubscriptionCursors()
+@pytest_asyncio.fixture
+async def channels_plugin():
+    from litestar.channels import ChannelsPlugin
+    from litestar.channels.backends.memory import MemoryChannelsBackend
+
+    plugin = ChannelsPlugin(
+        backend=MemoryChannelsBackend(), arbitrary_channels_allowed=True
+    )
+    async with plugin:
+        yield plugin
 
 
-@pytest.fixture(autouse=True)
-def reset_caches():
-    poll_proposal.cache_clear()
+def make_publisher(channels_plugin, repositories, **kwargs):
+    """A fast-ticking SQLite polling publisher for subscription tests."""
+    kwargs.setdefault("interval", 0.01)
+    return SqlitePollingRunUpdatePublisher(
+        channels=channels_plugin, repositories=repositories, **kwargs
+    )
 
 
 def _patch_permissions(mocker, *, authenticated: bool, member: bool) -> None:
@@ -96,7 +104,6 @@ def mock_repositories(csv_fixture_dir):
 def graphql_context(mock_repositories):
     return SimpleNamespace(
         repositories=mock_repositories,
-        subscription_cursors=SubscriptionCursors(),
         oauth_user=None,
     )
 
