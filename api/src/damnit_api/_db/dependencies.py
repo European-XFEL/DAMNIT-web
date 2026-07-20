@@ -1,19 +1,17 @@
-"""FastAPI dependency helpers for database sessions."""
+"""Litestar dependency helpers for database sessions."""
 
 from collections.abc import AsyncIterator
-from typing import Annotated
 
-from fastapi import Depends, Request
+from litestar.datastructures import State
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from ..state import get_app_state
 
-
-async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
+async def get_session(state: State) -> AsyncIterator[AsyncSession]:
     """Provide a database session from the application state."""
 
-    async with get_app_state(request).db_sessionmaker() as session:
+    async with state.app_state.db_sessionmaker() as session:  # type: ignore[attr-defined]
         yield session
 
 
-DBSession = Annotated[AsyncSession, Depends(get_session)]
+# Plain type alias; Litestar injects by the parameter name `session`.
+DBSession = AsyncSession

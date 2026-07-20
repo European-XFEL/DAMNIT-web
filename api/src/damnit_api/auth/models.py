@@ -2,7 +2,7 @@
 
 from typing import Self
 
-from fastapi.requests import HTTPConnection
+from litestar.connection import ASGIConnection
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, RootModel
 
 from .. import get_logger
@@ -33,12 +33,12 @@ class OAuthUserInfo(BaseUserInfo):
     """Basic user information obtained from the OAuth provider."""
 
     @classmethod
-    def from_connection(cls, connection: HTTPConnection) -> Self:
+    def from_connection(cls, connection: ASGIConnection) -> Self:
         """Create an OAuthUserInfo from the request session.
 
         !!! note
 
-            Dependency on `HTTPConnection` instead of `Request` to support websockets.
+            Dependency on `ASGIConnection` instead of `Request` to support websockets.
         """
         user_dict = connection.session.get("user")
         if user_dict is None:
@@ -82,7 +82,7 @@ class User(BaseUserInfo):
     @classmethod
     async def from_connection(
         cls,
-        connection: HTTPConnection,
+        connection: ASGIConnection,
         mymdc: MyMdCClient,
         session: DBSession,
     ) -> Self:
@@ -91,7 +91,7 @@ class User(BaseUserInfo):
 
         !!! note
 
-            Dependency on `HTTPConnection` instead of `Request` to support websockets.
+            Dependency on `ASGIConnection` instead of `Request` to support websockets.
         """
 
         oauth = OAuthUserInfo.from_connection(connection)

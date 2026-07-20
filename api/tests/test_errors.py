@@ -2,7 +2,8 @@
 
 import pytest
 import structlog
-from fastapi.testclient import TestClient
+from litestar import get
+from litestar.testing import TestClient
 
 from damnit_api.main import create_app
 from damnit_api.shared.errors import (
@@ -75,31 +76,19 @@ def test_request_id_none_when_not_bound():
 
 
 # -----------------------------------------------------------------------------
-# FastAPI exception handler
+# Litestar exception handler
 
 
 @pytest.fixture
 def app(monkeypatch):
-    monkeypatch.setenv("DW_API_AUTH__CLIENT_ID", "test")
-    monkeypatch.setenv("DW_API_AUTH__CLIENT_SECRET", "test")
-    monkeypatch.setenv(
-        "DW_API_AUTH__SERVER_METADATA_URL", "https://example.com/.well-known"
-    )
-    monkeypatch.setenv("DW_API_SESSION_SECRET", "test")
+    # AppState is built in the lifespan; stub the only startup step that
+    # does network I/O (OIDC discovery).
+    async def noop_load(self):
+        pass
 
-    # No OAuth client: skips the OIDC metadata fetch at startup; these tests
-    # never exercise the oauth routes.
-    monkeypatch.setattr("damnit_api.state.create_oauth_client", lambda settings: None)
+    monkeypatch.setattr("damnit_api.state.OAuthClient.load_server_metadata", noop_load)
 
-    app = create_app()
-    yield app
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def client(app):
-    with TestClient(app, raise_server_exceptions=False) as c:
-        yield c
+    return create_app()
 
 
 @pytest.mark.parametrize(
@@ -110,13 +99,16 @@ def client(app):
         (UpstreamServiceError, 502),
     ],
 )
-def test_handler_maps_dwerror_to_status_code(app, client, exc_class, expected_status):
-    @app.get("/__test_raise__")
-    def _raise():
+def test_handler_maps_dwerror_to_status_code(app, exc_class, expected_status):
+    @get("/__test_raise__", sync_to_thread=False)
+    def _raise() -> None:
         msg = "boom"
         raise exc_class(msg, details="extra")
 
-    resp = client.get("/__test_raise__")
+    app.register(_raise)
+
+    with TestClient(app) as client:
+        resp = client.get("/__test_raise__")
 
     assert resp.status_code == expected_status
     body = resp.json()

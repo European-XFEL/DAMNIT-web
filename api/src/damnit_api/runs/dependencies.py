@@ -1,17 +1,15 @@
-"""FastAPI dependency helpers for the runs repository registry."""
+"""Litestar dependency helpers for the runs repository registry."""
 
-from typing import Annotated
+from litestar.datastructures import State
 
-from fastapi import Depends, Request
-
-from ..state import get_app_state
 from .repository import DamnitRepositoryRegistry
 
 
-def get_repositories(request: Request) -> DamnitRepositoryRegistry:
+def get_repositories(state: State) -> DamnitRepositoryRegistry:
     """Provide the per-proposal repository registry from the application state."""
-    return get_app_state(request).repositories
+    return state.app_state.repositories  # type: ignore[attr-defined]
 
 
-Repositories = Annotated[DamnitRepositoryRegistry, Depends(get_repositories)]
+# Plain type alias; Litestar injects by the parameter name `repositories`.
+Repositories = DamnitRepositoryRegistry
 """Type alias for the DAMNIT repository registry dependency."""

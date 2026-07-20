@@ -77,14 +77,17 @@ async def test_member_passes_authorization_unchanged(logged_in_client):
     assert payload["data"]["runs"]
 
 
-async def test_graphql_query_without_session_unchanged(e2e_client):
-    """Today an unauthenticated GraphQL request is NOT turned into an HTTP error.
+async def test_graphql_query_without_session_rejected(e2e_client):
+    """An unauthenticated GraphQL request is rejected, not served.
+
+    The session lookup raises `ValueError` ("No user info in session") while
+    building the GraphQL context. Litestar's exception handling turns that into
+    a 500 response; under FastAPI the same error propagated unhandled through the
+    raw ASGI transport instead.
 
     !!! todo
 
-        Currently session-lookup `ValueError` is unhandled (surfaced here by raw ASGI
-        transport). This should become a proper 401 error, test and must be updated
-        this test when it does.
+        This should become a proper 401 error; update this test when it does.
     """
-    with pytest.raises(ValueError, match="No user info in session"):
-        await e2e_client.post("/graphql", json=runs_query(MEMBER_PROPOSAL))
+    response = await e2e_client.post("/graphql", json=runs_query(MEMBER_PROPOSAL))
+    assert response.status_code == 500

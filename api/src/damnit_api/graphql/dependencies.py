@@ -1,19 +1,15 @@
-"""FastAPI dependency helpers for GraphQL subscription state."""
+"""Litestar dependency helpers for GraphQL subscription state."""
 
-from typing import Annotated
+from litestar.datastructures import State
 
-from fastapi import Depends, Request
-
-from ..state import get_app_state
 from .subscriptions import SubscriptionCursors
 
 
-def get_subscription_cursors(request: Request) -> SubscriptionCursors:
+def get_subscription_cursors(state: State) -> SubscriptionCursors:
     """Provide the subscription cursors from the application state."""
-    return get_app_state(request).subscription_cursors
+    return state.app_state.subscription_cursors  # type: ignore[attr-defined]
 
 
-SubscriptionCursorsDep = Annotated[
-    SubscriptionCursors, Depends(get_subscription_cursors)
-]
+# Plain type alias; Litestar injects by the parameter name `subscription_cursors`.
+SubscriptionCursorsDep = SubscriptionCursors
 """Type alias for the subscription cursors dependency."""

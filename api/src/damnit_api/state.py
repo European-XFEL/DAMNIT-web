@@ -8,23 +8,44 @@ field is produced by a pure ``create_*`` factory taking :class:`Settings`
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from fastapi import (
-    Request,  # noqa: TC002 - FastAPI DI inspects annotations at runtime
+from litestar.datastructures import (
+    State as LitestarState,  # noqa: TC002 - Litestar inspects annotations at runtime via get_type_hints
 )
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
-    from authlib.integrations.starlette_client import StarletteOAuth2App
-
     from ._mymdc.clients import MyMdCClient
     from .auth.token_store import TokenStore
     from .graphql.subscriptions import SubscriptionCursors
     from .runs.repository import DamnitRepositoryRegistry
     from .shared.settings import Settings
+
+# Session cookie name, shared by `main.py`'s `CookieBackendConfig` and the
+# logout handlers in `auth/routers.py` so the two cannot drift.
+SESSION_COOKIE_KEY = "session"
+
+
+@dataclass
+class OAuthClient:
+    """OAuth2/OIDC client configuration with lazily loaded server metadata."""
+
+    client_id: str
+    client_secret: str
+    scope: str
+    server_metadata_url: str
+    server_metadata: dict = field(default_factory=dict)
+
+    async def load_server_metadata(self) -> None:
+        import httpx
+
+        async with httpx.AsyncClient() as http:
+            resp = await http.get(self.server_metadata_url)
+            resp.raise_for_status()
+            self.server_metadata = resp.json()
 
 
 @dataclass(frozen=True)
@@ -32,7 +53,7 @@ class AppState:
     db_engine: AsyncEngine
     db_sessionmaker: async_sessionmaker[AsyncSession]
     mymdc_client: MyMdCClient
-    oauth_client: StarletteOAuth2App | None  # None when auth is disabled
+    oauth_client: OAuthClient | None  # None when auth is disabled
     token_store: TokenStore
     repositories: DamnitRepositoryRegistry
     subscription_cursors: SubscriptionCursors
@@ -62,21 +83,16 @@ def create_mymdc_client(settings: Settings) -> MyMdCClient:
             raise ValueError(msg)
 
 
-def create_oauth_client(settings: Settings) -> StarletteOAuth2App | None:
+def create_oauth_client(settings: Settings) -> OAuthClient | None:
     if settings.auth is None:
         return None
 
-    from authlib.integrations.starlette_client import OAuth
-
-    oauth = OAuth()
-    oauth.register(
-        name="damnit_web",
+    return OAuthClient(
         client_id=settings.auth.client_id,
         client_secret=settings.auth.client_secret.get_secret_value(),
+        scope="openid email groups",
         server_metadata_url=str(settings.auth.server_metadata_url),
-        client_kwargs={"scope": "openid email groups"},
     )
-    return oauth.damnit_web  # pyright: ignore[reportReturnType]
 
 
 def create_token_store() -> TokenStore:
@@ -103,6 +119,6 @@ def create_subscription_cursors() -> SubscriptionCursors:
     return SubscriptionCursors()
 
 
-def get_app_state(request: Request) -> AppState:
-    """FastAPI dependency: the application's :class:`AppState`."""
-    return request.app.state.app_state
+def provide_app_state(state: LitestarState) -> AppState:
+    """Litestar dependency: the application's :class:`AppState`."""
+    return state.app_state  # type: ignore[attr-defined]

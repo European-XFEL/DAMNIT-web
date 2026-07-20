@@ -1,21 +1,34 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse, RedirectResponse
-from starlette.middleware.sessions import SessionMiddleware
+from litestar import Litestar
+from litestar.di import Provide
+from litestar.exceptions import HTTPException
 
-from ._logging import RequestLoggingMiddleware
+from . import contextfile, metadata
+from ._db.dependencies import get_session
+from ._mymdc.dependencies import get_mymdc_client
+from .auth.dependencies import get_oauth_user_info, get_user
 
-# Known paths are redirected to the login page and
-# then back after successful authentication.
+# Known paths are redirected to the login page after a 401.
 KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import _logging, auth, contextfile, get_logger, metadata
-    from .shared import errors, gql
+    import hashlib
+
+    from litestar import Request, Response
+    from litestar.middleware.session.client_side import CookieBackendConfig
+    from litestar.openapi import OpenAPIConfig
+    from litestar.response import Redirect
+
+    from . import _logging, auth, get_logger
+    from .graphql.dependencies import get_subscription_cursors
+    from .runs.dependencies import get_repositories
+    from .shared.errors import DamnitWebError
+    from .shared.gql import get_gql_controller
     from .shared.settings import settings
     from .state import (
+        SESSION_COOKIE_KEY,
         AppState,
         create_db_engine,
         create_db_sessionmaker,
@@ -24,12 +37,50 @@ def create_app():
         create_repositories,
         create_subscription_cursors,
         create_token_store,
+        provide_app_state,
     )
 
     logger = get_logger("lifespan")
 
+    # ── Session middleware ────────────────────────────────────────────────────
+    # Derive a 32-byte AES key from the session secret via SHA-256.
+    session_secret = settings.session_secret
+    assert session_secret is not None  # enforced by Settings validator  # noqa: S101
+    session_config = CookieBackendConfig(
+        secret=hashlib.sha256(session_secret.get_secret_value().encode()).digest(),
+        key=SESSION_COOKIE_KEY,
+    )
+
+    # ── Exception handlers ────────────────────────────────────────────────────
+    def dw_error_handler(request: Request, exc: DamnitWebError) -> Response:
+        code = getattr(exc, "code", None) or 500
+        return Response(
+            content={
+                "message": exc.message,
+                "details": exc.details,
+                "request_id": exc.request_id,
+            },
+            status_code=code,
+        )
+
+    def unauthorized_handler(
+        request: Request, exc: HTTPException
+    ) -> Response | Redirect:
+        if exc.status_code == 401 and request.url.path in KNOWN_PATHS:
+            from urllib.parse import urlencode
+
+            redirect_to = (
+                f"/oauth/login?{urlencode({'redirect_uri': request.url.path})}"
+            )
+            return Redirect(path=redirect_to, status_code=307)
+        return Response(content={"detail": exc.detail}, status_code=exc.status_code)
+
+    # ── OpenAPI config ────────────────────────────────────────────────────────
+    openapi_config = OpenAPIConfig(title="DAMNIT Web API", version="1.0.0")
+
+    # ── Lifespan ──────────────────────────────────────────────────────────────
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: Litestar):
         _logging.configure(
             level=settings.log_level,
             debug=settings.debug,
@@ -38,14 +89,15 @@ def create_app():
 
         logger.info("Starting application lifespan")
 
+        engine = create_db_engine(settings)
+
         oauth_client = create_oauth_client(settings)
         if oauth_client is not None:
             await oauth_client.load_server_metadata()
 
-        db_engine = create_db_engine(settings)
         app.state.app_state = AppState(
-            db_engine=db_engine,
-            db_sessionmaker=create_db_sessionmaker(db_engine),
+            db_engine=engine,
+            db_sessionmaker=create_db_sessionmaker(engine),
             mymdc_client=create_mymdc_client(settings),
             oauth_client=oauth_client,
             token_store=create_token_store(),
@@ -53,76 +105,55 @@ def create_app():
             subscription_cursors=create_subscription_cursors(),
         )
 
-        if settings.is_local:
-            app.router.include_router(auth.noauth_router)
-        else:
-            app.router.include_router(auth.router)
-        app.router.include_router(metadata.router)
-        app.router.include_router(contextfile.router)
-        app.router.include_router(gql.get_gql_app(), prefix="/graphql")
-        yield
+        try:
+            yield
+        finally:
+            await engine.dispose()
 
-    swagger_oauth = (
-        None
-        if settings.auth is None
-        else {
-            "usePkceWithAuthorizationCodeGrant": True,
-            "clientId": settings.auth.client_id,
-        }
-    )
-    app = FastAPI(lifespan=lifespan, swagger_ui_init_oauth=swagger_oauth)
-
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):  # noqa: RUF029
-        request_path = request.url.path
-        if (
-            not settings.is_local
-            and exc.status_code == status.HTTP_401_UNAUTHORIZED
-            and request_path in KNOWN_PATHS
-        ):
-            return RedirectResponse(url=f"/oauth/login?redirect_uri={request_path}")
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"detail": exc.detail},
-        )
-
-    @app.exception_handler(errors.DamnitWebError)
-    async def base_exception_handler(request: Request, exc: errors.DamnitWebError):  # noqa: RUF029
-        status_code = exc.code or status.HTTP_500_INTERNAL_SERVER_ERROR
-
-        content: dict[str, str | int | dict] = {
-            "message": exc.message,
-            "status_code": status_code,
-        }
-
-        if exc.details:
-            content["details"] = exc.details
-
-        if exc.request_id:
-            content["request_id"] = exc.request_id
-
-        return JSONResponse(
-            status_code=status_code,
-            content=content,
-        )
-
-    app.add_middleware(
-        SessionMiddleware,
-        secret_key=settings.session_secret.get_secret_value(),  # pyright: ignore[reportOptionalMemberAccess]
+    # ── Auth controller (mode-dependent, ADR-008 composition) ───────────────
+    auth_controller = (
+        auth.NoAuthOAuthController if settings.is_local else auth.OAuthController
     )
 
-    app.add_middleware(RequestLoggingMiddleware)
+    # ── GraphQL controller ────────────────────────────────────────────────────
+    gql_controller = get_gql_controller()
 
-    try:
-        from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
-
-        app.add_middleware(
-            ProxyHeadersMiddleware, trusted_hosts=["localhost", "127.0.0.1"]
-        )
-    except Exception:
-        logger.warning("Could not add proxy headers middleware")
-
-    return app
+    return Litestar(
+        route_handlers=[
+            metadata.router,
+            contextfile.router,
+            auth_controller,
+            gql_controller,
+        ],
+        lifespan=[lifespan],
+        dependencies={
+            "app_state": Provide(provide_app_state, sync_to_thread=False),
+            # Shared across all routes; resolved on demand.
+            "oauth_config": Provide(
+                auth.dependencies.get_oauth_client, sync_to_thread=False
+            ),
+            "token_store": Provide(
+                auth.dependencies.get_token_store, sync_to_thread=False
+            ),
+            "session": Provide(get_session),
+            "mymdc": Provide(get_mymdc_client, sync_to_thread=False),
+            "user": Provide(get_user),
+            "oauth_user": Provide(get_oauth_user_info, sync_to_thread=False),
+            "subscription_cursors": Provide(
+                get_subscription_cursors, sync_to_thread=False
+            ),
+            "repositories": Provide(get_repositories, sync_to_thread=False),
+        },
+        middleware=[
+            session_config.middleware,
+            _logging.RequestLoggingMiddleware,
+        ],
+        exception_handlers={  # ty: ignore[invalid-argument-type]
+            DamnitWebError: dw_error_handler,
+            HTTPException: unauthorized_handler,
+        },
+        openapi_config=openapi_config,
+    )
 
 
 if __name__ == "__main__":

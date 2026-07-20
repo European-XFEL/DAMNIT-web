@@ -1,19 +1,15 @@
 import inspect
 import logging
 import sys
-from typing import TYPE_CHECKING
 
 import colorama
 import structlog
 import structlog.typing
 import ulid
-from starlette.middleware.base import BaseHTTPMiddleware
+from litestar.middleware.base import MiddlewareProtocol
+from litestar.types import ASGIApp, Message, Receive, Scope, Send
 from structlog.dev import RichTracebackFormatter
 from structlog.stdlib import ProcessorFormatter
-
-if TYPE_CHECKING:  # pragma: no cover
-    from starlette.requests import Request
-    from starlette.responses import Response
 
 
 def get_logger(logger_name: str | None = None):
@@ -181,52 +177,58 @@ def configure_uvicorn(renderer, shared_processors):
     uvicorn.config.LOGGING_CONFIG["loggers"]["uvicorn.access"]["propagate"] = False
 
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    _logger = None
+class RequestLoggingMiddleware(MiddlewareProtocol):
+    """Log requests and responses via structlog, replacing uvicorn access logs."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+        self._logger = None
 
     @property
     def logger(self):
         if not self._logger:
             self._logger = structlog.get_logger(logger_name="damnit_api.access_log")
-
         return self._logger
 
-    async def dispatch(self, request: "Request", call_next) -> "Response":
-        """Add a middleware to FastAPI that will log requests and responses,
-        this is used instead of the builtin Uvicorn access logging to better
-        integrate with structlog"""
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
         structlog.contextvars.bind_contextvars(request_id=str(ulid.ULID()))
 
-        info = {
-            "method": request.method,
-            "path": request.scope["path"],
-            "client": request.client,
+        info: dict = {
+            "method": scope["method"],
+            "path": scope["path"],
+            "client": scope.get("client"),
         }
 
-        if request.query_params:
-            info["query_params"] = str(request.query_params)
+        if query_string := scope.get("query_string"):
+            info["query_params"] = query_string.decode()
 
-        if request.path_params:
-            info["path_params"] = str(request.path_params)
+        if path_params := scope.get("path_params"):
+            info["path_params"] = str(path_params)
 
         logger = self.logger.bind()
-
         logger.info("Request", **info)
 
-        response = await call_next(request)
+        async def send_wrapper(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                status_code: int = message["status"]
 
-        if response.status_code < 400:
-            response_logger = logger.info
-        elif response.status_code < 500:
-            response_logger = logger.warn
-        else:
-            response_logger = logger.error
+                if status_code < 400:
+                    response_logger = logger.info
+                elif status_code < 500:
+                    response_logger = logger.warn
+                else:
+                    response_logger = logger.error
 
-        # Health checks are noisy, so we downgrade their log level
-        if request.url.path.endswith("/health"):
-            response_logger = logger.debug
+                # Health checks are noisy, so we downgrade their log level
+                if scope["path"].endswith("/health"):
+                    response_logger = logger.debug
 
-        response_logger("Response", status_code=response.status_code)
+                response_logger("Response", status_code=status_code)
 
-        return response
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)

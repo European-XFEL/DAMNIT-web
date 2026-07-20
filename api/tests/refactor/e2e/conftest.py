@@ -5,9 +5,9 @@ Tests defined here should only interact with the app via HTTP, never python call
 This conftest is the only place allowed to touch the app, and only via:
 
 - the app factory (`damnit_api.main.create_app`), imported lazily inside a fixture
-- `mint_session_cookie`, which forges the signed session cookie OAuth callback would set
+- `mint_session_cookie`, which forges the session cookie OAuth callback would set
   - This helper is deliberately coupled to the session implementation
-  (Starlette `SessionMiddleware` over `itsdangerous`)
+  (Litestar's client-side `CookieBackendConfig`)
   - The framework-swap branch must update this one helper and nothing else
 
 Outbound HTTP is recorded and replayed with pytest-recording. Cassettes stored in
@@ -18,15 +18,12 @@ check this before committing files. In theory, the `vcr_config` filters strip au
 headers and OAuth client credentials at record time, but you should still check.
 """
 
-import base64
-import json
 from pathlib import Path
 
 import httpx
 import pytest
 import pytest_asyncio
 from asgi_lifespan import LifespanManager
-from itsdangerous import TimestampSigner
 
 SESSION_COOKIE = "session"
 
@@ -142,16 +139,33 @@ async def logged_in_client(e2e_client):  # noqa: RUF029 - must be async to recei
 
 
 def mint_session_cookie(user: dict | None = None) -> dict[str, str]:
-    """Forge the signed session cookie a completed OAuth login would set.
+    """Forge the session cookie a completed OAuth login would set.
 
     !!! warning
 
         This bypasses awkward OAuth internals (redirects, callbacks, etc...) while
-        keeping the key real session path: value is signed with the app's own session
-        secret, same as how as Starlette's `SessionMiddleware` does.
+        keeping the real session path: the value is encrypted with the app's own
+        session secret, exactly as Litestar's client-side `CookieBackendConfig` does
+        (see `main.py`).
     """
+    import hashlib
+
+    from litestar.middleware.session.client_side import (
+        ClientSideSessionBackend,
+        CookieBackendConfig,
+    )
+
     from damnit_api.shared.settings import settings
 
-    secret = settings.session_secret.get_secret_value()  # pyright: ignore[reportOptionalMemberAccess]
-    payload = base64.b64encode(json.dumps({"user": user or TEST_USER}).encode("utf-8"))
-    return {SESSION_COOKIE: TimestampSigner(secret).sign(payload).decode("utf-8")}
+    secret = settings.session_secret.get_secret_value()  # ty: ignore[unresolved-attribute]  # pyright: ignore[reportOptionalMemberAccess]
+    config = CookieBackendConfig(
+        secret=hashlib.sha256(secret.encode()).digest(), key=SESSION_COOKIE
+    )
+    backend = ClientSideSessionBackend(config=config)
+    chunks = backend.dump_data({"user": user or TEST_USER})
+    if len(chunks) == 1:
+        return {SESSION_COOKIE: chunks[0].decode("utf-8")}
+    return {
+        f"{SESSION_COOKIE}-{i}": chunk.decode("utf-8")
+        for i, chunk in enumerate(chunks)
+    }
