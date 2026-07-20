@@ -1,0 +1,66 @@
+"""Tests for the AppState container and its DI surface (ADR-002/ADR-003)."""
+
+import ast
+from pathlib import Path
+
+from damnit_api.auth.token_store import InMemoryTokenStore
+from damnit_api.runs.sqlite import DamnitDBRegistry
+from damnit_api.shared.settings import Settings
+from damnit_api.state import create_oauth_client
+
+
+def test_appstate_only_imported_by_composition_root():
+    """Handlers and dependencies must depend on specific objects, never the
+    whole `AppState`; only the composition root may import it (ADR-002)."""
+    src_root = Path("src/damnit_api")
+    allowed = {src_root / "state.py", src_root / "main.py"}
+
+    def imports_app_state(path: Path) -> bool:
+        tree = ast.parse(path.read_text())
+        return any(
+            isinstance(node, ast.ImportFrom)
+            and any(alias.name == "AppState" for alias in node.names)
+            for node in ast.walk(tree)
+        )
+
+    offenders = [
+        str(path)
+        for path in src_root.rglob("*.py")
+        if path not in allowed and imports_app_state(path)
+    ]
+
+    assert offenders == []
+
+
+def test_create_oauth_client_returns_none_when_auth_disabled(tmp_path):
+    settings = Settings(damnit_path=tmp_path)  # local mode: auth is None
+    assert settings.auth is None
+    assert create_oauth_client(settings) is None
+
+
+def test_registry_memoizes_managers_per_proposal(monkeypatch):
+    created = []
+
+    class DummyManager:
+        def __init__(self, proposal):
+            self.proposal = proposal
+            created.append(proposal)
+
+    monkeypatch.setattr(
+        "damnit_api.runs.sqlite.session.DatabaseSessionManager", DummyManager
+    )
+
+    registry = DamnitDBRegistry()
+    first = registry.get("1234")
+    assert registry.get("1234") is first
+    assert registry.get("5678") is not first
+    assert created == ["1234", "5678"]
+
+
+def test_token_store_stores_and_pops_fields():
+    store = InMemoryTokenStore()
+    store.store("sub-1", {"access_token": "a", "id_token": "i"})
+
+    assert store.pop_token_field("sub-1", "access_token") == "a"
+    assert store.pop_token_field("sub-1", "access_token") is None  # popped
+    assert store.pop_token_field("unknown-sub", "id_token") is None

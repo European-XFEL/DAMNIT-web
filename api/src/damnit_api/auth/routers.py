@@ -13,8 +13,6 @@ logger = get_logger()
 
 router = APIRouter(prefix="/oauth", tags=["auth"])
 
-TOKEN_STORE = {}
-
 
 @router.get("/login", status_code=307)
 async def auth(
@@ -47,6 +45,7 @@ async def callback(
     request: Request,
     redirect_uri: dependencies.RedirectURI,
     client: dependencies.Client,
+    token_store: dependencies.TokenStoreDep,
 ) -> RedirectResponse:
     """OAuth2 callback endpoint to handle the response from the OAuth provider."""
     try:
@@ -63,7 +62,7 @@ async def callback(
 
     # TODO: could (should?) be stored in db for persistence across server restarts
     # NOTE: required for revoking tokens on logout
-    TOKEN_STORE[user["sub"]] = token
+    token_store.store(str(user["sub"]), token)
 
     return RedirectResponse(url=unquote(str(redirect_uri)))
 
@@ -72,6 +71,7 @@ async def callback(
 async def logout(
     request: Request,
     client: dependencies.Client,
+    token_store: dependencies.TokenStoreDep,
 ) -> JSONResponse:
     """Fully logout the user and revoke tokens.
 
@@ -87,7 +87,7 @@ async def logout(
         token = await client.fetch_access_token()
 
         for k in ("refresh_token", "access_token"):
-            if user_token := TOKEN_STORE.get(user_sub, {}).pop(k, None):
+            if user_token := token_store.pop_token_field(user_sub, k):
                 await client.post(
                     revocation_endpoint,
                     token=token,
@@ -97,7 +97,7 @@ async def logout(
 
     end_session_endpoint = client.server_metadata.get("end_session_endpoint")
 
-    token_id = TOKEN_STORE.get(user_sub, {}).pop("id_token", None)
+    token_id = token_store.pop_token_field(user_sub, "id_token")
 
     logout_url = None
     if token_id and end_session_endpoint:
@@ -142,11 +142,14 @@ noauth_router = APIRouter(prefix="/oauth", tags=["auth"])
 
 
 @noauth_router.get("/userinfo")
-async def noauth_userinfo():
+async def noauth_userinfo(request: Request):
     from ..metadata.services import LOCAL_CYCLE, _local_proposal_number
+    from ..state import get_app_state
 
     proposals = {}
-    proposal_number = await _local_proposal_number()
+    proposal_number = await _local_proposal_number(
+        get_app_state(request).damnit_registry
+    )
     if proposal_number:
         proposals = {LOCAL_CYCLE: [proposal_number]}
 

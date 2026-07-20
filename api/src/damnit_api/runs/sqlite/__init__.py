@@ -10,8 +10,8 @@ from .repository import (
 )
 from .session import (
     DAMNIT_PATH,
+    DamnitDBRegistry,
     DatabaseSessionManager,
-    get_connection,
     get_damnit_path,
     get_session,
 )
@@ -19,6 +19,7 @@ from .session import (
 __all__ = [
     "DAMNIT_PATH",
     "DEFAULT_PROPOSAL",
+    "DamnitDBRegistry",
     "DatabaseSessionManager",
     "async_all_tags",
     "async_column",
@@ -27,7 +28,6 @@ __all__ = [
     "async_table",
     "async_variable_tags",
     "async_variables",
-    "get_connection",
     "get_damnit_path",
     "get_session",
 ]

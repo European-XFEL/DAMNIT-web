@@ -1,12 +1,9 @@
 import pytest
 
-from damnit_api.runs.sqlite import DatabaseSessionManager, async_table
+from damnit_api.runs.sqlite import DamnitDBRegistry
 
 
-@pytest.fixture(autouse=True)
-def _clear_db_session_manager_registry():
-    DatabaseSessionManager.registry.clear()
-    async_table.cache_clear()
-    yield
-    DatabaseSessionManager.registry.clear()
-    async_table.cache_clear()
+@pytest.fixture
+def damnit_registry() -> DamnitDBRegistry:
+    """A fresh per-test registry; nothing module-level to clear between tests."""
+    return DamnitDBRegistry()

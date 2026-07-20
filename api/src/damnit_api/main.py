@@ -1,4 +1,3 @@
-from asyncio import TaskGroup
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -13,9 +12,19 @@ KNOWN_PATHS = ["/graphql"]
 
 
 def create_app():
-    from . import _db, _logging, _mymdc, auth, contextfile, get_logger, metadata
+    from . import _logging, auth, contextfile, get_logger, metadata
     from .shared import errors, gql
     from .shared.settings import settings
+    from .state import (
+        AppState,
+        create_damnit_registry,
+        create_db_engine,
+        create_db_sessionmaker,
+        create_mymdc_client,
+        create_oauth_client,
+        create_subscription_cursors,
+        create_token_store,
+    )
 
     logger = get_logger("lifespan")
 
@@ -29,10 +38,20 @@ def create_app():
 
         logger.info("Starting application lifespan")
 
-        bootstraps = [_mymdc.bootstrap, auth.bootstrap, _db.bootstrap]
-        async with TaskGroup() as tg:
-            for bs in bootstraps:
-                tg.create_task(bs(settings))
+        oauth_client = create_oauth_client(settings)
+        if oauth_client is not None:
+            await oauth_client.load_server_metadata()
+
+        db_engine = create_db_engine(settings)
+        app.state.app_state = AppState(
+            db_engine=db_engine,
+            db_sessionmaker=create_db_sessionmaker(db_engine),
+            mymdc_client=create_mymdc_client(settings),
+            oauth_client=oauth_client,
+            token_store=create_token_store(),
+            damnit_registry=create_damnit_registry(),
+            subscription_cursors=create_subscription_cursors(),
+        )
 
         if settings.is_local:
             app.router.include_router(auth.noauth_router)

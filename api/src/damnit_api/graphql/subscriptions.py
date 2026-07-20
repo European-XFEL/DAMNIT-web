@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 import strawberry
 from async_lru import alru_cache
 from strawberry.scalars import JSON
+from strawberry.types import Info
 
 from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..runs.sqlite import async_latest_rows, async_max, async_table
@@ -14,41 +15,58 @@ from .utils import DatabaseInput, LatestData, fetch_info
 
 POLLING_INTERVAL = 1  # seconds
 
-# Server-side high-water mark per proposal so each tick only fetches rows
-# newer than what the previous tick already shipped.
-_last_seen_timestamp: dict[str, float] = {}
+
+class SubscriptionCursors:
+    """Server-side high-water mark per proposal so each tick only fetches rows
+    newer than what the previous tick already shipped. Hashable by identity
+    for alru_cache."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, float] = {}
+
+    def __contains__(self, proposal: str) -> bool:
+        return proposal in self._data
+
+    def __getitem__(self, proposal: str) -> float:
+        return self._data[proposal]
+
+    def __setitem__(self, proposal: str, value: float) -> None:
+        self._data[proposal] = value
 
 
 # Per-client cursor is deliberately omitted from the cache key so that
 # concurrent subscribers coalesce into a single DB read per tick.
 @alru_cache(maxsize=32, ttl=POLLING_INTERVAL)
-async def poll_proposal(proposal):
-    table = await async_table(proposal, name="run_variables")
+async def poll_proposal(registry, proposal, cursors: SubscriptionCursors):
+    table = await async_table(registry, proposal, name="run_variables")
     if table is None:
         return None
 
-    if proposal not in _last_seen_timestamp:
+    if proposal not in cursors:
         max_timestamp = await async_max(
-            proposal, table="run_variables", column="timestamp"
+            registry, proposal, table="run_variables", column="timestamp"
         )
-        _last_seen_timestamp[proposal] = max_timestamp or 0
+        cursors[proposal] = max_timestamp or 0
 
     rows = await async_latest_rows(
+        registry,
         proposal,
         table=table,
         by="timestamp",
-        start_at=_last_seen_timestamp[proposal],
+        start_at=cursors[proposal],
     )
     if not rows:
         return None
 
     latest_data = LatestData.from_list(rows)
 
-    latest_runs = await fetch_info(proposal, runs=list(latest_data.runs.keys()))
+    latest_runs = await fetch_info(
+        registry, proposal, runs=list(latest_data.runs.keys())
+    )
     latest_runs = create_map(latest_runs, key="run")
 
-    fetch_metadata.cache_invalidate(proposal)
-    metadata = await fetch_metadata(proposal)
+    fetch_metadata.cache_invalidate(registry, proposal)
+    metadata = await fetch_metadata(registry, proposal)
 
     runs = {}
     run_timestamps = {}
@@ -76,7 +94,7 @@ async def poll_proposal(proposal):
         msg = "Latest data has no timestamp."
         raise ValueError(msg)
 
-    _last_seen_timestamp[proposal] = latest_data.timestamp
+    cursors[proposal] = latest_data.timestamp
 
     metadata = {
         "runs": sorted(set(metadata["runs"]) | set(runs.keys())),
@@ -109,13 +127,18 @@ class Subscription:
     @strawberry.subscription(permission_classes=PROPOSAL_PERMISSIONS)
     async def latest_data(
         self,
+        info: Info,
         database: DatabaseInput,
         timestamp: Timestamp,
     ) -> AsyncGenerator[JSON]:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         while True:
             await asyncio.sleep(POLLING_INTERVAL)
 
-            snapshot = await poll_proposal(proposal=database.proposal)
+            snapshot = await poll_proposal(
+                info.context.damnit_registry,
+                proposal=database.proposal,
+                cursors=info.context.subscription_cursors,
+            )
             result = filter_for_client(snapshot, timestamp)
             if result is not None:
                 yield result  # FIX: # pyright: ignore[reportReturnType]

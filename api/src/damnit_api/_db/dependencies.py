@@ -3,16 +3,16 @@
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-import damnit_api._db
+from ..state import get_app_state
 
 
-async def get_session() -> AsyncIterator[AsyncSession]:
-    """Provide a database session for FastAPI dependencies."""
+async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
+    """Provide a database session from the application state."""
 
-    async with damnit_api._db.__SESSION_LOCAL() as session:
+    async with get_app_state(request).db_sessionmaker() as session:
         yield session
 
 

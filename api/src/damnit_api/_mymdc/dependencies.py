@@ -1,8 +1,15 @@
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 
-from . import clients, ports
+from ..state import get_app_state
+from . import clients
 
-MyMdCClient = Annotated[clients.MyMdCClient, Depends(ports.MyMdCPort.from_global)]
+
+def get_mymdc_client(request: Request) -> "clients.MyMdCClient":
+    """Provide the MyMdC client from the application state."""
+    return get_app_state(request).mymdc_client
+
+
+MyMdCClient = Annotated[clients.MyMdCClient, Depends(get_mymdc_client)]
 """Type alias for the MyMdC client dependency."""

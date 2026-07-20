@@ -5,7 +5,7 @@ from typing import Any
 import strawberry
 from sqlalchemy import or_, select
 
-from ..runs.sqlite import async_table, get_session
+from ..runs.sqlite import DamnitDBRegistry, async_table, get_session
 from ..shared.const import DEFAULT_PROPOSAL
 
 
@@ -64,14 +64,14 @@ class LatestData:
         return instance
 
 
-async def fetch_info(proposal, *, runs):
-    table = await async_table(proposal, name="run_info")
+async def fetch_info(registry: DamnitDBRegistry, proposal, *, runs):
+    table = await async_table(registry, proposal, name="run_info")
     if table is None:
         return []
     conditions = [table.c.run == run for run in runs]
     query = select(table).where(or_(*conditions)).order_by(table.c.run)
 
-    async with get_session(proposal) as session:
+    async with get_session(registry, proposal) as session:
         result = await session.execute(query)
         if not result:
             raise ValueError  # TODO: Better error handling

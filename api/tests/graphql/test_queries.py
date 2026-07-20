@@ -131,8 +131,6 @@ async def real_damnit_db(mocker, tmp_path):
         "damnit_api.runs.sqlite.session.find_proposal",
         return_value=str(proposal_root),
     )
-    # `registry` is injected by the `Registry` metaclass at class creation.
-    DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
 
     manager = DatabaseSessionManager(proposal)
     async with manager.connect() as conn:
@@ -182,7 +180,6 @@ async def real_damnit_db(mocker, tmp_path):
     yield proposal
 
     await manager.close()
-    DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 @pytest.mark.asyncio

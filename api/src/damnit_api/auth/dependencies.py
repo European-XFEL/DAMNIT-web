@@ -3,11 +3,12 @@
 from typing import Annotated
 
 from authlib.integrations.starlette_client import StarletteOAuth2App
-from fastapi import Depends
+from fastapi import Depends, Request
 
-from .bootstrap import get_oauth_client
+from ..state import get_app_state
 from .models import OAuthUserInfo as _OAuthUserInfo
 from .models import User as _User
+from .token_store import TokenStore
 
 
 # TODO: Get from settings
@@ -15,8 +16,29 @@ def _get_default_redirect_login_uri() -> str:
     return "/app/home"
 
 
+def get_oauth_client(request: Request) -> StarletteOAuth2App:
+    """Provide the OAuth client from the application state.
+
+    Raises:
+        RuntimeError: If auth is disabled and no client was built.
+    """
+    client = get_app_state(request).oauth_client
+    if client is None:
+        msg = "OAuth client is not configured (auth is disabled)."
+        raise RuntimeError(msg)
+    return client
+
+
+def get_token_store(request: Request) -> TokenStore:
+    """Provide the token store from the application state."""
+    return get_app_state(request).token_store
+
+
 RedirectURI = Annotated[str, Depends(_get_default_redirect_login_uri)]
 """Type alias for the redirect URI dependency."""
+
+TokenStoreDep = Annotated[TokenStore, Depends(get_token_store)]
+"""Type alias for the token store dependency."""
 
 Client = Annotated[StarletteOAuth2App, Depends(get_oauth_client)]
 """Type alias for the OAuth client dependency."""

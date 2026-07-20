@@ -26,7 +26,7 @@ For more information, see [ADR-000](adr/000-vertical-slice-architecture.md).
 | `appdb/`                          | The app's own database (infrastructure) | Models, engine/session plumbing for `dw_api.sqlite`                                                                       | Planned | `_db/`                                                                    |
 | `mymdc/`                          | MyMdC client (infrastructure)           | Ports, clients, vendored models                                                                                           | Planned | `_mymdc/`                                                                 |
 | `core/`                           | Cross-cutting, framework-free           | Shared error classes (see [ADR-001](adr/001-error-classes.md)), `DamnitType`, value types, converters                     | Planned | `shared/` + `utils.py`                                                    |
-| `main.py` / `app.py` / `state.py` | Composition root                        | `AppState`, `create_*` factories, `create_app()` - the only place that may import everything and read settings            | Partial | `main.py` only                                                            |
+| `main.py` / `app.py` / `state.py` | Composition root                        | `AppState`, `create_*` factories (see [ADR-002](adr/002-no-global-mutable-state.md)), `create_app()` - the only place that may import everything and read settings | Partial | `main.py` + `state.py`                                                            |
 
 Where new code goes:
 
@@ -55,7 +55,7 @@ The key rules are:
   - Importing another package's `_underscore` name is always wrong.
 2. **Composition root is the top:** it may import everything, but nothing is allowed to import it.
   - If importing a slice from the composition root forces a function-body import to avoid cycles, the type probably belongs in `core/`.
-3. **Composition root reads settings:** everything else receives configuration as parameters.
+3. **Composition root reads settings:** everything else receives configuration as parameters (see [ADR-003](adr/003-injected-settings.md)).
 4. **Authorisation applied at the edge:** routes and resolvers use dependencies and permission classes.
   - This means that services should not apply authorisation rules themselves.
 5. **No `if settings.is_local:` outside the composition root:** Local mode is selected by composition, not conditionals throughout the codebase.

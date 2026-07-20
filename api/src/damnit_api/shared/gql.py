@@ -14,8 +14,10 @@ from .._mymdc.dependencies import MyMdCClient
 from ..auth import gql as auth
 from ..auth.dependencies import OAuthUserInfo
 from ..auth.models import User
+from ..graphql.dependencies import SubscriptionCursorsDep
 from ..metadata import gql as metadata
 from ..runs import types as run_types
+from ..runs.sqlite.dependencies import DamnitRegistry
 
 SUBSCRIPTION_PROTOCOLS = [
     GRAPHQL_TRANSPORT_WS_PROTOCOL,
@@ -55,6 +57,8 @@ class Context(BaseContext):
     mymdc: MyMdCClient
     oauth_user: OAuthUserInfo
     session: DBSession
+    damnit_registry: DamnitRegistry
+    subscription_cursors: SubscriptionCursorsDep
     _user: User | None = None
 
     async def get_user(self) -> User:
@@ -67,9 +71,19 @@ class Context(BaseContext):
 
 
 async def get_context(  # noqa: RUF029
-    oauth_user: OAuthUserInfo, mymdc: MyMdCClient, session: DBSession
+    oauth_user: OAuthUserInfo,
+    mymdc: MyMdCClient,
+    session: DBSession,
+    damnit_registry: DamnitRegistry,
+    subscription_cursors: SubscriptionCursorsDep,
 ):
-    return Context(oauth_user=oauth_user, mymdc=mymdc, session=session)
+    return Context(
+        oauth_user=oauth_user,
+        mymdc=mymdc,
+        session=session,
+        damnit_registry=damnit_registry,
+        subscription_cursors=subscription_cursors,
+    )
 
 
 def get_gql_app():

@@ -66,8 +66,8 @@ def group_by_run(record):
     return list(grouped.values())
 
 
-async def fetch_variables(proposal, *, limit, offset, names=None):
-    table = await async_table(proposal, name="run_variables")
+async def fetch_variables(registry, proposal, *, limit, offset, names=None):
+    table = await async_table(registry, proposal, name="run_variables")
     if table is None:
         return []
 
@@ -122,7 +122,7 @@ async def fetch_variables(proposal, *, limit, offset, names=None):
         .order_by(runs_subquery.c.run)
     )
 
-    async with get_session(proposal) as session:
+    async with get_session(registry, proposal) as session:
         result = await session.execute(query)
         if not result:
             raise ValueError  # TODO: Better error handling
@@ -179,6 +179,7 @@ class Query:
         names = _selected_variable_names(info)
 
         variables = await fetch_variables(
+            info.context.damnit_registry,
             proposal,
             limit=per_page,
             offset=(page - 1) * per_page,
@@ -190,7 +191,9 @@ class Query:
 
         if _wants_run_info(names):
             info_rows = await fetch_info(
-                proposal, runs=[v["run"]["value"] for v in variables]
+                info.context.damnit_registry,
+                proposal,
+                runs=[v["run"]["value"] for v in variables],
             )
         else:
             info_rows = [{} for _ in variables]
@@ -214,7 +217,7 @@ class Query:
 
         await _ensure_damnit_path(info, proposal)
 
-        snapshot = await fetch_metadata(proposal)
+        snapshot = await fetch_metadata(info.context.damnit_registry, proposal)
         return {
             **snapshot,
             "timestamp": snapshot["timestamp"] * 1000,  # ms for JS

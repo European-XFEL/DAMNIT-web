@@ -1,12 +1,17 @@
+from types import SimpleNamespace
+
 import pytest
 import strawberry
 from strawberry.schema.config import StrawberryConfig
 
-from damnit_api.graphql import subscriptions
 from damnit_api.graphql.directives import lightweight
 from damnit_api.graphql.metadata import fetch_metadata
 from damnit_api.graphql.queries import Query
-from damnit_api.graphql.subscriptions import Subscription, poll_proposal
+from damnit_api.graphql.subscriptions import (
+    Subscription,
+    SubscriptionCursors,
+    poll_proposal,
+)
 from damnit_api.runs.types import SCALAR_MAP, DamnitVariable
 
 from .const import (
@@ -21,7 +26,6 @@ from .const import (
 def reset_caches():
     fetch_metadata.cache_clear()
     poll_proposal.cache_clear()
-    subscriptions._last_seen_timestamp.clear()
     return
 
 
@@ -111,16 +115,43 @@ def graphql_schema_no_auth(
     )
 
 
+class _SchemaWithDefaultContext:
+    """Wraps a strawberry `Schema` so resolvers see a default context (with
+    a fresh `damnit_registry`) without every test passing `context_value`;
+    an explicit `context_value` at the call site still wins."""
+
+    def __init__(self, schema, context):
+        self._schema = schema
+        self._context = context
+
+    def execute(self, query, **kwargs):
+        kwargs.setdefault("context_value", self._context)
+        return self._schema.execute(query, **kwargs)
+
+    def subscribe(self, query, **kwargs):
+        kwargs.setdefault("context_value", self._context)
+        return self._schema.subscribe(query, **kwargs)
+
+
+@pytest.fixture
+def graphql_context(damnit_registry):
+    return SimpleNamespace(
+        damnit_registry=damnit_registry,
+        subscription_cursors=SubscriptionCursors(),
+    )
+
+
 @pytest.fixture
 def graphql_schema(
     bypass_proposal_permission,
     mocked_ensure_damnit_path,
     mocked_metadata_max,
     graphql_schema_no_auth,
+    graphql_context,
 ):
     """Same schema as graphql_schema_no_auth, with permission and damnit-path
     checks bypassed so tests exercise resolver logic only."""
-    return graphql_schema_no_auth
+    return _SchemaWithDefaultContext(graphql_schema_no_auth, graphql_context)
 
 
 @pytest.fixture
