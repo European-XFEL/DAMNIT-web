@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest'
 
-import { flattenRuns } from '#src/data/table/table-data.transforms'
+import {
+  flattenRuns,
+  heavyVariableNames,
+} from '#src/data/table/table-data.transforms'
 import type { VariableError, VariableValue } from '#src/types'
 
 function variable(
@@ -58,5 +61,50 @@ describe('flattenRuns', () => {
       { variables: [variable('run', 1), variable('x', 2, 'number', null)] },
     ])
     expect(table['1'].x.error).toBeUndefined()
+  })
+})
+
+// A heavy value the @lightweight directive held back: the server sends the
+// variable with its value nulled out.
+const blanked = (name: string, error: VariableError | null = null) =>
+  variable(name, null as unknown as VariableValue, 'array', error)
+
+describe('heavyVariableNames', () => {
+  test('names the blanked variables worth a second fetch', () => {
+    const rows = flattenRuns([
+      {
+        variables: [
+          variable('run', 1),
+          variable('energy', 1.2),
+          blanked('spectrum'),
+        ],
+      },
+    ])
+
+    expect(heavyVariableNames(rows)).toEqual(['spectrum'])
+  })
+
+  test('leaves out a variable that failed rather than being held back', () => {
+    // A blank carrying an error is a variable that genuinely has no value, so
+    // fetching it again would only return the same error.
+    const rows = flattenRuns([
+      {
+        variables: [
+          variable('run', 1),
+          blanked('broken', { cls: 'ValueError', message: 'boom' }),
+        ],
+      },
+    ])
+
+    expect(heavyVariableNames(rows)).toEqual([])
+  })
+
+  test('names a variable once however many runs blanked it', () => {
+    const rows = flattenRuns([
+      { variables: [variable('run', 1), blanked('spectrum')] },
+      { variables: [variable('run', 2), blanked('spectrum')] },
+    ])
+
+    expect(heavyVariableNames(rows)).toEqual(['spectrum'])
   })
 })

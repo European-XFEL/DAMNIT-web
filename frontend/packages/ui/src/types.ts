@@ -32,16 +32,6 @@ export type TagItem = {
   variables: string[]
 }
 
-export type ExtractedDataItem = unknown
-
-export type ExtractedMetadataItem = {
-  name: string
-  dtype: string
-  dims: string[]
-  coords: { [dim: string]: number[] }
-  attrs: { [attr: string]: unknown }
-}
-
 export type TabItem = {
   title: string
   subtitle?: string
@@ -71,11 +61,15 @@ export type AvailableProposals = {
   [cycle: string]: number[]
 }
 
+// Summary plots chart one variable against another across runs; preview plots
+// show a single variable's extracted value per run.
+export type PlotSource = 'summary' | 'preview'
+
 // A plot's definition: the plotRequested action payload and the shape plots
 // stores. Lives here so table (requester) and plots (store) can share it.
 export type PlotSpec = {
   variables: string[]
   runs?: string[]
-  source: string
+  source: PlotSource
   title?: string
 }

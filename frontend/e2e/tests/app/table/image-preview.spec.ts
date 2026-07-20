@@ -46,7 +46,7 @@ test('right-clicking an image cell dismisses the preview and opens the context m
   // Right-click the same cell: the preview clears and the plot menu opens.
   await rightClickCell(page, IMAGE_CELL)
   await expect(preview).toBeHidden()
-  await expect(page.getByText('Plot: data')).toBeVisible()
+  await expect(page.getByText('Plot: preview')).toBeVisible()
 })
 
 test('hovering a cell with no supported tooltip shows nothing', async ({

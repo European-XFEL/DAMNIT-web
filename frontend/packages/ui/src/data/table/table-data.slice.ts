@@ -3,18 +3,18 @@ This is planned to be deprecated in favor of unified Redux and
 Apollo Client store
 */
 
-import {
-  createAsyncThunk,
-  createSlice,
-  type PayloadAction,
-} from '@reduxjs/toolkit'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import { isStaleProposal, resetProposal } from '#src/app/store/actions'
+import { resetProposal } from '#src/app/store/actions'
 import { type Maybe } from '#src/types'
 import { isEmpty } from '#src/utils/helpers'
 
-import { type TableDataOptions, type TableInfo } from './table-data.types'
-import TableDataServices from './table-data.services'
+import { isBlanked } from './table-data.transforms'
+import {
+  type TableData,
+  type TableInfo,
+  type TableMetadata,
+} from './table-data.types'
 
 interface TableDataState extends TableInfo {
   lastUpdate: Record<string, Maybe<number>>
@@ -26,62 +26,19 @@ const initialState: TableDataState = {
   lastUpdate: {},
 }
 
-type TableOptions = Omit<TableDataOptions, 'deferred'>
-
-export const getTable = createAsyncThunk(
-  'tableData/get',
-  async (
-    { proposal, page, pageSize, lightweight = false }: TableOptions,
-    thunkAPI
-  ) => {
-    const result = await TableDataServices.getTable({
-      proposal,
-      page,
-      pageSize,
-      lightweight,
-    })
-
-    // Drop the result if the user left this proposal while it was in flight:
-    // Redux is the table's render source, so a late fulfillment would flash
-    // the departed proposal's rows back into the just-reset slice.
-    if (isStaleProposal(thunkAPI.getState(), proposal)) {
-      return thunkAPI.rejectWithValue('stale')
-    }
-
-    return result
+// Metadata is optional: a page loader has only rows to contribute, while
+// useProposal's metadata query and the subscription have both. Runs arrive on
+// the wire as numbers, so the payload takes that shape and the reducer is what
+// turns them into the strings the table keys its rows by.
+type UpdateInfo = {
+  data: TableData
+  metadata?: Partial<Omit<TableMetadata, 'runs'>> & {
+    runs?: (string | number)[]
   }
-)
-
-export const getTableData = createAsyncThunk(
-  'tableData/getData',
-  async (
-    {
-      proposal,
-      variables,
-      page = 1,
-      pageSize = 10000,
-      deferred = false,
-    }: TableDataOptions & { variables: string[] },
-    thunkAPI
-  ) => {
-    const result = await TableDataServices.getTableData({
-      proposal,
-      variables: ['run', ...variables],
-      page,
-      pageSize,
-      deferred,
-    })
-
-    if (isStaleProposal(thunkAPI.getState(), proposal)) {
-      return thunkAPI.rejectWithValue('stale')
-    }
-
-    return result
-  }
-)
-
-interface UpdateInfo extends TableInfo {
-  notify?: boolean
+  // A push from the subscription, as opposed to a bulk load of rows the table
+  // asked for. Only a push is news: it is what marks the runs as just-updated
+  // and what may legitimately clear a value.
+  live?: boolean
 }
 
 const slice = createSlice({
@@ -89,7 +46,7 @@ const slice = createSlice({
   initialState,
   reducers: {
     update: (state, action: PayloadAction<UpdateInfo>) => {
-      const { data, metadata } = action.payload
+      const { data, metadata, live = false } = action.payload
 
       // Update data
       if (!isEmpty(data)) {
@@ -98,8 +55,25 @@ const slice = createSlice({
         const updatedTimestamp = { ...state.lastUpdate }
 
         Object.entries(data).forEach(([run, variables]) => {
-          updatedData[run] = { ...(updatedData[run] || { run }), ...variables }
-          updatedTimestamp[run] = timestamp
+          const row = { ...(updatedData[run] || { run }) }
+
+          Object.entries(variables).forEach(([name, incoming]) => {
+            // A bulk load must not clobber a value the deferred pass already
+            // delivered with one @lightweight held back (see isBlanked): that
+            // would blank the cell for good, since both passes refetch together
+            // and the deferred one, having nothing new to report, never runs
+            // again to repair it.
+            const heldBack = !live && isBlanked(incoming)
+            if (heldBack && row[name]?.value != null) {
+              return
+            }
+            row[name] = incoming
+          })
+
+          updatedData[run] = row
+          if (live) {
+            updatedTimestamp[run] = timestamp
+          }
         })
 
         state.data = updatedData
@@ -109,33 +83,18 @@ const slice = createSlice({
       // A subscription push resends runs, variables, and timestamp but never
       // tags, so replacing wholesale would drop them and crash the tag-driven
       // column visibility. Merge so unsent fields (tags) survive.
-      state.metadata = { ...state.metadata, ...metadata }
+      if (metadata) {
+        const { runs, ...rest } = metadata
+        state.metadata = {
+          ...state.metadata,
+          ...rest,
+          ...(runs ? { runs: runs.map(String) } : {}),
+        }
+      }
     },
   },
   extraReducers: (builder) => {
     builder.addCase(resetProposal, () => initialState)
-    builder.addCase(
-      getTable.fulfilled,
-      (state, action: PayloadAction<TableInfo>) => {
-        // TODO: Add pending and rejected
-        const { data, metadata } = action.payload
-        if (!isEmpty(data)) {
-          state.data = { ...state.data, ...data }
-          state.metadata = metadata
-        }
-      }
-    )
-    builder.addCase(getTableData.fulfilled, (state, action) => {
-      // TODO: Add pending and rejected
-      const data = action.payload
-      const updatedData = { ...state.data }
-
-      Object.entries(data).forEach(([run, variables]) => {
-        updatedData[run] = { ...(updatedData[run] || { run }), ...variables }
-      })
-
-      state.data = updatedData
-    })
   },
 })
 

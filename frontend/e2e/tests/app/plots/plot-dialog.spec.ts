@@ -1,3 +1,4 @@
+import { previewRunFields } from '@damnit-frontend/shared/mocks'
 import { test, expect } from '#fixtures'
 import { openProposal, titleOf } from '#support/table'
 import {
@@ -43,7 +44,7 @@ test('choosing a Y variable plots a summary against Run', async ({
   await expect(plotFigure(page)).toBeVisible()
 })
 
-test('plotting data for a custom run set opens a data plot for those runs', async ({
+test('plotting a preview for a custom run set opens a preview plot for those runs', async ({
   page,
   example,
 }) => {
@@ -52,24 +53,25 @@ test('plotting data for a custom run set opens a data plot for those runs', asyn
 
   // The "run 7-9" subtitle only shows first-last, so collect the runs actually
   // fetched: the comma input is a discrete set, so exactly runs 7 and 9 should
-  // fire an ExtractedDataQuery, not the range 7..9.
+  // be asked for, not the range 7..9. A preview inlines its runs into the
+  // document rather than passing them as variables, so read them back from it.
   const requestedRuns: number[] = []
   page.on('request', (request) => {
     if (!request.url().includes('/graphql')) {
       return
     }
-    const { operationName, variables } = (request.postDataJSON() ?? {}) as {
+    const { operationName, query } = (request.postDataJSON() ?? {}) as {
       operationName?: string
-      variables?: { run?: number }
+      query?: string
     }
-    if (operationName === 'ExtractedDataQuery') {
-      requestedRuns.push(variables?.run as number)
+    if (operationName === 'PreviewDataQuery' && query) {
+      requestedRuns.push(...previewRunFields(query).map((field) => field.run))
     }
   })
 
-  // Switching to "Plot data" reveals the Variable combobox and the custom-runs
-  // input; the dialog is the only path to plotting an arbitrary run set.
-  await dialog.getByText('Plot data').click()
+  // Switching to "Plot preview" reveals the Variable combobox and the
+  // custom-runs input; the dialog is the only path to an arbitrary run set.
+  await dialog.getByText('Plot preview').click()
   await chooseVariable(dialog, {
     label: 'Variable',
     title: titleOf('xgm_intensity'),
@@ -77,7 +79,7 @@ test('plotting data for a custom run set opens a data plot for those runs', asyn
   await dialog.getByPlaceholder('e.g. 1,2,3,6-20,22').fill('7,9')
   await submitPlot(dialog)
 
-  const tab = plotTab(page, `Data: ${titleOf('xgm_intensity')}`)
+  const tab = plotTab(page, `Preview: ${titleOf('xgm_intensity')}`)
   await expect(tab).toBeVisible()
   await expect(tab).toContainText('run 7-9')
   await expect(plotFigure(page)).toBeVisible()

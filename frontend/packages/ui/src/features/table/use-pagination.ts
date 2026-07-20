@@ -1,98 +1,38 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 
-import { getDeferredTable } from '#src/data/table/table-data.thunks'
-import { getTable } from '#src/data/table/table-data.slice'
-import { useAppDispatch } from '#src/app/store/hooks'
-
-import { Pages, pageRangeForRegion } from './pagination'
+import { pagesForRegion } from './pagination'
 import type { Rectangle } from './types'
 
 type UsePaginationOptions = {
-  proposal: string
   enabled?: boolean
   pageSize?: number
 }
 
+// Decides which pages the table wants loaded as it scrolls; rendering a
+// TablePageLoader per page is what fetches them. Switching proposals remounts
+// the whole subtree (see ProposalRoute's key), so the wanted set never needs
+// clearing here.
 export const usePagination = ({
-  proposal,
   enabled = true,
   pageSize = 10,
-}: UsePaginationOptions) => {
-  const dispatch = useAppDispatch()
+}: UsePaginationOptions = {}) => {
+  const [pages, setPages] = useState<number[]>([])
 
-  // Reference: Loaded pages
-  const pagesRef = useRef(new Pages())
-
-  // State: Visible pages
-  const [visibleRegion, setVisibleRegion] = useState<Rectangle>({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  })
-
-  // Callback: Handle new page
-  const handleNewPage = useCallback(
-    async (page: number) => {
-      if (!proposal || page <= 0) {
-        return false
-      }
-
-      try {
-        await dispatch(getDeferredTable({ proposal, page, pageSize }))
-        return true
-      } catch (error) {
-        console.error('Failed to load data:', error)
-        return false
-      }
-    },
-    [proposal, dispatch, pageSize]
-  )
-
-  // Callback: On visible region changed
-  const onVisibleRegionChanged = useCallback((rect: Rectangle) => {
-    setVisibleRegion(rect)
-  }, [])
-
-  const loadPage = useCallback(
-    async (page: number) => {
-      // TODO: Add a retry when loading pages are stuck for quite some time
-      const pages = pagesRef.current
-
-      if (pages.isLoading(page) || pages.isLoaded(page)) {
+  const onVisibleRegionChanged = useCallback(
+    (region: Rectangle) => {
+      if (!enabled) {
         return
       }
-
-      pages.addToLoading(page)
-      const loaded = await handleNewPage(page)
-      if (loaded) {
-        pages.addToLoaded(page)
+      // The grid reports a zero-size region before it has laid out. That
+      // measures as page 1 alone, which would drop the window to a single page
+      // and unmount the loaders for everything actually on screen.
+      if (region.width === 0 || region.height === 0) {
+        return
       }
+      setPages((current) => pagesForRegion(current, region, pageSize))
     },
-    [handleNewPage]
+    [enabled, pageSize]
   )
 
-  // Effect: Trigger load page when visible region changes
-  useEffect(() => {
-    if (!proposal) {
-      return
-    }
-
-    if (!enabled) {
-      dispatch(getTable({ proposal, pageSize: 10000 }))
-      return
-    }
-
-    if (visibleRegion.width === 0 || visibleRegion.height === 0) {
-      return
-    }
-
-    pageRangeForRegion(visibleRegion, pageSize).forEach((page) => {
-      if (!pagesRef.current.isLoaded(page)) {
-        loadPage(page)
-      }
-    })
-  }, [loadPage, pageSize, visibleRegion, proposal, enabled, dispatch])
-
-  return { onVisibleRegionChanged }
+  return { pages, onVisibleRegionChanged }
 }

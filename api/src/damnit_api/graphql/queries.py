@@ -220,6 +220,10 @@ class Query:
             "timestamp": snapshot["timestamp"] * 1000,  # ms for JS
         }  # pyright: ignore[reportReturnType]
 
+    # Nullable, because a preview asks for many runs in one request, aliasing
+    # this field once per run. A non-null field that raises propagates the null
+    # up to the root, so a single unreadable run would take every other run in
+    # the request down with it.
     @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
     async def extracted_data(
         self,
@@ -227,7 +231,7 @@ class Query:
         database: DatabaseInput,
         run: int,
         variable: str,
-    ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+    ) -> JSON | None:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         await _ensure_damnit_path(info, database.proposal)
         # TODO: Convert to Strawberry type
         # and make it analogous to DamitVariable; e.g. `data`

@@ -58,8 +58,9 @@ const source: MockDataSource = {
 }
 
 const gqlHandlers = [
-  api.operation(async ({ operationName, variables }) => {
+  api.operation(async ({ operationName, query, variables }) => {
     const resolution = await resolveOperation(operationName, {
+      query,
       variables: variables as Record<string, unknown>,
       source,
     })

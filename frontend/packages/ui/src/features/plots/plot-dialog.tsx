@@ -14,14 +14,13 @@ import { useForm } from '@mantine/form'
 import TextCombobox, {
   type TextComboboxOptions,
 } from '#src/components/comboboxes/text-combobox'
-import { getExtractedValue } from '#src/data/extracted/extracted-data.slice'
-import { getTableData } from '#src/data/table/table-data.slice'
 import { selectVariables } from '#src/data/table/table-data.selectors'
-import { getAllExtractedValues } from '#src/data/thunks'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { type PlotSpec } from '#src/types'
 import { getVariableTitle } from '#src/utils/variables'
 
 import { addPlot } from './plots.slice'
+import { parseRunSelection } from './utils'
 
 type PlotDialogForm = {
   runSelection: string
@@ -36,31 +35,9 @@ type PlotDialogProps = {
   close: () => void
 }
 
-// Parses manual selection from string to array
-const parseRunSelection = (strInput: string) => {
-  const input = String(strInput).split(',')
-  const parsed = input.reduce<string[]>((result, str) => {
-    if (!str.includes('-')) {
-      result.push(str)
-      return result
-    }
-    const [bottom, top] = str
-      .split('-')
-      .map((i) => Number(i))
-      .sort()
-    for (let i = bottom; i <= top; i++) {
-      result.push(String(i))
-    }
-    return result
-  }, [])
-
-  return parsed
-}
-
 const PlotDialog = (props: PlotDialogProps) => {
   const dispatch = useAppDispatch()
 
-  const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const variables = useAppSelector(selectVariables)
 
   const dialogForm = useForm<PlotDialogForm>({
@@ -112,32 +89,22 @@ const PlotDialog = (props: PlotDialogProps) => {
       return
     }
 
-    const plotOptions =
+    const plotOptions: PlotSpec =
       submitedFormValues.plotType === 'summary'
         ? {
             variables: [xVariable, yVariable],
-            source: 'table',
+            source: 'summary',
             title: `Summary: ${getVariableTitle(
               yMetadata
             )} vs. ${getVariableTitle(xMetadata)}`,
           }
         : {
             variables: [yVariable],
-            source: 'extracted',
-            title: `Data: ${getVariableTitle(yMetadata)}`,
+            source: 'preview',
+            title: `Preview: ${getVariableTitle(yMetadata)}`,
           }
 
     dispatch(addPlot({ ...plotOptions, runs: runs ?? undefined }))
-
-    if (submitedFormValues.plotType === 'summary') {
-      dispatch(getTableData({ proposal, variables: [xVariable, yVariable] }))
-    } else if (runs) {
-      runs.forEach((run) => {
-        dispatch(getExtractedValue({ proposal, run, variable: yVariable }))
-      })
-    } else {
-      dispatch(getAllExtractedValues({ proposal, variable: yVariable }))
-    }
 
     handleClose()
   }
@@ -200,7 +167,7 @@ const PlotDialog = (props: PlotDialogProps) => {
             value={formValues.plotType}
             onChange={(value) => {
               dialogForm.setFieldValue('plotType', value)
-              if (value === 'extracted') {
+              if (value === 'preview') {
                 dialogForm.setFieldValue('runSelectionType', 'manualSelection')
               } else if (!formValues.runSelection) {
                 dialogForm.setFieldValue('runSelectionType', 'allSelection')
@@ -208,7 +175,7 @@ const PlotDialog = (props: PlotDialogProps) => {
             }}
             data={[
               { label: 'Plot summary', value: 'summary' },
-              { label: 'Plot data', value: 'extracted' },
+              { label: 'Plot preview', value: 'preview' },
             ]}
             orientation="horizontal"
             mt="3px"
@@ -250,7 +217,7 @@ const PlotDialog = (props: PlotDialogProps) => {
           {formValues.plotType !== 'summary' &&
             formValues.runSelectionType === 'allSelection' && (
               <Blockquote color="red" p="10" w="100%">
-                You are about to plot data for all the runs.
+                You are about to plot preview data for all the runs.
               </Blockquote>
             )}
 

@@ -161,9 +161,11 @@ export async function mockApi(
   })
 
   await page.route('**/graphql', async (route) => {
-    const { operationName, variables } = (route.request().postDataJSON() ??
-      {}) as {
+    const { operationName, query, variables } = (route
+      .request()
+      .postDataJSON() ?? {}) as {
       operationName: string
+      query: string
       variables?: Record<string, unknown>
     }
 
@@ -182,6 +184,7 @@ export async function mockApi(
 
     try {
       const resolution = await resolveOperation(operationName, {
+        query,
         variables: variables ?? {},
         source,
       })
