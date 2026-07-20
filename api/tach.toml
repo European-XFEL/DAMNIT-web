@@ -1,0 +1,167 @@
+# Import-boundary baseline (ADR-000).
+#
+# This encodes the *current* dependency graph, derived from real imports via
+# `tach sync`, not the target architecture in docs/architecture.md. Edges that
+# the architecture forbids are marked DEBT(ADR-xxx) with a one-line reason;
+# un-annotated edges are legitimate under the current rules (composition-root
+# imports, core/infrastructure imports, or the one explicit auth->proposals
+# exception). Don't add new DEBT edges; fixing an existing one means deleting
+# its line here in the same commit.
+
+source_roots = ["src"]
+
+[[modules]]
+path = "damnit_api"
+# legitimate: the package __init__ configures logging on import.
+depends_on = ["damnit_api._logging"]
+
+[[modules]]
+path = "damnit_api.auth"
+depends_on = [
+    "damnit_api",
+    "damnit_api.shared",
+    "damnit_api._db",
+    "damnit_api._mymdc",
+    # legitimate: ADR-000's explicit "auth -> proposals" exception (metadata is
+    # proposals under its current name); membership needs proposal metadata,
+    # never the reverse.
+    "damnit_api.metadata",
+    # DEBT(ADR-000): auth/routers.py's noauth_userinfo() imports
+    # runs.dependencies.Repositories for local-mode proposal lookup. Slice ->
+    # slice import with no declared exception.
+    "damnit_api.runs",
+]
+
+[[modules]]
+path = "damnit_api.contextfile"
+# legitimate: contextfile resolves proposal metadata/path to serve context
+# files, the future proposals/locator.py role (ADR-004).
+depends_on = ["damnit_api.metadata"]
+
+[[modules]]
+path = "damnit_api.metadata"
+depends_on = [
+    "damnit_api",
+    "damnit_api.shared",
+    "damnit_api._db",
+    "damnit_api._mymdc",
+    # DEBT(ADR-000): metadata/services.py's _local_proposal_number() imports
+    # runs.repository / runs.sqlite.repository (function-body) for local-mode
+    # lookup. Slice -> slice import with no declared exception.
+    "damnit_api.runs",
+]
+
+[[modules]]
+path = "damnit_api.runs"
+# legitimate: core (shared) plus the to-be-removed utils junk drawer.
+depends_on = ["damnit_api", "damnit_api.shared", "damnit_api.utils"]
+
+[[modules]]
+path = "damnit_api.graphql"
+depends_on = [
+    "damnit_api",
+    "damnit_api.shared",
+    # DEBT(ADR-007): graphql is transport-only, but graphql/queries.py,
+    # subscriptions.py, directives.py and publisher.py import runs.types /
+    # runs.repository directly. Resolves once resolvers move to runs/gql.py.
+    "damnit_api.runs",
+    # DEBT(ADR-007): graphql/queries.py imports metadata.services'
+    # _get_proposal_meta / _update_proposal_meta - cross-slice private names
+    # (also ADR-000). Resolves once resolvers move to a slice gql module and
+    # metadata gets a public interface.
+    "damnit_api.metadata",
+]
+
+[[modules]]
+path = "damnit_api.shared"
+depends_on = [
+    "damnit_api",
+    # DEBT(ADR-007): shared/gql.py assembles the whole schema and Context -
+    # composition-root-shaped, importing from nearly every package - but lives
+    # under shared/ instead of graphql/schema.py. Most edges below trace to it;
+    # once it moves to graphql/schema.py they become legitimate composition-root
+    # imports and this block shrinks to the two exceptions noted below.
+    "damnit_api._db",
+    "damnit_api.runs",
+    "damnit_api.graphql",
+    "damnit_api.metadata",
+    # DEBT(ADR-007) + shared/permissions.py imports auth.policy's
+    # require_proposal_member, the ADR-011 transport adapter over the membership
+    # policy - a core-shaped module importing a slice.
+    "damnit_api.auth",
+    # DEBT(ADR-007) + shared/settings.py imports _mymdc.settings models as part
+    # of settings assembly.
+    "damnit_api._mymdc",
+]
+
+[[modules]]
+path = "damnit_api._db"
+# clean: infrastructure imports nothing app-specific.
+depends_on = []
+
+[[modules]]
+path = "damnit_api._mymdc"
+# legitimate: infrastructure -> core.
+depends_on = ["damnit_api", "damnit_api.shared"]
+
+[[modules]]
+path = "damnit_api._logging"
+depends_on = ["damnit_api.shared"]
+
+[[modules]]
+path = "damnit_api.utils"
+depends_on = ["damnit_api.shared"]
+
+[[modules]]
+path = "damnit_api.state"
+# composition root: may import everything (architecture.md rule 2).
+depends_on = ["damnit_api.runs", "damnit_api._mymdc"]
+
+[[modules]]
+path = "damnit_api.main"
+# composition root: may import everything (architecture.md rule 2).
+depends_on = [
+    "damnit_api",
+    "damnit_api.shared",
+    "damnit_api.runs",
+    "damnit_api.graphql",
+    "damnit_api.metadata",
+    "damnit_api.contextfile",
+    "damnit_api.auth",
+    "damnit_api._mymdc",
+    "damnit_api._logging",
+    "damnit_api.state",
+]
+
+# Public-interface enforcement: modules with no known cross-slice `_private`
+# imports get an interface restricting them to non-underscore names, so a new
+# private cross-slice import fails loudly. `metadata` is deliberately left off -
+# its genuine `_get_proposal_meta` / `_update_proposal_meta` /
+# `_get_proposal_meta_many` / `_local_proposal_meta` / `_local_proposal_number`
+# cross-slice imports (see the DEBT comments above) would fail this check;
+# bending the tool to pass would hide real debt, so it stays an uncovered gap
+# (ADR-000).
+
+[[interfaces]]
+expose = ["^[^_][^.]*(\\.[^_][^.]*)*$"]
+from = ["damnit_api"]
+
+[[interfaces]]
+expose = ["^[^_][^.]*(\\.[^_][^.]*)*$"]
+from = ["damnit_api.auth"]
+
+[[interfaces]]
+expose = ["^[^_][^.]*(\\.[^_][^.]*)*$"]
+from = ["damnit_api.contextfile"]
+
+[[interfaces]]
+expose = ["^[^_][^.]*(\\.[^_][^.]*)*$"]
+from = ["damnit_api.shared"]
+
+[[interfaces]]
+expose = ["^[^_][^.]*(\\.[^_][^.]*)*$"]
+from = ["damnit_api._db"]
+
+[[interfaces]]
+expose = ["^[^_][^.]*(\\.[^_][^.]*)*$"]
+from = ["damnit_api._mymdc"]

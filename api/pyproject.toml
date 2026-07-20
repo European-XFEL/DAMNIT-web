@@ -54,6 +54,7 @@ test = [
 lint = [
     "pyright>=1.1.406",
     "ruff>=0.7",
+    "tach>=0.29",
     "ty>=0.0.42",
 ]
 docs = [

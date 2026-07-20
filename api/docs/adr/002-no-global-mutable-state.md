@@ -48,7 +48,7 @@ Chosen option: a single frozen `AppState` dataclass built once in the lifespan. 
 3. There is exactly one composition/setup root: the app entrypoint and its lifespan (target shape: `create_app(settings)`, see the ADR-000 layout).
    - This is the only place that reads settings to select implementations.
    - Handlers, resolvers, and services receive dependencies via DI or plain parameters, they must **never** import them.
-   <!-- TODO: add to import linting -->
+   - tach enforces this: nothing may import the composition root (`state.py`, `main.py`), so a handler cannot reach `AppState` by import.
 4. Caches must be treated as state.
    - Any cache must be owned by an object that is itself created by a factory and reachable from `AppState`.
    - Module-level and class-level cache decorators on application code are banned.

@@ -48,7 +48,7 @@ flowchart LR
     root --> slices --> infra --> core
 ```
 
-The key rules are:
+Rules, enforced by [tach](https://github.com/gauge-sh/tach) (`api/tach.toml`, wired into CI and pre-commit):
 
 1. **Downward only:** Slices import `core` and infrastructure
   - Slices never import the composition root or another slice's internals.
@@ -60,10 +60,10 @@ The key rules are:
   - This means that services should not apply authorisation rules themselves.
 5. **No `if settings.is_local:` outside the composition root:** Local mode is selected by composition, not conditionals throughout the codebase (see [ADR-008](adr/008-local-mode-composition.md)).
 
-Note that these are currently only enforced by convention/review. Import linter/archetecture check tool is planned to be added.
-
 !!! warning "Current issues"
 
+    The current code still violates some of these rules. Each violation is declared as a `DEBT(ADR-xxx)` edge in `api/tach.toml`, so `tach check` fails on any new one:
+
     - `shared/gql.py`'s import-everything role
-    - Function-body imports working around circular imports
-    - Imports 'across' many modules and their files
+    - `graphql/` resolvers importing `runs` and `metadata` directly
+    - `auth` and `metadata` importing `runs` for local-mode proposal lookup
