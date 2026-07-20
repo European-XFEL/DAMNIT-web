@@ -1,5 +1,5 @@
 from anyio import Path as APath
-from litestar import Router, get
+from litestar import Request, Router, get
 from litestar.di import Provide
 
 from ..metadata.models import ProposalMeta
@@ -7,7 +7,13 @@ from ..metadata.routers import get_proposal_meta
 from . import models
 
 
-@get("/content")
+def _proposal_cache_key(request: Request) -> str:
+    """Key response-cache entries per proposal so entries stay isolated."""
+    proposal_number = request.query_params.get("proposal_number", "")
+    return f"{request.url.path}:{proposal_number}"
+
+
+@get("/content", cache=5, cache_key_builder=_proposal_cache_key)
 async def get_content(proposal: ProposalMeta) -> models.ContextFile | None:
     if proposal.damnit_path is None:
         return None
@@ -16,7 +22,7 @@ async def get_content(proposal: ProposalMeta) -> models.ContextFile | None:
     )
 
 
-@get("/last_modified")
+@get("/last_modified", cache=5, cache_key_builder=_proposal_cache_key)
 async def get_modified(proposal: ProposalMeta) -> models.ModifiedTime | None:
     if proposal.damnit_path is None:
         return None

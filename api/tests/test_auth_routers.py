@@ -4,12 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from litestar.di import Provide
-from litestar.middleware.session.client_side import CookieBackendConfig
+from litestar.middleware.session.server_side import ServerSideSessionConfig
 from litestar.testing import create_test_client
 
+from damnit_api.auth.oauth import SESSION_COOKIE_KEY, OAuthClient
 from damnit_api.auth.routers import OAuthController
-from damnit_api.auth.token_store import InMemoryTokenStore
-from damnit_api.state import SESSION_COOKIE_KEY, OAuthClient
 
 SERVER_METADATA = {
     "authorization_endpoint": "https://idp.example/authorize",
@@ -41,24 +40,18 @@ def _oauth_config() -> OAuthClient:
 
 
 @pytest.fixture
-def token_store():
-    return InMemoryTokenStore()
-
-
-@pytest.fixture
 def session_config():
-    return CookieBackendConfig(secret=b"0" * 32, key=SESSION_COOKIE_KEY)
+    return ServerSideSessionConfig(key=SESSION_COOKIE_KEY)
 
 
 @pytest.fixture
-def client(token_store, session_config):
-    # oauth_config/token_store are app-level dependencies in the composition
-    # root (main.py); provide fakes at the same layer here.
+def client(session_config):
+    # oauth_config is an app-level dependency in the composition root
+    # (main.py); provide a fake at the same layer here.
     with create_test_client(
         route_handlers=[OAuthController],
         dependencies={
             "oauth_config": Provide(_oauth_config, sync_to_thread=False),
-            "token_store": Provide(lambda: token_store, sync_to_thread=False),
         },
         session_config=session_config,
         middleware=[session_config.middleware],
@@ -102,9 +95,7 @@ def test_callback_state_mismatch_returns_401(client):
     assert resp.status_code == 401
 
 
-def test_callback_success_stores_session_user_and_token(
-    client, token_store, mock_oauth_client
-):
+def test_callback_success_stores_session_user_and_token(client, mock_oauth_client):
     client.set_session_data({"_oauth_state": "csrf-state"})
 
     resp = client.get(
@@ -119,38 +110,40 @@ def test_callback_success_stores_session_user_and_token(
     session = client.get_session_data()
     assert session["user"]["sub"] == "user-1"
 
-    assert token_store.pop_token_field("user-1", "access_token") == "tok123"
-    assert token_store.pop_token_field("user-1", "refresh_token") == "ref456"
+    # Tokens are stored server-side as part of the session data.
+    assert session["tokens"]["access_token"] == "tok123"  # noqa: S105
+    assert session["tokens"]["refresh_token"] == "ref456"  # noqa: S105
 
 
 # ── /oauth/logout ────────────────────────────────────────────────────────────
 
 
-def test_logout_revokes_tokens_and_clears_session_cookie(
-    client, token_store, mock_oauth_client
-):
-    token_store.store(
-        "user-1",
-        {"access_token": "tok123", "refresh_token": "ref456", "id_token": "idtok789"},
-    )
-    client.set_session_data({"user": {"sub": "user-1"}})
+def test_logout_revokes_tokens_and_clears_session_cookie(client, mock_oauth_client):
+    client.set_session_data({
+        "user": {"sub": "user-1"},
+        "tokens": {
+            "access_token": "tok123",
+            "refresh_token": "ref456",
+            "id_token": "idtok789",
+        },
+    })
 
     resp = client.post("/oauth/logout")
 
     assert resp.status_code == 201
     assert resp.json()["logout_url"].startswith("https://idp.example/logout")
 
-    # Both refresh and access tokens are revoked via the TokenStore.
+    # Both refresh and access tokens are revoked.
     assert mock_oauth_client.post.await_count == 2
-    assert token_store.pop_token_field("user-1", "access_token") is None
-    assert token_store.pop_token_field("user-1", "refresh_token") is None
 
     # The session cookie is cleared, keyed by the shared session cookie name.
     set_cookie = resp.headers.get("set-cookie", "")
     assert f"{SESSION_COOKIE_KEY}=" in set_cookie
     assert "Max-Age=0" in set_cookie
 
-    assert "user" not in client.get_session_data()
+    session = client.get_session_data()
+    assert "user" not in session
+    assert "tokens" not in session
 
 
 # ── x-forwarded-host trust gate ──────────────────────────────────────────────
@@ -220,7 +213,7 @@ def test_login_rejects_protocol_relative_redirect_target(client, mock_oauth_clie
 
 
 def test_relative_redirect_carried_through_login_and_callback(
-    client, token_store, mock_oauth_client
+    client, mock_oauth_client
 ):
     resp = client.get(
         "/oauth/login",
@@ -241,9 +234,7 @@ def test_relative_redirect_carried_through_login_and_callback(
     assert resp.headers["location"] == "/proposal/1234"
 
 
-def test_callback_sanitizes_redirect_carried_in_session(
-    client, token_store, mock_oauth_client
-):
+def test_callback_sanitizes_redirect_carried_in_session(client, mock_oauth_client):
     client.set_session_data(
         {
             "_oauth_state": "csrf-state",

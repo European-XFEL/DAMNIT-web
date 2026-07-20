@@ -33,7 +33,7 @@ Chosen option: a single frozen `AppState` dataclass built once in the lifespan. 
 
 - Good: initialisation order and the full dependency set are explicit in one place
   - Good: missing dependency results in construction error at startup, not a `None` at request time.
-- Good: tests build `AppState` with fakes (a mock MyMdC client, an in-memory token store)
+- Good: tests build `AppState` with fakes (a mock MyMdC client, a stub OAuth client)
   - Good: removes/reduces need to monkeypatch modules and clear cache between tests.
 - Bad: (ish?) dependencies must be specified through signatures instead of imported where needed
   - This is kind of the whole point, but it does mean there is more code to do the same thing (importing a global is easier/shorter)
@@ -43,7 +43,7 @@ Chosen option: a single frozen `AppState` dataclass built once in the lifespan. 
 ### The rules
 
 1. All runtime dependencies stored in a single frozen `AppState` dataclass (`state.py`) which is constructed once in the application lifespan and attached to `app.state`. This currently contains:
-   - App DB engine/sessionmaker, MyMdC client, OAuth client (`None` when auth is disabled), DAMNIT DB registry, token store, subscription cursors.
+   - App DB engine/sessionmaker, MyMdC client, OAuth client (`None` when auth is disabled), DAMNIT DB registry, subscription cursors.
 2. Each field is built by a pure factory function (`create_*`) taking `Settings` as explicit arguments. No factory reads module state or has side effects beyond constructing its object.
 3. There is exactly one composition/setup root: the app entrypoint and its lifespan (target shape: `create_app(settings)`, see the ADR-000 layout).
    - This is the only place that reads settings to select implementations.

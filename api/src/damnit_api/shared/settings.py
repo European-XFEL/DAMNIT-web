@@ -52,6 +52,10 @@ class Settings(BaseSettings):
 
     db_path: Path = Path(__file__).parents[3] / "dw_api.sqlite"
 
+    # Directory for file-backed Litestar stores (server-side sessions, response
+    # cache) outside local mode; each named store gets a subdirectory.
+    store_path: Path = Path(__file__).parents[3] / "stores"
+
     debug: bool = True
 
     log_level: str = "DEBUG"

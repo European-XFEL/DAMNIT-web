@@ -107,10 +107,13 @@ def _fresh_app_db(tmp_path):
     db_path = tmp_path / "dw_api.sqlite"
     SQLModel.metadata.create_all(create_engine(f"sqlite:///{db_path}"))
 
-    original = settings.db_path
+    original_db, original_store = settings.db_path, settings.store_path
     settings.db_path = db_path
+    # Isolate the file-backed stores (server-side sessions, response cache) into
+    # the tmp dir so tests never write into the repo's `stores/`.
+    settings.store_path = tmp_path / "stores"
     yield
-    settings.db_path = original
+    settings.db_path, settings.store_path = original_db, original_store
 
 
 @pytest_asyncio.fixture
@@ -128,44 +131,43 @@ async def e2e_client(vcr, _fresh_app_db):
         async with httpx.AsyncClient(
             transport=transport, base_url="http://testserver"
         ) as client:
+            # Expose the Litestar app so `mint_session_cookie` can write the
+            # forged session into the app's own server-side store.
+            client.app = app
             yield client
 
 
 @pytest_asyncio.fixture
-async def logged_in_client(e2e_client):  # noqa: RUF029 - must be async to receive the async fixture
-    """ASGI client with new login session cookie."""
-    e2e_client.cookies.update(mint_session_cookie())
+async def logged_in_client(e2e_client):
+    """ASGI client with a forged server-side login session."""
+    cookie = await mint_session_cookie(e2e_client.app)
+    e2e_client.cookies.update(cookie)
     return e2e_client
 
 
-def mint_session_cookie(user: dict | None = None) -> dict[str, str]:
+async def mint_session_cookie(app, user: dict | None = None) -> dict[str, str]:
     """Forge the session cookie a completed OAuth login would set.
 
     !!! warning
 
         This bypasses awkward OAuth internals (redirects, callbacks, etc...) while
-        keeping the real session path: the value is encrypted with the app's own
-        session secret, exactly as Litestar's client-side `CookieBackendConfig` does
-        (see `main.py`).
+        keeping the real session path: the session data is written into the app's
+        own server-side store and the returned cookie carries only the opaque
+        session id, exactly as Litestar's `ServerSideSessionConfig` does (see
+        `main.py`).
     """
-    import hashlib
-
-    from litestar.middleware.session.client_side import (
-        ClientSideSessionBackend,
-        CookieBackendConfig,
+    from litestar.middleware.session.server_side import (
+        ServerSideSessionBackend,
+        ServerSideSessionConfig,
     )
 
-    from damnit_api.shared.settings import settings
-
-    secret = settings.session_secret.get_secret_value()  # ty: ignore[unresolved-attribute]  # pyright: ignore[reportOptionalMemberAccess]
-    config = CookieBackendConfig(
-        secret=hashlib.sha256(secret.encode()).digest(), key=SESSION_COOKIE
+    config = ServerSideSessionConfig(key=SESSION_COOKIE)
+    backend = ServerSideSessionBackend(config=config)
+    store = config.get_store_from_app(app)
+    session_id = backend.generate_session_id()
+    await backend.set(
+        session_id=session_id,
+        data=backend.serialize_data({"user": user or TEST_USER}),
+        store=store,
     )
-    backend = ClientSideSessionBackend(config=config)
-    chunks = backend.dump_data({"user": user or TEST_USER})
-    if len(chunks) == 1:
-        return {SESSION_COOKIE: chunks[0].decode("utf-8")}
-    return {
-        f"{SESSION_COOKIE}-{i}": chunk.decode("utf-8")
-        for i, chunk in enumerate(chunks)
-    }
+    return {SESSION_COOKIE: session_id}

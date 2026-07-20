@@ -86,7 +86,9 @@ def app(monkeypatch):
     async def noop_load(self):
         pass
 
-    monkeypatch.setattr("damnit_api.state.OAuthClient.load_server_metadata", noop_load)
+    monkeypatch.setattr(
+        "damnit_api.auth.oauth.OAuthClient.load_server_metadata", noop_load
+    )
 
     return create_app()
 

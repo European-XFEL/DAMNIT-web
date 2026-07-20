@@ -1,6 +1,5 @@
 from typing import Self
 
-import async_lru
 from anyio import Path as APath
 from pydantic import BaseModel
 
@@ -9,7 +8,6 @@ class ModifiedTime(BaseModel):
     lastModified: float  # noqa: N815
 
     @classmethod
-    @async_lru.alru_cache(ttl=5)
     async def from_file(cls, path: APath) -> Self:
         stat = await path.stat()
         return cls(lastModified=stat.st_mtime)
@@ -20,7 +18,6 @@ class ContextFile(BaseModel):
     fileContent: str  # noqa: N815
 
     @classmethod
-    @async_lru.alru_cache(ttl=5)
     async def from_file(cls, path: APath) -> Self:
         content = await path.read_text()
         modified_timestamp = await ModifiedTime.from_file(path)

@@ -9,10 +9,9 @@ from litestar.datastructures import State
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .._mymdc.dependencies import MyMdCClient
-from ..state import OAuthClient
 from .models import OAuthUserInfo as _OAuthUserInfo
 from .models import User as _User
-from .token_store import TokenStore
+from .oauth import OAuthClient
 
 
 def get_oauth_client(state: State) -> OAuthClient:
@@ -39,10 +38,6 @@ async def get_oauth_http_client(
         yield client
     finally:
         await client.aclose()
-
-
-def get_token_store(state: State) -> TokenStore:
-    return state.app_state.token_store  # type: ignore[attr-defined]
 
 
 def get_oauth_user_info(request: Request) -> _OAuthUserInfo:

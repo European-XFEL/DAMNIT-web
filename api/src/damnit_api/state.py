@@ -8,7 +8,7 @@ field is produced by a pure ``create_*`` factory taking :class:`Settings`
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from litestar.datastructures import (
@@ -19,33 +19,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
     from ._mymdc.clients import MyMdCClient
-    from .auth.token_store import TokenStore
+    from .auth.oauth import OAuthClient
     from .graphql.subscriptions import SubscriptionCursors
     from .runs.repository import DamnitRepositoryRegistry
     from .shared.settings import Settings
-
-# Session cookie name, shared by `main.py`'s `CookieBackendConfig` and the
-# logout handlers in `auth/routers.py` so the two cannot drift.
-SESSION_COOKIE_KEY = "session"
-
-
-@dataclass
-class OAuthClient:
-    """OAuth2/OIDC client configuration with lazily loaded server metadata."""
-
-    client_id: str
-    client_secret: str
-    scope: str
-    server_metadata_url: str
-    server_metadata: dict = field(default_factory=dict)
-
-    async def load_server_metadata(self) -> None:
-        import httpx
-
-        async with httpx.AsyncClient() as http:
-            resp = await http.get(self.server_metadata_url)
-            resp.raise_for_status()
-            self.server_metadata = resp.json()
 
 
 @dataclass(frozen=True)
@@ -54,7 +31,6 @@ class AppState:
     db_sessionmaker: async_sessionmaker[AsyncSession]
     mymdc_client: MyMdCClient
     oauth_client: OAuthClient | None  # None when auth is disabled
-    token_store: TokenStore
     repositories: DamnitRepositoryRegistry
     subscription_cursors: SubscriptionCursors
 
@@ -81,24 +57,6 @@ def create_mymdc_client(settings: Settings) -> MyMdCClient:
         case _:
             msg = "Invalid MyMdC configuration"
             raise ValueError(msg)
-
-
-def create_oauth_client(settings: Settings) -> OAuthClient | None:
-    if settings.auth is None:
-        return None
-
-    return OAuthClient(
-        client_id=settings.auth.client_id,
-        client_secret=settings.auth.client_secret.get_secret_value(),
-        scope="openid email groups",
-        server_metadata_url=str(settings.auth.server_metadata_url),
-    )
-
-
-def create_token_store() -> TokenStore:
-    from .auth.token_store import InMemoryTokenStore
-
-    return InMemoryTokenStore()
 
 
 def create_repositories() -> DamnitRepositoryRegistry:
