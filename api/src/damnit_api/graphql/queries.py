@@ -30,18 +30,29 @@ async def _ensure_damnit_path(info: Info, proposal: str) -> None:
     if settings.is_local:
         return
 
-    meta = await _get_proposal_meta(
-        info.context.mymdc, int(proposal), info.context.session
-    )
+    context = info.context
+    # Every aliased field in a preview request asks about the same proposal, so
+    # take the session lock once and remember the answer instead of running the
+    # same lookup concurrently on a session that cannot be shared.
+    async with context.session_lock:
+        if proposal in context.checked_proposals:
+            return
+
+        await _require_damnit_path(context, proposal)
+        context.checked_proposals.add(proposal)
+
+
+async def _require_damnit_path(context, proposal: str) -> None:
+    meta = await _get_proposal_meta(context.mymdc, int(proposal), context.session)
+    if meta.damnit_path:
+        return
+
+    logger.info("No damnit path found, updating proposal metadata")
+    meta = await _update_proposal_meta(context.mymdc, int(proposal), context.session)
     if not meta.damnit_path:
-        logger.info("No damnit path found, updating proposal metadata")
-        meta = await _update_proposal_meta(
-            info.context.mymdc, int(proposal), info.context.session
-        )
-        if not meta.damnit_path:
-            msg = "No damnit path found after updating proposal metadata."
-            # TODO: custom exceptions
-            raise ValueError(msg)
+        msg = "No damnit path found after updating proposal metadata."
+        # TODO: custom exceptions
+        raise ValueError(msg)
 
 
 def group_by_run(record):
