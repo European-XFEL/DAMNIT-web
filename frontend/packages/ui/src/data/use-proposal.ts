@@ -5,6 +5,7 @@ import {
   setProposalNotFound,
   setProposalSuccess,
 } from '#src/data/metadata/metadata.slice'
+import { stampLiveRuns } from '#src/data/table/run-stamps'
 import {
   RUN_UPDATES_SUBSCRIPTION,
   TABLE_DATA_QUERY,
@@ -81,6 +82,7 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
             variables: { proposal: proposal.value },
             data: { runs: update.runs },
           })
+          stampLiveRuns(update.runs)
         }
 
         // Metadata rides along only when the run list, variables, or tags

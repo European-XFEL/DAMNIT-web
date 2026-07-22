@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useApolloClient, useQuery } from '@apollo/client/react'
+import { useApolloClient, useQuery, useReactiveVar } from '@apollo/client/react'
 import { debounce } from 'lodash'
 
 import { VARIABLES } from '#src/constants'
+import { liveRunStamps } from '#src/data/table/run-stamps'
 import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   DEFERRED_TABLE_DATA_QUERY,
@@ -27,6 +28,7 @@ type UseTableRunsOptions = {
 
 type UseTableRuns = {
   cellsByKey: Map<string, RunCells>
+  lastUpdatedByKey: ReadonlyMap<string, number>
   onVisibleRegionChanged: (region: Rectangle) => void
 }
 
@@ -188,5 +190,11 @@ export function useTableRuns({
 
   const cellsByKey = useMemo(() => indexRunCells(runs ?? []), [runs])
 
-  return { cellsByKey, onVisibleRegionChanged }
+  // Per-run flash stamps for the grid's update highlight, written where the
+  // subscription push lands. Loads and deferred fills never stamp, so only a
+  // live push animates; a run with no stamp reads undefined and glide skips
+  // the flash entirely.
+  const lastUpdatedByKey = useReactiveVar(liveRunStamps)
+
+  return { cellsByKey, lastUpdatedByKey, onVisibleRegionChanged }
 }

@@ -66,7 +66,11 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const { runs } = useTableMeta()
   const tableVariables = useTableVariables()
-  const { cellsByKey, onVisibleRegionChanged: fetchOnScroll } = useTableRuns({
+  const {
+    cellsByKey,
+    lastUpdatedByKey,
+    onVisibleRegionChanged: fetchOnScroll,
+  } = useTableRuns({
     proposal,
     paginated,
     pageSize: PAGE_SIZE,
@@ -130,10 +134,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       return getCell({
         value: rowData[variable].value,
         dtype: rowData[variable].dtype,
-        options: {},
+        options: { lastUpdated: lastUpdatedByKey.get(runKey(identity)) },
       })
     },
-    [tableColumns, runs, cellsByKey]
+    [tableColumns, runs, cellsByKey, lastUpdatedByKey]
   )
 
   // Cell: tooltip. Errored cells show a card; image cells show a preview.
