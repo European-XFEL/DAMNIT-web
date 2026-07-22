@@ -76,7 +76,7 @@ def get_gql_app():
     schema = Schema(
         query=Query,
         subscription=Subscription,
-        types=[run_types.DamnitVariable],
+        types=[run_types.Cell],
         directives=[gql_main.directives.lightweight],
         config=StrawberryConfig(
             auto_camel_case=False,

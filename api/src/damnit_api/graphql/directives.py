@@ -1,7 +1,7 @@
 import strawberry
 from strawberry.directive import DirectiveLocation, DirectiveValue
 
-from ..runs.types import DamnitRun, DamnitVariable
+from ..runs.types import Cell, DamnitRun
 from ..shared.const import DamnitType
 
 HEAVY_DATA = (
@@ -15,22 +15,22 @@ HEAVY_DATA = (
     locations=[DirectiveLocation.FIELD],
     description="Only return lightweight values (e.g., scalars)",
 )
-def lightweight(field: DirectiveValue[DamnitRun | DamnitVariable]):
+def lightweight(field: DirectiveValue[DamnitRun | Cell]):
     fields = field if isinstance(field, list) else [field]
 
-    for variable in get_variables(fields):
-        if variable is not None and variable.dtype in HEAVY_DATA:
-            variable.value = None
+    for cell in get_cells(fields):
+        if cell is not None and cell.dtype in HEAVY_DATA:
+            cell.value = None
 
     # Return original field
     return field
 
 
-def get_variables(fields):
-    variables = []
+def get_cells(fields):
+    cells = []
     for field in fields:
         if isinstance(field, DamnitRun):
-            variables.extend(field._variables)
-        elif isinstance(field, DamnitVariable):
-            variables.append(field)
-    return variables
+            cells.extend(field._cells)
+        elif isinstance(field, Cell):
+            cells.append(field)
+    return cells

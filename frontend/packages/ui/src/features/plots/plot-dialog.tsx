@@ -17,7 +17,7 @@ import TextCombobox, {
 import { selectVariables } from '#src/data/table/table-data.selectors'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { type PlotSpec } from '#src/types'
-import { getVariableTitle } from '#src/utils/variables'
+import { getVariableTitle } from '#src/data/table/table-data.transforms'
 
 import { addPlot } from './plots.slice'
 import { parseRunSelection } from './utils'

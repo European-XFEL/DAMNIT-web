@@ -48,7 +48,7 @@ strawberry.enum(DamnitType, graphql_name_from="value")
 
 
 @strawberry.type
-class DamnitVariableError:
+class CellError:
     message: str
     cls: str
 
@@ -56,9 +56,9 @@ class DamnitVariableError:
     def from_attrs(cls, attributes):
         """Pull the error out of a `run_variables.attributes` value.
 
-        When a variable fails to execute, DAMNIT stores a JSON string like
-        ``{"error": "...", "error_cls": "..."}`` in the `attributes` column.
-        Returns a `DamnitVariableError`, or None if there is no error.
+        When a variable fails for one run, DAMNIT stores a JSON string like
+        ``{"error": "...", "error_cls": "..."}`` in that cell's `attributes`
+        column. Returns a `CellError`, or None if the cell has no error.
         """
         if not isinstance(attributes, str):
             return None
@@ -81,26 +81,26 @@ class DamnitVariableError:
 
 
 @strawberry.type
-class DamnitVariable:
+class Cell:
     name: str
     value: Any | None
     dtype: DamnitType
-    error: DamnitVariableError | None = None
+    error: CellError | None = None
 
 
 @strawberry.type
 class DamnitRun:
-    _variables: strawberry.Private[list[DamnitVariable]]
+    _cells: strawberry.Private[list[Cell]]
 
     @strawberry.field
-    def variables(self, names: list[str] | None = None) -> list[DamnitVariable]:
+    def cells(self, names: list[str] | None = None) -> list[Cell]:
         if names is None:
-            return self._variables
+            return self._cells
         requested = set(names)
-        return [v for v in self._variables if v.name in requested]
+        return [v for v in self._cells if v.name in requested]
 
     @classmethod
-    def _iter_variables(cls, record):
+    def _iter_cells(cls, record):
         for name, entry in record.items():
             if entry is None:
                 continue
@@ -108,12 +108,12 @@ class DamnitRun:
                 entry = {"value": entry}
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)
-            error = DamnitVariableError.from_attrs(entry.get("attributes"))
-            yield DamnitVariable(name=name, value=Any(value), dtype=dtype, error=error)
+            error = CellError.from_attrs(entry.get("attributes"))
+            yield Cell(name=name, value=Any(value), dtype=dtype, error=error)
 
     @classmethod
     def from_db(cls, record):
-        return cls(_variables=list(cls._iter_variables(record)))
+        return cls(_cells=list(cls._iter_cells(record)))
 
     @classmethod
     def resolve(cls, record):
@@ -121,7 +121,7 @@ class DamnitRun:
             name: None for name, entry in record.items() if entry is None
         }
 
-        for v in cls._iter_variables(record):
+        for v in cls._iter_cells(record):
             if v.value is None and v.error is None:
                 out[v.name] = None
                 continue

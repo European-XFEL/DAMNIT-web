@@ -9,7 +9,7 @@ from damnit_api.runs.serialization import (
     serialize,
     to_complex_string,
 )
-from damnit_api.runs.types import DamnitRun, DamnitVariableError
+from damnit_api.runs.types import CellError, DamnitRun
 from damnit_api.shared.const import DamnitType
 
 
@@ -140,14 +140,14 @@ def test_serialize_image():
 
 
 # -----------------------------------------------------------------------------
-# Test DamnitVariableError.from_attrs
+# Test CellError.from_attrs
 
 ERROR_ATTRS = {"error": "IndexError: list index out of range", "error_cls": "Foo"}
 
 
 def test_extract_error_from_json_string():
-    error = DamnitVariableError.from_attrs(json.dumps(ERROR_ATTRS))
-    assert error == DamnitVariableError(message=ERROR_ATTRS["error"], cls="Foo")
+    error = CellError.from_attrs(json.dumps(ERROR_ATTRS))
+    assert error == CellError(message=ERROR_ATTRS["error"], cls="Foo")
 
 
 @pytest.mark.parametrize(
@@ -163,7 +163,7 @@ def test_extract_error_from_json_string():
     ],
 )
 def test_extract_error_returns_none(attributes):
-    assert DamnitVariableError.from_attrs(attributes) is None
+    assert CellError.from_attrs(attributes) is None
 
 
 # -----------------------------------------------------------------------------

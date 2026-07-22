@@ -1,13 +1,13 @@
 import { Image, useComputedColorScheme, useMantineTheme } from '@mantine/core'
 import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
-import { type VariableError } from '#src/types'
+import { type CellError } from '#src/data/table/table-data.types'
 import { assertNever } from '#src/utils/helpers'
 
 import { ErrorContent } from './error-content'
 
 export type CellTooltip =
-  | { kind: 'error'; error: VariableError }
+  | { kind: 'error'; error: CellError }
   | { kind: 'image'; src: string }
 
 type TableTooltipProps = {

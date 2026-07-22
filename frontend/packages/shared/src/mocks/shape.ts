@@ -25,7 +25,7 @@ export function shapeTableData(
 ) {
   return {
     runs: data.map((run) => ({
-      variables: Object.entries(run.variables)
+      cells: Object.entries(run.variables)
         .filter(([name]) => names == null || names.includes(name))
         .map(([name, variable]) => ({
           name,

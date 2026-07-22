@@ -2,10 +2,10 @@ import { describe, expect, test } from 'vitest'
 
 import { selectVariables } from '#src/data/table/table-data.selectors'
 import type { RootState } from '#src/app/store/reducer'
-import type { VariableMetadataItem } from '#src/types'
+import type { Variable } from '#src/data/table/table-data.types'
 
 function stateWithVariables(names: string[]): RootState {
-  const variables: Record<string, VariableMetadataItem> = Object.fromEntries(
+  const variables: Record<string, Variable> = Object.fromEntries(
     names.map((name) => [name, { name, tags: [] }])
   )
   return { tableData: { metadata: { variables } } } as unknown as RootState

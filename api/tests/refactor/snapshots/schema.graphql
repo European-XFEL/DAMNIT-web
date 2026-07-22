@@ -3,8 +3,20 @@ directive @lightweight on FIELD
 
 scalar Any
 
+type Cell {
+  name: String!
+  value: Any
+  dtype: DamnitType!
+  error: CellError
+}
+
+type CellError {
+  message: String!
+  cls: String!
+}
+
 type DamnitRun {
-  variables(names: [String!] = null): [DamnitVariable!]!
+  cells(names: [String!] = null): [Cell!]!
 }
 
 enum DamnitType {
@@ -20,18 +32,6 @@ enum DamnitType {
   rgba
   png
   dataset
-}
-
-type DamnitVariable {
-  name: String!
-  value: Any
-  dtype: DamnitType!
-  error: DamnitVariableError
-}
-
-type DamnitVariableError {
-  message: String!
-  cls: String!
 }
 
 input DatabaseInput {

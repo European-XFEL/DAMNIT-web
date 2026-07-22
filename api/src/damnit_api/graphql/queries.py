@@ -16,7 +16,7 @@ from .utils import DatabaseInput, fetch_info
 logger = get_logger()
 
 # Names that only `fetch_info` provides; `proposal` and `run` already come
-# from `fetch_variables`.
+# from `fetch_cells`.
 RUN_INFO_NAMES = frozenset(KNOWN_DTYPES) - {"proposal", "run"}
 
 
@@ -54,7 +54,7 @@ def group_by_run(record):
                 "proposal": {"value": entry["proposal"]},
                 "run": {"value": entry["run"]},
             }
-        # Outer-join placeholder for a run with no matching variables.
+        # Outer-join placeholder for a run with no matching cells.
         if entry["name"] is None:
             continue
         grouped[key][entry["name"]] = {
@@ -66,7 +66,7 @@ def group_by_run(record):
     return list(grouped.values())
 
 
-async def fetch_variables(proposal, *, limit, offset, names=None):
+async def fetch_cells(proposal, *, limit, offset, names=None):
     table = await async_table(proposal, name="run_variables")
     if table is None:
         return []
@@ -130,15 +130,15 @@ async def fetch_variables(proposal, *, limit, offset, names=None):
         return group_by_run(result.mappings().all())  # type: ignore[assignment]
 
 
-def _selected_variable_names(info: Info) -> list[str] | None:
-    """Union the `names` arguments across every `variables` sub-selection.
+def _selected_cell_names(info: Info) -> list[str] | None:
+    """Union the `names` arguments across every `cells` sub-selection.
     Returns None if any selection omits the argument (forces a full fetch).
     """
     union = set()
     found = False
     for selected in info.selected_fields:
         for sub in selected.selections:
-            if not isinstance(sub, SelectedField) or sub.name != "variables":
+            if not isinstance(sub, SelectedField) or sub.name != "cells":
                 continue
             found = True
             arg = sub.arguments.get("names")
@@ -170,34 +170,33 @@ class Query:
     ) -> list[DamnitRun]:
         """Return a paginated list of Damnit runs.
 
-        If the `variables` sub-selection passes a `names` argument, it is
-        pushed down to SQL so only those variables are fetched. Omitting the
-        argument returns every variable for each run.
+        If the `cells` sub-selection passes a `names` argument, it is
+        pushed down to SQL so only those cells are fetched. Omitting the
+        argument returns every cell for each run.
         """
         proposal = database.proposal
         await _ensure_damnit_path(info, proposal)
-        names = _selected_variable_names(info)
+        names = _selected_cell_names(info)
 
-        variables = await fetch_variables(
+        cells = await fetch_cells(
             proposal,
             limit=per_page,
             offset=(page - 1) * per_page,
             names=names,
         )
 
-        if not len(variables):
+        if not len(cells):
             return []
 
         if _wants_run_info(names):
             info_rows = await fetch_info(
-                proposal, runs=[v["run"]["value"] for v in variables]
+                proposal, runs=[c["run"]["value"] for c in cells]
             )
         else:
-            info_rows = [{} for _ in variables]
+            info_rows = [{} for _ in cells]
 
         return [
-            DamnitRun.from_db({**v, **i})
-            for v, i in zip(variables, info_rows, strict=True)
+            DamnitRun.from_db({**c, **i}) for c, i in zip(cells, info_rows, strict=True)
         ]
 
     @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
@@ -234,7 +233,7 @@ class Query:
     ) -> JSON | None:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         await _ensure_damnit_path(info, database.proposal)
         # TODO: Convert to Strawberry type
-        # and make it analogous to DamitVariable; e.g. `data`
+        # and make it analogous to Cell; e.g. `data`
         return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
             proposal=database.proposal,
             run=run,

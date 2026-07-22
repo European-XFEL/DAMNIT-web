@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { ActionIcon, Group, ScrollArea, Text, Tooltip } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 
-import { type VariableError } from '#src/types'
+import { type CellError } from '#src/data/table/table-data.types'
 import { errorText, errorVisuals } from '#src/features/table/cells'
 
 type ErrorContentProps = {
-  error: VariableError
+  error: CellError
 }
 
 const COPIED_RESET_MS = 1500

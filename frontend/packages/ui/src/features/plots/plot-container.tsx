@@ -5,7 +5,7 @@ import { IconInfoCircle } from '@tabler/icons-react'
 import { DTYPES } from '#src/constants'
 import { createTypedSelector } from '#src/app/store/selectors'
 import { useAppSelector } from '#src/app/store/hooks'
-import { type VariableDataItem, type VariableMetadataItem } from '#src/types'
+import { type Cell, type Variable } from '#src/data/table/table-data.types'
 import { formatRunsSubtitle } from '#src/utils/helpers'
 
 import { type PlotTrace, type PlotMeta, type PlotData } from './plots.types'
@@ -13,11 +13,6 @@ import Plot from './plot'
 import PreviewChunkLoader from './preview-chunk-loader'
 import { useSummaryPlotData } from './use-summary-plot-data'
 import { usePreviewPlotData } from './use-preview-plot-data'
-
-type Variable = {
-  data: number[]
-  metadata: VariableMetadataItem
-}
 
 /*
  * -----------------------------
@@ -33,23 +28,22 @@ const selectTableData = createTypedSelector(
     (_, __, variables) => variables,
   ],
   (tableData, tableMetadata, runs: string[], variables: string[]) => {
-    const result = variables.reduce<Record<string, Variable>>(
-      (acc, variable) => {
-        acc[variable] = {
-          data: [],
-          metadata: tableMetadata.variables[variable],
-        }
-        return acc
-      },
-      {}
-    )
+    const result = variables.reduce<
+      Record<string, { data: number[]; metadata: Variable }>
+    >((acc, variable) => {
+      acc[variable] = {
+        data: [],
+        metadata: tableMetadata.variables[variable],
+      }
+      return acc
+    }, {})
 
     for (const run of runs) {
       const varData = variables.map((variable) => tableData[run]?.[variable])
 
       if (
         varData.every(
-          (data): data is VariableDataItem =>
+          (data): data is Cell =>
             data != null &&
             typeof data.value === 'number' &&
             [DTYPES.number].includes(data.dtype)

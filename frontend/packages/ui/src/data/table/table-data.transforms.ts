@@ -1,34 +1,39 @@
-import type { VariableDataItem, VariableError, VariableValue } from '#src/types'
+import type {
+  Cell,
+  CellError,
+  CellValue,
+  TableData,
+  Variable,
+} from './table-data.types'
 
-import type { TableData } from './table-data.types'
-
-type DamnitVariable = {
+type DamnitCell = {
   name: string
-  value: VariableValue
+  value: CellValue
   dtype: string
-  error?: VariableError | null
+  error?: CellError | null
 }
 
 export type DamnitRun = {
-  variables: DamnitVariable[]
+  cells: DamnitCell[]
 }
 
 // A value the server blanked rather than one that is genuinely absent. The
 // @lightweight directive nulls heavy values (images, arrays) so a page's rows
-// land fast, which leaves them looking like a variable with no value. The one
+// land fast, which leaves them looking like a cell with no value. The one
 // tell is that a real failure carries an error, so the errorless blanks are the
 // ones the server is still holding back.
-export function isBlanked(variable: VariableDataItem | undefined): boolean {
-  return variable?.value == null && variable?.error == null
+export function isBlanked(cell: Cell | undefined): boolean {
+  return cell?.value == null && cell?.error == null
 }
 
-// The variables worth a second, heavier fetch: the ones @lightweight blanked.
+// The variables worth a second, heavier fetch: the ones whose cells
+// @lightweight blanked, in any row.
 export function heavyVariableNames(data: TableData): string[] {
   const names = new Set<string>()
 
   for (const row of Object.values(data)) {
-    for (const [name, variable] of Object.entries(row)) {
-      if (isBlanked(variable)) {
+    for (const [name, cell] of Object.entries(row)) {
+      if (isBlanked(cell)) {
         names.add(name)
       }
     }
@@ -38,28 +43,32 @@ export function heavyVariableNames(data: TableData): string[] {
 }
 
 // Turn the GraphQL runs payload into the table's run-keyed row map. Each run is
-// keyed by its `run` variable's value; a run with no `run` variable, or a null
-// run value, is skipped. A variable's null error collapses to undefined.
+// keyed by its `run` cell's value; a run with no `run` cell, or a null run
+// value, is skipped. A cell's null error collapses to undefined.
 export function flattenRuns(runs: DamnitRun[]): TableData {
   const table: TableData = {}
 
   for (const run of runs) {
-    const runVariable = run.variables.find((v) => v.name === 'run')
-    if (runVariable === undefined || runVariable.value == null) {
+    const runCell = run.cells.find((c) => c.name === 'run')
+    if (runCell === undefined || runCell.value == null) {
       continue
     }
 
-    const row: Record<string, VariableDataItem> = {}
-    for (const variable of run.variables) {
-      row[variable.name] = {
-        value: variable.value,
-        dtype: variable.dtype,
-        error: variable.error ?? undefined,
+    const row: Record<string, Cell> = {}
+    for (const cell of run.cells) {
+      row[cell.name] = {
+        value: cell.value,
+        dtype: cell.dtype,
+        error: cell.error ?? undefined,
       }
     }
 
-    table[String(runVariable.value)] = row
+    table[String(runCell.value)] = row
   }
 
   return table
+}
+
+export function getVariableTitle(variable: Variable): string {
+  return variable.title || variable.name
 }
