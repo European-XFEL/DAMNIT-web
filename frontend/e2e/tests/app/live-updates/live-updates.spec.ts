@@ -20,12 +20,12 @@ import {
 // image-preview.spec. Every updated run sits in the initial vertical fold.
 test.use({ viewport: { width: 1600, height: 900 } })
 
-// A subscription push carries the full runs and variables. The reducer merges
-// metadata, so the seed's tags survive and the push omits them (as the backend
-// does); the mock stamps the timestamp. runs stays numeric to match the seed and
-// the backend; a caller overrides it to add a run.
+// A subscription push carries the full metadata snapshot: runs, variables, and
+// tags. The client replaces its metadata wholesale, exactly as the backend
+// sends it, so the push carries tags too. The mock stamps the timestamp; runs
+// stays numeric to match the seed, and a caller overrides it to add a run.
 function fullMetadata(runs: number[]) {
-  return { runs, variables: XPCS.meta.variables }
+  return { runs, variables: XPCS.meta.variables, tags: XPCS.meta.tags }
 }
 
 test('a finished run appears as a new row', async ({ page, api, example }) => {

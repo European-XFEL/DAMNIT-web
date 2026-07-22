@@ -18,6 +18,7 @@ import { BASE_URL, WS_URL } from '#src/constants'
 
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from './operation-names'
 import { createPriorityLink } from './priority-link'
+import { typePolicies } from './type-policies'
 
 const removeTypenameLink = removeTypenameFromVariables({
   except: {
@@ -60,7 +61,7 @@ const splitLink = split(
   from([priorityLink, httpLink])
 )
 
-export const cache = new InMemoryCache()
+export const cache = new InMemoryCache({ typePolicies })
 
 export const client = new ApolloClient({
   cache,

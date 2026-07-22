@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import type { Tag } from '#src/data/table/table-data.types'
+import { useTableMeta } from '#src/data/table/use-table-meta'
 import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
   selectTagSelection,
@@ -69,10 +70,7 @@ export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
 }
 
 function useVariableNames() {
-  // TODO: Replace with GraphQL useQuery
-  const variables = useAppSelector(
-    (state) => state.tableData.metadata.variables
-  )
+  const { variables } = useTableMeta()
   return useMemo(() => Object.keys(variables), [variables])
 }
 
@@ -88,8 +86,7 @@ export function useColumnVisibilityFromVariables() {
 }
 
 export function useColumnVisibilityFromTags() {
-  // TODO: Replace with GraphQL useQuery
-  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const { tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
   const variableNames = useVariableNames()
 
@@ -106,7 +103,7 @@ export function useColumnVisibilityFromTags() {
 export function useColumnVisibility() {
   const variableNames = useVariableNames()
   const visibility = useAppSelector(selectVariableVisibility)
-  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const { tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
 
   return useMemo(

@@ -51,6 +51,10 @@ export function registerAppListeners() {
                 ? DELETE
                 : value,
           })
+          // This is what reclaims the memory, not a tidy-up. Runs normalize to
+          // top-level `DamnitRun:{...}` entries, so dropping the fields above
+          // only removes the references to them; the entries themselves sit
+          // there as orphans, images and all, until the collector runs.
           cache.gc()
         })
       )

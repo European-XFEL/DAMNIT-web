@@ -1,9 +1,15 @@
 import { Image, ScrollArea, Text } from '@mantine/core'
+import { useFragment } from '@apollo/client/react'
 
 import { selectVariableVisibility } from '#src/features/table/store/selectors'
 import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
+import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
+import {
+  type CellValue,
+  type Run as RunEntity,
+} from '#src/data/table/table-data.types'
+import { useTableMeta } from '#src/data/table/use-table-meta'
 import { useAppSelector } from '#src/app/store/hooks'
-import { type CellValue } from '#src/data/table/table-data.types'
 import { formatDate, isEmpty } from '#src/utils/helpers'
 
 import classes from './run.module.css'
@@ -75,23 +81,38 @@ const renderFactory = {
 }
 
 const Run = () => {
-  const tableData = useAppSelector((state) => state.tableData.data)
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const { run, variables: selectedVariables } = useAppSelector(
     (state) => state.table.selection
   )
-  const metadataVariables = useAppSelector(
-    (state) => state.tableData.metadata.variables
-  )
+  const { runs, variables: metadataVariables } = useTableMeta()
   const variableVisibility = useAppSelector(selectVariableVisibility)
 
-  if (!run || !tableData[run]) {
+  // The selection carries a run number; its proposal comes from the run list,
+  // which pairs each number with the proposal it belongs to.
+  const identity =
+    run != null ? runs.find((entry) => entry.run === run) : undefined
+  const { data: runEntity, complete } = useFragment<RunEntity>({
+    fragment: RUN_FRAGMENT,
+    from: {
+      __typename: 'DamnitRun',
+      database: proposal,
+      proposal: identity?.proposal ?? '',
+      run: identity?.run ?? -1,
+    },
+  })
+
+  if (run == null || !identity || !complete) {
     return null
   }
 
+  const cells = Object.fromEntries(
+    (runEntity.cells ?? []).map((cell) => [cell.name, cell])
+  )
   const runData = isEmpty(selectedVariables)
-    ? tableData[run]
+    ? cells
     : Object.fromEntries(
-        Object.entries(tableData[run]).filter(([name]) =>
+        Object.entries(cells).filter(([name]) =>
           selectedVariables.includes(name)
         )
       )
@@ -110,7 +131,7 @@ const Run = () => {
         return render({
           name,
           label: metadataVariables[name]?.title || name,
-          value: data.value,
+          value: data.value as CellValue,
         })
       })}
     </ScrollArea>
