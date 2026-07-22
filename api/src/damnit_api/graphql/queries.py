@@ -1,5 +1,5 @@
 import strawberry
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, tuple_
 from strawberry.scalars import JSON
 from strawberry.types import Info
 from strawberry.types.nodes import SelectedField
@@ -8,8 +8,13 @@ from .. import get_logger
 from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..metadata.services import _get_proposal_meta, _update_proposal_meta
 from ..runs.preview import get_preview_data
-from ..runs.sqlite import async_table, get_session
-from ..runs.types import KNOWN_DTYPES, DamnitRun
+from ..runs.sqlite import (
+    async_active_proposal,
+    async_table,
+    get_session,
+    order_by_active,
+)
+from ..runs.types import KNOWN_DTYPES, DamnitRun, TableMeta
 from .metadata import fetch_metadata
 from .utils import DatabaseInput, fetch_info
 
@@ -82,27 +87,32 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
     if table is None:
         return []
 
+    active = await async_active_proposal(proposal)
     runs_subquery = (
         select(table.c.proposal, table.c.run)
         .distinct()
-        .order_by(table.c.run)
+        .order_by(*order_by_active(table, active))
         .limit(limit)
         .offset(offset)
         .subquery()
     )
 
+    page_pairs = select(runs_subquery.c.proposal, runs_subquery.c.run)
     latest_timestamp_subquery = select(
         table.c.proposal,
         table.c.run,
         table.c.name,
         func.max(table.c.timestamp).label("latest_timestamp"),
-    ).where(table.c.run.in_(select(runs_subquery.c.run)))
+    ).where(tuple_(table.c.proposal, table.c.run).in_(page_pairs))
     if names is not None:
         latest_timestamp_subquery = latest_timestamp_subquery.where(
             table.c.name.in_(names)
         )
+    # Group by (proposal, run, name): grouping by run alone would let one
+    # run's max timestamp mix in a colliding run from another proposal, and
+    # SQLite's bare-column group-by would then pick an arbitrary proposal.
     latest_timestamp_subquery = latest_timestamp_subquery.group_by(
-        table.c.run, table.c.name
+        table.c.proposal, table.c.run, table.c.name
     ).subquery()
 
     # Outer-join from `runs_subquery` so a `names` filter that excludes every
@@ -119,7 +129,10 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
         .select_from(runs_subquery)
         .outerjoin(
             latest_timestamp_subquery,
-            runs_subquery.c.run == latest_timestamp_subquery.c.run,
+            and_(
+                runs_subquery.c.proposal == latest_timestamp_subquery.c.proposal,
+                runs_subquery.c.run == latest_timestamp_subquery.c.run,
+            ),
         )
         .outerjoin(
             table,
@@ -130,20 +143,22 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
                 table.c.timestamp == latest_timestamp_subquery.c.latest_timestamp,
             ),
         )
-        .order_by(runs_subquery.c.run)
+        .order_by(*order_by_active(runs_subquery, active))
     )
 
     async with get_session(proposal) as session:
         result = await session.execute(query)
-        if not result:
-            raise ValueError  # TODO: Better error handling
-
         return group_by_run(result.mappings().all())  # type: ignore[assignment]
 
 
 def _selected_cell_names(info: Info) -> list[str] | None:
     """Union the `names` arguments across every `cells` sub-selection.
-    Returns None if any selection omits the argument (forces a full fetch).
+
+    Returns one of three things:
+    - ``[]`` if no `cells` field is selected (an identity-only query): fetch no
+      cells and skip the run_info fetch, since there is nothing to serialize.
+    - ``None`` if a `cells` selection omits `names`: fetch every cell.
+    - the sorted union of the requested names otherwise.
     """
     union = set()
     found = False
@@ -156,7 +171,10 @@ def _selected_cell_names(info: Info) -> list[str] | None:
             if arg is None:
                 return None
             union.update(arg)
-    return sorted(union) if found else None
+    if not found:
+        # No `cells` selected: caller wants run identities only.
+        return []
+    return sorted(union)
 
 
 def _wants_run_info(names: list[str] | None) -> bool:
@@ -199,15 +217,17 @@ class Query:
         if not len(cells):
             return []
 
-        if _wants_run_info(names):
-            info_rows = await fetch_info(
-                proposal, runs=[c["run"]["value"] for c in cells]
-            )
-        else:
-            info_rows = [{} for _ in cells]
+        pairs = [(c["proposal"]["value"], c["run"]["value"]) for c in cells]
+        run_info = (
+            await fetch_info(proposal, runs=pairs) if _wants_run_info(names) else {}
+        )
 
         return [
-            DamnitRun.from_db({**c, **i}) for c, i in zip(cells, info_rows, strict=True)
+            DamnitRun.from_db(
+                {**c, **run_info.get(pair, {})},
+                database=database.proposal,
+            )
+            for c, pair in zip(cells, pairs, strict=True)
         ]
 
     @strawberry.field(permission_classes=PROPOSAL_PERMISSIONS)
@@ -215,7 +235,7 @@ class Query:
         self,
         info: Info,
         database: DatabaseInput,
-    ) -> JSON:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+    ) -> TableMeta:
         proposal = database.proposal
         if not proposal:
             msg = "Proposal number is required."
@@ -225,10 +245,7 @@ class Query:
         await _ensure_damnit_path(info, proposal)
 
         snapshot = await fetch_metadata(proposal)
-        return {
-            **snapshot,
-            "timestamp": snapshot["timestamp"] * 1000,  # ms for JS
-        }  # pyright: ignore[reportReturnType]
+        return TableMeta.from_snapshot(snapshot)
 
     # Nullable, because a preview asks for many runs in one request, aliasing
     # this field once per run. A non-null field that raises propagates the null

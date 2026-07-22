@@ -37,7 +37,13 @@ def runs_query(proposal: int) -> dict:
 
 
 def metadata_query(proposal: int) -> dict:
-    return {"query": f'query {{ metadata(database: {{ proposal: "{proposal}" }}) }}'}
+    return {
+        "query": f"""
+            query {{
+              metadata(database: {{ proposal: "{proposal}" }}) {{ timestamp }}
+            }}
+        """
+    }
 
 
 async def test_runs_query_forbidden_for_non_member_unchanged(logged_in_client):

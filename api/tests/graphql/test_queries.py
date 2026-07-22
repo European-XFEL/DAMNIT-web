@@ -7,10 +7,10 @@ from damnit_api.runs.types import DamnitRun
 
 from .const import (
     EXAMPLE_DATA,
-    EXAMPLE_VARIABLES,
+    EXAMPLE_TAGGED_VARIABLES,
     KNOWN_DATA,
     PROPOSAL,
-    RUNS,
+    RUN_IDENTIFIERS,
     get_values,
 )
 
@@ -36,9 +36,11 @@ def mocked_fetch_cells(mocker):
 
 @pytest.fixture
 def mocked_fetch_info(mocker):
+    # fetch_info returns a mapping keyed by (proposal, run).
+    info = get_values(KNOWN_DATA)
     return mocker.patch(
         "damnit_api.graphql.queries.fetch_info",
-        return_value=[get_values(KNOWN_DATA)],
+        return_value={(info["proposal"], info["run"]): info},
     )
 
 
@@ -68,6 +70,31 @@ async def test_runs_query(graphql_schema, mocked_fetch_cells, mocked_fetch_info)
 
     assert mocked_fetch_cells.call_args.kwargs["names"] is None
     assert mocked_fetch_info.called
+
+
+@pytest.mark.asyncio
+async def test_runs_query_returns_identity_trio(
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
+):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
+            database
+            proposal
+            run
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    assert result.data["runs"] == [
+        {"database": str(PROPOSAL), "proposal": str(PROPOSAL), "run": 348}
+    ]
+
+    # Identity-only: no cells to load, so run_info is skipped too.
+    assert mocked_fetch_cells.call_args.kwargs["names"] == []
+    assert not mocked_fetch_info.called
 
 
 @pytest.mark.asyncio
@@ -235,6 +262,153 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
     ]
 
 
+@pytest_asyncio.fixture
+async def two_proposal_db(mocker, tmp_path, request):
+    """A file holding two proposals that share a run number, wired via
+    `find_proposal`. The addressing proposal (999999) is the active one in
+    `metameta`; 888888 is a guest. Yields the addressing proposal id.
+
+    Parametrise indirectly with the `metameta` proposal value to write, or
+    with None to write no row at all.
+    """
+    proposal = "999999"
+    active_value = getattr(request, "param", proposal)
+    guest = 888888
+    proposal_root = tmp_path / "proposal"
+    (proposal_root / DAMNIT_PATH).mkdir(parents=True)
+
+    mocker.patch(
+        "damnit_api.runs.sqlite.session.find_proposal",
+        return_value=str(proposal_root),
+    )
+    DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
+
+    manager = DatabaseSessionManager(proposal)
+    async with manager.connect() as conn:
+        await conn.execute(
+            text(
+                "CREATE TABLE run_variables ("
+                "  proposal INTEGER NOT NULL,"
+                "  run INTEGER NOT NULL,"
+                "  name TEXT NOT NULL,"
+                "  value BLOB,"
+                "  summary_type TEXT,"
+                "  attributes BLOB,"
+                "  timestamp REAL NOT NULL,"
+                "  PRIMARY KEY (proposal, run, name, timestamp)"
+                ")"
+            )
+        )
+        await conn.execute(
+            text("CREATE TABLE run_info (proposal INTEGER, run INTEGER)")
+        )
+        await conn.execute(text("CREATE TABLE metameta (key TEXT, value TEXT)"))
+
+        variable_rows = [
+            # (999999, 1): a superseded and a latest `alpha`.
+            (int(proposal), 1, "alpha", "a1_old", 1000.0),
+            (int(proposal), 1, "alpha", "a1", 2000.0),
+            (int(proposal), 2, "alpha", "a2", 1500.0),
+            # Guest run collides on run number 1 with its own value.
+            (guest, 1, "alpha", "guest_a1", 1200.0),
+        ]
+        await conn.execute(
+            text(
+                "INSERT INTO run_variables"
+                " (proposal, run, name, value, timestamp)"
+                " VALUES (:proposal, :run, :name, :value, :timestamp)"
+            ),
+            [
+                {"proposal": p, "run": r, "name": n, "value": v, "timestamp": t}
+                for p, r, n, v, t in variable_rows
+            ],
+        )
+        await conn.execute(
+            text("INSERT INTO run_info (proposal, run) VALUES (:proposal, :run)"),
+            [
+                {"proposal": int(proposal), "run": 1},
+                {"proposal": int(proposal), "run": 2},
+                {"proposal": guest, "run": 1},
+            ],
+        )
+        if active_value is not None:
+            await conn.execute(
+                text("INSERT INTO metameta (key, value) VALUES ('proposal', :value)"),
+                {"value": active_value},
+            )
+
+    yield proposal
+
+    await manager.close()
+    DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+@pytest.mark.asyncio
+async def test_runs_query_includes_guests_active_block_first(
+    graphql_schema, two_proposal_db
+):
+    """Guests are included and ordered after the active proposal's block,
+    and a run number shared across proposals keeps each proposal's value.
+    """
+    proposal = two_proposal_db
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{proposal}"}}, per_page: 10) {{
+            proposal
+            run
+            cells(names: ["alpha"]) {{ name value }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    runs = result.data["runs"]
+
+    # Active proposal (999999) block first, then the guest (888888).
+    assert [(r["proposal"], r["run"]) for r in runs] == [
+        ("999999", 1),
+        ("999999", 2),
+        ("888888", 1),
+    ]
+
+    alpha = [{v["name"]: v["value"] for v in r["cells"]}.get("alpha") for r in runs]
+    # The colliding run 1 keeps each proposal's own latest value.
+    assert alpha == ["a1", "a2", "guest_a1"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "two_proposal_db",
+    # No `proposal` row at all, and a row DAMNIT wrote something unreadable in.
+    [None, "not-a-number"],
+    indirect=True,
+)
+async def test_runs_query_without_an_active_proposal_orders_by_proposal_then_run(
+    graphql_schema, two_proposal_db
+):
+    """A file whose `metameta` names no readable active proposal has no block
+    to put first, so runs order by (proposal, run) and the guest leads.
+    """
+    proposal = two_proposal_db
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{proposal}"}}, per_page: 10) {{
+            proposal
+            run
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    assert [(r["proposal"], r["run"]) for r in result.data["runs"]] == [
+        ("888888", 1),
+        ("999999", 1),
+        ("999999", 2),
+    ]
+
+
 @pytest.mark.asyncio
 async def test_runs_query_fetches_run_info_when_metadata_requested(
     graphql_schema, mocked_fetch_cells, mocked_fetch_info
@@ -259,7 +433,12 @@ async def test_runs_query_fetches_run_info_when_metadata_requested(
 async def test_metadata_query(graphql_schema):
     query = """
         query TableMetadataQuery($proposal: String) {
-          metadata(database: { proposal: $proposal })
+          metadata(database: { proposal: $proposal }) {
+            runs { proposal run }
+            variables
+            tags
+            timestamp
+          }
         }
     """
     result = await graphql_schema.execute(
@@ -271,10 +450,12 @@ async def test_metadata_query(graphql_schema):
 
     metadata = result.data["metadata"]
     assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags"}
-    assert metadata["runs"] == RUNS
+    assert metadata["runs"] == [
+        {"proposal": str(proposal), "run": run} for proposal, run in RUN_IDENTIFIERS
+    ]
     assert metadata["variables"] == {
         **DamnitRun.known_variables(),
-        **EXAMPLE_VARIABLES,
+        **EXAMPLE_TAGGED_VARIABLES,
     }
     assert "(Untagged)" in metadata["tags"]
     assert "eTOF" in metadata["tags"]

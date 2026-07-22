@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import strawberry
-from sqlalchemy import or_, select
+from sqlalchemy import select, tuple_
 
 from ..runs.sqlite import async_table, get_session
 from ..shared.const import DEFAULT_PROPOSAL
@@ -35,8 +35,9 @@ class LatestData:
     def add(self, data):
         timestamp = data["timestamp"]
 
-        # Bookkeep by runs
-        run = self.runs[data["run"]]
+        # Bookkeep by (proposal, run): run numbers collide across proposals in
+        # one file, so keying by run alone would merge two runs into one.
+        run = self.runs[data["proposal"], data["run"]]
         if run[data["name"]].timestamp < timestamp:
             run[data["name"]] = Data(
                 value=data["value"],
@@ -65,15 +66,20 @@ class LatestData:
 
 
 async def fetch_info(proposal, *, runs):
+    """Fetch `run_info` rows for the given (proposal, run) pairs.
+
+    Returns a mapping keyed by (proposal, run) so callers align rows even when
+    run numbers collide across proposals in one file.
+    """
     table = await async_table(proposal, name="run_info")
     if table is None:
-        return []
-    conditions = [table.c.run == run for run in runs]
-    query = select(table).where(or_(*conditions)).order_by(table.c.run)
+        return {}
+    # One `(proposal, run) IN (...)` predicate rather than an OR of per-pair
+    # ANDs: the unpaginated table asks for up to ALL_RUNS_PAGE_SIZE pairs, and a
+    # 10000-branch OR builds thousands of expressions SQLite runs as separate
+    # index probes. Mirrors the tuple IN already used in `fetch_cells`.
+    query = select(table).where(tuple_(table.c.proposal, table.c.run).in_(runs))
 
     async with get_session(proposal) as session:
         result = await session.execute(query)
-        if not result:
-            raise ValueError  # TODO: Better error handling
-
-        return result.mappings().all()
+        return {(row["proposal"], row["run"]): row for row in result.mappings().all()}

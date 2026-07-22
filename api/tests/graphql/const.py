@@ -5,6 +5,7 @@ from damnit_api.utils import create_map
 
 PROPOSAL = 900485
 RUNS = [348, 349, 350]
+RUN_IDENTIFIERS = [(PROPOSAL, run) for run in RUNS]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -85,6 +86,16 @@ EXAMPLE_VARIABLE_TAGS = {
     "etof_settings.ret0": [1],
     "etof.eTOF_calibration": [7],
     "etof.eTOF_response_width": [7],
+}
+
+# What `fetch_metadata` makes of the three above: each variable carries the
+# names of its tags, not their ids.
+EXAMPLE_TAGGED_VARIABLES = {
+    name: {
+        **variable,
+        "tags": [EXAMPLE_TAGS[tag]["name"] for tag in EXAMPLE_VARIABLE_TAGS[name]],
+    }
+    for name, variable in EXAMPLE_VARIABLES.items()
 }
 
 # -----------------------------------------------------------------------------

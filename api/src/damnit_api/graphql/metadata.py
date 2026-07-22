@@ -1,4 +1,6 @@
 import asyncio
+import hashlib
+import json
 
 from async_lru import alru_cache
 
@@ -11,15 +13,16 @@ from ..utils import create_map
 async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
     """Fetch the per-proposal metadata snapshot from SQLite.
 
-    Returns a dict with `runs`, `variables`, `tags`, and `timestamp`. Result
-    is TTL-cached; the `latest_data` subscription invalidates this cache when
-    it observes new data so subsequent reads stay fresh.
+    Returns a dict with `runs`, `variables`, `tags`, and `timestamp`. `runs`
+    is a server-ordered list of (proposal, run) pairs (active block first).
+    Result is TTL-cached; the `run_updates` subscription invalidates this
+    cache when it observes new data so subsequent reads stay fresh.
     """
     tags, variables, variable_tags, runs, max_timestamp = await asyncio.gather(
         db.async_all_tags(proposal),
         db.async_variables(proposal),
         db.async_variable_tags(proposal),
-        db.async_column(proposal, table="run_info", name="run"),
+        db.async_run_identifiers(proposal),
         db.async_max(proposal, table="run_variables", column="timestamp"),
     )
 
@@ -39,9 +42,26 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
     }
     tags = create_map([untagged, *tags.values()], key="name")
 
-    return {
-        "runs": sorted(runs or []),
+    snapshot = {
+        "runs": runs,
         "variables": variables,
         "tags": tags,
         "timestamp": max_timestamp or 0,
     }
+    snapshot["signature"] = _signature(snapshot)
+    return snapshot
+
+
+def _signature(snapshot) -> str:
+    """Hash of everything a subscriber would be pushed.
+
+    Computed here so it costs one pass per actual read rather than one per
+    subscription tick. `timestamp` is left out: it moves whenever any value
+    changes, which would make every tick look like a metadata change.
+    """
+    payload = json.dumps(
+        {key: snapshot[key] for key in ("runs", "variables", "tags")},
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()

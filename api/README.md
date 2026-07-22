@@ -43,13 +43,23 @@ podman compose up
 
 ```gql
 query TableMetadataQuery {
-  metadata(database: {proposal: "<PROPOSAL_NUMBER>"})
+  metadata(database: {proposal: "<PROPOSAL_NUMBER>"}) {
+    runs {
+      proposal
+      run
+    }
+    variables
+    tags
+    timestamp
+  }
 }
 ```
 
-This returns a JSON snapshot for the proposal:
+This returns a `TableMeta` snapshot for the proposal:
 
-- `runs` - sorted list of run numbers in the proposal
+- `runs` - server-ordered list of `{proposal, run}` pairs. Run numbers repeat
+  across the proposals sharing one database, so a run is only identified by
+  the pair
 - `variables` - map of variable name to its title and tags (includes the
   known variables listed below alongside any user-defined ones)
 - `tags` - map of tag name to its id and the variables it groups
@@ -63,6 +73,9 @@ of their cells:
 ```gql
 query TableDataQuery($per_page: Int = 10) {
   runs(database: {proposal: "2956"}, per_page: $per_page) {
+    database
+    proposal
+    run
     cells {
       name
       value
@@ -72,8 +85,12 @@ query TableDataQuery($per_page: Int = 10) {
 }
 ```
 
-Each run is returned as a flat list of `Cell` entries (`name`,
-`value`, `dtype`). One can pass a list of `names` to select variables:
+Every run carries the identity trio `database`, `proposal` and `run`. Select
+all three in every document: it is what the client normalizes each run by, and
+what keeps two proposals' run 5 apart.
+
+The cells are a flat list of `Cell` entries (`name`, `value`, `dtype`). One can
+pass a list of `names` to select variables:
 
 ```gql
 query TableDataQuery($per_page: Int = 10) {
@@ -98,17 +115,43 @@ ones from the proposal's context file:
 Pagination is controlled with `page` (1-indexed, defaults to `1`) and
 `per_page` (defaults to `10`).
 
-### 3. Subscribe to latest data
+### 3. Subscribe to run updates
 
 ```gql
-subscription LatestDataSubscription {
-  latest_data(database: {proposal: "<PROPOSAL_NUMBER>"}, timestamp: <TIMESTAMP>)
+subscription RunUpdatesSubscription {
+  run_updates(database: {proposal: "<PROPOSAL_NUMBER>"}, since: <TIMESTAMP>) {
+    runs {
+      database
+      proposal
+      run
+      cells {
+        name
+        value
+        dtype
+      }
+    }
+    metadata {
+      runs {
+        proposal
+        run
+      }
+      variables
+      tags
+      timestamp
+    }
+    timestamp
+  }
 }
 ```
 
-This returns the following:
+Each push is a `RunUpdates`:
 
-- list of (new) runs
-- updated metadata
+- `runs` - the runs whose cells changed since `since`
+- `metadata` - the full `TableMeta`, but only on a push where it materially
+  changed. It is `null` otherwise, so a tag edit or a new variable arrives
+  even on a tick that brings no runs
+- `timestamp` - the cursor to send as the next `since`
 
-Note that the `timestamp` is in milliseconds since Unix epoch.
+Note that both `since` and `timestamp` are in milliseconds since the Unix
+epoch. Passing `since: 0` is the cold start: it delivers the next tick's
+changed runs, not the proposal's history.

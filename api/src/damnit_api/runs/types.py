@@ -1,8 +1,9 @@
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import NewType
 
 import strawberry
+from strawberry.scalars import JSON
 
 from .. import get_logger
 from ..shared.const import DamnitType
@@ -36,11 +37,15 @@ KNOWN_DTYPES = {v.name: v.dtype for v in KNOWN_VARIABLES}
 Any = NewType("Any", object)
 Timestamp = NewType("Timestamp", float)
 
+# The client works in JS milliseconds; the server works in seconds. Parse
+# incoming cursors down to seconds and serialize outgoing ones back to
+# milliseconds so both sides stay in their native unit.
 SCALAR_MAP = {
     Any: strawberry.scalar(name="Any"),
     Timestamp: strawberry.scalar(
         name="Timestamp",
         parse_value=lambda value: value / 1000,
+        serialize=lambda value: value * 1000,
     ),
 }
 
@@ -88,8 +93,29 @@ class Cell:
     error: CellError | None = None
 
 
+def _unwrap(entry):
+    """Return the bare value whether the record entry is wrapped as
+    ``{"value": ...}`` (from `fetch_cells`) or a raw scalar (from
+    `run_info`)."""
+    if isinstance(entry, dict):
+        return entry.get("value")
+    return entry
+
+
+@strawberry.type
+class RunId:
+    proposal: str
+    run: int
+
+
 @strawberry.type
 class DamnitRun:
+    # Identity trio: `database` is the addressing handle echoed back, while
+    # `proposal` and `run` are facts from the row. Runs collide across
+    # proposals within one file, so all three are needed to key a run.
+    database: str
+    proposal: str
+    run: int
     _cells: strawberry.Private[list[Cell]]
 
     @strawberry.field
@@ -97,7 +123,7 @@ class DamnitRun:
         if names is None:
             return self._cells
         requested = set(names)
-        return [v for v in self._cells if v.name in requested]
+        return [c for c in self._cells if c.name in requested]
 
     @classmethod
     def _iter_cells(cls, record):
@@ -112,26 +138,20 @@ class DamnitRun:
             yield Cell(name=name, value=Any(value), dtype=dtype, error=error)
 
     @classmethod
-    def from_db(cls, record):
-        return cls(_cells=list(cls._iter_cells(record)))
-
-    @classmethod
-    def resolve(cls, record):
-        out: dict[str, object | None] = {
-            name: None for name, entry in record.items() if entry is None
-        }
-
-        for v in cls._iter_cells(record):
-            if v.value is None and v.error is None:
-                out[v.name] = None
-                continue
-
-            resolved = {"value": v.value, "dtype": v.dtype.value}
-            if v.error is not None:
-                resolved["error"] = asdict(v.error)
-
-            out[v.name] = resolved
-        return out
+    def from_db(cls, record, *, database):
+        # Both callers key their rows on (proposal, run), so a record without
+        # them is a bug upstream. Fail here rather than mint a `"None"`
+        # proposal that quietly becomes a cache key on the client.
+        proposal = _unwrap(record["proposal"])
+        if proposal is None:
+            msg = "Run record has no proposal."
+            raise ValueError(msg)
+        return cls(
+            database=str(database),
+            proposal=str(proposal),
+            run=int(_unwrap(record["run"])),
+            _cells=list(cls._iter_cells(record)),
+        )
 
     @staticmethod
     def known_variables():
@@ -158,3 +178,23 @@ class DamnitRun:
             return dtype
 
         return DamnitType.STRING
+
+
+@strawberry.type
+class TableMeta:
+    runs: list[RunId]
+    variables: JSON
+    tags: JSON
+    timestamp: Timestamp
+
+    @classmethod
+    def from_snapshot(cls, snapshot):
+        return cls(
+            runs=[
+                RunId(proposal=str(proposal), run=int(run))
+                for proposal, run in snapshot["runs"]
+            ],
+            variables=snapshot["variables"],
+            tags=snapshot["tags"],
+            timestamp=snapshot["timestamp"],
+        )

@@ -17,19 +17,58 @@
 # name: test_metadata_query_wire_shape_unchanged
   dict({
     'runs': list([
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
+      dict({
+        'proposal': '6996',
+        'run': 1,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 2,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 3,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 4,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 5,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 6,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 7,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 8,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 9,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 10,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 11,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 12,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 13,
+      }),
     ]),
     'tags': dict({
       '(Untagged)': dict({

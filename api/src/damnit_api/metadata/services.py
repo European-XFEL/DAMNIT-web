@@ -43,22 +43,10 @@ def _local_proposal_meta(proposal_number: ProposalNumber) -> ProposalMeta:
 
 
 async def _local_proposal_number() -> int | None:
-    from sqlalchemy import select
-
-    from ..runs.sqlite import async_table, get_session
+    from ..runs.sqlite import async_active_proposal
     from ..shared.const import DEFAULT_PROPOSAL
 
-    table = await async_table(DEFAULT_PROPOSAL, name="metameta")
-    if table is None:
-        return None
-
-    async with get_session(DEFAULT_PROPOSAL) as session:
-        result = await session.execute(
-            select(table.c.value).where(table.c.key == "proposal")
-        )
-        value = result.scalar()
-
-    return int(value) if value else None
+    return await async_active_proposal(DEFAULT_PROPOSAL)
 
 
 async def _fetch_proposal_meta(
