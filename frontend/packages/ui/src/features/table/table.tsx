@@ -177,13 +177,16 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
 
-    // Inform that a row has been (de)selected
+    // Inform that a row has been (de)selected. The proposal rides along: run
+    // numbers collide across proposals in one table, so the number alone cannot
+    // identify which run the detail aside should read.
     const row = rows.last() as number
-    const run = runs[row]?.run ?? null
+    const identity = runs[row]
 
     dispatch(
       selectRun({
-        run,
+        proposal: identity?.proposal ?? null,
+        run: identity?.run ?? null,
       })
     )
 
@@ -209,11 +212,12 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   }
   const handleCellActivated = (cell: Item) => {
     const [col, row] = cell
-    const run = runs[row]?.run ?? null
+    const identity = runs[row]
 
     dispatch(
       selectRun({
-        run,
+        proposal: identity?.proposal ?? null,
+        run: identity?.run ?? null,
         variables: col == null ? null : [tableColumns[col].id],
       })
     )
