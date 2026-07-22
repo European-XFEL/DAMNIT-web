@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import type { Tag } from '#src/data/table/table-data.types'
-import { NONCONFIGURABLE_VARIABLES } from '#src/features/table/constants'
+import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
   selectTagSelection,
   selectVariableVisibility,

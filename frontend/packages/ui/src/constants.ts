@@ -24,4 +24,6 @@ export const DTYPES = {
 
 export const EXCLUDED_VARIABLES = ['proposal', 'added_at']
 
-export const VISIBILITY_EXCLUDED_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
+// `run` identifies the row rather than describing it, so it is never a column
+// the user configures, and the run detail panel already shows it in the header.
+export const NONCONFIGURABLE_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
