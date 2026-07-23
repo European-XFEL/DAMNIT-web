@@ -5,7 +5,7 @@ import { Anchor, rem } from '@mantine/core'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
 
 import { ControlButton } from '#src/features/table/components/control-button'
-import { NONCONFIGURABLE_VARIABLES } from '#src/features/table/constants'
+import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import { useColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
 import { selectTagSelection } from '#src/features/table/store/selectors'
 import {

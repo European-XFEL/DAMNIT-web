@@ -32,7 +32,7 @@ const buildTableDataQuery = (
       page: $page
       per_page: $per_page
     ) ${lightweight ? '@lightweight' : ''} {
-      variables(names: $names) {
+      cells(names: $names) {
         name
         value
         dtype

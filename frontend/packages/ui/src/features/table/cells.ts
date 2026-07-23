@@ -13,7 +13,10 @@ import {
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES } from '#src/constants'
-import { type VariableError, type VariableValue } from '#src/types'
+import {
+  type CellError,
+  type CellValue,
+} from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/helpers'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
@@ -23,7 +26,7 @@ const SKELETON_BOX_WIDTH = 30
 // TODO: Handle nonconforming data type
 
 export const imageCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): ImageCell => {
   const data = typeof value === 'string' ? [value] : []
@@ -39,7 +42,7 @@ export const imageCell = (
 }
 
 export const textCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): TextCell => {
   const data = value ? String(value) : ''
@@ -53,7 +56,7 @@ export const textCell = (
 }
 
 export const numberCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): NumberCell => {
   const data =
@@ -77,7 +80,7 @@ export const numberCell = (
 }
 
 export const arrayCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): SparklineCellType => {
   const values = Array.isArray(value) ? (value as number[]) : []
@@ -106,7 +109,7 @@ export const arrayCell = (
 }
 
 export const dateCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): TextCell => {
   const data = value && typeof value === 'number' ? formatDate(value) : ''
@@ -130,7 +133,7 @@ const ERROR_CELL_KIND = 'error-cell'
 
 export interface ErrorCellProps {
   readonly kind: typeof ERROR_CELL_KIND
-  readonly error: VariableError
+  readonly error: CellError
 }
 
 export type ErrorCell = CustomCell<ErrorCellProps>
@@ -160,11 +163,11 @@ export const errorVisuals = (cls: string): ErrorVisuals => {
 
 // Clipboard/copy representation, shared by the cell's copyData and the
 // tooltip's Ctrl+C handler.
-export const errorText = (error: VariableError): string =>
+export const errorText = (error: CellError): string =>
   `${error.cls}\n${error.message}`
 
 export const errorCell = (
-  error: VariableError,
+  error: CellError,
   params: Partial<BaseGridCell> = {}
 ): ErrorCell => {
   return {
@@ -255,7 +258,7 @@ export const makeErrorCellRenderer = (
 }
 
 export const loadingCell = (
-  _: VariableValue,
+  _: CellValue,
   params: Partial<BaseGridCell> = {}
 ): LoadingCell => {
   return {
@@ -276,7 +279,7 @@ const gridCellFactory = {
 }
 
 type GetCellOptions = {
-  value: VariableValue
+  value: CellValue
   dtype: keyof typeof gridCellFactory
   options: Partial<BaseGridCell>
 }

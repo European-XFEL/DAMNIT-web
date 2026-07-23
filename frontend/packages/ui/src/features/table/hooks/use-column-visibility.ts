@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
-import type { TagItem } from '#src/types'
-import { NONCONFIGURABLE_VARIABLES } from '#src/features/table/constants'
+import type { Tag } from '#src/data/table/table-data.types'
+import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
   selectTagSelection,
   selectVariableVisibility,
@@ -11,7 +11,7 @@ import { useAppSelector } from '#src/app/store/hooks'
 type ColumnVisibilityInputs = {
   variableNames: string[]
   visibility: Record<string, boolean | undefined>
-  tags: Record<string, TagItem>
+  tags: Record<string, Tag>
   tagSelection: Record<string, boolean>
 }
 

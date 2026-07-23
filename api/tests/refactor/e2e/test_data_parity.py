@@ -43,7 +43,7 @@ def runs_query(proposal: int, *, per_page: int, names: list[str]) -> dict:
         "query": f"""
             query {{
               runs(database: {{proposal: "{proposal}"}}, per_page: {per_page}) {{
-                variables(names: [{names_arg}]) {{
+                cells(names: [{names_arg}]) {{
                   name value dtype error {{ message cls }}
                 }}
               }}
@@ -100,7 +100,7 @@ async def test_runs_query_wire_shapes_unchanged(logged_in_client, snapshot):
     runs = payload["data"]["runs"]
     assert len(runs) == 1
 
-    by_name = {v["name"]: v for v in runs[0]["variables"]}
+    by_name = {c["name"]: c for c in runs[0]["cells"]}
     assert set(by_name) == set(names)
 
     # Image variables serialize to a base64 PNG data URI, not raw bytes; pin

@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest'
 
 import { computeColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
-import type { TagItem } from '#src/types'
+import type { Tag } from '#src/data/table/table-data.types'
 
-const tag = (name: string, variables: string[]): TagItem => ({
+const tag = (name: string, variables: string[]): Tag => ({
   id: 0,
   name,
   variables,

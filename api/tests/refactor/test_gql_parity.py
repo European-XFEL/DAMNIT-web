@@ -51,7 +51,7 @@ def full_schema() -> strawberry.Schema:
     return strawberry.Schema(
         query=Query,
         subscription=Subscription,
-        types=[run_types.DamnitVariable],
+        types=[run_types.Cell],
         directives=[gql_directives.lightweight],
         config=StrawberryConfig(
             auto_camel_case=False,
@@ -87,7 +87,7 @@ def test_public_sdl_unchanged(full_schema):
 
 
 @pytest.fixture
-def mocked_fetch_variables(mocker):
+def mocked_fetch_cells(mocker):
     values = get_values(EXAMPLE_DATA)
     wrapped = {
         "proposal": {"value": values["proposal"]},
@@ -99,7 +99,7 @@ def mocked_fetch_variables(mocker):
         },
     }
     return mocker.patch(
-        "damnit_api.graphql.queries.fetch_variables",
+        "damnit_api.graphql.queries.fetch_cells",
         return_value=[wrapped],
     )
 
@@ -114,12 +114,12 @@ def mocked_fetch_info(mocker):
 
 @pytest.mark.asyncio
 async def test_runs_query_wire_shape_unchanged(
-    graphql_schema, mocked_fetch_variables, mocked_fetch_info
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
 ):
     query = f"""
         query {{
           runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 1) {{
-            variables {{
+            cells {{
               name
               value
               dtype
@@ -134,16 +134,16 @@ async def test_runs_query_wire_shape_unchanged(
 
     runs = result.data["runs"]
     assert isinstance(runs, list)
-    assert set(runs[0].keys()) == {"variables"}
+    assert set(runs[0].keys()) == {"cells"}
 
-    variables = {v["name"]: v for v in runs[0]["variables"]}
-    assert set(variables) >= {"proposal", "run", "n_trains", "start_time"}
-    for variable in variables.values():
-        assert set(variable.keys()) == {"name", "value", "dtype"}
+    cells = {c["name"]: c for c in runs[0]["cells"]}
+    assert set(cells) >= {"proposal", "run", "n_trains", "start_time"}
+    for cell in cells.values():
+        assert set(cell.keys()) == {"name", "value", "dtype"}
 
     # `start_time` is a timestamp: the frontend expects milliseconds
-    assert variables["start_time"]["value"] == KNOWN_DATA["start_time"].damnit_value
-    assert variables["start_time"]["dtype"] == "timestamp"
+    assert cells["start_time"]["value"] == KNOWN_DATA["start_time"].damnit_value
+    assert cells["start_time"]["dtype"] == "timestamp"
 
 
 @pytest.mark.asyncio

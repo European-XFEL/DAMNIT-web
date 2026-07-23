@@ -29,7 +29,7 @@ def runs_query(proposal: int) -> dict:
         "query": f"""
             query {{
               runs(database: {{proposal: "{proposal}"}}, per_page: 1) {{
-                variables {{ name }}
+                cells {{ name }}
               }}
             }}
         """

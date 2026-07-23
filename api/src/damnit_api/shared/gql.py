@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import asyncio
+from dataclasses import dataclass, field
 
 import numpy as np
 import orjson
@@ -56,14 +57,22 @@ class Context(BaseContext):
     oauth_user: OAuthUserInfo
     session: DBSession
     _user: User | None = None
+    # One request can resolve many root fields at once (a preview aliases
+    # `extracted_data` once per run), and they all share the session above.
+    # SQLAlchemy forbids concurrent use of a single session, so the paths that
+    # memoize below take this lock before touching it. Each memoized answer then
+    # costs one serialization rather than one lookup per field.
+    session_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    checked_proposals: set[str] = field(default_factory=set)
 
     async def get_user(self) -> User:
         """Resolve and memoize the full `User` for this request."""
-        if self._user is None:
-            self._user = await User.from_oauth_user(
-                self.mymdc, self.session, self.oauth_user
-            )
-        return self._user
+        async with self.session_lock:
+            if self._user is None:
+                self._user = await User.from_oauth_user(
+                    self.mymdc, self.session, self.oauth_user
+                )
+            return self._user
 
 
 async def get_context(  # noqa: RUF029
@@ -76,7 +85,7 @@ def get_gql_app():
     schema = Schema(
         query=Query,
         subscription=Subscription,
-        types=[run_types.DamnitVariable],
+        types=[run_types.Cell],
         directives=[gql_main.directives.lightweight],
         config=StrawberryConfig(
             auto_camel_case=False,

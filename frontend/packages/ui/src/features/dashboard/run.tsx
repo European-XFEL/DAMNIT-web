@@ -1,14 +1,12 @@
 import { Image, ScrollArea, Text } from '@mantine/core'
 
 import { selectVariableVisibility } from '#src/features/table/store/selectors'
-import { DTYPES } from '#src/constants'
+import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import { useAppSelector } from '#src/app/store/hooks'
-import { type VariableValue } from '#src/types'
+import { type CellValue } from '#src/data/table/table-data.types'
 import { formatDate, isEmpty } from '#src/utils/helpers'
 
 import classes from './run.module.css'
-
-const EXCLUDED_VARIABLES = ['proposal', 'run', 'added_at']
 
 type ScalarProps = {
   label: string
@@ -35,7 +33,7 @@ const Scalar = ({ label, value, monospace = false }: ScalarProps) => (
 type RenderProps = {
   name: string
   label: string
-  value: VariableValue
+  value: CellValue
 }
 
 const renderString = ({ name, label, value }: RenderProps) => (
@@ -102,7 +100,7 @@ const Run = () => {
     ([name, data]) =>
       variableVisibility[name] !== false &&
       data?.value != null &&
-      !EXCLUDED_VARIABLES.includes(name)
+      !NONCONFIGURABLE_VARIABLES.includes(name)
   )
 
   return (

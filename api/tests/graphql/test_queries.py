@@ -16,8 +16,8 @@ from .const import (
 
 
 @pytest.fixture
-def mocked_fetch_variables(mocker):
-    # fetch_variables returns wrapped values: {"run": {"value": 348}, ...}
+def mocked_fetch_cells(mocker):
+    # fetch_cells returns wrapped values: {"run": {"value": 348}, ...}
     values = get_values(EXAMPLE_DATA)
     wrapped = {
         "proposal": {"value": values["proposal"]},
@@ -29,7 +29,7 @@ def mocked_fetch_variables(mocker):
         },
     }
     return mocker.patch(
-        "damnit_api.graphql.queries.fetch_variables",
+        "damnit_api.graphql.queries.fetch_cells",
         return_value=[wrapped],
     )
 
@@ -43,11 +43,11 @@ def mocked_fetch_info(mocker):
 
 
 @pytest.mark.asyncio
-async def test_runs_query(graphql_schema, mocked_fetch_variables, mocked_fetch_info):
+async def test_runs_query(graphql_schema, mocked_fetch_cells, mocked_fetch_info):
     query = f"""
         query TableDataQuery($per_page: Int = 2) {{
           runs(database: {{proposal: "{PROPOSAL}"}}, per_page: $per_page) {{
-            variables {{
+            cells {{
               name
               value
             }}
@@ -61,23 +61,23 @@ async def test_runs_query(graphql_schema, mocked_fetch_variables, mocked_fetch_i
     runs = result.data["runs"]
     assert len(runs) == 1
 
-    variables = runs[0]["variables"]
-    variable_names = {v["name"] for v in variables}
-    assert "run" in variable_names
-    assert "n_trains" in variable_names
+    cells = runs[0]["cells"]
+    cell_names = {c["name"] for c in cells}
+    assert "run" in cell_names
+    assert "n_trains" in cell_names
 
-    assert mocked_fetch_variables.call_args.kwargs["names"] is None
+    assert mocked_fetch_cells.call_args.kwargs["names"] is None
     assert mocked_fetch_info.called
 
 
 @pytest.mark.asyncio
-async def test_runs_query_filters_variables_by_name(
-    graphql_schema, mocked_fetch_variables, mocked_fetch_info
+async def test_runs_query_filters_cells_by_name(
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
 ):
     query = f"""
         query {{
           runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
-            variables(names: ["n_trains"]) {{
+            cells(names: ["n_trains"]) {{
               name
             }}
           }}
@@ -87,21 +87,21 @@ async def test_runs_query_filters_variables_by_name(
 
     assert result.errors is None
 
-    variables = result.data["runs"][0]["variables"]
-    assert [v["name"] for v in variables] == ["n_trains"]
+    cells = result.data["runs"][0]["cells"]
+    assert [c["name"] for c in cells] == ["n_trains"]
 
-    assert mocked_fetch_variables.call_args.kwargs["names"] == ["n_trains"]
+    assert mocked_fetch_cells.call_args.kwargs["names"] == ["n_trains"]
     assert not mocked_fetch_info.called
 
 
 @pytest.mark.asyncio
 async def test_runs_query_filters_multiple_names(
-    graphql_schema, mocked_fetch_variables, mocked_fetch_info
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
 ):
     query = f"""
         query {{
           runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
-            variables(names: ["n_trains", "etof_settings.ret0"]) {{
+            cells(names: ["n_trains", "etof_settings.ret0"]) {{
               name
             }}
           }}
@@ -111,10 +111,10 @@ async def test_runs_query_filters_multiple_names(
 
     assert result.errors is None
 
-    names = {v["name"] for v in result.data["runs"][0]["variables"]}
+    names = {v["name"] for v in result.data["runs"][0]["cells"]}
     assert names == {"n_trains", "etof_settings.ret0"}
 
-    forwarded = mocked_fetch_variables.call_args.kwargs["names"]
+    forwarded = mocked_fetch_cells.call_args.kwargs["names"]
     assert set(forwarded) == {"n_trains", "etof_settings.ret0"}
 
 
@@ -188,13 +188,13 @@ async def real_damnit_db(mocker, tmp_path):
 @pytest.mark.asyncio
 async def test_runs_query_unknown_name(graphql_schema, real_damnit_db):
     """Filtering by an unknown name returns every paginated run with an
-    empty `variables` list (regression: an inner join used to drop them).
+    empty `cells` list (regression: an inner join used to drop them).
     """
     proposal = real_damnit_db
     query = f"""
         query {{
           runs(database: {{proposal: "{proposal}"}}, per_page: 10) {{
-            variables(names: ["does.not.exist"]) {{
+            cells(names: ["does.not.exist"]) {{
               name
             }}
           }}
@@ -204,7 +204,7 @@ async def test_runs_query_unknown_name(graphql_schema, real_damnit_db):
 
     assert result.errors is None
     runs = result.data["runs"]
-    assert [r["variables"] for r in runs] == [[], [], []]
+    assert [r["cells"] for r in runs] == [[], [], []]
 
 
 @pytest.mark.asyncio
@@ -216,7 +216,7 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
     query = f"""
         query {{
           runs(database: {{proposal: "{proposal}"}}, per_page: 10) {{
-            variables(names: ["alpha", "run"]) {{
+            cells(names: ["alpha", "run"]) {{
               name
               value
             }}
@@ -227,7 +227,7 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
 
     assert result.errors is None
     runs = result.data["runs"]
-    by_run = [{v["name"]: v["value"] for v in r["variables"]} for r in runs]
+    by_run = [{v["name"]: v["value"] for v in r["cells"]} for r in runs]
     assert by_run == [
         {"alpha": "a1", "run": 1},
         {"alpha": "a2", "run": 2},
@@ -237,12 +237,12 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
 
 @pytest.mark.asyncio
 async def test_runs_query_fetches_run_info_when_metadata_requested(
-    graphql_schema, mocked_fetch_variables, mocked_fetch_info
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
 ):
     query = f"""
         query {{
           runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
-            variables(names: ["start_time"]) {{
+            cells(names: ["start_time"]) {{
               name
             }}
           }}
@@ -252,7 +252,7 @@ async def test_runs_query_fetches_run_info_when_metadata_requested(
 
     assert result.errors is None
     assert mocked_fetch_info.called
-    assert [v["name"] for v in result.data["runs"][0]["variables"]] == ["start_time"]
+    assert [v["name"] for v in result.data["runs"][0]["cells"]] == ["start_time"]
 
 
 @pytest.mark.asyncio
@@ -285,7 +285,7 @@ async def test_runs_forbidden(graphql_schema_authenticated_non_member):
     query = f"""
         query {{
           runs(database: {{proposal: "{PROPOSAL}"}}) {{
-            variables {{ name }}
+            cells {{ name }}
           }}
         }}
     """
@@ -313,7 +313,7 @@ async def test_runs_unauthorized(graphql_schema_no_auth):
     query = f"""
         query {{
           runs(database: {{proposal: "{PROPOSAL}"}}) {{
-            variables {{ name }}
+            cells {{ name }}
           }}
         }}
     """

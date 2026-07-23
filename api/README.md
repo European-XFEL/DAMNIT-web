@@ -58,12 +58,12 @@ This returns a JSON snapshot for the proposal:
 ### 2. Query the runs
 
 For instance, to fetch the first 10 runs of proposal `2956` along with all
-of their variables:
+of their cells:
 
 ```gql
 query TableDataQuery($per_page: Int = 10) {
   runs(database: {proposal: "2956"}, per_page: $per_page) {
-    variables {
+    cells {
       name
       value
       dtype
@@ -72,13 +72,13 @@ query TableDataQuery($per_page: Int = 10) {
 }
 ```
 
-Each run is returned as a flat list of `DamnitVariable` entries (`name`,
+Each run is returned as a flat list of `Cell` entries (`name`,
 `value`, `dtype`). One can pass a list of `names` to select variables:
 
 ```gql
 query TableDataQuery($per_page: Int = 10) {
   runs(database: {proposal: "2956"}, per_page: $per_page) {
-    variables(names: ["proposal", "run"]) {
+    cells(names: ["proposal", "run"]) {
       name
       value
       dtype

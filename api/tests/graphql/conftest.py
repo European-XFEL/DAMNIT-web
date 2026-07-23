@@ -7,7 +7,7 @@ from damnit_api.graphql.directives import lightweight
 from damnit_api.graphql.metadata import fetch_metadata
 from damnit_api.graphql.queries import Query
 from damnit_api.graphql.subscriptions import Subscription, poll_proposal
-from damnit_api.runs.types import SCALAR_MAP, DamnitVariable
+from damnit_api.runs.types import SCALAR_MAP, Cell
 
 from .const import (
     EXAMPLE_TAGS,
@@ -105,7 +105,7 @@ def graphql_schema_no_auth(
     return strawberry.Schema(
         query=Query,
         subscription=Subscription,
-        types=[DamnitVariable],
+        types=[Cell],
         directives=[lightweight],
         config=StrawberryConfig(auto_camel_case=False, scalar_map=SCALAR_MAP),
     )

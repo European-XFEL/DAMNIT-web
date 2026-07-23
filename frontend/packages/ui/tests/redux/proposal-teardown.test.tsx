@@ -21,7 +21,7 @@ const PAGES = [1, 2, 3]
 const runsPayload = {
   runs: [
     {
-      variables: [
+      cells: [
         { name: 'run', value: 1, dtype: 'number', error: null },
         { name: 'energy', value: 10, dtype: 'number', error: null },
       ],

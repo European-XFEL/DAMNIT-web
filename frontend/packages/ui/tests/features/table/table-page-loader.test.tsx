@@ -26,7 +26,7 @@ const responseFor = (
   { names, energy }: { names?: string[]; energy: number }
 ) => {
   const lightweight = operationName === 'LightweightTableDataQuery'
-  const variables = [
+  const cells = [
     { name: 'run', value: 1, dtype: 'number', error: null },
     { name: 'energy', value: energy, dtype: 'number', error: null },
     {
@@ -40,8 +40,8 @@ const responseFor = (
   return {
     runs: [
       {
-        variables: variables.filter(
-          (variable) => names == null || names.includes(variable.name)
+        cells: cells.filter(
+          (cell) => names == null || names.includes(cell.name)
         ),
       },
     ],

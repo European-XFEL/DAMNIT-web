@@ -1,12 +1,12 @@
 import { expect, test } from 'vitest'
 
 import reducer, { updateTable } from '#src/data/table/table-data.slice'
-import type { TableData } from '#src/data/table/table-data.types'
+import type { CellValue, TableData } from '#src/data/table/table-data.types'
 
 const initial = reducer(undefined, { type: '@@INIT' })
 
-const spectrum = (value: unknown): TableData => ({
-  '1': { spectrum: { value: value as never, dtype: 'array' } },
+const spectrum = (value: CellValue): TableData => ({
+  '1': { spectrum: { value, dtype: 'array' } },
 })
 
 // What the deferred pass delivers, and what a later lightweight pass sends for
