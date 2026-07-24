@@ -55,45 +55,38 @@ That keeps a file's imports stable when the tree moves, and it is enforced.
 
 ### Data flow
 
-Every GraphQL fetch goes through an Apollo hook. What a screen renders _from_
-depends on whether the schema lets Apollo key the data:
+Every GraphQL fetch goes through an Apollo hook, and the Apollo cache is the
+render source. `DamnitRun` carries an identity trio (`database`, `proposal`,
+`run`) and the cache keys it on all three, since run numbers collide across
+proposals in one file (`typePolicies` in `graphql/type-policies.ts`).
 
-- **Table rows and summary plots** flow from hooks into the `tableData` Redux
-  slice, which owns the merge. `DamnitRun` has no id: the API models the run
-  number as a known variable alongside the real ones, so there is nothing for
-  Apollo to normalize and the merge cannot move into the cache yet. `TablePageLoader`
-  renders one instance per wanted page, since a component can own only one
-  watched query, and each dispatches its own rows.
-- **Preview plots** render straight from the Apollo cache, with no slice.
-  `extracted_data` fetches one run per call and has no batch field, so
-  `usePreviewPlotData` builds a document that aliases the field per run
-  (`r142: extracted_data(run: 142, ...)`), chunked by run value. One
-  `PreviewChunkLoader` per chunk fetches cache-and-network, while the parent
-  watches the whole aliased document cache-only with `returnPartialData`, so the
-  plot fills in as chunks land. Aliases are erased in the store, so plots that
-  overlap on a run read the one entry; each chunk still revalidates it.
+- **Table rows and summary plots** render from the cache. The row layout is the
+  server-ordered `metadata.runs`; a cell's value is looked up by the run's
+  identity. `useTableRuns` owns one watched lightweight query and `fetchMore`s
+  the pages the user scrolls to; the `Query.runs` field policy (`keyArgs`
+  `['database']`) dedups every page, deferred fill, and pushed run into one
+  list. The heavy pass still runs: after a page lands, its blanked heavy values
+  are refetched (`network-only`, throttled by the priority link) and merge into
+  the same runs. The `DamnitRun.cells` field policy (`keyArgs: false`) merges
+  the lightweight, deferred, and pushed cell sets into one bag per run, keyed by
+  name; a held-back blank (an errorless null) never overwrites a value already
+  in place.
+- **Preview plots** render straight from the Apollo cache. `extracted_data`
+  fetches one run per call and has no batch field, so `usePreviewPlotData`
+  builds a document that aliases the field per run (`r142:
+  extracted_data(run: 142, ...)`), chunked by run value. One
+  `PreviewChunkLoader` per chunk fetches
+  cache-and-network, while the parent watches the whole aliased document
+  cache-only with `returnPartialData`, so the plot fills in as chunks land.
 
-Two cache behaviours are worth knowing before you touch a runs document:
-
-- **A directive is part of the store key.** The lightweight and deferred queries
-  send identical `runs(...)` arguments, so the deferred write looks certain to
-  clobber the lightweight one. It does not: the cache holds
-  `runs({...})@lightweight` and `runs({...})` as two fields. That separation only
-  holds because `@lightweight` is in the document.
-- **Column subsets replace, they do not merge.** Because `DamnitRun` is
-  unnormalized the runs array is stored inline, and every write replaces it
-  whole, so two documents asking for different `names` at the same page evict
-  each other rather than sharing. This is why summary plots fetch `no-cache`:
-  the slice is the only thing that renders their rows, so a cached copy is never
-  read, and caching one would only evict the table's. Do not paper over it with
-  typePolicies against the unkeyed schema; the real fix is a run key on the
-  backend.
-
-Both are symptoms of the same missing key. Once the backend gives `DamnitRun`
-one and adds a batch preview field, runs normalize in the cache, pagination
-becomes one query plus `fetchMore`, the grid and summary plots render from the
-cache, and the `tableData` slice goes away. Summary plots go back to
-cache-and-network with it.
+Liveness comes from the cache. The `run_updates` subscription (`use-proposal`)
+writes changed runs into the normalized cache and, when the run list, variables,
+or tags change, replaces the `TableMeta` entry; the `since` cursor advances with
+each push. Leaving a proposal drops its cached fields and collects the runs they
+referenced (`app/store/listeners.ts`), deferred until the departing page's
+watchers have unsubscribed so the eviction cannot send them back to the network.
+There is no stale-proposal guard: the three-part key makes a departed proposal's
+runs unreadable by the next one.
 
 ## Installation
 

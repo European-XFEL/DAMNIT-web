@@ -29,21 +29,22 @@ test('activating a single cell shows only that variable', async ({
 test.describe('errored cell', () => {
   test.use({ example: xpcsWithErrors })
 
-  test('activating an errored cell opens the sidebar but shows no value', async ({
+  test('activating an errored cell shows the failure instead of a value', async ({
     page,
     example,
   }) => {
     await openProposal(page, example)
 
-    // xgm_intensity failed for run 1, so its cell carries value null.
+    // xgm_intensity failed for run 1, so its cell carries an error and no value.
     const errored = ERROR_CELLS[0]
     await activateCell(page, { col: errored.col, row: ERROR_ROW })
 
     const panel = page.getByRole('complementary')
-    // The aside still opens for the run.
     await expect(selectedRunTab(page)).toBeVisible()
-    // The null value is filtered out, so nothing renders for the cell.
-    await expect(panel.getByText(titleOf(errored.variable))).toHaveCount(0)
+    // The cell renders under its own title, with the failure in place of the
+    // value it never got.
+    await expect(panel.getByText(titleOf(errored.variable))).toBeVisible()
+    await expect(panel.getByText(errored.error.message)).toBeVisible()
     await expect(panel.locator('img')).toHaveCount(0)
   })
 })

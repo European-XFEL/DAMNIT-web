@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 import strawberry
 from strawberry.schema.config import StrawberryConfig
@@ -13,7 +15,7 @@ from .const import (
     EXAMPLE_TAGS,
     EXAMPLE_VARIABLE_TAGS,
     EXAMPLE_VARIABLES,
-    RUNS,
+    RUN_IDENTIFIERS,
 )
 
 
@@ -22,6 +24,7 @@ def reset_caches():
     fetch_metadata.cache_clear()
     poll_proposal.cache_clear()
     subscriptions._last_seen_timestamp.clear()
+    subscriptions._last_run_added_at.clear()
     return
 
 
@@ -44,35 +47,38 @@ def bypass_proposal_permission(mocker):
     _patch_permissions(mocker, authenticated=True, member=True)
 
 
+# `fetch_metadata` folds tags into variables and variables into tags by
+# mutating what it reads. The real db builds those maps afresh from each query,
+# so hand out a copy per call; returning the constant itself lets one call's
+# edits pile up in the next one's result.
+def _fresh(mocker, target, value):
+    mocker.patch(target, side_effect=lambda *args, **kwargs: deepcopy(value))
+
+
 @pytest.fixture
 def mocked_metadata_variables(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_variables",
-        return_value=EXAMPLE_VARIABLES,
-    )
+    _fresh(mocker, "damnit_api.graphql.metadata.db.async_variables", EXAMPLE_VARIABLES)
 
 
 @pytest.fixture
 def mocked_metadata_all_tags(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_all_tags",
-        return_value=EXAMPLE_TAGS,
-    )
+    _fresh(mocker, "damnit_api.graphql.metadata.db.async_all_tags", EXAMPLE_TAGS)
 
 
 @pytest.fixture
 def mocked_metadata_variable_tags(mocker):
-    mocker.patch(
+    _fresh(
+        mocker,
         "damnit_api.graphql.metadata.db.async_variable_tags",
-        return_value=EXAMPLE_VARIABLE_TAGS,
+        EXAMPLE_VARIABLE_TAGS,
     )
 
 
 @pytest.fixture
-def mocked_metadata_column(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_column",
-        return_value=RUNS,
+def mocked_metadata_run_identifiers(mocker):
+    return mocker.patch(
+        "damnit_api.graphql.metadata.db.async_run_identifiers",
+        return_value=RUN_IDENTIFIERS,
     )
 
 
@@ -96,7 +102,7 @@ def mocked_ensure_damnit_path(mocker):
 @pytest.fixture
 def graphql_schema_no_auth(
     mocked_metadata_variables,
-    mocked_metadata_column,
+    mocked_metadata_run_identifiers,
     mocked_metadata_all_tags,
     mocked_metadata_variable_tags,
 ):

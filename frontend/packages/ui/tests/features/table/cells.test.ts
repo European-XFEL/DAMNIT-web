@@ -15,15 +15,18 @@ import {
 import { DTYPES } from '#src/constants'
 
 describe('getCell', () => {
-  // A missing value (null or undefined) always renders a loading skeleton,
-  // whatever the declared dtype is.
-  test('renders a loading cell when the value is missing', () => {
-    expect(
-      getCell({ value: undefined, dtype: DTYPES.number, options: {} }).kind
-    ).toBe(GridCellKind.Loading)
+  // Only a heavy dtype is ever held back by @lightweight, so only a heavy null
+  // has a value still on its way.
+  test('renders a loading cell for a missing heavy value', () => {
     expect(
       getCell({ value: undefined, dtype: DTYPES.image, options: {} }).kind
     ).toBe(GridCellKind.Loading)
+  })
+
+  test('renders an empty cell for a missing scalar, not a loading one', () => {
+    expect(
+      getCell({ value: undefined, dtype: DTYPES.number, options: {} }).kind
+    ).toBe(GridCellKind.Text)
   })
 
   test('picks the cell type from the dtype when a value is present', () => {

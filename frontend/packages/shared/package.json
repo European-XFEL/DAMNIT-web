@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
+    "./constants": "./src/constants.ts",
     "./mocks": "./src/mocks/index.ts"
   },
   "scripts": {

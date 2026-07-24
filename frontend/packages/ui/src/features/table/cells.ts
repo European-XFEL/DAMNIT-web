@@ -12,7 +12,7 @@ import {
 } from '@glideapps/glide-data-grid'
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
-import { DTYPES } from '#src/constants'
+import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
   type CellError,
   type CellValue,
@@ -289,7 +289,14 @@ export const getCell = ({
   dtype,
   options,
 }: GetCellOptions): GridCell => {
-  // If the value is null or undefined, use the loading cell factory.
-  const factory = value == null ? loadingCell : gridCellFactory[dtype]
-  return factory(value, options)
+  // A null heavy value is one @lightweight held back, so it draws the loading
+  // skeleton until the deferred fetch fills it. A null scalar is a cell DAMNIT
+  // has no value for and nothing is coming, so it draws as empty rather than
+  // loading forever.
+  if (value == null) {
+    return HEAVY_DTYPES.has(String(dtype))
+      ? loadingCell(value, options)
+      : textCell('')
+  }
+  return gridCellFactory[dtype](value, options)
 }

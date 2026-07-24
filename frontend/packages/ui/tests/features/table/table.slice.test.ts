@@ -8,13 +8,33 @@ import reducer, {
 } from '#src/features/table/table.slice'
 
 describe('selectRun', () => {
-  test('sets the run and its variables', () => {
+  test('sets the run, its proposal, and its variables', () => {
     const state = reducer(
       undefined,
-      selectRun({ run: 5, variables: ['a', 'b'] })
+      selectRun({ proposal: '900485', run: 5, variables: ['a', 'b'] })
     )
+    expect(state.selection.proposal).toBe('900485')
     expect(state.selection.run).toBe(5)
     expect(state.selection.variables).toEqual(['a', 'b'])
+  })
+
+  // The proposal disambiguates a run number that collides across proposals, so
+  // the same number under a different proposal is a distinct selection.
+  test('keeps the proposal that owns the selected run', () => {
+    // Select the active proposal's run 5.
+    let state = reducer(
+      undefined,
+      selectRun({ proposal: '900485', run: 5, variables: [] })
+    )
+    expect(state.selection.proposal).toBe('900485')
+
+    // Select a guest proposal's run of the same number.
+    state = reducer(
+      state,
+      selectRun({ proposal: '888888', run: 5, variables: [] })
+    )
+    expect(state.selection.proposal).toBe('888888')
+    expect(state.selection.run).toBe(5)
   })
 
   // Referential stability is the contract: a redundant dispatch must keep the
@@ -22,9 +42,12 @@ describe('selectRun', () => {
   test('keeps the same variables array reference on a redundant dispatch', () => {
     const first = reducer(
       undefined,
-      selectRun({ run: 5, variables: ['a', 'b'] })
+      selectRun({ proposal: '900485', run: 5, variables: ['a', 'b'] })
     )
-    const second = reducer(first, selectRun({ run: 5, variables: ['a', 'b'] }))
+    const second = reducer(
+      first,
+      selectRun({ proposal: '900485', run: 5, variables: ['a', 'b'] })
+    )
     expect(second.selection.variables).toBe(first.selection.variables)
   })
 })

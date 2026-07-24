@@ -1,40 +1,26 @@
-import type {
-  Cell,
-  CellError,
-  CellValue,
-  TableData,
-  Variable,
-} from './table-data.types'
+import { isHeavyBlank } from '#src/constants'
 
-type DamnitCell = {
-  name: string
-  value: CellValue
-  dtype: string
-  error?: CellError | null
+import type { Cell, Run, RunCells, RunId, Variable } from './table-data.types'
+
+// A value the server is still holding back on the table's first pass, rather
+// than one that is genuinely absent. Shares its rule with the cache merge policy
+// through `isHeavyBlank`, so the two cannot disagree on what is still to come.
+function isDeferred(cell: Cell): boolean {
+  return isHeavyBlank({
+    value: cell.value,
+    error: cell.error,
+    dtype: cell.dtype,
+  })
 }
 
-export type DamnitRun = {
-  cells: DamnitCell[]
-}
-
-// A value the server blanked rather than one that is genuinely absent. The
-// @lightweight directive nulls heavy values (images, arrays) so a page's rows
-// land fast, which leaves them looking like a cell with no value. The one
-// tell is that a real failure carries an error, so the errorless blanks are the
-// ones the server is still holding back.
-export function isBlanked(cell: Cell | undefined): boolean {
-  return cell?.value == null && cell?.error == null
-}
-
-// The variables worth a second, heavier fetch: the ones whose cells
-// @lightweight blanked, in any row.
-export function heavyVariableNames(data: TableData): string[] {
+// The cells worth a second, heavier fetch: the ones @lightweight held back.
+export function heavyCellNames(runs: Run[]): string[] {
   const names = new Set<string>()
 
-  for (const row of Object.values(data)) {
-    for (const [name, cell] of Object.entries(row)) {
-      if (isBlanked(cell)) {
-        names.add(name)
+  for (const run of runs) {
+    for (const cell of run.cells) {
+      if (isDeferred(cell)) {
+        names.add(cell.name)
       }
     }
   }
@@ -42,31 +28,44 @@ export function heavyVariableNames(data: TableData): string[] {
   return [...names]
 }
 
-// Turn the GraphQL runs payload into the table's run-keyed row map. Each run is
-// keyed by its `run` cell's value; a run with no `run` cell, or a null run
-// value, is skipped. A cell's null error collapses to undefined.
-export function flattenRuns(runs: DamnitRun[]): TableData {
-  const table: TableData = {}
+// The identity a run is looked up by: (proposal, run). The database is constant
+// across a table, so the client keys only on the pair, which is enough to keep
+// runs that share a number across proposals apart.
+export function runKey({ proposal, run }: RunId): string {
+  return `${proposal}:${run}`
+}
 
-  for (const run of runs) {
-    const runCell = run.cells.find((c) => c.name === 'run')
-    if (runCell === undefined || runCell.value == null) {
-      continue
-    }
-
-    const row: Record<string, Cell> = {}
-    for (const cell of run.cells) {
-      row[cell.name] = {
-        value: cell.value,
-        dtype: cell.dtype,
-        error: cell.error ?? undefined,
-      }
-    }
-
-    table[String(runCell.value)] = row
+// One run's cells keyed by variable name, for O(1) lookup. Shared by the grid
+// index and the run-detail aside so both key a run's cells the same way.
+export function cellsByName(cells: Cell[]): RunCells {
+  const byName: RunCells = {}
+  for (const cell of cells) {
+    byName[cell.name] = cell
   }
+  return byName
+}
 
-  return table
+// A live push gives a new `runs` array but reuses the object of every unchanged
+// run (Apollo's result caching), so this WeakMap hands back that run's
+// already-built cell map and only the changed runs are rebuilt. A proposal can
+// hold thousands of runs while a push touches a handful. The reuse is within one
+// watched query's re-broadcasts: a separate query over the same runs gets its
+// own object refs, since Apollo does not canonicalize across queries, so it
+// rebuilds its own entries. Entries drop out when Apollo releases the run object.
+const cellsByRun = new WeakMap<Run, RunCells>()
+
+// Index the runs payload into a per-identity cell map the grid reads by lookup.
+export function indexRunCells(runs: Run[]): Map<string, RunCells> {
+  const byIdentity = new Map<string, RunCells>()
+  for (const run of runs) {
+    let cells = cellsByRun.get(run)
+    if (cells === undefined) {
+      cells = cellsByName(run.cells)
+      cellsByRun.set(run, cells)
+    }
+    byIdentity.set(runKey(run), cells)
+  }
+  return byIdentity
 }
 
 export function getVariableTitle(variable: Variable): string {

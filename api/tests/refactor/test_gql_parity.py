@@ -25,7 +25,7 @@ from damnit_api.shared.gql import Query, Subscription
 
 from ..graphql.const import (
     EXAMPLE_DATA,
-    EXAMPLE_VARIABLES,
+    EXAMPLE_TAGGED_VARIABLES,
     KNOWN_DATA,
     NEW_DATA,
     PROPOSAL,
@@ -106,9 +106,10 @@ def mocked_fetch_cells(mocker):
 
 @pytest.fixture
 def mocked_fetch_info(mocker):
+    info = get_values(KNOWN_DATA)
     return mocker.patch(
         "damnit_api.graphql.queries.fetch_info",
-        return_value=[get_values(KNOWN_DATA)],
+        return_value={(info["proposal"], info["run"]): info},
     )
 
 
@@ -150,7 +151,12 @@ async def test_runs_query_wire_shape_unchanged(
 async def test_metadata_query_wire_shape_unchanged(graphql_schema):
     query = """
         query($proposal: String) {
-          metadata(database: { proposal: $proposal })
+          metadata(database: { proposal: $proposal }) {
+            runs { proposal run }
+            variables
+            tags
+            timestamp
+          }
         }
     """
     result = await graphql_schema.execute(
@@ -163,9 +169,11 @@ async def test_metadata_query_wire_shape_unchanged(graphql_schema):
     metadata = result.data["metadata"]
     assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags"}
     assert isinstance(metadata["runs"], list)
+    for identifier in metadata["runs"]:
+        assert set(identifier.keys()) == {"proposal", "run"}
     assert metadata["variables"] == {
         **DamnitRun.known_variables(),
-        **EXAMPLE_VARIABLES,
+        **EXAMPLE_TAGGED_VARIABLES,
     }
     assert isinstance(metadata["timestamp"], int | float)
 
@@ -205,14 +213,15 @@ def mocked_latest_rows(mocker, current_timestamp):
 
 @pytest.fixture
 def mocked_subscription_fetch_info(mocker):
+    info = {**get_values(KNOWN_DATA), "run": NEW_RUN}
     return mocker.patch(
         "damnit_api.graphql.subscriptions.fetch_info",
-        return_value=[{**get_values(KNOWN_DATA), "run": NEW_RUN}],
+        return_value={(info["proposal"], info["run"]): info},
     )
 
 
 @pytest.mark.asyncio
-async def test_latest_data_subscription_wire_shape_unchanged(
+async def test_run_updates_subscription_wire_shape_unchanged(
     graphql_schema,
     current_timestamp,
     mocked_latest_rows,
@@ -222,16 +231,27 @@ async def test_latest_data_subscription_wire_shape_unchanged(
         """
         subscription(
           $proposal: String,
-          $timestamp: Timestamp!) {
-          latest_data(
+          $since: Timestamp!) {
+          run_updates(
             database: { proposal: $proposal },
-            timestamp: $timestamp
-          )
+            since: $since
+          ) {
+            runs {
+              database
+              proposal
+              run
+              cells { name value dtype }
+            }
+            metadata {
+              runs { proposal run }
+            }
+            timestamp
+          }
         }
         """,
         variable_values={
             "proposal": str(PROPOSAL),
-            "timestamp": (current_timestamp - 1) * 1000,
+            "since": (current_timestamp - 1) * 1000,
         },
     )
 
@@ -239,19 +259,23 @@ async def test_latest_data_subscription_wire_shape_unchanged(
         result = await asyncio.wait_for(anext(subscription), timeout=2)
         assert not result.errors
 
-        payload = result.data["latest_data"]
-        assert set(payload.keys()) == {"runs", "metadata"}
+        payload = result.data["run_updates"]
+        assert set(payload.keys()) == {"runs", "metadata", "timestamp"}
 
         runs = payload["runs"]
-        assert set(runs.keys()) == {NEW_RUN}
-        run_data = runs[NEW_RUN]
-        assert set(run_data.keys()) >= {"n_trains", "run_length", "xgm_intensity"}
-        for variable in run_data.values():
-            assert set(variable.keys()) == {"value", "dtype"}
+        assert isinstance(runs, list)
+        run = runs[0]
+        assert set(run.keys()) == {"database", "proposal", "run", "cells"}
+        assert run["run"] == NEW_RUN
+        for cell in run["cells"]:
+            assert set(cell.keys()) == {"name", "value", "dtype"}
 
         metadata = payload["metadata"]
-        assert set(metadata.keys()) == {"runs", "timestamp", "variables"}
-        # ms-timestamp, matching the `metadata` query's serialization
-        assert metadata["timestamp"] == current_timestamp * 1000
+        assert set(metadata.keys()) == {"runs"}
+        for identifier in metadata["runs"]:
+            assert set(identifier.keys()) == {"proposal", "run"}
+
+        # ms-timestamp cursor, matching the `metadata` query's serialization
+        assert payload["timestamp"] == current_timestamp * 1000
     finally:
         await subscription.aclose()

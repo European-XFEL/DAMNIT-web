@@ -1,100 +1,132 @@
 import { describe, expect, test } from 'vitest'
 
 import {
-  flattenRuns,
-  heavyVariableNames,
+  heavyCellNames,
+  indexRunCells,
+  runKey,
 } from '#src/data/table/table-data.transforms'
-import type { CellError, CellValue } from '#src/data/table/table-data.types'
+import type {
+  Cell,
+  CellError,
+  CellValue,
+  Run,
+} from '#src/data/table/table-data.types'
 
 function cell(
   name: string,
   value: CellValue,
   dtype = 'number',
   error: CellError | null = null
-) {
+): Cell {
   return { name, value, dtype, error }
 }
 
-describe('flattenRuns', () => {
-  test('keys each row by its run cell value', () => {
-    const table = flattenRuns([
-      { cells: [cell('run', 5), cell('energy', 1.2)] },
-      { cells: [cell('run', 9), cell('energy', 3.4)] },
+function run(proposal: string, number: number, cells: Run['cells']): Run {
+  return { database: proposal, proposal, run: number, cells }
+}
+
+describe('indexRunCells', () => {
+  test('keys each run by its (proposal, run) identity', () => {
+    const cells = indexRunCells([
+      run('900405', 5, [cell('energy', 1.2)]),
+      run('900405', 9, [cell('energy', 3.4)]),
     ])
 
-    expect(Object.keys(table)).toEqual(['5', '9'])
-    expect(table['5'].energy).toEqual({
+    expect([...cells.keys()]).toEqual(['900405:5', '900405:9'])
+    expect(cells.get('900405:5')?.energy).toEqual({
+      name: 'energy',
       value: 1.2,
       dtype: 'number',
-      error: undefined,
+      error: null,
     })
   })
 
-  test('skips a run that has no run variable', () => {
-    const table = flattenRuns([{ cells: [cell('energy', 1.2)] }])
-    expect(table).toEqual({})
+  test('keeps runs that share a number across proposals apart', () => {
+    // The same run number in two proposals is two rows, not one, which is the
+    // whole reason a run is keyed by the pair.
+    const cells = indexRunCells([
+      run('900405', 1, [cell('energy', 1.2)]),
+      run('900485', 1, [cell('energy', 9.9)]),
+    ])
+
+    expect(cells.get('900405:1')?.energy.value).toBe(1.2)
+    expect(cells.get('900485:1')?.energy.value).toBe(9.9)
   })
 
-  // The guard is `value == null`, so a missing run value is skipped the same
-  // way whether it arrives as null (as GraphQL delivers it) or undefined.
-  test('skips a run whose run value is missing', () => {
-    expect(flattenRuns([{ cells: [cell('run', undefined)] }])).toEqual({})
-    expect(flattenRuns([{ cells: [cell('run', null)] }])).toEqual({})
-  })
-
-  test('maps a variable to its value, dtype and error', () => {
+  test('stores each cell by its variable name', () => {
     const error = { cls: 'ValueError', message: 'boom' }
-    const table = flattenRuns([
-      { cells: [cell('run', 1), cell('x', 2, 'number', error)] },
+    const cells = indexRunCells([
+      run('900405', 1, [cell('x', 2, 'number', error)]),
     ])
-    expect(table['1'].x).toEqual({ value: 2, dtype: 'number', error })
+    expect(cells.get('900405:1')?.x).toEqual({
+      name: 'x',
+      value: 2,
+      dtype: 'number',
+      error,
+    })
+  })
+  test('reuses a run’s cell map while the run object is unchanged', () => {
+    const runA = run('900405', 1, [cell('energy', 1.2)])
+
+    // A later push hands back a new array but the same unchanged run object, so
+    // its already-built cell map comes back rather than being rebuilt.
+    const first = indexRunCells([runA]).get('900405:1')
+    const second = indexRunCells([runA]).get('900405:1')
+
+    expect(second).toBe(first)
   })
 
-  test('collapses a null error to undefined', () => {
-    const table = flattenRuns([
-      { cells: [cell('run', 1), cell('x', 2, 'number', null)] },
-    ])
-    expect(table['1'].x.error).toBeUndefined()
+  test('rebuilds only the run whose object changed', () => {
+    const runA = run('900405', 1, [cell('energy', 1.2)])
+    const runB = run('900405', 2, [cell('energy', 3.4)])
+    const first = indexRunCells([runA, runB])
+
+    // runB is replaced with a fresh object (its value changed); runA is untouched.
+    const runBNext = run('900405', 2, [cell('energy', 9.9)])
+    const second = indexRunCells([runA, runBNext])
+
+    expect(second.get('900405:1')).toBe(first.get('900405:1'))
+    expect(second.get('900405:2')).not.toBe(first.get('900405:2'))
+    expect(second.get('900405:2')?.energy.value).toBe(9.9)
   })
 })
 
-// A heavy value the @lightweight directive held back: the server sends the
-// variable with its value nulled out.
+test('runKey pairs proposal and run into a lookup key', () => {
+  expect(runKey({ proposal: '900405', run: 143 })).toBe('900405:143')
+})
+
+// A heavy value the @lightweight directive held back: the server sends the cell
+// with its value nulled out.
 const blanked = (name: string, error: CellError | null = null) =>
   cell(name, null, 'array', error)
 
-describe('heavyVariableNames', () => {
+describe('heavyCellNames', () => {
   test('names the blanked cells worth a second fetch', () => {
-    const rows = flattenRuns([
-      {
-        cells: [cell('run', 1), cell('energy', 1.2), blanked('spectrum')],
-      },
+    const names = heavyCellNames([
+      run('900405', 1, [cell('energy', 1.2), blanked('spectrum')]),
     ])
 
-    expect(heavyVariableNames(rows)).toEqual(['spectrum'])
+    expect(names).toEqual(['spectrum'])
   })
 
-  test('leaves out a variable that failed rather than being held back', () => {
-    // A blank carrying an error is a variable that genuinely has no value, so
+  test('leaves out a cell that failed rather than being held back', () => {
+    // A blank carrying an error is a cell that genuinely has no value, so
     // fetching it again would only return the same error.
-    const rows = flattenRuns([
-      {
-        cells: [
-          cell('run', 1),
-          blanked('broken', { cls: 'ValueError', message: 'boom' }),
-        ],
-      },
+    const names = heavyCellNames([
+      run('900405', 1, [
+        blanked('broken', { cls: 'ValueError', message: 'boom' }),
+      ]),
     ])
 
-    expect(heavyVariableNames(rows)).toEqual([])
+    expect(names).toEqual([])
   })
 
-  test('names a variable once however many runs blanked it', () => {
-    const rows = flattenRuns([
-      { cells: [cell('run', 1), blanked('spectrum')] },
-      { cells: [cell('run', 2), blanked('spectrum')] },
+  test('names a cell once however many runs blanked it', () => {
+    const names = heavyCellNames([
+      run('900405', 1, [blanked('spectrum')]),
+      run('900405', 2, [blanked('spectrum')]),
     ])
 
-    expect(heavyVariableNames(rows)).toEqual(['spectrum'])
+    expect(names).toEqual(['spectrum'])
   })
 })

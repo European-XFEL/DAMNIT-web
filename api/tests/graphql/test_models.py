@@ -170,16 +170,24 @@ def test_extract_error_returns_none(attributes):
 # Test DamnitRun error path
 
 
-def test_resolve_includes_error_for_failed_variable():
+def test_from_db_includes_error_for_failed_variable():
     record = {
+        "proposal": {"value": 900485},
         "run": {"value": 1},
         "broken": {"value": None, "attributes": json.dumps(ERROR_ATTRS)},
     }
-    resolved = DamnitRun.resolve(record)
+    run = DamnitRun.from_db(record, database="900485")
 
-    assert "error" not in resolved["run"]
-    assert resolved["broken"]["value"] is None
-    assert resolved["broken"]["error"] == {
-        "message": ERROR_ATTRS["error"],
-        "cls": "Foo",
-    }
+    by_name = {v.name: v for v in run.cells()}
+    assert by_name["run"].error is None
+    assert by_name["broken"].value is None
+    assert by_name["broken"].error == CellError(message=ERROR_ATTRS["error"], cls="Foo")
+
+
+def test_from_db_populates_identity_trio():
+    record = {"proposal": {"value": 900485}, "run": {"value": 348}}
+    run = DamnitRun.from_db(record, database="900485")
+
+    assert run.database == "900485"
+    assert run.proposal == "900485"
+    assert run.run == 348

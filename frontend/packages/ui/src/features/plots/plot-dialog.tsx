@@ -14,8 +14,8 @@ import { useForm } from '@mantine/form'
 import TextCombobox, {
   type TextComboboxOptions,
 } from '#src/components/comboboxes/text-combobox'
-import { selectVariables } from '#src/data/table/table-data.selectors'
-import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { useTableVariables } from '#src/data/table/use-table-meta'
+import { useAppDispatch } from '#src/app/store/hooks'
 import { type PlotSpec } from '#src/types'
 import { getVariableTitle } from '#src/data/table/table-data.transforms'
 
@@ -38,7 +38,7 @@ type PlotDialogProps = {
 const PlotDialog = (props: PlotDialogProps) => {
   const dispatch = useAppDispatch()
 
-  const variables = useAppSelector(selectVariables)
+  const variables = useTableVariables()
 
   const dialogForm = useForm<PlotDialogForm>({
     mode: 'uncontrolled',

@@ -1,5 +1,28 @@
 /// <reference types="vite/client" />
+import { HEAVY_DTYPES } from '@damnit-frontend/shared/constants'
+
 import { formatUrl } from './utils/helpers'
+
+// The dtypes @lightweight holds back on the table's first pass. Shared with the
+// mock server so both track the API's HEAVY_DATA from one place.
+export { HEAVY_DTYPES }
+
+// An errorless null with a heavy dtype is a value @lightweight held back, not a
+// genuine absence: only heavy dtypes are blanked, and a real failure carries an
+// error. A null scalar is a cell DAMNIT has no value for. The cache merge policy
+// and the table's deferred-fetch selector both decide "still to come" by this
+// one rule, over their own cell shapes, so keeping it here stops them drifting.
+export function isHeavyBlank({
+  value,
+  error,
+  dtype,
+}: {
+  value: unknown
+  error: unknown
+  dtype: string
+}): boolean {
+  return value == null && error == null && HEAVY_DTYPES.has(dtype)
+}
 
 export const CONTACT_EMAIL = 'da@xfel.eu'
 
@@ -22,8 +45,21 @@ export const DTYPES = {
   timestamp: 'timestamp',
 }
 
-export const EXCLUDED_VARIABLES = ['proposal', 'added_at']
+export const EXCLUDED_VARIABLES = ['added_at']
 
 // `run` identifies the row rather than describing it, so it is never a column
 // the user configures, and the run detail panel already shows it in the header.
 export const NONCONFIGURABLE_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
+
+// Real, configurable columns the table leaves out of the default view. They
+// stay hidden until the user turns them on in the Variables popover.
+export const DEFAULT_HIDDEN_VARIABLES = ['proposal']
+
+// A variable the user hasn't touched shows by default, unless it is hidden by
+// default, in which case it stays hidden until explicitly turned on.
+export function isVariableVisible(
+  name: string,
+  visibility: Record<string, boolean | undefined>
+) {
+  return visibility[name] ?? !DEFAULT_HIDDEN_VARIABLES.includes(name)
+}

@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 
 import type { Tag } from '#src/data/table/table-data.types'
-import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
+import { useTableMeta } from '#src/data/table/use-table-meta'
+import { isVariableVisible, NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
   selectTagSelection,
   selectVariableVisibility,
@@ -15,20 +16,20 @@ type ColumnVisibilityInputs = {
   tagSelection: Record<string, boolean>
 }
 
-// Columns the user can't hide (proposal, added_at, run) never appear here.
+// Columns the user can't hide (added_at, run) never appear here.
 function configurableVariables(variableNames: string[]) {
   return variableNames.filter(
     (name) => !NONCONFIGURABLE_VARIABLES.includes(name)
   )
 }
 
-// A variable is visible unless it was explicitly turned off.
+// The visibility map for the configurable columns.
 function visibilityFromVariables(
   configurable: string[],
   visibility: ColumnVisibilityInputs['visibility']
 ) {
   return Object.fromEntries(
-    configurable.map((name) => [name, visibility[name] !== false])
+    configurable.map((name) => [name, isVariableVisible(name, visibility)])
   )
 }
 
@@ -69,10 +70,7 @@ export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
 }
 
 function useVariableNames() {
-  // TODO: Replace with GraphQL useQuery
-  const variables = useAppSelector(
-    (state) => state.tableData.metadata.variables
-  )
+  const { variables } = useTableMeta()
   return useMemo(() => Object.keys(variables), [variables])
 }
 
@@ -88,8 +86,7 @@ export function useColumnVisibilityFromVariables() {
 }
 
 export function useColumnVisibilityFromTags() {
-  // TODO: Replace with GraphQL useQuery
-  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const { tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
   const variableNames = useVariableNames()
 
@@ -106,7 +103,7 @@ export function useColumnVisibilityFromTags() {
 export function useColumnVisibility() {
   const variableNames = useVariableNames()
   const visibility = useAppSelector(selectVariableVisibility)
-  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const { tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
 
   return useMemo(

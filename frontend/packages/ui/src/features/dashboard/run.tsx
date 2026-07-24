@@ -1,9 +1,21 @@
 import { Image, ScrollArea, Text } from '@mantine/core'
+import { useFragment } from '@apollo/client/react'
 
 import { selectVariableVisibility } from '#src/features/table/store/selectors'
-import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
+import {
+  DTYPES,
+  NONCONFIGURABLE_VARIABLES,
+  isVariableVisible,
+} from '#src/constants'
+import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
+import { cellsByName } from '#src/data/table/table-data.transforms'
+import {
+  type CellError,
+  type CellValue,
+  type Run as RunEntity,
+} from '#src/data/table/table-data.types'
+import { useTableMeta } from '#src/data/table/use-table-meta'
 import { useAppSelector } from '#src/app/store/hooks'
-import { type CellValue } from '#src/data/table/table-data.types'
 import { formatDate, isEmpty } from '#src/utils/helpers'
 
 import classes from './run.module.css'
@@ -66,6 +78,16 @@ const renderUnknown = ({ name, label }: RenderProps) => (
   <Scalar key={name} label={label} value={'(no preview)'} />
 )
 
+const renderError = ({
+  name,
+  label,
+  error,
+}: {
+  name: string
+  label: string
+  error: CellError
+}) => <Scalar key={name} label={label} value={error.message} />
+
 const renderFactory = {
   [DTYPES.image]: renderImage,
   [DTYPES.string]: renderString,
@@ -75,42 +97,73 @@ const renderFactory = {
 }
 
 const Run = () => {
-  const tableData = useAppSelector((state) => state.tableData.data)
-  const { run, variables: selectedVariables } = useAppSelector(
-    (state) => state.table.selection
-  )
-  const metadataVariables = useAppSelector(
-    (state) => state.tableData.metadata.variables
-  )
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
+  const {
+    proposal: selectedProposal,
+    run,
+    variables: selectedVariables,
+  } = useAppSelector((state) => state.table.selection)
+  const { runs, variables: metadataVariables } = useTableMeta()
   const variableVisibility = useAppSelector(selectVariableVisibility)
 
-  if (!run || !tableData[run]) {
+  // Read the normalized run straight from the cache by its identity trio. The
+  // selection carries (proposal, run); `database` is constant across the table,
+  // so those two complete the key the cache normalizes on.
+  const { data: runEntity, complete } = useFragment<RunEntity>({
+    fragment: RUN_FRAGMENT,
+    from: {
+      __typename: 'DamnitRun',
+      database: proposal,
+      proposal: selectedProposal ?? '',
+      run: run ?? -1,
+    },
+  })
+
+  // Show the selection only while it is still a row of the current proposal's
+  // table. Run numbers collide across proposals, so both parts must match; a
+  // stale selection from a proposal the user has left resolves to nothing.
+  const inCurrentTable =
+    run != null &&
+    selectedProposal != null &&
+    runs.some(
+      (entry) => entry.proposal === selectedProposal && entry.run === run
+    )
+
+  if (!inCurrentTable || !complete) {
     return null
   }
 
+  const cells = cellsByName(runEntity.cells ?? [])
   const runData = isEmpty(selectedVariables)
-    ? tableData[run]
+    ? cells
     : Object.fromEntries(
-        Object.entries(tableData[run]).filter(([name]) =>
+        Object.entries(cells).filter(([name]) =>
           selectedVariables.includes(name)
         )
       )
 
   const validRuns = Object.entries(runData).filter(
     ([name, data]) =>
-      variableVisibility[name] !== false &&
-      data?.value != null &&
+      isVariableVisible(name, variableVisibility) &&
+      (data?.error != null || data?.value != null) &&
       !NONCONFIGURABLE_VARIABLES.includes(name)
   )
 
   return (
     <ScrollArea h="100vh" offsetScrollbars>
       {validRuns.map(([name, data]) => {
+        const label = metadataVariables[name]?.title || name
+        // A failed cell keeps its stale value in the cache; the grid gives the
+        // error precedence, so the aside must too, showing the error rather
+        // than the stale value.
+        if (data.error) {
+          return renderError({ name, label, error: data.error })
+        }
         const render = renderFactory[data.dtype] ?? renderFactory.default
         return render({
           name,
-          label: metadataVariables[name]?.title || name,
-          value: data.value,
+          label,
+          value: data.value as CellValue,
         })
       })}
     </ScrollArea>

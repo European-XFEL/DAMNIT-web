@@ -3,6 +3,7 @@ import lodashSize from 'lodash/size'
 import { Checkbox, rem } from '@mantine/core'
 import { IconCheck, IconList, IconCircle } from '@tabler/icons-react'
 
+import { useTableMeta } from '#src/data/table/use-table-meta'
 import { ControlButton } from '#src/features/table/components/control-button'
 import {
   useColumnVisibilityFromTags,
@@ -23,7 +24,7 @@ type VariableDetailsProps = {
 }
 
 function VariableDetails({ name }: VariableDetailsProps) {
-  const metadata = useAppSelector((state) => state.tableData.metadata.variables)
+  const { variables: metadata } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
 
   const items = metadata[name].tags.map((tagName) => ({
@@ -67,7 +68,7 @@ type VariableRecord = {
 function VariablesTable() {
   const dispatch = useAppDispatch()
 
-  const metadata = useAppSelector((state) => state.tableData.metadata.variables)
+  const { variables: metadata } = useTableMeta()
 
   const visibilityFromVariables = useColumnVisibilityFromVariables()
   const visibilityFromTags = useColumnVisibilityFromTags()

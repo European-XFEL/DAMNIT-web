@@ -53,7 +53,18 @@ def runs_query(proposal: int, *, per_page: int, names: list[str]) -> dict:
 
 
 def metadata_query(proposal: int) -> dict:
-    return {"query": f'query {{ metadata(database: {{ proposal: "{proposal}" }}) }}'}
+    return {
+        "query": f"""
+            query {{
+              metadata(database: {{ proposal: "{proposal}" }}) {{
+                runs {{ proposal run }}
+                variables
+                tags
+                timestamp
+              }}
+            }}
+        """
+    }
 
 
 GET_USER_PROPOSALS_QUERY = """
@@ -100,7 +111,7 @@ async def test_runs_query_wire_shapes_unchanged(logged_in_client, snapshot):
     runs = payload["data"]["runs"]
     assert len(runs) == 1
 
-    by_name = {c["name"]: c for c in runs[0]["cells"]}
+    by_name = {v["name"]: v for v in runs[0]["cells"]}
     assert set(by_name) == set(names)
 
     # Image variables serialize to a base64 PNG data URI, not raw bytes; pin

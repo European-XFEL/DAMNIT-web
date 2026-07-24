@@ -11,7 +11,7 @@ const DEFERRED = gql`
 `
 
 const PROMPT = gql`
-  query TableMetadataQuery {
+  query TableMetaQuery {
     metadata
   }
 `
