@@ -1,6 +1,10 @@
 import type { Page, WebSocketRoute } from '@playwright/test'
 
-import type { Meta, RunData } from '@damnit-frontend/shared/mocks'
+import {
+  shapeCell,
+  type Meta,
+  type RunData,
+} from '@damnit-frontend/shared/mocks'
 
 // A subscription push, in the test's convenient shape: a run-keyed data map plus
 // the table metadata. `deliver` translates it into the backend's `run_updates`
@@ -51,16 +55,9 @@ export async function mockWebSocket(
     database: proposal,
     proposal,
     run,
-    cells: Object.entries(variables).map(([name, variable]) => ({
-      __typename: 'Cell',
-      name,
-      value: variable.value,
-      dtype: variable.dtype,
-      error:
-        'error' in variable
-          ? { __typename: 'CellError', ...variable.error }
-          : null,
-    })),
+    cells: Object.entries(variables).map(([name, variable]) =>
+      shapeCell(name, variable)
+    ),
   })
 
   const deliver = ({ runs, metadata }: LatestData) => {

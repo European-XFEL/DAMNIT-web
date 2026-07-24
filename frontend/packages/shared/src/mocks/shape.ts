@@ -25,6 +25,26 @@ export function shapeMetadata(meta: Meta, proposal: string) {
   }
 }
 
+// One cell's wire object. Shared by the query mock and the subscription mock so
+// the `Cell`/`CellError` shape stays identical on both paths. `error` is always
+// sent, even absent from the example: the query selects it, so omitting it
+// leaves the client's cache read incomplete and every cached replay silently
+// refetches. `lightweight` blanks a heavy value the way the real @lightweight
+// pass does.
+export function shapeCell(
+  name: string,
+  cell: RunData['variables'][string],
+  { lightweight = false }: { lightweight?: boolean } = {}
+) {
+  return {
+    __typename: 'Cell',
+    name,
+    value: lightweight && HEAVY_DTYPES.has(cell.dtype) ? null : cell.value,
+    dtype: cell.dtype,
+    error: 'error' in cell ? { __typename: 'CellError', ...cell.error } : null,
+  }
+}
+
 export function shapeTableData(
   data: RunData[],
   { proposal, names, lightweight = false }: ShapeTableDataOptions
@@ -42,18 +62,7 @@ export function shapeTableData(
       run: Number(run.variables.run?.value ?? run.source.run_number),
       cells: Object.entries(run.variables)
         .filter(([name]) => names == null || names.includes(name))
-        .map(([name, cell]) => ({
-          __typename: 'Cell',
-          name,
-          value:
-            lightweight && HEAVY_DTYPES.has(cell.dtype) ? null : cell.value,
-          dtype: cell.dtype,
-          // Always sent, even absent from the example: the query selects it, so
-          // omitting it leaves the client's cache read incomplete and every
-          // cached replay silently refetches.
-          error:
-            'error' in cell ? { __typename: 'CellError', ...cell.error } : null,
-        })),
+        .map(([name, cell]) => shapeCell(name, cell, { lightweight })),
     })),
   }
 }
