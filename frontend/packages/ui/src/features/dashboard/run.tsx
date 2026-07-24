@@ -4,6 +4,7 @@ import { useFragment } from '@apollo/client/react'
 import { selectVariableVisibility } from '#src/features/table/store/selectors'
 import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
+import { cellsByName } from '#src/data/table/table-data.transforms'
 import {
   type CellError,
   type CellValue,
@@ -101,33 +102,34 @@ const Run = () => {
   const { runs, variables: metadataVariables } = useTableMeta()
   const variableVisibility = useAppSelector(selectVariableVisibility)
 
-  // The selection carries the run's identity (proposal, run). Run numbers
-  // collide across proposals in one table, so both are needed to pick the row;
-  // matching on the number alone would resolve a guest run to the active
-  // proposal's run of the same number.
-  const identity =
-    run != null && selectedProposal != null
-      ? runs.find(
-          (entry) => entry.proposal === selectedProposal && entry.run === run
-        )
-      : undefined
+  // Read the normalized run straight from the cache by its identity trio. The
+  // selection carries (proposal, run); `database` is constant across the table,
+  // so those two complete the key the cache normalizes on.
   const { data: runEntity, complete } = useFragment<RunEntity>({
     fragment: RUN_FRAGMENT,
     from: {
       __typename: 'DamnitRun',
       database: proposal,
-      proposal: identity?.proposal ?? '',
-      run: identity?.run ?? -1,
+      proposal: selectedProposal ?? '',
+      run: run ?? -1,
     },
   })
 
-  if (run == null || !identity || !complete) {
+  // Show the selection only while it is still a row of the current proposal's
+  // table. Run numbers collide across proposals, so both parts must match; a
+  // stale selection from a proposal the user has left resolves to nothing.
+  const inCurrentTable =
+    run != null &&
+    selectedProposal != null &&
+    runs.some(
+      (entry) => entry.proposal === selectedProposal && entry.run === run
+    )
+
+  if (!inCurrentTable || !complete) {
     return null
   }
 
-  const cells = Object.fromEntries(
-    (runEntity.cells ?? []).map((cell) => [cell.name, cell])
-  )
+  const cells = cellsByName(runEntity.cells ?? [])
   const runData = isEmpty(selectedVariables)
     ? cells
     : Object.fromEntries(
