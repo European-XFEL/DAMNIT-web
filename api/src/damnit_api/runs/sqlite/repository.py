@@ -133,18 +133,6 @@ async def async_max(proposal, *, table: str, column: str):
     return result.scalar()
 
 
-async def async_column(proposal, *, table: str, name: str):
-    table = await async_table(proposal, name=table)
-    if table is None:
-        return []
-    selection = select(table.c.get(name))
-
-    async with get_session(proposal) as session:
-        result = await session.execute(selection)
-
-    return result.scalars().all()
-
-
 async def async_all_tags(proposal):
     tags_table = await async_table(proposal, name="tags")
     if tags_table is None:

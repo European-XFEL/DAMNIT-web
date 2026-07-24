@@ -2,7 +2,6 @@ from ...shared.const import DEFAULT_PROPOSAL
 from .repository import (
     async_active_proposal,
     async_all_tags,
-    async_column,
     async_latest_rows,
     async_max,
     async_run_identifiers,
@@ -25,7 +24,6 @@ __all__ = [
     "DatabaseSessionManager",
     "async_active_proposal",
     "async_all_tags",
-    "async_column",
     "async_latest_rows",
     "async_max",
     "async_run_identifiers",
