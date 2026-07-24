@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 
 import type { Tag } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
+import { isVariableVisible, NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
   selectTagSelection,
   selectVariableVisibility,
@@ -16,20 +16,20 @@ type ColumnVisibilityInputs = {
   tagSelection: Record<string, boolean>
 }
 
-// Columns the user can't hide (proposal, added_at, run) never appear here.
+// Columns the user can't hide (added_at, run) never appear here.
 function configurableVariables(variableNames: string[]) {
   return variableNames.filter(
     (name) => !NONCONFIGURABLE_VARIABLES.includes(name)
   )
 }
 
-// A variable is visible unless it was explicitly turned off.
+// The visibility map for the configurable columns.
 function visibilityFromVariables(
   configurable: string[],
   visibility: ColumnVisibilityInputs['visibility']
 ) {
   return Object.fromEntries(
-    configurable.map((name) => [name, visibility[name] !== false])
+    configurable.map((name) => [name, isVariableVisible(name, visibility)])
   )
 }
 

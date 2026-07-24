@@ -45,8 +45,21 @@ export const DTYPES = {
   timestamp: 'timestamp',
 }
 
-export const EXCLUDED_VARIABLES = ['proposal', 'added_at']
+export const EXCLUDED_VARIABLES = ['added_at']
 
 // `run` identifies the row rather than describing it, so it is never a column
 // the user configures, and the run detail panel already shows it in the header.
 export const NONCONFIGURABLE_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
+
+// Real, configurable columns the table leaves out of the default view. They
+// stay hidden until the user turns them on in the Variables popover.
+export const DEFAULT_HIDDEN_VARIABLES = ['proposal']
+
+// A variable the user hasn't touched shows by default, unless it is hidden by
+// default, in which case it stays hidden until explicitly turned on.
+export function isVariableVisible(
+  name: string,
+  visibility: Record<string, boolean | undefined>
+) {
+  return visibility[name] ?? !DEFAULT_HIDDEN_VARIABLES.includes(name)
+}

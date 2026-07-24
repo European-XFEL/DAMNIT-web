@@ -2,7 +2,11 @@ import { Image, ScrollArea, Text } from '@mantine/core'
 import { useFragment } from '@apollo/client/react'
 
 import { selectVariableVisibility } from '#src/features/table/store/selectors'
-import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
+import {
+  DTYPES,
+  NONCONFIGURABLE_VARIABLES,
+  isVariableVisible,
+} from '#src/constants'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
 import { cellsByName } from '#src/data/table/table-data.transforms'
 import {
@@ -140,7 +144,7 @@ const Run = () => {
 
   const validRuns = Object.entries(runData).filter(
     ([name, data]) =>
-      variableVisibility[name] !== false &&
+      isVariableVisible(name, variableVisibility) &&
       (data?.error != null || data?.value != null) &&
       !NONCONFIGURABLE_VARIABLES.includes(name)
   )
