@@ -121,20 +121,24 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         return numberCell(identity?.run)
       }
 
-      const rowData = identity && cellsByKey.get(runKey(identity))
-      if (!rowData || !rowData[variable]) {
+      if (!identity) {
         return textCell('')
       }
 
-      const cellError = rowData[variable].error
-      if (cellError) {
-        return errorCell(cellError)
+      const key = runKey(identity)
+      const cell = cellsByKey.get(key)?.[variable]
+      if (!cell) {
+        return textCell('')
+      }
+
+      if (cell.error) {
+        return errorCell(cell.error)
       }
 
       return getCell({
-        value: rowData[variable].value,
-        dtype: rowData[variable].dtype,
-        options: { lastUpdated: lastUpdatedByKey.get(runKey(identity)) },
+        value: cell.value,
+        dtype: cell.dtype,
+        options: { lastUpdated: lastUpdatedByKey.get(key) },
       })
     },
     [tableColumns, runs, cellsByKey, lastUpdatedByKey]

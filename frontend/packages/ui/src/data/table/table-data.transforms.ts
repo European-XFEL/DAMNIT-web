@@ -5,7 +5,7 @@ import type { Cell, Run, RunCells, RunId, Variable } from './table-data.types'
 // A value the server is still holding back on the table's first pass, rather
 // than one that is genuinely absent. Shares its rule with the cache merge policy
 // through `isHeavyBlank`, so the two cannot disagree on what is still to come.
-export function isDeferred(cell: Cell): boolean {
+function isDeferred(cell: Cell): boolean {
   return isHeavyBlank({
     value: cell.value,
     error: cell.error,
@@ -35,12 +35,14 @@ export function runKey({ proposal, run }: RunId): string {
   return `${proposal}:${run}`
 }
 
-function buildRunCells(run: Run): RunCells {
-  const cells: RunCells = {}
-  for (const cell of run.cells) {
-    cells[cell.name] = cell
+// One run's cells keyed by variable name, for O(1) lookup. Shared by the grid
+// index and the run-detail aside so both key a run's cells the same way.
+export function cellsByName(cells: Cell[]): RunCells {
+  const byName: RunCells = {}
+  for (const cell of cells) {
+    byName[cell.name] = cell
   }
-  return cells
+  return byName
 }
 
 // A live push gives a new `runs` array but reuses the object of every unchanged
@@ -58,7 +60,7 @@ export function indexRunCells(runs: Run[]): Map<string, RunCells> {
   for (const run of runs) {
     let cells = cellsByRun.get(run)
     if (cells === undefined) {
-      cells = buildRunCells(run)
+      cells = cellsByName(run.cells)
       cellsByRun.set(run, cells)
     }
     byIdentity.set(runKey(run), cells)
