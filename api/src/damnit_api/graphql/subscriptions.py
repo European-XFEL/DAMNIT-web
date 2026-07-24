@@ -105,10 +105,14 @@ async def poll_proposal(proposal):
         "runs": runs,
         "run_timestamps": run_timestamps,
         "max_timestamp": _last_seen_timestamp[proposal],  # seconds
-        # Whether this is news is the subscriber's call, not ours: this poll is
-        # shared by every subscriber of the proposal, so a verdict reached here
-        # would be delivered to whichever one happened to fill the cache window
-        # and silently withheld from the rest.
+        # The whole snapshot rides along so a subscriber that needs to push it
+        # builds `TableMeta` from this exact metadata, rather than re-fetching and
+        # racing a newer snapshot whose signature no longer matches. Whether this
+        # is news is the subscriber's call, not ours: this poll is shared by every
+        # subscriber of the proposal, so a verdict reached here would be delivered
+        # to whichever one happened to fill the cache window and silently withheld
+        # from the rest.
+        "metadata": metadata,
         "metadata_signature": metadata["signature"],
     }
 
@@ -159,9 +163,7 @@ class Subscription:
                 and snapshot["metadata_signature"] != last_signature
             ):
                 last_signature = snapshot["metadata_signature"]
-                metadata = TableMeta.from_snapshot(
-                    await fetch_metadata(database.proposal)
-                )
+                metadata = TableMeta.from_snapshot(snapshot["metadata"])
 
             result = filter_for_client(snapshot, since, metadata)
             if result is not None:
