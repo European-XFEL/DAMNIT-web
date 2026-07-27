@@ -64,9 +64,12 @@ export function useSummaryPlotData({
     for (const id of runIds) {
       const row = cells.get(runKey(id))
       const points = variables.map((name) => row?.[name])
+      // A failed cell is out whatever its value reads as, the same rule the
+      // grid, the aside and the plot context menu all apply.
       const allNumeric = points.every(
         (point) =>
           point != null &&
+          point.error == null &&
           typeof point.summary.value === 'number' &&
           point.summary.dtype === DTYPES.number
       )

@@ -265,9 +265,12 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     const rowData = identity && cellsByKey.get(runKey(identity))
 
     // A row whose page has not loaded yet has no data at all, not merely no
-    // value: it has nothing to offer a plot either way.
+    // value: it has nothing to offer a plot either way. A failed cell arrives
+    // with a null value, so it is already out; checking the error keeps this in
+    // step with the grid and the aside.
     // TODO: Use extracted data type from the database
-    if (col !== -1 && rowData?.[column]?.summary.value != null) {
+    const cell = rowData?.[column]
+    if (col !== -1 && cell?.error == null && cell?.summary.value != null) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 

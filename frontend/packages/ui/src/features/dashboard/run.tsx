@@ -153,9 +153,8 @@ const Run = () => {
     <ScrollArea h="100vh" offsetScrollbars>
       {validRuns.map(([name, data]) => {
         const label = metadataVariables[name]?.title || name
-        // A failed cell keeps its stale value in the cache; the grid gives the
-        // error precedence, so the aside must too, showing the error rather
-        // than the stale value.
+        // The error comes first, the same order the grid and the plots use: a
+        // cell that failed has nothing worth rendering from its summary.
         if (data.error) {
           return renderError({ name, label, error: data.error })
         }
