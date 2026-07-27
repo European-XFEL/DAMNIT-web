@@ -13,7 +13,6 @@ import {
   textCell,
 } from '#src/features/table/cells'
 import { DTYPES } from '#src/constants'
-import type { CellValue } from '#src/data/table/table-data.types'
 
 describe('getCell', () => {
   // Only a heavy dtype is ever held back by @lightweight, so only a heavy null
@@ -29,20 +28,11 @@ describe('getCell', () => {
 
   // A missing scalar is a genuinely empty cell, not a pending fetch, so it
   // renders blank instead of spinning forever.
-  test('renders a blank cell for a genuinely empty scalar', () => {
-    const cell = getCell({
-      value: null as unknown as CellValue,
-      dtype: DTYPES.number,
-      options: {},
-    })
+  test('renders an empty cell for a missing scalar, not a loading one', () => {
+    const cell = getCell({ value: null, dtype: DTYPES.number, options: {} })
+
     expect(cell.kind).toBe(GridCellKind.Text)
     expect((cell as TextCell).displayData).toBe('')
-  })
-
-  test('renders an empty cell for a missing scalar, not a loading one', () => {
-    expect(
-      getCell({ value: undefined, dtype: DTYPES.number, options: {} }).kind
-    ).toBe(GridCellKind.Text)
   })
 
   test('picks the cell type from the dtype when a value is present', () => {
@@ -52,6 +42,15 @@ describe('getCell', () => {
     expect(
       getCell({ value: 'hi', dtype: DTYPES.string, options: {} }).kind
     ).toBe(GridCellKind.Text)
+  })
+
+  // A dtype with no renderer (a boolean cell has none) must not throw: the grid
+  // asks getContent for every visible cell, so one would break the whole table.
+  test('falls back to a text cell for a dtype with no renderer', () => {
+    const cell = getCell({ value: false, dtype: 'boolean', options: {} })
+
+    expect(cell.kind).toBe(GridCellKind.Text)
+    expect((cell as TextCell).displayData).toBe('false')
   })
 })
 
@@ -124,10 +123,16 @@ describe('textCell', () => {
     expect(cell.displayData).toBe('hello')
   })
 
-  test('renders an empty string for the falsy 0', () => {
-    const cell = textCell(0)
-    expect(cell.data).toBe('')
-    expect(cell.displayData).toBe('')
+  // The unknown-dtype fallback routes through here, so a false or a zero is a
+  // real value the grid still has to show, not an absent one.
+  test('stringifies a falsy value rather than blanking it', () => {
+    expect(textCell(0).displayData).toBe('0')
+    expect(textCell(false).displayData).toBe('false')
+  })
+
+  test('renders an empty string for a missing value', () => {
+    expect(textCell(null).displayData).toBe('')
+    expect(textCell(undefined).displayData).toBe('')
   })
 })
 

@@ -45,7 +45,9 @@ export const textCell = (
   value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): TextCell => {
-  const data = value ? String(value) : ''
+  // Not a truthiness check: this is the fallback for a dtype with no renderer,
+  // and `false`, `0` and `NaN` are values the grid still has to show.
+  const data = value == null ? '' : String(value)
   return {
     kind: GridCellKind.Text,
     displayData: data,
@@ -290,9 +292,11 @@ export const getCell = ({
   options,
 }: GetCellOptions): GridCell => {
   // The grid asks for every visible cell on every redraw, so the populated case
-  // comes first and allocates nothing on its way through.
+  // comes first and allocates nothing on its way through. A dtype with no
+  // renderer (e.g. a boolean cell) falls back to text rather than crashing
+  // every visible cell the grid asks `getContent` for.
   if (value != null) {
-    return gridCellFactory[dtype](value, options)
+    return (gridCellFactory[dtype] ?? textCell)(value, options)
   }
   // A null heavy value is one @lightweight held back, so it draws the loading
   // skeleton until the deferred fetch fills it. A null scalar is a cell DAMNIT

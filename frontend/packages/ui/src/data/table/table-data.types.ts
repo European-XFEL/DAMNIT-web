@@ -1,4 +1,6 @@
-export type CellValue = string | number | number[] | null | undefined
+// `boolean` has no renderer of its own and falls back to text, but the API's
+// `Any` scalar does emit one, so leaving it out would only hide it.
+export type CellValue = string | number | boolean | number[] | null | undefined
 
 export type CellError = {
   message: string
