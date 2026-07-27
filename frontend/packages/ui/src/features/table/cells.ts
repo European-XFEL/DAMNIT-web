@@ -12,7 +12,7 @@ import {
 } from '@glideapps/glide-data-grid'
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
-import { DTYPES, HEAVY_DTYPES } from '#src/constants'
+import { DTYPES, isHeavySummaryBlank } from '#src/constants'
 import {
   type CellError,
   type CellValue,
@@ -280,7 +280,7 @@ const gridCellFactory = {
 
 type GetCellOptions = {
   value: CellValue
-  dtype: keyof typeof gridCellFactory
+  dtype: string
   options: Partial<BaseGridCell>
 }
 
@@ -289,14 +289,16 @@ export const getCell = ({
   dtype,
   options,
 }: GetCellOptions): GridCell => {
+  // The grid asks for every visible cell on every redraw, so the populated case
+  // comes first and allocates nothing on its way through.
+  if (value != null) {
+    return gridCellFactory[dtype](value, options)
+  }
   // A null heavy value is one @lightweight held back, so it draws the loading
   // skeleton until the deferred fetch fills it. A null scalar is a cell DAMNIT
   // has no value for and nothing is coming, so it draws as empty rather than
   // loading forever.
-  if (value == null) {
-    return HEAVY_DTYPES.has(String(dtype))
-      ? loadingCell(value, options)
-      : textCell('')
-  }
-  return gridCellFactory[dtype](value, options)
+  return isHeavySummaryBlank({ value, dtype })
+    ? loadingCell(value, options)
+    : textCell('')
 }

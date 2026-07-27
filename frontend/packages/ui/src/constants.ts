@@ -7,21 +7,19 @@ import { formatUrl } from './utils/helpers'
 // mock server so both track the API's HEAVY_DATA from one place.
 export { HEAVY_DTYPES }
 
-// An errorless null with a heavy dtype is a value @lightweight held back, not a
-// genuine absence: only heavy dtypes are blanked, and a real failure carries an
-// error. A null scalar is a cell DAMNIT has no value for. The cache merge policy
-// and the table's deferred-fetch selector both decide "still to come" by this
-// one rule, over their own cell shapes, so keeping it here stops them drifting.
-export function isHeavyBlank({
+// A summary whose value is null under a heavy dtype is one @lightweight held
+// back, not a genuine absence: only heavy dtypes are blanked, so a null scalar
+// is a cell DAMNIT has no value for. Every caller that decides "still to come"
+// reads this one rule over its own cell shape, so keeping it here stops them
+// drifting.
+export function isHeavySummaryBlank({
   value,
-  error,
   dtype,
 }: {
   value: unknown
-  error: unknown
   dtype: string
 }): boolean {
-  return value == null && error == null && HEAVY_DTYPES.has(dtype)
+  return value == null && HEAVY_DTYPES.has(dtype)
 }
 
 export const CONTACT_EMAIL = 'da@xfel.eu'

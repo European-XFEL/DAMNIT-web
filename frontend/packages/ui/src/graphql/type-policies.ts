@@ -5,7 +5,7 @@ import type {
   TypePolicies,
 } from '@apollo/client'
 
-import { isHeavyBlank } from '#src/constants'
+import { isHeavySummaryBlank } from '#src/constants'
 
 // Accumulate normalized refs into one list, deduped by Apollo's own cache id
 // (`__ref`), the identity it already computed from keyFields. When nothing new
@@ -63,7 +63,7 @@ function mergeSummary(
     dtype != null &&
     dtype === existing.dtype &&
     existing.value != null &&
-    isHeavyBlank({ value: incoming.value, error: null, dtype })
+    isHeavySummaryBlank({ value: incoming.value, dtype })
   return heldBackBlank ? existing : mergeObjects(existing, incoming)
 }
 
@@ -71,12 +71,9 @@ export const typePolicies: TypePolicies = {
   DamnitRun: {
     keyFields: ['database', 'proposal', 'run'],
     fields: {
-      // Cell refs, one list per run. Cell is a normalized entity, so the
-      // two-pass table (lightweight blanks, then a heavier deferred fill) writes
-      // both passes to the same cell object; this list only owes membership.
-      // Without it, the deferred pass's shorter `cells` array would replace the
-      // lightweight one and drop cells absent from the second fetch. Value
-      // protection lives on `CellSummary.value`.
+      // Cell refs, one list per run. Both table passes write to the same
+      // normalized cells, so this list only owes membership: without it the
+      // deferred pass's shorter array would drop the cells it did not carry.
       cells: {
         keyArgs: false,
         merge: mergeRefsByIdentity,
@@ -87,11 +84,11 @@ export const typePolicies: TypePolicies = {
     keyFields: ['id'],
   },
   CellSummary: {
-    // Merge at the summary level: a merge function only sees the field it
-    // merges, and this is the only level where `dtype` travels with the value.
-    // `error` is cell-level, so it cannot be read here; the API drops the
-    // summary type of a failed cell so that a failure never looks like a blank
-    // held back.
+    // The value guard lives here rather than on `Cell` because Apollo forbids a
+    // merge function from reading sibling fields, so this is the only level that
+    // can see `dtype` alongside the value. `error` is cell-level, so it cannot
+    // be read here; the API drops the summary type of a failed cell so that a
+    // failure never looks like a blank held back.
     merge: mergeSummary,
   },
   Query: {

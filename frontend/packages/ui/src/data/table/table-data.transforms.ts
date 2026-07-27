@@ -1,16 +1,14 @@
-import { isHeavyBlank } from '#src/constants'
+import { isHeavySummaryBlank } from '#src/constants'
 
 import type { Cell, Run, RunCells, RunId, Variable } from './table-data.types'
 
 // A value the server is still holding back on the table's first pass, rather
 // than one that is genuinely absent. Shares its rule with the cache merge policy
-// through `isHeavyBlank`, so the two cannot disagree on what is still to come.
+// through `isHeavySummaryBlank`, so the two cannot disagree on what is still to
+// come. A cell that failed carries an error, and its blank is the final answer
+// rather than a value on its way.
 function isDeferred(cell: Cell): boolean {
-  return isHeavyBlank({
-    value: cell.summary.value,
-    error: cell.error,
-    dtype: cell.summary.dtype,
-  })
+  return cell.error == null && isHeavySummaryBlank(cell.summary)
 }
 
 // The cells worth a second, heavier fetch: the ones @lightweight held back.

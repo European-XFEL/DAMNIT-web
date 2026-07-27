@@ -6,39 +6,25 @@ import {
   runKey,
 } from '#src/data/table/table-data.transforms'
 import type {
+  Cell,
   CellError,
   CellValue,
   Run,
 } from '#src/data/table/table-data.types'
 
-type CellInput = {
-  name: string
-  value: CellValue
-  dtype: string
-  error: CellError | null
-}
-
+// These transforms key cells by name and never read `id`, so it only has to be
+// present, not realistic.
 function cell(
   name: string,
   value: CellValue,
   dtype = 'number',
   error: CellError | null = null
-): CellInput {
-  return { name, value, dtype, error }
+): Cell {
+  return { id: name, name, error, summary: { value, dtype } }
 }
 
-function run(proposal: string, number: number, cells: CellInput[]): Run {
-  return {
-    database: proposal,
-    proposal,
-    run: number,
-    cells: cells.map((entry) => ({
-      id: `${proposal}:${number}:${entry.name}`,
-      name: entry.name,
-      error: entry.error,
-      summary: { value: entry.value, dtype: entry.dtype },
-    })),
-  }
+function run(proposal: string, number: number, cells: Cell[]): Run {
+  return { database: proposal, proposal, run: number, cells }
 }
 
 describe('indexRunCells', () => {
@@ -50,7 +36,7 @@ describe('indexRunCells', () => {
 
     expect([...cells.keys()]).toEqual(['900405:5', '900405:9'])
     expect(cells.get('900405:5')?.energy).toEqual({
-      id: '900405:5:energy',
+      id: 'energy',
       name: 'energy',
       error: null,
       summary: { value: 1.2, dtype: 'number' },
@@ -75,7 +61,7 @@ describe('indexRunCells', () => {
       run('900405', 1, [cell('x', 2, 'number', error)]),
     ])
     expect(cells.get('900405:1')?.x).toEqual({
-      id: '900405:1:x',
+      id: 'x',
       name: 'x',
       error,
       summary: { value: 2, dtype: 'number' },
@@ -144,5 +130,14 @@ describe('heavyCellNames', () => {
     ])
 
     expect(names).toEqual(['spectrum'])
+  })
+
+  test('leaves out a genuinely-empty scalar cell', () => {
+    // A null scalar (no error, non-heavy dtype) is a deleted-for-this-run
+    // value, not a held-back heavy blank, so re-fetching it would loop forever.
+    const empty = cell('note', null, 'string')
+    const names = heavyCellNames([run('900405', 1, [empty])])
+
+    expect(names).toEqual([])
   })
 })

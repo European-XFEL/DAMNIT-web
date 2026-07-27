@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { GridCellKind } from '@glideapps/glide-data-grid'
+import { GridCellKind, type TextCell } from '@glideapps/glide-data-grid'
 
 import {
   arrayCell,
@@ -13,6 +13,7 @@ import {
   textCell,
 } from '#src/features/table/cells'
 import { DTYPES } from '#src/constants'
+import type { CellValue } from '#src/data/table/table-data.types'
 
 describe('getCell', () => {
   // Only a heavy dtype is ever held back by @lightweight, so only a heavy null
@@ -21,6 +22,21 @@ describe('getCell', () => {
     expect(
       getCell({ value: undefined, dtype: DTYPES.image, options: {} }).kind
     ).toBe(GridCellKind.Loading)
+    expect(
+      getCell({ value: undefined, dtype: DTYPES.array, options: {} }).kind
+    ).toBe(GridCellKind.Loading)
+  })
+
+  // A missing scalar is a genuinely empty cell, not a pending fetch, so it
+  // renders blank instead of spinning forever.
+  test('renders a blank cell for a genuinely empty scalar', () => {
+    const cell = getCell({
+      value: null as unknown as CellValue,
+      dtype: DTYPES.number,
+      options: {},
+    })
+    expect(cell.kind).toBe(GridCellKind.Text)
+    expect((cell as TextCell).displayData).toBe('')
   })
 
   test('renders an empty cell for a missing scalar, not a loading one', () => {
