@@ -61,7 +61,24 @@ const splitLink = split(
   from([priorityLink, httpLink])
 )
 
-export const cache = new InMemoryCache({ typePolicies })
+// Apollo memoizes each read per (selection set, object), capped at 50,000
+// entries by default. A cell costs two of those, the `Cell` and its
+// `CellSummary`, so a table of a few hundred runs times its variables can fill
+// the cap on its own. Past it every cache write re-reads the whole table instead
+// of returning the memoized result, which is seconds of main thread per
+// paginated page. The budget is shared across documents, and the summary plot
+// asks for every run at once, so give it room.
+//
+// One knob, three caches: `resultCacheMaxSize` is the `max` for
+// `executeSelectionSet` (the one reasoned about above), `executeSubSelectedArray`
+// and `maybeBroadcastWatch`, whose own defaults are 10,000 and 5,000. Only the
+// first is the binding constraint here, because it holds two entries per cell
+// while the others hold roughly one per run, so raising all three is headroom
+// the other two never reach rather than a budget worth splitting.
+export const cache = new InMemoryCache({
+  typePolicies,
+  resultCacheMaxSize: 200_000,
+})
 
 export const client = new ApolloClient({
   cache,
