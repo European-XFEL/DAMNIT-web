@@ -84,11 +84,12 @@ export const typePolicies: TypePolicies = {
     keyFields: ['id'],
   },
   CellSummary: {
-    // The value guard lives here rather than on `Cell` because Apollo forbids a
-    // merge function from reading sibling fields, so this is the only level that
-    // can see `dtype` alongside the value. `error` is cell-level, so it cannot
-    // be read here; the API drops the summary type of a failed cell so that a
-    // failure never looks like a blank held back.
+    // The value guard lives here rather than on `Cell` because a merge function
+    // only sees the field it merges, so this is the only level that can see
+    // `dtype` alongside the value. A failed cell needs no case of its own, and
+    // could not get one: `error` is cell-level and unreadable from here. The API
+    // drops the summary type of a failed cell instead, so it arrives as a null
+    // string rather than a heavy blank and clears the value it had.
     merge: mergeSummary,
   },
   Query: {

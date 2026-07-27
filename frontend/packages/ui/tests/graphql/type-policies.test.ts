@@ -151,20 +151,38 @@ test('a blank still lands on a cell that has no value yet', () => {
   expect(valueOf(readRuns(), 1, 'spectrum')).toBeNull()
 })
 
-test('a cell that fails after computing shows the error over its stale value', () => {
+test('a cell that fails after computing clears the value it had', () => {
   const error = { cls: 'ValueError', message: 'boom' }
   writeRuns([run(PROPOSAL, 1, [filled])])
 
-  // The variable errors on a later pass: the summary value is held back (null),
-  // but the error lands on the cell. The stale value stays cached and unseen,
-  // since the grid gives the error precedence.
-  writeRuns([run(PROPOSAL, 1, [cell('spectrum', null, 'array', error)])])
+  // DAMNIT stores a failed variable with a null value and no summary type, so
+  // it comes back as a null string, not a held-back heavy blank: the error
+  // lands and the array it had goes with it.
+  writeRuns([run(PROPOSAL, 1, [cell('spectrum', null, 'string', error)])])
 
   const spectrum = readRuns()[0].cells.find(
     (entry) => entry.name === 'spectrum'
   )
   expect(spectrum?.error).toEqual(error)
-  expect(spectrum?.summary.value).toEqual([1, 2, 3])
+  expect(spectrum?.summary.value).toBeNull()
+})
+
+test('an error alone cannot clear a value under a heavy dtype', () => {
+  writeRuns([run(PROPOSAL, 1, [filled])])
+
+  // The merge sees only the summary, so the error beside it is invisible here
+  // and the blank still reads as one @lightweight held back. Nothing on the
+  // client can close this: what keeps it unreachable is the API dropping the
+  // summary type of a failed cell (`DamnitRun._iter_cells`), which turns the
+  // case above into the null string the previous test covers. If that guarantee
+  // goes, this is the value that gets pinned behind the error.
+  writeRuns([
+    run(PROPOSAL, 1, [
+      cell('spectrum', null, 'array', { cls: 'ValueError', message: 'boom' }),
+    ]),
+  ])
+
+  expect(valueOf(readRuns(), 1, 'spectrum')).toEqual([1, 2, 3])
 })
 
 test('paginated runs accumulate into one list, deduped by identity', () => {
