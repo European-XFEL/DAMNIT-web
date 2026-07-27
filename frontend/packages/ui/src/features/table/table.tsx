@@ -136,8 +136,8 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       }
 
       return getCell({
-        value: cell.value,
-        dtype: cell.dtype,
+        value: cell.summary.value,
+        dtype: cell.summary.dtype,
         options: { lastUpdated: lastUpdatedByKey.get(key) },
       })
     },
@@ -160,11 +160,11 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         return { kind: 'error', error: item.error }
       }
       if (
-        item.dtype === DTYPES.image &&
-        typeof item.value === 'string' &&
-        item.value
+        item.summary.dtype === DTYPES.image &&
+        typeof item.summary.value === 'string' &&
+        item.summary.value
       ) {
-        return { kind: 'image', src: item.value }
+        return { kind: 'image', src: item.summary.value }
       }
       return undefined
     },
@@ -267,7 +267,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     // A row whose page has not loaded yet has no data at all, not merely no
     // value: it has nothing to offer a plot either way.
     // TODO: Use extracted data type from the database
-    if (col !== -1 && rowData?.[column]?.value != null) {
+    if (col !== -1 && rowData?.[column]?.summary.value != null) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 

@@ -7,9 +7,9 @@ import type { Cell, Run, RunCells, RunId, Variable } from './table-data.types'
 // through `isHeavyBlank`, so the two cannot disagree on what is still to come.
 function isDeferred(cell: Cell): boolean {
   return isHeavyBlank({
-    value: cell.value,
+    value: cell.summary.value,
     error: cell.error,
-    dtype: cell.dtype,
+    dtype: cell.summary.dtype,
   })
 }
 

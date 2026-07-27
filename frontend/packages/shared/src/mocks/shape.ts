@@ -26,22 +26,53 @@ export function shapeMetadata(meta: Meta, proposal: string) {
 }
 
 // One cell's wire object. Shared by the query mock and the subscription mock so
-// the `Cell`/`CellError` shape stays identical on both paths. `error` is always
-// sent, even absent from the example: the query selects it, so omitting it
-// leaves the client's cache read incomplete and every cached replay silently
-// refetches. `lightweight` blanks a heavy value the way the real @lightweight
-// pass does.
-export function shapeCell(
+// the composite `Cell` shape stays identical on both paths. The `id` is built
+// from the run's identity, so a live push lands on the same normalized cache
+// object the table already holds. `error` is always sent, even absent from the
+// example: the query selects it, so omitting it leaves the client's cache read
+// incomplete and every cached replay silently refetches. `lightweight` blanks a
+// heavy value the way the real @lightweight pass does.
+function shapeCell(
   name: string,
   cell: RunData['variables'][string],
-  { lightweight = false }: { lightweight?: boolean } = {}
+  { database, proposal, run, lightweight = false }: ShapeCellOptions
 ) {
   return {
     __typename: 'Cell',
+    id: `${database}:${proposal}:${run}:${name}`,
     name,
-    value: lightweight && HEAVY_DTYPES.has(cell.dtype) ? null : cell.value,
-    dtype: cell.dtype,
     error: 'error' in cell ? { __typename: 'CellError', ...cell.error } : null,
+    summary: {
+      __typename: 'CellSummary',
+      value: lightweight && HEAVY_DTYPES.has(cell.dtype) ? null : cell.value,
+      dtype: cell.dtype,
+    },
+  }
+}
+
+// One run's wire object: the identity trio Apollo keys the run by, plus cells
+// whose ids are built from that same trio. Shared by the query mock and the
+// subscription mock, so the two cannot disagree on how a run and its cells are
+// keyed, and a live push lands on the run the table already holds.
+//
+// `run` is the logical run number the metadata list and the grid rows use, not
+// the physical source run number: in the xpcs example, runs 1 to 6 come from
+// source runs 6, 7, 11, 33, 34 and 35. Pass the wrong one and the run and every
+// one of its cells key to a row no grid reads.
+export function shapeRun(
+  variables: RunData['variables'],
+  { database, proposal, run, names, lightweight = false }: ShapeRunOptions
+) {
+  return {
+    __typename: 'DamnitRun',
+    database,
+    proposal,
+    run,
+    cells: Object.entries(variables)
+      .filter(([name]) => names == null || names.includes(name))
+      .map(([name, cell]) =>
+        shapeCell(name, cell, { database, proposal, run, lightweight })
+      ),
   }
 }
 
@@ -50,21 +81,29 @@ export function shapeTableData(
   { proposal, names, lightweight = false }: ShapeTableDataOptions
 ) {
   return {
-    runs: data.map((run) => ({
-      // The identity trio, so Apollo keys the run by (database, proposal, run).
-      // `database` is the addressing handle the client sent; the examples are
-      // single-proposal, so a run's own proposal is the queried one too. The
-      // run is the `run` variable's value (the logical number the metadata run
-      // list uses), not the physical source run number.
-      __typename: 'DamnitRun',
-      database: proposal,
-      proposal,
-      run: Number(run.variables.run?.value ?? run.source.run_number),
-      cells: Object.entries(run.variables)
-        .filter(([name]) => names == null || names.includes(name))
-        .map(([name, cell]) => shapeCell(name, cell, { lightweight })),
-    })),
+    runs: data.map((run) =>
+      shapeRun(run.variables, {
+        // `database` is the addressing handle the client sent; the examples are
+        // single-proposal, so a run's own proposal is the queried one too.
+        database: proposal,
+        proposal,
+        run: Number(run.variables.run?.value ?? run.source.run_number),
+        names,
+        lightweight,
+      })
+    ),
   }
+}
+
+type ShapeCellOptions = {
+  database: string
+  proposal: string
+  run: number
+  lightweight?: boolean
+}
+
+type ShapeRunOptions = ShapeCellOptions & {
+  names?: string[] | null
 }
 
 type ShapeTableDataOptions = {

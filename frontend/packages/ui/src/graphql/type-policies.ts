@@ -7,60 +7,6 @@ import type {
 
 import { isHeavyBlank } from '#src/constants'
 
-// A cell as it sits in the cache: an embedded object (Cell is not normalized)
-// or, defensively, a reference.
-type StoreCell = Reference | StoreObject
-
-type ReadField = FieldFunctionOptions['readField']
-
-// The held-back-blank rule over the cache's own cell representation. Reads
-// `isHeavyBlank`, the same rule the table transforms apply to a plain cell, so a
-// value @lightweight held back is never mistaken for one DAMNIT genuinely
-// cleared, and the merge policy and the deferred-fetch selector stay in step.
-function isDeferredCell(cell: StoreCell, readField: ReadField): boolean {
-  return isHeavyBlank({
-    value: readField('value', cell),
-    error: readField('error', cell),
-    dtype: readField<string>('dtype', cell)!,
-  })
-}
-
-// Merge the lightweight, deferred, and pushed cell sets into one bag per run,
-// keyed by name. A held-back value never overwrites a value already in place, so
-// a cache-and-network refetch of the lightweight pass cannot blank a heavy value
-// the deferred pass filled in. It still lands on a cell that has none yet,
-// which is what draws the loading skeleton until the value arrives.
-//
-// Unlike the phase-1 slice, this cannot tell a live push from a bulk load, so it
-// drops the "a live push may clear a value" branch. DAMNIT never un-computes a
-// value back to null, so no real push relies on it.
-function mergeCellsByName(
-  existing: readonly StoreCell[] = [],
-  incoming: readonly StoreCell[] = [],
-  { readField }: FieldFunctionOptions
-): StoreCell[] {
-  const byName = new Map<string, StoreCell>()
-
-  for (const cell of existing) {
-    byName.set(readField<string>('name', cell)!, cell)
-  }
-
-  for (const cell of incoming) {
-    const name = readField<string>('name', cell)!
-    const previous = byName.get(name)
-    const heldBack =
-      previous != null &&
-      isDeferredCell(cell, readField) &&
-      readField('value', previous) != null
-    if (heldBack) {
-      continue
-    }
-    byName.set(name, cell)
-  }
-
-  return [...byName.values()]
-}
-
 // Accumulate normalized refs into one list, deduped by Apollo's own cache id
 // (`__ref`), the identity it already computed from keyFields. When nothing new
 // arrives this hands back the same array: a value-only push carries only refs
@@ -87,15 +33,66 @@ function mergeRefsByIdentity(
   return [...existing, ...additions]
 }
 
+// A summary as the cache stores it. Both fields are optional because a write
+// only carries what its document selected, not because the schema allows one
+// without the other.
+type StoredSummary = StoreObject & {
+  value?: unknown
+  dtype?: string
+}
+
+// Keep a value the lightweight pass is holding back. Only a heavy dtype is ever
+// blanked, so a null arriving over a value of that same dtype is a blank on its
+// way to being filled, and the cached value stays. Everything else is DAMNIT's
+// own answer and replaces what is there: a null scalar clears a stale number,
+// and a retyped variable clears a value that no longer describes it, which is
+// what puts the cell back in the deferred pass's queue.
+function mergeSummary(
+  existing: StoredSummary | undefined,
+  incoming: StoredSummary,
+  { mergeObjects }: FieldFunctionOptions
+): StoredSummary {
+  if (existing == null) {
+    return incoming
+  }
+
+  // A write that selected only `value` carries no dtype; the cached one still
+  // describes the cell, and merging rather than replacing is what keeps it.
+  const dtype = incoming.dtype ?? existing.dtype
+  const heldBackBlank =
+    dtype != null &&
+    dtype === existing.dtype &&
+    existing.value != null &&
+    isHeavyBlank({ value: incoming.value, error: null, dtype })
+  return heldBackBlank ? existing : mergeObjects(existing, incoming)
+}
+
 export const typePolicies: TypePolicies = {
   DamnitRun: {
     keyFields: ['database', 'proposal', 'run'],
     fields: {
+      // Cell refs, one list per run. Cell is a normalized entity, so the
+      // two-pass table (lightweight blanks, then a heavier deferred fill) writes
+      // both passes to the same cell object; this list only owes membership.
+      // Without it, the deferred pass's shorter `cells` array would replace the
+      // lightweight one and drop cells absent from the second fetch. Value
+      // protection lives on `CellSummary.value`.
       cells: {
         keyArgs: false,
-        merge: mergeCellsByName,
+        merge: mergeRefsByIdentity,
       },
     },
+  },
+  Cell: {
+    keyFields: ['id'],
+  },
+  CellSummary: {
+    // Merge at the summary level: a merge function only sees the field it
+    // merges, and this is the only level where `dtype` travels with the value.
+    // `error` is cell-level, so it cannot be read here; the API drops the
+    // summary type of a failed cell so that a failure never looks like a blank
+    // held back.
+    merge: mergeSummary,
   },
   Query: {
     fields: {

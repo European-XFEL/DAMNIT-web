@@ -67,12 +67,12 @@ export function useSummaryPlotData({
       const allNumeric = points.every(
         (point) =>
           point != null &&
-          typeof point.value === 'number' &&
-          point.dtype === DTYPES.number
+          typeof point.summary.value === 'number' &&
+          point.summary.dtype === DTYPES.number
       )
       if (allNumeric) {
         points.forEach((point, index) => {
-          series[index].push(point!.value as number)
+          series[index].push(point!.summary.value as number)
         })
       }
     }

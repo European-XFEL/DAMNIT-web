@@ -1,7 +1,7 @@
 import type { Page, WebSocketRoute } from '@playwright/test'
 
 import {
-  shapeCell,
+  shapeRun,
   type Meta,
   type RunData,
 } from '@damnit-frontend/shared/mocks'
@@ -50,16 +50,6 @@ export async function mockWebSocket(
   let clock = 1_700_000_000_000
   const nextTimestamp = () => (clock += 1000)
 
-  const shapeRun = (run: number, variables: RunData['variables']) => ({
-    __typename: 'DamnitRun',
-    database: proposal,
-    proposal,
-    run,
-    cells: Object.entries(variables).map(([name, variable]) =>
-      shapeCell(name, variable)
-    ),
-  })
-
   const deliver = ({ runs, metadata }: LatestData) => {
     const timestamp = nextTimestamp()
     socket?.send(
@@ -71,7 +61,11 @@ export async function mockWebSocket(
             run_updates: {
               __typename: 'RunUpdates',
               runs: Object.entries(runs).map(([run, variables]) =>
-                shapeRun(Number(run), variables)
+                shapeRun(variables, {
+                  database: proposal,
+                  proposal,
+                  run: Number(run),
+                })
               ),
               metadata: {
                 __typename: 'TableMeta',

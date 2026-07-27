@@ -12,6 +12,7 @@ import { setupStore, type AppStore } from '#src/app/store/store'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { LIGHTWEIGHT_TABLE_DATA_QUERY } from '#src/data/table/table-data.queries'
 import { cache } from '#src/graphql/apollo'
+import { cellId } from '#tests/support/cells'
 
 // Leaving a proposal evicts its Apollo entries. The two things that has to get
 // right, one test each: the departed proposal is actually gone from the cache,
@@ -27,21 +28,30 @@ const PROPOSAL_LIST = gql`
   }
 `
 
-function runsPayload(proposal: string) {
+// A guest run: addressed through one handle but reporting a proposal of its
+// own. The two differ on purpose, because the cell id leads with the handle and
+// carries the proposal second, so a fixture that made them equal would let a
+// matcher confuse the two and still pass.
+function runsPayload(database: string) {
+  const proposal = `guest-${database}`
   return {
     runs: [
       {
         __typename: 'DamnitRun',
-        database: proposal,
+        database,
         proposal,
         run: 1,
         cells: [
           {
             __typename: 'Cell',
+            id: cellId({ database, proposal, run: 1, name: 'energy' }),
             name: 'energy',
-            value: 10,
-            dtype: 'number',
             error: null,
+            summary: {
+              __typename: 'CellSummary',
+              value: 10,
+              dtype: 'number',
+            },
           },
         ],
       },
@@ -110,13 +120,24 @@ function tree(store: AppStore, client: ApolloClient<object>, proposal: string) {
   )
 }
 
-// Everything in the cache belonging to a proposal: the ROOT_QUERY fields keyed
-// by its number, and the normalized runs those fields point at.
-function cacheEntriesFor(proposal: string) {
+// Everything in the cache belonging to one database handle: the ROOT_QUERY
+// fields whose arguments name it, the runs addressed through it, and those runs'
+// cells. All three spell the handle differently, so each needs its own match: a
+// query field carries it as an argument, a run as the first of its identity
+// trio, and a cell as the first segment of its id. Cells outnumber runs by the
+// variable count, so missing them would hide most of a leak.
+function cacheEntriesFor(database: string) {
   const snapshot = cache.extract() as Record<string, object>
+  const handleOf = (key: string) => key.match(/^Cell:{"id":"([^:]+):/)?.[1]
+
   return Object.entries(snapshot)
     .flatMap(([id, entry]) => (id === 'ROOT_QUERY' ? Object.keys(entry) : [id]))
-    .filter((key) => key.includes(`"proposal":"${proposal}"`))
+    .filter(
+      (key) =>
+        key.includes(`"proposal":"${database}"`) ||
+        key.includes(`"database":"${database}"`) ||
+        handleOf(key) === database
+    )
 }
 
 beforeEach(async () => {

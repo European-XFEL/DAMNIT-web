@@ -12,16 +12,21 @@ import { type Run, type TableMeta } from './table-data.types'
  * -----------------------------
  */
 
-// The cell selection every runs document shares. A field added to one copy but
-// not the others leaves the documents drifting apart over the same cache entry,
-// so the shape lives in one place.
+// The cell selection every runs document shares. `id` must ride on it: Cell is
+// a normalized entity keyed by `id`, so Apollo throws on a selection that omits
+// it, and a field added to one copy but not the others would silently break
+// normalization. Keeping the shape in one place stops the three documents from
+// drifting.
 const CELL_FIELDS = `
+  id
   name
-  value
-  dtype
   error {
     message
     cls
+  }
+  summary {
+    value
+    dtype
   }
 `
 

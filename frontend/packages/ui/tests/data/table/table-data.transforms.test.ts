@@ -6,23 +6,39 @@ import {
   runKey,
 } from '#src/data/table/table-data.transforms'
 import type {
-  Cell,
   CellError,
   CellValue,
   Run,
 } from '#src/data/table/table-data.types'
+
+type CellInput = {
+  name: string
+  value: CellValue
+  dtype: string
+  error: CellError | null
+}
 
 function cell(
   name: string,
   value: CellValue,
   dtype = 'number',
   error: CellError | null = null
-): Cell {
+): CellInput {
   return { name, value, dtype, error }
 }
 
-function run(proposal: string, number: number, cells: Run['cells']): Run {
-  return { database: proposal, proposal, run: number, cells }
+function run(proposal: string, number: number, cells: CellInput[]): Run {
+  return {
+    database: proposal,
+    proposal,
+    run: number,
+    cells: cells.map((entry) => ({
+      id: `${proposal}:${number}:${entry.name}`,
+      name: entry.name,
+      error: entry.error,
+      summary: { value: entry.value, dtype: entry.dtype },
+    })),
+  }
 }
 
 describe('indexRunCells', () => {
@@ -34,10 +50,10 @@ describe('indexRunCells', () => {
 
     expect([...cells.keys()]).toEqual(['900405:5', '900405:9'])
     expect(cells.get('900405:5')?.energy).toEqual({
+      id: '900405:5:energy',
       name: 'energy',
-      value: 1.2,
-      dtype: 'number',
       error: null,
+      summary: { value: 1.2, dtype: 'number' },
     })
   })
 
@@ -49,8 +65,8 @@ describe('indexRunCells', () => {
       run('900485', 1, [cell('energy', 9.9)]),
     ])
 
-    expect(cells.get('900405:1')?.energy.value).toBe(1.2)
-    expect(cells.get('900485:1')?.energy.value).toBe(9.9)
+    expect(cells.get('900405:1')?.energy.summary.value).toBe(1.2)
+    expect(cells.get('900485:1')?.energy.summary.value).toBe(9.9)
   })
 
   test('stores each cell by its variable name', () => {
@@ -59,10 +75,10 @@ describe('indexRunCells', () => {
       run('900405', 1, [cell('x', 2, 'number', error)]),
     ])
     expect(cells.get('900405:1')?.x).toEqual({
+      id: '900405:1:x',
       name: 'x',
-      value: 2,
-      dtype: 'number',
       error,
+      summary: { value: 2, dtype: 'number' },
     })
   })
   test('reuses a run’s cell map while the run object is unchanged', () => {
@@ -87,7 +103,7 @@ describe('indexRunCells', () => {
 
     expect(second.get('900405:1')).toBe(first.get('900405:1'))
     expect(second.get('900405:2')).not.toBe(first.get('900405:2'))
-    expect(second.get('900405:2')?.energy.value).toBe(9.9)
+    expect(second.get('900405:2')?.energy.summary.value).toBe(9.9)
   })
 })
 
@@ -96,7 +112,7 @@ test('runKey pairs proposal and run into a lookup key', () => {
 })
 
 // A heavy value the @lightweight directive held back: the server sends the cell
-// with its value nulled out.
+// with its summary value nulled out.
 const blanked = (name: string, error: CellError | null = null) =>
   cell(name, null, 'array', error)
 

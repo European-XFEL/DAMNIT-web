@@ -5,12 +5,19 @@ export type CellError = {
   cls: string
 }
 
-// One run's value in one variable. `name` ties the cell to its variable.
-export type Cell = {
-  name: string
+// The table-value facet of a cell: the summary the grid renders.
+export type CellSummary = {
   value: CellValue
   dtype: string
+}
+
+// One run's cell in one variable. `id` ("{database}:{proposal}:{run}:{name}") is
+// the Apollo cache key; `name` ties the cell to its variable.
+export type Cell = {
+  id: string
+  name: string
   error?: CellError | null
+  summary: CellSummary
 }
 
 // A column: what a variable is, independent of any run's value of it.

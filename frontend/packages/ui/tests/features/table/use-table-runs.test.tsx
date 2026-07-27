@@ -18,6 +18,7 @@ import { TABLE_DATA_QUERY } from '#src/data/table/table-data.queries'
 import { createPriorityLink } from '#src/graphql/priority-link'
 import { typePolicies } from '#src/graphql/type-policies'
 import { useTableRuns } from '#src/features/table/use-table-runs'
+import { cellId } from '#tests/support/cells'
 
 const PROPOSAL = '900405'
 const PAGE_SIZE = 10
@@ -39,10 +40,15 @@ const runFor = (run: number) => ({
   cells: [
     {
       __typename: 'Cell',
+      id: cellId({
+        database: PROPOSAL,
+        proposal: PROPOSAL,
+        run,
+        name: 'spectrum',
+      }),
       name: 'spectrum',
-      value: null,
-      dtype: 'array',
       error: null,
+      summary: { __typename: 'CellSummary', value: null, dtype: 'array' },
     },
   ],
 })
@@ -173,10 +179,19 @@ test('does not flash a run filled by a cache write', async () => {
           cells: [
             {
               __typename: 'Cell',
+              id: cellId({
+                database: PROPOSAL,
+                proposal: PROPOSAL,
+                run: 1,
+                name: 'spectrum',
+              }),
               name: 'spectrum',
-              value: [1, 2, 3],
-              dtype: 'array',
               error: null,
+              summary: {
+                __typename: 'CellSummary',
+                value: [1, 2, 3],
+                dtype: 'array',
+              },
             },
           ],
         },
@@ -186,7 +201,7 @@ test('does not flash a run filled by a cache write', async () => {
 
   // The fill landed, and the run still carries no flash stamp.
   await vi.waitFor(() =>
-    expect(result.current.cellsByKey.get(key)?.spectrum.value).toEqual([
+    expect(result.current.cellsByKey.get(key)?.spectrum.summary.value).toEqual([
       1, 2, 3,
     ])
   )

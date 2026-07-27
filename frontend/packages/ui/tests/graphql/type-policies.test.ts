@@ -6,6 +6,7 @@ import {
   type TableDataResult,
 } from '#src/data/table/table-data.queries'
 import { typePolicies } from '#src/graphql/type-policies'
+import { cellId } from '#tests/support/cells'
 
 const PROPOSAL = '900405'
 
@@ -15,30 +16,48 @@ beforeEach(() => {
   cache = new InMemoryCache({ typePolicies })
 })
 
-// A cell as it sits in the cache, under its wire __typename.
-type Cell = {
+type CellError = { cls: string; message: string }
+
+// A cell as the wire sends it, before `run` stamps the normalization id and
+// wraps the summary facet.
+type CellInput = {
   name: string
   value: unknown
   dtype: string
-  error: { cls: string; message: string } | null
+  error: CellError | null
 }
 
 function cell(
   name: string,
   value: unknown,
   dtype = 'number',
-  error: Cell['error'] = null
-): Cell {
-  return { __typename: 'Cell', name, value, dtype, error } as Cell
+  error: CellError | null = null
+): CellInput {
+  return { name, value, dtype, error }
 }
 
-function run(proposal: string, number: number, cells: Cell[]) {
+function run(proposal: string, number: number, cells: CellInput[]) {
   return {
     __typename: 'DamnitRun',
     database: PROPOSAL,
     proposal,
     run: number,
-    cells,
+    cells: cells.map((entry) => ({
+      __typename: 'Cell',
+      id: cellId({
+        database: PROPOSAL,
+        proposal,
+        run: number,
+        name: entry.name,
+      }),
+      name: entry.name,
+      error: entry.error,
+      summary: {
+        __typename: 'CellSummary',
+        value: entry.value,
+        dtype: entry.dtype,
+      },
+    })),
   }
 }
 
@@ -64,7 +83,16 @@ const valueOf = (
 ) =>
   runs
     .find((entry) => entry.run === identity)
-    ?.cells.find((entry) => entry.name === name)?.value
+    ?.cells.find((entry) => entry.name === name)?.summary.value
+
+const dtypeOf = (
+  runs: TableDataResult['runs'],
+  identity: number,
+  name: string
+) =>
+  runs
+    .find((entry) => entry.run === identity)
+    ?.cells.find((entry) => entry.name === name)?.summary.dtype
 
 const blanked = cell('spectrum', null, 'array')
 const filled = cell('spectrum', [1, 2, 3], 'array')
@@ -74,7 +102,9 @@ test('the lightweight, deferred, and pushed cell sets share one run', () => {
   writeRuns([run(PROPOSAL, 1, [cell('energy', 10), blanked])])
   expect(valueOf(readRuns(), 1, 'spectrum')).toBeNull()
 
-  // The deferred pass fills only the heavy value, keyed onto the same run.
+  // The deferred pass fills only the heavy value, keyed onto the same run. The
+  // cells list unions by identity, so `energy` survives even though this pass
+  // did not carry it.
   writeRuns([run(PROPOSAL, 1, [cell('run', 1), filled])])
   expect(valueOf(readRuns(), 1, 'spectrum')).toEqual([1, 2, 3])
   expect(valueOf(readRuns(), 1, 'energy')).toBe(10)
@@ -84,10 +114,34 @@ test('a held-back blank does not overwrite a value already in place', () => {
   writeRuns([run(PROPOSAL, 1, [filled])])
 
   // A cache-and-network refetch of the lightweight pass blanks the heavy value
-  // again; the merge keeps the value the deferred pass filled in.
+  // again; the CellSummary.value merge keeps the value the deferred pass filled.
   writeRuns([run(PROPOSAL, 1, [blanked])])
 
   expect(valueOf(readRuns(), 1, 'spectrum')).toEqual([1, 2, 3])
+})
+
+test('a retyped variable clears the value that no longer describes it', () => {
+  writeRuns([run(PROPOSAL, 1, [filled])])
+
+  // A context-file edit retypes `spectrum` from an array to an image, so the
+  // next lightweight pass blanks it under the new dtype. Keeping the array here
+  // would pair it with a dtype that cannot draw it, and the cell would never be
+  // fetched again because it would still look like it had a value.
+  writeRuns([run(PROPOSAL, 1, [cell('spectrum', null, 'image')])])
+
+  expect(valueOf(readRuns(), 1, 'spectrum')).toBeNull()
+  expect(dtypeOf(readRuns(), 1, 'spectrum')).toBe('image')
+})
+
+test('a null scalar clears the value it had rather than keeping it', () => {
+  writeRuns([run(PROPOSAL, 1, [cell('energy', 10)])])
+  expect(valueOf(readRuns(), 1, 'energy')).toBe(10)
+
+  // Unlike a held-back heavy blank, a null scalar is DAMNIT clearing the value
+  // for this run, so the merge must let it through instead of keeping the stale
+  // number.
+  writeRuns([run(PROPOSAL, 1, [cell('energy', null)])])
+  expect(valueOf(readRuns(), 1, 'energy')).toBeNull()
 })
 
 test('a blank still lands on a cell that has no value yet', () => {
@@ -97,16 +151,20 @@ test('a blank still lands on a cell that has no value yet', () => {
   expect(valueOf(readRuns(), 1, 'spectrum')).toBeNull()
 })
 
-test('an errored blank replaces a value already in place', () => {
-  // A blank carrying an error is a real result, not a value held back.
+test('a cell that fails after computing shows the error over its stale value', () => {
   const error = { cls: 'ValueError', message: 'boom' }
   writeRuns([run(PROPOSAL, 1, [filled])])
 
+  // The variable errors on a later pass: the summary value is held back (null),
+  // but the error lands on the cell. The stale value stays cached and unseen,
+  // since the grid gives the error precedence.
   writeRuns([run(PROPOSAL, 1, [cell('spectrum', null, 'array', error)])])
 
-  const spectrum = readRuns()[0].cells.find((c) => c.name === 'spectrum')
-  expect(spectrum?.value).toBeNull()
+  const spectrum = readRuns()[0].cells.find(
+    (entry) => entry.name === 'spectrum'
+  )
   expect(spectrum?.error).toEqual(error)
+  expect(spectrum?.summary.value).toEqual([1, 2, 3])
 })
 
 test('paginated runs accumulate into one list, deduped by identity', () => {
@@ -129,4 +187,16 @@ test('runs that share a number across proposals stay separate', () => {
   const runs = readRuns()
   expect(runs).toHaveLength(2)
   expect(cache.identify(runs[0])).not.toBe(cache.identify(runs[1]))
+})
+
+test('cells sharing a name across runs are separate normalized entities', () => {
+  // The id folds in the run's identity, so one variable's cell in two runs
+  // never collapses onto a single cache object.
+  writeRuns([
+    run(PROPOSAL, 1, [cell('energy', 1.2)]),
+    run(PROPOSAL, 2, [cell('energy', 9.9)]),
+  ])
+
+  expect(valueOf(readRuns(), 1, 'energy')).toBe(1.2)
+  expect(valueOf(readRuns(), 2, 'energy')).toBe(9.9)
 })

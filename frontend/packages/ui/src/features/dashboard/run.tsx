@@ -145,7 +145,7 @@ const Run = () => {
   const validRuns = Object.entries(runData).filter(
     ([name, data]) =>
       isVariableVisible(name, variableVisibility) &&
-      (data?.error != null || data?.value != null) &&
+      (data?.error != null || data?.summary.value != null) &&
       !NONCONFIGURABLE_VARIABLES.includes(name)
   )
 
@@ -159,11 +159,12 @@ const Run = () => {
         if (data.error) {
           return renderError({ name, label, error: data.error })
         }
-        const render = renderFactory[data.dtype] ?? renderFactory.default
+        const render =
+          renderFactory[data.summary.dtype] ?? renderFactory.default
         return render({
           name,
           label,
-          value: data.value as CellValue,
+          value: data.summary.value as CellValue,
         })
       })}
     </ScrollArea>
