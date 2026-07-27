@@ -19,8 +19,8 @@ def lightweight(field: DirectiveValue[DamnitRun | Cell]):
     fields = field if isinstance(field, list) else [field]
 
     for cell in get_cells(fields):
-        if cell is not None and cell.dtype in HEAVY_DATA:
-            cell.value = None
+        if cell is not None and cell.summary.dtype in HEAVY_DATA:
+            cell.summary.value = None
 
     # Return original field
     return field

@@ -86,11 +86,22 @@ class CellError:
 
 
 @strawberry.type
-class Cell:
-    name: str
+class CellSummary:
     value: Any | None
     dtype: DamnitType
-    error: CellError | None = None
+
+
+@strawberry.type
+class Cell:
+    # `id` is the cell's global identity, "{database}:{proposal}:{run}:{name}".
+    # `database` is in it because the same (proposal, run, name) can be served
+    # through two databases (a guest proposal also opened directly), so it is
+    # scoped the same way the run's own key is. `error` describes the whole cell:
+    # a failed variable still carries a summary, with a null value.
+    id: strawberry.ID
+    name: str
+    error: CellError | None
+    summary: CellSummary
 
 
 def _unwrap(entry):
@@ -126,7 +137,7 @@ class DamnitRun:
         return [c for c in self._cells if c.name in requested]
 
     @classmethod
-    def _iter_cells(cls, record):
+    def _iter_cells(cls, record, *, database, proposal, run):
         for name, entry in record.items():
             if entry is None:
                 continue
@@ -135,7 +146,19 @@ class DamnitRun:
             dtype = cls.get_dtype(name, entry)
             value, dtype = serialize(entry["value"], dtype=dtype)
             error = CellError.from_attrs(entry.get("attributes"))
-            yield Cell(name=name, value=Any(value), dtype=dtype, error=error)
+            if error is not None:
+                # A failed cell has no value to render, so its summary type is
+                # not worth keeping. The client merges a cell's summary without
+                # being able to see the error alongside it, so a heavy dtype
+                # here would look like a value @lightweight held back and pin
+                # whatever the cell held before it failed.
+                dtype = DamnitType.STRING
+            yield Cell(
+                id=strawberry.ID(f"{database}:{proposal}:{run}:{name}"),
+                name=name,
+                error=error,
+                summary=CellSummary(value=Any(value), dtype=dtype),
+            )
 
     @classmethod
     def from_db(cls, record, *, database):
@@ -146,11 +169,23 @@ class DamnitRun:
         if proposal is None:
             msg = "Run record has no proposal."
             raise ValueError(msg)
+        database = str(database)
+        # Cell ids join their parts with ":", so a part carrying one of its own
+        # would let two different cells share an id and collide in the client's
+        # cache. Only `database` can: it is the handle the client sent, and a
+        # path handle is coming.
+        if ":" in database:
+            msg = f"Database handle may not contain ':': {database!r}"
+            raise ValueError(msg)
+        proposal = str(proposal)
+        run = int(_unwrap(record["run"]))
         return cls(
-            database=str(database),
-            proposal=str(proposal),
-            run=int(_unwrap(record["run"])),
-            _cells=list(cls._iter_cells(record)),
+            database=database,
+            proposal=proposal,
+            run=run,
+            _cells=list(
+                cls._iter_cells(record, database=database, proposal=proposal, run=run)
+            ),
         )
 
     @staticmethod

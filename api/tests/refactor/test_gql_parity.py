@@ -121,9 +121,10 @@ async def test_runs_query_wire_shape_unchanged(
         query {{
           runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 1) {{
             cells {{
+              id
               name
-              value
-              dtype
+              error {{ message cls }}
+              summary {{ value dtype }}
             }}
           }}
         }}
@@ -140,11 +141,17 @@ async def test_runs_query_wire_shape_unchanged(
     cells = {c["name"]: c for c in runs[0]["cells"]}
     assert set(cells) >= {"proposal", "run", "n_trains", "start_time"}
     for cell in cells.values():
-        assert set(cell.keys()) == {"name", "value", "dtype"}
+        assert set(cell.keys()) == {"id", "name", "error", "summary"}
+        assert set(cell["summary"].keys()) == {"value", "dtype"}
+
+    # The synthesized id is "{database}:{proposal}:{run}:{name}", the Apollo
+    # cache key; the database handle echoes the proposal it was addressed by.
+    assert cells["n_trains"]["id"] == f"{PROPOSAL}:{PROPOSAL}:348:n_trains"
 
     # `start_time` is a timestamp: the frontend expects milliseconds
-    assert cells["start_time"]["value"] == KNOWN_DATA["start_time"].damnit_value
-    assert cells["start_time"]["dtype"] == "timestamp"
+    start_time = cells["start_time"]["summary"]
+    assert start_time["value"] == KNOWN_DATA["start_time"].damnit_value
+    assert start_time["dtype"] == "timestamp"
 
 
 @pytest.mark.asyncio
@@ -240,7 +247,7 @@ async def test_run_updates_subscription_wire_shape_unchanged(
               database
               proposal
               run
-              cells { name value dtype }
+              cells { id name error { message cls } summary { value dtype } }
             }
             metadata {
               runs { proposal run }
@@ -268,7 +275,9 @@ async def test_run_updates_subscription_wire_shape_unchanged(
         assert set(run.keys()) == {"database", "proposal", "run", "cells"}
         assert run["run"] == NEW_RUN
         for cell in run["cells"]:
-            assert set(cell.keys()) == {"name", "value", "dtype"}
+            assert set(cell.keys()) == {"id", "name", "error", "summary"}
+            assert set(cell["summary"].keys()) == {"value", "dtype"}
+            assert cell["id"] == f"{PROPOSAL}:{PROPOSAL}:{NEW_RUN}:{cell['name']}"
 
         metadata = payload["metadata"]
         assert set(metadata.keys()) == {"runs"}

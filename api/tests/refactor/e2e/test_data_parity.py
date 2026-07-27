@@ -44,7 +44,10 @@ def runs_query(proposal: int, *, per_page: int, names: list[str]) -> dict:
             query {{
               runs(database: {{proposal: "{proposal}"}}, per_page: {per_page}) {{
                 cells(names: [{names_arg}]) {{
-                  name value dtype error {{ message cls }}
+                  id
+                  name
+                  error {{ message cls }}
+                  summary {{ value dtype }}
                 }}
               }}
             }}
@@ -118,10 +121,13 @@ async def test_runs_query_wire_shapes_unchanged(logged_in_client, snapshot):
     # the prefix directly and replace the value in the snapshot so it isn't
     # pinning the exact rendered image bytes
     image = by_name["xpcs_g2_plot"]
-    assert image["dtype"] == "image"
+    assert image["summary"]["dtype"] == "image"
     assert image["error"] is None
-    assert image["value"].startswith("data:image/png;base64,")
-    by_name["xpcs_g2_plot"] = {**image, "value": "<png-data-uri>"}
+    assert image["summary"]["value"].startswith("data:image/png;base64,")
+    by_name["xpcs_g2_plot"] = {
+        **image,
+        "summary": {**image["summary"], "value": "<png-data-uri>"},
+    }
 
     assert _normalize(by_name) == snapshot
 

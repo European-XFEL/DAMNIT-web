@@ -51,7 +51,7 @@ async def test_runs_query(graphql_schema, mocked_fetch_cells, mocked_fetch_info)
           runs(database: {{proposal: "{PROPOSAL}"}}, per_page: $per_page) {{
             cells {{
               name
-              value
+              summary {{ value }}
             }}
           }}
         }}
@@ -70,6 +70,44 @@ async def test_runs_query(graphql_schema, mocked_fetch_cells, mocked_fetch_info)
 
     assert mocked_fetch_cells.call_args.kwargs["names"] is None
     assert mocked_fetch_info.called
+
+
+@pytest.mark.asyncio
+async def test_lightweight_directive_blanks_heavy_values(
+    graphql_schema, mocker, mocked_fetch_info
+):
+    # A heavy cell (array) next to a scalar, so the directive has both to sort.
+    record = {
+        "proposal": {"value": PROPOSAL},
+        "run": {"value": 348},
+        "n_trains": {"value": 3641, "summary_type": None},
+        "spectrum": {"value": [1.0, 2.0, 3.0], "summary_type": "trendline"},
+    }
+    mocker.patch(
+        "damnit_api.graphql.queries.fetch_cells",
+        return_value=[record],
+    )
+
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) @lightweight {{
+            cells {{
+              name
+              summary {{ value dtype }}
+            }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+
+    cells = {c["name"]: c["summary"] for c in result.data["runs"][0]["cells"]}
+    # The heavy value is held back, but its dtype still describes the cell.
+    assert cells["spectrum"]["value"] is None
+    assert cells["spectrum"]["dtype"] == "array"
+    # A scalar is left untouched.
+    assert cells["n_trains"]["value"] == 3641
 
 
 @pytest.mark.asyncio
@@ -245,7 +283,7 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
           runs(database: {{proposal: "{proposal}"}}, per_page: 10) {{
             cells(names: ["alpha", "run"]) {{
               name
-              value
+              summary {{ value }}
             }}
           }}
         }}
@@ -254,7 +292,7 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
 
     assert result.errors is None
     runs = result.data["runs"]
-    by_run = [{v["name"]: v["value"] for v in r["cells"]} for r in runs]
+    by_run = [{v["name"]: v["summary"]["value"] for v in r["cells"]} for r in runs]
     assert by_run == [
         {"alpha": "a1", "run": 1},
         {"alpha": "a2", "run": 2},
@@ -356,7 +394,7 @@ async def test_runs_query_includes_guests_active_block_first(
           runs(database: {{proposal: "{proposal}"}}, per_page: 10) {{
             proposal
             run
-            cells(names: ["alpha"]) {{ name value }}
+            cells(names: ["alpha"]) {{ name summary {{ value }} }}
           }}
         }}
     """
@@ -372,7 +410,10 @@ async def test_runs_query_includes_guests_active_block_first(
         ("888888", 1),
     ]
 
-    alpha = [{v["name"]: v["value"] for v in r["cells"]}.get("alpha") for r in runs]
+    alpha = [
+        {v["name"]: v["summary"]["value"] for v in r["cells"]}.get("alpha")
+        for r in runs
+    ]
     # The colliding run 1 keeps each proposal's own latest value.
     assert alpha == ["a1", "a2", "guest_a1"]
 

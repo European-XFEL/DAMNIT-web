@@ -180,8 +180,26 @@ def test_from_db_includes_error_for_failed_variable():
 
     by_name = {v.name: v for v in run.cells()}
     assert by_name["run"].error is None
-    assert by_name["broken"].value is None
+    assert by_name["broken"].summary.value is None
     assert by_name["broken"].error == CellError(message=ERROR_ATTRS["error"], cls="Foo")
+
+
+def test_from_db_drops_a_heavy_summary_type_when_the_variable_failed():
+    # The client merges a cell's summary without being able to see the error
+    # beside it, so a heavy dtype on a null value reads as one @lightweight held
+    # back and pins whatever the cell held before it failed.
+    record = {
+        "proposal": {"value": 900485},
+        "run": {"value": 1},
+        "broken": {
+            "value": None,
+            "summary_type": "trendline",
+            "attributes": json.dumps(ERROR_ATTRS),
+        },
+    }
+    run = DamnitRun.from_db(record, database="900485")
+
+    assert run.cells(names=["broken"])[0].summary.dtype == DamnitType.STRING
 
 
 def test_from_db_populates_identity_trio():
@@ -191,3 +209,28 @@ def test_from_db_populates_identity_trio():
     assert run.database == "900485"
     assert run.proposal == "900485"
     assert run.run == 348
+
+
+def test_from_db_scopes_cell_ids_by_database():
+    # The same (proposal, run, name) served through two databases (a guest
+    # proposal also opened directly) must key distinct normalized cells, so the
+    # second database cannot overwrite the first's cached value.
+    record = {
+        "proposal": {"value": 900485},
+        "run": {"value": 348},
+        "n_trains": {"value": 3641},
+    }
+    guest = DamnitRun.from_db(record, database="900405")
+    direct = DamnitRun.from_db(record, database="900485")
+
+    assert guest.cells(names=["n_trains"])[0].id == "900405:900485:348:n_trains"
+    assert direct.cells(names=["n_trains"])[0].id == "900485:900485:348:n_trains"
+
+
+def test_from_db_rejects_a_database_handle_carrying_a_colon():
+    # Cell ids join their parts with ":", so a handle carrying one of its own
+    # would let two different cells share an id and collide in the client cache.
+    record = {"proposal": {"value": 900485}, "run": {"value": 348}}
+
+    with pytest.raises(ValueError, match="may not contain"):
+        DamnitRun.from_db(record, database="900405:900485")

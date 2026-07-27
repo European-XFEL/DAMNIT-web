@@ -4,15 +4,20 @@ directive @lightweight on FIELD
 scalar Any
 
 type Cell {
+  id: ID!
   name: String!
-  value: Any
-  dtype: DamnitType!
   error: CellError
+  summary: CellSummary!
 }
 
 type CellError {
   message: String!
   cls: String!
+}
+
+type CellSummary {
+  value: Any
+  dtype: DamnitType!
 }
 
 type DamnitRun {

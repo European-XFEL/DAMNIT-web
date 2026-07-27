@@ -35,7 +35,7 @@ SUBSCRIPTION = """
           database
           proposal
           run
-          cells { name value dtype }
+          cells { name summary { value dtype } }
         }
         metadata {
           runs { proposal run }
@@ -150,7 +150,11 @@ async def test_run_updates(
             "run": DatabaseVariable(value=NEW_RUN, damnit_dtype=DamnitType.NUMBER),
         }
         got = {
-            v["name"]: {"value": v["value"], "dtype": v["dtype"]} for v in run["cells"]
+            v["name"]: {
+                "value": v["summary"]["value"],
+                "dtype": v["summary"]["dtype"],
+            }
+            for v in run["cells"]
         }
         assert got == {
             name: {"value": var.damnit_value, "dtype": var.damnit_dtype.value}
