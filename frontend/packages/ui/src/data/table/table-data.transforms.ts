@@ -2,11 +2,16 @@ import { isHeavySummaryBlank } from '#src/constants'
 
 import type { Cell, Run, RunCells, RunId, Variable } from './table-data.types'
 
+// A cell with something to render. A failed cell is out whatever its summary
+// reads as: the error is the result, and every surface shows that instead.
+export function hasValue(cell: Cell | undefined): cell is Cell {
+  return cell != null && cell.error == null && cell.summary.value != null
+}
+
 // A value the server is still holding back on the table's first pass, rather
 // than one that is genuinely absent. Shares its rule with the cache merge policy
 // through `isHeavySummaryBlank`, so the two cannot disagree on what is still to
-// come. A cell that failed carries an error, and its blank is the final answer
-// rather than a value on its way.
+// come.
 function isDeferred(cell: Cell): boolean {
   return cell.error == null && isHeavySummaryBlank(cell.summary)
 }

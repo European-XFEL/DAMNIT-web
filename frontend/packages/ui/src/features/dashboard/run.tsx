@@ -153,8 +153,7 @@ const Run = () => {
     <ScrollArea h="100vh" offsetScrollbars>
       {validRuns.map(([name, data]) => {
         const label = metadataVariables[name]?.title || name
-        // The error comes first, the same order the grid and the plots use: a
-        // cell that failed has nothing worth rendering from its summary.
+        // A cell that failed has nothing worth rendering from its summary.
         if (data.error) {
           return renderError({ name, label, error: data.error })
         }

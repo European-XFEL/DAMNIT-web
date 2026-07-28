@@ -9,7 +9,11 @@ import {
   type TableDataResult,
   type TableDataVariables,
 } from '#src/data/table/table-data.queries'
-import { indexRunCells, runKey } from '#src/data/table/table-data.transforms'
+import {
+  hasValue,
+  indexRunCells,
+  runKey,
+} from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 
@@ -64,12 +68,9 @@ export function useSummaryPlotData({
     for (const id of runIds) {
       const row = cells.get(runKey(id))
       const points = variables.map((name) => row?.[name])
-      // A failed cell is out whatever its value reads as, the same rule the
-      // grid, the aside and the plot context menu all apply.
       const allNumeric = points.every(
         (point) =>
-          point != null &&
-          point.error == null &&
+          hasValue(point) &&
           typeof point.summary.value === 'number' &&
           point.summary.dtype === DTYPES.number
       )

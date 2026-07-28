@@ -15,7 +15,7 @@ import { Group, Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
-import { runKey } from '#src/data/table/table-data.transforms'
+import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
@@ -265,12 +265,9 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     const rowData = identity && cellsByKey.get(runKey(identity))
 
     // A row whose page has not loaded yet has no data at all, not merely no
-    // value: it has nothing to offer a plot either way. A failed cell arrives
-    // with a null value, so it is already out; checking the error keeps this in
-    // step with the grid and the aside.
+    // value: it has nothing to offer a plot either way.
     // TODO: Use extracted data type from the database
-    const cell = rowData?.[column]
-    if (col !== -1 && cell?.error == null && cell?.summary.value != null) {
+    if (col !== -1 && hasValue(rowData ? rowData[column] : undefined)) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 
