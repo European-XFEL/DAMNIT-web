@@ -22,7 +22,7 @@ describe('getCell', () => {
       getCell({ value: undefined, dtype: DTYPES.image, options: {} }).kind
     ).toBe(GridCellKind.Loading)
     expect(
-      getCell({ value: undefined, dtype: DTYPES.array, options: {} }).kind
+      getCell({ value: undefined, dtype: DTYPES.array1d, options: {} }).kind
     ).toBe(GridCellKind.Loading)
   })
 

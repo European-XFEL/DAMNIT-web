@@ -105,7 +105,7 @@ async def test_lightweight_directive_blanks_heavy_values(
     cells = {c["name"]: c["summary"] for c in result.data["runs"][0]["cells"]}
     # The heavy value is held back, but its dtype still describes the cell.
     assert cells["spectrum"]["value"] is None
-    assert cells["spectrum"]["dtype"] == "array"
+    assert cells["spectrum"]["dtype"] == "array1d"
     # A scalar is left untouched.
     assert cells["n_trains"]["value"] == 3641
 

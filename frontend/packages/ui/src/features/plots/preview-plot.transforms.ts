@@ -8,14 +8,14 @@ export function toPlotTrace(
   { run }: { run: string }
 ): PlotTrace {
   switch (value.dtype) {
-    case 'array': {
+    case 'array1d': {
       const dim = value.dims[0]
       return {
         x: { name: dim, value: value.coords[dim] },
         y: { name: `Run ${run}`, value: value.data as number[] },
       }
     }
-    case 'image': {
+    case 'array2d': {
       const [y, x] = value.dims.map((axis) => ({
         name: axis,
         value: value.coords[axis],
@@ -35,15 +35,15 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
   const meta: PlotMeta = { type: 'unsupported' }
 
   switch (value.dtype) {
-    case 'array':
+    case 'array1d':
       meta.x = { name: value.dims[0] }
       meta.y = { name: value.name }
       meta.type = 'scatter'
       break
-    case 'image':
+    case 'array2d':
       meta.type = 'heatmap'
       break
-    case 'png':
+    case 'image':
       meta.type = 'image'
       break
     case 'number':

@@ -107,7 +107,7 @@ test('runKey pairs proposal and run into a lookup key', () => {
 // A heavy value the @lightweight directive held back: the server sends the cell
 // with its summary value nulled out.
 const blanked = (name: string, error: CellError | null = null) =>
-  cell({ name, value: null, dtype: 'array', error })
+  cell({ name, value: null, dtype: 'array1d', error })
 
 describe('heavyCellNames', () => {
   test('names the blanked cells worth a second fetch', () => {

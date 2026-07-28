@@ -5372,5 +5372,5 @@
     ]
   },
   "name": "total_transmission",
-  "dtype": "array"
+  "dtype": "array1d"
 }

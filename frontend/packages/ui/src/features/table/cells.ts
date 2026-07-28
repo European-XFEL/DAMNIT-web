@@ -280,7 +280,7 @@ const gridCellFactory: Partial<Record<string, CellFactory>> = {
   [DTYPES.image]: imageCell,
   [DTYPES.string]: textCell,
   [DTYPES.number]: numberCell,
-  [DTYPES.array]: arrayCell,
+  [DTYPES.array1d]: arrayCell,
   [DTYPES.timestamp]: dateCell,
 }
 

@@ -16,7 +16,7 @@ const VARIABLE = 'spectrum'
 const spectrumFor = (run: number) => ({
   data: [run, run + 1],
   name: VARIABLE,
-  dtype: 'array',
+  dtype: 'array1d',
   dims: ['pulse'],
   coords: { pulse: [0, 1] },
   attrs: {},

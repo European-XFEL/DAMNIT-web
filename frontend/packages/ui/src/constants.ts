@@ -37,7 +37,7 @@ export const VARIABLES = {
 }
 export const DTYPES = {
   image: 'image',
-  array: 'array',
+  array1d: 'array1d',
   string: 'string',
   number: 'number',
   timestamp: 'timestamp',

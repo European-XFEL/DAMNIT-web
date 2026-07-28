@@ -44,7 +44,7 @@ const runFor = (run: number) => ({
       run,
       name: 'spectrum',
       value: null,
-      dtype: 'array',
+      dtype: 'array1d',
     }),
   ],
 })
@@ -179,7 +179,7 @@ test('does not flash a run filled by a cache write', async () => {
               run: 1,
               name: 'spectrum',
               value: [1, 2, 3],
-              dtype: 'array',
+              dtype: 'array1d',
             }),
           ],
         },

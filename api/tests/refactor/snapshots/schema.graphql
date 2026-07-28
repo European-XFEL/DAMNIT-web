@@ -34,12 +34,10 @@ enum DamnitType {
   boolean
   timestamp
   complex
-  array
+  array1d
+  array2d
   image
   numpy
-  rgba
-  png
-  dataset
 }
 
 input DatabaseInput {

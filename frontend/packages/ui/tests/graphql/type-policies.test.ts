@@ -90,8 +90,8 @@ const dtypeOf = (
   name: string
 ) => summaryOf(runs, identity, name)?.dtype
 
-const blanked = cell({ name: 'spectrum', value: null, dtype: 'array' })
-const filled = cell({ name: 'spectrum', value: [1, 2, 3], dtype: 'array' })
+const blanked = cell({ name: 'spectrum', value: null, dtype: 'array1d' })
+const filled = cell({ name: 'spectrum', value: [1, 2, 3], dtype: 'array1d' })
 
 test('the lightweight, deferred, and pushed cell sets share one run', () => {
   // The lightweight pass lands the run with its heavy value blanked.
@@ -183,7 +183,7 @@ test('an error alone cannot clear a value under a heavy dtype', () => {
       cell({
         name: 'spectrum',
         value: null,
-        dtype: 'array',
+        dtype: 'array1d',
         error: { cls: 'ValueError', message: 'boom' },
       }),
     ]),

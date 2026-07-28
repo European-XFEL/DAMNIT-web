@@ -22,7 +22,7 @@ PYTHON_TYPES = {
 SUMMARY_TYPES = {
     "complex": DamnitType.COMPLEX,
     "numpy": DamnitType.NUMPY,
-    "trendline": DamnitType.ARRAY,
+    "trendline": DamnitType.ARRAY_1D,
 }
 
 

@@ -4,10 +4,11 @@ from strawberry.directive import DirectiveLocation, DirectiveValue
 from ..runs.types import Cell, DamnitRun
 from ..shared.const import DamnitType
 
+# The summary dtypes worth a second round trip. ARRAY_2D is missing on purpose:
+# DamnitRun.get_dtype cannot reach it, so only a preview ever carries one.
 HEAVY_DATA = (
     DamnitType.IMAGE,
-    DamnitType.RGBA,
-    DamnitType.ARRAY,
+    DamnitType.ARRAY_1D,
 )
 
 

@@ -50,18 +50,18 @@ type PreviewBase = {
   attrs?: PreviewAttrs
 }
 
-// An array or a 2D image: the backend sends these as a serialized DataArray, so
-// they carry the dimensions and coordinates to plot the values against.
+// A 1D or 2D numeric array: the backend sends these as a serialized DataArray,
+// so they carry the dimensions and coordinates to plot the values against.
 type PreviewArray = PreviewBase & {
-  dtype: 'array' | 'image'
+  dtype: 'array1d' | 'array2d'
   dims: string[]
   coords: { [dim: string]: number[] }
 }
 
-// A single value with nothing to plot it against. An RGBA image arrives already
-// encoded as a png, and the rest are scalars; none of them has dimensions.
+// A single value with nothing to plot it against. A picture arrives already
+// rendered to a base64 png, and the rest are scalars; none has dimensions.
 type PreviewScalar = PreviewBase & {
-  dtype: 'png' | 'number' | 'string' | 'boolean' | 'timestamp' | 'none'
+  dtype: 'image' | 'number' | 'string' | 'boolean' | 'timestamp' | 'none'
 }
 
 // What extracted_data returns for one run and variable: the values, plus the

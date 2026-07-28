@@ -122,14 +122,14 @@ def test_serialize_numpy():
 
 def test_serialize_array_unsupported_shape():
     blob = to_npy_bytes(np.array([1, 2, 3], dtype=np.float64))
-    _, dtype = serialize(blob, dtype=DamnitType.ARRAY)
+    _, dtype = serialize(blob, dtype=DamnitType.ARRAY_1D)
     assert dtype == DamnitType.STRING
 
 
-def test_serialize_array_valid():
+def test_serialize_reduces_a_2xn_trendline_to_one_series():
     arr = np.array([[1, 2, 3, 4], [10, 20, 30, 40]], dtype=np.float64)
-    value, dtype = serialize(to_npy_bytes(arr), dtype=DamnitType.ARRAY)
-    assert dtype == DamnitType.ARRAY
+    value, dtype = serialize(to_npy_bytes(arr), dtype=DamnitType.ARRAY_1D)
+    assert dtype == DamnitType.ARRAY_1D
     assert isinstance(value, np.ndarray)
 
 
