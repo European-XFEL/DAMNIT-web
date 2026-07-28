@@ -138,6 +138,7 @@ class DamnitRun:
 
     @classmethod
     def _iter_cells(cls, record, *, database, proposal, run):
+        prefix = f"{database}:{proposal}:{run}:"
         for name, entry in record.items():
             if entry is None:
                 continue
@@ -154,7 +155,7 @@ class DamnitRun:
                 # whatever the cell held before it failed.
                 dtype = DamnitType.STRING
             yield Cell(
-                id=strawberry.ID(f"{database}:{proposal}:{run}:{name}"),
+                id=strawberry.ID(prefix + name),
                 name=name,
                 error=error,
                 summary=CellSummary(value=Any(value), dtype=dtype),
@@ -162,13 +163,6 @@ class DamnitRun:
 
     @classmethod
     def from_db(cls, record, *, database):
-        # Both callers key their rows on (proposal, run), so a record without
-        # them is a bug upstream. Fail here rather than mint a `"None"`
-        # proposal that quietly becomes a cache key on the client.
-        proposal = _unwrap(record["proposal"])
-        if proposal is None:
-            msg = "Run record has no proposal."
-            raise ValueError(msg)
         database = str(database)
         # Cell ids join their parts with ":", so a part carrying one of its own
         # would let two different cells share an id and collide in the client's
@@ -176,6 +170,14 @@ class DamnitRun:
         # path handle is coming.
         if ":" in database:
             msg = f"Database handle may not contain ':': {database!r}"
+            raise ValueError(msg)
+
+        # Both callers key their rows on (proposal, run), so a record without
+        # them is a bug upstream. Fail here rather than mint a `"None"`
+        # proposal that quietly becomes a cache key on the client.
+        proposal = _unwrap(record["proposal"])
+        if proposal is None:
+            msg = "Run record has no proposal."
             raise ValueError(msg)
         proposal = str(proposal)
         run = int(_unwrap(record["run"]))
