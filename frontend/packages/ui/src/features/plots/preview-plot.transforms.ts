@@ -1,4 +1,9 @@
-import { type PlotMeta, type PlotTrace, type PreviewValue } from './plots.types'
+import {
+  type PlotMeta,
+  type PlotTrace,
+  type PreviewScalar,
+  type PreviewValue,
+} from './plots.types'
 
 // extracted_data is a JSON scalar, so `value.data` arrives as unknown and its
 // shape is only knowable from `dtype`. Each branch narrows it to what Plot
@@ -27,6 +32,9 @@ export function toPlotTrace(
       }
     }
     default:
+      // Everything left plots as a bare value. A new array dtype has to be
+      // given its own branch above before it builds.
+      value satisfies PreviewScalar
       return { data: { name: `Run ${run}`, value: value.data } }
   }
 }
@@ -52,6 +60,14 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
     case 'timestamp':
       meta.type = 'scalar'
       break
+    case 'none':
+      // A run the variable has no value for, or one the backend could not type.
+      // There is nothing to draw either way.
+      break
+    default:
+      // A new dtype has to be drawn here before it builds. An unknown one at
+      // runtime means a mismatched API, and stays unsupported.
+      value satisfies never
   }
 
   // Only the attributes the plot declares. `attrs` also carries whatever the
