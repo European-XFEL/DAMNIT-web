@@ -26,13 +26,20 @@ type CellInput = {
   error: CellError | null
 }
 
-function cell(
-  name: string,
-  value: unknown,
+function cell({
+  name,
+  value,
   dtype = 'number',
-  error: CellError | null = null
-): CellInput {
+  error = null,
+}: CellOptions): CellInput {
   return { name, value, dtype, error }
+}
+
+type CellOptions = {
+  name: string
+  value: unknown
+  dtype?: string
+  error?: CellError | null
 }
 
 function run(proposal: string, number: number, cells: CellInput[]) {
@@ -83,18 +90,18 @@ const dtypeOf = (
   name: string
 ) => summaryOf(runs, identity, name)?.dtype
 
-const blanked = cell('spectrum', null, 'array')
-const filled = cell('spectrum', [1, 2, 3], 'array')
+const blanked = cell({ name: 'spectrum', value: null, dtype: 'array' })
+const filled = cell({ name: 'spectrum', value: [1, 2, 3], dtype: 'array' })
 
 test('the lightweight, deferred, and pushed cell sets share one run', () => {
   // The lightweight pass lands the run with its heavy value blanked.
-  writeRuns([run(PROPOSAL, 1, [cell('energy', 10), blanked])])
+  writeRuns([run(PROPOSAL, 1, [cell({ name: 'energy', value: 10 }), blanked])])
   expect(valueOf(readRuns(), 1, 'spectrum')).toBeNull()
 
   // The deferred pass fills only the heavy value, keyed onto the same run. The
   // cells list unions by identity, so `energy` survives even though this pass
   // did not carry it.
-  writeRuns([run(PROPOSAL, 1, [cell('run', 1), filled])])
+  writeRuns([run(PROPOSAL, 1, [cell({ name: 'run', value: 1 }), filled])])
   expect(valueOf(readRuns(), 1, 'spectrum')).toEqual([1, 2, 3])
   expect(valueOf(readRuns(), 1, 'energy')).toBe(10)
 })
@@ -116,20 +123,22 @@ test('a retyped variable clears the value that no longer describes it', () => {
   // next lightweight pass blanks it under the new dtype. Keeping the array here
   // would pair it with a dtype that cannot draw it, and the cell would never be
   // fetched again because it would still look like it had a value.
-  writeRuns([run(PROPOSAL, 1, [cell('spectrum', null, 'image')])])
+  writeRuns([
+    run(PROPOSAL, 1, [cell({ name: 'spectrum', value: null, dtype: 'image' })]),
+  ])
 
   expect(valueOf(readRuns(), 1, 'spectrum')).toBeNull()
   expect(dtypeOf(readRuns(), 1, 'spectrum')).toBe('image')
 })
 
 test('a null scalar clears the value it had rather than keeping it', () => {
-  writeRuns([run(PROPOSAL, 1, [cell('energy', 10)])])
+  writeRuns([run(PROPOSAL, 1, [cell({ name: 'energy', value: 10 })])])
   expect(valueOf(readRuns(), 1, 'energy')).toBe(10)
 
   // Unlike a held-back heavy blank, a null scalar is DAMNIT clearing the value
   // for this run, so the merge must let it through instead of keeping the stale
   // number.
-  writeRuns([run(PROPOSAL, 1, [cell('energy', null)])])
+  writeRuns([run(PROPOSAL, 1, [cell({ name: 'energy', value: null })])])
   expect(valueOf(readRuns(), 1, 'energy')).toBeNull()
 })
 
@@ -147,7 +156,11 @@ test('a cell that fails after computing clears the value it had', () => {
   // DAMNIT stores a failed variable with a null value and no summary type, so
   // it comes back as a null string, not a held-back heavy blank: the error
   // lands and the array it had goes with it.
-  writeRuns([run(PROPOSAL, 1, [cell('spectrum', null, 'string', error)])])
+  writeRuns([
+    run(PROPOSAL, 1, [
+      cell({ name: 'spectrum', value: null, dtype: 'string', error }),
+    ]),
+  ])
 
   const spectrum = readRuns()[0].cells.find(
     (entry) => entry.name === 'spectrum'
@@ -167,7 +180,12 @@ test('an error alone cannot clear a value under a heavy dtype', () => {
   // goes, this is the value that gets pinned behind the error.
   writeRuns([
     run(PROPOSAL, 1, [
-      cell('spectrum', null, 'array', { cls: 'ValueError', message: 'boom' }),
+      cell({
+        name: 'spectrum',
+        value: null,
+        dtype: 'array',
+        error: { cls: 'ValueError', message: 'boom' },
+      }),
     ]),
   ])
 
@@ -175,10 +193,10 @@ test('an error alone cannot clear a value under a heavy dtype', () => {
 })
 
 test('paginated runs accumulate into one list, deduped by identity', () => {
-  writeRuns([run(PROPOSAL, 1, [cell('energy', 1)])])
+  writeRuns([run(PROPOSAL, 1, [cell({ name: 'energy', value: 1 })])])
   writeRuns([
-    run(PROPOSAL, 1, [cell('energy', 1)]),
-    run(PROPOSAL, 2, [cell('energy', 2)]),
+    run(PROPOSAL, 1, [cell({ name: 'energy', value: 1 })]),
+    run(PROPOSAL, 2, [cell({ name: 'energy', value: 2 })]),
   ])
 
   const runs = readRuns()
@@ -187,8 +205,8 @@ test('paginated runs accumulate into one list, deduped by identity', () => {
 
 test('runs that share a number across proposals stay separate', () => {
   writeRuns([
-    run('900405', 1, [cell('energy', 1.2)]),
-    run('900485', 1, [cell('energy', 9.9)]),
+    run('900405', 1, [cell({ name: 'energy', value: 1.2 })]),
+    run('900485', 1, [cell({ name: 'energy', value: 9.9 })]),
   ])
 
   const runs = readRuns()
@@ -200,8 +218,8 @@ test('cells sharing a name across runs are separate normalized entities', () => 
   // The id folds in the run's identity, so one variable's cell in two runs
   // never collapses onto a single cache object.
   writeRuns([
-    run(PROPOSAL, 1, [cell('energy', 1.2)]),
-    run(PROPOSAL, 2, [cell('energy', 9.9)]),
+    run(PROPOSAL, 1, [cell({ name: 'energy', value: 1.2 })]),
+    run(PROPOSAL, 2, [cell({ name: 'energy', value: 9.9 })]),
   ])
 
   expect(valueOf(readRuns(), 1, 'energy')).toBe(1.2)

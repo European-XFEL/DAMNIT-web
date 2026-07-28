@@ -14,13 +14,20 @@ import type {
 
 // These transforms key cells by name and never read `id`, so it only has to be
 // present, not realistic.
-function cell(
-  name: string,
-  value: CellValue,
+function cell({
+  name,
+  value,
   dtype = 'number',
-  error: CellError | null = null
-): Cell {
+  error = null,
+}: CellOptions): Cell {
   return { id: name, name, error, summary: { value, dtype } }
+}
+
+type CellOptions = {
+  name: string
+  value: CellValue
+  dtype?: string
+  error?: CellError | null
 }
 
 function run(proposal: string, number: number, cells: Cell[]): Run {
@@ -30,8 +37,8 @@ function run(proposal: string, number: number, cells: Cell[]): Run {
 describe('indexRunCells', () => {
   test('keys each run by its (proposal, run) identity', () => {
     const cells = indexRunCells([
-      run('900405', 5, [cell('energy', 1.2)]),
-      run('900405', 9, [cell('energy', 3.4)]),
+      run('900405', 5, [cell({ name: 'energy', value: 1.2 })]),
+      run('900405', 9, [cell({ name: 'energy', value: 3.4 })]),
     ])
 
     expect([...cells.keys()]).toEqual(['900405:5', '900405:9'])
@@ -47,8 +54,8 @@ describe('indexRunCells', () => {
     // The same run number in two proposals is two rows, not one, which is the
     // whole reason a run is keyed by the pair.
     const cells = indexRunCells([
-      run('900405', 1, [cell('energy', 1.2)]),
-      run('900485', 1, [cell('energy', 9.9)]),
+      run('900405', 1, [cell({ name: 'energy', value: 1.2 })]),
+      run('900485', 1, [cell({ name: 'energy', value: 9.9 })]),
     ])
 
     expect(cells.get('900405:1')?.energy.summary.value).toBe(1.2)
@@ -58,7 +65,7 @@ describe('indexRunCells', () => {
   test('stores each cell by its variable name', () => {
     const error = { cls: 'ValueError', message: 'boom' }
     const cells = indexRunCells([
-      run('900405', 1, [cell('x', 2, 'number', error)]),
+      run('900405', 1, [cell({ name: 'x', value: 2, error })]),
     ])
     expect(cells.get('900405:1')?.x).toEqual({
       id: 'x',
@@ -68,7 +75,7 @@ describe('indexRunCells', () => {
     })
   })
   test('reuses a run’s cell map while the run object is unchanged', () => {
-    const runA = run('900405', 1, [cell('energy', 1.2)])
+    const runA = run('900405', 1, [cell({ name: 'energy', value: 1.2 })])
 
     // A later push hands back a new array but the same unchanged run object, so
     // its already-built cell map comes back rather than being rebuilt.
@@ -79,12 +86,12 @@ describe('indexRunCells', () => {
   })
 
   test('rebuilds only the run whose object changed', () => {
-    const runA = run('900405', 1, [cell('energy', 1.2)])
-    const runB = run('900405', 2, [cell('energy', 3.4)])
+    const runA = run('900405', 1, [cell({ name: 'energy', value: 1.2 })])
+    const runB = run('900405', 2, [cell({ name: 'energy', value: 3.4 })])
     const first = indexRunCells([runA, runB])
 
     // runB is replaced with a fresh object (its value changed); runA is untouched.
-    const runBNext = run('900405', 2, [cell('energy', 9.9)])
+    const runBNext = run('900405', 2, [cell({ name: 'energy', value: 9.9 })])
     const second = indexRunCells([runA, runBNext])
 
     expect(second.get('900405:1')).toBe(first.get('900405:1'))
@@ -100,12 +107,15 @@ test('runKey pairs proposal and run into a lookup key', () => {
 // A heavy value the @lightweight directive held back: the server sends the cell
 // with its summary value nulled out.
 const blanked = (name: string, error: CellError | null = null) =>
-  cell(name, null, 'array', error)
+  cell({ name, value: null, dtype: 'array', error })
 
 describe('heavyCellNames', () => {
   test('names the blanked cells worth a second fetch', () => {
     const names = heavyCellNames([
-      run('900405', 1, [cell('energy', 1.2), blanked('spectrum')]),
+      run('900405', 1, [
+        cell({ name: 'energy', value: 1.2 }),
+        blanked('spectrum'),
+      ]),
     ])
 
     expect(names).toEqual(['spectrum'])
@@ -135,7 +145,7 @@ describe('heavyCellNames', () => {
   test('leaves out a genuinely-empty scalar cell', () => {
     // A null scalar (no error, non-heavy dtype) is a deleted-for-this-run
     // value, not a held-back heavy blank, so re-fetching it would loop forever.
-    const empty = cell('note', null, 'string')
+    const empty = cell({ name: 'note', value: null, dtype: 'string' })
     const names = heavyCellNames([run('900405', 1, [empty])])
 
     expect(names).toEqual([])
