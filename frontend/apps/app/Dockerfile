@@ -12,8 +12,10 @@ ARG APP_DIR
 RUN corepack enable
 WORKDIR /usr/src/app
 
-# Prepare workspace
+# Prepare workspace. pnpm hashes every file named by patchedDependencies before
+# it resolves anything, so patches/ must land before the source tree does.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches/ patches/
 COPY ${APP_DIR}/package.json ${APP_DIR}/
 COPY packages/ui/package.json packages/ui/
 COPY packages/config/package.json packages/config/
