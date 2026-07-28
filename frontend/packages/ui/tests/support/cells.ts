@@ -1,18 +1,35 @@
-// The server's cell id, "{database}:{proposal}:{run}:{name}" (built in
-// `DamnitRun._iter_cells`). Apollo keys `Cell` on it, so a fixture that spells
-// it differently mints a second entity for the same cell, which is exactly the
-// drift these tests exist to catch. `database` leads and is not the proposal: a
-// guest run is served through one database and reports another proposal.
-export function cellId({
+import { cellId } from '@damnit-frontend/shared/mocks'
+
+// One cell as the server sends it, built the way the mock server builds it.
+// Apollo keys `Cell` on the id, so a fixture that spells the composite shape its
+// own way mints a second entity for the same cell, which is exactly the drift
+// these tests exist to catch.
+export function serverCell({
   database,
   proposal,
   run,
   name,
-}: {
+  value,
+  dtype = 'number',
+  error = null,
+}: ServerCellOptions) {
+  return {
+    __typename: 'Cell',
+    id: cellId({ database, proposal, run, name }),
+    name,
+    error,
+    summary: { __typename: 'CellSummary', value, dtype },
+  }
+}
+
+type ServerCellOptions = {
   database: string
   proposal: string
   run: number
   name: string
-}): string {
-  return `${database}:${proposal}:${run}:${name}`
+  value: unknown
+  dtype?: string
+  error?: CellError | null
 }
+
+type CellError = { cls: string; message: string }

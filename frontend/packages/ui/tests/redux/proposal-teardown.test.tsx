@@ -12,7 +12,7 @@ import { setupStore, type AppStore } from '#src/app/store/store'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { LIGHTWEIGHT_TABLE_DATA_QUERY } from '#src/data/table/table-data.queries'
 import { cache } from '#src/graphql/apollo'
-import { cellId } from '#tests/support/cells'
+import { serverCell } from '#tests/support/cells'
 
 // Leaving a proposal evicts its Apollo entries. The two things that has to get
 // right, one test each: the departed proposal is actually gone from the cache,
@@ -42,17 +42,7 @@ function runsPayload(database: string) {
         proposal,
         run: 1,
         cells: [
-          {
-            __typename: 'Cell',
-            id: cellId({ database, proposal, run: 1, name: 'energy' }),
-            name: 'energy',
-            error: null,
-            summary: {
-              __typename: 'CellSummary',
-              value: 10,
-              dtype: 'number',
-            },
-          },
+          serverCell({ database, proposal, run: 1, name: 'energy', value: 10 }),
         ],
       },
     ],

@@ -18,7 +18,7 @@ import { TABLE_DATA_QUERY } from '#src/data/table/table-data.queries'
 import { createPriorityLink } from '#src/graphql/priority-link'
 import { typePolicies } from '#src/graphql/type-policies'
 import { useTableRuns } from '#src/features/table/use-table-runs'
-import { cellId } from '#tests/support/cells'
+import { serverCell } from '#tests/support/cells'
 
 const PROPOSAL = '900405'
 const PAGE_SIZE = 10
@@ -38,18 +38,14 @@ const runFor = (run: number) => ({
   proposal: PROPOSAL,
   run,
   cells: [
-    {
-      __typename: 'Cell',
-      id: cellId({
-        database: PROPOSAL,
-        proposal: PROPOSAL,
-        run,
-        name: 'spectrum',
-      }),
+    serverCell({
+      database: PROPOSAL,
+      proposal: PROPOSAL,
+      run,
       name: 'spectrum',
-      error: null,
-      summary: { __typename: 'CellSummary', value: null, dtype: 'array' },
-    },
+      value: null,
+      dtype: 'array',
+    }),
   ],
 })
 
@@ -177,22 +173,14 @@ test('does not flash a run filled by a cache write', async () => {
           proposal: PROPOSAL,
           run: 1,
           cells: [
-            {
-              __typename: 'Cell',
-              id: cellId({
-                database: PROPOSAL,
-                proposal: PROPOSAL,
-                run: 1,
-                name: 'spectrum',
-              }),
+            serverCell({
+              database: PROPOSAL,
+              proposal: PROPOSAL,
+              run: 1,
               name: 'spectrum',
-              error: null,
-              summary: {
-                __typename: 'CellSummary',
-                value: [1, 2, 3],
-                dtype: 'array',
-              },
-            },
+              value: [1, 2, 3],
+              dtype: 'array',
+            }),
           ],
         },
       ],

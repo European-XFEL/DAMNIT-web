@@ -6,7 +6,7 @@ import {
   type TableDataResult,
 } from '#src/data/table/table-data.queries'
 import { typePolicies } from '#src/graphql/type-policies'
-import { cellId } from '#tests/support/cells'
+import { serverCell } from '#tests/support/cells'
 
 const PROPOSAL = '900405'
 
@@ -18,8 +18,7 @@ beforeEach(() => {
 
 type CellError = { cls: string; message: string }
 
-// A cell as the wire sends it, before `run` stamps the normalization id and
-// wraps the summary facet.
+// A cell before `run` stamps it with the identity it is keyed by.
 type CellInput = {
   name: string
   value: unknown
@@ -42,22 +41,9 @@ function run(proposal: string, number: number, cells: CellInput[]) {
     database: PROPOSAL,
     proposal,
     run: number,
-    cells: cells.map((entry) => ({
-      __typename: 'Cell',
-      id: cellId({
-        database: PROPOSAL,
-        proposal,
-        run: number,
-        name: entry.name,
-      }),
-      name: entry.name,
-      error: entry.error,
-      summary: {
-        __typename: 'CellSummary',
-        value: entry.value,
-        dtype: entry.dtype,
-      },
-    })),
+    cells: cells.map((entry) =>
+      serverCell({ database: PROPOSAL, proposal, run: number, ...entry })
+    ),
   }
 }
 
@@ -76,23 +62,26 @@ function readRuns() {
   })!.runs
 }
 
-const valueOf = (
+const summaryOf = (
   runs: TableDataResult['runs'],
   identity: number,
   name: string
 ) =>
   runs
     .find((entry) => entry.run === identity)
-    ?.cells.find((entry) => entry.name === name)?.summary.value
+    ?.cells.find((entry) => entry.name === name)?.summary
+
+const valueOf = (
+  runs: TableDataResult['runs'],
+  identity: number,
+  name: string
+) => summaryOf(runs, identity, name)?.value
 
 const dtypeOf = (
   runs: TableDataResult['runs'],
   identity: number,
   name: string
-) =>
-  runs
-    .find((entry) => entry.run === identity)
-    ?.cells.find((entry) => entry.name === name)?.summary.dtype
+) => summaryOf(runs, identity, name)?.dtype
 
 const blanked = cell('spectrum', null, 'array')
 const filled = cell('spectrum', [1, 2, 3], 'array')

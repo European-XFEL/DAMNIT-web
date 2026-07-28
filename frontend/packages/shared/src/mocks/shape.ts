@@ -25,13 +25,20 @@ export function shapeMetadata(meta: Meta, proposal: string) {
   }
 }
 
+// The server's cell id, built the same way `DamnitRun._iter_cells` builds it.
+// Apollo keys `Cell` on it, so anything that spells it differently mints a
+// second entity for the same cell. `database` leads and is not the proposal: a
+// guest run is served through one database and reports another proposal.
+export function cellId({ database, proposal, run, name }: CellIdParts): string {
+  return `${database}:${proposal}:${run}:${name}`
+}
+
 // One cell's wire object. Shared by the query mock and the subscription mock so
-// the composite `Cell` shape stays identical on both paths. The `id` is built
-// from the run's identity, so a live push lands on the same normalized cache
-// object the table already holds. `error` is always sent, even absent from the
-// example: the query selects it, so omitting it leaves the client's cache read
-// incomplete and every cached replay silently refetches. `lightweight` blanks a
-// heavy value the way the real @lightweight pass does.
+// the composite `Cell` shape stays identical on both paths. `error` is always
+// sent, even absent from the example: the query selects it, so omitting it
+// leaves the client's cache read incomplete and every cached replay silently
+// refetches. `lightweight` blanks a heavy value the way the real @lightweight
+// pass does.
 function shapeCell(
   name: string,
   cell: RunData['variables'][string],
@@ -39,7 +46,7 @@ function shapeCell(
 ) {
   return {
     __typename: 'Cell',
-    id: `${database}:${proposal}:${run}:${name}`,
+    id: cellId({ database, proposal, run, name }),
     name,
     error: 'error' in cell ? { __typename: 'CellError', ...cell.error } : null,
     summary: {
@@ -54,15 +61,11 @@ function shapeCell(
 // whose ids are built from that same trio. Shared by the query mock and the
 // subscription mock, so the two cannot disagree on how a run and its cells are
 // keyed, and a live push lands on the run the table already holds.
-//
-// `run` is the logical run number the metadata list and the grid rows use, not
-// the physical source run number: in the xpcs example, runs 1 to 6 come from
-// source runs 6, 7, 11, 33, 34 and 35. Pass the wrong one and the run and every
-// one of its cells key to a row no grid reads.
 export function shapeRun(
   variables: RunData['variables'],
-  { database, proposal, run, names, lightweight = false }: ShapeRunOptions
+  options: ShapeRunOptions
 ) {
+  const { database, proposal, run, names } = options
   return {
     __typename: 'DamnitRun',
     database,
@@ -70,9 +73,7 @@ export function shapeRun(
     run,
     cells: Object.entries(variables)
       .filter(([name]) => names == null || names.includes(name))
-      .map(([name, cell]) =>
-        shapeCell(name, cell, { database, proposal, run, lightweight })
-      ),
+      .map(([name, cell]) => shapeCell(name, cell, options)),
   }
 }
 
@@ -87,12 +88,23 @@ export function shapeTableData(
         // single-proposal, so a run's own proposal is the queried one too.
         database: proposal,
         proposal,
+        // The logical run number the metadata list and the grid rows use, not
+        // the physical source run number: in the xpcs example, runs 1 to 6 come
+        // from source runs 6, 7, 11, 33, 34 and 35. Take the wrong one and the
+        // run and every one of its cells key to a row no grid reads.
         run: Number(run.variables.run?.value ?? run.source.run_number),
         names,
         lightweight,
       })
     ),
   }
+}
+
+type CellIdParts = {
+  database: string
+  proposal: string
+  run: number
+  name: string
 }
 
 type ShapeCellOptions = {
@@ -102,6 +114,8 @@ type ShapeCellOptions = {
   lightweight?: boolean
 }
 
+// A run takes everything a cell takes, because it forwards the bag straight
+// through, plus the name filter that only makes sense over a whole run.
 type ShapeRunOptions = ShapeCellOptions & {
   names?: string[] | null
 }
