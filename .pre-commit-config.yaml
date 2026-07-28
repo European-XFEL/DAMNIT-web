@@ -11,12 +11,14 @@ repos:
           - id: check-merge-conflict
           - id: check-toml
           - id: check-yaml
+          # Patch files carry significant whitespace: a blank context line is a
+          # single space, and normalising it stops pnpm applying the patch.
           - id: end-of-file-fixer
             stages: [pre-commit]
-            exclude: ^frontend/apps/demo/public/
+            exclude: ^frontend/(apps/demo/public/|patches/)
           - id: trailing-whitespace
             stages: [pre-commit]
-            exclude: ^frontend/apps/demo/public/
+            exclude: ^frontend/(apps/demo/public/|patches/)
 
     # Recorded HTTP cassettes are scrubbed at record time; this gate catches
     # anything the scrubbing missed before it can be committed. Known-benign
