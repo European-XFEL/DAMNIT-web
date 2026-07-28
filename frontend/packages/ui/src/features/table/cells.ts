@@ -12,7 +12,7 @@ import {
 } from '@glideapps/glide-data-grid'
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
-import { DTYPES, isHeavySummaryBlank } from '#src/constants'
+import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
   type CellError,
   type CellValue,
@@ -272,7 +272,11 @@ export const loadingCell = (
   }
 }
 
-const gridCellFactory = {
+type CellFactory = (value: CellValue, params: Partial<BaseGridCell>) => GridCell
+
+// Typed so a lookup reads as possibly-missing: DAMNIT's dtypes are an open set
+// (boolean and complex among them) and only these five have a renderer.
+const gridCellFactory: Partial<Record<string, CellFactory>> = {
   [DTYPES.image]: imageCell,
   [DTYPES.string]: textCell,
   [DTYPES.number]: numberCell,
@@ -291,18 +295,15 @@ export const getCell = ({
   dtype,
   options,
 }: GetCellOptions): GridCell => {
-  // The grid asks for every visible cell on every redraw, so the populated case
-  // comes first and allocates nothing on its way through. A dtype with no
-  // renderer (e.g. a boolean cell) falls back to text rather than crashing
-  // every visible cell the grid asks `getContent` for.
+  // A dtype with no renderer falls back to text rather than throwing on every
+  // visible cell the grid asks `getContent` for.
   if (value != null) {
     return (gridCellFactory[dtype] ?? textCell)(value, options)
   }
   // A null heavy value is one @lightweight held back, so it draws the loading
   // skeleton until the deferred fetch fills it. A null scalar is a cell DAMNIT
   // has no value for and nothing is coming, so it draws as empty rather than
-  // loading forever.
-  return isHeavySummaryBlank({ value, dtype })
-    ? loadingCell(value, options)
-    : textCell('')
+  // loading forever. This is `isHeavySummaryBlank` with the null already
+  // established, kept inline because the grid re-asks on every redraw.
+  return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
 }
