@@ -170,7 +170,7 @@ def test_to_dataarray_2d_dataarray_with_coords():
 @pytest.mark.parametrize("data", scalars + datasets)
 def test_to_data_array_unsupported(data):
     with pytest.raises(ValueError, match=NOT_SUPPORTED_MESSAGE):
-        to_dataarray(data)
+        to_dataarray(data.value)
 
 
 # -----------------------------------------------------------------------------
