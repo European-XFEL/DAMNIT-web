@@ -66,6 +66,12 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
       variables: { proposal: proposal.value, since },
       skip:
         !subscribe || proposal.loading || proposal.notFound || !proposal.value,
+      // `onData` below writes every push into the cache itself, so Apollo's own
+      // write would be the same payload a second time, filed under
+      // ROOT_SUBSCRIPTION where nothing reads it. That root is never collected,
+      // so it would also hold every pushed cell (images included) for as long as
+      // the tab lives.
+      fetchPolicy: 'no-cache',
       onData: ({ data, client }) => {
         const update = data.data?.run_updates
         if (!update) {

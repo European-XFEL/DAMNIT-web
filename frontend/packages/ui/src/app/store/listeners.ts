@@ -54,8 +54,10 @@ export function registerAppListeners() {
           // This is what reclaims the memory, not a tidy-up. Runs normalize to
           // top-level `DamnitRun:{...}` entries, so dropping the fields above
           // only removes the references to them; the entries themselves sit
-          // there as orphans, images and all, until the collector runs.
-          cache.gc()
+          // there as orphans, images and all, until the collector runs. The read
+          // memo has to go with them: it holds the results read out of those
+          // entries, so leaving it would keep the payload alive past the sweep.
+          cache.gc({ resetResultCache: true })
         })
       )
     },
