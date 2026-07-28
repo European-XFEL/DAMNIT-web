@@ -33,12 +33,11 @@ function mergeRefsByIdentity(
   return [...existing, ...additions]
 }
 
-// A summary as the cache stores it. Both fields are optional because a write
-// only carries what its document selected, not because the schema allows one
-// without the other.
+// A summary as the cache stores it. Every runs document selects the summary
+// through the one `CELL_FIELDS` constant, so both fields always arrive.
 type StoredSummary = StoreObject & {
-  value?: unknown
-  dtype?: string
+  value: unknown
+  dtype: string
 }
 
 // Keep a value the lightweight pass is holding back. Only a heavy dtype is ever
@@ -56,14 +55,10 @@ function mergeSummary(
     return incoming
   }
 
-  // A write that selected only `value` carries no dtype; the cached one still
-  // describes the cell, and merging rather than replacing is what keeps it.
-  const dtype = incoming.dtype ?? existing.dtype
   const heldBackBlank =
-    dtype != null &&
-    dtype === existing.dtype &&
     existing.value != null &&
-    isHeavySummaryBlank({ value: incoming.value, dtype })
+    incoming.dtype === existing.dtype &&
+    isHeavySummaryBlank(incoming)
   return heldBackBlank ? existing : mergeObjects(existing, incoming)
 }
 
@@ -86,10 +81,14 @@ export const typePolicies: TypePolicies = {
   CellSummary: {
     // The value guard lives here rather than on `Cell` because a merge function
     // only sees the field it merges, so this is the only level that can see
-    // `dtype` alongside the value. A failed cell needs no case of its own, and
-    // could not get one: `error` is cell-level and unreadable from here. The API
-    // drops the summary type of a failed cell instead, so it arrives as a null
-    // string rather than a heavy blank and clears the value it had.
+    // `dtype` alongside the value. `error` is cell-level and unreadable from
+    // here, which is why the API drops a failed cell's summary type instead
+    // (`DamnitRun._iter_cells`).
+    //
+    // Declaring any merge here costs one entry in Apollo's `storageTrie` per
+    // cell, held by a strong Map that `gc`, `evict` and `resetResultCache` all
+    // leave alone. It is the price of normalizing `Cell`: two documents write
+    // the same field with different completeness, so something has to arbitrate.
     merge: mergeSummary,
   },
   Query: {

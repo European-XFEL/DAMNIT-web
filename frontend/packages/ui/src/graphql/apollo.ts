@@ -67,14 +67,15 @@ const splitLink = split(
 // the cap on its own. Past it every cache write re-reads the whole table instead
 // of returning the memoized result, which is seconds of main thread per
 // paginated page. The budget is shared across documents, and the summary plot
-// asks for every run at once, so give it room.
+// asks for every run at once, so give it room. This is sized for a few thousand
+// runs, not for `ALL_RUNS_PAGE_SIZE` of them.
 //
-// One knob, three caches: `resultCacheMaxSize` is the `max` for
-// `executeSelectionSet` (the one reasoned about above), `executeSubSelectedArray`
-// and `maybeBroadcastWatch`, whose own defaults are 10,000 and 5,000. Only the
-// first is the binding constraint here, because it holds two entries per cell
-// while the others hold roughly one per run, so raising all three is headroom
-// the other two never reach rather than a budget worth splitting.
+// The one knob sets the cap for three caches: `executeSelectionSet` (the one
+// reasoned about above), `executeSubSelectedArray` and `maybeBroadcastWatch`,
+// whose own defaults are 10,000 and 5,000. Apollo offers no way to raise only
+// one, so the other two are raised along with it; the price is that their
+// entries now roll over far later, and a saturated budget costs tens of MB of
+// bookkeeping. Leaving a proposal resets all three (`registerAppListeners`).
 export const cache = new InMemoryCache({
   typePolicies,
   resultCacheMaxSize: 200_000,
