@@ -31,12 +31,17 @@ const retryLink = new RetryLink({
     initial: 1000,
     max: 1000,
   },
+  attempts: {
+    // An aborted request was cancelled on teardown, not lost. The default
+    // retries on any error, which would fire five attempts at a dead signal.
+    retryIf: (error) => error != null && error.name !== 'AbortError',
+  },
 })
 
 const httpLink = new HttpLink({ uri: `${BASE_URL}graphql` })
 
-// The deferred pass fetches a page's heavy values, so letting several run at
-// once would hold up the lighter queries the user is actually waiting to see.
+// One deferred pass at a time: it pulls whole image columns against a single
+// uvicorn worker, so two at once starve the page fetch the user is waiting on.
 const priorityLink = createPriorityLink({
   maxActive: 1,
   queuedOperations: [DEFERRED_TABLE_DATA_QUERY_NAME],
