@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 
 import { useAppSelector } from '#src/app/store/hooks'
@@ -9,6 +9,7 @@ import {
   type TableDataResult,
   type TableDataVariables,
 } from '#src/data/table/table-data.queries'
+import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
 import {
   hasValue,
   indexRunCells,
@@ -56,6 +57,15 @@ export function useSummaryPlotData({
       skip: !enabled || !proposal,
     }
   )
+
+  // This path pulls the whole proposal in one page, so a full page back means
+  // runs past the cap are missing from every summary plot.
+  const runCount = data?.runs?.length
+  useEffect(() => {
+    if (runCount !== undefined) {
+      warnIfRunsTruncated(proposal, runCount)
+    }
+  }, [proposal, runCount])
 
   return useMemo(() => {
     if (!enabled) {

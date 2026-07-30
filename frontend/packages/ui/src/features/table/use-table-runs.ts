@@ -4,6 +4,7 @@ import { debounce } from 'lodash'
 
 import { VARIABLES } from '#src/constants'
 import { liveRunStamps } from '#src/data/table/run-stamps'
+import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
 import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   CACHED_RUNS_QUERY,
@@ -409,6 +410,16 @@ export function useTableRuns({
     },
     [paginated, settleRegion]
   )
+
+  // The unpaginated table pulls every run in one page, so a full page back means
+  // runs past the cap are missing.
+  const runCount = runs?.length
+  useEffect(() => {
+    if (paginated || runCount === undefined) {
+      return
+    }
+    warnIfRunsTruncated(proposal, runCount)
+  }, [paginated, proposal, runCount])
 
   const cellsByKey = useMemo(() => indexRunCells(runs ?? []), [runs])
 

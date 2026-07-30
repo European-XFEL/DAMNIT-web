@@ -11,6 +11,7 @@ import {
 } from '#src/features/plots/plots.slice'
 import { plotRequested, selectRun } from '#src/features/table/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
+import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
 import { cache } from '#src/graphql/apollo'
 import { isEmpty } from '#src/utils/helpers'
 
@@ -29,6 +30,8 @@ export function registerAppListeners() {
       if (!departed) {
         return
       }
+
+      forgetRunsTruncation(departed)
 
       // Drop that proposal's cached fields, and only that proposal's: every
       // one of them carries the number in its arguments, so the next proposal's
