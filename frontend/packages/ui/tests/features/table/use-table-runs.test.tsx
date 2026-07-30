@@ -5,7 +5,6 @@ import {
   InMemoryCache,
   Observable,
   type FetchResult,
-  type Observer,
   type Operation,
 } from '@apollo/client'
 import { ApolloProvider } from '@apollo/client/react'
@@ -114,7 +113,7 @@ const hangsUntilCancelled = (onCancel: () => void) =>
 // abort has to reach the observer, or nothing tells the hook the page is gone.
 const rejectsOnAbort = (
   operation: Operation,
-  observer: Observer<FetchResult>,
+  observer: { error: (reason: unknown) => void },
   onAbort: () => void
 ) => {
   const { signal } = operation.getContext().fetchOptions as {
