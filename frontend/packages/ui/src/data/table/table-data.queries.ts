@@ -100,6 +100,17 @@ export const DEFERRED_TABLE_DATA_QUERY = buildTableDataQuery(
   false
 )
 
+// Every run cached for the proposal, read rather than fetched. `Query.runs`
+// keys on `database` alone, so this one entry is where both passes and the
+// live push merge, and reading it is what repaints the table.
+export const CACHED_RUNS_QUERY = gql`
+  query CachedRunsQuery($proposal: String) {
+    runs(database: { proposal: $proposal }) {
+      ${RUN_ALL_CELLS}
+    }
+  }
+`
+
 export type TableDataResult = {
   runs: Run[]
 }

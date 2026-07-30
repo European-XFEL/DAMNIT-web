@@ -44,8 +44,7 @@ type StoredSummary = StoreObject & {
 // blanked, so a null arriving over a value of that same dtype is a blank on its
 // way to being filled, and the cached value stays. Everything else is DAMNIT's
 // own answer and replaces what is there: a null scalar clears a stale number,
-// and a retyped variable clears a value that no longer describes it, which is
-// what puts the cell back in the deferred pass's queue.
+// and a retyped variable clears a value that no longer describes it.
 function mergeSummary(
   existing: StoredSummary | undefined,
   incoming: StoredSummary,
