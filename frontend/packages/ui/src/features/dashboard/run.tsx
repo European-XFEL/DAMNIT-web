@@ -1,7 +1,7 @@
 import { Image, ScrollArea, Text } from '@mantine/core'
 import { useFragment } from '@apollo/client/react'
 
-import { selectVariableVisibility } from '#src/features/table/store/selectors'
+import { selectVariableVisibility } from '#src/features/table/stores/table.selectors'
 import {
   DTYPES,
   NONCONFIGURABLE_VARIABLES,

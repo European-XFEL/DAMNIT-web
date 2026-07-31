@@ -3,7 +3,7 @@ import { ActionIcon, Group, ScrollArea, Text, Tooltip } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 
 import { type CellError } from '#src/data/table/table-data.types'
-import { errorText, errorVisuals } from '#src/features/table/cells'
+import { errorText, errorVisuals } from '#src/features/table/utils/cells'
 
 type ErrorContentProps = {
   error: CellError

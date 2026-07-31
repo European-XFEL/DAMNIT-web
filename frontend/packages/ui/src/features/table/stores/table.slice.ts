@@ -3,8 +3,7 @@ import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { resetProposal } from '#src/app/store/actions'
 import { type PlotSpec } from '#src/types'
 import { isArrayEqual } from '#src/utils/array'
-
-import type { Scroll } from './types'
+import type { Scroll } from '#src/features/table/types/table.types'
 
 type VariableOptions = {
   visibility: boolean

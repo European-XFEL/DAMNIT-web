@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { renderHook } from 'vitest-browser-react'
 
-import { useContextMenu } from '#src/features/table/use-context-menu'
-import type { ContextMenuProps } from '#src/features/table/context-menu'
+import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
+import type { ContextMenuProps } from '#src/features/table/components/context-menu'
 
 const openProps: ContextMenuProps = {
   localPosition: { x: 10, y: 20 },

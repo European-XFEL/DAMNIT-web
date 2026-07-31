@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { type ContextMenuProps } from './context-menu'
+import { type ContextMenuProps } from '#src/features/table/components/context-menu'
 
 export const useContextMenu = (): [
   ContextMenuProps,

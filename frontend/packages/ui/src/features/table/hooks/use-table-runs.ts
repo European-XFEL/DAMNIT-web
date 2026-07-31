@@ -19,9 +19,8 @@ import {
 } from '#src/data/table/table-data.transforms'
 import type { RunCells } from '#src/data/table/table-data.types'
 import { orderBy } from '#src/utils/objects'
-
-import { pageRangeForRegion } from './pagination'
-import type { Rectangle } from './types'
+import { pageRangeForRegion } from '#src/features/table/utils/pagination'
+import type { Rectangle } from '#src/features/table/types/table.types'
 
 type UseTableRunsOptions = {
   proposal: string

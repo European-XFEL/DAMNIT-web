@@ -9,7 +9,10 @@ import {
   removePlot,
   reset as resetPlots,
 } from '#src/features/plots/plots.slice'
-import { plotRequested, selectRun } from '#src/features/table/table.slice'
+import {
+  plotRequested,
+  selectRun,
+} from '#src/features/table/stores/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
 import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
 import { cache } from '#src/graphql/apollo'

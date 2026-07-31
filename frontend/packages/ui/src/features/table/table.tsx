@@ -23,7 +23,6 @@ import {
 import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
-
 import {
   errorCell,
   getCell,
@@ -31,17 +30,20 @@ import {
   numberCell,
   textCell,
   type ErrorColors,
-} from './cells'
-import { TagsPopover } from './components/popovers/tags-popover'
-import { VariablesPopover } from './components/popovers/variables-popover'
-import { type CellTooltip } from './components/tooltips/table-tooltip'
-import ContextMenu from './context-menu'
-import { useTableTooltip } from './hooks/use-table-tooltip'
-import { useColumnVisibility } from './hooks/use-column-visibility'
-import { useTableRuns } from './use-table-runs'
-import { useContextMenu } from './use-context-menu'
-import { useScrollToView } from './use-scroll-to-view'
-import { plotRequested, selectRun } from './table.slice'
+} from '#src/features/table/utils/cells'
+import { TagsPopover } from '#src/features/table/components/popovers/tags-popover'
+import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
+import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
+import ContextMenu from '#src/features/table/components/context-menu'
+import { useTableTooltip } from '#src/features/table/hooks/use-table-tooltip'
+import { useColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
+import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
+import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
+import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
+import {
+  plotRequested,
+  selectRun,
+} from '#src/features/table/stores/table.slice'
 
 type Column = {
   id: string

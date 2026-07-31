@@ -1,6 +1,6 @@
 import { range } from '@mantine/hooks'
 
-import type { Rectangle } from './types'
+import type { Rectangle } from '#src/features/table/types/table.types'
 
 // The pages to ensure-loaded for a scroll window, padding half a page on each
 // side so rows just outside the viewport are ready before they scroll in. Rows

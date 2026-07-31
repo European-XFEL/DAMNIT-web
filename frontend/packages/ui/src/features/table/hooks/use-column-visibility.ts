@@ -6,7 +6,7 @@ import { isVariableVisible, NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
   selectTagSelection,
   selectVariableVisibility,
-} from '#src/features/table/store/selectors'
+} from '#src/features/table/stores/table.selectors'
 import { useAppSelector } from '#src/app/store/hooks'
 
 type ColumnVisibilityInputs = {

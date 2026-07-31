@@ -6,7 +6,7 @@ import { contextfileApi } from '#src/features/context-file/context-file.api'
 import metadata from '#src/data/metadata/metadata.slice'
 import dashboard from '#src/features/dashboard/dashboard.slice'
 import plots from '#src/features/plots/plots.slice'
-import table from '#src/features/table/table.slice'
+import table from '#src/features/table/stores/table.slice'
 
 const reducer = combineReducers({
   contextFile,

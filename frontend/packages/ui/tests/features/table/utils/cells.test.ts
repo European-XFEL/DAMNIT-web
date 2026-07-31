@@ -11,7 +11,7 @@ import {
   imageCell,
   numberCell,
   textCell,
-} from '#src/features/table/cells'
+} from '#src/features/table/utils/cells'
 import { DTYPES } from '#src/constants'
 
 describe('getCell', () => {

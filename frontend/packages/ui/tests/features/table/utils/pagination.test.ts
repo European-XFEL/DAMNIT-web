@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { pageRangeForRegion } from '#src/features/table/pagination'
+import { pageRangeForRegion } from '#src/features/table/utils/pagination'
 
 const region = (y: number, height: number) => ({ x: 0, y, width: 0, height })
 
