@@ -37,7 +37,7 @@ import { VariablesPopover } from './components/popovers/variables-popover'
 import { type CellTooltip } from './components/tooltips/table-tooltip'
 import ContextMenu from './context-menu'
 import { useTableTooltip } from './hooks/use-table-tooltip'
-import { useTable } from './hooks/use-table'
+import { useColumnVisibility } from './hooks/use-column-visibility'
 import { useTableRuns } from './use-table-runs'
 import { useContextMenu } from './use-context-menu'
 import { useScrollToView } from './use-scroll-to-view'
@@ -88,7 +88,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     scrollY,
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
-  const { columnVisibility } = useTable()
+  const columnVisibility = useColumnVisibility()
   const theme = useMantineTheme()
 
   // Initialization: Memos
