@@ -58,21 +58,24 @@ export function useSummaryPlotData({
     }
   )
 
+  const runs = data?.runs
+
   // This path pulls the whole proposal in one page, so a full page back means
   // runs past the cap are missing from every summary plot.
-  const runCount = data?.runs?.length
+  const runCount = runs?.length
   useEffect(() => {
     if (runCount !== undefined) {
       warnIfRunsTruncated(proposal, runCount)
     }
   }, [proposal, runCount])
 
+  const cells = useMemo(() => indexRunCells(runs ?? []), [runs])
+
   return useMemo(() => {
     if (!enabled) {
       return null
     }
 
-    const cells = indexRunCells(data?.runs ?? [])
     const series = variables.map(() => [] as number[])
 
     for (const id of runIds) {
@@ -109,5 +112,5 @@ export function useSummaryPlotData({
     }
 
     return { traces: [trace], meta }
-  }, [enabled, data, runIds, variables, variableMeta])
+  }, [enabled, cells, runIds, variables, variableMeta])
 }
