@@ -7,7 +7,7 @@ export function formatDate(timestamp: number) {
   return `${formattedTime} | ${formattedDate}`
 }
 
-export const formatRunsSubtitle = (runs: string[]) => {
+export const formatRunsSubtitle = (runs: (string | number)[]) => {
   if (!runs || !runs.length) {
     return ''
   }

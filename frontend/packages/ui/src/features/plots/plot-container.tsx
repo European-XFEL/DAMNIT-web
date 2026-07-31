@@ -64,10 +64,6 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
   }, [plot.runs, allRuns, proposal])
 
   const runNumbers = useMemo(() => runIds.map((run) => run.run), [runIds])
-  const runLabels = useMemo(
-    () => runIds.map((run) => String(run.run)),
-    [runIds]
-  )
 
   const summaryData = useSummaryPlotData({
     runIds,
@@ -95,7 +91,7 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
       <Stack gap={0} align="flex-start" justify="flex-start">
         <Text size="lg">{plot.title}</Text>
         <Text size="sm" c="dark.5">
-          {formatRunsSubtitle(runLabels)}
+          {formatRunsSubtitle(runNumbers)}
         </Text>
       </Stack>
       {!traces.length ? (
