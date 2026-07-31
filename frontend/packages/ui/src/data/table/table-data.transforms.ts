@@ -74,3 +74,13 @@ export function indexRunCells(runs: Run[]): Map<string, RunCells> {
 export function getVariableTitle(variable: Variable): string {
   return variable.title || variable.name
 }
+
+// A variable dropped from the context file leaves nothing behind but its name.
+export function getTitleByName(
+  variables: Record<string, Variable>,
+  name: string
+): string {
+  return Object.hasOwn(variables, name)
+    ? getVariableTitle(variables[name])
+    : name
+}

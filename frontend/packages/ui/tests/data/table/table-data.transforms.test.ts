@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 
 import {
+  getTitleByName,
+  getVariableTitle,
   heavyCellNames,
   indexRunCells,
   runKey,
@@ -10,6 +12,7 @@ import type {
   CellError,
   CellValue,
   Run,
+  Variable,
 } from '#src/data/table/table-data.types'
 
 // These transforms key cells by name and never read `id`, so it only has to be
@@ -149,5 +152,46 @@ describe('heavyCellNames', () => {
     const names = heavyCellNames([run('900405', 1, [empty])])
 
     expect(names).toEqual([])
+  })
+})
+
+const variable = (name: string, title?: string): Variable => ({
+  name,
+  title,
+  tags: [],
+})
+
+describe('getVariableTitle', () => {
+  test('shows the title the context file gave the variable', () => {
+    expect(getVariableTitle(variable('energy', 'Photon energy'))).toBe(
+      'Photon energy'
+    )
+  })
+
+  test('shows the name when nobody titled the variable', () => {
+    expect(getVariableTitle(variable('energy'))).toBe('energy')
+  })
+
+  test('shows the name when the title is blank', () => {
+    // DAMNIT's title column is free text, so an empty one is a title the user
+    // cleared rather than one they set to nothing.
+    expect(getVariableTitle(variable('energy', ''))).toBe('energy')
+  })
+})
+
+describe('getTitleByName', () => {
+  test('finds a variable by name and shows its title', () => {
+    const variables = { energy: variable('energy', 'Photon energy') }
+
+    expect(getTitleByName(variables, 'energy')).toBe('Photon energy')
+  })
+
+  test('shows the name when the variable is gone from the context file', () => {
+    // A plot outlives the variable it charts, so its axis still needs a label.
+    expect(getTitleByName({}, 'energy')).toBe('energy')
+  })
+
+  test('shows the name when the variable is named after a built-in', () => {
+    expect(getTitleByName({}, 'constructor')).toBe('constructor')
   })
 })
