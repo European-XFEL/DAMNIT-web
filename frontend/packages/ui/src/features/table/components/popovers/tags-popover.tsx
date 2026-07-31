@@ -4,6 +4,7 @@ import lodashSize from 'lodash/size'
 import { Anchor, rem } from '@mantine/core'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
 
+import { getVariableTitle } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import { ControlButton } from '#src/features/table/components/control-button'
 import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
@@ -43,7 +44,7 @@ function TagDetail({ name }: TagDetailProps) {
 
       return {
         name: varMeta.name,
-        title: varMeta.title ?? varMeta.name,
+        title: getVariableTitle(varMeta),
         selected: columnVisibility[varName],
       }
     })

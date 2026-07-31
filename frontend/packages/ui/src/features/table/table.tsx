@@ -15,7 +15,11 @@ import { Group, Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
-import { hasValue, runKey } from '#src/data/table/table-data.transforms'
+import {
+  getVariableTitle,
+  hasValue,
+  runKey,
+} from '#src/data/table/table-data.transforms'
 import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
@@ -92,7 +96,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     () =>
       tableVariables
         .filter(({ name }) => columnVisibility[name] !== false)
-        .map(({ name, title }) => ({ id: name, title: title || name })),
+        .map((variable) => ({
+          id: variable.name,
+          title: getVariableTitle(variable),
+        })),
     [tableVariables, columnVisibility]
   )
 

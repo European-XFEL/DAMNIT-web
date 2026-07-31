@@ -8,7 +8,10 @@ import {
   isVariableVisible,
 } from '#src/constants'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
-import { cellsByName } from '#src/data/table/table-data.transforms'
+import {
+  cellsByName,
+  getTitleByName,
+} from '#src/data/table/table-data.transforms'
 import {
   type CellError,
   type CellValue,
@@ -152,7 +155,7 @@ const Run = () => {
   return (
     <ScrollArea h="100vh" offsetScrollbars>
       {validRuns.map(([name, data]) => {
-        const label = metadataVariables[name]?.title || name
+        const label = getTitleByName(metadataVariables, name)
         // A cell that failed has nothing worth rendering from its summary.
         if (data.error) {
           return renderError({ name, label, error: data.error })

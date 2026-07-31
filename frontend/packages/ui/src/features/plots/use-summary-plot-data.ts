@@ -11,6 +11,7 @@ import {
 } from '#src/data/table/table-data.queries'
 import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
 import {
+  getTitleByName,
   hasValue,
   indexRunCells,
   runKey,
@@ -95,11 +96,8 @@ export function useSummaryPlotData({
     }
 
     const [xVar, yVar] = variables
-    // A variable dropped from the context file leaves the plot that charts it
-    // open, with no metadata behind it. Falling back to the name is what the
-    // titleless case already does.
-    const xName = variableMeta[xVar]?.title || xVar
-    const yName = variableMeta[yVar]?.title || yVar
+    const xName = getTitleByName(variableMeta, xVar)
+    const yName = getTitleByName(variableMeta, yVar)
 
     const trace: PlotTrace = {
       x: { value: series[0], name: xName },

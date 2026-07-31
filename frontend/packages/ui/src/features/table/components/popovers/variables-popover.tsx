@@ -3,6 +3,7 @@ import lodashSize from 'lodash/size'
 import { Checkbox, rem } from '@mantine/core'
 import { IconCheck, IconList, IconCircle } from '@tabler/icons-react'
 
+import { getTitleByName } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import { ControlButton } from '#src/features/table/components/control-button'
 import {
@@ -75,15 +76,13 @@ function VariablesTable() {
 
   const records = useMemo(
     () =>
-      Object.entries(visibilityFromVariables).map(([variable, isVisible]) => {
-        const meta = metadata?.[variable]
-
-        return {
+      Object.entries(visibilityFromVariables).map(
+        ([variable, isVisible]): VariableRecord => ({
           name: variable,
-          title: meta?.title ?? variable,
+          title: getTitleByName(metadata, variable),
           isVisible,
-        } as VariableRecord
-      }),
+        })
+      ),
     [visibilityFromVariables, metadata]
   )
 
