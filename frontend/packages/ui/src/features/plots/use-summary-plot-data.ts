@@ -1,32 +1,48 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 
-import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
-import { VARIABLES } from '#src/constants'
+import { useAppSelector } from '#src/app/store/hooks'
+import { DTYPES, VARIABLES } from '#src/constants'
 import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   TABLE_DATA_QUERY,
   type TableDataResult,
   type TableDataVariables,
 } from '#src/data/table/table-data.queries'
-import { updateTable } from '#src/data/table/table-data.slice'
-import { flattenRuns } from '#src/data/table/table-data.transforms'
+import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
+import {
+  getTitleByName,
+  hasValue,
+  indexRunCells,
+  runKey,
+} from '#src/data/table/table-data.transforms'
+import type { RunId } from '#src/data/table/table-data.types'
+import { useTableMeta } from '#src/data/table/use-table-meta'
+
+import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
 
 type UseSummaryPlotDataOptions = {
+  runIds: RunId[]
   variables: string[]
   enabled: boolean
 }
 
-// Fetches the variables a summary plot charts into the table slice, which is
-// where the plot reads them back from. Routing through the slice rather than
-// rendering from the cache is what keeps summary plots live: a subscription
-// push writes the same rows, and the plot redraws with them.
+// Summary plots chart a variable across every run in the proposal. The values
+// come from the same normalized cache the table fills (`Query.runs` is keyed by
+// database alone, so this shares the table's entry), but the paginated table
+// only caches the pages scrolled to, so this pulls the full run set itself
+// (per_page = ALL_RUNS_PAGE_SIZE, cache-and-network). cache-first would chart
+// only the runs already scrolled into cache, so it stays network-backed; the
+// merge policy returning a stable list on value-only pushes is what keeps this
+// from re-running on every cache write. A run is charted only when every
+// variable it plots is a real number.
 export function useSummaryPlotData({
+  runIds,
   variables,
   enabled,
-}: UseSummaryPlotDataOptions) {
-  const dispatch = useAppDispatch()
+}: UseSummaryPlotDataOptions): PlotData | null {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
+  const { variables: variableMeta } = useTableMeta()
 
   const { data } = useQuery<TableDataResult, TableDataVariables>(
     TABLE_DATA_QUERY,
@@ -35,23 +51,64 @@ export function useSummaryPlotData({
         proposal,
         page: 1,
         per_page: ALL_RUNS_PAGE_SIZE,
-        // `run` keys each row onto the ones the table already holds.
+        // `run` keys each row; the rest are what the plot charts.
         names: [VARIABLES.run, ...variables],
       },
-      // The slice is the only thing that renders these rows, so a cached copy
-      // is never read: caching one would only cost a write, and let this
-      // query's entry replace the unpaginated table's, which is stored under
-      // the same arguments. Once a keyed run lets the plot render from the
-      // cache, this becomes cache-and-network and the slice goes away.
-      fetchPolicy: 'no-cache',
+      fetchPolicy: 'cache-and-network',
       skip: !enabled || !proposal,
     }
   )
 
+  const runs = data?.runs
+
+  // This path pulls the whole proposal in one page, so a full page back means
+  // runs past the cap are missing from every summary plot.
+  const runCount = runs?.length
   useEffect(() => {
-    if (!data) {
-      return
+    if (runCount !== undefined) {
+      warnIfRunsTruncated(proposal, runCount)
     }
-    dispatch(updateTable({ data: flattenRuns(data.runs) }))
-  }, [data, dispatch])
+  }, [proposal, runCount])
+
+  const cells = useMemo(() => indexRunCells(runs ?? []), [runs])
+
+  return useMemo(() => {
+    if (!enabled) {
+      return null
+    }
+
+    const series = variables.map(() => [] as number[])
+
+    for (const id of runIds) {
+      const row = cells.get(runKey(id))
+      const points = variables.map((name) => row?.[name])
+      const allNumeric = points.every(
+        (point) =>
+          hasValue(point) &&
+          typeof point.summary.value === 'number' &&
+          point.summary.dtype === DTYPES.number
+      )
+      if (allNumeric) {
+        points.forEach((point, index) => {
+          series[index].push(point!.summary.value as number)
+        })
+      }
+    }
+
+    const [xVar, yVar] = variables
+    const xName = getTitleByName(variableMeta, xVar)
+    const yName = getTitleByName(variableMeta, yVar)
+
+    const trace: PlotTrace = {
+      x: { value: series[0], name: xName },
+      y: { value: series[1], name: yName },
+    }
+    const meta: PlotMeta = {
+      type: 'scatter',
+      x: { name: xName },
+      y: { name: yName },
+    }
+
+    return { traces: [trace], meta }
+  }, [enabled, cells, runIds, variables, variableMeta])
 }

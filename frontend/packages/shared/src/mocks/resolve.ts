@@ -73,9 +73,9 @@ export async function resolveOperation(
 
   try {
     switch (operationName) {
-      case 'TableMetadataQuery': {
+      case 'TableMetaQuery': {
         const { meta } = await source.runs(proposal)
-        return resolved({ metadata: shapeMetadata(meta) })
+        return resolved({ metadata: shapeMetadata(meta, proposal) })
       }
       case 'TableDataQuery':
       case 'LightweightTableDataQuery':
@@ -84,6 +84,7 @@ export async function resolveOperation(
         const names = variables.names as string[] | null | undefined
         return resolved(
           shapeTableData(data, {
+            proposal,
             names,
             lightweight: operationName === 'LightweightTableDataQuery',
           })

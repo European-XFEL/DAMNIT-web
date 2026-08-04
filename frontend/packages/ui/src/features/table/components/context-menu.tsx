@@ -2,10 +2,11 @@ import { useLayer } from 'react-laag'
 import { Stack } from '@mantine/core'
 import { ContextMenuPortal as MantineContextMenu } from 'mantine-contextmenu'
 
+import { toBounds } from '#src/features/table/utils/bounds'
+
 import ContextMenuItem, {
   type ContextMenuItemOptions,
 } from './context-menu-item'
-import { toBounds } from './bounds'
 
 export type ContextMenuProps = {
   localPosition: { x: number; y: number }

@@ -37,21 +37,30 @@ export const createPriorityLink = ({
         break
       }
 
+      // The slot is held until the operation terminates, not until its first
+      // payload: one answering incrementally emits `next` with its request open.
       activeOperations.add(nextOperation)
       nextOperation.subscription = nextOperation.execute().subscribe({
         next: (response) => {
-          activeOperations.delete(nextOperation)
           nextOperation.observer.next?.(response)
-          processNextOperation()
         },
+        // Freeing the slot in `finally`, so the queue drains whatever the
+        // downstream handler does.
         error: (error) => {
           activeOperations.delete(nextOperation)
-          nextOperation.observer.error?.(error)
-          processNextOperation()
+          try {
+            nextOperation.observer.error?.(error)
+          } finally {
+            processNextOperation()
+          }
         },
         complete: () => {
           activeOperations.delete(nextOperation)
-          nextOperation.observer.complete?.()
+          try {
+            nextOperation.observer.complete?.()
+          } finally {
+            processNextOperation()
+          }
         },
       })
     }

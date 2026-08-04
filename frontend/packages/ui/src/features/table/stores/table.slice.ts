@@ -3,8 +3,7 @@ import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 import { resetProposal } from '#src/app/store/actions'
 import { type PlotSpec } from '#src/types'
 import { isArrayEqual } from '#src/utils/array'
-
-import type { Scroll } from './types'
+import type { Scroll } from '#src/features/table/types/table.types'
 
 type VariableOptions = {
   visibility: boolean
@@ -16,6 +15,7 @@ type TagSettings = {
 
 type TableState = {
   selection: {
+    proposal: string | null
     run: number | null
     variables: string[]
   }
@@ -28,7 +28,7 @@ type TableState = {
 }
 
 const initialState: TableState = {
-  selection: { run: null, variables: [] },
+  selection: { proposal: null, run: null, variables: [] },
   variables: {},
   tags: {},
   view: { scroll: { x: 0, y: 0 } },
@@ -43,9 +43,12 @@ const slice = createSlice({
       state.isActive = action.payload
     },
     selectRun: ({ selection }, action) => {
-      const { run, variables } = action.payload
+      const { proposal, run, variables } = action.payload
       if (selection.run !== run) {
         selection.run = run
+      }
+      if (selection.proposal !== proposal) {
+        selection.proposal = proposal
       }
       if (!isArrayEqual(selection.variables, variables)) {
         selection.variables = variables

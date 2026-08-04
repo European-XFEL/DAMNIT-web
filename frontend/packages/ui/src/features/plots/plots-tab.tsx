@@ -2,6 +2,7 @@ import { Box, Stack, Text } from '@mantine/core'
 
 import Tabs from '#src/components/tabs/tabs'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import { useTableMeta } from '#src/data/table/use-table-meta'
 import { sorted } from '#src/utils/array'
 import { formatRunsSubtitle, isEmpty } from '#src/utils/helpers'
 
@@ -12,7 +13,8 @@ const PlotsTab = () => {
   const dispatch = useAppDispatch()
 
   const plots = useAppSelector((state) => state.plots)
-  const runs = useAppSelector((state) => state.tableData.metadata.runs)
+  const { runs: runIds } = useTableMeta()
+  const runs = runIds.map((run) => String(run.run))
 
   const contents = Object.fromEntries(
     Object.entries(plots.data).map(([id, plot]) => {

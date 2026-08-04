@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   Modal,
   Button,
@@ -11,13 +12,11 @@ import {
 import { TextInput, Text, Blockquote } from '@mantine/core'
 import { useForm } from '@mantine/form'
 
-import TextCombobox, {
-  type TextComboboxOptions,
-} from '#src/components/comboboxes/text-combobox'
-import { selectVariables } from '#src/data/table/table-data.selectors'
-import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import TextCombobox from '#src/components/comboboxes/text-combobox'
+import { useTableVariables } from '#src/data/table/use-table-meta'
+import { useAppDispatch } from '#src/app/store/hooks'
 import { type PlotSpec } from '#src/types'
-import { getVariableTitle } from '#src/utils/variables'
+import { getVariableTitle } from '#src/data/table/table-data.transforms'
 
 import { addPlot } from './plots.slice'
 import { parseRunSelection } from './utils'
@@ -38,7 +37,7 @@ type PlotDialogProps = {
 const PlotDialog = (props: PlotDialogProps) => {
   const dispatch = useAppDispatch()
 
-  const variables = useAppSelector(selectVariables)
+  const variables = useTableVariables()
 
   const dialogForm = useForm<PlotDialogForm>({
     mode: 'uncontrolled',
@@ -111,6 +110,15 @@ const PlotDialog = (props: PlotDialogProps) => {
 
   const formValues = dialogForm.getValues()
 
+  const variableOptions = useMemo(
+    () =>
+      variables.map((variable) => ({
+        name: variable.name,
+        title: getVariableTitle(variable),
+      })),
+    [variables]
+  )
+
   return (
     <Modal
       opened={props.opened}
@@ -142,7 +150,7 @@ const PlotDialog = (props: PlotDialogProps) => {
           >
             {formValues.plotType === 'summary' && (
               <TextCombobox
-                options={variables as TextComboboxOptions}
+                options={variableOptions}
                 value={formValues.xVariable}
                 setValue={(value) =>
                   dialogForm.setFieldValue('xVariable', value)
@@ -153,7 +161,7 @@ const PlotDialog = (props: PlotDialogProps) => {
               />
             )}
             <TextCombobox
-              options={variables as TextComboboxOptions}
+              options={variableOptions}
               value={formValues.yVariable}
               setValue={(value) => dialogForm.setFieldValue('yVariable', value)}
               label={formValues.plotType === 'summary' ? 'Y-axis' : 'Variable'}

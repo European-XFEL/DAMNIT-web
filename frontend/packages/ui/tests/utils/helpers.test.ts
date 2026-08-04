@@ -40,6 +40,10 @@ describe('formatRunsSubtitle', () => {
   test('shows the first and last run as a range', () => {
     expect(formatRunsSubtitle(['5', '6', '7', '8', '9'])).toBe('(run 5-9)')
   })
+
+  test('shows the same range when the runs are numbers', () => {
+    expect(formatRunsSubtitle([5, 6, 9])).toBe('(run 5-9)')
+  })
 })
 
 describe('formatUrl', () => {

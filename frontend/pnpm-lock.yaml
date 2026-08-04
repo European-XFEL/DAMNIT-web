@@ -552,6 +552,10 @@ importers:
         version: 5.9.3
 
   packages/ui:
+    dependencies:
+      '@damnit-frontend/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@apollo/client':
         specifier: catalog:graphql

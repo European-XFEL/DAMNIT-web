@@ -10,9 +10,11 @@ import { debounce } from 'lodash'
 import { type DataEditorRef } from '@glideapps/glide-data-grid'
 
 import { useAppDispatch, useAppStore } from '#src/app/store/hooks'
-
-import { setActive, setViewScroll } from './table.slice'
-import type { Rectangle, Scroll } from './types'
+import {
+  setActive,
+  setViewScroll,
+} from '#src/features/table/stores/table.slice'
+import type { Rectangle, Scroll } from '#src/features/table/types/table.types'
 
 export function useScrollToView(ref: RefObject<DataEditorRef>) {
   const dispatch = useAppDispatch()

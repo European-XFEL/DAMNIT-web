@@ -59,17 +59,19 @@ export async function mockApi(
   let contextContent = example.contextFile
   let contextLastModified = 1_700_000_000
 
+  // variables.proposal arrives as a string, so hold the accessible set as strings.
+  const accessible = accessibleProposals(example).map(String)
+
   const api: MockApi = {
     unmockedRequests: [],
     touchContextFile: (content) => {
       contextContent = content
       contextLastModified += 1
     },
-    pushLatestData: await mockWebSocket(page),
+    // A push carries the run's identity, so it is delivered for the proposal the
+    // subscription opened (the first accessible one in a single-proposal example).
+    pushLatestData: await mockWebSocket(page, accessible[0]),
   }
-
-  // variables.proposal arrives as a string, so hold the accessible set as strings.
-  const accessible = accessibleProposals(example).map(String)
 
   // One example per test, so the source ignores the requested proposal. A
   // missing (run, variable) file surfaces as ENOENT; translate it to

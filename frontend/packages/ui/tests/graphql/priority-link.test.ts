@@ -1,4 +1,11 @@
-import { ApolloLink, Observable, execute, gql } from '@apollo/client'
+import {
+  ApolloLink,
+  Observable,
+  execute,
+  gql,
+  type FetchResult,
+  type Observer,
+} from '@apollo/client'
 import { expect, test } from 'vitest'
 
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from '#src/graphql/operation-names'
@@ -11,25 +18,30 @@ const DEFERRED = gql`
 `
 
 const PROMPT = gql`
-  query TableMetadataQuery {
+  query TableMetaQuery {
     metadata
   }
 `
 
-// Records what reached the network and leaves every request hanging, so a test
-// decides when (and whether) each one answers.
+// Records what reached the network and leaves every request hanging, handing
+// back each one's observer so a test decides when (and whether) it answers.
 function createNetwork() {
   const started: number[] = []
+  const observers = new Map<number, Observer<FetchResult>>()
   let cancelled = 0
 
   const link = new ApolloLink((operation) => {
-    started.push((operation.variables.page as number) ?? 0)
-    return new Observable(() => () => {
-      cancelled += 1
+    const page = (operation.variables.page as number) ?? 0
+    started.push(page)
+    return new Observable<FetchResult>((observer) => {
+      observers.set(page, observer)
+      return () => {
+        cancelled += 1
+      }
     })
   })
 
-  return { link, started, cancelled: () => cancelled }
+  return { link, started, observers, cancelled: () => cancelled }
 }
 
 function send(link: ApolloLink, page: number) {
@@ -52,6 +64,28 @@ test('a queued operation waits for the one in flight', async () => {
   send(link, 2)
 
   expect(network.started).toEqual([1])
+})
+
+test('a queued operation waits for the whole answer, not the first payload', async () => {
+  const network = createNetwork()
+  const link = ApolloLink.from([
+    createPriorityLink({
+      maxActive: 1,
+      queuedOperations: [DEFERRED_TABLE_DATA_QUERY_NAME],
+    }),
+    network.link,
+  ])
+
+  send(link, 1)
+  send(link, 2)
+
+  // An operation answering incrementally is still holding its request open
+  // after its first payload, so letting the next one in would run both at once.
+  network.observers.get(1)?.next?.({ data: { runs: [] } })
+  expect(network.started).toEqual([1])
+
+  network.observers.get(1)?.complete?.()
+  expect(network.started).toEqual([1, 2])
 })
 
 test('an operation nobody waits for stops holding up the queue', async () => {

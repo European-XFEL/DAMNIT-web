@@ -7,31 +7,6 @@ export type DeepPartial<T> = T extends Function
     ? { [K in keyof T]?: DeepPartial<T[K]> }
     : T
 
-export type VariableValue = Maybe<string | number | number[]>
-
-export type VariableError = {
-  message: string
-  cls: string
-}
-
-export type VariableDataItem = {
-  value: VariableValue
-  dtype: string
-  error?: VariableError
-}
-
-export type VariableMetadataItem = {
-  name: string
-  title?: string
-  tags: string[]
-}
-
-export type TagItem = {
-  id: number
-  name: string
-  variables: string[]
-}
-
 export type TabItem = {
   title: string
   subtitle?: string

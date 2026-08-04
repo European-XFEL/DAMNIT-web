@@ -13,12 +13,16 @@ import {
 import { allCells } from '@glideapps/glide-data-grid-cells'
 import { Group, Stack, useMantineTheme } from '@mantine/core'
 
-import { DTYPES, EXCLUDED_VARIABLES, VARIABLES } from '#src/constants'
+import { DTYPES, VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
-import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
+import {
+  getVariableTitle,
+  hasValue,
+  runKey,
+} from '#src/data/table/table-data.transforms'
+import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
-
 import {
   errorCell,
   getCell,
@@ -26,18 +30,20 @@ import {
   numberCell,
   textCell,
   type ErrorColors,
-} from './cells'
-import { TagsPopover } from './components/popovers/tags-popover'
-import { VariablesPopover } from './components/popovers/variables-popover'
-import { type CellTooltip } from './components/tooltips/table-tooltip'
-import ContextMenu from './context-menu'
-import { useTableTooltip } from './hooks/use-table-tooltip'
-import { useTable } from './hooks/use-table'
-import TablePageLoader from './table-page-loader'
-import { useContextMenu } from './use-context-menu'
-import { usePagination } from './use-pagination'
-import { useScrollToView } from './use-scroll-to-view'
-import { plotRequested, selectRun } from './table.slice'
+} from '#src/features/table/utils/cells'
+import { TagsPopover } from '#src/features/table/components/popovers/tags-popover'
+import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
+import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
+import ContextMenu from '#src/features/table/components/context-menu'
+import { useTableTooltip } from '#src/features/table/hooks/use-table-tooltip'
+import { useColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
+import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
+import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
+import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
+import {
+  plotRequested,
+  selectRun,
+} from '#src/features/table/stores/table.slice'
 
 type Column = {
   id: string
@@ -62,40 +68,41 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
 
-  // Initialization: Selectors
+  // Initialization: Data sources (the Apollo cache, via hooks)
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
+  const { runs } = useTableMeta()
+  const tableVariables = useTableVariables()
   const {
-    data: tableData,
-    metadata: tableMetadata,
-    lastUpdate: tableLastUpdate,
-  } = useAppSelector((state) => state.tableData)
+    cellsByKey,
+    lastUpdatedByKey,
+    onVisibleRegionChanged: fetchOnScroll,
+  } = useTableRuns({
+    proposal,
+    paginated,
+    pageSize: PAGE_SIZE,
+  })
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()
-  const { pages, onVisibleRegionChanged: paginationHandler } = usePagination({
-    enabled: paginated,
-    pageSize: PAGE_SIZE,
-  })
   const {
     onVisibleRegionChanged: scrollToViewHandler,
     scrollX,
     scrollY,
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
-  const { columnVisibility } = useTable()
+  const columnVisibility = useColumnVisibility()
   const theme = useMantineTheme()
 
   // Initialization: Memos
   const tableColumns = useMemo(
     () =>
-      Object.values(tableMetadata.variables)
-        .filter(
-          ({ name }) =>
-            !EXCLUDED_VARIABLES.includes(name) &&
-            columnVisibility[name] !== false
-        )
-        .map(({ name, title }) => ({ id: name, title: title || name })),
-    [tableMetadata.variables, columnVisibility]
+      tableVariables
+        .filter(({ name }) => columnVisibility[name] !== false)
+        .map((variable) => ({
+          id: variable.name,
+          title: getVariableTitle(variable),
+        })),
+    [tableVariables, columnVisibility]
   )
 
   // Error-glyph colors resolved from the live theme; dark mode plugs in here.
@@ -112,44 +119,49 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     [errorColors]
   )
 
-  // Data: Populate grid
+  // Data: Populate grid. Row layout is the server-ordered run list; a cell's
+  // value is looked up by the run's identity from the normalized cache.
   const getContent = useCallback(
     ([col, row]: Item) => {
-      const run = tableMetadata.runs[row]
+      const identity = runs[row]
       const variable = tableColumns[col]?.id
 
       if (variable === VARIABLES.run) {
-        return numberCell(run)
+        return numberCell(identity?.run)
       }
 
-      const rowData = tableData[run]
-      if (!rowData || !rowData[variable]) {
+      if (!identity) {
         return textCell('')
       }
 
-      const cellError = rowData[variable].error
-      if (cellError) {
-        return errorCell(cellError)
+      const key = runKey(identity)
+      const cell = cellsByKey.get(key)?.[variable]
+      if (!cell) {
+        return textCell('')
+      }
+
+      if (cell.error) {
+        return errorCell(cell.error)
       }
 
       return getCell({
-        value: rowData[variable].value,
-        dtype: rowData[variable].dtype,
-        options: { lastUpdated: tableLastUpdate[run] },
+        value: cell.summary.value,
+        dtype: cell.summary.dtype,
+        options: { lastUpdated: lastUpdatedByKey.get(key) },
       })
     },
-    [tableColumns, tableMetadata.runs, tableData, tableLastUpdate]
+    [tableColumns, runs, cellsByKey, lastUpdatedByKey]
   )
 
   // Cell: tooltip. Errored cells show a card; image cells show a preview.
   const resolveTooltip = useCallback(
     (col: number, row: number): CellTooltip | undefined => {
-      const run = tableMetadata.runs[row]
+      const identity = runs[row]
       const variable = tableColumns[col]?.id
-      if (run == null || !variable) {
+      if (identity == null || !variable) {
         return undefined
       }
-      const item = tableData[run]?.[variable]
+      const item = cellsByKey.get(runKey(identity))?.[variable]
       if (!item) {
         return undefined
       }
@@ -157,15 +169,15 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         return { kind: 'error', error: item.error }
       }
       if (
-        item.dtype === DTYPES.image &&
-        typeof item.value === 'string' &&
-        item.value
+        item.summary.dtype === DTYPES.image &&
+        typeof item.summary.value === 'string' &&
+        item.summary.value
       ) {
-        return { kind: 'image', src: item.value }
+        return { kind: 'image', src: item.summary.value }
       }
       return undefined
     },
-    [tableColumns, tableMetadata.runs, tableData]
+    [tableColumns, runs, cellsByKey]
   )
   const {
     onItemHovered: handleItemHovered,
@@ -182,13 +194,16 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
 
-    // Inform that a row has been (de)selected
+    // Inform that a row has been (de)selected. The proposal rides along: run
+    // numbers collide across proposals in one table, so the number alone cannot
+    // identify which run the detail aside should read.
     const row = rows.last() as number
-    const run = tableMetadata.runs[row]
+    const identity = runs[row]
 
     dispatch(
       selectRun({
-        run,
+        proposal: identity?.proposal ?? null,
+        run: identity?.run ?? null,
       })
     )
 
@@ -214,11 +229,12 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   }
   const handleCellActivated = (cell: Item) => {
     const [col, row] = cell
-    const run = tableMetadata.runs[row]
+    const identity = runs[row]
 
     dispatch(
       selectRun({
-        run: run,
+        proposal: identity?.proposal ?? null,
+        run: identity?.run ?? null,
         variables: col == null ? null : [tableColumns[col].id],
       })
     )
@@ -254,17 +270,23 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     }
 
     const column = tableColumns[col]?.id
-    const rowData = tableData[tableMetadata.runs[row]]
+    const identity = runs[row]
+    const rowData = identity && cellsByKey.get(runKey(identity))
 
     // A row whose page has not loaded yet has no data at all, not merely no
     // value: it has nothing to offer a plot either way.
     // TODO: Use extracted data type from the database
-    if (col !== -1 && rowData?.[column]?.value != null) {
+    if (col !== -1 && hasValue(rowData ? rowData[column] : undefined)) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 
-      const rows = [selectedCell[1], ...selectedRange.map((rect) => rect.y)]
-      const runs = sorted(rows.map((row) => tableMetadata.runs[row as number]))
+      const selectedRows = [
+        selectedCell[1],
+        ...selectedRange.map((rect) => rect.y),
+      ]
+      const runNumbers = sorted(
+        selectedRows.map((row) => String(runs[row as number]?.run))
+      )
 
       setContextMenu({
         localPosition: { x: event.localEventX, y: event.localEventY },
@@ -275,7 +297,11 @@ const Table = ({ grid, paginated = true }: TableProps) => {
             title: 'Plot: preview',
             subtitle,
             onClick: () =>
-              addPreviewPlot({ variable: variable.id, label: subtitle, runs }),
+              addPreviewPlot({
+                variable: variable.id,
+                label: subtitle,
+                runs: runNumbers,
+              }),
           },
         ],
       })
@@ -387,7 +413,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   } | null>(null)
   const handleVisibleRegionChange = useCallback(
     (rect: Rectangle, tx?: number, ty?: number) => {
-      paginationHandler(rect)
+      fetchOnScroll(rect)
       scrollToViewHandler(rect)
       const previous = lastVisibleRegionRef.current
       const nextTx = tx ?? 0
@@ -404,27 +430,11 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         dismissTooltipOnScroll()
       }
     },
-    [paginationHandler, scrollToViewHandler, dismissTooltipOnScroll]
+    [fetchOnScroll, scrollToViewHandler, dismissTooltipOnScroll]
   )
 
   return (
     <>
-      {paginated ? (
-        pages.map((page) => (
-          <TablePageLoader
-            key={page}
-            proposal={proposal}
-            page={page}
-            pageSize={PAGE_SIZE}
-          />
-        ))
-      ) : (
-        <TablePageLoader
-          proposal={proposal}
-          page={1}
-          pageSize={ALL_RUNS_PAGE_SIZE}
-        />
-      )}
       {!tableColumns.length ? null : (
         <Stack w="100%" h="100%" gap="sm">
           <Group px={6}>
@@ -437,7 +447,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               ref={tableRef}
               columns={formatColumns(tableColumns)}
               getCellContent={getContent}
-              rows={tableMetadata.runs.length}
+              rows={runs.length}
               rowSelect="single"
               rowMarkers="clickable-number"
               gridSelection={gridSelection}

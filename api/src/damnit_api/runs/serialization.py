@@ -101,7 +101,9 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
             value = to_complex_string(blob2complex(value))
             dtype = DamnitType.STRING
 
-        case DamnitType.ARRAY:
+        case DamnitType.ARRAY_1D:
+            # The 1-D is what the client receives, not what is stored: a
+            # trendline summary is a 2xN blob of x and y rows.
             if isinstance(value, bytes):
                 arr = blob2numpy(value)
 

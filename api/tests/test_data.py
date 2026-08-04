@@ -22,7 +22,7 @@ from damnit_api.shared.const import DamnitType
 @dataclass
 class ExtractedData:
     value: object
-    dtype: DamnitType
+    dtype: DamnitType | None = None
     type_hint: DataType | None = None
 
 
@@ -35,17 +35,17 @@ images = [
     ExtractedData(
         value=np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8),
         type_hint=DataType.Image,
-        dtype=DamnitType.RGBA,
+        dtype=DamnitType.IMAGE,
     ),
 ]
 ndarrays = [
     ExtractedData(
         value=np.random.rand(10),
-        dtype=DamnitType.ARRAY,
+        dtype=DamnitType.ARRAY_1D,
     ),
     ExtractedData(
         value=np.random.rand(4, 3),
-        dtype=DamnitType.IMAGE,
+        dtype=DamnitType.ARRAY_2D,
     ),
 ]
 dataarrays = [
@@ -66,7 +66,6 @@ datasets = [
             coords={"x": np.arange(10)},
         ),
         type_hint=DataType.Dataset,
-        dtype=DamnitType.DATASET,
     ),
 ]
 
@@ -170,7 +169,7 @@ def test_to_dataarray_2d_dataarray_with_coords():
 @pytest.mark.parametrize("data", scalars + datasets)
 def test_to_data_array_unsupported(data):
     with pytest.raises(ValueError, match=NOT_SUPPORTED_MESSAGE):
-        to_dataarray(data)
+        to_dataarray(data.value)
 
 
 # -----------------------------------------------------------------------------
@@ -178,8 +177,8 @@ def test_to_data_array_unsupported(data):
 
 
 def test_standardize_dataarray():
-    name = "some_image"
-    dtype = DamnitType.IMAGE
+    name = "some_array"
+    dtype = DamnitType.ARRAY_2D
     data = xr.DataArray(
         data=np.random.rand(4, 3),
         name=name,
@@ -206,9 +205,9 @@ def test_standardize_dataarray():
     # assert actual == expected
 
 
-def test_standardize_png():
-    name = "some_png"
-    dtype = DamnitType.PNG
+def test_standardize_image():
+    name = "some_image"
+    dtype = DamnitType.IMAGE
     data = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAABQUlEQVR4nAE2Acn+ARvURClMomT2KO"  # noqa: E501
 
     assert standardize(data, name=name, dtype=dtype.value) == {
@@ -239,7 +238,7 @@ def mock_damnit_class(mocker, *, data, type_hint):
 
 def test_get_preview_data_ndarray(mocker):
     name = "some_array"
-    dtype = DamnitType.ARRAY
+    dtype = DamnitType.ARRAY_1D
     data = np.random.rand(4)
 
     mock_damnit_class(mocker, data=data, type_hint=None)
@@ -257,7 +256,7 @@ def test_get_preview_data_ndarray(mocker):
 
 def test_get_preview_data_dataarray(mocker):
     name = "some_array"
-    dtype = DamnitType.ARRAY
+    dtype = DamnitType.ARRAY_1D
     data = xr.DataArray(
         np.random.rand(4),
         dims=["trains"],
@@ -276,9 +275,9 @@ def test_get_preview_data_dataarray(mocker):
     assert_coords(actual["coords"], data.coords)
 
 
-def test_get_preview_data_png(mocker):
-    name = "some_png"
-    dtype = DamnitType.PNG  # because we convert RGBA array to PNG string
+def test_get_preview_data_image(mocker):
+    name = "some_image"
+    dtype = DamnitType.IMAGE  # a colour array is rendered to a PNG string
     data = np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8)
 
     mock_damnit_class(mocker, data=data, type_hint=DataType.Image)

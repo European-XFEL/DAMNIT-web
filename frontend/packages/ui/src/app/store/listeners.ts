@@ -9,8 +9,12 @@ import {
   removePlot,
   reset as resetPlots,
 } from '#src/features/plots/plots.slice'
-import { plotRequested, selectRun } from '#src/features/table/table.slice'
+import {
+  plotRequested,
+  selectRun,
+} from '#src/features/table/stores/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
+import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
 import { cache } from '#src/graphql/apollo'
 import { isEmpty } from '#src/utils/helpers'
 
@@ -29,6 +33,8 @@ export function registerAppListeners() {
       if (!departed) {
         return
       }
+
+      forgetRunsTruncation(departed)
 
       // Drop that proposal's cached fields, and only that proposal's: every
       // one of them carries the number in its arguments, so the next proposal's
@@ -51,7 +57,13 @@ export function registerAppListeners() {
                 ? DELETE
                 : value,
           })
-          cache.gc()
+          // This is what reclaims the memory, not a tidy-up. Runs normalize to
+          // top-level `DamnitRun:{...}` entries, so dropping the fields above
+          // only removes the references to them; the entries themselves sit
+          // there as orphans, images and all, until the collector runs. The read
+          // memo has to go with them: it holds the results read out of those
+          // entries, so leaving it would keep the payload alive past the sweep.
+          cache.gc({ resetResultCache: true })
         })
       )
     },

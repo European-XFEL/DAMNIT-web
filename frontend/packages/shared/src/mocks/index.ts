@@ -1,6 +1,8 @@
 export {
   REST_API_PREFIXES,
+  cellId,
   shapeMetadata,
+  shapeRun,
   shapeTableData,
   unmockedOperationError,
 } from './shape'

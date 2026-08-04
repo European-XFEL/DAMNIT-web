@@ -5372,5 +5372,5 @@
     ]
   },
   "name": "pulses",
-  "dtype": "array"
+  "dtype": "array1d"
 }

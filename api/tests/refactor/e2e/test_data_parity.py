@@ -43,8 +43,11 @@ def runs_query(proposal: int, *, per_page: int, names: list[str]) -> dict:
         "query": f"""
             query {{
               runs(database: {{proposal: "{proposal}"}}, per_page: {per_page}) {{
-                variables(names: [{names_arg}]) {{
-                  name value dtype error {{ message cls }}
+                cells(names: [{names_arg}]) {{
+                  id
+                  name
+                  error {{ message cls }}
+                  summary {{ value dtype }}
                 }}
               }}
             }}
@@ -53,7 +56,18 @@ def runs_query(proposal: int, *, per_page: int, names: list[str]) -> dict:
 
 
 def metadata_query(proposal: int) -> dict:
-    return {"query": f'query {{ metadata(database: {{ proposal: "{proposal}" }}) }}'}
+    return {
+        "query": f"""
+            query {{
+              metadata(database: {{ proposal: "{proposal}" }}) {{
+                runs {{ proposal run }}
+                variables
+                tags
+                timestamp
+              }}
+            }}
+        """
+    }
 
 
 GET_USER_PROPOSALS_QUERY = """
@@ -100,17 +114,20 @@ async def test_runs_query_wire_shapes_unchanged(logged_in_client, snapshot):
     runs = payload["data"]["runs"]
     assert len(runs) == 1
 
-    by_name = {v["name"]: v for v in runs[0]["variables"]}
+    by_name = {v["name"]: v for v in runs[0]["cells"]}
     assert set(by_name) == set(names)
 
     # Image variables serialize to a base64 PNG data URI, not raw bytes; pin
     # the prefix directly and replace the value in the snapshot so it isn't
     # pinning the exact rendered image bytes
     image = by_name["xpcs_g2_plot"]
-    assert image["dtype"] == "image"
+    assert image["summary"]["dtype"] == "image"
     assert image["error"] is None
-    assert image["value"].startswith("data:image/png;base64,")
-    by_name["xpcs_g2_plot"] = {**image, "value": "<png-data-uri>"}
+    assert image["summary"]["value"].startswith("data:image/png;base64,")
+    by_name["xpcs_g2_plot"] = {
+        **image,
+        "summary": {**image["summary"], "value": "<png-data-uri>"},
+    }
 
     assert _normalize(by_name) == snapshot
 

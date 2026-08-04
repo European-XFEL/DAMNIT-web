@@ -12,8 +12,11 @@ import {
 } from '@glideapps/glide-data-grid'
 import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
 
-import { DTYPES } from '#src/constants'
-import { type VariableError, type VariableValue } from '#src/types'
+import { DTYPES, HEAVY_DTYPES } from '#src/constants'
+import {
+  type CellError,
+  type CellValue,
+} from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/helpers'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
@@ -23,7 +26,7 @@ const SKELETON_BOX_WIDTH = 30
 // TODO: Handle nonconforming data type
 
 export const imageCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): ImageCell => {
   const data = typeof value === 'string' ? [value] : []
@@ -39,10 +42,12 @@ export const imageCell = (
 }
 
 export const textCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): TextCell => {
-  const data = value ? String(value) : ''
+  // Not a truthiness check: this is the fallback for a dtype with no renderer,
+  // and `false`, `0` and `NaN` are values the grid still has to show.
+  const data = value == null ? '' : String(value)
   return {
     kind: GridCellKind.Text,
     displayData: data,
@@ -53,7 +58,7 @@ export const textCell = (
 }
 
 export const numberCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): NumberCell => {
   const data =
@@ -77,7 +82,7 @@ export const numberCell = (
 }
 
 export const arrayCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): SparklineCellType => {
   const values = Array.isArray(value) ? (value as number[]) : []
@@ -106,7 +111,7 @@ export const arrayCell = (
 }
 
 export const dateCell = (
-  value: VariableValue,
+  value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): TextCell => {
   const data = value && typeof value === 'number' ? formatDate(value) : ''
@@ -130,7 +135,7 @@ const ERROR_CELL_KIND = 'error-cell'
 
 export interface ErrorCellProps {
   readonly kind: typeof ERROR_CELL_KIND
-  readonly error: VariableError
+  readonly error: CellError
 }
 
 export type ErrorCell = CustomCell<ErrorCellProps>
@@ -160,11 +165,11 @@ export const errorVisuals = (cls: string): ErrorVisuals => {
 
 // Clipboard/copy representation, shared by the cell's copyData and the
 // tooltip's Ctrl+C handler.
-export const errorText = (error: VariableError): string =>
+export const errorText = (error: CellError): string =>
   `${error.cls}\n${error.message}`
 
 export const errorCell = (
-  error: VariableError,
+  error: CellError,
   params: Partial<BaseGridCell> = {}
 ): ErrorCell => {
   return {
@@ -255,7 +260,7 @@ export const makeErrorCellRenderer = (
 }
 
 export const loadingCell = (
-  _: VariableValue,
+  _: CellValue,
   params: Partial<BaseGridCell> = {}
 ): LoadingCell => {
   return {
@@ -267,17 +272,21 @@ export const loadingCell = (
   }
 }
 
-const gridCellFactory = {
+type CellFactory = (value: CellValue, params: Partial<BaseGridCell>) => GridCell
+
+// Typed so a lookup reads as possibly-missing: DAMNIT's dtypes are an open set
+// (boolean and complex among them) and only these five have a renderer.
+const gridCellFactory: Partial<Record<string, CellFactory>> = {
   [DTYPES.image]: imageCell,
   [DTYPES.string]: textCell,
   [DTYPES.number]: numberCell,
-  [DTYPES.array]: arrayCell,
+  [DTYPES.array1d]: arrayCell,
   [DTYPES.timestamp]: dateCell,
 }
 
 type GetCellOptions = {
-  value: VariableValue
-  dtype: keyof typeof gridCellFactory
+  value: CellValue
+  dtype: string
   options: Partial<BaseGridCell>
 }
 
@@ -286,7 +295,15 @@ export const getCell = ({
   dtype,
   options,
 }: GetCellOptions): GridCell => {
-  // If the value is null or undefined, use the loading cell factory.
-  const factory = value == null ? loadingCell : gridCellFactory[dtype]
-  return factory(value, options)
+  // A dtype with no renderer falls back to text rather than throwing on every
+  // visible cell the grid asks `getContent` for.
+  if (value != null) {
+    return (gridCellFactory[dtype] ?? textCell)(value, options)
+  }
+  // A null heavy value is one @lightweight held back, so it draws the loading
+  // skeleton until the deferred fetch fills it. A null scalar is a cell DAMNIT
+  // has no value for and nothing is coming, so it draws as empty rather than
+  // loading forever. This is `isHeavySummaryBlank` with the null already
+  // established, kept inline because the grid re-asks on every redraw.
+  return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
 }

@@ -41,6 +41,9 @@
     "test:browser": "vitest run --project browser",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@damnit-frontend/shared": "workspace:*"
+  },
   "peerDependencies": {
     "@apollo/client": "catalog:graphql",
     "@glideapps/glide-data-grid": "catalog:components",

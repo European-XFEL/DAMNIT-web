@@ -17,19 +17,58 @@
 # name: test_metadata_query_wire_shape_unchanged
   dict({
     'runs': list([
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
+      dict({
+        'proposal': '6996',
+        'run': 1,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 2,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 3,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 4,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 5,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 6,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 7,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 8,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 9,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 10,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 11,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 12,
+      }),
+      dict({
+        'proposal': '6996',
+        'run': 13,
+      }),
     ]),
     'tags': dict({
       '(Untagged)': dict({
@@ -189,76 +228,112 @@
 # name: test_runs_query_wire_shapes_unchanged
   dict({
     'added_at': dict({
-      'dtype': 'timestamp',
       'error': None,
+      'id': '6996:6996:1:added_at',
       'name': 'added_at',
-      'value': 1717058767016,
+      'summary': dict({
+        'dtype': 'timestamp',
+        'value': 1717058767016,
+      }),
     }),
     'n_pulses': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:n_pulses',
       'name': 'n_pulses',
-      'value': 290.0,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 290.0,
+      }),
     }),
     'n_trains': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:n_trains',
       'name': 'n_trains',
-      'value': 2679,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 2679,
+      }),
     }),
     'proposal': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:proposal',
       'name': 'proposal',
-      'value': 6996,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 6996,
+      }),
     }),
     'run': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:run',
       'name': 'run',
-      'value': 1,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 1,
+      }),
     }),
     'sample_type': dict({
-      'dtype': 'string',
       'error': None,
+      'id': '6996:6996:1:sample_type',
       'name': 'sample_type',
-      'value': 'Silica nanoparticle',
+      'summary': dict({
+        'dtype': 'string',
+        'value': 'Silica nanoparticle',
+      }),
     }),
     'sample_x': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:sample_x',
       'name': 'sample_x',
-      'value': 1.780738354,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 1.780738354,
+      }),
     }),
     'sample_y': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:sample_y',
       'name': 'sample_y',
-      'value': 21.00022591,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 21.00022591,
+      }),
     }),
     'start_time': dict({
-      'dtype': 'timestamp',
       'error': None,
+      'id': '6996:6996:1:start_time',
       'name': 'start_time',
-      'value': 1717058356866,
+      'summary': dict({
+        'dtype': 'timestamp',
+        'value': 1717058356866,
+      }),
     }),
     'total_transmission': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:total_transmission',
       'name': 'total_transmission',
-      'value': 0.000114891,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 0.000114891,
+      }),
     }),
     'xgm_intensity': dict({
-      'dtype': 'number',
       'error': None,
+      'id': '6996:6996:1:xgm_intensity',
       'name': 'xgm_intensity',
-      'value': 470.959655762,
+      'summary': dict({
+        'dtype': 'number',
+        'value': 470.959655762,
+      }),
     }),
     'xpcs_g2_plot': dict({
-      'dtype': 'image',
       'error': None,
+      'id': '6996:6996:1:xpcs_g2_plot',
       'name': 'xpcs_g2_plot',
-      'value': '<png-data-uri>',
+      'summary': dict({
+        'dtype': 'image',
+        'value': '<png-data-uri>',
+      }),
     }),
   })
 # ---

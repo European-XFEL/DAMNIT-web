@@ -15,7 +15,7 @@ test.use({ viewport: PLOT_VIEWPORT })
 // the scalar shown in the table cell. One per render branch:
 const SCATTER_VAR = 'xgm_intensity' // 1-D array -> Plotly scatter
 const SCALAR_VAR = 'n_trains' // scalar number -> "unable to display" notice
-const IMAGE_VAR = 'xpcs_g2_plot' // png -> plain <img>
+const IMAGE_VAR = 'xpcs_g2_plot' // image -> plain <img>
 
 test('right-clicking a cell and choosing "Plot: preview" plots its preview data', async ({
   page,
@@ -65,7 +65,7 @@ test('right-clicking a scalar cell shows the unable-to-display notice', async ({
   await expect(page.getByText(/scalar/)).toContainText(String(scalarValue))
 })
 
-test('right-clicking a png cell renders the image instead of a figure', async ({
+test('right-clicking an image cell renders the picture instead of a figure', async ({
   page,
   example,
 }) => {
