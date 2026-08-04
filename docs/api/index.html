@@ -449,10 +449,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-subscribe-to-latest-data" class="md-nav__link">
+  <a href="#3-subscribe-to-run-updates" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. Subscribe to latest data
+        3. Subscribe to run updates
       </span>
     </span>
   </a>
@@ -982,10 +982,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#3-subscribe-to-latest-data" class="md-nav__link">
+  <a href="#3-subscribe-to-run-updates" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        3. Subscribe to latest data
+        3. Subscribe to run updates
       </span>
     </span>
   </a>
@@ -1045,12 +1045,22 @@ podman<span class="w"> </span>compose<span class="w"> </span>up
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <h3 id="1-query-the-metadata">1. Query the metadata<a class="headerlink" href="#1-query-the-metadata" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>query TableMetadataQuery {
-  metadata(database: {proposal: &quot;&lt;PROPOSAL_NUMBER&gt;&quot;})
+  metadata(database: {proposal: &quot;&lt;PROPOSAL_NUMBER&gt;&quot;}) {
+    runs {
+      proposal
+      run
+    }
+    variables
+    tags
+    timestamp
+  }
 }
 </code></pre></div>
-<p>This returns a JSON snapshot for the proposal:</p>
+<p>This returns a <code>TableMeta</code> snapshot for the proposal:</p>
 <ul>
-<li><code>runs</code> - sorted list of run numbers in the proposal</li>
+<li><code>runs</code> - server-ordered list of <code>{proposal, run}</code> pairs. Run numbers repeat
+  across the proposals sharing one database, so a run is only identified by
+  the pair</li>
 <li><code>variables</code> - map of variable name to its title and tags (includes the
   known variables listed below alongside any user-defined ones)</li>
 <li><code>tags</code> - map of tag name to its id and the variables it groups</li>
@@ -1058,10 +1068,13 @@ podman<span class="w"> </span>compose<span class="w"> </span>up
 </ul>
 <h3 id="2-query-the-runs">2. Query the runs<a class="headerlink" href="#2-query-the-runs" title="Permanent link">&para;</a></h3>
 <p>For instance, to fetch the first 10 runs of proposal <code>2956</code> along with all
-of their variables:</p>
+of their cells:</p>
 <div class="highlight"><pre><span></span><code>query TableDataQuery($per_page: Int = 10) {
   runs(database: {proposal: &quot;2956&quot;}, per_page: $per_page) {
-    variables {
+    database
+    proposal
+    run
+    cells {
       name
       value
       dtype
@@ -1069,11 +1082,14 @@ of their variables:</p>
   }
 }
 </code></pre></div>
-<p>Each run is returned as a flat list of <code>DamnitVariable</code> entries (<code>name</code>,
-<code>value</code>, <code>dtype</code>). One can pass a list of <code>names</code> to select variables:</p>
+<p>Every run carries the identity trio <code>database</code>, <code>proposal</code> and <code>run</code>. Select
+all three in every document: it is what the client normalizes each run by, and
+what keeps two proposals' run 5 apart.</p>
+<p>The cells are a flat list of <code>Cell</code> entries (<code>name</code>, <code>value</code>, <code>dtype</code>). One can
+pass a list of <code>names</code> to select variables:</p>
 <div class="highlight"><pre><span></span><code>query TableDataQuery($per_page: Int = 10) {
   runs(database: {proposal: &quot;2956&quot;}, per_page: $per_page) {
-    variables(names: [&quot;proposal&quot;, &quot;run&quot;]) {
+    cells(names: [&quot;proposal&quot;, &quot;run&quot;]) {
       name
       value
       dtype
@@ -1091,17 +1107,43 @@ ones from the proposal's context file:</p>
 </ul>
 <p>Pagination is controlled with <code>page</code> (1-indexed, defaults to <code>1</code>) and
 <code>per_page</code> (defaults to <code>10</code>).</p>
-<h3 id="3-subscribe-to-latest-data">3. Subscribe to latest data<a class="headerlink" href="#3-subscribe-to-latest-data" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>subscription LatestDataSubscription {
-  latest_data(database: {proposal: &quot;&lt;PROPOSAL_NUMBER&gt;&quot;}, timestamp: &lt;TIMESTAMP&gt;)
+<h3 id="3-subscribe-to-run-updates">3. Subscribe to run updates<a class="headerlink" href="#3-subscribe-to-run-updates" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>subscription RunUpdatesSubscription {
+  run_updates(database: {proposal: &quot;&lt;PROPOSAL_NUMBER&gt;&quot;}, since: &lt;TIMESTAMP&gt;) {
+    runs {
+      database
+      proposal
+      run
+      cells {
+        name
+        value
+        dtype
+      }
+    }
+    metadata {
+      runs {
+        proposal
+        run
+      }
+      variables
+      tags
+      timestamp
+    }
+    timestamp
+  }
 }
 </code></pre></div>
-<p>This returns the following:</p>
+<p>Each push is a <code>RunUpdates</code>:</p>
 <ul>
-<li>list of (new) runs</li>
-<li>updated metadata</li>
+<li><code>runs</code> - the runs whose cells changed since <code>since</code></li>
+<li><code>metadata</code> - the full <code>TableMeta</code>, but only on a push where it materially
+  changed. It is <code>null</code> otherwise, so a tag edit or a new variable arrives
+  even on a tick that brings no runs</li>
+<li><code>timestamp</code> - the cursor to send as the next <code>since</code></li>
 </ul>
-<p>Note that the <code>timestamp</code> is in milliseconds since Unix epoch.</p>
+<p>Note that both <code>since</code> and <code>timestamp</code> are in milliseconds since the Unix
+epoch. Passing <code>since: 0</code> is the cold start: it delivers the next tick's
+changed runs, not the proposal's history.</p>
 
   
 
