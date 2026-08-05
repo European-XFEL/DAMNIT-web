@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 
 // The grid is a Glide <canvas>. Actions that must reach Glide's canvas mouse
 // handler (hover, context menu, cell/column selection, activation) are driven by
@@ -19,6 +19,7 @@ export const ROW_HEIGHT = 34
 
 export type Box = { x: number; y: number; width: number; height: number }
 export type Cell = { col: number; row: number }
+export type Point = { x: number; y: number }
 
 // Opening a plot switches to the Plots tab, which unmounts the table, so the
 // canvas may be absent when a later grid action runs. Wait for it before reading
@@ -55,4 +56,58 @@ export function cellPoint(box: Box, { col, row }: Cell) {
     x: columnCenter(box, col),
     y: box.y + HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2,
   }
+}
+
+export type Axis = 'horizontal' | 'vertical'
+
+// The element that carries the grid's scrollbars, which occupy the strip
+// between its client box and its border box. One owner: the class tracks Glide.
+export function gridScroller(page: Page): Locator {
+  return page.locator('.dvn-scroller')
+}
+
+// The grid mounts its scroller before the padders give it a scroll range, so an
+// early read can land on a grid that cannot scroll yet. Poll this.
+export async function canScroll(page: Page, axis: Axis): Promise<boolean> {
+  const track = await readTrack(gridScroller(page), axis)
+  return track.scroll > track.client
+}
+
+// The centre of a scrollbar thumb, in page coordinates, ready for page.mouse.
+export async function scrollbarThumb(page: Page, axis: Axis): Promise<Point> {
+  const scroller = gridScroller(page)
+  await expect(scroller).toBeVisible()
+  await expect.poll(() => canScroll(page, axis)).toBe(true)
+
+  const track = await readTrack(scroller, axis)
+  if (track.thickness === 0) {
+    throw new Error(
+      `the ${axis} scrollbar takes no layout space, so it cannot be pressed; launch the browser without --hide-scrollbars`
+    )
+  }
+
+  const length = (track.client * track.client) / track.scroll
+  const along = (track.offset / track.scroll) * track.client + length / 2
+  return axis === 'horizontal'
+    ? { x: track.x + along, y: track.y + track.height - track.thickness / 2 }
+    : { x: track.x + track.width - track.thickness / 2, y: track.y + along }
+}
+
+function readTrack(scroller: Locator, axis: Axis) {
+  return scroller.evaluate((element: HTMLElement, along: Axis) => {
+    const sideways = along === 'horizontal'
+    const { x, y, width, height } = element.getBoundingClientRect()
+    return {
+      x,
+      y,
+      width,
+      height,
+      thickness: sideways
+        ? element.offsetHeight - element.clientHeight
+        : element.offsetWidth - element.clientWidth,
+      client: sideways ? element.clientWidth : element.clientHeight,
+      scroll: sideways ? element.scrollWidth : element.scrollHeight,
+      offset: sideways ? element.scrollLeft : element.scrollTop,
+    }
+  }, axis)
 }
