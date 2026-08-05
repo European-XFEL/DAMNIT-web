@@ -13,7 +13,7 @@ import {
   TableTooltip,
   type CellTooltip,
 } from '#src/features/table/components/tooltips/table-tooltip'
-import { ZERO_BOUNDS, toBounds } from '#src/features/table/bounds'
+import { ZERO_BOUNDS, toBounds } from '#src/features/table/utils/bounds'
 import { assertNever } from '#src/utils/helpers'
 
 const DELAY = { open: 200, switch: 60, close: 200 }

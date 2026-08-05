@@ -45,16 +45,15 @@ def get_preview_data(proposal, run, variable):
 
     attrs = None
     match dtype:
-        case DamnitType.ARRAY | DamnitType.IMAGE:
+        case DamnitType.ARRAY_1D | DamnitType.ARRAY_2D:
             data = get_array(data)
-        case DamnitType.RGBA:
+        case DamnitType.IMAGE:
             attrs = {
                 "shape": list(
                     data.shape[:2]  # FIX: # pyright: ignore[reportAttributeAccessIssue]
                 )
             }
             data = get_png(data)
-            dtype = DamnitType.PNG
 
     return standardize(data, name=variable, dtype=dtype.value, attrs=attrs)
 
@@ -81,7 +80,7 @@ def get_array(data):
 def get_damnit_type(data, *, type_hint=None):  # noqa: C901
     match type_hint:
         case DataType.Image:
-            return DamnitType.RGBA
+            return DamnitType.IMAGE
         case DataType.Timestamp:
             return DamnitType.TIMESTAMP
         case None:
@@ -94,7 +93,7 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
                     return DamnitType.NUMBER
                 raise ValueError(NOT_SUPPORTED_MESSAGE)
             if data.ndim == 3 and data.shape[-1] in (3, 4):
-                return DamnitType.RGBA
+                return DamnitType.IMAGE
         case DataType.Dataset | DataType.PlotlyFigure:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 
@@ -103,9 +102,9 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
 
     match data.ndim:
         case 1:
-            return DamnitType.ARRAY
+            return DamnitType.ARRAY_1D
         case 2:
-            return DamnitType.IMAGE
+            return DamnitType.ARRAY_2D
         case _:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 

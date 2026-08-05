@@ -62,12 +62,12 @@ export async function selectCells(page: Page, cells: Cell[]) {
   )
 }
 
-// Right-click a cell and pick "Plot: data". Right-clicking a cell that is not
+// Right-click a cell and pick "Plot: preview". Right-clicking a cell that is not
 // already selected resets the selection to it, so build any multi-run range
 // with selectCells first, then right-click one of the selected cells.
-export async function openDataPlot(page: Page, cell: Cell) {
+export async function openPreviewPlot(page: Page, cell: Cell) {
   await rightClickCell(page, cell)
-  await contextMenu(page).getByText('Plot: data').click()
+  await contextMenu(page).getByText('Plot: preview').click()
 }
 
 // The plot dialog ("Display Plot" -> "Plot Settings" modal). Returns the dialog

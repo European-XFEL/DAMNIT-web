@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { PREVIEW_DTYPES } from '@damnit-frontend/shared/constants'
 import type {
   RunData,
   Runs,
@@ -50,6 +51,56 @@ function readJson<T>(dir: string, name: string): T {
 }
 
 const runs = readJson<Runs>(base, 'runs.json')
+
+// How many dimensions each preview dtype carries. A dtype that is absent here
+// is a scalar, which carries none.
+const DIMS_BY_DTYPE: Record<string, number> = { array1d: 1, array2d: 2 }
+
+function checkPreviewPayload(name: string, payload: ExtractedData): void {
+  if (!PREVIEW_DTYPES.has(payload.dtype)) {
+    throw new Error(
+      `'${name}' has an unknown preview dtype '${payload.dtype}'; ` +
+        'update the fixture or the demo data'
+    )
+  }
+
+  // A dtype that keeps its name but changes meaning passes the check above,
+  // so check the payload too: array2d has two dims, array1d one, scalar none.
+  const expected = DIMS_BY_DTYPE[payload.dtype] ?? 0
+  const dims = Array.isArray(payload.dims) ? payload.dims.length : 0
+  if (dims !== expected) {
+    throw new Error(
+      `'${name}' is '${payload.dtype}' and should carry ${expected} dims, not ${dims}`
+    )
+  }
+
+  // A picture arrives already rendered to a base64 png, never as an array.
+  if (payload.dtype === 'image' && typeof payload.data !== 'string') {
+    throw new Error(`'${name}' is an image but its data is not a base64 string`)
+  }
+
+  // One level of nesting per dimension. An empty array has no depth to read.
+  if (Array.isArray(payload.data) && payload.data.length > 0) {
+    const nested = Array.isArray(payload.data[0])
+    const shouldNest = expected > 1
+    if (nested !== shouldNest) {
+      throw new Error(
+        `'${name}' is '${payload.dtype}' but its data is ${nested ? 'nested' : 'flat'}`
+      )
+    }
+  }
+}
+
+// Every payload is checked at load. The demo serves these same files, so a
+// vocabulary change that leaves one behind fails here, not in the shipped demo.
+for (const run of readdirSync(join(base, 'data'))) {
+  for (const file of readdirSync(join(base, 'data', run))) {
+    checkPreviewPayload(
+      `${run}/${file}`,
+      readJson<ExtractedData>(join(base, 'data', run), file)
+    )
+  }
+}
 
 export const XPCS = {
   meta: runs.meta,

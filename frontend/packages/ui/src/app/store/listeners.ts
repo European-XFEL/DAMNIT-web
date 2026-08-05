@@ -9,8 +9,12 @@ import {
   removePlot,
   reset as resetPlots,
 } from '#src/features/plots/plots.slice'
-import { plotRequested, selectRun } from '#src/features/table/table.slice'
+import {
+  plotRequested,
+  selectRun,
+} from '#src/features/table/stores/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
+import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
 import { cache } from '#src/graphql/apollo'
 import { isEmpty } from '#src/utils/helpers'
 
@@ -20,23 +24,48 @@ import { startAppListening } from './listener-middleware'
 export function registerAppListeners() {
   startAppListening({
     actionCreator: resetProposal,
-    effect: (_, { dispatch }) => {
+    effect: (_, { dispatch, getOriginalState }) => {
       dispatch(contextfileApi.util.resetApiState())
 
-      // Drop every proposal-scoped ROOT_QUERY field, keeping only the home
-      // list's proposal_metadata. An allowlist means a new proposal-scoped
-      // field is dropped automatically. Apollo defers a watcher's unsubscribe
-      // by a macrotask, so the dashboard's metadata watch is still live here;
-      // clearing synchronously drops the departing proposal before the next
-      // one mounts, where a deferred clear would instead wipe the next
-      // proposal's freshly cached data. gc only reclaims orphaned entities, so
-      // defer it off the transition frame.
-      cache.modify({
-        id: 'ROOT_QUERY',
-        fields: (value, { fieldName, DELETE }) =>
-          fieldName === 'proposal_metadata' ? value : DELETE,
-      })
-      setTimeout(() => cache.gc())
+      // The proposal being left. Read from the original state because this
+      // action is what clears it.
+      const departed = getOriginalState().metadata.proposal.value
+      if (!departed) {
+        return
+      }
+
+      forgetRunsTruncation(departed)
+
+      // Drop that proposal's cached fields, and only that proposal's: every
+      // one of them carries the number in its arguments, so the next proposal's
+      // fields cannot be caught by this.
+      //
+      // Deferred, because the eviction would otherwise land on watchers that
+      // are still subscribed. React runs a removed subtree's cleanups parent
+      // first, so this listener fires while the departing pages' watchers are
+      // alive, and dirtying them makes each one refetch a proposal the user has
+      // already left. Apollo defers its unsubscribes by a macrotask, so wait
+      // out both that and the microtasks queued ahead of it. Scoping is what
+      // makes waiting safe: by the time this runs the next proposal may have
+      // cached data, and none of it is ours to drop.
+      Promise.resolve().then(() =>
+        setTimeout(() => {
+          cache.modify({
+            id: 'ROOT_QUERY',
+            fields: (value, { storeFieldName, DELETE }) =>
+              storeFieldName.includes(`"proposal":"${departed}"`)
+                ? DELETE
+                : value,
+          })
+          // This is what reclaims the memory, not a tidy-up. Runs normalize to
+          // top-level `DamnitRun:{...}` entries, so dropping the fields above
+          // only removes the references to them; the entries themselves sit
+          // there as orphans, images and all, until the collector runs. The read
+          // memo has to go with them: it holds the results read out of those
+          // entries, so leaving it would keep the payload alive past the sweep.
+          cache.gc({ resetResultCache: true })
+        })
+      )
     },
   })
 

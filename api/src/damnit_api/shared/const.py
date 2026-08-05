@@ -13,10 +13,7 @@ class DamnitType(Enum):
     TIMESTAMP = "timestamp"
     COMPLEX = "complex"
 
-    ARRAY = "array"
+    ARRAY_1D = "array1d"
+    ARRAY_2D = "array2d"
     IMAGE = "image"
     NUMPY = "numpy"
-    RGBA = "rgba"
-
-    PNG = "png"
-    DATASET = "dataset"

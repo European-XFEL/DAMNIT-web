@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "exports": {
+    "./constants": "./src/constants.ts",
     "./mocks": "./src/mocks/index.ts"
   },
   "scripts": {
@@ -11,9 +12,13 @@
     "lint:prettier": "prettier --check --cache --ignore-path ../../.prettierignore .",
     "lint:tsc": "tsc -b --noEmit"
   },
+  "peerDependencies": {
+    "graphql": "catalog:graphql"
+  },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
     "eslint": "catalog:linting",
+    "graphql": "catalog:graphql",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"
   }

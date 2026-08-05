@@ -482,6 +482,9 @@ importers:
       globals:
         specifier: catalog:linting
         version: 16.0.0
+      graphql:
+        specifier: catalog:graphql
+        version: 16.10.0
       monaco-editor:
         specifier: catalog:components
         version: 0.55.1
@@ -543,6 +546,9 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.22.0
+      graphql:
+        specifier: catalog:graphql
+        version: 16.10.0
       prettier:
         specifier: catalog:linting
         version: 3.6.2
@@ -551,6 +557,10 @@ importers:
         version: 5.9.3
 
   packages/ui:
+    dependencies:
+      '@damnit-frontend/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@apollo/client':
         specifier: catalog:graphql

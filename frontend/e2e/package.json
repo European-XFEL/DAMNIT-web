@@ -25,6 +25,7 @@
     "@types/node": "catalog:types",
     "eslint": "catalog:linting",
     "globals": "catalog:linting",
+    "graphql": "catalog:graphql",
     "monaco-editor": "catalog:components",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"

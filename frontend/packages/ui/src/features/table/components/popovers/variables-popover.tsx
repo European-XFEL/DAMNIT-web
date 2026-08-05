@@ -3,15 +3,17 @@ import lodashSize from 'lodash/size'
 import { Checkbox, rem } from '@mantine/core'
 import { IconCheck, IconList, IconCircle } from '@tabler/icons-react'
 
-import { ControlButton } from '#src/features/table/components/control-button'
+import { getTitleByName } from '#src/data/table/table-data.transforms'
+import { useTableMeta } from '#src/data/table/use-table-meta'
 import {
   useColumnVisibilityFromTags,
   useColumnVisibilityFromVariables,
 } from '#src/features/table/hooks/use-column-visibility'
-import { selectTagSelection } from '#src/features/table/store/selectors'
-import { setVariableVisibility } from '#src/features/table/table.slice'
+import { selectTagSelection } from '#src/features/table/stores/table.selectors'
+import { setVariableVisibility } from '#src/features/table/stores/table.slice'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
+import { ControlButton } from './control-button'
 import { SearchableTable } from './searchable-table'
 import { RowDetails, RowItemCheckbox } from './row-details'
 import { BasePopover } from './base-popover'
@@ -23,7 +25,7 @@ type VariableDetailsProps = {
 }
 
 function VariableDetails({ name }: VariableDetailsProps) {
-  const metadata = useAppSelector((state) => state.tableData.metadata.variables)
+  const { variables: metadata } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
 
   const items = metadata[name].tags.map((tagName) => ({
@@ -67,22 +69,20 @@ type VariableRecord = {
 function VariablesTable() {
   const dispatch = useAppDispatch()
 
-  const metadata = useAppSelector((state) => state.tableData.metadata.variables)
+  const { variables: metadata } = useTableMeta()
 
   const visibilityFromVariables = useColumnVisibilityFromVariables()
   const visibilityFromTags = useColumnVisibilityFromTags()
 
   const records = useMemo(
     () =>
-      Object.entries(visibilityFromVariables).map(([variable, isVisible]) => {
-        const meta = metadata?.[variable]
-
-        return {
+      Object.entries(visibilityFromVariables).map(
+        ([variable, isVisible]): VariableRecord => ({
           name: variable,
-          title: meta?.title ?? variable,
+          title: getTitleByName(metadata, variable),
           isVisible,
-        } as VariableRecord
-      }),
+        })
+      ),
     [visibilityFromVariables, metadata]
   )
 

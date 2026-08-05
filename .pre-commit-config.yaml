@@ -35,7 +35,7 @@ repos:
 
     # ruff walks up from each file to find api/ruff.toml automatically
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.14.13
+      rev: v0.15.8
       hooks:
           - id: ruff-check
             files: ^api/

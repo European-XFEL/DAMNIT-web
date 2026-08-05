@@ -4,16 +4,18 @@ import lodashSize from 'lodash/size'
 import { Anchor, rem } from '@mantine/core'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
 
-import { ControlButton } from '#src/features/table/components/control-button'
-import { NONCONFIGURABLE_VARIABLES } from '#src/features/table/constants'
+import { getVariableTitle } from '#src/data/table/table-data.transforms'
+import { useTableMeta } from '#src/data/table/use-table-meta'
+import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import { useColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
-import { selectTagSelection } from '#src/features/table/store/selectors'
+import { selectTagSelection } from '#src/features/table/stores/table.selectors'
 import {
   clearTagSelection,
   setTagSelection,
-} from '#src/features/table/table.slice'
+} from '#src/features/table/stores/table.slice'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
+import { ControlButton } from './control-button'
 import { SearchableTable } from './searchable-table'
 import { RowDetails, RowItemCheckbox } from './row-details'
 import { BasePopover } from './base-popover'
@@ -28,9 +30,7 @@ type TagDetailProps = {
 }
 
 function TagDetail({ name }: TagDetailProps) {
-  const { variables, tags } = useAppSelector(
-    (state) => state.tableData.metadata
-  )
+  const { variables, tags } = useTableMeta()
   const columnVisibility = useColumnVisibility()
 
   const items = tags[name].variables
@@ -44,7 +44,7 @@ function TagDetail({ name }: TagDetailProps) {
 
       return {
         name: varMeta.name,
-        title: varMeta.title ?? varMeta.name,
+        title: getVariableTitle(varMeta),
         selected: columnVisibility[varName],
       }
     })
@@ -78,7 +78,7 @@ function TagDetail({ name }: TagDetailProps) {
 export function TagsTable() {
   const dispatch = useAppDispatch()
   const selection = useAppSelector(selectTagSelection)
-  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const { tags } = useTableMeta()
 
   const records = useMemo(() => {
     return Object.keys(tags)

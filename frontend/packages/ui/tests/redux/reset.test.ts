@@ -1,37 +1,16 @@
-import { expect, test, vi } from 'vitest'
-import { gql } from '@apollo/client'
+import { expect, test } from 'vitest'
 
-import { cache } from '#src/graphql/apollo'
 import { authApi, type UserInfo } from '#src/features/auth/auth.api'
 import { selectUserFullName } from '#src/features/auth/auth.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
-import { getTable, updateTable } from '#src/data/table/table-data.slice'
 import { resetProposal } from '#src/app/store/actions'
 import type { RootState } from '#src/app/store/reducer'
 import { setupStore } from '#src/app/store/store'
 
-// Leaving a proposal drops every proposal-scoped cache, in both Apollo and RTK
-// Query. Only the session (authApi) and the proposal list (proposal_metadata)
-// survive.
-
-// A real cache, so the eviction below is observable. The slices reach the
-// client through their services, and importing the real one opens a websocket
-// from a Node test.
-vi.mock('#src/graphql/apollo', async () => {
-  const { InMemoryCache } = await import('@apollo/client')
-  return { cache: new InMemoryCache(), client: {} }
-})
-
-// getTable normally reaches the network through the client; stub the service so
-// the thunk resolves without one, letting the stale-fetch guard be exercised.
-vi.mock('#src/data/table/table-data.services', () => ({
-  default: {
-    getTable: vi.fn(async () => ({
-      data: { '7': { run: { value: 7, dtype: 'number' } } },
-      metadata: { variables: {}, runs: ['7'], timestamp: 1, tags: {} },
-    })),
-  },
-}))
+// Leaving a proposal returns every proposal-scoped redux slice to its initial
+// state and drops the RTK Query context-file cache. The Apollo cache is left
+// warm on purpose (a run is keyed by database, proposal, run), and the session
+// (authApi) survives.
 
 // upsertQueryData pipes the value through transformResponse, so the fixture
 // feeds the wire shape. Handing it a UserInfo instead leaves proposals
@@ -43,27 +22,6 @@ const user = {
   email: 'ada@example.org',
   proposals_by_year_half: { '202401': [6996] },
 } as unknown as UserInfo
-
-async function signedInStoreShowingRun() {
-  const store = setupStore()
-
-  await store.dispatch(
-    authApi.util.upsertQueryData('getUserInfo', undefined, user)
-  )
-  store.dispatch(
-    updateTable({
-      data: { '5': { run: { value: 5, dtype: 'number' } } },
-      metadata: {
-        variables: { run: { name: 'run', tags: [] } },
-        runs: ['5'],
-        timestamp: 1,
-        tags: {},
-      },
-    })
-  )
-
-  return store
-}
 
 // Every slice the store owns except the two RTK Query caches, read off the
 // store itself so a slice added later is covered without touching this file.
@@ -87,78 +45,13 @@ test.each(proposalSlices)(
   }
 )
 
-// The dashboard's three root fields alongside the home page's, each with the
-// arguments the real queries send, so eviction has to match every variant.
-const CACHED_FIELDS = gql`
-  query Cached($proposal: String) {
-    runs(database: { proposal: $proposal })
-    metadata(database: { proposal: $proposal })
-    extracted_data(database: { proposal: $proposal }, run: 1, variable: "image")
-    proposal_metadata(proposal_numbers: [6996]) {
-      number
-    }
-  }
-`
-
-test('resetProposal drops the proposal-scoped fields but keeps the proposal list', () => {
-  cache.writeQuery({
-    query: CACHED_FIELDS,
-    variables: { proposal: '6996' },
-    data: {
-      runs: { '5': { run: 5 } },
-      metadata: { runs: ['5'] },
-      extracted_data: { value: 'png' },
-      proposal_metadata: [{ __typename: 'ProposalMetadata', number: 6996 }],
-    },
-  })
+test('resetProposal keeps the user signed in', async () => {
   const store = setupStore()
-
-  store.dispatch(resetProposal())
-
-  const rootQuery = cache.extract().ROOT_QUERY ?? {}
-  const survivors = Object.keys(rootQuery)
-    .filter((key) => key !== '__typename')
-    .map((key) => key.split('(')[0])
-  expect(survivors).toEqual(['proposal_metadata'])
-})
-
-test('resetProposal clears the table but keeps the user signed in', async () => {
-  const store = await signedInStoreShowingRun()
-
-  store.dispatch(resetProposal())
-
-  expect(store.getState().tableData.data).toEqual({})
-  expect(selectUserFullName(store.getState())).toBe('Ada Lovelace')
-})
-
-const PROPOSAL = '6996'
-
-function storeOnProposal(value: string) {
-  return setupStore({
-    metadata: { proposal: { value, loading: false, notFound: false } },
-  })
-}
-
-test('a table fetch still on the open proposal populates the table', async () => {
-  const store = storeOnProposal(PROPOSAL)
-
-  await store.dispatch(getTable({ proposal: PROPOSAL, page: 1, pageSize: 10 }))
-
-  expect(store.getState().tableData.data).toEqual({
-    '7': { run: { value: 7, dtype: 'number' } },
-  })
-})
-
-test('a table fetch that resolves after leaving the proposal is dropped', async () => {
-  const store = storeOnProposal(PROPOSAL)
-
-  // The fetch is in flight when the user leaves, so resetProposal runs first
-  // and the late fulfillment must not repopulate the reset slice.
-  const pending = store.dispatch(
-    getTable({ proposal: PROPOSAL, page: 1, pageSize: 10 })
+  await store.dispatch(
+    authApi.util.upsertQueryData('getUserInfo', undefined, user)
   )
-  store.dispatch(resetProposal())
-  await pending
 
-  expect(store.getState().tableData.data).toEqual({})
+  store.dispatch(resetProposal())
+
+  expect(selectUserFullName(store.getState())).toBe('Ada Lovelace')
 })

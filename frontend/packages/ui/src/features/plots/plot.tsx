@@ -1,6 +1,6 @@
 import Plotly from 'react-plotly.js'
 
-import { type PlotInfo, type PlotMetadata } from './plots.types'
+import { type PlotData, type PlotMeta } from './plots.types'
 
 type Plot = {
   data: Plotly.Data[]
@@ -13,19 +13,19 @@ type Plot = {
  * -----------------------------
  */
 
-const scatterPlot = ({ data }: PlotInfo): Plot => {
-  const plotData = data.reduce<Plotly.ScatterData[]>((acc, d) => {
-    if (d.x?.value == null || d.y?.value == null) {
+const scatterPlot = ({ traces }: PlotData): Plot => {
+  const plotData = traces.reduce<Plotly.ScatterData[]>((acc, trace) => {
+    if (trace.x?.value == null || trace.y?.value == null) {
       return acc
     }
-    const trace = {
-      x: d.x.value as number[],
-      y: d.y.value as number[],
-      name: d.y?.name,
+    const plotTrace = {
+      x: trace.x.value as number[],
+      y: trace.y.value as number[],
+      name: trace.y?.name,
       mode: 'markers',
       type: 'scatter',
     }
-    acc.push(trace as Plotly.ScatterData)
+    acc.push(plotTrace as Plotly.ScatterData)
     return acc
   }, [])
 
@@ -46,9 +46,9 @@ const getDynamicHeight = (height: number) => {
   return Math.min(Math.max(height * yScale, minHeight), maxHeight)
 }
 
-const heatmapPlot = ({ data, metadata }: PlotInfo): Plot => {
-  const [zmin, zmax] = metadata.colormap_range ?? [undefined, undefined]
-  const { x, y, z } = data[0]
+const heatmapPlot = ({ traces, meta }: PlotData): Plot => {
+  const [zmin, zmax] = meta.colormap_range ?? [undefined, undefined]
+  const { x, y, z } = traces[0]
 
   if (!x || !y || !z) {
     throw new Error('Unable to plot heatmap: missing required data.')
@@ -99,9 +99,9 @@ function isAllowedPlotType(type: unknown): type is AllowedPlotTypes {
 }
 
 function getPlot<T extends AllowedPlotTypes>(
-  info: PlotInfo & { metadata: { type: T } }
+  plot: PlotData & { meta: { type: T } }
 ) {
-  return PLOTS[info.metadata.type](info) as ReturnType<(typeof PLOTS)[T]>
+  return PLOTS[plot.meta.type](plot) as ReturnType<(typeof PLOTS)[T]>
 }
 
 /*
@@ -110,12 +110,12 @@ function getPlot<T extends AllowedPlotTypes>(
  * -----------------------------
  */
 
-type PlotProps = PlotInfo
+type PlotProps = PlotData
 
-const Plot = ({ data, metadata }: PlotProps) => {
+const Plot = ({ traces, meta }: PlotProps) => {
   const defaultLayout = {
-    xaxis: { title: metadata.x?.name },
-    yaxis: { title: { text: metadata.y?.name, standoff: 20 } },
+    xaxis: { title: meta.x?.name },
+    yaxis: { title: { text: meta.y?.name, standoff: 20 } },
     margin: {
       t: 40,
     },
@@ -126,13 +126,13 @@ const Plot = ({ data, metadata }: PlotProps) => {
     modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoscale'],
   }
 
-  if (!isAllowedPlotType(metadata.type)) {
+  if (!isAllowedPlotType(meta.type)) {
     return null
   }
 
   const { data: plotData, layout: plotLayout } = getPlot({
-    data,
-    metadata: metadata as PlotMetadata & { type: AllowedPlotTypes },
+    traces,
+    meta: meta as PlotMeta & { type: AllowedPlotTypes },
   })
 
   return (

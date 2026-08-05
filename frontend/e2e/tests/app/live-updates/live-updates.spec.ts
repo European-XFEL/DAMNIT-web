@@ -20,12 +20,12 @@ import {
 // image-preview.spec. Every updated run sits in the initial vertical fold.
 test.use({ viewport: { width: 1600, height: 900 } })
 
-// A subscription push carries the full runs and variables. The reducer merges
-// metadata, so the seed's tags survive and the push omits them (as the backend
-// does); the mock stamps the timestamp. runs stays numeric to match the seed and
-// the backend; a caller overrides it to add a run.
+// A subscription push carries the full metadata snapshot: runs, variables, and
+// tags. The client replaces its metadata wholesale, exactly as the backend
+// sends it, so the push carries tags too. The mock stamps the timestamp; runs
+// stays numeric to match the seed, and a caller overrides it to add a run.
 function fullMetadata(runs: number[]) {
-  return { runs, variables: XPCS.meta.variables }
+  return { runs, variables: XPCS.meta.variables, tags: XPCS.meta.tags }
 }
 
 test('a finished run appears as a new row', async ({ page, api, example }) => {
@@ -33,10 +33,10 @@ test('a finished run appears as a new row', async ({ page, api, example }) => {
   const grid = page.locator('[role="grid"]')
   const seedRuns = XPCS.meta.runs.length
 
-  // Wait for the seed's data to land before pushing, so getTable.fulfilled cannot
-  // revert the new run afterwards. Gate on a populated cell, not aria-rowcount:
-  // the metadata query fills runs (and the row count) with no cell data, so the
-  // row count can reach seedRuns + 1 before getTable.fulfilled has landed.
+  // Wait for the seed's data to land before pushing, so the page's own rows
+  // cannot revert the new run afterwards. Gate on a populated cell, not
+  // aria-rowcount: the metadata query fills runs (and the row count) with no
+  // cell data, so the row count can reach seedRuns + 1 before the rows land.
   await expect(
     cell(page, { col: columnOf('n_trains'), row: 0 })
   ).not.toBeEmpty()
@@ -66,9 +66,9 @@ test("an existing run's value updates live", async ({ page, api, example }) => {
   await openProposal(page, example)
   const trains = cell(page, { col: columnOf('n_trains'), row: 0 })
 
-  // Wait for the seed value to land before pushing, so getTable.fulfilled cannot
-  // revert the update afterwards. The push then sets a value the seed never had,
-  // so the cell text flipping to it proves the update rendered.
+  // Wait for the seed value to land before pushing, so the page's own rows
+  // cannot revert the update afterwards. The push then sets a value the seed
+  // never had, so the cell text flipping to it proves the update rendered.
   await expect(trains).not.toBeEmpty()
   const updated = '999999'
   await expect(trains).not.toHaveText(updated)
@@ -95,7 +95,7 @@ test.describe('a deferred image resolves after its run finished', () => {
     const preview = card.locator('img')
 
     // Wait for the seed data to land (run 1's n_trains is populated) before
-    // pushing, so getTable.fulfilled cannot revert the image afterwards.
+    // pushing, so the page's own rows cannot revert the image afterwards.
     await expect(
       cell(page, { col: columnOf('n_trains'), row: 0 })
     ).not.toBeEmpty()

@@ -5,11 +5,12 @@ import reducer, {
   removePlot,
   setCurrentPlot,
 } from '#src/features/plots/plots.slice'
+import { type PlotSpec } from '#src/types'
 
-const plot = (variables: string[]) => ({
+const plot = (variables: string[]): PlotSpec => ({
   variables,
   runs: [],
-  source: 'scalar',
+  source: 'summary',
 })
 
 describe('addPlot', () => {
