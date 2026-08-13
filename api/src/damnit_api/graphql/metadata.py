@@ -60,7 +60,7 @@ def _signature(snapshot) -> str:
     changes, which would make every tick look like a metadata change.
     """
     payload = json.dumps(
-        {key: snapshot[key] for key in ("runs", "variables", "tags")},
+        {key: value for key, value in snapshot.items() if key != "timestamp"},
         sort_keys=True,
         default=str,
     )
