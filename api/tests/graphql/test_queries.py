@@ -503,6 +503,27 @@ async def test_metadata_query(graphql_schema):
 
 
 @pytest.mark.asyncio
+async def test_metadata_query_lists_a_tags_variables_in_column_order(graphql_schema):
+    query = """
+        query TableMetadataQuery($proposal: String) {
+          metadata(database: { proposal: $proposal }) {
+            tags
+          }
+        }
+    """
+    result = await graphql_schema.execute(
+        query,
+        variable_values={"proposal": str(PROPOSAL)},
+    )
+
+    assert result.errors is None
+    assert result.data["metadata"]["tags"]["eTOF"]["variables"] == [
+        "etof.eTOF_calibration",
+        "etof.eTOF_response_width",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_runs_forbidden(graphql_schema_authenticated_non_member):
     query = f"""
         query {{

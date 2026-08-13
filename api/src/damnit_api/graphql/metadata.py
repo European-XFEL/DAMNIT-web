@@ -31,8 +31,8 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
 
     variables = {**DamnitRun.known_variables(), **variables}
 
-    for name, var_tags in variable_tags.items():
-        for tag in var_tags:
+    for name in variables:
+        for tag in variable_tags.get(name, []):
             tags[tag].setdefault("variables", []).append(name)
 
     untagged = {

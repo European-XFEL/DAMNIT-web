@@ -79,13 +79,15 @@ EXAMPLE_TAGS = create_map(
 # -----------------------------------------------------------------------------
 # Variable -> tag mapping (as returned by async_variable_tags)
 
+# The join table has no order of its own, so the two eTOF rows come back the
+# other way round from the variables above.
 EXAMPLE_VARIABLE_TAGS = {
     "n_trains": [],
     "run_length": [],
     "xgm_intensity": [],
     "etof_settings.ret0": [1],
-    "etof.eTOF_calibration": [7],
     "etof.eTOF_response_width": [7],
+    "etof.eTOF_calibration": [7],
 }
 
 # What `fetch_metadata` makes of the three above: each variable carries the
