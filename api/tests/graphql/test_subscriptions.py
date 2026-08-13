@@ -344,7 +344,7 @@ def test_filter_for_client_cursorless_client_receives_this_tick():
 def test_filter_for_client_delivers_metadata_without_changed_runs():
     snapshot = _snapshot({(PROPOSAL, 1): 100.0})
     metadata = TableMeta(
-        runs=[], variables={}, tags={}, timestamp=snapshot["max_timestamp"]
+        runs=[], variables={}, tags={}, groups={}, timestamp=snapshot["max_timestamp"]
     )
 
     result = filter_for_client(snapshot, since=300.0, metadata=metadata)

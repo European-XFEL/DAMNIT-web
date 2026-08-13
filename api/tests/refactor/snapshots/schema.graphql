@@ -99,6 +99,7 @@ type TableMeta {
   runs: [RunId!]!
   variables: JSON!
   tags: JSON!
+  groups: JSON!
   timestamp: Timestamp!
 }
 

@@ -222,6 +222,7 @@ class TableMeta:
     runs: list[RunId]
     variables: JSON
     tags: JSON
+    groups: JSON
     timestamp: Timestamp
 
     @classmethod
@@ -233,5 +234,6 @@ class TableMeta:
             ],
             variables=snapshot["variables"],
             tags=snapshot["tags"],
+            groups=snapshot["groups"],
             timestamp=snapshot["timestamp"],
         )
