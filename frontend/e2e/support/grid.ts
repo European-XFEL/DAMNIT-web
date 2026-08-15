@@ -6,7 +6,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
 // never receives these events. These helpers turn an a11y column/row index into
 // a canvas point.
 //
-// COLUMN_WIDTH matches formatColumns (width: 100) in features/table/table.tsx.
+// COLUMN_WIDTH matches the width the gridColumns memo sets in
+// features/table/table.tsx.
 // HEADER_HEIGHT and ROW_HEIGHT are Glide's defaults; ROW_MARKER_WIDTH is Glide's
 // auto width for a clickable-number marker at this row count (<=100 rows -> 32).
 // The math assumes no horizontal scroll and that the nav and aside are collapsed
@@ -16,6 +17,15 @@ export const ROW_MARKER_WIDTH = 32
 export const COLUMN_WIDTH = 100
 export const HEADER_HEIGHT = 36
 export const ROW_HEIGHT = 34
+
+// A grouped proposal gains a second header row above the titles, pushing them
+// and every row down. Matches GROUP_HEADER_HEIGHT in features/table/table.tsx.
+export const GROUP_HEADER_HEIGHT = 24
+
+// Wide enough to keep every column inside the horizontal fold, which the
+// coordinate helpers and columnTitles need, and above Mantine's `sm`
+// breakpoint, below which the tab bar hides.
+export const WIDE_VIEWPORT = { width: 1600, height: 900 }
 
 export type Box = { x: number; y: number; width: number; height: number }
 export type Cell = { col: number; row: number }
@@ -46,15 +56,43 @@ export function columnCenter(box: Box, col: number): number {
   return x
 }
 
-export function headerPoint(box: Box, col: number) {
-  return { x: columnCenter(box, col), y: box.y + HEADER_HEIGHT / 2 }
+// Everything below the group row starts this far down. Callers derive `grouped`
+// from the example under test rather than deciding it per call.
+function headerTop(grouped: boolean): number {
+  return grouped ? GROUP_HEADER_HEIGHT : 0
 }
 
-// Rows start below the fixed header; `row` is 0-based.
-export function cellPoint(box: Box, { col, row }: Cell) {
+// The title of a column, below the group row if there is one.
+export function headerPoint(
+  box: Box,
+  { col, grouped = false }: { col: number; grouped?: boolean }
+) {
   return {
     x: columnCenter(box, col),
-    y: box.y + HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2,
+    y: box.y + headerTop(grouped) + HEADER_HEIGHT / 2,
+  }
+}
+
+// The group box above a column, on a proposal that has groups. The row spans
+// the full width, so an ungrouped column has a box too, blank and inert. With
+// no groups at all Glide paints no row and this point lands in the titles.
+export function groupHeaderPoint(box: Box, col: number) {
+  return { x: columnCenter(box, col), y: box.y + GROUP_HEADER_HEIGHT / 2 }
+}
+
+// Rows start below the header rows; `row` is 0-based.
+export function cellPoint(
+  box: Box,
+  { col, row, grouped = false }: Cell & { grouped?: boolean }
+) {
+  return {
+    x: columnCenter(box, col),
+    y:
+      box.y +
+      headerTop(grouped) +
+      HEADER_HEIGHT +
+      row * ROW_HEIGHT +
+      ROW_HEIGHT / 2,
   }
 }
 

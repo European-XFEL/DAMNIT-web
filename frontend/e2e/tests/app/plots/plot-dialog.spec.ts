@@ -1,16 +1,16 @@
 import { previewRunFields } from '@damnit-frontend/shared/mocks'
 import { test, expect } from '#fixtures'
+import { WIDE_VIEWPORT } from '#support/grid'
 import { openProposal, titleOf } from '#support/table'
 import {
   chooseVariable,
   openPlotDialog,
-  PLOT_VIEWPORT,
   plotFigure,
   plotTab,
   submitPlot,
 } from '#support/plots'
 
-test.use({ viewport: PLOT_VIEWPORT })
+test.use({ viewport: WIDE_VIEWPORT })
 
 test('submitting with no variable shows a validation error and keeps the dialog open', async ({
   page,
@@ -35,11 +35,14 @@ test('choosing a Y variable plots a summary against Run', async ({
   const dialog = await openPlotDialog(page)
 
   // X defaults to Run, so choosing only Y plots the variable against the run.
-  await chooseVariable(dialog, { label: 'Y-axis', title: titleOf('n_trains') })
+  await chooseVariable(dialog, {
+    label: 'Y-axis',
+    title: titleOf(example, 'n_trains'),
+  })
   await submitPlot(dialog)
 
   await expect(
-    plotTab(page, `Summary: ${titleOf('n_trains')} vs. Run`)
+    plotTab(page, `Summary: ${titleOf(example, 'n_trains')} vs. Run`)
   ).toBeVisible()
   await expect(plotFigure(page)).toBeVisible()
 })
@@ -74,12 +77,12 @@ test('plotting a preview for a custom run set opens a preview plot for those run
   await dialog.getByText('Plot preview').click()
   await chooseVariable(dialog, {
     label: 'Variable',
-    title: titleOf('xgm_intensity'),
+    title: titleOf(example, 'xgm_intensity'),
   })
   await dialog.getByPlaceholder('e.g. 1,2,3,6-20,22').fill('7,9')
   await submitPlot(dialog)
 
-  const tab = plotTab(page, `Preview: ${titleOf('xgm_intensity')}`)
+  const tab = plotTab(page, `Preview: ${titleOf(example, 'xgm_intensity')}`)
   await expect(tab).toBeVisible()
   await expect(tab).toContainText('run 7-9')
   await expect(plotFigure(page)).toBeVisible()
