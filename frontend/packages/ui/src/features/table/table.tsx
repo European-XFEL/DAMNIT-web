@@ -6,6 +6,7 @@ import {
   type DataEditorProps,
   type DataEditorRef,
   type GridSelection,
+  type GroupHeaderClickedEventArgs,
   type HeaderClickedEventArgs,
   type Item,
   type Rectangle,
@@ -31,6 +32,7 @@ import {
   textCell,
   type ErrorColors,
 } from '#src/features/table/utils/cells'
+import { getColumnTitle } from '#src/features/table/utils/column-title'
 import { countPinnedColumns } from '#src/features/table/utils/pinned-columns'
 import { TagsPopover } from '#src/features/table/components/popovers/tags-popover'
 import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
@@ -46,18 +48,6 @@ import {
   selectRun,
 } from '#src/features/table/stores/table.slice'
 
-type Column = {
-  id: string
-  title: string
-}
-
-const formatColumns = (columns: Column[]) => {
-  return columns.map((column) => ({
-    ...column,
-    width: 100,
-  }))
-}
-
 export type TableProps = {
   grid?: DataEditorProps
   paginated?: boolean
@@ -65,13 +55,17 @@ export type TableProps = {
 
 const PAGE_SIZE = 10
 
+// Shorter than the 36px title row below it: Glide paints both rows in the same
+// font on the same background, so height is the only lever left.
+const GROUP_HEADER_HEIGHT = 24
+
 const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
 
   // Initialization: Data sources (the Apollo cache, via hooks)
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
-  const { runs } = useTableMeta()
+  const { runs, groups } = useTableMeta()
   const tableVariables = useTableVariables()
   const {
     cellsByKey,
@@ -102,14 +96,58 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         .map((variable) => ({
           id: variable.name,
           title: getVariableTitle(variable),
+          group: variable.group,
         })),
     [tableVariables, columnVisibility]
+  )
+
+  // What the grid draws: the title without the level its group header already
+  // shows. Everywhere else keeps the whole title, plot labels included.
+  // Glide's accessibility mirror has one header row and no group bar, so a
+  // screen reader hears this stripped title with nothing to disambiguate it.
+  const gridColumns = useMemo(
+    () =>
+      tableColumns.map((column) => ({
+        ...column,
+        title: getColumnTitle(column, groups),
+        width: 100,
+      })),
+    [tableColumns, groups]
   )
 
   const pinnedColumns = useMemo(
     () => countPinnedColumns(tableColumns),
     [tableColumns]
   )
+
+  // Glide's own default would paint the raw group key, so the label comes here;
+  // a group whose title the server could not derive keeps that key. It asks once
+  // per visible column on every paint, so resolve the labels once and hand them
+  // back by lookup. `''` is what it passes for an ungrouped one.
+  const groupDetails = useMemo(() => {
+    const details: Record<string, { name: string }> = { '': { name: '' } }
+    for (const name of Object.keys(groups)) {
+      details[name] = { name: groups[name]?.title ?? name }
+    }
+    return details
+  }, [groups])
+
+  // Glide redraws the canvas whenever this changes identity, so keep it stable.
+  const getGroupDetails = useCallback(
+    (group: string) => groupDetails[group] ?? { name: group },
+    [groupDetails]
+  )
+
+  // The box over the ungrouped columns carries no label, so a click on it means
+  // nothing. Glide would otherwise select the whole run, pinned Run included.
+  const handleGroupHeaderClicked = (
+    col: number,
+    event: GroupHeaderClickedEventArgs
+  ) => {
+    if (!tableColumns[col]?.group) {
+      event.preventDefault()
+    }
+  }
 
   // Error-glyph colors resolved from the live theme; dark mode plugs in here.
   const errorColors = useMemo<ErrorColors>(
@@ -246,7 +284,19 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     )
   }
 
-  // Context menus
+  // Context menus. Every one of them is a single plot entry placed at the
+  // pointer, so they differ only in what that entry says and does.
+  const showPlotMenu = (
+    event: CellClickedEventArgs | HeaderClickedEventArgs,
+    item: { title: string; subtitle: string; onClick: () => void }
+  ) => {
+    setContextMenu({
+      localPosition: { x: event.localEventX, y: event.localEventY },
+      bounds: event.bounds,
+      contents: [{ key: 'plot', ...item }],
+    })
+  }
+
   const handleCellContextMenu = (
     [col, row]: Item,
     event: CellClickedEventArgs
@@ -294,22 +344,15 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         selectedRows.map((row) => String(runs[row as number]?.run))
       )
 
-      setContextMenu({
-        localPosition: { x: event.localEventX, y: event.localEventY },
-        bounds: event.bounds,
-        contents: [
-          {
-            key: 'plot',
-            title: 'Plot: preview',
-            subtitle,
-            onClick: () =>
-              addPreviewPlot({
-                variable: variable.id,
-                label: subtitle,
-                runs: runNumbers,
-              }),
-          },
-        ],
+      showPlotMenu(event, {
+        title: 'Plot: preview',
+        subtitle,
+        onClick: () =>
+          addPreviewPlot({
+            variable: variable.id,
+            label: subtitle,
+            runs: runNumbers,
+          }),
       })
     }
   }
@@ -318,13 +361,17 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     event: HeaderClickedEventArgs
   ) => {
     event.preventDefault()
-    const columnSelection = gridSelection.columns.toArray()
 
-    if (!columnSelection.includes(col)) {
-      if (!columnSelection.length) {
-        columnSelection.push(col)
-      }
+    // The row-marker header arrives as -1. Glide guards the group bar against
+    // it but not this one, and it has nothing to select or plot.
+    if (col < 0) {
+      return
+    }
 
+    // Right-clicking outside the selection replaces it, so the menu reads the
+    // selection it is about to show rather than the one it is replacing.
+    const isSelected = gridSelection.columns.hasIndex(col)
+    if (!isSelected) {
       setGridSelection({
         columns: CompactSelection.fromSingleSelection(col),
         rows: CompactSelection.empty(),
@@ -332,49 +379,28 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       })
     }
 
-    if (columnSelection.length === 1) {
-      if (col !== -1) {
-        const variable = tableColumns[col]
-        const subtitle = `${variable.title} vs. Run`
+    const columnSelection = isSelected ? gridSelection.columns.toArray() : [col]
 
-        setContextMenu({
-          localPosition: { x: event.localEventX, y: event.localEventY },
-          bounds: event.bounds,
-          contents: [
-            {
-              key: 'plot',
-              title: 'Plot: summary',
-              subtitle,
-              onClick: () =>
-                addSummaryPlot({
-                  variables: [VARIABLES.run, variable.id],
-                  label: subtitle,
-                }),
-            },
-          ],
-        })
-      }
-    } else if (columnSelection.length === 2) {
-      const col0 = columnSelection.filter((c) => c !== col)[0]
-      const y = tableColumns[col] // the latest selection
-      const x = tableColumns[col0] // the first selection
-
-      const subtitle = `${y.title} vs. ${x.title}`
-
-      setContextMenu({
-        localPosition: { x: event.localEventX, y: event.localEventY },
-        bounds: event.bounds,
-        contents: [
-          {
-            key: 'plot',
-            title: 'Plot: summary',
-            subtitle,
-            onClick: () =>
-              addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
-          },
-        ],
-      })
+    if (columnSelection.length > 2) {
+      return
     }
+
+    // The latest selection is the y axis. The first is the x axis, or Run when
+    // this column is the only one selected.
+    const y = tableColumns[col]
+    const firstSelected = columnSelection.find((c) => c !== col)
+    const x =
+      firstSelected === undefined
+        ? { id: VARIABLES.run, title: 'Run' }
+        : tableColumns[firstSelected]
+    const subtitle = `${y.title} vs. ${x.title}`
+
+    showPlotMenu(event, {
+      title: 'Plot: summary',
+      subtitle,
+      onClick: () =>
+        addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
+    })
   }
 
   const addSummaryPlot = ({
@@ -451,7 +477,13 @@ const Table = ({ grid, paginated = true }: TableProps) => {
             <DataEditor
               {...(grid || {})}
               ref={tableRef}
-              columns={formatColumns(tableColumns)}
+              columns={gridColumns}
+              getGroupDetails={getGroupDetails}
+              groupHeaderHeight={GROUP_HEADER_HEIGHT}
+              onGroupHeaderClicked={handleGroupHeaderClicked}
+              // Glide suppresses the native menu only when a consumer asks it
+              // to, and the group bar has nothing of its own to offer.
+              onGroupHeaderContextMenu={(_col, event) => event.preventDefault()}
               getCellContent={getContent}
               rows={runs.length}
               rowSelect="single"

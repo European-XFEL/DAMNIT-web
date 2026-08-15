@@ -15,6 +15,7 @@ const EMPTY_META: TableMeta = {
   variables: {},
   runs: [],
   tags: {},
+  groups: {},
   timestamp: 0,
 }
 

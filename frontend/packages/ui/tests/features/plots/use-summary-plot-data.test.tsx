@@ -85,6 +85,7 @@ function setup(
         runs: runs.map(({ proposal, run }) => ({ proposal, run })),
         variables,
         tags: {},
+        groups: {},
         timestamp: 0,
       },
     },

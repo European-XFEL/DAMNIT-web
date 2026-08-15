@@ -91,8 +91,8 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
           stampLiveRuns(update.runs)
         }
 
-        // Metadata rides along only when the run list, variables, or tags
-        // changed. Replace it wholesale; it is the run layout's source.
+        // Metadata rides along only when the run list, variables, tags or
+        // groups changed. Replace it wholesale; it is the run layout's source.
         if (update.metadata) {
           client.cache.writeQuery({
             query: TABLE_META_QUERY,
