@@ -49,6 +49,10 @@ export const EXCLUDED_VARIABLES = ['added_at']
 // the user configures, and the run detail panel already shows it in the header.
 export const NONCONFIGURABLE_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
 
+// What identifies a row, and so what stays in place while the rest of the table
+// scrolls. They lead the column order, proposal first.
+export const PINNED_COLUMNS = [VARIABLES.proposal, VARIABLES.run]
+
 // Real, configurable columns the table leaves out of the default view. They
 // stay hidden until the user turns them on in the Variables popover.
 export const DEFAULT_HIDDEN_VARIABLES = ['proposal']

@@ -31,6 +31,7 @@ import {
   textCell,
   type ErrorColors,
 } from '#src/features/table/utils/cells'
+import { countPinnedColumns } from '#src/features/table/utils/pinned-columns'
 import { TagsPopover } from '#src/features/table/components/popovers/tags-popover'
 import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
@@ -103,6 +104,11 @@ const Table = ({ grid, paginated = true }: TableProps) => {
           title: getVariableTitle(variable),
         })),
     [tableVariables, columnVisibility]
+  )
+
+  const pinnedColumns = useMemo(
+    () => countPinnedColumns(tableColumns),
+    [tableColumns]
   )
 
   // Error-glyph colors resolved from the live theme; dark mode plugs in here.
@@ -457,7 +463,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
               onItemHovered={handleItemHovered}
-              freezeColumns={1}
+              freezeColumns={pinnedColumns}
               customRenderers={renderers}
               onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}
