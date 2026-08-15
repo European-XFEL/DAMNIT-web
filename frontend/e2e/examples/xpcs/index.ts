@@ -298,6 +298,82 @@ export const xpcsWithPendingImage: Example = {
   }),
 }
 
+// The demo data has no grouped proposal, so this rewrites the three sample
+// columns as a @Group the way the API serves one. They are already adjacent,
+// and the API gathers a group at its earliest member, so the order stands.
+const SAMPLE_GROUP = { name: 'sample', title: 'Sample' }
+
+const GROUPED_VARIABLES: Record<string, { name: string; title: string }> = {
+  sample_type: { name: 'sample.type', title: 'Sample/Type' },
+  sample_x: { name: 'sample.x', title: 'Sample/X [mm]' },
+  sample_y: { name: 'sample.y', title: 'Sample/Y [mm]' },
+}
+
+function groupedName(name: string): string {
+  return GROUPED_VARIABLES[name]?.name ?? name
+}
+
+// The per-run data files on disk keep the demo's ungrouped names, so a read for
+// a renamed column maps back before it reaches the filesystem.
+const UNGROUPED_NAMES: Record<string, string> = Object.fromEntries(
+  Object.entries(GROUPED_VARIABLES).map(([name, { name: grouped }]) => [
+    grouped,
+    name,
+  ])
+)
+
+function groupSampleColumns(
+  variables: Example['meta']['variables']
+): Example['meta']['variables'] {
+  const missing = Object.keys(GROUPED_VARIABLES).filter(
+    (name) => !(name in variables)
+  )
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.join(', ')} is not a column in the example; update the fixture or the demo data`
+    )
+  }
+
+  return Object.fromEntries(
+    Object.entries(variables).map(([name, variable]) => {
+      const renamed = GROUPED_VARIABLES[name]
+      return renamed === undefined
+        ? [name, variable]
+        : [renamed.name, { ...variable, ...renamed, group: SAMPLE_GROUP.name }]
+    })
+  )
+}
+
+function groupRunCells(variables: RunData['variables']): RunData['variables'] {
+  return Object.fromEntries(
+    Object.entries(variables).map(([name, cell]) => [groupedName(name), cell])
+  )
+}
+
+// XPCS with its sample columns grouped, for the second header row. The tag
+// memberships are renamed alongside the variables so the tag filter still
+// resolves them.
+export const xpcsWithGroups: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: groupSampleColumns(XPCS.meta.variables),
+    tags: Object.fromEntries(
+      Object.entries(XPCS.meta.tags).map(([name, tag]) => [
+        name,
+        { ...tag, variables: tag.variables.map(groupedName) },
+      ])
+    ),
+    groups: { [SAMPLE_GROUP.name]: SAMPLE_GROUP },
+  },
+  data: XPCS.data.map((run) => ({
+    ...run,
+    variables: groupRunCells(run.variables),
+  })),
+  extractedData: (run, variable) =>
+    XPCS.extractedData(run, UNGROUPED_NAMES[variable] ?? variable),
+}
+
 // The home page shows one table per semester, so this example spreads proposals
 // across a few. It keeps 6996 (so the dashboard link still works) and adds the
 // real XFEL example proposals 700002/700003/700004.

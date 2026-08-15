@@ -17,6 +17,7 @@ export type LatestData = {
     runs: number[]
     variables: Meta['variables']
     tags?: Meta['tags']
+    groups?: Meta['groups']
   }
 }
 
@@ -76,6 +77,7 @@ export async function mockWebSocket(
                 })),
                 variables: metadata.variables,
                 tags: metadata.tags ?? {},
+                groups: metadata.groups ?? {},
                 timestamp,
               },
               timestamp,
