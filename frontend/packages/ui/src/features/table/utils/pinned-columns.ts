@@ -1,10 +1,19 @@
-import { PINNED_COLUMNS } from '#src/constants'
+// Split the columns into the pinned ones and the rest. Pinned columns come out
+// in the order they are pinned, and only if they are still in the list.
+//
+// Mirrors TanStack, where pinning is applied before ordering, so a later
+// columnOrder governs only the centre and can never unfreeze a pinned column.
+export function pinnedFirst<T extends { name: string }>(
+  columns: T[],
+  pinned: string[]
+) {
+  const byName = new Map(columns.map((column) => [column.name, column]))
+  const start = pinned
+    .map((name) => byName.get(name))
+    .filter((column) => column != null)
 
-// How many columns the grid should freeze: the identity columns it is currently
-// showing. Counting the leading ones rather than the pinned set keeps this
-// right when the proposal column is hidden, which it is by default.
-export function countPinnedColumns(columns: { id: string }[]): number {
-  const firstLoose = columns.findIndex(({ id }) => !PINNED_COLUMNS.includes(id))
+  const pinnedNames = new Set(pinned)
+  const centre = columns.filter((column) => !pinnedNames.has(column.name))
 
-  return firstLoose === -1 ? columns.length : firstLoose
+  return { start, centre }
 }

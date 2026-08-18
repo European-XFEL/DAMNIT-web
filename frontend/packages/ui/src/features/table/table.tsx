@@ -16,12 +16,8 @@ import { Group, Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
-import {
-  getVariableTitle,
-  hasValue,
-  runKey,
-} from '#src/data/table/table-data.transforms'
-import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
+import { hasValue, runKey } from '#src/data/table/table-data.transforms'
+import { useTableMeta } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 import {
@@ -33,19 +29,28 @@ import {
   type ErrorColors,
 } from '#src/features/table/utils/cells'
 import { getColumnTitle } from '#src/features/table/utils/column-title'
-import { countPinnedColumns } from '#src/features/table/utils/pinned-columns'
 import { TagsPopover } from '#src/features/table/components/popovers/tags-popover'
 import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
 import ContextMenu from '#src/features/table/components/context-menu'
 import { useTableTooltip } from '#src/features/table/hooks/use-table-tooltip'
-import { useColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
+import { useTableColumns } from '#src/features/table/hooks/use-table-columns'
 import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
 import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
 import {
+  toCurrent,
+  toSelectedCells,
+  type ColumnIndex,
+  type RowIndex,
+  type SelectedCells,
+} from '#src/features/table/utils/grid-selection'
+import { selectRowSelection } from '#src/features/table/stores/table.selectors'
+import {
+  cellActivated,
   plotRequested,
-  selectRun,
+  runDeselected,
+  runSelected,
 } from '#src/features/table/stores/table.slice'
 
 export type TableProps = {
@@ -66,7 +71,6 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: Data sources (the Apollo cache, via hooks)
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const { runs, groups } = useTableMeta()
-  const tableVariables = useTableVariables()
   const {
     cellsByKey,
     lastUpdatedByKey,
@@ -85,21 +89,8 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     scrollY,
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
-  const columnVisibility = useColumnVisibility()
+  const { columns: tableColumns, pinnedCount } = useTableColumns()
   const theme = useMantineTheme()
-
-  // Initialization: Memos
-  const tableColumns = useMemo(
-    () =>
-      tableVariables
-        .filter(({ name }) => columnVisibility[name] !== false)
-        .map((variable) => ({
-          id: variable.name,
-          title: getVariableTitle(variable),
-          group: variable.group,
-        })),
-    [tableVariables, columnVisibility]
-  )
 
   // What the grid draws: the title without the level its group header already
   // shows. Everywhere else keeps the whole title, plot labels included.
@@ -113,11 +104,6 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         width: 100,
       })),
     [tableColumns, groups]
-  )
-
-  const pinnedColumns = useMemo(
-    () => countPinnedColumns(tableColumns),
-    [tableColumns]
   )
 
   // Glide's own default would paint the raw group key, so the label comes here;
@@ -230,11 +216,52 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
 
   // Cell: Click event
-  const [gridSelection, setGridSelection] = useState<GridSelection>({
-    columns: CompactSelection.empty(),
-    rows: CompactSelection.empty(),
-    current: undefined,
-  })
+  // Both stay local because nothing outside the grid reads them. That does mean
+  // the outline a drill-down draws is gone after the Plots tab unmounts the
+  // table, while the drill-down itself survives in `activeVariable`: the aside
+  // keeps showing the right variable, only its outline has to be clicked back.
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([])
+  const [selectedCells, setSelectedCells] = useState<SelectedCells>()
+  const rowSelection = useAppSelector(selectRowSelection)
+
+  // Kept apart from the selection below: the two indices turn over with the
+  // table, while the selection turns over with every click and every mouse-move
+  // of a range drag, and rebuilding a row per run on each of those is wasted.
+  const columnIndex = useMemo<ColumnIndex>(
+    () => new Map(tableColumns.map((column, index) => [column.id, index])),
+    [tableColumns]
+  )
+  const rowIndex = useMemo<RowIndex>(
+    () => new Map(runs.map((identity, index) => [runKey(identity), index])),
+    [runs]
+  )
+
+  const gridSelection = useMemo<GridSelection>(() => {
+    let columns = CompactSelection.empty()
+    for (const variable of selectedColumns) {
+      const index = columnIndex.get(variable)
+      if (index != null) {
+        columns = columns.add(index)
+      }
+    }
+
+    // The highlight follows the selected run rather than the row it sat on, so
+    // a run arriving above it cannot slide it onto its neighbour.
+    let rows = CompactSelection.empty()
+    for (const key of Object.keys(rowSelection)) {
+      const index = rowIndex.get(key)
+      if (index != null) {
+        rows = rows.add(index)
+      }
+    }
+
+    return {
+      columns,
+      rows,
+      current: toCurrent(selectedCells, columnIndex, rowIndex),
+    }
+  }, [columnIndex, rowIndex, selectedColumns, rowSelection, selectedCells])
+
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
 
@@ -244,12 +271,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     const row = rows.last() as number
     const identity = runs[row]
 
-    dispatch(
-      selectRun({
-        proposal: identity?.proposal ?? null,
-        run: identity?.run ?? null,
-      })
-    )
+    dispatch(identity ? runSelected(identity) : runDeselected())
 
     // Clear range stack if cells from the other column are currently selected
     const rangeStack =
@@ -262,26 +284,30 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         : undefined
 
     // Finalize
-    setGridSelection({
-      columns,
-      rows,
-
-      current: current
-        ? { ...current, ...(rangeStack && { rangeStack }) }
-        : undefined,
-    })
-  }
-  const handleCellActivated = (cell: Item) => {
-    const [col, row] = cell
-    const identity = runs[row]
-
-    dispatch(
-      selectRun({
-        proposal: identity?.proposal ?? null,
-        run: identity?.run ?? null,
-        variables: col == null ? null : [tableColumns[col].id],
-      })
+    setSelectedColumns(
+      columns
+        .toArray()
+        .map((index) => tableColumns[index]?.id)
+        .filter((variable) => variable != null)
     )
+    setSelectedCells(
+      current
+        ? toSelectedCells(
+            { ...current, ...(rangeStack && { rangeStack }) },
+            tableColumns,
+            runs
+          )
+        : undefined
+    )
+  }
+  const handleCellActivated = ([col, row]: Item) => {
+    const identity = runs[row]
+    const variable = tableColumns[col]?.id
+    if (!identity || !variable) {
+      return
+    }
+
+    dispatch(cellActivated({ ...identity, variable }))
   }
 
   // Context menus. Every one of them is a single plot entry placed at the
@@ -303,6 +329,8 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   ) => {
     event.preventDefault()
 
+    // As in the header menu, the run selection is left alone: right-clicking
+    // opens a menu, it does not close the aside.
     let selectedCell = gridSelection.current?.cell ?? []
     let selectedRange = gridSelection.current?.rangeStack ?? []
 
@@ -313,16 +341,18 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       selectedCell = [col, row]
       selectedRange = []
 
-      setGridSelection({
-        columns: CompactSelection.empty(),
-        rows: CompactSelection.empty(),
-        current: {
-          cell: selectedCell,
-          rangeStack: selectedRange,
-
-          range: { x: col, y: row, width: 1, height: 1 },
-        },
-      })
+      setSelectedColumns([])
+      setSelectedCells(
+        toSelectedCells(
+          {
+            cell: selectedCell,
+            rangeStack: selectedRange,
+            range: { x: col, y: row, width: 1, height: 1 },
+          },
+          tableColumns,
+          runs
+        )
+      )
     }
 
     const column = tableColumns[col]?.id
@@ -364,19 +394,19 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
     // The row-marker header arrives as -1. Glide guards the group bar against
     // it but not this one, and it has nothing to select or plot.
-    if (col < 0) {
+    const column = tableColumns[col]
+    if (col < 0 || !column) {
       return
     }
 
     // Right-clicking outside the selection replaces it, so the menu reads the
-    // selection it is about to show rather than the one it is replacing.
+    // selection it is about to show rather than the one it is replacing. The
+    // run selection is left alone: it says which run the aside is showing, and
+    // opening a menu is not a reason to close that.
     const isSelected = gridSelection.columns.hasIndex(col)
     if (!isSelected) {
-      setGridSelection({
-        columns: CompactSelection.fromSingleSelection(col),
-        rows: CompactSelection.empty(),
-        current: undefined,
-      })
+      setSelectedColumns([column.id])
+      setSelectedCells(undefined)
     }
 
     const columnSelection = isSelected ? gridSelection.columns.toArray() : [col]
@@ -387,7 +417,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
     // The latest selection is the y axis. The first is the x axis, or Run when
     // this column is the only one selected.
-    const y = tableColumns[col]
+    const y = column
     const firstSelected = columnSelection.find((c) => c !== col)
     const x =
       firstSelected === undefined
@@ -495,7 +525,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
               onItemHovered={handleItemHovered}
-              freezeColumns={pinnedColumns}
+              freezeColumns={pinnedCount}
               customRenderers={renderers}
               onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}

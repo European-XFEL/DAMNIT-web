@@ -10,7 +10,7 @@ import {
   useColumnVisibilityFromVariables,
 } from '#src/features/table/hooks/use-column-visibility'
 import { selectTagSelection } from '#src/features/table/stores/table.selectors'
-import { setVariableVisibility } from '#src/features/table/stores/table.slice'
+import { setColumnVisibility } from '#src/features/table/stores/table.slice'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
 import { ControlButton } from './control-button'
@@ -87,7 +87,7 @@ function VariablesTable() {
   )
 
   const applyVisibility = (visibility: VariableVisibility) => {
-    dispatch(setVariableVisibility(visibility))
+    dispatch(setColumnVisibility(visibility))
   }
 
   const buildAllVisibility = (isVisible: boolean) =>

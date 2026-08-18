@@ -2,10 +2,10 @@ import { useMemo } from 'react'
 
 import type { Tag } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { isVariableVisible, NONCONFIGURABLE_VARIABLES } from '#src/constants'
+import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
+  selectColumnVisibility,
   selectTagSelection,
-  selectVariableVisibility,
 } from '#src/features/table/stores/table.selectors'
 import { useAppSelector } from '#src/app/store/hooks'
 
@@ -23,13 +23,14 @@ function configurableVariables(variableNames: string[]) {
   )
 }
 
-// The visibility map for the configurable columns.
+// The visibility map for the configurable columns. A column the user has not
+// touched shows, so only an explicit false hides one.
 function visibilityFromVariables(
   configurable: string[],
   visibility: ColumnVisibilityInputs['visibility']
 ) {
   return Object.fromEntries(
-    configurable.map((name) => [name, isVariableVisible(name, visibility)])
+    configurable.map((name) => [name, visibility[name] ?? true])
   )
 }
 
@@ -76,7 +77,7 @@ function useVariableNames() {
 
 export function useColumnVisibilityFromVariables() {
   const variableNames = useVariableNames()
-  const visibility = useAppSelector(selectVariableVisibility)
+  const visibility = useAppSelector(selectColumnVisibility)
 
   return useMemo(
     () =>
@@ -100,9 +101,11 @@ export function useColumnVisibilityFromTags() {
   )
 }
 
-export function useColumnVisibility() {
+// Which columns the table actually shows. Named apart from the store's
+// `columnVisibility`, which is only one of its two inputs.
+export function useVisibleColumns() {
   const variableNames = useVariableNames()
-  const visibility = useAppSelector(selectVariableVisibility)
+  const visibility = useAppSelector(selectColumnVisibility)
   const { tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
 

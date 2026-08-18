@@ -1,25 +1,25 @@
 import { Image, ScrollArea, Text } from '@mantine/core'
 import { useFragment } from '@apollo/client/react'
 
-import { selectVariableVisibility } from '#src/features/table/stores/table.selectors'
-import {
-  DTYPES,
-  NONCONFIGURABLE_VARIABLES,
-  isVariableVisible,
-} from '#src/constants'
+import { useColumnVisibilityFromVariables } from '#src/features/table/hooks/use-column-visibility'
+import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
 import {
   cellsByName,
   getTitleByName,
 } from '#src/data/table/table-data.transforms'
 import {
+  type Cell,
   type CellError,
   type CellValue,
+  type RunCells,
   type Run as RunEntity,
 } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
+import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
+import { selectActiveVariable } from '#src/features/table/stores/table.selectors'
 import { useAppSelector } from '#src/app/store/hooks'
-import { formatDate, isEmpty } from '#src/utils/helpers'
+import { formatDate } from '#src/utils/helpers'
 
 import classes from './run.module.css'
 
@@ -99,15 +99,36 @@ const renderFactory = {
   default: renderUnknown,
 }
 
+// A name the map does not carry has either left the context file since the run
+// was written or is one the user cannot hide; only the second is dropped here.
+function isShown(
+  name: string,
+  visibility: Record<string, boolean | undefined>
+) {
+  return visibility[name] !== false && !NONCONFIGURABLE_VARIABLES.includes(name)
+}
+
+// Drilling into a cell asks for that one variable by name, so hiding its column
+// does not veto it: visibility is about the grid, and this is not the grid.
+function shownCells(
+  cells: RunCells,
+  activeVariable: string | null,
+  visibility: Record<string, boolean | undefined>
+): [string, Cell][] {
+  if (activeVariable == null) {
+    return Object.entries(cells).filter(([name]) => isShown(name, visibility))
+  }
+
+  const drilled = cells[activeVariable]
+  return drilled ? [[activeVariable, drilled]] : []
+}
+
 const Run = () => {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
-  const {
-    proposal: selectedProposal,
-    run,
-    variables: selectedVariables,
-  } = useAppSelector((state) => state.table.selection)
-  const { runs, variables: metadataVariables } = useTableMeta()
-  const variableVisibility = useAppSelector(selectVariableVisibility)
+  const selectedRun = useSelectedRun()
+  const activeVariable = useAppSelector(selectActiveVariable)
+  const { variables: metadataVariables } = useTableMeta()
+  const columnVisibility = useColumnVisibilityFromVariables()
 
   // Read the normalized run straight from the cache by its identity trio. The
   // selection carries (proposal, run); `database` is constant across the table,
@@ -117,44 +138,24 @@ const Run = () => {
     from: {
       __typename: 'DamnitRun',
       database: proposal,
-      proposal: selectedProposal ?? '',
-      run: run ?? -1,
+      proposal: selectedRun?.proposal ?? '',
+      run: selectedRun?.run ?? -1,
     },
   })
 
-  // Show the selection only while it is still a row of the current proposal's
-  // table. Run numbers collide across proposals, so both parts must match; a
-  // stale selection from a proposal the user has left resolves to nothing.
-  const inCurrentTable =
-    run != null &&
-    selectedProposal != null &&
-    runs.some(
-      (entry) => entry.proposal === selectedProposal && entry.run === run
-    )
-
-  if (!inCurrentTable || !complete) {
+  if (selectedRun == null || !complete) {
     return null
   }
 
   const cells = cellsByName(runEntity.cells ?? [])
-  const runData = isEmpty(selectedVariables)
-    ? cells
-    : Object.fromEntries(
-        Object.entries(cells).filter(([name]) =>
-          selectedVariables.includes(name)
-        )
-      )
 
-  const validRuns = Object.entries(runData).filter(
-    ([name, data]) =>
-      isVariableVisible(name, variableVisibility) &&
-      (data?.error != null || data?.summary.value != null) &&
-      !NONCONFIGURABLE_VARIABLES.includes(name)
+  const renderable = shownCells(cells, activeVariable, columnVisibility).filter(
+    ([, cell]) => cell.error != null || cell.summary.value != null
   )
 
   return (
     <ScrollArea h="100vh" offsetScrollbars>
-      {validRuns.map(([name, data]) => {
+      {renderable.map(([name, data]) => {
         const label = getTitleByName(metadataVariables, name)
         // A cell that failed has nothing worth rendering from its summary.
         if (data.error) {

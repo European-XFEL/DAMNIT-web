@@ -13,9 +13,10 @@ type NavState = {
   isOpened: boolean
 }
 
+// No isOpened: the aside shows whatever run the table has selected, so it opens
+// and closes with that selection rather than holding the answer a second time.
 type AsideState = {
   tabs: Record<string, TabItem>
-  isOpened: boolean
 }
 
 type DasboardState = {
@@ -33,7 +34,6 @@ const initialState: DasboardState = {
     isOpened: false,
   },
   aside: {
-    isOpened: false,
     tabs: { run: { title: 'Run', isClosable: false } },
   },
 }
@@ -82,14 +82,6 @@ const slice = createSlice({
     closeNav: (state) => {
       state.nav.isOpened = false
     },
-
-    // Aside
-    openAside: (state) => {
-      state.aside.isOpened = true
-    },
-    closeAside: (state) => {
-      state.aside.isOpened = false
-    },
   },
   extraReducers: (builder) => {
     builder.addCase(resetProposal, () => initialState)
@@ -97,12 +89,5 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const {
-  addTab,
-  removeTab,
-  setCurrentTab,
-  openNav,
-  closeNav,
-  openAside,
-  closeAside,
-} = slice.actions
+export const { addTab, removeTab, setCurrentTab, openNav, closeNav } =
+  slice.actions

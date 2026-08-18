@@ -1,34 +1,23 @@
 import type { RootState } from '#src/app/store/types'
-import { createTypedSelector } from '#src/app/store/selectors'
 
 // ----------------------------------------------------------------------------
-// Variables
+// Columns
 
-const selectVariables = (state: RootState) => state.table.variables
+export const selectColumnVisibility = (state: RootState) =>
+  state.table.columnVisibility
 
-export const selectVariableVisibility = createTypedSelector(
-  [selectVariables],
-  (variables) =>
-    Object.fromEntries(
-      Object.entries(variables).map(([variable, settings]) => [
-        variable,
-        settings.visibility,
-      ])
-    )
-)
+export const selectColumnPinning = (state: RootState) =>
+  state.table.columnPinning
+
+// ----------------------------------------------------------------------------
+// Selection
+
+export const selectRowSelection = (state: RootState) => state.table.rowSelection
+
+export const selectActiveVariable = (state: RootState) =>
+  state.table.activeVariable
 
 // ----------------------------------------------------------------------------
 // Tags
 
-const selectTags = (state: RootState) => state.table.tags
-
-export const selectTagSelection = createTypedSelector(
-  [selectTags],
-  (variables) =>
-    Object.fromEntries(
-      Object.entries(variables).map(([variable, settings]) => [
-        variable,
-        settings.isSelected,
-      ])
-    )
-)
+export const selectTagSelection = (state: RootState) => state.table.tagSelection
