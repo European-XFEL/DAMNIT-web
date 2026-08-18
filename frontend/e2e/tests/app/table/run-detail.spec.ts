@@ -1,5 +1,11 @@
 import { test, expect } from '#fixtures'
-import { openProposal, selectRun, selectedRunTab } from '#support/table'
+import {
+  closeAside,
+  openProposal,
+  highlightedRow,
+  selectRun,
+  selectedRunTab,
+} from '#support/table'
 
 test('selecting a run shows all its variables', async ({ page, example }) => {
   await openProposal(page, example)
@@ -32,4 +38,22 @@ test('selecting another run replaces the selection', async ({
   await expect(selectedRunTab(page)).toContainText('Run: 2')
   // Single row selection: the panel follows the run, it does not stack tabs.
   await expect(selectedRunTab(page)).toHaveCount(1)
+})
+
+// The aside shows the selected run and owns nothing of its own, so closing it is
+// how a user deselects: a highlighted row beside a closed panel means nothing.
+test('closing the aside clears the run selection', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+
+  await selectRun(page, { example, row: 0 })
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(highlightedRow(page, { row: 0 })).toBeAttached()
+
+  await closeAside(page)
+
+  await expect(selectedRunTab(page)).toHaveCount(0)
+  await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
 })
