@@ -6,6 +6,7 @@ import {
   IMAGE_VALUE,
   xpcsWithPendingImage,
 } from '#examples/xpcs'
+import { fullMetadata } from '#mocks'
 import { WIDE_VIEWPORT } from '#support/grid'
 import {
   cell,
@@ -19,14 +20,6 @@ import {
 
 // Every updated run sits in the initial vertical fold.
 test.use({ viewport: WIDE_VIEWPORT })
-
-// A subscription push carries the full metadata snapshot: runs, variables, and
-// tags. The client replaces its metadata wholesale, exactly as the backend
-// sends it, so the push carries tags too. The mock stamps the timestamp; runs
-// stays numeric to match the seed, and a caller overrides it to add a run.
-function fullMetadata(runs: number[]) {
-  return { runs, variables: XPCS.meta.variables, tags: XPCS.meta.tags }
-}
 
 test('a finished run appears as a new row', async ({ page, api, example }) => {
   await openProposal(page, example)
@@ -46,7 +39,7 @@ test('a finished run appears as a new row', async ({ page, api, example }) => {
 
   const newRun = XPCS.meta.runs[seedRuns - 1] + 1
   api.pushLatestData({
-    metadata: fullMetadata([...XPCS.meta.runs, newRun]),
+    metadata: fullMetadata(example.meta, [...XPCS.meta.runs, newRun]),
     runs: {
       [newRun]: {
         run: { dtype: 'number', value: newRun },
@@ -74,7 +67,7 @@ test("an existing run's value updates live", async ({ page, api, example }) => {
   await expect(trains).not.toHaveText(updated)
 
   api.pushLatestData({
-    metadata: fullMetadata(XPCS.meta.runs),
+    metadata: fullMetadata(example.meta, XPCS.meta.runs),
     runs: { 1: { n_trains: { dtype: 'number', value: Number(updated) } } },
   })
 
@@ -112,7 +105,7 @@ test.describe('a deferred image resolves after its run finished', () => {
     // Phase 2: extraction completes; the push fills the cell and the hover
     // preview appears.
     api.pushLatestData({
-      metadata: fullMetadata(XPCS.meta.runs),
+      metadata: fullMetadata(example.meta, XPCS.meta.runs),
       runs: { 1: { [IMAGE_VARIABLE]: { dtype: 'image', value: IMAGE_VALUE } } },
     })
     await waitForCellLoaded(page, IMAGE_CELL)

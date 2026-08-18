@@ -23,6 +23,17 @@ export type LatestData = {
 
 export type PushLatestData = (data: LatestData) => void
 
+// The metadata half of a push. The client replaces its metadata wholesale, so a
+// push that carries only the run list would drop the variables and tags the
+// table is drawn from. Takes them from the example under test rather than a
+// fixed one, so a spec that switches examples pushes the matching snapshot.
+export function fullMetadata(
+  meta: Pick<Meta, 'variables' | 'tags'>,
+  runs: number[]
+): LatestData['metadata'] {
+  return { runs, variables: meta.variables, tags: meta.tags }
+}
+
 // Mock the app's graphql-ws connection. Playwright fully mocks the socket, so we
 // play the graphql-transport-ws server by hand: acknowledge the init, remember
 // the active subscription id, and answer pings. The subscription is never
