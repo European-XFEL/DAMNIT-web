@@ -27,6 +27,41 @@ export const GROUP_HEADER_HEIGHT = 24
 // breakpoint, below which the tab bar hides.
 export const WIDE_VIEWPORT = { width: 1600, height: 900 }
 
+// The columns the table pins, in the order it pins them. Mirrors the store's
+// columnPinning.start seed.
+const PINNED_COLUMNS = ['proposal', 'run']
+
+// Every coordinate helper here maps a variable's position in meta order to the
+// column the grid draws. The app pins columns by pulling them to the front, so
+// that mapping only holds while the pinned columns already lead the metadata.
+// They do today, which is why nothing converts between the two orders; this
+// fails loudly if a fixture ever changes that, rather than silently pointing
+// every helper one column off.
+export function assertDrawnInMetaOrder(order: string[]) {
+  const pinned = PINNED_COLUMNS.filter((name) => order.includes(name))
+  const leading = order.slice(0, pinned.length)
+  if (pinned.some((name, index) => leading[index] !== name)) {
+    throw new Error(
+      `the example pins [${pinned.join(', ')}] but leads with ` +
+        `[${leading.join(', ')}]; the grid draws the pinned columns first, so ` +
+        `meta order is no longer the drawn order`
+    )
+  }
+}
+
+// The a11y grid column of a variable: its index in meta order, offset by one for
+// the row-marker column. Holds because no example carries an EXCLUDED_VARIABLE.
+export function columnIndex(order: string[], name: string): number {
+  assertDrawnInMetaOrder(order)
+  const index = order.indexOf(name)
+  if (index === -1) {
+    throw new Error(
+      `'${name}' is not a column in the example; update the fixture or the demo data`
+    )
+  }
+  return index + 1
+}
+
 export type Box = { x: number; y: number; width: number; height: number }
 export type Cell = { col: number; row: number }
 export type Point = { x: number; y: number }
@@ -81,19 +116,30 @@ export function groupHeaderPoint(box: Box, col: number) {
 }
 
 // Rows start below the header rows; `row` is 0-based.
+function rowCenter(box: Box, row: number, grouped: boolean): number {
+  return (
+    box.y +
+    headerTop(grouped) +
+    HEADER_HEIGHT +
+    row * ROW_HEIGHT +
+    ROW_HEIGHT / 2
+  )
+}
+
 export function cellPoint(
   box: Box,
   { col, row, grouped = false }: Cell & { grouped?: boolean }
 ) {
-  return {
-    x: columnCenter(box, col),
-    y:
-      box.y +
-      headerTop(grouped) +
-      HEADER_HEIGHT +
-      row * ROW_HEIGHT +
-      ROW_HEIGHT / 2,
-  }
+  return { x: columnCenter(box, col), y: rowCenter(box, row, grouped) }
+}
+
+// The row's marker, which Glide draws left of the first column. `columnCenter`
+// starts at the first data column, so the marker needs an x of its own.
+export function rowMarkerPoint(
+  box: Box,
+  { row, grouped = false }: { row: number; grouped?: boolean }
+) {
+  return { x: box.x + ROW_MARKER_WIDTH / 2, y: rowCenter(box, row, grouped) }
 }
 
 export type Axis = 'horizontal' | 'vertical'

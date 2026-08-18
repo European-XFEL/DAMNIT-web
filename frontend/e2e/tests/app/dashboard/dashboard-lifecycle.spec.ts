@@ -39,7 +39,7 @@ test('clicking the logo tears down the dashboard state', async ({
   await showTable(page)
 
   // Select a run.
-  await selectRun(page, { row: 0 })
+  await selectRun(page, { example, row: 0 })
   await expect(selectedRunTab(page)).toContainText('Run: 1')
 
   // Hide the Trains column.
@@ -70,7 +70,7 @@ test('switching dashboard tabs keeps the run selection and sidebar', async ({
   await openProposal(page, example)
 
   // Select a run and confirm the sidebar shows its values.
-  await selectRun(page, { row: 0 })
+  await selectRun(page, { example, row: 0 })
   const panel = page.getByRole('complementary')
   await expect(selectedRunTab(page)).toContainText('Run: 1')
   await expect(panel.getByText('silica')).toBeVisible()

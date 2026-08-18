@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { PREVIEW_DTYPES } from '@damnit-frontend/shared/constants'
+import { columnIndex } from '#support/grid'
 import type {
   RunData,
   Runs,
@@ -199,22 +200,9 @@ const erroredMeta: Example['meta'] = {
   },
 }
 
-// a11y grid column of a variable: its index among the meta columns, offset by
-// one for the row-marker column. The demo data carries none of the app's
-// EXCLUDED_VARIABLES, so every meta variable is a rendered column.
-function columnOf(order: string[], name: string): number {
-  const index = order.indexOf(name)
-  if (index === -1) {
-    throw new Error(
-      `'${name}' is not a column in the example; update the fixture or the demo data`
-    )
-  }
-  return index + 1
-}
-
 export const ERROR_CELLS = FAILURES.map((failure) => ({
   ...failure,
-  col: columnOf(Object.keys(erroredMeta.variables), failure.variable),
+  col: columnIndex(Object.keys(erroredMeta.variables), failure.variable),
 }))
 
 // Grid row of the errored run, derived so a reordered demo still hovers it.
@@ -238,7 +226,7 @@ if (imageEntry === undefined || imageEntry[1].dtype !== 'image') {
 const imageVariable = imageEntry[0]
 
 export const IMAGE_CELL = {
-  col: columnOf(Object.keys(XPCS.meta.variables), imageVariable),
+  col: columnIndex(Object.keys(XPCS.meta.variables), imageVariable),
   row: 0,
 }
 

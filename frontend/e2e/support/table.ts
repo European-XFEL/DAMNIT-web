@@ -4,9 +4,11 @@ import { accessibleProposals, type Example } from '#examples/xpcs'
 import {
   type Cell,
   cellPoint,
+  columnIndex,
   gridBox,
   groupHeaderPoint,
   headerPoint,
+  rowMarkerPoint,
 } from '#support/grid'
 
 // The grid is a <canvas>. Glide Data Grid mirrors the visible columns into a
@@ -97,14 +99,8 @@ export async function openProposal(page: Page, example: Example) {
   await openDashboard(page, () => page.goto(`proposal/${proposal}`))
 }
 
-// The a11y column index of a variable: its position in meta order, plus one for
-// the row-marker column. A rename or reorder fails here loudly.
 export function columnOf(example: Example, name: string): number {
-  const index = Object.keys(example.meta.variables).indexOf(name)
-  if (index === -1) {
-    throw new Error(`'${name}' is not a column in the example`)
-  }
-  return index + 1
+  return columnIndex(Object.keys(example.meta.variables), name)
 }
 
 // The display title the table header and plot tabs render for a variable.
@@ -189,16 +185,37 @@ export function rowCheckbox(page: Page, name: string): Locator {
   return page.getByRole('row', { name }).getByRole('checkbox')
 }
 
+// Click the row's marker, which is Glide's own select-this-row control. Driven
+// by real pointer coordinates like the other canvas gestures: focusing the
+// mirrored cell and pressing Glide's Shift+Space keybinding does not carry the
+// row through, so it selects whichever row Glide already had focused.
 // `row` must be within the initial vertical fold; this does not scroll it in.
-export async function selectRun(page: Page, { row }: { row: number }) {
+export async function selectRun(
+  page: Page,
+  { example, row }: { example: Example; row: number }
+) {
   // The a11y tree renders a beat after the canvas, and Glide only mirrors rows
-  // in the current vertical window, so wait for the target cell itself.
-  const runCell = cell(page, { col: RUN_COLUMN, row })
-  await expect(runCell).toBeAttached()
-  // Shift+Space is Glide's selectRow keybinding: it selects the focused cell's
-  // row, so the column is irrelevant.
-  await runCell.focus()
-  await page.keyboard.press('Shift+Space')
+  // in the current vertical window, so wait for the target row to exist.
+  await expect(cell(page, { col: RUN_COLUMN, row })).toBeAttached()
+
+  const box = await gridBox(page)
+  const { x, y } = rowMarkerPoint(box, { row, grouped: hasGroups(example) })
+  await page.mouse.click(x, y)
+}
+
+// The mirrored row of a highlighted run, the row half of the aria-selected
+// mirror selectedColumnHeaders reads on the column side. Glide numbers the
+// header row 1, so data row `row` is `row + 2`.
+export function highlightedRow(page: Page, { row }: { row: number }): Locator {
+  return page.locator(
+    `[role="row"][aria-rowindex="${row + 2}"][aria-selected="true"]`
+  )
+}
+
+// Close the aside from its X. It is the panel's only plain button; the tabs
+// beside it carry the tab role.
+export function closeAside(page: Page) {
+  return page.getByRole('complementary').getByRole('button').click()
 }
 
 // The aside's Run tab, whose title becomes `Run: <n>` once a run is selected.
