@@ -8,7 +8,7 @@ import {
   type CheckboxProps,
 } from '@mantine/core'
 
-const headerC =
+export const mutedC =
   'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0))'
 // gray-6 on the panel's gray-0 ground is 3.15:1, under the 4.5:1 floor.
 const unselectedC =
@@ -92,6 +92,11 @@ export function RowItemCheckbox({
 // ----------------------------------------------------------------------------
 // List
 
+const collator = new Intl.Collator(undefined, {
+  sensitivity: 'base',
+  numeric: true,
+})
+
 type RowListItem = {
   name: string
   title: string
@@ -104,11 +109,6 @@ export type RowListProps = {
 }
 
 function List({ items, renderIndicator }: RowListProps) {
-  const collator = new Intl.Collator(undefined, {
-    sensitivity: 'base',
-    numeric: true,
-  })
-
   // TODO: Change `.sort()` to `.toSorted()` when it's more widely adopted
   const sorted = [...items].sort((a, b) =>
     a.selected !== b.selected
@@ -134,6 +134,24 @@ function List({ items, renderIndicator }: RowListProps) {
 // ----------------------------------------------------------------------------
 // Section
 
+export type SectionHeadingProps = { children: ReactNode }
+
+// The Variables popover heads a group with this too. The two labels share a
+// treatment by decision, so they share the component.
+export function SectionHeading({ children }: SectionHeadingProps) {
+  return (
+    <Text
+      fz={10}
+      fw={500}
+      tt="uppercase"
+      c={mutedC}
+      style={{ letterSpacing: 0.8 }}
+    >
+      {children}
+    </Text>
+  )
+}
+
 export type RowSectionProps = {
   header: string
   info?: string
@@ -144,17 +162,9 @@ function Section({ header, info, children }: RowSectionProps) {
   return (
     <Stack gap={6}>
       <Group justify="space-between" gap={8}>
-        <Text
-          fz={10}
-          fw={500}
-          tt="uppercase"
-          c={headerC}
-          style={{ letterSpacing: 0.8 }}
-        >
-          {header}
-        </Text>
+        <SectionHeading>{header}</SectionHeading>
         {info != null && (
-          <Text fz={10} c={headerC} style={{ letterSpacing: 0.6 }}>
+          <Text fz={10} c={mutedC} style={{ letterSpacing: 0.6 }}>
             {info}
           </Text>
         )}
