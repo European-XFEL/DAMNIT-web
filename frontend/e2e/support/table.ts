@@ -181,8 +181,41 @@ export async function openPopover(page: Page, name: string): Promise<Locator> {
   return button
 }
 
+// A row in a popover's list. Exact matching is for a title another row's title
+// contains, such as a group member's once its group's words are stripped.
+export function popoverRow(
+  page: Page,
+  name: string,
+  { exact = false } = {}
+): Locator {
+  return page.getByRole('row', { name, exact })
+}
+
 export function rowCheckbox(page: Page, name: string): Locator {
-  return page.getByRole('row', { name }).getByRole('checkbox')
+  return popoverRow(page, name).getByRole('checkbox')
+}
+
+// A group's row in the Variables popover, and the link in it that shows or
+// hides every variable at once. The row's name carries the link's words too, so
+// it is found by the link rather than matched exactly the way a variable row is.
+export function groupRow(page: Page, name: string): Locator {
+  return popoverRow(page, name).filter({ has: page.getByRole('button') })
+}
+
+export function groupAction(page: Page, name: string): Locator {
+  return groupRow(page, name).getByRole('button')
+}
+
+// The popover's own show/hide-all link, above the table. It reads the same as
+// the group links, so this excludes the ones inside a row.
+export function popoverAction(page: Page): Locator {
+  return page.locator('.mantine-Popover-dropdown button:not(tr button)')
+}
+
+// The details a variable's row opens. mantine-datatable renders them in a row
+// of their own below it, so they are not inside the row that was clicked.
+export function rowDetails(page: Page): Locator {
+  return page.locator('.mantine-datatable-row-expansion-cell')
 }
 
 // Click the row's marker, which is Glide's own select-this-row control. Driven

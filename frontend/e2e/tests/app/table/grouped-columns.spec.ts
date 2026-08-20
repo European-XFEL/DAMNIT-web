@@ -7,8 +7,14 @@ import {
   columnOf,
   columnTitles,
   contextMenu,
+  expectVisibleColumns,
+  groupAction,
+  groupRow,
+  openPopover,
   openProposal,
+  popoverRow,
   rightClickHeader,
+  rowCheckbox,
   selectedColumnHeaders,
   titleOf,
 } from '#support/table'
@@ -89,4 +95,73 @@ test('clicking a named group box selects its columns and no others', async ({
     'X [mm]',
     'Y [mm]',
   ])
+})
+
+test('a grouped variable can still be hidden on its own', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expectVisibleColumns(page, 13)
+
+  // The row shows the title without the group's words, which its own group row
+  // right above it already carries.
+  await openPopover(page, 'Variables')
+  await rowCheckbox(page, 'X [mm]').uncheck()
+
+  await expectVisibleColumns(page, 12)
+  expect(await columnTitles(page)).not.toContain('X [mm]')
+})
+
+test('hiding a group from its heading hides every column in it', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expectVisibleColumns(page, 13)
+
+  await openPopover(page, 'Variables')
+  await groupAction(page, 'Sample').click()
+
+  await expectVisibleColumns(page, 10)
+  const titles = await columnTitles(page)
+  expect(titles).not.toContain('Type')
+  expect(titles).not.toContain('X [mm]')
+  expect(titles).not.toContain('Y [mm]')
+})
+
+test('a partly hidden group offers to show the rest', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openPopover(page, 'Variables')
+  const sample = groupAction(page, 'Sample')
+
+  // Hide one member
+  await rowCheckbox(page, 'X [mm]').uncheck()
+  await expect(sample).toHaveText('Show all')
+
+  // Complete the group
+  await sample.click()
+  await expectVisibleColumns(page, 13)
+})
+
+test('searching a group name keeps the group and its members', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openPopover(page, 'Variables')
+
+  await page.getByPlaceholder('Search variables').fill('sample')
+
+  // Exact names: the rows show the stripped titles, and "Type" on its own would
+  // also match the ungrouped "Scan type" the search is meant to drop.
+  const row = (name: string) => popoverRow(page, name, { exact: true })
+  await expect(groupRow(page, 'Sample')).toBeVisible()
+  await expect(row('Type')).toBeVisible()
+  await expect(row('X [mm]')).toBeVisible()
+  await expect(row('Y [mm]')).toBeVisible()
+  await expect(row('Trains')).toHaveCount(0)
 })

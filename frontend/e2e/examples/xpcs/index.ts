@@ -286,6 +286,45 @@ export const xpcsWithPendingImage: Example = {
   }),
 }
 
+// Rewrite every tag's membership list, so a fixture that renames or drops a
+// variable leaves the Tags popover saying the same thing the variables do.
+function mapTagVariables(
+  tags: Example['meta']['tags'],
+  rename: (variables: string[]) => string[]
+) {
+  return Object.fromEntries(
+    Object.entries(tags).map(([name, tag]) => [
+      name,
+      { ...tag, variables: rename(tag.variables) },
+    ])
+  )
+}
+
+// Every variable in the demo data carries a tag except `run`, which the popover
+// never configures, so this drops one variable's tag to give it an untagged row.
+export const UNTAGGED_VARIABLE = 'scan_type'
+
+const untagged = XPCS.meta.variables[UNTAGGED_VARIABLE]
+if (untagged === undefined) {
+  throw new Error(
+    `${UNTAGGED_VARIABLE} is not a column in the example; update the fixture or the demo data`
+  )
+}
+
+export const xpcsWithUntagged: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: {
+      ...XPCS.meta.variables,
+      [UNTAGGED_VARIABLE]: { ...untagged, tags: [] },
+    },
+    tags: mapTagVariables(XPCS.meta.tags, (variables) =>
+      variables.filter((variable) => variable !== UNTAGGED_VARIABLE)
+    ),
+  },
+}
+
 // The demo data has no grouped proposal, so this rewrites the three sample
 // columns as a @Group the way the API serves one. They are already adjacent,
 // and the API gathers a group at its earliest member, so the order stands.
@@ -346,11 +385,8 @@ export const xpcsWithGroups: Example = {
   meta: {
     ...XPCS.meta,
     variables: groupSampleColumns(XPCS.meta.variables),
-    tags: Object.fromEntries(
-      Object.entries(XPCS.meta.tags).map(([name, tag]) => [
-        name,
-        { ...tag, variables: tag.variables.map(groupedName) },
-      ])
+    tags: mapTagVariables(XPCS.meta.tags, (variables) =>
+      variables.map(groupedName)
     ),
     groups: { [SAMPLE_GROUP.name]: SAMPLE_GROUP },
   },
