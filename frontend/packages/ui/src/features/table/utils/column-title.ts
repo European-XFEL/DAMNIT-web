@@ -1,5 +1,11 @@
 import type { TableMeta } from '#src/data/table/table-data.types'
 
+// What a group is labelled with. The server omits a title it could not derive,
+// and the raw key is a better header than a blank one.
+export function getGroupTitle(group: string, groups: TableMeta['groups']) {
+  return groups[group]?.title ?? group
+}
+
 // The header title of a column, without the part its group header already
 // shows. This removes a prefix rather than parsing the title again: the server
 // took the group's title from this same title's first slash, so it either

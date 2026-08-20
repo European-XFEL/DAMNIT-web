@@ -28,7 +28,10 @@ import {
   textCell,
   type ErrorColors,
 } from '#src/features/table/utils/cells'
-import { getColumnTitle } from '#src/features/table/utils/column-title'
+import {
+  getColumnTitle,
+  getGroupTitle,
+} from '#src/features/table/utils/column-title'
 import { TagsPopover } from '#src/features/table/components/popovers/tags-popover'
 import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
@@ -106,14 +109,13 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     [tableColumns, groups]
   )
 
-  // Glide's own default would paint the raw group key, so the label comes here;
-  // a group whose title the server could not derive keeps that key. It asks once
-  // per visible column on every paint, so resolve the labels once and hand them
-  // back by lookup. `''` is what it passes for an ungrouped one.
+  // Glide's own default would paint the raw group key, so the label comes here.
+  // It asks once per visible column on every paint, so resolve the labels once
+  // and hand them back by lookup. `''` is what it passes for an ungrouped one.
   const groupDetails = useMemo(() => {
     const details: Record<string, { name: string }> = { '': { name: '' } }
     for (const name of Object.keys(groups)) {
-      details[name] = { name: groups[name]?.title ?? name }
+      details[name] = { name: getGroupTitle(name, groups) }
     }
     return details
   }, [groups])
