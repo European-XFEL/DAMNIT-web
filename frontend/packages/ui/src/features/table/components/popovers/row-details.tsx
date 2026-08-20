@@ -10,8 +10,9 @@ import {
 
 const headerC =
   'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0))'
+// gray-6 on the panel's gray-0 ground is 3.15:1, under the 4.5:1 floor.
 const unselectedC =
-  'light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2))'
+  'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-2))'
 const selectedC =
   'light-dark(var(--mantine-color-gray-9), var(--mantine-color-dark-0))'
 
@@ -25,7 +26,8 @@ type IndicatorRenderer = (args: {
 }) => ReactNode
 
 export type RowItemProps = {
-  children: ReactNode
+  // The label is clamped to one line, so it doubles as the item's tooltip.
+  children: string
   selected?: boolean
   renderIndicator?: IndicatorRenderer
 }
@@ -47,7 +49,14 @@ function Item({
           </Box>
         )}
 
-        <Text fz={11} lh={1.2} c={color} fw={400} lineClamp={1}>
+        <Text
+          fz={11}
+          lh={1.2}
+          c={color}
+          fw={400}
+          lineClamp={1}
+          title={children}
+        >
           {children}
         </Text>
       </Group>
@@ -165,7 +174,7 @@ function Root({ children }: RowDetailsProps) {
   return (
     <Stack
       bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
-      px="md"
+      px="sm"
       py="xs"
       gap={6}
       style={{
