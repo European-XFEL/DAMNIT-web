@@ -25,6 +25,11 @@ type TagRecord = {
   isSelected: boolean
 }
 
+// A tag row has nothing but its name to match on.
+function filterTagRecords(records: TagRecord[], query: string) {
+  return records.filter((record) => record.name.toLowerCase().includes(query))
+}
+
 type TagDetailProps = {
   name: string
 }
@@ -101,8 +106,8 @@ export function TagsTable() {
 
   return (
     <SearchableTable
-      searchKey="name"
       searchPlaceholder="Search tags"
+      filterRecords={filterTagRecords}
       dataTableProps={{
         records,
         columns: [

@@ -1,0 +1,43 @@
+.group td {
+  padding-top: 10px;
+  padding-bottom: 2px;
+}
+
+/* The action overhangs into the title cell so it ends on the checkbox column. */
+.group td:last-of-type {
+  display: flex;
+  justify-content: flex-end;
+  overflow: visible;
+}
+
+/* The rail is drawn twice: down the member rows, and past an expanded member's
+   details, which sit in a row of their own. One definition keeps them in step. */
+.member,
+.memberDetails {
+  --rail-inset: 10px;
+  --rail-width: 2px;
+  --rail-color: light-dark(
+    var(--mantine-color-gray-4),
+    var(--mantine-color-dark-4)
+  );
+}
+
+.memberDetails {
+  border-left: var(--rail-width) solid var(--rail-color);
+  margin-left: var(--rail-inset);
+}
+
+.member td:first-of-type {
+  position: relative;
+}
+
+/* Inset from the popover edge, or the rail reads as a scrollbar. */
+.member td:first-of-type::before {
+  background: var(--rail-color);
+  bottom: 0;
+  content: '';
+  left: var(--rail-inset);
+  position: absolute;
+  top: 0;
+  width: var(--rail-width);
+}
