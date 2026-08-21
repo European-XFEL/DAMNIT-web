@@ -22,6 +22,7 @@ export function shapeMetadata(meta: Meta, proposal: string) {
     })),
     timestamp: 0,
     tags: meta.tags,
+    groups: meta.groups ?? {},
   }
 }
 

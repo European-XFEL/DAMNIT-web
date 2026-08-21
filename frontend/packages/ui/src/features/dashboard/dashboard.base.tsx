@@ -2,9 +2,10 @@ import { type ReactNode } from 'react'
 import { AppShell, CloseButton, Skeleton } from '@mantine/core'
 
 import Tabs from '#src/components/tabs/tabs'
+import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
+import { runDeselected } from '#src/features/table/stores/table.slice'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
-import { closeAside } from './dashboard.slice'
 import Run from './run'
 
 type DashboardBaseProps = {
@@ -15,13 +16,13 @@ type DashboardBaseProps = {
 const DashboardBase = ({ main, header }: DashboardBaseProps) => {
   const dispatch = useAppDispatch()
   const dashboard = useAppSelector((state) => state.dashboard)
-  const { run: selectedRun } = useAppSelector((state) => state.table.selection)
+  const selectedRun = useSelectedRun()
 
   // Aside tabs
   const populatedAsideTabs = Object.fromEntries(
     Object.entries(dashboard.aside.tabs).map(([id, tab]) => {
       const extraProps = selectedRun
-        ? { title: `${tab.title}: ${selectedRun}` }
+        ? { title: `${tab.title}: ${selectedRun.run}` }
         : {}
       return [
         id,
@@ -45,7 +46,7 @@ const DashboardBase = ({ main, header }: DashboardBaseProps) => {
       aside={{
         width: 360,
         breakpoint: 'sm',
-        collapsed: { desktop: !dashboard.aside.isOpened },
+        collapsed: { desktop: !selectedRun },
       }}
     >
       <AppShell.Header>{header}</AppShell.Header>
@@ -61,7 +62,7 @@ const DashboardBase = ({ main, header }: DashboardBaseProps) => {
         <Tabs
           contents={populatedAsideTabs}
           lastElement={
-            <CloseButton ml="auto" onClick={() => dispatch(closeAside())} />
+            <CloseButton ml="auto" onClick={() => dispatch(runDeselected())} />
           }
         />
       </AppShell.Aside>

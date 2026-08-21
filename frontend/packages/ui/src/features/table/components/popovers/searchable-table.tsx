@@ -36,19 +36,22 @@ type DataTableProps<T> = Required<
     MantineDataTableProps<T>,
     'records' | 'columns' | 'rowExpansion' | 'idAccessor'
   >
->
+> &
+  Pick<MantineDataTableProps<T>, 'rowClassName'>
 
 export type SearchableTableProps<T> = {
   dataTableProps: DataTableProps<T>
-  searchKey: keyof T
   searchPlaceholder: SearchInputProps['placeholder']
+  // What the search box matches. Each popover's rows differ, so each owns its
+  // filter. `query` arrives trimmed and lowercased.
+  filterRecords: (records: T[], query: string) => T[]
   toolbarAction?: ReactNode
 }
 
 export function SearchableTable<T>({
   dataTableProps,
-  searchKey,
   searchPlaceholder,
+  filterRecords,
   toolbarAction,
 }: SearchableTableProps<T>) {
   const [query, setQuery] = useState('')
@@ -57,13 +60,8 @@ export function SearchableTable<T>({
   const { records, ...forwardedDataTableProps } = dataTableProps
 
   const filtered = useMemo(
-    () =>
-      records.filter((record) => {
-        const entry = record[searchKey] as string
-        return entry.toLowerCase().includes(debouncedQuery.trim().toLowerCase())
-      }),
-
-    [records, searchKey, debouncedQuery]
+    () => filterRecords(records, debouncedQuery.trim().toLowerCase()),
+    [records, filterRecords, debouncedQuery]
   )
 
   return (

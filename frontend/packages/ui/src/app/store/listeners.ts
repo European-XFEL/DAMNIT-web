@@ -1,18 +1,10 @@
-import {
-  addTab,
-  closeAside,
-  openAside,
-  removeTab,
-} from '#src/features/dashboard/dashboard.slice'
+import { addTab, removeTab } from '#src/features/dashboard/dashboard.slice'
 import {
   addPlot,
   removePlot,
   reset as resetPlots,
 } from '#src/features/plots/plots.slice'
-import {
-  plotRequested,
-  selectRun,
-} from '#src/features/table/stores/table.slice'
+import { plotRequested } from '#src/features/table/stores/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
 import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
 import { cache } from '#src/graphql/apollo'
@@ -66,16 +58,6 @@ export function registerAppListeners() {
           cache.gc({ resetResultCache: true })
         })
       )
-    },
-  })
-
-  startAppListening({
-    actionCreator: selectRun,
-    effect: (action, { dispatch }) => {
-      const { run } = action.payload
-
-      const sideEffect = run != null ? openAside : closeAside
-      dispatch(sideEffect())
     },
   })
 

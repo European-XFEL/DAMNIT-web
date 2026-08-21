@@ -6,6 +6,8 @@ import {
   IMAGE_VALUE,
   xpcsWithPendingImage,
 } from '#examples/xpcs'
+import { fullMetadata } from '#mocks'
+import { WIDE_VIEWPORT } from '#support/grid'
 import {
   cell,
   columnOf,
@@ -16,17 +18,8 @@ import {
   waitForCellLoaded,
 } from '#support/table'
 
-// A wide viewport keeps the image column within the horizontal fold, matching
-// image-preview.spec. Every updated run sits in the initial vertical fold.
-test.use({ viewport: { width: 1600, height: 900 } })
-
-// A subscription push carries the full metadata snapshot: runs, variables, and
-// tags. The client replaces its metadata wholesale, exactly as the backend
-// sends it, so the push carries tags too. The mock stamps the timestamp; runs
-// stays numeric to match the seed, and a caller overrides it to add a run.
-function fullMetadata(runs: number[]) {
-  return { runs, variables: XPCS.meta.variables, tags: XPCS.meta.tags }
-}
+// Every updated run sits in the initial vertical fold.
+test.use({ viewport: WIDE_VIEWPORT })
 
 test('a finished run appears as a new row', async ({ page, api, example }) => {
   await openProposal(page, example)
@@ -38,7 +31,7 @@ test('a finished run appears as a new row', async ({ page, api, example }) => {
   // aria-rowcount: the metadata query fills runs (and the row count) with no
   // cell data, so the row count can reach seedRuns + 1 before the rows land.
   await expect(
-    cell(page, { col: columnOf('n_trains'), row: 0 })
+    cell(page, { col: columnOf(example, 'n_trains'), row: 0 })
   ).not.toBeEmpty()
 
   // aria-rowcount counts the header row too, so the seed shows seedRuns + 1.
@@ -46,7 +39,7 @@ test('a finished run appears as a new row', async ({ page, api, example }) => {
 
   const newRun = XPCS.meta.runs[seedRuns - 1] + 1
   api.pushLatestData({
-    metadata: fullMetadata([...XPCS.meta.runs, newRun]),
+    metadata: fullMetadata(example.meta, [...XPCS.meta.runs, newRun]),
     runs: {
       [newRun]: {
         run: { dtype: 'number', value: newRun },
@@ -64,7 +57,7 @@ test('a finished run appears as a new row', async ({ page, api, example }) => {
 
 test("an existing run's value updates live", async ({ page, api, example }) => {
   await openProposal(page, example)
-  const trains = cell(page, { col: columnOf('n_trains'), row: 0 })
+  const trains = cell(page, { col: columnOf(example, 'n_trains'), row: 0 })
 
   // Wait for the seed value to land before pushing, so the page's own rows
   // cannot revert the update afterwards. The push then sets a value the seed
@@ -74,7 +67,7 @@ test("an existing run's value updates live", async ({ page, api, example }) => {
   await expect(trains).not.toHaveText(updated)
 
   api.pushLatestData({
-    metadata: fullMetadata(XPCS.meta.runs),
+    metadata: fullMetadata(example.meta, XPCS.meta.runs),
     runs: { 1: { n_trains: { dtype: 'number', value: Number(updated) } } },
   })
 
@@ -97,14 +90,14 @@ test.describe('a deferred image resolves after its run finished', () => {
     // Wait for the seed data to land (run 1's n_trains is populated) before
     // pushing, so the page's own rows cannot revert the image afterwards.
     await expect(
-      cell(page, { col: columnOf('n_trains'), row: 0 })
+      cell(page, { col: columnOf(example, 'n_trains'), row: 0 })
     ).not.toBeEmpty()
 
     // Phase 1: still extracting, so the cell is a blank skeleton and hovering
     // shows no preview. Wait past the 200ms tooltip open delay, then the portal
     // stays empty (assert the whole portal, not just an <img>).
     await expect(imageCell).toBeEmpty()
-    await hoverCell(page, IMAGE_CELL, { waitForContent: false })
+    await hoverCell(page, { example, ...IMAGE_CELL, waitForContent: false })
     await page.waitForTimeout(400)
     await expect(card.locator(':scope > *')).toHaveCount(0)
     await moveAway(page)
@@ -112,11 +105,11 @@ test.describe('a deferred image resolves after its run finished', () => {
     // Phase 2: extraction completes; the push fills the cell and the hover
     // preview appears.
     api.pushLatestData({
-      metadata: fullMetadata(XPCS.meta.runs),
+      metadata: fullMetadata(example.meta, XPCS.meta.runs),
       runs: { 1: { [IMAGE_VARIABLE]: { dtype: 'image', value: IMAGE_VALUE } } },
     })
     await waitForCellLoaded(page, IMAGE_CELL)
-    await hoverCell(page, IMAGE_CELL)
+    await hoverCell(page, { example, ...IMAGE_CELL })
     await expect(preview).toBeVisible()
   })
 })

@@ -22,6 +22,7 @@ type VariableMeta = {
   name: string
   title: string
   tags: string[]
+  group?: string
 }
 
 type TagMeta = {
@@ -30,11 +31,21 @@ type TagMeta = {
   variables: string[]
 }
 
+// `title` is optional because the server omits the one it could not derive: a
+// group whose members carry no slash in their titles has nothing to be named by.
+type GroupMeta = {
+  name: string
+  title?: string
+}
+
+// `groups` is optional because the example data predates grouping and the
+// server sends an empty map for a proposal that uses none.
 export type Meta = {
   sources: Record<string, SourceMeta>
   variables: Record<string, VariableMeta>
   runs: number[]
   tags: Record<string, TagMeta>
+  groups?: Record<string, GroupMeta>
 }
 
 export type RunData = {

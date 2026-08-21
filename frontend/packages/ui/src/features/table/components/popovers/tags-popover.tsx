@@ -7,7 +7,7 @@ import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
 import { getVariableTitle } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
-import { useColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
+import { useVisibleColumns } from '#src/features/table/hooks/use-column-visibility'
 import { selectTagSelection } from '#src/features/table/stores/table.selectors'
 import {
   clearTagSelection,
@@ -25,13 +25,18 @@ type TagRecord = {
   isSelected: boolean
 }
 
+// A tag row has nothing but its name to match on.
+function filterTagRecords(records: TagRecord[], query: string) {
+  return records.filter((record) => record.name.toLowerCase().includes(query))
+}
+
 type TagDetailProps = {
   name: string
 }
 
 function TagDetail({ name }: TagDetailProps) {
   const { variables, tags } = useTableMeta()
-  const columnVisibility = useColumnVisibility()
+  const visibleColumns = useVisibleColumns()
 
   const items = tags[name].variables
     .filter(
@@ -45,7 +50,7 @@ function TagDetail({ name }: TagDetailProps) {
       return {
         name: varMeta.name,
         title: getVariableTitle(varMeta),
-        selected: columnVisibility[varName],
+        selected: visibleColumns[varName],
       }
     })
 
@@ -101,8 +106,8 @@ export function TagsTable() {
 
   return (
     <SearchableTable
-      searchKey="name"
       searchPlaceholder="Search tags"
+      filterRecords={filterTagRecords}
       dataTableProps={{
         records,
         columns: [

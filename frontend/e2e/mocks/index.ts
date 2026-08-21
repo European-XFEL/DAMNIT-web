@@ -14,6 +14,8 @@ import { accessibleProposals, type Example } from '#examples/xpcs'
 
 import { mockWebSocket, type PushLatestData } from './websocket'
 
+export { fullMetadata } from './websocket'
+
 // @monaco-editor/react does not bundle the editor; at runtime its loader fetches
 // monaco from jsDelivr. Resolve the monaco-editor package we already install and
 // serve its min/vs tree instead, so the editor loads with no network and the

@@ -7,6 +7,7 @@ from damnit_api.runs.types import DamnitRun
 
 from .const import (
     EXAMPLE_DATA,
+    EXAMPLE_GROUPS,
     EXAMPLE_TAGGED_VARIABLES,
     KNOWN_DATA,
     PROPOSAL,
@@ -478,6 +479,7 @@ async def test_metadata_query(graphql_schema):
             runs { proposal run }
             variables
             tags
+            groups
             timestamp
           }
         }
@@ -490,7 +492,7 @@ async def test_metadata_query(graphql_schema):
     assert result.errors is None
 
     metadata = result.data["metadata"]
-    assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags"}
+    assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags", "groups"}
     assert metadata["runs"] == [
         {"proposal": str(proposal), "run": run} for proposal, run in RUN_IDENTIFIERS
     ]
@@ -498,8 +500,30 @@ async def test_metadata_query(graphql_schema):
         **DamnitRun.known_variables(),
         **EXAMPLE_TAGGED_VARIABLES,
     }
+    assert metadata["groups"] == EXAMPLE_GROUPS
     assert "(Untagged)" in metadata["tags"]
     assert "eTOF" in metadata["tags"]
+
+
+@pytest.mark.asyncio
+async def test_metadata_query_lists_a_tags_variables_in_column_order(graphql_schema):
+    query = """
+        query TableMetadataQuery($proposal: String) {
+          metadata(database: { proposal: $proposal }) {
+            tags
+          }
+        }
+    """
+    result = await graphql_schema.execute(
+        query,
+        variable_values={"proposal": str(PROPOSAL)},
+    )
+
+    assert result.errors is None
+    assert result.data["metadata"]["tags"]["eTOF"]["variables"] == [
+        "etof.eTOF_calibration",
+        "etof.eTOF_response_width",
+    ]
 
 
 @pytest.mark.asyncio

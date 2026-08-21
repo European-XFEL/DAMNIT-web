@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { PREVIEW_DTYPES } from '@damnit-frontend/shared/constants'
+import { columnIndex } from '#support/grid'
 import type {
   RunData,
   Runs,
@@ -199,22 +200,9 @@ const erroredMeta: Example['meta'] = {
   },
 }
 
-// a11y grid column of a variable: its index among the meta columns, offset by
-// one for the row-marker column. The demo data carries none of the app's
-// EXCLUDED_VARIABLES, so every meta variable is a rendered column.
-function columnOf(order: string[], name: string): number {
-  const index = order.indexOf(name)
-  if (index === -1) {
-    throw new Error(
-      `'${name}' is not a column in the example; update the fixture or the demo data`
-    )
-  }
-  return index + 1
-}
-
 export const ERROR_CELLS = FAILURES.map((failure) => ({
   ...failure,
-  col: columnOf(Object.keys(erroredMeta.variables), failure.variable),
+  col: columnIndex(Object.keys(erroredMeta.variables), failure.variable),
 }))
 
 // Grid row of the errored run, derived so a reordered demo still hovers it.
@@ -238,7 +226,7 @@ if (imageEntry === undefined || imageEntry[1].dtype !== 'image') {
 const imageVariable = imageEntry[0]
 
 export const IMAGE_CELL = {
-  col: columnOf(Object.keys(XPCS.meta.variables), imageVariable),
+  col: columnIndex(Object.keys(XPCS.meta.variables), imageVariable),
   row: 0,
 }
 
@@ -296,6 +284,118 @@ export const xpcsWithPendingImage: Example = {
     const { [imageVariable]: _, ...variables } = run.variables
     return { ...run, variables }
   }),
+}
+
+// Rewrite every tag's membership list, so a fixture that renames or drops a
+// variable leaves the Tags popover saying the same thing the variables do.
+function mapTagVariables(
+  tags: Example['meta']['tags'],
+  rename: (variables: string[]) => string[]
+) {
+  return Object.fromEntries(
+    Object.entries(tags).map(([name, tag]) => [
+      name,
+      { ...tag, variables: rename(tag.variables) },
+    ])
+  )
+}
+
+// Every variable in the demo data carries a tag except `run`, which the popover
+// never configures, so this drops one variable's tag to give it an untagged row.
+export const UNTAGGED_VARIABLE = 'scan_type'
+
+const untagged = XPCS.meta.variables[UNTAGGED_VARIABLE]
+if (untagged === undefined) {
+  throw new Error(
+    `${UNTAGGED_VARIABLE} is not a column in the example; update the fixture or the demo data`
+  )
+}
+
+export const xpcsWithUntagged: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: {
+      ...XPCS.meta.variables,
+      [UNTAGGED_VARIABLE]: { ...untagged, tags: [] },
+    },
+    tags: mapTagVariables(XPCS.meta.tags, (variables) =>
+      variables.filter((variable) => variable !== UNTAGGED_VARIABLE)
+    ),
+  },
+}
+
+// The demo data has no grouped proposal, so this rewrites the three sample
+// columns as a @Group the way the API serves one. They are already adjacent,
+// and the API gathers a group at its earliest member, so the order stands.
+const SAMPLE_GROUP = { name: 'sample', title: 'Sample' }
+
+const GROUPED_VARIABLES: Record<string, { name: string; title: string }> = {
+  sample_type: { name: 'sample.type', title: 'Sample/Type' },
+  sample_x: { name: 'sample.x', title: 'Sample/X [mm]' },
+  sample_y: { name: 'sample.y', title: 'Sample/Y [mm]' },
+}
+
+function groupedName(name: string): string {
+  return GROUPED_VARIABLES[name]?.name ?? name
+}
+
+// The per-run data files on disk keep the demo's ungrouped names, so a read for
+// a renamed column maps back before it reaches the filesystem.
+const UNGROUPED_NAMES: Record<string, string> = Object.fromEntries(
+  Object.entries(GROUPED_VARIABLES).map(([name, { name: grouped }]) => [
+    grouped,
+    name,
+  ])
+)
+
+function groupSampleColumns(
+  variables: Example['meta']['variables']
+): Example['meta']['variables'] {
+  const missing = Object.keys(GROUPED_VARIABLES).filter(
+    (name) => !(name in variables)
+  )
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.join(', ')} is not a column in the example; update the fixture or the demo data`
+    )
+  }
+
+  return Object.fromEntries(
+    Object.entries(variables).map(([name, variable]) => {
+      const renamed = GROUPED_VARIABLES[name]
+      return renamed === undefined
+        ? [name, variable]
+        : [renamed.name, { ...variable, ...renamed, group: SAMPLE_GROUP.name }]
+    })
+  )
+}
+
+function groupRunCells(variables: RunData['variables']): RunData['variables'] {
+  return Object.fromEntries(
+    Object.entries(variables).map(([name, cell]) => [groupedName(name), cell])
+  )
+}
+
+// XPCS with its sample columns grouped, for the second header row. The tag
+// memberships are renamed alongside the variables so the tag filter still
+// resolves them.
+export const xpcsWithGroups: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: groupSampleColumns(XPCS.meta.variables),
+    tags: mapTagVariables(XPCS.meta.tags, (variables) =>
+      variables.map(groupedName)
+    ),
+    groups: { [SAMPLE_GROUP.name]: SAMPLE_GROUP },
+  },
+  data: XPCS.data.map((run) => ({
+    ...run,
+    variables: groupRunCells(run.variables),
+  })),
+  extractedData: (run, variable) =>
+    XPCS.extractedData(run, UNGROUPED_NAMES[variable] ?? variable),
 }
 
 // The home page shows one table per semester, so this example spreads proposals

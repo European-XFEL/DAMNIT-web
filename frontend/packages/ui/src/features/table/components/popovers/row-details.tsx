@@ -8,10 +8,11 @@ import {
   type CheckboxProps,
 } from '@mantine/core'
 
-const headerC =
+export const mutedC =
   'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0))'
+// gray-6 on the panel's gray-0 ground is 3.15:1, under the 4.5:1 floor.
 const unselectedC =
-  'light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2))'
+  'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-2))'
 const selectedC =
   'light-dark(var(--mantine-color-gray-9), var(--mantine-color-dark-0))'
 
@@ -25,7 +26,8 @@ type IndicatorRenderer = (args: {
 }) => ReactNode
 
 export type RowItemProps = {
-  children: ReactNode
+  // The label is clamped to one line, so it doubles as the item's tooltip.
+  children: string
   selected?: boolean
   renderIndicator?: IndicatorRenderer
 }
@@ -47,7 +49,14 @@ function Item({
           </Box>
         )}
 
-        <Text fz={11} lh={1.2} c={color} fw={400} lineClamp={1}>
+        <Text
+          fz={11}
+          lh={1.2}
+          c={color}
+          fw={400}
+          lineClamp={1}
+          title={children}
+        >
           {children}
         </Text>
       </Group>
@@ -83,6 +92,11 @@ export function RowItemCheckbox({
 // ----------------------------------------------------------------------------
 // List
 
+const collator = new Intl.Collator(undefined, {
+  sensitivity: 'base',
+  numeric: true,
+})
+
 type RowListItem = {
   name: string
   title: string
@@ -95,11 +109,6 @@ export type RowListProps = {
 }
 
 function List({ items, renderIndicator }: RowListProps) {
-  const collator = new Intl.Collator(undefined, {
-    sensitivity: 'base',
-    numeric: true,
-  })
-
   // TODO: Change `.sort()` to `.toSorted()` when it's more widely adopted
   const sorted = [...items].sort((a, b) =>
     a.selected !== b.selected
@@ -125,6 +134,24 @@ function List({ items, renderIndicator }: RowListProps) {
 // ----------------------------------------------------------------------------
 // Section
 
+export type SectionHeadingProps = { children: ReactNode }
+
+// The Variables popover heads a group with this too. The two labels share a
+// treatment by decision, so they share the component.
+export function SectionHeading({ children }: SectionHeadingProps) {
+  return (
+    <Text
+      fz={10}
+      fw={500}
+      tt="uppercase"
+      c={mutedC}
+      style={{ letterSpacing: 0.8 }}
+    >
+      {children}
+    </Text>
+  )
+}
+
 export type RowSectionProps = {
   header: string
   info?: string
@@ -135,17 +162,9 @@ function Section({ header, info, children }: RowSectionProps) {
   return (
     <Stack gap={6}>
       <Group justify="space-between" gap={8}>
-        <Text
-          fz={10}
-          fw={500}
-          tt="uppercase"
-          c={headerC}
-          style={{ letterSpacing: 0.8 }}
-        >
-          {header}
-        </Text>
+        <SectionHeading>{header}</SectionHeading>
         {info != null && (
-          <Text fz={10} c={headerC} style={{ letterSpacing: 0.6 }}>
+          <Text fz={10} c={mutedC} style={{ letterSpacing: 0.6 }}>
             {info}
           </Text>
         )}
@@ -165,7 +184,7 @@ function Root({ children }: RowDetailsProps) {
   return (
     <Stack
       bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
-      px="md"
+      px="sm"
       py="xs"
       gap={6}
       style={{

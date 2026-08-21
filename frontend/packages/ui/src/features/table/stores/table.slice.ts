@@ -1,38 +1,58 @@
 import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import { resetProposal } from '#src/app/store/actions'
+import { VARIABLES } from '#src/constants'
+import { runKey } from '#src/data/table/table-data.transforms'
+import type { RunId } from '#src/data/table/table-data.types'
 import { type PlotSpec } from '#src/types'
-import { isArrayEqual } from '#src/utils/array'
+import { isEmpty } from '#src/utils/helpers'
 import type { Scroll } from '#src/features/table/types/table.types'
 
-type VariableOptions = {
-  visibility: boolean
+// Shaped by @tanstack/table-core v9: column ids and primitives, nothing derived.
+// These key names are the contract, so don't rename them to fit local taste.
+type TanstackState = {
+  columnVisibility: Record<string, boolean>
+  columnPinning: { start: string[]; end: string[] }
+  rowSelection: Record<string, true>
 }
 
-type TagSettings = {
-  isSelected: boolean
-}
-
-type TableState = {
-  selection: {
-    proposal: string | null
-    run: number | null
-    variables: string[]
-  }
+// What TanStack has no name for. `tagSelection` filters columns by a facet,
+// which its row-filtering columnFilters cannot express; scroll and isActive only
+// mean anything mid-session, which its state slices deliberately exclude.
+type TableViewState = {
+  activeVariable: string | null
+  tagSelection: Record<string, boolean>
   view: {
     scroll: Scroll
   }
-  variables: Record<string, VariableOptions>
-  tags: Record<string, TagSettings>
   isActive: boolean
 }
 
+type TableState = TanstackState & TableViewState
+
 const initialState: TableState = {
-  selection: { proposal: null, run: null, variables: [] },
-  variables: {},
-  tags: {},
+  // A column shows unless it is listed false, so only the ones the table leaves
+  // out of its default view are seeded.
+  columnVisibility: { [VARIABLES.proposal]: false },
+  // These lead the grid and stay put while it scrolls. Glide freezes a leading
+  // run of columns, so `end` is here only because the shape carries it.
+  columnPinning: { start: [VARIABLES.proposal, VARIABLES.run], end: [] },
+  // Keyed by runKey, so the selection survives the rows moving under it.
+  rowSelection: {},
+  // Which variable the aside is drilled into; null shows every one of them.
+  activeVariable: null,
+  tagSelection: {},
   view: { scroll: { x: 0, y: 0 } },
   isActive: false,
+}
+
+// Immer hands out a new object on every assignment, so writing unconditionally
+// would give every reader of `rowSelection` a fresh reference per click.
+function selectRow(state: TableState, key: string) {
+  const selected = Object.keys(state.rowSelection)
+  if (selected.length !== 1 || selected[0] !== key) {
+    state.rowSelection = { [key]: true }
+  }
 }
 
 const slice = createSlice({
@@ -42,43 +62,37 @@ const slice = createSlice({
     setActive: (state, action: PayloadAction<boolean>) => {
       state.isActive = action.payload
     },
-    selectRun: ({ selection }, action) => {
-      const { proposal, run, variables } = action.payload
-      if (selection.run !== run) {
-        selection.run = run
-      }
-      if (selection.proposal !== proposal) {
-        selection.proposal = proposal
-      }
-      if (!isArrayEqual(selection.variables, variables)) {
-        selection.variables = variables
-      }
+    runSelected: (state, action: PayloadAction<RunId>) => {
+      selectRow(state, runKey(action.payload))
+      state.activeVariable = null
     },
-    setVariableVisibility: (
+    runDeselected: (state) => {
+      if (!isEmpty(state.rowSelection)) {
+        state.rowSelection = {}
+      }
+      state.activeVariable = null
+    },
+    cellActivated: (
+      state,
+      action: PayloadAction<RunId & { variable: string }>
+    ) => {
+      selectRow(state, runKey(action.payload))
+      state.activeVariable = action.payload.variable
+    },
+    setColumnVisibility: (
       state,
       action: PayloadAction<Record<string, boolean>>
     ) => {
-      for (const [name, isVisible] of Object.entries(action.payload)) {
-        const options = state.variables[name] ?? {}
-        state.variables[name] = { ...options, visibility: isVisible }
-      }
+      Object.assign(state.columnVisibility, action.payload)
     },
     setTagSelection: (
       state,
       action: PayloadAction<Record<string, boolean>>
     ) => {
-      // Set the tags selection
-      for (const [name, isSelected] of Object.entries(action.payload)) {
-        const settings = state.tags[name] ?? {}
-        state.tags[name] = { ...settings, isSelected }
-      }
+      Object.assign(state.tagSelection, action.payload)
     },
     clearTagSelection: (state) => {
-      // Set the tags selection
-      for (const name of Object.keys(state.tags)) {
-        const settings = state.tags[name] ?? {}
-        state.tags[name] = { ...settings, isSelected: false }
-      }
+      state.tagSelection = {}
     },
     setViewScroll: (state, action: PayloadAction<Scroll>) => {
       state.view.scroll = action.payload
@@ -91,11 +105,13 @@ const slice = createSlice({
 
 export default slice.reducer
 export const {
+  cellActivated,
   clearTagSelection,
-  selectRun,
+  runDeselected,
+  runSelected,
   setActive,
+  setColumnVisibility,
   setTagSelection,
-  setVariableVisibility,
   setViewScroll,
 } = slice.actions
 

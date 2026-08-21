@@ -1,7 +1,15 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { XPCS, accessibleProposals, type Example } from '#examples/xpcs'
-import { cellPoint, gridBox, headerPoint } from '#support/grid'
+import { accessibleProposals, type Example } from '#examples/xpcs'
+import {
+  type Cell,
+  cellPoint,
+  columnIndex,
+  gridBox,
+  groupHeaderPoint,
+  headerPoint,
+  rowMarkerPoint,
+} from '#support/grid'
 
 // The grid is a <canvas>. Glide Data Grid mirrors the visible columns into a
 // <table role="grid"> as canvas fallback content, which the browser never
@@ -91,19 +99,21 @@ export async function openProposal(page: Page, example: Example) {
   await openDashboard(page, () => page.goto(`proposal/${proposal}`))
 }
 
-// The a11y column index of a variable: its position in meta order, plus one for
-// the row-marker column. A rename or reorder fails here loudly.
-export function columnOf(name: string): number {
-  const index = Object.keys(XPCS.meta.variables).indexOf(name)
-  if (index === -1) {
-    throw new Error(`'${name}' is not a column in the example`)
-  }
-  return index + 1
+export function columnOf(example: Example, name: string): number {
+  return columnIndex(Object.keys(example.meta.variables), name)
 }
 
 // The display title the table header and plot tabs render for a variable.
-export function titleOf(name: string): string {
-  return XPCS.meta.variables[name].title
+export function titleOf(example: Example, name: string): string {
+  return example.meta.variables[name].title
+}
+
+// A grouped proposal draws a second header row, which pushes every point below
+// it down. Read from the example, so hiding every grouped column leaves this
+// saying true after Glide has dropped the row: it enables the row from the
+// visible columns, not from the metadata.
+export function hasGroups(example: Example): boolean {
+  return Object.keys(example.meta.groups ?? {}).length > 0
 }
 
 // aria-colcount is the live data-column count, excluding the row-marker column.
@@ -121,6 +131,48 @@ export function columnHeader(page: Page, title: string): Locator {
   return page.locator('[role="columnheader"]', { hasText: title })
 }
 
+// Every mirrored header title, left to right. The mirror renders a beat after
+// the canvas, so wait for the row before reading it or an early call comes back
+// empty. Same viewport caveat as columnHeader: these are the on-screen columns,
+// not every column.
+export async function columnTitles(page: Page): Promise<string[]> {
+  const headers = page.locator('[role="columnheader"]')
+  await expect(headers.first()).toBeAttached()
+  return headers.allInnerTexts()
+}
+
+// The mirrored headers of the selected columns. Selection is painted on the
+// canvas, but Glide also carries it into the mirror as aria-selected, which is
+// the only way a test can read it.
+export function selectedColumnHeaders(page: Page): Locator {
+  return page.locator('[role="columnheader"][aria-selected="true"]')
+}
+
+// The grid's right-click menu. One owner: the class tracks Mantine's.
+export function contextMenu(page: Page): Locator {
+  return page.locator('.mantine-contextmenu')
+}
+
+// Right-click a column title by real pointer coordinates, mirroring
+// rightClickCell.
+export async function rightClickHeader(
+  page: Page,
+  { example, col }: { example: Example; col: number }
+) {
+  const box = await gridBox(page)
+  const { x, y } = headerPoint(box, { col, grouped: hasGroups(example) })
+  await page.mouse.click(x, y, { button: 'right' })
+}
+
+// Click the group box above a column, on a grouped proposal. Like hoverCell
+// this drives real pointer coordinates: the group row is painted on the canvas
+// and has no mirrored element to click.
+export async function clickGroupHeader(page: Page, col: number) {
+  const box = await gridBox(page)
+  const { x, y } = groupHeaderPoint(box, col)
+  await page.mouse.click(x, y)
+}
+
 // Opens a Variables/Tags popover from its toolbar button, returning the button
 // so tests can assert its count badge afterwards.
 export async function openPopover(page: Page, name: string): Promise<Locator> {
@@ -129,20 +181,74 @@ export async function openPopover(page: Page, name: string): Promise<Locator> {
   return button
 }
 
-export function rowCheckbox(page: Page, name: string): Locator {
-  return page.getByRole('row', { name }).getByRole('checkbox')
+// A row in a popover's list. Exact matching is for a title another row's title
+// contains, such as a group member's once its group's words are stripped.
+export function popoverRow(
+  page: Page,
+  name: string,
+  { exact = false } = {}
+): Locator {
+  return page.getByRole('row', { name, exact })
 }
 
+export function rowCheckbox(page: Page, name: string): Locator {
+  return popoverRow(page, name).getByRole('checkbox')
+}
+
+// A group's row in the Variables popover, and the link in it that shows or
+// hides every variable at once. The row's name carries the link's words too, so
+// it is found by the link rather than matched exactly the way a variable row is.
+export function groupRow(page: Page, name: string): Locator {
+  return popoverRow(page, name).filter({ has: page.getByRole('button') })
+}
+
+export function groupAction(page: Page, name: string): Locator {
+  return groupRow(page, name).getByRole('button')
+}
+
+// The popover's own show/hide-all link, above the table. It reads the same as
+// the group links, so this excludes the ones inside a row.
+export function popoverAction(page: Page): Locator {
+  return page.locator('.mantine-Popover-dropdown button:not(tr button)')
+}
+
+// The details a variable's row opens. mantine-datatable renders them in a row
+// of their own below it, so they are not inside the row that was clicked.
+export function rowDetails(page: Page): Locator {
+  return page.locator('.mantine-datatable-row-expansion-cell')
+}
+
+// Click the row's marker, which is Glide's own select-this-row control. Driven
+// by real pointer coordinates like the other canvas gestures: focusing the
+// mirrored cell and pressing Glide's Shift+Space keybinding does not carry the
+// row through, so it selects whichever row Glide already had focused.
 // `row` must be within the initial vertical fold; this does not scroll it in.
-export async function selectRun(page: Page, { row }: { row: number }) {
+export async function selectRun(
+  page: Page,
+  { example, row }: { example: Example; row: number }
+) {
   // The a11y tree renders a beat after the canvas, and Glide only mirrors rows
-  // in the current vertical window, so wait for the target cell itself.
-  const runCell = cell(page, { col: RUN_COLUMN, row })
-  await expect(runCell).toBeAttached()
-  // Shift+Space is Glide's selectRow keybinding: it selects the focused cell's
-  // row, so the column is irrelevant.
-  await runCell.focus()
-  await page.keyboard.press('Shift+Space')
+  // in the current vertical window, so wait for the target row to exist.
+  await expect(cell(page, { col: RUN_COLUMN, row })).toBeAttached()
+
+  const box = await gridBox(page)
+  const { x, y } = rowMarkerPoint(box, { row, grouped: hasGroups(example) })
+  await page.mouse.click(x, y)
+}
+
+// The mirrored row of a highlighted run, the row half of the aria-selected
+// mirror selectedColumnHeaders reads on the column side. Glide numbers the
+// header row 1, so data row `row` is `row + 2`.
+export function highlightedRow(page: Page, { row }: { row: number }): Locator {
+  return page.locator(
+    `[role="row"][aria-rowindex="${row + 2}"][aria-selected="true"]`
+  )
+}
+
+// Close the aside from its X. It is the panel's only plain button; the tabs
+// beside it carry the tab role.
+export function closeAside(page: Page) {
+  return page.getByRole('complementary').getByRole('button').click()
 }
 
 // The aside's Run tab, whose title becomes `Run: <n>` once a run is selected.
@@ -157,8 +263,12 @@ export function selectedRunTab(page: Page): Locator {
 // column index (row marker is 0, Run is 1), matching selectRun.
 export async function hoverCell(
   page: Page,
-  { col, row }: { col: number; row: number },
-  { waitForContent = true }: { waitForContent?: boolean } = {}
+  {
+    example,
+    col,
+    row,
+    waitForContent = true,
+  }: Cell & { example: Example; waitForContent?: boolean }
 ) {
   // The deferred table data loads after the canvas paints, so the target cell
   // can still be empty when the pointer arrives, and hovering an empty cell
@@ -169,8 +279,9 @@ export async function hoverCell(
   }
 
   const box = await gridBox(page)
-  const header = headerPoint(box, col)
-  const cell = cellPoint(box, { col, row })
+  const grouped = hasGroups(example)
+  const header = headerPoint(box, { col, grouped })
+  const cell = cellPoint(box, { col, row, grouped })
   // Rest on the header first so the move onto the cell always reads as a hover
   // transition, then settle on the cell center for the open delay to elapse.
   await page.mouse.move(header.x, header.y)
@@ -182,10 +293,10 @@ export async function hoverCell(
 // the cell center rather than going through the a11y mirror.
 export async function rightClickCell(
   page: Page,
-  { col, row }: { col: number; row: number }
+  { example, col, row }: Cell & { example: Example }
 ) {
   const box = await gridBox(page)
-  const { x, y } = cellPoint(box, { col, row })
+  const { x, y } = cellPoint(box, { col, row, grouped: hasGroups(example) })
   await page.mouse.click(x, y, { button: 'right' })
 }
 
@@ -196,10 +307,10 @@ export async function rightClickCell(
 // column through to activation.
 export async function activateCell(
   page: Page,
-  { col, row }: { col: number; row: number }
+  { example, col, row }: Cell & { example: Example }
 ) {
   const box = await gridBox(page)
-  const { x, y } = cellPoint(box, { col, row })
+  const { x, y } = cellPoint(box, { col, row, grouped: hasGroups(example) })
   await page.mouse.dblclick(x, y)
 }
 

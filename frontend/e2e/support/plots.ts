@@ -1,12 +1,13 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
+import { type Example } from '#examples/xpcs'
 import { type Cell, cellPoint, gridBox, headerPoint } from '#support/grid'
-import { rightClickCell } from '#support/table'
-
-// Wide enough to keep the target columns within the horizontal fold so the
-// coordinate clicks land on them, and above Mantine's `sm` breakpoint, below
-// which the tab bar (with the Display Plot button) is hidden.
-export const PLOT_VIEWPORT = { width: 1600, height: 900 }
+import {
+  contextMenu,
+  hasGroups,
+  rightClickCell,
+  rightClickHeader,
+} from '#support/table'
 
 // Click the first point, then modifier-click the rest to build a multi-select.
 // Glide reads Cmd on macOS and Ctrl elsewhere; ControlOrMeta lets Playwright
@@ -22,27 +23,26 @@ async function multiClick(page: Page, points: { x: number; y: number }[]) {
   await page.keyboard.up('ControlOrMeta')
 }
 
-const contextMenu = (page: Page) => page.locator('.mantine-contextmenu')
-
-async function rightClickHeader(page: Page, col: number) {
-  const box = await gridBox(page)
-  const { x, y } = headerPoint(box, col)
-  await page.mouse.click(x, y, { button: 'right' })
-}
-
 // The right-clicked column becomes the summary plot's Y axis.
-export async function selectColumns(page: Page, cols: number[]) {
+export async function selectColumns(
+  page: Page,
+  { example, cols }: { example: Example; cols: number[] }
+) {
   const box = await gridBox(page)
+  const grouped = hasGroups(example)
   await multiClick(
     page,
-    cols.map((col) => headerPoint(box, col))
+    cols.map((col) => headerPoint(box, { col, grouped }))
   )
 }
 
 // Right-click a header and pick "Plot: summary". Scope the click to the menu:
 // a bare "Plot" also matches the toolbar's "Display Plot" button.
-export async function openSummaryPlot(page: Page, col: number) {
-  await rightClickHeader(page, col)
+export async function openSummaryPlot(
+  page: Page,
+  { example, col }: { example: Example; col: number }
+) {
+  await rightClickHeader(page, { example, col })
   await contextMenu(page).getByText('Plot: summary').click()
 }
 
@@ -54,19 +54,26 @@ export async function showTable(page: Page) {
 }
 
 // The cells must share one column, or the grid clears the range stack.
-export async function selectCells(page: Page, cells: Cell[]) {
+export async function selectCells(
+  page: Page,
+  { example, cells }: { example: Example; cells: Cell[] }
+) {
   const box = await gridBox(page)
+  const grouped = hasGroups(example)
   await multiClick(
     page,
-    cells.map((cell) => cellPoint(box, cell))
+    cells.map((cell) => cellPoint(box, { ...cell, grouped }))
   )
 }
 
 // Right-click a cell and pick "Plot: preview". Right-clicking a cell that is not
 // already selected resets the selection to it, so build any multi-run range
 // with selectCells first, then right-click one of the selected cells.
-export async function openPreviewPlot(page: Page, cell: Cell) {
-  await rightClickCell(page, cell)
+export async function openPreviewPlot(
+  page: Page,
+  { example, col, row }: Cell & { example: Example }
+) {
+  await rightClickCell(page, { example, col, row })
   await contextMenu(page).getByText('Plot: preview').click()
 }
 

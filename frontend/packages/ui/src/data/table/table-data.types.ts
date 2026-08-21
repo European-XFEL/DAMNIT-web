@@ -22,17 +22,26 @@ export type Cell = {
   summary: CellSummary
 }
 
-// A column: what a variable is, independent of any run's value of it.
+// A column: what a variable is, independent of any run's value of it. `group` is
+// the key of the group it belongs to, absent when it belongs to none.
 export type Variable = {
   name: string
   title?: string
   tags: string[]
+  group?: string
 }
 
 export type Tag = {
   id: number
   name: string
   variables: string[]
+}
+
+// A group of variables, named by the context file's @Group instance. Membership
+// lives on the variable; the label is absent when its members disagree on one.
+export type VariableGroup = {
+  name: string
+  title?: string
 }
 
 // A run row. Its identity is the (database, proposal, run) trio, which the cache
@@ -56,10 +65,11 @@ export type RunId = {
 // One run's cells keyed by variable name, for O(1) cell lookup.
 export type RunCells = Record<string, Cell>
 
-// The table's shape: its columns, row order, tags, and freshness.
+// The table's shape: its columns, row order, tags, groups, and freshness.
 export type TableMeta = {
   variables: Record<string, Variable>
   runs: RunId[]
   tags: Record<string, Tag>
+  groups: Record<string, VariableGroup>
   timestamp: number
 }

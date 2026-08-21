@@ -11,11 +11,16 @@ const records: Row[] = [
   { id: '3', title: 'Temperature' },
 ]
 
+// SearchableTable trims and lowercases before handing the query over, so this
+// only has to match.
+const filterRows = (rows: Row[], query: string) =>
+  rows.filter((row) => row.title.toLowerCase().includes(query))
+
 function renderTable() {
   return renderWithProviders(
     <SearchableTable<Row>
-      searchKey="title"
       searchPlaceholder="Search"
+      filterRecords={filterRows}
       dataTableProps={{
         records,
         columns: [{ accessor: 'title' }],

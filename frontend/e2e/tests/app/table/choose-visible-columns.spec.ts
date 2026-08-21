@@ -4,6 +4,7 @@ import {
   expectVisibleColumns,
   openPopover,
   openProposal,
+  popoverAction,
   rowCheckbox,
 } from '#support/table'
 
@@ -66,4 +67,20 @@ test('a hidden column stays hidden after the popover closes', async ({
   // Reopen the popover
   await variables.click()
   await expect(rowCheckbox(page, 'Trains')).not.toBeChecked()
+})
+
+test('the popover link hides every variable, then shows them again', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openPopover(page, 'Variables')
+
+  // Hide everything the popover configures, leaving the pinned Run column
+  await popoverAction(page).click()
+  await expectVisibleColumns(page, 1)
+
+  // Show it all again
+  await popoverAction(page).click()
+  await expectVisibleColumns(page, 13)
 })
