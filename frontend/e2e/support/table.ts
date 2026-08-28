@@ -7,7 +7,9 @@ import {
   columnIndex,
   gridBox,
   groupHeaderPoint,
+  headerEdgePoint,
   headerPoint,
+  type Point,
   rowMarkerPoint,
 } from '#support/grid'
 
@@ -108,6 +110,12 @@ export function titleOf(example: Example, name: string): string {
   return example.meta.variables[name].title
 }
 
+// The example's trailing variable, which the table draws as its last column.
+export function lastVariableOf(example: Example): string {
+  const names = Object.keys(example.meta.variables)
+  return names[names.length - 1]
+}
+
 // A grouped proposal draws a second header row, which pushes every point below
 // it down. Read from the example, so hiding every grouped column leaves this
 // saying true after Glide has dropped the row: it enables the row from the
@@ -146,6 +154,31 @@ export async function columnTitles(page: Page): Promise<string[]> {
 // the only way a test can read it.
 export function selectedColumnHeaders(page: Page): Locator {
   return page.locator('[role="columnheader"][aria-selected="true"]')
+}
+
+// A width never reaches the accessibility mirror, so it is read back by clicking
+// a point and asking which column answered. Keep probes 5px clear of a seam.
+export async function clickAndExpectColumn(
+  page: Page,
+  { point, title }: { point: Point; title: string }
+) {
+  await page.mouse.click(point.x, point.y)
+  await expect(selectedColumnHeaders(page)).toHaveText([title])
+}
+
+// The seam a resize gesture aims at, on the example's own title row. `overshoot`
+// pushes it into the strip of dead space Glide leaves beside the last column.
+export async function headerEdge(
+  page: Page,
+  {
+    example,
+    col,
+    overshoot = 0,
+  }: { example: Example; col: number; overshoot?: number }
+): Promise<Point> {
+  const box = await gridBox(page)
+  const { x, y } = headerEdgePoint(box, { col, grouped: hasGroups(example) })
+  return { x: x + overshoot, y }
 }
 
 // The grid's right-click menu. One owner: the class tracks Mantine's.
