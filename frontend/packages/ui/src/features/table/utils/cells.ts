@@ -10,7 +10,11 @@ import {
   type NumberCell,
   type TextCell,
 } from '@glideapps/glide-data-grid'
-import { type SparklineCellType } from '@glideapps/glide-data-grid-cells'
+import {
+  allCells,
+  SparklineCell as sparklineRenderer,
+  type SparklineCellType,
+} from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
@@ -241,6 +245,10 @@ export const makeErrorCellRenderer = (
     kind: GridCellKind.Custom,
     isMatch: (cell: CustomCell): cell is ErrorCell =>
       (cell.data as Partial<ErrorCellProps>).kind === ERROR_CELL_KIND,
+    // Nothing is drawn but the glyph, padded either side, so that is the whole
+    // width a double-click fit should ask for.
+    measure: (_ctx, _cell, theme) =>
+      ERROR_ICON_SIZE + 2 * theme.cellHorizontalPadding,
     draw: ({ ctx, rect, theme, cell }) => {
       const img = icons[errorKind(cell.data.error.cls)]
       if (!img.complete || img.naturalWidth === 0) {
@@ -307,3 +315,17 @@ export const getCell = ({
   // established, kept inline because the grid re-asks on every redraw.
   return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
 }
+
+// Every renderer the grid draws with. The sparkline ships with no `measure`, so
+// a fit would land on Glide's 150px default; a trend has no width of its own.
+export const makeCellRenderers = (
+  colors: ErrorColors,
+  sparklineWidth: number
+) => [
+  ...allCells.map((renderer) =>
+    renderer === sparklineRenderer
+      ? { ...renderer, measure: () => sparklineWidth }
+      : renderer
+  ),
+  makeErrorCellRenderer(colors),
+]
