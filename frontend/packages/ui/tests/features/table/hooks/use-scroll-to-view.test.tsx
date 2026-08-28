@@ -1,5 +1,4 @@
-import type { PropsWithChildren, RefObject } from 'react'
-import { Provider } from 'react-redux'
+import type { RefObject } from 'react'
 import { renderHook } from 'vitest-browser-react'
 import { describe, expect, test } from 'vitest'
 import type { DataEditorRef } from '@glideapps/glide-data-grid'
@@ -7,13 +6,8 @@ import type { DataEditorRef } from '@glideapps/glide-data-grid'
 import { resetProposal } from '#src/app/store/actions'
 import type { Rectangle, Scroll } from '#src/features/table/types/table.types'
 import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
-import { setupStore, type AppStore } from '#src/app/store/store'
-
-function makeWrapper(store: AppStore) {
-  return function ReduxWrapper({ children }: PropsWithChildren) {
-    return <Provider store={store}>{children}</Provider>
-  }
-}
+import { setupStore } from '#src/app/store/store'
+import { withStore } from '#tests/support/render'
 
 // A ref whose first getBounds sets the baseline and whose second reports a
 // viewport shifted by `delta`, so the hook records `delta` as the saved scroll.
@@ -35,7 +29,7 @@ describe('useScrollToView', () => {
     const ref = refScrolledBy({ x: 0, y: 40 })
     const { result, act, unmount } = await renderHook(
       () => useScrollToView(ref),
-      { wrapper: makeWrapper(store) }
+      { wrapper: withStore(store) }
     )
 
     // Scroll down: the first callback sets the baseline, the second records it.
@@ -55,7 +49,7 @@ describe('useScrollToView', () => {
     const ref = refScrolledBy({ x: 0, y: 40 })
     const { result, act, unmount } = await renderHook(
       () => useScrollToView(ref),
-      { wrapper: makeWrapper(store) }
+      { wrapper: withStore(store) }
     )
 
     await act(() => {
