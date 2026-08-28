@@ -13,6 +13,7 @@ import type { Scroll } from '#src/features/table/types/table.types'
 type TanstackState = {
   columnVisibility: Record<string, boolean>
   columnPinning: { start: string[]; end: string[] }
+  columnSizing: Record<string, number>
   rowSelection: Record<string, true>
 }
 
@@ -37,6 +38,8 @@ const initialState: TableState = {
   // These lead the grid and stay put while it scrolls. Glide freezes a leading
   // run of columns, so `end` is here only because the shape carries it.
   columnPinning: { start: [VARIABLES.proposal, VARIABLES.run], end: [] },
+  // Keyed by variable name; a missing one draws at the default width.
+  columnSizing: {},
   // Keyed by runKey, so the selection survives the rows moving under it.
   rowSelection: {},
   // Which variable the aside is drilled into; null shows every one of them.
@@ -58,6 +61,8 @@ function selectRow(state: TableState, key: string) {
 const slice = createSlice({
   name: 'table',
   initialState,
+  // An action names what happened at its source (columnResized, resetProposal);
+  // a widget that owns its slot's next value speaks state (setTagSelection).
   reducers: {
     setActive: (state, action: PayloadAction<boolean>) => {
       state.isActive = action.payload
@@ -85,6 +90,17 @@ const slice = createSlice({
     ) => {
       Object.assign(state.columnVisibility, action.payload)
     },
+    columnResized: (
+      state,
+      action: PayloadAction<{ variable: string; width: number }>
+    ) => {
+      state.columnSizing[action.payload.variable] = action.payload.width
+    },
+    columnWidthsReset: (state) => {
+      if (!isEmpty(state.columnSizing)) {
+        state.columnSizing = {}
+      }
+    },
     setTagSelection: (
       state,
       action: PayloadAction<Record<string, boolean>>
@@ -107,6 +123,8 @@ export default slice.reducer
 export const {
   cellActivated,
   clearTagSelection,
+  columnResized,
+  columnWidthsReset,
   runDeselected,
   runSelected,
   setActive,
