@@ -28,6 +28,30 @@ index 412d81c8748b979a9d988f2e3cfa8eddc1bfc555..1d7ebc9ce3dbfd793fc009b318f3e1e6
          const args = getMouseArgsForPosition(canvas, clientX, clientY, ev);
          downPosition.current = args.location;
          if (args.isTouch) {
+diff --git a/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js b/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js
+index 05c6d7e0123358e6e18f02e91d7e2e884a3806b0..8aaabfd405137d151609df641f856d1298a55363 100644
+--- a/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js
++++ b/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js
+@@ -73,8 +73,18 @@ const DataGridDnd = p => {
+             if (args.kind === "out-of-bounds" && args.isEdge && canResize) {
+                 const bounds = gridRef?.current?.getBounds(columns.length - 1, -1);
+                 if (bounds !== undefined) {
++                    const last = columns.length - 1;
+                     setResizeColStartX(bounds.x);
+-                    setResizeCol(columns.length - 1);
++                    setResizeCol(last);
++                    // Announce the grab, as the header branch below does, so a
++                    // consumer can tell it from the ones it is re-sent to.
++                    const oobCanvas = canvasRef?.current;
++                    if (oobCanvas) {
++                        const oobRect = oobCanvas.getBoundingClientRect();
++                        const oobScale = oobRect.width / oobCanvas.offsetWidth;
++                        const oobWidth = bounds.width / oobScale;
++                        onColumnResizeStart?.(columns[last], oobWidth, last, oobWidth + (columns[last].growOffset ?? 0));
++                    }
+                 }
+             }
+             else if (args.kind === "header" && col >= lockColumns) {
 diff --git a/dist/esm/internal/data-grid/data-grid.js b/dist/esm/internal/data-grid/data-grid.js
 index c32e94b805eeb5291d0c3aa3b44b8dc43e9f99b4..11f7dfeeb7bfbe314a82a9afb9229ae3949456f4 100644
 --- a/dist/esm/internal/data-grid/data-grid.js
@@ -58,3 +82,27 @@ index c32e94b805eeb5291d0c3aa3b44b8dc43e9f99b4..11f7dfeeb7bfbe314a82a9afb9229ae3
          const args = getMouseArgsForPosition(canvas, clientX, clientY, ev);
          downPosition.current = args.location;
          if (args.isTouch) {
+diff --git a/dist/esm/internal/data-grid-dnd/data-grid-dnd.js b/dist/esm/internal/data-grid-dnd/data-grid-dnd.js
+index 734f50fd6705f0d0c36760ca88c3661ab18944d1..f0020eca7c647d73ff1518e67752a1ec95778407 100644
+--- a/dist/esm/internal/data-grid-dnd/data-grid-dnd.js
++++ b/dist/esm/internal/data-grid-dnd/data-grid-dnd.js
+@@ -45,8 +45,18 @@ const DataGridDnd = p => {
+             if (args.kind === "out-of-bounds" && args.isEdge && canResize) {
+                 const bounds = gridRef?.current?.getBounds(columns.length - 1, -1);
+                 if (bounds !== undefined) {
++                    const last = columns.length - 1;
+                     setResizeColStartX(bounds.x);
+-                    setResizeCol(columns.length - 1);
++                    setResizeCol(last);
++                    // Announce the grab, as the header branch below does, so a
++                    // consumer can tell it from the ones it is re-sent to.
++                    const oobCanvas = canvasRef?.current;
++                    if (oobCanvas) {
++                        const oobRect = oobCanvas.getBoundingClientRect();
++                        const oobScale = oobRect.width / oobCanvas.offsetWidth;
++                        const oobWidth = bounds.width / oobScale;
++                        onColumnResizeStart?.(columns[last], oobWidth, last, oobWidth + (columns[last].growOffset ?? 0));
++                    }
+                 }
+             }
+             else if (args.kind === "header" && col >= lockColumns) {
