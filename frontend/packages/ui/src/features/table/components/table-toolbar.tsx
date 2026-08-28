@@ -21,7 +21,8 @@ export const TableToolbar = memo(function TableToolbar({
     <Group px={6}>
       <VariablesPopover />
       <TagsPopover />
-      <Divider orientation="vertical" h={20} />
+      {/* A height turns Mantine's stretch on the divider into a top-align. */}
+      <Divider orientation="vertical" h={20} style={{ alignSelf: 'center' }} />
       <Tooltip label="Fit all columns" fz="xs" withArrow>
         <ActionIcon
           variant="subtle"
