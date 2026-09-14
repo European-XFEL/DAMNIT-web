@@ -3,6 +3,8 @@ import { describe, expect, test } from 'vitest'
 import reducer, {
   cellActivated,
   clearTagSelection,
+  columnResized,
+  columnWidthsReset,
   runDeselected,
   runSelected,
   setColumnVisibility,
@@ -99,6 +101,22 @@ describe('columnPinning', () => {
   test('seeds the identity columns pinned to the start, proposal first', () => {
     const state = reducer(undefined, { type: 'unknown' })
     expect(state.columnPinning).toEqual({ start: ['proposal', 'run'], end: [] })
+  })
+})
+
+describe('columnResized', () => {
+  test('resizes one column without clobbering its siblings', () => {
+    let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
+    state = reducer(state, columnResized({ variable: 'b', width: 60 }))
+    expect(state.columnSizing).toEqual({ a: 240, b: 60 })
+  })
+})
+
+describe('columnWidthsReset', () => {
+  test('drops every width the user set', () => {
+    let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
+    state = reducer(state, columnWidthsReset())
+    expect(state.columnSizing).toEqual({})
   })
 })
 

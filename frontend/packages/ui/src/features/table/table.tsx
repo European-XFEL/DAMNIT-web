@@ -11,8 +11,7 @@ import {
   type Item,
   type Rectangle,
 } from '@glideapps/glide-data-grid'
-import { allCells } from '@glideapps/glide-data-grid-cells'
-import { Group, Stack, useMantineTheme } from '@mantine/core'
+import { Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
@@ -23,7 +22,7 @@ import { isEmpty } from '#src/utils/helpers'
 import {
   errorCell,
   getCell,
-  makeErrorCellRenderer,
+  makeCellRenderers,
   numberCell,
   textCell,
   type ErrorColors,
@@ -32,8 +31,7 @@ import {
   getColumnTitle,
   getGroupTitle,
 } from '#src/features/table/utils/column-title'
-import { TagsPopover } from '#src/features/table/components/popovers/tags-popover'
-import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
+import { TableToolbar } from '#src/features/table/components/table-toolbar'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
 import ContextMenu from '#src/features/table/components/context-menu'
 import { useTableTooltip } from '#src/features/table/hooks/use-table-tooltip'
@@ -41,6 +39,7 @@ import { useTableColumns } from '#src/features/table/hooks/use-table-columns'
 import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
 import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
+import { useColumnResize } from '#src/features/table/hooks/use-column-resize'
 import {
   toCurrent,
   toSelectedCells,
@@ -66,6 +65,10 @@ const PAGE_SIZE = 10
 // Shorter than the 36px title row below it: Glide paints both rows in the same
 // font on the same background, so height is the only lever left.
 const GROUP_HEADER_HEIGHT = 24
+
+// Every column starts here, whatever it holds. Dragging a header edge or
+// double-clicking it writes the user's own width to the store instead.
+const DEFAULT_COLUMN_WIDTH = 100
 
 const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: References
@@ -93,6 +96,14 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   } = useScrollToView(tableRef)
   const [contextMenu, setContextMenu] = useContextMenu()
   const { columns: tableColumns, pinnedCount } = useTableColumns()
+  const {
+    columnSizing,
+    onColumnResize,
+    onColumnResizeStart,
+    onColumnResizeEnd,
+    fitAllColumns,
+    resetColumnWidths,
+  } = useColumnResize(tableRef, tableColumns.length)
   const theme = useMantineTheme()
 
   // What the grid draws: the title without the level its group header already
@@ -104,9 +115,9 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       tableColumns.map((column) => ({
         ...column,
         title: getColumnTitle(column, groups),
-        width: 100,
+        width: columnSizing[column.id] ?? DEFAULT_COLUMN_WIDTH,
       })),
-    [tableColumns, groups]
+    [tableColumns, groups, columnSizing]
   )
 
   // Glide's own default would paint the raw group key, so the label comes here.
@@ -147,7 +158,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     [theme]
   )
   const renderers = useMemo(
-    () => [...allCells, makeErrorCellRenderer(errorColors)],
+    () => makeCellRenderers(errorColors, DEFAULT_COLUMN_WIDTH),
     [errorColors]
   )
 
@@ -501,10 +512,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     <>
       {!tableColumns.length ? null : (
         <Stack w="100%" h="100%" gap="sm">
-          <Group px={6}>
-            <VariablesPopover />
-            <TagsPopover />
-          </Group>
+          <TableToolbar
+            onFitAllColumns={fitAllColumns}
+            onResetColumnWidths={resetColumnWidths}
+          />
           <>
             <DataEditor
               {...(grid || {})}
@@ -517,6 +528,18 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               // to, and the group bar has nothing of its own to offer.
               onGroupHeaderContextMenu={(_col, event) => event.preventDefault()}
               getCellContent={getContent}
+              onColumnResize={onColumnResize}
+              onColumnResizeStart={onColumnResizeStart}
+              onColumnResizeEnd={onColumnResizeEnd}
+              // Lets Glide measure the visible cells, which is what its
+              // built-in double-click fit needs.
+              getCellsForSelection={true}
+              // Copy rides along with the line above, and a column copy asks for
+              // every run, which pagination has not fetched, so a paste is short.
+              keybindings={{ copy: false }}
+              // No cell here sets a span, so Glide's scan for one would read
+              // cells on every selection change and throw the answer away.
+              spanRangeBehavior="allowPartial"
               rows={runs.length}
               rowSelect="single"
               rowMarkers="clickable-number"

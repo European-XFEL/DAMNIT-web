@@ -27,6 +27,12 @@ export const GROUP_HEADER_HEIGHT = 24
 // breakpoint, below which the tab bar hides.
 export const WIDE_VIEWPORT = { width: 1600, height: 900 }
 
+// Headless Chromium hides scrollbars by default, leaving only overlay ones,
+// which take no layout space. Spread into the `test.use` of specs that need one.
+export const REAL_SCROLLBARS = {
+  launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] },
+}
+
 // The columns the table pins, in the order it pins them. Mirrors the store's
 // columnPinning.start seed.
 const PINNED_COLUMNS = ['proposal', 'run']
@@ -106,6 +112,46 @@ export function headerPoint(
     x: columnCenter(box, col),
     y: box.y + headerTop(grouped) + HEADER_HEIGHT / 2,
   }
+}
+
+// The seam a resize gesture aims at: the right edge of `col` on the title row.
+export function headerEdgePoint(
+  box: Box,
+  options: { col: number; grouped?: boolean }
+) {
+  const point = headerPoint(box, options)
+  return { ...point, x: point.x + COLUMN_WIDTH / 2 }
+}
+
+// Three quarters across a column, clear of both its seams. A column collapsed
+// to Glide's 50px minimum no longer reaches here.
+export function threeQuartersAcross(box: Box, col: number): number {
+  return columnCenter(box, col) + COLUMN_WIDTH * 0.25
+}
+
+// Glide pairs up any two mouse-ups less than this apart, wherever on the grid
+// they land, and calls the second one a double click.
+const DOUBLE_CLICK_WINDOW = 500
+
+// A gesture that follows a click too soon arrives as a double click, which over
+// a header edge means the fit.
+export async function waitOutDoubleClick(page: Page) {
+  await page.waitForTimeout(DOUBLE_CLICK_WINDOW)
+}
+
+// Glide tracks a drag through the raw mouse moves, so it has to travel in steps
+// rather than jump. `hold` waits that long before releasing.
+export async function dragBy(
+  page: Page,
+  { from, by, hold = 0 }: { from: Point; by: Point; hold?: number }
+) {
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(from.x + by.x, from.y + by.y, { steps: 10 })
+  if (hold > 0) {
+    await page.waitForTimeout(hold)
+  }
+  await page.mouse.up()
 }
 
 // The group box above a column, on a proposal that has groups. The row spans
