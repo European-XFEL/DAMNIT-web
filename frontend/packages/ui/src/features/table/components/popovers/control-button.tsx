@@ -33,11 +33,11 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
           <Text size="xs" fw={500}>
             {label}
           </Text>
-          {badgeCount && (
+          {badgeCount ? (
             <Badge variant="light" size="sm" radius="sm" color={badgeColor}>
               {badgeCount}
             </Badge>
-          )}
+          ) : null}
         </Group>
       </Button>
     )
