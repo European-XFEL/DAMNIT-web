@@ -23,6 +23,7 @@ export function BasePopover({ renderTarget, children }: BasePopoverProps) {
       shadow="md"
       radius="sm"
       closeOnClickOutside
+      trapFocus
       withArrow
       arrowPosition="side"
       arrowSize={12}
