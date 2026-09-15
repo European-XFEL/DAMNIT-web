@@ -1,7 +1,4 @@
-import type { PropsWithChildren } from 'react'
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client'
-import { ApolloProvider } from '@apollo/client/react'
-import { Provider } from 'react-redux'
 import { renderHook } from 'vitest-browser-react'
 import { expect, test, vi } from 'vitest'
 
@@ -17,6 +14,7 @@ import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { useSummaryPlotData } from '#src/features/plots/use-summary-plot-data'
 import { typePolicies } from '#src/graphql/type-policies'
 import { serverCell } from '#tests/support/cells'
+import { withProviders } from '#tests/support/render'
 
 // A rebuild is not visible in the output, so the mock is the only surface the
 // memo boundary shows on. The real implementation keeps the plots working.
@@ -99,15 +97,7 @@ function setup(
     link: new ApolloLink(() => null),
   })
 
-  function Providers({ children }: PropsWithChildren) {
-    return (
-      <Provider store={store}>
-        <ApolloProvider client={client}>{children}</ApolloProvider>
-      </Provider>
-    )
-  }
-
-  return { cache, wrapper: Providers }
+  return { cache, wrapper: withProviders({ store, client }) }
 }
 
 const variableFor = (name: string, title?: string): Variable => ({

@@ -1,14 +1,12 @@
-import type { PropsWithChildren } from 'react'
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client'
-import { ApolloProvider } from '@apollo/client/react'
-import { Provider } from 'react-redux'
 import { renderHook } from 'vitest-browser-react'
 import { expect, test, vi } from 'vitest'
 
-import { setupStore, type AppStore } from '#src/app/store/store'
+import { setupStore } from '#src/app/store/store'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { buildPreviewQuery } from '#src/features/plots/preview-chunks'
 import { usePreviewPlotData } from '#src/features/plots/use-preview-plot-data'
+import { withProviders } from '#tests/support/render'
 
 const PROPOSAL = '6996'
 const VARIABLE = 'spectrum'
@@ -32,31 +30,20 @@ function writeChunk(cache: InMemoryCache, runs: number[]) {
   })
 }
 
-function makeWrapper(store: AppStore, cache: InMemoryCache) {
-  // The watcher is cache-only, so it never reaches the link; an empty one keeps
-  // the test honest about that.
-  const client = new ApolloClient({ cache, link: new ApolloLink(() => null) })
-
-  return function Providers({ children }: PropsWithChildren) {
-    return (
-      <Provider store={store}>
-        <ApolloProvider client={client}>{children}</ApolloProvider>
-      </Provider>
-    )
-  }
-}
-
 function setup() {
   const store = setupStore()
   store.dispatch(setProposalPending(PROPOSAL))
   const cache = new InMemoryCache()
+  // The watcher is cache-only, so it never reaches the link; an empty one keeps
+  // the test honest about that.
+  const client = new ApolloClient({ cache, link: new ApolloLink(() => null) })
 
-  return { store, cache, wrapper: makeWrapper(store, cache) }
+  return { store, cache, wrapper: withProviders({ store, client }) }
 }
 
 const renderPreview = (
   runs: number[],
-  wrapper: ReturnType<typeof makeWrapper>
+  wrapper: ReturnType<typeof withProviders>
 ) =>
   renderHook(
     () => usePreviewPlotData({ runs, variable: VARIABLE, enabled: true }),
