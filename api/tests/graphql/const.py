@@ -72,6 +72,8 @@ EXAMPLE_TAGS = create_map(
     [
         {"id": 1, "name": "eTOF setting"},
         {"id": 7, "name": "eTOF"},
+        # DAMNIT keeps a tag after its last variable is untagged.
+        {"id": 9, "name": "XGM"},
     ],
     key="id",
 )
