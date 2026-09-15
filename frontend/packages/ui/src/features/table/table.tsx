@@ -10,6 +10,7 @@ import {
   type HeaderClickedEventArgs,
   type Item,
   type Rectangle,
+  type Theme,
 } from '@glideapps/glide-data-grid'
 import { Stack, useMantineTheme } from '@mantine/core'
 
@@ -40,6 +41,7 @@ import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
 import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
 import { useColumnResize } from '#src/features/table/hooks/use-column-resize'
+import { useColumnFlash } from '#src/features/table/hooks/use-column-flash'
 import {
   toCurrent,
   toSelectedCells,
@@ -118,23 +120,6 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         width: columnSizing[column.id] ?? DEFAULT_COLUMN_WIDTH,
       })),
     [tableColumns, groups, columnSizing]
-  )
-
-  // Glide's own default would paint the raw group key, so the label comes here.
-  // It asks once per visible column on every paint, so resolve the labels once
-  // and hand them back by lookup. `''` is what it passes for an ungrouped one.
-  const groupDetails = useMemo(() => {
-    const details: Record<string, { name: string }> = { '': { name: '' } }
-    for (const name of Object.keys(groups)) {
-      details[name] = { name: getGroupTitle(name, groups) }
-    }
-    return details
-  }, [groups])
-
-  // Glide redraws the canvas whenever this changes identity, so keep it stable.
-  const getGroupDetails = useCallback(
-    (group: string) => groupDetails[group] ?? { name: group },
-    [groupDetails]
   )
 
   // The box over the ungrouped columns carries no label, so a click on it means
@@ -247,6 +232,34 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const rowIndex = useMemo<RowIndex>(
     () => new Map(runs.map((identity, index) => [runKey(identity), index])),
     [runs]
+  )
+
+  const { highlightRegions, drawHeader, groupThemes } = useColumnFlash(
+    columnIndex,
+    runs.length
+  )
+
+  // Glide would paint the raw group key, and it asks per visible column on every
+  // paint, so the labels resolve once here. `''` is an ungrouped column.
+  const groupDetails = useMemo(() => {
+    const details: Record<
+      string,
+      { name: string; overrideTheme?: Partial<Theme> }
+    > = { '': { name: '' } }
+    for (const name of Object.keys(groups)) {
+      details[name] = {
+        name: getGroupTitle(name, groups),
+        overrideTheme: groupThemes?.[name],
+      }
+    }
+    return details
+  }, [groups, groupThemes])
+
+  // Glide reads each band's theme from here, but a new identity alone repaints
+  // nothing; the flash's new highlightRegions each frame does that.
+  const getGroupDetails = useCallback(
+    (group: string) => groupDetails[group] ?? { name: group },
+    [groupDetails]
   )
 
   const gridSelection = useMemo<GridSelection>(() => {
@@ -521,6 +534,8 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               {...(grid || {})}
               ref={tableRef}
               columns={gridColumns}
+              highlightRegions={highlightRegions}
+              drawHeader={drawHeader}
               getGroupDetails={getGroupDetails}
               groupHeaderHeight={GROUP_HEADER_HEIGHT}
               onGroupHeaderClicked={handleGroupHeaderClicked}
