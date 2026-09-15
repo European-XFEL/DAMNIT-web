@@ -9,6 +9,7 @@ catalogs:
   components:
     '@glideapps/glide-data-grid': 6.0.3
     '@glideapps/glide-data-grid-cells': 6.0.3
+    '@hello-pangea/dnd': 18.0.1
     '@mantine/core': 7.17.3
     '@mantine/form': 7.17.3
     '@mantine/hooks': 7.17.3
