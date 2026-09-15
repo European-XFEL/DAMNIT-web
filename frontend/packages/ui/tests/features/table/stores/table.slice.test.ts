@@ -3,6 +3,8 @@ import { describe, expect, test } from 'vitest'
 import reducer, {
   cellActivated,
   clearTagSelection,
+  columnMoved,
+  columnOrderReset,
   columnResized,
   columnWidthsReset,
   runDeselected,
@@ -101,6 +103,87 @@ describe('columnPinning', () => {
   test('seeds the identity columns pinned to the start, proposal first', () => {
     const state = reducer(undefined, { type: 'unknown' })
     expect(state.columnPinning).toEqual({ start: ['proposal', 'run'], end: [] })
+  })
+})
+
+describe('columnMoved', () => {
+  test('writes the order and stamps the columns the drop moved', () => {
+    const state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a', 'c'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    expect(state.columnOrder).toEqual(['b', 'a', 'c'])
+    expect(state.lastMove).toEqual({
+      columns: ['b'],
+      groups: [],
+      at: expect.any(Number),
+    })
+  })
+
+  test('adds each drop to what has moved since the last reset', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a', 'g.x', 'g.y'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(
+      state,
+      columnMoved({
+        order: ['g.x', 'g.y', 'b', 'a'],
+        moved: { columns: ['g.x', 'g.y'], groups: ['g'] },
+      })
+    )
+    state = reducer(
+      state,
+      columnMoved({
+        order: ['g.x', 'g.y', 'a', 'b'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+
+    expect(state.movedSinceReset).toEqual({
+      columns: ['b', 'g.x', 'g.y'],
+      groups: ['g'],
+    })
+  })
+})
+
+describe('columnOrderReset', () => {
+  test('stamps everything moved since the last reset and starts the list over', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a', 'g.x', 'g.y'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(
+      state,
+      columnMoved({
+        order: ['g.x', 'g.y', 'b', 'a'],
+        moved: { columns: ['g.x', 'g.y'], groups: ['g'] },
+      })
+    )
+
+    state = reducer(state, columnOrderReset())
+    expect(state.columnOrder).toEqual([])
+    expect(state.lastMove).toEqual({
+      columns: ['b', 'g.x', 'g.y'],
+      groups: ['g'],
+      at: expect.any(Number),
+    })
+    expect(state.movedSinceReset).toEqual({ columns: [], groups: [] })
+  })
+
+  test('a reset with nothing moved stamps nothing', () => {
+    const state = reducer(undefined, columnOrderReset())
+
+    expect(state.lastMove).toBeNull()
   })
 })
 

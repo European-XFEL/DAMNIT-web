@@ -9,6 +9,8 @@ export const selectColumnVisibility = (state: RootState) =>
 export const selectColumnPinning = (state: RootState) =>
   state.table.columnPinning
 
+export const selectColumnOrder = (state: RootState) => state.table.columnOrder
+
 export const selectColumnSizing = (state: RootState) => state.table.columnSizing
 
 // ----------------------------------------------------------------------------
