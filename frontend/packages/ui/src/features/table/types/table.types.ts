@@ -11,6 +11,13 @@ export type TableColumn = {
   group?: string
 }
 
+// What a move put somewhere new. `groups` names a group only when it moved
+// whole, so a member reordered inside its group leaves it out.
+export type MovedColumns = {
+  columns: string[]
+  groups: string[]
+}
+
 export type Rectangle = {
   x: number
   y: number
