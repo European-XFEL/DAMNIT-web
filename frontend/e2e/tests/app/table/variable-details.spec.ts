@@ -1,9 +1,9 @@
 import { test, expect } from '#fixtures'
 import { UNTAGGED_VARIABLE, xpcsWithUntagged } from '#examples/xpcs'
 import {
+  columnDisclosure,
   openPopover,
   openProposal,
-  popoverRow,
   rowDetails,
   titleOf,
 } from '#support/table'
@@ -19,16 +19,12 @@ test('only a variable with tags has details to open', async ({
   await openProposal(page, example)
   await openPopover(page, 'Variables')
 
-  const details = rowDetails(page)
-
   // A tagged variable opens its tags
-  await popoverRow(page, 'Trains', { exact: true }).click()
-  await expect(details).toContainText('Run details')
+  await columnDisclosure(page, 'Trains').click()
+  await expect(await rowDetails(page, 'Trains')).toContainText('Run details')
 
-  // An untagged one opens nothing, so the panel above is left as it was
-  await popoverRow(page, titleOf(example, UNTAGGED_VARIABLE), {
-    exact: true,
-  }).click()
-  await expect(details).toHaveCount(1)
-  await expect(details).toContainText('Run details')
+  // An untagged one has nothing to open, so it offers no way in at all
+  await expect(
+    columnDisclosure(page, titleOf(example, UNTAGGED_VARIABLE))
+  ).toHaveCount(0)
 })

@@ -149,6 +149,14 @@ export async function columnTitles(page: Page): Promise<string[]> {
   return headers.allInnerTexts()
 }
 
+// Glide repaints its mirror a beat after the store changes, so poll the drawn
+// order. Only the leading columns count: the mirror stops at the viewport.
+export async function expectLeadingColumns(page: Page, titles: string[]) {
+  await expect
+    .poll(async () => (await columnTitles(page)).slice(0, titles.length))
+    .toEqual(titles)
+}
+
 // The mirrored headers of the selected columns. Selection is painted on the
 // canvas, but Glide also carries it into the mirror as aria-selected, which is
 // the only way a test can read it.
@@ -214,41 +222,60 @@ export async function openPopover(page: Page, name: string): Promise<Locator> {
   return button
 }
 
-// A row in a popover's list. Exact matching is for a title another row's title
-// contains, such as a group member's once its group's words are stripped.
-export function popoverRow(
-  page: Page,
-  name: string,
-  { exact = false } = {}
-): Locator {
-  return page.getByRole('row', { name, exact })
-}
-
+// The checkbox that shows a column or selects a tag. Each is named for the row
+// it sits in, which is the only part of a row either popover lets a test name.
 export function rowCheckbox(page: Page, name: string): Locator {
-  return popoverRow(page, name).getByRole('checkbox')
+  return page.getByRole('checkbox', { name, exact: true })
 }
 
-// A group's row in the Variables popover, and the link in it that shows or
-// hides every variable at once. The row's name carries the link's words too, so
-// it is found by the link rather than matched exactly the way a variable row is.
-export function groupRow(page: Page, name: string): Locator {
-  return popoverRow(page, name).filter({ has: page.getByRole('button') })
-}
-
+// The link that shows or hides a whole group at once. Its name carries the
+// group's, since every one of these links reads "Hide all" on screen.
 export function groupAction(page: Page, name: string): Locator {
-  return groupRow(page, name).getByRole('button')
+  return page.getByRole('button', { name: `all ${name}` })
 }
 
-// The popover's own show/hide-all link, above the table. It reads the same as
-// the group links, so this excludes the ones inside a row.
+// The handle that lifts a column or a group. Only a row an order governs has
+// one, so a pinned row is absent from this by construction.
+export function columnHandle(page: Page, name: string): Locator {
+  return page.getByRole('button', { name: `Reorder ${name}`, exact: true })
+}
+
+// What a column opens when its title is pressed. Tags are all there is to
+// show, so an untagged column has no such button at all.
+export function columnDisclosure(page: Page, name: string): Locator {
+  return page
+    .locator('.mantine-Popover-dropdown')
+    .getByRole('button', { name, exact: true })
+}
+
+// Space lifts, each arrow moves one place, space drops: the library's keyboard
+// drag, and the only one a test can drive without coordinates.
+export async function dragColumn(
+  page: Page,
+  {
+    name,
+    key,
+    places = 1,
+  }: { name: string; key: 'ArrowUp' | 'ArrowDown'; places?: number }
+) {
+  await columnHandle(page, name).focus()
+  await page.keyboard.press('Space')
+  for (let step = 0; step < places; step++) {
+    await page.keyboard.press(key)
+  }
+  await page.keyboard.press('Space')
+}
+
+// The popover's own show/hide-all link, above the list. The group links read
+// the same on screen, so this matches the one that names no group.
 export function popoverAction(page: Page): Locator {
-  return page.locator('.mantine-Popover-dropdown button:not(tr button)')
+  return page.getByRole('button', { name: /^(Hide|Show) all$/ })
 }
 
-// The details a variable's row opens. mantine-datatable renders them in a row
-// of their own below it, so they are not inside the row that was clicked.
-export function rowDetails(page: Page): Locator {
-  return page.locator('.mantine-datatable-row-expansion-cell')
+// The details a column opens, found through the button that controls them.
+export async function rowDetails(page: Page, name: string): Promise<Locator> {
+  const id = await columnDisclosure(page, name).getAttribute('aria-controls')
+  return page.locator(`[id="${id}"]`)
 }
 
 // Click the row's marker, which is Glide's own select-this-row control. Driven
