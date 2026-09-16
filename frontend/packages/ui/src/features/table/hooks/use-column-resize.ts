@@ -59,7 +59,7 @@ export function useColumnResize(
   }, [grid, columnCount])
 
   const resetColumnWidths = useCallback(() => {
-    dispatch(columnWidthsReset())
+    dispatch(columnWidthsReset({ columns: [], groups: [] }))
   }, [dispatch])
 
   return {

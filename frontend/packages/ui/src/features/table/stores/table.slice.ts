@@ -21,12 +21,14 @@ type TanstackState = {
   rowSelection: Record<string, true>
 }
 
+type ColumnFlash = ChangedColumns & { at: number }
+
 // What TanStack has no name for. `tagSelection` filters columns by a facet,
 // which its row-filtering columnFilters cannot express; scroll and isActive only
 // mean anything mid-session, which its state slices deliberately exclude.
 type TableViewState = {
   activeVariable: string | null
-  lastFlash: (ChangedColumns & { at: number }) | null
+  lastFlash: ColumnFlash | null
   movedSinceReset: ChangedColumns
   tagSelection: Record<string, boolean>
   view: {
@@ -53,14 +55,22 @@ const initialState: TableState = {
   rowSelection: {},
   // Which variable the aside is drilled into; null shows every one of them.
   activeVariable: null,
-  // What the last drop or reset moved and when, on performance.now()'s clock.
-  // Only the grid's flash reads it, so it means nothing past the session.
+  // What the last drop, fit or reset changed and when, on performance.now()'s
+  // clock. Only the grid's flash reads it, so it means nothing past the session.
   lastFlash: null,
   // Every drop since the order was last reset, which is what a reset moves back.
   movedSinceReset: { columns: [], groups: [] },
   tagSelection: {},
   view: { scroll: { x: 0, y: 0 } },
   isActive: false,
+}
+
+// A click that changed nothing leaves the slot alone, so it cannot cut a flash
+// still fading.
+function stampFlash(state: TableState, flash: ColumnFlash) {
+  if (!isEmpty(flash.columns)) {
+    state.lastFlash = flash
+  }
 }
 
 // Immer hands out a new object on every assignment, so writing unconditionally
@@ -143,10 +153,26 @@ const slice = createSlice({
     ) => {
       state.columnSizing[action.payload.variable] = action.payload.width
     },
-    columnWidthsReset: (state) => {
-      if (!isEmpty(state.columnSizing)) {
-        state.columnSizing = {}
-      }
+    // Glide answers a fit one column at a time, so useColumnResize compares the
+    // widths itself and stamps what changed in one action.
+    columnsFitted: {
+      reducer: (state, action: PayloadAction<ColumnFlash>) => {
+        stampFlash(state, action.payload)
+      },
+      prepare: (payload: ChangedColumns) => ({
+        payload: { ...payload, at: performance.now() },
+      }),
+    },
+    columnWidthsReset: {
+      reducer: (state, action: PayloadAction<ColumnFlash>) => {
+        if (!isEmpty(state.columnSizing)) {
+          state.columnSizing = {}
+        }
+        stampFlash(state, action.payload)
+      },
+      prepare: (payload: ChangedColumns) => ({
+        payload: { ...payload, at: performance.now() },
+      }),
     },
     setTagSelection: (
       state,
@@ -173,6 +199,7 @@ export const {
   columnMoved,
   columnOrderReset,
   columnResized,
+  columnsFitted,
   columnWidthsReset,
   runDeselected,
   runSelected,

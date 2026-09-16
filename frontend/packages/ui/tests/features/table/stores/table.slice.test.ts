@@ -198,7 +198,7 @@ describe('columnResized', () => {
 describe('columnWidthsReset', () => {
   test('drops every width the user set', () => {
     let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
-    state = reducer(state, columnWidthsReset())
+    state = reducer(state, columnWidthsReset({ columns: [], groups: [] }))
     expect(state.columnSizing).toEqual({})
   })
 })

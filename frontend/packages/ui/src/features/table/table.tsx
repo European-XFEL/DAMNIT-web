@@ -32,6 +32,7 @@ import {
   getColumnTitle,
   getGroupTitle,
 } from '#src/features/table/utils/column-title'
+import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
 import ContextMenu from '#src/features/table/components/context-menu'
@@ -67,10 +68,6 @@ const PAGE_SIZE = 10
 // Shorter than the 36px title row below it: Glide paints both rows in the same
 // font on the same background, so height is the only lever left.
 const GROUP_HEADER_HEIGHT = 24
-
-// Every column starts here, whatever it holds. Dragging a header edge or
-// double-clicking it writes the user's own width to the store instead.
-const DEFAULT_COLUMN_WIDTH = 100
 
 const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: References
