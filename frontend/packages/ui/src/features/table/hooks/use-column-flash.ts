@@ -6,7 +6,7 @@ import type {
 } from '@glideapps/glide-data-grid'
 
 import { useAppSelector } from '#src/app/store/hooks'
-import { selectLastMove } from '#src/features/table/stores/table.selectors'
+import { selectLastFlash } from '#src/features/table/stores/table.selectors'
 import type { ColumnIndex } from '#src/features/table/utils/grid-selection'
 
 // Full strength while the eye travels from the popover to the grid.
@@ -31,31 +31,31 @@ function flashStrength(elapsed: number) {
   return 1 - easeOutCubic((elapsed - FLASH_HOLD) / FLASH_FADE)
 }
 
-// Tints what the last move put somewhere new, then fades it. A new
+// Tints what the last drop or reset changed, then fades it. A new
 // highlightRegions each frame is what makes Glide repaint the headers and band.
 export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
-  const lastMove = useAppSelector(selectLastMove)
+  const lastFlash = useAppSelector(selectLastFlash)
 
   // Tagged with the stamp it belongs to, so a strength left over from an
-  // earlier move is never drawn on this one.
+  // earlier flash is never drawn on this one.
   const [fade, setFade] = useState<{ at: number; strength: number } | null>(
     null
   )
 
   const indices = useMemo(() => {
     const found = new Set<number>()
-    for (const name of lastMove?.columns ?? []) {
+    for (const name of lastFlash?.columns ?? []) {
       const index = columnIndex.get(name)
       if (index != null) {
         found.add(index)
       }
     }
     return found
-  }, [lastMove, columnIndex])
+  }, [lastFlash, columnIndex])
   const tinted = indices.size > 0
 
   useEffect(() => {
-    if (lastMove == null || !tinted) {
+    if (lastFlash == null || !tinted) {
       return
     }
 
@@ -63,7 +63,7 @@ export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
     const tick = () => {
       // A stamp already this old draws nothing: the Plots tab unmounts the
       // table, and a remount would otherwise replay the last drop.
-      const elapsed = performance.now() - lastMove.at
+      const elapsed = performance.now() - lastFlash.at
       if (elapsed >= FLASH_DURATION) {
         setFade(null)
         return
@@ -72,9 +72,9 @@ export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
       // The hold draws the same strength each frame, and the grid need not
       // render for it.
       setFade((current) =>
-        current?.at === lastMove.at && current.strength === strength
+        current?.at === lastFlash.at && current.strength === strength
           ? current
-          : { at: lastMove.at, strength }
+          : { at: lastFlash.at, strength }
       )
       frame = requestAnimationFrame(tick)
     }
@@ -84,13 +84,13 @@ export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
       cancelAnimationFrame(frame)
       setFade(null)
     }
-  }, [lastMove, tinted])
+  }, [lastFlash, tinted])
 
   const strength =
-    fade != null && fade.at === lastMove?.at ? fade.strength : null
+    fade != null && fade.at === lastFlash?.at ? fade.strength : null
 
   return useMemo(() => {
-    if (strength == null || lastMove == null || !tinted) {
+    if (strength == null || lastFlash == null || !tinted) {
       return {
         highlightRegions: undefined,
         drawHeader: undefined,
@@ -99,7 +99,7 @@ export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
     }
 
     const color = `rgba(${FLASH_RGB}, ${strength * FLASH_PEAK})`
-    const groups = new Set(lastMove.groups)
+    const groups = new Set(lastFlash.groups)
 
     // Glide has no draw callback for the band, only a theme per group, which
     // also fills the headers of that group's columns.
@@ -146,5 +146,5 @@ export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
     }
 
     return { highlightRegions, drawHeader, groupThemes }
-  }, [strength, lastMove, indices, tinted, rowCount])
+  }, [strength, lastFlash, indices, tinted, rowCount])
 }

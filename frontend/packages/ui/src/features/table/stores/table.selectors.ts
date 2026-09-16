@@ -13,7 +13,7 @@ export const selectColumnOrder = (state: RootState) => state.table.columnOrder
 
 export const selectColumnSizing = (state: RootState) => state.table.columnSizing
 
-export const selectLastMove = (state: RootState) => state.table.lastMove
+export const selectLastFlash = (state: RootState) => state.table.lastFlash
 
 // ----------------------------------------------------------------------------
 // Selection

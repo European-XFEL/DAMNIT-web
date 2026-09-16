@@ -273,7 +273,7 @@ test('a drag hands the grid the whole order, pinned columns first', async () => 
       'n_trains',
       'scan_type',
     ])
-  expect(store.getState().table.lastMove?.columns).toEqual(['n_trains'])
+  expect(store.getState().table.lastFlash?.columns).toEqual(['n_trains'])
 })
 
 test('a member cannot be dragged out of the group it belongs to', async () => {

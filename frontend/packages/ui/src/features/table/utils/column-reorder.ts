@@ -1,6 +1,6 @@
 import type { DropResult } from '@hello-pangea/dnd'
 
-import type { MovedColumns } from '#src/features/table/types/table.types'
+import type { ChangedColumns } from '#src/features/table/types/table.types'
 import {
   columnsOf,
   type Column,
@@ -75,7 +75,7 @@ type OrderLists = {
 export function reorderColumns(
   { blocks, shown }: OrderLists,
   { source, destination }: DropResult
-): { order: string[]; moved: MovedColumns } | null {
+): { order: string[]; moved: ChangedColumns } | null {
   if (
     destination == null ||
     destination.droppableId !== source.droppableId ||

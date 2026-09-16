@@ -11,9 +11,9 @@ export type TableColumn = {
   group?: string
 }
 
-// What a move put somewhere new. `groups` names a group only when it moved
-// whole, so a member reordered inside its group leaves it out.
-export type MovedColumns = {
+// The columns something put somewhere new or resized. `groups` names a group
+// only when the whole group changed, so one member on its own leaves it out.
+export type ChangedColumns = {
   columns: string[]
   groups: string[]
 }

@@ -116,7 +116,7 @@ describe('columnMoved', () => {
       })
     )
     expect(state.columnOrder).toEqual(['b', 'a', 'c'])
-    expect(state.lastMove).toEqual({
+    expect(state.lastFlash).toEqual({
       columns: ['b'],
       groups: [],
       at: expect.any(Number),
@@ -172,7 +172,7 @@ describe('columnOrderReset', () => {
 
     state = reducer(state, columnOrderReset())
     expect(state.columnOrder).toEqual([])
-    expect(state.lastMove).toEqual({
+    expect(state.lastFlash).toEqual({
       columns: ['b', 'g.x', 'g.y'],
       groups: ['g'],
       at: expect.any(Number),
@@ -183,7 +183,7 @@ describe('columnOrderReset', () => {
   test('a reset with nothing moved stamps nothing', () => {
     const state = reducer(undefined, columnOrderReset())
 
-    expect(state.lastMove).toBeNull()
+    expect(state.lastFlash).toBeNull()
   })
 })
 

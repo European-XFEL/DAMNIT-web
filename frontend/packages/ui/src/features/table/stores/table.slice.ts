@@ -7,7 +7,7 @@ import type { RunId } from '#src/data/table/table-data.types'
 import { type PlotSpec } from '#src/types'
 import { isEmpty } from '#src/utils/helpers'
 import type {
-  MovedColumns,
+  ChangedColumns,
   Scroll,
 } from '#src/features/table/types/table.types'
 
@@ -26,8 +26,8 @@ type TanstackState = {
 // mean anything mid-session, which its state slices deliberately exclude.
 type TableViewState = {
   activeVariable: string | null
-  lastMove: (MovedColumns & { at: number }) | null
-  movedSinceReset: MovedColumns
+  lastFlash: (ChangedColumns & { at: number }) | null
+  movedSinceReset: ChangedColumns
   tagSelection: Record<string, boolean>
   view: {
     scroll: Scroll
@@ -55,7 +55,7 @@ const initialState: TableState = {
   activeVariable: null,
   // What the last drop or reset moved and when, on performance.now()'s clock.
   // Only the grid's flash reads it, so it means nothing past the session.
-  lastMove: null,
+  lastFlash: null,
   // Every drop since the order was last reset, which is what a reset moves back.
   movedSinceReset: { columns: [], groups: [] },
   tagSelection: {},
@@ -111,18 +111,18 @@ const slice = createSlice({
         state,
         action: PayloadAction<{
           order: string[]
-          moved: MovedColumns
+          moved: ChangedColumns
           at: number
         }>
       ) => {
         const { order, moved, at } = action.payload
         state.columnOrder = order
-        state.lastMove = { ...moved, at }
+        state.lastFlash = { ...moved, at }
         const since = state.movedSinceReset
         since.columns = [...new Set([...since.columns, ...moved.columns])]
         since.groups = [...new Set([...since.groups, ...moved.groups])]
       },
-      prepare: (payload: { order: string[]; moved: MovedColumns }) => ({
+      prepare: (payload: { order: string[]; moved: ChangedColumns }) => ({
         payload: { ...payload, at: performance.now() },
       }),
     },
@@ -132,7 +132,7 @@ const slice = createSlice({
           return
         }
         state.columnOrder = []
-        state.lastMove = { ...state.movedSinceReset, at: action.payload.at }
+        state.lastFlash = { ...state.movedSinceReset, at: action.payload.at }
         state.movedSinceReset = { columns: [], groups: [] }
       },
       prepare: () => ({ payload: { at: performance.now() } }),
