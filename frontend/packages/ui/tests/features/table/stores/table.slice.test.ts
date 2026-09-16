@@ -3,7 +3,10 @@ import { describe, expect, test } from 'vitest'
 import reducer, {
   cellActivated,
   clearTagSelection,
+  columnMoved,
+  columnOrderReset,
   columnResized,
+  columnsFitted,
   columnWidthsReset,
   runDeselected,
   runSelected,
@@ -104,6 +107,87 @@ describe('columnPinning', () => {
   })
 })
 
+describe('columnMoved', () => {
+  test('writes the order and stamps the columns the drop moved', () => {
+    const state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a', 'c'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    expect(state.columnOrder).toEqual(['b', 'a', 'c'])
+    expect(state.lastFlash).toEqual({
+      columns: ['b'],
+      groups: [],
+      at: expect.any(Number),
+    })
+  })
+
+  test('adds each drop to what has moved since the last reset', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a', 'g.x', 'g.y'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(
+      state,
+      columnMoved({
+        order: ['g.x', 'g.y', 'b', 'a'],
+        moved: { columns: ['g.x', 'g.y'], groups: ['g'] },
+      })
+    )
+    state = reducer(
+      state,
+      columnMoved({
+        order: ['g.x', 'g.y', 'a', 'b'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+
+    expect(state.movedSinceReset).toEqual({
+      columns: ['b', 'g.x', 'g.y'],
+      groups: ['g'],
+    })
+  })
+})
+
+describe('columnOrderReset', () => {
+  test('stamps everything moved since the last reset and starts the list over', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a', 'g.x', 'g.y'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(
+      state,
+      columnMoved({
+        order: ['g.x', 'g.y', 'b', 'a'],
+        moved: { columns: ['g.x', 'g.y'], groups: ['g'] },
+      })
+    )
+
+    state = reducer(state, columnOrderReset())
+    expect(state.columnOrder).toEqual([])
+    expect(state.lastFlash).toEqual({
+      columns: ['b', 'g.x', 'g.y'],
+      groups: ['g'],
+      at: expect.any(Number),
+    })
+    expect(state.movedSinceReset).toEqual({ columns: [], groups: [] })
+  })
+
+  test('a reset with nothing moved stamps nothing', () => {
+    const state = reducer(undefined, columnOrderReset())
+
+    expect(state.lastFlash).toBeNull()
+  })
+})
+
 describe('columnResized', () => {
   test('resizes one column without clobbering its siblings', () => {
     let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
@@ -112,11 +196,63 @@ describe('columnResized', () => {
   })
 })
 
+describe('columnsFitted', () => {
+  test('stamps the columns and groups the fit changed', () => {
+    const state = reducer(
+      undefined,
+      columnsFitted({ columns: ['g.x', 'g.y'], groups: ['g'] })
+    )
+
+    expect(state.lastFlash).toEqual({
+      columns: ['g.x', 'g.y'],
+      groups: ['g'],
+      at: expect.any(Number),
+    })
+  })
+
+  test('a fit that changed nothing leaves the last flash alone', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(state, columnsFitted({ columns: [], groups: [] }))
+
+    expect(state.lastFlash).toMatchObject({ columns: ['b'], groups: [] })
+  })
+})
+
 describe('columnWidthsReset', () => {
   test('drops every width the user set', () => {
     let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
-    state = reducer(state, columnWidthsReset())
+    state = reducer(state, columnWidthsReset({ columns: ['a'], groups: [] }))
     expect(state.columnSizing).toEqual({})
+  })
+
+  test('stamps the columns the reset put back', () => {
+    let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
+    state = reducer(state, columnWidthsReset({ columns: ['a'], groups: [] }))
+
+    expect(state.lastFlash).toEqual({
+      columns: ['a'],
+      groups: [],
+      at: expect.any(Number),
+    })
+  })
+
+  test('a reset that changed nothing leaves the last flash alone', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(state, columnWidthsReset({ columns: [], groups: [] }))
+
+    expect(state.lastFlash).toMatchObject({ columns: ['b'], groups: [] })
   })
 })
 

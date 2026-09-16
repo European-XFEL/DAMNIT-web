@@ -6,22 +6,30 @@ import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
 import { type PlotSpec } from '#src/types'
 import { isEmpty } from '#src/utils/helpers'
-import type { Scroll } from '#src/features/table/types/table.types'
+import type {
+  ChangedColumns,
+  Scroll,
+} from '#src/features/table/types/table.types'
 
 // Shaped by @tanstack/table-core v9: column ids and primitives, nothing derived.
 // These key names are the contract, so don't rename them to fit local taste.
 type TanstackState = {
   columnVisibility: Record<string, boolean>
+  columnOrder: string[]
   columnPinning: { start: string[]; end: string[] }
   columnSizing: Record<string, number>
   rowSelection: Record<string, true>
 }
+
+type ColumnFlash = ChangedColumns & { at: number }
 
 // What TanStack has no name for. `tagSelection` filters columns by a facet,
 // which its row-filtering columnFilters cannot express; scroll and isActive only
 // mean anything mid-session, which its state slices deliberately exclude.
 type TableViewState = {
   activeVariable: string | null
+  lastFlash: ColumnFlash | null
+  movedSinceReset: ChangedColumns
   tagSelection: Record<string, boolean>
   view: {
     scroll: Scroll
@@ -35,6 +43,9 @@ const initialState: TableState = {
   // A column shows unless it is listed false, so only the ones the table leaves
   // out of its default view are seeded.
   columnVisibility: { [VARIABLES.proposal]: false },
+  // The user's own column order, empty until they set one: the table follows
+  // the order the server sends until then. Variable names only, never groups.
+  columnOrder: [],
   // These lead the grid and stay put while it scrolls. Glide freezes a leading
   // run of columns, so `end` is here only because the shape carries it.
   columnPinning: { start: [VARIABLES.proposal, VARIABLES.run], end: [] },
@@ -44,9 +55,22 @@ const initialState: TableState = {
   rowSelection: {},
   // Which variable the aside is drilled into; null shows every one of them.
   activeVariable: null,
+  // What the last drop, fit or reset changed and when, on performance.now()'s
+  // clock. Only the grid's flash reads it, so it means nothing past the session.
+  lastFlash: null,
+  // Every drop since the order was last reset, which is what a reset moves back.
+  movedSinceReset: { columns: [], groups: [] },
   tagSelection: {},
   view: { scroll: { x: 0, y: 0 } },
   isActive: false,
+}
+
+// A click that changed nothing leaves the slot alone, so it cannot cut a flash
+// still fading.
+function stampFlash(state: TableState, flash: ColumnFlash) {
+  if (!isEmpty(flash.columns)) {
+    state.lastFlash = flash
+  }
 }
 
 // Immer hands out a new object on every assignment, so writing unconditionally
@@ -90,16 +114,65 @@ const slice = createSlice({
     ) => {
       Object.assign(state.columnVisibility, action.payload)
     },
+    // Stamped as it is created, so the reducer stays pure and the drop handler
+    // passes only what it knows.
+    columnMoved: {
+      reducer: (
+        state,
+        action: PayloadAction<{
+          order: string[]
+          moved: ChangedColumns
+          at: number
+        }>
+      ) => {
+        const { order, moved, at } = action.payload
+        state.columnOrder = order
+        state.lastFlash = { ...moved, at }
+        const since = state.movedSinceReset
+        since.columns = [...new Set([...since.columns, ...moved.columns])]
+        since.groups = [...new Set([...since.groups, ...moved.groups])]
+      },
+      prepare: (payload: { order: string[]; moved: ChangedColumns }) => ({
+        payload: { ...payload, at: performance.now() },
+      }),
+    },
+    columnOrderReset: {
+      reducer: (state, action: PayloadAction<{ at: number }>) => {
+        if (isEmpty(state.columnOrder)) {
+          return
+        }
+        state.columnOrder = []
+        state.lastFlash = { ...state.movedSinceReset, at: action.payload.at }
+        state.movedSinceReset = { columns: [], groups: [] }
+      },
+      prepare: () => ({ payload: { at: performance.now() } }),
+    },
     columnResized: (
       state,
       action: PayloadAction<{ variable: string; width: number }>
     ) => {
       state.columnSizing[action.payload.variable] = action.payload.width
     },
-    columnWidthsReset: (state) => {
-      if (!isEmpty(state.columnSizing)) {
-        state.columnSizing = {}
-      }
+    // Glide answers a fit one column at a time, so useColumnResize compares the
+    // widths itself and stamps what changed in one action.
+    columnsFitted: {
+      reducer: (state, action: PayloadAction<ColumnFlash>) => {
+        stampFlash(state, action.payload)
+      },
+      prepare: (payload: ChangedColumns) => ({
+        payload: { ...payload, at: performance.now() },
+      }),
+    },
+    columnWidthsReset: {
+      reducer: (state, action: PayloadAction<ColumnFlash>) => {
+        if (!isEmpty(state.columnSizing)) {
+          state.columnSizing = {}
+        }
+        stampFlash(state, action.payload)
+      },
+      prepare: (payload: ChangedColumns) => ({
+        payload: { ...payload, at: performance.now() },
+      }),
     },
     setTagSelection: (
       state,
@@ -123,7 +196,10 @@ export default slice.reducer
 export const {
   cellActivated,
   clearTagSelection,
+  columnMoved,
+  columnOrderReset,
   columnResized,
+  columnsFitted,
   columnWidthsReset,
   runDeselected,
   runSelected,

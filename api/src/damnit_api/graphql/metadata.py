@@ -32,11 +32,14 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
     groups = _assign_groups(variables)
     variables = _order_by_group(variables)
 
+    for tag in tags.values():
+        tag["variables"] = []
+
     for name, var in variables.items():
         tag_ids = variable_tags.get(name, [])
         var["tags"] = [tags[tag]["name"] for tag in tag_ids]
         for tag in tag_ids:
-            tags[tag].setdefault("variables", []).append(name)
+            tags[tag]["variables"].append(name)
 
     untagged = {
         "id": 0,

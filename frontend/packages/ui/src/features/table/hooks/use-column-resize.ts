@@ -5,20 +5,29 @@ import {
   type GridColumn,
 } from '@glideapps/glide-data-grid'
 
-import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import {
+  useAppDispatch,
+  useAppSelector,
+  useAppStore,
+} from '#src/app/store/hooks'
 import { selectColumnSizing } from '#src/features/table/stores/table.selectors'
 import {
   columnResized,
+  columnsFitted,
   columnWidthsReset,
 } from '#src/features/table/stores/table.slice'
+import type { TableColumn } from '#src/features/table/types/table.types'
+import { changedWidths } from '#src/features/table/utils/column-widths'
 
 // The widths the user has set, and the handlers that write them. Glide re-sends a
 // drag to every selected column, so all but the grabbed one are dropped.
 export function useColumnResize(
   grid: RefObject<DataEditorRef>,
-  columnCount: number
+  columns: TableColumn[]
 ) {
   const dispatch = useAppDispatch()
+  // Read when clicked, so a drag frame does not hand the toolbar new handlers.
+  const store = useAppStore()
   const columnSizing = useAppSelector(selectColumnSizing)
 
   // The column being resized, empty between gestures.
@@ -53,14 +62,20 @@ export function useColumnResize(
     // Glide ends a drag on a window mouseup, which a release outside the
     // browser never fires; a stranded ref would filter this sweep to one column.
     draggedVariable.current = undefined
+    const before = store.getState().table.columnSizing
     grid.current?.remeasureColumns(
-      CompactSelection.fromSingleSelection([0, columnCount])
+      CompactSelection.fromSingleSelection([0, columns.length])
     )
-  }, [grid, columnCount])
+    // Glide answers every column before remeasureColumns returns. If that ever
+    // goes async, the widths still land and only the flash is lost.
+    const after = store.getState().table.columnSizing
+    dispatch(columnsFitted(changedWidths({ columns, before, after })))
+  }, [grid, columns, dispatch, store])
 
   const resetColumnWidths = useCallback(() => {
-    dispatch(columnWidthsReset())
-  }, [dispatch])
+    const before = store.getState().table.columnSizing
+    dispatch(columnWidthsReset(changedWidths({ columns, before, after: {} })))
+  }, [columns, dispatch, store])
 
   return {
     columnSizing,

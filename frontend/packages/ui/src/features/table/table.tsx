@@ -10,6 +10,7 @@ import {
   type HeaderClickedEventArgs,
   type Item,
   type Rectangle,
+  type Theme,
 } from '@glideapps/glide-data-grid'
 import { Stack, useMantineTheme } from '@mantine/core'
 
@@ -31,6 +32,7 @@ import {
   getColumnTitle,
   getGroupTitle,
 } from '#src/features/table/utils/column-title'
+import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
 import ContextMenu from '#src/features/table/components/context-menu'
@@ -40,6 +42,7 @@ import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
 import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
 import { useColumnResize } from '#src/features/table/hooks/use-column-resize'
+import { useColumnFlash } from '#src/features/table/hooks/use-column-flash'
 import {
   toCurrent,
   toSelectedCells,
@@ -65,10 +68,6 @@ const PAGE_SIZE = 10
 // Shorter than the 36px title row below it: Glide paints both rows in the same
 // font on the same background, so height is the only lever left.
 const GROUP_HEADER_HEIGHT = 24
-
-// Every column starts here, whatever it holds. Dragging a header edge or
-// double-clicking it writes the user's own width to the store instead.
-const DEFAULT_COLUMN_WIDTH = 100
 
 const Table = ({ grid, paginated = true }: TableProps) => {
   // Initialization: References
@@ -103,7 +102,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     onColumnResizeEnd,
     fitAllColumns,
     resetColumnWidths,
-  } = useColumnResize(tableRef, tableColumns.length)
+  } = useColumnResize(tableRef, tableColumns)
   const theme = useMantineTheme()
 
   // What the grid draws: the title without the level its group header already
@@ -118,23 +117,6 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         width: columnSizing[column.id] ?? DEFAULT_COLUMN_WIDTH,
       })),
     [tableColumns, groups, columnSizing]
-  )
-
-  // Glide's own default would paint the raw group key, so the label comes here.
-  // It asks once per visible column on every paint, so resolve the labels once
-  // and hand them back by lookup. `''` is what it passes for an ungrouped one.
-  const groupDetails = useMemo(() => {
-    const details: Record<string, { name: string }> = { '': { name: '' } }
-    for (const name of Object.keys(groups)) {
-      details[name] = { name: getGroupTitle(name, groups) }
-    }
-    return details
-  }, [groups])
-
-  // Glide redraws the canvas whenever this changes identity, so keep it stable.
-  const getGroupDetails = useCallback(
-    (group: string) => groupDetails[group] ?? { name: group },
-    [groupDetails]
   )
 
   // The box over the ungrouped columns carries no label, so a click on it means
@@ -247,6 +229,34 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const rowIndex = useMemo<RowIndex>(
     () => new Map(runs.map((identity, index) => [runKey(identity), index])),
     [runs]
+  )
+
+  const { highlightRegions, drawHeader, groupThemes } = useColumnFlash(
+    columnIndex,
+    runs.length
+  )
+
+  // Glide would paint the raw group key, and it asks per visible column on every
+  // paint, so the labels resolve once here. `''` is an ungrouped column.
+  const groupDetails = useMemo(() => {
+    const details: Record<
+      string,
+      { name: string; overrideTheme?: Partial<Theme> }
+    > = { '': { name: '' } }
+    for (const name of Object.keys(groups)) {
+      details[name] = {
+        name: getGroupTitle(name, groups),
+        overrideTheme: groupThemes?.[name],
+      }
+    }
+    return details
+  }, [groups, groupThemes])
+
+  // Glide reads each band's theme from here, but a new identity alone repaints
+  // nothing; the flash's new highlightRegions each frame does that.
+  const getGroupDetails = useCallback(
+    (group: string) => groupDetails[group] ?? { name: group },
+    [groupDetails]
   )
 
   const gridSelection = useMemo<GridSelection>(() => {
@@ -521,6 +531,8 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               {...(grid || {})}
               ref={tableRef}
               columns={gridColumns}
+              highlightRegions={highlightRegions}
+              drawHeader={drawHeader}
               getGroupDetails={getGroupDetails}
               groupHeaderHeight={GROUP_HEADER_HEIGHT}
               onGroupHeaderClicked={handleGroupHeaderClicked}

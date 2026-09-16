@@ -41,6 +41,7 @@ export default defineConfig({
             '@apollo/client/link/subscriptions',
             '@apollo/client/link/remove-typename',
             'graphql',
+            'clsx',
           ],
         },
         test: {

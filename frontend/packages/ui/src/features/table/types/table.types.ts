@@ -11,6 +11,13 @@ export type TableColumn = {
   group?: string
 }
 
+// The columns something put somewhere new or resized. `groups` names a group
+// only when the whole group changed, so one member on its own leaves it out.
+export type ChangedColumns = {
+  columns: string[]
+  groups: string[]
+}
+
 export type Rectangle = {
   x: number
   y: number

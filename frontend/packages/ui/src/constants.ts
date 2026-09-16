@@ -48,3 +48,7 @@ export const EXCLUDED_VARIABLES = ['added_at']
 // `run` identifies the row rather than describing it, so it is never a column
 // the user configures, and the run detail panel already shows it in the header.
 export const NONCONFIGURABLE_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
+
+// The tag the server adds for every variable the context file left untagged. No
+// user wrote it, so the Tags popover sets it apart.
+export const UNTAGGED_TAG = '(Untagged)'

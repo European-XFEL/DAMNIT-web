@@ -36,14 +36,14 @@ test('searching filters the variable list', async ({ page, example }) => {
   // Filter the list
   await page.getByPlaceholder('Search variables').fill('sample')
 
-  await expect(page.getByRole('row', { name: 'Sample type' })).toBeVisible()
-  await expect(page.getByRole('row', { name: 'Sample X [mm]' })).toBeVisible()
-  await expect(page.getByRole('row', { name: 'Sample Y [mm]' })).toBeVisible()
-  await expect(page.getByRole('row', { name: 'Trains' })).toHaveCount(0)
+  await expect(rowCheckbox(page, 'Sample type')).toBeVisible()
+  await expect(rowCheckbox(page, 'Sample X [mm]')).toBeVisible()
+  await expect(rowCheckbox(page, 'Sample Y [mm]')).toBeVisible()
+  await expect(rowCheckbox(page, 'Trains')).toHaveCount(0)
 
   // Clear the search
   await page.getByPlaceholder('Search variables').clear()
-  await expect(page.getByRole('row', { name: 'Trains' })).toBeVisible()
+  await expect(rowCheckbox(page, 'Trains')).toBeVisible()
 })
 
 test('a hidden column stays hidden after the popover closes', async ({
@@ -83,4 +83,21 @@ test('the popover link hides every variable, then shows them again', async ({
   // Show it all again
   await popoverAction(page).click()
   await expectVisibleColumns(page, 13)
+})
+
+test('the popover link hides only what the search left on screen', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openPopover(page, 'Variables')
+
+  // Narrow the list to the Sample group
+  await page.getByPlaceholder('Search variables').fill('sample')
+  await expect(rowCheckbox(page, 'Trains')).toHaveCount(0)
+
+  await popoverAction(page).click()
+
+  // The three Sample columns go; the ones the search took off screen stay
+  await expectVisibleColumns(page, 10)
 })

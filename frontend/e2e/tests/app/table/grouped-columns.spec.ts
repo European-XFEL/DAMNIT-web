@@ -9,10 +9,8 @@ import {
   contextMenu,
   expectVisibleColumns,
   groupAction,
-  groupRow,
   openPopover,
   openProposal,
-  popoverRow,
   rightClickHeader,
   rowCheckbox,
   selectedColumnHeaders,
@@ -104,10 +102,10 @@ test('a grouped variable can still be hidden on its own', async ({
   await openProposal(page, example)
   await expectVisibleColumns(page, 13)
 
-  // The row shows the title without the group's words, which its own group row
-  // right above it already carries.
+  // The row shows the title without the group's words, but its checkbox is
+  // named by the whole title, so it speaks for this column alone.
   await openPopover(page, 'Variables')
-  await rowCheckbox(page, 'X [mm]').uncheck()
+  await rowCheckbox(page, 'Sample/X [mm]').uncheck()
 
   await expectVisibleColumns(page, 12)
   expect(await columnTitles(page)).not.toContain('X [mm]')
@@ -139,7 +137,7 @@ test('a partly hidden group offers to show the rest', async ({
   const sample = groupAction(page, 'Sample')
 
   // Hide one member
-  await rowCheckbox(page, 'X [mm]').uncheck()
+  await rowCheckbox(page, 'Sample/X [mm]').uncheck()
   await expect(sample).toHaveText('Show all')
 
   // Complete the group
@@ -156,12 +154,9 @@ test('searching a group name keeps the group and its members', async ({
 
   await page.getByPlaceholder('Search variables').fill('sample')
 
-  // Exact names: the rows show the stripped titles, and "Type" on its own would
-  // also match the ungrouped "Scan type" the search is meant to drop.
-  const row = (name: string) => popoverRow(page, name, { exact: true })
-  await expect(groupRow(page, 'Sample')).toBeVisible()
-  await expect(row('Type')).toBeVisible()
-  await expect(row('X [mm]')).toBeVisible()
-  await expect(row('Y [mm]')).toBeVisible()
-  await expect(row('Trains')).toHaveCount(0)
+  await expect(groupAction(page, 'Sample')).toBeVisible()
+  await expect(rowCheckbox(page, 'Sample/Type')).toBeVisible()
+  await expect(rowCheckbox(page, 'Sample/X [mm]')).toBeVisible()
+  await expect(rowCheckbox(page, 'Sample/Y [mm]')).toBeVisible()
+  await expect(rowCheckbox(page, 'Trains')).toHaveCount(0)
 })

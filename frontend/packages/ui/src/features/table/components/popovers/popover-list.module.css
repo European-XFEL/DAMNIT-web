@@ -1,0 +1,223 @@
+/* What the list lines up on: the handle column, the gap before the title, and
+   where the title starts past both. */
+.row,
+.groupHeader,
+.details,
+.empty {
+  --lead: 22px;
+  --gap: 6px;
+  --title-inset: calc(var(--lead) + var(--gap));
+}
+
+/* The ground an open row shares with its details. */
+.row,
+.details {
+  --open-bg: light-dark(
+    var(--mantine-color-gray-0),
+    var(--mantine-color-dark-6)
+  );
+}
+
+.row,
+.groupHeader,
+.block {
+  --hover-bg: light-dark(
+    var(--mantine-color-gray-1),
+    var(--mantine-color-dark-6)
+  );
+}
+
+.row,
+.groupHeader {
+  /* Dim here and prominent below are the popover family's pair, the same two
+     row-details draws its unselected and selected items from. */
+  --grip-color: light-dark(
+    var(--mantine-color-gray-7),
+    var(--mantine-color-dark-2)
+  );
+
+  align-items: center;
+  background: var(--mantine-color-body);
+  display: flex;
+  gap: var(--gap);
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+/* No rows left, said where a row's title would start. */
+.empty {
+  align-items: center;
+  display: flex;
+  min-height: 32px;
+  padding: 0 10px 0 calc(10px + var(--title-inset));
+}
+
+/* A heading carries a 10px label, so it does not need a variable row's height.
+   24px is the target-size floor for the link it holds. */
+.groupHeader {
+  min-height: 24px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+/* The air that separates one group from the next. It sits outside the heading,
+   or the hover below would swallow it. */
+.block {
+  margin-block: 6px;
+}
+
+.row:hover,
+.groupHeader:hover {
+  background: var(--hover-bg);
+}
+
+/* A group's handle shows what it would pick up. The rows inside go clear so an
+   open one does not read lighter than the block lit around it. */
+.block:has(> .groupHeader .grip:hover) {
+  background: var(--hover-bg);
+}
+
+.block:has(> .groupHeader .grip:hover) .groupHeader,
+.block:has(> .groupHeader .grip:hover) .row,
+.block:has(> .groupHeader .grip:hover) .details {
+  background: transparent;
+}
+
+/* A row with no handle leaves the column blank, so its title still starts where
+   every other title does. */
+.lead {
+  flex-shrink: 0;
+  width: var(--lead);
+}
+
+/* The grip is the whole handle column, so it clears the target-size floor
+   without showing a box, and the title starts where the column ends. */
+.grip,
+.pin {
+  color: var(--grip-color);
+  display: grid;
+  flex-shrink: 0;
+  height: 24px;
+  place-items: center;
+  width: var(--lead);
+}
+
+/* A pin keeps a resting grip's colour, since anything lighter drops under the
+   3:1 icon floor on a hovered row. Only the cursor and hover set them apart. */
+.grip {
+  cursor: grab;
+}
+
+/* Under the pinned rows. Lighter and inset on the gutter, so it reads as a
+   pause in the list rather than the popover's own section dividers. */
+.pinnedDivider {
+  --divider-color: light-dark(
+    var(--mantine-color-gray-2),
+    var(--mantine-color-dark-5)
+  );
+
+  margin-inline: 10px;
+}
+
+/* Only the handle in use darkens. The colour sits on the two elements that
+   hold a grip, so a dragged group leaves its members at rest. */
+.grip:hover,
+.grip:focus-visible,
+.item.dragging .grip,
+.block.dragging > .groupHeader .grip {
+  --grip-color: light-dark(
+    var(--mantine-color-gray-9),
+    var(--mantine-color-dark-0)
+  );
+}
+
+/* The rail down a group's members, centred under the group's grip so it drops
+   from the handle that moves them, with each member's grip inside it. */
+.member,
+.memberDetails {
+  --rail-inset: calc(10px + (var(--lead) - var(--rail-width)) / 2);
+  --rail-width: 2px;
+  --rail-color: light-dark(
+    var(--mantine-color-gray-4),
+    var(--mantine-color-dark-4)
+  );
+}
+
+.member {
+  padding-left: var(--lead);
+  position: relative;
+}
+
+.member::before {
+  background: var(--rail-color);
+  bottom: 0;
+  content: '';
+  left: var(--rail-inset);
+  position: absolute;
+  top: 0;
+  width: var(--rail-width);
+}
+
+/* An open row and its details are one block: they share a ground, and the
+   panel's text starts where the row's title does. */
+.row:has(+ .details) {
+  background: var(--open-bg);
+}
+
+.details {
+  background: var(--open-bg);
+  padding: 10px 10px 10px calc(10px + var(--title-inset));
+  position: relative;
+}
+
+/* Where the row ends and its details begin. The hairline starts at the title
+   rather than the popover edge, so it does not read as a section divider. */
+.details::before {
+  background: light-dark(
+    var(--mantine-color-gray-3),
+    var(--mantine-color-dark-4)
+  );
+  content: '';
+  height: 1px;
+  left: calc(10px + var(--title-inset));
+  position: absolute;
+  right: 10px;
+  top: 0;
+}
+
+.memberDetails {
+  border-left: var(--rail-width) solid var(--rail-color);
+  margin-left: var(--rail-inset);
+  padding-left: var(--title-inset);
+}
+
+.memberDetails::before {
+  left: var(--title-inset);
+}
+
+/* The handle the keyboard is on. The ring is inset, since a row fills the
+   popover and an outset one would be clipped by the scroll area. */
+.grip:focus-visible,
+.title:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+/* Both actions sit on the popover's own gutter rather than on the row columns,
+   one at each end. The bar is a group heading's height, for the same links. */
+.footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 24px;
+  padding: 0 10px;
+}
+
+/* A flex slot hands its link the link's own line height, not a line box's. */
+.footerSlot {
+  display: flex;
+}
