@@ -9,7 +9,7 @@ import { useAppSelector } from '#src/app/store/hooks'
 import { selectLastFlash } from '#src/features/table/stores/table.selectors'
 import type { ColumnIndex } from '#src/features/table/utils/grid-selection'
 
-// Full strength while the eye travels from the popover to the grid.
+// Full strength while the eye travels from the popover or toolbar to the grid.
 const FLASH_HOLD = 200
 // Then an ease-out to nothing.
 const FLASH_FADE = 800
@@ -31,7 +31,7 @@ function flashStrength(elapsed: number) {
   return 1 - easeOutCubic((elapsed - FLASH_HOLD) / FLASH_FADE)
 }
 
-// Tints what the last drop or reset changed, then fades it. A new
+// Tints what the last drop, fit or reset changed, then fades it. A new
 // highlightRegions each frame is what makes Glide repaint the headers and band.
 export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
   const lastFlash = useAppSelector(selectLastFlash)
@@ -62,7 +62,7 @@ export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
     let frame = 0
     const tick = () => {
       // A stamp already this old draws nothing: the Plots tab unmounts the
-      // table, and a remount would otherwise replay the last drop.
+      // table, and a remount would otherwise replay the last flash.
       const elapsed = performance.now() - lastFlash.at
       if (elapsed >= FLASH_DURATION) {
         setFade(null)

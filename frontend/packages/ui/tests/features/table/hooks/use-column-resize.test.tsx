@@ -8,10 +8,15 @@ import type {
 } from '@glideapps/glide-data-grid'
 
 import { useColumnResize } from '#src/features/table/hooks/use-column-resize'
+import type { TableColumn } from '#src/features/table/types/table.types'
 import { setupStore, type AppStore } from '#src/app/store/store'
 import { withStore } from '#tests/support/render'
 
-const COLUMN_COUNT = 3
+const COLUMNS: TableColumn[] = [
+  { id: 'n_trains', title: 'n_trains' },
+  { id: 'xgm_intensity', title: 'XGM / intensity', group: 'XGM' },
+  { id: 'xgm_energy', title: 'XGM / energy', group: 'XGM' },
+]
 
 function column(id: string): GridColumn {
   return { id, title: id, width: 100 }
@@ -32,7 +37,7 @@ function gridStub() {
 }
 
 function renderResize(store: AppStore, ref = gridStub().ref) {
-  return renderHook(() => useColumnResize(ref, COLUMN_COUNT), {
+  return renderHook(() => useColumnResize(ref, COLUMNS), {
     wrapper: withStore(store),
   })
 }

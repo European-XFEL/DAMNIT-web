@@ -102,7 +102,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     onColumnResizeEnd,
     fitAllColumns,
     resetColumnWidths,
-  } = useColumnResize(tableRef, tableColumns.length)
+  } = useColumnResize(tableRef, tableColumns)
   const theme = useMantineTheme()
 
   // What the grid draws: the title without the level its group header already
