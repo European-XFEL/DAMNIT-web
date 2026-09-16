@@ -6,6 +6,7 @@ import reducer, {
   columnMoved,
   columnOrderReset,
   columnResized,
+  columnsFitted,
   columnWidthsReset,
   runDeselected,
   runSelected,
@@ -195,11 +196,63 @@ describe('columnResized', () => {
   })
 })
 
+describe('columnsFitted', () => {
+  test('stamps the columns and groups the fit changed', () => {
+    const state = reducer(
+      undefined,
+      columnsFitted({ columns: ['g.x', 'g.y'], groups: ['g'] })
+    )
+
+    expect(state.lastFlash).toEqual({
+      columns: ['g.x', 'g.y'],
+      groups: ['g'],
+      at: expect.any(Number),
+    })
+  })
+
+  test('a fit that changed nothing leaves the last flash alone', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(state, columnsFitted({ columns: [], groups: [] }))
+
+    expect(state.lastFlash).toMatchObject({ columns: ['b'], groups: [] })
+  })
+})
+
 describe('columnWidthsReset', () => {
   test('drops every width the user set', () => {
     let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
-    state = reducer(state, columnWidthsReset({ columns: [], groups: [] }))
+    state = reducer(state, columnWidthsReset({ columns: ['a'], groups: [] }))
     expect(state.columnSizing).toEqual({})
+  })
+
+  test('stamps the columns the reset put back', () => {
+    let state = reducer(undefined, columnResized({ variable: 'a', width: 240 }))
+    state = reducer(state, columnWidthsReset({ columns: ['a'], groups: [] }))
+
+    expect(state.lastFlash).toEqual({
+      columns: ['a'],
+      groups: [],
+      at: expect.any(Number),
+    })
+  })
+
+  test('a reset that changed nothing leaves the last flash alone', () => {
+    let state = reducer(
+      undefined,
+      columnMoved({
+        order: ['b', 'a'],
+        moved: { columns: ['b'], groups: [] },
+      })
+    )
+    state = reducer(state, columnWidthsReset({ columns: [], groups: [] }))
+
+    expect(state.lastFlash).toMatchObject({ columns: ['b'], groups: [] })
   })
 })
 
