@@ -145,6 +145,30 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     [errorColors]
   )
 
+  // Glide paints from resolved colors, not CSS variables, so its header and
+  // group bar take the gray ramp the rest of the chrome is on.
+  const gridTheme = useMemo<Partial<Theme>>(
+    () => ({
+      bgHeader: theme.colors.gray[0],
+      bgHeaderHovered: theme.colors.gray[1],
+      bgHeaderHasFocus: theme.colors.gray[2],
+      borderColor: theme.colors.gray[2],
+      textHeader: theme.colors.gray[9],
+      accentColor: theme.colors.indigo[6],
+    }),
+    [theme]
+  )
+
+  // Glide fills the row numbers with the cell background, not the header's, so
+  // they need their own theme to share the header's gray.
+  const rowMarkers = useMemo(
+    () => ({
+      kind: 'clickable-number' as const,
+      theme: { bgCell: theme.colors.gray[0] },
+    }),
+    [theme]
+  )
+
   // Data: Populate grid. Row layout is the server-ordered run list; a cell's
   // value is looked up by the run's identity from the normalized cache.
   const getContent = useCallback(
@@ -559,6 +583,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
             <DataEditor
               {...(grid || {})}
               ref={tableRef}
+              theme={gridTheme}
               columns={gridColumns}
               highlightRegions={highlightRegions}
               drawHeader={drawHeader}
@@ -583,7 +608,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               spanRangeBehavior="allowPartial"
               rows={runs.length}
               rowSelect="single"
-              rowMarkers="clickable-number"
+              rowMarkers={rowMarkers}
               gridSelection={gridSelection}
               onGridSelectionChange={handleGridSelectionChange}
               // Escape or a click on nothing, which unselecting a column is not.
