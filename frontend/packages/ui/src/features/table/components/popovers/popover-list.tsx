@@ -14,7 +14,8 @@ import {
 import { IconSearch } from '@tabler/icons-react'
 import cx from 'clsx'
 
-import { mutedC } from './row-details'
+import { mutedC } from '#src/components/headings/section-heading'
+
 import classes from './popover-list.module.css'
 
 type SearchInputProps = {
