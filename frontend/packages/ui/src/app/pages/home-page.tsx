@@ -10,11 +10,15 @@ type HomePageProps = {
 
 const HomePage = ({ main, header }: HomePageProps) => {
   return (
-    <AppShell header={{ height: 60 }} padding="md">
+    <AppShell
+      header={{ height: 40 }}
+      padding="md"
+      style={{ '--app-shell-border-color': 'var(--mantine-color-gray-2)' }}
+    >
       <AppShell.Header>{header}</AppShell.Header>
       <AppShell.Main mb={64}>{main}</AppShell.Main>
       <AppShell.Footer
-        h={100}
+        h={80}
         withBorder={false}
         mr={32}
         style={{

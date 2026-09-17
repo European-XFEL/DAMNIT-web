@@ -82,7 +82,7 @@ function HomeRoute() {
   return (
     <HomePage
       header={
-        <Header px={20}>
+        <Header px={16}>
           <Logo linkTo="/home" />
           <UserMenu userName={userName} onLogout={() => navigate('/logout')} />
         </Header>
