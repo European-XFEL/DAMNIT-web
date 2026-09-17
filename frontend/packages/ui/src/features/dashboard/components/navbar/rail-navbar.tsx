@@ -70,7 +70,15 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
   const plots = usePlotEntries()
   const plotActive = plots.some(({ view }) => views.isActive(view))
   const [plotsOpened, setPlotsOpened] = useState(false)
+  const plotsRef = useRef<HTMLButtonElement>(null)
   const newPlotRef = useRef<HTMLButtonElement>(null)
+
+  // A pick unmounts the focused row, so focus goes back to Plots as on Escape,
+  // and the plot dialog returns there when it closes.
+  function closePlotsPopover() {
+    setPlotsOpened(false)
+    plotsRef.current?.focus()
+  }
 
   // Mantine's trap wraps Shift+Tab only from the first row, so from the hidden
   // start it would leave the popover open behind the focus.
@@ -103,6 +111,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
         >
           <Popover.Target>
             <RailButton
+              ref={plotsRef}
               icon={<IconChartLine size={20} stroke={1.5} />}
               label="Plots"
               active={plotActive}
@@ -113,14 +122,17 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
             {/* Focus starts on a hidden spot, so no close mark shows. */}
             <FocusTrap.InitialFocus onKeyDown={wrapToNewPlot} />
             <div className={classes.scroll}>
-              <PlotEntries onSelect={() => setPlotsOpened(false)} />
+              <PlotEntries
+                onSelect={closePlotsPopover}
+                onLastClosed={() => newPlotRef.current?.focus()}
+              />
             </div>
             {plots.length > 0 && <Divider my={4} color="gray.2" />}
             <UnstyledButton
               ref={newPlotRef}
               className={classes.item}
               onClick={() => {
-                setPlotsOpened(false)
+                closePlotsPopover()
                 onNewPlot()
               }}
             >

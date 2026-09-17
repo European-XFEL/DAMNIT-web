@@ -123,6 +123,8 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
           hiddenFrom="sm"
           size="sm"
           aria-label="Toggle navigation"
+          aria-expanded={mobileNavOpened}
+          aria-controls="dashboard-nav"
         />
         <NavToggle />
         <nav aria-label="Breadcrumb" className={classes.nav}>

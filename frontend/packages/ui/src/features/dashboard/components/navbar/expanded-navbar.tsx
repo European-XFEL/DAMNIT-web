@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { ActionIcon, AppShell, UnstyledButton } from '@mantine/core'
 import { IconFileCode, IconPlus, IconTable } from '@tabler/icons-react'
 
@@ -57,6 +57,7 @@ type ExpandedNavbarProps = {
 
 function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
   const views = useViews()
+  const newPlotRef = useRef<HTMLButtonElement>(null)
 
   return (
     <>
@@ -80,6 +81,7 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
               label="Plots"
               action={
                 <ActionIcon
+                  ref={newPlotRef}
                   variant="subtle"
                   color="gray"
                   size="sm"
@@ -90,7 +92,10 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
                 </ActionIcon>
               }
             />
-            <PlotEntries empty="(None)" />
+            <PlotEntries
+              empty="(None)"
+              onLastClosed={() => newPlotRef.current?.focus()}
+            />
           </li>
           {/* One file, so a plain item rather than a header over one entry. */}
           <li>
