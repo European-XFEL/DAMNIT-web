@@ -1,17 +1,36 @@
+/* Slides on the shell's transition. Closed, it leaves the Tab order after the
+   slide; open, it shows at once so the close button can take focus. */
 .aside {
   display: flex;
   flex: none;
   flex-direction: column;
-  width: 360px;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
   background: var(--mantine-color-white);
-  border-left: 1px solid var(--app-shell-border-color);
+  transition-property: width, visibility;
+  transition-duration: var(--app-shell-transition-duration);
+  transition-timing-function: var(--app-shell-transition-timing-function);
+
+  &[data-opened] {
+    width: 360px;
+    visibility: inherit;
+    transition-property: width;
+  }
 
   @mixin smaller-than $mantine-breakpoint-sm {
     position: absolute;
     z-index: var(--mantine-z-index-app);
     inset: 0;
     width: auto;
-    border-left: none;
+    transform: translateX(100%);
+    transition-property: transform, visibility;
+
+    &[data-opened] {
+      width: auto;
+      transform: none;
+      transition-property: transform;
+    }
 
     /* The run belongs to the table, so over any other view it steps out of the
        way until the table is back. */
@@ -21,11 +40,19 @@
   }
 }
 
+/* A fixed width, so the text does not re-wrap while the panel's box grows. */
 .tabs {
   display: flex;
   flex: 1;
   flex-direction: column;
+  width: 360px;
   min-height: 0;
+  border-left: 1px solid var(--app-shell-border-color);
+
+  @mixin smaller-than $mantine-breakpoint-sm {
+    width: auto;
+    border-left: none;
+  }
 }
 
 .head {
