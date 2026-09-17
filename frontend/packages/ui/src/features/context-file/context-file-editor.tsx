@@ -23,7 +23,7 @@ const ContextFileEditor = ({ content }: ContextFileEditorProps) => {
     if (savedView) {
       editor.restoreViewState(savedView)
     }
-    // Focus on open (the tab remounts the editor each time) so Ctrl+F opens
+    // Focus on open (selecting the view remounts the editor each time) so Ctrl+F opens
     // Monaco's find widget instead of the browser's, without a click first.
     editor.focus()
   }

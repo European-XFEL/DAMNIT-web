@@ -1,5 +1,7 @@
 import dayjs from 'dayjs'
 
+import { sorted } from './array'
+
 export function formatDate(timestamp: number) {
   const formattedDate = dayjs(timestamp).format('DD MMMM YYYY')
   const formattedTime = dayjs(timestamp).format('HH:mm:ss')
@@ -7,12 +9,26 @@ export function formatDate(timestamp: number) {
   return `${formattedTime} | ${formattedDate}`
 }
 
-export const formatRunsSubtitle = (runs: (string | number)[]) => {
-  if (!runs || !runs.length) {
+// No runs of its own means the plot follows every run, however many arrive.
+export function formatRunsSubtitle(runs: string[] | undefined) {
+  if (!runs) {
+    return 'All runs'
+  }
+
+  const numbers = sorted([...new Set(runs.map(Number))])
+  if (numbers.length === 0) {
     return ''
   }
 
-  return `(run ${runs[0]}${runs.length > 1 ? `-${runs[runs.length - 1]}` : ''})`
+  const first = numbers[0]
+  const last = numbers[numbers.length - 1]
+  if (numbers.length === 1) {
+    return `Run ${first}`
+  }
+  if (last - first === numbers.length - 1) {
+    return `Runs ${first}-${last}`
+  }
+  return `${numbers.length} runs, ${first}-${last}`
 }
 
 export function formatNumber(number: number, options = {}): number {

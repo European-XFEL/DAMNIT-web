@@ -7,39 +7,29 @@ import { generateUID } from './utils'
 
 type PlotsState = {
   data: Record<string, PlotSpec>
-  currentPlot: string | null
 }
 
 const initialState: PlotsState = {
   data: {},
-  currentPlot: null,
 }
 
 const slice = createSlice({
   name: 'plots',
   initialState,
   reducers: {
-    setCurrentPlot: (state, action) => {
-      const id = action.payload
-      if (state.data && id in state.data) {
-        state.currentPlot = id
-      }
+    // The action carries the new id, so the dashboard shows the plot from it.
+    addPlot: {
+      reducer: (state, action: PayloadAction<PlotSpec & { id: string }>) => {
+        const { id, ...plot } = action.payload
+        state.data[id] = plot
+      },
+      prepare: (plot: PlotSpec) => ({
+        payload: { ...plot, id: generateUID() },
+      }),
     },
-    addPlot: (state, action: PayloadAction<PlotSpec>) => {
-      const { variables, runs, source, title } = action.payload
-      const id = generateUID()
-      state.currentPlot = id
-      state.data = Object.assign(state.data || {}, {
-        [id]: { variables, runs, source, title },
-      })
+    removePlot: (state, action: PayloadAction<string>) => {
+      delete state.data[action.payload]
     },
-    removePlot: (state, action) => {
-      const { [action.payload]: _ = {}, ...rest } = state.data
-      const plots = Object.keys(rest)
-      state.currentPlot = plots.length ? plots.slice(-1)[0] : null
-      state.data = plots.length ? rest : {}
-    },
-    reset: () => initialState,
   },
   extraReducers: (builder) => {
     builder.addCase(resetProposal, () => initialState)
@@ -47,4 +37,4 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { addPlot, reset, removePlot, setCurrentPlot } = slice.actions
+export const { addPlot, removePlot } = slice.actions

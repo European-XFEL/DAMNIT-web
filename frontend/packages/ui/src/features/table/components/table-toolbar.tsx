@@ -18,7 +18,14 @@ export const TableToolbar = memo(function TableToolbar({
 }: TableToolbarProps) {
   return (
     /* Labelled buttons open a panel; the icons beside them act at once. */
-    <Group px={6}>
+    <Group
+      h={40}
+      px={6}
+      style={{
+        flex: 'none',
+        borderBottom: '1px solid var(--app-shell-border-color)',
+      }}
+    >
       <VariablesPopover />
       <TagsPopover />
       {/* A height turns Mantine's stretch on the divider into a top-align. */}

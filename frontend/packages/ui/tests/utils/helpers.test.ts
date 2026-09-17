@@ -29,20 +29,32 @@ describe('formatDate', () => {
 })
 
 describe('formatRunsSubtitle', () => {
-  test('returns an empty string for no runs', () => {
+  test('says all runs for a plot with no runs of its own', () => {
+    expect(formatRunsSubtitle(undefined)).toBe('All runs')
+  })
+
+  test('returns an empty string for an empty selection', () => {
     expect(formatRunsSubtitle([])).toBe('')
   })
 
   test('shows a single run', () => {
-    expect(formatRunsSubtitle(['5'])).toBe('(run 5)')
+    expect(formatRunsSubtitle(['5'])).toBe('Run 5')
   })
 
-  test('shows the first and last run as a range', () => {
-    expect(formatRunsSubtitle(['5', '6', '7', '8', '9'])).toBe('(run 5-9)')
+  test('shows a contiguous selection as a range of runs', () => {
+    expect(formatRunsSubtitle(['5', '6', '7', '8', '9'])).toBe('Runs 5-9')
   })
 
-  test('shows the same range when the runs are numbers', () => {
-    expect(formatRunsSubtitle([5, 6, 9])).toBe('(run 5-9)')
+  test('counts a sparse selection before its span, so it never reads as a range', () => {
+    expect(formatRunsSubtitle(['1', '4', '5', '9'])).toBe('4 runs, 1-9')
+  })
+
+  test('orders runs by number, not as text', () => {
+    expect(formatRunsSubtitle(['10', '8', '9'])).toBe('Runs 8-10')
+  })
+
+  test('counts a run picked twice once', () => {
+    expect(formatRunsSubtitle(['1', '1', '2', '3'])).toBe('Runs 1-3')
   })
 })
 

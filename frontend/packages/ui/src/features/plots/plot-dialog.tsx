@@ -93,14 +93,14 @@ const PlotDialog = (props: PlotDialogProps) => {
         ? {
             variables: [xVariable, yVariable],
             source: 'summary',
-            title: `Summary: ${getVariableTitle(
-              yMetadata
-            )} vs. ${getVariableTitle(xMetadata)}`,
+            name: `${getVariableTitle(yMetadata)} vs. ${getVariableTitle(
+              xMetadata
+            )}`,
           }
         : {
             variables: [yVariable],
             source: 'preview',
-            title: `Preview: ${getVariableTitle(yMetadata)}`,
+            name: getVariableTitle(yMetadata),
           }
 
     dispatch(addPlot({ ...plotOptions, runs: runs ?? undefined }))

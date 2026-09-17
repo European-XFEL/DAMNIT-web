@@ -7,28 +7,8 @@ export type DeepPartial<T> = T extends Function
     ? { [K in keyof T]?: DeepPartial<T[K]> }
     : T
 
-export type TabItem = {
-  title: string
-  subtitle?: string
-  isClosable?: boolean
-}
-
 export type WithTypeName<T> = T & {
   __typename: string
-}
-
-export type ProposalInfo = {
-  number: number
-  instrument: string
-  title: string
-  principal_investigator: string
-
-  start_date: string
-  end_date: string
-  run_cycle: string
-
-  proposal_path: string
-  damnit_path: string
 }
 
 // The proposals available to a user, keyed by cycle.
@@ -40,11 +20,11 @@ export type AvailableProposals = {
 // show a single variable's extracted value per run.
 export type PlotSource = 'summary' | 'preview'
 
-// A plot's definition: the plotRequested action payload and the shape plots
-// stores. Lives here so table (requester) and plots (store) can share it.
+// A plot's definition, shared by table (requester) and plots (store). `name`
+// is the plot alone ("Pulses vs. Run"); the kind comes from `source`.
 export type PlotSpec = {
   variables: string[]
   runs?: string[]
   source: PlotSource
-  title?: string
+  name: string
 }

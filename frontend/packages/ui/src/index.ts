@@ -11,9 +11,9 @@ export { default as InstrumentBadge } from './components/badges/instrument-badge
 
 // Features
 export { default as Dashboard } from './features/dashboard/dashboard'
-export { default as DashboardBase } from './features/dashboard/dashboard.base'
-export { default as DashboardMain } from './features/dashboard/dashboard.main'
-export { openNav, closeNav } from './features/dashboard/dashboard.slice'
+export { default as DashboardShell } from './features/dashboard/components/dashboard-shell'
+export { default as DashboardMain } from './features/dashboard/components/dashboard-main'
+export { default as ProposalIdentity } from './features/dashboard/components/proposal-identity'
 export { default as HeroPage } from './app/pages/hero-page'
 export { default as HomePage } from './app/pages/home-page'
 export { default as LoggedOutPage } from './app/pages/logged-out-page'

@@ -1,0 +1,89 @@
+.band {
+  display: flex;
+  height: 100%;
+}
+
+/* As wide as the nav, so its right edge carries the nav's border up through
+   the band. Below `sm` it holds only the wordmark. */
+.navCell {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: var(--app-shell-navbar-offset);
+  padding-left: 16px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 1px;
+    height: 20px;
+    background: var(--app-shell-border-color);
+    translate: 0 -50%;
+  }
+
+  @mixin smaller-than $mantine-breakpoint-sm {
+    width: auto;
+
+    &::after {
+      content: none;
+    }
+  }
+}
+
+.navCell[data-rail] {
+  justify-content: center;
+  padding: 0;
+}
+
+/* 11 px in, so the toggle's icon lands on the Variables icon's x. */
+.crumbRow {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 16px 0 11px;
+}
+
+.nav {
+  min-width: 0;
+}
+
+.crumbs {
+  flex-wrap: nowrap;
+}
+
+/* Mantine sets each crumb's line-height to 1, where the glyphs spill and get
+   clipped. */
+.crumb {
+  overflow: hidden;
+  line-height: var(--mantine-line-height-sm);
+  text-overflow: ellipsis;
+}
+
+/* Sized here, not per icon, so every view's icon comes out the same. */
+.icon {
+  display: inline-flex;
+  margin-right: rem(6px);
+  color: var(--mantine-color-gray-7);
+  vertical-align: rem(-3px);
+
+  & svg {
+    width: rem(16px);
+    height: rem(16px);
+  }
+}
+
+.separator {
+  color: var(--mantine-color-gray-5);
+}
+
+/* Which proposal you are in is the one thing the row must not cut, so it keeps
+   its width and the view crumb beside it is what ellipsizes. */
+.identity {
+  flex-shrink: 0;
+  border-radius: var(--mantine-radius-sm);
+}

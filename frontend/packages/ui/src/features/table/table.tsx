@@ -237,7 +237,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
   // Cell: Click event
   // Both stay local because nothing outside the grid reads them. That does mean
-  // the outline a drill-down draws is gone after the Plots tab unmounts the
+  // the outline a drill-down draws is gone after another view unmounts the
   // table, while the drill-down itself survives in `activeVariable`: the aside
   // keeps showing the right variable, only its outline has to be clicked back.
   const [selectedColumns, setSelectedColumns] = useState<string[]>([])
@@ -520,7 +520,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       plotRequested({
         variables,
         source: 'summary',
-        title: `Summary: ${label}`,
+        name: label,
       })
     )
   }
@@ -539,7 +539,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         runs,
         variables: [variable],
         source: 'preview',
-        title: `Preview: ${label}`,
+        name: label,
       })
     )
   }
@@ -574,7 +574,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   return (
     <>
       {!tableColumns.length ? null : (
-        <Stack w="100%" h="100%" gap="sm">
+        <Stack w="100%" h="100%" gap={0}>
           <TableToolbar
             onFitAllColumns={fitAllColumns}
             onResetColumnWidths={resetColumnWidths}
