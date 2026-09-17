@@ -1,5 +1,5 @@
 import { test, expect } from '#fixtures'
-import { gridBox, headerPoint } from '#support/grid'
+import { gridBox, gridCanvas, headerPoint } from '#support/grid'
 import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
 import {
   activateCell,
@@ -61,6 +61,18 @@ test('closing the aside clears the run selection', async ({
 
   await expect(selectedRunTab(page)).toHaveCount(0)
   await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
+})
+
+test('closing the aside hands focus back to the grid', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+
+  await closeAside(page)
+
+  await expect(gridCanvas(page)).toBeFocused()
 })
 
 // Selecting a column is how a summary plot starts, so it must not throw away the

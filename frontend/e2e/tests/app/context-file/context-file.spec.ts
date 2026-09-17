@@ -40,16 +40,14 @@ test('the context file view shows the proposal code, read-only', async ({
   expect(models.join('\n')).not.toContain(rejected)
 })
 
-test('opening the view focuses the editor so Ctrl+F opens Monaco search', async ({
+test('ctrl+f on the context file opens Monaco search', async ({
   page,
   example,
 }) => {
   await openProposal(page, example)
   await openContextFile(page)
 
-  // No click into the editor first: if the view handed focus to Monaco, Ctrl+F
-  // opens its find widget. Without that focus the keystroke would fall through
-  // to the browser's own page search and no find widget would appear.
+  // Focus is still on the nav entry that opened the view, not in the editor.
   await page.keyboard.press('Control+f')
   await expect(page.locator('.find-widget')).toBeVisible()
 })

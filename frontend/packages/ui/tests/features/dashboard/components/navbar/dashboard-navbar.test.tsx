@@ -33,6 +33,13 @@ const pulses: PlotSpec = {
   name: 'Pulses vs. Run',
 }
 
+const intensity: PlotSpec = {
+  variables: ['run', 'xgm_intensity'],
+  runs: ['6'],
+  source: 'summary',
+  name: 'Intensity vs. Run',
+}
+
 const ada: DashboardUser = {
   name: 'Ada Lovelace',
   onLogout: () => {},
@@ -185,6 +192,77 @@ test('closing a plot entry removes it from the nav', async () => {
   await expect
     .element(screen.getByRole('button', { name: 'All runs', exact: true }))
     .toHaveAttribute('aria-current', 'page')
+})
+
+test('closing a plot hands focus to the entry below, the one above, then New plot', async () => {
+  const store = setupStore()
+  store.dispatch(addPlot(trains))
+  store.dispatch(addPlot(pulses))
+  store.dispatch(addPlot(intensity))
+  const screen = await renderNav(store)
+  const entry = (name: RegExp) => screen.getByRole('button', { name })
+
+  // Close the middle plot from the keyboard
+  const pulsesButton = entry(/^Pulses vs. Run/).element() as HTMLElement
+  pulsesButton.focus()
+  await userEvent.tab()
+  await userEvent.keyboard('{Enter}')
+  await expect.element(entry(/^Intensity vs. Run/)).toHaveFocus()
+
+  // Close the last plot
+  await userEvent.tab()
+  await userEvent.keyboard('{Enter}')
+  await expect.element(entry(/^Trains vs. Run/)).toHaveFocus()
+
+  // Close the only plot left
+  await userEvent.tab()
+  await userEvent.keyboard('{Enter}')
+  await expect
+    .element(screen.getByRole('button', { name: 'New plot' }))
+    .toHaveFocus()
+})
+
+test('closing the last plot in the rail popover hands focus to New plot', async () => {
+  await resizeViewport({ width: 1024, height: 768 })
+  const store = setupStore()
+  store.dispatch(addPlot(trains))
+  store.dispatch(navCollapsed())
+  const screen = await renderNav(store)
+
+  await openRailPlots(screen)
+  await userEvent.tab()
+  await userEvent.tab()
+  await userEvent.keyboard('{Enter}')
+
+  await expect
+    .element(screen.getByRole('button', { name: 'New plot' }))
+    .toHaveFocus()
+})
+
+test('picking a plot or New plot in the rail hands focus back to Plots', async () => {
+  await resizeViewport({ width: 1024, height: 768 })
+  const store = setupStore()
+  store.dispatch(addPlot(trains))
+  store.dispatch(viewSelected({ kind: 'table' }))
+  store.dispatch(navCollapsed())
+  const screen = await renderNav(store)
+  const plots = screen.getByRole('button', { name: 'Plots', exact: true })
+
+  // Pick the plot from the keyboard
+  await openRailPlots(screen)
+  await userEvent.tab()
+  await userEvent.keyboard('{Enter}')
+  await expect.element(plots).toHaveFocus()
+
+  // Open New plot from the keyboard, then close its dialog
+  await openRailPlots(screen)
+  await userEvent.keyboard('{Shift>}{Tab}{/Shift}')
+  await userEvent.keyboard('{Enter}')
+  const dialog = screen.getByRole('dialog', { name: 'Plot Settings' })
+  await expect.element(dialog).toBeVisible()
+  await userEvent.keyboard('{Escape}')
+  await expect.element(dialog).not.toBeInTheDocument()
+  await expect.element(plots).toHaveFocus()
 })
 
 test('the plus beside Plots opens the plot settings', async () => {
