@@ -1,0 +1,50 @@
+.aside {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 360px;
+  background: var(--mantine-color-white);
+  border-left: 1px solid var(--app-shell-border-color);
+
+  @mixin smaller-than $mantine-breakpoint-sm {
+    position: absolute;
+    z-index: var(--mantine-z-index-app);
+    inset: 0;
+    width: auto;
+    border-left: none;
+
+    /* The run belongs to the table, so over any other view it steps out of the
+       way until the table is back. */
+    &[data-off-table] {
+      display: none;
+    }
+  }
+}
+
+.tabs {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.head {
+  flex: none;
+  flex-wrap: nowrap;
+  height: 40px;
+  padding: 0 12px;
+
+  /* The toolbar's line: the active tab's underline lands on it. */
+  --tabs-list-border-size: 0 0 1px 0;
+  --tab-border-color: var(--app-shell-border-color);
+}
+
+.close {
+  align-self: center;
+}
+
+.panel {
+  flex: 1;
+  min-height: 0;
+  padding-inline: 12px;
+}

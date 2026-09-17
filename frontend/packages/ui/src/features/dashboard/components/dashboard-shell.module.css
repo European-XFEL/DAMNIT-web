@@ -1,0 +1,16 @@
+/* Mantine only slides the closed mobile nav away, leaving it in the Tab order,
+   so visibility joins the transition and hides it after the slide. */
+.navbar {
+  @mixin smaller-than $mantine-breakpoint-sm {
+    &[data-closed] {
+      visibility: hidden;
+      transition-property: transform, top, height, visibility;
+    }
+  }
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}

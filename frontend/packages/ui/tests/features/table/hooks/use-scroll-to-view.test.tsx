@@ -38,7 +38,7 @@ describe('useScrollToView', () => {
       result.current.onVisibleRegionChanged(region)
     })
 
-    // A tab switch unmounts the Table but leaves the proposal (isActive) alive.
+    // Another view unmounts the Table but leaves the proposal (isActive) alive.
     await unmount()
 
     expect(store.getState().table.view.scroll).toEqual({ x: 0, y: 40 })

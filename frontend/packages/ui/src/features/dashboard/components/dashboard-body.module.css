@@ -1,0 +1,29 @@
+.body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Below `sm` the open nav and the open aside cover the view, so it leaves the
+   Tab order too. Under the nav it stays drawn until the nav has slid over it. */
+.body[data-covered] {
+  @mixin smaller-than $mantine-breakpoint-sm {
+    visibility: hidden;
+    transition: visibility var(--app-shell-transition-duration);
+  }
+}
+
+.view[data-covered] {
+  @mixin smaller-than $mantine-breakpoint-sm {
+    visibility: hidden;
+  }
+}
