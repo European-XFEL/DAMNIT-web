@@ -44,6 +44,7 @@ const ContextFileEditor = ({ content }: ContextFileEditorProps) => {
       theme="vs-light"
       options={{
         fontSize: 14,
+        padding: { top: 14, bottom: 14 },
         minimap: { enabled: true },
         scrollBeyondLastLine: false,
         wordWrap: 'on',
