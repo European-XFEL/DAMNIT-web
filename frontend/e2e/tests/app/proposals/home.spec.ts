@@ -8,6 +8,7 @@ import {
   proposalNumbers,
   proposalRow,
 } from '#support/proposals'
+import { breadcrumb } from '#support/dashboard'
 import { waitForTableData } from '#support/table'
 
 test.use({ example: xpcsWithProposals })
@@ -44,10 +45,9 @@ test('clicking a proposal opens its dashboard', async ({ page }) => {
   await proposalLink(page, PROPOSAL.number).click()
 
   await expect(page).toHaveURL(/\/app\/proposal\/6996$/)
-  const header = page.getByRole('banner')
   await expect(
-    header.getByRole('heading', { name: 'p6996 - Christian Gutt' })
-  ).toBeVisible()
+    breadcrumb(page).getByRole('button', { name: /p6996/ })
+  ).toContainText(PROPOSAL.principal_investigator)
 
   await tableData
 })
