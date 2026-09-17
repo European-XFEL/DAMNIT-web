@@ -306,12 +306,15 @@ export function highlightedRow(page: Page, { row }: { row: number }): Locator {
   )
 }
 
-// Close the aside from its X, named after the run it closes.
-export function closeAside(page: Page) {
+// The aside's X, named after the run it closes.
+export function asideCloseButton(page: Page): Locator {
   return page
     .getByRole('complementary')
     .getByRole('button', { name: /^Close run \d+$/ })
-    .click()
+}
+
+export function closeAside(page: Page) {
+  return asideCloseButton(page).click()
 }
 
 // The aside's Run tab, whose title becomes `Run: <n>` once a run is selected.
