@@ -5,13 +5,18 @@ import styles from './logo.module.css'
 
 type LogoProps = {
   linkTo: string
+  compact?: boolean
 }
 
-const Logo = ({ linkTo }: LogoProps) => {
+function Logo({ linkTo, compact = false }: LogoProps) {
   return (
-    <Link to={linkTo} className={styles.link}>
-      <Title order={1} style={{ fontFamily: 'Arial' }}>
-        DAMNIT!
+    <Link
+      to={linkTo}
+      className={styles.link}
+      aria-label={compact ? 'DAMNIT!' : undefined}
+    >
+      <Title order={1} fz={22} style={{ fontFamily: 'Arial' }}>
+        {compact ? 'D!' : 'DAMNIT!'}
       </Title>
     </Link>
   )
