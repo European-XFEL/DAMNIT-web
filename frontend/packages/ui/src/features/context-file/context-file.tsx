@@ -142,7 +142,7 @@ type WatchSection = {
 function WatchSection({ connected, lastUpdated }: WatchSection) {
   return (
     <>
-      <LabelStatus label="Last updated:" value={lastUpdated} />
+      <LabelStatus label="Last updated" value={lastUpdated} />
       <ConnectionStatus connected={connected} />
     </>
   )
