@@ -2,15 +2,16 @@ import { type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
 import { numberVars, XPCS, type Example } from '#examples/xpcs'
-import { WIDE_VIEWPORT } from '#support/grid'
+import { gridCanvas, WIDE_VIEWPORT } from '#support/grid'
 import { columnOf, openProposal, titleOf } from '#support/table'
+import { showTable } from '#support/dashboard'
 import {
-  closeTab,
+  closePlot,
   openSummaryPlot,
+  plotEntries,
+  plotEntry,
   plotFigure,
-  plotTab,
   selectColumns,
-  showTable,
 } from '#support/plots'
 
 test.use({ viewport: WIDE_VIEWPORT })
@@ -20,8 +21,8 @@ const [xVar, yVar] = numberVars
 const xTitle = titleOf(XPCS, xVar)
 const yTitle = titleOf(XPCS, yVar)
 
-// Opening a summary plot switches to the Plots tab, which unmounts the table.
-// Return to the Table tab between plots so the next header click has a canvas.
+// Opening a summary plot switches to its view, which unmounts the table.
+// Return to the table between plots so the next header click has a canvas.
 async function openSummaryPlots(
   page: Page,
   { example, cols }: { example: Example; cols: number[] }
@@ -42,9 +43,9 @@ test('right-clicking a variable header and choosing "Plot: summary" plots it aga
 
   await openSummaryPlot(page, { example, col: columnOf(example, xVar) })
 
-  await expect(plotTab(page, `Summary: ${xTitle} vs. Run`)).toBeVisible()
+  await expect(plotEntry(page, `${xTitle} vs. Run`)).toBeVisible()
   // Summary plots always mount a figure (their table data is never empty here),
-  // so this is a render smoke-check; the tab title above is the real assertion.
+  // so this is a render smoke-check; the entry above is the real assertion.
   await expect(plotFigure(page)).toBeVisible()
 })
 
@@ -61,7 +62,7 @@ test('selecting two variable headers plots the right-clicked one against the oth
   // The right-clicked column is the Y axis, the other is X.
   await openSummaryPlot(page, { example, col: columnOf(example, yVar) })
 
-  await expect(plotTab(page, `Summary: ${yTitle} vs. ${xTitle}`)).toBeVisible()
+  await expect(plotEntry(page, `${yTitle} vs. ${xTitle}`)).toBeVisible()
   await expect(plotFigure(page)).toBeVisible()
 })
 
@@ -75,30 +76,27 @@ test('closing one plot removes it and leaves the other open', async ({
     cols: [columnOf(example, xVar), columnOf(example, yVar)],
   })
 
-  const first = plotTab(page, `Summary: ${xTitle} vs. Run`)
-  const second = plotTab(page, `Summary: ${yTitle} vs. Run`)
+  const first = plotEntry(page, `${xTitle} vs. Run`)
+  const second = plotEntry(page, `${yTitle} vs. Run`)
   await expect(first).toBeVisible()
   await expect(second).toBeVisible()
 
-  await closeTab(page, `Summary: ${xTitle} vs. Run`)
+  await closePlot(page, `${xTitle} vs. Run`)
 
   await expect(first).toHaveCount(0)
   await expect(second).toBeVisible()
 })
 
-test('closing the Plots tab discards the plots and returns to the table', async ({
+test('closing the shown plot returns to the table it was opened from', async ({
   page,
   example,
 }) => {
   await openProposal(page, example)
-  await openSummaryPlots(page, {
-    example,
-    cols: [columnOf(example, xVar), columnOf(example, yVar)],
-  })
-  await expect(plotTab(page, 'Plots')).toBeVisible()
+  await openSummaryPlot(page, { example, col: columnOf(example, xVar) })
+  await expect(plotFigure(page)).toBeVisible()
 
-  await closeTab(page, 'Plots')
+  await closePlot(page, `${xTitle} vs. Run`)
 
-  await expect(plotTab(page, 'Plots')).toHaveCount(0)
-  await expect(page.getByTestId('data-grid-canvas')).toBeVisible()
+  await expect(plotEntries(page)).toHaveCount(0)
+  await expect(gridCanvas(page)).toBeVisible()
 })
