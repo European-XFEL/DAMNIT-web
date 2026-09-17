@@ -2,6 +2,7 @@ import { test, expect } from '#fixtures'
 import { gridBox, headerPoint } from '#support/grid'
 import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
 import {
+  activateCell,
   closeAside,
   hasGroups,
   openProposal,
@@ -166,4 +167,23 @@ test('escape clears the selected run while a column is selected', async ({
 
   await expect(selectedColumnHeaders(page)).toHaveCount(0)
   await expect(selectedRunTab(page)).toHaveCount(0)
+})
+
+// Glide reports Shift+Space on the selected row as the same empty selection a
+// Ctrl/Cmd-click on the last column does, so the resting pointer must not count.
+test('shift+space clears the selected run while the pointer rests on a header', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await activateCell(page, { example, col: 2, row: 0 })
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+
+  const box = await gridBox(page)
+  const header = headerPoint(box, { col: 2, grouped: hasGroups(example) })
+  await page.mouse.move(header.x, header.y)
+  await page.keyboard.press('Shift+Space')
+
+  await expect(selectedRunTab(page)).toHaveCount(0)
+  await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
 })

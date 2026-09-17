@@ -229,6 +229,16 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     handleItemHovered(args)
   }
 
+  // Glide reports a key's selection change before its keydown returns, so the
+  // flag marks exactly that change, whatever the pointer rests on.
+  const keyPressed = useRef(false)
+  const handleGridKeyDown = () => {
+    keyPressed.current = true
+    queueMicrotask(() => {
+      keyPressed.current = false
+    })
+  }
+
   // Kept apart from the selection below: the two indices turn over with the
   // table, while the selection turns over with every click and every mouse-move
   // of a range drag, and rebuilding a row per run on each of those is wasted.
@@ -310,7 +320,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     } else if (
       columns.length === 0 &&
       current == null &&
-      !pointerOnHeader.current
+      (keyPressed.current || !pointerOnHeader.current)
     ) {
       dispatch(runDeselected())
     }
@@ -583,6 +593,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
               onItemHovered={handleGridItemHovered}
+              onKeyDown={handleGridKeyDown}
               freezeColumns={pinnedCount}
               customRenderers={renderers}
               onVisibleRegionChanged={handleVisibleRegionChange}
