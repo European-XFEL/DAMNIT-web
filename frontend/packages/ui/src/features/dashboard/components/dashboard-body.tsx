@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { Box } from '@mantine/core'
 
 import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
@@ -23,16 +23,18 @@ function DashboardBody({ main }: DashboardBodyProps) {
     (state) => selectActiveView(state).kind === 'table'
   )
   const selectedRun = useSelectedRun()
+  const viewRef = useRef<HTMLDivElement>(null)
 
   return (
     <Box className={classes.body} mod={{ covered: mobileNavOpened }}>
       <Box
+        ref={viewRef}
         className={classes.view}
         mod={{ covered: onTable && selectedRun != null }}
       >
         {main}
       </Box>
-      <DashboardAside />
+      <DashboardAside viewRef={viewRef} />
     </Box>
   )
 }

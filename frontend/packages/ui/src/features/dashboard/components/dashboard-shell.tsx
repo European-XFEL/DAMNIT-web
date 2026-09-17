@@ -1,5 +1,6 @@
-import { type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { AppShell } from '@mantine/core'
+import { useDidUpdate, useFocusReturn } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import {
@@ -23,6 +24,18 @@ type DashboardShellProps = {
 function DashboardShell({ main, identity, user, homeTo }: DashboardShellProps) {
   const navCollapsed = useAppSelector(selectNavCollapsed)
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
+  const navRef = useRef<HTMLElement>(null)
+
+  // Opening the mobile nav focuses the view on show; closing it hands focus back
+  // to the Burger, which useFocusReturn records before that focus moves.
+  useFocusReturn({ opened: mobileNavOpened })
+  useDidUpdate(() => {
+    if (mobileNavOpened) {
+      navRef.current
+        ?.querySelector<HTMLElement>('[aria-current="page"]')
+        ?.focus()
+    }
+  }, [mobileNavOpened])
 
   return (
     <AppShell
@@ -39,6 +52,8 @@ function DashboardShell({ main, identity, user, homeTo }: DashboardShellProps) {
         <DashboardHeader identity={identity} homeTo={homeTo} />
       </AppShell.Header>
       <AppShell.Navbar
+        ref={navRef}
+        id="dashboard-nav"
         aria-label="Dashboard"
         className={classes.navbar}
         mod={{ closed: !mobileNavOpened }}

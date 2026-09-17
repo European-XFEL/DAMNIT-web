@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type MouseEvent, type ReactNode } from 'react'
 import { ActionIcon, Text, UnstyledButton } from '@mantine/core'
 import { IconX } from '@tabler/icons-react'
 
@@ -18,7 +18,7 @@ type PlotEntryProps = {
   label: string
   active: boolean
   onSelect: () => void
-  onClose: () => void
+  onClose: (event: MouseEvent<HTMLButtonElement>) => void
 }
 
 function PlotEntry({
@@ -66,16 +66,31 @@ function PlotEntry({
 
 type PlotEntriesProps = {
   onSelect?: () => void
+  onLastClosed: () => void
   empty?: ReactNode
 }
 
 // The open plots, each shown by its name and closed by its mark, in the nav
 // and in the rail's Plots popover alike. A caller under a permanent header
 // passes `empty` so the section says it is empty rather than leaving a gap.
-function PlotEntries({ onSelect, empty }: PlotEntriesProps) {
+function PlotEntries({ onSelect, onLastClosed, empty }: PlotEntriesProps) {
   const dispatch = useAppDispatch()
   const views = useViews()
   const plots = usePlotEntries()
+
+  // Closing unmounts the focused mark with its row, so focus goes to the row
+  // taking its place, the row above for the last one, or where the nav says.
+  function closePlot(id: string, closeMark: HTMLElement) {
+    const row = closeMark.closest('li')
+    const neighbour = row?.nextElementSibling ?? row?.previousElementSibling
+    const nextFocus = neighbour?.querySelector('button')
+    dispatch(removePlot(id))
+    if (nextFocus) {
+      nextFocus.focus()
+    } else {
+      onLastClosed()
+    }
+  }
 
   if (plots.length === 0) {
     return empty ? <div className={classes.placeholder}>{empty}</div> : null
@@ -95,7 +110,7 @@ function PlotEntries({ onSelect, empty }: PlotEntriesProps) {
             views.select(view)
             onSelect?.()
           }}
-          onClose={() => dispatch(removePlot(view.id))}
+          onClose={(event) => closePlot(view.id, event.currentTarget)}
         />
       ))}
     </ul>
