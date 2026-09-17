@@ -5,6 +5,7 @@ import {
   type CellClickedEventArgs,
   type DataEditorProps,
   type DataEditorRef,
+  type GridMouseEventArgs,
   type GridSelection,
   type GroupHeaderClickedEventArgs,
   type HeaderClickedEventArgs,
@@ -219,6 +220,15 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const [selectedCells, setSelectedCells] = useState<SelectedCells>()
   const rowSelection = useAppSelector(selectRowSelection)
 
+  // A row marker clicked off and the last column unselected reach Glide's
+  // change handler as the same empty selection; only the header takes Ctrl/Cmd.
+  const pointerOnHeader = useRef(false)
+  const handleGridItemHovered = (args: GridMouseEventArgs) => {
+    pointerOnHeader.current =
+      (args.kind === 'header' || args.kind === 'group-header') && !args.isTouch
+    handleItemHovered(args)
+  }
+
   // Kept apart from the selection below: the two indices turn over with the
   // table, while the selection turns over with every click and every mouse-move
   // of a range drag, and rebuilding a row per run on each of those is wasted.
@@ -288,13 +298,22 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
 
-    // Inform that a row has been (de)selected. The proposal rides along: run
-    // numbers collide across proposals in one table, so the number alone cannot
-    // identify which run the detail aside should read.
-    const row = rows.last() as number
-    const identity = runs[row]
+    // The proposal rides along: run numbers collide across proposals in one
+    // table, so the number alone cannot identify which run the aside reads.
+    const row = rows.last()
+    const identity = row == null ? undefined : runs[row]
 
-    dispatch(identity ? runSelected(identity) : runDeselected())
+    // Glide drops the rows on any column or cell gesture, so an empty selection
+    // closes the run only when its row marker was clicked off.
+    if (identity) {
+      dispatch(runSelected(identity))
+    } else if (
+      columns.length === 0 &&
+      current == null &&
+      !pointerOnHeader.current
+    ) {
+      dispatch(runDeselected())
+    }
 
     // Clear range stack if cells from the other column are currently selected
     const rangeStack =
@@ -557,11 +576,13 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               rowMarkers="clickable-number"
               gridSelection={gridSelection}
               onGridSelectionChange={handleGridSelectionChange}
+              // Escape or a click on nothing, which unselecting a column is not.
+              onSelectionCleared={() => dispatch(runDeselected())}
               onCellActivated={handleCellActivated}
               rangeSelect="multi-cell"
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
-              onItemHovered={handleItemHovered}
+              onItemHovered={handleGridItemHovered}
               freezeColumns={pinnedCount}
               customRenderers={renderers}
               onVisibleRegionChanged={handleVisibleRegionChange}
