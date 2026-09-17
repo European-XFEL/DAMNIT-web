@@ -9,18 +9,24 @@ import {
   rightClickHeader,
 } from '#support/table'
 
-// Click the first point, then modifier-click the rest to build a multi-select.
 // Glide reads Cmd on macOS and Ctrl elsewhere; ControlOrMeta lets Playwright
 // send the modifier the current platform expects, so this works on every host.
-async function multiClick(page: Page, points: { x: number; y: number }[]) {
-  const [first, ...rest] = points
-  await page.mouse.click(first.x, first.y)
-
+export async function clickWithModifier(
+  page: Page,
+  points: { x: number; y: number }[]
+) {
   await page.keyboard.down('ControlOrMeta')
-  for (const point of rest) {
+  for (const point of points) {
     await page.mouse.click(point.x, point.y)
   }
   await page.keyboard.up('ControlOrMeta')
+}
+
+// Click the first point, then modifier-click the rest to build a multi-select.
+async function multiClick(page: Page, points: { x: number; y: number }[]) {
+  const [first, ...rest] = points
+  await page.mouse.click(first.x, first.y)
+  await clickWithModifier(page, rest)
 }
 
 // The right-clicked column becomes the summary plot's Y axis.

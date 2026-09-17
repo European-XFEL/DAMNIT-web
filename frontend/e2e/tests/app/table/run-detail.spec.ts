@@ -1,9 +1,13 @@
 import { test, expect } from '#fixtures'
+import { gridBox, headerPoint } from '#support/grid'
+import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
 import {
   closeAside,
+  hasGroups,
   openProposal,
   highlightedRow,
   selectRun,
+  selectedColumnHeaders,
   selectedRunTab,
 } from '#support/table'
 
@@ -56,4 +60,110 @@ test('closing the aside clears the run selection', async ({
 
   await expect(selectedRunTab(page)).toHaveCount(0)
   await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
+})
+
+// Selecting a column is how a summary plot starts, so it must not throw away the
+// run a user is reading.
+test('a column click keeps the selected run', async ({ page, example }) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+
+  await selectColumns(page, { example, cols: [2] })
+
+  await expect(selectedColumnHeaders(page)).toHaveCount(1)
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(highlightedRow(page, { row: 0 })).toBeAttached()
+})
+
+// Glide reports that last column going as an empty selection, the same shape
+// as Escape.
+test('unselecting the last selected column keeps the selected run', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await selectColumns(page, { example, cols: [2] })
+  await expect(selectedColumnHeaders(page)).toHaveCount(1)
+
+  const box = await gridBox(page)
+  await clickWithModifier(page, [
+    headerPoint(box, { col: 2, grouped: hasGroups(example) }),
+  ])
+
+  await expect(selectedColumnHeaders(page)).toHaveCount(0)
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(highlightedRow(page, { row: 0 })).toBeAttached()
+})
+
+test('clicking the row marker of the selected run again clears it', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+
+  await selectRun(page, { example, row: 0 })
+
+  await expect(selectedRunTab(page)).toHaveCount(0)
+  await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
+})
+
+// Glide reports this click as the same empty selection that unselecting the
+// last column does.
+test('clicking the row marker of the selected run clears it while a column is selected', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await selectColumns(page, { example, cols: [2] })
+  await expect(selectedColumnHeaders(page)).toHaveCount(1)
+
+  await selectRun(page, { example, row: 0 })
+
+  await expect(selectedRunTab(page)).toHaveCount(0)
+  await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
+})
+
+test('a cell click on another row keeps the selected run', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+
+  await selectCells(page, { example, cells: [{ col: 2, row: 2 }] })
+
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(highlightedRow(page, { row: 0 })).toBeAttached()
+})
+
+test('escape clears the selected run', async ({ page, example }) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+
+  await page.keyboard.press('Escape')
+
+  await expect(selectedRunTab(page)).toHaveCount(0)
+  await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
+})
+
+test('escape clears the selected run while a column is selected', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await selectColumns(page, { example, cols: [2] })
+  await expect(selectedRunTab(page)).toContainText('Run: 1')
+
+  await page.keyboard.press('Escape')
+
+  await expect(selectedColumnHeaders(page)).toHaveCount(0)
+  await expect(selectedRunTab(page)).toHaveCount(0)
 })
