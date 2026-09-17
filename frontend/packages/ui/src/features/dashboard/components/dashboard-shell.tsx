@@ -26,6 +26,7 @@ function DashboardShell({ main, identity, user, homeTo }: DashboardShellProps) {
 
   return (
     <AppShell
+      className={classes.shell}
       style={{ '--app-shell-border-color': 'var(--mantine-color-gray-2)' }}
       header={{ height: 40 }}
       navbar={{
