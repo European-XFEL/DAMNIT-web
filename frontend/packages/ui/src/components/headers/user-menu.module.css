@@ -1,0 +1,62 @@
+.user {
+  color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0));
+  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+  border-radius: var(--mantine-radius-sm);
+  transition: background-color 100ms ease;
+
+  &:hover,
+  &[data-expanded] {
+    background-color: light-dark(
+      var(--mantine-color-white),
+      var(--mantine-color-dark-8)
+    );
+  }
+
+  @media (max-width: $mantine-breakpoint-xs) {
+    display: none;
+  }
+}
+
+.avatar {
+  background: var(--mantine-color-indigo-0);
+  color: var(--mantine-color-indigo-7);
+}
+
+/* The avatar sits 3 px inside the pill, as in the rail, so it never moves. The
+   name and the chevron land on the nav's label and close mark columns. */
+.userNav {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 32px;
+  padding: 0 14px 0 3px;
+  border-radius: var(--mantine-radius-sm);
+  color: var(--mantine-color-gray-6);
+
+  &:hover,
+  &[data-expanded] {
+    background-color: var(--mantine-color-gray-2);
+  }
+}
+
+.userNavName {
+  flex: 1;
+  min-width: 0;
+  color: var(--mantine-color-gray-9);
+}
+
+/* The first 32 px of the nav's pill. */
+.userRail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--mantine-radius-sm);
+
+  &:hover,
+  &[data-expanded] {
+    background-color: var(--mantine-color-gray-2);
+  }
+}
