@@ -1,0 +1,13 @@
+/* A floating row sits on the same 10 px inset as the menus; the library's is
+   12. */
+.item {
+  padding-inline: 10px;
+}
+
+/* The mark centres on the title's line, as a plot entry's does in the nav. */
+.icon {
+  display: flex;
+  align-items: center;
+  height: calc(var(--mantine-font-size-xs) * var(--mantine-line-height-xs));
+  color: var(--mantine-color-gray-7);
+}
