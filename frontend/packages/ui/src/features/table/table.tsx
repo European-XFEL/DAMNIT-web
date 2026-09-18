@@ -3,7 +3,6 @@ import {
   CompactSelection,
   DataEditor,
   type CellClickedEventArgs,
-  type DataEditorProps,
   type DataEditorRef,
   type GridMouseEventArgs,
   type GridSelection,
@@ -60,7 +59,6 @@ import {
 } from '#src/features/table/stores/table.slice'
 
 export type TableProps = {
-  grid?: DataEditorProps
   paginated?: boolean
 }
 
@@ -70,7 +68,7 @@ const PAGE_SIZE = 10
 // font on the same background, so height is the only lever left.
 const GROUP_HEADER_HEIGHT = 24
 
-const Table = ({ grid, paginated = true }: TableProps) => {
+const Table = ({ paginated = true }: TableProps) => {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
 
@@ -581,7 +579,6 @@ const Table = ({ grid, paginated = true }: TableProps) => {
           />
           <>
             <DataEditor
-              {...(grid || {})}
               ref={tableRef}
               theme={gridTheme}
               columns={gridColumns}
