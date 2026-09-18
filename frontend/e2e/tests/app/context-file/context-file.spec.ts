@@ -114,7 +114,11 @@ test('a failed content load shows the editor error', async ({
   await openProposal(page, example)
   await contextFileNavItem(page).click()
 
-  await expect(page.getByText('Failed to load file content')).toBeVisible()
+  await expect(
+    page.getByText(
+      'The server returned an error. Reload the page to try again.'
+    )
+  ).toBeVisible()
 })
 
 test('a failed content load surfaces the backend error detail', async ({
@@ -135,4 +139,36 @@ test('a failed content load surfaces the backend error detail', async ({
   await contextFileNavItem(page).click()
 
   await expect(page.getByText('context.py has a syntax error')).toBeVisible()
+})
+
+test('a failed content load with a structured detail shows the generic message', async ({
+  page,
+  example,
+}) => {
+  // A FastAPI 422 carries `detail` as a list of objects. Rendered as-is it
+  // crashed the whole view, so a detail that is not text falls back instead.
+  await page.route('**/contextfile/content**', (route) =>
+    route.fulfill({
+      status: 422,
+      json: {
+        detail: [
+          {
+            type: 'int_parsing',
+            loc: ['query', 'proposal_number'],
+            msg: 'Input should be a valid integer',
+            input: '',
+          },
+        ],
+      },
+    })
+  )
+
+  await openProposal(page, example)
+  await contextFileNavItem(page).click()
+
+  await expect(
+    page.getByText(
+      'The server returned an error. Reload the page to try again.'
+    )
+  ).toBeVisible()
 })
