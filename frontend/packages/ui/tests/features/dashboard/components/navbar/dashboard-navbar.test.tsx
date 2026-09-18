@@ -107,7 +107,7 @@ test('the Plots section names itself empty until a plot is opened', async () => 
   const screen = await renderNav(store)
 
   // With nothing open, the section says so
-  await expect.element(screen.getByText('(None)')).toBeVisible()
+  await expect.element(screen.getByText('No plots')).toBeVisible()
 
   // Opening a plot puts its row where the placeholder was
   store.dispatch(addPlot(trains))
@@ -115,7 +115,7 @@ test('the Plots section names itself empty until a plot is opened', async () => 
   await expect
     .element(screen.getByRole('button', { name: /^Trains vs. Run/ }))
     .toBeVisible()
-  await expect.element(screen.getByText('(None)')).not.toBeInTheDocument()
+  await expect.element(screen.getByText('No plots')).not.toBeInTheDocument()
 })
 
 test('the Table and Plots headers are labels that never switch the view', async () => {
