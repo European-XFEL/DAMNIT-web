@@ -100,3 +100,19 @@ test('closing the shown plot returns to the table it was opened from', async ({
   await expect(plotEntries(page)).toHaveCount(0)
   await expect(gridCanvas(page)).toBeVisible()
 })
+
+test('the camera button downloads the plot as a png', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openSummaryPlot(page, { example, col: columnOf(example, xVar) })
+  const figure = plotFigure(page)
+  await expect(figure).toBeVisible()
+
+  const download = page.waitForEvent('download')
+  await figure.hover()
+  await figure.getByRole('button', { name: 'Download plot as a PNG' }).click()
+
+  expect((await download).suggestedFilename()).toMatch(/\.png$/)
+})

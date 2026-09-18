@@ -181,6 +181,9 @@ patchedDependencies:
   '@glideapps/glide-data-grid@6.0.3':
     hash: b11562e634688ae86b6d87637d3e0ef45b9669a3569204c4e516126509f8ea42
     path: patches/@glideapps__glide-data-grid@6.0.3.patch
+  plotly.js@3.3.1:
+    hash: 081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f
+    path: patches/plotly.js@3.3.1.patch
 
 importers:
 
@@ -266,7 +269,7 @@ importers:
         version: 2.0.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react-plotly.js:
         specifier: catalog:components
-        version: 2.6.0(plotly.js@3.3.1(mapbox-gl@1.13.3))(react@18.2.0)
+        version: 2.6.0(plotly.js@3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3))(react@18.2.0)
       react-redux:
         specifier: catalog:redux
         version: 9.2.0(@types/react@18.2.45)(react@18.2.0)(redux@5.0.1)
@@ -384,7 +387,7 @@ importers:
         version: 2.0.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react-plotly.js:
         specifier: catalog:components
-        version: 2.6.0(plotly.js@3.3.1(mapbox-gl@1.13.3))(react@18.2.0)
+        version: 2.6.0(plotly.js@3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3))(react@18.2.0)
       react-redux:
         specifier: catalog:redux
         version: 9.2.0(@types/react@18.2.45)(react@18.2.0)(redux@5.0.1)
@@ -685,7 +688,7 @@ importers:
         version: 2.0.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react-plotly.js:
         specifier: catalog:components
-        version: 2.6.0(plotly.js@3.3.1(mapbox-gl@1.13.3))(react@18.2.0)
+        version: 2.6.0(plotly.js@3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3))(react@18.2.0)
       react-redux:
         specifier: catalog:redux
         version: 9.2.0(@types/react@18.2.45)(react@18.2.0)(redux@5.0.1)
@@ -6646,7 +6649,7 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  plotly.js@3.3.1(mapbox-gl@1.13.3):
+  plotly.js@3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3):
     dependencies:
       '@plotly/d3': 3.8.2
       '@plotly/d3-sankey': 0.7.2
@@ -6861,9 +6864,9 @@ snapshots:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
 
-  react-plotly.js@2.6.0(plotly.js@3.3.1(mapbox-gl@1.13.3))(react@18.2.0):
+  react-plotly.js@2.6.0(plotly.js@3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3))(react@18.2.0):
     dependencies:
-      plotly.js: 3.3.1(mapbox-gl@1.13.3)
+      plotly.js: 3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3)
       prop-types: 15.8.1
       react: 18.2.0
 
