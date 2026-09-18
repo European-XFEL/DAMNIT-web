@@ -1,11 +1,12 @@
 import { test, expect } from '#fixtures'
 import { XPCS } from '#examples/xpcs'
 import {
-  contextFileTab,
+  contextFileNavItem,
   editorLine,
   openContextFile,
   scrollEditorToEnd,
 } from '#support/context-file'
+import { showTable } from '#support/dashboard'
 import { openProposal } from '#support/table'
 
 // Derive the first and last lines from the fixture so the assertions track the
@@ -14,7 +15,7 @@ const lines = XPCS.contextFile.trimEnd().split('\n')
 const firstLine = lines[0]
 const lastLine = lines[lines.length - 1]
 
-test('the Context File tab shows the proposal code, read-only', async ({
+test('the context file view shows the proposal code, read-only', async ({
   page,
   example,
 }) => {
@@ -39,21 +40,19 @@ test('the Context File tab shows the proposal code, read-only', async ({
   expect(models.join('\n')).not.toContain(rejected)
 })
 
-test('opening the tab focuses the editor so Ctrl+F opens Monaco search', async ({
+test('ctrl+f on the context file opens Monaco search', async ({
   page,
   example,
 }) => {
   await openProposal(page, example)
   await openContextFile(page)
 
-  // No click into the editor first: if the tab handed focus to Monaco, Ctrl+F
-  // opens its find widget. Without that focus the keystroke would fall through
-  // to the browser's own page search and no find widget would appear.
+  // Focus is still on the nav entry that opened the view, not in the editor.
   await page.keyboard.press('Control+f')
   await expect(page.locator('.find-widget')).toBeVisible()
 })
 
-test('the editor keeps its scroll position across a tab switch', async ({
+test('the editor keeps its scroll position across a view switch', async ({
   page,
   example,
 }) => {
@@ -66,11 +65,10 @@ test('the editor keeps its scroll position across a tab switch', async ({
   await expect(editorLine(page, lastLine)).toBeVisible()
   await expect(editorLine(page, firstLine)).toHaveCount(0)
 
-  // Leave the tab and come back. keepMounted={false} unmounts and remounts the
-  // editor, which restores the saved view state instead of resetting to the top.
-  await page.getByRole('tab', { name: 'Table' }).click()
-  await expect(page.getByTestId('data-grid-canvas')).toBeVisible()
-  await contextFileTab(page).click()
+  // Leave the view and come back. Only the active view is mounted, so this
+  // remounts the editor.
+  await showTable(page)
+  await contextFileNavItem(page).click()
 
   await expect(editorLine(page, lastLine)).toBeVisible()
   await expect(editorLine(page, firstLine)).toHaveCount(0)
@@ -114,7 +112,7 @@ test('a failed content load shows the editor error', async ({
   )
 
   await openProposal(page, example)
-  await contextFileTab(page).click()
+  await contextFileNavItem(page).click()
 
   await expect(page.getByText('Failed to load file content')).toBeVisible()
 })
@@ -134,7 +132,7 @@ test('a failed content load surfaces the backend error detail', async ({
   )
 
   await openProposal(page, example)
-  await contextFileTab(page).click()
+  await contextFileNavItem(page).click()
 
   await expect(page.getByText('context.py has a syntax error')).toBeVisible()
 })

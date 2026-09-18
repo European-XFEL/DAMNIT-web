@@ -6,6 +6,7 @@ import {
   cellPoint,
   columnIndex,
   gridBox,
+  gridCanvas,
   groupHeaderPoint,
   headerEdgePoint,
   headerPoint,
@@ -81,7 +82,7 @@ export async function openDashboard(
 ) {
   const tableData = waitForTableData(page)
   await navigate()
-  await expect(page.getByTestId('data-grid-canvas')).toBeVisible()
+  await expect(gridCanvas(page)).toBeVisible()
   await tableData
 }
 
@@ -105,7 +106,7 @@ export function columnOf(example: Example, name: string): number {
   return columnIndex(Object.keys(example.meta.variables), name)
 }
 
-// The display title the table header and plot tabs render for a variable.
+// The display title the table header and plot entries render for a variable.
 export function titleOf(example: Example, name: string): string {
   return example.meta.variables[name].title
 }
@@ -305,10 +306,15 @@ export function highlightedRow(page: Page, { row }: { row: number }): Locator {
   )
 }
 
-// Close the aside from its X. It is the panel's only plain button; the tabs
-// beside it carry the tab role.
+// The aside's X, named after the run it closes.
+export function asideCloseButton(page: Page): Locator {
+  return page
+    .getByRole('complementary')
+    .getByRole('button', { name: /^Close run \d+$/ })
+}
+
 export function closeAside(page: Page) {
-  return page.getByRole('complementary').getByRole('button').click()
+  return asideCloseButton(page).click()
 }
 
 // The aside's Run tab, whose title becomes `Run: <n>` once a run is selected.

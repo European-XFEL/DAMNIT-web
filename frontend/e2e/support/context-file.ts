@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
+import { dashboardNav } from '#support/dashboard'
+
 // Monaco renders each visible source line into a `.view-line` node. It
 // virtualizes, so only lines in the viewport exist in the DOM; match on a line
 // known to sit at the top of the file, never one reached by scrolling.
@@ -7,17 +9,16 @@ export function editorLine(page: Page, text: string): Locator {
   return page.locator('.view-line', { hasText: text })
 }
 
-// The tab's title is its accessible name.
-export function contextFileTab(page: Page): Locator {
-  return page.getByRole('tab', { name: 'Context File' })
+export function contextFileNavItem(page: Page): Locator {
+  return dashboardNav(page).getByRole('button', { name: 'Context file' })
 }
 
-// Open the Context File tab and wait until Monaco has mounted with its content.
+// Open the context file view and wait until Monaco has mounted with its content.
 // Waiting on the content response (like waitForTableData) lets the drift guard
 // see the request and keeps the first assertion from racing the fetch.
 export async function openContextFile(page: Page) {
   const content = page.waitForResponse('**/contextfile/content**')
-  await contextFileTab(page).click()
+  await contextFileNavItem(page).click()
   await content
   await expect(page.locator('.view-line').first()).toBeVisible()
 }

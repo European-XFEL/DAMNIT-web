@@ -4,7 +4,6 @@ import { IconInfoCircle } from '@tabler/icons-react'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { formatRunsSubtitle } from '#src/utils/helpers'
 
 import Plot from './plot'
 import PreviewChunkLoader from './preview-chunk-loader'
@@ -88,12 +87,6 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
           variable={plot.variables[0]}
         />
       ))}
-      <Stack gap={0} align="flex-start" justify="flex-start">
-        <Text size="lg">{plot.title}</Text>
-        <Text size="sm" c="dark.5">
-          {formatRunsSubtitle(runNumbers)}
-        </Text>
-      </Stack>
       {!traces.length ? (
         <Skeleton height={430} width={740} radius="xl" />
       ) : meta.type === 'image' ? (

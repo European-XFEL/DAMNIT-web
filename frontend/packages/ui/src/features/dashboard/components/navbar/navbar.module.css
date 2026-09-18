@@ -1,0 +1,191 @@
+/* Plain overflow: Mantine's ScrollArea sizes its content as a table, so a long
+   plot name widens the list instead of wrapping. */
+.scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.list,
+.entries {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  list-style: none;
+}
+
+.list {
+  gap: 16px;
+  padding: 8px;
+}
+
+.entries {
+  gap: 2px;
+  padding: 0;
+}
+
+/* The label sits low, nearer the rows it heads than the group above. */
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 10px 2px;
+}
+
+.item,
+.placeholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  font-size: rem(13px);
+}
+
+/* Says "No <kind>" where a section's entries would be. Italic is the app
+   speaking rather than anything the proposal holds. */
+.placeholder {
+  color: var(--mantine-color-gray-7);
+  font-style: italic;
+}
+
+.icon {
+  display: flex;
+  color: var(--mantine-color-gray-7);
+}
+
+.item,
+.entry,
+.railButton {
+  border-radius: var(--mantine-radius-sm);
+
+  &:hover:not([data-active]) {
+    background-color: var(--mantine-color-gray-2);
+  }
+}
+
+.item,
+.entry {
+  color: var(--mantine-color-gray-9);
+}
+
+.item[data-active],
+.entry[data-active],
+.railButton[data-active] {
+  background-color: var(--mantine-color-indigo-0);
+  color: var(--mantine-color-indigo-7);
+}
+
+.item[data-active] {
+  font-weight: 500;
+}
+
+.item[data-active] .icon,
+.entry[data-active] .icon {
+  color: inherit;
+}
+
+/* The select button stretches over the whole row, so the close mark sits on
+   top of it, padded like the Plots row so it lines up under the plus. */
+.entry {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 10px;
+}
+
+.entryButton {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+}
+
+.entryText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.entryTitle {
+  overflow-wrap: anywhere;
+  font-size: rem(13px);
+}
+
+.entry[data-active] .entryTitle {
+  font-weight: 500;
+}
+
+/* Shown on hover or focus only, its slot kept either way so the name never
+   shifts. */
+.entryClose {
+  position: relative;
+  visibility: hidden;
+}
+
+.entry:hover .entryClose,
+.entry:focus-within .entryClose {
+  visibility: inherit;
+}
+
+/* Without hover the mark would never show, and a plot could not be closed. */
+@media (hover: none) {
+  .entryClose {
+    visibility: inherit;
+  }
+}
+
+.bottom {
+  padding: 8px;
+  border-top: 1px solid var(--app-shell-border-color);
+}
+
+/* The border takes the nav's last pixel, so 1 px on the left centres the rail
+   under the wordmark. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 8px 1px;
+}
+
+/* The expanded foot's box, so the avatar keeps its place between the modes. */
+.railBottom {
+  border-top: 1px solid var(--app-shell-border-color);
+}
+
+.railButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--mantine-color-gray-7);
+}
+
+/* The size middleware caps the popover at the window, and only the plots scroll
+   so New plot stays in view. */
+.popover {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+/* New plot keeps its full height, its label in line with the plot names. */
+.popover .item {
+  flex-shrink: 0;
+  gap: 8px;
+}

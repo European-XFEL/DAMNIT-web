@@ -7,6 +7,7 @@ import classes from './examples.module.css'
 
 export type ExampleInfo = {
   id: string
+  label: string
   title: string
   subtitle: string
   instrument: string

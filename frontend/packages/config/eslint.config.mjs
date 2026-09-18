@@ -170,7 +170,6 @@ export function uiArchitecture(prefix = '') {
           { type: 'data', pattern: 'src/data' },
           { type: 'shared', pattern: 'src/lib' },
           { type: 'shared', pattern: 'src/utils' },
-          { type: 'shared', pattern: 'src/styles' },
           { type: 'shared', pattern: 'src' },
         ],
         // The store's typed surface: the one thing a feature may reach upward

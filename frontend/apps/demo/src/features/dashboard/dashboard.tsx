@@ -1,21 +1,32 @@
-import { DashboardBase, DashboardMain } from '@damnit-frontend/ui'
-
-import DashboardHeader, { type DashboardHeaderProps } from './dashboard-header'
+import {
+  DashboardShell,
+  DashboardMain,
+  ProposalIdentity,
+} from '@damnit-frontend/ui'
 
 type DashboardProps = {
-  headerProps: DashboardHeaderProps
+  label: string
+  subtitle: string
+  instrument: string
 }
 
-function Dashboard(props: DashboardProps) {
+function Dashboard({ label, subtitle, instrument }: DashboardProps) {
   return (
-    <DashboardBase
+    <DashboardShell
       main={
         <DashboardMain
           tableProps={{ paginated: false }}
           contextFileProps={{ subscribe: false }}
         />
       }
-      header={<DashboardHeader {...props.headerProps} />}
+      identity={
+        <ProposalIdentity
+          instrument={instrument}
+          label={label}
+          title={subtitle}
+        />
+      }
+      homeTo="/"
     />
   )
 }

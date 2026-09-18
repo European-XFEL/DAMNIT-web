@@ -45,7 +45,7 @@ function RootRoute() {
   return (
     <DamnitHomePage
       header={
-        <Header px={20}>
+        <Header px={16}>
           <Logo linkTo="/" />
         </Header>
       }

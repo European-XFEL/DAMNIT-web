@@ -58,16 +58,13 @@ import {
 } from '#src/features/table/utils/column-reorder'
 import { pinnedFirst } from '#src/features/table/utils/pinned-columns'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import SectionHeading, {
+  mutedC,
+} from '#src/components/headings/section-heading'
 
 import { ControlButton } from './control-button'
 import { ListRow, PopoverLink, PopoverList } from './popover-list'
-import {
-  mutedC,
-  RowItemCheckbox,
-  RowList,
-  RowSection,
-  SectionHeading,
-} from './row-details'
+import { RowItemCheckbox, RowList, RowSection } from './row-details'
 import { BasePopover } from './base-popover'
 import classes from './popover-list.module.css'
 

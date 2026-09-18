@@ -5,7 +5,7 @@ import { columnOf, openProposal, titleOf } from '#support/table'
 import {
   openPreviewPlot,
   plotFigure,
-  plotTab,
+  plotEntry,
   selectCells,
 } from '#support/plots'
 
@@ -29,9 +29,7 @@ test('right-clicking a cell and choosing "Plot: preview" plots its preview data'
     row: 0,
   })
 
-  await expect(
-    plotTab(page, `Preview: ${titleOf(example, SCATTER_VAR)}`)
-  ).toBeVisible()
+  await expect(plotEntry(page, titleOf(example, SCATTER_VAR))).toBeVisible()
   await expect(plotFigure(page)).toBeVisible()
 })
 
@@ -52,9 +50,9 @@ test('selecting cells from two runs plots both in one figure', async ({
   })
   await openPreviewPlot(page, { example, col, row: 1 })
 
-  const tab = plotTab(page, `Preview: ${titleOf(example, SCATTER_VAR)}`)
-  await expect(tab).toBeVisible()
-  await expect(tab).toContainText('run 1-2')
+  const entry = plotEntry(page, titleOf(example, SCATTER_VAR))
+  await expect(entry).toBeVisible()
+  await expect(entry).toContainText('Runs 1-2')
   await expect(plotFigure(page)).toHaveCount(1)
 })
 
@@ -73,9 +71,7 @@ test('right-clicking a scalar cell shows the unable-to-display notice', async ({
     row: 0,
   })
 
-  await expect(
-    plotTab(page, `Preview: ${titleOf(example, SCALAR_VAR)}`)
-  ).toBeVisible()
+  await expect(plotEntry(page, titleOf(example, SCALAR_VAR))).toBeVisible()
   await expect(page.getByText('Unable to display the plot')).toBeVisible()
   await expect(page.getByText(/scalar/)).toContainText(String(scalarValue))
 })
@@ -92,9 +88,7 @@ test('right-clicking an image cell renders the picture instead of a figure', asy
     row: 0,
   })
 
-  await expect(
-    plotTab(page, `Preview: ${titleOf(example, IMAGE_VAR)}`)
-  ).toBeVisible()
+  await expect(plotEntry(page, titleOf(example, IMAGE_VAR))).toBeVisible()
   await expect(page.locator('img[src^="data:image/png"]')).toBeVisible()
   await expect(plotFigure(page)).toHaveCount(0)
 })

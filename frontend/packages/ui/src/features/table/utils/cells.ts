@@ -15,6 +15,7 @@ import {
   SparklineCell as sparklineRenderer,
   type SparklineCellType,
 } from '@glideapps/glide-data-grid-cells'
+import { DEFAULT_THEME } from '@mantine/core'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
@@ -79,7 +80,7 @@ export const numberCell = (
     contentAlign: 'right',
     themeOverride: {
       fontFamily: 'monospace',
-      textDark: '#4A4A4A',
+      textDark: DEFAULT_THEME.colors.gray[7],
     },
     ...params,
   }

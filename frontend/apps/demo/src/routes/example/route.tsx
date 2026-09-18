@@ -37,11 +37,9 @@ function ExampleDashboard({ info }: ExampleDashboardProps) {
     <NotFoundPage />
   ) : (
     <Dashboard
-      headerProps={{
-        title: info.title,
-        subtitle: info.subtitle,
-        instrument: info.instrument,
-      }}
+      label={info.label}
+      subtitle={info.subtitle}
+      instrument={info.instrument}
     />
   )
 }

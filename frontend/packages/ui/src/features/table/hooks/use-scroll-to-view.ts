@@ -29,7 +29,7 @@ export function useScrollToView(ref: RefObject<DataEditorRef>) {
       debounce((scroll: Scroll) => {
         // React runs a removed subtree's parent cleanup before the child's, so
         // leaving a proposal resets this slice (clearing isActive) before this
-        // flush runs. Bail so we don't resave stale scroll. A tab switch leaves
+        // flush runs. Bail so we don't resave stale scroll. A view switch leaves
         // the proposal mounted, so isActive stays true and the scroll is kept.
         if (!store.getState().table.isActive) {
           return
@@ -40,8 +40,8 @@ export function useScrollToView(ref: RefObject<DataEditorRef>) {
   )
 
   // Mark the table active for the guard above, then on unmount (e.g. switching
-  // tabs) flush any pending scroll save instead of cancelling it, so a scroll
-  // followed by a fast tab switch is not lost.
+  // views) flush any pending scroll save instead of cancelling it, so a scroll
+  // followed by a fast view switch is not lost.
   useEffect(() => {
     dispatch(setActive(true))
     return () => {

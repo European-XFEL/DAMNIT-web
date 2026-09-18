@@ -1,14 +1,8 @@
-import { addTab, removeTab } from '#src/features/dashboard/dashboard.slice'
-import {
-  addPlot,
-  removePlot,
-  reset as resetPlots,
-} from '#src/features/plots/plots.slice'
+import { addPlot } from '#src/features/plots/plots.slice'
 import { plotRequested } from '#src/features/table/stores/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
 import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
 import { cache } from '#src/graphql/apollo'
-import { isEmpty } from '#src/utils/helpers'
 
 import { resetProposal } from './actions'
 import { startAppListening } from './listener-middleware'
@@ -65,30 +59,6 @@ export function registerAppListeners() {
     actionCreator: plotRequested,
     effect: (action, { dispatch }) => {
       dispatch(addPlot(action.payload))
-    },
-  })
-
-  startAppListening({
-    actionCreator: addPlot,
-    effect: (_, { dispatch }) => {
-      dispatch(addTab({ id: 'plots', title: 'Plots', isClosable: true }))
-    },
-  })
-
-  startAppListening({
-    actionCreator: removePlot,
-    effect: (_, { dispatch, getState }) => {
-      const { plots } = getState()
-      if (isEmpty(plots.data)) {
-        dispatch(removeTab('plots'))
-      }
-    },
-  })
-
-  startAppListening({
-    actionCreator: removeTab,
-    effect: (_, { dispatch }) => {
-      dispatch(resetPlots())
     },
   })
 }
