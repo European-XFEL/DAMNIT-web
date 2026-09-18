@@ -4,6 +4,7 @@ import {
   semesterLabels,
   expandMark,
   expandProposal,
+  expectNotTruncated,
   openHome,
   proposalLink,
   proposalNumbers,
@@ -37,6 +38,13 @@ test("the home page groups the user's proposals by semester, newest first", asyn
   await expect(proposalRow(page, 6996).getByText('MID')).toBeVisible()
   const numbers = await proposalNumbers(page).allTextContents()
   expect(numbers.indexOf('700004')).toBeLessThan(numbers.indexOf('6996'))
+})
+
+test('the instrument pill shows the whole tag', async ({ page }) => {
+  await openHome(page)
+
+  // SQS is the widest tag in this fixture, so the column would clip it first.
+  await expectNotTruncated(proposalRow(page, 700004).getByText('SQS'))
 })
 
 test('clicking a proposal opens its dashboard', async ({ page }) => {

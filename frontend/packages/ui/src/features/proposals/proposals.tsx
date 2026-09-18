@@ -1,13 +1,13 @@
 import { memo, useState } from 'react'
 import { Link } from 'react-router'
 import {
+  Anchor,
   Box,
   Code,
   Group,
   rem,
   Stack,
   Text,
-  type ElementProps,
   type TextProps,
 } from '@mantine/core'
 import { IconCalendarEvent, IconChevronRight } from '@tabler/icons-react'
@@ -75,7 +75,7 @@ const CycleCell = memo(function CycleCell({ cycle }: CycleCellProps) {
     <Group gap={0}>
       <ExpandedCell isExpanded />
       <Group component="span" ml={10} gap={6}>
-        <IconCalendarEvent className={cx(styles.icon)} />
+        <IconCalendarEvent className={styles.icon} stroke={1.5} />
         <span>{formatRunCycle(cycle)}</span>
       </Group>
     </Group>
@@ -102,7 +102,7 @@ const InstrumentCell = memo(function InstrumentCell(
  * -----------------------------
  */
 
-interface TextCellProps extends TextProps, ElementProps<'p', keyof TextProps> {
+interface TextCellProps extends TextProps {
   text: string
   link?: string
 }
@@ -112,9 +112,17 @@ const TextCell = memo(function TextCell({
   link,
   ...props
 }: TextCellProps) {
-  const component = <Text {...props}>{text}</Text>
-
-  return <Group>{link ? <Link to={link}>{component}</Link> : component}</Group>
+  return (
+    <Group>
+      {link ? (
+        <Anchor component={Link} to={link} {...props}>
+          {text}
+        </Anchor>
+      ) : (
+        <Text {...props}>{text}</Text>
+      )}
+    </Group>
+  )
 })
 
 /*
@@ -133,6 +141,7 @@ const DateCell = memo(function DateCell({ datetime, ...props }: DateCellProps) {
     <TextCell
       {...props}
       text={date.format('MMMM DD, YYYY')}
+      c="gray.7"
       className={styles.proposalDate}
     />
   )
@@ -173,16 +182,16 @@ const ProposalContent = memo(function ProposalContent({
   return (
     <Stack className={styles.content} p="xs" gap={6} pl={65} pr={65}>
       <Group gap={6}>
-        <Text size="xs" className={styles.contentLabel} c="dark.4">
+        <Text size="xs" className={styles.contentLabel} c="gray.7">
           Title:
         </Text>
         <Text size="xs">{proposalInfo.title}</Text>
       </Group>
       <Group gap={6}>
-        <Text size="xs" className={styles.contentLabel} c="dark.4">
+        <Text size="xs" className={styles.contentLabel} c="gray.7">
           Path:
         </Text>
-        <Code style={{ fontSize: rem(11) }}>{proposalInfo.damnit_path}</Code>
+        <Code fz="xxs">{proposalInfo.damnit_path}</Code>
       </Group>
     </Stack>
   )
@@ -225,7 +234,8 @@ const ProposalSubTable = memo(function ProposalSubTable({
         {
           accessor: 'instrument',
           noWrap: true,
-          width: 50,
+          // HED, the widest tag, needs 52 px at the 12 px badge floor.
+          width: rem(56),
           render: ({ instrument }) => (
             <InstrumentCell instrument={instrument} size="sm" />
           ),
