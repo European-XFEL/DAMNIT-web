@@ -20,12 +20,12 @@ function Main() {
           <Title order={1}>Example Gallery</Title>
 
           <Stack gap={4}>
-            <Text c="dimmed" size="lg" fw={400}>
+            <Text size="lg">
               Explore real-world applications of DAMNIT using data from previous
               experimental campaigns.
             </Text>
 
-            <Text c="dimmed" size="sm" fs="italic" style={{ opacity: 0.8 }}>
+            <Text c="gray.7" size="sm" fs="italic">
               These examples demonstrate how DAMNIT automates the extraction of
               metadata and analysis results, providing a live, searchable
               overview of your experiment's progress.

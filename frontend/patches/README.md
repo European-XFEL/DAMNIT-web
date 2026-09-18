@@ -53,3 +53,26 @@ hides scrollbars, which makes that width zero and the strip disappear, so
 patch reverted.
 
 Still present on upstream `main`, and not yet reported there.
+
+## `plotly.js`
+
+`react-plotly.js` loads `plotly.js/dist/plotly`, so the patch edits that one
+bundle; `src/` edits are inert here too.
+
+### The camera button exports nothing for a font name with a digit in it
+
+Plotly's SVG export protects quoted font names by swapping each `"` for a
+placeholder, setting the font-family again, and turning the placeholder into
+`'` after serializing (`src/snapshot/tosvg.js`). A family with a word that
+starts with a digit, like `"Source Sans 3 Variable"`, is not valid CSS once
+unquoted, so the browser drops the new value and keeps the quotes. They
+serialize as `&quot;`, and `htmlEntityDecode` then decodes them into a raw `"`
+inside the `style` attribute. The SVG is no longer valid XML, the image never
+loads, and the camera button downloads nothing. The patch keeps `&quot;`
+escaped as `&#34;`.
+
+The exported image still draws its text in a system font, because an SVG
+drawn as an image cannot load the page's web fonts.
+
+Still present on upstream `master`, and not yet reported there. Covered by
+`e2e/tests/app/plots/summary-plot.spec.ts`.

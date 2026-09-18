@@ -2,6 +2,7 @@ import {
   createTheme,
   DEFAULT_THEME,
   rem,
+  type AlertFactory,
   type AvatarFactory,
   type BadgeFactory,
   type CSSVariablesResolver,
@@ -52,6 +53,11 @@ export const theme = createTheme({
   // Plain objects, not Component.extend(), which pulls the component into any
   // bundle that imports the theme; `satisfies` keeps the typing.
   components: {
+    // A light alert's title takes shade 7 of its colour, under AA on the tint
+    // (red 3.4:1, orange 2.7:1). Text colour passes; the icon keeps the hue.
+    Alert: {
+      styles: { title: { color: 'var(--mantine-color-text)' } },
+    } satisfies ExtendComponent<AlertFactory>,
     Avatar: {
       classNames: { root: classes.avatar },
     } satisfies ExtendComponent<AvatarFactory>,

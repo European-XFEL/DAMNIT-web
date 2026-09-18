@@ -72,3 +72,4 @@ catalogs:
 
 patchedDependencies:
   '@glideapps/glide-data-grid@6.0.3': patches/@glideapps__glide-data-grid@6.0.3.patch
+  plotly.js@3.3.1: patches/plotly.js@3.3.1.patch

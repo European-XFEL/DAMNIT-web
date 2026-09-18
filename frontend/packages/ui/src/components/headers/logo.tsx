@@ -15,7 +15,7 @@ function Logo({ linkTo, compact = false }: LogoProps) {
       className={styles.link}
       aria-label={compact ? 'DAMNIT!' : undefined}
     >
-      <Title order={1} fz={22} style={{ fontFamily: 'Arial' }}>
+      <Title order={1} size="h3">
         {compact ? 'D!' : 'DAMNIT!'}
       </Title>
     </Link>

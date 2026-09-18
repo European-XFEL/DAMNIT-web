@@ -23,7 +23,9 @@ test('the context file view shows the proposal code, read-only', async ({
   await openContextFile(page)
 
   await expect(editorLine(page, firstLine)).toBeVisible()
-  await expect(page.getByText('🔒 Read-only')).toBeVisible()
+  await expect(
+    page.getByRole('status').getByText('Read-only', { exact: true })
+  ).toBeVisible()
 
   // Read-only means edits are dropped, not just labelled. Read Monaco's model
   // rather than a `.view-line`: the model updates synchronously on input, so a
@@ -114,7 +116,11 @@ test('a failed content load shows the editor error', async ({
   await openProposal(page, example)
   await contextFileNavItem(page).click()
 
-  await expect(page.getByText('Failed to load file content')).toBeVisible()
+  await expect(
+    page.getByText(
+      'The server could not read context.py. Reload the page to try again.'
+    )
+  ).toBeVisible()
 })
 
 test('a failed content load surfaces the backend error detail', async ({
@@ -135,4 +141,36 @@ test('a failed content load surfaces the backend error detail', async ({
   await contextFileNavItem(page).click()
 
   await expect(page.getByText('context.py has a syntax error')).toBeVisible()
+})
+
+test('a failed content load with a structured detail shows the generic message', async ({
+  page,
+  example,
+}) => {
+  // A FastAPI 422 carries `detail` as a list of objects. Rendered as-is it
+  // crashed the whole view, so a detail that is not text falls back instead.
+  await page.route('**/contextfile/content**', (route) =>
+    route.fulfill({
+      status: 422,
+      json: {
+        detail: [
+          {
+            type: 'int_parsing',
+            loc: ['query', 'proposal_number'],
+            msg: 'Input should be a valid integer',
+            input: '',
+          },
+        ],
+      },
+    })
+  )
+
+  await openProposal(page, example)
+  await contextFileNavItem(page).click()
+
+  await expect(
+    page.getByText(
+      'The server could not read context.py. Reload the page to try again.'
+    )
+  ).toBeVisible()
 })

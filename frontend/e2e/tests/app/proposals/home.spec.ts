@@ -2,7 +2,9 @@ import { test, expect } from '#fixtures'
 import { XPCS, xpcsWithProposals } from '#examples/xpcs'
 import {
   semesterLabels,
+  expandMark,
   expandProposal,
+  expectNotTruncated,
   openHome,
   proposalLink,
   proposalNumbers,
@@ -38,6 +40,13 @@ test("the home page groups the user's proposals by semester, newest first", asyn
   expect(numbers.indexOf('700004')).toBeLessThan(numbers.indexOf('6996'))
 })
 
+test('the instrument pill shows the whole tag', async ({ page }) => {
+  await openHome(page)
+
+  // SQS is the widest tag in this fixture, so the column would clip it first.
+  await expectNotTruncated(proposalRow(page, 700004).getByText('SQS'))
+})
+
 test('clicking a proposal opens its dashboard', async ({ page }) => {
   await openHome(page)
 
@@ -61,4 +70,15 @@ test('expanding a proposal reveals its title and path', async ({ page }) => {
   await expect(page.getByText(PROPOSAL.title)).toBeVisible()
   await expect(page.getByText('Path:')).toBeVisible()
   await expect(page.getByText(PROPOSAL.damnit_path)).toBeVisible()
+})
+
+test("a proposal's mark turns when its row is expanded", async ({ page }) => {
+  await openHome(page)
+
+  const mark = expandMark(page, PROPOSAL.number)
+  await expect(mark).toHaveCSS('transform', 'none')
+
+  await expandProposal(page, PROPOSAL.number)
+
+  await expect(mark).toHaveCSS('transform', 'matrix(0, 1, -1, 0, 0, 0)')
 })

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Box, Stack } from '@mantine/core'
+import { Alert, Box, Code, rem, Stack, Text } from '@mantine/core'
+import { IconAlertTriangle, IconLock } from '@tabler/icons-react'
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
@@ -90,25 +91,27 @@ const ContextFile = ({
         {isLoading ? (
           <CenteredLoader />
         ) : error ? (
-          <Box
-            style={{
-              textAlign: 'center',
-              color: 'red',
-              padding: '20px',
-            }}
+          <Alert
+            m={20}
+            variant="light"
+            color="red"
+            title="Unable to load the context file"
+            icon={
+              <IconAlertTriangle
+                style={{ width: rem(20), height: rem(20) }}
+                stroke={1.5}
+              />
+            }
           >
-            {isApiError(error)
-              ? (error.data as { detail?: string })?.detail ||
-                'Failed to load file content'
-              : 'An unexpected error occurred while loading the context file'}
-          </Box>
+            <Text size="sm">{describeLoadError(error)}</Text>
+          </Alert>
         ) : (
           <ContextFileEditor content={data?.fileContent} />
         )}
       </Box>
       <StatusBar
         leftSection={
-          <>{readOnly && <LabelStatus label="🔒 Read-only"></LabelStatus>}</>
+          readOnly && <LabelStatus icon={IconLock} label="Read-only" />
         }
         rightSection={
           subscribe ? (
@@ -153,6 +156,24 @@ const isApiError = (
 ): error is FetchBaseQueryError => {
   return (
     !!error && typeof error === 'object' && 'status' in error && 'data' in error
+  )
+}
+
+function describeLoadError(error: FetchBaseQueryError | SerializedError) {
+  if (!isApiError(error)) {
+    return 'Check your connection, then reload the page.'
+  }
+
+  const detail = (error.data as { detail?: unknown } | undefined)?.detail
+  if (typeof detail === 'string' && detail !== '') {
+    return detail
+  }
+
+  return (
+    <>
+      {'The server could not read '}
+      <Code>context.py</Code>. Reload the page to try again.
+    </>
   )
 }
 
