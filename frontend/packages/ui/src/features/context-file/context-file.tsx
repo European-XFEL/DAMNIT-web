@@ -97,10 +97,7 @@ const ContextFile = ({
               padding: '20px',
             }}
           >
-            {isApiError(error)
-              ? (error.data as { detail?: string })?.detail ||
-                'Failed to load file content'
-              : 'An unexpected error occurred while loading the context file'}
+            {describeLoadError(error)}
           </Box>
         ) : (
           <ContextFileEditor content={data?.fileContent} />
@@ -154,6 +151,19 @@ const isApiError = (
   return (
     !!error && typeof error === 'object' && 'status' in error && 'data' in error
   )
+}
+
+function describeLoadError(error: FetchBaseQueryError | SerializedError) {
+  if (!isApiError(error)) {
+    return 'Check your connection, then reload the page.'
+  }
+
+  const detail = (error.data as { detail?: unknown } | undefined)?.detail
+  if (typeof detail === 'string' && detail !== '') {
+    return detail
+  }
+
+  return 'The server returned an error. Reload the page to try again.'
 }
 
 export default ContextFile
