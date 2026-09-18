@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import isEmpty from 'lodash/isEmpty'
 import lodashSize from 'lodash/size'
+import { rem } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
 
@@ -71,9 +72,11 @@ function TagDetails({ name }: TagDetailsProps) {
         items={items}
         renderIndicator={({ selected, color, size }) =>
           selected ? (
-            <IconEye size={size} style={{ color }} />
+            <IconEye style={{ width: rem(size), height: rem(size), color }} />
           ) : (
-            <IconEyeClosed size={size} style={{ color }} />
+            <IconEyeClosed
+              style={{ width: rem(size), height: rem(size), color }}
+            />
           )
         }
       />

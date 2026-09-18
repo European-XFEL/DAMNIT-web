@@ -11,7 +11,7 @@ import {
   UnstyledButton,
   type AnchorProps,
 } from '@mantine/core'
-import { IconSearch } from '@tabler/icons-react'
+import { IconSearch, IconX } from '@tabler/icons-react'
 import cx from 'clsx'
 
 import { mutedC } from '#src/components/headings/section-heading'
@@ -42,8 +42,14 @@ function SearchInput({
       value={value}
       onChange={(e) => onChange(e.currentTarget.value)}
       size="sm"
+      // The rows it filters are xs, and a size of its own would shrink the box
+      // with the text. The search mark takes the placeholder's grey.
+      styles={{
+        input: { fontSize: 'var(--mantine-font-size-xs)' },
+        section: { color: 'var(--mantine-color-gray-7)' },
+      }}
       placeholder={placeholder}
-      leftSection={<IconSearch size={14} />}
+      leftSection={<IconSearch style={{ width: rem(14), height: rem(14) }} />}
       // Matched sections put the placeholder on the popover's title column and
       // set each glyph the same distance in from its own edge.
       leftSectionWidth={rem(38)}
@@ -55,6 +61,9 @@ function SearchInput({
         value === '' ? undefined : (
           <CloseButton
             size="sm"
+            icon={
+              <IconX style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
+            }
             aria-label="Clear search"
             // The button goes with the text, so focus goes back to the box.
             onClick={() => {
@@ -130,7 +139,7 @@ type PopoverLinkProps = Pick<AnchorProps, 'c' | 'td'> & {
 // The small text action both popovers use, in the footer and on a group heading.
 export function PopoverLink({
   onClick,
-  c = 'indigo',
+  c = 'indigo.7',
   td,
   'aria-label': label,
   children,
@@ -143,7 +152,7 @@ export function PopoverLink({
       c={c}
       td={td}
       underline="hover"
-      fz={11}
+      size="xxs"
       onClick={onClick}
     >
       {children}
