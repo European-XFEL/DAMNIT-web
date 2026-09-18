@@ -23,6 +23,14 @@ type UserMenuProps = {
   variant?: UserMenuVariant
 }
 
+// A menu opens 4 px off its button, closer than Mantine's 8. The nav's keeps
+// the 8, which lands its bottom edge on the foot's divider.
+const OFFSETS: Record<UserMenuVariant, number> = {
+  header: 4,
+  nav: 8,
+  rail: 4,
+}
+
 const POSITIONS: Record<UserMenuVariant, MenuProps['position']> = {
   header: 'bottom-end',
   nav: 'top-start',
@@ -48,10 +56,15 @@ export function UserMenu({
     />
   )
 
+  const chevron = (
+    <IconChevronDown style={{ width: rem(14), height: rem(14) }} stroke={2} />
+  )
+
   return (
     <Menu
       width={260}
       position={POSITIONS[variant]}
+      offset={OFFSETS[variant]}
       transitionProps={{
         transition: variant === 'header' ? 'pop-top-right' : 'pop',
       }}
@@ -68,16 +81,16 @@ export function UserMenu({
             <Text truncate className={classes.userNavName} fw={500} size="sm">
               {userName}
             </Text>
-            <IconChevronDown size={14} stroke={1.5} />
+            {chevron}
           </UnstyledButton>
         ) : (
           <UnstyledButton className={classes.user} p={5}>
             <Group gap={8} px={0}>
               {avatar}
-              <Text fw={500} size="sm">
+              <Text fw={500} size="sm" c="black">
                 {userName}
               </Text>
-              <IconChevronDown size={14} stroke={1.5} />
+              {chevron}
             </Group>
           </UnstyledButton>
         )}
