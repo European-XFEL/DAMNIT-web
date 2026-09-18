@@ -1,5 +1,5 @@
 import { type MouseEvent, type ReactNode } from 'react'
-import { ActionIcon, Text, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Text, UnstyledButton, rem } from '@mantine/core'
 import { IconX } from '@tabler/icons-react'
 
 import PlotKindIcon from '#src/components/icons/plot-kind-icon'
@@ -58,7 +58,7 @@ function PlotEntry({
         aria-label={`Close ${label}`}
         onClick={onClose}
       >
-        <IconX size={16} stroke={1.5} />
+        <IconX style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
       </ActionIcon>
     </li>
   )
