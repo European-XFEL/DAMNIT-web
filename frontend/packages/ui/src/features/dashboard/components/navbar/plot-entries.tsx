@@ -2,7 +2,7 @@ import { type MouseEvent, type ReactNode } from 'react'
 import { ActionIcon, Text, UnstyledButton } from '@mantine/core'
 import { IconX } from '@tabler/icons-react'
 
-import PlotKindIcon from '#src/features/plots/plot-kind-icon'
+import PlotKindIcon from '#src/components/icons/plot-kind-icon'
 import { removePlot } from '#src/features/plots/plots.slice'
 import { type PlotSource } from '#src/types'
 import { useAppDispatch } from '#src/app/store/hooks'

@@ -6,20 +6,13 @@ export const mutedC =
 
 export type SectionHeadingProps = {
   children: ReactNode
-  size?: number
 }
 
-// The table popovers head their sections with it and the dashboard nav its
-// groups, so every group label shares one treatment.
-function SectionHeading({ children, size = 10 }: SectionHeadingProps) {
+// Every group label, in the table popovers and the dashboard nav, shares this.
+// `size` rather than `fz`, which would leave the body's line height behind.
+function SectionHeading({ children }: SectionHeadingProps) {
   return (
-    <Text
-      fz={size}
-      fw={500}
-      tt="uppercase"
-      c={mutedC}
-      style={{ letterSpacing: 0.8 }}
-    >
+    <Text size="xxs" fw={500} tt="uppercase" c={mutedC} lts="0.06em">
       {children}
     </Text>
   )

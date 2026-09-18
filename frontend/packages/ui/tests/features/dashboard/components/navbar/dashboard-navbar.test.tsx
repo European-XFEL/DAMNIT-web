@@ -1,6 +1,3 @@
-// Mantine's own styles, so the rail popover is positioned and sized as in the app.
-import '@mantine/core/styles.layer.css'
-
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client'
 import { AppShell } from '@mantine/core'
 import { expect, test } from 'vitest'

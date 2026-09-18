@@ -23,7 +23,7 @@ type NavHeaderProps = {
 function NavHeader({ label, action }: NavHeaderProps) {
   return (
     <div className={classes.header}>
-      <SectionHeading size={11}>{label}</SectionHeading>
+      <SectionHeading>{label}</SectionHeading>
       {action}
     </div>
   )
