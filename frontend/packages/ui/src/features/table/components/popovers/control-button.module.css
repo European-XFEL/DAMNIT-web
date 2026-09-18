@@ -1,0 +1,24 @@
+/* Mantine narrows the inset on the side that holds a section, so a button
+   would change width the moment its count appears. */
+.root {
+  padding-inline: 10px;
+}
+
+/* An icon or count sits about half its label's size away, closer to the label
+   than the button's own inset is. Mantine's default is the 10 px spacing. */
+.section[data-position='left'] {
+  margin-inline-end: 6px;
+  /* A leading mark is secondary; the label carries the level. */
+  color: var(--mantine-color-gray-7);
+}
+
+.section[data-position='right'] {
+  margin-inline-start: 6px;
+}
+
+/* A whole-pixel line box: at the token's ratio the label sat over 1 px off
+   centre. */
+.label {
+  font-weight: 500;
+  line-height: 18px;
+}

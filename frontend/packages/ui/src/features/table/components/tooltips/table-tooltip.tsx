@@ -1,4 +1,9 @@
-import { Image, useComputedColorScheme, useMantineTheme } from '@mantine/core'
+import {
+  Image,
+  useComputedColorScheme,
+  useMantineTheme,
+  rem,
+} from '@mantine/core'
 import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
 import { type CellError } from '#src/data/table/table-data.types'
@@ -67,7 +72,7 @@ export function TableTooltip({
       style={{
         ...style,
         background: surface,
-        borderRadius: SURFACE_RADIUS,
+        borderRadius: rem(SURFACE_RADIUS),
         zIndex: 1000,
         boxShadow:
           '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',

@@ -1,4 +1,5 @@
 import {
+  AllCellRenderers,
   GridCellKind,
   type BaseGridCell,
   type CustomCell,
@@ -9,13 +10,13 @@ import {
   type LoadingCell,
   type NumberCell,
   type TextCell,
+  type Theme,
 } from '@glideapps/glide-data-grid'
 import {
   allCells,
   SparklineCell as sparklineRenderer,
   type SparklineCellType,
 } from '@glideapps/glide-data-grid-cells'
-import { DEFAULT_THEME } from '@mantine/core'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
@@ -23,10 +24,18 @@ import {
   type CellValue,
 } from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/helpers'
+import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
 // error cell renderer so a no-data cell and an errored cell line up.
 const SKELETON_BOX_WIDTH = 30
+
+// A Source Code Pro glyph is a fifth wider than the sans beside it, so mono
+// cells sit one step under the grid's 14 px.
+const MONO_CELL_THEME: Partial<Theme> = {
+  fontFamily: FONT_FAMILY_MONO,
+  baseFontStyle: `${FONT_SIZES.xs}px`,
+}
 
 // TODO: Handle nonconforming data type
 
@@ -78,10 +87,7 @@ export const numberCell = (
     data: data,
     allowOverlay: false,
     contentAlign: 'right',
-    themeOverride: {
-      fontFamily: 'monospace',
-      textDark: DEFAULT_THEME.colors.gray[7],
-    },
+    themeOverride: MONO_CELL_THEME,
     ...params,
   }
 }
@@ -126,9 +132,7 @@ export const dateCell = (
     allowOverlay: false,
     displayData: data,
     data,
-    themeOverride: {
-      fontFamily: 'monospace',
-    },
+    themeOverride: MONO_CELL_THEME,
     ...params,
   }
 }
@@ -316,6 +320,31 @@ export const getCell = ({
   // established, kept inline because the grid re-asks on every redraw.
   return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
 }
+
+// Glide measures every cell in the grid's font, so a mono cell would fit short
+// and lose its leading digits or its year.
+const measureInCellFont = (
+  renderer: (typeof AllCellRenderers)[number]
+): (typeof AllCellRenderers)[number] => {
+  const { measure } = renderer
+  if (measure === undefined) {
+    return renderer
+  }
+  return {
+    ...renderer,
+    measure: (ctx, cell, theme) => {
+      const { baseFontStyle, fontFamily } = { ...theme, ...cell.themeOverride }
+      ctx.save()
+      ctx.font = `${baseFontStyle} ${fontFamily}`
+      const width = measure(ctx, cell, theme)
+      ctx.restore()
+      return width
+    },
+  }
+}
+
+// Glide's own renderers, each measuring in the font its cell is drawn in.
+export const GRID_RENDERERS = AllCellRenderers.map(measureInCellFont)
 
 // Every renderer the grid draws with. The sparkline ships with no `measure`, so
 // a fit would land on Glide's 150px default; a trend has no width of its own.

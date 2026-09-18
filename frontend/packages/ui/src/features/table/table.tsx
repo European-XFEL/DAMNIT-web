@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   CompactSelection,
-  DataEditor,
+  DataEditorCore,
+  ImageWindowLoaderImpl,
+  sprites,
   type CellClickedEventArgs,
-  type DataEditorProps,
   type DataEditorRef,
   type GridMouseEventArgs,
   type GridSelection,
@@ -21,9 +22,12 @@ import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
+import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
+import { type PlotSource } from '#src/types'
 import {
   errorCell,
   getCell,
+  GRID_RENDERERS,
   makeCellRenderers,
   numberCell,
   textCell,
@@ -60,7 +64,6 @@ import {
 } from '#src/features/table/stores/table.slice'
 
 export type TableProps = {
-  grid?: DataEditorProps
   paginated?: boolean
 }
 
@@ -70,7 +73,16 @@ const PAGE_SIZE = 10
 // font on the same background, so height is the only lever left.
 const GROUP_HEADER_HEIGHT = 24
 
-const Table = ({ grid, paginated = true }: TableProps) => {
+// Glide draws in px: its defaults scaled by the theme's 6%, and the row
+// marker lifted to the 12 px floor. Mono cells sit a step under, in cells.ts.
+const GRID_FONTS: Partial<Theme> = {
+  fontFamily: FONT_FAMILY_SANS,
+  baseFontStyle: `${FONT_SIZE_DATA}px`,
+  headerFontStyle: `600 ${FONT_SIZE_DATA}px`,
+  markerFontStyle: `${FONT_SIZES.xxs}px`,
+}
+
+const Table = ({ paginated = true }: TableProps) => {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
 
@@ -144,27 +156,38 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     () => makeCellRenderers(errorColors, DEFAULT_COLUMN_WIDTH),
     [errorColors]
   )
+  // The core editor takes Glide's renderers from here, so it also takes the
+  // image loader and header icons the default editor would add.
+  const imageWindowLoader = useMemo(() => new ImageWindowLoaderImpl(), [])
 
   // Glide paints from resolved colors, not CSS variables, so its header and
   // group bar take the gray ramp the rest of the chrome is on.
   const gridTheme = useMemo<Partial<Theme>>(
     () => ({
+      ...GRID_FONTS,
       bgHeader: theme.colors.gray[0],
       bgHeaderHovered: theme.colors.gray[1],
       bgHeaderHasFocus: theme.colors.gray[2],
       borderColor: theme.colors.gray[2],
-      textHeader: theme.colors.gray[9],
-      accentColor: theme.colors.indigo[6],
+      textDark: theme.black,
+      textHeader: theme.black,
+      // A group name is a label over its columns, the treatment it already has
+      // in the popover and the nav.
+      textGroupHeader: theme.colors.gray[7],
+      accentColor: theme.colors.indigo[7],
     }),
     [theme]
   )
 
-  // Glide fills the row numbers with the cell background, not the header's, so
-  // they need their own theme to share the header's gray.
+  // Glide fills the row numbers with the cell background, so they take the
+  // header's grey here, and the index reads in the secondary grey.
   const rowMarkers = useMemo(
     () => ({
       kind: 'clickable-number' as const,
-      theme: { bgCell: theme.colors.gray[0] },
+      theme: {
+        bgCell: theme.colors.gray[0],
+        textLight: theme.colors.gray[7],
+      },
     }),
     [theme]
   )
@@ -390,12 +413,12 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   // pointer, so they differ only in what that entry says and does.
   const showPlotMenu = (
     event: CellClickedEventArgs | HeaderClickedEventArgs,
-    item: { title: string; subtitle: string; onClick: () => void }
+    item: { kind: PlotSource; subtitle: string; onClick: () => void }
   ) => {
     setContextMenu({
       localPosition: { x: event.localEventX, y: event.localEventY },
       bounds: event.bounds,
-      contents: [{ key: 'plot', ...item }],
+      contents: [{ key: 'plot', title: `Plot: ${item.kind}`, ...item }],
     })
   }
 
@@ -451,7 +474,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       )
 
       showPlotMenu(event, {
-        title: 'Plot: preview',
+        kind: 'preview',
         subtitle,
         onClick: () =>
           addPreviewPlot({
@@ -502,7 +525,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     const subtitle = `${y.title} vs. ${x.title}`
 
     showPlotMenu(event, {
-      title: 'Plot: summary',
+      kind: 'summary',
       subtitle,
       onClick: () =>
         addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
@@ -580,8 +603,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
             onResetColumnWidths={resetColumnWidths}
           />
           <>
-            <DataEditor
-              {...(grid || {})}
+            <DataEditorCore
               ref={tableRef}
               theme={gridTheme}
               columns={gridColumns}
@@ -620,7 +642,10 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               onItemHovered={handleGridItemHovered}
               onKeyDown={handleGridKeyDown}
               freezeColumns={pinnedCount}
+              renderers={GRID_RENDERERS}
               customRenderers={renderers}
+              headerIcons={sprites}
+              imageWindowLoader={imageWindowLoader}
               onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}

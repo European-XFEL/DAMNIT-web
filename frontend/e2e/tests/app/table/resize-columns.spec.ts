@@ -1,4 +1,7 @@
+import { type Page } from '@playwright/test'
+
 import { test, expect } from '#fixtures'
+import { WIDE_NUMBER, xpcsWithWideValues, type Example } from '#examples/xpcs'
 import {
   COLUMN_WIDTH,
   WIDE_VIEWPORT,
@@ -19,6 +22,9 @@ import {
 } from '#support/table'
 
 test.use({ viewport: WIDE_VIEWPORT })
+
+// The canvas clamps to its container, so a narrower one would measure the fold.
+const FIT_VIEWPORT = { width: 3400, height: 900 }
 
 test('dragging a header edge widens the column behind it', async ({
   page,
@@ -48,6 +54,24 @@ test('dragging a header edge widens the column behind it', async ({
   })
 })
 
+// The grid sizes itself to the sum of its column widths, so the canvas grows by
+// what the fit added to the column's default.
+async function fitColumn(
+  page: Page,
+  { example, col }: { example: Example; col: number }
+): Promise<number> {
+  const edge = await headerEdge(page, { example, col })
+  const before = (await gridBox(page)).width
+
+  await page.mouse.dblclick(edge.x, edge.y)
+
+  await expect
+    .poll(async () => (await gridBox(page)).width)
+    .toBeGreaterThan(before)
+  await waitOutDoubleClick(page)
+  return COLUMN_WIDTH + (await gridBox(page)).width - before
+}
+
 // Glide measures the visible cells and the whole title, which is what makes a
 // clipped title readable again.
 test('double-clicking a header edge fits the column to its title', async ({
@@ -56,25 +80,63 @@ test('double-clicking a header edge fits the column to its title', async ({
 }) => {
   await openProposal(page, example)
 
-  // The example's longest title, and the default width clips it.
+  // The default width clips this title.
   const xgm = columnOf(example, 'xgm_intensity')
-  const box = await gridBox(page)
   const edge = await headerEdge(page, { example, col: xgm })
 
-  // The next column's middle, which only changes hands if XGM swallows it.
-  await clickAndExpectColumn(page, {
-    point: { x: columnCenter(box, xgm + 1), y: edge.y },
-    title: titleOf(example, 'total_transmission'),
-  })
-  await waitOutDoubleClick(page)
+  await fitColumn(page, { example, col: xgm })
 
-  await page.mouse.dblclick(edge.x, edge.y)
-
-  // Ten past the old seam: clear of Glide's 5px edge zone, and near enough that
-  // the fit only has to reach 110px against a title measuring about 133.
+  // Ten past the old seam, clear of Glide's 5 px edge zone. XGM covers it at
+  // 116 px or more; the fit gives 123, a 107 px title plus 16.
   await clickAndExpectColumn(page, {
     point: { x: edge.x + 10, y: edge.y },
     title: titleOf(example, 'xgm_intensity'),
+  })
+})
+
+// What a mono cell needs to show `text` whole: the text in the grid's 13 px
+// Source Code Pro, and Glide's 8 px padding on either side.
+async function widthToShow(page: Page, text: string): Promise<number> {
+  return page.evaluate(async (text) => {
+    const font = "13px 'Source Code Pro Variable'"
+    await document.fonts.load(font)
+    const context = document.createElement('canvas').getContext('2d')
+    if (context === null) {
+      throw new Error('no 2d canvas to measure with')
+    }
+    context.font = font
+    return context.measureText(text).width + 16
+  }, text)
+}
+
+test.describe('an example whose values are wider than their titles', () => {
+  // The date is written in the browser's zone, so UTC fixes its text.
+  test.use({
+    example: xpcsWithWideValues,
+    timezoneId: 'UTC',
+    viewport: FIT_VIEWPORT,
+  })
+
+  test('double-clicking a header edge fits a mono column to its widest value', async ({
+    page,
+    example,
+  }) => {
+    await openProposal(page, example)
+    const dateNeeds = await widthToShow(page, '12:00:00 | 15 September 2024')
+    const numberNeeds = await widthToShow(page, String(WIDE_NUMBER))
+
+    // The date column, right of the number column so its fit moves no edge the
+    // next one aims at
+    const pulses = columnOf(example, 'n_pulses')
+    expect(
+      await fitColumn(page, { example, col: pulses })
+    ).toBeGreaterThanOrEqual(dateNeeds)
+
+    // The number column
+    const trains = columnOf(example, 'n_trains')
+    expect(
+      await fitColumn(page, { example, col: trains })
+    ).toBeGreaterThanOrEqual(numberNeeds)
   })
 })
 
@@ -133,8 +195,7 @@ test('clicking a header edge without dragging leaves the other selected columns 
 })
 
 test.describe('a viewport wide enough for a fitted table', () => {
-  // The canvas clamps to its container, so a narrower one would measure the fold.
-  test.use({ viewport: { width: 3400, height: 900 } })
+  test.use({ viewport: FIT_VIEWPORT })
 
   test('fitting from the toolbar reaches every column, hand-set ones included', async ({
     page,
