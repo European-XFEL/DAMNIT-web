@@ -45,7 +45,7 @@ function PlotEntry({
           <Text span inherit lineClamp={2} className={classes.entryTitle}>
             {name}
           </Text>
-          <Text span inherit fz="xs" c="gray.6">
+          <Text span inherit fz="xs" c="gray.7">
             {subtitle}
           </Text>
         </span>
