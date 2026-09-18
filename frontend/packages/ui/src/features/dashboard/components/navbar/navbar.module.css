@@ -92,10 +92,11 @@
    top of it, padded like the Plots row so it lines up under the plus. */
 .entry {
   --entry-title-size: var(--mantine-font-size-sm);
+  --entry-line: calc(var(--entry-title-size) * 1.25);
 
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 40px;
   padding: 4px 10px;
@@ -104,7 +105,7 @@
 .entryButton {
   display: flex;
   flex: 1;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-width: 0;
 
@@ -134,6 +135,17 @@
 
 .entry[data-active] .entryTitle {
   font-weight: 500;
+}
+
+/* Both marks centre on the name's first line, not the whole entry, so a name
+   that wraps keeps them beside its first words. */
+.entryButton .icon {
+  align-items: center;
+  height: var(--entry-line);
+}
+
+.entryClose {
+  margin-top: calc((var(--entry-line) - var(--ai-size)) / 2);
 }
 
 /* Shown on hover or focus only, its slot kept either way so the name never
