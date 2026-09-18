@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import { Combobox, useCombobox, ComboboxTarget, TextInput } from '@mantine/core'
+import {
+  Combobox,
+  useCombobox,
+  ComboboxTarget,
+  TextInput,
+  Box,
+} from '@mantine/core'
 
 type TextComboboxProps = {
   options: { name: string; title: string }[]
@@ -31,7 +37,7 @@ function TextCombobox(props: TextComboboxProps) {
   ))
 
   return (
-    <div style={{ margin: '5px 2px' }}>
+    <Box my={5} mx={2}>
       <Combobox
         store={combobox}
         withinPortal={false}
@@ -74,7 +80,7 @@ function TextCombobox(props: TextComboboxProps) {
           </Combobox.Options>
         </Combobox.Dropdown>
       </Combobox>
-    </div>
+    </Box>
   )
 }
 
