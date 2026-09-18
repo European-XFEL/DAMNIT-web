@@ -167,7 +167,7 @@ const Table = ({ paginated = true }: TableProps) => {
       // A group name is a label over its columns, the treatment it already has
       // in the popover and the nav.
       textGroupHeader: theme.colors.gray[7],
-      accentColor: theme.colors.indigo[6],
+      accentColor: theme.colors.indigo[7],
     }),
     [theme]
   )
