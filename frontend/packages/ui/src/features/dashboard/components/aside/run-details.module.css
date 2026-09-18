@@ -19,7 +19,7 @@
 }
 
 .scalarLabel {
-  color: var(--mantine-color-gray-6);
+  color: var(--mantine-color-gray-7);
   width: 100px;
 }
 
@@ -32,7 +32,7 @@
 }
 
 .objectLabel {
-  color: var(--mantine-color-gray-6);
+  color: var(--mantine-color-gray-7);
   width: 300px;
 }
 

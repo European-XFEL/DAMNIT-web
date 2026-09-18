@@ -156,7 +156,9 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
                   key={index}
                   span
                   size="sm"
-                  c={isLast ? 'gray.7' : undefined}
+                  // The group crumbs before the page you are on are labels for
+                  // where it sits, so they take the secondary grey.
+                  c={isLast ? undefined : 'gray.7'}
                   aria-current={isLast ? 'page' : undefined}
                 >
                   {crumb.icon && (
@@ -169,7 +171,7 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
                     <VisuallyHidden>, {crumb.iconLabel}</VisuallyHidden>
                   )}
                   {crumb.detail && (
-                    <Text span inherit c="gray.6">
+                    <Text span inherit c="gray.7">
                       {` (${crumb.detail})`}
                     </Text>
                   )}
