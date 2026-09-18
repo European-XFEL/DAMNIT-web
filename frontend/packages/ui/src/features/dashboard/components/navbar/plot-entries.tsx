@@ -17,6 +17,7 @@ type PlotEntryProps = {
   subtitle: string
   label: string
   active: boolean
+  iconSize: number
   onSelect: () => void
   onClose: (event: MouseEvent<HTMLButtonElement>) => void
 }
@@ -27,6 +28,7 @@ function PlotEntry({
   subtitle,
   label,
   active,
+  iconSize,
   onSelect,
   onClose,
 }: PlotEntryProps) {
@@ -39,13 +41,13 @@ function PlotEntry({
         onClick={onSelect}
       >
         <span className={classes.icon}>
-          <PlotKindIcon kind={kind} size={18} />
+          <PlotKindIcon kind={kind} size={iconSize} />
         </span>
         <span className={classes.entryText}>
           <Text span inherit lineClamp={2} className={classes.entryTitle}>
             {name}
           </Text>
-          <Text span inherit fz="xs" c="gray.7">
+          <Text span inherit className={classes.entrySubtitle} c="gray.7">
             {subtitle}
           </Text>
         </span>
@@ -68,12 +70,18 @@ type PlotEntriesProps = {
   onSelect?: () => void
   onLastClosed: () => void
   empty?: ReactNode
+  iconSize?: number
 }
 
 // The open plots, each shown by its name and closed by its mark, in the nav
 // and in the rail's Plots popover alike. A caller under a permanent header
 // passes `empty` so the section says it is empty rather than leaving a gap.
-function PlotEntries({ onSelect, onLastClosed, empty }: PlotEntriesProps) {
+function PlotEntries({
+  onSelect,
+  onLastClosed,
+  empty,
+  iconSize = 18,
+}: PlotEntriesProps) {
   const dispatch = useAppDispatch()
   const views = useViews()
   const plots = usePlotEntries()
@@ -106,6 +114,7 @@ function PlotEntries({ onSelect, onLastClosed, empty }: PlotEntriesProps) {
           subtitle={subtitle}
           label={label}
           active={views.isActive(view)}
+          iconSize={iconSize}
           onSelect={() => {
             views.select(view)
             onSelect?.()

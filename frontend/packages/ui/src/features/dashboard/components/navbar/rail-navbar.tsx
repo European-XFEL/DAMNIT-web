@@ -45,7 +45,7 @@ type RailButtonProps = Omit<ComponentPropsWithoutRef<'button'>, 'children'> & {
 const RailButton = forwardRef<HTMLButtonElement, RailButtonProps>(
   function RailButton({ icon, label, active, ...others }, ref) {
     return (
-      <Tooltip label={label} position="right" fz="xs" withArrow>
+      <Tooltip label={label} position="right" withArrow>
         <UnstyledButton
           {...others}
           ref={ref}
@@ -134,6 +134,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
             <FocusTrap.InitialFocus onKeyDown={wrapToNewPlot} />
             <div className={classes.scroll}>
               <PlotEntries
+                iconSize={16}
                 onSelect={closePlotsPopover}
                 onLastClosed={() => newPlotRef.current?.focus()}
               />
@@ -149,7 +150,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
             >
               <span className={classes.icon}>
                 <IconPlus
-                  style={{ width: rem(18), height: rem(18) }}
+                  style={{ width: rem(16), height: rem(16) }}
                   stroke={1.5}
                 />
               </span>

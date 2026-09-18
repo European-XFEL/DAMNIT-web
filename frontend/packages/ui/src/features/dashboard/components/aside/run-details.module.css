@@ -3,7 +3,7 @@
 .scalarItem {
   display: flex;
   flex-direction: row;
-  align-items: start;
+  align-items: baseline;
   overflow-x: auto;
   gap: 20px;
   margin-top: var(--mantine-spacing-xs);
@@ -20,7 +20,7 @@
 
 .scalarLabel {
   color: var(--mantine-color-gray-7);
-  width: 100px;
+  width: 110px;
 }
 
 .scalarvalue {

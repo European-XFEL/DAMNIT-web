@@ -26,7 +26,6 @@ function ProposalIdentity({
       position="bottom-start"
       openDelay={300}
       maw={480}
-      fz="xs"
       multiline
       withArrow
     >
