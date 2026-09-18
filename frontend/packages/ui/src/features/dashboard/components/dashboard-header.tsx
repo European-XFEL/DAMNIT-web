@@ -25,7 +25,7 @@ import {
 } from '#src/features/dashboard/stores/dashboard.selectors'
 import { useIsMobile } from '#src/features/dashboard/hooks/use-is-mobile'
 import { useNavRail } from '#src/features/dashboard/hooks/use-nav-rail'
-import PlotKindIcon from '#src/features/plots/plot-kind-icon'
+import PlotKindIcon from '#src/components/icons/plot-kind-icon'
 import {
   mobileNavToggled,
   navCollapsed,
