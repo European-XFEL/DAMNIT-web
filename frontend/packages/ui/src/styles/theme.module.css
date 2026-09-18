@@ -1,0 +1,29 @@
+/* A floating row reads a step under the page it sits over, in the shape the
+   nav's own popovers already use. */
+.menuItem {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* A mark sits about half its label's size from it, and says the level below the
+   label's unless the item carries a colour. */
+.menuItemSection[data-position='left'] {
+  margin-inline-end: 6px;
+  color: var(--menu-item-color, var(--mantine-color-gray-7));
+}
+
+/* Initials are drawn at the avatar's size / 2.5; the floor holds them at 12 px. */
+.avatar {
+  --avatar-placeholder-fz: max(
+    var(--mantine-font-size-xxs),
+    calc(var(--avatar-size) / 2.5)
+  );
+}
+
+/* Mantine sizes badge text under the floor; a line 1 px short of the pill
+   centres 12 px text. */
+.badge {
+  --badge-lh: calc(var(--badge-height) - rem(1px));
+  font-size: max(var(--mantine-font-size-xxs), var(--badge-fz));
+}

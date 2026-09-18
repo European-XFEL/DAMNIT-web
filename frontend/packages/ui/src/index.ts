@@ -9,6 +9,7 @@ export { default as Logo } from './components/headers/logo'
 export { UserMenu } from './components/headers/user-menu'
 export { default as SiteFooter } from './components/footers/site-footer'
 export { default as InstrumentBadge } from './components/badges/instrument-badge'
+export { default as SectionHeading } from './components/headings/section-heading'
 
 // Features
 export { default as Dashboard } from './features/dashboard/dashboard'
