@@ -1,4 +1,5 @@
 import {
+  AllCellRenderers,
   GridCellKind,
   type BaseGridCell,
   type CustomCell,
@@ -319,6 +320,31 @@ export const getCell = ({
   // established, kept inline because the grid re-asks on every redraw.
   return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
 }
+
+// Glide measures every cell in the grid's font, so a mono cell would fit short
+// and lose its leading digits or its year.
+const measureInCellFont = (
+  renderer: (typeof AllCellRenderers)[number]
+): (typeof AllCellRenderers)[number] => {
+  const { measure } = renderer
+  if (measure === undefined) {
+    return renderer
+  }
+  return {
+    ...renderer,
+    measure: (ctx, cell, theme) => {
+      const { baseFontStyle, fontFamily } = { ...theme, ...cell.themeOverride }
+      ctx.save()
+      ctx.font = `${baseFontStyle} ${fontFamily}`
+      const width = measure(ctx, cell, theme)
+      ctx.restore()
+      return width
+    },
+  }
+}
+
+// Glide's own renderers, each measuring in the font its cell is drawn in.
+export const GRID_RENDERERS = AllCellRenderers.map(measureInCellFont)
 
 // Every renderer the grid draws with. The sparkline ships with no `measure`, so
 // a fit would land on Glide's 150px default; a trend has no width of its own.

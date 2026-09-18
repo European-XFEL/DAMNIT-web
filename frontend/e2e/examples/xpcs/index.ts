@@ -286,6 +286,24 @@ export const xpcsWithPendingImage: Example = {
   }),
 }
 
+// A count and a date wider than any title, the values the grid draws in mono.
+export const WIDE_NUMBER = 123456789012345
+const WIDE_DATE = Date.UTC(2024, 8, 15, 12)
+
+// XPCS with every run's Trains holding WIDE_NUMBER and Pulses WIDE_DATE, so
+// those two columns fit to their values rather than their titles.
+export const xpcsWithWideValues: Example = {
+  ...XPCS,
+  data: XPCS.data.map((run) => ({
+    ...run,
+    variables: {
+      ...run.variables,
+      n_trains: { dtype: 'number', value: WIDE_NUMBER },
+      n_pulses: { dtype: 'timestamp', value: WIDE_DATE },
+    },
+  })),
+}
+
 // Rewrite every tag's membership list, so a fixture that renames or drops a
 // variable leaves the Tags popover saying the same thing the variables do.
 function mapTagVariables(
