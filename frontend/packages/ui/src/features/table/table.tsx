@@ -23,6 +23,7 @@ import { useTableMeta } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
+import { type PlotSource } from '#src/types'
 import {
   errorCell,
   getCell,
@@ -412,12 +413,12 @@ const Table = ({ paginated = true }: TableProps) => {
   // pointer, so they differ only in what that entry says and does.
   const showPlotMenu = (
     event: CellClickedEventArgs | HeaderClickedEventArgs,
-    item: { title: string; subtitle: string; onClick: () => void }
+    item: { kind: PlotSource; subtitle: string; onClick: () => void }
   ) => {
     setContextMenu({
       localPosition: { x: event.localEventX, y: event.localEventY },
       bounds: event.bounds,
-      contents: [{ key: 'plot', ...item }],
+      contents: [{ key: 'plot', title: `Plot: ${item.kind}`, ...item }],
     })
   }
 
@@ -473,7 +474,7 @@ const Table = ({ paginated = true }: TableProps) => {
       )
 
       showPlotMenu(event, {
-        title: 'Plot: preview',
+        kind: 'preview',
         subtitle,
         onClick: () =>
           addPreviewPlot({
@@ -524,7 +525,7 @@ const Table = ({ paginated = true }: TableProps) => {
     const subtitle = `${y.title} vs. ${x.title}`
 
     showPlotMenu(event, {
-      title: 'Plot: summary',
+      kind: 'summary',
       subtitle,
       onClick: () =>
         addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
