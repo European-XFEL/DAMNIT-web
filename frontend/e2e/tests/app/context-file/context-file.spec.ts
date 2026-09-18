@@ -118,7 +118,7 @@ test('a failed content load shows the editor error', async ({
 
   await expect(
     page.getByText(
-      'The server returned an error. Reload the page to try again.'
+      'The server could not read context.py. Reload the page to try again.'
     )
   ).toBeVisible()
 })
@@ -170,7 +170,7 @@ test('a failed content load with a structured detail shows the generic message',
 
   await expect(
     page.getByText(
-      'The server returned an error. Reload the page to try again.'
+      'The server could not read context.py. Reload the page to try again.'
     )
   ).toBeVisible()
 })

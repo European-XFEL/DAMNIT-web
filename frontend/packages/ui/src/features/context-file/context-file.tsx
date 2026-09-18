@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Alert, Box, rem, Stack, Text } from '@mantine/core'
+import { Alert, Box, Code, rem, Stack, Text } from '@mantine/core'
 import { IconAlertTriangle, IconLock } from '@tabler/icons-react'
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
@@ -169,7 +169,12 @@ function describeLoadError(error: FetchBaseQueryError | SerializedError) {
     return detail
   }
 
-  return 'The server returned an error. Reload the page to try again.'
+  return (
+    <>
+      {'The server could not read '}
+      <Code>context.py</Code>. Reload the page to try again.
+    </>
+  )
 }
 
 export default ContextFile
