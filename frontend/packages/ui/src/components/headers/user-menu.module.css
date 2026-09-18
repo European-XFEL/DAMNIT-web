@@ -1,6 +1,5 @@
 .user {
   color: light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0));
-  padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
   border-radius: var(--mantine-radius-sm);
   transition: background-color 100ms ease;
 
@@ -19,7 +18,7 @@
 
 .avatar {
   background: var(--mantine-color-indigo-0);
-  color: var(--mantine-color-indigo-7);
+  color: var(--mantine-color-indigo-8);
 }
 
 /* The avatar sits 3 px inside the pill, as in the rail, so it never moves. The
@@ -32,7 +31,7 @@
   height: 32px;
   padding: 0 14px 0 3px;
   border-radius: var(--mantine-radius-sm);
-  color: var(--mantine-color-gray-6);
+  color: var(--mantine-color-gray-7);
 
   &:hover,
   &[data-expanded] {
