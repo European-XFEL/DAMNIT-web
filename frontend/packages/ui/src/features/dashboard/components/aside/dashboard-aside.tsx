@@ -124,6 +124,7 @@ function DashboardAside({ viewRef }: DashboardAsideProps) {
           classNames={{
             root: classes.tabs,
             list: classes.head,
+            tab: classes.tab,
             panel: classes.panel,
           }}
         >
