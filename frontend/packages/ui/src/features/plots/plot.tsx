@@ -114,7 +114,7 @@ type PlotProps = PlotData
 
 const Plot = ({ traces, meta }: PlotProps) => {
   const defaultLayout = {
-    xaxis: { title: meta.x?.name },
+    xaxis: { title: { text: meta.x?.name } },
     yaxis: { title: { text: meta.y?.name, standoff: 20 } },
     margin: {
       t: 40,
