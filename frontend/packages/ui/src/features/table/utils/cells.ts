@@ -9,13 +9,13 @@ import {
   type LoadingCell,
   type NumberCell,
   type TextCell,
+  type Theme,
 } from '@glideapps/glide-data-grid'
 import {
   allCells,
   SparklineCell as sparklineRenderer,
   type SparklineCellType,
 } from '@glideapps/glide-data-grid-cells'
-import { DEFAULT_THEME } from '@mantine/core'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
@@ -23,10 +23,18 @@ import {
   type CellValue,
 } from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/helpers'
+import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
 // error cell renderer so a no-data cell and an errored cell line up.
 const SKELETON_BOX_WIDTH = 30
+
+// A Source Code Pro glyph is a fifth wider than the sans beside it, so mono
+// cells sit one step under the grid's 14 px.
+const MONO_CELL_THEME: Partial<Theme> = {
+  fontFamily: FONT_FAMILY_MONO,
+  baseFontStyle: `${FONT_SIZES.xs}px`,
+}
 
 // TODO: Handle nonconforming data type
 
@@ -78,10 +86,7 @@ export const numberCell = (
     data: data,
     allowOverlay: false,
     contentAlign: 'right',
-    themeOverride: {
-      fontFamily: 'monospace',
-      textDark: DEFAULT_THEME.colors.gray[7],
-    },
+    themeOverride: MONO_CELL_THEME,
     ...params,
   }
 }
@@ -126,9 +131,7 @@ export const dateCell = (
     allowOverlay: false,
     displayData: data,
     data,
-    themeOverride: {
-      fontFamily: 'monospace',
-    },
+    themeOverride: MONO_CELL_THEME,
     ...params,
   }
 }

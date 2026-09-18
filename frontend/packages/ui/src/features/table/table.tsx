@@ -20,6 +20,7 @@ import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
+import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
 import {
   errorCell,
   getCell,
@@ -67,6 +68,15 @@ const PAGE_SIZE = 10
 // Shorter than the 36px title row below it: Glide paints both rows in the same
 // font on the same background, so height is the only lever left.
 const GROUP_HEADER_HEIGHT = 24
+
+// Glide draws in px: its defaults scaled by the theme's 6%, and the row
+// marker lifted to the 12 px floor. Mono cells sit a step under, in cells.ts.
+const GRID_FONTS: Partial<Theme> = {
+  fontFamily: FONT_FAMILY_SANS,
+  baseFontStyle: `${FONT_SIZE_DATA}px`,
+  headerFontStyle: `600 ${FONT_SIZE_DATA}px`,
+  markerFontStyle: `${FONT_SIZES.xxs}px`,
+}
 
 const Table = ({ paginated = true }: TableProps) => {
   // Initialization: References
@@ -147,22 +157,30 @@ const Table = ({ paginated = true }: TableProps) => {
   // group bar take the gray ramp the rest of the chrome is on.
   const gridTheme = useMemo<Partial<Theme>>(
     () => ({
+      ...GRID_FONTS,
       bgHeader: theme.colors.gray[0],
       bgHeaderHovered: theme.colors.gray[1],
       bgHeaderHasFocus: theme.colors.gray[2],
       borderColor: theme.colors.gray[2],
-      textHeader: theme.colors.gray[9],
+      textDark: theme.black,
+      textHeader: theme.black,
+      // A group name is a label over its columns, the treatment it already has
+      // in the popover and the nav.
+      textGroupHeader: theme.colors.gray[7],
       accentColor: theme.colors.indigo[6],
     }),
     [theme]
   )
 
-  // Glide fills the row numbers with the cell background, not the header's, so
-  // they need their own theme to share the header's gray.
+  // Glide fills the row numbers with the cell background, so they take the
+  // header's grey here, and the index reads in the secondary grey.
   const rowMarkers = useMemo(
     () => ({
       kind: 'clickable-number' as const,
-      theme: { bgCell: theme.colors.gray[0] },
+      theme: {
+        bgCell: theme.colors.gray[0],
+        textLight: theme.colors.gray[7],
+      },
     }),
     [theme]
   )

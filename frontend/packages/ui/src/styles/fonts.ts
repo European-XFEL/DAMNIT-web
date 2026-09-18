@@ -7,7 +7,7 @@ export const FONT_FAMILY_SANS = `'${FONT_NAME_SANS}', ${DEFAULT_THEME.fontFamily
 export const FONT_FAMILY_MONO = `'${FONT_NAME_MONO}', ${DEFAULT_THEME.fontFamilyMonospace}`
 
 // The body scale in px. theme.ts turns these into the rem tokens the DOM
-// reads; Plotly takes the number itself.
+// reads; the grid and Plotly take the number itself.
 export const FONT_SIZES = {
   xxs: 12,
   xs: 13,
