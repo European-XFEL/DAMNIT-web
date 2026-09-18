@@ -53,14 +53,7 @@ function Item({
           </Box>
         )}
 
-        <Text
-          fz={11}
-          lh={1.2}
-          c={color}
-          fw={400}
-          lineClamp={1}
-          title={children}
-        >
+        <Text fz="xxs" lh={1.2} c={color} lineClamp={1} title={children}>
           {children}
         </Text>
       </Group>
@@ -154,7 +147,7 @@ export function RowSection({ header, info, children }: RowSectionProps) {
       <Group justify="space-between" gap={8}>
         <SectionHeading>{header}</SectionHeading>
         {info != null && (
-          <Text fz={10} c={mutedC} style={{ letterSpacing: 0.6 }}>
+          <Text size="xxs" c={mutedC}>
             {info}
           </Text>
         )}
