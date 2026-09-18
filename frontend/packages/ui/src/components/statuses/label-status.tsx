@@ -9,7 +9,7 @@ type LabelProps = {
 function Label({ content, bold = false }: LabelProps) {
   if (typeof content === 'string') {
     return (
-      <Text span fw={bold ? 600 : 10} lh="xs">
+      <Text span fw={bold ? 600 : undefined} lh="xs">
         {content}
       </Text>
     )
@@ -26,7 +26,7 @@ export type LabelStatusProps = {
 function LabelStatus({ label, value }: LabelStatusProps) {
   return (
     <Group wrap="nowrap" align="center">
-      <Text size="xs" fz={11} style={{ whiteSpace: 'nowrap' }}>
+      <Text size="xs" style={{ whiteSpace: 'nowrap' }}>
         <Label content={label} />
         {value != null && (
           <>
