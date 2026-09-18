@@ -1,4 +1,7 @@
+import { type Page } from '@playwright/test'
+
 import { test, expect } from '#fixtures'
+import { type Example } from '#examples/xpcs'
 import {
   COLUMN_WIDTH,
   WIDE_VIEWPORT,
@@ -48,6 +51,24 @@ test('dragging a header edge widens the column behind it', async ({
   })
 })
 
+// The grid sizes itself to the sum of its column widths, so the canvas grows by
+// what the fit added to the column's default.
+async function fitColumn(
+  page: Page,
+  { example, col }: { example: Example; col: number }
+): Promise<number> {
+  const edge = await headerEdge(page, { example, col })
+  const before = (await gridBox(page)).width
+
+  await page.mouse.dblclick(edge.x, edge.y)
+
+  await expect
+    .poll(async () => (await gridBox(page)).width)
+    .toBeGreaterThan(before)
+  await waitOutDoubleClick(page)
+  return COLUMN_WIDTH + (await gridBox(page)).width - before
+}
+
 // Glide measures the visible cells and the whole title, which is what makes a
 // clipped title readable again.
 test('double-clicking a header edge fits the column to its title', async ({
@@ -56,22 +77,14 @@ test('double-clicking a header edge fits the column to its title', async ({
 }) => {
   await openProposal(page, example)
 
-  // The example's longest title, and the default width clips it.
+  // The default width clips this title.
   const xgm = columnOf(example, 'xgm_intensity')
-  const box = await gridBox(page)
   const edge = await headerEdge(page, { example, col: xgm })
 
-  // The next column's middle, which only changes hands if XGM swallows it.
-  await clickAndExpectColumn(page, {
-    point: { x: columnCenter(box, xgm + 1), y: edge.y },
-    title: titleOf(example, 'total_transmission'),
-  })
-  await waitOutDoubleClick(page)
+  await fitColumn(page, { example, col: xgm })
 
-  await page.mouse.dblclick(edge.x, edge.y)
-
-  // Ten past the old seam: clear of Glide's 5px edge zone, and near enough that
-  // the fit only has to reach 110px against a title measuring about 133.
+  // Ten past the old seam, clear of Glide's 5 px edge zone. XGM covers it at
+  // 116 px or more; the fit gives 123, a 107 px title plus 16.
   await clickAndExpectColumn(page, {
     point: { x: edge.x + 10, y: edge.y },
     title: titleOf(example, 'xgm_intensity'),
