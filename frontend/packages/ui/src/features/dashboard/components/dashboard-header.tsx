@@ -7,6 +7,7 @@ import {
   Text,
   UnstyledButton,
   VisuallyHidden,
+  rem,
 } from '@mantine/core'
 import {
   IconChevronRight,
@@ -97,7 +98,7 @@ function NavToggle() {
       aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
       onClick={() => dispatch(collapsed ? navExpanded() : navCollapsed())}
     >
-      <Icon size={18} stroke={1.5} />
+      <Icon style={{ width: rem(18), height: rem(18) }} stroke={1.5} />
     </ActionIcon>
   )
 }
@@ -129,7 +130,12 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
         <NavToggle />
         <nav aria-label="Breadcrumb" className={classes.nav}>
           <Breadcrumbs
-            separator={<IconChevronRight size={12} stroke={1.5} />}
+            separator={
+              <IconChevronRight
+                style={{ width: rem(12), height: rem(12) }}
+                stroke={2}
+              />
+            }
             separatorMargin={8}
             classNames={{
               root: classes.crumbs,

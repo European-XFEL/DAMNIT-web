@@ -5,8 +5,9 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from 'react'
-import { CloseButton, Tabs } from '@mantine/core'
+import { CloseButton, Tabs, rem } from '@mantine/core'
 import { useDidUpdate } from '@mantine/hooks'
+import { IconX } from '@tabler/icons-react'
 
 import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
 import { selectActiveVariable } from '#src/features/table/stores/table.selectors'
@@ -130,6 +131,13 @@ function DashboardAside({ viewRef }: DashboardAsideProps) {
             <Tabs.Tab value="run">{`Run: ${shown.run.run}`}</Tabs.Tab>
             <CloseButton
               ref={closeRef}
+              size="sm"
+              icon={
+                <IconX
+                  style={{ width: rem(16), height: rem(16) }}
+                  stroke={1.5}
+                />
+              }
               ml="auto"
               className={classes.close}
               aria-label={`Close run ${shown.run.run}`}

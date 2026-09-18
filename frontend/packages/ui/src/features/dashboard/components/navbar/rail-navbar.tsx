@@ -13,6 +13,7 @@ import {
   Popover,
   Tooltip,
   UnstyledButton,
+  rem,
 } from '@mantine/core'
 import {
   IconChartLine,
@@ -93,7 +94,12 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
     <>
       <AppShell.Section grow className={classes.rail}>
         <RailButton
-          icon={<IconTable size={20} stroke={1.5} />}
+          icon={
+            <IconTable
+              style={{ width: rem(20), height: rem(20) }}
+              stroke={1.5}
+            />
+          }
           label="Table"
           active={views.isActive(TABLE_VIEW)}
           onClick={() => views.select(TABLE_VIEW)}
@@ -112,7 +118,12 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
           <Popover.Target>
             <RailButton
               ref={plotsRef}
-              icon={<IconChartLine size={20} stroke={1.5} />}
+              icon={
+                <IconChartLine
+                  style={{ width: rem(20), height: rem(20) }}
+                  stroke={1.5}
+                />
+              }
               label="Plots"
               active={plotActive}
               onClick={() => setPlotsOpened((opened) => !opened)}
@@ -137,14 +148,22 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
               }}
             >
               <span className={classes.icon}>
-                <IconPlus size={18} stroke={1.5} />
+                <IconPlus
+                  style={{ width: rem(18), height: rem(18) }}
+                  stroke={1.5}
+                />
               </span>
               New plot
             </UnstyledButton>
           </Popover.Dropdown>
         </Popover>
         <RailButton
-          icon={<IconFileCode size={20} stroke={1.5} />}
+          icon={
+            <IconFileCode
+              style={{ width: rem(20), height: rem(20) }}
+              stroke={1.5}
+            />
+          }
           label="Context file"
           active={views.isActive(CONTEXT_FILE_VIEW)}
           onClick={() => views.select(CONTEXT_FILE_VIEW)}
