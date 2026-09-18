@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Alert, Box, rem, Stack, Text } from '@mantine/core'
-import { IconAlertTriangle } from '@tabler/icons-react'
+import { IconAlertTriangle, IconLock } from '@tabler/icons-react'
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
@@ -111,7 +111,7 @@ const ContextFile = ({
       </Box>
       <StatusBar
         leftSection={
-          <>{readOnly && <LabelStatus label="🔒 Read-only"></LabelStatus>}</>
+          readOnly && <LabelStatus icon={IconLock} label="Read-only" />
         }
         rightSection={
           subscribe ? (

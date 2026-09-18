@@ -23,7 +23,9 @@ test('the context file view shows the proposal code, read-only', async ({
   await openContextFile(page)
 
   await expect(editorLine(page, firstLine)).toBeVisible()
-  await expect(page.getByText('🔒 Read-only')).toBeVisible()
+  await expect(
+    page.getByRole('status').getByText('Read-only', { exact: true })
+  ).toBeVisible()
 
   // Read-only means edits are dropped, not just labelled. Read Monaco's model
   // rather than a `.view-line`: the model updates synchronously on input, so a
