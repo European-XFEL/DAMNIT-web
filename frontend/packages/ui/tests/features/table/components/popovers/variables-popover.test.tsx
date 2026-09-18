@@ -1,7 +1,4 @@
 import type { ReactNode } from 'react'
-// Dimming is a colour, so the theme's variables have to be on the page for the
-// test to see one.
-import '@mantine/core/styles.layer.css'
 import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
 import { beforeEach, expect, test } from 'vitest'
