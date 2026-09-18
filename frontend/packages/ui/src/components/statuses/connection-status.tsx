@@ -1,4 +1,4 @@
-import { Group, Indicator } from '@mantine/core'
+import { Group, Indicator, rem } from '@mantine/core'
 import { IconWifi } from '@tabler/icons-react'
 
 type ConnectionStatusProps = { connected?: boolean; disabled?: boolean }
@@ -17,7 +17,15 @@ function ConnectionStatus({
         inline
         withBorder
       >
-        <IconWifi size={14} color={disabled ? 'gray' : undefined} />
+        <IconWifi
+          style={{ width: rem(14), height: rem(14) }}
+          color={
+            disabled
+              ? 'var(--mantine-color-gray-5)'
+              : 'var(--mantine-color-gray-7)'
+          }
+          aria-hidden
+        />
       </Indicator>
     </Group>
   )
