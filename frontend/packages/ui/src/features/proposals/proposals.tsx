@@ -1,4 +1,4 @@
-import { type ComponentType, memo, useState } from 'react'
+import { memo, useState } from 'react'
 import { Link } from 'react-router'
 import {
   Box,
@@ -10,11 +10,7 @@ import {
   type ElementProps,
   type TextProps,
 } from '@mantine/core'
-import {
-  IconCalendarEvent,
-  IconChevronRight,
-  IconPlus,
-} from '@tabler/icons-react'
+import { IconCalendarEvent, IconChevronRight } from '@tabler/icons-react'
 import cx from 'clsx'
 import dayjs from 'dayjs'
 import { DataTable } from 'mantine-datatable'
@@ -37,29 +33,28 @@ const formatRunCycle = (date: string) => {
   return `${year} - ${period}`
 }
 
-type CellProps = {
-  isExpanded?: boolean
-}
-
 /*
  * -----------------------------
  *   ExpandedCell Component
  * -----------------------------
  */
 
-interface ExpandedCellProps extends CellProps {
-  Component: ComponentType<{ className?: string }>
+type ExpandedCellProps = {
+  isExpanded: boolean
 }
 
+// Both levels expand with the same mark, so a row's state reads the same
+// wherever it sits.
 const ExpandedCell = memo(function ExpandedCell({
-  Component,
-  isExpanded = false,
+  isExpanded,
 }: ExpandedCellProps) {
   return (
-    <Component
+    <IconChevronRight
       className={cx(styles.icon, styles.expandIcon, {
         [styles.expandIconRotated]: isExpanded,
       })}
+      stroke={1.5}
+      aria-hidden
     />
   )
 })
@@ -70,17 +65,15 @@ const ExpandedCell = memo(function ExpandedCell({
  * -----------------------------
  */
 
-interface CycleCellProps extends CellProps {
+type CycleCellProps = {
   cycle: string
 }
 
-const CycleCell = memo(function CycleCell({
-  cycle,
-  isExpanded = true,
-}: CycleCellProps) {
+// A semester row is always expanded.
+const CycleCell = memo(function CycleCell({ cycle }: CycleCellProps) {
   return (
     <Group gap={0}>
-      <ExpandedCell Component={IconChevronRight} isExpanded={isExpanded} />
+      <ExpandedCell isExpanded />
       <Group component="span" ml={10} gap={6}>
         <IconCalendarEvent className={cx(styles.icon)} />
         <span>{formatRunCycle(cycle)}</span>
@@ -208,7 +201,9 @@ type ProposalSubTableProps = {
 const ProposalSubTable = memo(function ProposalSubTable({
   proposals,
 }: ProposalSubTableProps) {
-  const [expandedProposals, setExpandedProposals] = useState<string[]>([])
+  // The datatable keys its rows by `number`, so the ids it hands back are
+  // numbers too.
+  const [expandedProposals, setExpandedProposals] = useState<number[]>([])
   const { proposals: proposalInfo, isLoading } = useProposals({ proposals })
 
   return (
@@ -223,10 +218,7 @@ const ProposalSubTable = memo(function ProposalSubTable({
           noWrap: true,
           render: ({ number }) => (
             <Box component="span" ml={23} mr={5}>
-              <ExpandedCell
-                Component={IconPlus}
-                isExpanded={expandedProposals.includes(String(number))}
-              />
+              <ExpandedCell isExpanded={expandedProposals.includes(number)} />
             </Box>
           ),
         },
