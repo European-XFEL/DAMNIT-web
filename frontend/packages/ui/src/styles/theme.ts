@@ -4,6 +4,7 @@ import {
   rem,
   type AvatarFactory,
   type BadgeFactory,
+  type CSSVariablesResolver,
   type ExtendComponent,
   type MenuFactory,
   type TableFactory,
@@ -18,6 +19,13 @@ import classes from './theme.module.css'
 export const theme = createTheme({
   fontFamily: FONT_FAMILY_SANS,
   fontFamilyMonospace: FONT_FAMILY_MONO,
+  // Ink is the ramp's darkest grey, not pure black, the way USWDS sets its body
+  // text in gray-90.
+  black: DEFAULT_THEME.colors.gray[9],
+  // Shade 7 is where indigo reads at AA, as text on a neutral ground and as a
+  // fill under white text alike.
+  primaryColor: 'indigo',
+  primaryShade: { light: 7, dark: 8 },
   // sm is the page's base, xs is compact controls, supporting text and
   // anything floating, xxs is the floor.
   fontSizes: {
@@ -68,4 +76,15 @@ export const theme = createTheme({
       styles: { tooltip: { fontSize: 'var(--mantine-font-size-xs)' } },
     } satisfies ExtendComponent<TooltipFactory>,
   },
+})
+
+// Placeholder and dimmed are text a reader has to read, so they take the
+// secondary grey instead of Mantine's gray.5 and gray.6, both below AA.
+export const cssVariablesResolver: CSSVariablesResolver = (theme) => ({
+  variables: {},
+  light: {
+    '--mantine-color-placeholder': theme.colors.gray[7],
+    '--mantine-color-dimmed': theme.colors.gray[7],
+  },
+  dark: {},
 })
