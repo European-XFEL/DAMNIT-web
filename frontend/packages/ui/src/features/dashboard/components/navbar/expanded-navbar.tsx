@@ -101,7 +101,7 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
               }
             />
             <PlotEntries
-              empty="(None)"
+              empty="No plots"
               onLastClosed={() => newPlotRef.current?.focus()}
             />
           </li>
