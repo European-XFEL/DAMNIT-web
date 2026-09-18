@@ -4,6 +4,7 @@ type VariableValue =
   | { dtype: 'number'; value: number }
   | { dtype: 'string'; value: string }
   | { dtype: 'image'; value: string }
+  | { dtype: 'timestamp'; value: number }
 
 // A variable that failed to compute: no value, an error payload instead. The
 // server nulls the value and stores the error class and message, and the table

@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   CompactSelection,
-  DataEditor,
+  DataEditorCore,
+  ImageWindowLoaderImpl,
+  sprites,
   type CellClickedEventArgs,
   type DataEditorRef,
   type GridMouseEventArgs,
@@ -24,6 +26,7 @@ import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
 import {
   errorCell,
   getCell,
+  GRID_RENDERERS,
   makeCellRenderers,
   numberCell,
   textCell,
@@ -152,6 +155,9 @@ const Table = ({ paginated = true }: TableProps) => {
     () => makeCellRenderers(errorColors, DEFAULT_COLUMN_WIDTH),
     [errorColors]
   )
+  // The core editor takes Glide's renderers from here, so it also takes the
+  // image loader and header icons the default editor would add.
+  const imageWindowLoader = useMemo(() => new ImageWindowLoaderImpl(), [])
 
   // Glide paints from resolved colors, not CSS variables, so its header and
   // group bar take the gray ramp the rest of the chrome is on.
@@ -596,7 +602,7 @@ const Table = ({ paginated = true }: TableProps) => {
             onResetColumnWidths={resetColumnWidths}
           />
           <>
-            <DataEditor
+            <DataEditorCore
               ref={tableRef}
               theme={gridTheme}
               columns={gridColumns}
@@ -635,7 +641,10 @@ const Table = ({ paginated = true }: TableProps) => {
               onItemHovered={handleGridItemHovered}
               onKeyDown={handleGridKeyDown}
               freezeColumns={pinnedCount}
+              renderers={GRID_RENDERERS}
               customRenderers={renderers}
+              headerIcons={sprites}
+              imageWindowLoader={imageWindowLoader}
               onVisibleRegionChanged={handleVisibleRegionChange}
               scrollOffsetX={scrollX}
               scrollOffsetY={scrollY}

@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
-import { type Example } from '#examples/xpcs'
+import { WIDE_NUMBER, xpcsWithWideValues, type Example } from '#examples/xpcs'
 import {
   COLUMN_WIDTH,
   WIDE_VIEWPORT,
@@ -22,6 +22,9 @@ import {
 } from '#support/table'
 
 test.use({ viewport: WIDE_VIEWPORT })
+
+// The canvas clamps to its container, so a narrower one would measure the fold.
+const FIT_VIEWPORT = { width: 3400, height: 900 }
 
 test('dragging a header edge widens the column behind it', async ({
   page,
@@ -91,6 +94,52 @@ test('double-clicking a header edge fits the column to its title', async ({
   })
 })
 
+// What a mono cell needs to show `text` whole: the text in the grid's 13 px
+// Source Code Pro, and Glide's 8 px padding on either side.
+async function widthToShow(page: Page, text: string): Promise<number> {
+  return page.evaluate(async (text) => {
+    const font = "13px 'Source Code Pro Variable'"
+    await document.fonts.load(font)
+    const context = document.createElement('canvas').getContext('2d')
+    if (context === null) {
+      throw new Error('no 2d canvas to measure with')
+    }
+    context.font = font
+    return context.measureText(text).width + 16
+  }, text)
+}
+
+test.describe('an example whose values are wider than their titles', () => {
+  // The date is written in the browser's zone, so UTC fixes its text.
+  test.use({
+    example: xpcsWithWideValues,
+    timezoneId: 'UTC',
+    viewport: FIT_VIEWPORT,
+  })
+
+  test('double-clicking a header edge fits a mono column to its widest value', async ({
+    page,
+    example,
+  }) => {
+    await openProposal(page, example)
+    const dateNeeds = await widthToShow(page, '12:00:00 | 15 September 2024')
+    const numberNeeds = await widthToShow(page, String(WIDE_NUMBER))
+
+    // The date column, right of the number column so its fit moves no edge the
+    // next one aims at
+    const pulses = columnOf(example, 'n_pulses')
+    expect(
+      await fitColumn(page, { example, col: pulses })
+    ).toBeGreaterThanOrEqual(dateNeeds)
+
+    // The number column
+    const trains = columnOf(example, 'n_trains')
+    expect(
+      await fitColumn(page, { example, col: trains })
+    ).toBeGreaterThanOrEqual(numberNeeds)
+  })
+})
+
 // Glide re-sends a drag to every column in the selection, which would make the
 // two columns of a half-built plot resize together.
 test('resizing one of several selected columns leaves the others alone', async ({
@@ -146,8 +195,7 @@ test('clicking a header edge without dragging leaves the other selected columns 
 })
 
 test.describe('a viewport wide enough for a fitted table', () => {
-  // The canvas clamps to its container, so a narrower one would measure the fold.
-  test.use({ viewport: { width: 3400, height: 900 } })
+  test.use({ viewport: FIT_VIEWPORT })
 
   test('fitting from the toolbar reaches every column, hand-set ones included', async ({
     page,
