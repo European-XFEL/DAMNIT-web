@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Box, Stack } from '@mantine/core'
+import { Alert, Box, rem, Stack, Text } from '@mantine/core'
+import { IconAlertTriangle } from '@tabler/icons-react'
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
@@ -90,15 +91,20 @@ const ContextFile = ({
         {isLoading ? (
           <CenteredLoader />
         ) : error ? (
-          <Box
-            style={{
-              textAlign: 'center',
-              color: 'red',
-              padding: '20px',
-            }}
+          <Alert
+            m={20}
+            variant="light"
+            color="red"
+            title="Unable to load the context file"
+            icon={
+              <IconAlertTriangle
+                style={{ width: rem(20), height: rem(20) }}
+                stroke={1.5}
+              />
+            }
           >
-            {describeLoadError(error)}
-          </Box>
+            <Text size="sm">{describeLoadError(error)}</Text>
+          </Alert>
         ) : (
           <ContextFileEditor content={data?.fileContent} />
         )}
