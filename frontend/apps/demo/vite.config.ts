@@ -10,6 +10,8 @@ export default defineConfig(({ mode }): UserConfig => {
 
   return {
     base: BASE_URL,
+    // Keep every font subset a file, so unicode-range decides what downloads.
+    build: { assetsInlineLimit: 0 },
     plugins: [react()],
     resolve: {
       alias: {

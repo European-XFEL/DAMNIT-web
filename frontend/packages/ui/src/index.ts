@@ -1,5 +1,6 @@
 // Providers
 export { Providers } from './app/providers'
+export { ThemeProvider } from './app/theme-provider'
 
 // Components
 export { default as ContactButton } from './components/buttons/contact-button'

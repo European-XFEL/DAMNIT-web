@@ -42,7 +42,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@damnit-frontend/shared": "workspace:*"
+    "@damnit-frontend/shared": "workspace:*",
+    "@fontsource-variable/source-code-pro": "catalog:fonts",
+    "@fontsource-variable/source-sans-3": "catalog:fonts"
   },
   "peerDependencies": {
     "@apollo/client": "catalog:graphql",
