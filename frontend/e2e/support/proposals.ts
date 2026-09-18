@@ -31,6 +31,14 @@ export function proposalRow(page: Page, proposal: number): Locator {
   return proposalLink(page, proposal).locator('xpath=ancestor::tr[1]')
 }
 
+// A clipped label shows an ellipsis the DOM never exposes as text; its content
+// is wider than its box exactly then.
+export async function expectNotTruncated(label: Locator) {
+  await expect
+    .poll(() => label.evaluate((el) => el.scrollWidth <= el.clientWidth))
+    .toBe(true)
+}
+
 export async function openHome(page: Page) {
   await page.goto('home')
   // The semester table renders straight from the auth slice, but each semester's
