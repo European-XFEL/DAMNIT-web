@@ -22,6 +22,7 @@ import {
 import { Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, VARIABLES } from '#src/constants'
+import { plotRequested } from '#src/app/store/actions'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
@@ -61,7 +62,6 @@ import {
 import { selectRowSelection } from '#src/features/table/stores/table.selectors'
 import {
   cellActivated,
-  plotRequested,
   runDeselected,
   runSelected,
 } from '#src/features/table/stores/table.slice'

@@ -2,11 +2,11 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router'
 import { expect, test } from 'vitest'
 
+import { plotRequested } from '#src/app/store/actions'
 import { setupStore, type AppStore } from '#src/app/store/store'
 import DashboardHeader from '#src/features/dashboard/components/dashboard-header'
 import ProposalIdentity from '#src/features/dashboard/components/proposal-identity'
 import { viewSelected } from '#src/features/dashboard/stores/dashboard.slice'
-import { addPlot } from '#src/features/plots/plots.slice'
 import { renderWithProviders } from '#tests/support/render'
 import { resizeViewport } from '#tests/support/viewport'
 
@@ -52,7 +52,7 @@ test('the last crumb names the view on show', async () => {
 
   // A plot, after the Plots group it sits in
   store.dispatch(
-    addPlot({
+    plotRequested({
       variables: ['run', 'n_trains'],
       runs: ['1', '2', '3'],
       source: 'summary',
@@ -72,7 +72,7 @@ test('the last crumb names the view on show', async () => {
 test('a plot that follows every run says all runs in its crumb', async () => {
   const store = setupStore()
   store.dispatch(
-    addPlot({
+    plotRequested({
       variables: ['run', 'n_pulses'],
       source: 'summary',
       name: 'Pulses vs. Run',

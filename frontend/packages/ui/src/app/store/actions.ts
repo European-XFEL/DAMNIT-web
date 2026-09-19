@@ -1,7 +1,15 @@
-import { createAction } from '@reduxjs/toolkit'
+import { createAction, nanoid } from '@reduxjs/toolkit'
 
-// Store-level redux primitives owned by no single slice. This module imports
-// only @reduxjs/toolkit, so slices can import it without pulling in the reducer
-// (which imports the slices back).
+import type { PlotSpec } from '#src/types'
+
+// Store-level actions no single slice owns. It imports only @reduxjs/toolkit
+// and types, so a slice can import it without a cycle through the reducer.
 
 export const resetProposal = createAction('app/resetProposal')
+
+// Both the new-plot dialog and the table's context menu ask for plots. The
+// action carries the id, so the plots slice and the dashboard agree on it.
+export const plotRequested = createAction(
+  'app/plotRequested',
+  (plot: PlotSpec) => ({ payload: { ...plot, id: nanoid() } })
+)
