@@ -559,7 +559,7 @@ export function VariablesPopover() {
           isActive={opened}
           icon={IconList}
           label="Variables"
-          badgeCount={notVisibleCount * -1}
+          badge={notVisibleCount ? `${notVisibleCount} hidden` : undefined}
         />
       )}
     >

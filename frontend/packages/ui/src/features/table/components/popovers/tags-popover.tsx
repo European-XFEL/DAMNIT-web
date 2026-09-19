@@ -166,7 +166,7 @@ export function TagsPopover() {
           isActive={opened}
           icon={IconHash}
           label="Tags"
-          badgeCount={selectionCount}
+          badge={selectionCount ? `${selectionCount} selected` : undefined}
         />
       )}
     >

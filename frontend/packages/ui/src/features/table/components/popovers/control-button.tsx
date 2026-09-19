@@ -12,11 +12,11 @@ type ControlButtonProps = {
   icon: ElementType<IconProps>
   label: string
 
-  badgeCount: number
+  badge?: string
 }
 
 export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
-  ({ isActive = false, onClick, icon: Icon, label, badgeCount }, ref) => {
+  ({ isActive = false, onClick, icon: Icon, label, badge }, ref) => {
     return (
       <Button
         ref={ref}
@@ -31,9 +31,9 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
         }}
         leftSection={<Icon style={{ width: rem(14), height: rem(14) }} />}
         rightSection={
-          badgeCount ? (
+          badge ? (
             // A light badge's tint takes the button's state and its text caps at
-            // shade 6, so both are set to hold the count at one contrast ratio.
+            // shade 6, so both are set to hold the text at one contrast ratio.
             <Badge
               variant="light"
               size="sm"
@@ -41,7 +41,7 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
               bg="indigo.0"
               c="indigo.8"
             >
-              {badgeCount}
+              {badge}
             </Badge>
           ) : undefined
         }
