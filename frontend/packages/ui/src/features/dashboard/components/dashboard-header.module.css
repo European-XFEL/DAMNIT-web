@@ -13,6 +13,8 @@
   width: var(--app-shell-navbar-offset);
   padding-left: 16px;
 
+  /* A step darker than the nav's gray.2 border, which is 1.07:1 on the gray.1
+     band and all but vanishes there. */
   &::after {
     content: '';
     position: absolute;
@@ -20,7 +22,7 @@
     right: 0;
     width: 1px;
     height: 20px;
-    background: var(--app-shell-border-color);
+    background: var(--mantine-color-gray-3);
     translate: 0 -50%;
   }
 
