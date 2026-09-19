@@ -1,12 +1,12 @@
 import type { DropResult } from '@hello-pangea/dnd'
 
 import type { ChangedColumns } from '#src/features/table/types/table.types'
-import {
-  columnsOf,
-  type Column,
-  type ColumnBlock,
-  type ColumnGroupBlock,
+import type {
+  Column,
+  ColumnBlock,
+  ColumnGroupBlock,
 } from '#src/features/table/utils/column-blocks'
+import { blockKey, itemsOf } from '#src/utils/variable-blocks'
 
 // One list for the blocks and one per group for its members. They never share
 // a type, which is what keeps a member out of a group it does not belong to.
@@ -18,16 +18,6 @@ export function membersDroppable(group: string) {
 }
 
 const columnName = (column: Column) => column.name
-
-export function columnKey(name: string) {
-  return `variable:${name}`
-}
-
-// What names a block within the list it lives in, since a group and a column
-// could be given the same name. It is also the id the block is dragged by.
-export function blockKey(block: ColumnBlock) {
-  return block.kind === 'group' ? `group:${block.name}` : columnKey(block.name)
-}
 
 type MoveBesideOptions = {
   all: string[]
@@ -53,7 +43,7 @@ function moveBeside({ all, shown, from, to }: MoveBesideOptions) {
 }
 
 function toColumnOrder(blocks: ColumnBlock[]) {
-  return columnsOf(blocks).map(columnName)
+  return itemsOf(blocks).map(columnName)
 }
 
 function membersOf(blocks: ColumnBlock[], group: string) {

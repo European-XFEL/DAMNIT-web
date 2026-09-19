@@ -38,10 +38,7 @@ import {
   textCell,
   type ErrorColors,
 } from '#src/features/table/utils/cells'
-import {
-  getColumnTitle,
-  getGroupTitle,
-} from '#src/features/table/utils/column-title'
+import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
