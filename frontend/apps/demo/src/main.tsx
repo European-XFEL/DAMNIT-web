@@ -12,8 +12,8 @@ import { router } from './router'
 worker
   .start({
     // Fail loudly on an unmocked REST call so mock drift surfaces immediately.
-    // GraphQL drift is caught by the catch-all in handlers.ts; the demo's own
-    // asset fetches (examples/*.json, vite modules) stay bypassed.
+    // The GraphQL handler in handlers.ts logs its own gaps; the demo's asset
+    // fetches (examples/*.json, vite modules) stay bypassed.
     onUnhandledRequest(request, print) {
       const { pathname } = new URL(request.url)
       const isApiRequest = REST_API_PREFIXES.some((prefix) =>
