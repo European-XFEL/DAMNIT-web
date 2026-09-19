@@ -11,7 +11,10 @@ import {
 import { setupStore, type AppStore } from '#src/app/store/store'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
 import DashboardAside from '#src/features/dashboard/components/aside/dashboard-aside'
-import { runSelected } from '#src/features/table/stores/table.slice'
+import {
+  cellActivated,
+  runSelected,
+} from '#src/features/table/stores/table.slice'
 import { typePolicies } from '#src/graphql/type-policies'
 import { serverCell } from '#tests/support/cells'
 import { withProviders } from '#tests/support/render'
@@ -46,7 +49,12 @@ const METADATA = {
   timestamp: 0,
 }
 
-type CellFixture = { name: string; value: unknown; dtype?: string }
+type CellFixture = {
+  name: string
+  value: unknown
+  dtype?: string
+  error?: { cls: string; message: string }
+}
 
 const RUN_6: CellFixture[] = [
   { name: 'run', value: RUN },
@@ -103,20 +111,21 @@ beforeEach(async () => {
   store.dispatch(runSelected({ proposal: PROPOSAL, run: RUN }))
 })
 
-async function openRun({ cells = RUN_6 } = {}) {
-  const screen = await render(<DashboardAside viewRef={createRef()} />, {
+function openRun({ cells = RUN_6, drilled = null as string | null } = {}) {
+  if (drilled != null) {
+    store.dispatch(
+      cellActivated({ proposal: PROPOSAL, run: RUN, variable: drilled })
+    )
+  }
+  return render(<DashboardAside viewRef={createRef()} />, {
     wrapper: withProviders({ store, client: runClient(cells) }),
   })
-  await expect
-    .element(screen.getByText('Trains', { exact: true }))
-    .toBeVisible()
-  return screen
 }
 
 type Screen = Awaited<ReturnType<typeof openRun>>
 
-const leftOf = (screen: Screen, text: string) =>
-  screen.getByText(text, { exact: true }).element().getBoundingClientRect().left
+const boxOf = (screen: Screen, text: string) =>
+  screen.getByText(text, { exact: true }).element().getBoundingClientRect()
 
 test('a group lists its members under its heading by their short titles', async () => {
   const screen = await openRun()
@@ -130,10 +139,48 @@ test('a group lists its members under its heading by their short titles', async 
 
 test('an ungrouped variable sits flush with a group heading, its members inset', async () => {
   const screen = await openRun()
+  await expect.element(screen.getByText('Type', { exact: true })).toBeVisible()
 
-  const heading = leftOf(screen, 'Sample')
+  const heading = boxOf(screen, 'Sample').left
 
-  expect(leftOf(screen, 'Trains')).toBe(heading)
-  expect(leftOf(screen, 'Scan type')).toBe(heading)
-  expect(leftOf(screen, 'Type') - heading).toBe(22)
+  expect(boxOf(screen, 'Trains').left).toBe(heading)
+  expect(boxOf(screen, 'Scan type').left).toBe(heading)
+  expect(boxOf(screen, 'Type').left - heading).toBe(22)
+})
+
+test('a drilled cell shows its value below its title', async () => {
+  const screen = await openRun({ drilled: 'scan_type' })
+  await expect.element(screen.getByText('dscan')).toBeVisible()
+
+  const title = boxOf(screen, 'Scan type')
+  const value = boxOf(screen, 'dscan')
+
+  expect(value.top).toBeGreaterThanOrEqual(title.bottom)
+  expect(value.left).toBe(title.left)
+})
+
+// A heading and a rail for one row would dress it as a list.
+test('a drilled grouped cell names its group above its short title', async () => {
+  const screen = await openRun({ drilled: 'sample.type' })
+  await expect.element(screen.getByText('silica')).toBeVisible()
+
+  expect(boxOf(screen, 'Sample').bottom).toBeLessThanOrEqual(
+    boxOf(screen, 'Type').top
+  )
+  await expect.element(screen.getByRole('group')).not.toBeInTheDocument()
+})
+
+test('a drilled failed cell shows the failure card', async () => {
+  const error = { cls: 'ValueError', message: 'No trains in this run' }
+  const screen = await openRun({
+    cells: [{ name: 'n_trains', value: null, dtype: 'string', error }],
+    drilled: 'n_trains',
+  })
+
+  await expect
+    .element(screen.getByText('Trains', { exact: true }))
+    .toBeVisible()
+  await expect.element(screen.getByText('Error', { exact: true })).toBeVisible()
+  await expect.element(screen.getByText('ValueError')).toBeVisible()
+  await expect.element(screen.getByText(error.message)).toBeVisible()
 })

@@ -1,5 +1,11 @@
 import { test, expect } from '#fixtures'
-import { ERROR_CELLS, ERROR_ROW, xpcsWithErrors } from '#examples/xpcs'
+import {
+  ERROR_CELLS,
+  ERROR_ROW,
+  SAMPLE_GROUP,
+  xpcsWithErrors,
+  xpcsWithGroups,
+} from '#examples/xpcs'
 import {
   activateCell,
   columnOf,
@@ -65,13 +71,44 @@ test.describe('errored cell', () => {
 
     const panel = page.getByRole('complementary')
     await expect(selectedRunTab(page)).toBeVisible()
-    // The cell renders under its own title, with the failure in place of the
-    // value it never got.
+    // The cell keeps its title, with the failure card in place of the value
+    // it never got: the kind, the exception class and its message.
     await expect(
       panel.getByText(titleOf(example, errored.variable))
     ).toBeVisible()
+    await expect(panel.getByText(errored.title, { exact: true })).toBeVisible()
+    await expect(
+      panel.getByText(errored.error.cls, { exact: true })
+    ).toBeVisible()
     await expect(panel.getByText(errored.error.message)).toBeVisible()
     await expect(panel.locator('img')).toHaveCount(0)
+  })
+})
+
+test.describe('grouped cell', () => {
+  test.use({ example: xpcsWithGroups })
+
+  test('activating a grouped cell names its group above its short title', async ({
+    page,
+    example,
+  }) => {
+    await openProposal(page, example)
+
+    await activateCell(page, {
+      example,
+      col: columnOf(example, 'sample.type'),
+      row: 0,
+    })
+
+    const panel = page.getByRole('complementary')
+    await expect(
+      panel.getByText(SAMPLE_GROUP.title, { exact: true })
+    ).toBeVisible()
+    await expect(panel.getByText('Type', { exact: true })).toBeVisible()
+    await expect(panel.getByText('silica')).toBeVisible()
+    await expect(panel.getByText(titleOf(example, 'sample.type'))).toHaveCount(
+      0
+    )
   })
 })
 

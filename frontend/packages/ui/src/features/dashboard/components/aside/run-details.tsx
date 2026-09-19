@@ -1,6 +1,7 @@
 import { useId } from 'react'
-import { Image, ScrollArea, Text, rem } from '@mantine/core'
+import { Image, ScrollArea, Skeleton, Text, rem } from '@mantine/core'
 
+import CellErrorCard from '#src/components/feedback/cell-error-card'
 import SectionHeading from '#src/components/headings/section-heading'
 import { DTYPES } from '#src/constants'
 import type { RunEntry } from '#src/data/table/run-entries'
@@ -26,13 +27,12 @@ type EntryValueProps = {
 
 function EntryValue({ entry }: EntryValueProps) {
   if (entry.state === 'error') {
-    return (
-      <Text fz={FONT_SIZE_DATA} lh={SCALAR_LINE}>
-        {entry.error.message}
-      </Text>
-    )
+    return <CellErrorCard error={entry.error} variant="panel" />
   }
-  if (entry.state !== 'value') {
+  if (entry.state === 'loading') {
+    return <Skeleton h={12} w={120} radius="sm" />
+  }
+  if (entry.state === 'blank') {
     return null
   }
 
@@ -104,6 +104,28 @@ function GroupBlock({ block }: GroupBlockProps) {
   )
 }
 
+type DrilledViewProps = {
+  block: VariableBlock<RunEntry>
+}
+
+// One cell in a view of its own: its group's name above its title, and whatever
+// it holds below at the panel's width.
+function DrilledView({ block }: DrilledViewProps) {
+  const entry = block.kind === 'group' ? block.members[0] : block
+
+  return (
+    <div className={classes.view}>
+      {block.kind === 'group' && <SectionHeading>{block.title}</SectionHeading>}
+      <Text fz={FONT_SIZE_DATA} fw={500}>
+        {entry.columnTitle}
+      </Text>
+      <div className={classes.viewContent}>
+        <EntryValue entry={entry} />
+      </div>
+    </div>
+  )
+}
+
 type Section =
   | { kind: 'group'; block: VariableGroupBlock<RunEntry> }
   | { kind: 'entries'; entries: RunEntry[] }
@@ -137,6 +159,15 @@ function RunDetails({ run, variable }: RunDetailsProps) {
   const blocks = useRunEntries(run, variable)
   if (blocks == null) {
     return null
+  }
+
+  if (variable != null) {
+    const [block] = blocks
+    return (
+      <ScrollArea h="100%" offsetScrollbars>
+        {block && <DrilledView block={block} />}
+      </ScrollArea>
+    )
   }
 
   return (

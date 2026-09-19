@@ -68,3 +68,13 @@
   max-height: 300px;
   object-position: left top;
 }
+
+.view {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 16px;
+}
+
+.viewContent {
+  margin-top: 6px;
+}
