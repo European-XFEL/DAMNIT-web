@@ -1,4 +1,5 @@
 import { test, expect } from '#fixtures'
+import { ERROR_CELLS, ERROR_ROW, xpcsWithErrors } from '#examples/xpcs'
 import { gridBox, gridCanvas, headerPoint } from '#support/grid'
 import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
 import {
@@ -10,6 +11,7 @@ import {
   selectRun,
   selectedColumnHeaders,
   selectedRunTab,
+  titleOf,
 } from '#support/table'
 
 test('selecting a run shows all its variables', async ({ page, example }) => {
@@ -26,6 +28,31 @@ test('selecting a run shows all its variables', async ({ page, example }) => {
   await expect(panel.getByText('XGM intensity [uJ]')).toBeVisible()
   // The four XPCS variables render as image thumbnails in the panel.
   await expect(panel.locator('img')).toHaveCount(4)
+})
+
+test.describe('failed cells', () => {
+  test.use({ example: xpcsWithErrors })
+
+  // The grid's glyph and tooltip already mark a failure, so the run's list
+  // keeps to the values it has.
+  test('selecting a run leaves out the variables that failed for it', async ({
+    page,
+    example,
+  }) => {
+    await openProposal(page, example)
+
+    await selectRun(page, { example, row: ERROR_ROW })
+
+    const panel = page.getByRole('complementary')
+    await expect(
+      panel.getByText(titleOf(example, 'sample_type'), { exact: true })
+    ).toBeVisible()
+    for (const failed of ERROR_CELLS) {
+      await expect(
+        panel.getByText(titleOf(example, failed.variable), { exact: true })
+      ).toHaveCount(0)
+    }
+  })
 })
 
 test('selecting another run replaces the selection', async ({

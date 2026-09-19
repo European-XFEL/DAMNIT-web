@@ -466,6 +466,8 @@ const Table = ({ paginated = true }: TableProps) => {
         : undefined
     )
   }
+  // The run number names the row rather than holding a value, so activating it
+  // opens the whole run.
   const handleCellActivated = ([col, row]: Item) => {
     const identity = runs[row]
     const variable = tableColumns[col]?.id
@@ -473,7 +475,11 @@ const Table = ({ paginated = true }: TableProps) => {
       return
     }
 
-    dispatch(cellActivated({ ...identity, variable }))
+    dispatch(
+      variable === VARIABLES.run
+        ? runSelected(identity)
+        : cellActivated({ ...identity, variable })
+    )
   }
 
   // Context menus. Every one of them is a single plot entry placed at the

@@ -1,27 +1,18 @@
 import { Image, ScrollArea, Text, rem } from '@mantine/core'
-import { useFragment } from '@apollo/client/react'
 
-import { useColumnVisibilityFromVariables } from '#src/features/table/hooks/use-column-visibility'
-import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
-import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
+import { DTYPES } from '#src/constants'
+import type { RunEntry } from '#src/data/table/run-entries'
 import {
-  cellsByName,
-  getTitleByName,
-} from '#src/data/table/table-data.transforms'
-import {
-  type Cell,
   type CellError,
   type CellValue,
-  type RunCells,
-  type Run,
   type RunId,
 } from '#src/data/table/table-data.types'
-import { useTableMeta } from '#src/data/table/use-table-meta'
-import { useAppSelector } from '#src/app/store/hooks'
 import { FONT_SIZE_DATA } from '#src/styles/fonts'
 import { formatDate } from '#src/utils/helpers'
+import { itemsOf } from '#src/utils/variable-blocks'
 
 import classes from './run-details.module.css'
+import { useRunEntries } from './use-run-entries'
 
 // One line box for the label and either kind of value, so every row keeps the
 // same rhythm whatever it holds.
@@ -105,28 +96,18 @@ const renderFactory = {
   default: renderUnknown,
 }
 
-// A name the map does not carry has either left the context file since the run
-// was written or is one the user cannot hide; only the second is dropped here.
-function isShown(
-  name: string,
-  visibility: Record<string, boolean | undefined>
-) {
-  return visibility[name] !== false && !NONCONFIGURABLE_VARIABLES.includes(name)
-}
-
-// Drilling into a cell asks for that one variable by name, so hiding its column
-// does not veto it: visibility is about the grid, and this is not the grid.
-function shownCells(
-  cells: RunCells,
-  activeVariable: string | null,
-  visibility: Record<string, boolean | undefined>
-): [string, Cell][] {
-  if (activeVariable == null) {
-    return Object.entries(cells).filter(([name]) => isShown(name, visibility))
+function renderEntry(entry: RunEntry) {
+  const { name, title: label } = entry
+  switch (entry.state) {
+    case 'value': {
+      const render = renderFactory[entry.dtype] ?? renderFactory.default
+      return render({ name, label, value: entry.value })
+    }
+    case 'error':
+      return renderError({ name, label, error: entry.error })
+    default:
+      return null
   }
-
-  const drilled = cells[activeVariable]
-  return drilled ? [[activeVariable, drilled]] : []
 }
 
 type RunDetailsProps = {
@@ -134,50 +115,15 @@ type RunDetailsProps = {
   variable: string | null
 }
 
-function RunDetails({ run: runId, variable }: RunDetailsProps) {
-  const proposal = useAppSelector((state) => state.metadata.proposal.value)
-  const { variables: metadataVariables } = useTableMeta()
-  const columnVisibility = useColumnVisibilityFromVariables()
-
-  // Read the normalized run straight from the cache by its identity trio. The
-  // run id carries (proposal, run); `database` is constant across the table,
-  // so those two complete the key the cache normalizes on.
-  const { data: run, complete } = useFragment<Run>({
-    fragment: RUN_FRAGMENT,
-    from: {
-      __typename: 'DamnitRun',
-      database: proposal,
-      proposal: runId.proposal,
-      run: runId.run,
-    },
-  })
-
-  if (!complete) {
+function RunDetails({ run, variable }: RunDetailsProps) {
+  const blocks = useRunEntries(run, variable)
+  if (blocks == null) {
     return null
   }
 
-  const cells = cellsByName(run.cells ?? [])
-
-  const renderable = shownCells(cells, variable, columnVisibility).filter(
-    ([, cell]) => cell.error != null || cell.summary.value != null
-  )
-
   return (
     <ScrollArea h="100%" offsetScrollbars>
-      {renderable.map(([name, data]) => {
-        const label = getTitleByName(metadataVariables, name)
-        // A cell that failed has nothing worth rendering from its summary.
-        if (data.error) {
-          return renderError({ name, label, error: data.error })
-        }
-        const render =
-          renderFactory[data.summary.dtype] ?? renderFactory.default
-        return render({
-          name,
-          label,
-          value: data.summary.value as CellValue,
-        })
-      })}
+      {itemsOf(blocks).map(renderEntry)}
     </ScrollArea>
   )
 }
