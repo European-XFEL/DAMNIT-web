@@ -7,7 +7,9 @@ import {
   type BadgeFactory,
   type CSSVariablesResolver,
   type ExtendComponent,
+  type InputWrapperFactory,
   type MenuFactory,
+  type ModalFactory,
   type TableFactory,
   type TooltipFactory,
 } from '@mantine/core'
@@ -64,6 +66,18 @@ export const theme = createTheme({
     Badge: {
       classNames: { root: classes.badge },
     } satisfies ExtendComponent<BadgeFactory>,
+    // A field's label is compact text a step under its field; the hint goes
+    // under the input and the error under the hint.
+    InputWrapper: {
+      defaultProps: {
+        inputWrapperOrder: ['label', 'input', 'description', 'error'],
+      },
+      classNames: {
+        label: classes.inputLabel,
+        description: classes.inputDescription,
+        error: classes.inputError,
+      },
+    } satisfies ExtendComponent<InputWrapperFactory>,
     // An item reads its classes from the menu's own styles context, so the
     // shape of a row is set here rather than on Menu.Item.
     Menu: {
@@ -72,6 +86,11 @@ export const theme = createTheme({
         itemSection: classes.menuItemSection,
       },
     } satisfies ExtendComponent<MenuFactory>,
+    // A dialog's title is emphasis inside a surface, like a card's title, not
+    // a page title; Mantine already draws it at md.
+    Modal: {
+      styles: { title: { fontWeight: 600 } },
+    } satisfies ExtendComponent<ModalFactory>,
     // A plain th is the browser's bold; column headers are emphasis.
     Table: {
       styles: { th: { fontWeight: 600 } },

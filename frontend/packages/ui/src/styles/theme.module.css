@@ -27,3 +27,23 @@
   --badge-lh: calc(var(--badge-height) - rem(1px));
   font-size: max(var(--mantine-font-size-xxs), var(--badge-fz));
 }
+
+/* A field's label reads a step under the field it names, with 4 px of clear
+   space before the input; the hint and the error keep the label's size. */
+.inputLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--mantine-font-size-xs);
+  line-height: var(--mantine-line-height-xs);
+}
+
+.inputDescription {
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* Under the hint, not in its place, so the example stays while the entry is
+   wrong. */
+.inputError {
+  margin-top: 4px;
+  font-size: var(--mantine-font-size-xs);
+}
