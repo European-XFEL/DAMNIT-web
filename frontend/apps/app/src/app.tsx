@@ -7,7 +7,7 @@ import {
   useLocation,
   useParams,
 } from 'react-router'
-import { Container } from '@mantine/core'
+import { Container, VisuallyHidden } from '@mantine/core'
 
 import {
   Dashboard,
@@ -89,6 +89,7 @@ function HomeRoute() {
       }
       main={
         <Container>
+          <VisuallyHidden component="h1">Proposals</VisuallyHidden>
           <Proposals proposals={proposals} />
         </Container>
       }

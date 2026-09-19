@@ -16,13 +16,16 @@ export default function Dashboard() {
     return
   }
 
+  const label = `p${proposal.number}`
+
   return (
     <DashboardShell
       main={<DashboardMain />}
+      heading={label}
       identity={
         <ProposalIdentity
           instrument={proposal.instrument}
-          label={`p${proposal.number}`}
+          label={label}
           detail={proposal.principal_investigator}
           title={proposal.title}
         />

@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react'
-import { AppShell } from '@mantine/core'
+import { AppShell, VisuallyHidden } from '@mantine/core'
 import { useDidUpdate, useFocusReturn } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
@@ -17,11 +17,18 @@ import DashboardHeader from './dashboard-header'
 type DashboardShellProps = {
   main: ReactNode
   identity: ReactNode
+  heading: string
   user?: DashboardUser
   homeTo: string
 }
 
-function DashboardShell({ main, identity, user, homeTo }: DashboardShellProps) {
+function DashboardShell({
+  main,
+  identity,
+  heading,
+  user,
+  homeTo,
+}: DashboardShellProps) {
   const navCollapsed = useAppSelector(selectNavCollapsed)
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRef = useRef<HTMLElement>(null)
@@ -61,6 +68,7 @@ function DashboardShell({ main, identity, user, homeTo }: DashboardShellProps) {
         <DashboardNavbar user={user} />
       </AppShell.Navbar>
       <AppShell.Main className={classes.main}>
+        <VisuallyHidden component="h1">{heading}</VisuallyHidden>
         {/* The run sits below the band, which names the page whatever is
             open beside the view. */}
         <DashboardBody main={main} />
