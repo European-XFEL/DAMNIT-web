@@ -34,12 +34,17 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
           badge ? (
             // A light badge's tint takes the button's state and its text caps at
             // shade 6, so both are set to hold the text at one contrast ratio.
+            // A count is a phrase beside its label, not a status stamp, so it
+            // keeps its case and sits one weight over the label.
             <Badge
               variant="light"
               size="sm"
               radius="sm"
               bg="indigo.0"
               c="indigo.8"
+              tt="none"
+              fw={600}
+              lts="normal"
             >
               {badge}
             </Badge>
