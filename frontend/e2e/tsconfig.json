@@ -8,7 +8,7 @@
     "types": ["node", "@playwright/test"]
   },
   "include": [
-    "playwright.config.ts",
+    "playwright*.ts",
     "tests",
     "fixtures",
     "support",

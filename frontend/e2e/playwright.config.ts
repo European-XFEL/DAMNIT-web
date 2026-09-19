@@ -1,20 +1,15 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { baseConfig, isCI } from './playwright.base'
+
 // A dedicated port keeps the e2e server independent of any dev server a
 // developer may already run on 5173. Projects are named by surface, so a
 // browser variant (app-firefox) or another surface (site) appends cleanly.
 const PORT = 6173
 const APP_BASE_URL = `http://localhost:${PORT}/app/`
-const isCI = !!process.env.CI
 
 export default defineConfig({
-  fullyParallel: true,
-  forbidOnly: isCI,
-  retries: isCI ? 2 : 0,
-  reporter: 'list',
-  use: {
-    trace: 'on-first-retry',
-  },
+  ...baseConfig,
   projects: [
     {
       name: 'app-chromium',
