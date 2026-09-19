@@ -14,11 +14,11 @@ import { useForm } from '@mantine/form'
 
 import TextCombobox from '#src/components/comboboxes/text-combobox'
 import { useTableVariables } from '#src/data/table/use-table-meta'
+import { plotRequested } from '#src/app/store/actions'
 import { useAppDispatch } from '#src/app/store/hooks'
 import { type PlotSpec } from '#src/types'
 import { getVariableTitle } from '#src/data/table/table-data.transforms'
 
-import { addPlot } from './plots.slice'
 import { parseRunSelection } from './utils'
 
 type PlotDialogForm = {
@@ -103,7 +103,7 @@ const PlotDialog = (props: PlotDialogProps) => {
             name: getVariableTitle(yMetadata),
           }
 
-    dispatch(addPlot({ ...plotOptions, runs: runs ?? undefined }))
+    dispatch(plotRequested({ ...plotOptions, runs: runs ?? undefined }))
 
     handleClose()
   }

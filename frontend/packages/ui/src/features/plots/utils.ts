@@ -1,10 +1,3 @@
-export function generateUID() {
-  return (
-    Math.random().toString(36).substring(2, 15) +
-    Math.random().toString(36).substring(2, 15)
-  )
-}
-
 // Reads the dialog's run selection: a comma-separated list of runs and ranges,
 // as its own placeholder spells out ("1,2,3,6-20,22").
 export function parseRunSelection(input: string) {

@@ -1,10 +1,9 @@
-import { createAction, createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import { resetProposal } from '#src/app/store/actions'
 import { VARIABLES } from '#src/constants'
 import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
-import { type PlotSpec } from '#src/types'
 import { isEmpty } from '#src/utils/helpers'
 import type {
   ChangedColumns,
@@ -208,6 +207,3 @@ export const {
   setTagSelection,
   setViewScroll,
 } = slice.actions
-
-// No reducer handles this: a store listener turns the request into a plot.
-export const plotRequested = createAction<PlotSpec>('table/plotRequested')

@@ -1,5 +1,3 @@
-import { addPlot } from '#src/features/plots/plots.slice'
-import { plotRequested } from '#src/features/table/stores/table.slice'
 import { contextfileApi } from '#src/features/context-file/context-file.api'
 import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
 import { cache } from '#src/graphql/apollo'
@@ -52,13 +50,6 @@ export function registerAppListeners() {
           cache.gc({ resetResultCache: true })
         })
       )
-    },
-  })
-
-  startAppListening({
-    actionCreator: plotRequested,
-    effect: (action, { dispatch }) => {
-      dispatch(addPlot(action.payload))
     },
   })
 }

@@ -1,12 +1,13 @@
 import { expect, test } from 'vitest'
 
+import { plotRequested } from '#src/app/store/actions'
 import reducer, {
   mobileNavToggled,
   viewSelected,
 } from '#src/features/dashboard/stores/dashboard.slice'
-import { addPlot, removePlot } from '#src/features/plots/plots.slice'
+import { removePlot } from '#src/features/plots/plots.slice'
 
-const trains = addPlot({
+const trains = plotRequested({
   variables: ['run', 'n_trains'],
   source: 'summary',
   name: 'Trains vs. Run',
