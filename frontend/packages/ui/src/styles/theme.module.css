@@ -28,6 +28,12 @@
   font-size: max(var(--mantine-font-size-xxs), var(--badge-fz));
 }
 
+/* An 18 px line under 5 px of padding in a 4 px track is 36 px, the height of
+   every field and button; the token's ratio ran to 41. */
+.segmentedLabel {
+  line-height: 18px;
+}
+
 /* A field's label reads a step under the field it names, with 4 px of clear
    space before the input; the hint and the error keep the label's size. */
 .inputLabel {

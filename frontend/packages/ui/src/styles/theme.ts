@@ -10,6 +10,7 @@ import {
   type InputWrapperFactory,
   type MenuFactory,
   type ModalFactory,
+  type SegmentedControlFactory,
   type TableFactory,
   type TooltipFactory,
 } from '@mantine/core'
@@ -91,6 +92,11 @@ export const theme = createTheme({
     Modal: {
       styles: { title: { fontWeight: 600 } },
     } satisfies ExtendComponent<ModalFactory>,
+    // Mantine sizes the control from its text, which lands it at 41 px beside
+    // 36 px fields; the label's whole-pixel line brings it level.
+    SegmentedControl: {
+      classNames: { label: classes.segmentedLabel },
+    } satisfies ExtendComponent<SegmentedControlFactory>,
     // A plain th is the browser's bold; column headers are emphasis.
     Table: {
       styles: { th: { fontWeight: 600 } },
