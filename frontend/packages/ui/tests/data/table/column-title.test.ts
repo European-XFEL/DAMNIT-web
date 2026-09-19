@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 
-import { getColumnTitle } from '#src/features/table/utils/column-title'
+import { getColumnTitle } from '#src/data/table/column-title'
 import type { TableMeta } from '#src/data/table/table-data.types'
 
 // What a column holds by the time it gets here: the whole title the API sent,

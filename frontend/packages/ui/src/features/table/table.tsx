@@ -33,10 +33,7 @@ import {
   textCell,
   type ErrorColors,
 } from '#src/features/table/utils/cells'
-import {
-  getColumnTitle,
-  getGroupTitle,
-} from '#src/features/table/utils/column-title'
+import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
