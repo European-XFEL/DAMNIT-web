@@ -1,12 +1,15 @@
 import { expect, test } from 'vitest'
 
-import { runEntries, type RunEntry } from '#src/data/table/run-entries'
 import { cellsByName } from '#src/data/table/table-data.transforms'
 import type {
   Cell,
   CellValue,
   Variable,
 } from '#src/data/table/table-data.types'
+import {
+  runEntries,
+  type RunEntry,
+} from '#src/features/dashboard/components/aside/run-entries'
 import { computeColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
 import type { CellError } from '#src/utils/cell-errors'
 import { itemsOf, type VariableBlock } from '#src/utils/variable-blocks'

@@ -4,7 +4,6 @@ import { Image, ScrollArea, Skeleton, Text, rem } from '@mantine/core'
 import CellErrorCard from '#src/components/feedback/cell-error-card'
 import SectionHeading from '#src/components/headings/section-heading'
 import { DTYPES } from '#src/constants'
-import type { RunEntry } from '#src/data/table/run-entries'
 import type { RunId } from '#src/data/table/table-data.types'
 import { FONT_SIZE_DATA } from '#src/styles/fonts'
 import { formatDate } from '#src/utils/helpers'
@@ -15,6 +14,7 @@ import {
 } from '#src/utils/variable-blocks'
 
 import classes from './run-details.module.css'
+import type { RunEntry } from './run-entries'
 import { useRunEntries } from './use-run-entries'
 
 // One line box for the title and either kind of value, so every row keeps the

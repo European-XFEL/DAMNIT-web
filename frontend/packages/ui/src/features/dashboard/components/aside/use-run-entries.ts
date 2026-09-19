@@ -1,12 +1,13 @@
 import { useFragment } from '@apollo/client/react'
 
-import { runEntries } from '#src/data/table/run-entries'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
 import { cellsByName } from '#src/data/table/table-data.transforms'
 import type { Run, RunId } from '#src/data/table/table-data.types'
 import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
 import { useVisibleColumns } from '#src/features/table/hooks/use-column-visibility'
 import { useAppSelector } from '#src/app/store/hooks'
+
+import { runEntries } from './run-entries'
 
 // The run as the panel lists it, or null until the cache holds all of it.
 export function useRunEntries(runId: RunId, drilled: string | null) {
