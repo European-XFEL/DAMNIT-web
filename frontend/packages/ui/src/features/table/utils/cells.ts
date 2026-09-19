@@ -19,6 +19,7 @@ import {
 } from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
+import { errorKind, errorText, type ErrorKind } from '#src/utils/cell-errors'
 import {
   type CellError,
   type CellValue,
@@ -148,34 +149,6 @@ export interface ErrorCellProps {
 }
 
 export type ErrorCell = CustomCell<ErrorCellProps>
-
-export type ErrorKind = 'skipped' | 'missing' | 'error'
-
-export interface ErrorVisuals {
-  kind: ErrorKind
-  title: string
-}
-
-const ERROR_TITLES: Record<ErrorKind, string> = {
-  skipped: 'Missing dependency',
-  missing: 'Missing data',
-  error: 'Error',
-}
-
-// Resolve an exception class to its display kind.
-const errorKind = (cls: string): ErrorKind =>
-  cls === 'Skip' ? 'skipped' : cls === 'SourceNameError' ? 'missing' : 'error'
-
-// Resolve an exception class to its display kind and title.
-export const errorVisuals = (cls: string): ErrorVisuals => {
-  const kind = errorKind(cls)
-  return { kind, title: ERROR_TITLES[kind] }
-}
-
-// Clipboard/copy representation, shared by the cell's copyData and the
-// tooltip's Ctrl+C handler.
-export const errorText = (error: CellError): string =>
-  `${error.cls}\n${error.message}`
 
 export const errorCell = (
   error: CellError,

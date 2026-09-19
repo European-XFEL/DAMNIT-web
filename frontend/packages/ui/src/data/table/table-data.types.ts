@@ -1,11 +1,10 @@
+import type { CellError } from '#src/utils/cell-errors'
+
+export type { CellError }
+
 // `boolean` has no renderer of its own and falls back to text, but the API's
 // `Any` scalar does emit one, so leaving it out would only hide it.
 export type CellValue = string | number | boolean | number[] | null | undefined
-
-export type CellError = {
-  message: string
-  cls: string
-}
 
 // The table-value facet of a cell: the summary the grid renders.
 export type CellSummary = {
