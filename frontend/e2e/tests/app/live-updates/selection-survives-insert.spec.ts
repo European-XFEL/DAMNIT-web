@@ -23,7 +23,7 @@ test('a run pushed above the selected one moves its highlight, not its selection
 
   // Select run 2, the second row, so there are rows on both sides of it.
   await selectRun(page, { example, row: 1 })
-  await expect(selectedRunTab(page)).toContainText('Run: 2')
+  await expect(selectedRunTab(page)).toContainText('Run 2')
   await expect(highlightedRow(page, { row: 1 })).toBeAttached()
 
   // Push a run that lands at the top of the list.
@@ -40,6 +40,6 @@ test('a run pushed above the selected one moves its highlight, not its selection
 
   // Run 2 is now the third row, and both the aside and the highlight name it.
   await expect(highlightedRow(page, { row: 2 })).toBeAttached()
-  await expect(selectedRunTab(page)).toContainText('Run: 2')
+  await expect(selectedRunTab(page)).toContainText('Run 2')
   await expect(highlightedRow(page, { row: 1 })).not.toBeAttached()
 })

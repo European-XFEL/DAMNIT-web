@@ -62,15 +62,18 @@
   flex-wrap: nowrap;
   box-sizing: content-box;
   height: 40px;
-  padding: 0 12px 1px;
+  padding: 0 12px 1px 0;
 
   --tabs-list-border-size: 0 0 1px 0;
   --tab-border-color: var(--app-shell-border-color);
 }
 
-/* Reaches down over the line the head keeps in its padding. */
+/* Reaches down over the line the head keeps in its padding. The padding puts
+   the title at the rows' inset, and runs the underline in from the edge. */
 .tab {
   margin-bottom: -1px;
+  padding-inline: 12px;
+  font-weight: 500;
 }
 
 .close {

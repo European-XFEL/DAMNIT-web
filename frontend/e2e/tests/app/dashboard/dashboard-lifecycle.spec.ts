@@ -41,7 +41,7 @@ test('clicking the logo tears down the dashboard state', async ({
 
   // Select a run.
   await selectRun(page, { example, row: 0 })
-  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(selectedRunTab(page)).toContainText('Run 1')
 
   // Hide the Trains column.
   await openPopover(page, 'Variables')
@@ -73,7 +73,7 @@ test('switching dashboard views keeps the run selection and sidebar', async ({
   // Select a run and confirm the sidebar shows its values.
   await selectRun(page, { example, row: 0 })
   const panel = page.getByRole('complementary')
-  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(selectedRunTab(page)).toContainText('Run 1')
   await expect(panel.getByText('silica')).toBeVisible()
 
   // Open a plot (which switches to its view), then switch back to the table.
@@ -85,6 +85,6 @@ test('switching dashboard views keeps the run selection and sidebar', async ({
   await showTable(page)
 
   // The selection and its sidebar values survived the round trip.
-  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(selectedRunTab(page)).toContainText('Run 1')
   await expect(panel.getByText('silica')).toBeVisible()
 })

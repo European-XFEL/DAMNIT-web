@@ -33,7 +33,7 @@ test('activating a single cell shows only that variable', async ({
   })
 
   const panel = page.getByRole('complementary')
-  await expect(selectedRunTab(page)).toContainText('Run: 1')
+  await expect(selectedRunTab(page)).toContainText('Run 1')
   await expect(panel.getByText(titleOf(example, 'sample_type'))).toBeVisible()
   await expect(panel.getByText('silica')).toBeVisible()
   // Only the activated cell: the run's other variables and images are gone.
@@ -127,7 +127,7 @@ test('activating a cell highlights the row of the run it belongs to', async ({
     row: 1,
   })
 
-  await expect(selectedRunTab(page)).toContainText('Run: 2')
+  await expect(selectedRunTab(page)).toContainText('Run 2')
   await expect(highlightedRow(page, { row: 1 })).toBeAttached()
   await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
 })
@@ -180,7 +180,7 @@ test('selecting a run after drilling in shows its variables again', async ({
   // Select another run outright.
   await selectRun(page, { example, row: 1 })
 
-  await expect(selectedRunTab(page)).toContainText('Run: 2')
+  await expect(selectedRunTab(page)).toContainText('Run 2')
   await expect(panel.getByText(titleOf(example, 'sample_type'))).toBeVisible()
   await expect(panel.getByText(titleOf(example, 'xgm_intensity'))).toBeVisible()
 })
