@@ -54,6 +54,31 @@ patch reverted.
 
 Still present on upstream `main`, and not yet reported there.
 
+### A scrolled grid asks `verticalBorder` about the wrong column
+
+`verticalBorder` is documented as the left-hand border of column `col`, and
+`DataEditor` hands the consumer's function a source column, with the row-marker
+offset already taken off. Four sites disagree once the grid scrolls sideways:
+
+- `drawGridLines` and `drawExtraRowThemes` in
+  `internal/data-grid/render/data-grid-render.lines.js` pass `index + 1`, a
+  position in the visible window. It parts from the source column by one for
+  every column scrolled out on the left, so the table's group edges stay in
+  the band and leave the header and the cells. The patch passes
+  `c.sourceIndex + 1`.
+- `overdrawStickyBoundaries` in the same file and `drawGroups` in
+  `data-grid-render.header.js` draw at the freeze edge but ask about the
+  first visible scrollable column, which is whatever sits under the pinned
+  ones. The pinned edge then comes and goes with the scroll offset. The patch
+  asks about the first scrollable column, whose source index is the count of
+  sticky columns.
+
+A predicate that only names sticky columns never shows either, since sticky
+columns keep their position. Covered by
+`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`.
+
+Still present on upstream `main`, and not yet reported there.
+
 ## `plotly.js`
 
 `react-plotly.js` loads `plotly.js/dist/plotly`, so the patch edits that one

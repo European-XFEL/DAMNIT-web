@@ -195,6 +195,30 @@ export function gridCanvas(page: Page): Locator {
   return page.getByTestId('data-grid-canvas')
 }
 
+// How far the canvas pixel at `point` sits under the one to its right, on the
+// red channel: how strong a vertical line is there. Glide's scroll shadow is
+// not on the canvas, so it never counts.
+export async function lineStrength(page: Page, point: Point): Promise<number> {
+  return gridCanvas(page).evaluate((canvas: HTMLCanvasElement, { x, y }) => {
+    const rect = canvas.getBoundingClientRect()
+    const scale = canvas.width / rect.width
+    const context = canvas.getContext('2d')
+    if (!context) {
+      throw new Error('the grid canvas has no 2d context')
+    }
+    const [here, right] = [x, x + 1].map(
+      (px) =>
+        context.getImageData(
+          Math.round((px - rect.x) * scale),
+          Math.round((y - rect.y) * scale),
+          1,
+          1
+        ).data[0]
+    )
+    return right - here
+  }, point)
+}
+
 // The element that carries the grid's scrollbars, which occupy the strip
 // between its client box and its border box. One owner: the class tracks Glide.
 export function gridScroller(page: Page): Locator {

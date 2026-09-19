@@ -179,7 +179,7 @@ catalogs:
 
 patchedDependencies:
   '@glideapps/glide-data-grid@6.0.3':
-    hash: b11562e634688ae86b6d87637d3e0ef45b9669a3569204c4e516126509f8ea42
+    hash: 1b966a40ceb925b0fe51b6b5cf817335d0df91ceb2ce25926c3d50d31b2bf235
     path: patches/@glideapps__glide-data-grid@6.0.3.patch
   plotly.js@3.3.1:
     hash: 081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f
@@ -212,7 +212,7 @@ importers:
         version: link:../../packages/ui
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(patch_hash=b11562e634688ae86b6d87637d3e0ef45b9669a3569204c4e516126509f8ea42)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(patch_hash=1b966a40ceb925b0fe51b6b5cf817335d0df91ceb2ce25926c3d50d31b2bf235)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
         version: 6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
@@ -327,7 +327,7 @@ importers:
         version: link:../../packages/ui
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(patch_hash=b11562e634688ae86b6d87637d3e0ef45b9669a3569204c4e516126509f8ea42)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(patch_hash=1b966a40ceb925b0fe51b6b5cf817335d0df91ceb2ce25926c3d50d31b2bf235)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
         version: 6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
@@ -595,7 +595,7 @@ importers:
         version: link:../config
       '@glideapps/glide-data-grid':
         specifier: catalog:components
-        version: 6.0.3(patch_hash=b11562e634688ae86b6d87637d3e0ef45b9669a3569204c4e516126509f8ea42)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+        version: 6.0.3(patch_hash=1b966a40ceb925b0fe51b6b5cf817335d0df91ceb2ce25926c3d50d31b2bf235)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@glideapps/glide-data-grid-cells':
         specifier: catalog:components
         version: 6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
@@ -4489,7 +4489,7 @@ snapshots:
 
   '@glideapps/glide-data-grid-cells@6.0.3(@types/react@18.2.45)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
     dependencies:
-      '@glideapps/glide-data-grid': 6.0.3(patch_hash=b11562e634688ae86b6d87637d3e0ef45b9669a3569204c4e516126509f8ea42)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
+      '@glideapps/glide-data-grid': 6.0.3(patch_hash=1b966a40ceb925b0fe51b6b5cf817335d0df91ceb2ce25926c3d50d31b2bf235)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)
       '@linaria/react': 4.5.4(react@18.2.0)
       '@toast-ui/editor': 3.1.10
       '@toast-ui/react-editor': 3.1.10(react@18.2.0)
@@ -4503,7 +4503,7 @@ snapshots:
       - react-responsive-carousel
       - supports-color
 
-  '@glideapps/glide-data-grid@6.0.3(patch_hash=b11562e634688ae86b6d87637d3e0ef45b9669a3569204c4e516126509f8ea42)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
+  '@glideapps/glide-data-grid@6.0.3(patch_hash=1b966a40ceb925b0fe51b6b5cf817335d0df91ceb2ce25926c3d50d31b2bf235)(lodash@4.17.23)(marked@14.0.0)(react-dom@18.2.0(react@18.2.0))(react-responsive-carousel@3.2.23)(react@18.2.0)':
     dependencies:
       '@linaria/react': 4.5.4(react@18.2.0)
       canvas-hypertxt: 1.0.3
