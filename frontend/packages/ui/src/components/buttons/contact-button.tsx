@@ -1,7 +1,9 @@
-import { ActionIcon, Affix, Text, Tooltip, rem } from '@mantine/core'
+import { Affix, Button, Text, Tooltip, rem } from '@mantine/core'
 import { IconMail } from '@tabler/icons-react'
 
 import { CONTACT_EMAIL } from '#src/constants'
+
+import classes from './contact-button.module.css'
 
 function ContactButton() {
   return (
@@ -21,15 +23,21 @@ function ContactButton() {
           </Text>
         }
       >
-        <ActionIcon
+        <Button
           component="a"
           href={`mailto:${CONTACT_EMAIL}`}
-          color="indigo"
           radius="xl"
-          size={60}
+          classNames={{ section: classes.section }}
+          leftSection={
+            <IconMail
+              stroke={1.5}
+              style={{ width: rem(18), height: rem(18) }}
+              aria-hidden
+            />
+          }
         >
-          <IconMail stroke={1.5} style={{ width: rem(30), height: rem(30) }} />
-        </ActionIcon>
+          Send feedback
+        </Button>
       </Tooltip>
     </Affix>
   )
