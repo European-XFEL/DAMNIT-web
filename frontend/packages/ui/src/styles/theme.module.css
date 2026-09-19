@@ -34,3 +34,9 @@
   font-family: Arial, Helvetica, sans-serif;
   font-weight: 700;
 }
+
+/* An 18 px line under 5 px of padding in a 4 px track is 36 px, the height of
+   every field and button; the token's ratio ran to 41. */
+.segmentedLabel {
+  line-height: 18px;
+}
