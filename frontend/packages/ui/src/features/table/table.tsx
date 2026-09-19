@@ -1,11 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
+  blend,
   CompactSelection,
   DataEditorCore,
   ImageWindowLoaderImpl,
   sprites,
+  withAlpha,
+  type BaseDrawArgs,
   type CellClickedEventArgs,
   type DataEditorRef,
+  type DrawCellCallback,
+  type DrawHeaderCallback,
   type GridMouseEventArgs,
   type GridSelection,
   type GroupHeaderClickedEventArgs,
@@ -35,6 +40,7 @@ import {
   type ErrorColors,
 } from '#src/features/table/utils/cells'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
+import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
 import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
@@ -66,17 +72,36 @@ export type TableProps = {
 
 const PAGE_SIZE = 10
 
-// Shorter than the 36px title row below it: Glide paints both rows in the same
+// Matches the row height of desktop DAMNIT, the spreadsheet where these users
+// already read their runs.
+const ROW_HEIGHT = 30
+
+// One row tall, as a spreadsheet's column header is.
+const HEADER_HEIGHT = 30
+
+// Shorter than the title row below it: Glide paints both rows in the same
 // font on the same background, so height is the only lever left.
 const GROUP_HEADER_HEIGHT = 24
 
-// Glide draws in px: its defaults scaled by the theme's 6%, and the row
-// marker lifted to the 12 px floor. Mono cells sit a step under, in cells.ts.
+// Glide draws in px: its defaults scaled by the theme's 6%, the marker lifted
+// to the 12 px floor, and headers at 500 to sit a step over the cells.
 const GRID_FONTS: Partial<Theme> = {
   fontFamily: FONT_FAMILY_SANS,
   baseFontStyle: `${FONT_SIZE_DATA}px`,
-  headerFontStyle: `600 ${FONT_SIZE_DATA}px`,
+  headerFontStyle: `500 ${FONT_SIZE_DATA}px`,
   markerFontStyle: `${FONT_SIZES.xxs}px`,
+}
+
+// Starts under the row line, which a one-cell repaint leaves standing. Without
+// the restore, Glide's cached fill style would draw the next cell's text in it.
+function paintInnerLine(
+  ctx: CanvasRenderingContext2D,
+  { rect, color }: { rect: Rectangle; color: string }
+) {
+  ctx.save()
+  ctx.fillStyle = color
+  ctx.fillRect(rect.x, rect.y + 1, 1, rect.height - 1)
+  ctx.restore()
 }
 
 const Table = ({ paginated = true }: TableProps) => {
@@ -165,7 +190,10 @@ const Table = ({ paginated = true }: TableProps) => {
       bgHeader: theme.colors.gray[0],
       bgHeaderHovered: theme.colors.gray[1],
       bgHeaderHasFocus: theme.colors.gray[2],
-      borderColor: theme.colors.gray[2],
+      // Glide draws the group band's separators, the pinned edge and every
+      // vertical line in borderColor; the rows take the lighter one.
+      borderColor: theme.colors.gray[3],
+      horizontalBorderColor: theme.colors.gray[2],
       textDark: theme.black,
       textHeader: theme.black,
       // A group name is a label over its columns, the treatment it already has
@@ -295,9 +323,56 @@ const Table = ({ paginated = true }: TableProps) => {
     [runs]
   )
 
-  const { highlightRegions, drawHeader, groupThemes } = useColumnFlash(
-    columnIndex,
-    runs.length
+  const {
+    highlightRegions,
+    drawHeader: drawFlashHeader,
+    groupThemes,
+  } = useColumnFlash(columnIndex, runs.length)
+
+  // A spreadsheet's grid in two strengths: Glide's own line at the table's and
+  // the groups' edges, and a fainter one painted everywhere else.
+  const leftBorderOf = useCallback(
+    (col: number) => leftBorder(col, { columns: tableColumns, pinnedCount }),
+    [tableColumns, pinnedCount]
+  )
+  const hasVerticalBorder = useCallback(
+    (col: number) => leftBorderOf(col) === 'edge',
+    [leftBorderOf]
+  )
+
+  // One grey at two strengths: gray.0 over white, gray.2 over the header's
+  // gray.0, and a shade darker than any selected or flashed fill.
+  const innerCellLine = withAlpha(theme.colors.gray[6], 0.055)
+  const innerHeaderLine = withAlpha(theme.colors.gray[6], 0.12)
+
+  // A cell's line is blended to an opaque colour, since a one-cell repaint
+  // does not clear that pixel first; Glide refills the whole header every time.
+  const drawCell = useCallback<DrawCellCallback>(
+    (args, drawContent) => {
+      drawContent()
+      // Glide hands this callback its renderers' draw args, fill included,
+      // though the callback's type leaves the fill out.
+      const { ctx, rect, col, cellFillColor } = args as BaseDrawArgs
+      if (leftBorderOf(col) === 'inner') {
+        // A selected row's fill arrives translucent, painted over the cell's own.
+        const fill = blend(cellFillColor, args.theme.bgCell)
+        paintInnerLine(ctx, { rect, color: blend(innerCellLine, fill) })
+      }
+    },
+    [leftBorderOf, innerCellLine]
+  )
+  const drawHeader = useCallback<DrawHeaderCallback>(
+    (args, drawContent) => {
+      if (drawFlashHeader) {
+        drawFlashHeader(args, drawContent)
+      } else {
+        drawContent()
+      }
+      if (leftBorderOf(args.columnIndex) === 'inner') {
+        paintInnerLine(args.ctx, { rect: args.rect, color: innerHeaderLine })
+      }
+    },
+    [drawFlashHeader, leftBorderOf, innerHeaderLine]
   )
 
   // Glide would paint the raw group key, and it asks per visible column on every
@@ -606,8 +681,12 @@ const Table = ({ paginated = true }: TableProps) => {
               columns={gridColumns}
               highlightRegions={highlightRegions}
               drawHeader={drawHeader}
+              drawCell={drawCell}
               getGroupDetails={getGroupDetails}
+              rowHeight={ROW_HEIGHT}
+              headerHeight={HEADER_HEIGHT}
               groupHeaderHeight={GROUP_HEADER_HEIGHT}
+              verticalBorder={hasVerticalBorder}
               onGroupHeaderClicked={handleGroupHeaderClicked}
               // Glide suppresses the native menu only when a consumer asks it
               // to, and the group bar has nothing of its own to offer.

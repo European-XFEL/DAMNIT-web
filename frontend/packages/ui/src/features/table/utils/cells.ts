@@ -280,7 +280,6 @@ export const loadingCell = (
     kind: GridCellKind.Loading,
     allowOverlay: false,
     skeletonWidth: SKELETON_BOX_WIDTH,
-    skeletonHeight: 30,
     ...params,
   }
 }
