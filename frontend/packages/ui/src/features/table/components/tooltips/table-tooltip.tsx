@@ -8,7 +8,7 @@ import {
 import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
 import CellErrorCard from '#src/components/feedback/cell-error-card'
-import { type CellError } from '#src/data/table/table-data.types'
+import { type CellError } from '#src/utils/cell-errors'
 import { assertNever } from '#src/utils/helpers'
 
 export type CellTooltip =

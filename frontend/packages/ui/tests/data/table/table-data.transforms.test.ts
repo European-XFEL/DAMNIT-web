@@ -9,11 +9,11 @@ import {
 } from '#src/data/table/table-data.transforms'
 import type {
   Cell,
-  CellError,
   CellValue,
   Run,
   Variable,
 } from '#src/data/table/table-data.types'
+import type { CellError } from '#src/utils/cell-errors'
 
 // These transforms key cells by name and never read `id`, so it only has to be
 // present, not realistic.

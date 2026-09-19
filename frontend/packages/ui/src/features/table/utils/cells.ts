@@ -19,11 +19,13 @@ import {
 } from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
-import { errorKind, errorText, type ErrorKind } from '#src/utils/cell-errors'
 import {
+  errorKind,
+  errorText,
   type CellError,
-  type CellValue,
-} from '#src/data/table/table-data.types'
+  type ErrorKind,
+} from '#src/utils/cell-errors'
+import { type CellValue } from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/helpers'
 import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 
