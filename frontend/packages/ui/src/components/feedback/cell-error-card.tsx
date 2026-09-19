@@ -8,9 +8,21 @@ import {
   Tooltip,
   rem,
 } from '@mantine/core'
-import { IconCheck, IconCopy } from '@tabler/icons-react'
+import {
+  IconAlertTriangle,
+  IconCheck,
+  IconChevronsRight,
+  IconCopy,
+  IconHelp,
+  type Icon,
+} from '@tabler/icons-react'
 
-import { errorText, errorVisuals, type CellError } from '#src/utils/cell-errors'
+import {
+  errorText,
+  errorVisuals,
+  type CellError,
+  type ErrorKind,
+} from '#src/utils/cell-errors'
 
 type CellErrorCardVariant = 'tooltip' | 'panel'
 
@@ -38,11 +50,19 @@ const PALETTES = {
   },
 } satisfies Record<CellErrorCardVariant, Record<string, string>>
 
+// The grid's glyphs, drawn from the same Tabler icons.
+const KIND_ICONS: Record<ErrorKind, Icon> = {
+  error: IconAlertTriangle,
+  missing: IconHelp,
+  skipped: IconChevronsRight,
+}
+
 const COPIED_RESET_MS = 1500
 
 function CellErrorCard({ error, variant }: CellErrorCardProps) {
   const { kind, title } = errorVisuals(error.cls)
   const palette = PALETTES[variant]
+  const KindIcon = KIND_ICONS[kind]
   const [copied, setCopied] = useState(false)
   const resetTimerRef = useRef<number>(0)
 
@@ -76,13 +96,20 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
     >
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
-          <Text
-            size="sm"
-            fw={600}
+          <Group
+            gap={6}
+            wrap="nowrap"
             c={kind === 'error' ? palette.error : palette.quiet}
           >
-            {title}
-          </Text>
+            <KindIcon
+              aria-hidden
+              style={{ width: rem(16), height: rem(16) }}
+              stroke={1.5}
+            />
+            <Text size="sm" fw={600}>
+              {title}
+            </Text>
+          </Group>
           <Text size="xxs" c={palette.cls} ff="monospace">
             {error.cls}
           </Text>
