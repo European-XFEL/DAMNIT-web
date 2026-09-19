@@ -147,10 +147,6 @@
 .memberDetails {
   --rail-inset: calc(10px + (var(--lead) - var(--rail-width)) / 2);
   --rail-width: 2px;
-  --rail-color: light-dark(
-    var(--mantine-color-gray-4),
-    var(--mantine-color-dark-4)
-  );
 }
 
 .member {
@@ -159,7 +155,7 @@
 }
 
 .member::before {
-  background: var(--rail-color);
+  background: var(--group-rail-color);
   bottom: 0;
   content: '';
   left: var(--rail-inset);
@@ -217,7 +213,7 @@
 }
 
 .memberDetails {
-  border-left: var(--rail-width) solid var(--rail-color);
+  border-left: var(--rail-width) solid var(--group-rail-color);
   margin-left: var(--rail-inset);
   padding-left: var(--title-inset);
 }

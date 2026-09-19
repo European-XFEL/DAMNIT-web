@@ -120,6 +120,10 @@ export const cssVariablesResolver: CSSVariablesResolver = (theme) => ({
     // Mantine fixes the error colour at red.6, 3.3:1 on white; red.9 reads
     // at AA in the message, the border and the typed text alike.
     '--mantine-color-error': theme.colors.red[9],
+    // The line down a group's members, in every list that sets them in.
+    '--group-rail-color': theme.colors.gray[3],
   },
-  dark: {},
+  dark: {
+    '--group-rail-color': theme.colors.dark[5],
+  },
 })

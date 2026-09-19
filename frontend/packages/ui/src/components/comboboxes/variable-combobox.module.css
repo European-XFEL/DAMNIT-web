@@ -59,10 +59,7 @@
 }
 
 .group .option::before {
-  background: light-dark(
-    var(--mantine-color-gray-4),
-    var(--mantine-color-dark-4)
-  );
+  background: var(--group-rail-color);
   bottom: 0;
   content: '';
   left: 10px;
