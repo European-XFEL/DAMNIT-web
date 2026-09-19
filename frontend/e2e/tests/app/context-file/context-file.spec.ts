@@ -42,6 +42,26 @@ test('the context file view shows the proposal code, read-only', async ({
   expect(models.join('\n')).not.toContain(rejected)
 })
 
+test('the context file view fits the window without a page scrollbar', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openContextFile(page)
+
+  // The status bar closes the view at the window's bottom edge. Anything that
+  // ran past it would give the page a scroll range, and Monaco a second bar.
+  const layout = await page.getByRole('status').evaluate((bar) => {
+    const root = document.documentElement
+    return {
+      barBottom: bar.getBoundingClientRect().bottom,
+      scrollRange: root.scrollHeight - root.clientHeight,
+    }
+  })
+  expect(layout.barBottom).toBe(page.viewportSize()?.height)
+  expect(layout.scrollRange).toBe(0)
+})
+
 test('ctrl+f on the context file opens Monaco search', async ({
   page,
   example,
