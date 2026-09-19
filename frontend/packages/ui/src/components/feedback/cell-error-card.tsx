@@ -10,18 +10,39 @@ import {
 } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 
-import { type CellError } from '#src/data/table/table-data.types'
-import { errorText, errorVisuals } from '#src/utils/cell-errors'
+import { errorText, errorVisuals, type CellError } from '#src/utils/cell-errors'
 
-type ErrorContentProps = {
+type CellErrorCardVariant = 'tooltip' | 'panel'
+
+type CellErrorCardProps = {
   error: CellError
+  variant: CellErrorCardVariant
 }
+
+// The tooltip draws on its dark ground and the panel on white; each palette
+// clears AA on its own ground.
+const PALETTES = {
+  tooltip: {
+    error: 'red.4',
+    quiet: 'gray.4',
+    cls: 'gray.5',
+    message: 'white',
+    copied: 'var(--mantine-color-teal-4)',
+  },
+  panel: {
+    error: 'red.9',
+    quiet: 'gray.7',
+    cls: 'gray.7',
+    message: 'gray.9',
+    copied: 'var(--mantine-color-teal-8)',
+  },
+} satisfies Record<CellErrorCardVariant, Record<string, string>>
 
 const COPIED_RESET_MS = 1500
 
-export function ErrorContent({ error }: ErrorContentProps) {
+function CellErrorCard({ error, variant }: CellErrorCardProps) {
   const { kind, title } = errorVisuals(error.cls)
-  const accent = kind === 'error' ? 'red.4' : 'gray.4'
+  const palette = PALETTES[variant]
   const [copied, setCopied] = useState(false)
   const resetTimerRef = useRef<number>(0)
 
@@ -44,14 +65,25 @@ export function ErrorContent({ error }: ErrorContentProps) {
     })
   }
 
+  const isTooltip = variant === 'tooltip'
+
   return (
-    <Box maw={360} px={10} py={8} c="white">
+    <Box
+      maw={isTooltip ? 360 : undefined}
+      px={isTooltip ? 10 : 0}
+      py={isTooltip ? 8 : 0}
+      c={palette.message}
+    >
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
-          <Text size="sm" fw={600} c={accent}>
+          <Text
+            size="sm"
+            fw={600}
+            c={kind === 'error' ? palette.error : palette.quiet}
+          >
             {title}
           </Text>
-          <Text size="xxs" c="gray.5" ff="monospace">
+          <Text size="xxs" c={palette.cls} ff="monospace">
             {error.cls}
           </Text>
         </div>
@@ -66,7 +98,7 @@ export function ErrorContent({ error }: ErrorContentProps) {
               <IconCheck
                 style={{ width: rem(16), height: rem(16) }}
                 stroke={1.5}
-                color="var(--mantine-color-teal-4)"
+                color={palette.copied}
               />
             ) : (
               <IconCopy
@@ -77,7 +109,7 @@ export function ErrorContent({ error }: ErrorContentProps) {
           </ActionIcon>
         </Tooltip>
       </Group>
-      <ScrollArea.Autosize mah={200} type="auto">
+      <ScrollArea.Autosize mah={isTooltip ? 200 : undefined} type="auto">
         <Text size="xxs" ff="monospace" style={{ whiteSpace: 'pre-wrap' }}>
           {error.message}
         </Text>
@@ -85,3 +117,5 @@ export function ErrorContent({ error }: ErrorContentProps) {
     </Box>
   )
 }
+
+export default CellErrorCard

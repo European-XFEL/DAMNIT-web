@@ -6,10 +6,9 @@ import {
 } from '@mantine/core'
 import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
+import CellErrorCard from '#src/components/feedback/cell-error-card'
 import { type CellError } from '#src/data/table/table-data.types'
 import { assertNever } from '#src/utils/helpers'
-
-import { ErrorContent } from './error-content'
 
 export type CellTooltip =
   | { kind: 'error'; error: CellError }
@@ -30,7 +29,7 @@ const IMAGE_MARGIN = 4
 function renderBody(target: CellTooltip) {
   switch (target.kind) {
     case 'error':
-      return <ErrorContent error={target.error} />
+      return <CellErrorCard error={target.error} variant="tooltip" />
     case 'image':
       return (
         <Image
