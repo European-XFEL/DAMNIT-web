@@ -29,6 +29,22 @@ const POSITIONS: Record<UserMenuVariant, MenuProps['position']> = {
   rail: 'right-end',
 }
 
+// The nav's menu spans its pill. The other two buttons are narrower than a
+// menu needs, so they keep a fixed width.
+const WIDTHS: Record<UserMenuVariant, MenuProps['width']> = {
+  header: 260,
+  nav: 'target',
+  rail: 260,
+}
+
+// A menu opens 4 px off its button, closer than Mantine's 8. The nav's keeps
+// the 8, which lands its bottom edge on the foot's divider.
+const OFFSETS: Record<UserMenuVariant, number> = {
+  header: 4,
+  nav: 8,
+  rail: 4,
+}
+
 export function UserMenu({
   userName,
   onLogout,
@@ -54,10 +70,9 @@ export function UserMenu({
 
   return (
     <Menu
-      width={260}
+      width={WIDTHS[variant]}
       position={POSITIONS[variant]}
-      // A menu opens 4 px off its button, closer than Mantine's 8.
-      offset={4}
+      offset={OFFSETS[variant]}
       transitionProps={{
         transition: variant === 'header' ? 'pop-top-right' : 'pop',
       }}
