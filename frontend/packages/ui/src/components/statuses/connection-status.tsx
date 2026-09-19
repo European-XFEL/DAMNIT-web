@@ -9,12 +9,14 @@ function ConnectionStatus({
 }: ConnectionStatusProps) {
   return (
     <Group gap={4} wrap="nowrap" align="center">
+      {/* Flex, so the icon sets the height: on a text line the box would take
+          the line height and poke out of the bar. */}
       <Indicator
         color={disabled ? 'gray' : connected ? 'green' : 'red'}
         size={8}
         position="top-end"
-        offset={10}
-        inline
+        offset={2}
+        display="flex"
         withBorder
       >
         <IconWifi
