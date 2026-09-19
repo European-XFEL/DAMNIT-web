@@ -33,7 +33,7 @@ function HomeRoute() {
           DAMNIT!
         </Title>
 
-        <Title order={3} fw={400}>
+        <Title order={2} size="h3" fw={400}>
           Automated experiment overview at European XFEL
         </Title>
 
