@@ -91,6 +91,9 @@ export const cssVariablesResolver: CSSVariablesResolver = (theme) => ({
   light: {
     '--mantine-color-placeholder': theme.colors.gray[7],
     '--mantine-color-dimmed': theme.colors.gray[7],
+    // Mantine fixes the error colour at red.6, 3.3:1 on white; red.9 reads
+    // at AA in the message, the border and the typed text alike.
+    '--mantine-color-error': theme.colors.red[9],
   },
   dark: {},
 })
