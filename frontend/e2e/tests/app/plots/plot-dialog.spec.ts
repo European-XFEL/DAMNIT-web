@@ -21,7 +21,9 @@ test('submitting with no variable shows a validation error and keeps the dialog 
 
   await submitPlot(dialog)
 
-  await expect(dialog.getByText('Please enter a valid variable')).toBeVisible()
+  await expect(
+    dialog.getByText('Choose a variable', { exact: true })
+  ).toBeVisible()
   await expect(dialog).toBeVisible()
   // The submit was blocked, not just flagged: no figure was plotted.
   await expect(plotFigure(page)).toHaveCount(0)
@@ -36,7 +38,7 @@ test('choosing a Y variable plots a summary against Run', async ({
 
   // X defaults to Run, so choosing only Y plots the variable against the run.
   await chooseVariable(dialog, {
-    label: 'Y-axis',
+    label: 'Y axis',
     title: titleOf(example, 'n_trains'),
   })
   await submitPlot(dialog)
@@ -69,14 +71,14 @@ test('plotting a preview for runs "7,9" fetches only runs 7 and 9, not the range
     }
   })
 
-  // Switching to "Plot preview" reveals the Variable combobox and the
-  // custom-runs input; the dialog is the only path to an arbitrary run set.
-  await dialog.getByText('Plot preview').click()
+  // Preview swaps the axes for one Variable field and asks for runs; the
+  // dialog is the only path to an arbitrary run set.
+  await dialog.getByText('Preview', { exact: true }).click()
   await chooseVariable(dialog, {
     label: 'Variable',
     title: titleOf(example, 'xgm_intensity'),
   })
-  await dialog.getByPlaceholder('e.g. 1,2,3,6-20,22').fill('7,9')
+  await dialog.getByRole('textbox', { name: 'Runs' }).fill('7,9')
   await submitPlot(dialog)
 
   const entry = plotEntry(page, titleOf(example, 'xgm_intensity'))
