@@ -6,17 +6,17 @@ import { expect, type Locator, type Page } from '@playwright/test'
 // never receives these events. These helpers turn an a11y column/row index into
 // a canvas point.
 //
-// COLUMN_WIDTH matches the width the gridColumns memo sets in
-// features/table/table.tsx.
-// HEADER_HEIGHT and ROW_HEIGHT are Glide's defaults; ROW_MARKER_WIDTH is Glide's
-// auto width for a clickable-number marker at this row count (<=100 rows -> 32).
+// COLUMN_WIDTH matches the width the gridColumns memo sets, and HEADER_HEIGHT
+// and ROW_HEIGHT the heights the table passes, in features/table/table.tsx.
+// ROW_MARKER_WIDTH is Glide's auto width for a clickable-number marker at this
+// row count (<=100 rows -> 32).
 // The math assumes no horizontal scroll and that the nav and aside are collapsed
 // so the grid spans the viewport, so `col` must be within the painted horizontal
 // fold and `row` within the initial vertical fold.
 export const ROW_MARKER_WIDTH = 32
 export const COLUMN_WIDTH = 100
-export const HEADER_HEIGHT = 36
-export const ROW_HEIGHT = 34
+export const HEADER_HEIGHT = 30
+export const ROW_HEIGHT = 30
 
 // A grouped proposal gains a second header row above the titles, pushing them
 // and every row down. Matches GROUP_HEADER_HEIGHT in features/table/table.tsx.
