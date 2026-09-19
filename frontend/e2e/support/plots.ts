@@ -78,16 +78,16 @@ export async function openPreviewPlot(
   await contextMenu(page).getByText('Plot: preview').click()
 }
 
-// The plot dialog (the nav's "New plot" -> "Plot Settings" modal). Returns the
-// dialog locator so callers scope field interactions to it.
+// The nav's "New plot" dialog. Returns the dialog locator so callers scope
+// field interactions to it.
 export async function openPlotDialog(page: Page): Promise<Locator> {
   await dashboardNav(page).getByRole('button', { name: 'New plot' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Plot Settings' })
+  const dialog = page.getByRole('dialog', { name: 'New plot' })
   await expect(dialog).toBeVisible()
   return dialog
 }
 
-// Pick a variable in one of the dialog's comboboxes (X-axis, Y-axis, Variable):
+// Pick a variable in one of the dialog's fields (Y axis, X axis, Variable):
 // type its title to filter the options, then click the match.
 export async function chooseVariable(
   dialog: Locator,
@@ -96,7 +96,8 @@ export async function chooseVariable(
   const input = dialog.getByLabel(label)
   await input.click()
   await input.fill(title)
-  await dialog.getByRole('option', { name: title }).click()
+  // The options open in a portal outside the dialog.
+  await dialog.page().getByRole('option', { name: title }).click()
 }
 
 // Submit the dialog. Exact match keeps it off any other "Plot" in the dialog.
@@ -112,7 +113,7 @@ export async function plotVariable(
 ) {
   const dialog = await openPlotDialog(page)
   await chooseVariable(dialog, {
-    label: 'Y-axis',
+    label: 'Y axis',
     title: titleOf(example, variable),
   })
   await submitPlot(dialog)

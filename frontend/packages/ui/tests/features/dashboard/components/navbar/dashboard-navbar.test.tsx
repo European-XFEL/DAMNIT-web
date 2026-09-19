@@ -255,20 +255,20 @@ test('picking a plot or New plot in the rail hands focus back to Plots', async (
   await openRailPlots(screen)
   await userEvent.keyboard('{Shift>}{Tab}{/Shift}')
   await userEvent.keyboard('{Enter}')
-  const dialog = screen.getByRole('dialog', { name: 'Plot Settings' })
+  const dialog = screen.getByRole('dialog', { name: 'New plot' })
   await expect.element(dialog).toBeVisible()
   await userEvent.keyboard('{Escape}')
   await expect.element(dialog).not.toBeInTheDocument()
   await expect.element(plots).toHaveFocus()
 })
 
-test('the plus beside Plots opens the plot settings', async () => {
+test('the plus beside Plots opens the new plot dialog', async () => {
   const screen = await renderNav(setupStore())
 
   await screen.getByRole('button', { name: 'New plot' }).click()
 
   await expect
-    .element(screen.getByRole('dialog', { name: 'Plot Settings' }))
+    .element(screen.getByRole('dialog', { name: 'New plot' }))
     .toBeVisible()
 })
 
