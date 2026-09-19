@@ -66,9 +66,10 @@ export const theme = createTheme({
         itemSection: classes.menuItemSection,
       },
     } satisfies ExtendComponent<MenuFactory>,
-    // A plain th is the browser's bold; column headers are emphasis.
+    // A plain th is the browser's bold; column headers are labels on grey and
+    // take the grid's 500.
     Table: {
-      styles: { th: { fontWeight: 600 } },
+      styles: { th: { fontWeight: 500 } },
     } satisfies ExtendComponent<TableFactory>,
     // A tooltip floats, so it reads at the floating size instead of Mantine's
     // own sm.
