@@ -7,9 +7,10 @@ import { render } from 'vitest-browser-react'
 import type { AppStore } from '#src/app/store/store'
 import { ThemeProvider } from '#src/app/theme-provider'
 
-// For components that only need Mantine's theme context.
+// For components that only need Mantine's theme context. As a `wrapper`, the
+// theme stays around whatever a `rerender` passes.
 export function renderWithProviders(ui: ReactNode) {
-  return render(<ThemeProvider>{ui}</ThemeProvider>)
+  return render(ui, { wrapper: ThemeProvider })
 }
 
 // A `renderHook` wrapper for hooks that only need the store.

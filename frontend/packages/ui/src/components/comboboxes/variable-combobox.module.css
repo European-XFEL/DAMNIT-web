@@ -1,0 +1,76 @@
+/* Small text for every row and for the empty note, through Mantine's own
+   variable; the padding stays at sm so the rail meets the heading's text. */
+.dropdown {
+  --combobox-option-fz: var(--mantine-font-size-xs);
+}
+
+/* Rows are the Variables popover's: a light hover, and the chosen variable
+   ticked at the end. */
+.option {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+  min-height: 32px;
+  position: relative;
+}
+
+.option:hover:not([data-combobox-selected]) {
+  background-color: light-dark(
+    var(--mantine-color-gray-1),
+    var(--mantine-color-dark-6)
+  );
+}
+
+/* The row Enter would pick. Its tint is under 3:1 against the list, so a bar
+   at the row's edge marks it; a member lights its stretch of the rail. */
+.option[data-combobox-selected] {
+  background-color: light-dark(
+    var(--mantine-primary-color-1),
+    var(--mantine-primary-color-light)
+  );
+  color: inherit;
+}
+
+.option:not(.group *)[data-combobox-selected]::before {
+  background: var(--mantine-primary-color-filled);
+  border-radius: 2px;
+  bottom: 6px;
+  content: '';
+  left: 0;
+  position: absolute;
+  top: 6px;
+  width: 3px;
+}
+
+.groupLabel {
+  padding-bottom: 2px;
+  padding-top: 10px;
+}
+
+/* The heading is enough to set a group apart, so Mantine's rule is dropped. */
+.groupLabel::after {
+  display: none;
+}
+
+/* Members sit on the popover's rail, which starts under the heading's text. */
+.group .option {
+  padding-left: 22px;
+}
+
+.group .option::before {
+  background: light-dark(
+    var(--mantine-color-gray-4),
+    var(--mantine-color-dark-4)
+  );
+  bottom: 0;
+  content: '';
+  left: 10px;
+  position: absolute;
+  top: 0;
+  width: 2px;
+}
+
+.group .option[data-combobox-selected]::before {
+  background: var(--mantine-primary-color-filled);
+}
