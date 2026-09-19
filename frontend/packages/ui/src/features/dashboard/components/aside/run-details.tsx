@@ -1,113 +1,131 @@
+import { useId } from 'react'
 import { Image, ScrollArea, Text, rem } from '@mantine/core'
 
+import SectionHeading from '#src/components/headings/section-heading'
 import { DTYPES } from '#src/constants'
 import type { RunEntry } from '#src/data/table/run-entries'
-import {
-  type CellError,
-  type CellValue,
-  type RunId,
-} from '#src/data/table/table-data.types'
+import type { RunId } from '#src/data/table/table-data.types'
 import { FONT_SIZE_DATA } from '#src/styles/fonts'
 import { formatDate } from '#src/utils/helpers'
-import { itemsOf } from '#src/utils/variable-blocks'
+import {
+  blockKey,
+  type VariableBlock,
+  type VariableGroupBlock,
+} from '#src/utils/variable-blocks'
 
 import classes from './run-details.module.css'
 import { useRunEntries } from './use-run-entries'
 
-// One line box for the label and either kind of value, so every row keeps the
+// One line box for the title and either kind of value, so every row keeps the
 // same rhythm whatever it holds.
 const SCALAR_LINE = rem(22)
 
-type ScalarProps = {
-  label: string
-  value: string | number
-  monospace?: boolean
+type EntryValueProps = {
+  entry: RunEntry
 }
 
-function Scalar({ label, value, monospace = false }: ScalarProps) {
+function EntryValue({ entry }: EntryValueProps) {
+  if (entry.state === 'error') {
+    return (
+      <Text fz={FONT_SIZE_DATA} lh={SCALAR_LINE}>
+        {entry.error.message}
+      </Text>
+    )
+  }
+  if (entry.state !== 'value') {
+    return null
+  }
+
+  const { value, dtype } = entry
+  switch (dtype) {
+    case DTYPES.image:
+      return (
+        <Image className={classes.image} fit="contain" src={value as string} />
+      )
+    case DTYPES.number:
+    case DTYPES.timestamp:
+      return (
+        <Text fz="xs" lh={SCALAR_LINE} ff="monospace">
+          {dtype === DTYPES.number ? value : formatDate(value as number)}
+        </Text>
+      )
+    case DTYPES.string:
+      return (
+        <Text fz={FONT_SIZE_DATA} lh={SCALAR_LINE}>
+          {value}
+        </Text>
+      )
+    default:
+      return (
+        <Text fz={FONT_SIZE_DATA} lh={SCALAR_LINE}>
+          (no preview)
+        </Text>
+      )
+  }
+}
+
+type EntryRowProps = {
+  entry: RunEntry
+  title: string
+}
+
+function EntryRow({ entry, title }: EntryRowProps) {
+  const isImage = entry.state === 'value' && entry.dtype === DTYPES.image
+
   return (
-    <div className={classes.scalarItem}>
-      <Text size="xs" lh={SCALAR_LINE} className={classes.scalarLabel}>
-        {label}
+    <div className={isImage ? classes.stackedRow : classes.row}>
+      <Text component="dt" size="xs" lh={SCALAR_LINE} className={classes.title}>
+        {title}
       </Text>
-      <Text
-        fz={monospace ? 'xs' : FONT_SIZE_DATA}
-        lh={SCALAR_LINE}
-        className={classes.scalarValue}
-        ff={monospace ? 'monospace' : undefined}
-      >
-        {value}
-      </Text>
+      <dd className={classes.value}>
+        <EntryValue entry={entry} />
+      </dd>
     </div>
   )
 }
 
-type RenderProps = {
-  name: string
-  label: string
-  value: CellValue
+type GroupBlockProps = {
+  block: VariableGroupBlock<RunEntry>
 }
 
-const renderString = ({ name, label, value }: RenderProps) => (
-  <Scalar key={name} label={label} value={value as string} />
-)
+// Members go by their short title, since the heading above says the rest.
+function GroupBlock({ block }: GroupBlockProps) {
+  const headingId = useId()
 
-const renderDate = ({ name, label, value }: RenderProps) => (
-  <Scalar
-    key={name}
-    label={label}
-    value={formatDate(value as number)}
-    monospace
-  />
-)
-
-const renderNumber = ({ name, label, value }: RenderProps) => (
-  <Scalar key={name} label={label} value={value as number} monospace />
-)
-
-const renderImage = ({ name, label, value }: RenderProps) => (
-  <div className={classes.objectItem} key={name}>
-    <Text size="xs" className={classes.objectLabel}>
-      {label}
-    </Text>
-    <Image className={classes.objectValue} fit="contain" src={value} />
-  </div>
-)
-
-const renderUnknown = ({ name, label }: RenderProps) => (
-  <Scalar key={name} label={label} value={'(no preview)'} />
-)
-
-const renderError = ({
-  name,
-  label,
-  error,
-}: {
-  name: string
-  label: string
-  error: CellError
-}) => <Scalar key={name} label={label} value={error.message} />
-
-const renderFactory = {
-  [DTYPES.image]: renderImage,
-  [DTYPES.string]: renderString,
-  [DTYPES.number]: renderNumber,
-  [DTYPES.timestamp]: renderDate,
-  default: renderUnknown,
+  return (
+    <div role="group" aria-labelledby={headingId} className={classes.group}>
+      <SectionHeading id={headingId}>{block.title}</SectionHeading>
+      <dl className={classes.members}>
+        {block.members.map((entry) => (
+          <EntryRow key={entry.name} entry={entry} title={entry.columnTitle} />
+        ))}
+      </dl>
+    </div>
+  )
 }
 
-function renderEntry(entry: RunEntry) {
-  const { name, title: label } = entry
-  switch (entry.state) {
-    case 'value': {
-      const render = renderFactory[entry.dtype] ?? renderFactory.default
-      return render({ name, label, value: entry.value })
+type Section =
+  | { kind: 'group'; block: VariableGroupBlock<RunEntry> }
+  | { kind: 'entries'; entries: RunEntry[] }
+
+// A heading may not sit inside a <dl>, so the ungrouped entries between two
+// groups share a list of their own.
+function toSections(blocks: VariableBlock<RunEntry>[]): Section[] {
+  const sections: Section[] = []
+  for (const block of blocks) {
+    if (block.kind === 'group') {
+      sections.push({ kind: 'group', block })
+      continue
     }
-    case 'error':
-      return renderError({ name, label, error: entry.error })
-    default:
-      return null
+
+    const last = sections.at(-1)
+    if (last?.kind === 'entries') {
+      last.entries.push(block)
+    } else {
+      sections.push({ kind: 'entries', entries: [block] })
+    }
   }
+  return sections
 }
 
 type RunDetailsProps = {
@@ -123,7 +141,19 @@ function RunDetails({ run, variable }: RunDetailsProps) {
 
   return (
     <ScrollArea h="100%" offsetScrollbars>
-      {itemsOf(blocks).map(renderEntry)}
+      <div className={classes.list}>
+        {toSections(blocks).map((section) =>
+          section.kind === 'group' ? (
+            <GroupBlock key={blockKey(section.block)} block={section.block} />
+          ) : (
+            <dl key={`entries:${section.entries[0].name}`}>
+              {section.entries.map((entry) => (
+                <EntryRow key={entry.name} entry={entry} title={entry.title} />
+              ))}
+            </dl>
+          )
+        )}
+      </div>
     </ScrollArea>
   )
 }

@@ -346,7 +346,7 @@ export const xpcsWithUntagged: Example = {
 // The demo data has no grouped proposal, so this rewrites the three sample
 // columns as a @Group the way the API serves one. They are already adjacent,
 // and the API gathers a group at its earliest member, so the order stands.
-const SAMPLE_GROUP = { name: 'sample', title: 'Sample' }
+export const SAMPLE_GROUP = { name: 'sample', title: 'Sample' }
 
 const GROUPED_VARIABLES: Record<string, { name: string; title: string }> = {
   sample_type: { name: 'sample.type', title: 'Sample/Type' },

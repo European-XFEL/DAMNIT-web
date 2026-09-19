@@ -4,16 +4,18 @@ export const mutedC =
   'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0))'
 
 export type SectionHeadingProps = {
+  id?: string
   children: string
   // What a find matched, for a heading that heads a group.
   highlight?: string
 }
 
-// Every group label, in the table popovers and the dashboard nav, shares this.
+// Every group label shares this: the table popovers, the nav and the run panel.
 // `size` rather than `fz`, which would leave the body's line height behind.
-function SectionHeading({ children, highlight = '' }: SectionHeadingProps) {
+function SectionHeading({ id, children, highlight = '' }: SectionHeadingProps) {
   return (
     <Highlight
+      id={id}
       highlight={highlight}
       size="xxs"
       fw={500}
