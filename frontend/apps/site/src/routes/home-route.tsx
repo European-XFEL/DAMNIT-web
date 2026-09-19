@@ -1,4 +1,12 @@
-import { Flex, Box, Stack, Title, Group, Button } from '@mantine/core'
+import {
+  DEFAULT_THEME,
+  Flex,
+  Box,
+  Stack,
+  Title,
+  Group,
+  Button,
+} from '@mantine/core'
 
 import { SiteFooter, formatUrl } from '@damnit-frontend/ui'
 
@@ -15,7 +23,13 @@ function HomeRoute() {
       <Box style={{ flex: 1 }} />
 
       <Stack align="right" gap="md" maw={640} mx={100}>
-        <Title order={1} fw={700}>
+        {/* Arial is not optically small, so the logo takes Mantine's own h1
+            size, without the theme's 6%. */}
+        <Title
+          order={1}
+          variant="logo"
+          fz={DEFAULT_THEME.headings.sizes.h1.fontSize}
+        >
           DAMNIT!
         </Title>
 

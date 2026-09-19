@@ -47,3 +47,10 @@
   margin-top: 4px;
   font-size: var(--mantine-font-size-xs);
 }
+
+/* Arial, not the shipped face, so anyone can set the logo from the fonts on
+   their machine. Any component takes it through variant="logo". */
+:global([data-variant='logo']) {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+}

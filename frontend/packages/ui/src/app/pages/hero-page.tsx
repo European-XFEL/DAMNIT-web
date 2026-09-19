@@ -14,7 +14,9 @@ const HeroPage = () => {
 
   return (
     <Container className={classes.container} size="md">
-      <Title className={classes.title}>DAMNIT!</Title>
+      <Title variant="logo" className={classes.title}>
+        DAMNIT!
+      </Title>
     </Container>
   )
 }
