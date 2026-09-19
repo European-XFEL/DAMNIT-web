@@ -85,15 +85,8 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
     })
   }
 
-  const isTooltip = variant === 'tooltip'
-
   return (
-    <Box
-      maw={isTooltip ? 360 : undefined}
-      px={isTooltip ? 10 : 0}
-      py={isTooltip ? 8 : 0}
-      c={palette.message}
-    >
+    <Box c={palette.message}>
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
           <Group
@@ -136,7 +129,10 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
           </ActionIcon>
         </Tooltip>
       </Group>
-      <ScrollArea.Autosize mah={isTooltip ? 200 : undefined} type="auto">
+      <ScrollArea.Autosize
+        mah={variant === 'tooltip' ? 200 : undefined}
+        type="auto"
+      >
         <Text size="xxs" ff="monospace" style={{ whiteSpace: 'pre-wrap' }}>
           {error.message}
         </Text>

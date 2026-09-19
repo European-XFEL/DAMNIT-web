@@ -1,4 +1,5 @@
 import {
+  Box,
   Image,
   useComputedColorScheme,
   useMantineTheme,
@@ -29,7 +30,11 @@ const IMAGE_MARGIN = 4
 function renderBody(target: CellTooltip) {
   switch (target.kind) {
     case 'error':
-      return <CellErrorCard error={target.error} variant="tooltip" />
+      return (
+        <Box maw={360} px={10} py={8}>
+          <CellErrorCard error={target.error} variant="tooltip" />
+        </Box>
+      )
     case 'image':
       return (
         <Image
