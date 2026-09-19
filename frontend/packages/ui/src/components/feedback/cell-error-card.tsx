@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from 'react'
 import {
   ActionIcon,
   Box,
@@ -8,6 +7,7 @@ import {
   Tooltip,
   rem,
 } from '@mantine/core'
+import { useClipboard, useDidUpdate } from '@mantine/hooks'
 import {
   IconAlertTriangle,
   IconCheck,
@@ -63,27 +63,9 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
   const { kind, title } = errorVisuals(error.cls)
   const palette = PALETTES[variant]
   const KindIcon = KIND_ICONS[kind]
-  const [copied, setCopied] = useState(false)
-  const resetTimerRef = useRef<number>(0)
+  const clipboard = useClipboard({ timeout: COPIED_RESET_MS })
 
-  useEffect(() => {
-    window.clearTimeout(resetTimerRef.current)
-    setCopied(false)
-    return () => {
-      window.clearTimeout(resetTimerRef.current)
-    }
-  }, [error])
-
-  const handleCopy = () => {
-    void navigator.clipboard.writeText(errorText(error)).then(() => {
-      setCopied(true)
-      window.clearTimeout(resetTimerRef.current)
-      resetTimerRef.current = window.setTimeout(
-        () => setCopied(false),
-        COPIED_RESET_MS
-      )
-    })
-  }
+  useDidUpdate(clipboard.reset, [error])
 
   return (
     <Box c={palette.message}>
@@ -107,14 +89,14 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
             {error.cls}
           </Text>
         </div>
-        <Tooltip label={copied ? 'Copied' : 'Copy'} withArrow>
+        <Tooltip label={clipboard.copied ? 'Copied' : 'Copy'} withArrow>
           <ActionIcon
             variant="subtle"
             color="gray"
             size="sm"
-            onClick={handleCopy}
+            onClick={() => clipboard.copy(errorText(error))}
           >
-            {copied ? (
+            {clipboard.copied ? (
               <IconCheck
                 style={{ width: rem(16), height: rem(16) }}
                 stroke={1.5}
