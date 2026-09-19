@@ -40,6 +40,14 @@ test("the home page groups the user's proposals by semester, newest first", asyn
   expect(numbers.indexOf('700004')).toBeLessThan(numbers.indexOf('6996'))
 })
 
+test('the home page names itself Proposals to assistive tech', async ({
+  page,
+}) => {
+  await openHome(page)
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Proposals')
+})
+
 test('the instrument pill shows the whole tag', async ({ page }) => {
   await openHome(page)
 
