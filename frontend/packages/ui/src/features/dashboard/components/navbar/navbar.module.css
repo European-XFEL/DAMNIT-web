@@ -23,13 +23,14 @@
   padding: 0;
 }
 
-/* The label sits low, nearer the rows it heads than the group above. */
+/* The label sits low, nearer the rows it heads than the group above. The
+   action's box ends on the rows' edge, so a hovered plus lines up with them. */
 .header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   height: 24px;
-  padding: 0 10px 2px;
+  padding: 0 0 2px 10px;
 }
 
 .item,
@@ -89,7 +90,7 @@
 }
 
 /* The select button stretches over the whole row, so the close mark sits on
-   top of it, padded like the Plots row so it lines up under the plus. */
+   top of it, its box ending on the row's edge under the plus. */
 .entry {
   --entry-title-size: var(--mantine-font-size-sm);
   --entry-line: calc(var(--entry-title-size) * 1.25);
@@ -99,7 +100,7 @@
   align-items: flex-start;
   gap: 8px;
   min-height: 40px;
-  padding: 4px 10px;
+  padding: 4px 0 4px 10px;
 }
 
 .entryButton {
