@@ -1,4 +1,8 @@
-import { NONCONFIGURABLE_VARIABLES, isHeavySummaryBlank } from '#src/constants'
+import {
+  DTYPES,
+  NONCONFIGURABLE_VARIABLES,
+  isHeavySummaryBlank,
+} from '#src/constants'
 import type {
   Cell,
   CellValue,
@@ -13,7 +17,8 @@ import type { VariableBlock, VariableItem } from '#src/utils/variable-blocks'
 // What the panel draws under a variable's title.
 type CellState =
   | { state: 'value'; value: NonNullable<CellValue>; dtype: string }
-  | { state: 'loading' }
+  | { state: 'loading'; dtype: string }
+  | { state: 'no-preview' }
   | { state: 'blank' }
   | { state: 'error'; error: CellError }
 
@@ -37,8 +42,12 @@ function cellState(cell: Cell | undefined): CellState {
   if (cell.error != null) {
     return { state: 'error', error: cell.error }
   }
+  // A curve is something only a plot can show, so nothing waits for its value.
+  if (cell.summary.dtype === DTYPES.array1d) {
+    return { state: 'no-preview' }
+  }
   if (isHeavySummaryBlank(cell.summary)) {
-    return { state: 'loading' }
+    return { state: 'loading', dtype: cell.summary.dtype }
   }
 
   const { value, dtype } = cell.summary
@@ -63,7 +72,7 @@ export function runEntries({
     }
 
     const { state } = cellState(cells[name])
-    return visible[name] !== false && (state === 'value' || state === 'loading')
+    return visible[name] !== false && state !== 'blank' && state !== 'error'
   }
 
   return buildVariableBlocks(variables.filter(isListed), {

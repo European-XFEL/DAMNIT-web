@@ -29,53 +29,81 @@ function EntryValue({ entry }: EntryValueProps) {
   if (entry.state === 'error') {
     return <CellErrorCard error={entry.error} variant="panel" />
   }
-  if (entry.state === 'loading') {
-    return <Skeleton h={12} w={120} radius="sm" />
-  }
   if (entry.state === 'blank') {
     return null
+  }
+  if (entry.state === 'no-preview') {
+    return (
+      <Text
+        fz={FONT_SIZE_DATA}
+        lh={SCALAR_LINE}
+        fs="italic"
+        className={classes.muted}
+      >
+        No preview
+      </Text>
+    )
+  }
+  if (entry.state === 'loading') {
+    return <Skeleton mt={4} h={12} w={120} radius="sm" />
   }
 
   const { value, dtype } = entry
   switch (dtype) {
     case DTYPES.image:
-      return (
-        <Image className={classes.image} fit="contain" src={value as string} />
-      )
+      return <Image className={classes.image} src={String(value)} alt="" />
     case DTYPES.number:
+      return <MonoValue>{String(value)}</MonoValue>
     case DTYPES.timestamp:
-      return (
-        <Text fz="xs" lh={SCALAR_LINE} ff="monospace">
-          {dtype === DTYPES.number ? value : formatDate(value as number)}
-        </Text>
-      )
-    case DTYPES.string:
-      return (
-        <Text fz={FONT_SIZE_DATA} lh={SCALAR_LINE}>
-          {value}
-        </Text>
-      )
+      return <MonoValue>{formatDate(Number(value))}</MonoValue>
+    // Any other dtype prints the way the grid's text fallback prints it.
     default:
       return (
         <Text fz={FONT_SIZE_DATA} lh={SCALAR_LINE}>
-          (no preview)
+          {String(value)}
         </Text>
       )
   }
 }
 
-type EntryRowProps = {
-  entry: RunEntry
-  title: string
+type MonoValueProps = {
+  children: string
 }
 
-function EntryRow({ entry, title }: EntryRowProps) {
-  const isImage = entry.state === 'value' && entry.dtype === DTYPES.image
-
+// A Source Code Pro glyph is a fifth wider than the sans, so mono sits one
+// step under the data size, as in the grid.
+function MonoValue({ children }: MonoValueProps) {
   return (
-    <div className={isImage ? classes.stackedRow : classes.row}>
-      <Text component="dt" size="xs" lh={SCALAR_LINE} className={classes.title}>
-        {title}
+    <Text fz="xs" lh={SCALAR_LINE} ff="monospace">
+      {children}
+    </Text>
+  )
+}
+
+// An image, or the skeleton standing in for one, needs the panel's width.
+function isStacked(entry: RunEntry) {
+  return (
+    (entry.state === 'value' || entry.state === 'loading') &&
+    entry.dtype === DTYPES.image
+  )
+}
+
+type EntryRowProps = {
+  entry: RunEntry
+}
+
+// A member's column title drops its group's words; an ungrouped one's is whole.
+function EntryRow({ entry }: EntryRowProps) {
+  return (
+    <div className={isStacked(entry) ? classes.stackedRow : classes.row}>
+      <Text
+        component="dt"
+        size="xs"
+        fw={500}
+        lh={SCALAR_LINE}
+        className={classes.title}
+      >
+        {entry.columnTitle}
       </Text>
       <dd className={classes.value}>
         <EntryValue entry={entry} />
@@ -97,7 +125,7 @@ function GroupBlock({ block }: GroupBlockProps) {
       <SectionHeading id={headingId}>{block.title}</SectionHeading>
       <dl className={classes.members}>
         {block.members.map((entry) => (
-          <EntryRow key={entry.name} entry={entry} title={entry.columnTitle} />
+          <EntryRow key={entry.name} entry={entry} />
         ))}
       </dl>
     </div>
@@ -161,30 +189,35 @@ function RunDetails({ run, variable }: RunDetailsProps) {
     return null
   }
 
-  if (variable != null) {
-    const [block] = blocks
+  // Mostly what the user's filters leave; rarely a run with no value at all.
+  if (blocks.length === 0) {
     return (
-      <ScrollArea h="100%" offsetScrollbars>
-        {block && <DrilledView block={block} />}
-      </ScrollArea>
+      // Italic, as in the nav's placeholder: the app speaking, not the run.
+      <Text fz={FONT_SIZE_DATA} fs="italic" className={classes.muted}>
+        No values to show
+      </Text>
     )
   }
 
   return (
     <ScrollArea h="100%" offsetScrollbars>
-      <div className={classes.list}>
-        {toSections(blocks).map((section) =>
-          section.kind === 'group' ? (
-            <GroupBlock key={blockKey(section.block)} block={section.block} />
-          ) : (
-            <dl key={`entries:${section.entries[0].name}`}>
-              {section.entries.map((entry) => (
-                <EntryRow key={entry.name} entry={entry} title={entry.title} />
-              ))}
-            </dl>
-          )
-        )}
-      </div>
+      {variable != null ? (
+        <DrilledView block={blocks[0]} />
+      ) : (
+        <div className={classes.list}>
+          {toSections(blocks).map((section) =>
+            section.kind === 'group' ? (
+              <GroupBlock key={blockKey(section.block)} block={section.block} />
+            ) : (
+              <dl key={`entries:${section.entries[0].name}`}>
+                {section.entries.map((entry) => (
+                  <EntryRow key={entry.name} entry={entry} />
+                ))}
+              </dl>
+            )
+          )}
+        </div>
+      )}
     </ScrollArea>
   )
 }

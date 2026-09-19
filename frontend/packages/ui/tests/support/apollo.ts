@@ -5,8 +5,10 @@ import {
   Observable,
 } from '@apollo/client'
 
-// A client that answers every request with the table's metadata, for the
-// toolbar popovers that read nothing else.
+import { typePolicies } from '#src/graphql/type-policies'
+
+// A client that answers every request with the table's metadata, over the
+// app's own cache so a test can write the runs it reads straight into it.
 export function metadataClient(metadata: object) {
   const link = new ApolloLink(
     () =>
@@ -16,5 +18,5 @@ export function metadataClient(metadata: object) {
       })
   )
 
-  return new ApolloClient({ link, cache: new InMemoryCache() })
+  return new ApolloClient({ link, cache: new InMemoryCache({ typePolicies }) })
 }

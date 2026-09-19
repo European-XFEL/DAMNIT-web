@@ -23,8 +23,10 @@
 }
 
 .members {
+  --member-inset: 22px;
+
   position: relative;
-  padding-left: 22px;
+  padding-left: var(--member-inset);
 
   &::before {
     position: absolute;
@@ -36,37 +38,45 @@
   }
 }
 
+/* A value sits beside its title while both fit on one line, and drops below
+   it otherwise. The browser measures, so no length decides it here. */
 .row {
   display: flex;
+  flex-wrap: wrap;
+  column-gap: 20px;
+  row-gap: 2px;
   align-items: baseline;
-  gap: 20px;
 }
 
 .stackedRow {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
+  display: grid;
+  gap: 4px;
 }
 
+/* Nine titles in ten fit this on one line, and a wider one pushes its value
+   along. A member's inset comes out of it, so every value starts level. */
 .title {
-  flex: none;
-  width: 110px;
+  flex: 0 0 auto;
+  min-width: calc(126px - var(--member-inset, 0px));
   color: var(--mantine-color-gray-7);
 }
 
-.members .title {
-  width: 88px;
-}
-
 .value {
+  flex: 1 1 max-content;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
+.muted {
+  color: var(--mantine-color-gray-7);
+}
+
+/* Thumbnails are stored at 300 px on their long side, so they draw pixel for
+   pixel and are only ever scaled down. */
 .image {
+  width: auto;
   max-width: 100%;
   max-height: 300px;
-  object-position: left top;
 }
 
 .view {
