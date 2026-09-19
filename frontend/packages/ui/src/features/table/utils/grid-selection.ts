@@ -115,3 +115,37 @@ export function toCurrent(
       .filter((rect) => rect != null),
   }
 }
+
+type RunSelectionChange =
+  | { type: 'select'; run: RunId }
+  | { type: 'deselect' }
+  | { type: 'keep' }
+
+type RunSelectionChangeOptions = {
+  runs: RunId[]
+  // A key raised this change, whatever the pointer rests on.
+  keyPressed: boolean
+  pointerOnHeader: boolean
+}
+
+// What a Glide selection change does to the run. A column or cell gesture
+// empties the rows too, so only a key or a row marker clicked off closes it.
+export function runSelectionChange(
+  { columns, rows, current }: GridSelection,
+  { runs, keyPressed, pointerOnHeader }: RunSelectionChangeOptions
+): RunSelectionChange {
+  // The proposal rides along: run numbers collide across proposals in one
+  // table, so the number alone cannot identify which run the aside reads.
+  const row = rows.last()
+  const run = row == null ? undefined : runs[row]
+  if (run) {
+    return { type: 'select', run }
+  }
+
+  const emptied = columns.length === 0 && current == null
+  if (emptied && (keyPressed || !pointerOnHeader)) {
+    return { type: 'deselect' }
+  }
+
+  return { type: 'keep' }
+}

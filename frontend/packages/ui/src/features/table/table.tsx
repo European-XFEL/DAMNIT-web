@@ -53,6 +53,7 @@ import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
 import { useColumnResize } from '#src/features/table/hooks/use-column-resize'
 import { useColumnFlash } from '#src/features/table/hooks/use-column-flash'
 import {
+  runSelectionChange,
   toCurrent,
   toSelectedCells,
   type ColumnIndex,
@@ -425,22 +426,16 @@ const Table = ({ paginated = true }: TableProps) => {
   }, [columnIndex, rowIndex, selectedColumns, rowSelection, selectedCells])
 
   const handleGridSelectionChange = (newSelection: GridSelection) => {
-    const { columns, rows, current } = newSelection
+    const { columns, current } = newSelection
 
-    // The proposal rides along: run numbers collide across proposals in one
-    // table, so the number alone cannot identify which run the aside reads.
-    const row = rows.last()
-    const identity = row == null ? undefined : runs[row]
-
-    // Glide drops the rows on any column or cell gesture, so an empty selection
-    // closes the run only when its row marker was clicked off.
-    if (identity) {
-      dispatch(runSelected(identity))
-    } else if (
-      columns.length === 0 &&
-      current == null &&
-      (keyPressed.current || !pointerOnHeader.current)
-    ) {
+    const change = runSelectionChange(newSelection, {
+      runs,
+      keyPressed: keyPressed.current,
+      pointerOnHeader: pointerOnHeader.current,
+    })
+    if (change.type === 'select') {
+      dispatch(runSelected(change.run))
+    } else if (change.type === 'deselect') {
       dispatch(runDeselected())
     }
 
