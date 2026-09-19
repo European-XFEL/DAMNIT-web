@@ -174,7 +174,7 @@
 }
 
 /* The border takes the nav's last pixel, so 1 px on the left centres the rail
-   under the wordmark. */
+   under the logo. */
 .rail {
   display: flex;
   flex-direction: column;

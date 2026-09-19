@@ -4,7 +4,7 @@
 }
 
 /* As wide as the nav, so its right edge carries the nav's border up through
-   the band. Below `sm` it holds only the wordmark. */
+   the band. Below `sm` it holds only the logo. */
 .navCell {
   position: relative;
   display: flex;
