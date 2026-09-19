@@ -2,7 +2,7 @@ import { expect, type Locator, type Page } from '@playwright/test'
 
 import { gridCanvas } from '#support/grid'
 
-// The band across the top: the wordmark home, the nav toggle, the crumb row.
+// The band across the top: the logo home, the nav toggle, the crumb row.
 export function dashboardHeader(page: Page): Locator {
   return page.getByRole('banner')
 }
