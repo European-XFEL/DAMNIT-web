@@ -3,7 +3,6 @@ export { Providers } from './app/providers'
 export { ThemeProvider } from './app/theme-provider'
 
 // Components
-export { default as ContactButton } from './components/buttons/contact-button'
 export { default as Header } from './components/headers/header'
 export { default as Logo } from './components/headers/logo'
 export { UserMenu } from './components/headers/user-menu'

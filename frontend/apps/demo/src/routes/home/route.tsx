@@ -1,12 +1,7 @@
 import { useLoaderData } from 'react-router'
 import { Container, Divider, Stack, Text, Title } from '@mantine/core'
 
-import {
-  ContactButton,
-  Header,
-  HomePage as DamnitHomePage,
-  Logo,
-} from '@damnit-frontend/ui'
+import { Header, HomePage as DamnitHomePage, Logo } from '@damnit-frontend/ui'
 
 import { Examples } from '../../features/examples'
 
@@ -49,12 +44,7 @@ function RootRoute() {
           <Logo linkTo="/" />
         </Header>
       }
-      main={
-        <>
-          <Main />
-          <ContactButton />
-        </>
-      }
+      main={<Main />}
     />
   )
 }
