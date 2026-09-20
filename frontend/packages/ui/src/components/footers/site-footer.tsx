@@ -33,7 +33,8 @@ function SiteAnchor({ icon: Icon, children, ...props }: SiteAnchorProps) {
 
 function SiteFooter() {
   return (
-    <Group justify="space-between" w="100%" mx={16} my={6}>
+    // Padding, not margin: a margin on a full-width row runs past its parent.
+    <Group justify="space-between" w="100%" px={16} py={6}>
       <Group gap="md">
         <SiteAnchor href="https://damnit.rtfd.io" icon={IconBook}>
           Documentation
