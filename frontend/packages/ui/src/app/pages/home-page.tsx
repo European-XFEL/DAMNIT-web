@@ -20,7 +20,6 @@ const HomePage = ({ main, header }: HomePageProps) => {
       <AppShell.Footer
         h={80}
         withBorder={false}
-        mr={32}
         style={{
           background:
             'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 70%)',
