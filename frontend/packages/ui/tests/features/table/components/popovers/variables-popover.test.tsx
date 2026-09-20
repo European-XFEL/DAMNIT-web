@@ -537,6 +537,23 @@ test('Reset order hands focus to the search box as it goes', async () => {
 
 // The focus behaviour below belongs to BasePopover, which every popover shares;
 // this is just the one with a harness.
+test('the button says its popover is open', async () => {
+  const screen = await openPopover()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Variables' }))
+    .toHaveAttribute('aria-expanded', 'true')
+})
+
+test('the popover takes the name of the button that opened it', async () => {
+  const screen = await openPopover()
+
+  // The button's name carries its badge too, so only its start is fixed
+  await expect
+    .element(screen.getByRole('dialog', { name: /^Variables/ }))
+    .toBeVisible()
+})
+
 test('Escape hands focus back to the button that opened the popover', async () => {
   const screen = await openPopover()
 

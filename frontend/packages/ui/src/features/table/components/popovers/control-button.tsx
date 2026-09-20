@@ -1,11 +1,13 @@
-import { type ElementType } from 'react'
+import { type ComponentPropsWithoutRef, type ElementType } from 'react'
 import { forwardRef } from 'react'
 import { Badge, Button, rem } from '@mantine/core'
 import { type IconProps } from '@tabler/icons-react'
 
 import classes from './control-button.module.css'
 
-type ControlButtonProps = {
+// The rest are what a popover's target hands its button: whether it is open,
+// and the id the popover is named by.
+type ControlButtonProps = ComponentPropsWithoutRef<'button'> & {
   onClick: () => void
   isActive?: boolean
 
@@ -16,9 +18,10 @@ type ControlButtonProps = {
 }
 
 export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
-  ({ isActive = false, onClick, icon: Icon, label, badge }, ref) => {
+  ({ isActive = false, onClick, icon: Icon, label, badge, ...rest }, ref) => {
     return (
       <Button
+        {...rest}
         ref={ref}
         variant={isActive ? 'light' : 'white'}
         color="gray"
