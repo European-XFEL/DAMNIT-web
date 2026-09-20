@@ -7,7 +7,13 @@ import classes from './contact-button.module.css'
 
 function ContactButton() {
   return (
-    <Affix position={{ bottom: 40, right: 16 }}>
+    // Clear of the footer band, so a wrapped footer cannot reach the pill.
+    <Affix
+      position={{
+        bottom: 'calc(var(--app-shell-footer-height) + 16px)',
+        right: 16,
+      }}
+    >
       <Tooltip
         withArrow
         position="left"

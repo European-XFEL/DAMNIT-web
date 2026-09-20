@@ -12,13 +12,15 @@ const HomePage = ({ main, header }: HomePageProps) => {
   return (
     <AppShell
       header={{ height: 40 }}
+      // The height sits on the shell, not on the element, so the main area's
+      // clearance and the feedback pill's offset both read it.
+      footer={{ height: 80 }}
       padding="md"
       style={{ '--app-shell-border-color': 'var(--mantine-color-gray-2)' }}
     >
       <AppShell.Header>{header}</AppShell.Header>
-      <AppShell.Main mb={64}>{main}</AppShell.Main>
+      <AppShell.Main>{main}</AppShell.Main>
       <AppShell.Footer
-        h={80}
         withBorder={false}
         style={{
           background:
