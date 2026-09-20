@@ -49,6 +49,9 @@ function SearchInput({
         section: { color: 'var(--mantine-color-gray-7)' },
       }}
       placeholder={placeholder}
+      // A placeholder is the last thing a browser names a box by, so the box
+      // is named outright, from the same words.
+      aria-label={placeholder}
       leftSection={<IconSearch style={{ width: rem(14), height: rem(14) }} />}
       // Matched sections put the placeholder on the popover's title column and
       // set each glyph the same distance in from its own edge.

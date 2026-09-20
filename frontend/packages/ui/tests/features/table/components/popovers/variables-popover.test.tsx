@@ -331,6 +331,16 @@ test('a search that matches nothing says so', async () => {
   await expect.element(screen.getByText('No variables match')).toBeVisible()
 })
 
+// A browser names the box by its placeholder anyway, so only the attribute
+// shows that the name no longer rests on that fallback.
+test('the search box carries a name of its own', async () => {
+  const screen = await openPopover()
+
+  await expect
+    .element(screen.getByPlaceholder('Search variables'))
+    .toHaveAttribute('aria-label', 'Search variables')
+})
+
 test('the search box clears in one click', async () => {
   const screen = await openPopover()
 
