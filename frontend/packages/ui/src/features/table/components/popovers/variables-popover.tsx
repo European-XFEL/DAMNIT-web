@@ -1,6 +1,8 @@
 import {
   createContext,
   useContext,
+  useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -45,20 +47,17 @@ import {
 import {
   buildColumnBlocks,
   type Column,
+  type ColumnBlock,
   type ColumnGroupBlock,
 } from '#src/features/table/utils/column-blocks'
+import { findColumnMatches } from '#src/features/table/utils/column-find'
 import {
   BLOCKS_DROPPABLE,
   membersDroppable,
   reorderColumns,
 } from '#src/features/table/utils/column-reorder'
 import { pinnedFirst } from '#src/features/table/utils/pinned-columns'
-import {
-  blockKey,
-  filterVariableBlocks,
-  itemsOf,
-  variableKey,
-} from '#src/utils/variable-blocks'
+import { blockKey, itemsOf, variableKey } from '#src/utils/variable-blocks'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import SectionHeading, {
   mutedC,
@@ -77,6 +76,14 @@ const buildVisibility = (names: string[], isVisible: boolean) =>
 const OpenRowsContext = createContext<ReturnType<typeof useOpenRows> | null>(
   null
 )
+
+// What the search found, reached the same way. A row is named by its key, and
+// Tab from the search box lands on the element with that key's target id.
+const FindContext = createContext<{
+  search: string
+  currentKey?: string
+  targetId: (key: string) => string
+} | null>(null)
 
 type VariableDetailsProps = {
   tags: string[]
@@ -124,6 +131,9 @@ type VisibilityActionProps = {
   allShown: boolean
   onToggle: (isVisible: boolean) => void
   passesTagFilter?: boolean
+  // How many of a search's matches the link acts on, so it says so. Left out,
+  // it acts on all.
+  matchCount?: number
   // Named in the link's accessible name, so a group's link is not just another
   // "Hide all". It keeps the visible words, which is what the name has to say.
   groupTitle?: string
@@ -133,9 +143,14 @@ function VisibilityAction({
   allShown,
   onToggle,
   passesTagFilter = true,
+  matchCount,
   groupTitle,
 }: VisibilityActionProps) {
-  const label = allShown ? 'Hide all' : 'Show all'
+  const verb = allShown ? 'Hide' : 'Show'
+  const label =
+    matchCount == null
+      ? `${verb} all`
+      : `${verb} ${matchCount} ${matchCount === 1 ? 'match' : 'matches'}`
 
   return (
     <PopoverLink
@@ -158,12 +173,14 @@ const HANDLE_ICON_SIZE = 14
 type GripProps = {
   label: string
   handleProps?: DraggableProvided['dragHandleProps']
+  id?: string
 }
 
-function Grip({ label, handleProps }: GripProps) {
+function Grip({ label, handleProps, id }: GripProps) {
   return (
     <div
       {...handleProps}
+      id={handleProps == null ? undefined : id}
       className={classes.grip}
       aria-label={handleProps == null ? undefined : `Reorder ${label}`}
     >
@@ -209,6 +226,7 @@ function ColumnItem({
 }: ColumnItemProps) {
   const dispatch = useAppDispatch()
   const openRows = useContext(OpenRowsContext)
+  const find = useContext(FindContext)
   const {
     name,
     title,
@@ -218,6 +236,8 @@ function ColumnItem({
     passesTagFilter,
     tags,
   } = column
+  const key = variableKey(name)
+  const targetId = find?.targetId(key)
 
   return (
     <div
@@ -230,17 +250,25 @@ function ColumnItem({
         columnTitle={columnTitle}
         muted={!isVisible || !passesTagFilter}
         isMember={isMember}
+        highlight={find?.search}
+        isCurrent={find?.currentKey === key}
         // An inert grip on a row nobody can move would invite a drag that does
         // nothing.
         lead={
           isPinned ? (
             <PinnedMark />
           ) : (
-            <Grip label={title} handleProps={provided?.dragHandleProps} />
+            <Grip
+              label={title}
+              handleProps={provided?.dragHandleProps}
+              id={targetId}
+            />
           )
         }
         control={
           <RowItemCheckbox
+            // A pinned row has no grip, so a find lands on its checkbox.
+            id={isPinned ? targetId : undefined}
             aria-label={title}
             checked={isVisible}
             disabled={!canHide}
@@ -290,8 +318,10 @@ function GroupBlock({
   children,
 }: GroupBlockProps) {
   const dispatch = useAppDispatch()
+  const find = useContext(FindContext)
   const { innerRef, draggableProps, dragHandleProps } = provided
 
+  const key = blockKey(block)
   const names = block.members.map((member) => member.name)
 
   return (
@@ -300,10 +330,20 @@ function GroupBlock({
       className={cx(classes.block, { [classes.dragging]: isDragging })}
       {...draggableProps}
     >
-      <div className={classes.groupHeader}>
-        <Grip label={block.title} handleProps={dragHandleProps} />
+      <div
+        className={cx(classes.groupHeader, {
+          [classes.current]: find?.currentKey === key,
+        })}
+      >
+        <Grip
+          label={block.title}
+          handleProps={dragHandleProps}
+          id={find?.targetId(key)}
+        />
         <span className={classes.title}>
-          <SectionHeading>{block.title}</SectionHeading>
+          <SectionHeading highlight={find?.search}>
+            {block.title}
+          </SectionHeading>
         </span>
         <VisibilityAction
           groupTitle={block.title}
@@ -387,6 +427,7 @@ function VariableList() {
   const tagFilter = useColumnVisibilityFromTags()
   const openRows = useOpenRows()
   const searchRef = useRef<HTMLInputElement>(null)
+  const idPrefix = useId()
 
   // Pinned columns are not the user's to move, but they still lead the stored
   // order, or every other reader would find them at its end.
@@ -395,31 +436,97 @@ function VariableList() {
     [variables, pinned]
   )
 
-  const live = useMemo(() => {
+  // The rows the list draws. A pinned column leads them and draws flat, since
+  // its group is not on screen: it shows what it is, but it never moves.
+  const built = useMemo(() => {
     const build = (columns: typeof variables) =>
       buildColumnBlocks({ variables: columns, groups, visibility, tagFilter })
 
-    const blocks = build(centre)
+    return { blocks: build(centre), pinnedColumns: itemsOf(build(start)) }
+  }, [start, centre, groups, visibility, tagFilter])
+
+  const live = useMemo(
+    () => ({ ...built, search: debouncedQuery.trim() }),
+    [built, debouncedQuery]
+  )
+
+  // A drag reads the list as the library measured it, so a live run push landing
+  // mid-drag cannot shift a row under the drop, nor a search scroll one away.
+  const [frozen, setFrozen] = useState<typeof live | null>(null)
+  const { blocks, pinnedColumns, search } = frozen ?? live
+
+  // The pinned rows are searched first, since they lead the list on screen.
+  const matches = useMemo(() => {
+    const pinnedRows = pinnedColumns.map(
+      (column): ColumnBlock => ({ kind: 'variable', ...column })
+    )
+    return findColumnMatches([...pinnedRows, ...blocks], search)
+  }, [pinnedColumns, blocks, search])
+  const isSearching = search !== ''
+
+  // The match Enter stepped to, or the one a lift pinned. Kept by key so a
+  // drop that reorders the matches leaves the find where it was.
+  const [steppedKey, setSteppedKey] = useState<string>()
+  // A new search starts from its first match.
+  useEffect(() => setSteppedKey(undefined), [search])
+
+  const currentIndex = Math.max(
+    matches.findIndex((match) => match.key === steppedKey),
+    0
+  )
+  const current = matches.at(currentIndex)
+
+  // The rows draw from `search` and `currentKey`; the rest is how the list
+  // reaches the row a key names, which only the find itself uses.
+  const find = useMemo(() => {
+    const targetId = (key: string) => `${idPrefix}${key}`
+    const element = (key: string) => document.getElementById(targetId(key))
 
     return {
-      blocks,
-      shown: filterVariableBlocks(blocks, debouncedQuery),
-      // A pinned column leads the list and shows what it is, but it never moves.
-      pinnedColumns: itemsOf(
-        filterVariableBlocks(build(start), debouncedQuery)
-      ),
+      search,
+      currentKey: current?.key,
+      targetId,
+      element,
+      scrollTo: (key: string) =>
+        element(key)?.scrollIntoView({ block: 'center' }),
     }
-  }, [start, centre, groups, visibility, tagFilter, debouncedQuery])
+  }, [search, current?.key, idPrefix])
 
-  // A drag reads the list as the library measured it, so a search or a live run
-  // push landing mid-drag cannot shift a row under the drop.
-  const [frozen, setFrozen] = useState<typeof live | null>(null)
-  const { blocks, shown, pinnedColumns } = frozen ?? live
+  // The current match comes to the middle of the list whenever the search moves
+  // it. Nothing moves during a drag, since the find is frozen.
+  useEffect(() => {
+    if (find.currentKey === undefined) {
+      return
+    }
+    find.scrollTo(find.currentKey)
+  }, [find])
 
-  // A drop lands beside its neighbour in the whole order, so the columns the
-  // search left out stay where they are.
+  const stepToNext = () => {
+    if (matches.length === 0) {
+      return
+    }
+    const next = matches[(currentIndex + 1) % matches.length].key
+    setSteppedKey(next)
+    // A sole match steps to itself, which leaves the find unchanged and the
+    // effect above asleep, so that step scrolls for itself.
+    if (next === find.currentKey) {
+      find.scrollTo(next)
+    }
+  }
+
+  // A row with nothing the keyboard can take lets Tab go where it would.
+  const focusCurrentMatch = () => {
+    const target =
+      find.currentKey === undefined ? null : find.element(find.currentKey)
+    if (target == null || target.matches(':disabled')) {
+      return false
+    }
+    target.focus()
+    return true
+  }
+
   const handleDragEnd = (result: DropResult) => {
-    const move = reorderColumns({ blocks, shown }, result)
+    const move = reorderColumns(blocks, result)
     setFrozen(null)
     if (move != null) {
       const order = [...start.map(({ name }) => name), ...move.order]
@@ -430,7 +537,7 @@ function VariableList() {
   // Mantine's transform would offset a preview's `position: fixed`, so both
   // lists drag a clone, which the library renders outside the popover.
   const renderBlockClone: DraggableChildrenFn = (clone, _snapshot, rubric) => {
-    const block = shown[rubric.source.index]
+    const block = blocks[rubric.source.index]
     return block.kind === 'group' ? (
       <GroupBlock block={block} provided={clone} isDragging>
         {block.members.map((member) => (
@@ -442,102 +549,119 @@ function VariableList() {
     )
   }
 
-  const listedColumns = [...pinnedColumns, ...itemsOf(shown)]
-
-  // The link speaks only for the columns the search left that the user can
-  // hide, so with none of those it says nothing rather than "Hide all".
-  const hideable = listedColumns.filter((column) => column.canHide)
+  // The link speaks for the columns a search found, or for every column with no
+  // search, and only those the user can hide.
+  const hideable = (
+    isSearching
+      ? matches.flatMap((match) =>
+          match.kind === 'column' ? [match.column] : []
+        )
+      : [...pinnedColumns, ...itemsOf(blocks)]
+  ).filter((column) => column.canHide)
   const hideableNames = hideable.map((column) => column.name)
 
   return (
     <OpenRowsContext.Provider value={openRows}>
-      <DragDropContext
-        onBeforeCapture={() => setFrozen(live)}
-        onDragEnd={handleDragEnd}
-      >
-        <PopoverList
-          search={{
-            value: query,
-            onChange: setQuery,
-            placeholder: 'Search variables',
-            inputRef: searchRef,
+      <FindContext.Provider value={find}>
+        <DragDropContext
+          onBeforeCapture={() => {
+            setFrozen(live)
+            // The find holds the match it is on, or the drop moves the list
+            // under it and hands the find to whatever became first.
+            setSteppedKey((key) => key ?? current?.key)
           }}
-          emptyMessage={
-            debouncedQuery.trim() !== '' && listedColumns.length === 0
-              ? 'No variables match'
-              : undefined
-          }
-          // Back to the server's order, all of it whatever the search shows.
-          // It appears once the user has moved something, and goes when used.
-          footerStart={
-            hasOrder && (
-              <PopoverLink
-                onClick={() => {
-                  dispatch(columnOrderReset())
-                  searchRef.current?.focus()
-                }}
-              >
-                Reset order
-              </PopoverLink>
-            )
-          }
-          footerEnd={
-            hideableNames.length > 0 && (
-              <VisibilityAction
-                allShown={hideable.every((column) => column.isVisible)}
-                onToggle={(isVisible) =>
-                  dispatch(
-                    setColumnVisibility(
-                      buildVisibility(hideableNames, isVisible)
-                    )
-                  )
-                }
-              />
-            )
-          }
+          onDragEnd={handleDragEnd}
         >
-          {pinnedColumns.map((column) => (
-            <ColumnItem key={column.name} column={column} isPinned />
-          ))}
-
-          {/* Where the columns that stay put end and the ones a drag moves
-              begin, drawn only with rows on both sides. */}
-          {pinnedColumns.length > 0 && shown.length > 0 && (
-            <Divider className={classes.pinnedDivider} />
-          )}
-
-          <Droppable
-            droppableId={BLOCKS_DROPPABLE}
-            type={BLOCKS_DROPPABLE}
-            renderClone={renderBlockClone}
+          <PopoverList
+            search={{
+              value: query,
+              onChange: setQuery,
+              placeholder: 'Search variables',
+              inputRef: searchRef,
+              find: isSearching
+                ? {
+                    current: current == null ? 0 : currentIndex + 1,
+                    total: matches.length,
+                    onStep: stepToNext,
+                    focusCurrentMatch,
+                  }
+                : undefined,
+            }}
+            // Back to the server's order. It appears once the user has moved
+            // something, and goes when used.
+            footerStart={
+              hasOrder && (
+                <PopoverLink
+                  onClick={() => {
+                    dispatch(columnOrderReset())
+                    searchRef.current?.focus()
+                  }}
+                >
+                  Reset order
+                </PopoverLink>
+              )
+            }
+            // With nothing to act on, the link says nothing rather than
+            // "Hide all".
+            footerEnd={
+              hideableNames.length > 0 && (
+                <VisibilityAction
+                  allShown={hideable.every((column) => column.isVisible)}
+                  matchCount={isSearching ? hideable.length : undefined}
+                  onToggle={(isVisible) =>
+                    dispatch(
+                      setColumnVisibility(
+                        buildVisibility(hideableNames, isVisible)
+                      )
+                    )
+                  }
+                />
+              )
+            }
           >
-            {(blockList) => (
-              <Stack
-                ref={blockList.innerRef}
-                {...blockList.droppableProps}
-                gap={0}
-              >
-                {shown.map((block, index) =>
-                  block.kind === 'group' ? (
-                    <DraggableGroup
-                      key={blockKey(block)}
-                      block={block}
-                      index={index}
-                    />
-                  ) : (
-                    <DraggableColumn
-                      key={blockKey(block)}
-                      column={block}
-                      index={index}
-                    />
-                  )
-                )}
-                {blockList.placeholder}
-              </Stack>
+            {pinnedColumns.map((column) => (
+              <ColumnItem key={column.name} column={column} isPinned />
+            ))}
+
+            {/* Where the columns that stay put end and the ones a drag moves
+                begin, drawn only with rows on both sides. */}
+            {pinnedColumns.length > 0 && blocks.length > 0 && (
+              <Divider className={classes.pinnedDivider} />
             )}
-          </Droppable>
-        </PopoverList>
-      </DragDropContext>
+
+            <Droppable
+              droppableId={BLOCKS_DROPPABLE}
+              type={BLOCKS_DROPPABLE}
+              renderClone={renderBlockClone}
+            >
+              {(blockList) => (
+                <Stack
+                  ref={blockList.innerRef}
+                  {...blockList.droppableProps}
+                  gap={0}
+                >
+                  {blocks.map((block, index) =>
+                    block.kind === 'group' ? (
+                      <DraggableGroup
+                        key={blockKey(block)}
+                        block={block}
+                        index={index}
+                      />
+                    ) : (
+                      <DraggableColumn
+                        key={blockKey(block)}
+                        column={block}
+                        index={index}
+                      />
+                    )
+                  )}
+                  {blockList.placeholder}
+                </Stack>
+              )}
+            </Droppable>
+          </PopoverList>
+        </DragDropContext>
+      </FindContext.Provider>
     </OpenRowsContext.Provider>
   )
 }

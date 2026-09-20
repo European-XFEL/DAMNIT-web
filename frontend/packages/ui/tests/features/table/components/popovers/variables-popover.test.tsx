@@ -118,6 +118,41 @@ function gripColour(screen: Screen, label: string) {
 const rowOf = (screen: Screen, label: string) =>
   closestHolding(screen, { label, selector: 'input[type="checkbox"]' })
 
+const background = (element: Element) =>
+  getComputedStyle(element).backgroundColor
+
+// The ground under a row's marked letters, which the current match deepens.
+const markIn = (row: Element) => background(row.querySelector('mark')!)
+
+// The letters a search has marked, top to bottom. The popover draws in a
+// portal, so they are read from the whole page.
+const markedLetters = () =>
+  Array.from(document.querySelectorAll('mark'), (mark) => mark.textContent)
+
+// The box's count of the matches, as it reads on screen.
+const findCount = (screen: Screen) => screen.getByText(/^\d+\/\d+$/)
+
+// A list long enough that its last rows sit outside the popover's viewport.
+const manyVariables = () =>
+  Object.fromEntries(
+    Array.from({ length: 60 }, (_, index) => [
+      `v${index}`,
+      { name: `v${index}`, title: `Variable ${index}`, tags: [] },
+    ])
+  )
+
+async function search(screen: Screen, query: string) {
+  await screen.getByPlaceholder('Search variables').fill(query)
+  // Past the debounce, once the count has come in
+  await expect.element(findCount(screen)).toBeVisible()
+}
+
+// Out of the box, past the clear button Tab reaches first, and into the list.
+async function tabToMatch() {
+  await userEvent.tab()
+  await userEvent.tab()
+}
+
 // One place along, by the keyboard half of the gesture.
 async function drag(
   screen: Screen,
@@ -152,17 +187,23 @@ test('a pinned column is marked pinned and offers no handle', async () => {
   expect(movableColumns(screen)).not.toContain('Proposal')
 })
 
+// The popover always draws two lines of its own, above and below the list.
+const lines = (screen: Screen) =>
+  screen.getByRole('separator').elements().length
+
 test('a line parts the pinned rows from the rows that move', async () => {
   const screen = await openPopover()
-  // The popover always draws two of its own, above and below the list
-  const lines = () => screen.getByRole('separator').elements().length
 
-  // With rows on both sides of it
-  expect(lines()).toBe(3)
+  expect(lines(screen)).toBe(3)
+})
 
-  // Narrowed to Run alone, with nothing below to part it from
-  await screen.getByPlaceholder('Search variables').fill('run')
-  await expect.poll(lines).toBe(2)
+test('no line is drawn under pinned rows with nothing below them', async () => {
+  const { proposal, run } = METADATA.variables
+  client = metadataClient({ ...METADATA, variables: { proposal, run } })
+  const screen = await openPopover()
+  await expect.element(screen.getByText('Proposal')).toBeVisible()
+
+  expect(lines(screen)).toBe(2)
 })
 
 test('Run is listed with a checkbox that cannot be cleared', async () => {
@@ -292,43 +333,250 @@ test('a member cannot be dragged out of the group it belongs to', async () => {
   ).toEqual([])
 })
 
-test('a drop under a search moves only the column that was dragged', async () => {
+test('a search marks the letters it matched and leaves every row in place', async () => {
   const screen = await openPopover()
 
-  // Narrow the list to the two ungrouped columns either side of the group
-  await screen.getByPlaceholder('Search variables').fill('n')
-  await expect
-    .poll(() => movableColumns(screen))
-    .toEqual(['Trains', 'Scan type'])
+  await search(screen, 'type')
 
-  await drag(screen, { label: 'Trains' })
-
-  // With the search cleared, the group it passed over has not moved
-  await screen.getByRole('button', { name: 'Clear search' }).click()
-  await expect
-    .poll(() => movableColumns(screen))
-    .toEqual(['Sample', 'Sample/Type', 'Sample/X [mm]', 'Scan type', 'Trains'])
+  expect(markedLetters()).toEqual(['Type', 'type'])
+  expect(movableColumns(screen)).toEqual([
+    'Trains',
+    'Sample',
+    'Sample/Type',
+    'Sample/X [mm]',
+    'Scan type',
+  ])
 })
 
-test('a search landing mid-drag leaves the list as the drag found it', async () => {
+test('the box counts the matches and Enter steps through them, wrapping', async () => {
+  const screen = await openPopover()
+  // Trains, Type and Scan type
+  await search(screen, 't')
+  await expect.element(findCount(screen)).toHaveTextContent('1/3')
+
+  await userEvent.keyboard('{Enter}')
+  await expect.element(findCount(screen)).toHaveTextContent('2/3')
+
+  await userEvent.keyboard('{Enter}')
+  await userEvent.keyboard('{Enter}')
+  await expect.element(findCount(screen)).toHaveTextContent('1/3')
+})
+
+test('the current match is lit and its mark deepens, and Enter moves both on', async () => {
+  const screen = await openPopover()
+  const unlit = background(rowOf(screen, 'Run'))
+  await search(screen, 't')
+
+  // On the first match
+  const ordinaryMark = markIn(rowOf(screen, 'Type'))
+  expect(background(rowOf(screen, 'Trains'))).not.toBe(unlit)
+  expect(markIn(rowOf(screen, 'Trains'))).not.toBe(ordinaryMark)
+  expect(background(rowOf(screen, 'Type'))).toBe(unlit)
+
+  // Stepped on to the second
+  await userEvent.keyboard('{Enter}')
+  await expect.poll(() => background(rowOf(screen, 'Type'))).not.toBe(unlit)
+  expect(markIn(rowOf(screen, 'Type'))).not.toBe(ordinaryMark)
+  expect(background(rowOf(screen, 'Trains'))).toBe(unlit)
+  expect(markIn(rowOf(screen, 'Trains'))).toBe(ordinaryMark)
+})
+
+test('Tab leaves the search box through the button that clears it', async () => {
+  const screen = await openPopover()
+  await search(screen, 'scan')
+
+  await userEvent.tab()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Clear search' }))
+    .toHaveFocus()
+})
+
+test("Tab from the search box lands on the current match's handle, ready to drag", async () => {
+  const screen = await openPopover()
+  await search(screen, 'scan')
+
+  // Tab into the list
+  await tabToMatch()
+  await expect.element(handle(screen, 'Scan type')).toHaveFocus()
+
+  // One place up, past the group
+  await userEvent.keyboard('{Space}')
+  await userEvent.keyboard('{ArrowUp}')
+  await userEvent.keyboard('{Space}')
+  await expect
+    .poll(() => movableColumns(screen))
+    .toEqual(['Trains', 'Scan type', 'Sample', 'Sample/Type', 'Sample/X [mm]'])
+})
+
+test('a group heading is one match, and Tab lands on its handle', async () => {
+  const screen = await openPopover()
+
+  await search(screen, 'sample')
+  await expect.element(findCount(screen)).toHaveTextContent('1/1')
+  expect(markedLetters()).toEqual(['Sample'])
+
+  await tabToMatch()
+  await expect.element(handle(screen, 'Sample')).toHaveFocus()
+})
+
+test("Tab lands on a pinned match's checkbox, since it has no handle", async () => {
+  const screen = await openPopover()
+  await search(screen, 'proposal')
+
+  await tabToMatch()
+
+  await expect
+    .element(screen.getByRole('checkbox', { name: 'Proposal', exact: true }))
+    .toHaveFocus()
+})
+
+test('Tab past a match the keyboard cannot take goes on down the list', async () => {
+  const screen = await openPopover()
+  // Run's checkbox is disabled, and a pinned row has no handle
+  await search(screen, 'run')
+
+  await tabToMatch()
+
+  // The first row, where Tab out of the box goes with no match to take it
+  await expect
+    .element(screen.getByRole('checkbox', { name: 'Proposal', exact: true }))
+    .toHaveFocus()
+})
+
+test('a drop keeps the find on the row it moved', async () => {
+  const screen = await openPopover()
+  await search(screen, 't')
+
+  // Step on to Scan type, the last of the three, and move it above the group
+  await userEvent.keyboard('{Enter}')
+  await userEvent.keyboard('{Enter}')
+  await drag(screen, { label: 'Scan type', key: 'ArrowUp' })
+
+  // Now the second match in list order, and still the current one
+  await expect.element(findCount(screen)).toHaveTextContent('2/3')
+  expect(background(rowOf(screen, 'Scan type'))).not.toBe(
+    background(rowOf(screen, 'Run'))
+  )
+})
+
+test('a drop keeps the find on a match it never stepped to', async () => {
+  const screen = await openPopover()
+  await search(screen, 't')
+
+  // Trains is the first of the three matches, with no Enter pressed
+  await drag(screen, { label: 'Trains' })
+
+  // Now the second match in list order, and still the current one
+  await expect.element(findCount(screen)).toHaveTextContent('2/3')
+  expect(background(rowOf(screen, 'Trains'))).not.toBe(
+    background(rowOf(screen, 'Run'))
+  )
+})
+
+// A click is answered by whatever sits at the point, and the count lies over
+// the box, so the element at that point is what a click would reach.
+test('a click on the find count reaches the search box under it', async () => {
+  const screen = await openPopover()
+  await search(screen, 'scan')
+
+  const { left, top, width, height } = findCount(screen)
+    .element()
+    .getBoundingClientRect()
+  const hit = document.elementFromPoint(left + width / 2, top + height / 2)
+
+  expect(hit).toBe(screen.getByPlaceholder('Search variables').element())
+})
+
+test('a search typed again starts at its first match', async () => {
+  const screen = await openPopover()
+  const box = screen.getByPlaceholder('Search variables')
+  await search(screen, 't')
+
+  // On to the last of the three
+  await userEvent.keyboard('{Enter}')
+  await userEvent.keyboard('{Enter}')
+  await expect.element(findCount(screen)).toHaveTextContent('3/3')
+
+  // The same word again, past the debounce both ways
+  await box.clear()
+  await expect.poll(markedLetters).toEqual([])
+  await search(screen, 't')
+
+  await expect.element(findCount(screen)).toHaveTextContent('1/3')
+})
+
+test('a search landing mid-drag marks nothing until the drop', async () => {
   const screen = await openPopover()
 
   // Type, then lift a column before the search has settled
-  await screen.getByPlaceholder('Search variables').fill('n')
+  await screen.getByPlaceholder('Search variables').fill('t')
   handle(screen, 'Trains').element().focus()
   await userEvent.keyboard('{Space}')
 
-  // Past the debounce, the pinned row the search would drop is still there
+  // Past the debounce
   await new Promise((resolve) => setTimeout(resolve, 400))
-  await expect.element(screen.getByText('Proposal')).toBeVisible()
+  expect(markedLetters()).toEqual([])
+
+  // Dropped where it was lifted
+  await userEvent.keyboard('{Space}')
+  await expect.poll(markedLetters).toEqual(['T', 'T', 't'])
 })
 
 test('a search that matches nothing says so', async () => {
   const screen = await openPopover()
 
-  await screen.getByPlaceholder('Search variables').fill('zzz')
+  await search(screen, 'zzz')
 
-  await expect.element(screen.getByText('No variables match')).toBeVisible()
+  await expect.element(findCount(screen)).toHaveTextContent('0/0')
+  await expect
+    .element(screen.getByRole('status'))
+    .toHaveTextContent('No matches')
+})
+
+test('the count is read out in words as the find moves', async () => {
+  const screen = await openPopover()
+  await search(screen, 't')
+
+  await userEvent.keyboard('{Enter}')
+
+  await expect
+    .element(screen.getByRole('status'))
+    .toHaveTextContent('2 of 3 matches')
+})
+
+test('a match far down a long list is brought into view, and the page stays put', async () => {
+  client = metadataClient({
+    ...METADATA,
+    variables: { ...METADATA.variables, ...manyVariables() },
+  })
+  const screen = await openPopover()
+  const last = handle(screen, 'Variable 59')
+  await expect.element(last).not.toBeInViewport()
+
+  await search(screen, 'variable 59')
+
+  await expect.element(last).toBeInViewport()
+  expect([window.scrollX, window.scrollY]).toEqual([0, 0])
+})
+
+test('Enter brings back a sole match scrolled out of view', async () => {
+  client = metadataClient({
+    ...METADATA,
+    variables: { ...METADATA.variables, ...manyVariables() },
+  })
+  const screen = await openPopover()
+  const last = handle(screen, 'Variable 59')
+  await search(screen, 'variable 59')
+  await expect.element(last).toBeInViewport()
+
+  // Scrolled back up, away from the only match
+  handle(screen, 'Variable 0').element().scrollIntoView()
+  await expect.element(last).not.toBeInViewport()
+
+  await userEvent.keyboard('{Enter}')
+
+  await expect.element(last).toBeInViewport()
 })
 
 // A browser names the box by its placeholder anyway, so only the attribute
@@ -343,18 +591,12 @@ test('the search box carries a name of its own', async () => {
 
 test('the search box clears in one click', async () => {
   const screen = await openPopover()
+  await search(screen, 'sample')
+  expect(markedLetters()).toEqual(['Sample'])
 
-  // Narrow the list to the group
-  await screen.getByPlaceholder('Search variables').fill('sample')
-  await expect
-    .poll(() => movableColumns(screen))
-    .toEqual(['Sample', 'Sample/Type', 'Sample/X [mm]'])
-
-  // Clear it, and the button goes with the text it had to clear
+  // The marks go, and the button with the text it had to clear
   await screen.getByRole('button', { name: 'Clear search' }).click()
-  await expect
-    .poll(() => movableColumns(screen))
-    .toEqual(['Trains', 'Sample', 'Sample/Type', 'Sample/X [mm]', 'Scan type'])
+  await expect.poll(markedLetters).toEqual([])
   expect(
     screen.getByRole('button', { name: 'Clear search' }).elements()
   ).toEqual([])
@@ -362,12 +604,12 @@ test('the search box clears in one click', async () => {
 
 test('clearing the search hands focus back to the search box', async () => {
   const screen = await openPopover()
-  const search = screen.getByPlaceholder('Search variables')
+  const box = screen.getByPlaceholder('Search variables')
 
-  await search.fill('sample')
+  await box.fill('sample')
   await screen.getByRole('button', { name: 'Clear search' }).click()
 
-  await expect.element(search).toHaveFocus()
+  await expect.element(box).toHaveFocus()
 })
 
 test('the checkbox beside a column hides it', async () => {
@@ -396,6 +638,51 @@ test('the footer link leaves alone the columns the user cannot hide', async () =
   // Run's checkbox reads checked whatever the store holds, so only the store
   // shows the link never wrote it.
   expect(store.getState().table.columnVisibility).not.toHaveProperty('run')
+})
+
+test('under a search the footer link hides only the matches and says how many', async () => {
+  const screen = await openPopover()
+  const checkbox = (name: string) =>
+    screen.getByRole('checkbox', { name, exact: true })
+  await search(screen, 't')
+
+  await screen.getByRole('button', { name: 'Hide 3 matches' }).click()
+
+  await expect.element(checkbox('Trains')).not.toBeChecked()
+  await expect.element(checkbox('Sample/Type')).not.toBeChecked()
+  await expect.element(checkbox('Scan type')).not.toBeChecked()
+  await expect.element(checkbox('Sample/X [mm]')).toBeChecked()
+})
+
+test('a group found by its heading is left to the link beside the heading', async () => {
+  const screen = await openPopover()
+  const checkbox = (name: string) =>
+    screen.getByRole('checkbox', { name, exact: true })
+  await search(screen, 'sample')
+
+  // The footer says nothing: the heading is the only match, and hiding a group
+  // is what the link on the heading is for
+  expect(
+    screen.getByRole('button', { name: /^(Hide|Show) \d+ match/ }).elements()
+  ).toEqual([])
+
+  // That link still takes the whole group
+  await screen.getByRole('button', { name: 'Hide all Sample' }).click()
+  await expect.element(checkbox('Sample/Type')).not.toBeChecked()
+  await expect.element(checkbox('Sample/X [mm]')).not.toBeChecked()
+})
+
+test('under a search that finds nothing the footer link goes', async () => {
+  const screen = await openPopover()
+
+  await search(screen, 'zzz')
+
+  // A group's own link names its group, so it does not answer to this
+  expect(
+    screen
+      .getByRole('button', { name: /^(Hide|Show) (all|\d+ match(es)?)$/ })
+      .elements()
+  ).toEqual([])
 })
 
 test("a group's link hides every member at once", async () => {

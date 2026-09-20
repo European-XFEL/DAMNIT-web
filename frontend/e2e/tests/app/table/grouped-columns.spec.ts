@@ -4,6 +4,7 @@ import { WIDE_VIEWPORT } from '#support/grid'
 import { openSummaryPlot, plotEntry } from '#support/plots'
 import {
   clickGroupHeader,
+  columnHandle,
   columnOf,
   columnTitles,
   contextMenu,
@@ -13,7 +14,9 @@ import {
   openProposal,
   rightClickHeader,
   rowCheckbox,
+  searchMarks,
   selectedColumnHeaders,
+  tabToMatch,
   titleOf,
 } from '#support/table'
 
@@ -145,7 +148,7 @@ test('a partly hidden group offers to show the rest', async ({
   await expectVisibleColumns(page, 13)
 })
 
-test('searching a group name keeps the group and its members', async ({
+test("searching a group name marks its heading, and Tab lands on the group's handle", async ({
   page,
   example,
 }) => {
@@ -153,10 +156,8 @@ test('searching a group name keeps the group and its members', async ({
   await openPopover(page, 'Variables')
 
   await page.getByPlaceholder('Search variables').fill('sample')
+  await expect(searchMarks(page)).toHaveText(['Sample'])
 
-  await expect(groupAction(page, 'Sample')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample/Type')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample/X [mm]')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample/Y [mm]')).toBeVisible()
-  await expect(rowCheckbox(page, 'Trains')).toHaveCount(0)
+  await tabToMatch(page)
+  await expect(columnHandle(page, 'Sample')).toBeFocused()
 })

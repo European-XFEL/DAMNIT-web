@@ -1,14 +1,22 @@
-import { useId, useRef, type ReactNode, type RefObject } from 'react'
+import {
+  useId,
+  useRef,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import {
   Anchor,
   CloseButton,
   Divider,
+  Highlight,
   rem,
   ScrollArea,
   Stack,
   Text,
   TextInput,
   UnstyledButton,
+  VisuallyHidden,
   type AnchorProps,
 } from '@mantine/core'
 import { IconSearch, IconX } from '@tabler/icons-react'
@@ -18,6 +26,23 @@ import { mutedC } from '#src/components/headings/section-heading'
 
 import classes from './popover-list.module.css'
 
+// The glyph slot at each end of the box, so the search icon and the clear
+// button sit the same distance in from their own edge.
+const SECTION_WIDTH = 38
+
+// The clear button's slot, and a count up to "99/999" before it with a little
+// air: that measures 42 px at 11 px in the widest fallback font.
+const FIND_SECTION_WIDTH = SECTION_WIDTH + 42
+
+type SearchFind = {
+  // Counted from one, and zero when nothing matched.
+  current: number
+  total: number
+  onStep: () => void
+  // Moves focus to the current match, or returns false to let Tab go on.
+  focusCurrentMatch: () => boolean
+}
+
 type SearchInputProps = {
   value: string
   onChange: (value: string) => void
@@ -25,6 +50,16 @@ type SearchInputProps = {
   // For a control elsewhere in the popover that removes itself when used and
   // needs somewhere to leave focus.
   inputRef?: RefObject<HTMLInputElement>
+  // What a search found in a list it leaves whole. A list that narrows has
+  // nothing to count or step through, so it leaves this out.
+  find?: SearchFind
+}
+
+function describeFind({ current, total }: SearchFind) {
+  if (total === 0) {
+    return 'No matches'
+  }
+  return `${current} of ${total} ${total === 1 ? 'match' : 'matches'}`
 }
 
 function SearchInput({
@@ -32,53 +67,108 @@ function SearchInput({
   onChange,
   placeholder,
   inputRef,
+  find,
 }: SearchInputProps) {
   const ownRef = useRef<HTMLInputElement>(null)
   const ref = inputRef ?? ownRef
 
+  // Enter steps through the matches, as a browser's find bar does. An IME ends
+  // a word with the same key, and that Enter belongs to the word.
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (
+      find == null ||
+      event.key !== 'Enter' ||
+      event.nativeEvent.isComposing
+    ) {
+      return
+    }
+    event.preventDefault()
+    find.onStep()
+  }
+
+  // Tab leaves the box through the clear button, as it does in a browser's find
+  // bar, and goes on from there to the current match.
+  const handleClearKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (find == null || event.key !== 'Tab' || event.shiftKey) {
+      return
+    }
+    if (find.focusCurrentMatch()) {
+      event.preventDefault()
+    }
+  }
+
   return (
-    <TextInput
-      ref={ref}
-      value={value}
-      onChange={(e) => onChange(e.currentTarget.value)}
-      size="sm"
-      // The rows it filters are xs, and a size of its own would shrink the box
-      // with the text. The search mark takes the placeholder's grey.
-      styles={{
-        input: { fontSize: 'var(--mantine-font-size-xs)' },
-        section: { color: 'var(--mantine-color-gray-7)' },
-      }}
-      placeholder={placeholder}
-      // A placeholder is the last thing a browser names a box by, so the box
-      // is named outright, from the same words.
-      aria-label={placeholder}
-      leftSection={<IconSearch style={{ width: rem(14), height: rem(14) }} />}
-      // Matched sections put the placeholder on the popover's title column and
-      // set each glyph the same distance in from its own edge.
-      leftSectionWidth={rem(38)}
-      rightSectionWidth={rem(38)}
-      // Mantine leaves a section inert unless it is told otherwise, so without
-      // this the button draws and cannot be clicked.
-      rightSectionPointerEvents="all"
-      rightSection={
-        value === '' ? undefined : (
-          <CloseButton
-            size="sm"
-            icon={
-              <IconX style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
-            }
-            aria-label="Clear search"
-            // The button goes with the text, so focus goes back to the box.
-            onClick={() => {
-              onChange('')
-              ref.current?.focus()
-            }}
-          />
-        )
-      }
-      variant="unstyled"
-      style={{ minWidth: 100 }}
-    />
+    <>
+      <TextInput
+        ref={ref}
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
+        onKeyDown={handleKeyDown}
+        size="sm"
+        // The rows it filters are xs, and a size of its own would shrink the box
+        // with the text. The search mark takes the placeholder's grey.
+        styles={{
+          input: { fontSize: 'var(--mantine-font-size-xs)' },
+          section: { color: 'var(--mantine-color-gray-7)' },
+        }}
+        placeholder={placeholder}
+        // A placeholder is the last thing a browser names a box by, so the box
+        // is named outright, from the same words.
+        aria-label={placeholder}
+        leftSection={<IconSearch style={{ width: rem(14), height: rem(14) }} />}
+        // Matched sections put the placeholder on the popover's title column.
+        leftSectionWidth={rem(SECTION_WIDTH)}
+        rightSectionWidth={rem(
+          find == null ? SECTION_WIDTH : FIND_SECTION_WIDTH
+        )}
+        // The section lies over the end of the box, so a click on the count
+        // reaches the text under it. Only the button answers, by its own rule.
+        rightSectionPointerEvents="none"
+        rightSection={
+          value === '' ? undefined : (
+            <div className={classes.searchEnd}>
+              {/* Said in words by the status below, so read only once. */}
+              {find != null && (
+                <Text
+                  component="span"
+                  className={classes.count}
+                  fz={11}
+                  c={mutedC}
+                  aria-hidden
+                >
+                  {find.current}/{find.total}
+                </Text>
+              )}
+              <span className={classes.clearSlot}>
+                <CloseButton
+                  size="sm"
+                  icon={
+                    <IconX
+                      style={{ width: rem(16), height: rem(16) }}
+                      stroke={1.5}
+                    />
+                  }
+                  aria-label="Clear search"
+                  onKeyDown={handleClearKeyDown}
+                  // The button goes with the text, so focus goes back to the
+                  // box.
+                  onClick={() => {
+                    onChange('')
+                    ref.current?.focus()
+                  }}
+                />
+              </span>
+            </div>
+          )
+        }
+        variant="unstyled"
+        style={{ minWidth: 100 }}
+      />
+      {/* Always there, so the first count lands in a region already watched. */}
+      <VisuallyHidden role="status">
+        {find == null ? '' : describeFind(find)}
+      </VisuallyHidden>
+    </>
   )
 }
 
@@ -174,6 +264,10 @@ type ListRowProps = {
   italic?: boolean
   // A member is indented past the rail its group draws.
   isMember?: boolean
+  // What a find matched, marked wherever it falls in the title.
+  highlight?: string
+  // The match a find is on.
+  isCurrent?: boolean
   // What sits in the handle column. Left out, the column stays blank.
   lead?: ReactNode
   control: ReactNode
@@ -192,6 +286,8 @@ export function ListRow({
   muted = false,
   italic = false,
   isMember = false,
+  highlight = '',
+  isCurrent = false,
   lead = <div className={classes.lead} />,
   control,
   details,
@@ -201,8 +297,9 @@ export function ListRow({
   const detailsId = useId()
 
   const titleText = (
-    <Text
+    <Highlight
       component="span"
+      highlight={highlight}
       fz="xs"
       c={muted ? mutedC : undefined}
       fs={italic ? 'italic' : undefined}
@@ -210,12 +307,17 @@ export function ListRow({
       title={columnTitle}
     >
       {columnTitle}
-    </Text>
+    </Highlight>
   )
 
   return (
     <>
-      <div className={cx(classes.row, { [classes.member]: isMember })}>
+      <div
+        className={cx(classes.row, {
+          [classes.member]: isMember,
+          [classes.current]: isCurrent,
+        })}
+      >
         {lead}
 
         {details == null ? (

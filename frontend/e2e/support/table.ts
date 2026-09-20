@@ -235,18 +235,28 @@ export function groupAction(page: Page, name: string): Locator {
   return page.getByRole('button', { name: `all ${name}` })
 }
 
+// Out of the search box, past the clear button Tab reaches first, and into the
+// list at the match the find is on.
+export async function tabToMatch(page: Page) {
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Tab')
+}
+
 // The handle that lifts a column or a group. Only a row an order governs has
 // one, so a pinned row is absent from this by construction.
 export function columnHandle(page: Page, name: string): Locator {
   return page.getByRole('button', { name: `Reorder ${name}`, exact: true })
 }
 
+// Whatever a toolbar popover has open. One owner: the class tracks Mantine's.
+export function popoverDropdown(page: Page): Locator {
+  return page.locator('.mantine-Popover-dropdown')
+}
+
 // What a column opens when its title is pressed. Tags are all there is to
 // show, so an untagged column has no such button at all.
 export function columnDisclosure(page: Page, name: string): Locator {
-  return page
-    .locator('.mantine-Popover-dropdown')
-    .getByRole('button', { name, exact: true })
+  return popoverDropdown(page).getByRole('button', { name, exact: true })
 }
 
 // Space lifts, each arrow moves one place, space drops: the library's keyboard
@@ -267,10 +277,22 @@ export async function dragColumn(
   await page.keyboard.press('Space')
 }
 
-// The popover's own show/hide-all link, above the list. The group links read
-// the same on screen, so this matches the one that names no group.
+// The popover's own show/hide link in the footer: "Hide all", or "Hide 3
+// matches" under a search. A group's link names its group and stays out.
 export function popoverAction(page: Page): Locator {
-  return page.getByRole('button', { name: /^(Hide|Show) all$/ })
+  return page.getByRole('button', {
+    name: /^(Hide|Show) (all|\d+ match(es)?)$/,
+  })
+}
+
+// The letters a search has marked in the Variables popover, top to bottom.
+export function searchMarks(page: Page): Locator {
+  return popoverDropdown(page).locator('mark')
+}
+
+// The search box's count of its matches, "2/3", beside the clear button.
+export function searchCount(page: Page): Locator {
+  return popoverDropdown(page).getByText(/^\d+\/\d+$/)
 }
 
 // The details a column opens, found through the button that controls them.

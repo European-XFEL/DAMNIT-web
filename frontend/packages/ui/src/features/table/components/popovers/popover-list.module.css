@@ -64,6 +64,12 @@
   text-align: left;
 }
 
+/* The letters a find matched, in the title's own ink so a dimmed row still
+   reads as dimmed. */
+.title mark {
+  color: inherit;
+}
+
 /* The air that separates one group from the next. It sits outside the heading,
    or the hover below would swallow it. */
 .block {
@@ -81,8 +87,8 @@
   background: var(--hover-bg);
 }
 
-.block:has(> .groupHeader .grip:hover) .groupHeader,
-.block:has(> .groupHeader .grip:hover) .row,
+.block:has(> .groupHeader .grip:hover) .groupHeader:not(.current),
+.block:has(> .groupHeader .grip:hover) .row:not(.current),
 .block:has(> .groupHeader .grip:hover) .details {
   background: transparent;
 }
@@ -168,6 +174,27 @@
   background: var(--open-bg);
 }
 
+/* The match a find is on, tinted as a browser tints its current find. It comes
+   after the hover and the open row so that neither paints over it. */
+.row.current,
+.groupHeader.current {
+  /* The dark value is a stand-in: the app has no dark scheme to judge one in. */
+  background: light-dark(
+    var(--mantine-color-yellow-0),
+    var(--mantine-color-yellow-light)
+  );
+}
+
+/* On that row the mark deepens as well, the way a find bar colours the match it
+   is on apart from the rest it found. The dark value is a stand-in too. */
+.row.current mark,
+.groupHeader.current mark {
+  background-color: light-dark(
+    var(--mantine-color-yellow-4),
+    var(--mantine-color-yellow-6)
+  );
+}
+
 .details {
   background: var(--open-bg);
   padding: 10px 10px 10px calc(10px + var(--title-inset));
@@ -205,6 +232,30 @@
 .title:focus-visible {
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: -2px;
+}
+
+/* A find's count, then the clear button in a 38 px slot of its own, so the
+   glyph sits where it does in the box without a count. */
+.searchEnd {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* The one part of an inert section that takes a click of its own. */
+.clearSlot {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  pointer-events: auto;
+  width: 38px;
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Both actions sit on the popover's own gutter rather than on the row columns,

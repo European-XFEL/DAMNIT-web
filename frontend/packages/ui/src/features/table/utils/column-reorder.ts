@@ -6,7 +6,7 @@ import type {
   ColumnBlock,
   ColumnGroupBlock,
 } from '#src/features/table/utils/column-blocks'
-import { blockKey, itemsOf } from '#src/utils/variable-blocks'
+import { itemsOf } from '#src/utils/variable-blocks'
 
 // One list for the blocks and one per group for its members. They never share
 // a type, which is what keeps a member out of a group it does not belong to.
@@ -19,27 +19,13 @@ export function membersDroppable(group: string) {
 
 const columnName = (column: Column) => column.name
 
-type MoveBesideOptions = {
-  all: string[]
-  shown: string[]
-  from: number
-  to: number
-}
-
-// Where a dropped row lands in the full order: beside its new neighbour. Keys
-// rather than rows, since a group on screen may hold only some members.
-function moveBeside({ all, shown, from, to }: MoveBesideOptions) {
-  const dragged = shown[from]
-  const neighbours = shown.filter((_, index) => index !== from)
-  const rest = all.filter((key) => key !== dragged)
-
-  // Dropped at the top it leads the row that was there; anywhere else it
-  // follows the one above it.
-  const leads = to === 0
-  const beside = rest.indexOf(neighbours[leads ? 0 : to - 1])
-  const at = leads ? beside : beside + 1
-
-  return [...rest.slice(0, at), dragged, ...rest.slice(at)]
+// The list with one item taken out and put back in at `to`.
+function moveItem<Item>(
+  items: Item[],
+  { from, to }: { from: number; to: number }
+) {
+  const rest = items.filter((_, index) => index !== from)
+  return [...rest.slice(0, to), items[from], ...rest.slice(to)]
 }
 
 function toColumnOrder(blocks: ColumnBlock[]) {
@@ -53,17 +39,10 @@ function membersOf(blocks: ColumnBlock[], group: string) {
   )?.members
 }
 
-type OrderLists = {
-  // Every block in table order, which the new order is written against, and the
-  // ones the search left on screen, which is what a drop's indices count.
-  blocks: ColumnBlock[]
-  shown: ColumnBlock[]
-}
-
 // The new column order after one drop and what the drop moved, or null
 // when there is nothing to write.
 export function reorderColumns(
-  { blocks, shown }: OrderLists,
+  blocks: ColumnBlock[],
   { source, destination }: DropResult
 ): { order: string[]; moved: ChangedColumns } | null {
   if (
@@ -74,40 +53,27 @@ export function reorderColumns(
     return null
   }
 
+  const move = { from: source.index, to: destination.index }
+
   if (source.droppableId === BLOCKS_DROPPABLE) {
-    const keys = moveBeside({
-      all: blocks.map(blockKey),
-      shown: shown.map(blockKey),
-      from: source.index,
-      to: destination.index,
-    })
-    const byKey = new Map(blocks.map((block) => [blockKey(block), block]))
-    const dragged = shown[source.index]
-    // Read from the whole list: a group moves the members a search hid.
-    const whole = byKey.get(blockKey(dragged))
+    const dragged = blocks[source.index]
 
     return {
-      order: toColumnOrder(keys.flatMap((key) => byKey.get(key) ?? [])),
+      order: toColumnOrder(moveItem(blocks, move)),
       moved: {
-        columns: toColumnOrder(whole == null ? [] : [whole]),
+        columns: toColumnOrder([dragged]),
         groups: dragged.kind === 'group' ? [dragged.name] : [],
       },
     }
   }
 
   const group = source.droppableId.slice(MEMBERS_PREFIX.length)
-  const shownMembers = membersOf(shown, group)
   const members = membersOf(blocks, group)
-  if (shownMembers === undefined || members === undefined) {
+  if (members === undefined) {
     return null
   }
 
-  const memberOrder = moveBeside({
-    all: members.map(columnName),
-    shown: shownMembers.map(columnName),
-    from: source.index,
-    to: destination.index,
-  })
+  const memberOrder = moveItem(members, move).map(columnName)
 
   return {
     order: blocks.flatMap((block) =>
@@ -115,6 +81,6 @@ export function reorderColumns(
         ? memberOrder
         : toColumnOrder([block])
     ),
-    moved: { columns: [shownMembers[source.index].name], groups: [] },
+    moved: { columns: [members[source.index].name], groups: [] },
   }
 }
