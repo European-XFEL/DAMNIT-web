@@ -35,7 +35,8 @@ function SiteFooter() {
   return (
     // Padding, not margin: a margin on a full-width row runs past its parent.
     <Group justify="space-between" w="100%" px={16} py={6}>
-      <Group gap="md">
+      {/* Two marked links sit as far apart as the toolbar sets its own pairs. */}
+      <Group gap={24}>
         <SiteAnchor href="https://damnit.rtfd.io" icon={IconBook}>
           Documentation
         </SiteAnchor>
@@ -46,7 +47,7 @@ function SiteFooter() {
           Source code
         </SiteAnchor>
       </Group>
-      <Group gap="md">
+      <Group gap={24}>
         <SiteAnchor
           href="https://www.xfel.eu/legal_notice/index_eng.html"
           icon={IconScale}
