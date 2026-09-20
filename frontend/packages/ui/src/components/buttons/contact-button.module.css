@@ -3,3 +3,10 @@
 .section[data-position='left'] {
   margin-inline-end: 8px;
 }
+
+/* Below xs the footer's links wrap to two rows, so the pill goes up one. */
+.root {
+  @media (max-width: $mantine-breakpoint-xs) {
+    bottom: 80px;
+  }
+}
