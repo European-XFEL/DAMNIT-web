@@ -7,7 +7,10 @@ import classes from './contact-button.module.css'
 
 function ContactButton() {
   return (
-    <Affix position={{ bottom: 40, right: 16 }}>
+    <Affix
+      position={{ bottom: 40, right: 16 }}
+      classNames={{ root: classes.root }}
+    >
       <Tooltip
         withArrow
         position="left"
