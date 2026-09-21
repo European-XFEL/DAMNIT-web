@@ -49,7 +49,7 @@ test('clicking the logo tears down the dashboard state', async ({
   await expect(columnHeader(page, 'Trains')).toHaveCount(0)
   await page.keyboard.press('Escape')
 
-  // Click the DAMNIT! wordmark to leave the dashboard.
+  // Click the DAMNIT! logo to leave the dashboard.
   await dashboardHeader(page).getByRole('link', { name: 'DAMNIT!' }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
 

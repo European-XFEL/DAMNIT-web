@@ -6,17 +6,17 @@ import { expect, type Locator, type Page } from '@playwright/test'
 // never receives these events. These helpers turn an a11y column/row index into
 // a canvas point.
 //
-// COLUMN_WIDTH matches the width the gridColumns memo sets in
-// features/table/table.tsx.
-// HEADER_HEIGHT and ROW_HEIGHT are Glide's defaults; ROW_MARKER_WIDTH is Glide's
-// auto width for a clickable-number marker at this row count (<=100 rows -> 32).
+// COLUMN_WIDTH matches the width the gridColumns memo sets, and HEADER_HEIGHT
+// and ROW_HEIGHT the heights the table passes, in features/table/table.tsx.
+// ROW_MARKER_WIDTH is Glide's auto width for a clickable-number marker at this
+// row count (<=100 rows -> 32).
 // The math assumes no horizontal scroll and that the nav and aside are collapsed
 // so the grid spans the viewport, so `col` must be within the painted horizontal
 // fold and `row` within the initial vertical fold.
 export const ROW_MARKER_WIDTH = 32
 export const COLUMN_WIDTH = 100
-export const HEADER_HEIGHT = 36
-export const ROW_HEIGHT = 34
+export const HEADER_HEIGHT = 30
+export const ROW_HEIGHT = 30
 
 // A grouped proposal gains a second header row above the titles, pushing them
 // and every row down. Matches GROUP_HEADER_HEIGHT in features/table/table.tsx.
@@ -193,6 +193,30 @@ export type Axis = 'horizontal' | 'vertical'
 // the test id tracks Glide.
 export function gridCanvas(page: Page): Locator {
   return page.getByTestId('data-grid-canvas')
+}
+
+// How far the canvas pixel at `point` sits under the one to its right, on the
+// red channel: how strong a vertical line is there. Glide's scroll shadow is
+// not on the canvas, so it never counts.
+export async function lineStrength(page: Page, point: Point): Promise<number> {
+  return gridCanvas(page).evaluate((canvas: HTMLCanvasElement, { x, y }) => {
+    const rect = canvas.getBoundingClientRect()
+    const scale = canvas.width / rect.width
+    const context = canvas.getContext('2d')
+    if (!context) {
+      throw new Error('the grid canvas has no 2d context')
+    }
+    const [here, right] = [x, x + 1].map(
+      (px) =>
+        context.getImageData(
+          Math.round((px - rect.x) * scale),
+          Math.round((y - rect.y) * scale),
+          1,
+          1
+        ).data[0]
+    )
+    return right - here
+  }, point)
 }
 
 // The element that carries the grid's scrollbars, which occupy the strip

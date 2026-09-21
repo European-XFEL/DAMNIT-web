@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { Title } from '@mantine/core'
+import { DEFAULT_THEME, Text } from '@mantine/core'
 
 import styles from './logo.module.css'
 
@@ -15,9 +15,16 @@ function Logo({ linkTo, compact = false }: LogoProps) {
       className={styles.link}
       aria-label={compact ? 'DAMNIT!' : undefined}
     >
-      <Title order={1} fz={22} style={{ fontFamily: 'Arial' }}>
+      {/* Arial is not optically small, so the logo takes Mantine's own h3
+          size, without the theme's 6%. */}
+      <Text
+        span
+        variant="logo"
+        fz={DEFAULT_THEME.headings.sizes.h3.fontSize}
+        lh="h3"
+      >
         {compact ? 'D!' : 'DAMNIT!'}
-      </Title>
+      </Text>
     </Link>
   )
 }

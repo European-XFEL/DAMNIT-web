@@ -1,7 +1,9 @@
 import { type ElementType } from 'react'
 import { forwardRef } from 'react'
-import { Badge, Button, Group, Text, type BadgeProps } from '@mantine/core'
+import { Badge, Button, rem } from '@mantine/core'
 import { type IconProps } from '@tabler/icons-react'
+
+import classes from './control-button.module.css'
 
 type ControlButtonProps = {
   onClick: () => void
@@ -10,15 +12,11 @@ type ControlButtonProps = {
   icon: ElementType<IconProps>
   label: string
 
-  badgeCount: number
-  badgeColor?: BadgeProps['color']
+  badge?: string
 }
 
 export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
-  (
-    { isActive = false, onClick, icon: Icon, label, badgeCount, badgeColor },
-    ref
-  ) => {
+  ({ isActive = false, onClick, icon: Icon, label, badge }, ref) => {
     return (
       <Button
         ref={ref}
@@ -26,19 +24,35 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
         color="gray"
         c="black"
         size="xs"
-        leftSection={<Icon size={14} />}
+        classNames={{
+          root: classes.root,
+          section: classes.section,
+          label: classes.label,
+        }}
+        leftSection={<Icon style={{ width: rem(14), height: rem(14) }} />}
+        rightSection={
+          badge ? (
+            // A light badge's tint takes the button's state and its text caps at
+            // shade 6, so both are set to hold the text at one contrast ratio.
+            // A count is a phrase beside its label, not a status stamp, so it
+            // keeps its case and sits one weight over the label.
+            <Badge
+              variant="light"
+              size="sm"
+              radius="sm"
+              bg="indigo.0"
+              c="indigo.8"
+              tt="none"
+              fw={600}
+              lts="normal"
+            >
+              {badge}
+            </Badge>
+          ) : undefined
+        }
         onClick={onClick}
       >
-        <Group gap={6}>
-          <Text size="xs" fw={500}>
-            {label}
-          </Text>
-          {badgeCount ? (
-            <Badge variant="light" size="sm" radius="sm" color={badgeColor}>
-              {badgeCount}
-            </Badge>
-          ) : null}
-        </Group>
+        {label}
       </Button>
     )
   }

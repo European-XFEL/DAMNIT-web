@@ -24,8 +24,10 @@ const LoggedOutPage = () => {
     >
       {!userInfo || isError ? (
         <div style={{ textAlign: 'center' }}>
-          <Title order={2}>You have been logged out.</Title>
-          <Text size="md" style={{ marginBottom: '20px' }}>
+          <Title order={1} size="h2">
+            You have been logged out.
+          </Title>
+          <Text size="md" mb={20}>
             Thanks for using DAMNIT!
           </Text>
           <div className={classes.controls}>
@@ -39,7 +41,7 @@ const LoggedOutPage = () => {
         </div>
       ) : (
         <div style={{ textAlign: 'center' }}>
-          <Title order={2}>
+          <Title order={1} size="h2">
             {"Nope, you're still logged in, "}
             <Text span c="indigo" inherit>
               {userInfo.name}

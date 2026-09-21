@@ -32,7 +32,7 @@ test('the header user menu logs the user out', async ({ page }) => {
 test('the logged-out page recognises a live session', async ({ page }) => {
   await page.goto('logged-out')
 
-  const heading = page.getByRole('heading', { level: 2 })
+  const heading = page.getByRole('heading', { level: 1 })
   await expect(heading).toContainText("Nope, you're still logged in,")
   await expect(heading).toContainText(USER_NAME)
   await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()

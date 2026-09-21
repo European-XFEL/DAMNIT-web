@@ -1,7 +1,7 @@
 import { test, expect } from '#fixtures'
 import { XPCS } from '#examples/xpcs'
 import { breadcrumb } from '#support/dashboard'
-import { waitForTableData } from '#support/table'
+import { openProposal, waitForTableData } from '#support/table'
 
 const PROPOSAL = XPCS.proposalMetadata[0]
 
@@ -29,4 +29,15 @@ test('opening a proposal names its instrument, number and PI above the table, an
   await expect(page.getByRole('tooltip')).toHaveText(PROPOSAL.title)
 
   await tableData
+})
+
+test('the dashboard names the proposal as its main heading', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    `p${PROPOSAL.number}`
+  )
 })

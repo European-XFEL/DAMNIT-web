@@ -12,15 +12,15 @@ const HomePage = ({ main, header }: HomePageProps) => {
   return (
     <AppShell
       header={{ height: 40 }}
+      // The height sits on the shell so the main area's clearance reads it.
+      footer={{ height: 80 }}
       padding="md"
       style={{ '--app-shell-border-color': 'var(--mantine-color-gray-2)' }}
     >
       <AppShell.Header>{header}</AppShell.Header>
-      <AppShell.Main mb={64}>{main}</AppShell.Main>
+      <AppShell.Main>{main}</AppShell.Main>
       <AppShell.Footer
-        h={80}
         withBorder={false}
-        mr={32}
         style={{
           background:
             'linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 70%)',

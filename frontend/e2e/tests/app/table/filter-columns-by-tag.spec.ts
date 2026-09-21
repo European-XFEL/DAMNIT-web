@@ -17,7 +17,7 @@ test("selecting a tag shows only that tag's columns", async ({
   const tags = await openPopover(page, 'Tags')
   await rowCheckbox(page, 'Beam properties').check()
 
-  await expect(tags).toContainText('1')
+  await expect(tags.getByText('1 selected', { exact: true })).toBeVisible()
   await expectVisibleColumns(page, 3)
   await expect(columnHeader(page, 'XGM intensity [uJ]')).toHaveCount(1)
   await expect(columnHeader(page, 'Trains')).toHaveCount(0)
@@ -33,7 +33,7 @@ test('selecting more tags widens the visible columns', async ({
   await rowCheckbox(page, 'Beam properties').check()
   await rowCheckbox(page, 'Run details').check()
 
-  await expect(tags).toContainText('2')
+  await expect(tags.getByText('2 selected', { exact: true })).toBeVisible()
   await expectVisibleColumns(page, 9)
   await expect(columnHeader(page, 'Trains')).toHaveCount(1)
 })

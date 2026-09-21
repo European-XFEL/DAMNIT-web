@@ -19,6 +19,7 @@ function Dashboard({ label, subtitle, instrument }: DashboardProps) {
           contextFileProps={{ subscribe: false }}
         />
       }
+      heading={label}
       identity={
         <ProposalIdentity
           instrument={instrument}
