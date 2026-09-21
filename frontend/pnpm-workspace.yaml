@@ -20,6 +20,9 @@ catalogs:
     monaco-editor: 0.55.1
     postcss-preset-mantine: 1.17.0
     react-plotly.js: 2.6.0
+  fonts:
+    '@fontsource-variable/source-code-pro': 5.3.0
+    '@fontsource-variable/source-sans-3': 5.3.0
   frontend:
     clsx: 2.1.1
     dayjs: 1.11.13

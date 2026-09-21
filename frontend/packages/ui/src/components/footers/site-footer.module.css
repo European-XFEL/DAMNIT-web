@@ -1,0 +1,6 @@
+/* A mark sits about half its label's size from it, as the toolbar pairs them. */
+.anchor {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

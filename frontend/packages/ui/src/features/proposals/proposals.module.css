@@ -1,7 +1,10 @@
+/* Only the row mark sits inline, and the offset centres it on the number
+   beside it. A leading mark is secondary; the label carries the level. */
 .icon {
-  width: rem(13px);
+  width: 16px;
   height: auto;
-  vertical-align: rem(-1px);
+  vertical-align: -2px;
+  color: var(--mantine-color-gray-7);
 }
 
 .expandIcon {
@@ -20,9 +23,9 @@
 }
 
 .contentLabel {
-  width: rem(80px);
+  width: 80px;
 }
 
 .proposalDate {
-  width: rem(112px);
+  width: 112px;
 }

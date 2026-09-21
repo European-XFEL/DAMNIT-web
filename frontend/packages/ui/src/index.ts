@@ -1,19 +1,20 @@
 // Providers
 export { Providers } from './app/providers'
+export { ThemeProvider } from './app/theme-provider'
 
 // Components
-export { default as ContactButton } from './components/buttons/contact-button'
 export { default as Header } from './components/headers/header'
 export { default as Logo } from './components/headers/logo'
 export { UserMenu } from './components/headers/user-menu'
 export { default as SiteFooter } from './components/footers/site-footer'
 export { default as InstrumentBadge } from './components/badges/instrument-badge'
+export { default as SectionHeading } from './components/headings/section-heading'
 
 // Features
 export { default as Dashboard } from './features/dashboard/dashboard'
-export { default as DashboardBase } from './features/dashboard/dashboard.base'
-export { default as DashboardMain } from './features/dashboard/dashboard.main'
-export { openNav, closeNav } from './features/dashboard/dashboard.slice'
+export { default as DashboardShell } from './features/dashboard/components/dashboard-shell'
+export { default as DashboardMain } from './features/dashboard/components/dashboard-main'
+export { default as ProposalIdentity } from './features/dashboard/components/proposal-identity'
 export { default as HeroPage } from './app/pages/hero-page'
 export { default as HomePage } from './app/pages/home-page'
 export { default as LoggedOutPage } from './app/pages/logged-out-page'

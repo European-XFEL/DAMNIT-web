@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Keep every font subset a file, so unicode-range decides what downloads.
+  build: { assetsInlineLimit: 0 },
   plugins: [react()],
   resolve: {
     alias: {

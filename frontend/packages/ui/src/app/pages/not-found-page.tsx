@@ -16,7 +16,9 @@ const NotFoundPage = () => {
       }}
     >
       <div style={{ textAlign: 'center' }}>
-        <Title order={2}>DAMNIT! Page not found.</Title>
+        <Title order={1} size="h2">
+          DAMNIT! Page not found.
+        </Title>
         <div className={styles.controls}>
           <MainNavButton
             variant="filled"

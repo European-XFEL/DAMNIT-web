@@ -1,12 +1,7 @@
 import { useLoaderData } from 'react-router'
 import { Container, Divider, Stack, Text, Title } from '@mantine/core'
 
-import {
-  ContactButton,
-  Header,
-  HomePage as DamnitHomePage,
-  Logo,
-} from '@damnit-frontend/ui'
+import { Header, HomePage as DamnitHomePage, Logo } from '@damnit-frontend/ui'
 
 import { Examples } from '../../features/examples'
 
@@ -20,12 +15,12 @@ function Main() {
           <Title order={1}>Example Gallery</Title>
 
           <Stack gap={4}>
-            <Text c="dimmed" size="lg" fw={400}>
+            <Text size="lg">
               Explore real-world applications of DAMNIT using data from previous
               experimental campaigns.
             </Text>
 
-            <Text c="dimmed" size="sm" fs="italic" style={{ opacity: 0.8 }}>
+            <Text c="gray.7" size="sm" fs="italic">
               These examples demonstrate how DAMNIT automates the extraction of
               metadata and analysis results, providing a live, searchable
               overview of your experiment's progress.
@@ -45,16 +40,11 @@ function RootRoute() {
   return (
     <DamnitHomePage
       header={
-        <Header px={20}>
+        <Header px={16}>
           <Logo linkTo="/" />
         </Header>
       }
-      main={
-        <>
-          <Main />
-          <ContactButton />
-        </>
-      }
+      main={<Main />}
     />
   )
 }

@@ -83,25 +83,29 @@ const ContextFile = ({
   }, [lastModifiedData, data?.lastModified, refetch, subscribe])
 
   return (
-    <Stack align="stretch" h="100%">
-      {isLoading ? (
-        <CenteredLoader />
-      ) : error ? (
-        <Box
-          style={{
-            textAlign: 'center',
-            color: 'red',
-            padding: '20px',
-          }}
-        >
-          {isApiError(error)
-            ? (error.data as { detail?: string })?.detail ||
-              'Failed to load file content'
-            : 'An unexpected error occurred while loading the context file'}
-        </Box>
-      ) : (
-        <ContextFileEditor content={data?.fileContent} />
-      )}
+    <Stack align="stretch" h="100%" gap={0}>
+      {/* Monaco fills its parent, so without the min-height it grows past
+          the view and pushes the status bar off screen. */}
+      <Box flex={1} mih={0}>
+        {isLoading ? (
+          <CenteredLoader />
+        ) : error ? (
+          <Box
+            style={{
+              textAlign: 'center',
+              color: 'red',
+              padding: '20px',
+            }}
+          >
+            {isApiError(error)
+              ? (error.data as { detail?: string })?.detail ||
+                'Failed to load file content'
+              : 'An unexpected error occurred while loading the context file'}
+          </Box>
+        ) : (
+          <ContextFileEditor content={data?.fileContent} />
+        )}
+      </Box>
       <StatusBar
         leftSection={
           <>{readOnly && <LabelStatus label="🔒 Read-only"></LabelStatus>}</>
@@ -138,7 +142,7 @@ type WatchSection = {
 function WatchSection({ connected, lastUpdated }: WatchSection) {
   return (
     <>
-      <LabelStatus label="Last updated:" value={lastUpdated} />
+      <LabelStatus label="Last updated" value={lastUpdated} />
       <ConnectionStatus connected={connected} />
     </>
   )

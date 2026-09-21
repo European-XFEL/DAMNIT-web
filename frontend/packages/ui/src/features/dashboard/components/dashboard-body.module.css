@@ -1,0 +1,30 @@
+.body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+
+  /* The closed run waits off screen to the right. Clipping keeps it from
+     widening the page, which focus would otherwise scroll sideways. */
+  @mixin smaller-than $mantine-breakpoint-sm {
+    overflow: clip;
+  }
+}
+
+.view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Below `sm` the open nav and the open aside cover the view, so it leaves the
+   Tab order too. It stays drawn until whichever covers it has slid over it. */
+.body[data-covered],
+.view[data-covered] {
+  @mixin smaller-than $mantine-breakpoint-sm {
+    visibility: hidden;
+    transition: visibility var(--app-shell-transition-duration);
+  }
+}

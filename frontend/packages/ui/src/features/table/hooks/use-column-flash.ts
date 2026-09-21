@@ -61,7 +61,7 @@ export function useColumnFlash(columnIndex: ColumnIndex, rowCount: number) {
 
     let frame = 0
     const tick = () => {
-      // A stamp already this old draws nothing: the Plots tab unmounts the
+      // A stamp already this old draws nothing: another view unmounts the
       // table, and a remount would otherwise replay the last flash.
       const elapsed = performance.now() - lastFlash.at
       if (elapsed >= FLASH_DURATION) {

@@ -5,6 +5,7 @@ import {
   type CellClickedEventArgs,
   type DataEditorProps,
   type DataEditorRef,
+  type GridMouseEventArgs,
   type GridSelection,
   type GroupHeaderClickedEventArgs,
   type HeaderClickedEventArgs,
@@ -144,6 +145,30 @@ const Table = ({ grid, paginated = true }: TableProps) => {
     [errorColors]
   )
 
+  // Glide paints from resolved colors, not CSS variables, so its header and
+  // group bar take the gray ramp the rest of the chrome is on.
+  const gridTheme = useMemo<Partial<Theme>>(
+    () => ({
+      bgHeader: theme.colors.gray[0],
+      bgHeaderHovered: theme.colors.gray[1],
+      bgHeaderHasFocus: theme.colors.gray[2],
+      borderColor: theme.colors.gray[2],
+      textHeader: theme.colors.gray[9],
+      accentColor: theme.colors.indigo[6],
+    }),
+    [theme]
+  )
+
+  // Glide fills the row numbers with the cell background, not the header's, so
+  // they need their own theme to share the header's gray.
+  const rowMarkers = useMemo(
+    () => ({
+      kind: 'clickable-number' as const,
+      theme: { bgCell: theme.colors.gray[0] },
+    }),
+    [theme]
+  )
+
   // Data: Populate grid. Row layout is the server-ordered run list; a cell's
   // value is looked up by the run's identity from the normalized cache.
   const getContent = useCallback(
@@ -212,12 +237,31 @@ const Table = ({ grid, paginated = true }: TableProps) => {
 
   // Cell: Click event
   // Both stay local because nothing outside the grid reads them. That does mean
-  // the outline a drill-down draws is gone after the Plots tab unmounts the
+  // the outline a drill-down draws is gone after another view unmounts the
   // table, while the drill-down itself survives in `activeVariable`: the aside
   // keeps showing the right variable, only its outline has to be clicked back.
   const [selectedColumns, setSelectedColumns] = useState<string[]>([])
   const [selectedCells, setSelectedCells] = useState<SelectedCells>()
   const rowSelection = useAppSelector(selectRowSelection)
+
+  // A row marker clicked off and the last column unselected reach Glide's
+  // change handler as the same empty selection; only the header takes Ctrl/Cmd.
+  const pointerOnHeader = useRef(false)
+  const handleGridItemHovered = (args: GridMouseEventArgs) => {
+    pointerOnHeader.current =
+      (args.kind === 'header' || args.kind === 'group-header') && !args.isTouch
+    handleItemHovered(args)
+  }
+
+  // Glide reports a key's selection change before its keydown returns, so the
+  // flag marks exactly that change, whatever the pointer rests on.
+  const keyPressed = useRef(false)
+  const handleGridKeyDown = () => {
+    keyPressed.current = true
+    queueMicrotask(() => {
+      keyPressed.current = false
+    })
+  }
 
   // Kept apart from the selection below: the two indices turn over with the
   // table, while the selection turns over with every click and every mouse-move
@@ -288,13 +332,22 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, rows, current } = newSelection
 
-    // Inform that a row has been (de)selected. The proposal rides along: run
-    // numbers collide across proposals in one table, so the number alone cannot
-    // identify which run the detail aside should read.
-    const row = rows.last() as number
-    const identity = runs[row]
+    // The proposal rides along: run numbers collide across proposals in one
+    // table, so the number alone cannot identify which run the aside reads.
+    const row = rows.last()
+    const identity = row == null ? undefined : runs[row]
 
-    dispatch(identity ? runSelected(identity) : runDeselected())
+    // Glide drops the rows on any column or cell gesture, so an empty selection
+    // closes the run only when its row marker was clicked off.
+    if (identity) {
+      dispatch(runSelected(identity))
+    } else if (
+      columns.length === 0 &&
+      current == null &&
+      (keyPressed.current || !pointerOnHeader.current)
+    ) {
+      dispatch(runDeselected())
+    }
 
     // Clear range stack if cells from the other column are currently selected
     const rangeStack =
@@ -467,7 +520,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
       plotRequested({
         variables,
         source: 'summary',
-        title: `Summary: ${label}`,
+        name: label,
       })
     )
   }
@@ -486,7 +539,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
         runs,
         variables: [variable],
         source: 'preview',
-        title: `Preview: ${label}`,
+        name: label,
       })
     )
   }
@@ -521,7 +574,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
   return (
     <>
       {!tableColumns.length ? null : (
-        <Stack w="100%" h="100%" gap="sm">
+        <Stack w="100%" h="100%" gap={0}>
           <TableToolbar
             onFitAllColumns={fitAllColumns}
             onResetColumnWidths={resetColumnWidths}
@@ -530,6 +583,7 @@ const Table = ({ grid, paginated = true }: TableProps) => {
             <DataEditor
               {...(grid || {})}
               ref={tableRef}
+              theme={gridTheme}
               columns={gridColumns}
               highlightRegions={highlightRegions}
               drawHeader={drawHeader}
@@ -554,14 +608,17 @@ const Table = ({ grid, paginated = true }: TableProps) => {
               spanRangeBehavior="allowPartial"
               rows={runs.length}
               rowSelect="single"
-              rowMarkers="clickable-number"
+              rowMarkers={rowMarkers}
               gridSelection={gridSelection}
               onGridSelectionChange={handleGridSelectionChange}
+              // Escape or a click on nothing, which unselecting a column is not.
+              onSelectionCleared={() => dispatch(runDeselected())}
               onCellActivated={handleCellActivated}
               rangeSelect="multi-cell"
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
-              onItemHovered={handleItemHovered}
+              onItemHovered={handleGridItemHovered}
+              onKeyDown={handleGridKeyDown}
               freezeColumns={pinnedCount}
               customRenderers={renderers}
               onVisibleRegionChanged={handleVisibleRegionChange}

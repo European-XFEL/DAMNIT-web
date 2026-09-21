@@ -1,4 +1,3 @@
-import '@mantine/core/styles.layer.css'
 import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
 import { beforeEach, expect, test } from 'vitest'

@@ -1,7 +1,7 @@
 import { test, expect } from '#fixtures'
 import { xpcsWithGroups } from '#examples/xpcs'
 import { WIDE_VIEWPORT } from '#support/grid'
-import { openSummaryPlot, plotTab } from '#support/plots'
+import { openSummaryPlot, plotEntry } from '#support/plots'
 import {
   clickGroupHeader,
   columnOf,
@@ -60,7 +60,7 @@ test('a plot from a grouped column keeps the group in its label', async ({
   // No group header sits over a plot, so the label carries the words the column
   // header drops. Two groups can share a leaf title.
   await expect(
-    plotTab(page, `Summary: ${titleOf(example, SAMPLE_X)} vs. Run`)
+    plotEntry(page, `${titleOf(example, SAMPLE_X)} vs. Run`)
   ).toBeVisible()
 })
 

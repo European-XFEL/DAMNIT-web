@@ -1,0 +1,12 @@
+/* A mark sits about half its label's size from it: 8 at 15 px, as the nav's
+   rows pair theirs. Mantine's default is the 10 px spacing. */
+.section[data-position='left'] {
+  margin-inline-end: 8px;
+}
+
+/* Below xs the footer's links wrap to two rows, so the pill goes up one. */
+.root {
+  @media (max-width: $mantine-breakpoint-xs) {
+    bottom: 80px;
+  }
+}

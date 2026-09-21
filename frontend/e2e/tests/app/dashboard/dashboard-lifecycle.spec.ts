@@ -12,7 +12,8 @@ import {
   selectRun,
   selectedRunTab,
 } from '#support/table'
-import { openSummaryPlot, plotTab, showTable } from '#support/plots'
+import { dashboardHeader, showTable } from '#support/dashboard'
+import { openSummaryPlot, plotEntries } from '#support/plots'
 import { proposalLink } from '#support/proposals'
 
 // The multi-semester example makes the home page issue one proposal query per
@@ -35,7 +36,7 @@ test('clicking the logo tears down the dashboard state', async ({
     example,
     col: columnOf(example, numberVars[1]),
   })
-  await expect(plotTab(page, 'Plots')).toBeVisible()
+  await expect(plotEntries(page)).toHaveCount(1)
   await showTable(page)
 
   // Select a run.
@@ -49,7 +50,7 @@ test('clicking the logo tears down the dashboard state', async ({
   await page.keyboard.press('Escape')
 
   // Click the DAMNIT! logo to leave the dashboard.
-  await page.getByRole('banner').getByRole('link', { name: 'DAMNIT!' }).click()
+  await dashboardHeader(page).getByRole('link', { name: 'DAMNIT!' }).click()
   await expect(page).toHaveURL(/\/app\/home$/)
 
   // Reopen the same proposal through the home list.
@@ -60,10 +61,10 @@ test('clicking the logo tears down the dashboard state', async ({
   await expectVisibleColumns(page, 13)
   await expect(columnHeader(page, 'Trains')).toHaveCount(1)
   await expect(selectedRunTab(page)).toHaveCount(0)
-  await expect(plotTab(page, 'Plots')).toHaveCount(0)
+  await expect(plotEntries(page)).toHaveCount(0)
 })
 
-test('switching dashboard tabs keeps the run selection and sidebar', async ({
+test('switching dashboard views keeps the run selection and sidebar', async ({
   page,
   example,
 }) => {
@@ -75,15 +76,15 @@ test('switching dashboard tabs keeps the run selection and sidebar', async ({
   await expect(selectedRunTab(page)).toContainText('Run: 1')
   await expect(panel.getByText('silica')).toBeVisible()
 
-  // Open a plot (which switches to the Plots tab), then switch back to Table.
+  // Open a plot (which switches to its view), then switch back to the table.
   await openSummaryPlot(page, {
     example,
     col: columnOf(example, numberVars[0]),
   })
-  await expect(plotTab(page, 'Plots')).toBeVisible()
+  await expect(plotEntries(page)).toHaveCount(1)
   await showTable(page)
 
-  // The selection and its sidebar values survived the tab round trip.
+  // The selection and its sidebar values survived the round trip.
   await expect(selectedRunTab(page)).toContainText('Run: 1')
   await expect(panel.getByText('silica')).toBeVisible()
 })

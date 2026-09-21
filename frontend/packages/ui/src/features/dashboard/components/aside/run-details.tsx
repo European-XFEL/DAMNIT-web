@@ -13,15 +13,14 @@ import {
   type CellError,
   type CellValue,
   type RunCells,
-  type Run as RunEntity,
+  type Run,
+  type RunId,
 } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
-import { selectActiveVariable } from '#src/features/table/stores/table.selectors'
 import { useAppSelector } from '#src/app/store/hooks'
 import { formatDate } from '#src/utils/helpers'
 
-import classes from './run.module.css'
+import classes from './run-details.module.css'
 
 type ScalarProps = {
   label: string
@@ -29,21 +28,23 @@ type ScalarProps = {
   monospace?: boolean
 }
 
-const Scalar = ({ label, value, monospace = false }: ScalarProps) => (
-  <div className={classes.scalarItem}>
-    <Text size="xs" className={classes.scalarLabel}>
-      {label}
-    </Text>
-    <Text
-      size="sm"
-      className={classes.scalarValue}
-      style={monospace ? { fontFamily: 'monospace' } : undefined}
-      c={monospace ? 'dark.5' : undefined}
-    >
-      {value}
-    </Text>
-  </div>
-)
+function Scalar({ label, value, monospace = false }: ScalarProps) {
+  return (
+    <div className={classes.scalarItem}>
+      <Text size="xs" className={classes.scalarLabel}>
+        {label}
+      </Text>
+      <Text
+        size="sm"
+        className={classes.scalarValue}
+        style={monospace ? { fontFamily: 'monospace' } : undefined}
+        c={monospace ? 'dark.5' : undefined}
+      >
+        {value}
+      </Text>
+    </div>
+  )
+}
 
 type RenderProps = {
   name: string
@@ -123,38 +124,41 @@ function shownCells(
   return drilled ? [[activeVariable, drilled]] : []
 }
 
-const Run = () => {
+type RunDetailsProps = {
+  run: RunId
+  variable: string | null
+}
+
+function RunDetails({ run: runId, variable }: RunDetailsProps) {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
-  const selectedRun = useSelectedRun()
-  const activeVariable = useAppSelector(selectActiveVariable)
   const { variables: metadataVariables } = useTableMeta()
   const columnVisibility = useColumnVisibilityFromVariables()
 
   // Read the normalized run straight from the cache by its identity trio. The
-  // selection carries (proposal, run); `database` is constant across the table,
+  // run id carries (proposal, run); `database` is constant across the table,
   // so those two complete the key the cache normalizes on.
-  const { data: runEntity, complete } = useFragment<RunEntity>({
+  const { data: run, complete } = useFragment<Run>({
     fragment: RUN_FRAGMENT,
     from: {
       __typename: 'DamnitRun',
       database: proposal,
-      proposal: selectedRun?.proposal ?? '',
-      run: selectedRun?.run ?? -1,
+      proposal: runId.proposal,
+      run: runId.run,
     },
   })
 
-  if (selectedRun == null || !complete) {
+  if (!complete) {
     return null
   }
 
-  const cells = cellsByName(runEntity.cells ?? [])
+  const cells = cellsByName(run.cells ?? [])
 
-  const renderable = shownCells(cells, activeVariable, columnVisibility).filter(
+  const renderable = shownCells(cells, variable, columnVisibility).filter(
     ([, cell]) => cell.error != null || cell.summary.value != null
   )
 
   return (
-    <ScrollArea h="100vh" offsetScrollbars>
+    <ScrollArea h="100%" offsetScrollbars>
       {renderable.map(([name, data]) => {
         const label = getTitleByName(metadataVariables, name)
         // A cell that failed has nothing worth rendering from its summary.
@@ -173,4 +177,4 @@ const Run = () => {
   )
 }
 
-export default Run
+export default RunDetails

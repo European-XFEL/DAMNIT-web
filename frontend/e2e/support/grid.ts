@@ -22,10 +22,9 @@ export const ROW_HEIGHT = 34
 // and every row down. Matches GROUP_HEADER_HEIGHT in features/table/table.tsx.
 export const GROUP_HEADER_HEIGHT = 24
 
-// Wide enough to keep every column inside the horizontal fold, which the
-// coordinate helpers and columnTitles need, and above Mantine's `sm`
-// breakpoint, below which the tab bar hides.
-export const WIDE_VIEWPORT = { width: 1600, height: 900 }
+// Wide enough to keep every column inside the horizontal fold beside the
+// expanded 280px nav, which the coordinate helpers and columnTitles need.
+export const WIDE_VIEWPORT = { width: 1840, height: 900 }
 
 // Headless Chromium hides scrollbars by default, leaving only overlay ones,
 // which take no layout space. Spread into the `test.use` of specs that need one.
@@ -72,11 +71,11 @@ export type Box = { x: number; y: number; width: number; height: number }
 export type Cell = { col: number; row: number }
 export type Point = { x: number; y: number }
 
-// Opening a plot switches to the Plots tab, which unmounts the table, so the
+// Opening a plot switches to its view, which unmounts the table, so the
 // canvas may be absent when a later grid action runs. Wait for it before reading
 // its box.
 export async function gridBox(page: Page): Promise<Box> {
-  const canvas = page.getByTestId('data-grid-canvas')
+  const canvas = gridCanvas(page)
   await expect(canvas).toBeVisible()
   const box = await canvas.boundingBox()
   if (!box) {
@@ -189,6 +188,12 @@ export function rowMarkerPoint(
 }
 
 export type Axis = 'horizontal' | 'vertical'
+
+// Glide's canvas, which draws the grid and holds its keyboard focus. One owner:
+// the test id tracks Glide.
+export function gridCanvas(page: Page): Locator {
+  return page.getByTestId('data-grid-canvas')
+}
 
 // The element that carries the grid's scrollbars, which occupy the strip
 // between its client box and its border box. One owner: the class tracks Glide.
