@@ -18,6 +18,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches/ patches/
 COPY ${APP_DIR}/package.json ${APP_DIR}/
 COPY packages/ui/package.json packages/ui/
+COPY packages/shared/package.json packages/shared/
 COPY packages/config/package.json packages/config/
 
 # Install workspace dependencies
