@@ -24,12 +24,9 @@ const UnableToDisplayAlert = ({ children }: PropsWithChildren) => {
       variant="light"
       color="orange"
       title="Unable to display the plot"
-      // Mantine draws the title and icon in orange.7, 2.73:1 on the tint. The
-      // text colour keeps the title at AA and orange.8 keeps the icon over 3:1.
-      styles={{
-        title: { color: 'var(--mantine-color-text)' },
-        icon: { color: 'var(--mantine-color-orange-8)' },
-      }}
+      // Mantine draws the icon in orange.7, 2.73:1 on the tint; orange.8 keeps
+      // it over 3:1. The theme already sets the title in the text colour.
+      styles={{ icon: { color: 'var(--mantine-color-orange-8)' } }}
       icon={
         <IconInfoCircle
           style={{ width: rem(20), height: rem(20) }}
