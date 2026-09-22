@@ -15,19 +15,19 @@ export function StatusBar({
     <Paper
       radius={0}
       role="status"
+      h={22}
+      px={6}
       {...paperProps}
       style={{
         flex: 'none',
-        height: 22,
         borderTop: '1px solid var(--app-shell-border-color)',
         display: 'flex',
         alignItems: 'center',
-        paddingInline: 6,
         ...paperProps.style,
       }}
     >
       <Group
-        gap={8}
+        gap={12}
         style={{ flex: 1, minWidth: 0 }}
         wrap="nowrap"
         align="center"

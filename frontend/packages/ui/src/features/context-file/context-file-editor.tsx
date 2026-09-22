@@ -3,6 +3,7 @@ import { Editor as Monaco, type OnMount } from '@monaco-editor/react'
 
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import { useAppDispatch, useAppStore } from '#src/app/store/hooks'
+import { FONT_FAMILY_MONO, FONT_NAME_MONO } from '#src/styles/fonts'
 
 import { setView } from './context-file.slice'
 
@@ -26,12 +27,20 @@ const ContextFileEditor = ({ content }: ContextFileEditorProps) => {
   const store = useAppStore()
   const editorRef = useRef<MonacoEditor | null>(null)
 
-  const handleMount: OnMount = (editor) => {
+  const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
     const savedView = store.getState().contextFile.view
     if (savedView) {
       editor.restoreViewState(savedView)
     }
+    // Monaco keeps the glyph width it measured at mount, so measure again
+    // once the shipped mono has landed.
+    document.fonts
+      .load(`1em '${FONT_NAME_MONO}'`)
+      .then(() => monaco.editor.remeasureFonts())
+      .catch((error: unknown) => {
+        console.warn(`Font ${FONT_NAME_MONO} did not load`, error)
+      })
   }
 
   // Ctrl+F searches the file from anywhere on the view: Monaco draws only the
@@ -74,6 +83,7 @@ const ContextFileEditor = ({ content }: ContextFileEditorProps) => {
     <Monaco
       theme="vs-light"
       options={{
+        fontFamily: FONT_FAMILY_MONO,
         fontSize: 14,
         padding: { top: 14, bottom: 14 },
         minimap: { enabled: true },
