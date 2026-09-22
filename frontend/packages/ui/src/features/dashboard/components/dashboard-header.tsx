@@ -7,6 +7,7 @@ import {
   Text,
   UnstyledButton,
   VisuallyHidden,
+  rem,
 } from '@mantine/core'
 import {
   IconChevronRight,
@@ -97,7 +98,7 @@ function NavToggle() {
       aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
       onClick={() => dispatch(collapsed ? navExpanded() : navCollapsed())}
     >
-      <Icon size={18} stroke={1.5} />
+      <Icon style={{ width: rem(18), height: rem(18) }} stroke={1.5} />
     </ActionIcon>
   )
 }
@@ -129,7 +130,12 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
         <NavToggle />
         <nav aria-label="Breadcrumb" className={classes.nav}>
           <Breadcrumbs
-            separator={<IconChevronRight size={12} stroke={1.5} />}
+            separator={
+              <IconChevronRight
+                style={{ width: rem(12), height: rem(12) }}
+                stroke={2}
+              />
+            }
             separatorMargin={8}
             classNames={{
               root: classes.crumbs,
@@ -150,7 +156,9 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
                   key={index}
                   span
                   size="sm"
-                  c={isLast ? 'gray.7' : undefined}
+                  // The group crumbs before the page you are on are labels for
+                  // where it sits, so they take the secondary grey.
+                  c={isLast ? undefined : 'gray.7'}
                   aria-current={isLast ? 'page' : undefined}
                 >
                   {crumb.icon && (
@@ -163,7 +171,7 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
                     <VisuallyHidden>, {crumb.iconLabel}</VisuallyHidden>
                   )}
                   {crumb.detail && (
-                    <Text span inherit c="gray.6">
+                    <Text span inherit c="gray.7">
                       {` (${crumb.detail})`}
                     </Text>
                   )}

@@ -55,23 +55,32 @@
   }
 }
 
+/* The line sits under the 40 px row, level with the toolbar's, and the active
+   tab's underline lands on it. */
 .head {
   flex: none;
   flex-wrap: nowrap;
+  box-sizing: content-box;
   height: 40px;
-  padding: 0 12px;
+  padding: 0 12px 1px;
 
-  /* The toolbar's line: the active tab's underline lands on it. */
   --tabs-list-border-size: 0 0 1px 0;
   --tab-border-color: var(--app-shell-border-color);
+}
+
+/* Reaches down over the line the head keeps in its padding. */
+.tab {
+  margin-bottom: -1px;
 }
 
 .close {
   align-self: center;
 }
 
+/* The scroll area reserves its own gutter on the right, which is the inset
+   there, so padding both sides would leave the content lopsided. */
 .panel {
   flex: 1;
   min-height: 0;
-  padding-inline: 12px;
+  padding-inline-start: 12px;
 }

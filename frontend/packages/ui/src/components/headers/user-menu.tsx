@@ -37,6 +37,14 @@ const POSITIONS: Record<UserMenuVariant, MenuProps['position']> = {
   rail: 'right-end',
 }
 
+// The nav's menu spans its pill. The other two buttons are narrower than a
+// menu needs, so they keep a fixed width.
+const WIDTHS: Record<UserMenuVariant, MenuProps['width']> = {
+  header: 260,
+  nav: 'target',
+  rail: 260,
+}
+
 export function UserMenu({
   userName,
   onLogout,
@@ -62,7 +70,7 @@ export function UserMenu({
 
   return (
     <Menu
-      width={260}
+      width={WIDTHS[variant]}
       position={POSITIONS[variant]}
       offset={OFFSETS[variant]}
       transitionProps={{

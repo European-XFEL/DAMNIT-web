@@ -1,4 +1,4 @@
-import { Image, ScrollArea, Text } from '@mantine/core'
+import { Image, ScrollArea, Text, rem } from '@mantine/core'
 import { useFragment } from '@apollo/client/react'
 
 import { useColumnVisibilityFromVariables } from '#src/features/table/hooks/use-column-visibility'
@@ -18,9 +18,14 @@ import {
 } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import { useAppSelector } from '#src/app/store/hooks'
+import { FONT_SIZE_DATA } from '#src/styles/fonts'
 import { formatDate } from '#src/utils/helpers'
 
 import classes from './run-details.module.css'
+
+// One line box for the label and either kind of value, so every row keeps the
+// same rhythm whatever it holds.
+const SCALAR_LINE = rem(22)
 
 type ScalarProps = {
   label: string
@@ -31,14 +36,14 @@ type ScalarProps = {
 function Scalar({ label, value, monospace = false }: ScalarProps) {
   return (
     <div className={classes.scalarItem}>
-      <Text size="xs" className={classes.scalarLabel}>
+      <Text size="xs" lh={SCALAR_LINE} className={classes.scalarLabel}>
         {label}
       </Text>
       <Text
-        size="sm"
+        fz={monospace ? 'xs' : FONT_SIZE_DATA}
+        lh={SCALAR_LINE}
         className={classes.scalarValue}
-        style={monospace ? { fontFamily: 'monospace' } : undefined}
-        c={monospace ? 'dark.5' : undefined}
+        ff={monospace ? 'monospace' : undefined}
       >
         {value}
       </Text>
