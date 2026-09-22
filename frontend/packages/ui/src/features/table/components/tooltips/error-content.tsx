@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActionIcon, Group, ScrollArea, Text, Tooltip } from '@mantine/core'
+import {
+  ActionIcon,
+  Box,
+  Group,
+  ScrollArea,
+  Text,
+  Tooltip,
+  rem,
+} from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 
 import { type CellError } from '#src/data/table/table-data.types'
@@ -37,27 +45,17 @@ export function ErrorContent({ error }: ErrorContentProps) {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: 360,
-        padding: '8px 10px',
-        color: 'var(--mantine-color-white)',
-      }}
-    >
+    <Box maw={360} px={10} py={8} c="white">
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
-          <Text size="xs" fw={700} c={accent}>
+          <Text size="sm" fw={600} c={accent}>
             {title}
           </Text>
-          <Text size="xs" c="gray.5" style={{ fontFamily: 'monospace' }}>
+          <Text size="xxs" c="gray.5" ff="monospace">
             {error.cls}
           </Text>
         </div>
-        <Tooltip
-          label={copied ? 'Copied' : 'Copy'}
-          withArrow
-          styles={{ tooltip: { fontSize: 10, padding: '2px 6px' } }}
-        >
+        <Tooltip label={copied ? 'Copied' : 'Copy'} withArrow>
           <ActionIcon
             variant="subtle"
             color="gray"
@@ -65,21 +63,25 @@ export function ErrorContent({ error }: ErrorContentProps) {
             onClick={handleCopy}
           >
             {copied ? (
-              <IconCheck size={14} color="var(--mantine-color-teal-4)" />
+              <IconCheck
+                style={{ width: rem(16), height: rem(16) }}
+                stroke={1.5}
+                color="var(--mantine-color-teal-4)"
+              />
             ) : (
-              <IconCopy size={14} />
+              <IconCopy
+                style={{ width: rem(16), height: rem(16) }}
+                stroke={1.5}
+              />
             )}
           </ActionIcon>
         </Tooltip>
       </Group>
       <ScrollArea.Autosize mah={200} type="auto">
-        <Text
-          size="xs"
-          style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}
-        >
+        <Text size="xxs" ff="monospace" style={{ whiteSpace: 'pre-wrap' }}>
           {error.message}
         </Text>
       </ScrollArea.Autosize>
-    </div>
+    </Box>
   )
 }

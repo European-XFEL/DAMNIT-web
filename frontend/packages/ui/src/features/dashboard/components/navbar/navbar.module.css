@@ -23,13 +23,14 @@
   padding: 0;
 }
 
-/* The label sits low, nearer the rows it heads than the group above. */
+/* The label sits low, nearer the rows it heads than the group above. The
+   action's box ends on the rows' edge, so a hovered plus lines up with them. */
 .header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   height: 24px;
-  padding: 0 10px 2px;
+  padding: 0 0 2px 10px;
 }
 
 .item,
@@ -40,7 +41,7 @@
   width: 100%;
   height: 32px;
   padding: 0 10px;
-  font-size: rem(13px);
+  font-size: var(--mantine-font-size-sm);
 }
 
 /* Says "No <kind>" where a section's entries would be. Italic is the app
@@ -70,11 +71,13 @@
   color: var(--mantine-color-gray-9);
 }
 
+/* Accent text on the accent's own tint is a shade darker than on a plain
+   ground, where indigo.7 already reads. */
 .item[data-active],
 .entry[data-active],
 .railButton[data-active] {
   background-color: var(--mantine-color-indigo-0);
-  color: var(--mantine-color-indigo-7);
+  color: var(--mantine-color-indigo-8);
 }
 
 .item[data-active] {
@@ -87,20 +90,23 @@
 }
 
 /* The select button stretches over the whole row, so the close mark sits on
-   top of it, padded like the Plots row so it lines up under the plus. */
+   top of it, its box ending on the row's edge under the plus. */
 .entry {
+  --entry-title-size: var(--mantine-font-size-sm);
+  --entry-line: calc(var(--entry-title-size) * 1.25);
+
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 40px;
-  padding: 4px 10px;
+  padding: 4px 0 4px 10px;
 }
 
 .entryButton {
   display: flex;
   flex: 1;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-width: 0;
 
@@ -121,11 +127,26 @@
 
 .entryTitle {
   overflow-wrap: anywhere;
-  font-size: rem(13px);
+  font-size: var(--entry-title-size);
+}
+
+.entrySubtitle {
+  font-size: var(--mantine-font-size-xs);
 }
 
 .entry[data-active] .entryTitle {
   font-weight: 500;
+}
+
+/* Both marks centre on the name's first line, not the whole entry, so a name
+   that wraps keeps them beside its first words. */
+.entryButton .icon {
+  align-items: center;
+  height: var(--entry-line);
+}
+
+.entryClose {
+  margin-top: calc((var(--entry-line) - var(--ai-size)) / 2);
 }
 
 /* Shown on hover or focus only, its slot kept either way so the name never
@@ -187,5 +208,23 @@
 /* New plot keeps its full height, its label in line with the plot names. */
 .popover .item {
   flex-shrink: 0;
-  gap: 8px;
+}
+
+/* A floating row pairs its mark with its label at half the label's size. */
+.popover .item,
+.popover .entryButton {
+  gap: 6px;
+}
+
+/* A floating surface reads a step under the page it sits over. */
+.popover .item {
+  font-size: var(--mantine-font-size-xs);
+}
+
+.popover .entry {
+  --entry-title-size: var(--mantine-font-size-xs);
+}
+
+.popover .entrySubtitle {
+  font-size: var(--mantine-font-size-xxs);
 }

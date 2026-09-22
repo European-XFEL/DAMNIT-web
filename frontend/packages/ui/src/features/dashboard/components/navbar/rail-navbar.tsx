@@ -13,6 +13,7 @@ import {
   Popover,
   Tooltip,
   UnstyledButton,
+  rem,
 } from '@mantine/core'
 import {
   IconChartLine,
@@ -44,7 +45,7 @@ type RailButtonProps = Omit<ComponentPropsWithoutRef<'button'>, 'children'> & {
 const RailButton = forwardRef<HTMLButtonElement, RailButtonProps>(
   function RailButton({ icon, label, active, ...others }, ref) {
     return (
-      <Tooltip label={label} position="right" fz="xs" withArrow>
+      <Tooltip label={label} position="right" withArrow>
         <UnstyledButton
           {...others}
           ref={ref}
@@ -93,7 +94,12 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
     <>
       <AppShell.Section grow className={classes.rail}>
         <RailButton
-          icon={<IconTable size={20} stroke={1.5} />}
+          icon={
+            <IconTable
+              style={{ width: rem(20), height: rem(20) }}
+              stroke={1.5}
+            />
+          }
           label="Table"
           active={views.isActive(TABLE_VIEW)}
           onClick={() => views.select(TABLE_VIEW)}
@@ -112,7 +118,12 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
           <Popover.Target>
             <RailButton
               ref={plotsRef}
-              icon={<IconChartLine size={20} stroke={1.5} />}
+              icon={
+                <IconChartLine
+                  style={{ width: rem(20), height: rem(20) }}
+                  stroke={1.5}
+                />
+              }
               label="Plots"
               active={plotActive}
               onClick={() => setPlotsOpened((opened) => !opened)}
@@ -123,6 +134,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
             <FocusTrap.InitialFocus onKeyDown={wrapToNewPlot} />
             <div className={classes.scroll}>
               <PlotEntries
+                iconSize={16}
                 onSelect={closePlotsPopover}
                 onLastClosed={() => newPlotRef.current?.focus()}
               />
@@ -137,14 +149,22 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
               }}
             >
               <span className={classes.icon}>
-                <IconPlus size={18} stroke={1.5} />
+                <IconPlus
+                  style={{ width: rem(16), height: rem(16) }}
+                  stroke={1.5}
+                />
               </span>
               New plot
             </UnstyledButton>
           </Popover.Dropdown>
         </Popover>
         <RailButton
-          icon={<IconFileCode size={20} stroke={1.5} />}
+          icon={
+            <IconFileCode
+              style={{ width: rem(20), height: rem(20) }}
+              stroke={1.5}
+            />
+          }
           label="Context file"
           active={views.isActive(CONTEXT_FILE_VIEW)}
           onClick={() => views.select(CONTEXT_FILE_VIEW)}

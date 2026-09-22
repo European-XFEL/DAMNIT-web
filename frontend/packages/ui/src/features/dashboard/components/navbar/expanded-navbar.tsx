@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react'
-import { ActionIcon, AppShell, UnstyledButton } from '@mantine/core'
+import { ActionIcon, AppShell, UnstyledButton, rem } from '@mantine/core'
 import { IconFileCode, IconPlus, IconTable } from '@tabler/icons-react'
 
 import { UserMenu } from '#src/components/headers/user-menu'
@@ -68,7 +68,12 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
             <ul className={classes.entries} aria-label="Table">
               <li>
                 <NavItem
-                  icon={<IconTable size={18} stroke={1.5} />}
+                  icon={
+                    <IconTable
+                      style={{ width: rem(18), height: rem(18) }}
+                      stroke={1.5}
+                    />
+                  }
                   label="All runs"
                   active={views.isActive(TABLE_VIEW)}
                   onClick={() => views.select(TABLE_VIEW)}
@@ -88,7 +93,10 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
                   aria-label="New plot"
                   onClick={onNewPlot}
                 >
-                  <IconPlus size={16} stroke={1.5} />
+                  <IconPlus
+                    style={{ width: rem(16), height: rem(16) }}
+                    stroke={1.5}
+                  />
                 </ActionIcon>
               }
             />
@@ -100,7 +108,12 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
           {/* One file, so a plain item rather than a header over one entry. */}
           <li>
             <NavItem
-              icon={<IconFileCode size={18} stroke={1.5} />}
+              icon={
+                <IconFileCode
+                  style={{ width: rem(18), height: rem(18) }}
+                  stroke={1.5}
+                />
+              }
               label="Context file"
               active={views.isActive(CONTEXT_FILE_VIEW)}
               onClick={() => views.select(CONTEXT_FILE_VIEW)}

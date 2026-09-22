@@ -28,8 +28,61 @@ index 412d81c8748b979a9d988f2e3cfa8eddc1bfc555..1d7ebc9ce3dbfd793fc009b318f3e1e6
          const args = getMouseArgsForPosition(canvas, clientX, clientY, ev);
          downPosition.current = args.location;
          if (args.isTouch) {
+diff --git a/dist/cjs/internal/data-grid/render/data-grid-render.header.js b/dist/cjs/internal/data-grid/render/data-grid-render.header.js
+index 716665001cbe206f636d54daedb3c7bf494fe6c7..fa9370093d442a55bbce654e9251024e6f0f29f7 100644
+--- a/dist/cjs/internal/data-grid/render/data-grid-render.header.js
++++ b/dist/cjs/internal/data-grid/render/data-grid-render.header.js
+@@ -78,6 +78,8 @@ function drawGroups(ctx, effectiveCols, width, translateX, groupHeaderHeight, ho
+     const xPad = 8;
+     const [hCol, hRow] = hovered?.[0] ?? [];
+     let finalX = 0;
++    const firstScrollable = effectiveCols.find(c => !c.sticky);
++    const stickyCount = effectiveCols.indexOf(firstScrollable);
+     (0, data_grid_render_walk_js_1.walkGroups)(effectiveCols, width, translateX, groupHeaderHeight, (span, groupName, x, y, w, h) => {
+         if (damage !== undefined &&
+             !damage.hasItemInRectangle({
+@@ -138,7 +140,7 @@ function drawGroups(ctx, effectiveCols, width, translateX, groupHeaderHeight, ho
+                 ctx.globalAlpha = 1;
+             }
+         }
+-        if (x !== 0 && verticalBorder(span[0])) {
++        if (x !== 0 && verticalBorder(span[0] === firstScrollable?.sourceIndex ? stickyCount : span[0])) {
+             ctx.beginPath();
+             ctx.moveTo(x + 0.5, 0);
+             ctx.lineTo(x + 0.5, groupHeaderHeight);
+diff --git a/dist/cjs/internal/data-grid/render/data-grid-render.lines.js b/dist/cjs/internal/data-grid/render/data-grid-render.lines.js
+index 023082eb90917a4c62839dbd6f78f5d1f1908d79..ea1b645b9746dc953af3d380a1201a14c80afb01 100644
+--- a/dist/cjs/internal/data-grid/render/data-grid-render.lines.js
++++ b/dist/cjs/internal/data-grid/render/data-grid-render.lines.js
+@@ -59,7 +59,7 @@ function overdrawStickyBoundaries(ctx, effectiveCols, width, height, freezeTrail
+     for (const c of effectiveCols) {
+         if (c.sticky)
+             continue;
+-        drawFreezeBorder = verticalBorder(c.sourceIndex);
++        drawFreezeBorder = verticalBorder(effectiveCols.indexOf(c));
+         break;
+     }
+     const hColor = theme.horizontalBorderColor ?? theme.borderColor;
+@@ -149,7 +149,7 @@ function drawExtraRowThemes(ctx, effectiveCols, cellYOffset, translateX, transla
+                 colThemeBgCell !== bgCell &&
+                 tx >= minX &&
+                 tx <= maxX &&
+-                verticalBorder(index + 1)) {
++                verticalBorder(c.sourceIndex + 1)) {
+                 toDraw.push({
+                     x: tx,
+                     y: extraRowsStartY,
+@@ -211,7 +211,7 @@ function drawGridLines(ctx, effectiveCols, cellYOffset, translateX, translateY,
+             continue;
+         x += c.width;
+         const tx = c.sticky ? x : x + translateX;
+-        if (tx >= minX && tx <= maxX && verticalBorder(index + 1)) {
++        if (tx >= minX && tx <= maxX && verticalBorder(c.sourceIndex + 1)) {
+             toDraw.push({
+                 x1: tx,
+                 y1: Math.max(groupHeaderHeight, minY),
 diff --git a/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js b/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js
-index 05c6d7e0123358e6e18f02e91d7e2e884a3806b0..8aaabfd405137d151609df641f856d1298a55363 100644
+index 05c6d7e0123358e6e18f02e91d7e2e884a3806b0..05efc9407161e91e2fb986240a0888d563ffebc1 100644
 --- a/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js
 +++ b/dist/cjs/internal/data-grid-dnd/data-grid-dnd.js
 @@ -73,8 +73,18 @@ const DataGridDnd = p => {
@@ -82,8 +135,61 @@ index c32e94b805eeb5291d0c3aa3b44b8dc43e9f99b4..11f7dfeeb7bfbe314a82a9afb9229ae3
          const args = getMouseArgsForPosition(canvas, clientX, clientY, ev);
          downPosition.current = args.location;
          if (args.isTouch) {
+diff --git a/dist/esm/internal/data-grid/render/data-grid-render.header.js b/dist/esm/internal/data-grid/render/data-grid-render.header.js
+index 1f35f1ef23fbe847c424b7c5e50f9285262792e3..2238427c1e756cb3d31f4d3bf9691e6c67ea33c1 100644
+--- a/dist/esm/internal/data-grid/render/data-grid-render.header.js
++++ b/dist/esm/internal/data-grid/render/data-grid-render.header.js
+@@ -74,6 +74,8 @@ export function drawGroups(ctx, effectiveCols, width, translateX, groupHeaderHei
+     const xPad = 8;
+     const [hCol, hRow] = hovered?.[0] ?? [];
+     let finalX = 0;
++    const firstScrollable = effectiveCols.find(c => !c.sticky);
++    const stickyCount = effectiveCols.indexOf(firstScrollable);
+     walkGroups(effectiveCols, width, translateX, groupHeaderHeight, (span, groupName, x, y, w, h) => {
+         if (damage !== undefined &&
+             !damage.hasItemInRectangle({
+@@ -134,7 +136,7 @@ export function drawGroups(ctx, effectiveCols, width, translateX, groupHeaderHei
+                 ctx.globalAlpha = 1;
+             }
+         }
+-        if (x !== 0 && verticalBorder(span[0])) {
++        if (x !== 0 && verticalBorder(span[0] === firstScrollable?.sourceIndex ? stickyCount : span[0])) {
+             ctx.beginPath();
+             ctx.moveTo(x + 0.5, 0);
+             ctx.lineTo(x + 0.5, groupHeaderHeight);
+diff --git a/dist/esm/internal/data-grid/render/data-grid-render.lines.js b/dist/esm/internal/data-grid/render/data-grid-render.lines.js
+index 4d2fc07fad5fd99357604f2684387ee661b25dbd..15daa3621e025e229f119ac9587bf779766bbd02 100644
+--- a/dist/esm/internal/data-grid/render/data-grid-render.lines.js
++++ b/dist/esm/internal/data-grid/render/data-grid-render.lines.js
+@@ -57,7 +57,7 @@ export function overdrawStickyBoundaries(ctx, effectiveCols, width, height, free
+     for (const c of effectiveCols) {
+         if (c.sticky)
+             continue;
+-        drawFreezeBorder = verticalBorder(c.sourceIndex);
++        drawFreezeBorder = verticalBorder(effectiveCols.indexOf(c));
+         break;
+     }
+     const hColor = theme.horizontalBorderColor ?? theme.borderColor;
+@@ -146,7 +146,7 @@ export function drawExtraRowThemes(ctx, effectiveCols, cellYOffset, translateX,
+                 colThemeBgCell !== bgCell &&
+                 tx >= minX &&
+                 tx <= maxX &&
+-                verticalBorder(index + 1)) {
++                verticalBorder(c.sourceIndex + 1)) {
+                 toDraw.push({
+                     x: tx,
+                     y: extraRowsStartY,
+@@ -207,7 +207,7 @@ export function drawGridLines(ctx, effectiveCols, cellYOffset, translateX, trans
+             continue;
+         x += c.width;
+         const tx = c.sticky ? x : x + translateX;
+-        if (tx >= minX && tx <= maxX && verticalBorder(index + 1)) {
++        if (tx >= minX && tx <= maxX && verticalBorder(c.sourceIndex + 1)) {
+             toDraw.push({
+                 x1: tx,
+                 y1: Math.max(groupHeaderHeight, minY),
 diff --git a/dist/esm/internal/data-grid-dnd/data-grid-dnd.js b/dist/esm/internal/data-grid-dnd/data-grid-dnd.js
-index 734f50fd6705f0d0c36760ca88c3661ab18944d1..f0020eca7c647d73ff1518e67752a1ec95778407 100644
+index 734f50fd6705f0d0c36760ca88c3661ab18944d1..d5dc920ff3d9d1747d6d64bc2a4db3bd06bab612 100644
 --- a/dist/esm/internal/data-grid-dnd/data-grid-dnd.js
 +++ b/dist/esm/internal/data-grid-dnd/data-grid-dnd.js
 @@ -45,8 +45,18 @@ const DataGridDnd = p => {

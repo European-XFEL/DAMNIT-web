@@ -15,7 +15,7 @@ import {
   type DraggableProvided,
   type DropResult,
 } from '@hello-pangea/dnd'
-import { Divider, Stack } from '@mantine/core'
+import { Divider, Stack, rem } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import {
   IconCheck,
@@ -103,9 +103,12 @@ function VariableDetails({ tags }: VariableDetailsProps) {
         items={items}
         renderIndicator={({ selected, color, size }) =>
           selected ? (
-            <IconCheck size={size} style={{ color }} />
+            <IconCheck style={{ width: rem(size), height: rem(size), color }} />
           ) : (
-            <IconCircle size={6} stroke={4} style={{ color }} />
+            <IconCircle
+              style={{ width: rem(6), height: rem(6), color }}
+              stroke={4}
+            />
           )
         }
       />
@@ -162,7 +165,9 @@ function Grip({ label, handleProps }: GripProps) {
       className={classes.grip}
       aria-label={handleProps == null ? undefined : `Reorder ${label}`}
     >
-      <IconGripVertical size={HANDLE_ICON_SIZE} />
+      <IconGripVertical
+        style={{ width: rem(HANDLE_ICON_SIZE), height: rem(HANDLE_ICON_SIZE) }}
+      />
     </div>
   )
 }
@@ -171,7 +176,9 @@ function Grip({ label, handleProps }: GripProps) {
 function PinnedMark() {
   return (
     <div className={classes.pin} role="img" aria-label="Pinned" title="Pinned">
-      <IconPinned size={HANDLE_ICON_SIZE} />
+      <IconPinned
+        style={{ width: rem(HANDLE_ICON_SIZE), height: rem(HANDLE_ICON_SIZE) }}
+      />
     </div>
   )
 }
@@ -552,7 +559,7 @@ export function VariablesPopover() {
           isActive={opened}
           icon={IconList}
           label="Variables"
-          badgeCount={notVisibleCount * -1}
+          badge={notVisibleCount ? `${notVisibleCount} hidden` : undefined}
         />
       )}
     >

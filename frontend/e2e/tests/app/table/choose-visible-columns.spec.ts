@@ -24,7 +24,7 @@ test('hiding a variable removes its column from the table', async ({
   await expect(trains).toBeChecked()
   await trains.uncheck()
 
-  await expect(variables).toContainText('-1')
+  await expect(variables.getByText('1 hidden', { exact: true })).toBeVisible()
   await expectVisibleColumns(page, 12)
   await expect(columnHeader(page, 'Trains')).toHaveCount(0)
 })
@@ -55,13 +55,13 @@ test('a hidden column stays hidden after the popover closes', async ({
   // Hide the column
   const variables = await openPopover(page, 'Variables')
   await rowCheckbox(page, 'Trains').uncheck()
-  await expect(variables).toContainText('-1')
+  await expect(variables.getByText('1 hidden', { exact: true })).toBeVisible()
   await expectVisibleColumns(page, 12)
 
   // Close the popover
   await page.keyboard.press('Escape')
   await expect(page.getByPlaceholder('Search variables')).toHaveCount(0)
-  await expect(variables).toContainText('-1')
+  await expect(variables.getByText('1 hidden', { exact: true })).toBeVisible()
   await expectVisibleColumns(page, 12)
 
   // Reopen the popover

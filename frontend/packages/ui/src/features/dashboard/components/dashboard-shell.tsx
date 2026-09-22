@@ -55,7 +55,7 @@ function DashboardShell({
         collapsed: { mobile: !mobileNavOpened },
       }}
     >
-      <AppShell.Header bg="gray.0">
+      <AppShell.Header bg="gray.1">
         <DashboardHeader identity={identity} homeTo={homeTo} />
       </AppShell.Header>
       <AppShell.Navbar
