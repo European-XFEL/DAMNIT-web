@@ -1,11 +1,13 @@
 import { useMemo, type PropsWithChildren } from 'react'
-import { Alert, Code, Image, Skeleton, Stack, Text } from '@mantine/core'
+import { Alert, Code, Image, rem, Skeleton, Stack, Text } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
+import cx from 'clsx'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 
 import Plot from './plot'
+import classes from './plot.module.css'
 import PreviewChunkLoader from './preview-chunk-loader'
 import { useSummaryPlotData } from './use-summary-plot-data'
 import { usePreviewPlotData } from './use-preview-plot-data'
@@ -22,7 +24,16 @@ const UnableToDisplayAlert = ({ children }: PropsWithChildren) => {
       variant="light"
       color="orange"
       title="Unable to display the plot"
-      icon={<IconInfoCircle />}
+      // Mantine draws the icon in orange.7, 2.73:1 on the tint; orange.8 keeps
+      // it over 3:1. The theme already sets the title in the text colour.
+      styles={{ icon: { color: 'var(--mantine-color-orange-8)' } }}
+      icon={
+        <IconInfoCircle
+          style={{ width: rem(20), height: rem(20) }}
+          stroke={1.5}
+          aria-hidden
+        />
+      }
     >
       {children}
     </Alert>
@@ -78,7 +89,7 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
   const { traces, meta } = summaryData ?? previewData
 
   return (
-    <Stack align="flex-start" justify="flex-start">
+    <Stack align="flex-start" justify="flex-start" maw={1200}>
       {chunks.map((chunk) => (
         <PreviewChunkLoader
           key={chunk[0]}
@@ -88,7 +99,7 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
         />
       ))}
       {!traces.length ? (
-        <Skeleton height={430} width={740} radius="xl" />
+        <Skeleton className={cx(classes.frame, classes.wide)} radius="xl" />
       ) : meta.type === 'image' ? (
         <Image
           src={traces[0].data?.value}

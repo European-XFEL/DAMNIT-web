@@ -8,6 +8,7 @@ import {
   type CSSVariablesResolver,
   type ExtendComponent,
   type MenuFactory,
+  type SegmentedControlFactory,
   type TableFactory,
   type TooltipFactory,
 } from '@mantine/core'
@@ -72,6 +73,11 @@ export const theme = createTheme({
         itemSection: classes.menuItemSection,
       },
     } satisfies ExtendComponent<MenuFactory>,
+    // Mantine sizes the control from its text, which lands it at 41 px beside
+    // 36 px fields; the label's whole-pixel line brings it level.
+    SegmentedControl: {
+      classNames: { label: classes.segmentedLabel },
+    } satisfies ExtendComponent<SegmentedControlFactory>,
     // A plain th is the browser's bold; column headers are labels on grey and
     // take the grid's 500.
     Table: {
