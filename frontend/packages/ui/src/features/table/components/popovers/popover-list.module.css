@@ -52,7 +52,7 @@
   padding: 0 10px 0 calc(10px + var(--title-inset));
 }
 
-/* A heading carries a 10px label, so it does not need a variable row's height.
+/* A heading carries a 12px label, so it does not need a variable row's height.
    24px is the target-size floor for the link it holds. */
 .groupHeader {
   min-height: 24px;
