@@ -44,19 +44,21 @@ import {
 } from '#src/features/table/stores/table.slice'
 import {
   buildColumnBlocks,
-  columnsOf,
-  filterColumnBlocks,
   type Column,
   type ColumnGroupBlock,
 } from '#src/features/table/utils/column-blocks'
 import {
-  blockKey,
   BLOCKS_DROPPABLE,
-  columnKey,
   membersDroppable,
   reorderColumns,
 } from '#src/features/table/utils/column-reorder'
 import { pinnedFirst } from '#src/features/table/utils/pinned-columns'
+import {
+  blockKey,
+  filterVariableBlocks,
+  itemsOf,
+  variableKey,
+} from '#src/utils/variable-blocks'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import SectionHeading, {
   mutedC,
@@ -266,7 +268,7 @@ type DraggableColumnProps = {
 
 function DraggableColumn({ index, ...item }: DraggableColumnProps) {
   return (
-    <Draggable draggableId={columnKey(item.column.name)} index={index}>
+    <Draggable draggableId={variableKey(item.column.name)} index={index}>
       {(provided) => <ColumnItem provided={provided} {...item} />}
     </Draggable>
   )
@@ -397,14 +399,15 @@ function VariableList() {
     const build = (columns: typeof variables) =>
       buildColumnBlocks({ variables: columns, groups, visibility, tagFilter })
 
-    const search = debouncedQuery.trim().toLowerCase()
     const blocks = build(centre)
 
     return {
       blocks,
-      shown: filterColumnBlocks(blocks, search),
+      shown: filterVariableBlocks(blocks, debouncedQuery),
       // A pinned column leads the list and shows what it is, but it never moves.
-      pinnedColumns: columnsOf(filterColumnBlocks(build(start), search)),
+      pinnedColumns: itemsOf(
+        filterVariableBlocks(build(start), debouncedQuery)
+      ),
     }
   }, [start, centre, groups, visibility, tagFilter, debouncedQuery])
 
@@ -439,7 +442,7 @@ function VariableList() {
     )
   }
 
-  const listedColumns = [...pinnedColumns, ...columnsOf(shown)]
+  const listedColumns = [...pinnedColumns, ...itemsOf(shown)]
 
   // The link speaks only for the columns the search left that the user can
   // hide, so with none of those it says nothing rather than "Hide all".

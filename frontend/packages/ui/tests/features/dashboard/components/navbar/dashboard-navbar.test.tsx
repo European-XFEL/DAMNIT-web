@@ -4,6 +4,7 @@ import { expect, test } from 'vitest'
 import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
 
+import { plotRequested } from '#src/app/store/actions'
 import { setupStore, type AppStore } from '#src/app/store/store'
 import DashboardNavbar from '#src/features/dashboard/components/navbar/dashboard-navbar'
 import {
@@ -11,7 +12,6 @@ import {
   viewSelected,
 } from '#src/features/dashboard/stores/dashboard.slice'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
-import { addPlot } from '#src/features/plots/plots.slice'
 import { type PlotSpec } from '#src/types'
 import { withProviders } from '#tests/support/render'
 import { resizeViewport } from '#tests/support/viewport'
@@ -75,7 +75,7 @@ test('a new plot appears under Plots as the view on show', async () => {
   const store = setupStore()
   const screen = await renderNav(store)
 
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
 
   const entry = screen.getByRole('button', { name: /^Trains vs. Run/ })
   await expect.element(entry).toHaveTextContent('Runs 1-3')
@@ -87,7 +87,7 @@ test('a new plot appears under Plots as the view on show', async () => {
 
 test('an entry shows the plot name and spells its kind out only for screen readers', async () => {
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   const screen = await renderNav(store)
 
   const entry = screen.getByRole('button', {
@@ -107,7 +107,7 @@ test('the Plots section names itself empty until a plot is opened', async () => 
   await expect.element(screen.getByText('No plots')).toBeVisible()
 
   // Opening a plot puts its row where the placeholder was
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
 
   await expect
     .element(screen.getByRole('button', { name: /^Trains vs. Run/ }))
@@ -117,7 +117,7 @@ test('the Plots section names itself empty until a plot is opened', async () => 
 
 test('the Table and Plots headers are labels that never switch the view', async () => {
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   store.dispatch(viewSelected({ kind: 'table' }))
   const screen = await renderNav(store)
 
@@ -150,8 +150,8 @@ test('All runs under Table shows the table', async () => {
 
 test('the close mark shows only while its entry is hovered or focused', async () => {
   const store = setupStore()
-  store.dispatch(addPlot(trains))
-  store.dispatch(addPlot(pulses))
+  store.dispatch(plotRequested(trains))
+  store.dispatch(plotRequested(pulses))
   const screen = await renderNav(store)
   const marks = screen.getByRole('button', {
     name: /^Close /,
@@ -177,7 +177,7 @@ test('the close mark shows only while its entry is hovered or focused', async ()
 
 test('closing a plot entry removes it from the nav', async () => {
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   const screen = await renderNav(store)
 
   await screen.getByRole('button', { name: /^Trains vs. Run/ }).hover()
@@ -193,9 +193,9 @@ test('closing a plot entry removes it from the nav', async () => {
 
 test('closing a plot hands focus to the entry below, the one above, then New plot', async () => {
   const store = setupStore()
-  store.dispatch(addPlot(trains))
-  store.dispatch(addPlot(pulses))
-  store.dispatch(addPlot(intensity))
+  store.dispatch(plotRequested(trains))
+  store.dispatch(plotRequested(pulses))
+  store.dispatch(plotRequested(intensity))
   const screen = await renderNav(store)
   const entry = (name: RegExp) => screen.getByRole('button', { name })
 
@@ -222,7 +222,7 @@ test('closing a plot hands focus to the entry below, the one above, then New plo
 test('closing the last plot in the rail popover hands focus to New plot', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
 
@@ -239,7 +239,7 @@ test('closing the last plot in the rail popover hands focus to New plot', async 
 test('picking a plot or New plot in the rail hands focus back to Plots', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   store.dispatch(viewSelected({ kind: 'table' }))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
@@ -255,20 +255,20 @@ test('picking a plot or New plot in the rail hands focus back to Plots', async (
   await openRailPlots(screen)
   await userEvent.keyboard('{Shift>}{Tab}{/Shift}')
   await userEvent.keyboard('{Enter}')
-  const dialog = screen.getByRole('dialog', { name: 'Plot Settings' })
+  const dialog = screen.getByRole('dialog', { name: 'New plot' })
   await expect.element(dialog).toBeVisible()
   await userEvent.keyboard('{Escape}')
   await expect.element(dialog).not.toBeInTheDocument()
   await expect.element(plots).toHaveFocus()
 })
 
-test('the plus beside Plots opens the plot settings', async () => {
+test('the plus beside Plots opens the new plot dialog', async () => {
   const screen = await renderNav(setupStore())
 
   await screen.getByRole('button', { name: 'New plot' }).click()
 
   await expect
-    .element(screen.getByRole('dialog', { name: 'Plot Settings' }))
+    .element(screen.getByRole('dialog', { name: 'New plot' }))
     .toBeVisible()
 })
 
@@ -276,8 +276,8 @@ test('the rail lists the open plots and New plot in its popover', async () => {
   // The rail only exists from the `sm` breakpoint up.
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
-  store.dispatch(addPlot(pulses))
+  store.dispatch(plotRequested(trains))
+  store.dispatch(plotRequested(pulses))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
 
@@ -297,7 +297,7 @@ test('the rail lists the open plots and New plot in its popover', async () => {
 test('picking a plot in the rail shows it and closes the popover', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   store.dispatch(viewSelected({ kind: 'table' }))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
@@ -315,8 +315,8 @@ test('picking a plot in the rail shows it and closes the popover', async () => {
 test('closing a plot in the rail keeps the popover open', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
-  store.dispatch(addPlot(pulses))
+  store.dispatch(plotRequested(trains))
+  store.dispatch(plotRequested(pulses))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
   const plots = screen.getByRole('button', { name: 'Plots', exact: true })
@@ -337,7 +337,7 @@ test('closing a plot in the rail keeps the popover open', async () => {
 test('the rail popover takes focus on open without showing a close mark', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
 
@@ -353,7 +353,7 @@ test('the rail popover takes focus on open without showing a close mark', async 
 test('Escape closes the rail popover and hands focus back to Plots', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
 
@@ -371,7 +371,7 @@ test('Escape closes the rail popover and hands focus back to Plots', async () =>
 test('Shift+Tab as the rail popover opens wraps to New plot', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
 
@@ -387,7 +387,7 @@ test('the rail popover stays inside a short window, its plots scrolling above a 
   await resizeViewport({ width: 1024, height: 480 })
   const store = setupStore()
   for (let run = 1; run <= 15; run++) {
-    store.dispatch(addPlot({ ...trains, runs: [String(run)] }))
+    store.dispatch(plotRequested({ ...trains, runs: [String(run)] }))
   }
   store.dispatch(navCollapsed())
   const screen = await renderNav(store)
@@ -439,7 +439,7 @@ function centre(element: Element) {
 test('the plus, a close mark and the chevron end where the All runs row ends', async () => {
   await resizeViewport({ width: 1024, height: 768 })
   const store = setupStore()
-  store.dispatch(addPlot(trains))
+  store.dispatch(plotRequested(trains))
   const screen = await renderNav(store, { user: ada })
   const row = screen.getByRole('button', { name: 'All runs', exact: true })
   const newPlot = screen.getByRole('button', { name: 'New plot' })

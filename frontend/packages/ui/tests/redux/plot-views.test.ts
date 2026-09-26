@@ -1,9 +1,10 @@
 import { expect, test } from 'vitest'
 
+import { plotRequested } from '#src/app/store/actions'
 import { setupStore, type AppStore } from '#src/app/store/store'
 import { selectActiveView } from '#src/features/dashboard/stores/dashboard.selectors'
 import { viewSelected } from '#src/features/dashboard/stores/dashboard.slice'
-import { addPlot, removePlot } from '#src/features/plots/plots.slice'
+import { removePlot } from '#src/features/plots/plots.slice'
 import { type PlotSpec } from '#src/types'
 
 const summary: PlotSpec = {
@@ -13,7 +14,7 @@ const summary: PlotSpec = {
 }
 
 function openPlot(store: AppStore) {
-  const added = addPlot(summary)
+  const added = plotRequested(summary)
   store.dispatch(added)
   return added.payload.id
 }

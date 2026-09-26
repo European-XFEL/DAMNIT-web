@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import type { DropResult } from '@hello-pangea/dnd'
 
-import { filterColumnBlocks } from '#src/features/table/utils/column-blocks'
 import {
   BLOCKS_DROPPABLE,
   membersDroppable,
   reorderColumns,
 } from '#src/features/table/utils/column-reorder'
+import { filterVariableBlocks } from '#src/utils/variable-blocks'
 import { exampleBlocks } from '#tests/support/columns'
 
 // Only the source and destination decide a move; the rest is what the library
@@ -32,7 +32,7 @@ const drop = ({
 // With no search, the list on screen is the whole list.
 const reorder = (result: DropResult, { search = '' } = {}) => {
   const blocks = exampleBlocks()
-  const shown = filterColumnBlocks(blocks, search)
+  const shown = filterVariableBlocks(blocks, search)
   return reorderColumns({ blocks, shown }, result)
 }
 

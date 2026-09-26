@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import { resetProposal } from '#src/app/store/actions'
-import { addPlot, removePlot } from '#src/features/plots/plots.slice'
+import { plotRequested, resetProposal } from '#src/app/store/actions'
+import { removePlot } from '#src/features/plots/plots.slice'
 import { type View } from '#src/features/dashboard/types/dashboard.types'
 import { isSameView, TABLE_VIEW } from '#src/features/dashboard/utils/views'
 
@@ -52,7 +52,7 @@ const slice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(addPlot, (state, action) => {
+      .addCase(plotRequested, (state, action) => {
         selectView(state, { kind: 'plot', id: action.payload.id })
       })
       // Closing the plot on show goes back to the view before it. A closed plot
