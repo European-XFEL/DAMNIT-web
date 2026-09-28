@@ -1,14 +1,23 @@
-import { useId, useRef, type ReactNode, type RefObject } from 'react'
+import {
+  useId,
+  useRef,
+  type KeyboardEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react'
 import {
   Anchor,
+  Box,
   CloseButton,
   Divider,
+  Highlight,
   rem,
   ScrollArea,
   Stack,
   Text,
   TextInput,
   UnstyledButton,
+  VisuallyHidden,
   type AnchorProps,
 } from '@mantine/core'
 import { IconSearch, IconX } from '@tabler/icons-react'
@@ -18,6 +27,24 @@ import { mutedC } from '#src/components/headings/section-heading'
 
 import classes from './popover-list.module.css'
 
+const SECTION_WIDTH = 38
+
+// A count up to "99/999" measures 42 px at 11 px in the widest fallback font.
+const COUNT_SECTION_WIDTH = SECTION_WIDTH + 42
+
+type MatchCount = {
+  current: number
+  total: number
+}
+
+type SearchMatches = {
+  // Left out while the first search is still waiting to run.
+  count?: MatchCount
+  onStep: (direction: 1 | -1) => void
+  // Moves focus to the current match, or returns false to let Tab go on.
+  onTabToMatch: () => boolean
+}
+
 type SearchInputProps = {
   value: string
   onChange: (value: string) => void
@@ -25,6 +52,14 @@ type SearchInputProps = {
   // For a control elsewhere in the popover that removes itself when used and
   // needs somewhere to leave focus.
   inputRef?: RefObject<HTMLInputElement>
+  matches?: SearchMatches
+}
+
+function describeMatchCount({ current, total }: MatchCount) {
+  if (total === 0) {
+    return 'No matches'
+  }
+  return `${current} of ${total} ${total === 1 ? 'match' : 'matches'}`
 }
 
 function SearchInput({
@@ -32,50 +67,109 @@ function SearchInput({
   onChange,
   placeholder,
   inputRef,
+  matches,
 }: SearchInputProps) {
   const ownRef = useRef<HTMLInputElement>(null)
   const ref = inputRef ?? ownRef
 
+  // An IME ends a word with Enter too, and that Enter belongs to the word.
+  // Safari sends it after the composition ends, as key code 229.
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (
+      matches == null ||
+      event.key !== 'Enter' ||
+      event.nativeEvent.isComposing ||
+      event.keyCode === 229
+    ) {
+      return
+    }
+    event.preventDefault()
+    matches.onStep(event.shiftKey ? -1 : 1)
+  }
+
+  const handleClearKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (matches == null || event.key !== 'Tab' || event.shiftKey) {
+      return
+    }
+    if (matches.onTabToMatch()) {
+      event.preventDefault()
+    }
+  }
+
   return (
-    <TextInput
-      ref={ref}
-      value={value}
-      onChange={(e) => onChange(e.currentTarget.value)}
-      size="sm"
-      // The rows it filters are xs, and a size of its own would shrink the box
-      // with the text. The search mark takes the placeholder's grey.
-      styles={{
-        input: { fontSize: 'var(--mantine-font-size-xs)' },
-        section: { color: 'var(--mantine-color-gray-7)' },
-      }}
-      placeholder={placeholder}
-      leftSection={<IconSearch style={{ width: rem(14), height: rem(14) }} />}
-      // Matched sections put the placeholder on the popover's title column and
-      // set each glyph the same distance in from its own edge.
-      leftSectionWidth={rem(38)}
-      rightSectionWidth={rem(38)}
-      // Mantine leaves a section inert unless it is told otherwise, so without
-      // this the button draws and cannot be clicked.
-      rightSectionPointerEvents="all"
-      rightSection={
-        value === '' ? undefined : (
-          <CloseButton
-            size="sm"
-            icon={
-              <IconX style={{ width: rem(16), height: rem(16) }} stroke={1.5} />
-            }
-            aria-label="Clear search"
-            // The button goes with the text, so focus goes back to the box.
-            onClick={() => {
-              onChange('')
-              ref.current?.focus()
-            }}
-          />
-        )
-      }
-      variant="unstyled"
-      style={{ minWidth: 100 }}
-    />
+    <>
+      <TextInput
+        ref={ref}
+        value={value}
+        onChange={(e) => onChange(e.currentTarget.value)}
+        onKeyDown={handleKeyDown}
+        size="sm"
+        // The rows it filters are xs, and a size of its own would shrink the box
+        // with the text. The search mark takes the placeholder's grey.
+        styles={{
+          input: { fontSize: 'var(--mantine-font-size-xs)' },
+          section: { color: 'var(--mantine-color-gray-7)' },
+        }}
+        placeholder={placeholder}
+        leftSection={<IconSearch style={{ width: rem(14), height: rem(14) }} />}
+        // Matched sections put the placeholder on the popover's title column.
+        leftSectionWidth={rem(SECTION_WIDTH)}
+        rightSectionWidth={rem(
+          matches == null ? SECTION_WIDTH : COUNT_SECTION_WIDTH
+        )}
+        // The section lies over the end of the box, so a click on the count
+        // reaches the text under it. Only the button answers, by its own rule.
+        rightSectionPointerEvents="none"
+        rightSection={
+          value === '' ? undefined : (
+            <Box
+              className={classes.searchEnd}
+              style={{ '--clear-width': rem(SECTION_WIDTH) }}
+            >
+              {/* The status below says it in words. */}
+              {matches?.count != null && (
+                <Text
+                  component="span"
+                  className={classes.count}
+                  fz={11}
+                  c={mutedC}
+                  aria-hidden
+                >
+                  {matches.count.current}/{matches.count.total}
+                </Text>
+              )}
+              <span className={classes.clearSlot}>
+                <CloseButton
+                  size="sm"
+                  icon={
+                    <IconX
+                      style={{ width: rem(16), height: rem(16) }}
+                      stroke={1.5}
+                    />
+                  }
+                  aria-label="Clear search"
+                  onKeyDown={handleClearKeyDown}
+                  // The button goes with the text, so focus goes back to the
+                  // box.
+                  onClick={() => {
+                    onChange('')
+                    ref.current?.focus()
+                  }}
+                />
+              </span>
+            </Box>
+          )
+        }
+        variant="unstyled"
+        style={{ minWidth: 100 }}
+      />
+      {/* Always rendered, so the first count lands in a watched region. */}
+      <VisuallyHidden role="status">
+        {matches?.count == null || value === ''
+          ? ''
+          : describeMatchCount(matches.count)}
+      </VisuallyHidden>
+    </>
   )
 }
 
@@ -171,6 +265,8 @@ type ListRowProps = {
   italic?: boolean
   // A member is indented past the rail its group draws.
   isMember?: boolean
+  highlight?: string
+  isCurrent?: boolean
   // What sits in the handle column. Left out, the column stays blank.
   lead?: ReactNode
   control: ReactNode
@@ -189,6 +285,8 @@ export function ListRow({
   muted = false,
   italic = false,
   isMember = false,
+  highlight = '',
+  isCurrent = false,
   lead = <div className={classes.lead} />,
   control,
   details,
@@ -198,8 +296,9 @@ export function ListRow({
   const detailsId = useId()
 
   const titleText = (
-    <Text
+    <Highlight
       component="span"
+      highlight={highlight}
       fz="xs"
       c={muted ? mutedC : undefined}
       fs={italic ? 'italic' : undefined}
@@ -207,12 +306,18 @@ export function ListRow({
       title={columnTitle}
     >
       {columnTitle}
-    </Text>
+    </Highlight>
   )
 
   return (
     <>
-      <div className={cx(classes.row, { [classes.member]: isMember })}>
+      <div
+        className={cx(classes.row, {
+          [classes.member]: isMember,
+          [classes.current]: isCurrent,
+        })}
+        aria-current={isCurrent || undefined}
+      >
         {lead}
 
         {details == null ? (
