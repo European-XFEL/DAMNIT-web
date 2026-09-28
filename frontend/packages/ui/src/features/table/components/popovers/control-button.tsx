@@ -10,12 +10,16 @@ type ControlButtonProps = {
 
   icon: ElementType<IconProps>
   label: string
+  labelId: string
 
   badge?: string
 }
 
 export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
-  ({ onClick, isActive = false, icon: Icon, label, badge, ...rest }, ref) => {
+  (
+    { onClick, isActive = false, icon: Icon, label, labelId, badge, ...rest },
+    ref
+  ) => {
     return (
       <Button
         // Popover.Target clones aria-expanded, aria-controls and the target id
@@ -54,7 +58,7 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
         }
         onClick={onClick}
       >
-        {label}
+        <span id={labelId}>{label}</span>
       </Button>
     )
   }

@@ -1,4 +1,9 @@
-import { type ElementType, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  useId,
+  type ElementType,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { Popover } from '@mantine/core'
 import { useDisclosure, useFocusReturn } from '@mantine/hooks'
 import { type IconProps } from '@tabler/icons-react'
@@ -19,6 +24,7 @@ export function BasePopover({
   children,
 }: BasePopoverProps) {
   const [opened, { toggle, open, close }] = useDisclosure(false)
+  const labelId = useId()
   // Only Escape hands focus back. On every close it would take focus off the
   // cell a click outside just landed on.
   const returnFocus = useFocusReturn({ opened, shouldReturnFocus: false })
@@ -62,10 +68,18 @@ export function BasePopover({
           isActive={opened}
           icon={icon}
           label={label}
+          labelId={labelId}
           badge={badge}
         />
       </Popover.Target>
-      <Popover.Dropdown px={0} py={0} onKeyDownCapture={handleKeyDownCapture}>
+      {/* Mantine names the dropdown after the whole target, so a badge on it
+          would change the dialog's name while it is open. */}
+      <Popover.Dropdown
+        aria-labelledby={labelId}
+        px={0}
+        py={0}
+        onKeyDownCapture={handleKeyDownCapture}
+      >
         {children}
       </Popover.Dropdown>
     </Popover>
