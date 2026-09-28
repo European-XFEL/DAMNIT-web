@@ -1,18 +1,23 @@
-import { type KeyboardEvent, type ReactNode } from 'react'
+import { type ElementType, type KeyboardEvent, type ReactNode } from 'react'
 import { Popover } from '@mantine/core'
 import { useDisclosure, useFocusReturn } from '@mantine/hooks'
+import { type IconProps } from '@tabler/icons-react'
 
-type RenderTargetOptions = {
-  opened: boolean
-  toggle: () => void
-}
+import { ControlButton } from './control-button'
 
 type BasePopoverProps = {
-  renderTarget: (options: RenderTargetOptions) => ReactNode
+  icon: ElementType<IconProps>
+  label: string
+  badge?: string
   children: ReactNode
 }
 
-export function BasePopover({ renderTarget, children }: BasePopoverProps) {
+export function BasePopover({
+  icon,
+  label,
+  badge,
+  children,
+}: BasePopoverProps) {
   const [opened, { toggle, open, close }] = useDisclosure(false)
   // Only Escape hands focus back. On every close it would take focus off the
   // cell a click outside just landed on.
@@ -51,7 +56,15 @@ export function BasePopover({ renderTarget, children }: BasePopoverProps) {
         },
       }}
     >
-      <Popover.Target>{renderTarget({ opened, toggle })}</Popover.Target>
+      <Popover.Target>
+        <ControlButton
+          onClick={toggle}
+          isActive={opened}
+          icon={icon}
+          label={label}
+          badge={badge}
+        />
+      </Popover.Target>
       <Popover.Dropdown px={0} py={0} onKeyDownCapture={handleKeyDownCapture}>
         {children}
       </Popover.Dropdown>
