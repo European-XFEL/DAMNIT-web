@@ -164,6 +164,12 @@ async function search(screen: Screen, query: string) {
   await expect.element(matchCount(screen)).toBeVisible()
 }
 
+// Out of the box, past the clear button Tab reaches first, and into the list.
+async function tabToMatch() {
+  await userEvent.tab()
+  await userEvent.tab()
+}
+
 // One place along, by the keyboard half of the gesture.
 async function drag(
   screen: Screen,
@@ -459,6 +465,72 @@ test('an open current match shares its lit ground with its tags', async () => {
 
   expect(isLit(screen, 'Scan type')).toBe(true)
   expect(background(details)).toBe(background(rowOf(screen, 'Scan type')))
+})
+
+test('Tab leaves the search box through the button that clears it', async () => {
+  const screen = await openPopover()
+  await search(screen, 'scan')
+
+  await userEvent.tab()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Clear search' }))
+    .toHaveFocus()
+})
+
+test("Tab from the search box lands on the current match's handle, ready to drag", async () => {
+  const screen = await openPopover()
+  await search(screen, 'scan')
+
+  // Tab into the list
+  await tabToMatch()
+  await expect.element(handle(screen, 'Scan type')).toHaveFocus()
+
+  // One place up, past the group
+  await drag(screen, { label: 'Scan type', key: 'ArrowUp' })
+  await expect
+    .poll(() => movableColumns(screen))
+    .toEqual(['Trains', 'Scan type', 'Sample', 'Sample/Type', 'Sample/X [mm]'])
+})
+
+test("Tab from a search that names a group lands on the group's handle", async () => {
+  const screen = await openPopover()
+
+  await search(screen, 'sample')
+
+  await tabToMatch()
+  await expect.element(handle(screen, 'Sample')).toHaveFocus()
+})
+
+test('Tab on text not yet searched lands on the first match of that text', async () => {
+  const screen = await openPopover()
+  await search(screen, 't')
+
+  // One more letter, then Tab well inside the debounce
+  await userEvent.keyboard('y')
+  await tabToMatch()
+
+  await expect.element(handle(screen, 'Sample/Type')).toHaveFocus()
+})
+
+test("Tab lands on a pinned match's checkbox, since it has no handle", async () => {
+  const screen = await openPopover()
+  await search(screen, 'proposal')
+
+  await tabToMatch()
+
+  await expect.element(checkbox(screen, 'Proposal')).toHaveFocus()
+})
+
+test('Tab past a match the keyboard cannot take goes on down the list', async () => {
+  const screen = await openPopover()
+  // Run's checkbox is disabled, and a pinned row has no handle
+  await search(screen, 'run')
+
+  await tabToMatch()
+
+  // The first row, where Tab out of the box goes with no match to take it
+  await expect.element(checkbox(screen, 'Proposal')).toHaveFocus()
 })
 
 test('a drop keeps the current match on the row it moved', async () => {

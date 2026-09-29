@@ -8,6 +8,7 @@ import {
   openPopover,
   openProposal,
   searchCount,
+  tabToMatch,
 } from '#support/table'
 
 test.use({ example: xpcsWithGroups, viewport: WIDE_VIEWPORT })
@@ -154,4 +155,8 @@ test('Enter steps to the next match', async ({ page, example }) => {
 
   await page.keyboard.press('Enter')
   await expect(searchCount(page)).toHaveText('2/4')
+
+  // Tab follows the current match to the second
+  await tabToMatch(page)
+  await expect(columnHandle(page, 'XPCS SAXS overview')).toBeFocused()
 })

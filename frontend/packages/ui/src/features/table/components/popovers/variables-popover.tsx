@@ -490,18 +490,19 @@ function VariableList() {
   const runSearch = (text: string) => {
     const search = text.trim()
     if (search === searched.search) {
-      return
+      return current?.key
     }
     const key = findColumnMatches(rows, search).at(0)?.key
     setSearched({ search, key })
     if (key !== undefined) {
       scrollToMatch(key)
     }
+    return key
   }
   const searchLater = useDebouncedCallback(runSearch, 200)
 
-  // Enter on text the list has not searched yet runs that search now, and its
-  // first match is current.
+  // Enter or Tab on text the list has not searched yet runs that search now,
+  // and its first match is current.
   const step = (direction: 1 | -1) => {
     if (query.trim() !== searched.search) {
       runSearch(query)
@@ -514,6 +515,16 @@ function VariableList() {
       matches[(currentIndex + direction + matches.length) % matches.length].key
     setSearched({ search: searched.search, key: next })
     scrollToMatch(next)
+  }
+
+  const tabToMatch = () => {
+    const key = runSearch(query)
+    const target = key === undefined ? null : element(key)
+    if (target == null || target.matches(':disabled')) {
+      return false
+    }
+    target.focus()
+    return true
   }
 
   const handleDragEnd = (result: DropResult) => {
@@ -578,7 +589,7 @@ function VariableList() {
             matches:
               query.trim() === ''
                 ? undefined
-                : { count, onStep: step, onTabToMatch: () => false },
+                : { count, onStep: step, onTabToMatch: tabToMatch },
           }}
           // Back to the server's order. It appears once the user has moved
           // something, and goes when used.

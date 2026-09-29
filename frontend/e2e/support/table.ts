@@ -235,6 +235,13 @@ export function groupAction(page: Page, name: string): Locator {
   return page.getByRole('button', { name: `all ${name}` })
 }
 
+// Out of the search box, past the clear button Tab reaches first, and into the
+// list at the current match.
+export async function tabToMatch(page: Page) {
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Tab')
+}
+
 // The handle that lifts a column or a group. Only a row an order governs has
 // one, so a pinned row is absent from this by construction.
 export function columnHandle(page: Page, name: string): Locator {

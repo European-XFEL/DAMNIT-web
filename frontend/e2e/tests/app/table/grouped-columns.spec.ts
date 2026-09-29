@@ -4,6 +4,7 @@ import { WIDE_VIEWPORT } from '#support/grid'
 import { openSummaryPlot, plotEntry } from '#support/plots'
 import {
   clickGroupHeader,
+  columnHandle,
   columnOf,
   columnTitles,
   contextMenu,
@@ -13,7 +14,9 @@ import {
   openProposal,
   rightClickHeader,
   rowCheckbox,
+  searchMarks,
   selectedColumnHeaders,
+  tabToMatch,
   titleOf,
 } from '#support/table'
 
@@ -143,4 +146,18 @@ test('a partly hidden group offers to show the rest', async ({
   // Complete the group
   await sample.click()
   await expectVisibleColumns(page, 13)
+})
+
+test("Tab from a search that names a group lands on the group's handle", async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openPopover(page, 'Variables')
+
+  await page.getByPlaceholder('Search variables').fill('sample')
+  await expect(searchMarks(page)).toHaveText(['Sample'])
+
+  await tabToMatch(page)
+  await expect(columnHandle(page, 'Sample')).toBeFocused()
 })
