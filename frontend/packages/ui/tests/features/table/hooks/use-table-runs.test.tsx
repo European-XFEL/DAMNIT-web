@@ -153,7 +153,7 @@ function createNetwork({ answerDeferred = false, failDeferred = false } = {}) {
 }
 
 const heavyValueFor = (cells: Map<string, RunCells>, run: number): unknown =>
-  cells.get(`${PROPOSAL}:${run}`)?.spectrum?.summary.value
+  cells.get(`${PROPOSAL}:${run}`)?.get('spectrum')?.summary.value
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 200))
 
@@ -1064,9 +1064,9 @@ test('does not flash a run filled by a cache write', async () => {
 
   // The fill landed, and the run still carries no flash stamp.
   await vi.waitFor(() =>
-    expect(result.current.cellsByKey.get(key)?.spectrum.summary.value).toEqual([
-      1, 2, 3,
-    ])
+    expect(
+      result.current.cellsByKey.get(key)?.get('spectrum')?.summary.value
+    ).toEqual([1, 2, 3])
   )
   expect(result.current.lastUpdatedByKey.get(key)).toBeUndefined()
 })

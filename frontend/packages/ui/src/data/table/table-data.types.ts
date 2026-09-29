@@ -62,8 +62,7 @@ export type RunId = {
   run: number
 }
 
-// One run's cells keyed by variable name, for O(1) cell lookup.
-export type RunCells = Record<string, Cell>
+export type RunCells = Map<string, Cell>
 
 // The table's shape: its columns, row order, tags, groups, and freshness.
 export type TableMeta = {

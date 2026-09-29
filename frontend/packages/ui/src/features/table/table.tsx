@@ -233,7 +233,7 @@ const Table = ({ paginated = true }: TableProps) => {
       }
 
       const key = runKey(identity)
-      const cell = cellsByKey.get(key)?.[variable]
+      const cell = cellsByKey.get(key)?.get(variable)
       if (!cell) {
         return textCell('')
       }
@@ -259,7 +259,7 @@ const Table = ({ paginated = true }: TableProps) => {
       if (identity == null || !variable) {
         return undefined
       }
-      const item = cellsByKey.get(runKey(identity))?.[variable]
+      const item = cellsByKey.get(runKey(identity))?.get(variable)
       if (!item) {
         return undefined
       }
@@ -533,7 +533,7 @@ const Table = ({ paginated = true }: TableProps) => {
     // A row whose page has not loaded yet has no data at all, not merely no
     // value: it has nothing to offer a plot either way.
     // TODO: Use extracted data type from the database
-    if (col !== -1 && hasValue(rowData ? rowData[column] : undefined)) {
+    if (col !== -1 && hasValue(rowData?.get(column))) {
       const variable = tableColumns[col]
       const subtitle = `${variable.title}`
 

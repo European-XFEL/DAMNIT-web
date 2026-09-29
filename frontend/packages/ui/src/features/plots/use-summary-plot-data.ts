@@ -81,7 +81,7 @@ export function useSummaryPlotData({
 
     for (const id of runIds) {
       const row = cells.get(runKey(id))
-      const points = variables.map((name) => row?.[name])
+      const points = variables.map((name) => row?.get(name))
       const allNumeric = points.every(
         (point) =>
           hasValue(point) &&
