@@ -78,6 +78,29 @@ describe('indexRunCells', () => {
     })
   })
 
+  test('returns no cell for a built-in name the run does not hold', () => {
+    const cells = indexRunCells([
+      run('900405', 1, [cell({ name: 'energy', value: 1.2 })]),
+    ])
+
+    expect(cells.get('900405:1')?.get('energy')?.summary.value).toBe(1.2)
+    expect(cells.get('900405:1')?.get('constructor')).toBeUndefined()
+  })
+
+  test('keeps a cell named after a built-in as its own entry', () => {
+    const cells = indexRunCells([
+      run('900405', 1, [
+        cell({ name: 'constructor', value: 1 }),
+        cell({ name: '__proto__', value: 2 }),
+      ]),
+    ])
+
+    expect([...cells.get('900405:1')!.keys()]).toEqual([
+      'constructor',
+      '__proto__',
+    ])
+  })
+
   test('reuses a run’s cell map while the run object is unchanged', () => {
     const runA = run('900405', 1, [cell({ name: 'energy', value: 1.2 })])
 
