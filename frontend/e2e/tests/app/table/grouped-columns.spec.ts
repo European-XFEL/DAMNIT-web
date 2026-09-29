@@ -144,19 +144,3 @@ test('a partly hidden group offers to show the rest', async ({
   await sample.click()
   await expectVisibleColumns(page, 13)
 })
-
-test('searching a group name keeps the group and its members', async ({
-  page,
-  example,
-}) => {
-  await openProposal(page, example)
-  await openPopover(page, 'Variables')
-
-  await page.getByPlaceholder('Search variables').fill('sample')
-
-  await expect(groupAction(page, 'Sample')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample/Type')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample/X [mm]')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample/Y [mm]')).toBeVisible()
-  await expect(rowCheckbox(page, 'Trains')).toHaveCount(0)
-})
