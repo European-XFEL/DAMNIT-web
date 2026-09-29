@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -76,6 +77,7 @@ const ListContext = createContext<{
   highlight: {
     search: string
     currentKey?: string
+    targetId: (key: string) => string
   }
 } | null>(null)
 
@@ -165,12 +167,14 @@ const HANDLE_ICON_SIZE = 14
 type GripProps = {
   label: string
   handleProps?: DraggableProvided['dragHandleProps']
+  id?: string
 }
 
-function Grip({ label, handleProps }: GripProps) {
+function Grip({ label, handleProps, id }: GripProps) {
   return (
     <div
       {...handleProps}
+      id={handleProps == null ? undefined : id}
       className={classes.grip}
       aria-label={handleProps == null ? undefined : `Reorder ${label}`}
     >
@@ -228,6 +232,7 @@ function ColumnItem({
     tags,
   } = column
   const key = variableKey(name)
+  const targetId = highlight?.targetId(key)
 
   return (
     <div
@@ -248,11 +253,17 @@ function ColumnItem({
           isPinned ? (
             <PinnedMark />
           ) : (
-            <Grip label={title} handleProps={provided?.dragHandleProps} />
+            <Grip
+              label={title}
+              handleProps={provided?.dragHandleProps}
+              id={targetId}
+            />
           )
         }
         control={
           <RowItemCheckbox
+            // A pinned row has no grip, so a match lands on its checkbox.
+            id={isPinned ? targetId : undefined}
             aria-label={title}
             checked={isVisible}
             disabled={!canHide}
@@ -319,7 +330,11 @@ function GroupBlock({
         className={cx(classes.groupHeader, { [classes.current]: isCurrent })}
         aria-current={isCurrent || undefined}
       >
-        <Grip label={block.title} handleProps={dragHandleProps} />
+        <Grip
+          label={block.title}
+          handleProps={dragHandleProps}
+          id={highlight?.targetId(key)}
+        />
         <span className={classes.title}>
           <SectionHeading highlight={highlight?.search}>
             {block.title}
@@ -411,6 +426,7 @@ function VariableList() {
   const tagFilter = useColumnVisibilityFromTags()
   const openRows = useOpenRows()
   const searchRef = useRef<HTMLInputElement>(null)
+  const idPrefix = useId()
 
   // Pinned columns are not the user's to move, but they still lead the stored
   // order, or every other reader would find them at its end.
@@ -430,7 +446,7 @@ function VariableList() {
   const live = { ...built, found: searched }
 
   // A drag reads the list as the library measured it, so a live run push landing
-  // mid-drag cannot shift a row under the drop.
+  // mid-drag cannot shift a row under the drop, nor a search scroll one away.
   const [frozen, setFrozen] = useState<typeof live | null>(null)
   const { blocks, pinnedColumns, found } = frozen ?? live
 
@@ -453,6 +469,24 @@ function VariableList() {
     matches.find((match) => match.key === found.key) ?? matches.at(0)
   const currentIndex = current == null ? -1 : matches.indexOf(current)
 
+  const targetId = (key: string) => `${idPrefix}${key}`
+  const element = (key: string) => document.getElementById(targetId(key))
+
+  // Only the list scrolls, and only when the match is out of its view.
+  const scrollToMatch = (key: string) => {
+    const target = element(key)
+    const viewport = target?.closest('.mantine-ScrollArea-viewport')
+    if (target == null || viewport == null || frozen != null) {
+      return
+    }
+    const box = target.getBoundingClientRect()
+    const view = viewport.getBoundingClientRect()
+    if (box.top >= view.top && box.bottom <= view.bottom) {
+      return
+    }
+    viewport.scrollTop += box.top - view.top - (view.height - box.height) / 2
+  }
+
   const runSearch = (text: string) => {
     const search = text.trim()
     if (search === searched.search) {
@@ -460,6 +494,9 @@ function VariableList() {
     }
     const key = findColumnMatches(rows, search).at(0)?.key
     setSearched({ search, key })
+    if (key !== undefined) {
+      scrollToMatch(key)
+    }
   }
   const searchLater = useDebouncedCallback(runSearch, 200)
 
@@ -476,6 +513,7 @@ function VariableList() {
     const next =
       matches[(currentIndex + direction + matches.length) % matches.length].key
     setSearched({ search: searched.search, key: next })
+    scrollToMatch(next)
   }
 
   const handleDragEnd = (result: DropResult) => {
@@ -516,7 +554,7 @@ function VariableList() {
     ? { current: currentIndex + 1, total: matches.length }
     : undefined
 
-  const highlight = { search: found.search, currentKey: current?.key }
+  const highlight = { search: found.search, currentKey: current?.key, targetId }
 
   return (
     <ListContext.Provider value={{ openRows, highlight }}>

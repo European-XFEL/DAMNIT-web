@@ -143,6 +143,21 @@ const markedLetters = () =>
 // The box's count of the matches, as it reads on screen.
 const matchCount = (screen: Screen) => screen.getByText(/^\d+\/\d+$/)
 
+// A list long enough that its last rows sit outside the popover's viewport.
+const longListClient = () =>
+  metadataClient({
+    ...METADATA,
+    variables: {
+      ...METADATA.variables,
+      ...Object.fromEntries(
+        Array.from({ length: 60 }, (_, index) => [
+          `v${index}`,
+          { name: `v${index}`, title: `Variable ${index}`, tags: [] },
+        ])
+      ),
+    },
+  })
+
 async function search(screen: Screen, query: string) {
   await screen.getByPlaceholder('Search variables').fill(query)
   // Past the debounce, once the count has come in
@@ -595,6 +610,58 @@ test('the count is read out in words as the current match moves', async () => {
   await expect
     .element(screen.getByRole('status'))
     .toHaveTextContent('2 of 3 matches')
+})
+
+test('a match far down a long list is brought into view, and the page stays put', async () => {
+  client = longListClient()
+  // Low enough on the page that the popover runs past its end
+  const screen = await openPopover({ outside: <div style={{ height: 400 }} /> })
+  expect(document.documentElement.scrollHeight).toBeGreaterThan(
+    window.innerHeight
+  )
+  const match = handle(screen, 'Variable 40')
+  await expect.element(match).not.toBeInViewport()
+
+  await search(screen, 'variable 40')
+
+  await expect.element(match).toBeInViewport()
+  expect(window.scrollY).toBe(0)
+})
+
+test('a match already in view leaves the list where it is', async () => {
+  client = longListClient()
+  const screen = await openPopover()
+  const viewport = handle(screen, 'Variable 0')
+    .element()
+    .closest('.mantine-ScrollArea-viewport')!
+  await expect
+    .element(handle(screen, 'Variable 5'))
+    .toBeInViewport({ ratio: 1 })
+
+  // Variable 5 is in view, below the middle of the list
+  await search(screen, 'variable 5')
+  expect(viewport.scrollTop).toBe(0)
+
+  // Variable 50 is out of view, so the list moves to it
+  await userEvent.keyboard('{Enter}')
+  await expect.element(handle(screen, 'Variable 50')).toBeInViewport()
+  expect(viewport.scrollTop).toBeGreaterThan(0)
+})
+
+test('Enter brings back a sole match scrolled out of view', async () => {
+  client = longListClient()
+  const screen = await openPopover()
+  const last = handle(screen, 'Variable 59')
+  await search(screen, 'variable 59')
+  await expect.element(last).toBeInViewport()
+
+  // Scrolled back up, away from the only match
+  handle(screen, 'Variable 0').element().scrollIntoView()
+  await expect.element(last).not.toBeInViewport()
+
+  await userEvent.keyboard('{Enter}')
+
+  await expect.element(last).toBeInViewport()
 })
 
 test('the search box clears in one click', async () => {
