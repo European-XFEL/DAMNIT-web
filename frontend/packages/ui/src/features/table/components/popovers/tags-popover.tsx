@@ -18,7 +18,6 @@ import {
 } from '#src/features/table/stores/table.slice'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
-import { ControlButton } from './control-button'
 import { ListRow, PopoverLink, PopoverList } from './popover-list'
 import { RowItemCheckbox, RowList, RowSection } from './row-details'
 import { BasePopover } from './base-popover'
@@ -160,15 +159,9 @@ export function TagsPopover() {
 
   return (
     <BasePopover
-      renderTarget={({ opened, toggle }) => (
-        <ControlButton
-          onClick={toggle}
-          isActive={opened}
-          icon={IconHash}
-          label="Tags"
-          badge={selectionCount ? `${selectionCount} selected` : undefined}
-        />
-      )}
+      icon={IconHash}
+      label="Tags"
+      badge={selectionCount ? `${selectionCount} selected` : undefined}
     >
       <TagList />
     </BasePopover>

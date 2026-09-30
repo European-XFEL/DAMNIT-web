@@ -64,7 +64,6 @@ import SectionHeading, {
   mutedC,
 } from '#src/components/headings/section-heading'
 
-import { ControlButton } from './control-button'
 import { ListRow, PopoverLink, PopoverList } from './popover-list'
 import { RowItemCheckbox, RowList, RowSection } from './row-details'
 import { BasePopover } from './base-popover'
@@ -556,15 +555,9 @@ export function VariablesPopover() {
 
   return (
     <BasePopover
-      renderTarget={({ opened, toggle }) => (
-        <ControlButton
-          onClick={toggle}
-          isActive={opened}
-          icon={IconList}
-          label="Variables"
-          badge={notVisibleCount ? `${notVisibleCount} hidden` : undefined}
-        />
-      )}
+      icon={IconList}
+      label="Variables"
+      badge={notVisibleCount ? `${notVisibleCount} hidden` : undefined}
     >
       <VariableList />
     </BasePopover>

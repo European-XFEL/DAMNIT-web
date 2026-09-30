@@ -1,5 +1,4 @@
-import { type ElementType } from 'react'
-import { forwardRef } from 'react'
+import { forwardRef, type ElementType } from 'react'
 import { Badge, Button, rem } from '@mantine/core'
 import { type IconProps } from '@tabler/icons-react'
 
@@ -11,14 +10,21 @@ type ControlButtonProps = {
 
   icon: ElementType<IconProps>
   label: string
+  labelId: string
 
   badge?: string
 }
 
 export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
-  ({ isActive = false, onClick, icon: Icon, label, badge }, ref) => {
+  (
+    { onClick, isActive = false, icon: Icon, label, labelId, badge, ...rest },
+    ref
+  ) => {
     return (
       <Button
+        // Popover.Target clones aria-expanded, aria-controls and the target id
+        // onto this button, so they have to reach the DOM.
+        {...rest}
         ref={ref}
         variant={isActive ? 'light' : 'white'}
         color="gray"
@@ -52,7 +58,7 @@ export const ControlButton = forwardRef<HTMLButtonElement, ControlButtonProps>(
         }
         onClick={onClick}
       >
-        {label}
+        <span id={labelId}>{label}</span>
       </Button>
     )
   }
