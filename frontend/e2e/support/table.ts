@@ -339,10 +339,10 @@ export function closeAside(page: Page) {
   return asideCloseButton(page).click()
 }
 
-// The aside's Run tab, whose title becomes `Run: <n>` once a run is selected.
+// The aside's Run tab, whose title becomes `Run <n>` once a run is selected.
 // This is the primary downstream signal that a grid selection took effect.
 export function selectedRunTab(page: Page): Locator {
-  return page.getByRole('tab', { name: /Run:\s*\d+/ })
+  return page.getByRole('tab', { name: /Run\s+\d+/ })
 }
 
 // Hover a cell by real pointer coordinates over the canvas. Selection can go

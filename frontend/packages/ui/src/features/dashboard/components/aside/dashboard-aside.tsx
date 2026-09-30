@@ -129,7 +129,7 @@ function DashboardAside({ viewRef }: DashboardAsideProps) {
           }}
         >
           <Tabs.List>
-            <Tabs.Tab value="run">{`Run: ${shown.run.run}`}</Tabs.Tab>
+            <Tabs.Tab value="run">{`Run ${shown.run.run}`}</Tabs.Tab>
             <CloseButton
               ref={closeRef}
               size="sm"
