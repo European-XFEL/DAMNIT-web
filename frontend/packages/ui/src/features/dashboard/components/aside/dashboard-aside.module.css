@@ -42,6 +42,8 @@
 
 /* A fixed width, so the text does not re-wrap while the panel's box grows. */
 .tabs {
+  --aside-inset: 12px;
+
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -55,23 +57,32 @@
   }
 }
 
-/* The line sits under the 40 px row, level with the toolbar's, and the active
-   tab's underline lands on it. */
+/* The line sits under the 40 px row, level with the toolbar's. The tab brings
+   its own start inset, so its underline runs from the aside's edge. */
 .head {
   flex: none;
   flex-wrap: nowrap;
   box-sizing: content-box;
   height: 40px;
-  padding: 0 12px 1px;
+  padding-block-end: 1px;
+  padding-inline-end: var(--aside-inset);
 
   --tabs-list-border-size: 0 0 1px 0;
   --tab-border-color: var(--app-shell-border-color);
 }
 
-/* Reaches down over the line the head keeps in its padding. */
+/* Reaches down over the line the head keeps in its padding, and squares the
+   corner that meets the aside's border. */
 .tab {
   margin-bottom: -1px;
+  padding-inline: var(--aside-inset);
+  border-start-start-radius: 0;
   font-weight: 500;
+
+  /* The aside clips anything outside its box, so the ring goes inside. */
+  &:focus-visible {
+    outline-offset: -2px;
+  }
 }
 
 .close {
@@ -83,5 +94,5 @@
 .panel {
   flex: 1;
   min-height: 0;
-  padding-inline-start: 12px;
+  padding-inline-start: var(--aside-inset);
 }
