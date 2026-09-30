@@ -38,14 +38,9 @@ export function runKey({ proposal, run }: RunId): string {
   return `${proposal}:${run}`
 }
 
-// One run's cells keyed by variable name, for O(1) lookup. Shared by the grid
-// index and the run-detail aside so both key a run's cells the same way.
+// One run's cells by variable name, shared by the grid and the run panel.
 export function cellsByName(cells: Cell[]): RunCells {
-  const byName: RunCells = {}
-  for (const cell of cells) {
-    byName[cell.name] = cell
-  }
-  return byName
+  return new Map(cells.map((cell) => [cell.name, cell]))
 }
 
 // A live push gives a new `runs` array but reuses the object of every unchanged

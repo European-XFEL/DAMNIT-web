@@ -122,10 +122,10 @@ function shownCells(
   visibility: Record<string, boolean | undefined>
 ): [string, Cell][] {
   if (activeVariable == null) {
-    return Object.entries(cells).filter(([name]) => isShown(name, visibility))
+    return [...cells].filter(([name]) => isShown(name, visibility))
   }
 
-  const drilled = cells[activeVariable]
+  const drilled = cells.get(activeVariable)
   return drilled ? [[activeVariable, drilled]] : []
 }
 

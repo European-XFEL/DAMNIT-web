@@ -45,7 +45,7 @@ describe('indexRunCells', () => {
     ])
 
     expect([...cells.keys()]).toEqual(['900405:5', '900405:9'])
-    expect(cells.get('900405:5')?.energy).toEqual({
+    expect(cells.get('900405:5')?.get('energy')).toEqual({
       id: 'energy',
       name: 'energy',
       error: null,
@@ -61,8 +61,8 @@ describe('indexRunCells', () => {
       run('900485', 1, [cell({ name: 'energy', value: 9.9 })]),
     ])
 
-    expect(cells.get('900405:1')?.energy.summary.value).toBe(1.2)
-    expect(cells.get('900485:1')?.energy.summary.value).toBe(9.9)
+    expect(cells.get('900405:1')?.get('energy')?.summary.value).toBe(1.2)
+    expect(cells.get('900485:1')?.get('energy')?.summary.value).toBe(9.9)
   })
 
   test('stores each cell by its variable name', () => {
@@ -70,13 +70,37 @@ describe('indexRunCells', () => {
     const cells = indexRunCells([
       run('900405', 1, [cell({ name: 'x', value: 2, error })]),
     ])
-    expect(cells.get('900405:1')?.x).toEqual({
+    expect(cells.get('900405:1')?.get('x')).toEqual({
       id: 'x',
       name: 'x',
       error,
       summary: { value: 2, dtype: 'number' },
     })
   })
+
+  test('returns no cell for a built-in name the run does not hold', () => {
+    const cells = indexRunCells([
+      run('900405', 1, [cell({ name: 'energy', value: 1.2 })]),
+    ])
+
+    expect(cells.get('900405:1')?.get('energy')?.summary.value).toBe(1.2)
+    expect(cells.get('900405:1')?.get('constructor')).toBeUndefined()
+  })
+
+  test('keeps a cell named after a built-in as its own entry', () => {
+    const cells = indexRunCells([
+      run('900405', 1, [
+        cell({ name: 'constructor', value: 1 }),
+        cell({ name: '__proto__', value: 2 }),
+      ]),
+    ])
+
+    expect([...cells.get('900405:1')!.keys()]).toEqual([
+      'constructor',
+      '__proto__',
+    ])
+  })
+
   test('reuses a run’s cell map while the run object is unchanged', () => {
     const runA = run('900405', 1, [cell({ name: 'energy', value: 1.2 })])
 
@@ -99,7 +123,7 @@ describe('indexRunCells', () => {
 
     expect(second.get('900405:1')).toBe(first.get('900405:1'))
     expect(second.get('900405:2')).not.toBe(first.get('900405:2'))
-    expect(second.get('900405:2')?.energy.summary.value).toBe(9.9)
+    expect(second.get('900405:2')?.get('energy')?.summary.value).toBe(9.9)
   })
 })
 
