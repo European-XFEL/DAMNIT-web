@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -16,7 +17,7 @@ import {
   type DropResult,
 } from '@hello-pangea/dnd'
 import { Divider, Stack, rem } from '@mantine/core'
-import { useDebouncedValue } from '@mantine/hooks'
+import { useDebouncedCallback } from '@mantine/hooks'
 import {
   IconCheck,
   IconCircle,
@@ -45,20 +46,17 @@ import {
 import {
   buildColumnBlocks,
   type Column,
+  type ColumnBlock,
   type ColumnGroupBlock,
 } from '#src/features/table/utils/column-blocks'
+import { findColumnMatches } from '#src/features/table/utils/column-matches'
 import {
   BLOCKS_DROPPABLE,
   membersDroppable,
   reorderColumns,
 } from '#src/features/table/utils/column-reorder'
 import { pinnedFirst } from '#src/features/table/utils/pinned-columns'
-import {
-  blockKey,
-  filterVariableBlocks,
-  itemsOf,
-  variableKey,
-} from '#src/utils/variable-blocks'
+import { blockKey, itemsOf, variableKey } from '#src/utils/variable-blocks'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import SectionHeading, {
   mutedC,
@@ -72,10 +70,16 @@ import classes from './popover-list.module.css'
 const buildVisibility = (names: string[], isVisible: boolean) =>
   Object.fromEntries(names.map((name) => [name, isVisible]))
 
-// The list's open rows, reached from every row however deep its group nests it.
-const OpenRowsContext = createContext<ReturnType<typeof useOpenRows> | null>(
-  null
-)
+// The list's open rows and its highlight, reached from every row however deep
+// its group nests it.
+const ListContext = createContext<{
+  openRows: ReturnType<typeof useOpenRows>
+  highlight: {
+    search: string
+    currentKey?: string
+    targetId: (key: string) => string
+  }
+} | null>(null)
 
 type VariableDetailsProps = {
   tags: string[]
@@ -123,6 +127,7 @@ type VisibilityActionProps = {
   allShown: boolean
   onToggle: (isVisible: boolean) => void
   passesTagFilter?: boolean
+  matchCount?: number
   // Named in the link's accessible name, so a group's link is not just another
   // "Hide all". It keeps the visible words, which is what the name has to say.
   groupTitle?: string
@@ -132,9 +137,14 @@ function VisibilityAction({
   allShown,
   onToggle,
   passesTagFilter = true,
+  matchCount,
   groupTitle,
 }: VisibilityActionProps) {
-  const label = allShown ? 'Hide all' : 'Show all'
+  const verb = allShown ? 'Hide' : 'Show'
+  const label =
+    matchCount == null
+      ? `${verb} all`
+      : `${verb} ${matchCount} ${matchCount === 1 ? 'match' : 'matches'}`
 
   return (
     <PopoverLink
@@ -157,12 +167,14 @@ const HANDLE_ICON_SIZE = 14
 type GripProps = {
   label: string
   handleProps?: DraggableProvided['dragHandleProps']
+  id?: string
 }
 
-function Grip({ label, handleProps }: GripProps) {
+function Grip({ label, handleProps, id }: GripProps) {
   return (
     <div
       {...handleProps}
+      id={handleProps == null ? undefined : id}
       className={classes.grip}
       aria-label={handleProps == null ? undefined : `Reorder ${label}`}
     >
@@ -207,7 +219,9 @@ function ColumnItem({
   isDragging = false,
 }: ColumnItemProps) {
   const dispatch = useAppDispatch()
-  const openRows = useContext(OpenRowsContext)
+  const list = useContext(ListContext)
+  const openRows = list?.openRows
+  const highlight = list?.highlight
   const {
     name,
     title,
@@ -217,6 +231,8 @@ function ColumnItem({
     passesTagFilter,
     tags,
   } = column
+  const key = variableKey(name)
+  const targetId = highlight?.targetId(key)
 
   return (
     <div
@@ -229,17 +245,25 @@ function ColumnItem({
         columnTitle={columnTitle}
         muted={!isVisible || !passesTagFilter}
         isMember={isMember}
+        highlight={highlight?.search}
+        isCurrent={highlight?.currentKey === key}
         // An inert grip on a row nobody can move would invite a drag that does
         // nothing.
         lead={
           isPinned ? (
             <PinnedMark />
           ) : (
-            <Grip label={title} handleProps={provided?.dragHandleProps} />
+            <Grip
+              label={title}
+              handleProps={provided?.dragHandleProps}
+              id={targetId}
+            />
           )
         }
         control={
           <RowItemCheckbox
+            // A pinned row has no grip, so a match lands on its checkbox.
+            id={isPinned ? targetId : undefined}
             aria-label={title}
             checked={isVisible}
             disabled={!canHide}
@@ -289,8 +313,11 @@ function GroupBlock({
   children,
 }: GroupBlockProps) {
   const dispatch = useAppDispatch()
+  const highlight = useContext(ListContext)?.highlight
   const { innerRef, draggableProps, dragHandleProps } = provided
 
+  const key = blockKey(block)
+  const isCurrent = highlight?.currentKey === key
   const names = block.members.map((member) => member.name)
 
   return (
@@ -299,10 +326,19 @@ function GroupBlock({
       className={cx(classes.block, { [classes.dragging]: isDragging })}
       {...draggableProps}
     >
-      <div className={classes.groupHeader}>
-        <Grip label={block.title} handleProps={dragHandleProps} />
+      <div
+        className={cx(classes.groupHeader, { [classes.current]: isCurrent })}
+        aria-current={isCurrent || undefined}
+      >
+        <Grip
+          label={block.title}
+          handleProps={dragHandleProps}
+          id={highlight?.targetId(key)}
+        />
         <span className={classes.title}>
-          <SectionHeading>{block.title}</SectionHeading>
+          <SectionHeading highlight={highlight?.search}>
+            {block.title}
+          </SectionHeading>
         </span>
         <VisibilityAction
           groupTitle={block.title}
@@ -377,7 +413,11 @@ function DraggableGroup({ block, index }: DraggableGroupProps) {
 function VariableList() {
   const dispatch = useAppDispatch()
   const [query, setQuery] = useState('')
-  const [debouncedQuery] = useDebouncedValue(query, 200)
+  // What the list has searched and its current match, set together. The match
+  // is kept by key, so a change in the order of the matches keeps it.
+  const [searched, setSearched] = useState<{ search: string; key?: string }>({
+    search: '',
+  })
   const variables = useTableVariables()
   const { groups } = useTableMeta()
   const { start: pinned } = useAppSelector(selectColumnPinning)
@@ -386,6 +426,7 @@ function VariableList() {
   const tagFilter = useColumnVisibilityFromTags()
   const openRows = useOpenRows()
   const searchRef = useRef<HTMLInputElement>(null)
+  const idPrefix = useId()
 
   // Pinned columns are not the user's to move, but they still lead the stored
   // order, or every other reader would find them at its end.
@@ -394,31 +435,100 @@ function VariableList() {
     [variables, pinned]
   )
 
-  const live = useMemo(() => {
+  // A pinned column leads the list and shows what it is, but it never moves.
+  const built = useMemo(() => {
     const build = (columns: typeof variables) =>
       buildColumnBlocks({ variables: columns, groups, visibility, tagFilter })
 
-    const blocks = build(centre)
+    return { blocks: build(centre), pinnedColumns: itemsOf(build(start)) }
+  }, [start, centre, groups, visibility, tagFilter])
 
-    return {
-      blocks,
-      shown: filterVariableBlocks(blocks, debouncedQuery),
-      // A pinned column leads the list and shows what it is, but it never moves.
-      pinnedColumns: itemsOf(
-        filterVariableBlocks(build(start), debouncedQuery)
-      ),
-    }
-  }, [start, centre, groups, visibility, tagFilter, debouncedQuery])
+  const live = { ...built, found: searched }
 
-  // A drag reads the list as the library measured it, so a search or a live run
-  // push landing mid-drag cannot shift a row under the drop.
+  // A drag reads the list as the library measured it, so a live run push landing
+  // mid-drag cannot shift a row under the drop, nor a search scroll one away.
   const [frozen, setFrozen] = useState<typeof live | null>(null)
-  const { blocks, shown, pinnedColumns } = frozen ?? live
+  const { blocks, pinnedColumns, found } = frozen ?? live
 
-  // A drop lands beside its neighbour in the whole order, so the columns the
-  // search left out stay where they are.
+  const rows = useMemo(
+    () => [
+      ...pinnedColumns.map(
+        (column): ColumnBlock => ({ kind: 'variable', ...column })
+      ),
+      ...blocks,
+    ],
+    [pinnedColumns, blocks]
+  )
+  const matches = useMemo(
+    () => findColumnMatches(rows, found.search),
+    [rows, found.search]
+  )
+  const isSearching = found.search !== ''
+
+  const current =
+    matches.find((match) => match.key === found.key) ?? matches.at(0)
+  const currentIndex = current == null ? -1 : matches.indexOf(current)
+
+  const targetId = (key: string) => `${idPrefix}${key}`
+  const element = (key: string) => document.getElementById(targetId(key))
+
+  // Only the list scrolls, and only when the match is out of its view.
+  const scrollToMatch = (key: string) => {
+    const target = element(key)
+    const viewport = target?.closest('.mantine-ScrollArea-viewport')
+    if (target == null || viewport == null || frozen != null) {
+      return
+    }
+    const box = target.getBoundingClientRect()
+    const view = viewport.getBoundingClientRect()
+    if (box.top >= view.top && box.bottom <= view.bottom) {
+      return
+    }
+    viewport.scrollTop += box.top - view.top - (view.height - box.height) / 2
+  }
+
+  const runSearch = (text: string) => {
+    const search = text.trim()
+    if (search === searched.search) {
+      return current?.key
+    }
+    const key = findColumnMatches(rows, search).at(0)?.key
+    setSearched({ search, key })
+    if (key !== undefined) {
+      scrollToMatch(key)
+    }
+    return key
+  }
+  const searchLater = useDebouncedCallback(runSearch, 200)
+
+  // Enter or Tab on text the list has not searched yet runs that search now,
+  // and its first match is current.
+  const step = (direction: 1 | -1) => {
+    if (query.trim() !== searched.search) {
+      runSearch(query)
+      return
+    }
+    if (matches.length === 0) {
+      return
+    }
+    const next =
+      matches[(currentIndex + direction + matches.length) % matches.length].key
+    setSearched({ search: searched.search, key: next })
+    scrollToMatch(next)
+  }
+
+  const tabToMatch = () => {
+    const key = runSearch(query)
+    const target = key === undefined ? null : element(key)
+    if (target == null || target.matches(':disabled')) {
+      return false
+    }
+    target.focus()
+    return true
+  }
+
   const handleDragEnd = (result: DropResult) => {
-    const move = reorderColumns({ blocks, shown }, result)
+    const move = reorderColumns(blocks, result)
     setFrozen(null)
     if (move != null) {
       const order = [...start.map(({ name }) => name), ...move.order]
@@ -429,7 +539,7 @@ function VariableList() {
   // Mantine's transform would offset a preview's `position: fixed`, so both
   // lists drag a clone, which the library renders outside the popover.
   const renderBlockClone: DraggableChildrenFn = (clone, _snapshot, rubric) => {
-    const block = shown[rubric.source.index]
+    const block = blocks[rubric.source.index]
     return block.kind === 'group' ? (
       <GroupBlock block={block} provided={clone} isDragging>
         {block.members.map((member) => (
@@ -441,15 +551,24 @@ function VariableList() {
     )
   }
 
-  const listedColumns = [...pinnedColumns, ...itemsOf(shown)]
-
-  // The link speaks only for the columns the search left that the user can
-  // hide, so with none of those it says nothing rather than "Hide all".
-  const hideable = listedColumns.filter((column) => column.canHide)
+  const hideable = (
+    isSearching
+      ? matches.flatMap((match) =>
+          match.kind === 'column' ? [match.column] : []
+        )
+      : [...pinnedColumns, ...itemsOf(blocks)]
+  ).filter((column) => column.canHide)
   const hideableNames = hideable.map((column) => column.name)
 
+  // The box counts nothing until the text typed in it has been searched.
+  const count = isSearching
+    ? { current: currentIndex + 1, total: matches.length }
+    : undefined
+
+  const highlight = { search: found.search, currentKey: current?.key, targetId }
+
   return (
-    <OpenRowsContext.Provider value={openRows}>
+    <ListContext.Provider value={{ openRows, highlight }}>
       <DragDropContext
         onBeforeCapture={() => setFrozen(live)}
         onDragEnd={handleDragEnd}
@@ -457,17 +576,23 @@ function VariableList() {
         <PopoverList
           search={{
             value: query,
-            onChange: setQuery,
+            onChange: (value) => {
+              setQuery(value)
+              // An empty box is never a word half typed, so it waits for nothing.
+              if (value.trim() === '') {
+                runSearch('')
+              }
+              searchLater(value)
+            },
             placeholder: 'Search variables',
             inputRef: searchRef,
+            matches:
+              query.trim() === ''
+                ? undefined
+                : { count, onStep: step, onTabToMatch: tabToMatch },
           }}
-          emptyMessage={
-            debouncedQuery.trim() !== '' && listedColumns.length === 0
-              ? 'No variables match'
-              : undefined
-          }
-          // Back to the server's order, all of it whatever the search shows.
-          // It appears once the user has moved something, and goes when used.
+          // Back to the server's order. It appears once the user has moved
+          // something, and goes when used.
           footerStart={
             hasOrder && (
               <PopoverLink
@@ -480,10 +605,13 @@ function VariableList() {
               </PopoverLink>
             )
           }
+          // With nothing to act on, the link says nothing rather than
+          // "Hide all".
           footerEnd={
             hideableNames.length > 0 && (
               <VisibilityAction
                 allShown={hideable.every((column) => column.isVisible)}
+                matchCount={isSearching ? hideable.length : undefined}
                 onToggle={(isVisible) =>
                   dispatch(
                     setColumnVisibility(
@@ -501,7 +629,7 @@ function VariableList() {
 
           {/* Where the columns that stay put end and the ones a drag moves
               begin, drawn only with rows on both sides. */}
-          {pinnedColumns.length > 0 && shown.length > 0 && (
+          {pinnedColumns.length > 0 && blocks.length > 0 && (
             <Divider className={classes.pinnedDivider} />
           )}
 
@@ -516,7 +644,7 @@ function VariableList() {
                 {...blockList.droppableProps}
                 gap={0}
               >
-                {shown.map((block, index) =>
+                {blocks.map((block, index) =>
                   block.kind === 'group' ? (
                     <DraggableGroup
                       key={blockKey(block)}
@@ -537,7 +665,7 @@ function VariableList() {
           </Droppable>
         </PopoverList>
       </DragDropContext>
-    </OpenRowsContext.Provider>
+    </ListContext.Provider>
   )
 }
 

@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 import {
   blockKey,
   filterVariableBlocks,
+  titleMatcher,
   type VariableBlock,
 } from '#src/utils/variable-blocks'
 import { exampleBlocks } from '#tests/support/columns'
@@ -64,4 +65,19 @@ test('a group and a variable given the same name get different keys', () => {
   }
 
   expect(blockKey(group)).not.toEqual(blockKey(variable))
+})
+
+test('a search for the micro sign finds the Greek mu a title is written with', () => {
+  expect(titleMatcher('\u00b5s')('Delay [\u03bcs]')).toBe(true)
+})
+
+test('the list keeps a title written with the Greek mu when the search types the micro sign', () => {
+  const delay: VariableBlock = {
+    kind: 'variable',
+    name: 'delay',
+    title: 'Delay [μs]',
+    columnTitle: 'Delay [μs]',
+  }
+
+  expect(namesOf(filterVariableBlocks([delay], 'µs'))).toEqual(['delay'])
 })

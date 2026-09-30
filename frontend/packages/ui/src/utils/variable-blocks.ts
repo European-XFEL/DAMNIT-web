@@ -1,3 +1,5 @@
+import escapeRegExp from 'lodash/escapeRegExp'
+
 // One variable as a list shows it. `title` is whole, so search and screen
 // readers get the group's words; `columnTitle` drops what the heading carries.
 export type VariableItem = {
@@ -28,18 +30,24 @@ export function itemsOf<Item extends VariableItem>(
   )
 }
 
+// Mantine's Highlight marks letters with a case-blind regex, and a search that
+// counts matches must agree with it: `µs` marks the `μs` that lowercase misses.
+export function titleMatcher(query: string) {
+  const pattern = new RegExp(escapeRegExp(query.trim()), 'i')
+  return (title: string) => pattern.test(title)
+}
+
 // Keep a variable when its whole title or its group's matches. A group stays
 // while any member is left, so no member shows without its heading.
 export function filterVariableBlocks<Item extends VariableItem>(
   blocks: VariableBlock<Item>[],
   query: string
 ): VariableBlock<Item>[] {
-  const search = query.trim().toLowerCase()
-  if (search === '') {
+  if (query.trim() === '') {
     return blocks
   }
 
-  const matches = (title: string) => title.toLowerCase().includes(search)
+  const matches = titleMatcher(query)
 
   return blocks.flatMap((block) => {
     if (block.kind !== 'group') {

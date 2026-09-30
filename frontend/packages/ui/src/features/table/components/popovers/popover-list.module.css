@@ -64,6 +64,20 @@
   text-align: left;
 }
 
+/* One yellow for every match, and a dimmed row keeps its ink on the marked
+   letters. */
+.title mark,
+.groupHeader mark {
+  background-color: light-dark(
+    var(--mantine-color-yellow-3),
+    var(--mantine-color-yellow-5)
+  );
+}
+
+.title mark {
+  color: inherit;
+}
+
 /* The air that separates one group from the next. It sits outside the heading,
    or the hover below would swallow it. */
 .block {
@@ -81,9 +95,9 @@
   background: var(--hover-bg);
 }
 
-.block:has(> .groupHeader .grip:hover) .groupHeader,
-.block:has(> .groupHeader .grip:hover) .row,
-.block:has(> .groupHeader .grip:hover) .details {
+.block:has(> .groupHeader .grip:hover) .groupHeader:not(.current),
+.block:has(> .groupHeader .grip:hover) .row:not(.current),
+.block:has(> .groupHeader .grip:hover) .row:not(.current) + .details {
   background: transparent;
 }
 
@@ -168,6 +182,17 @@
   background: var(--open-bg);
 }
 
+/* Last, so hover and open never paint over the current match or its details.
+   The dark values are stand-ins until the app has a dark scheme. */
+.row.current,
+.row.current + .details,
+.groupHeader.current {
+  background: light-dark(
+    var(--mantine-color-yellow-0),
+    var(--mantine-color-yellow-light)
+  );
+}
+
 .details {
   background: var(--open-bg);
   padding: 10px 10px 10px calc(10px + var(--title-inset));
@@ -205,6 +230,27 @@
 .title:focus-visible {
   outline: 2px solid var(--mantine-primary-color-filled);
   outline-offset: -2px;
+}
+
+.searchEnd {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.clearSlot {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  pointer-events: auto;
+  width: var(--clear-width);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* Both actions sit on the popover's own gutter rather than on the row columns,
