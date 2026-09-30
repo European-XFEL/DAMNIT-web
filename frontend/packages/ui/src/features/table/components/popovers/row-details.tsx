@@ -66,10 +66,11 @@ function Item({
 
 type RowItemCheckboxProps = Pick<
   CheckboxProps,
-  'checked' | 'onChange' | 'variant' | 'disabled' | 'aria-label'
+  'id' | 'checked' | 'onChange' | 'variant' | 'disabled' | 'aria-label'
 >
 
 export function RowItemCheckbox({
+  id,
   checked,
   onChange,
   variant = 'filled',
@@ -78,6 +79,7 @@ export function RowItemCheckbox({
 }: RowItemCheckboxProps) {
   return (
     <Checkbox
+      id={id}
       variant={variant}
       aria-label={label}
       checked={checked}

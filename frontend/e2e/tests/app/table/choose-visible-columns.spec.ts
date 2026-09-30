@@ -6,6 +6,7 @@ import {
   openProposal,
   popoverAction,
   rowCheckbox,
+  searchMarks,
 } from '#support/table'
 
 test('hiding a variable removes its column from the table', async ({
@@ -29,21 +30,22 @@ test('hiding a variable removes its column from the table', async ({
   await expect(columnHeader(page, 'Trains')).toHaveCount(0)
 })
 
-test('searching filters the variable list', async ({ page, example }) => {
+test('searching marks the variables it finds and keeps the rest', async ({
+  page,
+  example,
+}) => {
   await openProposal(page, example)
   await openPopover(page, 'Variables')
 
-  // Filter the list
+  // Find the three Sample columns
   await page.getByPlaceholder('Search variables').fill('sample')
 
-  await expect(rowCheckbox(page, 'Sample type')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample X [mm]')).toBeVisible()
-  await expect(rowCheckbox(page, 'Sample Y [mm]')).toBeVisible()
-  await expect(rowCheckbox(page, 'Trains')).toHaveCount(0)
+  await expect(searchMarks(page)).toHaveText(['Sample', 'Sample', 'Sample'])
+  await expect(rowCheckbox(page, 'Trains')).toBeVisible()
 
   // Clear the search
   await page.getByPlaceholder('Search variables').clear()
-  await expect(rowCheckbox(page, 'Trains')).toBeVisible()
+  await expect(searchMarks(page)).toHaveCount(0)
 })
 
 test('a hidden column stays hidden after the popover closes', async ({
@@ -85,19 +87,19 @@ test('the popover link hides every variable, then shows them again', async ({
   await expectVisibleColumns(page, 13)
 })
 
-test('the popover link hides only what the search left on screen', async ({
+test('under a search the popover link hides only the matches', async ({
   page,
   example,
 }) => {
   await openProposal(page, example)
   await openPopover(page, 'Variables')
 
-  // Narrow the list to the Sample group
+  // Find the three Sample columns
   await page.getByPlaceholder('Search variables').fill('sample')
-  await expect(rowCheckbox(page, 'Trains')).toHaveCount(0)
+  await expect(popoverAction(page)).toHaveText('Hide 3 matches')
 
   await popoverAction(page).click()
 
-  // The three Sample columns go; the ones the search took off screen stay
+  // The three Sample columns go; the ones the search did not find stay
   await expectVisibleColumns(page, 10)
 })

@@ -7,6 +7,8 @@ import {
   expectLeadingColumns,
   openPopover,
   openProposal,
+  searchCount,
+  tabToMatch,
 } from '#support/table'
 
 test.use({ example: xpcsWithGroups, viewport: WIDE_VIEWPORT })
@@ -120,35 +122,41 @@ test('Reset order puts the columns back in the order the server sent', async ({
   await expectLeadingColumns(page, SERVER_ORDER)
 })
 
-test('a search moves a column next to a match far away from it', async ({
+test('a found column is dragged among its real neighbours', async ({
   page,
   example,
 }) => {
   await openProposal(page, example)
   await openPopover(page, 'Variables')
+  await page.getByPlaceholder('Search variables').fill('g2')
+  await expect(searchCount(page)).toHaveText('1/1')
 
-  // All the search leaves are two columns seven places apart in the table
-  await page.getByPlaceholder('Search variables').fill('tra')
-  await expect(columnHandle(page, 'Total Transmission')).toBeVisible()
-  await expect(columnHandle(page, 'Pulses')).toHaveCount(0)
+  // One place up, past the neighbour the table gives it
+  await dragColumn(page, { name: 'XPCS g2', key: 'ArrowUp' })
 
-  await dragColumn(page, { name: 'Trains', key: 'ArrowDown' })
-
-  // Trains lands beside Total Transmission, and every column it passed
-  // keeps the place the server gave it
   await expectLeadingColumns(page, [
-    'Run',
-    'Pulses',
-    'Type',
-    'X [mm]',
-    'Y [mm]',
-    'Scan type',
+    ...SERVER_ORDER,
     'XGM intensity [uJ]',
     'Total Transmission',
-    'Trains',
     'XPCS q-rings',
-    'XPCS SAXS overview',
     'XPCS g2',
+    'XPCS SAXS overview',
     'XPCS intensity outliers',
   ])
+})
+
+test('Enter steps to the next match', async ({ page, example }) => {
+  await openProposal(page, example)
+  await openPopover(page, 'Variables')
+
+  // The four XPCS columns
+  await page.getByPlaceholder('Search variables').fill('xpcs')
+  await expect(searchCount(page)).toHaveText('1/4')
+
+  await page.keyboard.press('Enter')
+  await expect(searchCount(page)).toHaveText('2/4')
+
+  // Tab follows the current match to the second
+  await tabToMatch(page)
+  await expect(columnHandle(page, 'XPCS SAXS overview')).toBeFocused()
 })
