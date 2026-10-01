@@ -16,7 +16,21 @@ import { resizeViewport } from '#tests/support/viewport'
 const PROPOSAL = '900405'
 const RUN = 6
 
-const EXTRA_VARIABLES: Variable[] = [{ name: 'run', title: 'Run', tags: [] }]
+const EXTRA_VARIABLES: Variable[] = [
+  { name: 'run', title: 'Run', tags: [] },
+  { name: 'start_time', title: 'Start time', tags: [] },
+  { name: 'comment', title: 'Comment', tags: [] },
+  { name: 'xgm_energy', title: 'XGM energy', tags: [] },
+  { name: 'shutter_open', title: 'Shutter open', tags: [] },
+  { name: 'trend', title: 'Trend', tags: [] },
+  { name: 'azimuthal', title: 'Azimuthal average', tags: [] },
+  { name: 'detector', title: 'Detector image', tags: [] },
+  {
+    name: 'intensity',
+    title: 'Integrated intensity of the azimuthal average over all trains',
+    tags: [],
+  },
+]
 
 const METADATA = {
   __typename: 'TableMeta',
@@ -87,6 +101,13 @@ function openRun({ cells = RUN_6 } = {}) {
 
 type Screen = Awaited<ReturnType<typeof openRun>>
 
+function thumbnail({ width, height }: { width: number; height: number }) {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  return canvas.toDataURL('image/png')
+}
+
 const boxOf = (screen: Screen, text: string) =>
   screen.getByText(text, { exact: true }).element().getBoundingClientRect()
 
@@ -109,4 +130,157 @@ test('an ungrouped variable sits flush with a group heading, its members inset',
   expect(boxOf(screen, 'Trains').left).toBe(heading)
   expect(boxOf(screen, 'Scan type').left).toBe(heading)
   expect(boxOf(screen, 'Type').left - heading).toBe(22)
+})
+
+test('a long string drops below its title', async () => {
+  const screen = await openRun({
+    cells: [
+      ...RUN_6,
+      {
+        name: 'comment',
+        value: 'Silica 50 nm in a 2 mm capillary, slow flow on',
+        dtype: 'string',
+      },
+    ],
+  })
+  const comment = screen.getByText('Silica 50 nm', { exact: false })
+  await expect.element(comment).toBeVisible()
+
+  const title = boxOf(screen, 'Comment')
+  const value = comment.element().getBoundingClientRect()
+  expect(value.top).toBeGreaterThanOrEqual(title.bottom)
+  expect(value.left).toBe(title.left)
+})
+
+test('a date stays beside its title', async () => {
+  const screen = await openRun({
+    cells: [
+      ...RUN_6,
+      {
+        name: 'start_time',
+        value: Date.UTC(2025, 5, 3, 9, 41, 7),
+        dtype: 'timestamp',
+      },
+    ],
+  })
+  const date = screen.getByText('2025', { exact: false })
+  await expect.element(date).toBeVisible()
+
+  expect(date.element().getBoundingClientRect().left).toBeGreaterThan(
+    boxOf(screen, 'Start time').right
+  )
+})
+
+test('a title wider than the panel wraps inside it', async () => {
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'intensity', value: 0.52 }],
+  })
+  const title = screen.getByText('Integrated intensity', { exact: false })
+  await expect.element(title).toBeVisible()
+
+  const viewport = title.element().closest('.mantine-ScrollArea-viewport')!
+  expect(viewport.scrollWidth).toBe(viewport.clientWidth)
+  expect(title.element().getBoundingClientRect().right).toBeLessThanOrEqual(
+    viewport.getBoundingClientRect().right
+  )
+})
+
+test('a number prints at full precision', async () => {
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'xgm_energy', value: 1500.5958251953125 }],
+  })
+
+  await expect
+    .element(screen.getByText('1500.5958251953125', { exact: true }))
+    .toBeVisible()
+})
+
+async function loadedImage(screen: Screen, name: string) {
+  const image = screen.getByRole('img', { name })
+  await expect.element(image).toBeVisible()
+  const element = image.element() as HTMLImageElement
+  await expect.poll(() => element.naturalWidth).toBeGreaterThan(0)
+  return element
+}
+
+test('a thumbnail narrower than the panel draws at its own size', async () => {
+  const screen = await openRun({
+    cells: [
+      ...RUN_6,
+      {
+        name: 'azimuthal',
+        value: thumbnail({ width: 300, height: 225 }),
+        dtype: 'image',
+      },
+    ],
+  })
+
+  const image = await loadedImage(screen, 'Azimuthal average')
+
+  expect(image.getBoundingClientRect().width).toBe(300)
+})
+
+test('a thumbnail wider than the panel scales down to its width', async () => {
+  const screen = await openRun({
+    cells: [
+      ...RUN_6,
+      {
+        name: 'detector',
+        value: thumbnail({ width: 600, height: 300 }),
+        dtype: 'image',
+      },
+    ],
+  })
+
+  const image = await loadedImage(screen, 'Detector image')
+
+  const panelWidth = image.closest('dd')!.getBoundingClientRect().width
+  expect(image.getBoundingClientRect().width).toBe(panelWidth)
+  expect(image.getBoundingClientRect().height).toBe(panelWidth / 2)
+})
+
+test('a value with no renderer of its own prints as the grid prints it', async () => {
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'shutter_open', value: true, dtype: 'boolean' }],
+  })
+
+  await expect.element(screen.getByText('true', { exact: true })).toBeVisible()
+})
+
+test('an array still held back reads No preview beside its title', async () => {
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'trend', value: null, dtype: 'array1d' }],
+  })
+  const placeholder = screen.getByText('No preview')
+  await expect.element(placeholder).toBeVisible()
+
+  expect(placeholder.element().getBoundingClientRect().left).toBeGreaterThan(
+    boxOf(screen, 'Trend').right
+  )
+})
+
+test('an array that has arrived reads No preview too', async () => {
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'trend', value: [1, 2, 3], dtype: 'array1d' }],
+  })
+
+  await expect.element(screen.getByText('No preview')).toBeVisible()
+})
+
+test('a thumbnail still loading keeps its title in the list', async () => {
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'azimuthal', value: null, dtype: 'image' }],
+  })
+
+  await expect
+    .element(screen.getByText('Azimuthal average', { exact: true }))
+    .toBeVisible()
+})
+
+test('a run with nothing left to show says so', async () => {
+  const screen = await openRun({
+    cells: [{ name: 'n_trains', value: null }],
+  })
+
+  await expect.element(screen.getByText('No values to show')).toBeVisible()
 })
