@@ -13,7 +13,7 @@ import type { VariableBlock, VariableItem } from '#src/utils/variable-blocks'
 
 type CellState =
   | { state: 'value'; value: NonNullable<CellValue>; dtype: string }
-  | { state: 'loading' }
+  | { state: 'loading'; dtype: string }
   | { state: 'blank' }
   | { state: 'error'; error: CellError }
 
@@ -37,7 +37,7 @@ function cellState(cell: Cell | undefined): CellState {
     return { state: 'error', error: cell.error }
   }
   if (isDeferred(cell)) {
-    return { state: 'loading' }
+    return { state: 'loading', dtype: cell.summary.dtype }
   }
 
   const { value, dtype } = cell.summary
