@@ -188,6 +188,15 @@ test('an active failed cell keeps a long message and its copy button inside the 
   expectInsidePanel(copy.element())
 })
 
+test('an active cell the run has no value for says No value', async () => {
+  const screen = await openRun({ activeVariable: 'comment' })
+
+  await expect
+    .element(screen.getByText('Comment', { exact: true }))
+    .toBeVisible()
+  await expect.element(screen.getByText('No value')).toBeVisible()
+})
+
 test('a long string drops below its title', async () => {
   const screen = await openRun({
     cells: [
