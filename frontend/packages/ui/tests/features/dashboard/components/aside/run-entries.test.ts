@@ -3,7 +3,6 @@ import { expect, test } from 'vitest'
 import { cellsByName } from '#src/data/table/table-data.transforms'
 import type {
   Cell,
-  CellError,
   CellValue,
   Variable,
 } from '#src/data/table/table-data.types'
@@ -11,6 +10,7 @@ import {
   runEntries,
   type RunEntry,
 } from '#src/features/dashboard/components/aside/run-entries'
+import type { CellError } from '#src/utils/cell-errors'
 import { itemsOf, type VariableBlock } from '#src/utils/variable-blocks'
 import { ALL_VISIBLE, GROUPS, VARIABLES } from '#tests/support/columns'
 

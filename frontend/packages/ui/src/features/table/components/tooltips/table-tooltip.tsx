@@ -1,4 +1,5 @@
 import {
+  Box,
   Image,
   useComputedColorScheme,
   useMantineTheme,
@@ -6,10 +7,9 @@ import {
 } from '@mantine/core'
 import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
-import { type CellError } from '#src/data/table/table-data.types'
+import CellErrorCard from '#src/components/feedback/cell-error-card'
+import { type CellError } from '#src/utils/cell-errors'
 import { assertNever } from '#src/utils/helpers'
-
-import { ErrorContent } from './error-content'
 
 export type CellTooltip =
   | { kind: 'error'; error: CellError }
@@ -30,7 +30,11 @@ const IMAGE_MARGIN = 4
 function renderBody(target: CellTooltip) {
   switch (target.kind) {
     case 'error':
-      return <ErrorContent error={target.error} />
+      return (
+        <Box maw={360} px={10} py={8}>
+          <CellErrorCard error={target.error} variant="tooltip" />
+        </Box>
+      )
     case 'image':
       return (
         <Image

@@ -2,13 +2,13 @@ import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import { isDeferred } from '#src/data/table/table-data.transforms'
 import type {
   Cell,
-  CellError,
   CellValue,
   RunCells,
   TableMeta,
   Variable,
 } from '#src/data/table/table-data.types'
 import { buildVariableBlocks } from '#src/data/table/variable-blocks'
+import type { CellError } from '#src/utils/cell-errors'
 import type { VariableBlock, VariableItem } from '#src/utils/variable-blocks'
 
 type CellState =

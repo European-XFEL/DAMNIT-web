@@ -6,7 +6,11 @@ import { setupStore, type AppStore } from '#src/app/store/store'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
 import type { Variable } from '#src/data/table/table-data.types'
 import DashboardAside from '#src/features/dashboard/components/aside/dashboard-aside'
-import { runSelected } from '#src/features/table/stores/table.slice'
+import {
+  cellActivated,
+  runSelected,
+} from '#src/features/table/stores/table.slice'
+import type { CellError } from '#src/utils/cell-errors'
 import { metadataClient } from '#tests/support/apollo'
 import { serverCell } from '#tests/support/cells'
 import { GROUPS, VARIABLES } from '#tests/support/columns'
@@ -46,7 +50,12 @@ const METADATA = {
   timestamp: 0,
 }
 
-type CellFixture = { name: string; value: unknown; dtype?: string }
+type CellFixture = {
+  name: string
+  value: unknown
+  dtype?: string
+  error?: CellError
+}
 
 const RUN_6: CellFixture[] = [
   { name: 'run', value: RUN },
@@ -93,7 +102,15 @@ beforeEach(async () => {
   store.dispatch(runSelected({ proposal: PROPOSAL, run: RUN }))
 })
 
-function openRun({ cells = RUN_6 } = {}) {
+function openRun({
+  cells = RUN_6,
+  activeVariable,
+}: { cells?: CellFixture[]; activeVariable?: string } = {}) {
+  if (activeVariable != null) {
+    store.dispatch(
+      cellActivated({ proposal: PROPOSAL, run: RUN, variable: activeVariable })
+    )
+  }
   return render(<DashboardAside viewRef={createRef()} />, {
     wrapper: withProviders({ store, client: runClient(cells) }),
   })
@@ -110,6 +127,14 @@ function thumbnail({ width, height }: { width: number; height: number }) {
 
 const boxOf = (screen: Screen, text: string) =>
   screen.getByText(text, { exact: true }).element().getBoundingClientRect()
+
+function expectInsidePanel(element: Element) {
+  const viewport = element.closest('.mantine-ScrollArea-viewport')!
+  expect(viewport.scrollWidth).toBe(viewport.clientWidth)
+  expect(element.getBoundingClientRect().right).toBeLessThanOrEqual(
+    viewport.getBoundingClientRect().right
+  )
+}
 
 test('a group lists its members under its heading by their short titles', async () => {
   const screen = await openRun()
@@ -130,6 +155,82 @@ test('an ungrouped variable sits flush with a group heading, its members inset',
   expect(boxOf(screen, 'Trains').left).toBe(heading)
   expect(boxOf(screen, 'Scan type').left).toBe(heading)
   expect(boxOf(screen, 'Type').left - heading).toBe(22)
+})
+
+test('an active cell shows its value below its title', async () => {
+  const screen = await openRun({ activeVariable: 'scan_type' })
+  await expect.element(screen.getByText('dscan')).toBeVisible()
+
+  const title = boxOf(screen, 'Scan type')
+  const value = boxOf(screen, 'dscan')
+
+  expect(value.top).toBeGreaterThanOrEqual(title.bottom)
+  expect(value.left).toBe(title.left)
+})
+
+// The group heading stays, but a group role and rail around one row would
+// make it read as a list.
+test('an active grouped cell names its group above its short title', async () => {
+  const screen = await openRun({ activeVariable: 'sample.type' })
+  await expect.element(screen.getByText('silica')).toBeVisible()
+
+  expect(boxOf(screen, 'Sample').bottom).toBeLessThanOrEqual(
+    boxOf(screen, 'Type').top
+  )
+  await expect.element(screen.getByRole('group')).not.toBeInTheDocument()
+})
+
+test('an active failed cell shows the failure card', async () => {
+  const error = { cls: 'ValueError', message: 'No trains in this run' }
+  const screen = await openRun({
+    cells: [{ name: 'n_trains', value: null, dtype: 'string', error }],
+    activeVariable: 'n_trains',
+  })
+
+  await expect
+    .element(screen.getByText('Trains', { exact: true }))
+    .toBeVisible()
+  await expect.element(screen.getByText('Error', { exact: true })).toBeVisible()
+  await expect.element(screen.getByText('ValueError')).toBeVisible()
+  await expect.element(screen.getByText(error.message)).toBeVisible()
+})
+
+test('an active failed cell keeps a long message and its copy button inside the panel', async () => {
+  const error = {
+    cls: 'SourceNameError',
+    message:
+      'No source SA2_XTD1_XGM_DOOCS_output_data_intensitySa1TD_pulseEnergy_photonFlux',
+  }
+  const screen = await openRun({
+    cells: [{ name: 'n_trains', value: null, dtype: 'string', error }],
+    activeVariable: 'n_trains',
+  })
+  const copy = screen.getByRole('button', { name: 'Copy' })
+  await expect.element(copy).toBeVisible()
+
+  expectInsidePanel(copy.element())
+})
+
+test('an active cell wraps a long value inside the panel', async () => {
+  const value =
+    'silica_50nm_capillary_2mm_slow_flow_batch_A3_prepared_2025_06_03'
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'comment', value, dtype: 'string' }],
+    activeVariable: 'comment',
+  })
+  const text = screen.getByText(value)
+  await expect.element(text).toBeVisible()
+
+  expectInsidePanel(text.element())
+})
+
+test('an active cell the run has no value for says No value', async () => {
+  const screen = await openRun({ activeVariable: 'comment' })
+
+  await expect
+    .element(screen.getByText('Comment', { exact: true }))
+    .toBeVisible()
+  await expect.element(screen.getByText('No value')).toBeVisible()
 })
 
 test('a long string drops below its title', async () => {
@@ -178,11 +279,7 @@ test('a title wider than the panel wraps inside it', async () => {
   const title = screen.getByText('Integrated intensity', { exact: false })
   await expect.element(title).toBeVisible()
 
-  const viewport = title.element().closest('.mantine-ScrollArea-viewport')!
-  expect(viewport.scrollWidth).toBe(viewport.clientWidth)
-  expect(title.element().getBoundingClientRect().right).toBeLessThanOrEqual(
-    viewport.getBoundingClientRect().right
-  )
+  expectInsidePanel(title.element())
 })
 
 test('a number prints at full precision', async () => {
