@@ -171,9 +171,8 @@ const ERROR_ICON_SIZE = 14
 const ERROR_ICON_RENDER_SIZE = 56
 const ERROR_ICON_STROKE = 2
 
-// Tabler outline icon paths (@tabler/icons-react v3.31.0): alert-triangle,
-// help, and chevrons-right. Inlined so the canvas renderer can build the SVG
-// itself instead of pulling react-dom/server into the client bundle.
+// The error card's Tabler icons (v3.31.0) as raw paths, so the canvas builds
+// the SVG itself instead of pulling react-dom/server into the client bundle.
 const ERROR_ICON_PATHS: Record<ErrorKind, string> = {
   error:
     '<path d="M12 9v4" />' +

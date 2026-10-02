@@ -8,7 +8,14 @@ import {
   rem,
 } from '@mantine/core'
 import { useClipboard, useDidUpdate } from '@mantine/hooks'
-import { IconCheck, IconCopy } from '@tabler/icons-react'
+import {
+  IconAlertTriangle,
+  IconCheck,
+  IconChevronsRight,
+  IconCopy,
+  IconHelp,
+  type Icon,
+} from '@tabler/icons-react'
 
 import {
   errorKind,
@@ -36,10 +43,11 @@ const PALETTES = {
   },
 }
 
-const TITLES: Record<ErrorKind, string> = {
-  error: 'Error',
-  missing: 'Missing data',
-  skipped: 'Missing dependency',
+// The grid draws these glyphs from ERROR_ICON_PATHS in cells.ts.
+const KINDS: Record<ErrorKind, { icon: Icon; title: string }> = {
+  error: { icon: IconAlertTriangle, title: 'Error' },
+  missing: { icon: IconHelp, title: 'Missing data' },
+  skipped: { icon: IconChevronsRight, title: 'Missing dependency' },
 }
 
 const COPIED_RESET_MS = 1500
@@ -51,6 +59,7 @@ type CellErrorCardProps = {
 
 function CellErrorCard({ error, variant }: CellErrorCardProps) {
   const kind = errorKind(error.cls)
+  const { icon: KindIcon, title } = KINDS[kind]
   const palette = PALETTES[variant]
   const clipboard = useClipboard({ timeout: COPIED_RESET_MS })
 
@@ -73,13 +82,20 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
     <Box c={palette.message} style={{ overflowWrap: 'anywhere' }}>
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
         <div>
-          <Text
-            size="sm"
-            fw={600}
+          <Group
+            gap={6}
+            wrap="nowrap"
             c={kind === 'error' ? palette.error : palette.muted}
           >
-            {TITLES[kind]}
-          </Text>
+            <KindIcon
+              aria-hidden
+              style={{ width: rem(16), height: rem(16) }}
+              stroke={1.5}
+            />
+            <Text size="sm" fw={600}>
+              {title}
+            </Text>
+          </Group>
           <Text size="xxs" c={palette.cls} ff="monospace">
             {error.cls}
           </Text>
