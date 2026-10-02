@@ -157,6 +157,29 @@ test('an ungrouped variable sits flush with a group heading, its members inset',
   expect(boxOf(screen, 'Type').left - heading).toBe(22)
 })
 
+test('an active cell shows its value below its title', async () => {
+  const screen = await openRun({ activeVariable: 'scan_type' })
+  await expect.element(screen.getByText('dscan')).toBeVisible()
+
+  const title = boxOf(screen, 'Scan type')
+  const value = boxOf(screen, 'dscan')
+
+  expect(value.top).toBeGreaterThanOrEqual(title.bottom)
+  expect(value.left).toBe(title.left)
+})
+
+// The group heading stays, but a group role and rail around one row would
+// make it read as a list.
+test('an active grouped cell names its group above its short title', async () => {
+  const screen = await openRun({ activeVariable: 'sample.type' })
+  await expect.element(screen.getByText('silica')).toBeVisible()
+
+  expect(boxOf(screen, 'Sample').bottom).toBeLessThanOrEqual(
+    boxOf(screen, 'Type').top
+  )
+  await expect.element(screen.getByRole('group')).not.toBeInTheDocument()
+})
+
 test('an active failed cell shows the failure card', async () => {
   const error = { cls: 'ValueError', message: 'No trains in this run' }
   const screen = await openRun({
@@ -186,6 +209,19 @@ test('an active failed cell keeps a long message and its copy button inside the 
   await expect.element(copy).toBeVisible()
 
   expectInsidePanel(copy.element())
+})
+
+test('an active cell wraps a long value inside the panel', async () => {
+  const value =
+    'silica_50nm_capillary_2mm_slow_flow_batch_A3_prepared_2025_06_03'
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'comment', value, dtype: 'string' }],
+    activeVariable: 'comment',
+  })
+  const text = screen.getByText(value)
+  await expect.element(text).toBeVisible()
+
+  expectInsidePanel(text.element())
 })
 
 test('an active cell the run has no value for says No value', async () => {
