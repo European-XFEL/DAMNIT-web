@@ -152,23 +152,6 @@ export interface ErrorCellProps {
 
 export type ErrorCell = CustomCell<ErrorCellProps>
 
-export interface ErrorVisuals {
-  kind: ErrorKind
-  title: string
-}
-
-const ERROR_TITLES: Record<ErrorKind, string> = {
-  skipped: 'Missing dependency',
-  missing: 'Missing data',
-  error: 'Error',
-}
-
-// Resolve an exception class to its display kind and title.
-export const errorVisuals = (cls: string): ErrorVisuals => {
-  const kind = errorKind(cls)
-  return { kind, title: ERROR_TITLES[kind] }
-}
-
 export const errorCell = (
   error: CellError,
   params: Partial<BaseGridCell> = {}

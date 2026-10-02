@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Image, ScrollArea, Skeleton, Text, rem } from '@mantine/core'
 
+import CellErrorCard from '#src/components/feedback/cell-error-card'
 import SectionHeading, {
   mutedC,
 } from '#src/components/headings/section-heading'
@@ -28,7 +29,7 @@ type EntryValueProps = {
 
 function EntryValue({ entry }: EntryValueProps) {
   if (entry.state === 'error') {
-    return <DataText>{entry.error.message}</DataText>
+    return <CellErrorCard error={entry.error} variant="panel" />
   }
   if (entry.state === 'blank') {
     return null
