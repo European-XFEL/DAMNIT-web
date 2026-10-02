@@ -1,46 +1,72 @@
-/* TODO: Create `item` interface */
+.list {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 16px;
 
-.scalarItem {
+  & dl {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+  }
+}
+
+/* The combobox's and the popover's block: a heading over its members, set in
+   behind a rail that starts under the heading's first letter. */
+.group {
+  display: grid;
+  row-gap: 2px;
+  margin-block: 6px;
+}
+
+.members {
+  --member-inset: 22px;
+
+  position: relative;
+  padding-left: var(--member-inset);
+
+  &::before {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    width: 2px;
+    content: '';
+    background: var(--group-rail-color);
+  }
+}
+
+/* A value sits beside its title while both fit on one line, and drops below
+   it otherwise. The browser measures, so no length decides it here. */
+.row {
   display: flex;
-  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: 20px;
+  row-gap: 2px;
   align-items: baseline;
-  overflow-x: auto;
-  gap: 20px;
-  margin-top: var(--mantine-spacing-xs);
 }
 
-.objectItem {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  max-height: 500px;
-  margin-top: var(--mantine-spacing-xs);
-  gap: 5px;
+.stackedRow {
+  display: grid;
+  gap: 4px;
 }
 
-.scalarLabel {
-  color: var(--mantine-color-gray-7);
-  width: 110px;
+/* Nine titles in ten fit this on one line, and a wider one pushes its value
+   along. A member's inset comes out of it, so every value starts level. */
+.title {
+  min-width: calc(126px - var(--member-inset, 0px));
+  overflow-wrap: anywhere;
 }
 
-.scalarvalue {
-  color: var(--mantine-color-dark-9);
-  min-width: 100px;
-  max-width: 160px;
-  height: 20px;
-  line-height: 20px;
+.value {
+  flex: 1 1 max-content;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.objectLabel {
-  color: var(--mantine-color-gray-7);
-  width: 300px;
-}
-
-.objectValue {
-  margin-left: 20px;
-  margin-right: 20px;
-  /* TODO: Manage `maxWidth` to fit drawer (parent) width */
-  max-width: 95%;
+/* Thumbnails are stored at 300 px on their long side, so they draw pixel for
+   pixel and are only ever scaled down. */
+.image {
+  width: auto;
+  max-width: 100%;
   max-height: 300px;
-  object-position: left top;
 }

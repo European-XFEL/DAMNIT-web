@@ -1,5 +1,11 @@
 import { test, expect } from '#fixtures'
-import { ERROR_CELLS, ERROR_ROW, xpcsWithErrors } from '#examples/xpcs'
+import {
+  ERROR_CELLS,
+  ERROR_ROW,
+  SAMPLE_GROUP,
+  xpcsWithErrors,
+  xpcsWithGroups,
+} from '#examples/xpcs'
 import { gridBox, gridCanvas, headerPoint } from '#support/grid'
 import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
 import {
@@ -69,6 +75,29 @@ test.describe('failed cells', () => {
         panel.getByText(titleOf(example, failed.variable), { exact: true })
       ).toHaveCount(0)
     }
+  })
+})
+
+test.describe('grouped variables', () => {
+  test.use({ example: xpcsWithGroups })
+
+  test("selecting a run lists a group's variables under its heading", async ({
+    page,
+    example,
+  }) => {
+    await openProposal(page, example)
+
+    await selectRun(page, { example, row: 0 })
+
+    const panel = page.getByRole('complementary')
+    const { title } = SAMPLE_GROUP
+    const group = panel.getByRole('group', { name: title })
+    // Under the heading, a member goes by its short title.
+    await expect(group.getByText('Type', { exact: true })).toBeVisible()
+    await expect(group.getByText('silica')).toBeVisible()
+    await expect(group.getByText(titleOf(example, 'sample.type'))).toHaveCount(
+      0
+    )
   })
 })
 

@@ -185,6 +185,24 @@ test('a heavy value still loading keeps its place', () => {
   })
 })
 
+const TREND: Variable = { name: 'trend', title: 'Trend', tags: [] }
+
+test('a failed array leaves the list', () => {
+  const trend = cell({
+    name: 'trend',
+    value: null,
+    dtype: 'array1d',
+    error: { cls: 'ValueError', message: 'No trains in this run' },
+  })
+
+  const blocks = entriesOf({
+    variables: [...VARIABLES, TREND],
+    cells: [...RUN_6, trend],
+  })
+
+  expect(namesOf(blocks)).not.toContain('trend')
+})
+
 test('the active variable is listed alone, in its group', () => {
   const blocks = entriesOf({ activeVariable: 'sample.x' })
 
