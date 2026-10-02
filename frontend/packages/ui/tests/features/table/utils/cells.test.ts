@@ -5,7 +5,6 @@ import {
   arrayCell,
   dateCell,
   errorCell,
-  errorText,
   errorVisuals,
   getCell,
   imageCell,
@@ -105,14 +104,6 @@ describe('errorVisuals', () => {
       kind: 'error',
       title: 'Error',
     })
-  })
-})
-
-describe('errorText', () => {
-  test('joins the class and message with a newline', () => {
-    expect(errorText({ cls: 'ValueError', message: 'boom' })).toBe(
-      'ValueError\nboom'
-    )
   })
 })
 

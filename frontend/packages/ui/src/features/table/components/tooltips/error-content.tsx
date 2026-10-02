@@ -10,8 +10,8 @@ import {
 } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 
-import { type CellError } from '#src/data/table/table-data.types'
-import { errorText, errorVisuals } from '#src/features/table/utils/cells'
+import { errorVisuals } from '#src/features/table/utils/cells'
+import { errorText, type CellError } from '#src/utils/cell-errors'
 
 type ErrorContentProps = {
   error: CellError

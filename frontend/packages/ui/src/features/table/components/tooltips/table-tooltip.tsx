@@ -6,7 +6,7 @@ import {
 } from '@mantine/core'
 import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
 
-import { type CellError } from '#src/data/table/table-data.types'
+import { type CellError } from '#src/utils/cell-errors'
 import { assertNever } from '#src/utils/helpers'
 
 import { ErrorContent } from './error-content'

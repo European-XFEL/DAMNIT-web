@@ -20,9 +20,12 @@ import {
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
+  errorKind,
+  errorText,
   type CellError,
-  type CellValue,
-} from '#src/data/table/table-data.types'
+  type ErrorKind,
+} from '#src/utils/cell-errors'
+import { type CellValue } from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/helpers'
 import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 
@@ -149,8 +152,6 @@ export interface ErrorCellProps {
 
 export type ErrorCell = CustomCell<ErrorCellProps>
 
-export type ErrorKind = 'skipped' | 'missing' | 'error'
-
 export interface ErrorVisuals {
   kind: ErrorKind
   title: string
@@ -162,20 +163,11 @@ const ERROR_TITLES: Record<ErrorKind, string> = {
   error: 'Error',
 }
 
-// Resolve an exception class to its display kind.
-const errorKind = (cls: string): ErrorKind =>
-  cls === 'Skip' ? 'skipped' : cls === 'SourceNameError' ? 'missing' : 'error'
-
 // Resolve an exception class to its display kind and title.
 export const errorVisuals = (cls: string): ErrorVisuals => {
   const kind = errorKind(cls)
   return { kind, title: ERROR_TITLES[kind] }
 }
-
-// Clipboard/copy representation, shared by the cell's copyData and the
-// tooltip's Ctrl+C handler.
-export const errorText = (error: CellError): string =>
-  `${error.cls}\n${error.message}`
 
 export const errorCell = (
   error: CellError,
