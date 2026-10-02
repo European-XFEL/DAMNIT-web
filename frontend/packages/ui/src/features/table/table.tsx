@@ -52,9 +52,11 @@ import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
 import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
 import { useColumnResize } from '#src/features/table/hooks/use-column-resize'
 import { useColumnFlash } from '#src/features/table/hooks/use-column-flash'
+import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
 import {
   toCurrent,
   toSelectedCells,
+  toSelectedRun,
   type ColumnIndex,
   type RowIndex,
   type SelectedCells,
@@ -291,6 +293,7 @@ const Table = ({ paginated = true }: TableProps) => {
   const [selectedColumns, setSelectedColumns] = useState<string[]>([])
   const [selectedCells, setSelectedCells] = useState<SelectedCells>()
   const rowSelection = useAppSelector(selectRowSelection)
+  const selectedRun = useSelectedRun()
 
   // A row marker clicked off and the last column unselected reach Glide's
   // change handler as the same empty selection; only the header takes Ctrl/Cmd.
@@ -425,23 +428,20 @@ const Table = ({ paginated = true }: TableProps) => {
   }, [columnIndex, rowIndex, selectedColumns, rowSelection, selectedCells])
 
   const handleGridSelectionChange = (newSelection: GridSelection) => {
-    const { columns, rows, current } = newSelection
+    const { columns, current } = newSelection
 
-    // The proposal rides along: run numbers collide across proposals in one
-    // table, so the number alone cannot identify which run the aside reads.
-    const row = rows.last()
-    const identity = row == null ? undefined : runs[row]
-
-    // Glide drops the rows on any column or cell gesture, so an empty selection
-    // closes the run only when its row marker was clicked off.
-    if (identity) {
-      dispatch(runSelected(identity))
-    } else if (
-      columns.length === 0 &&
-      current == null &&
-      (keyPressed.current || !pointerOnHeader.current)
-    ) {
-      dispatch(runDeselected())
+    const nextRun = toSelectedRun(newSelection, {
+      runs,
+      selectedRun,
+      keyPressed: keyPressed.current,
+      pointerOnHeader: pointerOnHeader.current,
+    })
+    if (nextRun == null) {
+      if (selectedRun) {
+        dispatch(runDeselected())
+      }
+    } else if (selectedRun == null || runKey(nextRun) !== runKey(selectedRun)) {
+      dispatch(runSelected(nextRun))
     }
 
     // Clear range stack if cells from the other column are currently selected

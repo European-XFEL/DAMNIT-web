@@ -115,3 +115,32 @@ export function toCurrent(
       .filter((rect) => rect != null),
   }
 }
+
+type ToSelectedRunOptions = {
+  runs: RunId[]
+  selectedRun: RunId | undefined
+  keyPressed: boolean
+  pointerOnHeader: boolean
+}
+
+// A column or cell gesture empties the rows too, so only a key or a row
+// marker clicked off closes the run.
+export function toSelectedRun(
+  { columns, rows, current }: GridSelection,
+  { runs, selectedRun, keyPressed, pointerOnHeader }: ToSelectedRunOptions
+): RunId | undefined {
+  // Return the proposal with the run: run numbers collide across proposals
+  // in one table, so the number alone cannot identify the run.
+  const row = rows.last()
+  const run = row == null ? undefined : runs[row]
+  if (run) {
+    return run
+  }
+
+  const emptied = columns.length === 0 && current == null
+  if (emptied && (keyPressed || !pointerOnHeader)) {
+    return undefined
+  }
+
+  return selectedRun
+}
