@@ -65,10 +65,14 @@ test.describe('errored cell', () => {
 
     const panel = page.getByRole('complementary')
     await expect(selectedRunTab(page)).toBeVisible()
-    // The cell renders under its own title, with the failure in place of the
-    // value it never got.
+    // The cell keeps its title, with the failure card in place of the value
+    // it never got: the kind, the exception class and its message.
     await expect(
       panel.getByText(titleOf(example, errored.variable))
+    ).toBeVisible()
+    await expect(panel.getByText(errored.title, { exact: true })).toBeVisible()
+    await expect(
+      panel.getByText(errored.error.cls, { exact: true })
     ).toBeVisible()
     await expect(panel.getByText(errored.error.message)).toBeVisible()
     await expect(panel.locator('img')).toHaveCount(0)
