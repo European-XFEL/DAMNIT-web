@@ -37,6 +37,19 @@ test('activating a single cell shows only that variable', async ({
   await expect(panel.locator('img')).toHaveCount(0)
 })
 
+test('activating the run number opens the whole run', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+
+  await activateCell(page, { example, col: columnOf(example, 'run'), row: 0 })
+
+  const panel = page.getByRole('complementary')
+  await expect(panel.getByText(titleOf(example, 'sample_type'))).toBeVisible()
+  await expect(panel.getByText(titleOf(example, 'xgm_intensity'))).toBeVisible()
+})
+
 test.describe('errored cell', () => {
   test.use({ example: xpcsWithErrors })
 

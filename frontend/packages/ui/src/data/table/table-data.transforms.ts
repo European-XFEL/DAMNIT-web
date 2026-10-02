@@ -12,7 +12,7 @@ export function hasValue(cell: Cell | undefined): cell is Cell {
 // than one that is genuinely absent. Shares its rule with the cache merge policy
 // through `isHeavySummaryBlank`, so the two cannot disagree on what is still to
 // come.
-function isDeferred(cell: Cell): boolean {
+export function isDeferred(cell: Cell): boolean {
   return cell.error == null && isHeavySummaryBlank(cell.summary)
 }
 
