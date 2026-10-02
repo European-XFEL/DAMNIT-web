@@ -148,6 +148,28 @@ function GroupBlock({ block }: GroupBlockProps) {
   )
 }
 
+type ActiveVariableViewProps = {
+  block: VariableBlock<RunEntry>
+}
+
+function ActiveVariableView({ block }: ActiveVariableViewProps) {
+  const entry = block.kind === 'group' ? block.members[0] : block
+
+  return (
+    <div className={classes.view}>
+      {block.kind === 'group' && <SectionHeading>{block.title}</SectionHeading>}
+      <dl>
+        <Text component="dt" fz={FONT_SIZE_DATA} fw={500}>
+          {entry.columnTitle}
+        </Text>
+        <dd>
+          <EntryValue entry={entry} />
+        </dd>
+      </dl>
+    </div>
+  )
+}
+
 type Section =
   | { kind: 'group'; block: VariableGroupBlock<RunEntry> }
   | { kind: 'entries'; key: string; entries: RunEntry[] }
@@ -173,6 +195,28 @@ function toSections(blocks: VariableBlock<RunEntry>[]): Section[] {
   return sections
 }
 
+type EntryListProps = {
+  blocks: VariableBlock<RunEntry>[]
+}
+
+function EntryList({ blocks }: EntryListProps) {
+  return (
+    <div className={classes.list}>
+      {toSections(blocks).map((section) =>
+        section.kind === 'group' ? (
+          <GroupBlock key={blockKey(section.block)} block={section.block} />
+        ) : (
+          <dl key={section.key}>
+            {section.entries.map((entry) => (
+              <EntryRow key={entry.name} entry={entry} />
+            ))}
+          </dl>
+        )
+      )}
+    </div>
+  )
+}
+
 type RunDetailsProps = {
   run: RunId
   variable: string | null
@@ -190,19 +234,11 @@ function RunDetails({ run, variable }: RunDetailsProps) {
 
   return (
     <ScrollArea h="100%" offsetScrollbars>
-      <div className={classes.list}>
-        {toSections(blocks).map((section) =>
-          section.kind === 'group' ? (
-            <GroupBlock key={blockKey(section.block)} block={section.block} />
-          ) : (
-            <dl key={section.key}>
-              {section.entries.map((entry) => (
-                <EntryRow key={entry.name} entry={entry} />
-              ))}
-            </dl>
-          )
-        )}
-      </div>
+      {variable != null ? (
+        <ActiveVariableView block={blocks[0]} />
+      ) : (
+        <EntryList blocks={blocks} />
+      )}
     </ScrollArea>
   )
 }
