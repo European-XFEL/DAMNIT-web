@@ -62,7 +62,11 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
     </Text>
   )
 
-  const copyLabel = clipboard.copied ? 'Copied' : 'Copy'
+  const copyLabel = clipboard.error
+    ? 'Copy failed'
+    : clipboard.copied
+      ? 'Copied'
+      : 'Copy'
   const CopyIcon = clipboard.copied ? IconCheck : IconCopy
 
   return (
@@ -86,7 +90,14 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
             variant="subtle"
             color="gray"
             size="sm"
-            onClick={() => clipboard.copy(errorText(error))}
+            onClick={() => {
+              // Mantine 7 keeps a failed copy's error through a later
+              // success; 9.6 clears it, and this reset can go then.
+              if (clipboard.error) {
+                clipboard.reset()
+              }
+              clipboard.copy(errorText(error))
+            }}
           >
             <CopyIcon
               style={{ width: rem(16), height: rem(16) }}
