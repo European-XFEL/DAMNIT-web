@@ -32,7 +32,7 @@ function EntryValue({ entry }: EntryValueProps) {
     return <CellErrorCard error={entry.error} variant="panel" />
   }
   if (entry.state === 'blank') {
-    return null
+    return <DataText muted>No value</DataText>
   }
   // The panel draws no curve, so an array reads No preview however far its
   // value has got.
