@@ -11,7 +11,15 @@ const XGM_ERROR = {
 const LONG_SOURCE =
   'SA2_XTD1_XGM_DOOCS_output_data_intensitySa1TD_pulseEnergy_photonFlux_averaged'
 
+const clipboardDescriptor = Object.getOwnPropertyDescriptor(
+  Navigator.prototype,
+  'clipboard'
+)
+
 afterEach(() => {
+  if (clipboardDescriptor) {
+    Object.defineProperty(Navigator.prototype, 'clipboard', clipboardDescriptor)
+  }
   vi.restoreAllMocks()
 })
 
@@ -31,6 +39,56 @@ test('copying an error puts its class and message on the clipboard', async () =>
   expect(writeText).toHaveBeenCalledWith(
     "ValueError\nCouldn't find an XGM in the run"
   )
+})
+
+test('the copy button says the copy failed when the browser refuses it', async () => {
+  vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
+    new Error('Write permission denied')
+  )
+  const screen = await renderWithProviders(
+    <CellErrorCard error={XGM_ERROR} variant="panel" />
+  )
+
+  await screen.getByRole('button', { name: 'Copy' }).click()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Copy failed' }))
+    .toBeVisible()
+})
+
+test('a copy that works after a failed one says Copied', async () => {
+  vi.spyOn(navigator.clipboard, 'writeText')
+    .mockRejectedValueOnce(new Error('Document is not focused'))
+    .mockResolvedValue(undefined)
+  const screen = await renderWithProviders(
+    <CellErrorCard error={XGM_ERROR} variant="panel" />
+  )
+
+  // The first copy fails
+  await screen.getByRole('button', { name: 'Copy' }).click()
+  await expect
+    .element(screen.getByRole('button', { name: 'Copy failed' }))
+    .toBeVisible()
+
+  // The second one works
+  await screen.getByRole('button', { name: 'Copy failed' }).click()
+  await expect
+    .element(screen.getByRole('button', { name: 'Copied' }))
+    .toBeVisible()
+})
+
+test('the copy button says the copy failed on a page without a clipboard', async () => {
+  // A plain-http origin does not expose navigator.clipboard at all.
+  delete (Navigator.prototype as { clipboard?: Clipboard }).clipboard
+  const screen = await renderWithProviders(
+    <CellErrorCard error={XGM_ERROR} variant="tooltip" />
+  )
+
+  await screen.getByRole('button', { name: 'Copy' }).click()
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Copy failed' }))
+    .toBeVisible()
 })
 
 test('a copied mark does not carry over to the next error', async () => {
