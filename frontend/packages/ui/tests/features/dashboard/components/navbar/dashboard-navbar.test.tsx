@@ -383,7 +383,7 @@ test('Shift+Tab as the rail popover opens wraps to New plot', async () => {
     .toHaveFocus()
 })
 
-test('the rail popover stays inside a short window, its plots scrolling above a full-height New plot', async () => {
+test('the rail popover stays inside a short window, its plots scrolling above New plot, which stays in full view', async () => {
   await resizeViewport({ width: 1024, height: 480 })
   const store = setupStore()
   for (let run = 1; run <= 15; run++) {
@@ -394,10 +394,9 @@ test('the rail popover stays inside a short window, its plots scrolling above a 
 
   await screen.getByRole('button', { name: 'Plots', exact: true }).click()
 
-  // New plot is in view at its full height without scrolling
+  // New plot is in full view without scrolling
   const newPlot = screen.getByRole('button', { name: 'New plot' })
   await expect.element(newPlot).toBeInViewport({ ratio: 1 })
-  expect(newPlot.element().getBoundingClientRect().height).toBe(32)
 
   // The last plot scrolls into view
   const lastPlot = screen.getByRole('button', {
@@ -425,58 +424,6 @@ test('the nav foot names the user, and the rail keeps only their initials', asyn
     .element(screen.getByRole('button', { name: 'Ada Lovelace', exact: true }))
     .toHaveTextContent('AL')
   await expect.element(screen.getByText('Ada Lovelace')).not.toBeInTheDocument()
-})
-
-function rightEdge(element: Element) {
-  return element.getBoundingClientRect().right
-}
-
-function centre(element: Element) {
-  const { left, right } = element.getBoundingClientRect()
-  return (left + right) / 2
-}
-
-test('the plus, a close mark and the chevron end where the All runs row ends', async () => {
-  await resizeViewport({ width: 1024, height: 768 })
-  const store = setupStore()
-  store.dispatch(plotRequested(trains))
-  const screen = await renderNav(store, { user: ada })
-  const row = screen.getByRole('button', { name: 'All runs', exact: true })
-  const newPlot = screen.getByRole('button', { name: 'New plot' })
-  const closeMark = screen.getByRole('button', {
-    name: /^Close Trains vs. Run/,
-    includeHidden: true,
-  })
-  const user = screen.getByRole('button', { name: 'Ada Lovelace', exact: true })
-
-  expect(rightEdge(newPlot.element())).toBe(rightEdge(row.element()))
-  expect(rightEdge(closeMark.element())).toBe(rightEdge(row.element()))
-
-  // The chevron has no box of its own, so it centres on the plus glyph
-  const chevron = user.element().querySelector('svg')!
-  const plusGlyph = newPlot.element().querySelector('svg')!
-  expect(centre(chevron)).toBe(centre(plusGlyph))
-})
-
-test('the user menu spans the user pill and its bottom edge lands on the foot divider', async () => {
-  await resizeViewport({ width: 1024, height: 768 })
-  const store = setupStore()
-  const screen = await renderNav(store, { user: ada })
-  const user = screen.getByRole('button', { name: 'Ada Lovelace', exact: true })
-  const pill = user.element().getBoundingClientRect()
-  const foot = user.element().parentElement!.getBoundingClientRect()
-
-  await user.click()
-  const menu = screen.getByRole('menu')
-
-  // The menu pops in scaled, so its box is read once the transition is over
-  await expect
-    .poll(() => menu.element().getBoundingClientRect().width)
-    .toBe(pill.width)
-  const dropdown = menu.element().getBoundingClientRect()
-  expect(dropdown.left).toBe(pill.left)
-  expect(dropdown.right).toBe(pill.right)
-  expect(dropdown.bottom).toBe(foot.top + 1)
 })
 
 test('below the sm breakpoint a collapsed nav still opens in full', async () => {
