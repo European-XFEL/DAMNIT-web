@@ -71,6 +71,8 @@
   max-height: 300px;
 }
 
+/* `anywhere`, not `break-word`, which looks the same but lets a long value
+   widen the panel's scroll area instead of wrapping. */
 .view {
   display: grid;
   gap: 4px;
