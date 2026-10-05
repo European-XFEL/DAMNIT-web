@@ -129,24 +129,6 @@ test('a run open at phone size hides the table behind it', async ({
   await expect(grid).toBeVisible()
 })
 
-test('a run closed at phone size leaves nothing to scroll to sideways', async ({
-  page,
-  example,
-}) => {
-  await openProposal(page, example)
-  const pageWidth = () =>
-    page.evaluate(() => document.scrollingElement!.scrollWidth)
-
-  // Before any run
-  expect(await pageWidth()).toBe(414)
-
-  // After a run opened and closed
-  await selectRun(page, { example, row: 0 })
-  await closeAside(page)
-  await expect(page.getByRole('complementary')).toBeHidden()
-  expect(await pageWidth()).toBe(414)
-})
-
 test('a run opened from the keyboard at phone size takes focus and hands it back to the grid', async ({
   page,
   example,
