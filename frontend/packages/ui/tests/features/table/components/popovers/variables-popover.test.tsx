@@ -135,6 +135,9 @@ const isLit = (screen: Screen, label: string) =>
 // The ground under a row's marked letters.
 const markIn = (row: Element) => background(row.querySelector('mark')!)
 
+const currentMatch = () =>
+  document.querySelector('[aria-current="true"]')?.textContent
+
 // The letters a search has marked, top to bottom. The popover draws in a
 // portal, so they are read from the whole page.
 const markedLetters = () =>
@@ -442,15 +445,13 @@ test('Enter pressed before the search settles runs it at once, on its first matc
 
 test('the current match, a row or a group heading, is marked current for screen readers', async () => {
   const screen = await openPopover()
-  const current = () =>
-    document.querySelector('[aria-current="true"]')?.textContent
   // The Sample heading, Type, and Scan type
   await search(screen, 'e')
-  expect(current()).toContain('Sample')
+  expect(currentMatch()).toContain('Sample')
 
   await userEvent.keyboard('{Enter}')
-  await expect.poll(current).toContain('Type')
-  expect(current()).not.toContain('Sample')
+  await expect.poll(currentMatch).toContain('Type')
+  expect(currentMatch()).not.toContain('Sample')
 })
 
 test('an open current match shares its lit ground with its tags', async () => {
@@ -544,7 +545,7 @@ test('a drop keeps the current match on the row it moved', async () => {
 
   // Now the second match in list order, and still the current one
   await expect.element(matchCount(screen)).toHaveTextContent('2/3')
-  expect(isLit(screen, 'Scan type')).toBe(true)
+  expect(currentMatch()).toContain('Scan type')
 })
 
 test('a drop keeps a current match that was never stepped to', async () => {
@@ -556,7 +557,7 @@ test('a drop keeps a current match that was never stepped to', async () => {
 
   // Now the second match in list order, and still the current one
   await expect.element(matchCount(screen)).toHaveTextContent('2/3')
-  expect(isLit(screen, 'Trains')).toBe(true)
+  expect(currentMatch()).toContain('Trains')
 })
 
 test('Reset order keeps a current match that was never stepped to', async () => {
