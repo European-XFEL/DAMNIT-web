@@ -101,6 +101,8 @@ test('closing the shown plot returns to the table it was opened from', async ({
   await expect(gridCanvas(page)).toBeVisible()
 })
 
+// Guards our plotly.js fix for font names with a word that starts with a
+// digit (patches/README.md). Drop the fix only once this passes without it.
 test('the camera button downloads the plot as a png', async ({
   page,
   example,

@@ -1,3 +1,6 @@
+// Guards our glide-data-grid fix for verticalBorder after a sideways scroll
+// (patches/README.md). Drop the fix only once this passes without it.
+
 import { type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'

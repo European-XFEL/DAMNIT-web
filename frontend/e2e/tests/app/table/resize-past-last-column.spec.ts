@@ -1,3 +1,6 @@
+// Guards our glide-data-grid fix for a resize past the last column
+// (patches/README.md). Drop the fix only once this passes without it.
+
 import { test, expect } from '#fixtures'
 import {
   COLUMN_WIDTH,
