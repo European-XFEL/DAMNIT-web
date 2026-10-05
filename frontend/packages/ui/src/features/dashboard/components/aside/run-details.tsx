@@ -1,132 +1,220 @@
-import { Image, ScrollArea, Text, rem } from '@mantine/core'
-import { useFragment } from '@apollo/client/react'
+import { useId } from 'react'
+import { Image, ScrollArea, Skeleton, Text, rem } from '@mantine/core'
 
-import { useColumnVisibilityFromVariables } from '#src/features/table/hooks/use-column-visibility'
-import { DTYPES, NONCONFIGURABLE_VARIABLES } from '#src/constants'
-import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
-import {
-  cellsByName,
-  getTitleByName,
-} from '#src/data/table/table-data.transforms'
-import {
-  type Cell,
-  type CellError,
-  type CellValue,
-  type RunCells,
-  type Run,
-  type RunId,
-} from '#src/data/table/table-data.types'
-import { useTableMeta } from '#src/data/table/use-table-meta'
-import { useAppSelector } from '#src/app/store/hooks'
+import CellErrorCard from '#src/components/feedback/cell-error-card'
+import SectionHeading, {
+  mutedC,
+} from '#src/components/headings/section-heading'
+import { DTYPES } from '#src/constants'
+import type { RunId } from '#src/data/table/table-data.types'
 import { FONT_SIZE_DATA } from '#src/styles/fonts'
 import { formatDate } from '#src/utils/helpers'
+import {
+  blockKey,
+  type VariableBlock,
+  type VariableGroupBlock,
+} from '#src/utils/variable-blocks'
 
 import classes from './run-details.module.css'
+import type { RunEntry } from './run-entries'
+import { useRunEntries } from './use-run-entries'
 
-// One line box for the label and either kind of value, so every row keeps the
+// One line box for the title and either kind of value, so every row keeps the
 // same rhythm whatever it holds.
-const SCALAR_LINE = rem(22)
+const LINE_HEIGHT = rem(22)
 
-type ScalarProps = {
-  label: string
-  value: string | number
-  monospace?: boolean
+type EntryValueProps = {
+  entry: RunEntry
 }
 
-function Scalar({ label, value, monospace = false }: ScalarProps) {
+function EntryValue({ entry }: EntryValueProps) {
+  if (entry.state === 'error') {
+    return <CellErrorCard error={entry.error} variant="panel" />
+  }
+  if (entry.state === 'blank') {
+    return <DataText muted>No value</DataText>
+  }
+  // The panel draws no curve, so an array reads No preview however far its
+  // value has got.
+  if (entry.dtype === DTYPES.array1d) {
+    return <DataText muted>No preview</DataText>
+  }
+  if (entry.state === 'loading') {
+    return <Skeleton mt={4} h={12} w={120} radius="sm" />
+  }
+
+  const { value, dtype } = entry
+  switch (dtype) {
+    case DTYPES.image:
+      return (
+        <Image
+          className={classes.image}
+          src={String(value)}
+          alt={entry.title}
+        />
+      )
+    case DTYPES.number:
+      return <MonoValue>{String(value)}</MonoValue>
+    case DTYPES.timestamp:
+      return <MonoValue>{formatDate(Number(value))}</MonoValue>
+    // Any other dtype prints the way the grid's text fallback prints it.
+    default:
+      return <DataText>{String(value)}</DataText>
+  }
+}
+
+type DataTextProps = {
+  children: string
+  muted?: boolean
+}
+
+// Italic when muted, as in the nav's placeholder: the app speaking, not the run.
+function DataText({ children, muted = false }: DataTextProps) {
   return (
-    <div className={classes.scalarItem}>
-      <Text size="xs" lh={SCALAR_LINE} className={classes.scalarLabel}>
-        {label}
-      </Text>
+    <Text
+      fz={FONT_SIZE_DATA}
+      lh={LINE_HEIGHT}
+      fs={muted ? 'italic' : undefined}
+      c={muted ? mutedC : undefined}
+    >
+      {children}
+    </Text>
+  )
+}
+
+type MonoValueProps = {
+  children: string
+}
+
+// A Source Code Pro glyph is a fifth wider than the sans, so mono sits one
+// step under the data size, as in the grid.
+function MonoValue({ children }: MonoValueProps) {
+  return (
+    <Text fz="xs" lh={LINE_HEIGHT} ff="monospace">
+      {children}
+    </Text>
+  )
+}
+
+// An image, or the skeleton standing in for one, needs the panel's width.
+function isStacked(entry: RunEntry) {
+  return (
+    (entry.state === 'value' || entry.state === 'loading') &&
+    entry.dtype === DTYPES.image
+  )
+}
+
+type EntryRowProps = {
+  entry: RunEntry
+}
+
+function EntryRow({ entry }: EntryRowProps) {
+  return (
+    <div className={isStacked(entry) ? classes.stackedRow : classes.row}>
       <Text
-        fz={monospace ? 'xs' : FONT_SIZE_DATA}
-        lh={SCALAR_LINE}
-        className={classes.scalarValue}
-        ff={monospace ? 'monospace' : undefined}
+        component="dt"
+        size="xs"
+        fw={500}
+        lh={LINE_HEIGHT}
+        c={mutedC}
+        className={classes.title}
       >
-        {value}
+        {entry.columnTitle}
       </Text>
+      <dd className={classes.value}>
+        <EntryValue entry={entry} />
+      </dd>
     </div>
   )
 }
 
-type RenderProps = {
-  name: string
-  label: string
-  value: CellValue
+type GroupBlockProps = {
+  block: VariableGroupBlock<RunEntry>
 }
 
-const renderString = ({ name, label, value }: RenderProps) => (
-  <Scalar key={name} label={label} value={value as string} />
-)
+// Members go by their short title, since the heading above says the rest.
+function GroupBlock({ block }: GroupBlockProps) {
+  const headingId = useId()
 
-const renderDate = ({ name, label, value }: RenderProps) => (
-  <Scalar
-    key={name}
-    label={label}
-    value={formatDate(value as number)}
-    monospace
-  />
-)
-
-const renderNumber = ({ name, label, value }: RenderProps) => (
-  <Scalar key={name} label={label} value={value as number} monospace />
-)
-
-const renderImage = ({ name, label, value }: RenderProps) => (
-  <div className={classes.objectItem} key={name}>
-    <Text size="xs" className={classes.objectLabel}>
-      {label}
-    </Text>
-    <Image className={classes.objectValue} fit="contain" src={value} />
-  </div>
-)
-
-const renderUnknown = ({ name, label }: RenderProps) => (
-  <Scalar key={name} label={label} value={'(no preview)'} />
-)
-
-const renderError = ({
-  name,
-  label,
-  error,
-}: {
-  name: string
-  label: string
-  error: CellError
-}) => <Scalar key={name} label={label} value={error.message} />
-
-const renderFactory = {
-  [DTYPES.image]: renderImage,
-  [DTYPES.string]: renderString,
-  [DTYPES.number]: renderNumber,
-  [DTYPES.timestamp]: renderDate,
-  default: renderUnknown,
+  return (
+    <div role="group" aria-labelledby={headingId} className={classes.group}>
+      <SectionHeading id={headingId}>{block.title}</SectionHeading>
+      <dl className={classes.members}>
+        {block.members.map((entry) => (
+          <EntryRow key={entry.name} entry={entry} />
+        ))}
+      </dl>
+    </div>
+  )
 }
 
-// A name the map does not carry has either left the context file since the run
-// was written or is one the user cannot hide; only the second is dropped here.
-function isShown(
-  name: string,
-  visibility: Record<string, boolean | undefined>
-) {
-  return visibility[name] !== false && !NONCONFIGURABLE_VARIABLES.includes(name)
+type ActiveVariableViewProps = {
+  block: VariableBlock<RunEntry>
 }
 
-// Drilling into a cell asks for that one variable by name, so hiding its column
-// does not veto it: visibility is about the grid, and this is not the grid.
-function shownCells(
-  cells: RunCells,
-  activeVariable: string | null,
-  visibility: Record<string, boolean | undefined>
-): [string, Cell][] {
-  if (activeVariable == null) {
-    return [...cells].filter(([name]) => isShown(name, visibility))
+function ActiveVariableView({ block }: ActiveVariableViewProps) {
+  const entry = block.kind === 'group' ? block.members[0] : block
+
+  return (
+    <div className={classes.view}>
+      {block.kind === 'group' && <SectionHeading>{block.title}</SectionHeading>}
+      <dl>
+        <Text component="dt" fz={FONT_SIZE_DATA} fw={500}>
+          {entry.columnTitle}
+        </Text>
+        <dd>
+          <EntryValue entry={entry} />
+        </dd>
+      </dl>
+    </div>
+  )
+}
+
+type Section =
+  | { kind: 'group'; block: VariableGroupBlock<RunEntry> }
+  | { kind: 'entries'; key: string; entries: RunEntry[] }
+
+// A heading may not sit inside a <dl>, so ungrouped entries between groups
+// share a list, keyed by the group above to stay mounted as its rows change.
+function toSections(blocks: VariableBlock<RunEntry>[]): Section[] {
+  const sections: Section[] = []
+  for (const block of blocks) {
+    if (block.kind === 'group') {
+      sections.push({ kind: 'group', block })
+      continue
+    }
+
+    const last = sections.at(-1)
+    if (last?.kind === 'entries') {
+      last.entries.push(block)
+    } else {
+      const key = last ? `entries:after:${blockKey(last.block)}` : 'entries'
+      sections.push({ kind: 'entries', key, entries: [block] })
+    }
   }
+  return sections
+}
 
-  const drilled = cells.get(activeVariable)
-  return drilled ? [[activeVariable, drilled]] : []
+type EntryListProps = {
+  blocks: VariableBlock<RunEntry>[]
+}
+
+function EntryList({ blocks }: EntryListProps) {
+  return (
+    <div className={classes.list}>
+      {toSections(blocks).map((section) =>
+        section.kind === 'group' ? (
+          <GroupBlock key={blockKey(section.block)} block={section.block} />
+        ) : (
+          <dl key={section.key}>
+            {section.entries.map((entry) => (
+              <EntryRow key={entry.name} entry={entry} />
+            ))}
+          </dl>
+        )
+      )}
+    </div>
+  )
 }
 
 type RunDetailsProps = {
@@ -134,50 +222,23 @@ type RunDetailsProps = {
   variable: string | null
 }
 
-function RunDetails({ run: runId, variable }: RunDetailsProps) {
-  const proposal = useAppSelector((state) => state.metadata.proposal.value)
-  const { variables: metadataVariables } = useTableMeta()
-  const columnVisibility = useColumnVisibilityFromVariables()
-
-  // Read the normalized run straight from the cache by its identity trio. The
-  // run id carries (proposal, run); `database` is constant across the table,
-  // so those two complete the key the cache normalizes on.
-  const { data: run, complete } = useFragment<Run>({
-    fragment: RUN_FRAGMENT,
-    from: {
-      __typename: 'DamnitRun',
-      database: proposal,
-      proposal: runId.proposal,
-      run: runId.run,
-    },
-  })
-
-  if (!complete) {
+function RunDetails({ run, variable }: RunDetailsProps) {
+  const blocks = useRunEntries(run, variable)
+  if (blocks == null) {
     return null
   }
 
-  const cells = cellsByName(run.cells ?? [])
-
-  const renderable = shownCells(cells, variable, columnVisibility).filter(
-    ([, cell]) => cell.error != null || cell.summary.value != null
-  )
+  if (blocks.length === 0) {
+    return <DataText muted>No values to show</DataText>
+  }
 
   return (
     <ScrollArea h="100%" offsetScrollbars>
-      {renderable.map(([name, data]) => {
-        const label = getTitleByName(metadataVariables, name)
-        // A cell that failed has nothing worth rendering from its summary.
-        if (data.error) {
-          return renderError({ name, label, error: data.error })
-        }
-        const render =
-          renderFactory[data.summary.dtype] ?? renderFactory.default
-        return render({
-          name,
-          label,
-          value: data.summary.value as CellValue,
-        })
-      })}
+      {variable != null ? (
+        <ActiveVariableView block={blocks[0]} />
+      ) : (
+        <EntryList blocks={blocks} />
+      )}
     </ScrollArea>
   )
 }

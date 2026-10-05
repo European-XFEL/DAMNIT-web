@@ -1,15 +1,25 @@
 import { test, expect } from '#fixtures'
+import {
+  ERROR_CELLS,
+  ERROR_ROW,
+  SAMPLE_GROUP,
+  xpcsWithErrors,
+  xpcsWithGroups,
+} from '#examples/xpcs'
 import { gridBox, gridCanvas, headerPoint } from '#support/grid'
 import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
 import {
   activateCell,
   closeAside,
   hasGroups,
+  openPopover,
   openProposal,
   highlightedRow,
+  rowCheckbox,
   selectRun,
   selectedColumnHeaders,
   selectedRunTab,
+  titleOf,
 } from '#support/table'
 
 test('selecting a run shows all its variables', async ({ page, example }) => {
@@ -26,6 +36,69 @@ test('selecting a run shows all its variables', async ({ page, example }) => {
   await expect(panel.getByText('XGM intensity [uJ]')).toBeVisible()
   // The four XPCS variables render as image thumbnails in the panel.
   await expect(panel.locator('img')).toHaveCount(4)
+})
+
+test('a column the tag filter hides leaves the run panel too', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await openPopover(page, 'Tags')
+  await rowCheckbox(page, 'Beam properties').check()
+
+  await selectRun(page, { example, row: 0 })
+
+  const panel = page.getByRole('complementary')
+  await expect(panel.getByText('XGM intensity [uJ]')).toBeVisible()
+  await expect(panel.getByText('Trains', { exact: true })).toHaveCount(0)
+})
+
+test.describe('failed cells', () => {
+  test.use({ example: xpcsWithErrors })
+
+  // The grid's glyph and tooltip already mark a failure, so the run's list
+  // keeps to the values it has.
+  test('selecting a run leaves out the variables that failed for it', async ({
+    page,
+    example,
+  }) => {
+    await openProposal(page, example)
+
+    await selectRun(page, { example, row: ERROR_ROW })
+
+    const panel = page.getByRole('complementary')
+    await expect(
+      panel.getByText(titleOf(example, 'sample_type'), { exact: true })
+    ).toBeVisible()
+    for (const failed of ERROR_CELLS) {
+      await expect(
+        panel.getByText(titleOf(example, failed.variable), { exact: true })
+      ).toHaveCount(0)
+    }
+  })
+})
+
+test.describe('grouped variables', () => {
+  test.use({ example: xpcsWithGroups })
+
+  test("selecting a run lists a group's variables under its heading", async ({
+    page,
+    example,
+  }) => {
+    await openProposal(page, example)
+
+    await selectRun(page, { example, row: 0 })
+
+    const panel = page.getByRole('complementary')
+    const { title } = SAMPLE_GROUP
+    const group = panel.getByRole('group', { name: title })
+    // Under the heading, a member goes by its short title.
+    await expect(group.getByText('Type', { exact: true })).toBeVisible()
+    await expect(group.getByText('silica')).toBeVisible()
+    await expect(group.getByText(titleOf(example, 'sample.type'))).toHaveCount(
+      0
+    )
+  })
 })
 
 test('selecting another run replaces the selection', async ({
