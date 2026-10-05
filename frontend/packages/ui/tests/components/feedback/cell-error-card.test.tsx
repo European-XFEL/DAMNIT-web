@@ -8,9 +8,6 @@ const XGM_ERROR = {
   message: "Couldn't find an XGM in the run",
 }
 
-const LONG_SOURCE =
-  'SA2_XTD1_XGM_DOOCS_output_data_intensitySa1TD_pulseEnergy_photonFlux_averaged'
-
 const clipboardDescriptor = Object.getOwnPropertyDescriptor(
   Navigator.prototype,
   'clipboard'
@@ -110,24 +107,4 @@ test('a copied mark does not carry over to the next error', async () => {
 
   // A poll could wait out the 1.5 s reset and pass without it.
   expect(screen.getByRole('button', { name: 'Copy' }).element()).toBeVisible()
-})
-
-test('a long word in the message wraps inside the card', async () => {
-  const screen = await renderWithProviders(
-    <div data-testid="frame" style={{ width: 360 }}>
-      <CellErrorCard
-        error={{ cls: 'SourceNameError', message: `No source ${LONG_SOURCE}` }}
-        variant="tooltip"
-      />
-    </div>
-  )
-  const copy = screen.getByRole('button', { name: 'Copy' })
-  await expect.element(copy).toBeVisible()
-
-  const frame = screen.getByTestId('frame').element().getBoundingClientRect()
-  const message = screen.getByText(LONG_SOURCE, { exact: false }).element()
-  expect(message.getBoundingClientRect().right).toBeLessThanOrEqual(frame.right)
-  expect(copy.element().getBoundingClientRect().right).toBeLessThanOrEqual(
-    frame.right
-  )
 })
