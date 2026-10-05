@@ -292,6 +292,24 @@ test('a number prints at full precision', async () => {
     .toBeVisible()
 })
 
+// Set in local time, since the panel prints in the machine's timezone.
+test('a timestamp prints as a date', async () => {
+  const screen = await openRun({
+    cells: [
+      ...RUN_6,
+      {
+        name: 'start_time',
+        value: new Date(2025, 5, 3, 9, 41, 7).getTime(),
+        dtype: 'timestamp',
+      },
+    ],
+  })
+
+  await expect
+    .element(screen.getByText('09:41:07 | 03 June 2025', { exact: true }))
+    .toBeVisible()
+})
+
 async function loadedImage(screen: Screen, name: string) {
   const image = screen.getByRole('img', { name })
   await expect.element(image).toBeVisible()
@@ -362,6 +380,18 @@ test('an array that has arrived reads No preview too', async () => {
   })
 
   await expect.element(screen.getByText('No preview')).toBeVisible()
+})
+
+test('a thumbnail is named for its variable', async () => {
+  const pixel =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+  const screen = await openRun({
+    cells: [...RUN_6, { name: 'azimuthal', value: pixel, dtype: 'image' }],
+  })
+
+  await expect
+    .element(screen.getByRole('img', { name: 'Azimuthal average' }))
+    .toBeVisible()
 })
 
 test('a thumbnail still loading keeps its title in the list', async () => {
