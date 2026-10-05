@@ -49,8 +49,9 @@ the width of a scrollbar (`data-editor.tsx`, `idealWidth`), whether or not one i
 drawn, leaving a strip of dead space beside the last column. Headless Chromium
 hides scrollbars, which makes that width zero and the strip disappear, so
 `e2e/tests/app/table/resize-past-last-column.spec.ts` turns them back on with
-`ignoreDefaultArgs: ['--hide-scrollbars']`. Without that the spec passes with the
-patch reverted.
+`ignoreDefaultArgs: ['--hide-scrollbars']`. Without that the press misses the
+grid, whether or not the patch is there: the drag test fails and the click test
+passes.
 
 Still present on upstream `main`, and not yet reported there.
 
@@ -75,7 +76,9 @@ offset already taken off. Four sites disagree once the grid scrolls sideways:
 
 A predicate that only names sticky columns never shows either, since sticky
 columns keep their position. Covered by
-`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`.
+`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`, which samples the cells
+only. Before dropping the patch, scroll a grouped table sideways and check
+that the pinned edge stays in the group band.
 
 Still present on upstream `main`, and not yet reported there.
 
@@ -99,5 +102,5 @@ escaped as `&#34;`.
 The exported image still draws its text in a system font, because an SVG
 drawn as an image cannot load the page's web fonts.
 
-Still present on upstream `master`, and not yet reported there. Covered by
-`e2e/tests/app/plots/summary-plot.spec.ts`.
+Still present on upstream `master`, and not yet reported there. Covered by the
+camera button test in `e2e/tests/app/plots/summary-plot.spec.ts`.
