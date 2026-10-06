@@ -12,6 +12,8 @@ import {
   gridBox,
   gridCanvas,
   gridScroller,
+  groupHeaderPoint,
+  headerCanvas,
   lineStrength,
   type Box,
   type Point,
@@ -28,8 +30,8 @@ import {
 // part from the source columns, and it puts Pulses, not an edge, at the freeze.
 const SCROLL = COLUMN_WIDTH
 
-// An edge line is gray.3, 33 levels under the white beside it; an inner line
-// is 7, and no line at all is 0. Only an edge clears this.
+// An edge line is 33 levels under the white cells, 26 under the group band;
+// an inner line is 7, and no line is 0. Only an edge clears this.
 const MIN_EDGE_STRENGTH = 18
 
 const SAMPLE_COLUMN = columnOf(xpcsWithGroups, 'sample.type')
@@ -95,6 +97,9 @@ test('the pinned edge stays drawn while the grid scrolls horizontally', async ({
     grouped: hasGroups(example),
   })
   await expectEdgeAt(gridCanvas(page), pinnedEdge)
+
+  const inGroupBand = { ...pinnedEdge, y: groupHeaderPoint(box, 2).y }
+  await expectEdgeAt(headerCanvas(page), inGroupBand)
 })
 
 test('a group edge stays on its column when a scrolled grid redraws', async ({

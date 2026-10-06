@@ -75,9 +75,9 @@ horizontally:
 
 A predicate that only names sticky columns never shows either, since sticky
 columns keep their position. Covered by
-`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`, which samples the cells
-only. Before dropping the patch, scroll a grouped table horizontally and check
-that the pinned edge stays in the group band.
+`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`, apart from
+`drawExtraRowThemes`, which the table never reaches: no column sets its own
+`bgCell`.
 
 Still present on upstream `main`, and not yet reported there.
 

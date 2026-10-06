@@ -195,6 +195,12 @@ export function gridCanvas(page: Page): Locator {
   return page.getByTestId('data-grid-canvas')
 }
 
+// Glide paints the header rows, group band included, on a second canvas laid
+// over the first, which has no test id of its own.
+export function headerCanvas(page: Page): Locator {
+  return gridCanvas(page).locator('xpath=following-sibling::canvas')
+}
+
 // How far the canvas pixel at `point` sits under the one to its right, on the
 // red channel: how strong a vertical line is there. Glide's scroll shadow is
 // not on the canvas, so it never counts.
