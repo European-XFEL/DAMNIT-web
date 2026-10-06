@@ -11,8 +11,8 @@ import {
 } from '#support/grid'
 import { openProposal } from '#support/table'
 
-// Small enough that the example's columns overflow sideways and its rows
-// overflow downwards, so the grid has both scrollbars and somewhere to scroll.
+// Small enough that the example's columns overflow horizontally and its rows
+// overflow vertically, so the grid has both scrollbars and somewhere to scroll.
 test.use({ viewport: { width: 900, height: 400 }, ...REAL_SCROLLBARS })
 
 // Glide autoscrolls a drag that strays outside the grid, and speeds up the

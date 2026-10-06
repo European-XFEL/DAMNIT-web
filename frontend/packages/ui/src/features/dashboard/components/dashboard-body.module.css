@@ -5,7 +5,7 @@
   min-height: 0;
 
   /* The closed run waits off screen to the right. Clipping keeps it from
-     widening the page, which focus would otherwise scroll sideways. */
+     widening the page, which focus would otherwise scroll horizontally. */
   @mixin smaller-than $mantine-breakpoint-sm {
     overflow: clip;
   }

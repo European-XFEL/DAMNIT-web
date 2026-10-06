@@ -254,19 +254,19 @@ export async function scrollbarThumb(page: Page, axis: Axis): Promise<Point> {
 
 function readTrack(scroller: Locator, axis: Axis) {
   return scroller.evaluate((element: HTMLElement, along: Axis) => {
-    const sideways = along === 'horizontal'
+    const horizontal = along === 'horizontal'
     const { x, y, width, height } = element.getBoundingClientRect()
     return {
       x,
       y,
       width,
       height,
-      thickness: sideways
+      thickness: horizontal
         ? element.offsetHeight - element.clientHeight
         : element.offsetWidth - element.clientWidth,
-      client: sideways ? element.clientWidth : element.clientHeight,
-      scroll: sideways ? element.scrollWidth : element.scrollHeight,
-      offset: sideways ? element.scrollLeft : element.scrollTop,
+      client: horizontal ? element.clientWidth : element.clientHeight,
+      scroll: horizontal ? element.scrollWidth : element.scrollHeight,
+      offset: horizontal ? element.scrollLeft : element.scrollTop,
     }
   }, axis)
 }

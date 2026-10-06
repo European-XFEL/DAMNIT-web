@@ -59,7 +59,8 @@ Still present on upstream `main`, and not yet reported there.
 
 `verticalBorder` is documented as the left-hand border of column `col`, and
 `DataEditor` hands the consumer's function a source column, with the row-marker
-offset already taken off. Four sites disagree once the grid scrolls sideways:
+offset already taken off. Four sites disagree once the grid scrolls
+horizontally:
 
 - `drawGridLines` and `drawExtraRowThemes` in
   `internal/data-grid/render/data-grid-render.lines.js` pass `index + 1`, a
@@ -77,7 +78,7 @@ offset already taken off. Four sites disagree once the grid scrolls sideways:
 A predicate that only names sticky columns never shows either, since sticky
 columns keep their position. Covered by
 `e2e/tests/app/table/grid-lines-after-scroll.spec.ts`, which samples the cells
-only. Before dropping the patch, scroll a grouped table sideways and check
+only. Before dropping the patch, scroll a grouped table horizontally and check
 that the pinned edge stays in the group band.
 
 Still present on upstream `main`, and not yet reported there.

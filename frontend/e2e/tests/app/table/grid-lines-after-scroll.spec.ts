@@ -1,4 +1,4 @@
-// Guards our glide-data-grid fix for verticalBorder after a sideways scroll
+// Guards our glide-data-grid fix for verticalBorder after a horizontal scroll
 // (patches/README.md). Drop the fix only once this passes without it.
 
 import { type Page } from '@playwright/test'
@@ -30,15 +30,15 @@ const SAMPLE_COLUMN = columnOf(xpcsWithGroups, 'sample.type')
 
 test.use({ example: xpcsWithGroups })
 
-async function scrollSideways(page: Page) {
+async function scrollHorizontally(page: Page) {
   await expect.poll(() => canScroll(page, 'horizontal')).toBe(true)
   await gridScroller(page).evaluate((scroller: HTMLElement, left: number) => {
     scroller.scrollLeft = left
   }, SCROLL)
 }
 
-// A scroll shifts the old frame sideways and draws only the new strip, which
-// carries old lines along. A resize makes Glide draw the whole frame again.
+// A scroll shifts the old frame and draws only the new strip, which carries
+// old lines along. A resize makes Glide draw the whole frame again.
 async function redrawInFull(page: Page) {
   const size = page.viewportSize()
   if (!size) {
@@ -65,13 +65,13 @@ function leftLinePoint(
   return { x: cell.x - COLUMN_WIDTH / 2, y: cell.y }
 }
 
-test('the pinned edge stays drawn while the grid scrolls sideways', async ({
+test('the pinned edge stays drawn while the grid scrolls horizontally', async ({
   page,
   example,
 }) => {
   await openProposal(page, example)
   const box = await gridBox(page)
-  await scrollSideways(page)
+  await scrollHorizontally(page)
 
   // Run is the one pinned column, so the edge is on the left of column 2.
   const pinnedEdge = leftLinePoint(box, {
@@ -89,7 +89,7 @@ test('a group edge stays on its column when a scrolled grid redraws', async ({
 }) => {
   await openProposal(page, example)
   const box = await gridBox(page)
-  await scrollSideways(page)
+  await scrollHorizontally(page)
   await redrawInFull(page)
 
   const groupStart = leftLinePoint(box, {
