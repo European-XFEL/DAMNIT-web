@@ -16,7 +16,13 @@ import {
   type Box,
   type Point,
 } from '#support/grid'
-import { columnOf, hasGroups, openProposal } from '#support/table'
+import {
+  columnOf,
+  columnTitles,
+  expectLeadingColumns,
+  hasGroups,
+  openProposal,
+} from '#support/table'
 
 // Glide scrolls in whole columns. One is enough for its visible positions to
 // part from the source columns, and it puts Pulses, not an edge, at the freeze.
@@ -32,9 +38,13 @@ test.use({ example: xpcsWithGroups })
 
 async function scrollHorizontally(page: Page) {
   await expect.poll(() => canScroll(page, 'horizontal')).toBe(true)
+  const [pinned, , next] = await columnTitles(page)
   await gridScroller(page).evaluate((scroller: HTMLElement, left: number) => {
     scroller.scrollLeft = left
   }, SCROLL)
+  // Glide draws the scroll before its mirror follows it, so until the mirror
+  // has dropped the scrolled-out column a canvas read may see the old frame.
+  await expectLeadingColumns(page, [pinned, next])
 }
 
 // A scroll shifts the old frame and draws only the new strip, which carries
