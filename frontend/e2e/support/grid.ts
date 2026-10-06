@@ -198,13 +198,16 @@ export function gridCanvas(page: Page): Locator {
 // How far the canvas pixel at `point` sits under the one to its right, on the
 // red channel: how strong a vertical line is there. Glide's scroll shadow is
 // not on the canvas, so it never counts.
-export async function lineStrength(page: Page, point: Point): Promise<number> {
-  return gridCanvas(page).evaluate((canvas: HTMLCanvasElement, { x, y }) => {
-    const rect = canvas.getBoundingClientRect()
-    const scale = canvas.width / rect.width
-    const context = canvas.getContext('2d')
+export async function lineStrength(
+  canvas: Locator,
+  point: Point
+): Promise<number> {
+  return canvas.evaluate((element: HTMLCanvasElement, { x, y }) => {
+    const rect = element.getBoundingClientRect()
+    const scale = element.width / rect.width
+    const context = element.getContext('2d')
     if (!context) {
-      throw new Error('the grid canvas has no 2d context')
+      throw new Error('the canvas has no 2d context')
     }
     const [here, right] = [x, x + 1].map(
       (px) =>

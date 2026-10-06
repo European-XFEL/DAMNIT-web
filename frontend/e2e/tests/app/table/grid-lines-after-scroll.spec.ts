@@ -1,7 +1,7 @@
 // Guards our glide-data-grid fix for verticalBorder after a horizontal scroll
 // (patches/README.md). Drop the fix only once this passes without it.
 
-import { type Page } from '@playwright/test'
+import { type Locator, type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
 import { xpcsWithGroups } from '#examples/xpcs'
@@ -75,6 +75,12 @@ function leftLinePoint(
   return { x: cell.x - COLUMN_WIDTH / 2, y: cell.y }
 }
 
+async function expectEdgeAt(canvas: Locator, point: Point) {
+  await expect
+    .poll(() => lineStrength(canvas, point))
+    .toBeGreaterThan(MIN_EDGE_STRENGTH)
+}
+
 test('the pinned edge stays drawn while the grid scrolls horizontally', async ({
   page,
   example,
@@ -88,9 +94,7 @@ test('the pinned edge stays drawn while the grid scrolls horizontally', async ({
     col: 2,
     grouped: hasGroups(example),
   })
-  await expect
-    .poll(() => lineStrength(page, pinnedEdge))
-    .toBeGreaterThan(MIN_EDGE_STRENGTH)
+  await expectEdgeAt(gridCanvas(page), pinnedEdge)
 })
 
 test('a group edge stays on its column when a scrolled grid redraws', async ({
@@ -107,7 +111,5 @@ test('a group edge stays on its column when a scrolled grid redraws', async ({
     grouped: hasGroups(example),
   })
   const groupEdge = { ...groupStart, x: groupStart.x - SCROLL }
-  await expect
-    .poll(() => lineStrength(page, groupEdge))
-    .toBeGreaterThan(MIN_EDGE_STRENGTH)
+  await expectEdgeAt(gridCanvas(page), groupEdge)
 })
