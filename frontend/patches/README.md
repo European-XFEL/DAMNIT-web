@@ -49,9 +49,7 @@ the width of a scrollbar (`data-editor.tsx`, `idealWidth`), whether or not one i
 drawn, leaving a strip of dead space beside the last column. Headless Chromium
 hides scrollbars, which makes that width zero and the strip disappear, so
 `e2e/tests/app/table/resize-past-last-column.spec.ts` turns them back on with
-`ignoreDefaultArgs: ['--hide-scrollbars']`. Without that the press misses the
-grid, whether or not the patch is there: the drag test fails and the click test
-passes.
+`ignoreDefaultArgs: ['--hide-scrollbars']`.
 
 Still present on upstream `main`, and not yet reported there.
 
