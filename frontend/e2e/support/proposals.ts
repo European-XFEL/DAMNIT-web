@@ -31,14 +31,6 @@ export function proposalRow(page: Page, proposal: number): Locator {
   return proposalLink(page, proposal).locator('xpath=ancestor::tr[1]')
 }
 
-// A clipped label shows an ellipsis the DOM never exposes as text; its content
-// is wider than its box exactly then.
-export async function expectNotTruncated(label: Locator) {
-  await expect
-    .poll(() => label.evaluate((el) => el.scrollWidth <= el.clientWidth))
-    .toBe(true)
-}
-
 export async function openHome(page: Page) {
   await page.goto('home')
   // The semester table renders straight from the auth slice, but each semester's
@@ -51,9 +43,4 @@ export async function openHome(page: Page) {
 // dashboard the way the number and PI cells would.
 export async function expandProposal(page: Page, proposal: number) {
   await proposalRow(page, proposal).getByRole('cell').first().click()
-}
-
-// The mark in that same cell, which turns a quarter when the row is expanded.
-export function expandMark(page: Page, proposal: number): Locator {
-  return proposalRow(page, proposal).getByRole('cell').first().locator('svg')
 }

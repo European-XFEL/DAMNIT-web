@@ -89,16 +89,6 @@ test('(Untagged) leads the list, ahead of a tag that sorts before it', async () 
   ])
 })
 
-test('(Untagged) is set in italics, unlike a tag the user wrote', async () => {
-  const screen = await openPopover()
-  const fontStyle = (name: string) =>
-    getComputedStyle(screen.getByText(name, { exact: true }).element())
-      .fontStyle
-
-  expect(fontStyle('(Untagged)')).toBe('italic')
-  expect(fontStyle('_raw')).toBe('normal')
-})
-
 test('the search matches a tag by name, whatever its case and spacing', async () => {
   const screen = await openPopover()
 

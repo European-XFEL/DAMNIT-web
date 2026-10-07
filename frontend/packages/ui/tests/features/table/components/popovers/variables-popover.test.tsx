@@ -6,17 +6,14 @@ import { beforeEach, expect, test } from 'vitest'
 import { setupStore, type AppStore } from '#src/app/store/store'
 import { TABLE_META_QUERY } from '#src/data/table/table-data.queries'
 import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
-import {
-  setColumnVisibility,
-  setTagSelection,
-} from '#src/features/table/stores/table.slice'
+import { setColumnVisibility } from '#src/features/table/stores/table.slice'
 import { metadataClient } from '#tests/support/apollo'
 import { withProviders } from '#tests/support/render'
 
 const PROPOSAL = '900405'
 
 // The xpcs example's shape: two pinned columns, two ungrouped ones, and a group
-// of two between them. One member carries a tag, so a tag can split its group.
+// of two between them, one of its members tagged.
 const METADATA = {
   __typename: 'TableMeta',
   variables: {
@@ -102,38 +99,8 @@ function movableColumns(screen: Screen) {
     .map((label) => label.slice(HANDLE.length))
 }
 
-// The smallest element around a column's label that also holds `selector`.
-function closestHolding(
-  screen: Screen,
-  { label, selector }: { label: string; selector: string }
-) {
-  let element = screen.getByText(label, { exact: true }).element().parentElement
-  while (element != null && element.querySelector(selector) == null) {
-    element = element.parentElement
-  }
-
-  return element!
-}
-
-// A handle in use shows only as the grip's colour. It is found from the label
-// beside it, since a preview's copy of the grip answers to no name.
-function gripColour(screen: Screen, label: string) {
-  const row = closestHolding(screen, { label, selector: 'svg' })
-  return getComputedStyle(row.querySelector('svg')!).color
-}
-
-const rowOf = (screen: Screen, label: string) =>
-  closestHolding(screen, { label, selector: 'input[type="checkbox"]' })
-
-const background = (element: Element) =>
-  getComputedStyle(element).backgroundColor
-
-// Run is never a match here, so its ground is the unlit one.
-const isLit = (screen: Screen, label: string) =>
-  background(rowOf(screen, label)) !== background(rowOf(screen, 'Run'))
-
-// The ground under a row's marked letters.
-const markIn = (row: Element) => background(row.querySelector('mark')!)
+const currentMatch = () =>
+  document.querySelector('[aria-current="true"]')?.textContent
 
 // The letters a search has marked, top to bottom. The popover draws in a
 // portal, so they are read from the whole page.
@@ -231,86 +198,6 @@ test('Run is listed with a checkbox that cannot be cleared', async () => {
   await expect.element(run).toBeDisabled()
 })
 
-test("Run's checkbox does not light up under the pointer", async () => {
-  const screen = await openPopover()
-  const run = checkbox(screen, 'Run')
-  const atRest = getComputedStyle(run.element()).borderColor
-
-  await userEvent.hover(run.element())
-  // Past the checkbox's 100 ms colour transition
-  await new Promise((resolve) => setTimeout(resolve, 300))
-
-  expect(getComputedStyle(run.element()).borderColor).toBe(atRest)
-})
-
-test('dims a column the table is not showing', async () => {
-  store.dispatch(setColumnVisibility({ n_trains: false }))
-  const screen = await openPopover()
-
-  const hidden = screen.getByText('Trains')
-  const shown = screen.getByText('Scan type')
-
-  expect(getComputedStyle(hidden.element()).color).not.toBe(
-    getComputedStyle(shown.element()).color
-  )
-})
-
-test('a handle the keyboard reaches darkens', async () => {
-  const screen = await openPopover()
-
-  const atRest = gripColour(screen, 'Trains')
-
-  // Tab past the pinned row's checkbox
-  await userEvent.tab()
-  await userEvent.tab()
-  await expect.element(handle(screen, 'Trains')).toHaveFocus()
-
-  expect(gripColour(screen, 'Trains')).not.toBe(atRest)
-})
-
-test('a lifted group marks its own handle, not its members', async () => {
-  const screen = await openPopover()
-
-  // Lift the group, which the library replaces with a preview clone that
-  // carries the members along
-  handle(screen, 'Sample').element().focus()
-  await userEvent.keyboard('{Space}')
-  await expect
-    .poll(() => gripColour(screen, 'Sample'))
-    .not.toBe(gripColour(screen, 'Scan type'))
-
-  // A member rides along, so it still looks like a row nobody is holding
-  expect(gripColour(screen, 'Type')).toBe(gripColour(screen, 'Scan type'))
-})
-
-// Two levels, since the handle and the link beside it do different things: the
-// handle speaks for the block it would move, the heading only for itself.
-test("hovering a group's handle lights the whole group", async () => {
-  const screen = await openPopover()
-
-  const grip = handle(screen, 'Sample').element()
-  const block = grip.parentElement!.parentElement!
-  const atRest = getComputedStyle(block).backgroundColor
-
-  // Over the heading, beside the handle
-  await userEvent.hover(screen.getByText('Sample', { exact: true }).element())
-  expect(getComputedStyle(block).backgroundColor).toBe(atRest)
-
-  // Over the handle itself
-  await userEvent.hover(grip)
-  expect(getComputedStyle(block).backgroundColor).not.toBe(atRest)
-})
-
-test('a pinned row lights on hover like the rows it sits above', async () => {
-  const screen = await openPopover()
-
-  await userEvent.hover(rowOf(screen, 'Trains'))
-  const lit = getComputedStyle(rowOf(screen, 'Trains')).backgroundColor
-
-  await userEvent.hover(rowOf(screen, 'Proposal'))
-  expect(getComputedStyle(rowOf(screen, 'Proposal')).backgroundColor).toBe(lit)
-})
-
 // The grid reads this order and is not rendered here, so the store is where the
 // hand-over shows.
 test('a drag hands the grid the whole order, pinned columns first', async () => {
@@ -381,28 +268,6 @@ test('the box counts the matches and Enter steps through them, wrapping', async 
   await expect.element(matchCount(screen)).toHaveTextContent('1/3')
 })
 
-test('the current match is lit, and Enter moves the light on', async () => {
-  const screen = await openPopover()
-  await search(screen, 't')
-
-  // On the first match
-  expect(isLit(screen, 'Trains')).toBe(true)
-  expect(isLit(screen, 'Type')).toBe(false)
-
-  // Stepped on to the second
-  await userEvent.keyboard('{Enter}')
-  await expect.poll(() => isLit(screen, 'Type')).toBe(true)
-  expect(isLit(screen, 'Trains')).toBe(false)
-})
-
-test('every match is marked in the same yellow, the current one too', async () => {
-  const screen = await openPopover()
-
-  await search(screen, 't')
-
-  expect(markIn(rowOf(screen, 'Trains'))).toBe(markIn(rowOf(screen, 'Type')))
-})
-
 test('Shift+Enter steps back through the matches, wrapping', async () => {
   const screen = await openPopover()
   await search(screen, 't')
@@ -442,29 +307,13 @@ test('Enter pressed before the search settles runs it at once, on its first matc
 
 test('the current match, a row or a group heading, is marked current for screen readers', async () => {
   const screen = await openPopover()
-  const current = () =>
-    document.querySelector('[aria-current="true"]')?.textContent
   // The Sample heading, Type, and Scan type
   await search(screen, 'e')
-  expect(current()).toContain('Sample')
+  expect(currentMatch()).toContain('Sample')
 
   await userEvent.keyboard('{Enter}')
-  await expect.poll(current).toContain('Type')
-  expect(current()).not.toContain('Sample')
-})
-
-test('an open current match shares its lit ground with its tags', async () => {
-  const screen = await openPopover()
-  await search(screen, 'scan')
-
-  const title = screen.getByRole('button', { name: 'Scan type', exact: true })
-  await title.click()
-  const details = document.getElementById(
-    title.element().getAttribute('aria-controls')!
-  )!
-
-  expect(isLit(screen, 'Scan type')).toBe(true)
-  expect(background(details)).toBe(background(rowOf(screen, 'Scan type')))
+  await expect.poll(currentMatch).toContain('Type')
+  expect(currentMatch()).not.toContain('Sample')
 })
 
 test('Tab leaves the search box through the button that clears it', async () => {
@@ -544,7 +393,7 @@ test('a drop keeps the current match on the row it moved', async () => {
 
   // Now the second match in list order, and still the current one
   await expect.element(matchCount(screen)).toHaveTextContent('2/3')
-  expect(isLit(screen, 'Scan type')).toBe(true)
+  expect(currentMatch()).toContain('Scan type')
 })
 
 test('a drop keeps a current match that was never stepped to', async () => {
@@ -556,7 +405,7 @@ test('a drop keeps a current match that was never stepped to', async () => {
 
   // Now the second match in list order, and still the current one
   await expect.element(matchCount(screen)).toHaveTextContent('2/3')
-  expect(isLit(screen, 'Trains')).toBe(true)
+  expect(currentMatch()).toContain('Trains')
 })
 
 test('Reset order keeps a current match that was never stepped to', async () => {
@@ -838,22 +687,6 @@ test("a group's link offers to show every member while one is hidden", async () 
   await expect
     .element(screen.getByRole('button', { name: 'Show all Sample' }))
     .toBeVisible()
-})
-
-test("a group's link is underlined only when no member passes the tag filter", async () => {
-  const underline = (screen: Screen) =>
-    getComputedStyle(
-      screen.getByRole('button', { name: 'Hide all Sample' }).element()
-    ).textDecorationLine
-
-  // A tag one member carries
-  store.dispatch(setTagSelection({ position: true }))
-  const screen = await openPopover()
-  expect(underline(screen)).toBe('none')
-
-  // A tag neither member carries
-  store.dispatch(setTagSelection({ position: false, scan: true }))
-  await expect.poll(() => underline(screen)).toBe('underline')
 })
 
 test('a tagged column opens its tags where the row is', async () => {

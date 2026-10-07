@@ -78,6 +78,8 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
       : 'Copy'
   const CopyIcon = clipboard.copied ? IconCheck : IconCopy
 
+  // `anywhere`, not `break-word`, which looks the same but lets a long word in
+  // the message push the card and its Copy button past their box.
   return (
     <Box c={palette.message} style={{ overflowWrap: 'anywhere' }}>
       <Group justify="space-between" gap="md" wrap="nowrap" mb={4}>
