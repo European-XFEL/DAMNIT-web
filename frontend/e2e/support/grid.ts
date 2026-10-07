@@ -195,16 +195,25 @@ export function gridCanvas(page: Page): Locator {
   return page.getByTestId('data-grid-canvas')
 }
 
+// Glide paints the header rows, group band included, on a second canvas laid
+// over the first, which has no test id of its own.
+export function headerCanvas(page: Page): Locator {
+  return gridCanvas(page).locator('xpath=following-sibling::canvas')
+}
+
 // How far the canvas pixel at `point` sits under the one to its right, on the
 // red channel: how strong a vertical line is there. Glide's scroll shadow is
 // not on the canvas, so it never counts.
-export async function lineStrength(page: Page, point: Point): Promise<number> {
-  return gridCanvas(page).evaluate((canvas: HTMLCanvasElement, { x, y }) => {
-    const rect = canvas.getBoundingClientRect()
-    const scale = canvas.width / rect.width
-    const context = canvas.getContext('2d')
+export async function lineStrength(
+  canvas: Locator,
+  point: Point
+): Promise<number> {
+  return canvas.evaluate((element: HTMLCanvasElement, { x, y }) => {
+    const rect = element.getBoundingClientRect()
+    const scale = element.width / rect.width
+    const context = element.getContext('2d')
     if (!context) {
-      throw new Error('the grid canvas has no 2d context')
+      throw new Error('the canvas has no 2d context')
     }
     const [here, right] = [x, x + 1].map(
       (px) =>
@@ -254,19 +263,19 @@ export async function scrollbarThumb(page: Page, axis: Axis): Promise<Point> {
 
 function readTrack(scroller: Locator, axis: Axis) {
   return scroller.evaluate((element: HTMLElement, along: Axis) => {
-    const sideways = along === 'horizontal'
+    const horizontal = along === 'horizontal'
     const { x, y, width, height } = element.getBoundingClientRect()
     return {
       x,
       y,
       width,
       height,
-      thickness: sideways
+      thickness: horizontal
         ? element.offsetHeight - element.clientHeight
         : element.offsetWidth - element.clientWidth,
-      client: sideways ? element.clientWidth : element.clientHeight,
-      scroll: sideways ? element.scrollWidth : element.scrollHeight,
-      offset: sideways ? element.scrollLeft : element.scrollTop,
+      client: horizontal ? element.clientWidth : element.clientHeight,
+      scroll: horizontal ? element.scrollWidth : element.scrollHeight,
+      offset: horizontal ? element.scrollLeft : element.scrollTop,
     }
   }, axis)
 }

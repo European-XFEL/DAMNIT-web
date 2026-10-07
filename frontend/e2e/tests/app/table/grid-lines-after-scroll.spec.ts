@@ -1,4 +1,7 @@
-import { type Page } from '@playwright/test'
+// Guards our glide-data-grid fix for verticalBorder after a horizontal scroll
+// (patches/README.md). Drop the fix only once this passes without it.
+
+import { type Locator, type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
 import { xpcsWithGroups } from '#examples/xpcs'
@@ -9,33 +12,45 @@ import {
   gridBox,
   gridCanvas,
   gridScroller,
+  groupHeaderPoint,
+  headerCanvas,
   lineStrength,
   type Box,
   type Point,
 } from '#support/grid'
-import { columnOf, hasGroups, openProposal } from '#support/table'
+import {
+  columnOf,
+  columnTitles,
+  expectLeadingColumns,
+  hasGroups,
+  openProposal,
+} from '#support/table'
 
 // Glide scrolls in whole columns. One is enough for its visible positions to
 // part from the source columns, and it puts Pulses, not an edge, at the freeze.
 const SCROLL = COLUMN_WIDTH
 
-// An edge line is gray.3, 33 levels under the white beside it; an inner line
-// is 7, and no line at all is 0. Only an edge clears this.
+// An edge line is 33 levels under the white cells, 26 under the group band;
+// an inner line is 7, and no line is 0. Only an edge clears this.
 const MIN_EDGE_STRENGTH = 18
 
 const SAMPLE_COLUMN = columnOf(xpcsWithGroups, 'sample.type')
 
 test.use({ example: xpcsWithGroups })
 
-async function scrollSideways(page: Page) {
+async function scrollHorizontally(page: Page) {
   await expect.poll(() => canScroll(page, 'horizontal')).toBe(true)
+  const [pinned, , next] = await columnTitles(page)
   await gridScroller(page).evaluate((scroller: HTMLElement, left: number) => {
     scroller.scrollLeft = left
   }, SCROLL)
+  // Glide draws the scroll before its mirror follows it, so until the mirror
+  // has dropped the scrolled-out column a canvas read may see the old frame.
+  await expectLeadingColumns(page, [pinned, next])
 }
 
-// A scroll shifts the old frame sideways and draws only the new strip, which
-// carries old lines along. A resize makes Glide draw the whole frame again.
+// A scroll shifts the old frame and draws only the new strip, which carries
+// old lines along. A resize makes Glide draw the whole frame again.
 async function redrawInFull(page: Page) {
   const size = page.viewportSize()
   if (!size) {
@@ -62,22 +77,29 @@ function leftLinePoint(
   return { x: cell.x - COLUMN_WIDTH / 2, y: cell.y }
 }
 
-test('the pinned edge stays drawn while the grid scrolls sideways', async ({
+async function expectEdgeAt(canvas: Locator, point: Point) {
+  await expect
+    .poll(() => lineStrength(canvas, point))
+    .toBeGreaterThan(MIN_EDGE_STRENGTH)
+}
+
+test('the pinned edge stays drawn while the grid scrolls horizontally', async ({
   page,
   example,
 }) => {
   await openProposal(page, example)
   const box = await gridBox(page)
-  await scrollSideways(page)
+  await scrollHorizontally(page)
 
   // Run is the one pinned column, so the edge is on the left of column 2.
   const pinnedEdge = leftLinePoint(box, {
     col: 2,
     grouped: hasGroups(example),
   })
-  await expect
-    .poll(() => lineStrength(page, pinnedEdge))
-    .toBeGreaterThan(MIN_EDGE_STRENGTH)
+  await expectEdgeAt(gridCanvas(page), pinnedEdge)
+
+  const inGroupBand = { ...pinnedEdge, y: groupHeaderPoint(box, 2).y }
+  await expectEdgeAt(headerCanvas(page), inGroupBand)
 })
 
 test('a group edge stays on its column when a scrolled grid redraws', async ({
@@ -86,7 +108,7 @@ test('a group edge stays on its column when a scrolled grid redraws', async ({
 }) => {
   await openProposal(page, example)
   const box = await gridBox(page)
-  await scrollSideways(page)
+  await scrollHorizontally(page)
   await redrawInFull(page)
 
   const groupStart = leftLinePoint(box, {
@@ -94,7 +116,5 @@ test('a group edge stays on its column when a scrolled grid redraws', async ({
     grouped: hasGroups(example),
   })
   const groupEdge = { ...groupStart, x: groupStart.x - SCROLL }
-  await expect
-    .poll(() => lineStrength(page, groupEdge))
-    .toBeGreaterThan(MIN_EDGE_STRENGTH)
+  await expectEdgeAt(gridCanvas(page), groupEdge)
 })

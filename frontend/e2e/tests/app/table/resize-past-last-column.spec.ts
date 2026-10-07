@@ -1,3 +1,6 @@
+// Guards our glide-data-grid fix for a resize past the last column
+// (patches/README.md). Drop the fix only once this passes without it.
+
 import { test, expect } from '#fixtures'
 import {
   COLUMN_WIDTH,
@@ -6,6 +9,7 @@ import {
   columnCenter,
   dragBy,
   gridBox,
+  gridScroller,
   threeQuartersAcross,
   waitOutDoubleClick,
 } from '#support/grid'
@@ -52,7 +56,12 @@ test('clicking past the last column leaves the other selected columns alone', as
   ])
   await waitOutDoubleClick(page)
 
-  await page.mouse.click(edge.x, edge.y)
+  // Glide shows the resize cursor only once a resize has started, so a press
+  // that misses the grid or lands too far past the edge fails here.
+  await page.mouse.move(edge.x, edge.y)
+  await page.mouse.down()
+  await expect(gridScroller(page)).toHaveCSS('cursor', 'col-resize')
+  await page.mouse.up()
 
   await clickAndExpectColumn(page, {
     point: { x: threeQuartersAcross(box, trains), y: edge.y },

@@ -49,8 +49,7 @@ the width of a scrollbar (`data-editor.tsx`, `idealWidth`), whether or not one i
 drawn, leaving a strip of dead space beside the last column. Headless Chromium
 hides scrollbars, which makes that width zero and the strip disappear, so
 `e2e/tests/app/table/resize-past-last-column.spec.ts` turns them back on with
-`ignoreDefaultArgs: ['--hide-scrollbars']`. Without that the spec passes with the
-patch reverted.
+`ignoreDefaultArgs: ['--hide-scrollbars']`.
 
 Still present on upstream `main`, and not yet reported there.
 
@@ -58,7 +57,8 @@ Still present on upstream `main`, and not yet reported there.
 
 `verticalBorder` is documented as the left-hand border of column `col`, and
 `DataEditor` hands the consumer's function a source column, with the row-marker
-offset already taken off. Four sites disagree once the grid scrolls sideways:
+offset already taken off. Four sites disagree once the grid scrolls
+horizontally:
 
 - `drawGridLines` and `drawExtraRowThemes` in
   `internal/data-grid/render/data-grid-render.lines.js` pass `index + 1`, a
@@ -75,7 +75,9 @@ offset already taken off. Four sites disagree once the grid scrolls sideways:
 
 A predicate that only names sticky columns never shows either, since sticky
 columns keep their position. Covered by
-`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`.
+`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`, apart from
+`drawExtraRowThemes`, which the table never reaches: no column sets its own
+`bgCell`.
 
 Still present on upstream `main`, and not yet reported there.
 
@@ -99,5 +101,5 @@ escaped as `&#34;`.
 The exported image still draws its text in a system font, because an SVG
 drawn as an image cannot load the page's web fonts.
 
-Still present on upstream `master`, and not yet reported there. Covered by
-`e2e/tests/app/plots/summary-plot.spec.ts`.
+Still present on upstream `master`, and not yet reported there. Covered by the
+camera button test in `e2e/tests/app/plots/summary-plot.spec.ts`.
