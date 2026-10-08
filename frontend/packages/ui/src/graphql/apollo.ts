@@ -16,6 +16,7 @@ import { createClient } from 'graphql-ws'
 
 import { BASE_URL, WS_URL } from '#src/constants'
 
+import { retryDelay } from './live-updates'
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from './operation-names'
 import { createPriorityLink } from './priority-link'
 import { typePolicies } from './type-policies'
@@ -50,6 +51,12 @@ const priorityLink = createPriorityLink({
 const wsClient = createClient({
   url: `${WS_URL}graphql`,
   shouldRetry: () => true,
+  retryAttempts: Infinity,
+  // Up to 1 s of spread, so the open tabs do not all reconnect at once.
+  retryWait: (retries) =>
+    new Promise((resolve) =>
+      setTimeout(resolve, retryDelay(retries) + Math.random() * 1000)
+    ),
 })
 
 const wsLink = new GraphQLWsLink(wsClient)
