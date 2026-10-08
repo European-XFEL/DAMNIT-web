@@ -217,23 +217,23 @@ describe('scrolling the table', () => {
     await vi.waitFor(() => expect(pages).toContain(1))
     pages.length = 0
 
-    // Dragging the scrollbar: the grid reports a region on every frame, and each
-    // one names a different band of pages.
+    // Dragging the scrollbar: the grid reports a region on every frame, and
+    // each one names a different band of pages.
     for (let y = 0; y < 500; y += 10) {
       result.current.onVisibleRegionChanged({ x: 0, y, width: 100, height: 20 })
     }
 
     await vi.waitFor(() => expect(pages.length).toBeGreaterThan(0))
-    // Fetching per frame would ask for every page the drag passed over, and none
-    // of those requests can be cancelled once made.
+    // Fetching per frame would ask for every page the drag passed over, and
+    // none of those requests can be cancelled once made.
     expect(pages.length).toBeLessThan(10)
   })
 
   test('aborts a page fetch when its page scrolls out of the window', async () => {
     const aborted: number[] = []
 
-    // Page 1 answers at once; every scrolled page hangs, so its fetch is still in
-    // flight when the next scroll moves the window off it.
+    // Page 1 answers at once; every scrolled page hangs, so its fetch is still
+    // in flight when the next scroll moves the window off it.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName !== LIGHTWEIGHT_NAME) {
@@ -313,8 +313,8 @@ describe('scrolling the table', () => {
     const started = { deferred: [] as number[] }
     const cancelled: number[] = []
 
-    // Page 1's heavy values never arrive; every other page's do, so a scroll can
-    // land on a window that needs nothing.
+    // Page 1's heavy values never arrive; every other page's do, so a scroll
+    // can land on a window that needs nothing.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
@@ -340,8 +340,8 @@ describe('scrolling the table', () => {
     await settle()
     expect(started.deferred.filter((page) => page === 1)).toHaveLength(2)
 
-    // Away again, but every page landed on is filled by now. Tearing page 1 down
-    // would free a slot nobody is waiting for and throw its work away.
+    // Away again, but every page landed on is filled by now. Tearing page 1
+    // down would free a slot nobody is waiting for and throw its work away.
     result.current.onVisibleRegionChanged(regionAt(200))
     await settle()
 
@@ -352,8 +352,8 @@ describe('scrolling the table', () => {
     const started = { lightweight: [] as number[], deferred: [] as number[] }
     const cancelled: number[] = []
 
-    // Page 1 holds a heavy value back and its deferred pass never answers. Every
-    // other page is scalar-only, so it loads with nothing to defer.
+    // Page 1 holds a heavy value back and its deferred pass never answers.
+    // Every other page is scalar-only, so it loads with nothing to defer.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
@@ -371,8 +371,8 @@ describe('scrolling the table', () => {
 
     const { result } = await renderTableRuns({ link })
 
-    // Scroll away before those pages have loaded: what they hold back is not known
-    // yet, so page 1 gives up the slot.
+    // Scroll away before those pages have loaded: what they hold back is not
+    // known yet, so page 1 gives up the slot.
     await vi.waitFor(() => expect(started.deferred).toContain(1))
     result.current.onVisibleRegionChanged(regionAt(200))
     await vi.waitFor(() => expect(cancelled).toEqual([1]))
@@ -387,8 +387,8 @@ describe('scrolling the table', () => {
     await settle()
     expect(started.deferred.filter((page) => page === 1)).toHaveLength(2)
 
-    // Away again. Those pages are loaded and hold nothing back, so tearing page 1
-    // down would free a slot nobody is waiting for.
+    // Away again. Those pages are loaded and hold nothing back, so tearing
+    // page 1 down would free a slot nobody is waiting for.
     result.current.onVisibleRegionChanged(regionAt(200))
     await settle()
 
@@ -417,9 +417,8 @@ describe('scrolling the table', () => {
   test("does not re-issue a scrolled-away page's deferred pass when a later page lands", async () => {
     const started = { deferred: [] as number[] }
 
-    // Page 1's heavy values never arrive, so its fetch is still cancellable when
-    // the user scrolls away. Every other page answers, which frees the single
-    // throttle slot so a re-issued page 1 would really reach the link.
+    // Page 1 never answers, so it is still cancellable after the scroll. The
+    // others answer and free the slot, so a re-issue would reach the link.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
@@ -448,8 +447,8 @@ describe('scrolling the table', () => {
     const started = { deferred: [] as number[] }
     const pending: Array<() => void> = []
 
-    // Every page but the first holds its rows back until the test releases them,
-    // so a page fetch can resolve after the user has scrolled somewhere else.
+    // Every page but the first holds its rows until the test releases them, so
+    // a fetch can resolve after the user has scrolled elsewhere.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
@@ -494,15 +493,14 @@ describe('waiting for the heavy values to fill in', () => {
     const network = createNetwork({ answerDeferred: true })
     const { result } = await renderTableRuns(network)
 
-    // Wait for the heavy value itself, not merely for the request to leave: an
-    // in-flight page is skipped for a different reason than a finished one, so
-    // waiting on the request would pass even with no record of finished pages.
+    // Wait for the value, not the request: an in-flight page is also skipped,
+    // so waiting on the request would pass with no record of finished pages.
     await vi.waitFor(() =>
       expect(heavyValueFor(result.current.cellsByKey, 1)).toEqual([1, 2, 3])
     )
 
-    // Settle on a window spanning pages 1 to 3: the two new pages load, and page 1
-    // comes back into view having already been filled.
+    // Settle on a window spanning pages 1 to 3: the two new pages load, and
+    // page 1 comes back into view having already been filled.
     result.current.onVisibleRegionChanged(regionAt(0))
 
     await vi.waitFor(() => expect(network.started.deferred).toContain(3))
@@ -515,8 +513,8 @@ describe('waiting for the heavy values to fill in', () => {
   test('asks for a heavy column that first appears on a later page', async () => {
     const deferredNames: Record<number, string[]> = {}
 
-    // Page 1 holds back only `spectrum`. Later pages hold back `preview` too, the
-    // way a variable added to the context file mid-session shows up.
+    // Page 1 holds back only `spectrum`. Later pages hold back `preview` too,
+    // the way a variable added to the context file mid-session shows up.
     const runWithNewColumn = (run: number) => ({
       ...runFor(run),
       cells: ['spectrum', 'preview'].map((name) =>
@@ -559,7 +557,7 @@ describe('waiting for the heavy values to fill in', () => {
   test('asks a page only for the columns it held back', async () => {
     const deferredNames: Record<number, string[]> = {}
 
-    // Only page 20 holds back `preview`. The pages beside it hold back `spectrum`
+    // Only page 20 holds back `preview`; its neighbours hold back `spectrum`
     // alone, so one shared list would ask them for a column they never blanked.
     const runWithPreview = (run: number) => ({
       ...runFor(run),
@@ -592,7 +590,7 @@ describe('waiting for the heavy values to fill in', () => {
     const { result } = await renderTableRuns({ link })
     await vi.waitFor(() => expect(deferredNames[1]).toBeDefined())
 
-    // Scrolling to y 200 loads pages 20, 21 and 22, and page 20 is scanned first.
+    // Scrolling to y 200 loads pages 20, 21 and 22; page 20 is scanned first.
     result.current.onVisibleRegionChanged(regionAt(200))
     await vi.waitFor(() => expect(deferredNames[21]).toBeDefined())
 
@@ -636,8 +634,8 @@ describe('waiting for the heavy values to fill in', () => {
   test('does not fetch heavy values for a page that held nothing back', async () => {
     const started = { lightweight: [] as number[], deferred: [] as number[] }
 
-    // The proposal's runs stop at page 21, so the tail of the padded window comes
-    // back empty. Scrolling to y 200 asks for pages 20 through 23.
+    // The proposal's runs stop at page 21, so the tail of the padded window
+    // comes back empty. Scrolling to y 200 asks for pages 20 through 23.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
@@ -662,8 +660,8 @@ describe('waiting for the heavy values to fill in', () => {
     expect(started.deferred).toContain(21)
     expect(started.deferred).not.toContain(22)
 
-    // Settle on it again, which takes the cached-page path rather than the fetch
-    // path, and must reach the same answer.
+    // Settle on it again, which takes the cached-page path rather than the
+    // fetch path, and must reach the same answer.
     result.current.onVisibleRegionChanged(regionAt(200))
     await settle()
 
@@ -674,8 +672,8 @@ describe('waiting for the heavy values to fill in', () => {
     const network = createNetwork()
     const cache = new InMemoryCache({ typePolicies })
 
-    // A summary plot sharing this cache entry has already written page 1 with only
-    // a scalar cell, so the hook's first (cache) read shows no heavy cell to defer.
+    // A summary plot sharing this cache entry already wrote page 1 with only a
+    // scalar cell, so the hook's first (cache) read has no heavy cell to defer.
     cache.writeQuery({
       query: TABLE_DATA_QUERY,
       variables: {
@@ -727,7 +725,7 @@ describe('running into a page that fails to load', () => {
       network.started.deferred.filter((page) => page === 1).length
 
     // Page 1 is the only page on screen at mount, so it spends its whole budget
-    // straight away: a failed pass hands the slot back and the next try goes out.
+    // at once: a failed pass hands the slot back and the next try goes out.
     await vi.waitFor(() => expect(triesForPageOne()).toBe(3))
 
     // Five more settles. A server that cannot answer must not hold the single
@@ -818,8 +816,8 @@ describe('running into a page that fails to load', () => {
 
     await renderTableRuns({ link })
 
-    // A page that brought nothing back is not done, so it spends its retry budget
-    // rather than leaving its heavy cells blank for the session.
+    // A page that brought nothing back is not done, so it spends its retry
+    // budget rather than leaving its heavy cells blank for the session.
     await vi.waitFor(() =>
       expect(started.filter((page) => page === 1)).toHaveLength(3)
     )
@@ -887,8 +885,8 @@ describe('running into a page that fails to load', () => {
     result.current.onVisibleRegionChanged(regionAt(200))
     await vi.waitFor(() => expect(reported).toHaveBeenCalled())
 
-    // Away and back. A page left mid-fetch, or marked loaded with nothing in it,
-    // is never asked for again; one left idle is.
+    // Away and back. A page left mid-fetch, or marked loaded with nothing in
+    // it, is never asked for again; one left idle is.
     result.current.onVisibleRegionChanged(regionAt(0))
     await settle()
     result.current.onVisibleRegionChanged(regionAt(200))
@@ -905,9 +903,8 @@ describe('leaving and reopening the table', () => {
 
     await vi.waitFor(() => expect(network.started.deferred).toContain(1))
 
-    // A proposal switch remounts the hook. Its in-flight heavy pages must let go,
-    // or they land after the teardown eviction and write the departed proposal's
-    // runs back into the cache.
+    // A proposal switch remounts the hook. In-flight heavy pages must let go,
+    // or they land after the eviction and write the old proposal's runs back.
     await unmount()
 
     await vi.waitFor(() => expect(network.cancelled.deferred).toEqual([1]))
@@ -917,9 +914,8 @@ describe('leaving and reopening the table', () => {
     const started = { deferred: [] as number[] }
     const pending: Array<() => void> = []
 
-    // A scrolled page's rows are held until the test releases them, and the abort
-    // is not wired to the observer: aborting cannot reject a fetch whose answer
-    // has already arrived, which is the race the guard is there for.
+    // A scrolled page's rows wait for the test and ignore the abort. An abort
+    // cannot reject an answer that has arrived, which is the race tested here.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
@@ -942,7 +938,7 @@ describe('leaving and reopening the table', () => {
     const { result, unmount } = await renderTableRuns({ link })
     await vi.waitFor(() => expect(started.deferred).toContain(1))
 
-    // Scroll so a page fetch goes out, then leave the proposal before it answers.
+    // Scroll so a page fetch goes out, then leave the proposal before it lands.
     result.current.onVisibleRegionChanged(regionAt(200))
     await vi.waitFor(() => expect(pending.length).toBeGreaterThan(0))
     await unmount()
@@ -959,10 +955,8 @@ describe('leaving and reopening the table', () => {
     const started = { lightweight: [] as number[], deferred: [] as number[] }
     const aborted: number[] = []
 
-    // Page 1 answers at once; a scrolled page's lightweight fetch hangs until its
-    // request is aborted, the way a proposal switch races a page fetch already in
-    // flight. Unmounting cannot reach a query the hook does not hold, so an abort
-    // is the only thing that stops it.
+    // A scrolled page's fetch hangs until aborted. Unmounting cannot reach a
+    // query the hook does not hold, so only the abort can stop it.
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
@@ -992,8 +986,8 @@ describe('leaving and reopening the table', () => {
 
     await unmount()
 
-    // The aborted request never resolves, so it cannot write the departed
-    // proposal's runs back into the swept cache or start a deferred pass for them.
+    // The aborted request never resolves, so it cannot write the old proposal's
+    // runs back into the swept cache or start a deferred pass for them.
     await vi.waitFor(() => expect(aborted.length).toBeGreaterThan(0))
     expect(started.deferred).toEqual([1])
   })
@@ -1031,15 +1025,14 @@ describe('leaving and reopening the table', () => {
   })
 
   test("records a scrolled page's deferred pass after a StrictMode remount", async () => {
-    // Dev StrictMode runs the mount effects setup, cleanup, setup. The cleanup
-    // stops every in-flight fetch and drops the page bookkeeping, so the second
-    // setup has to re-issue page 1 rather than read it as already handled.
+    // StrictMode's cleanup between its two mount setups stops every fetch and
+    // drops the page bookkeeping, so the second setup must re-issue page 1.
     const network = createNetwork()
     const { result } = await renderTableRuns(network, { strict: true })
 
     await vi.waitFor(() => expect(network.started.deferred).toContain(1))
 
-    // Scroll past page 1 so a fetchMore for the landed page goes out and resolves.
+    // Scroll past page 1 so the landed page's fetchMore goes out and resolves.
     result.current.onVisibleRegionChanged(regionAt(200))
 
     await vi.waitFor(() => expect(network.started.deferred).toContain(20))
@@ -1048,7 +1041,7 @@ describe('leaving and reopening the table', () => {
   test('loads page 1 again when a StrictMode remount aborts the first attempt', async () => {
     const started: number[] = []
 
-    // Answers on a later task and honours the abort signal, the way a network and
+    // Answers on a later task and honours the abort, as a network and
     // `HttpLink` do: the remount asks again while the aborted request is open.
     const link = new ApolloLink((operation) => {
       if (operation.operationName !== LIGHTWEIGHT_NAME) {
@@ -1140,9 +1133,8 @@ describe('receiving a live update', () => {
     // Stamp the way the subscription push handler does when a push arrives.
     stampLiveRuns([{ proposal: PROPOSAL, run: 1 }])
 
-    // Glide fades the flash against its own performance.now() frame time, so
-    // the stamp must sit in that clock: an epoch stamp (Date.now()) reads as
-    // decades in the future and paints the row yellow forever.
+    // Glide fades the flash on its performance.now() clock: a Date.now() stamp
+    // reads as decades ahead there and paints the row yellow forever.
     await vi.waitFor(() =>
       expect(result.current.lastUpdatedByKey.get(key)).toBeGreaterThan(0)
     )
