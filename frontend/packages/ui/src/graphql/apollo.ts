@@ -57,6 +57,7 @@ const wsClient = createClient({
     new Promise((resolve) =>
       setTimeout(resolve, retryDelay(retries) + Math.random() * 1000)
     ),
+  connectionAckWaitTimeout: 20_000,
 })
 
 const wsLink = new GraphQLWsLink(wsClient)
