@@ -155,6 +155,9 @@ function createNetwork({ answerDeferred = false, failDeferred = false } = {}) {
 const heavyValueFor = (cells: Map<string, RunCells>, run: number): unknown =>
   cells.get(`${PROPOSAL}:${run}`)?.get('spectrum')?.summary.value
 
+const timesStarted = (started: number[], page: number) =>
+  started.filter((startedPage) => startedPage === page).length
+
 const settle = () => new Promise((resolve) => setTimeout(resolve, 200))
 
 async function renderTableRuns(
@@ -336,7 +339,7 @@ describe('scrolling the table', () => {
     // Back to the top, which re-issues page 1 and fills pages 2 and 3.
     result.current.onVisibleRegionChanged(regionAt(0))
     await settle()
-    expect(started.filter((page) => page === 1)).toHaveLength(2)
+    expect(timesStarted(started, 1)).toBe(2)
 
     // Away again, but every page landed on is filled by now. Tearing page 1
     // down would free a slot nobody is waiting for and throw its work away.
@@ -378,7 +381,7 @@ describe('scrolling the table', () => {
     // Back to the top, which re-issues page 1.
     result.current.onVisibleRegionChanged(regionAt(0))
     await settle()
-    expect(started.deferred.filter((page) => page === 1)).toHaveLength(2)
+    expect(timesStarted(started.deferred, 1)).toBe(2)
 
     // Away again. Those pages are loaded and hold nothing back, so tearing
     // page 1 down would free a slot nobody is waiting for.
@@ -401,9 +404,7 @@ describe('scrolling the table', () => {
     // again instead of leaving its heavy cells skeletoned forever.
     result.current.onVisibleRegionChanged(regionAt(0))
     await vi.waitFor(() =>
-      expect(
-        network.started.deferred.filter((page) => page === 1)
-      ).toHaveLength(2)
+      expect(timesStarted(network.started.deferred, 1)).toBe(2)
     )
   })
 
@@ -433,7 +434,7 @@ describe('scrolling the table', () => {
     await vi.waitFor(() => expect(started).toContain(20))
     await settle()
 
-    expect(started.filter((page) => page === 1)).toHaveLength(1)
+    expect(timesStarted(started, 1)).toBe(1)
   })
 
   test('does not fetch heavy values for a page the user has already scrolled past', async () => {
@@ -498,9 +499,7 @@ describe('waiting for the heavy values to fill in', () => {
 
     await vi.waitFor(() => expect(network.started.deferred).toContain(3))
     // Asking again would re-download every heavy value on the page.
-    expect(network.started.deferred.filter((page) => page === 1)).toHaveLength(
-      1
-    )
+    expect(timesStarted(network.started.deferred, 1)).toBe(1)
   })
 
   test('asks for a heavy column that first appears on a later page', async () => {
@@ -699,8 +698,7 @@ describe('running into a page that fails to load', () => {
     const network = createNetwork({ failDeferred: true })
     const { result } = await renderTableRuns(network)
 
-    const triesForPageOne = () =>
-      network.started.deferred.filter((page) => page === 1).length
+    const triesForPageOne = () => timesStarted(network.started.deferred, 1)
 
     // Page 1 is the only page on screen at mount, so it spends its whole budget
     // at once: a failed pass hands the slot back and the next try goes out.
@@ -739,9 +737,7 @@ describe('running into a page that fails to load', () => {
 
     // Settle on pages 2 to 4 and let page 2 exhaust its three tries.
     result.current.onVisibleRegionChanged(regionAt(15))
-    await vi.waitFor(() =>
-      expect(started.filter((page) => page === 2)).toHaveLength(3)
-    )
+    await vi.waitFor(() => expect(timesStarted(started, 2)).toBe(3))
 
     const firstTry = started.indexOf(2)
     const retry = started.indexOf(2, firstTry + 1)
@@ -754,8 +750,7 @@ describe('running into a page that fails to load', () => {
     const network = createNetwork({ failDeferred: true })
     const { result } = await renderTableRuns(network)
 
-    const triesForPageOne = () =>
-      network.started.deferred.filter((page) => page === 1).length
+    const triesForPageOne = () => timesStarted(network.started.deferred, 1)
 
     // Spend page 1's whole budget while it stays on screen.
     for (let scroll = 0; scroll < 5; scroll += 1) {
@@ -796,9 +791,7 @@ describe('running into a page that fails to load', () => {
 
     // A page that brought nothing back is not done, so it spends its retry
     // budget rather than leaving its heavy cells blank for the session.
-    await vi.waitFor(() =>
-      expect(started.filter((page) => page === 1)).toHaveLength(3)
-    )
+    await vi.waitFor(() => expect(timesStarted(started, 1)).toBe(3))
   })
 
   test('reports a page fetch that fails and asks for it again', async () => {
@@ -864,9 +857,7 @@ describe('running into a page that fails to load', () => {
     result.current.onVisibleRegionChanged(regionAt(0))
     await settle()
     result.current.onVisibleRegionChanged(regionAt(200))
-    await vi.waitFor(() =>
-      expect(started.filter((page) => page === 20)).toHaveLength(2)
-    )
+    await vi.waitFor(() => expect(timesStarted(started, 20)).toBe(2))
   })
 })
 
