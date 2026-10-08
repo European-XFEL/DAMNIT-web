@@ -47,12 +47,12 @@ const priorityLink = createPriorityLink({
   queuedOperations: [DEFERRED_TABLE_DATA_QUERY_NAME],
 })
 
-const wsLink = new GraphQLWsLink(
-  createClient({
-    url: `${WS_URL}graphql`,
-    shouldRetry: () => true,
-  })
-)
+const wsClient = createClient({
+  url: `${WS_URL}graphql`,
+  shouldRetry: () => true,
+})
+
+const wsLink = new GraphQLWsLink(wsClient)
 
 const splitLink = split(
   ({ query }) => {
