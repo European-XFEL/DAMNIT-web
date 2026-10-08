@@ -16,7 +16,7 @@ import { createClient } from 'graphql-ws'
 
 import { BASE_URL, WS_URL } from '#src/constants'
 
-import { retryDelay } from './live-updates'
+import { liveUpdatesListeners, retryDelay } from './live-updates'
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from './operation-names'
 import { createPriorityLink } from './priority-link'
 import { typePolicies } from './type-policies'
@@ -58,6 +58,9 @@ const wsClient = createClient({
       setTimeout(resolve, retryDelay(retries) + Math.random() * 1000)
     ),
   connectionAckWaitTimeout: 20_000,
+  keepAlive: 10_000,
+  // Terminate, not close: a server that is gone never answers a close.
+  on: liveUpdatesListeners(() => wsClient.terminate()),
 })
 
 const wsLink = new GraphQLWsLink(wsClient)
