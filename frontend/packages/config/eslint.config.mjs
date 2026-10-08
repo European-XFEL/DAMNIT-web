@@ -22,6 +22,9 @@ const feature = (name) => ({
   element: { type: 'features', captured: { feature: name } },
 })
 
+const curlyQuoteOrLongDash = '[\u2018\u2019\u201C\u201D\u2013\u2014]'
+const plainPunctuation = 'Use a straight quote or a plain hyphen.'
+
 export default defineConfig(
   globalIgnores(['dist/**', 'public/mockServiceWorker.js']),
   {
@@ -78,6 +81,23 @@ export default defineConfig(
           importNames: ['useDispatch', 'useSelector'],
           message:
             'Use typed hooks `useAppDispatch` and `useAppSelector` instead.',
+        },
+      ],
+      // Prettier wraps a string holding an apostrophe in double quotes, so a
+      // curly one is never needed to avoid an escape.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: `Literal[value=/${curlyQuoteOrLongDash}/]`,
+          message: plainPunctuation,
+        },
+        {
+          selector: `TemplateElement[value.raw=/${curlyQuoteOrLongDash}/]`,
+          message: plainPunctuation,
+        },
+        {
+          selector: `JSXText[value=/${curlyQuoteOrLongDash}/]`,
+          message: plainPunctuation,
         },
       ],
       'import-x/no-cycle': ['error', { ignoreExternal: true }],
