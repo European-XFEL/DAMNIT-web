@@ -239,12 +239,10 @@ describe('scrolling the table', () => {
       if (operation.operationName !== LIGHTWEIGHT_NAME) {
         return hangs()
       }
+      if (page === 1) {
+        return answers([runFor(page)])
+      }
       return new Observable((observer) => {
-        if (page === 1) {
-          observer.next({ data: { runs: [runFor(page)] } })
-          observer.complete()
-          return
-        }
         rejectsOnAbort(operation, observer, () => aborted.push(page))
       })
     })
@@ -310,7 +308,7 @@ describe('scrolling the table', () => {
   })
 
   test('leaves an in-flight deferred fetch alone when the pages scrolled to are already loaded', async () => {
-    const started = { deferred: [] as number[] }
+    const started: number[] = []
     const cancelled: number[] = []
 
     // Page 1's heavy values never arrive; every other page's do, so a scroll
@@ -320,7 +318,7 @@ describe('scrolling the table', () => {
       if (operation.operationName === LIGHTWEIGHT_NAME) {
         return answers([runFor(page)])
       }
-      started.deferred.push(page)
+      started.push(page)
       if (page === 1) {
         return hangsUntilCancelled(() => cancelled.push(page))
       }
@@ -331,14 +329,14 @@ describe('scrolling the table', () => {
 
     // Scroll away while page 1 is in flight: the pages landed on still need the
     // slot, so page 1 gives it up.
-    await vi.waitFor(() => expect(started.deferred).toContain(1))
+    await vi.waitFor(() => expect(started).toContain(1))
     result.current.onVisibleRegionChanged(regionAt(200))
     await vi.waitFor(() => expect(cancelled).toEqual([1]))
 
     // Back to the top, which re-issues page 1 and fills pages 2 and 3.
     result.current.onVisibleRegionChanged(regionAt(0))
     await settle()
-    expect(started.deferred.filter((page) => page === 1)).toHaveLength(2)
+    expect(started.filter((page) => page === 1)).toHaveLength(2)
 
     // Away again, but every page landed on is filled by now. Tearing page 1
     // down would free a slot nobody is waiting for and throw its work away.
@@ -358,12 +356,7 @@ describe('scrolling the table', () => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
         started.lightweight.push(page)
-        return new Observable((observer) => {
-          observer.next({
-            data: { runs: [page === 1 ? runFor(page) : scalarRunFor(page)] },
-          })
-          observer.complete()
-        })
+        return answers([page === 1 ? runFor(page) : scalarRunFor(page)])
       }
       started.deferred.push(page)
       return hangsUntilCancelled(() => cancelled.push(page))
@@ -415,7 +408,7 @@ describe('scrolling the table', () => {
   })
 
   test("does not re-issue a scrolled-away page's deferred pass when a later page lands", async () => {
-    const started = { deferred: [] as number[] }
+    const started: number[] = []
 
     // Page 1 never answers, so it is still cancellable after the scroll. The
     // others answer and free the slot, so a re-issue would reach the link.
@@ -424,27 +417,27 @@ describe('scrolling the table', () => {
       if (operation.operationName === LIGHTWEIGHT_NAME) {
         return answers([runFor(page)])
       }
-      started.deferred.push(page)
+      started.push(page)
       if (page === 1) {
-        return new Observable(() => {})
+        return hangs()
       }
       return answers([filledRunFor(page)])
     })
 
     const { result } = await renderTableRuns({ link })
-    await vi.waitFor(() => expect(started.deferred).toContain(1))
+    await vi.waitFor(() => expect(started).toContain(1))
 
     // Scroll far past page 1, cancelling it. The pages landed on then fill, and
     // each of those cache writes is what used to re-fire page 1.
     result.current.onVisibleRegionChanged(regionAt(200))
-    await vi.waitFor(() => expect(started.deferred).toContain(20))
+    await vi.waitFor(() => expect(started).toContain(20))
     await settle()
 
-    expect(started.deferred.filter((page) => page === 1)).toHaveLength(1)
+    expect(started.filter((page) => page === 1)).toHaveLength(1)
   })
 
   test('does not fetch heavy values for a page the user has already scrolled past', async () => {
-    const started = { deferred: [] as number[] }
+    const started: number[] = []
     const pending: Array<() => void> = []
 
     // Every page but the first holds its rows until the test releases them, so
@@ -464,12 +457,12 @@ describe('scrolling the table', () => {
           pending.push(answer)
         })
       }
-      started.deferred.push(page)
+      started.push(page)
       return answers([filledRunFor(page)])
     })
 
     const { result } = await renderTableRuns({ link })
-    await vi.waitFor(() => expect(started.deferred).toContain(1))
+    await vi.waitFor(() => expect(started).toContain(1))
 
     // Ask for pages 20 to 23, then return to the top before any of them answer.
     result.current.onVisibleRegionChanged(regionAt(200))
@@ -482,9 +475,9 @@ describe('scrolling the table', () => {
 
     // Pages 2 and 3 are on screen and get their heavy values; page 20 resolved
     // into a window nobody is looking at and must not spend the throttle slot.
-    expect(started.deferred).toContain(2)
-    expect(started.deferred).toContain(3)
-    expect(started.deferred).not.toContain(20)
+    expect(started).toContain(2)
+    expect(started).toContain(3)
+    expect(started).not.toContain(20)
   })
 })
 
@@ -532,14 +525,7 @@ describe('waiting for the heavy values to fill in', () => {
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
-        return new Observable((observer) => {
-          observer.next({
-            data: {
-              runs: [page === 1 ? runFor(page) : runWithNewColumn(page)],
-            },
-          })
-          observer.complete()
-        })
+        return answers([page === 1 ? runFor(page) : runWithNewColumn(page)])
       }
       deferredNames[page] = operation.variables.names as string[]
       return answers([filledRunFor(page)])
@@ -576,12 +562,7 @@ describe('waiting for the heavy values to fill in', () => {
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
-        return new Observable((observer) => {
-          observer.next({
-            data: { runs: [page === 20 ? runWithPreview(page) : runFor(page)] },
-          })
-          observer.complete()
-        })
+        return answers([page === 20 ? runWithPreview(page) : runFor(page)])
       }
       deferredNames[page] = operation.variables.names as string[]
       return answers([filledRunFor(page)])
@@ -640,10 +621,7 @@ describe('waiting for the heavy values to fill in', () => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
         started.lightweight.push(page)
-        return new Observable((observer) => {
-          observer.next({ data: { runs: page > 21 ? [] : [runFor(page)] } })
-          observer.complete()
-        })
+        return answers(page > 21 ? [] : [runFor(page)])
       }
       started.deferred.push(page)
       return answers([filledRunFor(page)])
@@ -833,14 +811,10 @@ describe('running into a page that fails to load', () => {
       }
       const page = (operation.variables.page as number) ?? 1
       started.push(page)
-      return new Observable((observer) => {
-        if (page === 1) {
-          observer.next({ data: { runs: [runFor(page)] } })
-          observer.complete()
-          return
-        }
-        observer.error(new Error('the server cannot answer this page'))
-      })
+      if (page === 1) {
+        return answers([runFor(page)])
+      }
+      return refuses('the server cannot answer this page')
     })
 
     const { result } = await renderTableRuns({ link })
@@ -911,7 +885,7 @@ describe('leaving and reopening the table', () => {
   })
 
   test('does not fetch heavy values for a page whose fetch resolves after teardown', async () => {
-    const started = { deferred: [] as number[] }
+    const started: number[] = []
     const pending: Array<() => void> = []
 
     // A scrolled page's rows wait for the test and ignore the abort. An abort
@@ -931,12 +905,12 @@ describe('leaving and reopening the table', () => {
           pending.push(answer)
         })
       }
-      started.deferred.push(page)
+      started.push(page)
       return hangs()
     })
 
     const { result, unmount } = await renderTableRuns({ link })
-    await vi.waitFor(() => expect(started.deferred).toContain(1))
+    await vi.waitFor(() => expect(started).toContain(1))
 
     // Scroll so a page fetch goes out, then leave the proposal before it lands.
     result.current.onVisibleRegionChanged(regionAt(200))
@@ -948,7 +922,7 @@ describe('leaving and reopening the table', () => {
     pending.forEach((answer) => answer())
     await settle()
 
-    expect(started.deferred).toEqual([1])
+    expect(started).toEqual([1])
   })
 
   test('aborts an in-flight page fetch when the hook unmounts', async () => {
@@ -961,12 +935,10 @@ describe('leaving and reopening the table', () => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
         started.lightweight.push(page)
+        if (page === 1) {
+          return answers([runFor(page)])
+        }
         return new Observable((observer) => {
-          if (page === 1) {
-            observer.next({ data: { runs: [runFor(page)] } })
-            observer.complete()
-            return
-          }
           rejectsOnAbort(operation, observer, () => aborted.push(page))
         })
       }
@@ -1003,12 +975,10 @@ describe('leaving and reopening the table', () => {
       }
       const page = (operation.variables.page as number) ?? 1
       started.push(page)
+      if (page === 1) {
+        return answers([runFor(page)])
+      }
       return new Observable((observer) => {
-        if (page === 1) {
-          observer.next({ data: { runs: [runFor(page)] } })
-          observer.complete()
-          return
-        }
         rejectsOnAbort(operation, observer, () => aborted.push(page))
       })
     })
@@ -1094,33 +1064,12 @@ describe('receiving a live update', () => {
         per_page: PAGE_SIZE,
         names: ['run', 'spectrum'],
       },
-      data: {
-        runs: [
-          {
-            __typename: 'DamnitRun',
-            database: PROPOSAL,
-            proposal: PROPOSAL,
-            run: 1,
-            cells: [
-              serverCell({
-                database: PROPOSAL,
-                proposal: PROPOSAL,
-                run: 1,
-                name: 'spectrum',
-                value: [1, 2, 3],
-                dtype: 'array1d',
-              }),
-            ],
-          },
-        ],
-      },
+      data: { runs: [filledRunFor(1)] },
     })
 
     // The fill landed, and the run still carries no flash stamp.
     await vi.waitFor(() =>
-      expect(
-        result.current.cellsByKey.get(key)?.get('spectrum')?.summary.value
-      ).toEqual([1, 2, 3])
+      expect(heavyValueFor(result.current.cellsByKey, 1)).toEqual([1, 2, 3])
     )
     expect(result.current.lastUpdatedByKey.get(key)).toBeUndefined()
   })
