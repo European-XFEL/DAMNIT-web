@@ -1,0 +1,43 @@
+.item {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: var(--mantine-font-size-sm);
+  line-height: var(--mantine-line-height-sm);
+  color: var(--mantine-color-gray-7);
+  white-space: nowrap;
+
+  /* The item fills the bar, which sits on the window's bottom edge, so the
+     ring goes inside. */
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+
+  & b {
+    color: var(--mantine-color-gray-9);
+    font-weight: 600;
+    /* Source Sans 3's space is only 3 px at 15 px; this puts the value 6 px
+       from its colon, the same as the icon's gap. */
+    margin-inline-start: 3px;
+  }
+}
+
+/* The background reaches into the gap on each side, so the label keeps its
+   place in the bar. */
+.item[data-action] {
+  margin: 0 -6px;
+  padding: 0 6px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mantine-color-gray-1);
+  }
+}
+
+.item[data-warning] {
+  background: var(--mantine-color-orange-light);
+
+  &:hover {
+    background: var(--mantine-color-orange-light-hover);
+  }
+}
