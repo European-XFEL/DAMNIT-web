@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
-import { useQuery } from '@apollo/client/react'
+import { useQuery, useReactiveVar } from '@apollo/client/react'
+import { useDidUpdate } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import { DTYPES, VARIABLES } from '#src/constants'
@@ -18,6 +19,7 @@ import {
 } from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
+import { reconnectCount } from '#src/graphql/live-updates'
 
 import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
 
@@ -44,7 +46,8 @@ export function useSummaryPlotData({
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const { variables: variableMeta } = useTableMeta()
 
-  const { data } = useQuery<TableDataResult, TableDataVariables>(
+  const skip = !enabled || !proposal
+  const { data, refetch } = useQuery<TableDataResult, TableDataVariables>(
     TABLE_DATA_QUERY,
     {
       variables: {
@@ -55,9 +58,24 @@ export function useSummaryPlotData({
         names: [VARIABLES.run, ...variables],
       },
       fetchPolicy: 'cache-and-network',
-      skip: !enabled || !proposal,
+      // A reload after a reconnect must not join a request sent before it, which
+      // may have read the database before the server's catch-up cursor.
+      context: { queryDeduplication: false },
+      skip,
     }
   )
+
+  // After a reconnect the table reloads only the pages in view, and this charts
+  // every run. The query's first fetch covers a reconnect before it started.
+  const reconnects = useReactiveVar(reconnectCount)
+  useDidUpdate(() => {
+    if (skip) {
+      return
+    }
+    refetch().catch((error: unknown) => {
+      console.error('The summary plot failed to reload:', error)
+    })
+  }, [reconnects])
 
   const runs = data?.runs
 
