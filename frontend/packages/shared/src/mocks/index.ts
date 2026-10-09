@@ -1,6 +1,7 @@
 export {
   REST_API_PREFIXES,
   cellId,
+  runNumber,
   shapeMetadata,
   shapeRun,
   shapeTableData,
