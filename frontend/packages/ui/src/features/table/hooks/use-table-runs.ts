@@ -18,6 +18,7 @@ import {
   indexRunCells,
 } from '#src/data/table/table-data.transforms'
 import type { RunCells } from '#src/data/table/table-data.types'
+import { reconnectCount } from '#src/graphql/live-updates'
 import { orderBy } from '#src/utils/objects'
 import { pageRangeForRegion } from '#src/features/table/utils/pagination'
 import type { Rectangle } from '#src/features/table/types/table.types'
@@ -195,6 +196,9 @@ export function useTableRuns({
           query: DEFERRED_TABLE_DATA_QUERY,
           variables,
           fetchPolicy: 'no-cache',
+          // A stopped pass lets go of its request a tick later, and until then
+          // deduplication would hand it, and its stale answer, to a new pass.
+          context: { queryDeduplication: false },
         })
         .subscribe({
           next: ({ data: pageData }) => {
@@ -306,18 +310,15 @@ export function useTableRuns({
     [client, proposal, perPage, startNextDeferred]
   )
 
-  // Nothing has reported a scroll window yet, so ask for the seeded page. An
-  // unpaginated table never reports one, and this is the only ask it gets.
+  // Load the pages in view on mount, since an unpaginated table never reports
+  // a scroll window, and again on a reconnect, which may have missed changes.
+  const reconnects = useReactiveVar(reconnectCount)
   useEffect(() => {
-    if (!proposal) {
-      return
+    if (proposal) {
+      ensurePagesLoaded(visiblePages.current)
     }
-    ensurePagesLoaded(visiblePages.current)
-  }, [proposal, ensurePagesLoaded])
-
-  // On unmount (a proposal switch) stop both passes: a late deferred fetch
-  // lands its images after the teardown eviction, and a page fetch its runs.
-  useEffect(() => {
+    // Stop both passes: a late deferred fetch lands its images after the
+    // teardown eviction, and a page fetch its runs.
     const pages = pageStates.current
     return () => {
       stopDeferred()
@@ -326,7 +327,7 @@ export function useTableRuns({
       }
       pages.clear()
     }
-  }, [stopDeferred])
+  }, [proposal, ensurePagesLoaded, stopDeferred, reconnects])
 
   // Settling the per-frame scroll reports turns a scrollbar drag into a handful
   // of requests; `maxWait` keeps a slow scroll loading with no pause to wait for.
