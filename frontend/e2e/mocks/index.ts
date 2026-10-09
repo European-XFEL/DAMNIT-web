@@ -56,8 +56,8 @@ export async function mockApi(
   let authed = authenticated
 
   // Content and last_modified routes share this state. A realistic epoch keeps
-  // the "Last updated" label out of 1970; only the before/after delta matters to
-  // the refetch logic.
+  // the "Modified" time out of 1970; only the before/after delta matters to the
+  // refetch logic.
   let contextContent = example.contextFile
   let contextLastModified = 1_700_000_000
 

@@ -5,7 +5,11 @@ import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
 import CenteredLoader from '#src/components/feedback/centered-loader'
+import StatusItem from '#src/components/statuses/status-item'
+import { ViewStatus } from '#src/components/statuses/view-status'
 import { useAppSelector } from '#src/app/store/hooks'
+import { formatClockTime, formatLongDate, formatTimeAgo } from '#src/utils/time'
+import { useMinuteClock } from '#src/utils/use-minute-clock'
 
 import {
   useCheckFileLastModifiedQuery,
@@ -69,7 +73,39 @@ function ContextFile({ subscribe = true }: ContextFileProps) {
       ) : (
         <ContextFileEditor content={data?.fileContent} />
       )}
+      {data?.lastModified != null && (
+        <ViewStatus>
+          <ModifiedItem time={data.lastModified * 1000} />
+        </ViewStatus>
+      )}
     </Box>
+  )
+}
+
+type ModifiedItemProps = {
+  time: number
+}
+
+function ModifiedItem({ time }: ModifiedItemProps) {
+  const now = useMinuteClock()
+
+  return (
+    <StatusItem
+      label="Modified"
+      value={formatTimeAgo(time, { now })}
+      tooltip={
+        <>
+          Modified{' '}
+          <Text span inherit fw={600}>
+            {formatLongDate(time)}
+          </Text>{' '}
+          at{' '}
+          <Text span inherit fw={600}>
+            {formatClockTime(time)}
+          </Text>
+        </>
+      }
+    />
   )
 }
 
