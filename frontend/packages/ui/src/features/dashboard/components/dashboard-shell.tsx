@@ -3,6 +3,8 @@ import { AppShell, VisuallyHidden } from '@mantine/core'
 import { useDidUpdate, useFocusReturn } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
+import StatusBar from '#src/components/statuses/status-bar'
+import { ViewStatusProvider } from '#src/components/statuses/view-status'
 import {
   selectMobileNavOpened,
   selectNavCollapsed,
@@ -13,6 +15,7 @@ import { type DashboardUser } from '#src/features/dashboard/types/dashboard.type
 import classes from './dashboard-shell.module.css'
 import DashboardBody from './dashboard-body'
 import DashboardHeader from './dashboard-header'
+import ReadOnlyItem from './status/read-only-item'
 
 type DashboardShellProps = {
   main: ReactNode
@@ -54,6 +57,7 @@ function DashboardShell({
         breakpoint: 'sm',
         collapsed: { mobile: !mobileNavOpened },
       }}
+      footer={{ height: 28 }}
     >
       <AppShell.Header bg="gray.1">
         <DashboardHeader identity={identity} homeTo={homeTo} />
@@ -67,12 +71,19 @@ function DashboardShell({
       >
         <DashboardNavbar user={user} />
       </AppShell.Navbar>
-      <AppShell.Main className={classes.main}>
-        <VisuallyHidden component="h1">{heading}</VisuallyHidden>
-        {/* The run sits below the band, which names the page whatever is
-            open beside the view. */}
-        <DashboardBody main={main} />
-      </AppShell.Main>
+      <ViewStatusProvider>
+        <AppShell.Main className={classes.main}>
+          <VisuallyHidden component="h1">{heading}</VisuallyHidden>
+          {/* The run sits below the band, which names the page whatever is
+              open beside the view. */}
+          <DashboardBody main={main} />
+        </AppShell.Main>
+        <AppShell.Footer aria-label="Status bar">
+          <StatusBar>
+            <ReadOnlyItem />
+          </StatusBar>
+        </AppShell.Footer>
+      </ViewStatusProvider>
     </AppShell>
   )
 }
