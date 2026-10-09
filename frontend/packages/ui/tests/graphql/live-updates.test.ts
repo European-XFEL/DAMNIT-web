@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
-import { liveUpdatesListeners, retryDelay } from '#src/graphql/live-updates'
+import {
+  liveUpdatesListeners,
+  reconnectCount,
+  retryDelay,
+} from '#src/graphql/live-updates'
 
 beforeEach(() => {
+  reconnectCount(0)
   vi.useFakeTimers()
 })
 
@@ -14,6 +19,28 @@ test('the wait before reconnecting doubles from 1 s and stops at 30 s', () => {
   const waits = [0, 1, 2, 3, 4, 5, 6, 50].map((retries) => retryDelay(retries))
 
   expect(waits).toEqual([1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000])
+})
+
+test('a reconnect raises the reconnect count once, at its first push', () => {
+  const listeners = liveUpdatesListeners(vi.fn())
+
+  // First connect and push
+  listeners.connected({}, undefined, false)
+  listeners.message({ type: 'next' })
+  expect(reconnectCount()).toBe(0)
+
+  // Reconnect, with only a pong so far
+  listeners.connected({}, undefined, true)
+  listeners.message({ type: 'pong' })
+  expect(reconnectCount()).toBe(0)
+
+  // The first push after the reconnect
+  listeners.message({ type: 'next' })
+  expect(reconnectCount()).toBe(1)
+
+  // A later push
+  listeners.message({ type: 'next' })
+  expect(reconnectCount()).toBe(1)
 })
 
 test('a ping left unanswered for 20 s ends the connection', () => {
