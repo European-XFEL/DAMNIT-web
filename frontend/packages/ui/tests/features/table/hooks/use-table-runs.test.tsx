@@ -446,16 +446,14 @@ describe('scrolling the table', () => {
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
+        if (page === 1) {
+          return answers([runFor(page)])
+        }
         return new Observable((observer) => {
-          const answer = () => {
+          pending.push(() => {
             observer.next({ data: { runs: [runFor(page)] } })
             observer.complete()
-          }
-          if (page === 1) {
-            answer()
-            return
-          }
-          pending.push(answer)
+          })
         })
       }
       started.push(page)
@@ -884,16 +882,14 @@ describe('leaving and reopening the table', () => {
     const link = new ApolloLink((operation) => {
       const page = (operation.variables.page as number) ?? 1
       if (operation.operationName === LIGHTWEIGHT_NAME) {
+        if (page === 1) {
+          return answers([runFor(page)])
+        }
         return new Observable((observer) => {
-          const answer = () => {
+          pending.push(() => {
             observer.next({ data: { runs: [runFor(page)] } })
             observer.complete()
-          }
-          if (page === 1) {
-            answer()
-            return
-          }
-          pending.push(answer)
+          })
         })
       }
       started.push(page)
