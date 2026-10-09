@@ -22,6 +22,8 @@ import {
 import { Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, VARIABLES } from '#src/constants'
+import StatusItem from '#src/components/statuses/status-item'
+import { ViewStatus } from '#src/components/statuses/view-status'
 import { plotRequested } from '#src/app/store/actions'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { hasValue, runKey } from '#src/data/table/table-data.transforms'
@@ -104,6 +106,12 @@ function paintInnerLine(
   ctx.fillStyle = color
   ctx.fillRect(rect.x, rect.y + 1, 1, rect.height - 1)
   ctx.restore()
+}
+
+const numberFormat = new Intl.NumberFormat('en')
+
+function formatRunCount(count: number) {
+  return `${numberFormat.format(count)} ${count === 1 ? 'run' : 'runs'}`
 }
 
 const Table = ({ paginated = true }: TableProps) => {
@@ -736,6 +744,12 @@ const Table = ({ paginated = true }: TableProps) => {
             <ContextMenu {...contextMenu} />
             <div id="portal" />
           </>
+          <ViewStatus>
+            <StatusItem
+              tooltip="Runs in this proposal"
+              label={formatRunCount(runs.length)}
+            />
+          </ViewStatus>
         </Stack>
       )}
     </>
