@@ -7,3 +7,4 @@ certs/
 *.crt
 *.key
 *.pem
+__pycache__/
