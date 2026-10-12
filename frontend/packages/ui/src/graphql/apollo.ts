@@ -16,7 +16,7 @@ import { createClient } from 'graphql-ws'
 
 import { BASE_URL, WS_URL } from '#src/constants'
 
-import { liveUpdatesListeners, waitBeforeRetry } from './live-updates'
+import { liveUpdatesListeners, retryNow, waitBeforeRetry } from './live-updates'
 import { DEFERRED_TABLE_DATA_QUERY_NAME } from './operation-names'
 import { createPriorityLink } from './priority-link'
 import { typePolicies } from './type-policies'
@@ -59,7 +59,16 @@ const wsClient = createClient({
   on: liveUpdatesListeners(() => wsClient.terminate()),
 })
 
-const wsLink = new GraphQLWsLink(wsClient)
+// A new subscription skips the back-off left from an outage. End the wait
+// after `subscribe`: subscribing can start it.
+const wsLink = new GraphQLWsLink({
+  ...wsClient,
+  subscribe: (payload, sink) => {
+    const unsubscribe = wsClient.subscribe(payload, sink)
+    retryNow()
+    return unsubscribe
+  },
+})
 
 const splitLink = split(
   ({ query }) => {
