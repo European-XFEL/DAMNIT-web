@@ -1,13 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { Alert, Box, Code, rem, Stack, Text } from '@mantine/core'
-import { IconAlertTriangle, IconLock } from '@tabler/icons-react'
+import { Alert, Box, Code, rem, Text } from '@mantine/core'
+import { IconAlertTriangle } from '@tabler/icons-react'
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
 
 import CenteredLoader from '#src/components/feedback/centered-loader'
-import ConnectionStatus from '#src/components/statuses/connection-status'
-import LabelStatus from '#src/components/statuses/label-status'
-import StatusBar from '#src/components/statuses/status-bar'
 import { useAppSelector } from '#src/app/store/hooks'
 
 import {
@@ -16,46 +13,11 @@ import {
 } from './context-file.api'
 import ContextFileEditor from './context-file-editor'
 
-function formatRelativeTime(date: Date | number | undefined) {
-  if (date == null) {
-    return 'Unknown'
-  }
-
-  const now = Date.now()
-  const then = typeof date === 'number' ? date * 1000 : date.getTime()
-  const diff = Math.max(0, now - then) // past only
-
-  const seconds = Math.floor(diff / 1000)
-  if (seconds < 10) {
-    return 'just now'
-  }
-  if (seconds < 60) {
-    return `${seconds}s ago`
-  }
-
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) {
-    return `${minutes}m ago`
-  }
-
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) {
-    return `${hours}h ago`
-  }
-
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
-
 export type ContextFileProps = {
   subscribe?: boolean
-  readOnly?: boolean
 }
 
-const ContextFile = ({
-  subscribe = true,
-  readOnly = true,
-}: ContextFileProps) => {
+function ContextFile({ subscribe = true }: ContextFileProps) {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
 
   const { data, error, refetch, isLoading } = useGetFileContentQuery({
@@ -84,70 +46,30 @@ const ContextFile = ({
   }, [lastModifiedData, data?.lastModified, refetch, subscribe])
 
   return (
-    <Stack align="stretch" h="100%" gap={0}>
-      {/* Monaco fills its parent, so without the min-height it grows past
-          the view and pushes the status bar off screen. */}
-      <Box flex={1} mih={0}>
-        {isLoading ? (
-          <CenteredLoader />
-        ) : error ? (
-          <Alert
-            m={20}
-            variant="light"
-            color="red"
-            title="Unable to load the context file"
-            icon={
-              <IconAlertTriangle
-                style={{ width: rem(20), height: rem(20) }}
-                stroke={1.5}
-              />
-            }
-          >
-            <Text size="sm">{describeLoadError(error)}</Text>
-          </Alert>
-        ) : (
-          <ContextFileEditor content={data?.fileContent} />
-        )}
-      </Box>
-      <StatusBar
-        leftSection={
-          readOnly && <LabelStatus icon={IconLock} label="Read-only" />
-        }
-        rightSection={
-          subscribe ? (
-            <WatchSection
-              connected={true}
-              lastUpdated={formatRelativeTime(data?.lastModified)}
+    // Monaco fills its parent, so without the min-height it grows past the
+    // view and under the status bar.
+    <Box flex={1} mih={0}>
+      {isLoading ? (
+        <CenteredLoader />
+      ) : error ? (
+        <Alert
+          m={20}
+          variant="light"
+          color="red"
+          title="Unable to load the context file"
+          icon={
+            <IconAlertTriangle
+              style={{ width: rem(20), height: rem(20) }}
+              stroke={1.5}
             />
-          ) : (
-            <DemoSection />
-          )
-        }
-      />
-    </Stack>
-  )
-}
-
-function DemoSection() {
-  return (
-    <>
-      <LabelStatus label="Demo" value="No updates" />
-      <ConnectionStatus disabled />
-    </>
-  )
-}
-
-type WatchSection = {
-  connected: boolean
-  lastUpdated: string
-}
-
-function WatchSection({ connected, lastUpdated }: WatchSection) {
-  return (
-    <>
-      <LabelStatus label="Last updated" value={lastUpdated} />
-      <ConnectionStatus connected={connected} />
-    </>
+          }
+        >
+          <Text size="sm">{describeLoadError(error)}</Text>
+        </Alert>
+      ) : (
+        <ContextFileEditor content={data?.fileContent} />
+      )}
+    </Box>
   )
 }
 
