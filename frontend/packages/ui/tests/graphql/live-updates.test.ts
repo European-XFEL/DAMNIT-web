@@ -4,6 +4,7 @@ import {
   liveUpdatesListeners,
   reconnectCount,
   retryDelay,
+  retryNow,
   waitBeforeRetry,
 } from '#src/graphql/live-updates'
 
@@ -37,6 +38,14 @@ test('the wait before a reconnect runs its delay plus up to 1 s', async () => {
 
   expect(await waitEndsWithin(wait, 3999)).toBe(false)
   expect(await waitEndsWithin(wait, 1001)).toBe(true)
+})
+
+test('trying now ends a pending wait at once', async () => {
+  const wait = waitBeforeRetry(5)
+
+  retryNow()
+
+  expect(await waitEndsWithin(wait, 0)).toBe(true)
 })
 
 test('a reconnect raises the reconnect count once, at its first push', () => {
