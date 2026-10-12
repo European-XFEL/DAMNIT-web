@@ -17,25 +17,25 @@ informed: {list everyone who is kept up-to-date on progress; and with whom there
 
 - {decision driver 1, for instance, a desired software quality, faced concern, constraint or force}
 - {decision driver 2}
-- … <!-- numbers of drivers can vary -->
+- ... <!-- numbers of drivers can vary -->
 
 ## Considered Options
 
 - {title of option 1}
 - {title of option 2}
 - {title of option 3}
-- … <!-- numbers of options can vary -->
+- ... <!-- numbers of options can vary -->
 
 ## Decision Outcome
 
-Chosen option: "{title of option 1}", because {justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force {force} | … | comes out best (see below)}.
+Chosen option: "{title of option 1}", because {justification. e.g., only option, which meets k.o. criterion decision driver | which resolves force {force} | ... | comes out best (see below)}.
 
 <!-- This is an optional element. Feel free to remove. -->
 ### Consequences
 
-- Good: {positive consequence, e.g., improvement of one or more desired qualities, …}
-- Bad: {negative consequence, e.g., compromising one or more desired qualities, …}
-- … <!-- numbers of consequences can vary -->
+- Good: {positive consequence, e.g., improvement of one or more desired qualities, ...}
+- Bad: {negative consequence, e.g., compromising one or more desired qualities, ...}
+- ... <!-- numbers of consequences can vary -->
 
 <!-- This is an optional element. Feel free to remove. -->
 ### Confirmation
@@ -48,23 +48,23 @@ Chosen option: "{title of option 1}", because {justification. e.g., only option,
 ### {title of option 1}
 
 <!-- This is an optional element. Feel free to remove. -->
-{example | description | pointer to more information | …}
+{example | description | pointer to more information | ...}
 
 - Good: {argument a}
 - Good: {argument b}
 <!-- use "neutral" if the given argument weights neither for good nor bad -->
 - Neutral: {argument c}
 - Bad: {argument d}
-- … <!-- numbers of pros and cons can vary -->
+- ... <!-- numbers of pros and cons can vary -->
 
 ### {title of other option}
 
-{example | description | pointer to more information | …}
+{example | description | pointer to more information | ...}
 
 - Good: {argument a}
 - Neutral: {argument b}
 - Bad: {argument c}
-- …
+- ...
 
 <!-- This is an optional element. Feel free to remove. -->
 ## More Information
