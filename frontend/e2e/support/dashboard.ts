@@ -17,6 +17,12 @@ export function breadcrumb(page: Page): Locator {
   return page.getByRole('navigation', { name: 'Breadcrumb' })
 }
 
+// The bar along the bottom: the app's own items on the left, the open view's
+// on the right.
+export function statusBar(page: Page): Locator {
+  return page.getByRole('contentinfo', { name: 'Status bar' })
+}
+
 // Below `sm` the Burger in the band shows and hides the nav.
 export function navBurger(page: Page): Locator {
   return page.getByRole('button', { name: 'Toggle navigation' })
