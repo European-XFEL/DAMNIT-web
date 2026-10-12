@@ -1,0 +1,6 @@
+# The API owns the Python lint rules; the tools at the root follow them.
+extend = "api/ruff.toml"
+
+[lint.per-file-ignores]
+"scripts/**" = ["S404", "S603", "S607"]
+"scripts/**/test_*.py" = ["S101"]

@@ -33,14 +33,14 @@ repos:
             args: ["--baseline", ".secrets.baseline"]
             files: ^api/tests/(mock/mymdc/.*\.ya?ml|refactor/e2e/cassettes/.*\.ya?ml)$
 
-    # ruff walks up from each file to find api/ruff.toml automatically
+    # ruff walks up from each file to find api/ruff.toml or the root ruff.toml
     - repo: https://github.com/astral-sh/ruff-pre-commit
       rev: v0.15.8
       hooks:
           - id: ruff-check
-            files: ^api/
+            files: ^(api|scripts)/
           - id: ruff-format
-            files: ^api/
+            files: ^(api|scripts)/
 
     # Local hooks cd into subdirectories and strip the prefix from
     # file arguments so tools see project-relative paths.
