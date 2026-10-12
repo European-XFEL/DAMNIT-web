@@ -53,6 +53,12 @@ repos:
             files: (^|api/)pyproject\.toml$|^uv\.lock$
             pass_filenames: false
 
+          - id: check-characters
+            name: check-characters
+            entry: uv run python scripts/check-characters/check_characters.py
+            language: system
+            require_serial: true
+
           # pyright temporarily disabled while a backend change is in flight.
           # Uncomment to restore (already set up for pre-push).
           # - id: pyright
