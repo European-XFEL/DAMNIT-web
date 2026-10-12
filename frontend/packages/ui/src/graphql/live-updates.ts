@@ -17,6 +17,13 @@ export function retryDelay(retries: number): number {
   return Math.min(FIRST_RETRY_DELAY * 2 ** retries, LONGEST_RETRY_DELAY)
 }
 
+export function waitBeforeRetry(retries: number): Promise<void> {
+  return new Promise((resolve) => {
+    // Up to 1 s of spread, so the open tabs do not all reconnect at once.
+    setTimeout(resolve, retryDelay(retries) + Math.random() * 1000)
+  })
+}
+
 export function liveUpdatesListeners(terminate: () => void) {
   let pongTimeout: ReturnType<typeof setTimeout> | undefined
   let reloadPending = false
