@@ -1,5 +1,22 @@
-"""Reproduce the writer-side `database is locked` error against the
-production read path in `damnit_api.runs.sqlite`.
+"""Reproduce DAMNIT's writer starvation against the production read path in
+`damnit_api.runs.sqlite`.
+
+Three readers in one process overlap their reads, so the process never drops
+its shared lock on the file and DAMNIT's writer waits out its 30 s timeout,
+unless the API serializes the reads. The defaults copy DAMNIT's timeout and
+pace.
+
+Reads have to take about a second each, so run it from `api/` against a copy
+of a big database in scratch. It reads and writes only its own staged copy:
+
+    uv run --no-sync python scripts/reproduce-read-lock.py \
+        --damnit-dir /path/to/copy --scratch-dir /path/to/copy/staging
+
+Check the reader alone in two seconds against the committed mock database:
+
+    uv run --no-sync python scripts/reproduce-read-lock.py \
+        --no-writer --duration 2 --scratch-dir /path/to/staging --damnit-dir \
+        tests/mock/data/gpfs/exfel/exp/MID/202401/p006996/usr/Shared/amore
 """
 
 import argparse
@@ -14,9 +31,10 @@ import time
 import uuid
 from pathlib import Path
 
-DEFAULT_DURATION_S = 30.0
-DEFAULT_WRITER_TIMEOUT_S = 0.0
-DEFAULT_READERS = 1
+DEFAULT_DURATION_S = 60.0
+DEFAULT_WRITER_TIMEOUT_S = 30.0
+DEFAULT_WRITER_INTERVAL_S = 0.5
+DEFAULT_READERS = 3
 PROPOSAL_LABEL = "__repro__"
 
 
@@ -37,6 +55,7 @@ import time
 db_path = sys.argv[1]
 duration = float(sys.argv[2])
 writer_timeout = float(sys.argv[3])
+writer_interval = float(sys.argv[4])
 
 stop = False
 
@@ -51,44 +70,31 @@ conn = sqlite3.connect(
     db_path, timeout=writer_timeout, isolation_level=None,
 )
 
-attempts = 0
-successes = 0
+commits = 0
 lock_errors = 0
 other_errors = 0
-counter = 0
-last_report = time.monotonic()
+longest_wait = 0.0
 deadline = time.monotonic() + duration
 
 while not stop and time.monotonic() < deadline:
-    attempts += 1
+    start = time.perf_counter()
     try:
-        conn.execute(f"PRAGMA user_version = {counter}")
-        successes += 1
-        counter += 1
+        conn.execute(f"PRAGMA user_version = {commits}")
+        commits += 1
     except sqlite3.OperationalError as exc:
         if "database is locked" in str(exc):
             lock_errors += 1
         else:
             other_errors += 1
-    now = time.monotonic()
-    if now - last_report >= 1.0:
-        sys.stdout.write(json.dumps({
-            "kind": "tick",
-            "attempts": attempts,
-            "successes": successes,
-            "lock_errors": lock_errors,
-            "other_errors": other_errors,
-        }) + "\n")
-        sys.stdout.flush()
-        last_report = now
-    time.sleep(0.001)
+    longest_wait = max(longest_wait, time.perf_counter() - start)
+    time.sleep(writer_interval)
 
 sys.stdout.write(json.dumps({
     "kind": "final",
-    "attempts": attempts,
-    "successes": successes,
+    "commits": commits,
     "lock_errors": lock_errors,
     "other_errors": other_errors,
+    "longest_wait": longest_wait,
 }) + "\n")
 sys.stdout.flush()
 """
@@ -170,7 +176,7 @@ def stage_copy(damnit_dir, scratch_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Reproduce writer-side SQLITE_BUSY against the API read path",
+        description="Reproduce DAMNIT's writer starvation against the API read path",
     )
     parser.add_argument(
         "--damnit-dir",
@@ -188,7 +194,10 @@ def parse_args():
         "--duration",
         type=float,
         default=DEFAULT_DURATION_S,
-        help=f"Test duration in seconds (default {DEFAULT_DURATION_S:.0f})",
+        help=(
+            f"Test duration in seconds (default {DEFAULT_DURATION_S:g})."
+            " Has to be longer than --writer-timeout."
+        ),
     )
     parser.add_argument(
         "--keep",
@@ -205,17 +214,34 @@ def parse_args():
         type=float,
         default=DEFAULT_WRITER_TIMEOUT_S,
         help=(
-            "Writer's sqlite3 busy-retry budget in seconds (default 0)."
-            " The DAMNIT backend uses 30."
+            "Writer's sqlite3 busy-retry budget in seconds"
+            f" (default {DEFAULT_WRITER_TIMEOUT_S:g}, DAMNIT's timeout)."
+        ),
+    )
+    parser.add_argument(
+        "--writer-interval",
+        type=float,
+        default=DEFAULT_WRITER_INTERVAL_S,
+        help=(
+            "Pause between the writer's commits in seconds"
+            f" (default {DEFAULT_WRITER_INTERVAL_S:g}, DAMNIT's pace during"
+            " extraction)."
         ),
     )
     parser.add_argument(
         "--readers",
         type=int,
         default=DEFAULT_READERS,
-        help="Number of concurrent reader coroutines (default 1).",
+        help=f"Number of concurrent reader coroutines (default {DEFAULT_READERS}).",
     )
-    return parser.parse_args()
+
+    args = parser.parse_args()
+
+    # A writer starves only once a wait reaches its timeout.
+    if not args.no_writer and args.duration <= args.writer_timeout:
+        parser.error("--duration has to be longer than --writer-timeout")
+
+    return args
 
 
 def start_writer(db_path, args):
@@ -227,6 +253,7 @@ def start_writer(db_path, args):
             str(db_path),
             str(args.duration),
             str(args.writer_timeout),
+            str(args.writer_interval),
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -236,10 +263,10 @@ def start_writer(db_path, args):
 
 def empty_summary():
     return {
-        "attempts": 0,
-        "successes": 0,
+        "commits": 0,
         "lock_errors": 0,
         "other_errors": 0,
+        "longest_wait": 0.0,
     }
 
 
@@ -268,18 +295,22 @@ def collect_writer(writer):
 def print_summary(args, reader, writer):
     print()
     print("--------- reproduction summary ---------")
-    print(f"duration:        {args.duration:.1f} s")
+    print(f"duration:       {args.duration:.1f} s")
     print(
-        f"reader ops:      {reader['ops']}"
+        f"reader ops:     {reader['ops']}"
         f"  (lock errors: {reader['lock_errors']},"
         f" other errors: {reader['other_errors']})"
     )
-    print(
-        f"writer attempts: {writer['attempts']}"
-        f"  (lock errors: {writer['lock_errors']},"
-        f" other errors: {writer['other_errors']})"
-    )
-    print(f"writer success:  {writer['successes']}")
+    if not args.no_writer:
+        print(
+            f"writer commits: {writer['commits']}"
+            f"  (lock errors: {writer['lock_errors']},"
+            f" other errors: {writer['other_errors']})"
+        )
+        print(
+            f"longest wait:   {writer['longest_wait']:.2f} s"
+            "  (capped by the writer timeout)"
+        )
     print()
 
 
@@ -295,14 +326,15 @@ def print_result(args, writer):
 
     if writer["lock_errors"] > 0:
         print(
-            "REPRODUCED  the production read path on this branch causes"
-            " SQLITE_BUSY on the writer."
+            "REPRODUCED  the writer hit 'database is locked'"
+            f" (lock errors: {writer['lock_errors']},"
+            f" longest wait: {writer['longest_wait']:.1f} s)."
         )
         return 0
 
     print(
-        "NOT REPRODUCED  raise --duration or check that the writer"
-        " subprocess actually ran."
+        f"NOT REPRODUCED  in {args.duration:.0f} s the writer never hit"
+        f" 'database is locked' (commits: {writer['commits']})."
     )
 
     return 1
@@ -317,7 +349,7 @@ def main():
     db_path = staging / "runs.sqlite"
 
     writer = None
-    writer_summary = empty_summary()
+    writer_summary = None
     try:
         if not args.no_writer:
             writer = start_writer(db_path, args)
