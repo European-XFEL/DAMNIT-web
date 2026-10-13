@@ -21,6 +21,7 @@ Check the reader alone in two seconds against the committed mock database:
 
 import argparse
 import asyncio
+import importlib
 import json
 import os
 import shutil
@@ -31,7 +32,7 @@ import sys
 import threading
 import time
 import uuid
-from contextlib import closing
+from contextlib import closing, suppress
 from pathlib import Path
 
 DEFAULT_DURATION_S = 60.0
@@ -156,6 +157,14 @@ async def reader_loop(duration, readers, newest):
         counts["first_error"] = f"no read finished in {duration:g} s"
 
     return counts
+
+
+def preload_api():
+    # A first import in a fresh env compiles the API and can take seconds, so
+    # it runs before the clock starts. A broken import fails again in the
+    # readers, which report it as READER BROKEN.
+    with suppress(Exception):
+        importlib.import_module("damnit_api.runs.sqlite")
 
 
 def _stop_on_interrupt(*_):
@@ -402,6 +411,7 @@ def main():
     writer_summary = None
     try:
         newest = newest_timestamp(db_path)
+        preload_api()
         if not args.no_writer:
             writer = start_writer(db_path, args)
 
