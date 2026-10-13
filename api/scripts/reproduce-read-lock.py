@@ -16,8 +16,8 @@ import time
 import uuid
 from pathlib import Path
 
-DEFAULT_DURATION = 30.0
-DEFAULT_WRITER_TIMEOUT = 0.0
+DEFAULT_DURATION_S = 30.0
+DEFAULT_WRITER_TIMEOUT_S = 0.0
 DEFAULT_READERS = 1
 PROPOSAL_LABEL = "__repro__"
 
@@ -198,8 +198,8 @@ def parse_args():
     parser.add_argument(
         "--duration",
         type=float,
-        default=DEFAULT_DURATION,
-        help=f"Test duration in seconds (default {DEFAULT_DURATION:.0f})",
+        default=DEFAULT_DURATION_S,
+        help=f"Test duration in seconds (default {DEFAULT_DURATION_S:.0f})",
     )
     parser.add_argument(
         "--keep",
@@ -214,7 +214,7 @@ def parse_args():
     parser.add_argument(
         "--writer-timeout",
         type=float,
-        default=DEFAULT_WRITER_TIMEOUT,
+        default=DEFAULT_WRITER_TIMEOUT_S,
         help=(
             "Writer's sqlite3 busy-retry budget in seconds (default 0)."
             " The DAMNIT backend uses 30."
