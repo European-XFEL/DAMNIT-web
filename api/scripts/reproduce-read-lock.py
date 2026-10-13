@@ -25,10 +25,12 @@ import json
 import os
 import shutil
 import signal
+import sqlite3
 import subprocess
 import sys
 import time
 import uuid
+from contextlib import closing
 from pathlib import Path
 
 DEFAULT_DURATION_S = 60.0
@@ -104,7 +106,7 @@ sys.stdout.flush()
 # Reader
 
 
-async def _single_reader(deadline, counts):
+async def _single_reader(deadline, newest, counts):
     # The package builds its settings on first import, so this import has to
     # wait until main() has set DW_API_DAMNIT_PATH.
     from damnit_api.runs.sqlite import (
@@ -119,11 +121,13 @@ async def _single_reader(deadline, counts):
         try:
             await async_variables(PROPOSAL_LABEL)
             run_variables = await async_table(PROPOSAL_LABEL, name="run_variables")
+            # Like the live-update tick, ask only for rows newer than the
+            # newest: a full scan that returns almost nothing.
             await async_latest_rows(
                 PROPOSAL_LABEL,
                 table=run_variables,
                 by="timestamp",
-                start_at=0,
+                start_at=newest,
             )
             await async_all_tags(PROPOSAL_LABEL)
             await async_variable_tags(PROPOSAL_LABEL)
@@ -135,10 +139,12 @@ async def _single_reader(deadline, counts):
                 counts["other_errors"] += 1
 
 
-async def reader_loop(duration, readers):
+async def reader_loop(duration, readers, newest):
     deadline = time.monotonic() + duration
     counts = {"ops": 0, "lock_errors": 0, "other_errors": 0}
-    await asyncio.gather(*[_single_reader(deadline, counts) for _ in range(readers)])
+    await asyncio.gather(*[
+        _single_reader(deadline, newest, counts) for _ in range(readers)
+    ])
 
     return counts
 
@@ -161,8 +167,6 @@ def stage_copy(damnit_dir, scratch_dir):
 
     # Some older sqlites lack tags/variable_tags. Create empty placeholders
     # so both branches exercise the same read path on this scratch copy.
-    import sqlite3
-
     with sqlite3.connect(dst) as conn:
         conn.executescript(
             "CREATE TABLE IF NOT EXISTS tags ("
@@ -172,6 +176,15 @@ def stage_copy(damnit_dir, scratch_dir):
         )
 
     return staging
+
+
+def newest_timestamp(db_path):
+    # Read before the writer starts, so no lock can get in the way.
+    with closing(sqlite3.connect(db_path)) as conn:
+        query = "SELECT max(timestamp) FROM run_variables"
+        (newest,) = conn.execute(query).fetchone()
+
+    return newest or 0
 
 
 def parse_args():
@@ -351,10 +364,11 @@ def main():
     writer = None
     writer_summary = None
     try:
+        newest = newest_timestamp(db_path)
         if not args.no_writer:
             writer = start_writer(db_path, args)
 
-        reader_summary = asyncio.run(reader_loop(args.duration, args.readers))
+        reader_summary = asyncio.run(reader_loop(args.duration, args.readers, newest))
 
         if writer is not None:
             writer_summary = collect_writer(writer)
