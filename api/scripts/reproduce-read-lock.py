@@ -2,8 +2,6 @@
 production read path in `damnit_api.runs.sqlite`.
 """
 
-from __future__ import annotations
-
 import argparse
 import asyncio
 import json
@@ -22,7 +20,7 @@ DEFAULT_READERS = 1
 PROPOSAL_LABEL = "__repro__"
 
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Writer subprocess
 #
 # Runs in a separate interpreter so its lock requests go through the kernel
@@ -96,7 +94,7 @@ sys.stdout.flush()
 """
 
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Reader
 
 
@@ -148,7 +146,7 @@ async def reader_loop(duration, readers):
     return total_ops, total_locks, total_others
 
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Orchestration
 
 
