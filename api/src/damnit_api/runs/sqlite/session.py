@@ -107,6 +107,14 @@ async def get_database_mtime(proposal) -> int | None:
     return stat.st_mtime_ns
 
 
+def get_lock(proposal) -> asyncio.Lock:
+    """The lock `get_session` and `get_connection` take on this database.
+
+    Hold it around reads that open the database themselves, such as DAMNIT's API.
+    """
+    return DatabaseSessionManager(proposal)._lock
+
+
 # -----------------------------------------------------------------------------
 # Etc.
 
