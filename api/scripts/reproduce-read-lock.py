@@ -6,17 +6,20 @@ its shared lock on the file and DAMNIT's writer waits out its 30 s timeout,
 unless the API serializes the reads. The defaults copy DAMNIT's timeout and
 pace.
 
-Reads have to take about a second each, so run it from `api/` against a copy
-of a big database in scratch. It reads and writes only its own staged copy:
+Reads have to take about a second each, so point it at a big database. It
+only copies `runs.sqlite` out of `--damnit-dir`, so a proposal's own folder is
+safe, and runs against that copy in `--scratch-dir`. Run it from the
+repository root, where `uv run` installs the API on first use:
 
-    uv run --no-sync python scripts/reproduce-read-lock.py \
-        --damnit-dir /path/to/copy --scratch-dir /path/to/copy/staging
+    uv run --package damnit-api python api/scripts/reproduce-read-lock.py \
+        --damnit-dir /gpfs/exfel/exp/<inst>/<cycle>/<proposal>/usr/Shared/amore \
+        --scratch-dir /gpfs/exfel/data/scratch/$USER/lockcheck
 
 Check the reader alone in two seconds against the committed mock database:
 
-    uv run --no-sync python scripts/reproduce-read-lock.py \
-        --no-writer --duration 2 --scratch-dir /path/to/staging --damnit-dir \
-        tests/mock/data/gpfs/exfel/exp/MID/202401/p006996/usr/Shared/amore
+    uv run --package damnit-api python api/scripts/reproduce-read-lock.py \
+        --no-writer --duration 2 --scratch-dir /tmp/lockcheck --damnit-dir \
+        api/tests/mock/data/gpfs/exfel/exp/MID/202401/p006996/usr/Shared/amore
 """
 
 import argparse
