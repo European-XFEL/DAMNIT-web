@@ -24,9 +24,11 @@ import asyncio
 import json
 import os
 import shutil
+import signal
 import sqlite3
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from contextlib import closing
@@ -38,6 +40,8 @@ DEFAULT_WRITER_INTERVAL_S = 0.5
 DEFAULT_READERS = 3
 WRITER_STOP_TIMEOUT_S = 5.0
 PROPOSAL_LABEL = "__repro__"
+
+interrupted = threading.Event()
 
 
 # -----------------------------------------------------------------------------
@@ -116,7 +120,7 @@ async def _single_reader(deadline, newest, counts):
         counts["first_error"] = f"{type(exc).__name__}: {exc}"
         return
 
-    while time.monotonic() < deadline:
+    while not interrupted.is_set() and time.monotonic() < deadline:
         try:
             await async_variables(PROPOSAL_LABEL)
             run_variables = await async_table(PROPOSAL_LABEL, name="run_variables")
@@ -152,6 +156,13 @@ async def reader_loop(duration, readers, newest):
         counts["first_error"] = f"no read finished in {duration:g} s"
 
     return counts
+
+
+def _stop_on_interrupt(*_):
+    # Cancelling the API's reads can hang the exit, so the first Ctrl-C only
+    # asks the readers to stop; a second one interrupts as usual.
+    interrupted.set()
+    signal.signal(signal.SIGINT, signal.default_int_handler)
 
 
 # -----------------------------------------------------------------------------
@@ -265,6 +276,8 @@ def parse_args():
 
 
 def start_writer(db_path, args):
+    # Its own process group keeps the terminal's Ctrl-C away from the writer,
+    # which the parent stops once the readers are done.
     return subprocess.Popen(
         [
             sys.executable,
@@ -278,6 +291,7 @@ def start_writer(db_path, args):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        process_group=0,
     )
 
 
@@ -335,6 +349,10 @@ def print_result(args, reader, writer):
     Each result's line and its exit code come from one check, so one function
     prints the line and returns the code.
     """
+    if interrupted.is_set():
+        print("INTERRUPTED  the run was cut short, so it shows nothing.")
+        return 130
+
     if reader["first_error"]:
         print(
             "READER BROKEN  the reader failed, so the writer's numbers say"
@@ -373,6 +391,7 @@ def print_result(args, reader, writer):
 
 def main():
     args = parse_args()
+    signal.signal(signal.SIGINT, _stop_on_interrupt)
 
     staging = stage_copy(args.damnit_dir, args.scratch_dir)
     print(f"staged copy: {staging}")
