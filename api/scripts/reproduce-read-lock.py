@@ -24,7 +24,6 @@ import asyncio
 import json
 import os
 import shutil
-import signal
 import sqlite3
 import subprocess
 import sys
@@ -37,6 +36,7 @@ DEFAULT_DURATION_S = 60.0
 DEFAULT_WRITER_TIMEOUT_S = 30.0
 DEFAULT_WRITER_INTERVAL_S = 0.5
 DEFAULT_READERS = 3
+WRITER_STOP_TIMEOUT_S = 5.0
 PROPOSAL_LABEL = "__repro__"
 
 
@@ -49,24 +49,14 @@ PROPOSAL_LABEL = "__repro__"
 
 WRITER_SOURCE = r"""
 import json
-import signal
+import select
 import sqlite3
 import sys
 import time
 
 db_path = sys.argv[1]
-duration = float(sys.argv[2])
-writer_timeout = float(sys.argv[3])
-writer_interval = float(sys.argv[4])
-
-stop = False
-
-def _stop(*_):
-    global stop
-    stop = True
-
-signal.signal(signal.SIGTERM, _stop)
-signal.signal(signal.SIGINT, _stop)
+writer_timeout = float(sys.argv[2])
+writer_interval = float(sys.argv[3])
 
 conn = sqlite3.connect(
     db_path, timeout=writer_timeout, isolation_level=None,
@@ -76,9 +66,8 @@ commits = 0
 lock_errors = 0
 other_errors = 0
 longest_wait = 0.0
-deadline = time.monotonic() + duration
 
-while not stop and time.monotonic() < deadline:
+while True:
     start = time.perf_counter()
     try:
         conn.execute(f"PRAGMA user_version = {commits}")
@@ -89,7 +78,10 @@ while not stop and time.monotonic() < deadline:
         else:
             other_errors += 1
     longest_wait = max(longest_wait, time.perf_counter() - start)
-    time.sleep(writer_interval)
+
+    # The parent closes stdin to stop the writer, which also ends this wait.
+    if select.select([sys.stdin], [], [], writer_interval)[0]:
+        break
 
 sys.stdout.write(json.dumps({
     "kind": "final",
@@ -264,10 +256,10 @@ def start_writer(db_path, args):
             "-c",
             WRITER_SOURCE,
             str(db_path),
-            str(args.duration),
             str(args.writer_timeout),
             str(args.writer_interval),
         ],
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
@@ -284,12 +276,9 @@ def empty_summary():
 
 
 def collect_writer(writer):
+    """Stop the writer by closing its stdin and return its counts."""
     summary = empty_summary()
-    try:
-        stdout, stderr = writer.communicate(timeout=5)
-    except subprocess.TimeoutExpired:
-        writer.send_signal(signal.SIGTERM)
-        stdout, stderr = writer.communicate(timeout=5)
+    stdout, stderr = writer.communicate(timeout=WRITER_STOP_TIMEOUT_S)
 
     for line in stdout.splitlines():
         try:
@@ -372,11 +361,12 @@ def main():
 
         if writer is not None:
             writer_summary = collect_writer(writer)
-            writer = None
     finally:
-        if writer is not None and writer.poll() is None:
-            writer.send_signal(signal.SIGTERM)
-            writer.wait(timeout=5)
+        # Stops a writer still running after a timeout or a crash, before its
+        # copy is deleted.
+        if writer is not None:
+            writer.kill()
+            writer.wait()
         if not args.keep:
             shutil.rmtree(staging, ignore_errors=True)
 
