@@ -99,15 +99,20 @@ sys.stdout.flush()
 
 
 async def _single_reader(deadline, newest, counts):
-    # The package builds its settings on first import, so this import has to
-    # wait until main() has set DW_API_DAMNIT_PATH.
-    from damnit_api.runs.sqlite import (
-        async_all_tags,
-        async_latest_rows,
-        async_table,
-        async_variable_tags,
-        async_variables,
-    )
+    # Imported inside the try, so a broken import, such as after a module
+    # moves, reports READER BROKEN.
+    try:
+        from damnit_api.runs.sqlite import (
+            async_all_tags,
+            async_latest_rows,
+            async_table,
+            async_variable_tags,
+            async_variables,
+        )
+    except Exception as exc:
+        counts["other_errors"] += 1
+        counts["first_error"] = f"{type(exc).__name__}: {exc}"
+        return
 
     while time.monotonic() < deadline:
         try:
@@ -129,14 +134,20 @@ async def _single_reader(deadline, newest, counts):
                 counts["lock_errors"] += 1
             else:
                 counts["other_errors"] += 1
+                counts["first_error"] = counts["first_error"] or (
+                    f"{type(exc).__name__}: {exc}"
+                )
 
 
 async def reader_loop(duration, readers, newest):
     deadline = time.monotonic() + duration
-    counts = {"ops": 0, "lock_errors": 0, "other_errors": 0}
+    counts = {"ops": 0, "lock_errors": 0, "other_errors": 0, "first_error": None}
     await asyncio.gather(*[
         _single_reader(deadline, newest, counts) for _ in range(readers)
     ])
+
+    if counts["ops"] == 0 and counts["first_error"] is None:
+        counts["first_error"] = f"no read finished in {duration:g} s"
 
     return counts
 
@@ -242,6 +253,8 @@ def parse_args():
 
     args = parser.parse_args()
 
+    if args.readers < 1:
+        parser.error("--readers has to be at least 1")
     # A writer starves only once a wait reaches its timeout.
     if not args.no_writer and args.duration <= args.writer_timeout:
         parser.error("--duration has to be longer than --writer-timeout")
@@ -316,14 +329,22 @@ def print_summary(args, reader, writer):
     print()
 
 
-def print_result(args, writer):
+def print_result(args, reader, writer):
     """Print what the run showed and return the script's exit code.
 
     Each result's line and its exit code come from one check, so one function
     prints the line and returns the code.
     """
+    if reader["first_error"]:
+        print(
+            "READER BROKEN  the reader failed, so the writer's numbers say"
+            " nothing about the lock."
+        )
+        print(f"first error: {reader['first_error']}")
+        return 2
+
     if args.no_writer:
-        print("(no writer; sanity check only)")
+        print("reader ok")
         return 0
 
     if writer["lock_errors"] > 0:
@@ -372,7 +393,7 @@ def main():
 
     print_summary(args, reader_summary, writer_summary)
 
-    return print_result(args, writer_summary)
+    return print_result(args, reader_summary, writer_summary)
 
 
 if __name__ == "__main__":
