@@ -218,6 +218,22 @@ def parse_args():
     return parser.parse_args()
 
 
+def start_writer(db_path, args):
+    return subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            WRITER_SOURCE,
+            str(db_path),
+            str(args.duration),
+            str(args.writer_timeout),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
 def empty_summary():
     return {
         "attempts": 0,
@@ -249,30 +265,62 @@ def collect_writer(writer):
     return summary
 
 
+def print_summary(args, reader, writer):
+    print()
+    print("--------- reproduction summary ---------")
+    print(f"duration:        {args.duration:.1f} s")
+    print(
+        f"reader ops:      {reader['ops']}"
+        f"  (lock errors: {reader['lock_errors']},"
+        f" other errors: {reader['other_errors']})"
+    )
+    print(
+        f"writer attempts: {writer['attempts']}"
+        f"  (lock errors: {writer['lock_errors']},"
+        f" other errors: {writer['other_errors']})"
+    )
+    print(f"writer success:  {writer['successes']}")
+    print()
+
+
+def print_result(args, writer):
+    """Print what the run showed and return the script's exit code.
+
+    Each result's line and its exit code come from one check, so one function
+    prints the line and returns the code.
+    """
+    if args.no_writer:
+        print("(no writer; sanity check only)")
+        return 0
+
+    if writer["lock_errors"] > 0:
+        print(
+            "REPRODUCED  the production read path on this branch causes"
+            " SQLITE_BUSY on the writer."
+        )
+        return 0
+
+    print(
+        "NOT REPRODUCED  raise --duration or check that the writer"
+        " subprocess actually ran."
+    )
+
+    return 1
+
+
 def main():
     args = parse_args()
 
     staging = stage_copy(args.damnit_dir, args.scratch_dir)
     print(f"staged copy: {staging}")
     os.environ["DW_API_DAMNIT_PATH"] = str(staging)
+    db_path = staging / "runs.sqlite"
 
     writer = None
     writer_summary = empty_summary()
     try:
         if not args.no_writer:
-            writer = subprocess.Popen(
-                [
-                    sys.executable,
-                    "-c",
-                    WRITER_SOURCE,
-                    str(staging / "runs.sqlite"),
-                    str(args.duration),
-                    str(args.writer_timeout),
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
+            writer = start_writer(db_path, args)
 
         reader_summary = asyncio.run(reader_loop(args.duration, args.readers))
 
@@ -286,36 +334,9 @@ def main():
         if not args.keep:
             shutil.rmtree(staging, ignore_errors=True)
 
-    print()
-    print("--------- reproduction summary ---------")
-    print(f"duration:        {args.duration:.1f} s")
-    print(
-        f"reader ops:      {reader_summary['ops']}"
-        f"  (lock errors: {reader_summary['lock_errors']},"
-        f" other errors: {reader_summary['other_errors']})"
-    )
-    print(
-        f"writer attempts: {writer_summary['attempts']}"
-        f"  (lock errors: {writer_summary['lock_errors']},"
-        f" other errors: {writer_summary['other_errors']})"
-    )
-    print(f"writer success:  {writer_summary['successes']}")
-    print()
+    print_summary(args, reader_summary, writer_summary)
 
-    if args.no_writer:
-        print("(no writer; sanity check only)")
-        return 0
-    if writer_summary["lock_errors"] > 0:
-        print(
-            "REPRODUCED  the production read path on this branch causes"
-            " SQLITE_BUSY on the writer."
-        )
-        return 0
-    print(
-        "NOT REPRODUCED  raise --duration or check that the writer"
-        " subprocess actually ran."
-    )
-    return 1
+    return print_result(args, writer_summary)
 
 
 if __name__ == "__main__":
