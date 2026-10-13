@@ -63,14 +63,8 @@ class DatabaseSessionManager(metaclass=Registry):
             msg = "DatabaseSessionManager is not initialized"
             raise Exception(msg)
 
-        session = self._sessionmaker()
-        try:
+        async with self._sessionmaker() as session:
             yield session
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
 
 
 def get_session(proposal) -> AsyncSession:
