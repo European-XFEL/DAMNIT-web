@@ -74,6 +74,32 @@ test("an existing run's value updates live", async ({ page, api, example }) => {
   await expect(trains).toHaveText(updated)
 })
 
+test('a value changed during an outage shows once live updates reconnect', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  const trains = cell(page, { col: columnOf(example, 'n_trains'), row: 0 })
+  await expect(trains).not.toBeEmpty()
+  const updated = '777777'
+  await expect(trains).not.toHaveText(updated)
+
+  // Live updates drop, and run 1 changes before they are back. No push carries
+  // the change, so only asking again after the reconnect can find it.
+  await api.dropLiveUpdates()
+  api.editRuns({ 1: { n_trains: { dtype: 'number', value: Number(updated) } } })
+  // The server's first tick after the subscribe pushes the metadata, and that
+  // push is what sends the client to ask again.
+  api.pushLatestData({
+    metadata: fullMetadata(example.meta, XPCS.meta.runs),
+    runs: {},
+  })
+
+  // The first retry waits up to 2 s, then page 1 loads again.
+  await expect(trains).toHaveText(updated, { timeout: 10_000 })
+})
+
 test.describe('a deferred image resolves after its run finished', () => {
   test.use({ example: xpcsWithPendingImage })
 

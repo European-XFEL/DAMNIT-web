@@ -21,7 +21,14 @@ export type LatestData = {
   }
 }
 
-export type PushLatestData = (data: LatestData) => void
+export type LiveUpdatesMock = {
+  // Deliver a graphql-ws `next` as the backend does for new table data: a new
+  // run, an updated cell, or a deferred image resolving.
+  pushLatestData: (data: LatestData) => void
+  // Close the live-updates socket the way an API restart does, with a code
+  // graphql-ws retries, so the client reconnects after its first retry wait.
+  dropLiveUpdates: () => Promise<void>
+}
 
 // The metadata half of a push. The client replaces its metadata wholesale, so a
 // push that carries only the run list would drop the variables and tags the
@@ -37,9 +44,7 @@ export function fullMetadata(
 // Mock the app's graphql-ws connection. Playwright fully mocks the socket, so we
 // play the graphql-transport-ws server by hand: acknowledge the init, remember
 // the active subscription id, and answer pings. The subscription is never
-// completed by us, so a test can push repeatedly onto the same id. Returns
-// pushLatestData, which delivers a `next` shaped like the backend's run_updates
-// payload so a test can drive a live table update.
+// completed by us, so a test can push repeatedly onto the same id.
 //
 // Delivery is not gated on the subscription's `since` cursor: the mock sends
 // whatever is pushed, regardless of the timestamp the client subscribed with.
@@ -48,7 +53,7 @@ export function fullMetadata(
 export async function mockWebSocket(
   page: Page,
   proposal: string
-): Promise<PushLatestData> {
+): Promise<LiveUpdatesMock> {
   let socket: WebSocketRoute | undefined
   let activeId: string | undefined
   // Pushes made before the app has subscribed (the handshake can lag the grid
@@ -125,11 +130,17 @@ export async function mockWebSocket(
     })
   })
 
-  return (data) => {
-    if (socket && activeId !== undefined) {
-      deliver(data)
-    } else {
-      pending.push(data)
-    }
+  return {
+    pushLatestData: (data) => {
+      if (socket && activeId !== undefined) {
+        deliver(data)
+      } else {
+        pending.push(data)
+      }
+    },
+    dropLiveUpdates: async () => {
+      activeId = undefined
+      await socket?.close({ code: 1012, reason: 'Service Restart' })
+    },
   }
 }

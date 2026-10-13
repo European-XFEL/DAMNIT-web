@@ -7,12 +7,17 @@ import {
   MockDataNotFound,
   REST_API_PREFIXES,
   resolveOperation,
+  runNumber,
   unmockedOperationError,
   type MockDataSource,
 } from '@damnit-frontend/shared/mocks'
 import { accessibleProposals, type Example } from '#examples/xpcs'
 
-import { mockWebSocket, type PushLatestData } from './websocket'
+import {
+  mockWebSocket,
+  type LatestData,
+  type LiveUpdatesMock,
+} from './websocket'
 
 export { fullMetadata } from './websocket'
 
@@ -27,7 +32,7 @@ const monacoVsDir = path.join(
   'min/vs'
 )
 
-export type MockApi = {
+export type MockApi = LiveUpdatesMock & {
   // GraphQL operations and REST paths the router had no mock for; the test
   // fixture fails the test when any were seen, so mock drift surfaces loudly
   // instead of as an empty response or a silent request to the real network.
@@ -36,10 +41,9 @@ export type MockApi = {
   // file being edited on disk between polls. The next poll then sees a newer
   // stamp than the loaded content and triggers a refetch.
   touchContextFile: (content: string) => void
-  // Deliver a graphql-ws subscription message, modelling the backend pushing new
-  // table data. A spec calls this after the grid has loaded to drive a live
-  // update (a new run, an updated cell, or a deferred image resolving).
-  pushLatestData: PushLatestData
+  // Change what the GraphQL routes serve for some runs, with no push to say so,
+  // modelling values that changed while live updates were down.
+  editRuns: (runs: LatestData['runs']) => void
 }
 
 type MockApiOptions = {
@@ -64,6 +68,9 @@ export async function mockApi(
   // variables.proposal arrives as a string, so hold the accessible set as strings.
   const accessible = accessibleProposals(example).map(String)
 
+  // Replaced rather than mutated, so editRuns leaves the shared example alone.
+  let runData = example.data
+
   const api: MockApi = {
     unmockedRequests: [],
     touchContextFile: (content) => {
@@ -72,7 +79,13 @@ export async function mockApi(
     },
     // A push carries the run's identity, so it is delivered for the proposal the
     // subscription opened (the first accessible one in a single-proposal example).
-    pushLatestData: await mockWebSocket(page, accessible[0]),
+    ...(await mockWebSocket(page, accessible[0])),
+    editRuns: (runs) => {
+      runData = runData.map((run) => ({
+        ...run,
+        variables: { ...run.variables, ...runs[runNumber(run)] },
+      }))
+    },
   }
 
   // One example per test, so the source ignores the requested proposal. A
@@ -81,7 +94,7 @@ export async function mockApi(
   // falls through to the route handler's catch below, which fails the test
   // loudly instead of stalling.
   const source: MockDataSource = {
-    runs: async () => ({ meta: example.meta, data: example.data }),
+    runs: async () => ({ meta: example.meta, data: runData }),
     extractedData: async ({ run, variable }) => {
       try {
         return example.extractedData(run, variable)
