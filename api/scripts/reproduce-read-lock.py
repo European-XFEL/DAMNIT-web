@@ -65,6 +65,7 @@ conn = sqlite3.connect(
 commits = 0
 lock_errors = 0
 other_errors = 0
+first_error = None
 longest_wait = 0.0
 
 while True:
@@ -77,6 +78,7 @@ while True:
             lock_errors += 1
         else:
             other_errors += 1
+            first_error = first_error or f"{type(exc).__name__}: {exc}"
     longest_wait = max(longest_wait, time.perf_counter() - start)
 
     # The parent closes stdin to stop the writer, which also ends this wait.
@@ -84,10 +86,10 @@ while True:
         break
 
 sys.stdout.write(json.dumps({
-    "kind": "final",
     "commits": commits,
     "lock_errors": lock_errors,
     "other_errors": other_errors,
+    "first_error": first_error,
     "longest_wait": longest_wait,
 }) + "\n")
 sys.stdout.flush()
@@ -284,27 +286,25 @@ def empty_summary():
         "commits": 0,
         "lock_errors": 0,
         "other_errors": 0,
+        "first_error": None,
         "longest_wait": 0.0,
     }
 
 
 def collect_writer(writer):
     """Stop the writer by closing its stdin and return its counts."""
-    summary = empty_summary()
-    stdout, stderr = writer.communicate(timeout=WRITER_STOP_TIMEOUT_S)
+    try:
+        stdout, stderr = writer.communicate(timeout=WRITER_STOP_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        reason = f"the writer did not stop within {WRITER_STOP_TIMEOUT_S:g} s"
+        return {**empty_summary(), "first_error": reason}
 
-    for line in stdout.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("kind") == "final":
-            summary = event
-
-    if writer.returncode and stderr.strip():
+    if writer.returncode:
         sys.stderr.write("writer stderr:\n" + stderr)
+        reason = f"the writer exited with code {writer.returncode}"
+        return {**empty_summary(), "first_error": reason}
 
-    return summary
+    return json.loads(stdout)
 
 
 def print_summary(args, reader, writer):
@@ -346,6 +346,14 @@ def print_result(args, reader, writer):
     if args.no_writer:
         print("reader ok")
         return 0
+
+    if writer["first_error"]:
+        print(
+            "WRITER BROKEN  the writer failed, so its numbers say nothing"
+            " about the lock."
+        )
+        print(f"first error: {writer['first_error']}")
+        return 2
 
     if writer["lock_errors"] > 0:
         print(
