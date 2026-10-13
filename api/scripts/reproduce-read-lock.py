@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import shutil
 import signal
 import subprocess
@@ -100,6 +101,8 @@ sys.stdout.flush()
 
 
 async def _single_reader(deadline):
+    # The package builds its settings on first import, so this import has to
+    # wait until main() has set DW_API_DAMNIT_PATH.
     from damnit_api.runs.sqlite import (
         async_all_tags,
         async_latest_rows,
@@ -174,17 +177,6 @@ def stage_copy(damnit_dir, scratch_dir):
         )
 
     return staging
-
-
-def patch_path(staging):
-    """Point the runs read path at the staged copy."""
-    import damnit_api.runs.sqlite.session as session_module
-    import damnit_api.utils as utils_module
-
-    staged_path = str(staging)
-    session_module.get_damnit_path = lambda *_a, **_kw: staged_path
-    session_module.find_proposal = lambda *_a, **_kw: staged_path
-    utils_module.find_proposal = lambda *_a, **_kw: staged_path
 
 
 def parse_args():
@@ -273,7 +265,7 @@ def main():
 
     staging = stage_copy(args.damnit_dir, args.scratch_dir)
     print(f"staged copy: {staging}")
-    patch_path(staging)
+    os.environ["DW_API_DAMNIT_PATH"] = str(staging)
 
     writer = None
     writer_summary = empty_summary()
