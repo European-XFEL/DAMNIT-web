@@ -220,13 +220,19 @@ def parse_args():
         "--damnit-dir",
         type=Path,
         required=True,
-        help="DAMNIT amore folder containing runs.sqlite",
+        help=(
+            "DAMNIT amore folder containing runs.sqlite. Only read: the script"
+            " copies runs.sqlite and runs against the copy."
+        ),
     )
     parser.add_argument(
         "--scratch-dir",
         type=Path,
         required=True,
-        help="Parent dir for the per-run staging copy",
+        help=(
+            "Folder for the copy. Each run makes a new repro-* folder here and"
+            " deletes it on exit, unless --keep."
+        ),
     )
     parser.add_argument(
         "--duration",
