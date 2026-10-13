@@ -98,7 +98,7 @@ sys.stdout.flush()
 # Reader
 
 
-async def _single_reader(deadline):
+async def _single_reader(deadline, counts):
     # The package builds its settings on first import, so this import has to
     # wait until main() has set DW_API_DAMNIT_PATH.
     from damnit_api.runs.sqlite import (
@@ -108,10 +108,6 @@ async def _single_reader(deadline):
         async_variable_tags,
         async_variables,
     )
-
-    ops = 0
-    lock_errors = 0
-    other_errors = 0
 
     while time.monotonic() < deadline:
         try:
@@ -125,25 +121,20 @@ async def _single_reader(deadline):
             )
             await async_all_tags(PROPOSAL_LABEL)
             await async_variable_tags(PROPOSAL_LABEL)
-            ops += 4
+            counts["ops"] += 4
         except Exception as exc:
             if "database is locked" in str(exc):
-                lock_errors += 1
+                counts["lock_errors"] += 1
             else:
-                other_errors += 1
-
-    return ops, lock_errors, other_errors
+                counts["other_errors"] += 1
 
 
 async def reader_loop(duration, readers):
     deadline = time.monotonic() + duration
-    results = await asyncio.gather(*[_single_reader(deadline) for _ in range(readers)])
-    total_ops = total_locks = total_others = 0
-    for ops, locks, others in results:
-        total_ops += ops
-        total_locks += locks
-        total_others += others
-    return total_ops, total_locks, total_others
+    counts = {"ops": 0, "lock_errors": 0, "other_errors": 0}
+    await asyncio.gather(*[_single_reader(deadline, counts) for _ in range(readers)])
+
+    return counts
 
 
 # -----------------------------------------------------------------------------
@@ -283,9 +274,7 @@ def main():
                 text=True,
             )
 
-        reader_ops, reader_locks, reader_others = asyncio.run(
-            reader_loop(args.duration, args.readers)
-        )
+        reader_summary = asyncio.run(reader_loop(args.duration, args.readers))
 
         if writer is not None:
             writer_summary = collect_writer(writer)
@@ -301,8 +290,9 @@ def main():
     print("--------- reproduction summary ---------")
     print(f"duration:        {args.duration:.1f} s")
     print(
-        f"reader ops:      {reader_ops}"
-        f"  (lock errors: {reader_locks}, other errors: {reader_others})"
+        f"reader ops:      {reader_summary['ops']}"
+        f"  (lock errors: {reader_summary['lock_errors']},"
+        f" other errors: {reader_summary['other_errors']})"
     )
     print(
         f"writer attempts: {writer_summary['attempts']}"
