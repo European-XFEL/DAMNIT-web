@@ -4,11 +4,14 @@ from collections.abc import AsyncGenerator
 import strawberry
 from async_lru import alru_cache
 
+from .. import get_logger
 from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..runs.sqlite import async_latest_rows, async_max, async_table
 from ..runs.types import DamnitRun, TableMeta, Timestamp
 from .metadata import fetch_metadata
 from .utils import DatabaseInput, LatestData, fetch_info
+
+logger = get_logger()
 
 POLLING_INTERVAL = 1  # seconds
 
@@ -151,11 +154,25 @@ class Subscription:
         # always pushes, which also closes the gap between the client's opening
         # metadata query and its subscribe.
         last_signature = None
+        failing = False
 
         while True:
             await asyncio.sleep(POLLING_INTERVAL)
 
-            snapshot = await poll_proposal(proposal=database.proposal)
+            try:
+                snapshot = await poll_proposal(proposal=database.proposal)
+            except Exception as exc:
+                if not failing:
+                    logger.warning(
+                        "Live update poll failed, retrying",
+                        proposal=database.proposal,
+                        error=repr(exc),
+                        exc_info=True,
+                    )
+                failing = True
+                continue
+
+            failing = False
 
             metadata = None
             if (
