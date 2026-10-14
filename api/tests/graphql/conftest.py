@@ -24,7 +24,6 @@ def reset_caches():
     fetch_metadata.cache_clear()
     poll_proposal.cache_clear()
     subscriptions._last_seen_timestamp.clear()
-    subscriptions._last_run_added_at.clear()
     return
 
 

@@ -19,26 +19,12 @@ POLLING_INTERVAL = 1  # seconds
 # newer than what the previous tick already shipped.
 _last_seen_timestamp: dict[str, float] = {}
 
-# Newest `run_info.added_at` seen per proposal. A run is written to `run_info`
-# before its variables are extracted, so it can appear without moving any
-# `run_variables` timestamp. This is what notices it on the next tick instead
-# of leaving it until the metadata cache expires.
-_last_run_added_at: dict[str, float] = {}
-
 
 @strawberry.type
 class RunUpdates:
     runs: list[DamnitRun]
     metadata: TableMeta | None
     timestamp: Timestamp
-
-
-async def _new_run_appeared(proposal) -> bool:
-    added_at = await async_max(proposal, table="run_info", column="added_at") or 0
-    if _last_run_added_at.get(proposal) == added_at:
-        return False
-    _last_run_added_at[proposal] = added_at
-    return True
 
 
 # The per-client cursor and file mtime are deliberately omitted from the cache
@@ -65,12 +51,9 @@ async def poll_proposal(proposal):
         start_at=_last_seen_timestamp[proposal],
     )
 
-    # Re-read the metadata only when something can have changed it: new values,
-    # or a run that has appeared but has no values yet. A tag edit or a retitled
-    # variable writes neither, and no cheap query can see one either (`variables`
-    # and `tags` carry no timestamp), so those ride the cache's own expiry.
-    if rows or await _new_run_appeared(proposal):
-        fetch_metadata.cache_invalidate(proposal)
+    # A subscriber polls on its first tick, then only once the file has changed, so any
+    # write re-reads the metadata: a new run, a tag edit, a retitled variable.
+    fetch_metadata.cache_invalidate(proposal)
     metadata = await fetch_metadata(proposal)
 
     runs = {}

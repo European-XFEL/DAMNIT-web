@@ -497,21 +497,6 @@ async def test_poll_repeats_the_signature_while_metadata_is_unchanged(
     assert second["metadata_signature"] == first["metadata_signature"]
 
 
-@pytest.mark.asyncio
-async def test_poll_stops_rereading_metadata_once_a_proposal_is_idle(
-    mocked_no_new_rows, mocked_metadata_reads, mocked_metadata_run_identifiers
-):
-    await poll_proposal(proposal=str(PROPOSAL))
-    reads = mocked_metadata_run_identifiers.call_count
-
-    poll_proposal.cache_clear()
-    await poll_proposal(proposal=str(PROPOSAL))
-
-    # No new rows and no new run, so the tick rides the metadata cache instead
-    # of scanning every (proposal, run) pair in run_info again.
-    assert mocked_metadata_run_identifiers.call_count == reads
-
-
 # -----------------------------------------------------------------------------
 # filter_for_client
 
