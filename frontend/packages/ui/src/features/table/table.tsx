@@ -560,9 +560,12 @@ const Table = ({ paginated = true }: TableProps) => {
     event: CellClickedEventArgs | HeaderClickedEventArgs,
     item: { kind: PlotSource; subtitle: string; onClick: () => void }
   ) => {
+    // Glide's click is cell-relative; the menu wants a viewport point.
     setContextMenu({
-      localPosition: { x: event.localEventX, y: event.localEventY },
-      bounds: event.bounds,
+      position: {
+        x: event.bounds.x + event.localEventX,
+        y: event.bounds.y + event.localEventY,
+      },
       contents: [{ key: 'plot', title: `Plot: ${item.kind}`, ...item }],
     })
   }

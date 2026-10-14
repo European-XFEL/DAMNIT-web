@@ -1,21 +1,21 @@
 import { Stack } from '@mantine/core'
 import { ContextMenuPortal as MantineContextMenu } from 'mantine-contextmenu'
 
+import type { Point } from '#src/features/table/types/table.types'
+
 import ContextMenuItem, {
   type ContextMenuItemOptions,
 } from './context-menu-item'
 
 export type ContextMenuProps = {
-  localPosition: { x: number; y: number }
-  bounds: { x: number; y: number; width: number; height: number }
+  position: Point
   contents: ContextMenuItemOptions[]
   isOpen?: boolean
   onOutsideClick?: () => void
 }
 
 const ContextMenu = ({
-  localPosition,
-  bounds,
+  position,
   contents,
   isOpen = false,
   onOutsideClick = () => {
@@ -25,8 +25,8 @@ const ContextMenu = ({
   return (
     isOpen && (
       <MantineContextMenu
-        x={localPosition.x + bounds.x}
-        y={localPosition.y + bounds.y}
+        x={position.x}
+        y={position.y}
         onHide={onOutsideClick}
         content={() => (
           <Stack gap={0}>

@@ -5,8 +5,7 @@ import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
 import type { ContextMenuProps } from '#src/features/table/components/context-menu'
 
 const openProps: ContextMenuProps = {
-  localPosition: { x: 10, y: 20 },
-  bounds: { x: 0, y: 0, width: 100, height: 100 },
+  position: { x: 10, y: 20 },
   isOpen: false,
   contents: [],
 }

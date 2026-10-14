@@ -7,8 +7,7 @@ export const useContextMenu = (): [
   (newProps: ContextMenuProps) => void,
 ] => {
   const closedProps = {
-    localPosition: { x: 0, y: 0 },
-    bounds: { x: 0, y: 0, width: 0, height: 0 },
+    position: { x: 0, y: 0 },
     isOpen: false,
     contents: [],
   }
