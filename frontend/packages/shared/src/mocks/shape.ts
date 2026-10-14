@@ -78,6 +78,12 @@ export function shapeRun(
   }
 }
 
+// The logical run number the grid rows use, not the source run number: in the
+// xpcs example, run 1 comes from source run 6, so a mix-up keys to no row.
+export function runNumber(run: RunData) {
+  return Number(run.variables.run?.value ?? run.source.run_number)
+}
+
 export function shapeTableData(
   data: RunData[],
   { proposal, names, lightweight = false }: ShapeTableDataOptions
@@ -89,11 +95,7 @@ export function shapeTableData(
         // single-proposal, so a run's own proposal is the queried one too.
         database: proposal,
         proposal,
-        // The logical run number the metadata list and the grid rows use, not
-        // the physical source run number: in the xpcs example, runs 1 to 6 come
-        // from source runs 6, 7, 11, 33, 34 and 35. Take the wrong one and the
-        // run and every one of its cells key to a row no grid reads.
-        run: Number(run.variables.run?.value ?? run.source.run_number),
+        run: runNumber(run),
         names,
         lightweight,
       })

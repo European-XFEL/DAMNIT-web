@@ -17,11 +17,13 @@ import {
 } from '#src/graphql/operation-names'
 import { liveRunStamps, stampLiveRuns } from '#src/data/table/run-stamps'
 import { TABLE_DATA_QUERY } from '#src/data/table/table-data.queries'
+import { countReconnect } from '#src/graphql/live-updates'
 import { createPriorityLink } from '#src/graphql/priority-link'
 import { typePolicies } from '#src/graphql/type-policies'
 import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import type { Rectangle } from '#src/features/table/types/table.types'
 import type { RunCells } from '#src/data/table/table-data.types'
+import { sorted } from '#src/utils/array'
 import { serverCell } from '#tests/support/cells'
 
 const PROPOSAL = '900405'
@@ -140,7 +142,7 @@ function createNetwork({ answerDeferred = false, failDeferred = false } = {}) {
       return answers([runFor(page)])
     }
     started.deferred.push(page)
-    if (failDeferred) {
+    if (network.failDeferred) {
       return refuses('the server cannot answer this page')
     }
     if (answerDeferred) {
@@ -149,7 +151,9 @@ function createNetwork({ answerDeferred = false, failDeferred = false } = {}) {
     return hangsUntilCancelled(() => cancelled.deferred.push(page))
   })
 
-  return { link, started, cancelled }
+  // A test turns `failDeferred` off to bring the server back.
+  const network = { link, started, cancelled, failDeferred }
+  return network
 }
 
 const heavyValueFor = (cells: Map<string, RunCells>, run: number): unknown =>
@@ -1077,5 +1081,88 @@ describe('receiving a live update', () => {
     expect(result.current.lastUpdatedByKey.get(key)).toBeLessThanOrEqual(
       performance.now()
     )
+  })
+})
+
+describe('reconnecting after an outage', () => {
+  test('asks again for the pages in view, and only those', async () => {
+    const network = createNetwork({ answerDeferred: true })
+    const { result } = await renderTableRuns(network)
+
+    // Load pages 20 to 23, then settle back on pages 1 to 3.
+    result.current.onVisibleRegionChanged(regionAt(200))
+    await vi.waitFor(() => expect(network.started.deferred).toContain(23))
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await vi.waitFor(() => expect(network.started.deferred).toContain(3))
+    network.started.lightweight.length = 0
+
+    countReconnect()
+
+    // Every page in view may hold values that changed during the gap, loaded
+    // or not. The pages scrolled past load again when the user returns.
+    await vi.waitFor(() => expect(network.started.lightweight).toHaveLength(3))
+    await settle()
+    expect(sorted(network.started.lightweight)).toEqual([1, 2, 3])
+  })
+
+  test('stops the deferred pass in flight and starts it again on the reloaded page', async () => {
+    const network = createNetwork()
+    await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started.deferred).toEqual([1]))
+
+    countReconnect()
+
+    // Its answer could predate the reconnect and miss the very changes the
+    // reload is for.
+    await vi.waitFor(() => expect(network.started.deferred).toEqual([1, 1]))
+    expect(network.cancelled.deferred).toEqual([1])
+  })
+
+  test('pages scrolled to after a reconnect mid-load still get their heavy values', async () => {
+    const network = createNetwork()
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started.deferred).toEqual([1]))
+
+    // Reconnect while page 1's heavy values are loading
+    countReconnect()
+    await vi.waitFor(() => expect(network.started.lightweight).toEqual([1, 1]))
+
+    // Scroll away from page 1
+    result.current.onVisibleRegionChanged(regionAt(200))
+    await vi.waitFor(() => expect(network.started.deferred).toContain(20))
+  })
+
+  test('loads the heavy values of a page that ran out of tries during the outage', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork({ answerDeferred: true, failDeferred: true })
+
+    // Page 1 spends its three tries while the server is down
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() =>
+      expect(timesStarted(network.started.deferred, 1)).toBe(3)
+    )
+    expect(heavyValueFor(result.current.cellsByKey, 1)).toBeNull()
+
+    // The server is back and live updates reconnect
+    network.failDeferred = false
+    countReconnect()
+
+    await vi.waitFor(() =>
+      expect(heavyValueFor(result.current.cellsByKey, 1)).toEqual([1, 2, 3])
+    )
+  })
+
+  test('a table opened after an earlier reconnect asks for page 1 only once', async () => {
+    countReconnect()
+    const network = createNetwork()
+
+    // Opening a plot and going back remounts the table long after the
+    // reconnect. Resetting then would abort the page it has just asked for.
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() =>
+      expect(result.current.cellsByKey.has(`${PROPOSAL}:1`)).toBe(true)
+    )
+
+    expect(network.started.lightweight).toEqual([1])
   })
 })
