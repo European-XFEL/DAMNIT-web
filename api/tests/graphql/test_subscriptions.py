@@ -531,10 +531,6 @@ def _snapshot(run_timestamps):
     }
 
 
-def test_filter_for_client_none_snapshot():
-    assert filter_for_client(None, since=0) is None
-
-
 def test_filter_for_client_cursorless_client_receives_this_tick():
     snapshot = _snapshot({(PROPOSAL, 1): 100.0, (PROPOSAL, 2): 200.0})
     result = filter_for_client(snapshot, since=0)

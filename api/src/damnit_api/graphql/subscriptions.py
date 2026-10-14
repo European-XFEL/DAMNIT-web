@@ -125,8 +125,6 @@ async def poll_proposal(proposal):
 
 
 def filter_for_client(snapshot, since, metadata=None):
-    if snapshot is None:
-        return None
     # A cursorless client gets this tick's changed rows, not a history replay:
     # `poll_proposal` already bounds them by the server's high-water mark. Only
     # dropping them would be wrong, since a proposal with no runs seeds `since`
