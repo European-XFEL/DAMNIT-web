@@ -7,7 +7,9 @@ import {
   xpcsWithPendingImage,
 } from '#examples/xpcs'
 import { fullMetadata } from '#mocks'
+import { dashboardHeader } from '#support/dashboard'
 import { WIDE_VIEWPORT } from '#support/grid'
+import { proposalLink } from '#support/proposals'
 import {
   cell,
   columnOf,
@@ -20,6 +22,12 @@ import {
 
 // Every updated run sits in the initial vertical fold.
 test.use({ viewport: WIDE_VIEWPORT })
+
+// graphql-ws waits about 1, 2 and 4 s before the first three reconnects, so
+// once the mock has refused three the next wait runs 8 to 9 s.
+const REFUSALS = 3
+// That wait, its 1 s of spread, and 1 s to spare.
+const WAIT_RUNS_OUT = (2 ** REFUSALS + 2) * 1000
 
 test('a finished run appears as a new row', async ({ page, api, example }) => {
   await openProposal(page, example)
@@ -98,6 +106,36 @@ test('a value changed during an outage shows once live updates reconnect', async
 
   // The first retry waits up to 2 s, then page 1 loads again.
   await expect(trains).toHaveText(updated, { timeout: 10_000 })
+})
+
+test('a proposal opened after leaving during an outage connects at once', async ({
+  page,
+  api,
+  example,
+}) => {
+  test.slow()
+  const proposal = example.proposalMetadata[0].number
+  await openProposal(page, example)
+  await expect.poll(() => api.connections()).toBe(1)
+
+  // Drop live updates and refuse the next reconnects, so the waits grow
+  await api.dropLiveUpdates({ refuse: REFUSALS })
+  await expect
+    .poll(() => api.connections(), { timeout: 15_000 })
+    .toBe(1 + REFUSALS)
+
+  // Leave for the home page while graphql-ws waits. With no proposal open it
+  // gives up on that try at the end of the wait but keeps its back-off.
+  await dashboardHeader(page).getByRole('link', { name: 'DAMNIT!' }).click()
+  await expect(proposalLink(page, proposal)).toBeVisible()
+  await page.waitForTimeout(WAIT_RUNS_OUT)
+
+  // Open the proposal again
+  await proposalLink(page, proposal).click()
+
+  await expect
+    .poll(() => api.connections(), { timeout: 5000 })
+    .toBe(2 + REFUSALS)
 })
 
 test.describe('a deferred image resolves after its run finished', () => {

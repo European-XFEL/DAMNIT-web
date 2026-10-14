@@ -25,9 +25,11 @@ export type LiveUpdatesMock = {
   // Deliver a graphql-ws `next` as the backend does for new table data: a new
   // run, an updated cell, or a deferred image resolving.
   pushLatestData: (data: LatestData) => void
-  // Close the live-updates socket the way an API restart does, with a code
-  // graphql-ws retries, so the client reconnects after its first retry wait.
-  dropLiveUpdates: () => Promise<void>
+  // Close the socket the way an API restart does, so graphql-ws reconnects.
+  // With `refuse`, that many reconnects are closed too and the waits grow.
+  dropLiveUpdates: (options?: { refuse?: number }) => Promise<void>
+  // How many sockets the app has opened, refused ones included.
+  connections: () => number
 }
 
 // The metadata half of a push. The client replaces its metadata wholesale, so a
@@ -60,6 +62,8 @@ export async function mockWebSocket(
   // paint under load) wait here and are delivered in order the moment the
   // subscription opens, so a test never has to race the socket.
   const pending: LatestData[] = []
+  let refusalsLeft = 0
+  let connections = 0
 
   // The backend stamps each push with an advancing epoch-ms timestamp, which the
   // app feeds back as its subscription cursor. Model that so the stored cursor
@@ -105,6 +109,12 @@ export async function mockWebSocket(
   }
 
   await page.routeWebSocket('**/graphql', (ws) => {
+    connections += 1
+    if (refusalsLeft > 0) {
+      refusalsLeft -= 1
+      ws.close({ code: 1012 })
+      return
+    }
     socket = ws
     ws.onMessage((message) => {
       const msg = JSON.parse(String(message))
@@ -138,9 +148,11 @@ export async function mockWebSocket(
         pending.push(data)
       }
     },
-    dropLiveUpdates: async () => {
+    dropLiveUpdates: async ({ refuse = 0 } = {}) => {
+      refusalsLeft = refuse
       activeId = undefined
       await socket?.close({ code: 1012, reason: 'Service Restart' })
     },
+    connections: () => connections,
   }
 }
