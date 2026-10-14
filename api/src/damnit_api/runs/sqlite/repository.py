@@ -30,8 +30,10 @@ def order_by_active(table, active):
     return [case((table.c.proposal == active, 0), else_=1), *columns]
 
 
+# async_lru keys a call by how its arguments are written. The `/` and `*` allow
+# only the shape that `cache_invalidate` below clears.
 @alru_cache(ttl=300)
-async def async_table(proposal, name: str = "runs") -> Table | None:
+async def async_table(proposal, /, *, name: str) -> Table | None:
     async with get_connection(proposal) as conn:
         try:
             return await conn.run_sync(
