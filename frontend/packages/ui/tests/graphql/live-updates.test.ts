@@ -4,7 +4,19 @@ import {
   liveUpdatesListeners,
   reconnectCount,
   retryDelay,
+  retryNow,
+  waitBeforeRetry,
 } from '#src/graphql/live-updates'
+
+// Resolves to whether the wait has ended once `ms` more have passed.
+const waitEndsWithin = async (wait: Promise<void>, ms: number) => {
+  let ended = false
+  wait.then(() => {
+    ended = true
+  })
+  await vi.advanceTimersByTimeAsync(ms)
+  return ended
+}
 
 beforeEach(() => {
   reconnectCount(0)
@@ -19,6 +31,21 @@ test('the wait before reconnecting doubles from 1 s and stops at 30 s', () => {
   const waits = [0, 1, 2, 3, 4, 5, 6, 50].map((retries) => retryDelay(retries))
 
   expect(waits).toEqual([1000, 2000, 4000, 8000, 16000, 30000, 30000, 30000])
+})
+
+test('the wait before a reconnect runs its delay plus up to 1 s', async () => {
+  const wait = waitBeforeRetry(2)
+
+  expect(await waitEndsWithin(wait, 3999)).toBe(false)
+  expect(await waitEndsWithin(wait, 1001)).toBe(true)
+})
+
+test('trying now ends a pending wait at once', async () => {
+  const wait = waitBeforeRetry(5)
+
+  retryNow()
+
+  expect(await waitEndsWithin(wait, 0)).toBe(true)
 })
 
 test('a reconnect raises the reconnect count once, at its first push', () => {
