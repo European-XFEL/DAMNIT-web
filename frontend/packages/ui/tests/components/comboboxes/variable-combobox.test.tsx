@@ -82,7 +82,7 @@ function announcedOption(input: Element) {
 }
 
 describe('opening the list', () => {
-  test('opening a field that holds a variable lists every variable', async () => {
+  test('a field that holds a variable lists every variable', async () => {
     const screen = await renderWithProviders(<Picker initialValue="energy" />)
 
     await screen.getByLabelText('Y axis').click()
@@ -95,7 +95,7 @@ describe('opening the list', () => {
       .toBeVisible()
   })
 
-  test('opening a field that holds a variable highlights that variable', async () => {
+  test('a field that holds a variable highlights that variable', async () => {
     const screen = await renderWithProviders(<Picker initialValue="energy" />)
 
     await screen.getByLabelText('Y axis').click()
@@ -105,7 +105,7 @@ describe('opening the list', () => {
       .toBeVisible()
   })
 
-  test('clicking an empty field highlights nothing, so the first arrow lands on the first variable', async () => {
+  test('an empty field highlights nothing, so the first arrow lands on the first variable', async () => {
     const screen = await renderWithProviders(<Picker />)
 
     await screen.getByLabelText('Y axis').click()
@@ -118,7 +118,7 @@ describe('opening the list', () => {
 })
 
 describe('typing a search', () => {
-  test('typing narrows the options case-insensitively', async () => {
+  test('the options narrow case-insensitively', async () => {
     const screen = await renderWithProviders(<Picker />)
 
     await screen.getByLabelText('Y axis').fill('ENER')
@@ -209,7 +209,7 @@ describe('typing a search', () => {
 })
 
 describe('picking a variable', () => {
-  test('picking an option reports its name and shows its title in the field', async () => {
+  test('a picked option reports its name and shows its title in the field', async () => {
     const onChange = vi.fn()
     const screen = await renderWithProviders(<Picker onChange={onChange} />)
 
@@ -339,7 +339,7 @@ describe('following along with a screen reader', () => {
 })
 
 describe('pressing Enter inside a form', () => {
-  test('Enter after typing picks the first match instead of submitting the form', async () => {
+  test('a search picks its first match instead of submitting the form', async () => {
     const onChange = vi.fn()
     const onSubmit = vi.fn()
     const screen = await renderWithProviders(
@@ -360,7 +360,7 @@ describe('pressing Enter inside a form', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
-  test('Enter on a search that matches nothing submits nothing until the search is gone', async () => {
+  test('a search that matches nothing keeps the form from submitting until it is gone', async () => {
     const onSubmit = vi.fn()
     const screen = await renderWithProviders(
       <PickerInForm initialValue="energy" onSubmit={onSubmit} />
