@@ -25,16 +25,15 @@ class DatabaseSessionManager(metaclass=Registry):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
         self._engine = create_async_engine(
-            self.db_path,
+            f"sqlite+aiosqlite:///{self.path}",
             isolation_level="AUTOCOMMIT",
             poolclass=NullPool,
         )
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
     @property
-    def db_path(self):
-        path = Path(self.root_path) / "runs.sqlite"
-        return f"sqlite+aiosqlite:///{path}"
+    def path(self):
+        return Path(self.root_path) / "runs.sqlite"
 
     async def close(self):
         if self._engine is None:
