@@ -1,9 +1,11 @@
 import asyncio
+import sqlite3
 from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy.exc import OperationalError
 
 from damnit_api.graphql.subscriptions import (
     POLLING_INTERVAL,
@@ -270,6 +272,27 @@ async def test_metadata_reaches_a_subscriber_that_polls_in_a_later_window(
     finally:
         await first_sub.aclose()
         await second_sub.aclose()
+
+
+def _operational_error(message):
+    """What SQLAlchemy raises when SQLite fails a read."""
+    return OperationalError("SELECT", None, sqlite3.OperationalError(message))
+
+
+@pytest.mark.asyncio
+async def test_a_failed_tick_does_not_end_live_updates(
+    subscription, mocked_latest_rows, mocked_fetch_info
+):
+    mocked_fetch_info.side_effect = [
+        _operational_error("database is locked"),
+        mocked_fetch_info.return_value,
+    ]
+
+    with patched_sleep:
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+
+    assert not result.errors
+    assert [run["run"] for run in result.data["run_updates"]["runs"]] == [NEW_RUN]
 
 
 # -----------------------------------------------------------------------------
