@@ -120,7 +120,6 @@ test('a group member is listed by its short title but fills the field with its w
 
 test('leaving the field puts the chosen title back over what was typed', async () => {
   const screen = await renderWithProviders(<Picker initialValue="energy" />)
-
   const input = screen.getByLabelText('Y axis')
 
   // Type over the chosen title
@@ -128,7 +127,7 @@ test('leaving the field puts the chosen title back over what was typed', async (
   await expect.element(input).toHaveValue('xyz')
 
   // Leave the field
-  ;(input.element() as HTMLInputElement).blur()
+  input.element().blur()
   await expect.element(input).toHaveValue('Energy')
 })
 
@@ -362,8 +361,8 @@ test('Enter on a search that matches nothing submits nothing until the search is
   await expect.element(input).toHaveValue('zzz')
 
   // Leave and come back, so the field shows its variable again
-  ;(input.element() as HTMLInputElement).blur()
-  ;(input.element() as HTMLInputElement).focus()
+  input.element().blur()
+  input.element().focus()
   await expect.element(input).toHaveValue('Energy')
   await userEvent.keyboard('{Enter}')
   expect(onSubmit).toHaveBeenCalledOnce()
