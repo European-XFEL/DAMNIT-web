@@ -31,7 +31,7 @@ import { useTableMeta } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
-import { type PlotSource } from '#src/types'
+import type { PlotSource } from '#src/types'
 import {
   errorCell,
   getCell,

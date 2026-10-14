@@ -1,5 +1,5 @@
-import { type Rectangle } from '@glideapps/glide-data-grid'
-import { type IBounds } from 'react-laag'
+import type { Rectangle } from '@glideapps/glide-data-grid'
+import type { IBounds } from 'react-laag'
 
 export const ZERO_BOUNDS: IBounds = {
   left: 0,
