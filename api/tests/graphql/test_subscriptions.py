@@ -315,15 +315,47 @@ def _operational_error(message):
 
 
 @pytest.mark.asyncio
-async def test_a_failed_tick_does_not_end_live_updates(
-    subscription, mocked_latest_rows, mocked_fetch_info
+async def test_an_unchanged_database_file_is_not_read(
+    subscription,
+    mocked_database_mtime,
+    mocked_latest_rows,
+    mocked_fetch_info,
+    mocked_metadata_run_identifiers,
 ):
+    with ticks_finding_mtimes(mocked_database_mtime, [1, 1, 2]) as sleep:
+        await asyncio.wait_for(anext(subscription), timeout=2)
+        await asyncio.wait_for(anext(subscription), timeout=2)
+
+    # Three ticks, and the second, finding the file as the first left it, read
+    # neither rows nor metadata.
+    assert sleep.call_count == 3
+    assert mocked_latest_rows.call_count == 2
+    assert mocked_metadata_run_identifiers.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_every_tick_polls_while_the_database_mtime_is_unknown(
+    subscription, mocked_database_mtime, mocked_latest_rows, mocked_fetch_info
+):
+    with ticks_finding_mtimes(mocked_database_mtime, [None, None]):
+        await asyncio.wait_for(anext(subscription), timeout=2)
+        await asyncio.wait_for(anext(subscription), timeout=2)
+
+    assert mocked_latest_rows.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_a_failed_tick_does_not_end_live_updates(
+    subscription, mocked_database_mtime, mocked_latest_rows, mocked_fetch_info
+):
+    # One write: the tick that reads it fails, and the next one finds the file
+    # unchanged since, yet still has to deliver the run.
     mocked_fetch_info.side_effect = [
         _operational_error("database is locked"),
         mocked_fetch_info.return_value,
     ]
 
-    with patched_sleep:
+    with ticks_finding_mtimes(mocked_database_mtime, [1, 1]):
         result = await asyncio.wait_for(anext(subscription), timeout=2)
 
     assert not result.errors
@@ -351,6 +383,92 @@ async def test_each_run_of_failed_ticks_logs_one_warning_with_its_error(
 
     warnings = [log["error"] for log in logs if log["log_level"] == "warning"]
     assert warnings == [repr(locked), repr(io_error)]
+
+
+@pytest.mark.asyncio
+async def test_a_tick_finding_the_file_unchanged_ends_a_run_of_failures(
+    subscription, mocked_database_mtime, mocked_latest_rows, mocked_fetch_info
+):
+    good = mocked_fetch_info.return_value
+    locked = _operational_error("database is locked")
+    io_error = _operational_error("disk I/O error")
+    mocked_fetch_info.side_effect = [good, locked, io_error, good]
+
+    with (
+        ticks_finding_mtimes(mocked_database_mtime, [1, None, 1, 2, 2]),
+        capture_logs() as logs,
+    ):
+        # A good poll
+        await asyncio.wait_for(anext(subscription), timeout=2)
+
+        # A failed poll while the file cannot be stat'ed, a tick finding the file as
+        # the good poll left it, then a new write whose first poll fails
+        await asyncio.wait_for(anext(subscription), timeout=2)
+
+    warnings = [log["error"] for log in logs if log["log_level"] == "warning"]
+    assert warnings == [repr(locked), repr(io_error)]
+
+
+@pytest.mark.asyncio
+async def test_a_write_reaches_a_subscriber_first_served_a_snapshot_from_before_it(
+    graphql_schema,
+    current_timestamp,
+    mocked_database_mtime,
+    mocked_no_new_rows,
+    mocked_fetch_info,
+):
+    variables = {
+        "proposal": str(PROPOSAL),
+        "since": (current_timestamp - 1) * 1000,  # before the new row
+    }
+    first_sub = await graphql_schema.subscribe(SUBSCRIPTION, variable_values=variables)
+    second_sub = await graphql_schema.subscribe(SUBSCRIPTION, variable_values=variables)
+
+    try:
+        with patched_sleep:
+            await asyncio.wait_for(anext(first_sub), timeout=2)
+
+            # DAMNIT writes the new run, and the second subscriber's tick still
+            # finds the first one's snapshot in the cache
+            mocked_database_mtime.return_value = 2
+            mocked_no_new_rows.return_value = create_run_variables(
+                get_values(NEW_DATA),
+                proposal=PROPOSAL,
+                run=NEW_RUN,
+                timestamp=current_timestamp,
+            )
+            await asyncio.wait_for(anext(second_sub), timeout=2)
+
+            # The cache window ends, and the first subscriber reads the write
+            poll_proposal.cache_clear()
+            await asyncio.wait_for(anext(first_sub), timeout=2)
+
+            result = await asyncio.wait_for(anext(second_sub), timeout=2)
+    finally:
+        await first_sub.aclose()
+        await second_sub.aclose()
+
+    assert [run["run"] for run in result.data["run_updates"]["runs"]] == [NEW_RUN]
+
+
+@pytest.mark.asyncio
+async def test_a_table_created_while_a_poll_without_it_is_cached_reaches_a_subscriber(
+    mocker, subscription, mocked_database_mtime, mocked_no_new_rows
+):
+    async_table = mocker.patch(
+        "damnit_api.graphql.subscriptions.async_table", return_value=None
+    )
+
+    # Another subscriber's tick finds DAMNIT still creating the database
+    await poll_proposal(proposal=str(PROPOSAL))
+
+    # DAMNIT creates `run_variables` within that cache window
+    async_table.return_value = mocker.sentinel.run_variables_table
+
+    with ticks_finding_mtimes(mocked_database_mtime, [2, 2]):
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+
+    assert result.data["run_updates"]["metadata"]
 
 
 # -----------------------------------------------------------------------------
