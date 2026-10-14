@@ -9,7 +9,7 @@ const PlotContainer = lazy(() => import('#src/features/plots/plot-container'))
 const ContextFile = lazy(
   () => import('#src/features/context-file/context-file')
 )
-const Table = lazy(() => import('#src/features/table/table'))
+const Table = lazy(() => import('#src/features/table/components/glide-grid'))
 
 // Only the active view is mounted. One boundary per view, because a shared one
 // hides the table while a plot's chunk loads and the grid then drops right-clicks.
