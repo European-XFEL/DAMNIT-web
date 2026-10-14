@@ -60,23 +60,11 @@ export const useTableTooltip = (
   const tooltipRef = useRef<TooltipState | undefined>(tooltip)
   const closeTimerRef = useRef<number>(0)
   const openTimerRef = useRef<number>(0)
-  const rehoverFrameRef = useRef<number>(0)
   const pendingTargetRef = useRef<TooltipState | null>(null)
-  const cursorRef = useRef<{ x: number; y: number } | null>(null)
 
   useLayoutEffect(() => {
     tooltipRef.current = tooltip
   }, [tooltip])
-
-  useEffect(() => {
-    const onMove = (event: MouseEvent) => {
-      cursorRef.current = { x: event.clientX, y: event.clientY }
-    }
-    window.addEventListener('mousemove', onMove, { passive: true })
-    return () => {
-      window.removeEventListener('mousemove', onMove)
-    }
-  }, [])
 
   const cancelClose = useCallback(() => {
     window.clearTimeout(closeTimerRef.current)
@@ -126,37 +114,6 @@ export const useTableTooltip = (
       dismiss()
     }
   }, [suppressed, dismiss])
-
-  // Glide doesn't refire hover after a layout shift. Wait one frame for the
-  // tooltip portal to unmount, then dispatch a synthetic mousemove so Glide
-  // re-evaluates which cell is under the cursor.
-  const rehoverAtCursor = useCallback(() => {
-    const cursor = cursorRef.current
-    if (!cursor) {
-      return
-    }
-    cancelAnimationFrame(rehoverFrameRef.current)
-    rehoverFrameRef.current = requestAnimationFrame(() => {
-      const target = document.elementFromPoint(cursor.x, cursor.y)
-      if (!target) {
-        return
-      }
-      target.dispatchEvent(
-        new MouseEvent('mousemove', {
-          clientX: cursor.x,
-          clientY: cursor.y,
-          bubbles: true,
-          cancelable: true,
-          view: window,
-        })
-      )
-    })
-  }, [])
-
-  const dismissOnScroll = useCallback(() => {
-    dismiss()
-    rehoverAtCursor()
-  }, [dismiss, rehoverAtCursor])
 
   const onBodyEnter = useCallback(() => {
     cancelOpen()
@@ -253,7 +210,6 @@ export const useTableTooltip = (
     () => () => {
       window.clearTimeout(closeTimerRef.current)
       window.clearTimeout(openTimerRef.current)
-      cancelAnimationFrame(rehoverFrameRef.current)
     },
     []
   )
@@ -295,7 +251,6 @@ export const useTableTooltip = (
     onCellHovered,
     onCellMouseMove,
     dismiss,
-    dismissOnScroll,
     tooltip: tooltip
       ? renderLayer(
           <TableTooltip

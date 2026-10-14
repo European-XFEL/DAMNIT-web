@@ -53,6 +53,7 @@ import {
   useTableTooltip,
   type ResolveTooltip,
 } from '#src/features/table/hooks/use-table-tooltip'
+import { useRehoverAtCursor } from '#src/features/table/hooks/use-rehover-at-cursor'
 import { useTableColumns } from '#src/features/table/hooks/use-table-columns'
 import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
@@ -308,9 +309,10 @@ const Table = ({ paginated = true }: TableProps) => {
   const {
     onCellHovered,
     onCellMouseMove,
-    dismissOnScroll: dismissTooltipOnScroll,
+    dismiss: dismissTooltip,
     tooltip,
   } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
+  const rehoverAtCursor = useRehoverAtCursor()
 
   const selectedColumns = useAppSelector(selectSelectedColumns)
   const selectedCells = useAppSelector(selectSelectedCells)
@@ -754,11 +756,15 @@ const Table = ({ paginated = true }: TableProps) => {
         previous.tx !== nextTx ||
         previous.ty !== nextTy
       lastVisibleRegionRef.current = { rect, tx: nextTx, ty: nextTy }
+
+      // The rehover waits a frame for the card to close, so the mousemove
+      // reaches the grid rather than the card.
       if (scrolled) {
-        dismissTooltipOnScroll()
+        dismissTooltip()
+        rehoverAtCursor()
       }
     },
-    [fetchOnScroll, scrollToViewHandler, dismissTooltipOnScroll]
+    [fetchOnScroll, scrollToViewHandler, dismissTooltip, rehoverAtCursor]
   )
 
   return (
