@@ -17,6 +17,7 @@ from damnit_api.runs.types import DamnitRun, TableMeta
 from damnit_api.shared.const import DamnitType
 
 from .const import (
+    EXAMPLE_VARIABLE_TAGS,
     KNOWN_DATA,
     NEW_DATA,
     PROPOSAL,
@@ -77,6 +78,7 @@ SUBSCRIPTION = """
         }
         metadata {
           runs { proposal run }
+          tags
         }
         timestamp
       }
@@ -331,6 +333,24 @@ async def test_an_unchanged_database_file_is_not_read(
     assert sleep.call_count == 3
     assert mocked_latest_rows.call_count == 2
     assert mocked_metadata_run_identifiers.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_a_tag_edit_reaches_the_subscriber_on_the_next_tick(
+    mocker, subscription, mocked_database_mtime, mocked_no_new_rows
+):
+    with ticks_finding_mtimes(mocked_database_mtime, [1, 2]):
+        await asyncio.wait_for(anext(subscription), timeout=2)
+
+        # Someone tags the XGM intensity, which writes no value
+        mocker.patch(
+            "damnit_api.graphql.metadata.db.async_variable_tags",
+            return_value={**EXAMPLE_VARIABLE_TAGS, "xgm_intensity": [9]},
+        )
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+
+    tags = result.data["run_updates"]["metadata"]["tags"]
+    assert tags["XGM"]["variables"] == ["xgm_intensity"]
 
 
 @pytest.mark.asyncio
