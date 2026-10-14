@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
+import pytest_asyncio
 
 from damnit_api.graphql.subscriptions import (
     POLLING_INTERVAL,
@@ -49,6 +50,20 @@ SUBSCRIPTION = """
 @pytest.fixture(scope="module")
 def current_timestamp():
     return datetime.now(tz=UTC).timestamp()
+
+
+@pytest_asyncio.fixture
+async def subscription(graphql_schema, current_timestamp):
+    """A table opened before the new row, subscribed to its live updates."""
+    generator = await graphql_schema.subscribe(
+        SUBSCRIPTION,
+        variable_values={
+            "proposal": str(PROPOSAL),
+            "since": (current_timestamp - 1) * 1000,
+        },
+    )
+    yield generator
+    await generator.aclose()
 
 
 @pytest.fixture
@@ -117,59 +132,45 @@ def mocked_metadata_reads(
 
 @pytest.mark.asyncio
 async def test_run_updates(
-    graphql_schema,
-    current_timestamp,
-    mocked_latest_rows,
-    mocked_fetch_info,
+    subscription, current_timestamp, mocked_latest_rows, mocked_fetch_info
 ):
-    subscription = await graphql_schema.subscribe(
-        SUBSCRIPTION,
-        variable_values={
-            "proposal": str(PROPOSAL),
-            "since": (current_timestamp - 1) * 1000,  # before the new row
-        },
-    )
+    result = await asyncio.wait_for(anext(subscription), timeout=2)
+    assert not result.errors
 
-    try:
-        result = await asyncio.wait_for(anext(subscription), timeout=2)
-        assert not result.errors
+    payload = result.data["run_updates"]
+    assert payload["timestamp"] == current_timestamp * 1000
 
-        payload = result.data["run_updates"]
-        assert payload["timestamp"] == current_timestamp * 1000
+    # One changed run, carrying its identity trio and merged variables.
+    assert len(payload["runs"]) == 1
+    run = payload["runs"][0]
+    assert run["database"] == str(PROPOSAL)
+    assert run["proposal"] == str(PROPOSAL)
+    assert run["run"] == NEW_RUN
 
-        # One changed run, carrying its identity trio and merged variables.
-        assert len(payload["runs"]) == 1
-        run = payload["runs"][0]
-        assert run["database"] == str(PROPOSAL)
-        assert run["proposal"] == str(PROPOSAL)
-        assert run["run"] == NEW_RUN
-
-        expected = {
-            **KNOWN_DATA,
-            **NEW_DATA,
-            "run": DatabaseVariable(value=NEW_RUN, damnit_dtype=DamnitType.NUMBER),
+    expected = {
+        **KNOWN_DATA,
+        **NEW_DATA,
+        "run": DatabaseVariable(value=NEW_RUN, damnit_dtype=DamnitType.NUMBER),
+    }
+    got = {
+        v["name"]: {
+            "value": v["summary"]["value"],
+            "dtype": v["summary"]["dtype"],
         }
-        got = {
-            v["name"]: {
-                "value": v["summary"]["value"],
-                "dtype": v["summary"]["dtype"],
-            }
-            for v in run["cells"]
-        }
-        assert got == {
-            name: {"value": var.damnit_value, "dtype": var.damnit_dtype.value}
-            for name, var in expected.items()
-        }
+        for v in run["cells"]
+    }
+    assert got == {
+        name: {"value": var.damnit_value, "dtype": var.damnit_dtype.value}
+        for name, var in expected.items()
+    }
 
-        # Nothing has been pushed before, so this push carries the full,
-        # server-ordered metadata as (proposal, run) pairs.
-        metadata = payload["metadata"]
-        assert metadata["runs"] == [
-            {"proposal": str(proposal), "run": run_number}
-            for proposal, run_number in RUN_IDENTIFIERS
-        ]
-    finally:
-        await subscription.aclose()
+    # Nothing has been pushed before, so this push carries the full,
+    # server-ordered metadata as (proposal, run) pairs.
+    metadata = payload["metadata"]
+    assert metadata["runs"] == [
+        {"proposal": str(proposal), "run": run_number}
+        for proposal, run_number in RUN_IDENTIFIERS
+    ]
 
 
 @pytest.mark.asyncio
