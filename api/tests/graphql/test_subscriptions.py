@@ -40,6 +40,30 @@ async def _sleep_keeping_poll_cache(_delay):
 # Ticks of different subscribers share one cache window until a test clears it.
 patched_sleep = patch.object(asyncio, "sleep", side_effect=_sleep_keeping_poll_cache)
 
+
+def ticks_finding_mtimes(mocked_database_mtime, mtimes):
+    """Each tick finds the database file at the next of `mtimes`. The first lands in
+    the cache window of any poll before it, and each later one reaches the database,
+    as ticks a second apart do. Past the last, a tick never ends, so an update that
+    never came fails the test's timeout."""
+    mtimes = iter(mtimes)
+    first_tick = True
+
+    async def sleep(_delay):
+        nonlocal first_tick
+        try:
+            mocked_database_mtime.return_value = next(mtimes)
+        except StopIteration:
+            await asyncio.Event().wait()
+
+        if not first_tick:
+            poll_proposal.cache_clear()
+        first_tick = False
+        await _real_sleep(0)
+
+    return patch.object(asyncio, "sleep", side_effect=sleep)
+
+
 SUBSCRIPTION = """
     subscription RunUpdatesSubscription(
       $proposal: String,
@@ -308,19 +332,21 @@ async def test_a_failed_tick_does_not_end_live_updates(
 
 @pytest.mark.asyncio
 async def test_each_run_of_failed_ticks_logs_one_warning_with_its_error(
-    subscription, mocked_latest_rows, mocked_fetch_info
+    subscription, mocked_database_mtime, mocked_latest_rows, mocked_fetch_info
 ):
     good = mocked_fetch_info.return_value
     locked = _operational_error("database is locked")
     io_error = _operational_error("disk I/O error")
     mocked_fetch_info.side_effect = [locked, locked, good, io_error, good]
 
-    with patched_sleep, capture_logs() as logs:
+    with (
+        ticks_finding_mtimes(mocked_database_mtime, [1, 1, 1, 2, 2]),
+        capture_logs() as logs,
+    ):
         # Two failed ticks, then a good one
         await asyncio.wait_for(anext(subscription), timeout=2)
 
-        # One more failed tick, once the good poll has left the cache
-        poll_proposal.cache_clear()
+        # A new write whose first poll fails
         await asyncio.wait_for(anext(subscription), timeout=2)
 
     warnings = [log["error"] for log in logs if log["log_level"] == "warning"]

@@ -6,7 +6,7 @@ from async_lru import alru_cache
 
 from .. import get_logger
 from ..auth.permissions import PROPOSAL_PERMISSIONS
-from ..runs.sqlite import async_latest_rows, async_max, async_table
+from ..runs.sqlite import async_latest_rows, async_max, async_table, get_database_mtime
 from ..runs.types import DamnitRun, TableMeta, Timestamp
 from .metadata import fetch_metadata
 from .utils import DatabaseInput, LatestData, fetch_info
@@ -41,10 +41,13 @@ async def _new_run_appeared(proposal) -> bool:
     return True
 
 
-# Per-client cursor is deliberately omitted from the cache key so that
-# concurrent subscribers coalesce into a single DB read per tick.
+# The per-client cursor and file mtime are deliberately omitted from the cache
+# key so that concurrent subscribers coalesce into a single DB read per tick.
 @alru_cache(maxsize=32, ttl=POLLING_INTERVAL)
 async def poll_proposal(proposal):
+    # Stat'ed before the reads: a commit landing in between then costs one extra
+    # poll, where a stat after them would hide it until the next write.
+    mtime = await get_database_mtime(proposal)
     table = await async_table(proposal, name="run_variables")
     if table is None:
         return None
@@ -108,6 +111,7 @@ async def poll_proposal(proposal):
         "runs": runs,
         "run_timestamps": run_timestamps,
         "max_timestamp": _last_seen_timestamp[proposal],  # seconds
+        "mtime": mtime,  # nanoseconds
         # The whole snapshot rides along so a subscriber that needs to push it
         # builds `TableMeta` from this exact metadata, rather than re-fetching and
         # racing a newer snapshot whose signature no longer matches. Whether this
@@ -154,13 +158,20 @@ class Subscription:
         # always pushes, which also closes the gap between the client's opening
         # metadata query and its subscribe.
         last_signature = None
+        last_mtime = None
         failing = False
 
         while True:
             await asyncio.sleep(POLLING_INTERVAL)
 
             try:
-                snapshot = await poll_proposal(proposal=database.proposal)
+                mtime = await get_database_mtime(database.proposal)
+
+                # Compared with the mtime of the last poll, never with `since`: a
+                # commit lands after it stamps its rows, so its mtime is newer.
+                snapshot = None
+                if mtime is None or mtime != last_mtime:
+                    snapshot = await poll_proposal(proposal=database.proposal)
             except Exception as exc:
                 if not failing:
                     logger.warning(
@@ -174,11 +185,17 @@ class Subscription:
 
             failing = False
 
+            # The file is unchanged, or has no table yet. A miss leaves `last_mtime`
+            # as it was, since a cached one does not say when it was read.
+            if snapshot is None:
+                continue
+
+            # The snapshot may be one another subscriber cached before this write, so
+            # keep the mtime it was read at rather than this tick's.
+            last_mtime = snapshot["mtime"]
+
             metadata = None
-            if (
-                snapshot is not None
-                and snapshot["metadata_signature"] != last_signature
-            ):
+            if snapshot["metadata_signature"] != last_signature:
                 last_signature = snapshot["metadata_signature"]
                 metadata = TableMeta.from_snapshot(snapshot["metadata"])
 

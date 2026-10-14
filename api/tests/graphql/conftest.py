@@ -28,6 +28,14 @@ def reset_caches():
     return
 
 
+@pytest.fixture(autouse=True)
+def mocked_database_mtime(mocker):
+    """The database file keeps one mtime until a test moves it."""
+    return mocker.patch(
+        "damnit_api.graphql.subscriptions.get_database_mtime", return_value=1
+    )
+
+
 def _patch_permissions(mocker, *, authenticated: bool, member: bool) -> None:
     mocker.patch(
         "damnit_api.auth.permissions.IsAuthenticated.has_permission",
