@@ -28,7 +28,17 @@ from .utils import create_run_variables
 
 NEW_RUN = 400
 
-patched_sleep = patch.object(asyncio, "sleep", return_value=None)
+_real_sleep = asyncio.sleep
+
+
+# A tick yields to the loop, so a timeout ends a subscription that stops yielding
+# results.
+async def _sleep_keeping_poll_cache(_delay):
+    await _real_sleep(0)
+
+
+# Ticks of different subscribers share one cache window until a test clears it.
+patched_sleep = patch.object(asyncio, "sleep", side_effect=_sleep_keeping_poll_cache)
 
 SUBSCRIPTION = """
     subscription RunUpdatesSubscription(
