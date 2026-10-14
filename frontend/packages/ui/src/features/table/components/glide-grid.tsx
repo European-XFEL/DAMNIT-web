@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useRef } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  type ForwardedRef,
+} from 'react'
 import {
   blend,
   CompactSelection,
@@ -20,47 +27,36 @@ import {
   type Rectangle,
   type Theme,
 } from '@glideapps/glide-data-grid'
-import { Stack, useMantineTheme } from '@mantine/core'
+import { useMantineTheme } from '@mantine/core'
 
-import { DTYPES, VARIABLES } from '#src/constants'
-import { ViewStatus } from '#src/components/statuses/view-status'
-import { plotRequested } from '#src/app/store/actions'
+import { VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
-import { hasValue, runKey } from '#src/data/table/table-data.transforms'
-import { useTableMeta } from '#src/data/table/use-table-meta'
-import { isArrayEqual, sorted } from '#src/utils/array'
+import { runKey } from '#src/data/table/table-data.transforms'
+import { isArrayEqual } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
-import type { PlotSource } from '#src/types'
 import {
   errorCell,
   getCell,
   GRID_RENDERERS,
   makeCellRenderers,
   numberCell,
-  sparklineIndexAt,
   textCell,
-  toSparkline,
   type ErrorColors,
 } from '#src/features/table/utils/cells'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
-import { TableToolbar } from '#src/features/table/components/table-toolbar'
-import { RunCountItem } from '#src/features/table/components/run-count-item'
-import ContextMenu from '#src/features/table/components/context-menu'
-import {
-  useTableTooltip,
-  type ResolveTooltip,
-} from '#src/features/table/hooks/use-table-tooltip'
 import { useRehoverAtCursor } from '#src/features/table/hooks/use-rehover-at-cursor'
-import { useTableColumns } from '#src/features/table/hooks/use-table-columns'
-import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
-import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
 import { useScrollToView } from '#src/features/table/hooks/use-scroll-to-view'
 import { useColumnResize } from '#src/features/table/hooks/use-column-resize'
 import { useColumnFlash } from '#src/features/table/hooks/use-column-flash'
 import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
+import type {
+  CellId,
+  RunGridProps,
+  RunGridRef,
+} from '#src/features/table/types/table.types'
 import {
   toCurrent,
   toSelectedCells,
@@ -74,7 +70,6 @@ import {
   selectSelectedColumns,
 } from '#src/features/table/stores/table.selectors'
 import {
-  cellActivated,
   gridSelectionChanged,
   runDeselected,
   runSelected,
@@ -112,30 +107,41 @@ function paintInnerLine(
   ctx.restore()
 }
 
-function Table() {
-  // Initialization: References
-  const tableRef = useRef<DataEditorRef>(null)
+// Glide gives a click relative to its cell; the menu wants the viewport point.
+function toClientPoint(event: CellClickedEventArgs | HeaderClickedEventArgs) {
+  return {
+    x: event.bounds.x + event.localEventX,
+    y: event.bounds.y + event.localEventY,
+  }
+}
 
-  // Initialization: Data sources (the Apollo cache, via hooks)
-  const proposal = useAppSelector((state) => state.metadata.proposal.value)
-  const { runs, groups } = useTableMeta()
-  const {
+function GlideGrid(
+  {
+    columns: tableColumns,
+    pinnedCount,
+    groups,
+    runs,
     cellsByKey,
     lastUpdatedByKey,
-    onVisibleRegionChanged: fetchOnScroll,
-    loadErrors,
-    retryNow,
-  } = useTableRuns(proposal)
+    onVisibleRegionChanged,
+    onScroll,
+    onCellHovered,
+    onCellMouseMove,
+    onCellActivated,
+    onCellContextMenu,
+    onHeaderContextMenu,
+  }: RunGridProps,
+  ref: ForwardedRef<RunGridRef>
+) {
+  const tableRef = useRef<DataEditorRef>(null)
 
-  // Initialization: Hooks
   const dispatch = useAppDispatch()
   const {
     onVisibleRegionChanged: scrollToViewHandler,
     scrollX,
     scrollY,
   } = useScrollToView(tableRef)
-  const [contextMenu, setContextMenu] = useContextMenu()
-  const { columns: tableColumns, pinnedCount } = useTableColumns()
+  const rehoverAtCursor = useRehoverAtCursor()
   const {
     columnSizing,
     onColumnResize,
@@ -144,6 +150,10 @@ function Table() {
     fitAllColumns,
     resetColumnWidths,
   } = useColumnResize(tableRef, tableColumns)
+  useImperativeHandle(ref, () => ({ fitAllColumns, resetColumnWidths }), [
+    fitAllColumns,
+    resetColumnWidths,
+  ])
   const theme = useMantineTheme()
 
   // What the grid draws: the title without the level its group header already
@@ -223,8 +233,8 @@ function Table() {
     [theme]
   )
 
-  // Data: Populate grid. Row layout is the server-ordered run list; a cell's
-  // value is looked up by the run's identity from the normalized cache.
+  // Row layout is the server-ordered run list; a cell's value is looked up by
+  // the run's identity from the normalized cache.
   const getContent = useCallback(
     ([col, row]: Item) => {
       const identity = runs[row]
@@ -257,70 +267,32 @@ function Table() {
     [tableColumns, runs, cellsByKey, lastUpdatedByKey]
   )
 
-  // Cell: tooltip. Errored cells show a card; image cells show a preview; array
-  // cells show the point under the sparkline's crosshair.
-  const resolveTooltip: ResolveTooltip = ({
-    run,
-    variable,
-    bounds,
-    offsetX,
-  }) => {
-    const item = cellsByKey.get(runKey(run))?.get(variable)
-    if (!item) {
-      return undefined
-    }
-    if (item.error) {
-      return { kind: 'error', error: item.error }
-    }
-    if (
-      item.summary.dtype === DTYPES.image &&
-      typeof item.summary.value === 'string' &&
-      item.summary.value
-    ) {
-      return { kind: 'image', src: item.summary.value }
-    }
-    if (item.summary.dtype === DTYPES.array1d) {
-      const sparkline = toSparkline(item.summary.value)
-      if (!sparkline?.y.length) {
-        return undefined
-      }
-
-      const index = sparklineIndexAt(offsetX, bounds.width, sparkline.y.length)
-      return {
-        kind: 'sparkline',
-        x: sparkline.x[index],
-        y: sparkline.y[index],
-      }
-    }
-
-    return undefined
-  }
-  const {
-    onCellHovered,
-    onCellMouseMove,
-    dismiss: dismissTooltip,
-    tooltip,
-  } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
-  const rehoverAtCursor = useRehoverAtCursor()
-
   const selectedColumns = useAppSelector(selectSelectedColumns)
   const selectedCells = useAppSelector(selectSelectedCells)
   const rowSelection = useAppSelector(selectRowSelection)
   const selectedRun = useSelectedRun()
 
-  const toHoveredCell = (args: GridMouseEventArgs) => {
-    if (args.kind !== 'cell') {
-      return undefined
-    }
-
-    const [col, row] = args.location
+  const toCellId = ([col, row]: Item): CellId | undefined => {
     const run = runs[row]
     const variable = tableColumns[col]?.id
     if (!run || !variable) {
       return undefined
     }
 
-    return { run, variable, bounds: args.bounds, offsetX: args.localEventX }
+    return { run, variable }
+  }
+
+  const toHoveredCell = (args: GridMouseEventArgs) => {
+    if (args.kind !== 'cell') {
+      return undefined
+    }
+
+    const cell = toCellId(args.location)
+    if (!cell) {
+      return undefined
+    }
+
+    return { ...cell, bounds: args.bounds, offsetX: args.localEventX }
   }
 
   // A row marker clicked off and the last column unselected reach Glide's
@@ -512,7 +484,6 @@ function Table() {
             )
         : undefined
 
-    // Finalize
     dispatch(
       gridSelectionChanged({
         columns: columns
@@ -529,20 +500,12 @@ function Table() {
       })
     )
   }
-  // The run number names the row rather than holding a value, so activating it
-  // opens the whole run.
-  const handleCellActivated = ([col, row]: Item) => {
-    const identity = runs[row]
-    const variable = tableColumns[col]?.id
-    if (!identity || !variable) {
-      return
-    }
 
-    dispatch(
-      variable === VARIABLES.run
-        ? runSelected(identity)
-        : cellActivated({ ...identity, variable })
-    )
+  const handleCellActivated = (item: Item) => {
+    const cell = toCellId(item)
+    if (cell) {
+      onCellActivated(cell)
+    }
   }
 
   // If the aside is open, a plain click activates the cell, so the aside shows
@@ -561,22 +524,6 @@ function Table() {
       return
     }
     handleCellActivated(item)
-  }
-
-  // Context menus. Every one of them is a single plot entry placed at the
-  // pointer, so they differ only in what that entry says and does.
-  const showPlotMenu = (
-    event: CellClickedEventArgs | HeaderClickedEventArgs,
-    item: { kind: PlotSource; subtitle: string; onClick: () => void }
-  ) => {
-    // Glide's click is cell-relative; the menu wants a viewport point.
-    setContextMenu({
-      position: {
-        x: event.bounds.x + event.localEventX,
-        y: event.bounds.y + event.localEventY,
-      },
-      contents: [{ key: 'plot', title: `Plot: ${item.kind}`, ...item }],
-    })
   }
 
   const handleCellContextMenu = (
@@ -613,36 +560,22 @@ function Table() {
       )
     }
 
-    const column = tableColumns[col]?.id
-    const identity = runs[row]
-    const rowData = identity && cellsByKey.get(runKey(identity))
-
-    // A row whose page has not loaded yet has no data at all, not merely no
-    // value: it has nothing to offer a plot either way.
-    // TODO: Use extracted data type from the database
-    if (col !== -1 && hasValue(rowData?.get(column))) {
-      const variable = tableColumns[col]
-      const subtitle = `${variable.title}`
-
-      const selectedRows = [
-        selectedCell[1],
-        ...selectedRange.map((rect) => rect.y),
-      ]
-      const runNumbers = sorted(
-        selectedRows.map((row) => String(runs[row as number]?.run))
-      )
-
-      showPlotMenu(event, {
-        kind: 'preview',
-        subtitle,
-        onClick: () =>
-          addPreviewPlot({
-            variable: variable.id,
-            label: subtitle,
-            runs: runNumbers,
-          }),
-      })
+    const cell = toCellId([col, row])
+    if (!cell) {
+      return
     }
+
+    const selectedRows = [
+      selectedCell[1],
+      ...selectedRange.map((rect) => rect.y),
+    ]
+    onCellContextMenu({
+      ...cell,
+      selectedRuns: selectedRows
+        .map((index) => (index == null ? undefined : runs[index]))
+        .filter((selected) => selected != null),
+      position: toClientPoint(event),
+    })
   }
   const handleHeaderContextMenu = (
     col: number,
@@ -667,62 +600,13 @@ function Table() {
     }
 
     const columnSelection = isSelected ? gridSelection.columns.toArray() : [col]
-
-    if (columnSelection.length > 2) {
-      return
-    }
-
-    // The latest selection is the y axis. The first is the x axis, or Run when
-    // this column is the only one selected.
-    const y = column
-    const firstSelected = columnSelection.find((c) => c !== col)
-    const x =
-      firstSelected === undefined
-        ? { id: VARIABLES.run, title: 'Run' }
-        : tableColumns[firstSelected]
-    const subtitle = `${y.title} vs. ${x.title}`
-
-    showPlotMenu(event, {
-      kind: 'summary',
-      subtitle,
-      onClick: () =>
-        addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
+    onHeaderContextMenu({
+      variable: column.id,
+      selectedVariables: columnSelection
+        .map((index) => tableColumns[index]?.id)
+        .filter((variable) => variable != null),
+      position: toClientPoint(event),
     })
-  }
-
-  const addSummaryPlot = ({
-    variables,
-    label,
-  }: {
-    variables: string[]
-    label: string
-  }) => {
-    dispatch(
-      plotRequested({
-        variables,
-        source: 'summary',
-        name: label,
-      })
-    )
-  }
-
-  const addPreviewPlot = ({
-    variable,
-    label,
-    runs,
-  }: {
-    variable: string
-    label: string
-    runs: string[]
-  }) => {
-    dispatch(
-      plotRequested({
-        runs,
-        variables: [variable],
-        source: 'preview',
-        name: label,
-      })
-    )
   }
 
   const lastVisibleRegionRef = useRef<{
@@ -732,7 +616,7 @@ function Table() {
   } | null>(null)
   const handleVisibleRegionChange = useCallback(
     (rect: Rectangle, tx?: number, ty?: number) => {
-      fetchOnScroll(rect)
+      onVisibleRegionChanged(rect)
       scrollToViewHandler(rect)
       const previous = lastVisibleRegionRef.current
       const nextTx = tx ?? 0
@@ -746,94 +630,72 @@ function Table() {
         previous.ty !== nextTy
       lastVisibleRegionRef.current = { rect, tx: nextTx, ty: nextTy }
 
-      // The rehover waits a frame for the card to close, so the mousemove
-      // reaches the grid rather than the card.
+      // The rehover waits a frame, so whatever onScroll closed has gone by
+      // then and the mousemove reaches the grid.
       if (scrolled) {
-        dismissTooltip()
+        onScroll()
         rehoverAtCursor()
       }
     },
-    [fetchOnScroll, scrollToViewHandler, dismissTooltip, rehoverAtCursor]
+    [onVisibleRegionChanged, scrollToViewHandler, onScroll, rehoverAtCursor]
   )
 
   return (
-    <>
-      {!tableColumns.length ? null : (
-        <Stack w="100%" h="100%" gap={0}>
-          <TableToolbar
-            onFitAllColumns={fitAllColumns}
-            onResetColumnWidths={resetColumnWidths}
-          />
-          <>
-            <DataEditorCore
-              ref={tableRef}
-              theme={gridTheme}
-              columns={gridColumns}
-              highlightRegions={highlightRegions}
-              drawHeader={drawHeader}
-              getRowThemeOverride={getRowThemeOverride}
-              drawCell={drawCell}
-              getGroupDetails={getGroupDetails}
-              rowHeight={ROW_HEIGHT}
-              headerHeight={HEADER_HEIGHT}
-              groupHeaderHeight={GROUP_HEADER_HEIGHT}
-              verticalBorder={hasVerticalBorder}
-              onGroupHeaderClicked={handleGroupHeaderClicked}
-              // Glide suppresses the native menu only when a consumer asks it
-              // to, and the group bar has nothing of its own to offer.
-              onGroupHeaderContextMenu={(_col, event) => event.preventDefault()}
-              getCellContent={getContent}
-              onColumnResize={onColumnResize}
-              onColumnResizeStart={onColumnResizeStart}
-              onColumnResizeEnd={onColumnResizeEnd}
-              // Lets Glide measure the visible cells, which is what its
-              // built-in double-click fit needs.
-              getCellsForSelection={true}
-              // Copy rides along with the line above, and a column copy asks for
-              // every run, which pagination has not fetched, so a paste is short.
-              keybindings={{ copy: false }}
-              // No cell here sets a span, so Glide's scan for one would read
-              // cells on every selection change and throw the answer away.
-              spanRangeBehavior="allowPartial"
-              rows={runs.length}
-              rowSelect="single"
-              rowMarkers={rowMarkers}
-              gridSelection={gridSelection}
-              onGridSelectionChange={handleGridSelectionChange}
-              // Escape or a click on nothing, which unselecting a column is not.
-              onSelectionCleared={() => dispatch(runDeselected())}
-              onCellClicked={handleCellClicked}
-              onCellActivated={handleCellActivated}
-              rangeSelect="multi-cell"
-              onCellContextMenu={handleCellContextMenu}
-              onHeaderContextMenu={handleHeaderContextMenu}
-              onItemHovered={handleGridItemHovered}
-              onMouseMove={handleGridMouseMove}
-              onKeyDown={handleGridKeyDown}
-              freezeColumns={pinnedCount}
-              renderers={GRID_RENDERERS}
-              customRenderers={renderers}
-              headerIcons={sprites}
-              imageWindowLoader={imageWindowLoader}
-              onVisibleRegionChanged={handleVisibleRegionChange}
-              scrollOffsetX={scrollX}
-              scrollOffsetY={scrollY}
-            />
-            {tooltip}
-            <ContextMenu {...contextMenu} />
-            <div id="portal" />
-          </>
-          <ViewStatus>
-            <RunCountItem
-              runs={runs}
-              loadErrors={loadErrors}
-              onTryAgain={retryNow}
-            />
-          </ViewStatus>
-        </Stack>
-      )}
-    </>
+    <DataEditorCore
+      ref={tableRef}
+      theme={gridTheme}
+      columns={gridColumns}
+      highlightRegions={highlightRegions}
+      drawHeader={drawHeader}
+      getRowThemeOverride={getRowThemeOverride}
+      drawCell={drawCell}
+      getGroupDetails={getGroupDetails}
+      rowHeight={ROW_HEIGHT}
+      headerHeight={HEADER_HEIGHT}
+      groupHeaderHeight={GROUP_HEADER_HEIGHT}
+      verticalBorder={hasVerticalBorder}
+      onGroupHeaderClicked={handleGroupHeaderClicked}
+      // Glide suppresses the native menu only when a consumer asks it
+      // to, and the group bar has nothing of its own to offer.
+      onGroupHeaderContextMenu={(_col, event) => event.preventDefault()}
+      getCellContent={getContent}
+      onColumnResize={onColumnResize}
+      onColumnResizeStart={onColumnResizeStart}
+      onColumnResizeEnd={onColumnResizeEnd}
+      // Lets Glide measure the visible cells, which is what its
+      // built-in double-click fit needs.
+      getCellsForSelection={true}
+      // Copy rides along with the line above, and a column copy asks for
+      // every run, which pagination has not fetched, so a paste is short.
+      keybindings={{ copy: false }}
+      // No cell here sets a span, so Glide's scan for one would read
+      // cells on every selection change and throw the answer away.
+      spanRangeBehavior="allowPartial"
+      rows={runs.length}
+      rowSelect="single"
+      rowMarkers={rowMarkers}
+      gridSelection={gridSelection}
+      onGridSelectionChange={handleGridSelectionChange}
+      // Escape or a click on nothing, which unselecting a column is not.
+      onSelectionCleared={() => dispatch(runDeselected())}
+      onCellClicked={handleCellClicked}
+      onCellActivated={handleCellActivated}
+      rangeSelect="multi-cell"
+      onCellContextMenu={handleCellContextMenu}
+      onHeaderContextMenu={handleHeaderContextMenu}
+      onItemHovered={handleGridItemHovered}
+      onMouseMove={handleGridMouseMove}
+      onKeyDown={handleGridKeyDown}
+      freezeColumns={pinnedCount}
+      renderers={GRID_RENDERERS}
+      customRenderers={renderers}
+      headerIcons={sprites}
+      imageWindowLoader={imageWindowLoader}
+      onVisibleRegionChanged={handleVisibleRegionChange}
+      scrollOffsetX={scrollX}
+      scrollOffsetY={scrollY}
+    />
   )
 }
 
-export default Table
+export default forwardRef(GlideGrid)

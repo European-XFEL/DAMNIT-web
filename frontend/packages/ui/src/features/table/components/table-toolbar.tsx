@@ -10,8 +10,8 @@ type TableToolbarProps = {
   onResetColumnWidths: () => void
 }
 
-// Memoised because a drag writes a width per mouse-move, which re-renders the
-// table but changes nothing here.
+// Memoised because the hover card and every page load re-render the table but
+// change nothing here.
 export const TableToolbar = memo(function TableToolbar({
   onFitAllColumns,
   onResetColumnWidths,
