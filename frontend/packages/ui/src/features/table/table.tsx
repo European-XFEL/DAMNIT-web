@@ -269,13 +269,8 @@ const Table = ({ paginated = true }: TableProps) => {
   // Cell: tooltip. Errored cells show a card; image cells show a preview; array
   // cells show the point under the sparkline's crosshair.
   const resolveTooltip = useCallback<ResolveTooltip>(
-    (col, row, hover) => {
-      const identity = runs[row]
-      const variable = tableColumns[col]?.id
-      if (identity == null || !variable) {
-        return undefined
-      }
-      const item = cellsByKey.get(runKey(identity))?.get(variable)
+    ({ run, variable, bounds, offsetX }) => {
+      const item = cellsByKey.get(runKey(run))?.get(variable)
       if (!item) {
         return undefined
       }
@@ -294,20 +289,25 @@ const Table = ({ paginated = true }: TableProps) => {
         if (!sparkline?.y.length) {
           return undefined
         }
-        const index = sparklineIndexAt(hover.x, hover.width, sparkline.y.length)
+        const index = sparklineIndexAt(
+          offsetX,
+          bounds.width,
+          sparkline.y.length
+        )
         return {
           kind: 'sparkline',
           x: sparkline.x[index],
           y: sparkline.y[index],
         }
       }
+
       return undefined
     },
-    [tableColumns, runs, cellsByKey]
+    [cellsByKey]
   )
   const {
-    onItemHovered: handleItemHovered,
-    onMouseMove: handleTooltipMouseMove,
+    onCellHovered,
+    onCellMouseMove,
     dismissOnScroll: dismissTooltipOnScroll,
     tooltip,
   } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
@@ -317,13 +317,31 @@ const Table = ({ paginated = true }: TableProps) => {
   const rowSelection = useAppSelector(selectRowSelection)
   const selectedRun = useSelectedRun()
 
+  const toHoveredCell = (args: GridMouseEventArgs) => {
+    if (args.kind !== 'cell') {
+      return undefined
+    }
+
+    const [col, row] = args.location
+    const run = runs[row]
+    const variable = tableColumns[col]?.id
+    if (!run || !variable) {
+      return undefined
+    }
+
+    return { run, variable, bounds: args.bounds, offsetX: args.localEventX }
+  }
+
   // A row marker clicked off and the last column unselected reach Glide's
   // change handler as the same empty selection; only the header takes Ctrl/Cmd.
   const pointerOnHeader = useRef(false)
   const handleGridItemHovered = (args: GridMouseEventArgs) => {
     pointerOnHeader.current =
       (args.kind === 'header' || args.kind === 'group-header') && !args.isTouch
-    handleItemHovered(args)
+    onCellHovered(toHoveredCell(args))
+  }
+  const handleGridMouseMove = (args: GridMouseEventArgs) => {
+    onCellMouseMove(toHoveredCell(args))
   }
 
   // Glide reports a key's selection change before its keydown returns, so the
@@ -795,7 +813,7 @@ const Table = ({ paginated = true }: TableProps) => {
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
               onItemHovered={handleGridItemHovered}
-              onMouseMove={handleTooltipMouseMove}
+              onMouseMove={handleGridMouseMove}
               onKeyDown={handleGridKeyDown}
               freezeColumns={pinnedCount}
               renderers={GRID_RENDERERS}

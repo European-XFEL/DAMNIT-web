@@ -6,13 +6,13 @@ import {
   useRef,
   useState,
 } from 'react'
-import { type GridMouseEventArgs } from '@glideapps/glide-data-grid'
 import { type IBounds, useLayer } from 'react-laag'
 
 import {
   TableTooltip,
   type CellTooltip,
 } from '#src/features/table/components/tooltips/table-tooltip'
+import type { HoveredCell } from '#src/features/table/types/table.types'
 import { ZERO_BOUNDS, toBounds } from '#src/features/table/utils/bounds'
 import { assertNever } from '#src/utils/helpers'
 
@@ -50,13 +50,7 @@ const sameTarget = (
   b: TooltipState
 ): boolean => !!a && sameCell(a, b) && sameContent(a.target, b.target)
 
-// `hover` is the pointer's x offset into the cell and the cell width, for
-// tooltips that depend on the pointer position (e.g. sparklines).
-export type ResolveTooltip = (
-  col: number,
-  row: number,
-  hover: { x: number; width: number }
-) => CellTooltip | undefined
+export type ResolveTooltip = (cell: HoveredCell) => CellTooltip | undefined
 
 export const useTableTooltip = (
   resolve: ResolveTooltip,
@@ -108,7 +102,7 @@ export const useTableTooltip = (
     const delay = tooltipRef.current ? DELAY.switch : DELAY.open
     pendingTargetRef.current = next
     openTimerRef.current = window.setTimeout(() => {
-      // Read the ref because onMouseMove may have changed the target.
+      // Read the ref because onCellMouseMove may have changed the target.
       const next = pendingTargetRef.current
       if (!next) {
         return
@@ -174,34 +168,34 @@ export const useTableTooltip = (
   }, [scheduleClose])
 
   const resolveAt = useCallback(
-    (args: GridMouseEventArgs): TooltipState | undefined => {
-      if (args.kind !== 'cell') {
+    (cell: HoveredCell | undefined): TooltipState | undefined => {
+      if (!cell) {
         return undefined
       }
-      const [col, row] = args.location
-      const content = resolve(col, row, {
-        x: args.localEventX,
-        width: args.bounds.width,
-      })
+
+      const content = resolve(cell)
       if (!content) {
         return undefined
       }
-      return { target: content, bounds: toBounds(args.bounds) }
+
+      return { target: content, bounds: toBounds(cell.bounds) }
     },
     [resolve]
   )
 
-  const onItemHovered = useCallback(
-    (args: GridMouseEventArgs) => {
+  const onCellHovered = useCallback(
+    (cell: HoveredCell | undefined) => {
       if (suppressed) {
         return
       }
-      const next = resolveAt(args)
+
+      const next = resolveAt(cell)
       if (!next) {
         cancelOpen()
         scheduleClose()
         return
       }
+
       cancelClose()
       if (sameTarget(tooltipRef.current, next)) {
         cancelOpen()
@@ -210,6 +204,7 @@ export const useTableTooltip = (
       if (sameTarget(pendingTargetRef.current, next)) {
         return
       }
+
       scheduleOpen(next)
     },
     [
@@ -224,18 +219,20 @@ export const useTableTooltip = (
 
   // Glide only fires onItemHovered when the pointer moves to another cell, so
   // this updates tooltips that depend on the pointer position within a cell.
-  // Opening and closing tooltips is left to onItemHovered, so that moving
+  // Opening and closing tooltips is left to onCellHovered, so that moving
   // within a cell doesn't restart the open timer or reopen a tooltip closed
   // with Escape.
-  const onMouseMove = useCallback(
-    (args: GridMouseEventArgs) => {
+  const onCellMouseMove = useCallback(
+    (cell: HoveredCell | undefined) => {
       if (suppressed) {
         return
       }
-      const next = resolveAt(args)
+
+      const next = resolveAt(cell)
       if (!next || sameTarget(tooltipRef.current, next)) {
         return
       }
+
       // The tooltip is already open on this cell, so update it immediately.
       if (sameCell(tooltipRef.current, next)) {
         cancelOpen()
@@ -243,6 +240,7 @@ export const useTableTooltip = (
         setTooltip(next)
         return
       }
+
       // The tooltip is about to open on this cell, so just update the target.
       if (sameCell(pendingTargetRef.current, next)) {
         pendingTargetRef.current = next
@@ -294,8 +292,8 @@ export const useTableTooltip = (
   })
 
   return {
-    onItemHovered,
-    onMouseMove,
+    onCellHovered,
+    onCellMouseMove,
     dismiss,
     dismissOnScroll,
     tooltip: tooltip
