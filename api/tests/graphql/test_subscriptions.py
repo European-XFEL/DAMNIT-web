@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 import pytest_asyncio
 from sqlalchemy.exc import OperationalError
+from structlog.testing import capture_logs
 
 from damnit_api.graphql.subscriptions import (
     POLLING_INTERVAL,
@@ -293,6 +294,27 @@ async def test_a_failed_tick_does_not_end_live_updates(
 
     assert not result.errors
     assert [run["run"] for run in result.data["run_updates"]["runs"]] == [NEW_RUN]
+
+
+@pytest.mark.asyncio
+async def test_each_run_of_failed_ticks_logs_one_warning_with_its_error(
+    subscription, mocked_latest_rows, mocked_fetch_info
+):
+    good = mocked_fetch_info.return_value
+    locked = _operational_error("database is locked")
+    io_error = _operational_error("disk I/O error")
+    mocked_fetch_info.side_effect = [locked, locked, good, io_error, good]
+
+    with patched_sleep, capture_logs() as logs:
+        # Two failed ticks, then a good one
+        await asyncio.wait_for(anext(subscription), timeout=2)
+
+        # One more failed tick, once the good poll has left the cache
+        poll_proposal.cache_clear()
+        await asyncio.wait_for(anext(subscription), timeout=2)
+
+    warnings = [log["error"] for log in logs if log["log_level"] == "warning"]
+    assert warnings == [repr(locked), repr(io_error)]
 
 
 # -----------------------------------------------------------------------------
