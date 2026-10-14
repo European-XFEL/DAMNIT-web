@@ -39,7 +39,7 @@ async def async_table(proposal, name: str = "runs") -> Table | None:
             )
         except NoSuchTableError:
             # Don't cache misses; the table may appear shortly.
-            async_table.cache_invalidate(proposal, name)
+            async_table.cache_invalidate(proposal, name=name)
             return None
 
 
