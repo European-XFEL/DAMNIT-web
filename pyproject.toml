@@ -12,7 +12,12 @@ maintainers = [
 dependencies = []
 
 [dependency-groups]
-dev = ["pre-commit>=4.5"]
+dev = [
+    "pre-commit>=4.5",
+    "pytest~=8.2",
+    "regex>=2026.9.29",
+    "ruff>=0.7",
+]
 
 [tool.uv]
 default-groups = ["dev"]

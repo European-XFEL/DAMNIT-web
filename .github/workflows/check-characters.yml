@@ -1,0 +1,43 @@
+name: Check Characters
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+
+      - name: Sync dependencies
+        run: uv sync --locked
+
+      - name: Test the check
+        run: uv run --no-sync pytest scripts/check-characters
+
+      - name: Check characters
+        run: uv run --no-sync python scripts/check-characters/check_characters.py
+
+      - name: Ruff check
+        run: uv run --no-sync ruff check scripts
+
+      - name: Ruff format check
+        run: uv run --no-sync ruff format --check scripts

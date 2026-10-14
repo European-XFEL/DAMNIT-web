@@ -101,7 +101,7 @@ describe('indexRunCells', () => {
     ])
   })
 
-  test('reuses a run’s cell map while the run object is unchanged', () => {
+  test("reuses a run's cell map while the run object is unchanged", () => {
     const runA = run('900405', 1, [cell({ name: 'energy', value: 1.2 })])
 
     // A later push hands back a new array but the same unchanged run object, so
