@@ -1,8 +1,5 @@
-import { useLayer } from 'react-laag'
 import { Stack } from '@mantine/core'
 import { ContextMenuPortal as MantineContextMenu } from 'mantine-contextmenu'
-
-import { toBounds } from '#src/features/table/utils/bounds'
 
 import ContextMenuItem, {
   type ContextMenuItemOptions,
@@ -25,38 +22,20 @@ const ContextMenu = ({
     return
   },
 }: ContextMenuProps) => {
-  const {
-    layerProps: { ref: layerRef },
-    renderLayer,
-  } = useLayer({
-    isOpen,
-    auto: true,
-    placement: 'bottom-start',
-    possiblePlacements: ['bottom-start', 'bottom-end'],
-    triggerOffset: 2,
-    // onOutsideClick,
-    trigger: {
-      getBounds: () => toBounds(bounds),
-    },
-  })
-
   return (
-    isOpen &&
-    renderLayer(
-      <div ref={layerRef}>
-        <MantineContextMenu
-          x={localPosition.x + bounds.x}
-          y={localPosition.y + bounds.y}
-          onHide={onOutsideClick}
-          content={(_) => (
-            <Stack gap={0}>
-              {contents.map(({ key, ...props }) => (
-                <ContextMenuItem key={key} {...props} />
-              ))}
-            </Stack>
-          )}
-        />
-      </div>
+    isOpen && (
+      <MantineContextMenu
+        x={localPosition.x + bounds.x}
+        y={localPosition.y + bounds.y}
+        onHide={onOutsideClick}
+        content={() => (
+          <Stack gap={0}>
+            {contents.map(({ key, ...props }) => (
+              <ContextMenuItem key={key} {...props} />
+            ))}
+          </Stack>
+        )}
+      />
     )
   )
 }
