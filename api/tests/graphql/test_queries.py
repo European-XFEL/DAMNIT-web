@@ -18,6 +18,9 @@ from .const import (
     get_values,
 )
 
+# -----------------------------------------------------------------------------
+# Fetching runs
+
 
 @pytest.fixture
 def mocked_fetch_cells(mocker):
@@ -140,6 +143,55 @@ async def test_runs_query_returns_identity_trio(
 
 
 @pytest.mark.asyncio
+async def test_runs_query_fetches_run_info_when_metadata_requested(
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
+):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
+            cells(names: ["start_time"]) {{
+              name
+            }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    assert mocked_fetch_info.called
+    assert [v["name"] for v in result.data["runs"][0]["cells"]] == ["start_time"]
+
+
+@pytest.mark.asyncio
+async def test_runs_query_sends_when_each_value_was_computed(
+    graphql_schema, real_damnit_db
+):
+    proposal = real_damnit_db
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{proposal}"}}, per_page: 1) {{
+            cells {{ name computed_at }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    cells = result.data["runs"][0]["cells"]
+    assert {c["name"]: c["computed_at"] for c in cells} == {
+        "alpha": 1_000_000,
+        "beta": 1_050_000,
+        # Built from the run's key, not from a stored value.
+        "proposal": None,
+        "run": None,
+    }
+
+
+# -----------------------------------------------------------------------------
+# Choosing cells by name
+
+
+@pytest.mark.asyncio
 async def test_runs_query_filters_cells_by_name(
     graphql_schema, mocked_fetch_cells, mocked_fetch_info
 ):
@@ -241,40 +293,6 @@ async def real_damnit_db(mocker, tmp_path):
     DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
 
 
-async def _read_and_hold(proposal, steps):
-    """Read through `get_session` and keep the session open a moment."""
-    async with get_session(proposal) as session:
-        steps.append("enter")
-        await session.execute(text("SELECT count(*) FROM run_variables"))
-        await asyncio.sleep(0.05)
-        steps.append("leave")
-
-
-@pytest.mark.asyncio
-async def test_extracted_data_waits_for_a_read_on_the_same_database(
-    graphql_schema, real_damnit_db, mocker
-):
-    steps = []
-    mocker.patch(
-        "damnit_api.graphql.queries.get_preview_data",
-        side_effect=lambda **_: steps.append("preview"),
-    )
-    query = f"""
-        query {{
-          extracted_data(
-            database: {{proposal: "{real_damnit_db}"}}, run: 1, variable: "alpha"
-          )
-        }}
-    """
-
-    _, result = await asyncio.gather(
-        _read_and_hold(real_damnit_db, steps), graphql_schema.execute(query)
-    )
-
-    assert result.errors is None
-    assert steps == ["enter", "leave", "preview"]
-
-
 @pytest.mark.asyncio
 async def test_runs_query_unknown_name(graphql_schema, real_damnit_db):
     """Filtering by an unknown name returns every paginated run with an
@@ -325,29 +343,8 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
     ]
 
 
-@pytest.mark.asyncio
-async def test_runs_query_sends_when_each_value_was_computed(
-    graphql_schema, real_damnit_db
-):
-    proposal = real_damnit_db
-    query = f"""
-        query {{
-          runs(database: {{proposal: "{proposal}"}}, per_page: 1) {{
-            cells {{ name computed_at }}
-          }}
-        }}
-    """
-    result = await graphql_schema.execute(query)
-
-    assert result.errors is None
-    cells = result.data["runs"][0]["cells"]
-    assert {c["name"]: c["computed_at"] for c in cells} == {
-        "alpha": 1_000_000,
-        "beta": 1_050_000,
-        # Built from the run's key, not from a stored value.
-        "proposal": None,
-        "run": None,
-    }
+# -----------------------------------------------------------------------------
+# Choosing runs by id
 
 
 @pytest.mark.asyncio
@@ -453,6 +450,10 @@ async def test_runs_query_with_an_empty_ids_list_returns_no_runs(
     )
     assert result.errors is None
     assert result.data["runs"] == []
+
+
+# -----------------------------------------------------------------------------
+# Reading guest proposals' runs
 
 
 @pytest_asyncio.fixture
@@ -611,24 +612,8 @@ async def test_runs_query_with_ids_tells_apart_a_guest_run_with_the_same_number(
     assert runs[0]["cells"] == [{"name": "alpha", "summary": {"value": "guest_a1"}}]
 
 
-@pytest.mark.asyncio
-async def test_runs_query_fetches_run_info_when_metadata_requested(
-    graphql_schema, mocked_fetch_cells, mocked_fetch_info
-):
-    query = f"""
-        query {{
-          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
-            cells(names: ["start_time"]) {{
-              name
-            }}
-          }}
-        }}
-    """
-    result = await graphql_schema.execute(query)
-
-    assert result.errors is None
-    assert mocked_fetch_info.called
-    assert [v["name"] for v in result.data["runs"][0]["cells"]] == ["start_time"]
+# -----------------------------------------------------------------------------
+# Reading the table metadata
 
 
 @pytest.mark.asyncio
@@ -704,6 +689,48 @@ async def test_metadata_query_lists_no_variables_for_a_tag_nothing_carries(
 
     assert result.errors is None
     assert result.data["metadata"]["tags"]["XGM"]["variables"] == []
+
+
+# -----------------------------------------------------------------------------
+# Reading extracted data
+
+
+async def _read_and_hold(proposal, steps):
+    """Read through `get_session` and keep the session open a moment."""
+    async with get_session(proposal) as session:
+        steps.append("enter")
+        await session.execute(text("SELECT count(*) FROM run_variables"))
+        await asyncio.sleep(0.05)
+        steps.append("leave")
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_waits_for_a_read_on_the_same_database(
+    graphql_schema, real_damnit_db, mocker
+):
+    steps = []
+    mocker.patch(
+        "damnit_api.graphql.queries.get_preview_data",
+        side_effect=lambda **_: steps.append("preview"),
+    )
+    query = f"""
+        query {{
+          extracted_data(
+            database: {{proposal: "{real_damnit_db}"}}, run: 1, variable: "alpha"
+          )
+        }}
+    """
+
+    _, result = await asyncio.gather(
+        _read_and_hold(real_damnit_db, steps), graphql_schema.execute(query)
+    )
+
+    assert result.errors is None
+    assert steps == ["enter", "leave", "preview"]
+
+
+# -----------------------------------------------------------------------------
+# Asking without access
 
 
 @pytest.mark.asyncio
