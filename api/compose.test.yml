@@ -18,6 +18,10 @@ services:
       - DW_API_UVICORN__PORT=8443
       - DW_API_UVICORN__SSL_CERTFILE=/certs/cert.bundle
       - DW_API_UVICORN__SSL_KEYFILE=/certs/cert.key
-    ports:
-      - 8443:8443
+    # Podman's default network (pasta) fails here with "Failed to open()
+    # /dev/net/tun: No such device", so the API uses the host's network.
+    network_mode: host
+    # Unused with network_mode: host; uvicorn binds 8443 on the host itself.
+    # ports:
+    #   - 8443:8443
     restart: unless-stopped
