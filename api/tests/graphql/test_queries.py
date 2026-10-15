@@ -2,6 +2,7 @@ import asyncio
 
 import pytest
 import pytest_asyncio
+from damnit.backend.db import DamnitDB
 from sqlalchemy import text
 
 from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager, get_session
@@ -194,6 +195,7 @@ async def real_damnit_db(mocker, tmp_path):
     proposal = "999999"
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
+    DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
 
     mocker.patch(
         "damnit_api.runs.sqlite.session.find_proposal",
@@ -204,20 +206,6 @@ async def real_damnit_db(mocker, tmp_path):
 
     manager = DatabaseSessionManager(proposal)
     async with manager.connect() as conn:
-        await conn.execute(
-            text(
-                "CREATE TABLE run_variables ("
-                "  proposal INTEGER NOT NULL,"
-                "  run INTEGER NOT NULL,"
-                "  name TEXT NOT NULL,"
-                "  value BLOB,"
-                "  summary_type TEXT,"
-                "  attributes BLOB,"
-                "  timestamp REAL NOT NULL,"
-                "  PRIMARY KEY (proposal, run, name, timestamp)"
-                ")"
-            )
-        )
         rows = [
             # run 1: has both vars, stored at two different times
             (int(proposal), 1, "alpha", "a1", None, 1000.0),
@@ -376,6 +364,7 @@ async def two_proposal_db(mocker, tmp_path, request):
     guest = 888888
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
+    DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
 
     mocker.patch(
         "damnit_api.runs.sqlite.session.find_proposal",
@@ -385,25 +374,6 @@ async def two_proposal_db(mocker, tmp_path, request):
 
     manager = DatabaseSessionManager(proposal)
     async with manager.connect() as conn:
-        await conn.execute(
-            text(
-                "CREATE TABLE run_variables ("
-                "  proposal INTEGER NOT NULL,"
-                "  run INTEGER NOT NULL,"
-                "  name TEXT NOT NULL,"
-                "  value BLOB,"
-                "  summary_type TEXT,"
-                "  attributes BLOB,"
-                "  timestamp REAL NOT NULL,"
-                "  PRIMARY KEY (proposal, run, name, timestamp)"
-                ")"
-            )
-        )
-        await conn.execute(
-            text("CREATE TABLE run_info (proposal INTEGER, run INTEGER)")
-        )
-        await conn.execute(text("CREATE TABLE metameta (key TEXT, value TEXT)"))
-
         variable_rows = [
             # (999999, 1): a superseded and a latest `alpha`.
             (int(proposal), 1, "alpha", "a1_old", 1000.0),
