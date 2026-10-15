@@ -16,7 +16,7 @@ from ..runs.sqlite import (
 )
 from ..runs.types import KNOWN_DTYPES, DamnitRun, TableMeta
 from .metadata import fetch_metadata
-from .utils import DatabaseInput, fetch_info
+from .utils import DatabaseInput, RunIdInput, fetch_info
 
 logger = get_logger()
 
@@ -82,19 +82,20 @@ def group_by_run(record):
     return list(grouped.values())
 
 
-async def fetch_cells(proposal, *, limit, offset, names=None):
+async def fetch_cells(proposal, *, limit, offset, names=None, ids=None):
     table = await async_table(proposal, name="run_variables")
     if table is None:
         return []
 
     active = await async_active_proposal(proposal)
+    runs = select(table.c.proposal, table.c.run).distinct()
+    if ids is not None:
+        runs = runs.where(tuple_(table.c.proposal, table.c.run).in_(ids))
+
+    # A CTE, not a subquery: the statement reads the page twice, and
+    # SQLAlchemy 2.0.48 fails on a tuple `IN` parameter rendered twice.
     page_runs = (
-        select(table.c.proposal, table.c.run)
-        .distinct()
-        .order_by(*order_by_active(table, active))
-        .limit(limit)
-        .offset(offset)
-        .subquery()
+        runs.order_by(*order_by_active(table, active)).limit(limit).offset(offset).cte()
     )
 
     latest_timestamp_subquery = select(
@@ -195,22 +196,34 @@ class Query:
         database: DatabaseInput,
         page: int = 1,
         per_page: int = 10,
+        ids: list[RunIdInput] | None = None,
     ) -> list[DamnitRun]:
         """Return a paginated list of Damnit runs.
 
         If the `cells` sub-selection passes a `names` argument, it is
         pushed down to SQL so only those cells are fetched. Omitting the
         argument returns every cell for each run.
+
+        `ids` narrows the runs to those (proposal, run) pairs before paging,
+        so a caller with more ids than `per_page` raises `per_page`. An empty
+        `ids` returns no runs.
         """
         proposal = database.proposal
         await _ensure_damnit_path(info, proposal)
         names = _selected_cell_names(info)
+
+        run_ids = None
+        if ids is not None:
+            # DAMNIT's tables declare no column types, so a proposal sent as
+            # text would match none of the integers stored in them.
+            run_ids = [(int(run_id.proposal), run_id.run) for run_id in ids]
 
         cells = await fetch_cells(
             proposal,
             limit=per_page,
             offset=(page - 1) * per_page,
             names=names,
+            ids=run_ids,
         )
 
         if not len(cells):
