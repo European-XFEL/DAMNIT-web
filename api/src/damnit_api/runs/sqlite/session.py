@@ -2,6 +2,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from anyio import Path as APath
 from sqlalchemy.ext.asyncio import (
     AsyncConnection,
     AsyncSession,
@@ -25,16 +26,15 @@ class DatabaseSessionManager(metaclass=Registry):
         self.proposal = proposal
         self.root_path = get_damnit_path(proposal)
         self._engine = create_async_engine(
-            self.db_path,
+            f"sqlite+aiosqlite:///{self.path}",
             isolation_level="AUTOCOMMIT",
             poolclass=NullPool,
         )
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
     @property
-    def db_path(self):
-        path = Path(self.root_path) / "runs.sqlite"
-        return f"sqlite+aiosqlite:///{path}"
+    def path(self):
+        return Path(self.root_path) / "runs.sqlite"
 
     async def close(self):
         if self._engine is None:
@@ -79,6 +79,21 @@ def get_session(proposal) -> AsyncSession:
 
 def get_connection(proposal) -> AsyncConnection:
     return DatabaseSessionManager(proposal).connect()  # FIX: # pyright: ignore[reportReturnType]
+
+
+async def get_database_mtime(proposal) -> int | None:
+    """Return the modification time of the proposal's `runs.sqlite` in
+    nanoseconds, or None when the file cannot be stat'ed.
+
+    Raises RuntimeError when the proposal is not found.
+    """
+    path = APath(DatabaseSessionManager(proposal).path)
+    try:
+        stat = await path.stat()
+    except OSError:
+        return None
+
+    return stat.st_mtime_ns
 
 
 # -----------------------------------------------------------------------------
