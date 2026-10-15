@@ -222,6 +222,36 @@ def test_the_command_skips_a_binary_file_but_reports_the_text_file_beside_it(tmp
     assert result.stdout == "doc.md:1:25 U+2014 (use -)\n"
 
 
+def test_the_command_skips_a_file_marked_in_gitattributes(tmp_path):
+    repo = make_repo(
+        tmp_path,
+        {
+            ".gitattributes": "frontend/pnpm-lock.yaml -check-characters\n",
+            "frontend/pnpm-lock.yaml": "deprecated: Use MapLibre \u2014 see docs.\n",
+            "doc.md": "Runs load as you scroll \u2014 no paging.\n",
+        },
+    )
+
+    result = run_check(repo)
+
+    assert result.stdout == "doc.md:1:25 U+2014 (use -)\n"
+
+
+def test_the_command_skips_a_marked_file_even_when_pre_commit_names_it(tmp_path):
+    repo = make_repo(
+        tmp_path,
+        {
+            ".gitattributes": "frontend/pnpm-lock.yaml -check-characters\n",
+            "frontend/pnpm-lock.yaml": "deprecated: Use MapLibre \u2014 see docs.\n",
+            "doc.md": "Runs load as you scroll \u2014 no paging.\n",
+        },
+    )
+
+    result = run_check(repo, ["frontend/pnpm-lock.yaml", "doc.md"])
+
+    assert result.stdout == "doc.md:1:25 U+2014 (use -)\n"
+
+
 def test_the_command_skips_a_tracked_file_that_was_deleted_from_disk(tmp_path):
     repo = make_repo(
         tmp_path,
