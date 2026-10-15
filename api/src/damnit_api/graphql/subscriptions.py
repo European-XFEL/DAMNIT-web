@@ -4,23 +4,20 @@ from collections.abc import AsyncGenerator
 import strawberry
 from async_lru import alru_cache
 
+from .. import get_logger
 from ..auth.permissions import PROPOSAL_PERMISSIONS
-from ..runs.sqlite import async_latest_rows, async_max, async_table
+from ..runs.sqlite import async_latest_rows, async_max, async_table, get_database_mtime
 from ..runs.types import DamnitRun, TableMeta, Timestamp
 from .metadata import fetch_metadata
 from .utils import DatabaseInput, LatestData, fetch_info
+
+logger = get_logger()
 
 POLLING_INTERVAL = 1  # seconds
 
 # Server-side high-water mark per proposal so each tick only fetches rows
 # newer than what the previous tick already shipped.
 _last_seen_timestamp: dict[str, float] = {}
-
-# Newest `run_info.added_at` seen per proposal. A run is written to `run_info`
-# before its variables are extracted, so it can appear without moving any
-# `run_variables` timestamp. This is what notices it on the next tick instead
-# of leaving it until the metadata cache expires.
-_last_run_added_at: dict[str, float] = {}
 
 
 @strawberry.type
@@ -30,18 +27,13 @@ class RunUpdates:
     timestamp: Timestamp
 
 
-async def _new_run_appeared(proposal) -> bool:
-    added_at = await async_max(proposal, table="run_info", column="added_at") or 0
-    if _last_run_added_at.get(proposal) == added_at:
-        return False
-    _last_run_added_at[proposal] = added_at
-    return True
-
-
-# Per-client cursor is deliberately omitted from the cache key so that
-# concurrent subscribers coalesce into a single DB read per tick.
+# The per-client cursor and file mtime are deliberately omitted from the cache
+# key so that concurrent subscribers coalesce into a single DB read per tick.
 @alru_cache(maxsize=32, ttl=POLLING_INTERVAL)
 async def poll_proposal(proposal):
+    # Stat'ed before the reads: a commit landing in between then costs one extra
+    # poll, where a stat after them would hide it until the next write.
+    mtime = await get_database_mtime(proposal)
     table = await async_table(proposal, name="run_variables")
     if table is None:
         return None
@@ -59,12 +51,9 @@ async def poll_proposal(proposal):
         start_at=_last_seen_timestamp[proposal],
     )
 
-    # Re-read the metadata only when something can have changed it: new values,
-    # or a run that has appeared but has no values yet. A tag edit or a retitled
-    # variable writes neither, and no cheap query can see one either (`variables`
-    # and `tags` carry no timestamp), so those ride the cache's own expiry.
-    if rows or await _new_run_appeared(proposal):
-        fetch_metadata.cache_invalidate(proposal)
+    # A subscriber polls on its first tick, then only once the file has changed, so any
+    # write re-reads the metadata: a new run, a tag edit, a retitled variable.
+    fetch_metadata.cache_invalidate(proposal)
     metadata = await fetch_metadata(proposal)
 
     runs = {}
@@ -105,6 +94,7 @@ async def poll_proposal(proposal):
         "runs": runs,
         "run_timestamps": run_timestamps,
         "max_timestamp": _last_seen_timestamp[proposal],  # seconds
+        "mtime": mtime,  # nanoseconds
         # The whole snapshot rides along so a subscriber that needs to push it
         # builds `TableMeta` from this exact metadata, rather than re-fetching and
         # racing a newer snapshot whose signature no longer matches. Whether this
@@ -118,8 +108,6 @@ async def poll_proposal(proposal):
 
 
 def filter_for_client(snapshot, since, metadata=None):
-    if snapshot is None:
-        return None
     # A cursorless client gets this tick's changed rows, not a history replay:
     # `poll_proposal` already bounds them by the server's high-water mark. Only
     # dropping them would be wrong, since a proposal with no runs seeds `since`
@@ -151,17 +139,44 @@ class Subscription:
         # always pushes, which also closes the gap between the client's opening
         # metadata query and its subscribe.
         last_signature = None
+        last_mtime = None
+        failing = False
 
         while True:
             await asyncio.sleep(POLLING_INTERVAL)
 
-            snapshot = await poll_proposal(proposal=database.proposal)
+            try:
+                mtime = await get_database_mtime(database.proposal)
+
+                # Compared with the mtime of the last poll, never with `since`: a
+                # commit lands after it stamps its rows, so its mtime is newer.
+                snapshot = None
+                if mtime is None or mtime != last_mtime:
+                    snapshot = await poll_proposal(proposal=database.proposal)
+            except Exception as exc:
+                if not failing:
+                    logger.warning(
+                        "Live update poll failed, retrying",
+                        proposal=database.proposal,
+                        error=repr(exc),
+                        exc_info=True,
+                    )
+                failing = True
+                continue
+
+            failing = False
+
+            # The file is unchanged, or has no table yet. A miss leaves `last_mtime`
+            # as it was, since a cached one does not say when it was read.
+            if snapshot is None:
+                continue
+
+            # The snapshot may be one another subscriber cached before this write, so
+            # keep the mtime it was read at rather than this tick's.
+            last_mtime = snapshot["mtime"]
 
             metadata = None
-            if (
-                snapshot is not None
-                and snapshot["metadata_signature"] != last_signature
-            ):
+            if snapshot["metadata_signature"] != last_signature:
                 last_signature = snapshot["metadata_signature"]
                 metadata = TableMeta.from_snapshot(snapshot["metadata"])
 

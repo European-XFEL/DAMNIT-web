@@ -15,6 +15,7 @@ from .session import (
     DatabaseSessionManager,
     get_connection,
     get_damnit_path,
+    get_database_mtime,
     get_session,
 )
 
@@ -32,6 +33,7 @@ __all__ = [
     "async_variables",
     "get_connection",
     "get_damnit_path",
+    "get_database_mtime",
     "get_session",
     "order_by_active",
 ]
