@@ -90,7 +90,7 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
         return []
 
     active = await async_active_proposal(proposal)
-    runs_subquery = (
+    page_runs = (
         select(table.c.proposal, table.c.run)
         .distinct()
         .order_by(*order_by_active(table, active))
@@ -99,13 +99,12 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
         .subquery()
     )
 
-    page_pairs = select(runs_subquery.c.proposal, runs_subquery.c.run)
     latest_timestamp_subquery = select(
         table.c.proposal,
         table.c.run,
         table.c.name,
         func.max(table.c.timestamp).label("latest_timestamp"),
-    ).where(tuple_(table.c.proposal, table.c.run).in_(page_pairs))
+    ).where(tuple_(table.c.proposal, table.c.run).in_(select(page_runs)))
     if names is not None:
         latest_timestamp_subquery = latest_timestamp_subquery.where(
             table.c.name.in_(names)
@@ -117,24 +116,24 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
         table.c.proposal, table.c.run, table.c.name
     ).subquery()
 
-    # Outer-join from `runs_subquery` so a `names` filter that excludes every
+    # Outer-join from `page_runs` so a `names` filter that excludes every
     # row of a paginated run still keeps the run in the page.
     query = (
         select(
-            runs_subquery.c.proposal,
-            runs_subquery.c.run,
+            page_runs.c.proposal,
+            page_runs.c.run,
             latest_timestamp_subquery.c.name,
             table.c.value,
             table.c.summary_type,
             table.c.attributes,
             table.c.timestamp,
         )
-        .select_from(runs_subquery)
+        .select_from(page_runs)
         .outerjoin(
             latest_timestamp_subquery,
             and_(
-                runs_subquery.c.proposal == latest_timestamp_subquery.c.proposal,
-                runs_subquery.c.run == latest_timestamp_subquery.c.run,
+                page_runs.c.proposal == latest_timestamp_subquery.c.proposal,
+                page_runs.c.run == latest_timestamp_subquery.c.run,
             ),
         )
         .outerjoin(
@@ -146,7 +145,7 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
                 table.c.timestamp == latest_timestamp_subquery.c.latest_timestamp,
             ),
         )
-        .order_by(*order_by_active(runs_subquery, active))
+        .order_by(*order_by_active(page_runs, active))
     )
 
     async with get_session(proposal) as session:
