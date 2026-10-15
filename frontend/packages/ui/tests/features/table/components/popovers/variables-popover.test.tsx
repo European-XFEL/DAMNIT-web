@@ -443,6 +443,13 @@ describe('stepping through the matches', () => {
   test('Enter pressed before the search settles runs it at once, on its first match', async () => {
     const screen = await openPopover()
 
+    // On a slow runner the search can settle before Enter lands, so a fake
+    // clock holds it back for Enter to run.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+
     await screen.getByPlaceholder('Search variables').fill('type')
     await userEvent.keyboard('{Enter}')
 
