@@ -350,6 +350,111 @@ async def test_runs_query_sends_when_each_value_was_computed(
     }
 
 
+@pytest.mark.asyncio
+async def test_runs_query_with_ids_returns_only_those_runs(
+    graphql_schema, real_damnit_db
+):
+    """The runs come back in the server's order, not in the order of `ids`."""
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            run
+          }
+        }
+    """
+    ids = [{"proposal": proposal, "run": 3}, {"proposal": proposal, "run": 1}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": ids}
+    )
+
+    assert result.errors is None
+    assert [r["run"] for r in result.data["runs"]] == [1, 3]
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_ids_pages_through_only_those_runs(
+    graphql_schema, real_damnit_db
+):
+    """Pages count only the chosen runs: page 2 of every run would be run 2."""
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          first: runs(database: { proposal: $proposal }, ids: $ids, per_page: 1) {
+            run
+          }
+          second: runs(
+            database: { proposal: $proposal }, ids: $ids, per_page: 1, page: 2
+          ) {
+            run
+          }
+        }
+    """
+    ids = [{"proposal": proposal, "run": 1}, {"proposal": proposal, "run": 3}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": ids}
+    )
+
+    assert result.errors is None
+    assert result.data == {"first": [{"run": 1}], "second": [{"run": 3}]}
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_ids_and_names_returns_only_those_cells(
+    graphql_schema, real_damnit_db
+):
+    """Run 1 also has `alpha` and run 3 also has `beta`: each filter drops
+    one of them.
+    """
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            run
+            cells(names: ["beta"]) { name summary { value } }
+          }
+        }
+    """
+    ids = [{"proposal": proposal, "run": 1}, {"proposal": proposal, "run": 2}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": ids}
+    )
+
+    assert result.errors is None
+    by_run = {
+        r["run"]: {c["name"]: c["summary"]["value"] for c in r["cells"]}
+        for r in result.data["runs"]
+    }
+    assert by_run == {1: {"beta": "b1"}, 2: {}}
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_an_empty_ids_list_returns_no_runs(
+    graphql_schema, real_damnit_db
+):
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            run
+          }
+        }
+    """
+
+    # Without ids, every run comes back
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": None}
+    )
+    assert [r["run"] for r in result.data["runs"]] == [1, 2, 3]
+
+    # With an empty list, none do
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": []}
+    )
+    assert result.errors is None
+    assert result.data["runs"] == []
+
+
 @pytest_asyncio.fixture
 async def two_proposal_db(mocker, tmp_path, request):
     """A file holding two proposals that share a run number, wired via
@@ -480,6 +585,30 @@ async def test_runs_query_without_an_active_proposal_orders_by_proposal_then_run
         ("999999", 1),
         ("999999", 2),
     ]
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_ids_tells_apart_a_guest_run_with_the_same_number(
+    graphql_schema, two_proposal_db
+):
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            proposal
+            run
+            cells(names: ["alpha"]) { name summary { value } }
+          }
+        }
+    """
+    ids = [{"proposal": "888888", "run": 1}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": two_proposal_db, "ids": ids}
+    )
+
+    assert result.errors is None
+    runs = result.data["runs"]
+    assert [(r["proposal"], r["run"]) for r in runs] == [("888888", 1)]
+    assert runs[0]["cells"] == [{"name": "alpha", "summary": {"value": "guest_a1"}}]
 
 
 @pytest.mark.asyncio
