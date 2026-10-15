@@ -16,6 +16,9 @@ from .const import (
     get_values,
 )
 
+# -----------------------------------------------------------------------------
+# Fetching runs
+
 
 @pytest.fixture
 def mocked_fetch_cells(mocker):
@@ -135,6 +138,30 @@ async def test_runs_query_returns_identity_trio(
     # Identity-only: no cells to load, so run_info is skipped too.
     assert mocked_fetch_cells.call_args.kwargs["names"] == []
     assert not mocked_fetch_info.called
+
+
+@pytest.mark.asyncio
+async def test_runs_query_fetches_run_info_when_metadata_requested(
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
+):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
+            cells(names: ["start_time"]) {{
+              name
+            }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    assert mocked_fetch_info.called
+    assert [v["name"] for v in result.data["runs"][0]["cells"]] == ["start_time"]
+
+
+# -----------------------------------------------------------------------------
+# Choosing cells by name
 
 
 @pytest.mark.asyncio
@@ -289,6 +316,10 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
     ]
 
 
+# -----------------------------------------------------------------------------
+# Choosing runs by id
+
+
 @pytest.mark.asyncio
 async def test_runs_query_with_ids_returns_only_those_runs(
     graphql_schema, real_damnit_db
@@ -392,6 +423,10 @@ async def test_runs_query_with_an_empty_ids_list_returns_no_runs(
     )
     assert result.errors is None
     assert result.data["runs"] == []
+
+
+# -----------------------------------------------------------------------------
+# Reading guest proposals' runs
 
 
 @pytest_asyncio.fixture
@@ -550,24 +585,8 @@ async def test_runs_query_with_ids_tells_apart_a_guest_run_with_the_same_number(
     assert runs[0]["cells"] == [{"name": "alpha", "summary": {"value": "guest_a1"}}]
 
 
-@pytest.mark.asyncio
-async def test_runs_query_fetches_run_info_when_metadata_requested(
-    graphql_schema, mocked_fetch_cells, mocked_fetch_info
-):
-    query = f"""
-        query {{
-          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
-            cells(names: ["start_time"]) {{
-              name
-            }}
-          }}
-        }}
-    """
-    result = await graphql_schema.execute(query)
-
-    assert result.errors is None
-    assert mocked_fetch_info.called
-    assert [v["name"] for v in result.data["runs"][0]["cells"]] == ["start_time"]
+# -----------------------------------------------------------------------------
+# Reading the table metadata
 
 
 @pytest.mark.asyncio
@@ -643,6 +662,10 @@ async def test_metadata_query_lists_no_variables_for_a_tag_nothing_carries(
 
     assert result.errors is None
     assert result.data["metadata"]["tags"]["XGM"]["variables"] == []
+
+
+# -----------------------------------------------------------------------------
+# Asking without access
 
 
 @pytest.mark.asyncio
