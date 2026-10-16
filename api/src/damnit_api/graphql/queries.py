@@ -94,8 +94,8 @@ async def fetch_cells(proposal, *, limit, offset, names=None, ids=None):
     if ids is not None:
         runs = runs.where(tuple_(table.c.proposal, table.c.run).in_(ids))
 
-    # A CTE, not a subquery: the statement reads the page twice, and
-    # SQLAlchemy 2.0.48 fails on a tuple `IN` parameter rendered twice.
+    # `.cte()` writes the page once, in a `WITH` block both uses below refer to:
+    # SQLAlchemy 2.0.48 fails if the `ids` filter is copied into each use.
     page_runs = (
         runs.order_by(*order_by_active(table, active)).limit(limit).offset(offset).cte()
     )
