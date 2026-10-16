@@ -1,0 +1,3 @@
+# pnpm copies npm's deprecation notices into its lockfile, and a notice may
+# hold any character, so the character check skips it.
+frontend/pnpm-lock.yaml -check-characters
