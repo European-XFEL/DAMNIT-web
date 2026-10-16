@@ -6,15 +6,36 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from ._logging import RequestLoggingMiddleware
+from .shared import errors
 
 # Known paths are redirected to the login page and
 # then back after successful authentication.
 KNOWN_PATHS = ["/graphql"]
 
 
+async def base_exception_handler(request: Request, exc: errors.DamnitWebError):  # noqa: RUF029
+    status_code = exc.code or status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    content: dict[str, str | int | dict] = {
+        "message": exc.message,
+        "status_code": status_code,
+    }
+
+    if exc.details:
+        content["details"] = exc.details
+
+    if exc.request_id:
+        content["request_id"] = exc.request_id
+
+    return JSONResponse(
+        status_code=status_code,
+        content=content,
+    )
+
+
 def create_app():
     from . import _db, _logging, _mymdc, auth, contextfile, get_logger, metadata
-    from .shared import errors, gql
+    from .shared import gql
     from .shared.settings import settings
 
     logger = get_logger("lifespan")
@@ -67,25 +88,7 @@ def create_app():
             content={"detail": exc.detail},
         )
 
-    @app.exception_handler(errors.DamnitWebError)
-    async def base_exception_handler(request: Request, exc: errors.DamnitWebError):  # noqa: RUF029
-        status_code = exc.code or status.HTTP_500_INTERNAL_SERVER_ERROR
-
-        content: dict[str, str | int | dict] = {
-            "message": exc.message,
-            "status_code": status_code,
-        }
-
-        if exc.details:
-            content["details"] = exc.details
-
-        if exc.request_id:
-            content["request_id"] = exc.request_id
-
-        return JSONResponse(
-            status_code=status_code,
-            content=content,
-        )
+    app.exception_handler(errors.DamnitWebError)(base_exception_handler)
 
     app.add_middleware(
         SessionMiddleware,
