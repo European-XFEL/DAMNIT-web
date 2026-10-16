@@ -16,9 +16,8 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
 
     Returns a dict with `runs`, `variables`, `tags`, `groups`, and
     `timestamp`. `runs` is a server-ordered list of (proposal, run) pairs
-    (active block first). Result is TTL-cached; the `run_updates` subscription
-    invalidates this cache when it observes new data so subsequent reads stay
-    fresh.
+    (active block first). Result is TTL-cached; an open `run_updates`
+    subscription invalidates it whenever the database file changes.
     """
     tags, variables, variable_tags, runs, max_timestamp = await asyncio.gather(
         db.async_all_tags(proposal),
