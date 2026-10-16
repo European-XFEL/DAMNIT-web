@@ -1,5 +1,6 @@
 import pytest
 import pytest_asyncio
+from damnit.backend.db import DamnitDB
 from sqlalchemy import text
 
 from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager
@@ -14,6 +15,9 @@ from .const import (
     RUN_IDENTIFIERS,
     get_values,
 )
+
+# -----------------------------------------------------------------------------
+# Fetching runs
 
 
 @pytest.fixture
@@ -137,6 +141,30 @@ async def test_runs_query_returns_identity_trio(
 
 
 @pytest.mark.asyncio
+async def test_runs_query_fetches_run_info_when_metadata_requested(
+    graphql_schema, mocked_fetch_cells, mocked_fetch_info
+):
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
+            cells(names: ["start_time"]) {{
+              name
+            }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    assert mocked_fetch_info.called
+    assert [v["name"] for v in result.data["runs"][0]["cells"]] == ["start_time"]
+
+
+# -----------------------------------------------------------------------------
+# Choosing cells by name
+
+
+@pytest.mark.asyncio
 async def test_runs_query_filters_cells_by_name(
     graphql_schema, mocked_fetch_cells, mocked_fetch_info
 ):
@@ -192,6 +220,7 @@ async def real_damnit_db(mocker, tmp_path):
     proposal = "999999"
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
+    DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
 
     mocker.patch(
         "damnit_api.runs.sqlite.session.find_proposal",
@@ -202,20 +231,6 @@ async def real_damnit_db(mocker, tmp_path):
 
     manager = DatabaseSessionManager(proposal)
     async with manager.connect() as conn:
-        await conn.execute(
-            text(
-                "CREATE TABLE run_variables ("
-                "  proposal INTEGER NOT NULL,"
-                "  run INTEGER NOT NULL,"
-                "  name TEXT NOT NULL,"
-                "  value BLOB,"
-                "  summary_type TEXT,"
-                "  attributes BLOB,"
-                "  timestamp REAL NOT NULL,"
-                "  PRIMARY KEY (proposal, run, name, timestamp)"
-                ")"
-            )
-        )
         rows = [
             # run 1: has both vars
             (int(proposal), 1, "alpha", "a1", None, 1000.0),
@@ -301,6 +316,119 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
     ]
 
 
+# -----------------------------------------------------------------------------
+# Choosing runs by id
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_ids_returns_only_those_runs(
+    graphql_schema, real_damnit_db
+):
+    """The runs come back in the server's order, not in the order of `ids`."""
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            run
+          }
+        }
+    """
+    ids = [{"proposal": proposal, "run": 3}, {"proposal": proposal, "run": 1}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": ids}
+    )
+
+    assert result.errors is None
+    assert [r["run"] for r in result.data["runs"]] == [1, 3]
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_ids_pages_through_only_those_runs(
+    graphql_schema, real_damnit_db
+):
+    """Pages count only the chosen runs: page 2 of every run would be run 2."""
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          first: runs(database: { proposal: $proposal }, ids: $ids, per_page: 1) {
+            run
+          }
+          second: runs(
+            database: { proposal: $proposal }, ids: $ids, per_page: 1, page: 2
+          ) {
+            run
+          }
+        }
+    """
+    ids = [{"proposal": proposal, "run": 1}, {"proposal": proposal, "run": 3}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": ids}
+    )
+
+    assert result.errors is None
+    assert result.data == {"first": [{"run": 1}], "second": [{"run": 3}]}
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_ids_and_names_returns_only_those_cells(
+    graphql_schema, real_damnit_db
+):
+    """Run 1 also has `alpha` and run 3 also has `beta`: each filter drops
+    one of them.
+    """
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            run
+            cells(names: ["beta"]) { name summary { value } }
+          }
+        }
+    """
+    ids = [{"proposal": proposal, "run": 1}, {"proposal": proposal, "run": 2}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": ids}
+    )
+
+    assert result.errors is None
+    by_run = {
+        r["run"]: {c["name"]: c["summary"]["value"] for c in r["cells"]}
+        for r in result.data["runs"]
+    }
+    assert by_run == {1: {"beta": "b1"}, 2: {}}
+
+
+@pytest.mark.asyncio
+async def test_runs_query_with_an_empty_ids_list_returns_no_runs(
+    graphql_schema, real_damnit_db
+):
+    proposal = real_damnit_db
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            run
+          }
+        }
+    """
+
+    # Without ids, every run comes back
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": None}
+    )
+    assert [r["run"] for r in result.data["runs"]] == [1, 2, 3]
+
+    # With an empty list, none do
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": proposal, "ids": []}
+    )
+    assert result.errors is None
+    assert result.data["runs"] == []
+
+
+# -----------------------------------------------------------------------------
+# Reading guest proposals' runs
+
+
 @pytest_asyncio.fixture
 async def two_proposal_db(mocker, tmp_path, request):
     """A file holding two proposals that share a run number, wired via
@@ -315,6 +443,7 @@ async def two_proposal_db(mocker, tmp_path, request):
     guest = 888888
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
+    DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
 
     mocker.patch(
         "damnit_api.runs.sqlite.session.find_proposal",
@@ -324,25 +453,6 @@ async def two_proposal_db(mocker, tmp_path, request):
 
     manager = DatabaseSessionManager(proposal)
     async with manager.connect() as conn:
-        await conn.execute(
-            text(
-                "CREATE TABLE run_variables ("
-                "  proposal INTEGER NOT NULL,"
-                "  run INTEGER NOT NULL,"
-                "  name TEXT NOT NULL,"
-                "  value BLOB,"
-                "  summary_type TEXT,"
-                "  attributes BLOB,"
-                "  timestamp REAL NOT NULL,"
-                "  PRIMARY KEY (proposal, run, name, timestamp)"
-                ")"
-            )
-        )
-        await conn.execute(
-            text("CREATE TABLE run_info (proposal INTEGER, run INTEGER)")
-        )
-        await conn.execute(text("CREATE TABLE metameta (key TEXT, value TEXT)"))
-
         variable_rows = [
             # (999999, 1): a superseded and a latest `alpha`.
             (int(proposal), 1, "alpha", "a1_old", 1000.0),
@@ -452,23 +562,31 @@ async def test_runs_query_without_an_active_proposal_orders_by_proposal_then_run
 
 
 @pytest.mark.asyncio
-async def test_runs_query_fetches_run_info_when_metadata_requested(
-    graphql_schema, mocked_fetch_cells, mocked_fetch_info
+async def test_runs_query_with_ids_tells_apart_a_guest_run_with_the_same_number(
+    graphql_schema, two_proposal_db
 ):
-    query = f"""
-        query {{
-          runs(database: {{proposal: "{PROPOSAL}"}}, per_page: 2) {{
-            cells(names: ["start_time"]) {{
-              name
-            }}
-          }}
-        }}
+    query = """
+        query ($proposal: String, $ids: [RunIdInput!]) {
+          runs(database: { proposal: $proposal }, ids: $ids) {
+            proposal
+            run
+            cells(names: ["alpha"]) { name summary { value } }
+          }
+        }
     """
-    result = await graphql_schema.execute(query)
+    ids = [{"proposal": "888888", "run": 1}]
+    result = await graphql_schema.execute(
+        query, variable_values={"proposal": two_proposal_db, "ids": ids}
+    )
 
     assert result.errors is None
-    assert mocked_fetch_info.called
-    assert [v["name"] for v in result.data["runs"][0]["cells"]] == ["start_time"]
+    runs = result.data["runs"]
+    assert [(r["proposal"], r["run"]) for r in runs] == [("888888", 1)]
+    assert runs[0]["cells"] == [{"name": "alpha", "summary": {"value": "guest_a1"}}]
+
+
+# -----------------------------------------------------------------------------
+# Reading the table metadata
 
 
 @pytest.mark.asyncio
@@ -544,6 +662,10 @@ async def test_metadata_query_lists_no_variables_for_a_tag_nothing_carries(
 
     assert result.errors is None
     assert result.data["metadata"]["tags"]["XGM"]["variables"] == []
+
+
+# -----------------------------------------------------------------------------
+# Asking without access
 
 
 @pytest.mark.asyncio
