@@ -3,7 +3,14 @@
 from typing import Self
 
 from fastapi.requests import HTTPConnection
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, RootModel
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    RootModel,
+    ValidationError,
+)
 
 from .. import get_logger
 from .._db.dependencies import DBSession
@@ -49,7 +56,11 @@ class OAuthUserInfo(BaseUserInfo):
             msg = "No user info in session"
             raise UnauthenticatedError(msg)
 
-        return cls.model_validate(user_dict)
+        try:
+            return cls.model_validate(user_dict)
+        except ValidationError as e:
+            msg = "Invalid user info in session"
+            raise UnauthenticatedError(msg) from e
 
 
 DEV_USER = OAuthUserInfo(
