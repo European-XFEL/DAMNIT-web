@@ -148,6 +148,20 @@ def mocked_no_new_rows(mocker):
 
 
 @pytest.fixture
+def mocked_rows_stored_apart(mocked_no_new_rows):
+    """The poll finds two values of the new run, stored a minute apart."""
+    mocked_no_new_rows.return_value = [
+        *create_run_variables(
+            {"n_trains": 1200}, proposal=PROPOSAL, run=NEW_RUN, timestamp=1000
+        ),
+        *create_run_variables(
+            {"xgm_intensity": 1.5}, proposal=PROPOSAL, run=NEW_RUN, timestamp=1060
+        ),
+    ]
+    return mocked_no_new_rows
+
+
+@pytest.fixture
 def mocked_fetch_info(mocker):
     # fetch_info returns a mapping keyed by (proposal, run).
     info = {**get_values(KNOWN_DATA), "run": NEW_RUN}
@@ -210,6 +224,39 @@ async def test_run_updates(
         {"proposal": str(proposal), "run": run_number}
         for proposal, run_number in RUN_IDENTIFIERS
     ]
+
+
+@pytest.mark.asyncio
+async def test_run_updates_send_when_each_value_was_computed(
+    graphql_schema, mocked_rows_stored_apart, mocked_fetch_info
+):
+    subscription = await graphql_schema.subscribe(
+        f"""
+        subscription {{
+          run_updates(database: {{ proposal: "{PROPOSAL}" }}, since: 0) {{
+            runs {{ cells {{ name computed_at }} }}
+          }}
+        }}
+        """,
+    )
+
+    try:
+        with patched_sleep:
+            result = await asyncio.wait_for(anext(subscription), timeout=2)
+        assert not result.errors
+
+        cells = result.data["run_updates"]["runs"][0]["cells"]
+        assert {c["name"]: c["computed_at"] for c in cells} == {
+            "n_trains": 1_000_000,
+            "xgm_intensity": 1_060_000,
+            # From run_info, which DAMNIT does not stamp.
+            "proposal": None,
+            "run": None,
+            "start_time": None,
+            "added_at": None,
+        }
+    finally:
+        await subscription.aclose()
 
 
 @pytest.mark.asyncio

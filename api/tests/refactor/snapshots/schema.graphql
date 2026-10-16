@@ -7,6 +7,7 @@ type Cell {
   id: ID!
   name: String!
   error: CellError
+  computed_at: Timestamp
   summary: CellSummary!
 }
 
