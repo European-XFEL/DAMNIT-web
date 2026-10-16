@@ -1,27 +1,54 @@
-"""Reproduce the writer-side `database is locked` error against the
-production read path in `damnit_api.runs.sqlite`.
-"""
+"""Reproduce DAMNIT's writer starvation against the production read path in
+`damnit_api.runs.sqlite`.
 
-from __future__ import annotations
+Three readers in one process overlap their reads, so the process never drops
+its shared lock on the file and DAMNIT's writer waits out its 30 s timeout,
+unless the API serializes the reads. The defaults copy DAMNIT's timeout and
+pace.
+
+Reads have to take about a second each, so point it at a big database. It
+only copies `runs.sqlite` out of `--damnit-dir`, so a proposal's own folder is
+safe, and runs against that copy in `--scratch-dir`. Run it from the
+repository root, where `uv run` installs the API on first use:
+
+    uv run --package damnit-api python api/scripts/reproduce-read-lock.py \
+        --damnit-dir /gpfs/exfel/exp/<inst>/<cycle>/<proposal>/usr/Shared/amore \
+        --scratch-dir /gpfs/exfel/data/scratch/$USER/lockcheck
+
+Check the reader alone in two seconds against the committed mock database:
+
+    uv run --package damnit-api python api/scripts/reproduce-read-lock.py \
+        --no-writer --duration 2 --scratch-dir /tmp/lockcheck --damnit-dir \
+        api/tests/mock/data/gpfs/exfel/exp/MID/202401/p006996/usr/Shared/amore
+"""
 
 import argparse
 import asyncio
+import importlib
 import json
+import os
 import shutil
 import signal
+import sqlite3
 import subprocess
 import sys
+import threading
 import time
 import uuid
+from contextlib import closing, suppress
 from pathlib import Path
 
-DEFAULT_DURATION = 30.0
-DEFAULT_WRITER_TIMEOUT = 0.0
-DEFAULT_READERS = 1
+DEFAULT_DURATION_S = 60.0
+DEFAULT_WRITER_TIMEOUT_S = 30.0
+DEFAULT_WRITER_INTERVAL_S = 0.5
+DEFAULT_READERS = 3
+WRITER_STOP_TIMEOUT_S = 5.0
 PROPOSAL_LABEL = "__repro__"
 
+interrupted = threading.Event()
 
-# ---------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # Writer subprocess
 #
 # Runs in a separate interpreter so its lock requests go through the kernel
@@ -30,122 +57,127 @@ PROPOSAL_LABEL = "__repro__"
 
 WRITER_SOURCE = r"""
 import json
-import signal
+import select
 import sqlite3
 import sys
 import time
 
 db_path = sys.argv[1]
-duration = float(sys.argv[2])
-writer_timeout = float(sys.argv[3])
-
-stop = False
-
-def _stop(*_):
-    global stop
-    stop = True
-
-signal.signal(signal.SIGTERM, _stop)
-signal.signal(signal.SIGINT, _stop)
+writer_timeout = float(sys.argv[2])
+writer_interval = float(sys.argv[3])
 
 conn = sqlite3.connect(
     db_path, timeout=writer_timeout, isolation_level=None,
 )
 
-attempts = 0
-successes = 0
+commits = 0
 lock_errors = 0
 other_errors = 0
-counter = 0
-last_report = time.monotonic()
-deadline = time.monotonic() + duration
+first_error = None
+longest_wait = 0.0
 
-while not stop and time.monotonic() < deadline:
-    attempts += 1
+while True:
+    start = time.perf_counter()
     try:
-        conn.execute(f"PRAGMA user_version = {counter}")
-        successes += 1
-        counter += 1
+        conn.execute(f"PRAGMA user_version = {commits}")
+        commits += 1
     except sqlite3.OperationalError as exc:
         if "database is locked" in str(exc):
             lock_errors += 1
         else:
             other_errors += 1
-    now = time.monotonic()
-    if now - last_report >= 1.0:
-        sys.stdout.write(json.dumps({
-            "kind": "tick",
-            "attempts": attempts,
-            "successes": successes,
-            "lock_errors": lock_errors,
-            "other_errors": other_errors,
-        }) + "\n")
-        sys.stdout.flush()
-        last_report = now
-    time.sleep(0.001)
+            first_error = first_error or f"{type(exc).__name__}: {exc}"
+    longest_wait = max(longest_wait, time.perf_counter() - start)
+
+    # The parent closes stdin to stop the writer, which also ends this wait.
+    if select.select([sys.stdin], [], [], writer_interval)[0]:
+        break
 
 sys.stdout.write(json.dumps({
-    "kind": "final",
-    "attempts": attempts,
-    "successes": successes,
+    "commits": commits,
     "lock_errors": lock_errors,
     "other_errors": other_errors,
+    "first_error": first_error,
+    "longest_wait": longest_wait,
 }) + "\n")
 sys.stdout.flush()
 """
 
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Reader
 
 
-async def _single_reader(deadline):
-    from damnit_api.runs.sqlite import (
-        async_all_tags,
-        async_latest_rows,
-        async_table,
-        async_variable_tags,
-        async_variables,
-    )
+async def _single_reader(deadline, newest, counts):
+    # Imported inside the try, so a broken import, such as after a module
+    # moves, reports READER BROKEN.
+    try:
+        from damnit_api.runs.sqlite import (
+            async_all_tags,
+            async_latest_rows,
+            async_table,
+            async_variable_tags,
+            async_variables,
+        )
+    except Exception as exc:
+        counts["other_errors"] += 1
+        counts["first_error"] = f"{type(exc).__name__}: {exc}"
+        return
 
-    ops = 0
-    lock_errors = 0
-    other_errors = 0
-
-    while time.monotonic() < deadline:
+    while not interrupted.is_set() and time.monotonic() < deadline:
         try:
             await async_variables(PROPOSAL_LABEL)
             run_variables = await async_table(PROPOSAL_LABEL, name="run_variables")
+            # Like the live-update tick, ask only for rows newer than the
+            # newest: a full scan that returns almost nothing.
             await async_latest_rows(
                 PROPOSAL_LABEL,
                 table=run_variables,
                 by="timestamp",
-                start_at=0,
+                start_at=newest,
             )
             await async_all_tags(PROPOSAL_LABEL)
             await async_variable_tags(PROPOSAL_LABEL)
-            ops += 4
+            counts["ops"] += 4
         except Exception as exc:
             if "database is locked" in str(exc):
-                lock_errors += 1
+                counts["lock_errors"] += 1
             else:
-                other_errors += 1
+                counts["other_errors"] += 1
+                counts["first_error"] = counts["first_error"] or (
+                    f"{type(exc).__name__}: {exc}"
+                )
 
-    return ops, lock_errors, other_errors
 
-
-async def reader_loop(duration, readers):
+async def reader_loop(duration, readers, newest):
     deadline = time.monotonic() + duration
-    results = await asyncio.gather(*[_single_reader(deadline) for _ in range(readers)])
-    total_ops = total_locks = total_others = 0
-    for ops, locks, others in results:
-        total_ops += ops
-        total_locks += locks
-        total_others += others
-    return total_ops, total_locks, total_others
+    counts = {"ops": 0, "lock_errors": 0, "other_errors": 0, "first_error": None}
+    await asyncio.gather(*[
+        _single_reader(deadline, newest, counts) for _ in range(readers)
+    ])
+
+    if counts["ops"] == 0 and counts["first_error"] is None:
+        counts["first_error"] = f"no read finished in {duration:g} s"
+
+    return counts
 
 
-# ---------------------------------------------------------------------------
+def preload_api():
+    # A first import in a fresh env compiles the API and can take seconds, so
+    # it runs before the clock starts. A broken import fails again in the
+    # readers, which report it as READER BROKEN.
+    with suppress(Exception):
+        importlib.import_module("damnit_api.runs.sqlite")
+
+
+def _stop_on_interrupt(*_):
+    # Cancelling the API's reads can hang the exit, so the first Ctrl-C only
+    # asks the readers to stop; a second one interrupts as usual.
+    interrupted.set()
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
+
+# -----------------------------------------------------------------------------
 # Orchestration
 
 
@@ -163,8 +195,6 @@ def stage_copy(damnit_dir, scratch_dir):
 
     # Some older sqlites lack tags/variable_tags. Create empty placeholders
     # so both branches exercise the same read path on this scratch copy.
-    import sqlite3
-
     with sqlite3.connect(dst) as conn:
         conn.executescript(
             "CREATE TABLE IF NOT EXISTS tags ("
@@ -176,38 +206,45 @@ def stage_copy(damnit_dir, scratch_dir):
     return staging
 
 
-def patch_path(staging):
-    """Point the runs read path at the staged copy."""
-    import damnit_api.runs.sqlite.session as session_module
-    import damnit_api.utils as utils_module
+def newest_timestamp(db_path):
+    # Read before the writer starts, so no lock can get in the way.
+    with closing(sqlite3.connect(db_path)) as conn:
+        query = "SELECT max(timestamp) FROM run_variables"
+        (newest,) = conn.execute(query).fetchone()
 
-    staged_path = str(staging)
-    session_module.get_damnit_path = lambda *_a, **_kw: staged_path
-    session_module.find_proposal = lambda *_a, **_kw: staged_path
-    utils_module.find_proposal = lambda *_a, **_kw: staged_path
+    return newest or 0
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Reproduce writer-side SQLITE_BUSY against the API read path",
+        description="Reproduce DAMNIT's writer starvation against the API read path",
     )
     parser.add_argument(
         "--damnit-dir",
         type=Path,
         required=True,
-        help="DAMNIT amore folder containing runs.sqlite",
+        help=(
+            "DAMNIT amore folder containing runs.sqlite. Only read: the script"
+            " copies runs.sqlite and runs against the copy."
+        ),
     )
     parser.add_argument(
         "--scratch-dir",
         type=Path,
         required=True,
-        help="Parent dir for the per-run staging copy",
+        help=(
+            "Folder for the copy. Each run makes a new repro-* folder here and"
+            " deletes it on exit, unless --keep."
+        ),
     )
     parser.add_argument(
         "--duration",
         type=float,
-        default=DEFAULT_DURATION,
-        help=f"Test duration in seconds (default {DEFAULT_DURATION:.0f})",
+        default=DEFAULT_DURATION_S,
+        help=(
+            f"Test duration in seconds (default {DEFAULT_DURATION_S:g})."
+            " Has to be longer than --writer-timeout."
+        ),
     )
     parser.add_argument(
         "--keep",
@@ -222,120 +259,187 @@ def parse_args():
     parser.add_argument(
         "--writer-timeout",
         type=float,
-        default=DEFAULT_WRITER_TIMEOUT,
+        default=DEFAULT_WRITER_TIMEOUT_S,
         help=(
-            "Writer's sqlite3 busy-retry budget in seconds (default 0)."
-            " The DAMNIT backend uses 30."
+            "Writer's sqlite3 busy-retry budget in seconds"
+            f" (default {DEFAULT_WRITER_TIMEOUT_S:g}, DAMNIT's timeout)."
+        ),
+    )
+    parser.add_argument(
+        "--writer-interval",
+        type=float,
+        default=DEFAULT_WRITER_INTERVAL_S,
+        help=(
+            "Pause between the writer's commits in seconds"
+            f" (default {DEFAULT_WRITER_INTERVAL_S:g}, DAMNIT's pace during"
+            " extraction)."
         ),
     )
     parser.add_argument(
         "--readers",
         type=int,
         default=DEFAULT_READERS,
-        help="Number of concurrent reader coroutines (default 1).",
+        help=f"Number of concurrent reader coroutines (default {DEFAULT_READERS}).",
     )
-    return parser.parse_args()
+
+    args = parser.parse_args()
+
+    if args.readers < 1:
+        parser.error("--readers has to be at least 1")
+    # A writer starves only once a wait reaches its timeout.
+    if not args.no_writer and args.duration <= args.writer_timeout:
+        parser.error("--duration has to be longer than --writer-timeout")
+
+    return args
+
+
+def start_writer(db_path, args):
+    # Its own process group keeps the terminal's Ctrl-C away from the writer,
+    # which the parent stops once the readers are done.
+    return subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            WRITER_SOURCE,
+            str(db_path),
+            str(args.writer_timeout),
+            str(args.writer_interval),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        process_group=0,
+    )
 
 
 def empty_summary():
     return {
-        "attempts": 0,
-        "successes": 0,
+        "commits": 0,
         "lock_errors": 0,
         "other_errors": 0,
+        "first_error": None,
+        "longest_wait": 0.0,
     }
 
 
 def collect_writer(writer):
-    summary = empty_summary()
+    """Stop the writer by closing its stdin and return its counts."""
     try:
-        stdout, stderr = writer.communicate(timeout=5)
+        stdout, stderr = writer.communicate(timeout=WRITER_STOP_TIMEOUT_S)
     except subprocess.TimeoutExpired:
-        writer.send_signal(signal.SIGTERM)
-        stdout, stderr = writer.communicate(timeout=5)
+        reason = f"the writer did not stop within {WRITER_STOP_TIMEOUT_S:g} s"
+        return {**empty_summary(), "first_error": reason}
 
-    for line in stdout.splitlines():
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if event.get("kind") == "final":
-            summary = event
-
-    if writer.returncode and stderr.strip():
+    if writer.returncode:
         sys.stderr.write("writer stderr:\n" + stderr)
+        reason = f"the writer exited with code {writer.returncode}"
+        return {**empty_summary(), "first_error": reason}
 
-    return summary
+    return json.loads(stdout)
+
+
+def print_summary(args, reader, writer):
+    print()
+    print("--------- reproduction summary ---------")
+    print(f"duration:       {args.duration:.1f} s")
+    print(
+        f"reader ops:     {reader['ops']}"
+        f"  (lock errors: {reader['lock_errors']},"
+        f" other errors: {reader['other_errors']})"
+    )
+    if not args.no_writer:
+        print(
+            f"writer commits: {writer['commits']}"
+            f"  (lock errors: {writer['lock_errors']},"
+            f" other errors: {writer['other_errors']})"
+        )
+        print(
+            f"longest wait:   {writer['longest_wait']:.2f} s"
+            "  (capped by the writer timeout)"
+        )
+    print()
+
+
+def print_result(args, reader, writer):
+    """Print what the run showed and return the script's exit code.
+
+    Each result's line and its exit code come from one check, so one function
+    prints the line and returns the code.
+    """
+    if interrupted.is_set():
+        print("INTERRUPTED  the run was cut short, so it shows nothing.")
+        return 130
+
+    if reader["first_error"]:
+        print(
+            "READER BROKEN  the reader failed, so the writer's numbers say"
+            " nothing about the lock."
+        )
+        print(f"first error: {reader['first_error']}")
+        return 2
+
+    if args.no_writer:
+        print("reader ok")
+        return 0
+
+    if writer["first_error"]:
+        print(
+            "WRITER BROKEN  the writer failed, so its numbers say nothing"
+            " about the lock."
+        )
+        print(f"first error: {writer['first_error']}")
+        return 2
+
+    if writer["lock_errors"] > 0:
+        print(
+            "REPRODUCED  the writer hit 'database is locked'"
+            f" (lock errors: {writer['lock_errors']},"
+            f" longest wait: {writer['longest_wait']:.1f} s)."
+        )
+        return 0
+
+    print(
+        f"NOT REPRODUCED  in {args.duration:.0f} s the writer never hit"
+        f" 'database is locked' (commits: {writer['commits']})."
+    )
+
+    return 1
 
 
 def main():
     args = parse_args()
+    signal.signal(signal.SIGINT, _stop_on_interrupt)
 
     staging = stage_copy(args.damnit_dir, args.scratch_dir)
     print(f"staged copy: {staging}")
-    patch_path(staging)
+    os.environ["DW_API_DAMNIT_PATH"] = str(staging)
+    db_path = staging / "runs.sqlite"
 
     writer = None
-    writer_summary = empty_summary()
+    writer_summary = None
     try:
+        newest = newest_timestamp(db_path)
+        preload_api()
         if not args.no_writer:
-            writer = subprocess.Popen(
-                [
-                    sys.executable,
-                    "-c",
-                    WRITER_SOURCE,
-                    str(staging / "runs.sqlite"),
-                    str(args.duration),
-                    str(args.writer_timeout),
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
+            writer = start_writer(db_path, args)
 
-        reader_ops, reader_locks, reader_others = asyncio.run(
-            reader_loop(args.duration, args.readers)
-        )
+        reader_summary = asyncio.run(reader_loop(args.duration, args.readers, newest))
 
         if writer is not None:
             writer_summary = collect_writer(writer)
-            writer = None
     finally:
-        if writer is not None and writer.poll() is None:
-            writer.send_signal(signal.SIGTERM)
-            writer.wait(timeout=5)
+        # Stops a writer still running after a timeout or a crash, before its
+        # copy is deleted.
+        if writer is not None:
+            writer.kill()
+            writer.wait()
         if not args.keep:
             shutil.rmtree(staging, ignore_errors=True)
 
-    print()
-    print("--------- reproduction summary ---------")
-    print(f"duration:        {args.duration:.1f} s")
-    print(
-        f"reader ops:      {reader_ops}"
-        f"  (lock errors: {reader_locks}, other errors: {reader_others})"
-    )
-    print(
-        f"writer attempts: {writer_summary['attempts']}"
-        f"  (lock errors: {writer_summary['lock_errors']},"
-        f" other errors: {writer_summary['other_errors']})"
-    )
-    print(f"writer success:  {writer_summary['successes']}")
-    print()
+    print_summary(args, reader_summary, writer_summary)
 
-    if args.no_writer:
-        print("(no writer; sanity check only)")
-        return 0
-    if writer_summary["lock_errors"] > 0:
-        print(
-            "REPRODUCED  the production read path on this branch causes"
-            " SQLITE_BUSY on the writer."
-        )
-        return 0
-    print(
-        "NOT REPRODUCED  raise --duration or check that the writer"
-        " subprocess actually ran."
-    )
-    return 1
+    return print_result(args, reader_summary, writer_summary)
 
 
 if __name__ == "__main__":
