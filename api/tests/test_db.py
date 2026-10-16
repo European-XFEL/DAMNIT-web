@@ -10,6 +10,7 @@ transactions.
 import asyncio
 import os
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -92,3 +93,25 @@ def test_no_lingering_file_descriptor_after_read(damnit_db):
     assert _open_file_descriptors_to(db_file) == []
     asyncio.run(do_read())
     assert _open_file_descriptors_to(db_file) == []
+
+
+# -----------------------------------------------------------------------------
+# Table lookup
+
+
+# The asyncio.run in the test above leaves pytest-asyncio no current loop, so
+# this test runs its own, shared by both lookups: a new loop clears the miss.
+@pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
+def test_a_table_created_after_a_lookup_missed_it_is_found(damnit_db):
+    db_file = Path(damnit_db) / DAMNIT_PATH / "runs.sqlite"
+
+    with asyncio.Runner() as runner:
+        missed = runner.run(async_table(damnit_db, name="run_variables"))
+
+        with closing(sqlite3.connect(db_file)) as conn, conn:
+            conn.execute("CREATE TABLE run_variables (name TEXT)")
+
+        found = runner.run(async_table(damnit_db, name="run_variables"))
+
+    assert missed is None
+    assert found is not None
