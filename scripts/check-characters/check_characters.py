@@ -98,9 +98,11 @@ def repo_root():
 
 def tracked_files(root, named):
     # Pre-commit names the staged files and CI names none, which reads them all.
-    named = [Path(name).absolute() for name in named]
+    # :(literal), not --literal-pathspecs, which would turn off the exclude.
+    pathspecs = [f":(literal){Path(name).absolute()}" for name in named]
+    skip_marked = ":(exclude,attr:-check-characters)"
     output = subprocess.run(
-        ["git", "--literal-pathspecs", "ls-files", "--deduplicate", "-z", "--", *named],
+        ["git", "ls-files", "--deduplicate", "-z", "--", *pathspecs, skip_marked],
         cwd=root,
         stdout=subprocess.PIPE,
         encoding="utf-8",
