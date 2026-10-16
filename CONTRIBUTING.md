@@ -30,6 +30,14 @@ escape, such as `'\u2014'` or `&mdash;`. To check every tracked file, run:
 
     uv run python scripts/check-characters/check_characters.py
 
+To skip a whole file, such as a generated one that may hold any character,
+mark it in `.gitattributes`:
+
+    frontend/pnpm-lock.yaml -check-characters
+
+To skip a folder, write `folder/**`, since `folder` or `folder/` alone
+marks no file inside it.
+
 ## Bypassing hooks
 
 The hooks are local convenience, not the gate. For a work-in-progress

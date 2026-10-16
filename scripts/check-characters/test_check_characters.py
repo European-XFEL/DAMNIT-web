@@ -197,6 +197,20 @@ def test_a_file_named_from_a_subdirectory_is_read_from_that_subdirectory(tmp_pat
     assert result.stdout == "frontend/README.md:1:25 U+2014 (use -)\n"
 
 
+def test_a_named_file_with_brackets_is_read_as_its_name_not_as_a_pattern(tmp_path):
+    repo = make_repo(
+        tmp_path,
+        {
+            "routes/[id].tsx": "export const title = 'Run \u2014 details';\n",
+            "routes/d.tsx": "export const title = 'Runs \u2014 all';\n",
+        },
+    )
+
+    result = run_check(repo, ["routes/[id].tsx"])
+
+    assert result.stdout == "routes/[id].tsx:1:27 U+2014 (use -)\n"
+
+
 def test_the_command_skips_a_binary_file_but_reports_the_text_file_beside_it(tmp_path):
     (tmp_path / "runs.sqlite").write_bytes(b"SQLite format 3\x00\xe2\x80\x94")
     repo = make_repo(
@@ -204,6 +218,36 @@ def test_the_command_skips_a_binary_file_but_reports_the_text_file_beside_it(tmp
     )
 
     result = run_check(repo)
+
+    assert result.stdout == "doc.md:1:25 U+2014 (use -)\n"
+
+
+def test_the_command_skips_a_file_marked_in_gitattributes(tmp_path):
+    repo = make_repo(
+        tmp_path,
+        {
+            ".gitattributes": "frontend/pnpm-lock.yaml -check-characters\n",
+            "frontend/pnpm-lock.yaml": "deprecated: Use MapLibre \u2014 see docs.\n",
+            "doc.md": "Runs load as you scroll \u2014 no paging.\n",
+        },
+    )
+
+    result = run_check(repo)
+
+    assert result.stdout == "doc.md:1:25 U+2014 (use -)\n"
+
+
+def test_the_command_skips_a_marked_file_even_when_pre_commit_names_it(tmp_path):
+    repo = make_repo(
+        tmp_path,
+        {
+            ".gitattributes": "frontend/pnpm-lock.yaml -check-characters\n",
+            "frontend/pnpm-lock.yaml": "deprecated: Use MapLibre \u2014 see docs.\n",
+            "doc.md": "Runs load as you scroll \u2014 no paging.\n",
+        },
+    )
+
+    result = run_check(repo, ["frontend/pnpm-lock.yaml", "doc.md"])
 
     assert result.stdout == "doc.md:1:25 U+2014 (use -)\n"
 
