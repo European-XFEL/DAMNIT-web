@@ -18,8 +18,7 @@ export type VariableGroupBlock<Item extends VariableItem = VariableItem> = {
 }
 
 export type VariableBlock<Item extends VariableItem = VariableItem> =
-  | ({ kind: 'variable' } & Item)
-  | VariableGroupBlock<Item>
+  ({ kind: 'variable' } & Item) | VariableGroupBlock<Item>
 
 // The blocks flattened back to their variables, a group's members side by side.
 export function itemsOf<Item extends VariableItem>(

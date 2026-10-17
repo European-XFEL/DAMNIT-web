@@ -45,10 +45,7 @@ export function formatUrl(url: string) {
 }
 
 type MaybeObjectOrArray<T> =
-  | Record<string, unknown>
-  | ReadonlyArray<T>
-  | null
-  | undefined
+  Record<string, unknown> | ReadonlyArray<T> | null | undefined
 
 export function isEmpty<T>(value: MaybeObjectOrArray<T>) {
   return value == null || size(value) === 0

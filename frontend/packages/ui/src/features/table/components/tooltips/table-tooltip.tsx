@@ -22,8 +22,7 @@ import { assertNever } from '#src/utils/helpers'
 const Arrow = LaagArrow as unknown as ComponentType<ArrowProps>
 
 export type CellTooltip =
-  | { kind: 'error'; error: CellError }
-  | { kind: 'image'; src: string }
+  { kind: 'error'; error: CellError } | { kind: 'image'; src: string }
 
 type TableTooltipProps = {
   target: CellTooltip
