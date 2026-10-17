@@ -28,7 +28,7 @@ class Query(auth.Query, gql_main.queries.Query, metadata.Query):
     pass
 
 
-class Router(GraphQLRouter):
+class Router(GraphQLRouter["Context", None]):
     def encode_json(self, data: GraphQLHTTPResponse) -> str | bytes:  # pyright: ignore[reportIncompatibleMethodOverride]
         encoded = orjson.dumps(
             data,
@@ -96,5 +96,5 @@ def get_gql_app():
     return Router(
         schema=schema,
         subscription_protocols=SUBSCRIPTION_PROTOCOLS,
-        context_getter=get_context,  # pyright: ignore[reportArgumentType]
+        context_getter=get_context,
     )
