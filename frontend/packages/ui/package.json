@@ -7,7 +7,7 @@
     "node": ">=24",
     "pnpm": ">=10"
   },
-  "packageManager": "pnpm@10.21.0",
+  "packageManager": "pnpm@10.34.6",
   "author": {
     "name": "European XFEL",
     "email": "da@xfel.eu"
