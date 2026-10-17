@@ -31,7 +31,7 @@
     "lodash": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
-    "msw": "^2.12.7",
+    "msw": "catalog:testing",
     "plotly.js": "catalog:components",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",

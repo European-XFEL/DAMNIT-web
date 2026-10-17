@@ -138,6 +138,9 @@ catalogs:
     '@vitest/browser-playwright':
       specifier: 4.1.9
       version: 4.1.9
+    msw:
+      specifier: 2.12.7
+      version: 2.12.7
     playwright:
       specifier: 1.61.1
       version: 1.61.1
@@ -380,7 +383,7 @@ importers:
         specifier: catalog:components
         version: 7.17.1(@mantine/core@7.17.3(@mantine/hooks@7.17.3(react@18.2.0))(@types/react@18.2.45)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(@mantine/hooks@7.17.3(react@18.2.0))(clsx@2.1.1)(react@18.2.0)
       msw:
-        specifier: ^2.12.7
+        specifier: catalog:testing
         version: 2.12.7(@types/node@24.10.0)(typescript@5.9.3)
       plotly.js:
         specifier: catalog:components
