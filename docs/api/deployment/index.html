@@ -438,6 +438,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Deploy a new version">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#production" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Production
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Test
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -915,6 +943,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Deploy a new version">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#production" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Production
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Test
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -958,19 +1014,60 @@
 
 
 <h1 id="deployment">Deployment<a class="headerlink" href="#deployment" title="Permanent link">&para;</a></h1>
-<p>Production runs on <code>max-exfl457</code> under the <code>xdamnprd</code> account, served by
-Podman Compose from <code>~/srv/damnit-web/damnit-web-prod/api</code>. The
-<code>compose.prod.yml</code> file builds the image from source and serves the API over
-HTTPS on port 8443.</p>
+<p>The API runs under the <code>xdamnprd</code> account on two hosts. Each serves its own
+checkout with Podman Compose, builds the image from source and serves the
+API over HTTPS on port 8443.</p>
+<table>
+<thead>
+<tr>
+<th>Environment</th>
+<th>Host</th>
+<th>Checkout</th>
+<th>Compose file</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Production</td>
+<td><code>max-exfl457</code></td>
+<td><code>~/srv/damnit-web/damnit-web-prod</code></td>
+<td><code>api/compose.prod.yml</code></td>
+</tr>
+<tr>
+<td>Test</td>
+<td><code>max-exfl458</code></td>
+<td><code>~/srv/damnit-web/damnit-web-test</code></td>
+<td><code>api/compose.test.yml</code></td>
+</tr>
+</tbody>
+</table>
 <h2 id="deploy-a-new-version">Deploy a new version<a class="headerlink" href="#deploy-a-new-version" title="Permanent link">&para;</a></h2>
-<p>SSH to the host, pull the latest code, and rebuild:</p>
+<p>SSH to the host, pull the latest code, and rebuild.</p>
+<h3 id="production">Production<a class="headerlink" href="#production" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>xdamnprd@max-exfl457.desy.de
-<span class="nb">cd</span><span class="w"> </span>~/srv/damnit-web/damnit-web-prod/api
+<span class="nb">cd</span><span class="w"> </span>~/srv/damnit-web/damnit-web-prod
 git<span class="w"> </span>pull
-podman<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--build
+podman<span class="w"> </span>compose<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>api/compose.prod.yml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--podman-build-args<span class="o">=</span><span class="s2">&quot;--network=host&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>up<span class="w"> </span>-d<span class="w"> </span>--build
+</code></pre></div>
+<h3 id="test">Test<a class="headerlink" href="#test" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>ssh<span class="w"> </span>xdamnprd@max-exfl458.desy.de
+<span class="nb">cd</span><span class="w"> </span>~/srv/damnit-web/damnit-web-test
+git<span class="w"> </span>pull
+podman<span class="w"> </span>compose<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>-f<span class="w"> </span>api/compose.test.yml<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--podman-build-args<span class="o">=</span><span class="s2">&quot;--network=host&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>up<span class="w"> </span>-d<span class="w"> </span>--build
 </code></pre></div>
 <p><code>--build</code> rebuilds the image from the pulled code. Without it, the container
 keeps running the old image.</p>
+<p>Podman's default network (pasta) fails on these hosts with
+<code>Failed to open() /dev/net/tun: No such device</code>.
+<code>--podman-build-args="--network=host"</code> makes the build use the host's
+network instead; <code>network_mode: host</code> in the compose file does the same for
+the running container.</p>
 <h2 id="quick-restart">Quick restart<a class="headerlink" href="#quick-restart" title="Permanent link">&para;</a></h2>
 <p>To restart the running service without pulling or rebuilding:</p>
 <div class="highlight"><pre><span></span><code>damnit-web-up
@@ -980,10 +1077,9 @@ keeps running the old image.</p>
 then:</p>
 <div class="highlight"><pre><span></span><code>podman<span class="w"> </span>image<span class="w"> </span>prune<span class="w"> </span>-f
 </code></pre></div>
-<p>To rebuild from scratch and ignore the layer cache:</p>
-<div class="highlight"><pre><span></span><code>podman<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>compose.prod.yml<span class="w"> </span>build<span class="w"> </span>--no-cache
-podman<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>compose.prod.yml<span class="w"> </span>up<span class="w"> </span>-d
-</code></pre></div>
+<p>To rebuild from scratch and ignore the layer cache, run your environment's
+deploy command with <code>--no-cache</code> added to the build args:
+<code>--podman-build-args="--network=host --no-cache"</code>.</p>
 
 
 
