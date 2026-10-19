@@ -78,6 +78,7 @@ def group_by_run(record):
             "value": entry["value"],
             "summary_type": entry["summary_type"],
             "attributes": entry["attributes"],
+            "timestamp": entry["timestamp"],
         }
 
     return list(grouped.values())
@@ -126,6 +127,7 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
             table.c.value,
             table.c.summary_type,
             table.c.attributes,
+            table.c.timestamp,
         )
         .select_from(runs_subquery)
         .outerjoin(

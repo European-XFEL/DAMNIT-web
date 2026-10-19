@@ -219,9 +219,9 @@ async def real_damnit_db(mocker, tmp_path):
             )
         )
         rows = [
-            # run 1: has both vars
+            # run 1: has both vars, stored at two different times
             (int(proposal), 1, "alpha", "a1", None, 1000.0),
-            (int(proposal), 1, "beta", "b1", None, 1000.0),
+            (int(proposal), 1, "beta", "b1", None, 1050.0),
             # run 2: has only `alpha`
             (int(proposal), 2, "alpha", "a2", None, 1100.0),
             # run 3: has only `beta` (so a filter on `alpha` excludes it)
@@ -335,6 +335,31 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
         {"alpha": "a2", "run": 2},
         {"run": 3},
     ]
+
+
+@pytest.mark.asyncio
+async def test_runs_query_sends_when_each_value_was_computed(
+    graphql_schema, real_damnit_db
+):
+    proposal = real_damnit_db
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{proposal}"}}, per_page: 1) {{
+            cells {{ name computed_at }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    cells = result.data["runs"][0]["cells"]
+    assert {c["name"]: c["computed_at"] for c in cells} == {
+        "alpha": 1_000_000,
+        "beta": 1_050_000,
+        # Built from the run's key, not from a stored value.
+        "proposal": None,
+        "run": None,
+    }
 
 
 @pytest_asyncio.fixture
