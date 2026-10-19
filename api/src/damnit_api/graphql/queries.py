@@ -11,6 +11,7 @@ from ..runs.preview import get_preview_data
 from ..runs.sqlite import (
     async_active_proposal,
     async_table,
+    get_lock,
     get_session,
     order_by_active,
 )
@@ -77,6 +78,7 @@ def group_by_run(record):
             "value": entry["value"],
             "summary_type": entry["summary_type"],
             "attributes": entry["attributes"],
+            "timestamp": entry["timestamp"],
         }
 
     return list(grouped.values())
@@ -125,6 +127,7 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
             table.c.value,
             table.c.summary_type,
             table.c.attributes,
+            table.c.timestamp,
         )
         .select_from(runs_subquery)
         .outerjoin(
@@ -260,10 +263,11 @@ class Query:
         variable: str,
     ) -> JSON | None:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         await _ensure_damnit_path(info, database.proposal)
-        # TODO: Convert to Strawberry type
-        # and make it analogous to Cell; e.g. `data`
-        return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
-            proposal=database.proposal,
-            run=run,
-            variable=variable,
-        )
+        async with get_lock(database.proposal):
+            # TODO: Convert to Strawberry type
+            # and make it analogous to Cell; e.g. `data`
+            return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
+                proposal=database.proposal,
+                run=run,
+                variable=variable,
+            )

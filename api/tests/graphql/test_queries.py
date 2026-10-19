@@ -1,8 +1,10 @@
+import asyncio
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
 
-from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager
+from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager, get_session
 from damnit_api.runs.types import DamnitRun
 
 from .const import (
@@ -217,9 +219,9 @@ async def real_damnit_db(mocker, tmp_path):
             )
         )
         rows = [
-            # run 1: has both vars
+            # run 1: has both vars, stored at two different times
             (int(proposal), 1, "alpha", "a1", None, 1000.0),
-            (int(proposal), 1, "beta", "b1", None, 1000.0),
+            (int(proposal), 1, "beta", "b1", None, 1050.0),
             # run 2: has only `alpha`
             (int(proposal), 2, "alpha", "a2", None, 1100.0),
             # run 3: has only `beta` (so a filter on `alpha` excludes it)
@@ -249,6 +251,40 @@ async def real_damnit_db(mocker, tmp_path):
 
     await manager.close()
     DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+async def _read_and_hold(proposal, steps):
+    """Read through `get_session` and keep the session open a moment."""
+    async with get_session(proposal) as session:
+        steps.append("enter")
+        await session.execute(text("SELECT count(*) FROM run_variables"))
+        await asyncio.sleep(0.05)
+        steps.append("leave")
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_waits_for_a_read_on_the_same_database(
+    graphql_schema, real_damnit_db, mocker
+):
+    steps = []
+    mocker.patch(
+        "damnit_api.graphql.queries.get_preview_data",
+        side_effect=lambda **_: steps.append("preview"),
+    )
+    query = f"""
+        query {{
+          extracted_data(
+            database: {{proposal: "{real_damnit_db}"}}, run: 1, variable: "alpha"
+          )
+        }}
+    """
+
+    _, result = await asyncio.gather(
+        _read_and_hold(real_damnit_db, steps), graphql_schema.execute(query)
+    )
+
+    assert result.errors is None
+    assert steps == ["enter", "leave", "preview"]
 
 
 @pytest.mark.asyncio
@@ -299,6 +335,31 @@ async def test_runs_query_partial_name_match(graphql_schema, real_damnit_db):
         {"alpha": "a2", "run": 2},
         {"run": 3},
     ]
+
+
+@pytest.mark.asyncio
+async def test_runs_query_sends_when_each_value_was_computed(
+    graphql_schema, real_damnit_db
+):
+    proposal = real_damnit_db
+    query = f"""
+        query {{
+          runs(database: {{proposal: "{proposal}"}}, per_page: 1) {{
+            cells {{ name computed_at }}
+          }}
+        }}
+    """
+    result = await graphql_schema.execute(query)
+
+    assert result.errors is None
+    cells = result.data["runs"][0]["cells"]
+    assert {c["name"]: c["computed_at"] for c in cells} == {
+        "alpha": 1_000_000,
+        "beta": 1_050_000,
+        # Built from the run's key, not from a stored value.
+        "proposal": None,
+        "run": None,
+    }
 
 
 @pytest_asyncio.fixture
