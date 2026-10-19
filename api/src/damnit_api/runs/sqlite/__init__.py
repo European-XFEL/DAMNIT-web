@@ -16,6 +16,7 @@ from .session import (
     get_connection,
     get_damnit_path,
     get_database_mtime,
+    get_lock,
     get_session,
 )
 
@@ -34,6 +35,7 @@ __all__ = [
     "get_connection",
     "get_damnit_path",
     "get_database_mtime",
+    "get_lock",
     "get_session",
     "order_by_active",
 ]

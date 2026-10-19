@@ -1,8 +1,10 @@
+import asyncio
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
 
-from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager
+from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager, get_session
 from damnit_api.runs.types import DamnitRun
 
 from .const import (
@@ -249,6 +251,40 @@ async def real_damnit_db(mocker, tmp_path):
 
     await manager.close()
     DatabaseSessionManager.registry.pop(proposal, None)  # pyright: ignore[reportAttributeAccessIssue]
+
+
+async def _read_and_hold(proposal, steps):
+    """Read through `get_session` and keep the session open a moment."""
+    async with get_session(proposal) as session:
+        steps.append("enter")
+        await session.execute(text("SELECT count(*) FROM run_variables"))
+        await asyncio.sleep(0.05)
+        steps.append("leave")
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_waits_for_a_read_on_the_same_database(
+    graphql_schema, real_damnit_db, mocker
+):
+    steps = []
+    mocker.patch(
+        "damnit_api.graphql.queries.get_preview_data",
+        side_effect=lambda **_: steps.append("preview"),
+    )
+    query = f"""
+        query {{
+          extracted_data(
+            database: {{proposal: "{real_damnit_db}"}}, run: 1, variable: "alpha"
+          )
+        }}
+    """
+
+    _, result = await asyncio.gather(
+        _read_and_hold(real_damnit_db, steps), graphql_schema.execute(query)
+    )
+
+    assert result.errors is None
+    assert steps == ["enter", "leave", "preview"]
 
 
 @pytest.mark.asyncio
