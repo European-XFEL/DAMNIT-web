@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import json
 from collections import Counter
@@ -19,12 +18,14 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
     (active block first). Result is TTL-cached; an open `run_updates`
     subscription invalidates it whenever the database file changes.
     """
-    tags, variables, variable_tags, runs, max_timestamp = await asyncio.gather(
-        db.async_all_tags(proposal),
-        db.async_variables(proposal),
-        db.async_variable_tags(proposal),
-        db.async_run_identifiers(proposal),
-        db.async_max(proposal, table="run_variables", column="timestamp"),
+    # One after another: the database lock runs them in turn anyway, and a
+    # failed read stops the rest instead of leaving them queued on the lock.
+    tags = await db.async_all_tags(proposal)
+    variables = await db.async_variables(proposal)
+    variable_tags = await db.async_variable_tags(proposal)
+    runs = await db.async_run_identifiers(proposal)
+    max_timestamp = await db.async_max(
+        proposal, table="run_variables", column="timestamp"
     )
 
     variables = {**DamnitRun.known_variables(), **variables}
