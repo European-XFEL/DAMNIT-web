@@ -1,6 +1,7 @@
 import {
   Box,
   Image,
+  getDefaultZIndex,
   useComputedColorScheme,
   useMantineTheme,
   rem,
@@ -86,7 +87,9 @@ export function TableTooltip({
         ...style,
         background: surface,
         borderRadius: rem(SURFACE_RADIUS),
-        zIndex: 1000,
+        // A tooltip inside still draws on top: at the same level, Mantine's
+        // portals come later in the page than this one.
+        zIndex: getDefaultZIndex('popover'),
         boxShadow:
           '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',
       }}
