@@ -12,7 +12,7 @@ import {
   selectRun,
   selectedRunTab,
 } from '#support/table'
-import { dashboardHeader, showTable } from '#support/dashboard'
+import { homeLink, showTable } from '#support/dashboard'
 import { openSummaryPlot, plotEntries } from '#support/plots'
 import { proposalLink } from '#support/proposals'
 
@@ -50,7 +50,7 @@ test('clicking the logo tears down the dashboard state', async ({
   await page.keyboard.press('Escape')
 
   // Click the DAMNIT! logo to leave the dashboard.
-  await dashboardHeader(page).getByRole('link', { name: 'DAMNIT!' }).click()
+  await homeLink(page).click()
   await expect(page).toHaveURL(/\/app\/home$/)
 
   // Reopen the same proposal through the home list.
