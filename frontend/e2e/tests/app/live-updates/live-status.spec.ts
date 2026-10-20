@@ -18,6 +18,10 @@ function lostItem(page: Page) {
   return statusBar(page).getByRole('button', { name: /^Lost live updates/ })
 }
 
+function stoppedItem(page: Page) {
+  return statusBar(page).getByRole('img', { name: /^Live updates stopped/ })
+}
+
 test('clicking the lost live updates reconnects without sitting out the wait', async ({
   page,
   api,
@@ -65,4 +69,18 @@ test('a push of metadata alone does not count as an update', async ({
     runs: { [newRun]: { n_trains: { dtype: 'number', value: 4242 } } },
   })
   await expect(tooltip).toHaveText(/^Live updates\. Last update /)
+})
+
+test('live updates the server refuses are asked for once and show stopped', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expect(liveItem(page)).toBeVisible()
+
+  api.refuseLiveUpdates()
+
+  await expect(stoppedItem(page)).toBeVisible({ timeout: 1000 })
+  expect(api.subscriptions()).toBe(1)
 })
