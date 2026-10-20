@@ -15,6 +15,7 @@ import { type DashboardUser } from '#src/features/dashboard/types/dashboard.type
 import classes from './dashboard-shell.module.css'
 import DashboardBody from './dashboard-body'
 import DashboardHeader from './dashboard-header'
+import LiveUpdatesItem from './status/live-updates-item'
 import ReadOnlyItem from './status/read-only-item'
 
 type DashboardShellProps = {
@@ -80,6 +81,7 @@ function DashboardShell({
         </AppShell.Main>
         <AppShell.Footer aria-label="Status bar">
           <StatusBar>
+            <LiveUpdatesItem />
             <ReadOnlyItem />
           </StatusBar>
         </AppShell.Footer>

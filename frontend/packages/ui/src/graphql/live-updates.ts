@@ -85,7 +85,7 @@ export function recordLiveUpdatesEvent(event: LiveUpdatesEvent) {
 }
 
 const FIRST_RETRY_DELAY = 1000
-const LONGEST_RETRY_DELAY = 30_000
+export const LONGEST_RETRY_DELAY = 30_000
 // Not the 5 s graphql-ws suggests: a preview read stalls the API longer.
 const PONG_WAIT = 20_000
 
