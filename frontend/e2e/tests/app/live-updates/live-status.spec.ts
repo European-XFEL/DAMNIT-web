@@ -1,10 +1,11 @@
 import type { Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
-import { XPCS } from '#examples/xpcs'
+import { XPCS, xpcsWithProposals } from '#examples/xpcs'
 import { fullMetadata } from '#mocks'
-import { statusBar } from '#support/dashboard'
-import { openProposal } from '#support/table'
+import { homeLink, statusBar } from '#support/dashboard'
+import { proposalLink } from '#support/proposals'
+import { openDashboard, openProposal } from '#support/table'
 
 // graphql-ws waits about 1, 2 and 4 s before the first three reconnects, so
 // once the mock has refused three the next wait runs 8 to 9 s.
@@ -96,4 +97,37 @@ test('a subscription the server ends shows live updates stopped', async ({
   api.endLiveUpdates()
 
   await expect(stoppedItem(page)).toBeVisible()
+})
+
+test.describe('a user with several proposals', () => {
+  test.use({ example: xpcsWithProposals })
+
+  test('opening another proposal shows no changes since it opened', async ({
+    page,
+    api,
+    example,
+  }) => {
+    await openProposal(page, example)
+    const tooltip = page.getByRole('tooltip')
+
+    // A run changes on the first proposal
+    api.pushLatestData({
+      metadata: fullMetadata(example.meta, XPCS.meta.runs),
+      runs: {
+        [XPCS.meta.runs[0]]: { n_trains: { dtype: 'number', value: 4242 } },
+      },
+    })
+    await liveItem(page).hover()
+    await expect(tooltip).toHaveText(/^Live updates\. Last update /)
+
+    // Open another through the home list
+    await homeLink(page).click()
+    const other = example.proposalMetadata[1].number
+    await openDashboard(page, () => proposalLink(page, other).click())
+    // Hovered: after a click, a focus from a script is not focus-visible, and
+    // the tooltip opens on focus only when it is.
+    await liveItem(page).hover()
+
+    await expect(tooltip).toHaveText(/^Live updates\. No changes since/)
+  })
 })
