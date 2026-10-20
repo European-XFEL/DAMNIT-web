@@ -24,6 +24,7 @@ const CELL_FIELDS = `
     message
     cls
   }
+  computed_at
   summary {
     value
     dtype

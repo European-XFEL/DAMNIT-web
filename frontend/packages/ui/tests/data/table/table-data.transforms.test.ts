@@ -23,7 +23,7 @@ function cell({
   dtype = 'number',
   error = null,
 }: CellOptions): Cell {
-  return { id: name, name, error, summary: { value, dtype } }
+  return { id: name, name, error, computed_at: null, summary: { value, dtype } }
 }
 
 type CellOptions = {
@@ -49,6 +49,7 @@ describe('indexRunCells', () => {
       id: 'energy',
       name: 'energy',
       error: null,
+      computed_at: null,
       summary: { value: 1.2, dtype: 'number' },
     })
   })
@@ -74,6 +75,7 @@ describe('indexRunCells', () => {
       id: 'x',
       name: 'x',
       error,
+      computed_at: null,
       summary: { value: 2, dtype: 'number' },
     })
   })

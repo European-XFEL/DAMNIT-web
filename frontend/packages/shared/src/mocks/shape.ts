@@ -34,12 +34,8 @@ export function cellId({ database, proposal, run, name }: CellIdParts): string {
   return `${database}:${proposal}:${run}:${name}`
 }
 
-// One cell's wire object. Shared by the query mock and the subscription mock so
-// the composite `Cell` shape stays identical on both paths. `error` is always
-// sent, even absent from the example: the query selects it, so omitting it
-// leaves the client's cache read incomplete and every cached replay silently
-// refetches. `lightweight` blanks a heavy value the way the real @lightweight
-// pass does.
+// One cell's wire object, shared by the query and subscription mocks so the
+// composite `Cell` shape stays identical on both paths.
 function shapeCell(
   name: string,
   cell: RunData['variables'][string],
@@ -49,9 +45,13 @@ function shapeCell(
     __typename: 'Cell',
     id: cellId({ database, proposal, run, name }),
     name,
+    // Sent even when the example has none: the query selects both, so a cell
+    // missing one leaves the cache read incomplete and every replay refetches.
     error: 'error' in cell ? { __typename: 'CellError', ...cell.error } : null,
+    computed_at: cell.computed_at ?? null,
     summary: {
       __typename: 'CellSummary',
+      // Mirrors the real @lightweight pass.
       value: lightweight && HEAVY_DTYPES.has(cell.dtype) ? null : cell.value,
       dtype: cell.dtype,
     },

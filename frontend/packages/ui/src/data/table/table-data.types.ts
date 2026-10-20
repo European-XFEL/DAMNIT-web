@@ -16,6 +16,8 @@ export type Cell = {
   id: string
   name: string
   error?: CellError | null
+  // In milliseconds, or null on the cells DAMNIT never computes, such as `run`.
+  computed_at: number | null
   summary: CellSummary
 }
 
