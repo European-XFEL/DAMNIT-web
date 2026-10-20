@@ -21,7 +21,7 @@ import { useTableMeta } from '#src/data/table/use-table-meta'
 import { reconnectCount } from '#src/graphql/live-updates'
 
 import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
-import { drawnCells } from './summary-plot.transforms'
+import { drawnCells, newestComputedTime } from './summary-plot.transforms'
 
 type UseSummaryPlotDataOptions = {
   runIds: RunId[]
@@ -37,12 +37,16 @@ type UseSummaryPlotDataOptions = {
 // only the runs already scrolled into cache, so it stays network-backed; the
 // merge policy returning a stable list on value-only pushes is what keeps this
 // from re-running on every cache write. A run is charted only when every
-// variable it plots is a real number.
+// variable it plots is a real number. `computedAt` is when the newest charted
+// value was computed.
 export function useSummaryPlotData({
   runIds,
   variables,
   enabled,
-}: UseSummaryPlotDataOptions): PlotData | null {
+}: UseSummaryPlotDataOptions): {
+  data: PlotData | null
+  computedAt: number | null
+} {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const { variables: variableMeta } = useTableMeta()
 
@@ -90,7 +94,12 @@ export function useSummaryPlotData({
 
   const cells = useMemo(() => indexRunCells(runs ?? []), [runs])
 
-  return useMemo(() => {
+  const computedAt = useMemo(
+    () => (enabled ? newestComputedTime({ cells, runIds, variables }) : null),
+    [enabled, cells, runIds, variables]
+  )
+
+  const plotData = useMemo(() => {
     if (!enabled) {
       return null
     }
@@ -120,4 +129,6 @@ export function useSummaryPlotData({
 
     return { traces: [trace], meta }
   }, [enabled, cells, runIds, variables, variableMeta])
+
+  return { data: plotData, computedAt }
 }
