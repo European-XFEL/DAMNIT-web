@@ -1,6 +1,7 @@
 import type { Page, WebSocketRoute } from '@playwright/test'
 
 import {
+  SEED_TIMESTAMP_MS,
   shapeMetadata,
   shapeRun,
   type Meta,
@@ -69,7 +70,7 @@ export async function mockWebSocket(
   // The backend stamps each push with an advancing epoch-ms timestamp, which the
   // app feeds back as its subscription cursor. Model that so the stored cursor
   // looks real; the exact value does not affect delivery.
-  let clock = 1_700_000_000_000
+  let clock = SEED_TIMESTAMP_MS
   const nextTimestamp = () => (clock += 1000)
 
   const deliver = ({ runs, metadata }: LatestData) => {

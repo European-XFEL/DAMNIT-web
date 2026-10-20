@@ -7,6 +7,10 @@ import type { Meta, RunData } from './types'
 // mock drift surfaces immediately instead of as a silently broken page.
 export const REST_API_PREFIXES = ['oauth/', 'contextfile/']
 
+// The time the seeded examples were computed at. Live pushes are stamped after
+// it, so the client's cursor only moves forward.
+export const SEED_TIMESTAMP_MS = 1_700_000_000_000
+
 // The metadata snapshot for one proposal. `runs` is a list of (proposal, run)
 // pairs, server-ordered; the examples are single-proposal, so every pair takes
 // the queried proposal. `__typename` rides on every object so Apollo can

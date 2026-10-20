@@ -1,6 +1,11 @@
 import { Kind, parse } from 'graphql'
 
-import { shapeMetadata, shapeTableData, unmockedOperationError } from './shape'
+import {
+  SEED_TIMESTAMP_MS,
+  shapeMetadata,
+  shapeTableData,
+  unmockedOperationError,
+} from './shape'
 import type { Runs } from './types'
 
 // Thrown by a data source when the requested example data does not exist, so
@@ -75,8 +80,11 @@ export async function resolveOperation(
     switch (operationName) {
       case 'TableMetaQuery': {
         const { meta } = await source.runs(proposal)
+        // The time of the newest value, as the backend answers it: 0 with no
+        // runs, and the client then takes its cursor from the first live push.
+        const timestamp = meta.runs.length ? SEED_TIMESTAMP_MS : 0
         return resolved({
-          metadata: shapeMetadata(meta, { proposal, timestamp: 0 }),
+          metadata: shapeMetadata(meta, { proposal, timestamp }),
         })
       }
       case 'TableDataQuery':
