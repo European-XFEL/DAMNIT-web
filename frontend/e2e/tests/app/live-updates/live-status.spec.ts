@@ -84,3 +84,16 @@ test('live updates the server refuses are asked for once and show stopped', asyn
   await expect(stoppedItem(page)).toBeVisible({ timeout: 1000 })
   expect(api.subscriptions()).toBe(1)
 })
+
+test('a subscription the server ends shows live updates stopped', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expect(liveItem(page)).toBeVisible()
+
+  api.endLiveUpdates()
+
+  await expect(stoppedItem(page)).toBeVisible()
+})
