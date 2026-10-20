@@ -102,10 +102,8 @@ export const theme = createTheme({
     Table: {
       styles: { th: { fontWeight: 500 } },
     } satisfies ExtendComponent<TableFactory>,
-    // A tooltip floats, so it reads at the floating size instead of Mantine's
-    // own sm.
     Tooltip: {
-      styles: { tooltip: { fontSize: 'var(--mantine-font-size-xs)' } },
+      classNames: { tooltip: classes.tooltip, arrow: classes.tooltipArrow },
     } satisfies ExtendComponent<TooltipFactory>,
   },
 })
