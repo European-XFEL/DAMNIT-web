@@ -29,12 +29,13 @@ type TableTooltipProps = {
   target: CellTooltip
   layerProps: LayerProps
   arrowProps: UseLayerArrowProps
+  arrowSize: number
   onMouseEnter: () => void
   onMouseLeave: () => void
 }
 
 const IMAGE_MAX_SIZE = 300
-const SURFACE_RADIUS = 6
+const SURFACE_RADIUS = 4
 const IMAGE_MARGIN = 4
 
 function renderBody(target: CellTooltip) {
@@ -69,13 +70,14 @@ export function TableTooltip({
   target,
   layerProps,
   arrowProps,
+  arrowSize,
   onMouseEnter,
   onMouseLeave,
 }: TableTooltipProps) {
   const theme = useMantineTheme()
   const scheme = useComputedColorScheme('light')
   const surface =
-    scheme === 'dark' ? theme.colors.dark[5] : theme.colors.dark[7]
+    scheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[9]
   const { ref, style } = layerProps
 
   return (
@@ -98,7 +100,7 @@ export function TableTooltip({
         {...arrowProps}
         backgroundColor={surface}
         borderWidth={0}
-        size={10}
+        size={arrowSize}
       />
       {renderBody(target)}
     </div>

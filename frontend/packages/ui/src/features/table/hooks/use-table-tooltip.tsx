@@ -17,7 +17,7 @@ import { ZERO_BOUNDS, toBounds } from '#src/features/table/utils/bounds'
 import { assertNever } from '#src/utils/helpers'
 
 const DELAY = { open: 200, switch: 60, close: 200 }
-const TRIGGER_OFFSET = 8
+const ARROW_DEPTH = 8
 
 type TooltipState = { target: CellTooltip; bounds: IBounds }
 type UseTableTooltipOptions = { suppressed?: boolean }
@@ -227,7 +227,7 @@ export const useTableTooltip = (
     placement: 'right-start',
     possiblePlacements: ['right-start', 'left-start', 'right-end', 'left-end'],
     auto: true,
-    triggerOffset: TRIGGER_OFFSET,
+    triggerOffset: ARROW_DEPTH,
     container: 'portal',
     trigger,
   })
@@ -242,6 +242,7 @@ export const useTableTooltip = (
             target={tooltip.target}
             layerProps={layerProps}
             arrowProps={arrowProps}
+            arrowSize={ARROW_DEPTH}
             onMouseEnter={onBodyEnter}
             onMouseLeave={onBodyLeave}
           />
