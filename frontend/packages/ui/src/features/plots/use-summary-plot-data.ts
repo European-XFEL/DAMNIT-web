@@ -62,6 +62,9 @@ export function useSummaryPlotData({
         names: [VARIABLES.run, ...variables],
       },
       fetchPolicy: 'cache-and-network',
+      // A refetch overwrites by default, cutting every cached run down to the
+      // cells charted here: the table and run panel lose every other value.
+      refetchWritePolicy: 'merge',
       // A reload after a reconnect must not join a request sent before it, which
       // may have read the database before the server's catch-up cursor.
       context: { queryDeduplication: false },
