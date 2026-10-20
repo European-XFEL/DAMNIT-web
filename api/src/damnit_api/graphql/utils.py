@@ -15,6 +15,12 @@ class DatabaseInput:
     path: str | None = strawberry.field(default=strawberry.UNSET)
 
 
+@strawberry.input
+class RunIdInput:
+    proposal: str
+    run: int
+
+
 @dataclass
 class MetaData:
     timestamp: float = 0
