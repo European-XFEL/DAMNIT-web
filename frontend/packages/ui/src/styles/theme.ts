@@ -103,6 +103,13 @@ export const theme = createTheme({
       styles: { th: { fontWeight: 500 } },
     } satisfies ExtendComponent<TableFactory>,
     Tooltip: {
+      // The arrow pokes 4.7 px past the 1 px edge, so the tooltip sits 5 off.
+      // Mantine adds half the arrow to a number, and takes an object as is.
+      defaultProps: {
+        withArrow: true,
+        arrowSize: 8,
+        offset: { mainAxis: 5 },
+      },
       classNames: { tooltip: classes.tooltip, arrow: classes.tooltipArrow },
     } satisfies ExtendComponent<TooltipFactory>,
   },

@@ -45,7 +45,7 @@ type RailButtonProps = Omit<ComponentPropsWithoutRef<'button'>, 'children'> & {
 const RailButton = forwardRef<HTMLButtonElement, RailButtonProps>(
   function RailButton({ icon, label, active, ...others }, ref) {
     return (
-      <Tooltip label={label} position="right" withArrow>
+      <Tooltip label={label} position="right">
         <UnstyledButton
           {...others}
           ref={ref}

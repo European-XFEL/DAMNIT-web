@@ -39,7 +39,7 @@ export const TableToolbar = memo(function TableToolbar({
         mr={12}
         style={{ alignSelf: 'center' }}
       />
-      <Tooltip label="Fit all columns" withArrow>
+      <Tooltip label="Fit all columns">
         <ActionIcon
           variant="subtle"
           color="gray"
@@ -53,7 +53,7 @@ export const TableToolbar = memo(function TableToolbar({
           />
         </ActionIcon>
       </Tooltip>
-      <Tooltip label="Reset column widths" withArrow>
+      <Tooltip label="Reset column widths">
         <ActionIcon
           variant="subtle"
           color="gray"
