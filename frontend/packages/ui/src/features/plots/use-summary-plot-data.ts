@@ -3,7 +3,7 @@ import { useQuery, useReactiveVar } from '@apollo/client/react'
 import { useDidUpdate } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
-import { DTYPES, VARIABLES } from '#src/constants'
+import { VARIABLES } from '#src/constants'
 import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   TABLE_DATA_QUERY,
@@ -13,7 +13,6 @@ import {
 import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
 import {
   getTitleByName,
-  hasValue,
   indexRunCells,
   runKey,
 } from '#src/data/table/table-data.transforms'
@@ -22,6 +21,7 @@ import { useTableMeta } from '#src/data/table/use-table-meta'
 import { reconnectCount } from '#src/graphql/live-updates'
 
 import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
+import { drawnCells } from './summary-plot.transforms'
 
 type UseSummaryPlotDataOptions = {
   runIds: RunId[]
@@ -98,19 +98,10 @@ export function useSummaryPlotData({
     const series = variables.map(() => [] as number[])
 
     for (const id of runIds) {
-      const row = cells.get(runKey(id))
-      const points = variables.map((name) => row?.get(name))
-      const allNumeric = points.every(
-        (point) =>
-          hasValue(point) &&
-          typeof point.summary.value === 'number' &&
-          point.summary.dtype === DTYPES.number
-      )
-      if (allNumeric) {
-        points.forEach((point, index) => {
-          series[index].push(point!.summary.value as number)
-        })
-      }
+      const points = drawnCells(cells.get(runKey(id)), variables)
+      points?.forEach((point, index) => {
+        series[index].push(point.summary.value as number)
+      })
     }
 
     const [xVar, yVar] = variables
