@@ -9,7 +9,7 @@ import StatusItem from '#src/components/statuses/status-item'
 import { ViewStatus } from '#src/components/statuses/view-status'
 import { useAppSelector } from '#src/app/store/hooks'
 import { formatClockTime, formatLongDate, formatTimeAgo } from '#src/utils/time'
-import { useMinuteClock } from '#src/features/context-file/hooks/use-minute-clock'
+import { useMinuteClock } from '#src/hooks/use-minute-clock'
 
 import {
   useCheckFileLastModifiedQuery,
