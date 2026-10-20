@@ -109,6 +109,7 @@ export const theme = createTheme({
         withArrow: true,
         arrowSize: 8,
         offset: { mainAxis: 5 },
+        events: { hover: true, focus: true, touch: false },
       },
       classNames: { tooltip: classes.tooltip, arrow: classes.tooltipArrow },
     } satisfies ExtendComponent<TooltipFactory>,
