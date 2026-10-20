@@ -11,7 +11,10 @@ export const REST_API_PREFIXES = ['oauth/', 'contextfile/']
 // pairs, server-ordered; the examples are single-proposal, so every pair takes
 // the queried proposal. `__typename` rides on every object so Apollo can
 // normalize the runs the same way the real server lets it.
-export function shapeMetadata(meta: Meta, proposal: string) {
+export function shapeMetadata(
+  meta: Pick<Meta, 'variables' | 'runs' | 'tags' | 'groups'>,
+  { proposal, timestamp }: ShapeMetadataOptions
+) {
   return {
     __typename: 'TableMeta',
     variables: meta.variables,
@@ -20,7 +23,7 @@ export function shapeMetadata(meta: Meta, proposal: string) {
       proposal,
       run,
     })),
-    timestamp: 0,
+    timestamp,
     tags: meta.tags,
     groups: meta.groups ?? {},
   }
@@ -101,6 +104,11 @@ export function shapeTableData(
       })
     ),
   }
+}
+
+type ShapeMetadataOptions = {
+  proposal: string
+  timestamp: number
 }
 
 type CellIdParts = {

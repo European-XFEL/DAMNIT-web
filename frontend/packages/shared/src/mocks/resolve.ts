@@ -75,7 +75,9 @@ export async function resolveOperation(
     switch (operationName) {
       case 'TableMetaQuery': {
         const { meta } = await source.runs(proposal)
-        return resolved({ metadata: shapeMetadata(meta, proposal) })
+        return resolved({
+          metadata: shapeMetadata(meta, { proposal, timestamp: 0 }),
+        })
       }
       case 'TableDataQuery':
       case 'LightweightTableDataQuery':

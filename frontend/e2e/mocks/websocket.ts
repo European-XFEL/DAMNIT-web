@@ -1,6 +1,7 @@
 import type { Page, WebSocketRoute } from '@playwright/test'
 
 import {
+  shapeMetadata,
   shapeRun,
   type Meta,
   type RunData,
@@ -16,7 +17,7 @@ export type LatestData = {
   metadata: {
     runs: number[]
     variables: Meta['variables']
-    tags?: Meta['tags']
+    tags: Meta['tags']
     groups?: Meta['groups']
   }
 }
@@ -88,18 +89,7 @@ export async function mockWebSocket(
                   run: Number(run),
                 })
               ),
-              metadata: {
-                __typename: 'TableMeta',
-                runs: metadata.runs.map((run) => ({
-                  __typename: 'RunId',
-                  proposal,
-                  run,
-                })),
-                variables: metadata.variables,
-                tags: metadata.tags ?? {},
-                groups: metadata.groups ?? {},
-                timestamp,
-              },
+              metadata: shapeMetadata(metadata, { proposal, timestamp }),
               timestamp,
             },
           },
