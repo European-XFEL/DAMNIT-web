@@ -34,6 +34,14 @@ export type LiveUpdatesMock = {
   dropLiveUpdates: (options?: { refuse?: number }) => Promise<void>
   // How many sockets the app has opened, refused ones included.
   connections: () => number
+  // How many subscriptions the app has opened, refused ones included.
+  subscriptions: () => number
+  // Refuse the subscription, and every one after it, with a GraphQL error on
+  // an open socket, as the API does when it turns the session away.
+  refuseLiveUpdates: () => void
+  // Complete the open subscription from the server's side, as the API does
+  // when its stream of updates returns.
+  endLiveUpdates: () => void
 }
 
 // The metadata half of a push. The client replaces its metadata wholesale, so a
@@ -49,8 +57,8 @@ export function fullMetadata(
 
 // Mock the app's graphql-ws connection. Playwright fully mocks the socket, so we
 // play the graphql-transport-ws server by hand: acknowledge the init, remember
-// the active subscription id, and answer pings. The subscription is never
-// completed by us, so a test can push repeatedly onto the same id.
+// the active subscription id, and answer pings. The subscription stays open
+// until a test ends or refuses it, so a test can push repeatedly onto it.
 //
 // Delivery is not gated on the subscription's `since` cursor: the mock sends
 // whatever is pushed, regardless of the timestamp the client subscribed with.
@@ -69,6 +77,8 @@ export async function mockWebSocket(
   let lastMetadata: string | undefined
   let refusalsLeft = 0
   let connections = 0
+  let subscriptions = 0
+  let refused = false
 
   // The backend stamps each push with an advancing epoch-ms timestamp, which the
   // app feeds back as its subscription cursor. Model that so the stored cursor
@@ -111,6 +121,16 @@ export async function mockWebSocket(
     )
   }
 
+  const refuseSubscription = (ws: WebSocketRoute, id: string) => {
+    ws.send(
+      JSON.stringify({
+        id,
+        type: 'error',
+        payload: [{ message: 'Authentication required.' }],
+      })
+    )
+  }
+
   await page.routeWebSocket('**/graphql', (ws) => {
     connections += 1
     if (refusalsLeft > 0) {
@@ -126,6 +146,12 @@ export async function mockWebSocket(
           ws.send(JSON.stringify({ type: 'connection_ack' }))
           break
         case 'subscribe':
+          subscriptions += 1
+          if (refused) {
+            refuseSubscription(ws, msg.id)
+            break
+          }
+
           activeId = msg.id
           lastMetadata = undefined
           for (const data of pending.splice(0)) {
@@ -158,5 +184,19 @@ export async function mockWebSocket(
       await socket?.close({ code: 1012, reason: 'Service Restart' })
     },
     connections: () => connections,
+    subscriptions: () => subscriptions,
+    refuseLiveUpdates: () => {
+      refused = true
+      if (socket && activeId !== undefined) {
+        refuseSubscription(socket, activeId)
+        activeId = undefined
+      }
+    },
+    endLiveUpdates: () => {
+      if (socket && activeId !== undefined) {
+        socket.send(JSON.stringify({ id: activeId, type: 'complete' }))
+        activeId = undefined
+      }
+    },
   }
 }
