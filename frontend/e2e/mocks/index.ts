@@ -149,15 +149,14 @@ export async function mockApi(
     }
   )
 
-  // The real endpoint 500s with "No user info in session" when the cookie is
-  // gone, which PrivateRoute reads as isError and the LoggedOutPage reads as
-  // logged out. Mirror that shape rather than a 401.
+  // Mirror the real 401 for a gone cookie: PrivateRoute reads it as isError
+  // and the LoggedOutPage as logged out.
   await page.route('**/oauth/userinfo**', (route) =>
     authed
       ? route.fulfill({ json: example.userInfo })
       : route.fulfill({
-          status: 500,
-          json: { error: 'No user info in session' },
+          status: 401,
+          json: { message: 'No user info in session', status_code: 401 },
         })
   )
 
@@ -169,7 +168,7 @@ export async function mockApi(
   )
 
   // Logout returns no logout_url, so the app full-page navigates to /logged-out.
-  // Flip the session off so the LoggedOutPage re-fetch of userinfo 500s and the
+  // Flip the session off so the LoggedOutPage re-fetch of userinfo 401s and the
   // "You have been logged out" branch renders, modelling the cleared session
   // cookie.
   await page.route('**/oauth/logout**', (route) => {

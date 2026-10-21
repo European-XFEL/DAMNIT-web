@@ -2,6 +2,7 @@
 
 import pytest
 import structlog
+from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from damnit_api.main import create_app
@@ -86,6 +87,8 @@ def app(monkeypatch):
         "DW_API_AUTH__SERVER_METADATA_URL", "https://example.com/.well-known"
     )
     monkeypatch.setenv("DW_API_SESSION_SECRET", "test")
+    # Local mode hands a request with no session the dev user instead of a 401
+    monkeypatch.setattr("damnit_api.shared.settings.settings.damnit_path", None)
 
     async def noop_bootstrap(settings):
         pass
@@ -123,3 +126,14 @@ def test_handler_maps_dwerror_to_status_code(app, client, exc_class, expected_st
     body = resp.json()
     assert body["message"] == "boom"
     assert body["details"] == "extra"
+
+
+def test_a_websocket_without_a_login_is_accepted_and_closed_with_4401(client):
+    with client.websocket_connect(
+        "/graphql", subprotocols=["graphql-transport-ws"]
+    ) as ws:
+        assert ws.accepted_subprotocol == "graphql-transport-ws"
+        with pytest.raises(WebSocketDisconnect) as closed:
+            ws.receive_text()
+
+    assert closed.value.code == 4401

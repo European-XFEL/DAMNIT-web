@@ -4,11 +4,13 @@ from dataclasses import dataclass, field
 import numpy as np
 import orjson
 import strawberry
+from strawberry.exceptions import ConnectionRejectionError
 from strawberry.fastapi import BaseContext, GraphQLRouter
 from strawberry.http import GraphQLHTTPResponse
 from strawberry.schema.config import StrawberryConfig
 from strawberry.subscriptions import GRAPHQL_TRANSPORT_WS_PROTOCOL
 
+from .. import get_logger
 from .. import graphql as gql_main
 from .._db.dependencies import DBSession
 from .._mymdc.dependencies import MyMdCClient
@@ -17,6 +19,8 @@ from ..auth.dependencies import OAuthUserInfo
 from ..auth.models import User
 from ..metadata import gql as metadata
 from ..runs import types as run_types
+
+logger = get_logger()
 
 SUBSCRIPTION_PROTOCOLS = [
     GRAPHQL_TRANSPORT_WS_PROTOCOL,
@@ -28,7 +32,7 @@ class Query(auth.Query, gql_main.queries.Query, metadata.Query):
     pass
 
 
-class Router(GraphQLRouter):
+class Router(GraphQLRouter["Context", None]):
     def encode_json(self, data: GraphQLHTTPResponse) -> str | bytes:  # pyright: ignore[reportIncompatibleMethodOverride]
         encoded = orjson.dumps(
             data,
@@ -41,6 +45,21 @@ class Router(GraphQLRouter):
             return encoded.decode("utf-8")
 
         return encoded
+
+    async def on_ws_connect(self, context):
+        # A failed lookup here closes the handshake with 4403, which graphql-ws
+        # retries; the same failure at subscribe time reads as a refusal.
+        try:
+            await context.get_user()
+        except Exception as exc:
+            logger.warning(
+                "Could not resolve the user for live updates, rejecting the connection",
+                error=repr(exc),
+                exc_info=True,
+            )
+            raise ConnectionRejectionError from exc
+
+        return await super().on_ws_connect(context)
 
 
 class Schema(strawberry.Schema):
@@ -96,5 +115,5 @@ def get_gql_app():
     return Router(
         schema=schema,
         subscription_protocols=SUBSCRIPTION_PROTOCOLS,
-        context_getter=get_context,  # pyright: ignore[reportArgumentType]
+        context_getter=get_context,
     )
