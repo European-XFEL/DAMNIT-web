@@ -1,3 +1,22 @@
 .dot {
   border-color: var(--status-item-background);
 }
+
+/* Tabler draws the outer arc, the inner arc and the centre dot in that order.
+   An upgrade that reorders them breaks the spinner without an error. */
+.broadcast path {
+  transition: opacity 150ms linear;
+
+  &:nth-of-type(1) {
+    /* The outer arc's centre, (12, 13) in Tabler's 24 grid. In px, autoRem
+       would make it rem, and a larger root font would move it. */
+    transform-origin: 50% calc(100% * 13 / 24);
+  }
+}
+
+.broadcast:is([data-status='connecting'], [data-status='reconnecting']) path {
+  &:nth-of-type(2),
+  &:nth-of-type(3) {
+    opacity: 0;
+  }
+}

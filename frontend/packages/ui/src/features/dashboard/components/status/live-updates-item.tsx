@@ -1,13 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useReactiveVar } from '@apollo/client/react'
-import {
-  Box,
-  Indicator,
-  Loader,
-  rem,
-  Text,
-  VisuallyHidden,
-} from '@mantine/core'
+import { Box, Indicator, rem, Text, VisuallyHidden } from '@mantine/core'
+import { useReducedMotion } from '@mantine/hooks'
 import { IconBroadcast, IconBroadcastOff } from '@tabler/icons-react'
 
 import StatusItem from '#src/components/statuses/status-item'
@@ -34,6 +28,12 @@ function LiveUpdatesItem() {
   const lost = state.status === 'reconnecting'
   const { name, detail } = describe(state)
 
+  // A new icon once shown, so a quick first connect shows it already live,
+  // not easing and fading out of a spin it ran while hidden.
+  const icon = (
+    <LiveUpdatesIcon key={hidden ? 'hidden' : 'shown'} status={state.status} />
+  )
+
   // Hidden, not left out, so the items after it keep their place when it shows.
   return (
     <>
@@ -51,7 +51,7 @@ function LiveUpdatesItem() {
               {detail && ` ${detail}`}
             </>
           }
-          icon={<LiveUpdatesIcon status={state.status} />}
+          icon={icon}
           onClick={lost ? retryNow : undefined}
           warning={lost}
         />
@@ -104,32 +104,22 @@ const DOT_COLORS = {
   off: undefined,
 }
 
-const ICONS = {
-  connecting: <Loader size={16} color="currentColor" />,
-  live: <IconBroadcast style={ICON_STYLE} stroke={1.5} aria-hidden />,
-  reconnecting: <Loader size={16} color="currentColor" />,
-  stopped: <IconBroadcastOff style={ICON_STYLE} stroke={1.5} aria-hidden />,
-  off: (
-    <IconBroadcastOff
-      style={ICON_STYLE}
-      stroke={1.5}
-      color="var(--mantine-color-gray-5)"
-      aria-hidden
-    />
-  ),
-}
+const SPIN = [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }]
+const SPIN_DURATION = 1200
 
 type LiveUpdatesIconProps = {
   status: LiveUpdatesStatus
 }
 
 function LiveUpdatesIcon({ status }: LiveUpdatesIconProps) {
+  const ref = useArcSpin(status === 'connecting' || status === 'reconnecting')
   const dotColor = DOT_COLORS[status]
 
   // Flex, so the icon sets the height: on a text line the box would take the
   // line height and sit too low.
   return (
     <Indicator
+      ref={ref}
       color={dotColor}
       disabled={dotColor == null}
       size={8}
@@ -139,9 +129,47 @@ function LiveUpdatesIcon({ status }: LiveUpdatesIconProps) {
       withBorder
       classNames={{ indicator: classes.dot }}
     >
-      {ICONS[status]}
+      {status === 'stopped' || status === 'off' ? (
+        <IconBroadcastOff
+          style={ICON_STYLE}
+          stroke={1.5}
+          color={status === 'off' ? 'var(--mantine-color-gray-5)' : undefined}
+          aria-hidden
+        />
+      ) : (
+        <IconBroadcast
+          className={classes.broadcast}
+          data-status={status}
+          style={ICON_STYLE}
+          stroke={1.5}
+          aria-hidden
+        />
+      )}
     </Indicator>
   )
+}
+
+function useArcSpin(spinning: boolean) {
+  const ref = useRef<HTMLDivElement>(null)
+  const reducedMotion = useReducedMotion(false, {
+    getInitialValueInEffect: false,
+  })
+
+  useEffect(() => {
+    const arc = ref.current?.querySelector('path')
+    if (!spinning || reducedMotion || arc == null) {
+      return
+    }
+
+    const spin = arc.animate(SPIN, {
+      duration: SPIN_DURATION,
+      iterations: Infinity,
+    })
+
+    return () => spin.cancel()
+  }, [spinning, reducedMotion])
+
+  return ref
 }
 
 // Whether live updates are on their first connect, but not yet for long enough
