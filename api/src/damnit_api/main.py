@@ -1,20 +1,60 @@
 from asyncio import TaskGroup
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, WebSocket, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from ._logging import RequestLoggingMiddleware
+from ._logging import RequestLoggingMiddleware, get_logger
+from .shared import errors
+
+logger = get_logger()
 
 # Known paths are redirected to the login page and
 # then back after successful authentication.
 KNOWN_PATHS = ["/graphql"]
 
 
+async def base_exception_handler(request: Request, exc: errors.DamnitWebError):  # noqa: RUF029
+    status_code = exc.code or status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    content: dict[str, str | int | dict] = {
+        "message": exc.message,
+        "status_code": status_code,
+    }
+
+    if exc.details:
+        content["details"] = exc.details
+
+    if exc.request_id:
+        content["request_id"] = exc.request_id
+
+    return JSONResponse(
+        status_code=status_code,
+        content=content,
+    )
+
+
+async def unauthenticated_handler(
+    conn: Request | WebSocket, exc: errors.UnauthenticatedError
+):
+    if isinstance(conn, WebSocket):
+        # Refusing the handshake reaches the browser as 1006, which graphql-ws
+        # retries. A 4401 close after accepting a protocol it offered is final.
+        offered = conn.scope.get("subprotocols", [])
+        await conn.accept(subprotocol=offered[0] if offered else None)
+        await conn.close(code=4401, reason="Unauthorized")
+        await logger.ainfo(
+            "Closed a websocket with no login", path=conn.url.path, reason=exc.message
+        )
+        return None
+
+    return await base_exception_handler(conn, exc)
+
+
 def create_app():
-    from . import _db, _logging, _mymdc, auth, contextfile, get_logger, metadata
-    from .shared import errors, gql
+    from . import _db, _logging, _mymdc, auth, contextfile, metadata
+    from .shared import gql
     from .shared.settings import settings
 
     logger = get_logger("lifespan")
@@ -67,25 +107,8 @@ def create_app():
             content={"detail": exc.detail},
         )
 
-    @app.exception_handler(errors.DamnitWebError)
-    async def base_exception_handler(request: Request, exc: errors.DamnitWebError):  # noqa: RUF029
-        status_code = exc.code or status.HTTP_500_INTERNAL_SERVER_ERROR
-
-        content: dict[str, str | int | dict] = {
-            "message": exc.message,
-            "status_code": status_code,
-        }
-
-        if exc.details:
-            content["details"] = exc.details
-
-        if exc.request_id:
-            content["request_id"] = exc.request_id
-
-        return JSONResponse(
-            status_code=status_code,
-            content=content,
-        )
+    app.exception_handler(errors.DamnitWebError)(base_exception_handler)
+    app.exception_handler(errors.UnauthenticatedError)(unauthenticated_handler)
 
     app.add_middleware(
         SessionMiddleware,
@@ -136,7 +159,7 @@ if __name__ == "__main__":
 
     import uvicorn
 
-    from . import _logging, get_logger
+    from . import _logging
     from .shared.settings import settings
 
     _logging.configure(
@@ -144,8 +167,6 @@ if __name__ == "__main__":
         debug=settings.debug,
         add_call_site_parameters=True,
     )
-
-    logger = get_logger()
 
     logger.debug("Settings", **settings.model_dump())
 
