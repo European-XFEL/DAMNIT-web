@@ -43,7 +43,7 @@ function LiveUpdatesItem() {
           aria-label={name}
           tooltip={
             <>
-              <Text span inherit fw={600}>
+              <Text span inherit fw={600} display="block">
                 {name}
               </Text>
               {detail && ` ${detail}`}
