@@ -236,6 +236,30 @@ describe('scrolling the table', () => {
     expect(pages.length).toBeLessThan(10)
   })
 
+  test('asks for a page still loading only once when the window settles on it', async () => {
+    const started: number[] = []
+
+    // Page 1 never answers, so it is still loading when the window settles.
+    const link = new ApolloLink((operation) => {
+      const page = (operation.variables.page as number) ?? 1
+      if (operation.operationName !== LIGHTWEIGHT_NAME) {
+        return hangs()
+      }
+
+      started.push(page)
+      return page === 1 ? hangs() : answers([runFor(page)])
+    })
+
+    const { result } = await renderTableRuns({ link })
+    await vi.waitFor(() => expect(started).toContain(1))
+
+    result.current.onVisibleRegionChanged(regionAt(0))
+
+    // Page 3 being asked for shows the settled window reached the fetch.
+    await vi.waitFor(() => expect(started).toContain(3))
+    expect(timesStarted(started, 1)).toBe(1)
+  })
+
   test('aborts a page fetch when its page scrolls out of the window', async () => {
     const aborted: number[] = []
 

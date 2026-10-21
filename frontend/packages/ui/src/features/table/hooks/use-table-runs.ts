@@ -234,80 +234,90 @@ export function useTableRuns({
     [client, proposal, perPage]
   )
 
+  const fetchPage = useCallback(
+    (page: number) => {
+      const states = pageStates.current
+
+      // Unmounting cannot reach a query the hook does not hold, so a page
+      // fetch is cancelled through the request's abort signal instead.
+      const pageFetch = new AbortController()
+      updatePage(states, page, { lightweight: 'fetching', pageFetch })
+      const variables = { proposal, page, per_page: perPage }
+
+      // Park the page back at idle so scrolling to it asks once more. No
+      // attempt cap: RetryLink has already spent five requests under this one.
+      const failPageFetch = (...report: unknown[]) => {
+        if (pageFetch.signal.aborted) {
+          return
+        }
+
+        console.error(...report)
+        updatePage(states, page, {
+          lightweight: 'idle',
+          pageFetch: undefined,
+        })
+      }
+
+      // `no-cache` keeps the answer scoped to this page: a cached read of
+      // `Query.runs` hands back every page merged. The write below repaints.
+      void client
+        .query<TableDataResult, TableDataVariables>({
+          query: LIGHTWEIGHT_TABLE_DATA_QUERY,
+          variables,
+          fetchPolicy: 'no-cache',
+          // Deduplication would hand a re-issued page the first request's
+          // signal, which a remount has already aborted.
+          context: {
+            queryDeduplication: false,
+            fetchOptions: { signal: pageFetch.signal },
+          },
+        })
+        // Two handlers rather than a trailing `.catch`, so a throw from the
+        // success path cannot mark a page that loaded as needing another fetch.
+        .then(
+          ({ data: pageData }) => {
+            if (pageFetch.signal.aborted) {
+              return
+            }
+
+            // A fetch that resolves with no payload is a page that did not
+            // load: leave it idle rather than marking it loaded.
+            if (!pageData) {
+              failPageFetch(`Page ${page} came back with no data`)
+              return
+            }
+
+            client.cache.writeQuery({
+              query: LIGHTWEIGHT_TABLE_DATA_QUERY,
+              variables,
+              data: pageData,
+            })
+            updatePage(states, page, {
+              lightweight: 'done',
+              pageFetch: undefined,
+              heavyNames: heavyCellNames(pageData.runs),
+            })
+            startNextDeferred()
+          },
+          (error: Error) => {
+            failPageFetch(`Page ${page} failed to load:`, error)
+          }
+        )
+    },
+    [client, proposal, perPage, startNextDeferred]
+  )
+
   // Ask for the lightweight pass on any of these pages that is neither loading
   // nor loaded. Page 1 comes through here like every other page.
   const ensurePagesLoaded = useCallback(
     (pages: Iterable<number>) => {
-      const states = pageStates.current
       for (const page of pages) {
-        if (pageState(states, page).lightweight !== 'idle') {
-          continue
+        if (pageState(pageStates.current, page).lightweight === 'idle') {
+          fetchPage(page)
         }
-
-        // Unmounting cannot reach a query the hook does not hold, so a page
-        // fetch is cancelled through the request's abort signal instead.
-        const pageFetch = new AbortController()
-        updatePage(states, page, { lightweight: 'fetching', pageFetch })
-        const variables = { proposal, page, per_page: perPage }
-        // Park the page back at idle so scrolling to it asks once more. No
-        // attempt cap: RetryLink has already spent five requests under this one.
-        const failPageFetch = (...report: unknown[]) => {
-          if (pageFetch.signal.aborted) {
-            return
-          }
-          console.error(...report)
-          updatePage(states, page, {
-            lightweight: 'idle',
-            pageFetch: undefined,
-          })
-        }
-        // `no-cache` keeps the answer scoped to this page: a cached read of
-        // `Query.runs` hands back every page merged. The write below repaints.
-        //
-        // Two handlers rather than a trailing `.catch`, so a throw from the
-        // success path cannot mark a page that loaded as needing another fetch.
-        void client
-          .query<TableDataResult, TableDataVariables>({
-            query: LIGHTWEIGHT_TABLE_DATA_QUERY,
-            variables,
-            fetchPolicy: 'no-cache',
-            // Deduplication would hand a re-issued page the first request's
-            // signal, which a remount has already aborted.
-            context: {
-              queryDeduplication: false,
-              fetchOptions: { signal: pageFetch.signal },
-            },
-          })
-          .then(
-            ({ data: pageData }) => {
-              if (pageFetch.signal.aborted) {
-                return
-              }
-              // A fetch that resolves with no payload is a page that did not
-              // load: leave it idle rather than marking it loaded.
-              if (!pageData) {
-                failPageFetch(`Page ${page} came back with no data`)
-                return
-              }
-              client.cache.writeQuery({
-                query: LIGHTWEIGHT_TABLE_DATA_QUERY,
-                variables,
-                data: pageData,
-              })
-              updatePage(states, page, {
-                lightweight: 'done',
-                pageFetch: undefined,
-                heavyNames: heavyCellNames(pageData.runs),
-              })
-              startNextDeferred()
-            },
-            (error: Error) => {
-              failPageFetch(`Page ${page} failed to load:`, error)
-            }
-          )
       }
     },
-    [client, proposal, perPage, startNextDeferred]
+    [fetchPage]
   )
 
   // Load the pages in view on mount, since an unpaginated table never reports
