@@ -11,12 +11,13 @@ from ..runs.preview import get_preview_data
 from ..runs.sqlite import (
     async_active_proposal,
     async_table,
+    get_lock,
     get_session,
     order_by_active,
 )
 from ..runs.types import KNOWN_DTYPES, DamnitRun, TableMeta
 from .metadata import fetch_metadata
-from .utils import DatabaseInput, fetch_info
+from .utils import DatabaseInput, RunIdInput, fetch_info
 
 logger = get_logger()
 
@@ -77,33 +78,34 @@ def group_by_run(record):
             "value": entry["value"],
             "summary_type": entry["summary_type"],
             "attributes": entry["attributes"],
+            "timestamp": entry["timestamp"],
         }
 
     return list(grouped.values())
 
 
-async def fetch_cells(proposal, *, limit, offset, names=None):
+async def fetch_cells(proposal, *, limit, offset, names=None, ids=None):
     table = await async_table(proposal, name="run_variables")
     if table is None:
         return []
 
     active = await async_active_proposal(proposal)
-    runs_subquery = (
-        select(table.c.proposal, table.c.run)
-        .distinct()
-        .order_by(*order_by_active(table, active))
-        .limit(limit)
-        .offset(offset)
-        .subquery()
+    runs = select(table.c.proposal, table.c.run).distinct()
+    if ids is not None:
+        runs = runs.where(tuple_(table.c.proposal, table.c.run).in_(ids))
+
+    # `.cte()` writes the page once, in a `WITH` block both uses below refer to:
+    # SQLAlchemy 2.0.48 fails if the `ids` filter is copied into each use.
+    page_runs = (
+        runs.order_by(*order_by_active(table, active)).limit(limit).offset(offset).cte()
     )
 
-    page_pairs = select(runs_subquery.c.proposal, runs_subquery.c.run)
     latest_timestamp_subquery = select(
         table.c.proposal,
         table.c.run,
         table.c.name,
         func.max(table.c.timestamp).label("latest_timestamp"),
-    ).where(tuple_(table.c.proposal, table.c.run).in_(page_pairs))
+    ).where(tuple_(table.c.proposal, table.c.run).in_(select(page_runs)))
     if names is not None:
         latest_timestamp_subquery = latest_timestamp_subquery.where(
             table.c.name.in_(names)
@@ -115,23 +117,24 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
         table.c.proposal, table.c.run, table.c.name
     ).subquery()
 
-    # Outer-join from `runs_subquery` so a `names` filter that excludes every
+    # Outer-join from `page_runs` so a `names` filter that excludes every
     # row of a paginated run still keeps the run in the page.
     query = (
         select(
-            runs_subquery.c.proposal,
-            runs_subquery.c.run,
+            page_runs.c.proposal,
+            page_runs.c.run,
             latest_timestamp_subquery.c.name,
             table.c.value,
             table.c.summary_type,
             table.c.attributes,
+            table.c.timestamp,
         )
-        .select_from(runs_subquery)
+        .select_from(page_runs)
         .outerjoin(
             latest_timestamp_subquery,
             and_(
-                runs_subquery.c.proposal == latest_timestamp_subquery.c.proposal,
-                runs_subquery.c.run == latest_timestamp_subquery.c.run,
+                page_runs.c.proposal == latest_timestamp_subquery.c.proposal,
+                page_runs.c.run == latest_timestamp_subquery.c.run,
             ),
         )
         .outerjoin(
@@ -143,7 +146,7 @@ async def fetch_cells(proposal, *, limit, offset, names=None):
                 table.c.timestamp == latest_timestamp_subquery.c.latest_timestamp,
             ),
         )
-        .order_by(*order_by_active(runs_subquery, active))
+        .order_by(*order_by_active(page_runs, active))
     )
 
     async with get_session(proposal) as session:
@@ -196,22 +199,34 @@ class Query:
         database: DatabaseInput,
         page: int = 1,
         per_page: int = 10,
+        ids: list[RunIdInput] | None = None,
     ) -> list[DamnitRun]:
         """Return a paginated list of Damnit runs.
 
         If the `cells` sub-selection passes a `names` argument, it is
         pushed down to SQL so only those cells are fetched. Omitting the
         argument returns every cell for each run.
+
+        `ids` narrows the runs to those (proposal, run) pairs before paging,
+        so a caller with more ids than `per_page` raises `per_page`. An empty
+        `ids` returns no runs.
         """
         proposal = database.proposal
         await _ensure_damnit_path(info, proposal)
         names = _selected_cell_names(info)
+
+        run_ids = None
+        if ids is not None:
+            # DAMNIT's tables declare no column types, so a proposal sent as
+            # text would match none of the integers stored in them.
+            run_ids = [(int(run_id.proposal), run_id.run) for run_id in ids]
 
         cells = await fetch_cells(
             proposal,
             limit=per_page,
             offset=(page - 1) * per_page,
             names=names,
+            ids=run_ids,
         )
 
         if not len(cells):
@@ -260,10 +275,11 @@ class Query:
         variable: str,
     ) -> JSON | None:  # FIX: # pyright: ignore[reportInvalidTypeForm]
         await _ensure_damnit_path(info, database.proposal)
-        # TODO: Convert to Strawberry type
-        # and make it analogous to Cell; e.g. `data`
-        return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
-            proposal=database.proposal,
-            run=run,
-            variable=variable,
-        )
+        async with get_lock(database.proposal):
+            # TODO: Convert to Strawberry type
+            # and make it analogous to Cell; e.g. `data`
+            return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
+                proposal=database.proposal,
+                run=run,
+                variable=variable,
+            )

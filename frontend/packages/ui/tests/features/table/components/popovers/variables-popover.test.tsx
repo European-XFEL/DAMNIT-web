@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest'
 
 import { setupStore, type AppStore } from '#src/app/store/store'
 import { TABLE_META_QUERY } from '#src/data/table/table-data.queries'
@@ -442,6 +443,13 @@ describe('stepping through the matches', () => {
   test('Enter pressed before the search settles runs it at once, on its first match', async () => {
     const screen = await openPopover()
 
+    // On a slow runner the search can settle before Enter lands, so a fake
+    // clock holds it back for Enter to run.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+
     await screen.getByPlaceholder('Search variables').fill('type')
     await userEvent.keyboard('{Enter}')
 
@@ -692,13 +700,26 @@ describe('moving columns during a search', () => {
   test('a search landing mid-drag marks nothing until the drop', async () => {
     const screen = await openPopover()
 
+    // A slow runner can take longer to lift than the search waits, so a fake
+    // clock holds the search until the column is up.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+
     // Type, then lift a column before the search has settled
     await screen.getByPlaceholder('Search variables').fill('t')
+    // Nothing on screen shows a held search, so count it on the fake clock
+    expect(vi.getTimerCount()).toBe(1)
     handle(screen, 'Trains').element().focus()
     await userEvent.keyboard('{Space}')
 
-    // Past the debounce
-    await new Promise((resolve) => setTimeout(resolve, 400))
+    // Fire the held search and draw it at once. Left to React's scheduler, the
+    // check below would run first and pass even when the drag does not freeze.
+    flushSync(() => {
+      vi.runOnlyPendingTimers()
+    })
+    vi.useRealTimers()
     expect(markedLetters()).toEqual([])
 
     // Dropped where it was lifted

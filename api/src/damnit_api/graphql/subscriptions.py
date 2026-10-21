@@ -76,6 +76,7 @@ async def poll_proposal(proposal):
                     "value": data.value,
                     "summary_type": data.summary_type,
                     "attributes": data.attributes,
+                    "timestamp": data.timestamp,
                 }
                 for name, data in variables.items()
             }

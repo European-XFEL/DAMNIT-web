@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -32,6 +33,10 @@ class DatabaseSessionManager(metaclass=Registry):
         )
         self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
 
+        # SQLite keeps one kernel lock per process and file, so overlapping
+        # reads keep it held and DAMNIT's writer never gets in.
+        self._lock = _lock_for(self.root_path)
+
     @property
     def path(self):
         return Path(self.root_path) / "runs.sqlite"
@@ -50,7 +55,7 @@ class DatabaseSessionManager(metaclass=Registry):
             msg = "DatabaseSessionManager is not initialized"
             raise Exception(msg)
 
-        async with self._engine.begin() as connection:
+        async with self._lock, self._engine.begin() as connection:
             try:
                 yield connection
             except Exception:
@@ -63,14 +68,20 @@ class DatabaseSessionManager(metaclass=Registry):
             msg = "DatabaseSessionManager is not initialized"
             raise Exception(msg)
 
-        session = self._sessionmaker()
-        try:
+        async with self._lock, self._sessionmaker() as session:
             yield session
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+
+
+def _lock_for(root_path):
+    """The lock of a manager already open on this database, or a new one.
+
+    Two proposal strings can name one database, such as "1234" and "001234".
+    """
+    for manager in DatabaseSessionManager.registry.values():  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+        if manager.root_path == root_path:
+            return manager._lock
+
+    return asyncio.Lock()
 
 
 def get_session(proposal) -> AsyncSession:
@@ -94,6 +105,14 @@ async def get_database_mtime(proposal) -> int | None:
         return None
 
     return stat.st_mtime_ns
+
+
+def get_lock(proposal) -> asyncio.Lock:
+    """The lock `get_session` and `get_connection` take on this database.
+
+    Hold it around reads that open the database themselves, such as DAMNIT's API.
+    """
+    return DatabaseSessionManager(proposal)._lock
 
 
 # -----------------------------------------------------------------------------

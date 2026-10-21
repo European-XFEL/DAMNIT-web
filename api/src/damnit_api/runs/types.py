@@ -101,6 +101,9 @@ class Cell:
     id: strawberry.ID
     name: str
     error: CellError | None
+    # When DAMNIT stored the value; for a value typed by hand in the DAMNIT GUI,
+    # the time of that edit.
+    computed_at: Timestamp | None
     summary: CellSummary
 
 
@@ -158,6 +161,7 @@ class DamnitRun:
                 id=strawberry.ID(prefix + name),
                 name=name,
                 error=error,
+                computed_at=entry.get("timestamp"),
                 summary=CellSummary(value=Any(value), dtype=dtype),
             )
 

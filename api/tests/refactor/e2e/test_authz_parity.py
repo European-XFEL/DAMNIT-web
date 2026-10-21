@@ -3,13 +3,6 @@
 The minted session user (`e2etester`) is a member of exactly the recorded proposals
 {900000, 900001, 900549} (see `tests/mock/mymdc/identity_map.py`), so membership and
 non-membership are fixture properties, not live MyMdC state.
-
-!!! warning
-
-    These tests pin today's deny behaviour, which has a known issue to fix: an
-    unauthenticated GraphQL request raises an unhandled `ValueError` rather than
-    returning a 401 (see `test_graphql_query_without_session_unchanged`). Once
-    fixed, update the tests to reflect the new behaviour.
 """
 
 import pytest
@@ -83,14 +76,10 @@ async def test_member_passes_authorization_unchanged(logged_in_client):
     assert payload["data"]["runs"]
 
 
-async def test_graphql_query_without_session_unchanged(e2e_client):
-    """Today an unauthenticated GraphQL request is NOT turned into an HTTP error.
+async def test_graphql_query_without_session_answers_401(e2e_client):
+    response = await e2e_client.post("/graphql", json=runs_query(MEMBER_PROPOSAL))
 
-    !!! todo
-
-        Currently session-lookup `ValueError` is unhandled (surfaced here by raw ASGI
-        transport). This should become a proper 401 error, test and must be updated
-        this test when it does.
-    """
-    with pytest.raises(ValueError, match="No user info in session"):
-        await e2e_client.post("/graphql", json=runs_query(MEMBER_PROPOSAL))
+    assert response.status_code == 401
+    body = response.json()
+    assert body["message"] == "No user info in session"
+    assert body["status_code"] == 401
