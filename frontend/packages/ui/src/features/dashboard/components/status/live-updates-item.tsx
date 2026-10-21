@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useReactiveVar } from '@apollo/client/react'
 import { Box, Indicator, rem, Text, VisuallyHidden } from '@mantine/core'
 import { useReducedMotion } from '@mantine/hooks'
-import { IconBroadcast, IconBroadcastOff } from '@tabler/icons-react'
+import { IconBroadcast } from '@tabler/icons-react'
 
 import StatusItem from '#src/components/statuses/status-item'
 import {
@@ -111,6 +111,9 @@ const EASE_BACK_DURATION = 300
 // nearly a whole turn in one short ease.
 const EASE_BACK_ANGLE = 30
 
+// The slash of Tabler's IconBroadcastOff.
+const SLASH = 'M3 3l18 18'
+
 type LiveUpdatesIconProps = {
   status: LiveUpdatesStatus
 }
@@ -133,22 +136,16 @@ function LiveUpdatesIcon({ status }: LiveUpdatesIconProps) {
       withBorder
       classNames={{ indicator: classes.dot }}
     >
-      {status === 'stopped' || status === 'off' ? (
-        <IconBroadcastOff
-          style={ICON_STYLE}
-          stroke={1.5}
-          color={status === 'off' ? 'var(--mantine-color-gray-5)' : undefined}
-          aria-hidden
-        />
-      ) : (
-        <IconBroadcast
-          className={classes.broadcast}
-          data-status={status}
-          style={ICON_STYLE}
-          stroke={1.5}
-          aria-hidden
-        />
-      )}
+      <IconBroadcast
+        className={classes.broadcast}
+        data-status={status}
+        style={ICON_STYLE}
+        stroke={1.5}
+        aria-hidden
+      >
+        <path className={classes.slashGap} d={SLASH} />
+        <path className={classes.slash} d={SLASH} />
+      </IconBroadcast>
     </Indicator>
   )
 }

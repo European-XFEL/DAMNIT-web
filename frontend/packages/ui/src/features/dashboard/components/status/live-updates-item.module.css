@@ -20,3 +20,31 @@
     opacity: 0;
   }
 }
+
+/* One dash a little longer than the slash, offset out of sight until stopped
+   draws it in from its start. */
+.broadcast :is(.slashGap, .slash) {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  transition: stroke-dashoffset 300ms ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* 3 px wide in the item's background, under the 1 px slash, so the slash
+   parts the arcs with a 1 px gap on each side. */
+.broadcast .slashGap {
+  stroke: var(--status-item-background);
+  stroke-width: 4.5;
+}
+
+.broadcast:is([data-status='stopped'], [data-status='off'])
+  :is(.slashGap, .slash) {
+  stroke-dashoffset: 0;
+}
+
+.broadcast[data-status='off'] {
+  color: var(--mantine-color-gray-5);
+}
