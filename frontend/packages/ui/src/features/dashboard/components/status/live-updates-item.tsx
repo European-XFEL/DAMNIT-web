@@ -106,6 +106,10 @@ const DOT_COLORS = {
 
 const SPIN = [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }]
 const SPIN_DURATION = 1200
+const EASE_BACK_DURATION = 300
+// Under this the arc eases back to 0°, since easing on to 360° would whirl it
+// nearly a whole turn in one short ease.
+const EASE_BACK_ANGLE = 30
 
 type LiveUpdatesIconProps = {
   status: LiveUpdatesStatus
@@ -149,6 +153,8 @@ function LiveUpdatesIcon({ status }: LiveUpdatesIconProps) {
   )
 }
 
+// Web Animations rather than a CSS animation, which loses its angle once the
+// status changes, so the arc eases back to rest from wherever it stopped.
 function useArcSpin(spinning: boolean) {
   const ref = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion(false, {
@@ -166,7 +172,20 @@ function useArcSpin(spinning: boolean) {
       iterations: Infinity,
     })
 
-    return () => spin.cancel()
+    return () => {
+      const turn = (Number(spin.currentTime) % SPIN_DURATION) / SPIN_DURATION
+      const angle = turn * 360
+      const rest = angle < EASE_BACK_ANGLE ? 0 : 360
+
+      spin.cancel()
+      arc.animate(
+        [
+          { transform: `rotate(${angle}deg)` },
+          { transform: `rotate(${rest}deg)` },
+        ],
+        { duration: EASE_BACK_DURATION, easing: 'ease-out' }
+      )
+    }
   }, [spinning, reducedMotion])
 
   return ref
