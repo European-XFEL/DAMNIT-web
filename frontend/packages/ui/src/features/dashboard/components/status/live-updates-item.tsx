@@ -20,6 +20,8 @@ import {
 } from '#src/graphql/live-updates'
 import { formatClockTime, formatLongDate } from '#src/utils/time'
 
+import classes from './live-updates-item.module.css'
+
 // Most connects take well under a second, and a spinner for that long would
 // only flicker.
 const CONNECTING_DELAY = 1000
@@ -135,6 +137,7 @@ function LiveUpdatesIcon({ status }: LiveUpdatesIconProps) {
       offset={2}
       display="flex"
       withBorder
+      classNames={{ indicator: classes.dot }}
     >
       {ICONS[status]}
     </Indicator>
