@@ -151,6 +151,23 @@ export function useTableRuns({
     deferredFetch.current = null
   }, [])
 
+  // Only frees the slot for a page in view that wants it: with none waiting,
+  // stopping would throw the work away.
+  const stopDeferredOutOfView = useCallback(() => {
+    const holder = deferredFetch.current
+    const visible = visiblePages.current
+    if (!holder || visible.has(holder.page)) {
+      return
+    }
+
+    const wanted = [...visible].some((page) =>
+      wantsDeferred(pageState(pageStates.current, page))
+    )
+    if (wanted) {
+      stopDeferred()
+    }
+  }, [stopDeferred])
+
   // Fetch the values `@lightweight` held back on the page that most needs them.
   // One pass runs at a time, and this hook picks which page rather than the
   // priority link: only the hook knows what the user is looking at.
@@ -383,18 +400,7 @@ export function useTableRuns({
       }
     }
 
-    // The page holding the slot has scrolled away. Give it up only if a visible
-    // page wants it; with none waiting, that would throw the work away.
-    const holder = deferredFetch.current
-    if (holder && !visible.has(holder.page)) {
-      const wanted = pages.some((page) =>
-        wantsDeferred(pageState(states, page))
-      )
-      if (wanted) {
-        stopDeferred()
-      }
-    }
-
+    stopDeferredOutOfView()
     ensurePagesLoaded(pages)
     startNextDeferred()
   }, [
@@ -403,7 +409,7 @@ export function useTableRuns({
     pageSize,
     ensurePagesLoaded,
     startNextDeferred,
-    stopDeferred,
+    stopDeferredOutOfView,
   ])
 
   const onVisibleRegionChanged = useCallback(
