@@ -5,15 +5,24 @@ import {
   useMantineTheme,
   rem,
 } from '@mantine/core'
-import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
+import type { ComponentType } from 'react'
+import {
+  Arrow as LaagArrow,
+  type ArrowProps,
+  type LayerProps,
+  type UseLayerArrowProps,
+} from 'react-laag'
 
 import CellErrorCard from '#src/components/feedback/cell-error-card'
 import { type CellError } from '#src/utils/cell-errors'
 import { assertNever } from '#src/utils/helpers'
 
+// react-laag's Arrow type lists two props @types/react 18.3 dropped, while its
+// ArrowProps is built from the installed @types/react.
+const Arrow = LaagArrow as unknown as ComponentType<ArrowProps>
+
 export type CellTooltip =
-  | { kind: 'error'; error: CellError }
-  | { kind: 'image'; src: string }
+  { kind: 'error'; error: CellError } | { kind: 'image'; src: string }
 
 type TableTooltipProps = {
   target: CellTooltip
