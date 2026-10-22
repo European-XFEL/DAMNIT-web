@@ -36,7 +36,7 @@ type StatusItemProps = {
     // `loading`, which disables the button and so drops its focus.
     busy?: boolean
   }
-  warning?: boolean
+  level?: 'warning'
 }
 
 function StatusItem({
@@ -46,7 +46,7 @@ function StatusItem({
   value,
   'aria-label': ariaLabel,
   action,
-  warning = false,
+  level,
 }: StatusItemProps) {
   const { opened, open, close, itemRef, setBubble, itemProps, bubbleProps } =
     useBubble({ enabled: action != null })
@@ -85,7 +85,7 @@ function StatusItem({
             ref={itemRef}
             component="span"
             className={`${classes.item} mantine-focus-auto`}
-            mod={{ action: action != null, warning }}
+            mod={{ action: action != null, level }}
             tabIndex={0}
             role={action ? 'button' : ariaLabel ? 'img' : undefined}
             aria-disabled={action?.busy || undefined}

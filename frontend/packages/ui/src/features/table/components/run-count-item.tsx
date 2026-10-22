@@ -61,7 +61,7 @@ export const RunCountItem = memo(function RunCountItem({
               }
             : undefined
         }
-        warning={failure != null}
+        level={failure != null ? 'warning' : undefined}
       />
       <VisuallyHidden role="status">
         {failure ? `${failure.name}.` : ''}

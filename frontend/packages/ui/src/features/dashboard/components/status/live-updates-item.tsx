@@ -58,7 +58,7 @@ function LiveUpdatesItem() {
           }
           icon={icon}
           action={lost ? { ...TRY_NOW, busy: tryShown } : undefined}
-          warning={lost}
+          level={lost ? 'warning' : undefined}
         />
       </Box>
       <VisuallyHidden role="status">{hidden ? '' : name}</VisuallyHidden>
