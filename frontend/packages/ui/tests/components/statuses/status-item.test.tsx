@@ -302,6 +302,36 @@ describe('retrying', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
+  test('a double click does not press the action its first click brought in', async () => {
+    const reload = vi.fn()
+    const stoppedItem = (
+      <StatusItem
+        tooltip="Live updates stopped."
+        aria-label="Stopped"
+        icon={<IconBroadcastOff aria-hidden />}
+        action={{ label: 'Reload', icon: null, onClick: reload }}
+      />
+    )
+    const screen = await renderLostItem({
+      // The retry finds the login has ended, and live updates stop
+      onClick: () => screen.rerender(stoppedItem),
+    })
+    await userEvent.hover(lostItemButton(screen))
+    const reloadButton = screen.getByRole('button', {
+      name: 'Reload',
+      exact: true,
+    })
+
+    // Double-click Try now
+    await userEvent.dblClick(tryNowButton(screen))
+    await expect.element(reloadButton).toBeVisible()
+    expect(reload).not.toHaveBeenCalled()
+
+    // Click Reload
+    await userEvent.click(reloadButton)
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
   test('focus on the button moves to the item when the action goes', async () => {
     const screen = await renderLostItem()
     await userEvent.tab()
