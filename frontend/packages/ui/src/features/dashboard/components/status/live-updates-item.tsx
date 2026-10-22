@@ -31,7 +31,9 @@ function LiveUpdatesItem() {
   const hidden = useConnectingHidden(state)
   const tryShown = useShownAfter(state.trying ?? false)
   const lost = state.status === 'reconnecting'
-  const { name, detail } = describe(state, { tryShown })
+  const { name, time, detail } = describe(state, { tryShown })
+  const dated = time == null ? '' : ` ${formatDateAndTime(time)}.`
+  const sentence = name + dated
 
   // A new icon once shown, so a quick first connect shows it already live,
   // not easing and fading out of a spin it ran while hidden.
@@ -47,11 +49,14 @@ function LiveUpdatesItem() {
         style={hidden ? { visibility: 'hidden' } : undefined}
       >
         <StatusItem
-          aria-label={name}
+          aria-label={sentence}
           tooltip={
             <>
-              <Text span inherit fw={600} display="block">
-                {name}
+              <Text span inherit display="block">
+                <Text span inherit fw={600}>
+                  {name}
+                </Text>
+                {dated}
               </Text>
               {detail && ` ${detail}`}
             </>
@@ -61,7 +66,7 @@ function LiveUpdatesItem() {
           level={lost ? 'warning' : undefined}
         />
       </Box>
-      <VisuallyHidden role="status">{hidden ? '' : name}</VisuallyHidden>
+      <VisuallyHidden role="status">{hidden ? '' : sentence}</VisuallyHidden>
     </>
   )
 }
@@ -81,9 +86,11 @@ function describe(
             ? `No changes since ${formatDateAndTime(since)}.`
             : `Last update ${formatDateAndTime(lastPushAt)}.`,
       }
+    // The time stays out of the bold name, so the message reads first.
     case 'reconnecting':
       return {
-        name: `Lost live updates ${formatDateAndTime(since)}.`,
+        name: 'Lost live updates',
+        time: since,
         detail: describeRetry({ tryShown }),
       }
     case 'stopped':
