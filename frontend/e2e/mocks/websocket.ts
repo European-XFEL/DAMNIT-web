@@ -1,6 +1,8 @@
 import type { Page, WebSocketRoute } from '@playwright/test'
 
 import {
+  SEED_TIMESTAMP_MS,
+  shapeMetadata,
   shapeRun,
   type Meta,
   type RunData,
@@ -13,10 +15,12 @@ import {
 // stay numeric to match the seed; `deliver` pairs them with the open proposal.
 export type LatestData = {
   runs: Record<string, RunData['variables']>
+  // The server's current table metadata, changed or not. Like the backend,
+  // `deliver` sends it only when this subscription has not seen it yet.
   metadata: {
     runs: number[]
     variables: Meta['variables']
-    tags?: Meta['tags']
+    tags: Meta['tags']
     groups?: Meta['groups']
   }
 }
@@ -62,16 +66,24 @@ export async function mockWebSocket(
   // paint under load) wait here and are delivered in order the moment the
   // subscription opens, so a test never has to race the socket.
   const pending: LatestData[] = []
+  let lastMetadata: string | undefined
   let refusalsLeft = 0
   let connections = 0
 
   // The backend stamps each push with an advancing epoch-ms timestamp, which the
   // app feeds back as its subscription cursor. Model that so the stored cursor
   // looks real; the exact value does not affect delivery.
-  let clock = 1_700_000_000_000
+  let clock = SEED_TIMESTAMP_MS
   const nextTimestamp = () => (clock += 1000)
 
   const deliver = ({ runs, metadata }: LatestData) => {
+    const metadataJson = JSON.stringify(metadata)
+    const metadataChanged = metadataJson !== lastMetadata
+    if (Object.keys(runs).length === 0 && !metadataChanged) {
+      return
+    }
+
+    lastMetadata = metadataJson
     const timestamp = nextTimestamp()
     socket?.send(
       JSON.stringify({
@@ -88,18 +100,9 @@ export async function mockWebSocket(
                   run: Number(run),
                 })
               ),
-              metadata: {
-                __typename: 'TableMeta',
-                runs: metadata.runs.map((run) => ({
-                  __typename: 'RunId',
-                  proposal,
-                  run,
-                })),
-                variables: metadata.variables,
-                tags: metadata.tags ?? {},
-                groups: metadata.groups ?? {},
-                timestamp,
-              },
+              metadata: metadataChanged
+                ? shapeMetadata(metadata, { proposal, timestamp })
+                : null,
               timestamp,
             },
           },
@@ -124,6 +127,7 @@ export async function mockWebSocket(
           break
         case 'subscribe':
           activeId = msg.id
+          lastMetadata = undefined
           for (const data of pending.splice(0)) {
             deliver(data)
           }
