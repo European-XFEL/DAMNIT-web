@@ -25,7 +25,13 @@ function cell({
   dtype?: string
   error?: CellError | null
 }): Cell {
-  return { id: `p2956:6:${name}`, name, error, summary: { value, dtype } }
+  return {
+    id: `p2956:6:${name}`,
+    name,
+    error,
+    computed_at: null,
+    summary: { value, dtype },
+  }
 }
 
 const RUN_6 = [

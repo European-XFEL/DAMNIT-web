@@ -30,7 +30,7 @@ packages/ui/src/
   features/     auth, context-file, dashboard, plots, proposals, table
   components/   presentational only: no store, auth, or Apollo
   graphql/      Apollo client, shared documents, operation names
-  lib/  utils/  styles/   shared leaves
+  hooks/  lib/  utils/  styles/   shared leaves
   data/         the table slice and the proposal queries: the server state
                 still held outside Apollo
 ```
@@ -73,8 +73,8 @@ proposals in one file (`typePolicies` in `graphql/type-policies.ts`).
   in place.
 - **Preview plots** render straight from the Apollo cache. `extracted_data`
   fetches one run per call and has no batch field, so `usePreviewPlotData`
-  builds a document that aliases the field per run (`r142:
-  extracted_data(run: 142, ...)`), chunked by run value. One
+  builds a document that aliases the field per run
+  (`r142: extracted_data(run: 142, ...)`), chunked by run value. One
   `PreviewChunkLoader` per chunk fetches
   cache-and-network, while the parent watches the whole aliased document
   cache-only with `returnPartialData`, so the plot fills in as chunks land.

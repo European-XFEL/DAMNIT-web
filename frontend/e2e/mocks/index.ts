@@ -10,6 +10,7 @@ import {
   runNumber,
   unmockedOperationError,
   type MockDataSource,
+  type RunData,
 } from '@damnit-frontend/shared/mocks'
 import { accessibleProposals, type Example } from '#examples/xpcs'
 
@@ -31,6 +32,22 @@ const monacoVsDir = path.join(
   ),
   'min/vs'
 )
+
+// The example data has no computed times, so give every value one, run N a
+// minute after run N - 1. DAMNIT never computes `run`, so it gets none.
+function withComputedTimes(data: RunData[]): RunData[] {
+  return data.map((run) => {
+    const computed_at = 1_700_000_000_000 + (runNumber(run) - 1) * 60_000
+    const variables = Object.fromEntries(
+      Object.entries(run.variables).map(([name, variable]) => [
+        name,
+        name === 'run' ? variable : { ...variable, computed_at },
+      ])
+    )
+
+    return { ...run, variables }
+  })
+}
 
 export type MockApi = LiveUpdatesMock & {
   // GraphQL operations and REST paths the router had no mock for; the test
@@ -69,7 +86,7 @@ export async function mockApi(
   const accessible = accessibleProposals(example).map(String)
 
   // Replaced rather than mutated, so editRuns leaves the shared example alone.
-  let runData = example.data
+  let runData = withComputedTimes(example.data)
 
   const api: MockApi = {
     unmockedRequests: [],

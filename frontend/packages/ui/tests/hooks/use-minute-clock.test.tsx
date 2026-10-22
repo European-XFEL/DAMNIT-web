@@ -1,7 +1,7 @@
 import { renderHook } from 'vitest-browser-react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
-import { useMinuteClock } from '#src/features/context-file/hooks/use-minute-clock'
+import { useMinuteClock } from '#src/hooks/use-minute-clock'
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
