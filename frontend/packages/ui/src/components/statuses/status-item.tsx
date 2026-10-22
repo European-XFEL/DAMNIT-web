@@ -36,7 +36,9 @@ type StatusItemProps = {
     // `loading`, which disables the button and so drops its focus.
     busy?: boolean
   }
-  level?: 'warning'
+  // An error is a solid red ground, for an item that shows only an icon: words
+  // on it read under 4.5:1.
+  level?: 'warning' | 'error'
 }
 
 function StatusItem({
