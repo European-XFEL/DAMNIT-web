@@ -12,7 +12,7 @@ export type LiveUpdatesStatus =
 export type LiveUpdatesState = {
   status: LiveUpdatesStatus
   // When the status began. Live counts from when the proposal opened instead,
-  // if it opened later on a socket that was already live.
+  // if that was later, and a stop after a loss keeps the time of the loss.
   since: number
   lastPushAt?: number
 }
@@ -74,7 +74,12 @@ export function nextLiveUpdates(
     case 'pushed':
       return { ...state, lastPushAt: now }
     case 'failed':
-      return { ...state, status: 'stopped', since: now }
+      // Nothing has arrived since a loss, so a stop after one keeps its time.
+      return {
+        ...state,
+        status: 'stopped',
+        since: state.status === 'reconnecting' ? state.since : now,
+      }
     case 'disabled':
       return { status: 'off', since: now }
   }

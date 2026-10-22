@@ -103,10 +103,10 @@ test('graphql-ws closing a socket nothing uses reads as connecting, not lost', (
 })
 
 test('a failed subscription stops live updates', () => {
-  const lost: LiveUpdatesState = { status: 'reconnecting', since: 0 }
+  const live: LiveUpdatesState = { status: 'live', since: 0 }
 
   vi.setSystemTime(3000)
-  const failed = nextLiveUpdates(lost, { type: 'failed' })
+  const failed = nextLiveUpdates(live, { type: 'failed' })
 
   expect(failed).toEqual({ status: 'stopped', since: 3000 })
 })
