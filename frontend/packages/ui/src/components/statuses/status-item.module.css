@@ -70,7 +70,7 @@
   display: flex;
   gap: 16px;
   align-items: center;
-  max-width: min(380px, calc(100vw - 20px));
+  max-width: min(420px, calc(100vw - 20px));
   padding: 8px 10px;
   border: 0;
   background: var(--mantine-color-gray-9);
