@@ -6,7 +6,7 @@
     "node": ">=24",
     "pnpm": ">=10"
   },
-  "packageManager": "pnpm@10.21.0",
+  "packageManager": "pnpm@10.34.6",
   "scripts": {
     "lint:prettier": "pnpm -r lint:prettier",
     "lint:eslint": "pnpm -r lint:eslint",
