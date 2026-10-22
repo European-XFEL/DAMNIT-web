@@ -4,7 +4,9 @@ import { IconInfoCircle } from '@tabler/icons-react'
 import cx from 'clsx'
 
 import { useAppSelector } from '#src/app/store/hooks'
+import { ViewStatus } from '#src/components/statuses/view-status'
 import { useTableMeta } from '#src/data/table/use-table-meta'
+import ComputedItem from '#src/features/plots/components/computed-item'
 
 import Plot from './plot'
 import classes from './plot.module.css'
@@ -75,7 +77,7 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
 
   const runNumbers = useMemo(() => runIds.map((run) => run.run), [runIds])
 
-  const summaryData = useSummaryPlotData({
+  const { data: summaryData, computedAt } = useSummaryPlotData({
     runIds,
     variables: plot.variables,
     enabled: isSummary,
@@ -122,6 +124,11 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
         </UnableToDisplayAlert>
       ) : (
         <Plot traces={traces} meta={meta} />
+      )}
+      {computedAt !== null && (
+        <ViewStatus>
+          <ComputedItem time={computedAt} />
+        </ViewStatus>
       )}
     </Stack>
   )

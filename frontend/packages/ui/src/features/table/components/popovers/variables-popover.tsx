@@ -452,9 +452,10 @@ function VariableList() {
 
   const rows = useMemo(
     () => [
-      ...pinnedColumns.map(
-        (column): ColumnBlock => ({ kind: 'variable', ...column })
-      ),
+      ...pinnedColumns.map((column): ColumnBlock => ({
+        kind: 'variable',
+        ...column,
+      })),
       ...blocks,
     ],
     [pinnedColumns, blocks]

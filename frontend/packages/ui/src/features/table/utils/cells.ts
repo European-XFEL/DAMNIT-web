@@ -171,15 +171,15 @@ const ERROR_ICON_SIZE = 14
 const ERROR_ICON_RENDER_SIZE = 56
 const ERROR_ICON_STROKE = 2
 
-// The error card's Tabler icons (v3.31.0) as raw paths, so the canvas builds
+// The error card's Tabler icons (v3.49.0) as raw paths, so the canvas builds
 // the SVG itself instead of pulling react-dom/server into the client bundle.
 const ERROR_ICON_PATHS: Record<ErrorKind, string> = {
   error:
     '<path d="M12 9v4" />' +
-    '<path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />' +
+    '<path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" />' +
     '<path d="M12 16h.01" />',
   missing:
-    '<path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />' +
+    '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />' +
     '<path d="M12 17l0 .01" />' +
     '<path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4" />',
   skipped: '<path d="M7 7l5 5l-5 5" />' + '<path d="M13 7l5 5l-5 5" />',

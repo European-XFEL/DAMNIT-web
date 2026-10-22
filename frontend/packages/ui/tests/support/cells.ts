@@ -18,6 +18,7 @@ export function serverCell({
     id: cellId({ database, proposal, run, name }),
     name,
     error,
+    computed_at: null,
     summary: { __typename: 'CellSummary', value, dtype },
   }
 }

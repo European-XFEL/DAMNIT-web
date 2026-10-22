@@ -1,10 +1,14 @@
-import { DEFAULT_THEME } from '@mantine/core'
-
 export const FONT_NAME_SANS = 'Source Sans 3 Variable'
 export const FONT_NAME_MONO = 'Source Code Pro Variable'
 
-export const FONT_FAMILY_SANS = `'${FONT_NAME_SANS}', ${DEFAULT_THEME.fontFamily}`
-export const FONT_FAMILY_MONO = `'${FONT_NAME_MONO}', ${DEFAULT_THEME.fontFamilyMonospace}`
+// Mantine's default stacks, copied so the node tests need not load Mantine.
+const SYSTEM_SANS =
+  '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji'
+const SYSTEM_MONO =
+  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace'
+
+export const FONT_FAMILY_SANS = `'${FONT_NAME_SANS}', ${SYSTEM_SANS}`
+export const FONT_FAMILY_MONO = `'${FONT_NAME_MONO}', ${SYSTEM_MONO}`
 
 // The body scale in px. theme.ts turns these into the rem tokens the DOM
 // reads; the grid and Plotly take the number itself.

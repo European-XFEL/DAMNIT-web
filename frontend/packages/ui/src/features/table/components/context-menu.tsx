@@ -25,7 +25,10 @@ const ContextMenu = ({
     return
   },
 }: ContextMenuProps) => {
-  const { layerProps, renderLayer } = useLayer({
+  const {
+    layerProps: { ref: layerRef },
+    renderLayer,
+  } = useLayer({
     isOpen,
     auto: true,
     placement: 'bottom-start',
@@ -40,7 +43,7 @@ const ContextMenu = ({
   return (
     isOpen &&
     renderLayer(
-      <div ref={layerProps.ref}>
+      <div ref={layerRef}>
         <MantineContextMenu
           x={localPosition.x + bounds.x}
           y={localPosition.y + bounds.y}

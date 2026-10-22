@@ -674,6 +674,7 @@ describe('waiting for the heavy values to fill in', () => {
                 id: `${PROPOSAL}:1:energy`,
                 name: 'energy',
                 error: null,
+                computed_at: null,
                 summary: {
                   __typename: 'CellSummary',
                   value: 1,

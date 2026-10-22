@@ -11,7 +11,9 @@ type VariableValue =
 // renders a status glyph plus a hover card from it.
 type VariableFailure = { dtype: 'string'; value: null; error: VariableError }
 
-type Variable = VariableValue | VariableFailure
+// `computed_at` is in milliseconds. The example data has none, so the demo
+// shows no data age.
+type Variable = (VariableValue | VariableFailure) & { computed_at?: number }
 
 type SourceMeta = {
   proposal_number: number

@@ -3,7 +3,7 @@ import { useQuery, useReactiveVar } from '@apollo/client/react'
 import { useDidUpdate } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
-import { DTYPES, VARIABLES } from '#src/constants'
+import { VARIABLES } from '#src/constants'
 import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   TABLE_DATA_QUERY,
@@ -13,7 +13,6 @@ import {
 import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
 import {
   getTitleByName,
-  hasValue,
   indexRunCells,
   runKey,
 } from '#src/data/table/table-data.transforms'
@@ -22,6 +21,7 @@ import { useTableMeta } from '#src/data/table/use-table-meta'
 import { reconnectCount } from '#src/graphql/live-updates'
 
 import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
+import { drawnCells, newestComputedTime } from './summary-plot.transforms'
 
 type UseSummaryPlotDataOptions = {
   runIds: RunId[]
@@ -37,12 +37,16 @@ type UseSummaryPlotDataOptions = {
 // only the runs already scrolled into cache, so it stays network-backed; the
 // merge policy returning a stable list on value-only pushes is what keeps this
 // from re-running on every cache write. A run is charted only when every
-// variable it plots is a real number.
+// variable it plots is a real number. `computedAt` is when the newest charted
+// value was computed.
 export function useSummaryPlotData({
   runIds,
   variables,
   enabled,
-}: UseSummaryPlotDataOptions): PlotData | null {
+}: UseSummaryPlotDataOptions): {
+  data: PlotData | null
+  computedAt: number | null
+} {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const { variables: variableMeta } = useTableMeta()
 
@@ -90,7 +94,12 @@ export function useSummaryPlotData({
 
   const cells = useMemo(() => indexRunCells(runs ?? []), [runs])
 
-  return useMemo(() => {
+  const computedAt = useMemo(
+    () => (enabled ? newestComputedTime({ cells, runIds, variables }) : null),
+    [enabled, cells, runIds, variables]
+  )
+
+  const plotData = useMemo(() => {
     if (!enabled) {
       return null
     }
@@ -98,19 +107,10 @@ export function useSummaryPlotData({
     const series = variables.map(() => [] as number[])
 
     for (const id of runIds) {
-      const row = cells.get(runKey(id))
-      const points = variables.map((name) => row?.get(name))
-      const allNumeric = points.every(
-        (point) =>
-          hasValue(point) &&
-          typeof point.summary.value === 'number' &&
-          point.summary.dtype === DTYPES.number
-      )
-      if (allNumeric) {
-        points.forEach((point, index) => {
-          series[index].push(point!.summary.value as number)
-        })
-      }
+      const points = drawnCells(cells.get(runKey(id)), variables)
+      points?.forEach((point, index) => {
+        series[index].push(point.summary.value as number)
+      })
     }
 
     const [xVar, yVar] = variables
@@ -129,4 +129,6 @@ export function useSummaryPlotData({
 
     return { traces: [trace], meta }
   }, [enabled, cells, runIds, variables, variableMeta])
+
+  return { data: plotData, computedAt }
 }

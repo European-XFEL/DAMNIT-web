@@ -17,8 +17,7 @@ import {
 import classes from './site-footer.module.css'
 
 interface SiteAnchorProps
-  extends AnchorProps,
-    ElementProps<'a', keyof AnchorProps> {
+  extends AnchorProps, ElementProps<'a', keyof AnchorProps> {
   icon: ElementType<IconProps>
   children?: ReactNode
 }

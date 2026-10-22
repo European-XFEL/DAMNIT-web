@@ -138,7 +138,7 @@ test('charts a point per run from the values in the cache', async () => {
 
   const { result } = await renderSummary(runIdsFor([1, 2, 3]), wrapper)
 
-  const [trace] = result.current!.traces
+  const [trace] = result.current.data!.traces
   expect(trace.x?.value).toEqual([1, 2, 3])
   expect(trace.y?.value).toEqual([10, 20, 30])
   expect(trace.x?.name).toBe('Photon energy')
@@ -161,7 +161,7 @@ test('charts only the runs whose plotted variables are all numbers', async () =>
 
   // A half-charted run would pair run 4's energy with run 2's intensity and
   // silently shift every point after it.
-  const [trace] = result.current!.traces
+  const [trace] = result.current.data!.traces
   expect(trace.x?.value).toEqual([1, 4])
   expect(trace.y?.value).toEqual([10, 40])
 })
@@ -175,8 +175,8 @@ test('falls back to the variable name when it has left the context file', async 
 
   // The plot outlives the variable it charts, so an axis with no metadata
   // behind it is labelled by name rather than left blank.
-  expect(result.current!.meta.x?.name).toBe('Photon energy')
-  expect(result.current!.meta.y?.name).toBe('intensity')
+  expect(result.current.data!.meta.x?.name).toBe('Photon energy')
+  expect(result.current.data!.meta.y?.name).toBe('intensity')
 })
 
 test('reuses the cell index when the runs it charts change but the data does not', async () => {
@@ -190,7 +190,7 @@ test('reuses the cell index when the runs it charts change but the data does not
     wrapper
   )
   await vi.waitFor(() =>
-    expect(result.current!.traces[0].x?.value).toHaveLength(3)
+    expect(result.current.data!.traces[0].x?.value).toHaveLength(3)
   )
 
   const builds = vi.mocked(indexRunCells).mock.calls.length
@@ -198,7 +198,7 @@ test('reuses the cell index when the runs it charts change but the data does not
   // Deselecting a run hands the hook a new array without touching the cache.
   await rerender({ runIds: runIdsFor([1, 2]) })
 
-  expect(result.current!.traces[0].x?.value).toEqual([1, 2])
+  expect(result.current.data!.traces[0].x?.value).toEqual([1, 2])
   // Rebuilding here walks every run in the proposal to arrive at the same map.
   expect(vi.mocked(indexRunCells).mock.calls.length).toBe(builds)
 })
@@ -211,14 +211,14 @@ test('recharts when a deferred value lands on a run it already charts', async ()
 
   const { result } = await renderSummary(runIdsFor([1, 2]), wrapper)
   await vi.waitFor(() =>
-    expect(result.current!.traces[0].y?.value).toEqual([10, 20])
+    expect(result.current.data!.traces[0].y?.value).toEqual([10, 20])
   )
 
   // The fill carries run 2 alone, so which runs are cached never changes.
   writeRuns(cache, [runFor(2, { energy: 2, intensity: 999 })])
 
   await vi.waitFor(() =>
-    expect(result.current!.traces[0].y?.value).toEqual([10, 999])
+    expect(result.current.data!.traces[0].y?.value).toEqual([10, 999])
   )
 })
 
@@ -251,7 +251,7 @@ test('asks again for every run after live updates reconnect', async () => {
   countReconnect()
 
   await vi.waitFor(() =>
-    expect(result.current!.traces[0].y?.value).toEqual([10, 999])
+    expect(result.current.data!.traces[0].y?.value).toEqual([10, 999])
   )
 })
 
@@ -267,7 +267,7 @@ test('asks again after a reconnect while its first request is still unanswered',
   countReconnect()
 
   await vi.waitFor(() =>
-    expect(result.current!.traces[0].y?.value).toEqual([10, 999])
+    expect(result.current.data!.traces[0].y?.value).toEqual([10, 999])
   )
 })
 
@@ -283,7 +283,7 @@ test('asks for its runs once when opened after an earlier reconnect', async () =
 
   const { result } = await renderSummary(runIdsFor([1, 2]), wrapper)
   await vi.waitFor(() =>
-    expect(result.current!.traces[0].y?.value).toEqual([10, 999])
+    expect(result.current.data!.traces[0].y?.value).toEqual([10, 999])
   )
 
   expect(server.requests).toBe(1)
@@ -309,12 +309,12 @@ test('asks for its runs once when shown after a reconnect while hidden', async (
 
   // Live updates reconnect while the plot is hidden
   countReconnect()
-  expect(result.current).toBeNull()
+  expect(result.current.data).toBeNull()
 
   // The plot shows
   await rerender({ enabled: true })
   await vi.waitFor(() =>
-    expect(result.current!.traces[0].y?.value).toEqual([10, 999])
+    expect(result.current.data!.traces[0].y?.value).toEqual([10, 999])
   )
 
   expect(server.requests).toBe(1)

@@ -30,6 +30,7 @@
     "lodash": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
+    "plotly.js": "catalog:components",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",
     "react-laag": "catalog:frontend",

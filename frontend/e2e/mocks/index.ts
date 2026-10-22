@@ -10,6 +10,7 @@ import {
   runNumber,
   unmockedOperationError,
   type MockDataSource,
+  type RunData,
 } from '@damnit-frontend/shared/mocks'
 import { accessibleProposals, type Example } from '#examples/xpcs'
 
@@ -31,6 +32,22 @@ const monacoVsDir = path.join(
   ),
   'min/vs'
 )
+
+// The example data has no computed times, so give every value one, run N a
+// minute after run N - 1. DAMNIT never computes `run`, so it gets none.
+function withComputedTimes(data: RunData[]): RunData[] {
+  return data.map((run) => {
+    const computed_at = 1_700_000_000_000 + (runNumber(run) - 1) * 60_000
+    const variables = Object.fromEntries(
+      Object.entries(run.variables).map(([name, variable]) => [
+        name,
+        name === 'run' ? variable : { ...variable, computed_at },
+      ])
+    )
+
+    return { ...run, variables }
+  })
+}
 
 export type MockApi = LiveUpdatesMock & {
   // GraphQL operations and REST paths the router had no mock for; the test
@@ -69,7 +86,7 @@ export async function mockApi(
   const accessible = accessibleProposals(example).map(String)
 
   // Replaced rather than mutated, so editRuns leaves the shared example alone.
-  let runData = example.data
+  let runData = withComputedTimes(example.data)
 
   const api: MockApi = {
     unmockedRequests: [],
@@ -149,15 +166,14 @@ export async function mockApi(
     }
   )
 
-  // The real endpoint 500s with "No user info in session" when the cookie is
-  // gone, which PrivateRoute reads as isError and the LoggedOutPage reads as
-  // logged out. Mirror that shape rather than a 401.
+  // Mirror the real 401 for a gone cookie: PrivateRoute reads it as isError
+  // and the LoggedOutPage as logged out.
   await page.route('**/oauth/userinfo**', (route) =>
     authed
       ? route.fulfill({ json: example.userInfo })
       : route.fulfill({
-          status: 500,
-          json: { error: 'No user info in session' },
+          status: 401,
+          json: { message: 'No user info in session', status_code: 401 },
         })
   )
 
@@ -169,7 +185,7 @@ export async function mockApi(
   )
 
   // Logout returns no logout_url, so the app full-page navigates to /logged-out.
-  // Flip the session off so the LoggedOutPage re-fetch of userinfo 500s and the
+  // Flip the session off so the LoggedOutPage re-fetch of userinfo 401s and the
   // "You have been logged out" branch renders, modelling the cleared session
   // cookie.
   await page.route('**/oauth/logout**', (route) => {
