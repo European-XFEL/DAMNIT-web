@@ -24,7 +24,7 @@ function tryNowButton(page: Page) {
 }
 
 function stoppedItem(page: Page) {
-  return statusBar(page).getByRole('img', { name: /^Live updates stopped/ })
+  return statusBar(page).getByRole('button', { name: /^Live updates stopped/ })
 }
 
 test('Try now on lost live updates reconnects without sitting out the wait', async ({
