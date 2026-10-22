@@ -111,6 +111,15 @@ test('a failed subscription stops live updates', () => {
   expect(failed).toEqual({ status: 'stopped', since: 3000 })
 })
 
+test('lost live updates that stop keep the time they were lost', () => {
+  const lost: LiveUpdatesState = { status: 'reconnecting', since: 10_000 }
+
+  vi.setSystemTime(12_000)
+  const failed = nextLiveUpdates(lost, { type: 'failed' })
+
+  expect(failed).toEqual({ status: 'stopped', since: 10_000 })
+})
+
 test('graphql-ws closing a refused socket leaves live updates stopped', () => {
   const stopped: LiveUpdatesState = { status: 'stopped', since: 3000 }
 
