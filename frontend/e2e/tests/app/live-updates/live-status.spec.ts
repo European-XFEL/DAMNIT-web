@@ -27,6 +27,10 @@ function stoppedItem(page: Page) {
   return statusBar(page).getByRole('button', { name: /^Live updates stopped/ })
 }
 
+function reloadButton(page: Page) {
+  return statusBar(page).getByRole('button', { name: 'Reload', exact: true })
+}
+
 test('Try now on lost live updates reconnects without sitting out the wait', async ({
   page,
   api,
@@ -102,6 +106,39 @@ test('a subscription the server ends shows live updates stopped', async ({
   api.endLiveUpdates()
 
   await expect(stoppedItem(page)).toBeVisible()
+})
+
+test('Reload on stopped live updates reloads the page', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expect(liveItem(page)).toBeVisible()
+  api.refuseLiveUpdates()
+  await stoppedItem(page).hover()
+
+  const load = page.waitForEvent('load')
+  await reloadButton(page).click()
+
+  await load
+})
+
+test('an ended login shows on stopped live updates', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expect(liveItem(page)).toBeVisible()
+
+  // graphql-ws waits about 1 s before it tries again
+  await api.endLogin()
+  await stoppedItem(page).hover()
+
+  await expect(statusBar(page).getByRole('dialog')).toContainText(
+    'Your login has ended.'
+  )
 })
 
 test.describe('a user with several proposals', () => {
