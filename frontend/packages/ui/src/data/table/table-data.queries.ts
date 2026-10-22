@@ -4,7 +4,7 @@ import {
   DEFERRED_TABLE_DATA_QUERY_NAME,
   TABLE_DATA_QUERY_NAME,
 } from './table-data.constants'
-import { type Run, type TableMeta } from './table-data.types'
+import type { Run, RunId, TableMeta } from './table-data.types'
 
 /*
  * -----------------------------
@@ -111,6 +111,21 @@ export const CACHED_RUNS_QUERY = gql`
     }
   }
 `
+
+// The selected run with every cell, asked for by identity rather than by page,
+// so the run panel catches up wherever the run sits in the table.
+export const SELECTED_RUN_QUERY = gql`
+  query SelectedRunQuery($proposal: String, $ids: [RunIdInput!]) {
+    runs(database: { proposal: $proposal }, ids: $ids) {
+      ${RUN_ALL_CELLS}
+    }
+  }
+`
+
+export type SelectedRunVariables = {
+  proposal: string
+  ids: RunId[]
+}
 
 export type TableDataResult = {
   runs: Run[]
