@@ -138,7 +138,13 @@ function StatusItem({
           <UnstyledButton
             className={classes.action}
             aria-disabled={action.busy || undefined}
-            onClick={runAction}
+            // A press can swap the action under the pointer, so the second
+            // click of a double click presses nothing.
+            onClick={(event) => {
+              if (event.detail < 2) {
+                runAction?.()
+              }
+            }}
             // A held Enter would press it again on every repeat.
             onKeyDown={(event) => {
               if (event.repeat) {
