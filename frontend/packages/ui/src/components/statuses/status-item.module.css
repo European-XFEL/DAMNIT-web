@@ -32,7 +32,7 @@
   cursor: pointer;
 }
 
-.item[data-warning] {
+.item[data-level='warning'] {
   /* Solid, unlike Mantine's translucent tint, so an icon can draw a ring or
      a gap in the same colour and have it blend into the background. */
   --status-item-background: color-mix(
