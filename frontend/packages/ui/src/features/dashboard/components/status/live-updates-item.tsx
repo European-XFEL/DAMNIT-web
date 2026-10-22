@@ -34,10 +34,24 @@ const TRY_NOW = {
   onClick: retryNow,
 }
 
+const RELOAD = {
+  label: 'Reload',
+  icon: (
+    <IconRefresh
+      style={{ width: rem(14), height: rem(14) }}
+      stroke={2}
+      aria-hidden
+    />
+  ),
+  onClick: () => window.location.reload(),
+  bubbleOnly: true,
+}
+
 function LiveUpdatesItem() {
   const state = useReactiveVar(liveUpdates)
   const hidden = useConnectingHidden(state)
   const lost = state.status === 'reconnecting'
+  const stopped = state.status === 'stopped'
   const { name, time, detail } = describe(state)
   const dated = time == null ? '' : ` ${formatDateAndTime(time)}.`
   const sentence = name + dated
@@ -69,8 +83,8 @@ function LiveUpdatesItem() {
             </>
           }
           icon={icon}
-          action={lost ? TRY_NOW : undefined}
-          level={lost ? 'warning' : undefined}
+          action={lost ? TRY_NOW : stopped ? RELOAD : undefined}
+          level={lost ? 'warning' : stopped ? 'error' : undefined}
         />
       </Box>
       <VisuallyHidden role="status">{hidden ? '' : sentence}</VisuallyHidden>
@@ -78,30 +92,34 @@ function LiveUpdatesItem() {
   )
 }
 
-function describe({ status, since, lastPushAt }: LiveUpdatesState) {
-  switch (status) {
+function describe(state: LiveUpdatesState) {
+  switch (state.status) {
     case 'connecting':
       return { name: 'Connecting to live updates...' }
     case 'live':
       return {
         name: 'Live updates.',
         detail:
-          lastPushAt == null
-            ? `No changes since ${formatDateAndTime(since)}.`
-            : `Last update ${formatDateAndTime(lastPushAt)}.`,
+          state.lastPushAt == null
+            ? `No changes since ${formatDateAndTime(state.since)}.`
+            : `Last update ${formatDateAndTime(state.lastPushAt)}.`,
       }
     // The time stays out of the bold name, so the message reads first.
     case 'reconnecting':
       return {
         name: 'Lost live updates',
-        time: since,
+        time: state.since,
         // A no-break space, so a wrap never strands the unit on its own line.
         detail: `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`,
       }
     case 'stopped':
       return {
-        name: 'Live updates stopped by the server.',
-        detail: 'Reload the page to try again.',
+        name: 'Live updates stopped',
+        time: state.since,
+        detail:
+          state.reason === 'login'
+            ? 'Your login has ended.'
+            : 'The server ended them.',
       }
     case 'off':
       return { name: 'The demo has no live updates.' }
@@ -119,7 +137,7 @@ const DOT_COLORS = {
   connecting: 'gray',
   live: 'green',
   reconnecting: 'yellow',
-  stopped: 'red',
+  stopped: undefined,
   off: undefined,
 }
 
