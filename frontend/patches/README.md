@@ -98,7 +98,9 @@ Fixed upstream in 7.17.8 by
 [#7773](https://github.com/mantinedev/mantine/pull/7773), which we cannot take:
 core 7.17.8 pins `@mantine/hooks` to its own version, and the catalog holds
 hooks at 7.17.5 (see the note there). Drop the patch once that hold lifts and
-`@mantine/core` reaches 7.17.8.
+`@mantine/core` reaches 7.17.8. Covered by
+`packages/ui/tests/patches/mantine-transition.test.tsx`, which reopens before
+the first frame.
 
 ## `plotly.js`
 
