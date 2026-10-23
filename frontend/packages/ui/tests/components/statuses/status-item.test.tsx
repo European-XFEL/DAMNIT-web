@@ -206,3 +206,74 @@ describe('tabbing into the bubble', () => {
     await expect.element(button).toBeVisible()
   })
 })
+
+describe('pressing Escape', () => {
+  test('the bubble closes and focus in it moves back to the item', async () => {
+    const screen = await renderLostItem()
+    const button = tryNowButton(screen)
+    await userEvent.tab()
+    await userEvent.tab()
+    await expect.element(button).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+
+    await expect.element(lostItemButton(screen)).toHaveFocus()
+    await expect.element(button).not.toBeInTheDocument()
+  })
+
+  test('the bubble closes even when the focused element keeps the key', async () => {
+    const screen = await renderWithPointerOff(
+      <>
+        {lostItem()}
+        {/* As Glide's hidden input does */}
+        <input
+          aria-label="Grid"
+          onKeyDown={(event) => event.stopPropagation()}
+        />
+      </>
+    )
+    const button = tryNowButton(screen)
+    await userEvent.hover(lostItemButton(screen))
+    await expect.element(button).toBeVisible()
+    ;(
+      screen.getByRole('textbox', { name: 'Grid' }).element() as HTMLElement
+    ).focus()
+
+    await userEvent.keyboard('{Escape}')
+
+    await expect.element(button).not.toBeInTheDocument()
+  })
+
+  test('the run panel keeps its run on the Escape that closes the bubble', async () => {
+    const onPanelEscape = vi.fn()
+    const screen = await renderWithPointerOff(
+      <>
+        {lostItem()}
+        {/* As the run panel does */}
+        <input
+          aria-label="Panel"
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && !event.defaultPrevented) {
+              onPanelEscape()
+            }
+          }}
+        />
+      </>
+    )
+    const button = tryNowButton(screen)
+    await userEvent.hover(lostItemButton(screen))
+    await expect.element(button).toBeVisible()
+    ;(
+      screen.getByRole('textbox', { name: 'Panel' }).element() as HTMLElement
+    ).focus()
+
+    // The first Escape closes the bubble
+    await userEvent.keyboard('{Escape}')
+    await expect.element(button).not.toBeInTheDocument()
+    expect(onPanelEscape).not.toHaveBeenCalled()
+
+    // The next one is the panel's
+    await userEvent.keyboard('{Escape}')
+    expect(onPanelEscape).toHaveBeenCalledOnce()
+  })
+})
