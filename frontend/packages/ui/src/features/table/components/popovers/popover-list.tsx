@@ -303,6 +303,8 @@ export function ListRow({
       c={muted ? mutedC : undefined}
       fs={italic ? 'italic' : undefined}
       lineClamp={1}
+      // The browser's own tooltip, as Primer's Truncate uses: it waits about a
+      // second, so scanning down a long list flashes nothing.
       title={columnTitle}
     >
       {columnTitle}

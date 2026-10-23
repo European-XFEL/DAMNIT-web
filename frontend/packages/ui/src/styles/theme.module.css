@@ -60,3 +60,16 @@
   margin-top: 4px;
   font-size: var(--mantine-font-size-xs);
 }
+
+/* A tooltip floats, so it reads at the floating size instead of Mantine's own
+   sm. */
+.tooltip {
+  font-size: var(--mantine-font-size-xs);
+}
+
+/* The edge only shows on a dark surface, such as the hover card. A class, not
+   an inline style, so the arrow keeps the edge's colour when it flips side. */
+.tooltip,
+.tooltipArrow {
+  border: 1px solid var(--mantine-color-default-border);
+}

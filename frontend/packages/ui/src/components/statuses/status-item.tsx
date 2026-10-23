@@ -3,7 +3,8 @@ import { Box, Tooltip } from '@mantine/core'
 
 import classes from './status-item.module.css'
 
-// Keyboard and touch users open the tooltip too, since it carries the words.
+// Touch users open the tooltip too, since it carries the words. A prop
+// replaces the theme's whole events object, so hover and focus stay listed.
 const TOOLTIP_EVENTS = { hover: true, focus: true, touch: true }
 
 type StatusItemProps = {

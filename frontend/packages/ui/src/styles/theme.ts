@@ -102,10 +102,16 @@ export const theme = createTheme({
     Table: {
       styles: { th: { fontWeight: 500 } },
     } satisfies ExtendComponent<TableFactory>,
-    // A tooltip floats, so it reads at the floating size instead of Mantine's
-    // own sm.
     Tooltip: {
-      styles: { tooltip: { fontSize: 'var(--mantine-font-size-xs)' } },
+      // The arrow pokes 4.7 px past the 1 px edge, so the tooltip sits 5 off.
+      // Mantine adds half the arrow to a number, and takes an object as is.
+      defaultProps: {
+        withArrow: true,
+        arrowSize: 8,
+        offset: { mainAxis: 5 },
+        events: { hover: true, focus: true, touch: false },
+      },
+      classNames: { tooltip: classes.tooltip, arrow: classes.tooltipArrow },
     } satisfies ExtendComponent<TooltipFactory>,
   },
 })

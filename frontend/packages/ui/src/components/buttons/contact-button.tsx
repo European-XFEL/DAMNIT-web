@@ -12,7 +12,6 @@ function ContactButton() {
       classNames={{ root: classes.root }}
     >
       <Tooltip
-        withArrow
         position="left"
         multiline
         w={260}
