@@ -173,3 +173,36 @@ describe('leaving the item', () => {
     await expect.element(button).toBeVisible()
   })
 })
+
+describe('tabbing into the bubble', () => {
+  test("focus moves from the item to the bubble's button", async () => {
+    const screen = await renderLostItem()
+    const button = tryNowButton(screen)
+    await userEvent.tab()
+    await expect.element(button).toBeVisible()
+
+    await userEvent.tab()
+
+    await expect.element(button).toHaveFocus()
+  })
+
+  test('focus coming back into the bubble as it fades keeps it open', async () => {
+    const screen = await renderWithPointerOff(
+      <>
+        {lostItem()}
+        <button type="button">Next</button>
+      </>
+    )
+    const button = tryNowButton(screen)
+    await userEvent.tab()
+    await userEvent.tab()
+    await expect.element(button).toHaveFocus()
+
+    // Tab on and straight back, inside the fade
+    await userEvent.keyboard('{Tab}{Shift>}{Tab}{/Shift}')
+    await waitPastCloseDelay()
+
+    await expect.element(button).toHaveFocus()
+    await expect.element(button).toBeVisible()
+  })
+})
