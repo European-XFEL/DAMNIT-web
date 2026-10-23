@@ -348,3 +348,26 @@ describe('retrying', () => {
     await expect.element(button).not.toBeInTheDocument()
   })
 })
+
+describe('following along with a screen reader', () => {
+  test("an item with an action is described by its bubble's words only while the bubble is open", async () => {
+    const screen = await renderLostItem()
+    const item = lostItemButton(screen)
+    await expect.element(item).not.toHaveAttribute('aria-describedby')
+
+    await userEvent.hover(item)
+
+    await expect.element(tryNowButton(screen)).toBeVisible()
+    await expect.element(item).toHaveAccessibleDescription('Lost live updates.')
+  })
+
+  test('an item with no action is described by its tooltip while it shows', async () => {
+    const screen = await renderWithPointerOff(liveItem)
+
+    await userEvent.tab()
+
+    await expect
+      .element(screen.getByRole('img', { name: 'Live' }))
+      .toHaveAccessibleDescription('Live updates.')
+  })
+})
