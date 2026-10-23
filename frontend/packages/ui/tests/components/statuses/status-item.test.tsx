@@ -6,6 +6,8 @@ import { IconBroadcastOff } from '@tabler/icons-react'
 import StatusItem from '#src/components/statuses/status-item'
 import { renderWithProviders } from '#tests/support/render'
 
+const CLOSE_DELAY = 200
+
 const TRY_NOW = { label: 'Try now', icon: null, onClick: () => {} }
 
 const lostItem = ({ onClick = TRY_NOW.onClick } = {}) => (
@@ -31,6 +33,14 @@ type Screen = Awaited<ReturnType<typeof renderWithPointerOff>>
 
 const lostItemButton = (screen: Screen) =>
   screen.getByRole('button', { name: 'Lost Try now' })
+
+const tryNowButton = (screen: Screen) =>
+  screen.getByRole('button', { name: 'Try now', exact: true })
+
+// Well past the delay and the bubble's 150 ms fade, since a fading button
+// still counts as visible and a busy runner fires timers late.
+const waitPastCloseDelay = () =>
+  new Promise((resolve) => setTimeout(resolve, CLOSE_DELAY * 3))
 
 describe('pressing the item', () => {
   test('a click on an item with an action runs it', async () => {
@@ -61,5 +71,105 @@ describe('pressing the item', () => {
     await userEvent.keyboard('[Space>5]')
 
     expect(onClick).toHaveBeenCalledOnce()
+  })
+})
+
+describe('opening the bubble', () => {
+  test('an item with an action opens its bubble on hover', async () => {
+    const screen = await renderLostItem()
+
+    await userEvent.hover(lostItemButton(screen))
+
+    await expect.element(tryNowButton(screen)).toBeVisible()
+  })
+
+  test('an item with an action opens its bubble on keyboard focus', async () => {
+    const screen = await renderLostItem()
+
+    await userEvent.tab()
+
+    await expect.element(tryNowButton(screen)).toBeVisible()
+  })
+
+  test('a tap on an item with an action opens its bubble', async () => {
+    const screen = await renderLostItem()
+
+    // A tap clicks with no hover first
+    ;(lostItemButton(screen).element() as HTMLElement).click()
+
+    await expect.element(tryNowButton(screen)).toBeVisible()
+  })
+
+  test('an item clicked open and shut stays shut when focus comes back to it', async () => {
+    const screen = await renderLostItem()
+    const item = lostItemButton(screen)
+    const button = tryNowButton(screen)
+
+    // Click it open, then move away
+    await userEvent.click(item)
+    await expect.element(button).toBeVisible()
+    await userEvent.unhover(item)
+    await expect.element(button).not.toBeInTheDocument()
+
+    // Focus leaves and comes back, as it does with the window
+    ;(item.element() as HTMLElement).blur()
+    ;(item.element() as HTMLElement).focus()
+    await waitPastCloseDelay()
+    await expect.element(button).not.toBeInTheDocument()
+  })
+})
+
+describe('leaving the item', () => {
+  test('the bubble stays open as the pointer moves onto it', async () => {
+    const screen = await renderLostItem()
+    const button = tryNowButton(screen)
+
+    // Hover the item
+    await userEvent.hover(lostItemButton(screen))
+    await expect.element(button).toBeVisible()
+
+    // Move onto the bubble and stay past the close delay
+    await userEvent.hover(button)
+    await waitPastCloseDelay()
+    await expect.element(button).toBeVisible()
+  })
+
+  test('the bubble closes once the pointer leaves', async () => {
+    const screen = await renderLostItem()
+    const item = lostItemButton(screen)
+    const button = tryNowButton(screen)
+    await userEvent.hover(item)
+    await expect.element(button).toBeVisible()
+
+    await userEvent.unhover(item)
+
+    await expect.element(button).not.toBeInTheDocument()
+  })
+
+  test('keyboard focus on the item holds the bubble open as the pointer leaves', async () => {
+    const screen = await renderLostItem()
+    const item = lostItemButton(screen)
+    const button = tryNowButton(screen)
+    await userEvent.tab()
+    await expect.element(button).toBeVisible()
+
+    // The pointer passes over the item and on
+    await userEvent.hover(item)
+    await userEvent.unhover(item)
+    await waitPastCloseDelay()
+
+    await expect.element(button).toBeVisible()
+  })
+
+  test('focus on the button holds the bubble open as the pointer leaves', async () => {
+    const screen = await renderLostItem()
+    const button = tryNowButton(screen)
+    await userEvent.hover(lostItemButton(screen))
+    await userEvent.click(button)
+
+    await userEvent.unhover(button)
+    await waitPastCloseDelay()
+
+    await expect.element(button).toBeVisible()
   })
 })
