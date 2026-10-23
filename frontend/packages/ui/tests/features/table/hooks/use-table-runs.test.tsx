@@ -9,7 +9,7 @@ import {
 } from '@apollo/client'
 import { ApolloProvider } from '@apollo/client/react'
 import { renderHook } from 'vitest-browser-react'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import {
   DEFERRED_TABLE_DATA_QUERY_NAME,
@@ -35,6 +35,7 @@ const LIGHTWEIGHT_NAME = `Lightweight${TABLE_DATA_QUERY_NAME}`
 afterEach(() => {
   liveRunStamps(new Map())
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 // A run whose only cell is a heavy value @lightweight held back, so the hook
@@ -130,8 +131,12 @@ const rejectsOnAbort = (
 // Answers the lightweight page reads at once, recording which pages started and
 // which were cancelled, so a test drives the timing by scrolling. Deferred reads
 // hang unless `answerDeferred` or `failDeferred`, which is how a test gets a page
-// past merely in flight.
-function createNetwork({ answerDeferred = false, failDeferred = false } = {}) {
+// past merely in flight. `failLightweight` refuses the page reads instead.
+function createNetwork({
+  answerDeferred = false,
+  failDeferred = false,
+  failLightweight = false,
+} = {}) {
   const started = { lightweight: [] as number[], deferred: [] as number[] }
   const cancelled = { deferred: [] as number[] }
 
@@ -139,6 +144,9 @@ function createNetwork({ answerDeferred = false, failDeferred = false } = {}) {
     const page = (operation.variables.page as number) ?? 1
     if (operation.operationName === LIGHTWEIGHT_NAME) {
       started.lightweight.push(page)
+      if (network.failLightweight) {
+        return refuses('the server cannot answer this page')
+      }
       return answers([runFor(page)])
     }
     started.deferred.push(page)
@@ -151,8 +159,9 @@ function createNetwork({ answerDeferred = false, failDeferred = false } = {}) {
     return hangsUntilCancelled(() => cancelled.deferred.push(page))
   })
 
-  // A test turns `failDeferred` off to bring the server back.
-  const network = { link, started, cancelled, failDeferred }
+  // A test turns a `fail` flag off to bring the server back, or on to take it
+  // down after the first page has loaded.
+  const network = { link, started, cancelled, failDeferred, failLightweight }
   return network
 }
 
@@ -162,16 +171,33 @@ const heavyValueFor = (cells: Map<string, RunCells>, run: number): unknown =>
 const timesStarted = (started: number[], page: number) =>
   started.filter((startedPage) => startedPage === page).length
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 200))
+// Long enough for the scroll window to settle, on the real clock or a fake one.
+const settle = async () => {
+  if (vi.isFakeTimers()) {
+    await vi.advanceTimersByTimeAsync(200)
+    return
+  }
+  await new Promise((resolve) => setTimeout(resolve, 200))
+}
+
+// The retry clock's waits come out exact, with none of the spread that keeps
+// open tabs from retrying together. `Date` too, for the scroll debounce.
+const fakeRetryClock = () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+  vi.spyOn(Math, 'random').mockReturnValue(0)
+}
 
 async function renderTableRuns(
   network: { link: ApolloLink },
   {
     strict = false,
+    paginated = true,
     priorityLink = true,
     cache = new InMemoryCache({ typePolicies }),
   }: {
     strict?: boolean
+    // Off for the demo's table, which loads every run as one page.
+    paginated?: boolean
     // Off when a test needs the hook alone to hold the one-at-a-time cap.
     priorityLink?: boolean
     // Pre-seeded when a test starts from what another reader already cached.
@@ -200,7 +226,7 @@ async function renderTableRuns(
     () =>
       useTableRuns({
         proposal: PROPOSAL,
-        paginated: true,
+        paginated,
         pageSize: PAGE_SIZE,
       }),
     { wrapper: Providers }
@@ -720,140 +746,29 @@ describe('waiting for the heavy values to fill in', () => {
 })
 
 describe('running into a page that fails to load', () => {
-  test('stops retrying a page after three failed deferred passes', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const network = createNetwork({ failDeferred: true })
-    const { result } = await renderTableRuns(network)
+  beforeEach(fakeRetryClock)
 
-    const triesForPageOne = () => timesStarted(network.started.deferred, 1)
-
-    // Page 1 is the only page on screen at mount, so it spends its whole budget
-    // at once: a failed pass hands the slot back and the next try goes out.
-    await vi.waitFor(() => expect(triesForPageOne()).toBe(3))
-
-    // Five more settles. A server that cannot answer must not hold the single
-    // throttle slot for the rest of the session.
-    for (let scroll = 0; scroll < 5; scroll += 1) {
-      result.current.onVisibleRegionChanged(regionAt(0))
-      await settle()
-    }
-
-    expect(triesForPageOne()).toBe(3)
-  })
-
-  test('retries a failed page only after its neighbours have had a turn', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const started: number[] = []
-
-    // Page 2's heavy values always fail. Its neighbours answer, so always
-    // reaching for the lowest page would spend page 2's budget before theirs.
-    const link = new ApolloLink((operation) => {
-      const page = (operation.variables.page as number) ?? 1
-      if (operation.operationName === LIGHTWEIGHT_NAME) {
-        return answers([runFor(page)])
-      }
-      started.push(page)
-      if (page === 2) {
-        return refuses('the server cannot answer this page')
-      }
-      return answers([filledRunFor(page)])
-    })
-
-    const { result } = await renderTableRuns({ link })
-    await vi.waitFor(() => expect(started).toContain(1))
-
-    // Settle on pages 2 to 4 and let page 2 exhaust its three tries.
-    result.current.onVisibleRegionChanged(regionAt(15))
-    await vi.waitFor(() => expect(timesStarted(started, 2)).toBe(3))
-
-    const firstTry = started.indexOf(2)
-    const retry = started.indexOf(2, firstTry + 1)
-    expect(retry).toBeGreaterThan(started.indexOf(3))
-    expect(retry).toBeGreaterThan(started.indexOf(4))
-  })
-
-  test('retries a failed page after it scrolls back into view', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const network = createNetwork({ failDeferred: true })
-    const { result } = await renderTableRuns(network)
-
-    const triesForPageOne = () => timesStarted(network.started.deferred, 1)
-
-    // Spend page 1's whole budget while it stays on screen.
-    for (let scroll = 0; scroll < 5; scroll += 1) {
-      result.current.onVisibleRegionChanged(regionAt(0))
-      await settle()
-    }
-    expect(triesForPageOne()).toBe(3)
-
-    // Away and back. A server that has recovered in the meantime must not stay
-    // written off for the rest of the session.
-    result.current.onVisibleRegionChanged(regionAt(200))
-    await settle()
-    result.current.onVisibleRegionChanged(regionAt(0))
-    await settle()
-
-    expect(triesForPageOne()).toBeGreaterThan(3)
-  })
-
-  test('asks a page for its heavy values again when the pass brings no payload', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const started: number[] = []
-
-    // The deferred pass resolves with no payload rather than erroring, which is
-    // how a resolver that produced nothing comes back.
-    const link = new ApolloLink((operation) => {
-      const page = (operation.variables.page as number) ?? 1
-      if (operation.operationName === LIGHTWEIGHT_NAME) {
-        return answers([runFor(page)])
-      }
-      started.push(page)
-      return new Observable((observer) => {
-        observer.next({ data: null })
-        observer.complete()
-      })
-    })
-
-    await renderTableRuns({ link })
-
-    // A page that brought nothing back is not done, so it spends its retry
-    // budget rather than leaving its heavy cells blank for the session.
-    await vi.waitFor(() => expect(timesStarted(started, 1)).toBe(3))
-  })
-
-  test('reports a page fetch that fails and asks for it again', async () => {
+  test('reports a page that fails to load and asks for it again a second later, with no scroll', async () => {
     const reported = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const started: number[] = []
+    const network = createNetwork()
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started.lightweight).toEqual([1]))
 
-    const link = new ApolloLink((operation) => {
-      if (operation.operationName !== LIGHTWEIGHT_NAME) {
-        return hangs()
-      }
-      const page = (operation.variables.page as number) ?? 1
-      started.push(page)
-      if (page === 1) {
-        return answers([runFor(page)])
-      }
-      return refuses('the server cannot answer this page')
-    })
-
-    const { result } = await renderTableRuns({ link })
-    await vi.waitFor(() => expect(started).toContain(1))
-
-    // Scroll to a page the server cannot answer.
+    // The server goes down, and the user scrolls to pages it cannot answer.
+    network.failLightweight = true
     result.current.onVisibleRegionChanged(regionAt(200))
-    await vi.waitFor(() => expect(reported).toHaveBeenCalled())
-
-    // Scroll away and back: rows matter more than images, so it keeps trying.
-    const attempts = started.length
-    result.current.onVisibleRegionChanged(regionAt(0))
     await settle()
-    result.current.onVisibleRegionChanged(regionAt(200))
-    await vi.waitFor(() => expect(started.length).toBeGreaterThan(attempts))
+    expect(reported).toHaveBeenCalled()
+    expect(timesStarted(network.started.lightweight, 20)).toBe(1)
+
+    // The user sits still.
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(timesStarted(network.started.lightweight, 20)).toBe(2)
   })
 
   test('asks for a page again when its fetch brings no payload', async () => {
-    const reported = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => {})
     const started: number[] = []
 
     // No `errors`, so the fetch resolves rather than rejecting, and the handler
@@ -877,14 +792,384 @@ describe('running into a page that fails to load', () => {
 
     // Scroll to a page that answers with nothing.
     result.current.onVisibleRegionChanged(regionAt(200))
-    await vi.waitFor(() => expect(reported).toHaveBeenCalled())
+    await settle()
+    expect(timesStarted(started, 20)).toBe(1)
 
-    // Away and back. A page left mid-fetch, or marked loaded with nothing in
-    // it, is never asked for again; one left idle is.
+    // A page marked loaded with nothing in it is never asked for again.
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(timesStarted(started, 20)).toBe(2)
+  })
+
+  test('waits twice as long after each failure, up to 30 s', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const tries: number[] = []
+
+    const link = new ApolloLink((operation) => {
+      if (operation.operationName !== LIGHTWEIGHT_NAME) {
+        return hangs()
+      }
+      tries.push(Date.now())
+      return refuses('the server cannot answer this page')
+    })
+
+    await renderTableRuns({ link })
+    await vi.advanceTimersByTimeAsync(100_000)
+
+    const waits = tries.slice(1).map((time, index) => time - tries[index])
+    expect(waits).toEqual([1000, 2000, 4000, 8000, 16000, 30000, 30000])
+  })
+
+  test('waits a second again once the failed pages have loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const started: number[] = []
+    let serverDown = true
+    let dropPage3 = () => {}
+
+    // Page 2 fails while the server is down. Page 3's first request stays open
+    // until the test drops it, so it can fail after page 2 loads, with no scroll.
+    const link = new ApolloLink((operation) => {
+      if (operation.operationName !== LIGHTWEIGHT_NAME) {
+        return hangs()
+      }
+      const page = (operation.variables.page as number) ?? 1
+      started.push(page)
+      if (page === 2 && serverDown) {
+        return refuses('the server cannot answer this page')
+      }
+      if (page === 3 && timesStarted(started, 3) === 1) {
+        return new Observable((observer) => {
+          dropPage3 = () => observer.error(new Error('the server gave up'))
+        })
+      }
+      return answers([runFor(page)])
+    })
+
+    const { result } = await renderTableRuns({ link })
     result.current.onVisibleRegionChanged(regionAt(0))
     await settle()
+
+    // Page 2 fails five times, so the next wait is 16 s. Then the server comes
+    // back and page 2 loads, while page 3's request is still out.
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(timesStarted(started, 2)).toBe(5)
+    serverDown = false
+    await vi.advanceTimersByTimeAsync(16_000)
+    expect(timesStarted(started, 2)).toBe(6)
+
+    // Page 3's request fails, and the user sits still.
+    dropPage3()
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(timesStarted(started, 3)).toBe(2)
+  })
+
+  test('keeps the waits growing when other pages load while a retry is out', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const started: number[] = []
+    const loadPage: Array<() => void> = []
+    let failRetry = () => {}
+
+    // Page 1's heavy values fail at once, then its retry fails when the test
+    // says. Pages 2 and 3 hold nothing back and load when the test says.
+    const link = new ApolloLink((operation) => {
+      const page = (operation.variables.page as number) ?? 1
+      if (operation.operationName === LIGHTWEIGHT_NAME) {
+        if (page === 1) {
+          return answers([runFor(page)])
+        }
+        return new Observable((observer) => {
+          loadPage.push(() => {
+            observer.next({ data: { runs: [scalarRunFor(page)] } })
+            observer.complete()
+          })
+        })
+      }
+      started.push(page)
+      if (started.length === 1) {
+        return refuses('the server cannot answer this page')
+      }
+      return new Observable((observer) => {
+        failRetry = () => observer.error(new Error('the server gave up'))
+      })
+    })
+
+    const { result } = await renderTableRuns({ link })
+    await vi.waitFor(() => expect(started).toEqual([1]))
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+
+    // The retry goes out, and pages 2 and 3 land before it fails.
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(started).toEqual([1, 1])
+    loadPage.forEach((load) => load())
+    await vi.waitFor(() =>
+      expect(result.current.cellsByKey.has(`${PROPOSAL}:3`)).toBe(true)
+    )
+    failRetry()
+
+    // The second wait is 2 s, as if nothing had landed.
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(started).toEqual([1, 1])
+    await vi.advanceTimersByTimeAsync(1)
+    expect(started).toEqual([1, 1, 1])
+  })
+
+  test('asks for a failed page at once when it scrolls back into view, and not while it is away', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork()
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started.lightweight).toEqual([1]))
+
+    // Page 20 fails, then the user scrolls back to the top and stays there.
+    network.failLightweight = true
     result.current.onVisibleRegionChanged(regionAt(200))
-    await vi.waitFor(() => expect(timesStarted(started, 20)).toBe(2))
+    await settle()
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(timesStarted(network.started.lightweight, 20)).toBe(1)
+
+    // Back to page 20, sooner than any wait on the clock.
+    result.current.onVisibleRegionChanged(regionAt(200))
+    await settle()
+
+    expect(timesStarted(network.started.lightweight, 20)).toBe(2)
+  })
+
+  test('retries failed heavy values on the clock, after the pages beside them have had the slot', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const started: number[] = []
+
+    // Page 2's heavy values always fail, and page 3's take 2 s, so the clock
+    // asks for page 2 again while page 3 holds the slot and page 4 waits.
+    const link = new ApolloLink((operation) => {
+      const page = (operation.variables.page as number) ?? 1
+      if (operation.operationName === LIGHTWEIGHT_NAME) {
+        return answers([runFor(page)])
+      }
+      started.push(page)
+      if (page === 2) {
+        return refuses('the server cannot answer this page')
+      }
+      if (page === 3) {
+        return new Observable((observer) => {
+          setTimeout(() => {
+            observer.next({ data: { runs: [filledRunFor(page)] } })
+            observer.complete()
+          }, 2000)
+        })
+      }
+      return answers([filledRunFor(page)])
+    })
+
+    const { result } = await renderTableRuns({ link })
+    await vi.waitFor(() => expect(started).toEqual([1]))
+
+    // Settle on pages 2 to 4.
+    result.current.onVisibleRegionChanged(regionAt(15))
+    await settle()
+    expect(started).toEqual([1, 2, 3])
+
+    await vi.advanceTimersByTimeAsync(2000)
+
+    expect(started).toEqual([1, 2, 3, 4, 2])
+  })
+
+  test('leaves the slot to a page scrolled away until the clock asks again for the page in view that failed', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const cancelled: number[] = []
+    let serverDown = true
+
+    // Page 1's heavy values never arrive, so it holds the slot. Page 3 fails to
+    // load while the server is down, and pages 2 and 4 hold nothing back.
+    const link = new ApolloLink((operation) => {
+      const page = (operation.variables.page as number) ?? 1
+      if (operation.operationName !== LIGHTWEIGHT_NAME) {
+        if (page === 1) {
+          return hangsUntilCancelled(() => cancelled.push(page))
+        }
+        return answers([filledRunFor(page)])
+      }
+      if (page === 3 && serverDown) {
+        return refuses('the server cannot answer this page')
+      }
+      return answers([
+        page === 2 || page === 4 ? scalarRunFor(page) : runFor(page),
+      ])
+    })
+
+    const { result } = await renderTableRuns({ link })
+
+    // Pages 1 to 4, then 2 to 4. Page 3 cannot use the slot before the clock
+    // asks for it again, so page 1 keeps it.
+    result.current.onVisibleRegionChanged(regionAt(10))
+    await settle()
+    result.current.onVisibleRegionChanged(regionAt(15))
+    await settle()
+    expect(cancelled).toEqual([])
+
+    // The server comes back, and the clock asks for page 3 again.
+    serverDown = false
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(cancelled).toEqual([1])
+  })
+
+  test('takes the slot from a page scrolled away when the clock asks again for heavy values in view', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const started: number[] = []
+    const cancelled: number[] = []
+
+    // Page 3's heavy values fail, and page 4's never arrive, so page 4 holds
+    // the slot once it has it. Every other page answers.
+    const link = new ApolloLink((operation) => {
+      const page = (operation.variables.page as number) ?? 1
+      if (operation.operationName === LIGHTWEIGHT_NAME) {
+        return answers([runFor(page)])
+      }
+      started.push(page)
+      if (page === 3) {
+        return refuses('the server cannot answer this page')
+      }
+      if (page === 4) {
+        return hangsUntilCancelled(() => cancelled.push(page))
+      }
+      return answers([filledRunFor(page)])
+    })
+
+    const { result } = await renderTableRuns({ link })
+    await vi.waitFor(() => expect(started).toEqual([1]))
+
+    // Pages 1 to 3, then 3 to 5: page 3 fails, and page 4 takes the slot.
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+    result.current.onVisibleRegionChanged(regionAt(25))
+    await settle()
+    expect(started).toEqual([1, 2, 3, 4])
+
+    // Back up to pages 1 to 3, and the clock asks for page 3 again.
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(cancelled).toEqual([4])
+    expect(started).toEqual([1, 2, 3, 4, 3])
+  })
+
+  test('asks a page for its heavy values again when the pass brings no payload', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const started: number[] = []
+
+    // The deferred pass resolves with no payload rather than erroring, which is
+    // how a resolver that produced nothing comes back.
+    const link = new ApolloLink((operation) => {
+      const page = (operation.variables.page as number) ?? 1
+      if (operation.operationName === LIGHTWEIGHT_NAME) {
+        return answers([runFor(page)])
+      }
+      started.push(page)
+      return new Observable((observer) => {
+        observer.next({ data: null })
+        observer.complete()
+      })
+    })
+
+    await renderTableRuns({ link })
+    await vi.waitFor(() => expect(started).toEqual([1]))
+
+    // A page that brought nothing back is not done, so its heavy cells must
+    // not stay blank for the session.
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(started).toEqual([1, 1])
+  })
+
+  test('asks a page for its heavy values at once when it scrolls back into view after they failed', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork({ failDeferred: true })
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started.deferred).toEqual([1]))
+
+    // Away, long enough for the clock to have retried many times, and back.
+    result.current.onVisibleRegionChanged(regionAt(200))
+    await settle()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(timesStarted(network.started.deferred, 1)).toBe(1)
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+
+    expect(timesStarted(network.started.deferred, 1)).toBe(2)
+  })
+
+  test('asks a page for its heavy values at once when they failed after it scrolled away', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const started: number[] = []
+    let failPageOne = () => {}
+
+    // Page 1 holds a heavy value back, and its pass waits for the test to fail
+    // it. Every other page is scalar-only, so a window over them wants no slot.
+    const link = new ApolloLink((operation) => {
+      const page = (operation.variables.page as number) ?? 1
+      if (operation.operationName === LIGHTWEIGHT_NAME) {
+        return answers([page === 1 ? runFor(page) : scalarRunFor(page)])
+      }
+      started.push(page)
+      return new Observable((observer) => {
+        failPageOne = () => observer.error(new Error('the server gave up'))
+      })
+    })
+
+    const { result } = await renderTableRuns({ link })
+    await vi.waitFor(() => expect(started).toEqual([1]))
+
+    // Away and back, so the pages at y 200 are loaded and hold nothing back.
+    result.current.onVisibleRegionChanged(regionAt(200))
+    await settle()
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+    expect(started).toEqual([1, 1])
+
+    // Away again: page 1 keeps the slot, and its pass fails out of view.
+    result.current.onVisibleRegionChanged(regionAt(200))
+    await settle()
+    failPageOne()
+
+    // Back to the top, sooner than any wait on the clock.
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+
+    expect(started).toEqual([1, 1, 1])
+  })
+
+  test("asks for the demo table's one page again, though it never scrolls", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork({ failLightweight: true })
+    const { result } = await renderTableRuns(network, { paginated: false })
+    expect(timesStarted(network.started.lightweight, 1)).toBe(1)
+
+    // The server comes back.
+    network.failLightweight = false
+    await vi.advanceTimersByTimeAsync(1000)
+
+    await vi.waitFor(() =>
+      expect(result.current.cellsByKey.has(`${PROPOSAL}:1`)).toBe(true)
+    )
+  })
+
+  test('asks for nothing more once the table unmounts', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork({ failLightweight: true })
+    const { unmount } = await renderTableRuns(network)
+
+    // The clock is running.
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(timesStarted(network.started.lightweight, 1)).toBe(2)
+
+    await unmount()
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(timesStarted(network.started.lightweight, 1)).toBe(2)
   })
 })
 
@@ -1157,15 +1442,16 @@ describe('reconnecting after an outage', () => {
     await vi.waitFor(() => expect(network.started.deferred).toContain(20))
   })
 
-  test('loads the heavy values of a page that ran out of tries during the outage', async () => {
+  test('loads the heavy values that failed during the outage without waiting out the clock', async () => {
+    fakeRetryClock()
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const network = createNetwork({ answerDeferred: true, failDeferred: true })
 
-    // Page 1 spends its three tries while the server is down
+    // Page 1 fails five times while the server is down, so its next try is
+    // 16 s away
     const { result } = await renderTableRuns(network)
-    await vi.waitFor(() =>
-      expect(timesStarted(network.started.deferred, 1)).toBe(3)
-    )
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(timesStarted(network.started.deferred, 1)).toBe(5)
     expect(heavyValueFor(result.current.cellsByKey, 1)).toBeNull()
 
     // The server is back and live updates reconnect
