@@ -7,6 +7,10 @@ export function dashboardHeader(page: Page): Locator {
   return page.getByRole('banner')
 }
 
+export function homeLink(page: Page): Locator {
+  return dashboardHeader(page).getByRole('link', { name: 'DAMNIT!' })
+}
+
 // The dashboard's left nav: one item per view under its header, the user menu.
 export function dashboardNav(page: Page): Locator {
   return page.getByRole('navigation', { name: 'Dashboard' })

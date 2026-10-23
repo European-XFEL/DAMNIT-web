@@ -79,7 +79,9 @@ const splitLink = split(
     )
   },
   wsLink,
-  from([priorityLink, httpLink])
+  // Only HTTP retries here: graphql-ws retries a dropped socket itself, and an
+  // error the server sends, mostly a refusal, stops live updates until a reload.
+  from([retryLink, priorityLink, httpLink])
 )
 
 // Apollo memoizes each read per (selection set, object), capped at 50,000
@@ -104,5 +106,5 @@ export const cache = new InMemoryCache({
 
 export const client = new ApolloClient({
   cache,
-  link: from([retryLink, removeTypenameLink, splitLink]),
+  link: from([removeTypenameLink, splitLink]),
 })

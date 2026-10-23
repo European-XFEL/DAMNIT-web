@@ -7,7 +7,7 @@ import {
   xpcsWithPendingImage,
 } from '#examples/xpcs'
 import { fullMetadata } from '#mocks'
-import { dashboardHeader } from '#support/dashboard'
+import { homeLink } from '#support/dashboard'
 import { WIDE_VIEWPORT } from '#support/grid'
 import { proposalLink } from '#support/proposals'
 import {
@@ -126,7 +126,7 @@ test('a proposal opened after leaving during an outage connects at once', async 
 
   // Leave for the home page while graphql-ws waits. With no proposal open it
   // gives up on that try at the end of the wait but keeps its back-off.
-  await dashboardHeader(page).getByRole('link', { name: 'DAMNIT!' }).click()
+  await homeLink(page).click()
   await expect(proposalLink(page, proposal)).toBeVisible()
   await page.waitForTimeout(WAIT_RUNS_OUT)
 

@@ -6,6 +6,7 @@ import {
   setProposalSuccess,
 } from '#src/data/metadata/metadata.slice'
 import { stampLiveRuns } from '#src/data/table/run-stamps'
+import { recordLiveUpdatesEvent } from '#src/graphql/live-updates'
 import {
   RUN_UPDATES_SUBSCRIPTION,
   TABLE_DATA_QUERY,
@@ -60,12 +61,14 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
     dispatch(setProposalSuccess())
   }, [metadataResult, metadataError, dispatch])
 
+  const shouldSubscribe =
+    subscribe && !proposal.loading && !proposal.notFound && !!proposal.value
+
   useSubscription<RunUpdatesResult, RunUpdatesVariables>(
     RUN_UPDATES_SUBSCRIPTION,
     {
       variables: { proposal: proposal.value, since },
-      skip:
-        !subscribe || proposal.loading || proposal.notFound || !proposal.value,
+      skip: !shouldSubscribe,
       // `onData` below writes every push into the cache itself, so Apollo's own
       // write would be the same payload a second time, filed under
       // ROOT_SUBSCRIPTION where nothing reads it. That root is never collected,
@@ -83,6 +86,9 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
         // user just left writes runs keyed by that proposal, which the current
         // table never reads, so no guard is needed.
         if (update.runs.length) {
+          // Only runs count as an update: the server's first tick after every
+          // connect carries the metadata, changed or not.
+          recordLiveUpdatesEvent({ type: 'pushed' })
           client.cache.writeQuery({
             query: TABLE_DATA_QUERY,
             variables: { proposal: proposal.value },
@@ -101,8 +107,25 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
           })
         }
       },
+      // graphql-ws retries every drop, so an error or a completion is the
+      // server's own, and nothing will try again.
+      onError: () => recordLiveUpdatesEvent({ type: 'failed' }),
+      onComplete: () => recordLiveUpdatesEvent({ type: 'failed' }),
     }
   )
+
+  useEffect(() => {
+    if (!subscribe) {
+      recordLiveUpdatesEvent({ type: 'disabled' })
+    }
+  }, [subscribe])
+
+  // A new proposal counts its changes afresh, even on a socket that stays open.
+  useEffect(() => {
+    if (shouldSubscribe) {
+      recordLiveUpdatesEvent({ type: 'subscribed' })
+    }
+  }, [shouldSubscribe, proposal.value])
 
   return proposal
 }

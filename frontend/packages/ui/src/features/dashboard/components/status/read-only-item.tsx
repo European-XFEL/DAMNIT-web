@@ -9,10 +9,10 @@ function ReadOnlyItem() {
       aria-label="Read-only"
       tooltip={
         <>
-          <Text span inherit fw={600}>
-            Read-only
-          </Text>
-          . To edit comments or the context file, or to reprocess runs, use the
+          <Text span inherit fw={600} display="block">
+            Read-only.
+          </Text>{' '}
+          To edit comments or the context file, or to reprocess runs, use the
           DAMNIT GUI.
         </>
       }

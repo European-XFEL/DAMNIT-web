@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import {
+  liveUpdates,
   liveUpdatesListeners,
+  nextLiveUpdates,
   reconnectCount,
   retryDelay,
   retryNow,
   waitBeforeRetry,
+  type LiveUpdatesState,
 } from '#src/graphql/live-updates'
 
 // Resolves to whether the wait has ended once `ms` more have passed.
@@ -21,6 +24,8 @@ const waitEndsWithin = async (wait: Promise<void>, ms: number) => {
 beforeEach(() => {
   reconnectCount(0)
   vi.useFakeTimers()
+  vi.setSystemTime(0)
+  liveUpdates({ status: 'connecting', since: 0 })
 })
 
 afterEach(() => {
@@ -46,6 +51,113 @@ test('trying now ends a pending wait at once', async () => {
   retryNow()
 
   expect(await waitEndsWithin(wait, 0)).toBe(true)
+})
+
+test('a first connect goes live from the time it connected', () => {
+  vi.setSystemTime(1000)
+  const connecting = nextLiveUpdates(liveUpdates(), { type: 'subscribed' })
+  vi.setSystemTime(1500)
+  const live = nextLiveUpdates(connecting, { type: 'connected' })
+
+  expect(connecting).toEqual({ status: 'connecting', since: 1000 })
+  expect(live).toEqual({ status: 'live', since: 1500 })
+})
+
+test('a drop is lost from its first wait through every failed retry', () => {
+  const listeners = liveUpdatesListeners(vi.fn())
+  listeners.connected({}, undefined, false)
+
+  // The socket drops, and graphql-ws waits before it tries again
+  vi.setSystemTime(10_000)
+  listeners.closed()
+  waitBeforeRetry(0)
+  expect(liveUpdates()).toEqual({ status: 'reconnecting', since: 10_000 })
+
+  // A retry fails
+  vi.setSystemTime(12_000)
+  listeners.closed()
+  waitBeforeRetry(1)
+  expect(liveUpdates()).toEqual({ status: 'reconnecting', since: 10_000 })
+})
+
+test('a reconnect goes live again and keeps the last push', () => {
+  const lost: LiveUpdatesState = {
+    status: 'reconnecting',
+    since: 10_000,
+    lastPushAt: 5000,
+  }
+
+  vi.setSystemTime(20_000)
+  const live = nextLiveUpdates(lost, { type: 'connected' })
+
+  expect(live).toEqual({ status: 'live', since: 20_000, lastPushAt: 5000 })
+})
+
+test('graphql-ws closing a socket nothing uses reads as connecting, not lost', () => {
+  const live: LiveUpdatesState = { status: 'live', since: 0 }
+
+  vi.setSystemTime(3000)
+  const closed = nextLiveUpdates(live, { type: 'closed' })
+
+  expect(closed).toEqual({ status: 'connecting', since: 3000 })
+})
+
+test('a failed subscription stops live updates', () => {
+  const lost: LiveUpdatesState = { status: 'reconnecting', since: 0 }
+
+  vi.setSystemTime(3000)
+  const failed = nextLiveUpdates(lost, { type: 'failed' })
+
+  expect(failed).toEqual({ status: 'stopped', since: 3000 })
+})
+
+test('graphql-ws closing a refused socket leaves live updates stopped', () => {
+  const stopped: LiveUpdatesState = { status: 'stopped', since: 3000 }
+
+  vi.setSystemTime(3100)
+  const closed = nextLiveUpdates(stopped, { type: 'closed' })
+
+  expect(closed).toEqual(stopped)
+})
+
+test('a push records its time and leaves the status alone', () => {
+  const live: LiveUpdatesState = { status: 'live', since: 0 }
+
+  vi.setSystemTime(4000)
+  const pushed = nextLiveUpdates(live, { type: 'pushed' })
+
+  expect(pushed).toEqual({ status: 'live', since: 0, lastPushAt: 4000 })
+})
+
+test('opening a proposal on a live socket forgets the last push and counts from then', () => {
+  const live: LiveUpdatesState = { status: 'live', since: 0, lastPushAt: 4000 }
+
+  vi.setSystemTime(9000)
+  const opened = nextLiveUpdates(live, { type: 'subscribed' })
+
+  expect(opened).toEqual({ status: 'live', since: 9000 })
+})
+
+test('opening a proposal during an outage keeps the time live updates were lost', () => {
+  const lost: LiveUpdatesState = {
+    status: 'reconnecting',
+    since: 10_000,
+    lastPushAt: 5000,
+  }
+
+  vi.setSystemTime(20_000)
+  const opened = nextLiveUpdates(lost, { type: 'subscribed' })
+
+  expect(opened).toEqual({ status: 'reconnecting', since: 10_000 })
+})
+
+test('opening a proposal after live updates stopped connects afresh', () => {
+  const stopped: LiveUpdatesState = { status: 'stopped', since: 0 }
+
+  vi.setSystemTime(9000)
+  const opened = nextLiveUpdates(stopped, { type: 'subscribed' })
+
+  expect(opened).toEqual({ status: 'connecting', since: 9000 })
 })
 
 test('a reconnect raises the reconnect count once, at its first push', () => {

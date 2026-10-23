@@ -1,11 +1,17 @@
 .item {
+  --status-item-background: var(--mantine-color-body);
   display: flex;
   gap: 6px;
   align-items: center;
+  /* The box reaches into the gap on each side, so the focus ring and the
+     action's background clear the icon while the label keeps its place. */
+  margin: 0 -6px;
+  padding: 0 6px;
   font-size: var(--mantine-font-size-sm);
   line-height: var(--mantine-line-height-sm);
   color: var(--mantine-color-gray-7);
   white-space: nowrap;
+  background: var(--status-item-background);
 
   /* The item fills the bar, which sits on the window's bottom edge, so the
      ring goes inside. */
@@ -22,22 +28,28 @@
   }
 }
 
-/* The background reaches into the gap on each side, so the label keeps its
-   place in the bar. */
 .item[data-action] {
-  margin: 0 -6px;
-  padding: 0 6px;
   cursor: pointer;
 
   &:hover {
-    background: var(--mantine-color-gray-1);
+    --status-item-background: var(--mantine-color-gray-1);
   }
 }
 
 .item[data-warning] {
-  background: var(--mantine-color-orange-light);
+  /* Solid, unlike Mantine's translucent tint, so an icon can draw a ring or
+     a gap in the same colour and have it blend into the background. */
+  --status-item-background: color-mix(
+    in srgb,
+    var(--mantine-color-orange-filled) 10%,
+    var(--mantine-color-body)
+  );
 
   &:hover {
-    background: var(--mantine-color-orange-light-hover);
+    --status-item-background: color-mix(
+      in srgb,
+      var(--mantine-color-orange-filled) 12%,
+      var(--mantine-color-body)
+    );
   }
 }
