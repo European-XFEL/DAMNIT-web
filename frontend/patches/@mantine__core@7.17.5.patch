@@ -1,0 +1,80 @@
+diff --git a/cjs/components/Transition/use-transition.cjs b/cjs/components/Transition/use-transition.cjs
+index 879ce21c5f82d69db2a38c19d0eacfc0a7d74a3e..a5927fc0cef5fac1e433c892903a33e112a4cf86 100644
+--- a/cjs/components/Transition/use-transition.cjs
++++ b/cjs/components/Transition/use-transition.cjs
+@@ -38,10 +38,15 @@ function useTransition({
+   const transitionTimeoutRef = React.useRef(-1);
+   const delayTimeoutRef = React.useRef(-1);
+   const rafRef = React.useRef(-1);
++  const clearAllTimeouts = () => {
++    window.clearTimeout(transitionTimeoutRef.current);
++    window.clearTimeout(delayTimeoutRef.current);
++    cancelAnimationFrame(rafRef.current);
++  };
+   const handleStateChange = (shouldMount) => {
+     const preHandler = shouldMount ? onEnter : onExit;
+     const handler = shouldMount ? onEntered : onExited;
+-    window.clearTimeout(transitionTimeoutRef.current);
++    clearAllTimeouts();
+     const newTransitionDuration = reduceMotion ? 0 : shouldMount ? duration : exitDuration;
+     setTransitionDuration(newTransitionDuration);
+     if (newTransitionDuration === 0) {
+@@ -65,7 +70,7 @@ function useTransition({
+     }
+   };
+   const handleTransitionWithDelay = (shouldMount) => {
+-    window.clearTimeout(delayTimeoutRef.current);
++    clearAllTimeouts();
+     const delay = shouldMount ? enterDelay : exitDelay;
+     if (typeof delay !== "number") {
+       handleStateChange(shouldMount);
+@@ -83,8 +88,7 @@ function useTransition({
+   }, [mounted]);
+   React.useEffect(
+     () => () => {
+-      window.clearTimeout(transitionTimeoutRef.current);
+-      cancelAnimationFrame(rafRef.current);
++      clearAllTimeouts();
+     },
+     []
+   );
+diff --git a/esm/components/Transition/use-transition.mjs b/esm/components/Transition/use-transition.mjs
+index 3602915d20bc8df0604f37c677b4041138eee8fe..2c79ccfb852524ed8f2ca188d60d1bf32c2f9ff5 100644
+--- a/esm/components/Transition/use-transition.mjs
++++ b/esm/components/Transition/use-transition.mjs
+@@ -32,10 +32,15 @@ function useTransition({
+   const transitionTimeoutRef = useRef(-1);
+   const delayTimeoutRef = useRef(-1);
+   const rafRef = useRef(-1);
++  const clearAllTimeouts = () => {
++    window.clearTimeout(transitionTimeoutRef.current);
++    window.clearTimeout(delayTimeoutRef.current);
++    cancelAnimationFrame(rafRef.current);
++  };
+   const handleStateChange = (shouldMount) => {
+     const preHandler = shouldMount ? onEnter : onExit;
+     const handler = shouldMount ? onEntered : onExited;
+-    window.clearTimeout(transitionTimeoutRef.current);
++    clearAllTimeouts();
+     const newTransitionDuration = reduceMotion ? 0 : shouldMount ? duration : exitDuration;
+     setTransitionDuration(newTransitionDuration);
+     if (newTransitionDuration === 0) {
+@@ -59,7 +64,7 @@ function useTransition({
+     }
+   };
+   const handleTransitionWithDelay = (shouldMount) => {
+-    window.clearTimeout(delayTimeoutRef.current);
++    clearAllTimeouts();
+     const delay = shouldMount ? enterDelay : exitDelay;
+     if (typeof delay !== "number") {
+       handleStateChange(shouldMount);
+@@ -77,8 +82,7 @@ function useTransition({
+   }, [mounted]);
+   useEffect(
+     () => () => {
+-      window.clearTimeout(transitionTimeoutRef.current);
+-      cancelAnimationFrame(rafRef.current);
++      clearAllTimeouts();
+     },
+     []
+   );

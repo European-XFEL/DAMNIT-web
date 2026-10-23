@@ -81,6 +81,25 @@ columns keep their position. Covered by
 
 Still present on upstream `main`, and not yet reported there.
 
+## `@mantine/core`
+
+The builds sit at the package root, so the patch edits `cjs/` and `esm/`.
+
+### A popover reopened as its fade starts leaves the page anyway
+
+`useTransition` in `components/Transition/use-transition` runs an exit over two
+animation frames, and only the second one starts the timer that ends it. A
+reopen before that second frame has run clears the timer before it exists and
+leaves the pending frame in place, which goes on to start it: the dropdown
+leaves the page for a moment and takes focus with it. The patch cancels the
+pending frame on every change, as upstream's fix does.
+
+Fixed upstream in 7.17.8 by
+[#7773](https://github.com/mantinedev/mantine/pull/7773), which we cannot take:
+core 7.17.8 pins `@mantine/hooks` to its own version, and the catalog holds
+hooks at 7.17.5 (see the note there). Drop the patch once that hold lifts and
+`@mantine/core` reaches 7.17.8.
+
 ## `plotly.js`
 
 `react-plotly.js` loads `plotly.js/dist/plotly`, so the patch edits that one
