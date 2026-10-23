@@ -19,11 +19,15 @@ function lostItem(page: Page) {
   return statusBar(page).getByRole('button', { name: /^Lost live updates/ })
 }
 
+function tryNowButton(page: Page) {
+  return statusBar(page).getByRole('button', { name: 'Try now', exact: true })
+}
+
 function stoppedItem(page: Page) {
   return statusBar(page).getByRole('img', { name: /^Live updates stopped/ })
 }
 
-test('clicking the lost live updates reconnects without sitting out the wait', async ({
+test('Try now on lost live updates reconnects without sitting out the wait', async ({
   page,
   api,
   example,
@@ -38,9 +42,10 @@ test('clicking the lost live updates reconnects without sitting out the wait', a
     .toBe(1 + REFUSALS)
 
   // The last refusal can still be on its way to the page, before its wait
-  // starts: a click then ends nothing, so click again.
+  // starts: a press then ends nothing, so press again.
   await expect(async () => {
-    await lostItem(page).click({ timeout: 500 })
+    await lostItem(page).hover({ timeout: 500 })
+    await tryNowButton(page).click({ timeout: 500 })
     await expect(liveItem(page)).toBeVisible({ timeout: 500 })
   }).toPass({ timeout: 3000 })
 })
