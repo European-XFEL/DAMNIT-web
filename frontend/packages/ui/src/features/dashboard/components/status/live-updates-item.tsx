@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useReactiveVar } from '@apollo/client/react'
 import { Box, Indicator, rem, Text, VisuallyHidden } from '@mantine/core'
 import { useReducedMotion } from '@mantine/hooks'
-import { IconBroadcast } from '@tabler/icons-react'
+import { IconBroadcast, IconRefresh } from '@tabler/icons-react'
 
 import StatusItem from '#src/components/statuses/status-item'
 import {
@@ -21,6 +21,18 @@ import classes from './live-updates-item.module.css'
 const CONNECTING_DELAY = 1000
 
 const ICON_STYLE = { width: rem(16), height: rem(16) }
+
+const TRY_NOW = {
+  label: 'Try now',
+  icon: (
+    <IconRefresh
+      style={{ width: rem(14), height: rem(14) }}
+      stroke={2}
+      aria-hidden
+    />
+  ),
+  onClick: retryNow,
+}
 
 function LiveUpdatesItem() {
   const state = useReactiveVar(liveUpdates)
@@ -52,7 +64,7 @@ function LiveUpdatesItem() {
             </>
           }
           icon={icon}
-          onClick={lost ? retryNow : undefined}
+          action={lost ? TRY_NOW : undefined}
           warning={lost}
         />
       </Box>
@@ -77,7 +89,7 @@ function describe({ status, since, lastPushAt }: LiveUpdatesState) {
       return {
         name: `Lost live updates ${formatDateAndTime(since)}.`,
         // A no-break space, so a wrap never strands the unit on its own line.
-        detail: `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s. Click to try now.`,
+        detail: `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`,
       }
     case 'stopped':
       return {
