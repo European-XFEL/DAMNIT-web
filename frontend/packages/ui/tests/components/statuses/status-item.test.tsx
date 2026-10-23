@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { describe, expect, test, vi } from 'vitest'
 import { userEvent } from 'vitest/browser'
-import { IconBroadcastOff } from '@tabler/icons-react'
+import { IconBroadcast, IconBroadcastOff } from '@tabler/icons-react'
 
 import StatusItem from '#src/components/statuses/status-item'
 import { renderWithProviders } from '#tests/support/render'
@@ -16,6 +16,14 @@ const lostItem = ({ onClick = TRY_NOW.onClick } = {}) => (
     aria-label="Lost"
     icon={<IconBroadcastOff aria-hidden />}
     action={{ ...TRY_NOW, onClick }}
+  />
+)
+
+const liveItem = (
+  <StatusItem
+    tooltip="Live updates."
+    aria-label="Live"
+    icon={<IconBroadcast aria-hidden />}
   />
 )
 
@@ -41,6 +49,8 @@ const tryNowButton = (screen: Screen) =>
 // still counts as visible and a busy runner fires timers late.
 const waitPastCloseDelay = () =>
   new Promise((resolve) => setTimeout(resolve, CLOSE_DELAY * 3))
+
+const nextFrame = () => new Promise(requestAnimationFrame)
 
 describe('pressing the item', () => {
   test('a click on an item with an action runs it', async () => {
@@ -275,5 +285,66 @@ describe('pressing Escape', () => {
     // The next one is the panel's
     await userEvent.keyboard('{Escape}')
     expect(onPanelEscape).toHaveBeenCalledOnce()
+  })
+})
+
+describe('retrying', () => {
+  test('holding Enter on the button runs the action once', async () => {
+    const onClick = vi.fn()
+    const screen = await renderLostItem({ onClick })
+    const button = tryNowButton(screen)
+    await userEvent.tab()
+    await userEvent.tab()
+    await expect.element(button).toHaveFocus()
+
+    await userEvent.keyboard('{Enter>5/}')
+
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  test('focus on the button moves to the item when the action goes', async () => {
+    const screen = await renderLostItem()
+    await userEvent.tab()
+    await userEvent.tab()
+    await expect.element(tryNowButton(screen)).toHaveFocus()
+
+    // A try works
+    screen.rerender(liveItem)
+
+    await expect
+      .element(screen.getByRole('img', { name: 'Live' }))
+      .toHaveFocus()
+  })
+
+  test("focus on the bubble's words moves to the item when the action goes", async () => {
+    const screen = await renderLostItem()
+    await userEvent.hover(lostItemButton(screen))
+    await userEvent.click(screen.getByText('Lost live updates.'))
+    await expect.element(screen.getByRole('dialog')).toHaveFocus()
+
+    // A try works
+    screen.rerender(liveItem)
+
+    await expect
+      .element(screen.getByRole('img', { name: 'Live' }))
+      .toHaveFocus()
+  })
+
+  test('a bubble that left with its action stays shut when the action comes back', async () => {
+    const screen = await renderLostItem()
+    const button = tryNowButton(screen)
+
+    // A try works while the pointer rests on the bubble
+    await userEvent.hover(lostItemButton(screen))
+    await userEvent.hover(button)
+    screen.rerender(liveItem)
+    await expect.element(button).not.toBeInTheDocument()
+
+    // Live updates drop again a while later, with the pointer elsewhere
+    await userEvent.unhover(button)
+    await waitPastCloseDelay()
+    screen.rerender(lostItem())
+    await nextFrame()
+    await expect.element(button).not.toBeInTheDocument()
   })
 })
