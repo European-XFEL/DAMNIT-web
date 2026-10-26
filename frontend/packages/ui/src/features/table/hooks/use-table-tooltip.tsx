@@ -32,22 +32,34 @@ const sameContent = (a: CellTooltip, b: CellTooltip): boolean => {
       )
     case 'image':
       return b.kind === 'image' && a.src === b.src
+    case 'sparkline':
+      return b.kind === 'sparkline' && a.x === b.x && a.y === b.y
     default:
       return assertNever(a)
   }
 }
 
-const sameTarget = (
+const sameCell = (
   a: TooltipState | null | undefined,
   b: TooltipState
 ): boolean =>
-  !!a &&
-  a.bounds.left === b.bounds.left &&
-  a.bounds.top === b.bounds.top &&
-  sameContent(a.target, b.target)
+  !!a && a.bounds.left === b.bounds.left && a.bounds.top === b.bounds.top
+
+const sameTarget = (
+  a: TooltipState | null | undefined,
+  b: TooltipState
+): boolean => !!a && sameCell(a, b) && sameContent(a.target, b.target)
+
+// `hover` is the pointer's x offset into the cell and the cell width, for
+// tooltips that depend on the pointer position (e.g. sparklines).
+export type ResolveTooltip = (
+  col: number,
+  row: number,
+  hover: { x: number; width: number }
+) => CellTooltip | undefined
 
 export const useTableTooltip = (
-  resolve: (col: number, row: number) => CellTooltip | undefined,
+  resolve: ResolveTooltip,
   { suppressed = false }: UseTableTooltipOptions = {}
 ) => {
   const [tooltip, setTooltip] = useState<TooltipState>()
@@ -96,6 +108,11 @@ export const useTableTooltip = (
     const delay = tooltipRef.current ? DELAY.switch : DELAY.open
     pendingTargetRef.current = next
     openTimerRef.current = window.setTimeout(() => {
+      // Read the ref because onMouseMove may have changed the target.
+      const next = pendingTargetRef.current
+      if (!next) {
+        return
+      }
       pendingTargetRef.current = null
       // Sync the bounds ref before the state commit so react-laag positions
       // against the new cell on first paint instead of flashing at the old one.
@@ -156,28 +173,36 @@ export const useTableTooltip = (
     scheduleClose()
   }, [scheduleClose])
 
+  const resolveAt = useCallback(
+    (args: GridMouseEventArgs): TooltipState | undefined => {
+      if (args.kind !== 'cell') {
+        return undefined
+      }
+      const [col, row] = args.location
+      const content = resolve(col, row, {
+        x: args.localEventX,
+        width: args.bounds.width,
+      })
+      if (!content) {
+        return undefined
+      }
+      return { target: content, bounds: toBounds(args.bounds) }
+    },
+    [resolve]
+  )
+
   const onItemHovered = useCallback(
     (args: GridMouseEventArgs) => {
       if (suppressed) {
         return
       }
-      if (args.kind !== 'cell') {
-        cancelOpen()
-        scheduleClose()
-        return
-      }
-      const [col, row] = args.location
-      const content = resolve(col, row)
-      if (!content) {
+      const next = resolveAt(args)
+      if (!next) {
         cancelOpen()
         scheduleClose()
         return
       }
       cancelClose()
-      const next: TooltipState = {
-        target: content,
-        bounds: toBounds(args.bounds),
-      }
       if (sameTarget(tooltipRef.current, next)) {
         cancelOpen()
         return
@@ -187,7 +212,43 @@ export const useTableTooltip = (
       }
       scheduleOpen(next)
     },
-    [resolve, cancelClose, cancelOpen, scheduleClose, scheduleOpen, suppressed]
+    [
+      resolveAt,
+      cancelClose,
+      cancelOpen,
+      scheduleClose,
+      scheduleOpen,
+      suppressed,
+    ]
+  )
+
+  // Glide only fires onItemHovered when the pointer moves to another cell, so
+  // this updates tooltips that depend on the pointer position within a cell.
+  // Opening and closing tooltips is left to onItemHovered, so that moving
+  // within a cell doesn't restart the open timer or reopen a tooltip closed
+  // with Escape.
+  const onMouseMove = useCallback(
+    (args: GridMouseEventArgs) => {
+      if (suppressed) {
+        return
+      }
+      const next = resolveAt(args)
+      if (!next || sameTarget(tooltipRef.current, next)) {
+        return
+      }
+      // The tooltip is already open on this cell, so update it immediately.
+      if (sameCell(tooltipRef.current, next)) {
+        cancelOpen()
+        tooltipRef.current = next
+        setTooltip(next)
+        return
+      }
+      // The tooltip is about to open on this cell, so just update the target.
+      if (sameCell(pendingTargetRef.current, next)) {
+        pendingTargetRef.current = next
+      }
+    },
+    [resolveAt, cancelOpen, suppressed]
   )
 
   useEffect(
@@ -234,6 +295,7 @@ export const useTableTooltip = (
 
   return {
     onItemHovered,
+    onMouseMove,
     dismiss,
     dismissOnScroll,
     tooltip: tooltip

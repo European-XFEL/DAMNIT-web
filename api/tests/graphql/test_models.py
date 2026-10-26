@@ -67,21 +67,29 @@ def test_complex_string_custom_symbol():
 
 def test_resample_array_orders_by_x():
     arr = np.array([[3, 1, 2], [30, 10, 20]], dtype=np.float64)
-    result = resample_array(arr)
-    assert result[0] == 10
-    assert result[-1] == 30
+    x, y = resample_array(arr)
+    assert (x[0], x[-1]) == (1, 3)
+    assert (y[0], y[-1]) == (10, 30)
+
+
+def test_resample_array_evenly_spaces_x():
+    arr = np.array([[0, 1, 4], [0, 10, 40]], dtype=np.float64)
+    x, y = resample_array(arr)
+    np.testing.assert_array_equal(x, [0, 2, 4])
+    np.testing.assert_array_equal(y, [0, 20, 40])
 
 
 def test_resample_array_drops_non_finite():
     arr = np.array([[1, 2, 3, 4], [10, np.nan, np.inf, 40]], dtype=np.float64)
-    result = resample_array(arr)
-    assert np.all(np.isfinite(result))
+    x, y = resample_array(arr)
+    assert np.all(np.isfinite(x))
+    assert np.all(np.isfinite(y))
 
 
 def test_resample_array_removes_duplicates():
     arr = np.array([[1, 1, 2, 3], [10, 20, 30, 40]], dtype=np.float64)
-    result = resample_array(arr)
-    assert len(result) == 3
+    x, y = resample_array(arr)
+    assert len(x) == len(y) == 3
 
 
 # -----------------------------------------------------------------------------
@@ -126,11 +134,12 @@ def test_serialize_array_unsupported_shape():
     assert dtype == DamnitType.STRING
 
 
-def test_serialize_reduces_a_2xn_trendline_to_one_series():
+def test_serialize_splits_a_2xn_trendline_into_x_and_y():
     arr = np.array([[1, 2, 3, 4], [10, 20, 30, 40]], dtype=np.float64)
     value, dtype = serialize(to_npy_bytes(arr), dtype=DamnitType.ARRAY_1D)
     assert dtype == DamnitType.ARRAY_1D
-    assert isinstance(value, np.ndarray)
+    np.testing.assert_array_equal(value["x"], [1, 2, 3, 4])
+    np.testing.assert_array_equal(value["y"], [10, 20, 30, 40])
 
 
 def test_serialize_image():

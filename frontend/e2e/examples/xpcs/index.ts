@@ -286,6 +286,43 @@ export const xpcsWithPendingImage: Example = {
   }),
 }
 
+// The demo data has no array1d variable, so this appends one as a trailing
+// column, giving every run the same five-point sparkline.
+const SPARKLINE_VARIABLE = 'xgm_trend'
+
+export const xpcsWithSparkline: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: {
+      ...XPCS.meta.variables,
+      [SPARKLINE_VARIABLE]: {
+        name: SPARKLINE_VARIABLE,
+        title: 'XGM trend',
+        tags: [],
+      },
+    },
+  },
+  data: XPCS.data.map((run) => ({
+    ...run,
+    variables: {
+      ...run.variables,
+      [SPARKLINE_VARIABLE]: {
+        dtype: 'array1d',
+        value: { x: [0, 1, 2, 3, 4], y: [10, 30, 20, 40, 50] },
+      },
+    },
+  })),
+}
+
+export const SPARKLINE_CELL = {
+  col: columnIndex(
+    Object.keys(xpcsWithSparkline.meta.variables),
+    SPARKLINE_VARIABLE
+  ),
+  row: 0,
+}
+
 // A count and a date wider than any title, the values the grid draws in mono.
 export const WIDE_NUMBER = 123456789012345
 const WIDE_DATE = Date.UTC(2024, 8, 15, 12)
