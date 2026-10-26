@@ -47,11 +47,11 @@ export function toSelectedCells(
   { cell: [col, row], range, rangeStack }: GridSelection['current'] & object,
   columns: TableColumn[],
   runs: RunId[]
-): SelectedCells | undefined {
+): SelectedCells | null {
   const anchor = toSelectedCell(col, row, columns, runs)
   const anchored = toSelectedRange(range, columns, runs)
   if (!anchor || !anchored) {
-    return undefined
+    return null
   }
 
   return {
@@ -85,7 +85,7 @@ function toRectangle(
 // A selection whose column or run has left the table no longer points at
 // anything, which reads as nothing selected rather than as its neighbour.
 export function toCurrent(
-  selection: SelectedCells | undefined,
+  selection: SelectedCells | null,
   columnIndex: ColumnIndex,
   rowIndex: RowIndex
 ): GridSelection['current'] {
