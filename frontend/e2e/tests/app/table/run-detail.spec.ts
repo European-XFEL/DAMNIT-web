@@ -6,11 +6,12 @@ import {
   xpcsWithErrors,
   xpcsWithGroups,
 } from '#examples/xpcs'
-import { gridBox, gridCanvas, headerPoint } from '#support/grid'
+import { cellPoint, gridBox, gridCanvas, headerPoint } from '#support/grid'
 import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
 import {
   activateCell,
   closeAside,
+  columnOf,
   hasGroups,
   openPopover,
   openProposal,
@@ -214,7 +215,8 @@ test('clicking the row marker of the selected run clears it while a column is se
   await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
 })
 
-test('a cell click on another row keeps the selected run', async ({
+// With the aside open, a single click acts like activating the cell.
+test('a cell click with a run open shows that cell alone', async ({
   page,
   example,
 }) => {
@@ -222,10 +224,66 @@ test('a cell click on another row keeps the selected run', async ({
   await selectRun(page, { example, row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
-  await selectCells(page, { example, cells: [{ col: 2, row: 2 }] })
+  await selectCells(page, {
+    example,
+    cells: [{ col: columnOf(example, 'sample_type'), row: 2 }],
+  })
+
+  const panel = page.getByRole('complementary')
+  await expect(selectedRunTab(page)).toHaveText('Run 3')
+  await expect(panel.getByText(titleOf(example, 'sample_type'))).toBeVisible()
+  await expect(panel.getByText(titleOf(example, 'xgm_intensity'))).toHaveCount(
+    0
+  )
+})
+
+// Ctrl/Cmd-click is used to select cells for a plot, so it shouldn't change
+// the open run.
+test('a modifier click on another row keeps the open run', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  await expect(selectedRunTab(page)).toHaveText('Run 1')
+
+  const box = await gridBox(page)
+  await clickWithModifier(page, [
+    cellPoint(box, { col: 2, row: 2, grouped: hasGroups(example) }),
+  ])
 
   await expect(selectedRunTab(page)).toHaveText('Run 1')
-  await expect(highlightedRow(page, { row: 0 })).toBeAttached()
+})
+
+test('an arrow key with a run open moves the run with the cell', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  await activateCell(page, {
+    example,
+    col: columnOf(example, 'sample_type'),
+    row: 0,
+  })
+  await expect(selectedRunTab(page)).toHaveText('Run 1')
+
+  await page.keyboard.press('ArrowDown')
+
+  const panel = page.getByRole('complementary')
+  await expect(selectedRunTab(page)).toHaveText('Run 2')
+  await expect(panel.getByText(titleOf(example, 'sample_type'))).toBeVisible()
+})
+
+test('an arrow key with no run open opens none', async ({ page, example }) => {
+  await openProposal(page, example)
+  await selectCells(page, {
+    example,
+    cells: [{ col: columnOf(example, 'sample_type'), row: 0 }],
+  })
+
+  await page.keyboard.press('ArrowDown')
+
+  await expect(selectedRunTab(page)).toHaveCount(0)
 })
 
 test('escape clears the selected run', async ({ page, example }) => {

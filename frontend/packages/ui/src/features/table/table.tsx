@@ -3,6 +3,7 @@ import {
   blend,
   CompactSelection,
   DataEditorCore,
+  getDefaultTheme,
   ImageWindowLoaderImpl,
   sprites,
   withAlpha,
@@ -435,6 +436,21 @@ const Table = ({ paginated = true }: TableProps) => {
     }
   }, [columnIndex, rowIndex, selectedColumns, rowSelection, selectedCells])
 
+  // Highlight the row of the current cell in Glide's selected-row tint, without
+  // selecting the run (which would open the aside).
+  const focusedRow = gridSelection.current?.cell[1]
+  const focusedRowTheme = useMemo<Partial<Theme>>(
+    () => ({ bgCell: blend(getDefaultTheme().accentLight, theme.white) }),
+    [theme]
+  )
+  const getRowThemeOverride = useCallback(
+    (row: number) =>
+      row === focusedRow && !gridSelection.rows.hasIndex(row)
+        ? focusedRowTheme
+        : undefined,
+    [focusedRow, focusedRowTheme, gridSelection.rows]
+  )
+
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, current } = newSelection
 
@@ -450,6 +466,18 @@ const Table = ({ paginated = true }: TableProps) => {
       }
     } else if (selectedRun == null || runKey(nextRun) !== runKey(selectedRun)) {
       dispatch(runSelected(nextRun))
+    }
+
+    // If the aside is open and a key moved the current cell, update the aside
+    // the same way a click does.
+    const movedTo = current?.cell
+    if (
+      keyPressed.current &&
+      selectedRun != null &&
+      movedTo != null &&
+      !isArrayEqual(movedTo, gridSelection.current?.cell ?? [])
+    ) {
+      handleCellActivated(movedTo)
     }
 
     // Clear range stack if cells from the other column are currently selected
@@ -493,6 +521,24 @@ const Table = ({ paginated = true }: TableProps) => {
         ? runSelected(identity)
         : cellActivated({ ...identity, variable })
     )
+  }
+
+  // If the aside is open, a plain click activates the cell, so the aside shows
+  // the clicked cell. The row marker (column -1) is handled by the grid
+  // selection instead. Ctrl/Cmd-clicks add to the cell selection and
+  // Shift-clicks leave it unchanged, so neither should move the aside.
+  const handleCellClicked = (item: Item, event: CellClickedEventArgs) => {
+    if (
+      selectedRun == null ||
+      item[0] < 0 ||
+      event.button !== 0 ||
+      event.shiftKey ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+      return
+    }
+    handleCellActivated(item)
   }
 
   // Context menus. Every one of them is a single plot entry placed at the
@@ -695,6 +741,7 @@ const Table = ({ paginated = true }: TableProps) => {
               columns={gridColumns}
               highlightRegions={highlightRegions}
               drawHeader={drawHeader}
+              getRowThemeOverride={getRowThemeOverride}
               drawCell={drawCell}
               getGroupDetails={getGroupDetails}
               rowHeight={ROW_HEIGHT}
@@ -725,6 +772,7 @@ const Table = ({ paginated = true }: TableProps) => {
               onGridSelectionChange={handleGridSelectionChange}
               // Escape or a click on nothing, which unselecting a column is not.
               onSelectionCleared={() => dispatch(runDeselected())}
+              onCellClicked={handleCellClicked}
               onCellActivated={handleCellActivated}
               rangeSelect="multi-cell"
               onCellContextMenu={handleCellContextMenu}
