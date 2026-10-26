@@ -16,7 +16,7 @@ import {
   type DraggableProvided,
   type DropResult,
 } from '@hello-pangea/dnd'
-import { Divider, Stack, rem } from '@mantine/core'
+import { Divider, Stack, Tooltip, rem } from '@mantine/core'
 import { useDebouncedCallback } from '@mantine/hooks'
 import {
   IconCheck,
@@ -188,11 +188,16 @@ function Grip({ label, handleProps, id }: GripProps) {
 // Stands where the grip would, so a row that never moves says why.
 function PinnedMark() {
   return (
-    <div className={classes.pin} role="img" aria-label="Pinned" title="Pinned">
-      <IconPinned
-        style={{ width: rem(HANDLE_ICON_SIZE), height: rem(HANDLE_ICON_SIZE) }}
-      />
-    </div>
+    <Tooltip label="Pinned">
+      <div className={classes.pin} role="img" aria-label="Pinned">
+        <IconPinned
+          style={{
+            width: rem(HANDLE_ICON_SIZE),
+            height: rem(HANDLE_ICON_SIZE),
+          }}
+        />
+      </div>
+    </Tooltip>
   )
 }
 

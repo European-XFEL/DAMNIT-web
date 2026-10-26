@@ -27,7 +27,6 @@ function ProposalIdentity({
       openDelay={300}
       maw={480}
       multiline
-      withArrow
     >
       <Group className={classes.root} gap={8} wrap="nowrap">
         <InstrumentBadge instrument={instrument} />

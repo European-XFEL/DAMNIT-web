@@ -102,7 +102,7 @@ function CellErrorCard({ error, variant }: CellErrorCardProps) {
             {error.cls}
           </Text>
         </div>
-        <Tooltip label={copyLabel} withArrow>
+        <Tooltip label={copyLabel}>
           <ActionIcon
             aria-label={copyLabel}
             variant="subtle"
