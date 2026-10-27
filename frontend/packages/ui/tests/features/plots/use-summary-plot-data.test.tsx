@@ -11,11 +11,15 @@ import { expect, test, vi } from 'vitest'
 import { setupStore } from '#src/app/store/store'
 import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
+  RUN_FRAGMENT,
   TABLE_DATA_QUERY,
   TABLE_META_QUERY,
 } from '#src/data/table/table-data.queries'
-import { indexRunCells } from '#src/data/table/table-data.transforms'
-import type { RunId, Variable } from '#src/data/table/table-data.types'
+import {
+  cellsByName,
+  indexRunCells,
+} from '#src/data/table/table-data.transforms'
+import type { Run, RunId, Variable } from '#src/data/table/table-data.types'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { useSummaryPlotData } from '#src/features/plots/use-summary-plot-data'
 import { countReconnect } from '#src/graphql/live-updates'
@@ -239,6 +243,25 @@ function createServer(
   return server
 }
 
+// Reads a value through the run, as the run panel does: an overwrite drops the
+// run's link to a cell but leaves the cell itself in the cache.
+function panelValue(
+  cache: InMemoryCache,
+  { run, name }: { run: number; name: string }
+) {
+  const entry = cache.readFragment<Run>({
+    fragment: RUN_FRAGMENT,
+    id: cache.identify({
+      __typename: 'DamnitRun',
+      database: PROPOSAL,
+      proposal: PROPOSAL,
+      run,
+    }),
+  })
+
+  return cellsByName(entry?.cells ?? []).get(name)?.summary.value
+}
+
 test('asks again for every run after live updates reconnect', async () => {
   const runs = [1, 2].map((run) => runFor(run, numbersFor(run)))
   const server = createServer(runs)
@@ -253,6 +276,28 @@ test('asks again for every run after live updates reconnect', async () => {
   await vi.waitFor(() =>
     expect(result.current.data!.traces[0].y?.value).toEqual([10, 999])
   )
+})
+
+test('a reload after a reconnect keeps the values of variables the plot does not chart', async () => {
+  // The table loaded `n_trains` too, and the server answers the plot with only
+  // what it charts.
+  const runs = [1, 2].map((run) =>
+    runFor(run, { ...numbersFor(run), n_trains: run * 100 })
+  )
+  const server = createServer([1, 2].map((run) => runFor(run, numbersFor(run))))
+  const { cache, wrapper } = setup(runs, titled, { link: server.link })
+  const { result } = await renderSummary(runIdsFor([1, 2]), wrapper)
+  await vi.waitFor(() => expect(server.requests).toBe(1))
+
+  // Run 2 changes while live updates are down. Its new intensity is the sign
+  // that the reload has landed: the panel reads 200 before it too.
+  server.runs = [server.runs[0], runFor(2, { energy: 2, intensity: 999 })]
+  countReconnect()
+  await vi.waitFor(() =>
+    expect(result.current.data!.traces[0].y?.value).toEqual([10, 999])
+  )
+
+  expect(panelValue(cache, { run: 2, name: 'n_trains' })).toBe(200)
 })
 
 test('asks again after a reconnect while its first request is still unanswered', async () => {

@@ -2,6 +2,7 @@ import { Kind, parse } from 'graphql'
 
 import {
   SEED_TIMESTAMP_MS,
+  runNumber,
   shapeMetadata,
   shapeTableData,
   unmockedOperationError,
@@ -89,11 +90,21 @@ export async function resolveOperation(
       }
       case 'TableDataQuery':
       case 'LightweightTableDataQuery':
-      case 'DeferredTableDataQuery': {
+      case 'DeferredTableDataQuery':
+      case 'SelectedRunQuery': {
         const { data } = await source.runs(proposal)
         const names = variables.names as string[] | null | undefined
+        const ids = variables.ids as
+          { proposal: string; run: number }[] | null | undefined
+        const runs = ids
+          ? data.filter((run) =>
+              ids.some(
+                (id) => id.proposal === proposal && id.run === runNumber(run)
+              )
+            )
+          : data
         return resolved(
-          shapeTableData(data, {
+          shapeTableData(runs, {
             proposal,
             names,
             lightweight: operationName === 'LightweightTableDataQuery',
