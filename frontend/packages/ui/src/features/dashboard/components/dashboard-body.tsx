@@ -8,6 +8,7 @@ import {
   selectMobileNavOpened,
 } from '#src/features/dashboard/stores/dashboard.selectors'
 import DashboardAside from '#src/features/dashboard/components/aside/dashboard-aside'
+import { useReloadSelectedRun } from '#src/features/dashboard/hooks/use-reload-selected-run'
 
 import classes from './dashboard-body.module.css'
 
@@ -22,7 +23,9 @@ function DashboardBody({ main }: DashboardBodyProps) {
   const onTable = useAppSelector(
     (state) => selectActiveView(state).kind === 'table'
   )
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const selectedRun = useSelectedRun()
+  useReloadSelectedRun({ proposal, run: selectedRun })
   const viewRef = useRef<HTMLDivElement>(null)
 
   return (

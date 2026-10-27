@@ -4,11 +4,13 @@ import {
   IMAGE_CELL,
   IMAGE_VARIABLE,
   IMAGE_VALUE,
+  numberVars,
   xpcsWithPendingImage,
 } from '#examples/xpcs'
 import { fullMetadata } from '#mocks'
 import { homeLink } from '#support/dashboard'
 import { WIDE_VIEWPORT } from '#support/grid'
+import { openSummaryPlot, plotEntries } from '#support/plots'
 import { proposalLink } from '#support/proposals'
 import {
   cell,
@@ -16,6 +18,9 @@ import {
   hoverCell,
   moveAway,
   openProposal,
+  selectRun,
+  selectedRunTab,
+  titleOf,
   tooltipCard,
   waitForCellLoaded,
 } from '#support/table'
@@ -106,6 +111,42 @@ test('a value changed during an outage shows once live updates reconnect', async
 
   // The first retry waits up to 2 s, then page 1 loads again.
   await expect(trains).toHaveText(updated, { timeout: 10_000 })
+})
+
+test('the run beside a plot shows a value changed during an outage once live updates reconnect', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  await selectRun(page, { example, row: 0 })
+  const panel = page.getByRole('complementary', { name: 'Run' })
+  await expect(selectedRunTab(page)).toHaveText('Run 1')
+  await expect(panel.getByText(titleOf(example, 'n_trains'))).toBeVisible()
+  const updated = '777777'
+  await expect(panel.getByText(updated, { exact: true })).toHaveCount(0)
+
+  // A plot of another variable takes the table's place, and the run stays
+  // beside it on a wide screen.
+  await openSummaryPlot(page, {
+    example,
+    col: columnOf(example, numberVars[1]),
+  })
+  await expect(plotEntries(page)).toHaveCount(1)
+  await expect(selectedRunTab(page)).toHaveText('Run 1')
+
+  // Live updates drop, and run 1's trains change before they are back. The
+  // table is gone and the plot asks only for its own variable.
+  await api.dropLiveUpdates()
+  api.editRuns({ 1: { n_trains: { dtype: 'number', value: Number(updated) } } })
+  api.pushLatestData({
+    metadata: fullMetadata(example.meta, XPCS.meta.runs),
+    runs: {},
+  })
+
+  await expect(panel.getByText(updated, { exact: true })).toBeVisible({
+    timeout: 10_000,
+  })
 })
 
 test('a proposal opened after leaving during an outage connects at once', async ({
