@@ -329,11 +329,11 @@ export const getCell = ({
   return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
 }
 
+type GlideRenderer = (typeof AllCellRenderers)[number]
+
 // Glide measures every cell in the grid's font, so a mono cell would fit short
 // and lose its leading digits or its year.
-const measureInCellFont = (
-  renderer: (typeof AllCellRenderers)[number]
-): (typeof AllCellRenderers)[number] => {
+const measureInCellFont = (renderer: GlideRenderer): GlideRenderer => {
   const { measure } = renderer
   if (measure === undefined) {
     return renderer
