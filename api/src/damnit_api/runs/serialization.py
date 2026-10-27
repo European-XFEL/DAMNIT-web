@@ -65,13 +65,13 @@ def resample_array(arr):
 
     # Return immediately if there's only less than 2 elements
     if x.size < 2:
-        return y
+        return x, y
 
     # Build evenly-spaced x-axis (maybe using `size` is not the best)
     x_even = np.linspace(x[0], x[-1], x.size)
 
     # Build evenly-spaced y-axis
-    return np.interp(x_even, x, y)
+    return x_even, np.interp(x_even, x, y)
 
 
 def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
@@ -102,8 +102,8 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
             dtype = DamnitType.STRING
 
         case DamnitType.ARRAY_1D:
-            # The 1-D is what the client receives, not what is stored: a
-            # trendline summary is a 2xN blob of x and y rows.
+            # Trendline summaries are stored as a 2xN array of x and y rows. We
+            # send both so the frontend can show x in the hover tooltip.
             if isinstance(value, bytes):
                 arr = blob2numpy(value)
 
@@ -113,6 +113,7 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
                     value = f"{arr.dtype}: {arr.shape}"
                     dtype = DamnitType.STRING
                 else:
-                    value = resample_array(arr)
+                    x, y = resample_array(arr)
+                    value = {"x": x, "y": y}
 
     return value, dtype

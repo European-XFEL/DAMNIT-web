@@ -25,7 +25,10 @@ import {
   type CellError,
   type ErrorKind,
 } from '#src/utils/cell-errors'
-import { type CellValue } from '#src/data/table/table-data.types'
+import {
+  type CellValue,
+  type SparklineValue,
+} from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/helpers'
 import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 
@@ -95,16 +98,48 @@ export const numberCell = (
   }
 }
 
+export const toSparkline = (value: CellValue): SparklineValue | undefined => {
+  if (typeof value === 'object' && value !== null) {
+    return value
+  }
+  return undefined
+}
+
+// Glide pads the sparkline by 8px on each side (the default
+// cellHorizontalPadding, which our theme doesn't change). It also draws a
+// single value as two points, one at each end.
+const SPARKLINE_PAD_X = 8
+
+// Index of the point Glide's crosshair is on when the pointer is `hoverX` px
+// into the cell.
+export const sparklineIndexAt = (
+  hoverX: number,
+  width: number,
+  count: number
+): number => {
+  if (count === 1) {
+    return 0
+  }
+  const xStep = (width - 2 * SPARKLINE_PAD_X) / (count - 1)
+  return Math.min(
+    count - 1,
+    Math.max(0, Math.round((hoverX - SPARKLINE_PAD_X) / xStep))
+  )
+}
+
 export const arrayCell = (
   value: CellValue,
   params: Partial<BaseGridCell> = {}
 ): SparklineCellType => {
-  const values = Array.isArray(value) ? (value as number[]) : []
+  const values = toSparkline(value)?.y ?? []
 
-  const data = value
+  // Glide only draws the hover crosshair if displayValues is set, but it draws
+  // the labels with a hardcoded 8px font. So we pass blank labels and show the
+  // value in our own tooltip instead.
+  const data = values.length
     ? {
         values: values,
-        displayValues: values.map((v) => formatNumber(v).toString()),
+        displayValues: values.map(() => ''),
         yAxis: [Math.min(...values), Math.max(...values)] as Item,
       }
     : { values: [], yAxis: [0, 0] as Item }
@@ -320,7 +355,7 @@ const measureInCellFont = (
 export const GRID_RENDERERS = AllCellRenderers.map(measureInCellFont)
 
 // Every renderer the grid draws with. The sparkline ships with no `measure`, so
-// a fit would land on Glide's 150px default; a trend has no width of its own.
+// a fit would land on Glide's 150px default; a sparkline has no width of its own.
 export const makeCellRenderers = (
   colors: ErrorColors,
   sparklineWidth: number

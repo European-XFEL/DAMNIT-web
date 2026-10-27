@@ -16,14 +16,16 @@ import {
 
 import CellErrorCard from '#src/components/feedback/cell-error-card'
 import { type CellError } from '#src/utils/cell-errors'
-import { assertNever } from '#src/utils/helpers'
+import { assertNever, formatNumber } from '#src/utils/helpers'
 
 // react-laag's Arrow type lists two props @types/react 18.3 dropped, while its
 // ArrowProps is built from the installed @types/react.
 const Arrow = LaagArrow as unknown as ComponentType<ArrowProps>
 
 export type CellTooltip =
-  { kind: 'error'; error: CellError } | { kind: 'image'; src: string }
+  | { kind: 'error'; error: CellError }
+  | { kind: 'image'; src: string }
+  | { kind: 'sparkline'; x: number; y: number }
 
 type TableTooltipProps = {
   target: CellTooltip
@@ -60,6 +62,13 @@ function renderBody(target: CellTooltip) {
           radius={SURFACE_RADIUS - IMAGE_MARGIN}
           style={{ pointerEvents: 'none' }}
         />
+      )
+    case 'sparkline':
+      return (
+        <Box px={8} py={4} c="white" ff="monospace" fz="xs">
+          <div>x: {formatNumber(target.x)}</div>
+          <div>y: {formatNumber(target.y)}</div>
+        </Box>
       )
     default:
       return assertNever(target)

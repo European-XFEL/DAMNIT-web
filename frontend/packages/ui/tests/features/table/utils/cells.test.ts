@@ -8,7 +8,9 @@ import {
   getCell,
   imageCell,
   numberCell,
+  sparklineIndexAt,
   textCell,
+  toSparkline,
 } from '#src/features/table/utils/cells'
 import { DTYPES } from '#src/constants'
 
@@ -104,8 +106,8 @@ describe('textCell', () => {
 })
 
 describe('arrayCell', () => {
-  test('carries the values and a [min, max] y-axis', () => {
-    const cell = arrayCell([3, 1, 2])
+  test('plots the y of the sparkline on a [min, max] y-axis', () => {
+    const cell = arrayCell({ x: [0, 5, 10], y: [3, 1, 2] })
     expect(cell.data.values).toEqual([3, 1, 2])
     expect(cell.data.yAxis).toEqual([1, 3])
   })
@@ -114,6 +116,44 @@ describe('arrayCell', () => {
     const cell = arrayCell(undefined)
     expect(cell.data.values).toEqual([])
     expect(cell.data.yAxis).toEqual([0, 0])
+  })
+
+  // Glide draws labels at 8px, so the value is shown in our tooltip instead.
+  test('keeps its hover labels blank', () => {
+    const cell = arrayCell({ x: [0, 1, 2], y: [3, 1, 2] })
+    expect(cell.data.displayValues).toEqual(['', '', ''])
+  })
+})
+
+describe('toSparkline', () => {
+  test('passes an x/y sparkline through', () => {
+    const sparkline = { x: [0, 5], y: [3, 1] }
+    expect(toSparkline(sparkline)).toBe(sparkline)
+  })
+
+  test('is undefined for a non-sparkline value', () => {
+    expect(toSparkline('float64: (3,)')).toBeUndefined()
+    expect(toSparkline(null)).toBeUndefined()
+  })
+})
+
+describe('sparklineIndexAt', () => {
+  // A 116 px cell leaves 100 px between the 8 px pads: points every 25 px.
+  test('picks the point nearest the pointer', () => {
+    expect(sparklineIndexAt(8, 116, 5)).toBe(0)
+    expect(sparklineIndexAt(8 + 37, 116, 5)).toBe(1)
+    expect(sparklineIndexAt(8 + 38, 116, 5)).toBe(2)
+    expect(sparklineIndexAt(108, 116, 5)).toBe(4)
+  })
+
+  test('clamps a pointer in the padding to the ends', () => {
+    expect(sparklineIndexAt(0, 116, 5)).toBe(0)
+    expect(sparklineIndexAt(116, 116, 5)).toBe(4)
+  })
+
+  test('maps both ends of a lone value to that value', () => {
+    expect(sparklineIndexAt(0, 116, 1)).toBe(0)
+    expect(sparklineIndexAt(116, 116, 1)).toBe(0)
   })
 })
 

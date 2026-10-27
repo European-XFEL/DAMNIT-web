@@ -38,16 +38,20 @@ import {
   GRID_RENDERERS,
   makeCellRenderers,
   numberCell,
+  sparklineIndexAt,
   textCell,
+  toSparkline,
   type ErrorColors,
 } from '#src/features/table/utils/cells'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
-import { type CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
 import ContextMenu from '#src/features/table/components/context-menu'
-import { useTableTooltip } from '#src/features/table/hooks/use-table-tooltip'
+import {
+  useTableTooltip,
+  type ResolveTooltip,
+} from '#src/features/table/hooks/use-table-tooltip'
 import { useTableColumns } from '#src/features/table/hooks/use-table-columns'
 import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
@@ -261,9 +265,10 @@ const Table = ({ paginated = true }: TableProps) => {
     [tableColumns, runs, cellsByKey, lastUpdatedByKey]
   )
 
-  // Cell: tooltip. Errored cells show a card; image cells show a preview.
-  const resolveTooltip = useCallback(
-    (col: number, row: number): CellTooltip | undefined => {
+  // Cell: tooltip. Errored cells show a card; image cells show a preview; array
+  // cells show the point under the sparkline's crosshair.
+  const resolveTooltip = useCallback<ResolveTooltip>(
+    (col, row, hover) => {
       const identity = runs[row]
       const variable = tableColumns[col]?.id
       if (identity == null || !variable) {
@@ -283,12 +288,25 @@ const Table = ({ paginated = true }: TableProps) => {
       ) {
         return { kind: 'image', src: item.summary.value }
       }
+      if (item.summary.dtype === DTYPES.array1d) {
+        const sparkline = toSparkline(item.summary.value)
+        if (!sparkline?.y.length) {
+          return undefined
+        }
+        const index = sparklineIndexAt(hover.x, hover.width, sparkline.y.length)
+        return {
+          kind: 'sparkline',
+          x: sparkline.x[index],
+          y: sparkline.y[index],
+        }
+      }
       return undefined
     },
     [tableColumns, runs, cellsByKey]
   )
   const {
     onItemHovered: handleItemHovered,
+    onMouseMove: handleTooltipMouseMove,
     dismissOnScroll: dismissTooltipOnScroll,
     tooltip,
   } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
@@ -730,6 +748,7 @@ const Table = ({ paginated = true }: TableProps) => {
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
               onItemHovered={handleGridItemHovered}
+              onMouseMove={handleTooltipMouseMove}
               onKeyDown={handleGridKeyDown}
               freezeColumns={pinnedCount}
               renderers={GRID_RENDERERS}
