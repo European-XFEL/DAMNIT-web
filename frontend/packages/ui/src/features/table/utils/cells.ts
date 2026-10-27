@@ -351,8 +351,23 @@ const measureInCellFont = (renderer: GlideRenderer): GlideRenderer => {
   }
 }
 
-// Glide's own renderers, each measuring in the font its cell is drawn in.
-export const GRID_RENDERERS = AllCellRenderers.map(measureInCellFont)
+// Glide copies each visible cell's text into a hidden table for screen readers.
+// An image's text is its whole data URI, which Firefox lays out on every resize.
+const withShortImageText = (renderer: GlideRenderer): GlideRenderer =>
+  renderer.kind === GridCellKind.Image
+    ? {
+        ...renderer,
+        getAccessibilityString: (cell) =>
+          cell.kind === GridCellKind.Image && cell.data.length > 0
+            ? 'image'
+            : '',
+      }
+    : renderer
+
+// Glide's own renderers, each measuring in the font its cell is drawn in, and
+// an image read out to screen readers as a word rather than its data.
+export const GRID_RENDERERS =
+  AllCellRenderers.map(measureInCellFont).map(withShortImageText)
 
 // Every renderer the grid draws with. The sparkline ships with no `measure`, so
 // a fit would land on Glide's 150px default; a sparkline has no width of its own.

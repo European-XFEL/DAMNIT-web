@@ -56,7 +56,7 @@ test('hovering a cell with no supported tooltip shows nothing', async ({
   await openProposal(page, example)
   const card = tooltipCard(page)
 
-  // Wait for table data to load; the image cell mirrors its src once ready.
+  // Wait for table data to load; the image cell mirrors its text once ready.
   await waitForCellLoaded(page, IMAGE_CELL)
 
   // Cold-hover a plain Run cell, which schedules no tooltip. Wait past the
