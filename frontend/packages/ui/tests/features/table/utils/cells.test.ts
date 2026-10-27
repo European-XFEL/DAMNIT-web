@@ -1,11 +1,16 @@
 import { describe, expect, test } from 'vitest'
-import { GridCellKind, type TextCell } from '@glideapps/glide-data-grid'
+import {
+  GridCellKind,
+  type ImageCell,
+  type TextCell,
+} from '@glideapps/glide-data-grid'
 
 import {
   arrayCell,
   dateCell,
   errorCell,
   getCell,
+  GRID_RENDERERS,
   imageCell,
   numberCell,
   sparklineIndexAt,
@@ -165,6 +170,22 @@ describe('imageCell', () => {
   test('is empty for a non-string value', () => {
     expect(imageCell(undefined).data).toEqual([])
     expect(imageCell(42).data).toEqual([])
+  })
+})
+
+describe('GRID_RENDERERS', () => {
+  const screenReaderText = (cell: ImageCell) =>
+    GRID_RENDERERS.find(
+      (renderer) => renderer.kind === GridCellKind.Image
+    )?.getAccessibilityString(cell)
+
+  test('reads an image cell as "image", not its data URI', () => {
+    const cell = imageCell('data:image/png;base64,iVBORw0KGgo=')
+    expect(screenReaderText(cell)).toBe('image')
+  })
+
+  test('reads an image cell with no image as nothing', () => {
+    expect(screenReaderText(imageCell(42))).toBe('')
   })
 })
 
