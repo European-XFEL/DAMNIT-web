@@ -4,7 +4,7 @@
   gap: 6px;
   align-items: center;
   /* The box reaches into the gap on each side, so the focus ring and the
-     action's background clear the icon while the label keeps its place. */
+     warning's tint clear the icon while the label keeps its place. */
   margin: 0 -6px;
   padding: 0 6px;
   font-size: var(--mantine-font-size-sm);
@@ -30,10 +30,6 @@
 
 .item[data-action] {
   cursor: pointer;
-
-  &:hover {
-    --status-item-background: var(--mantine-color-gray-1);
-  }
 }
 
 .item[data-warning] {
@@ -51,5 +47,36 @@
       var(--mantine-color-orange-filled) 12%,
       var(--mantine-color-body)
     );
+  }
+}
+
+/* The bar's tooltip, with room for a button on the right. */
+.bubble {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: min(380px, calc(100vw - 20px));
+  padding: 8px 10px;
+  border: 0;
+  background: var(--mantine-color-gray-9);
+  color: var(--mantine-color-white);
+  font-size: var(--mantine-font-size-xs);
+  line-height: var(--mantine-line-height-xs);
+}
+
+.action {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--mantine-color-white);
+  border-radius: var(--mantine-radius-default);
+  font-size: inherit;
+  font-weight: 600;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
   }
 }

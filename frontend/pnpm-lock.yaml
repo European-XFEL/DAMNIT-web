@@ -187,6 +187,9 @@ patchedDependencies:
   '@glideapps/glide-data-grid@6.0.3':
     hash: 1b966a40ceb925b0fe51b6b5cf817335d0df91ceb2ce25926c3d50d31b2bf235
     path: patches/@glideapps__glide-data-grid@6.0.3.patch
+  '@mantine/core@7.17.5':
+    hash: c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc
+    path: patches/@mantine__core@7.17.5.patch
   plotly.js@3.3.1:
     hash: 081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f
     path: patches/plotly.js@3.3.1.patch
@@ -227,7 +230,7 @@ importers:
         version: 18.0.1(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/core':
         specifier: catalog:components
-        version: 7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/form':
         specifier: catalog:components
         version: 7.17.5(react@18.3.1)
@@ -260,10 +263,10 @@ importers:
         version: 4.18.1
       mantine-contextmenu:
         specifier: catalog:components
-        version: 7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+        version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
       mantine-datatable:
         specifier: catalog:components
-        version: 7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+        version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
       plotly.js:
         specifier: catalog:components
         version: 3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3)
@@ -345,7 +348,7 @@ importers:
         version: 18.0.1(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/core':
         specifier: catalog:components
-        version: 7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/form':
         specifier: catalog:components
         version: 7.17.5(react@18.3.1)
@@ -378,10 +381,10 @@ importers:
         version: 4.18.1
       mantine-contextmenu:
         specifier: catalog:components
-        version: 7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+        version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
       mantine-datatable:
         specifier: catalog:components
-        version: 7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+        version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
       msw:
         specifier: catalog:testing
         version: 2.12.7(@types/node@24.19.1)(typescript@5.9.3)
@@ -451,7 +454,7 @@ importers:
         version: link:../../packages/ui
       '@mantine/core':
         specifier: catalog:components
-        version: 7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: catalog:frontend
         version: 18.3.1
@@ -616,7 +619,7 @@ importers:
         version: 18.0.1(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/core':
         specifier: catalog:components
-        version: 7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/form':
         specifier: catalog:components
         version: 7.17.5(react@18.3.1)
@@ -676,10 +679,10 @@ importers:
         version: 4.18.1
       mantine-contextmenu:
         specifier: catalog:components
-        version: 7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+        version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
       mantine-datatable:
         specifier: catalog:components
-        version: 7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+        version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
       playwright:
         specifier: catalog:testing
         version: 1.64.0
@@ -4634,7 +4637,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@floating-ui/react': 0.26.28(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/hooks': 7.17.5(react@18.3.1)
@@ -6336,16 +6339,16 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  mantine-contextmenu@7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1):
+  mantine-contextmenu@7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1):
     dependencies:
-      '@mantine/core': 7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@mantine/core': 7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/hooks': 7.17.5(react@18.3.1)
       clsx: 2.1.1
       react: 18.3.1
 
-  mantine-datatable@7.17.1(@mantine/core@7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1):
+  mantine-datatable@7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1):
     dependencies:
-      '@mantine/core': 7.17.5(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@mantine/core': 7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@mantine/hooks': 7.17.5(react@18.3.1)
       clsx: 2.1.1
       react: 18.3.1
