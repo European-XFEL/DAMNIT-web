@@ -10,12 +10,12 @@ const CLOSE_DELAY = 200
 
 const TRY_NOW = { label: 'Try now', icon: null, onClick: () => {} }
 
-const lostItem = ({ onClick = TRY_NOW.onClick } = {}) => (
+const lostItem = ({ onClick = TRY_NOW.onClick, busy = false } = {}) => (
   <StatusItem
     tooltip="Lost live updates."
     aria-label="Lost"
     icon={<IconBroadcastOff aria-hidden />}
-    action={{ ...TRY_NOW, onClick }}
+    action={{ ...TRY_NOW, onClick, busy }}
   />
 )
 
@@ -34,7 +34,7 @@ const renderWithPointerOff = async (ui: ReactNode) => {
   return screen
 }
 
-const renderLostItem = (options?: { onClick: () => void }) =>
+const renderLostItem = (options?: Parameters<typeof lostItem>[0]) =>
   renderWithPointerOff(lostItem(options))
 
 type Screen = Awaited<ReturnType<typeof renderWithPointerOff>>
@@ -300,6 +300,44 @@ describe('retrying', () => {
     await userEvent.keyboard('{Enter>5/}')
 
     expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  test('a busy button ignores presses', async () => {
+    const onClick = vi.fn()
+    const screen = await renderLostItem({ onClick })
+    const button = tryNowButton(screen)
+    await userEvent.tab()
+    await userEvent.tab()
+    await expect.element(button).toHaveFocus()
+
+    // A press while ready
+    await userEvent.keyboard('{Enter}')
+    expect(onClick).toHaveBeenCalledOnce()
+
+    // A press while busy
+    screen.rerender(lostItem({ onClick, busy: true }))
+    await expect.element(button).toHaveAttribute('aria-disabled', 'true')
+    await userEvent.keyboard('{Enter}')
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  test('a tap on a busy item opens its bubble and presses nothing', async () => {
+    const onClick = vi.fn()
+    const screen = await renderLostItem({ onClick, busy: true })
+
+    // A tap clicks with no hover first
+    ;(lostItemButton(screen).element() as HTMLElement).click()
+
+    await expect.element(tryNowButton(screen)).toBeVisible()
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
+  test('a busy item says it is unavailable, as its button does', async () => {
+    const screen = await renderLostItem({ busy: true })
+
+    await expect
+      .element(lostItemButton(screen))
+      .toHaveAttribute('aria-disabled', 'true')
   })
 
   test('focus on the button moves to the item when the action goes', async () => {
