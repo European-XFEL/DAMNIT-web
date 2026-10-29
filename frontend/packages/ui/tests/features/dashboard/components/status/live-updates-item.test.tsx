@@ -1,8 +1,26 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import LiveUpdatesItem from '#src/features/dashboard/components/status/live-updates-item'
-import { liveUpdates } from '#src/graphql/live-updates'
+import {
+  liveUpdates,
+  type LiveUpdatesStopReason,
+} from '#src/graphql/live-updates'
 import { renderWithProviders } from '#tests/support/render'
+
+const openStoppedBubble = async (reason: LiveUpdatesStopReason) => {
+  liveUpdates({
+    status: 'stopped',
+    since: new Date(2026, 9, 20, 3, 0, 14).getTime(),
+    reason,
+  })
+  const screen = await renderWithProviders(<LiveUpdatesItem />)
+  const stopped = screen.getByRole('button', {
+    name: /^Live updates stopped/,
+  })
+  ;(stopped.element() as HTMLElement).focus()
+
+  return screen
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
@@ -93,4 +111,33 @@ test('every time in the live tooltip carries its date', async () => {
   await expect
     .element(screen.getByRole('dialog'))
     .toHaveTextContent('Lost live updates 19 October 2026 at 23:58:10.')
+})
+
+test('the stopped bubble says when live updates stopped and that the login has ended', async () => {
+  const screen = await openStoppedBubble('login')
+
+  await expect
+    .element(screen.getByRole('dialog'))
+    .toHaveTextContent(
+      'Live updates stopped 20 October 2026 at 03:00:14. Your login has ended.'
+    )
+})
+
+test('the stopped bubble blames the server for any end but the login', async () => {
+  const screen = await openStoppedBubble('server')
+
+  await expect
+    .element(screen.getByRole('dialog'))
+    .toHaveTextContent(
+      'Live updates stopped 20 October 2026 at 03:00:14. The server ended them.'
+    )
+})
+
+// The e2e spec presses it: Chromium will not let a test stub the reload.
+test('the stopped bubble holds a Reload button', async () => {
+  const screen = await openStoppedBubble('server')
+
+  await expect
+    .element(screen.getByRole('button', { name: 'Reload', exact: true }))
+    .toBeVisible()
 })

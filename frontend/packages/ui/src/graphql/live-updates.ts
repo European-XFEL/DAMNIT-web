@@ -1,4 +1,5 @@
 import { makeVar } from '@apollo/client'
+import { CloseCode } from 'graphql-ws'
 
 // Goes up each time live updates come back after a drop, for the views a push
 // does not refresh. Not in `apollo.ts`, which builds the client on import.
@@ -9,13 +10,17 @@ export const countReconnect = () => reconnectCount(reconnectCount() + 1)
 export type LiveUpdatesStatus =
   'connecting' | 'live' | 'reconnecting' | 'stopped' | 'off'
 
+export type LiveUpdatesStopReason = 'login' | 'server'
+
 export type LiveUpdatesState = {
-  status: LiveUpdatesStatus
   // When the status began. Live counts from when the proposal opened instead,
-  // if it opened later on a socket that was already live.
+  // if that was later, and a stop after a loss keeps the time of the loss.
   since: number
   lastPushAt?: number
-}
+} & (
+  | { status: Exclude<LiveUpdatesStatus, 'stopped'> }
+  | { status: 'stopped'; reason: LiveUpdatesStopReason }
+)
 
 export type LiveUpdatesEvent =
   | { type: 'subscribed' }
@@ -23,7 +28,7 @@ export type LiveUpdatesEvent =
   | { type: 'connected' }
   | { type: 'closed' }
   | { type: 'pushed' }
-  | { type: 'failed' }
+  | { type: 'failed'; reason: LiveUpdatesStopReason }
   | { type: 'disabled' }
 
 export const liveUpdates = makeVar<LiveUpdatesState>({
@@ -74,7 +79,13 @@ export function nextLiveUpdates(
     case 'pushed':
       return { ...state, lastPushAt: now }
     case 'failed':
-      return { ...state, status: 'stopped', since: now }
+      // Nothing has arrived since a loss, so a stop after one keeps its time.
+      return {
+        ...state,
+        status: 'stopped',
+        since: state.status === 'reconnecting' ? state.since : now,
+        reason: event.reason,
+      }
     case 'disabled':
       return { status: 'off', since: now }
   }
@@ -138,9 +149,24 @@ export function liveUpdatesListeners(terminate: () => void) {
         clearTimeout(pongTimeout)
       }
     },
-    closed: () => {
+    // A 4401 lands here before Apollo's `onError`, which sees it only as text.
+    closed: (event: unknown) => {
       clearTimeout(pongTimeout)
-      recordLiveUpdatesEvent({ type: 'closed' })
+
+      if (isUnauthorizedClose(event)) {
+        recordLiveUpdatesEvent({ type: 'failed', reason: 'login' })
+      } else {
+        recordLiveUpdatesEvent({ type: 'closed' })
+      }
     },
   }
+}
+
+function isUnauthorizedClose(event: unknown) {
+  return (
+    typeof event === 'object' &&
+    event !== null &&
+    'code' in event &&
+    event.code === CloseCode.Unauthorized
+  )
 }

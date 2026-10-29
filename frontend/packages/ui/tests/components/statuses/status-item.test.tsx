@@ -82,6 +82,33 @@ describe('pressing the item', () => {
 
     expect(onClick).toHaveBeenCalledOnce()
   })
+
+  test('an action pressed from the bubble only runs from its button, not from the item', async () => {
+    const onClick = vi.fn()
+    const screen = await renderWithPointerOff(
+      <StatusItem
+        tooltip="Live updates stopped."
+        aria-label="Stopped"
+        icon={<IconBroadcastOff aria-hidden />}
+        action={{ label: 'Reload', icon: null, onClick, bubbleOnly: true }}
+      />
+    )
+    const reloadButton = screen.getByRole('button', {
+      name: 'Reload',
+      exact: true,
+    })
+
+    // Click the item, then press Enter and Space on it
+    await userEvent.click(screen.getByRole('button', { name: 'Stopped' }))
+    await userEvent.keyboard('{Enter}')
+    await userEvent.keyboard(' ')
+    await expect.element(reloadButton).toBeVisible()
+    expect(onClick).not.toHaveBeenCalled()
+
+    // Click Reload
+    await userEvent.click(reloadButton)
+    expect(onClick).toHaveBeenCalledOnce()
+  })
 })
 
 describe('opening the bubble', () => {
@@ -300,6 +327,36 @@ describe('retrying', () => {
     await userEvent.keyboard('{Enter>5/}')
 
     expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  test('a double click does not press the action its first click brought in', async () => {
+    const reload = vi.fn()
+    const stoppedItem = (
+      <StatusItem
+        tooltip="Live updates stopped."
+        aria-label="Stopped"
+        icon={<IconBroadcastOff aria-hidden />}
+        action={{ label: 'Reload', icon: null, onClick: reload }}
+      />
+    )
+    const screen = await renderLostItem({
+      // The retry finds the login has ended, and live updates stop
+      onClick: () => screen.rerender(stoppedItem),
+    })
+    await userEvent.hover(lostItemButton(screen))
+    const reloadButton = screen.getByRole('button', {
+      name: 'Reload',
+      exact: true,
+    })
+
+    // Double-click Try now
+    await userEvent.dblClick(tryNowButton(screen))
+    await expect.element(reloadButton).toBeVisible()
+    expect(reload).not.toHaveBeenCalled()
+
+    // Click Reload
+    await userEvent.click(reloadButton)
+    expect(reload).toHaveBeenCalledOnce()
   })
 
   test('focus on the button moves to the item when the action goes', async () => {

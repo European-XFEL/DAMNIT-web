@@ -5,11 +5,17 @@ import {
   liveUpdatesListeners,
   nextLiveUpdates,
   reconnectCount,
+  recordLiveUpdatesEvent,
   retryDelay,
   retryNow,
   waitBeforeRetry,
   type LiveUpdatesState,
 } from '#src/graphql/live-updates'
+
+// The close graphql-ws hands its listener when a socket drops.
+const DROPPED = { code: 1006, reason: '' }
+// The close the API sends a socket whose login has ended.
+const LOGIN_ENDED = { code: 4401, reason: 'Unauthorized' }
 
 // Resolves to whether the wait has ended once `ms` more have passed.
 const waitEndsWithin = async (wait: Promise<void>, ms: number) => {
@@ -69,13 +75,13 @@ test('a drop is lost from its first wait through every failed retry', () => {
 
   // The socket drops, and graphql-ws waits before it tries again
   vi.setSystemTime(10_000)
-  listeners.closed()
+  listeners.closed(DROPPED)
   waitBeforeRetry(0)
   expect(liveUpdates()).toEqual({ status: 'reconnecting', since: 10_000 })
 
   // A retry fails
   vi.setSystemTime(12_000)
-  listeners.closed()
+  listeners.closed(DROPPED)
   waitBeforeRetry(1)
   expect(liveUpdates()).toEqual({ status: 'reconnecting', since: 10_000 })
 })
@@ -102,22 +108,82 @@ test('graphql-ws closing a socket nothing uses reads as connecting, not lost', (
   expect(closed).toEqual({ status: 'connecting', since: 3000 })
 })
 
-test('a failed subscription stops live updates', () => {
-  const lost: LiveUpdatesState = { status: 'reconnecting', since: 0 }
+test('a failed subscription stops live updates with the server as the reason', () => {
+  const live: LiveUpdatesState = { status: 'live', since: 0 }
 
   vi.setSystemTime(3000)
-  const failed = nextLiveUpdates(lost, { type: 'failed' })
+  const failed = nextLiveUpdates(live, { type: 'failed', reason: 'server' })
 
-  expect(failed).toEqual({ status: 'stopped', since: 3000 })
+  expect(failed).toEqual({ status: 'stopped', since: 3000, reason: 'server' })
+})
+
+test('lost live updates that stop keep the time they were lost', () => {
+  const lost: LiveUpdatesState = { status: 'reconnecting', since: 10_000 }
+
+  vi.setSystemTime(12_000)
+  const failed = nextLiveUpdates(lost, { type: 'failed', reason: 'server' })
+
+  expect(failed).toEqual({ status: 'stopped', since: 10_000, reason: 'server' })
 })
 
 test('graphql-ws closing a refused socket leaves live updates stopped', () => {
-  const stopped: LiveUpdatesState = { status: 'stopped', since: 3000 }
+  const stopped: LiveUpdatesState = {
+    status: 'stopped',
+    since: 3000,
+    reason: 'server',
+  }
 
   vi.setSystemTime(3100)
   const closed = nextLiveUpdates(stopped, { type: 'closed' })
 
   expect(closed).toEqual(stopped)
+})
+
+test('a first connect closed with 4401 stops live updates with the login as the reason', () => {
+  const listeners = liveUpdatesListeners(vi.fn())
+
+  vi.setSystemTime(2000)
+  listeners.closed(LOGIN_ENDED)
+
+  expect(liveUpdates()).toEqual({
+    status: 'stopped',
+    since: 2000,
+    reason: 'login',
+  })
+})
+
+test('a reconnect closed with 4401 stops lost live updates with the login as the reason', () => {
+  const listeners = liveUpdatesListeners(vi.fn())
+  listeners.connected({}, undefined, false)
+
+  // The socket drops
+  vi.setSystemTime(10_000)
+  listeners.closed(DROPPED)
+  waitBeforeRetry(0)
+
+  // The retry finds the login has ended
+  vi.setSystemTime(12_000)
+  listeners.closed(LOGIN_ENDED)
+  expect(liveUpdates()).toEqual({
+    status: 'stopped',
+    since: 10_000,
+    reason: 'login',
+  })
+})
+
+test('the failed subscription after a 4401 close keeps the login as the reason', () => {
+  const listeners = liveUpdatesListeners(vi.fn())
+
+  vi.setSystemTime(2000)
+  listeners.closed(LOGIN_ENDED)
+  vi.setSystemTime(2001)
+  recordLiveUpdatesEvent({ type: 'failed', reason: 'server' })
+
+  expect(liveUpdates()).toEqual({
+    status: 'stopped',
+    since: 2000,
+    reason: 'login',
+  })
 })
 
 test('a push records its time and leaves the status alone', () => {
@@ -151,8 +217,12 @@ test('opening a proposal during an outage keeps the time live updates were lost'
   expect(opened).toEqual({ status: 'reconnecting', since: 10_000 })
 })
 
-test('opening a proposal after live updates stopped connects afresh', () => {
-  const stopped: LiveUpdatesState = { status: 'stopped', since: 0 }
+test('opening a proposal after live updates stopped connects afresh and forgets why', () => {
+  const stopped: LiveUpdatesState = {
+    status: 'stopped',
+    since: 0,
+    reason: 'login',
+  }
 
   vi.setSystemTime(9000)
   const opened = nextLiveUpdates(stopped, { type: 'subscribed' })
@@ -220,7 +290,7 @@ test('a ping sent before a drop does not end the next connection', () => {
 
   // A ping, then the drop
   listeners.ping(false)
-  listeners.closed()
+  listeners.closed(DROPPED)
   vi.advanceTimersByTime(20_000)
   expect(terminate).not.toHaveBeenCalled()
 
