@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import {
   blend,
   CompactSelection,
   DataEditorCore,
+  getDefaultTheme,
   ImageWindowLoaderImpl,
   sprites,
   withAlpha,
@@ -65,11 +66,15 @@ import {
   toSelectedRun,
   type ColumnIndex,
   type RowIndex,
-  type SelectedCells,
 } from '#src/features/table/utils/grid-selection'
-import { selectRowSelection } from '#src/features/table/stores/table.selectors'
+import {
+  selectRowSelection,
+  selectSelectedCells,
+  selectSelectedColumns,
+} from '#src/features/table/stores/table.selectors'
 import {
   cellActivated,
+  gridSelectionChanged,
   runDeselected,
   runSelected,
 } from '#src/features/table/stores/table.slice'
@@ -311,13 +316,8 @@ const Table = ({ paginated = true }: TableProps) => {
     tooltip,
   } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
 
-  // Cell: Click event
-  // Both stay local because nothing outside the grid reads them. That does mean
-  // the outline a drill-down draws is gone after another view unmounts the
-  // table, while the drill-down itself survives in `activeVariable`: the aside
-  // keeps showing the right variable, only its outline has to be clicked back.
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([])
-  const [selectedCells, setSelectedCells] = useState<SelectedCells>()
+  const selectedColumns = useAppSelector(selectSelectedColumns)
+  const selectedCells = useAppSelector(selectSelectedCells)
   const rowSelection = useAppSelector(selectRowSelection)
   const selectedRun = useSelectedRun()
 
@@ -453,6 +453,21 @@ const Table = ({ paginated = true }: TableProps) => {
     }
   }, [columnIndex, rowIndex, selectedColumns, rowSelection, selectedCells])
 
+  // Highlight the row of the current cell in Glide's selected-row tint, without
+  // selecting the run (which would open the aside).
+  const focusedRow = gridSelection.current?.cell[1]
+  const focusedRowTheme = useMemo<Partial<Theme>>(
+    () => ({ bgCell: blend(getDefaultTheme().accentLight, theme.white) }),
+    [theme]
+  )
+  const getRowThemeOverride = useCallback(
+    (row: number) =>
+      row === focusedRow && !gridSelection.rows.hasIndex(row)
+        ? focusedRowTheme
+        : undefined,
+    [focusedRow, focusedRowTheme, gridSelection.rows]
+  )
+
   const handleGridSelectionChange = (newSelection: GridSelection) => {
     const { columns, current } = newSelection
 
@@ -470,6 +485,18 @@ const Table = ({ paginated = true }: TableProps) => {
       dispatch(runSelected(nextRun))
     }
 
+    // If the aside is open and a key moved the current cell, update the aside
+    // the same way a click does.
+    const movedTo = current?.cell
+    if (
+      keyPressed.current &&
+      selectedRun != null &&
+      movedTo != null &&
+      !isArrayEqual(movedTo, gridSelection.current?.cell ?? [])
+    ) {
+      handleCellActivated(movedTo)
+    }
+
     // Clear range stack if cells from the other column are currently selected
     const rangeStack =
       current && !isEmpty(current.cell) && !isEmpty(current.rangeStack)
@@ -481,20 +508,20 @@ const Table = ({ paginated = true }: TableProps) => {
         : undefined
 
     // Finalize
-    setSelectedColumns(
-      columns
-        .toArray()
-        .map((index) => tableColumns[index]?.id)
-        .filter((variable) => variable != null)
-    )
-    setSelectedCells(
-      current
-        ? toSelectedCells(
-            { ...current, ...(rangeStack && { rangeStack }) },
-            tableColumns,
-            runs
-          )
-        : undefined
+    dispatch(
+      gridSelectionChanged({
+        columns: columns
+          .toArray()
+          .map((index) => tableColumns[index]?.id)
+          .filter((variable) => variable != null),
+        cells: current
+          ? toSelectedCells(
+              { ...current, ...(rangeStack && { rangeStack }) },
+              tableColumns,
+              runs
+            )
+          : null,
+      })
     )
   }
   // The run number names the row rather than holding a value, so activating it
@@ -511,6 +538,24 @@ const Table = ({ paginated = true }: TableProps) => {
         ? runSelected(identity)
         : cellActivated({ ...identity, variable })
     )
+  }
+
+  // If the aside is open, a plain click activates the cell, so the aside shows
+  // the clicked cell. The row marker (column -1) is handled by the grid
+  // selection instead. Ctrl/Cmd-clicks add to the cell selection and
+  // Shift-clicks leave it unchanged, so neither should move the aside.
+  const handleCellClicked = (item: Item, event: CellClickedEventArgs) => {
+    if (
+      selectedRun == null ||
+      item[0] < 0 ||
+      event.button !== 0 ||
+      event.shiftKey ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+      return
+    }
+    handleCellActivated(item)
   }
 
   // Context menus. Every one of them is a single plot entry placed at the
@@ -544,17 +589,19 @@ const Table = ({ paginated = true }: TableProps) => {
       selectedCell = [col, row]
       selectedRange = []
 
-      setSelectedColumns([])
-      setSelectedCells(
-        toSelectedCells(
-          {
-            cell: selectedCell,
-            rangeStack: selectedRange,
-            range: { x: col, y: row, width: 1, height: 1 },
-          },
-          tableColumns,
-          runs
-        )
+      dispatch(
+        gridSelectionChanged({
+          columns: [],
+          cells: toSelectedCells(
+            {
+              cell: selectedCell,
+              rangeStack: selectedRange,
+              range: { x: col, y: row, width: 1, height: 1 },
+            },
+            tableColumns,
+            runs
+          ),
+        })
       )
     }
 
@@ -608,8 +655,7 @@ const Table = ({ paginated = true }: TableProps) => {
     // opening a menu is not a reason to close that.
     const isSelected = gridSelection.columns.hasIndex(col)
     if (!isSelected) {
-      setSelectedColumns([column.id])
-      setSelectedCells(undefined)
+      dispatch(gridSelectionChanged({ columns: [column.id], cells: null }))
     }
 
     const columnSelection = isSelected ? gridSelection.columns.toArray() : [col]
@@ -713,6 +759,7 @@ const Table = ({ paginated = true }: TableProps) => {
               columns={gridColumns}
               highlightRegions={highlightRegions}
               drawHeader={drawHeader}
+              getRowThemeOverride={getRowThemeOverride}
               drawCell={drawCell}
               getGroupDetails={getGroupDetails}
               rowHeight={ROW_HEIGHT}
@@ -743,6 +790,7 @@ const Table = ({ paginated = true }: TableProps) => {
               onGridSelectionChange={handleGridSelectionChange}
               // Escape or a click on nothing, which unselecting a column is not.
               onSelectionCleared={() => dispatch(runDeselected())}
+              onCellClicked={handleCellClicked}
               onCellActivated={handleCellActivated}
               rangeSelect="multi-cell"
               onCellContextMenu={handleCellContextMenu}

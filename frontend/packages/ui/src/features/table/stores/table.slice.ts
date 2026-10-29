@@ -4,11 +4,13 @@ import { resetProposal } from '#src/app/store/actions'
 import { VARIABLES } from '#src/constants'
 import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
+import { isArrayEqual } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 import type {
   ChangedColumns,
   Scroll,
 } from '#src/features/table/types/table.types'
+import type { SelectedCells } from '#src/features/table/utils/grid-selection'
 
 // Shaped by @tanstack/table-core v9: column ids and primitives, nothing derived.
 // These key names are the contract, so don't rename them to fit local taste.
@@ -23,10 +25,13 @@ type TanstackState = {
 type ColumnFlash = ChangedColumns & { at: number }
 
 // What TanStack has no name for. `tagSelection` filters columns by a facet,
-// which its row-filtering columnFilters cannot express; scroll and isActive only
-// mean anything mid-session, which its state slices deliberately exclude.
+// which its row-filtering columnFilters cannot express; scroll, isActive and the
+// grid selection only mean anything mid-session, which its state slices
+// deliberately exclude.
 type TableViewState = {
   activeVariable: string | null
+  selectedColumns: string[]
+  selectedCells: SelectedCells | null
   lastFlash: ColumnFlash | null
   movedSinceReset: ChangedColumns
   tagSelection: Record<string, boolean>
@@ -54,6 +59,11 @@ const initialState: TableState = {
   rowSelection: {},
   // Which variable the aside is drilled into; null shows every one of them.
   activeVariable: null,
+  // The grid's column and cell selection, kept here rather than in the grid so
+  // it survives the table unmounting while another view is open. Held by
+  // variable and runKey, like rowSelection.
+  selectedColumns: [],
+  selectedCells: null,
   // What the last drop, fit or reset changed and when, on performance.now()'s
   // clock. Only the grid's flash reads it, so it means nothing past the session.
   lastFlash: null,
@@ -106,6 +116,21 @@ const slice = createSlice({
     ) => {
       selectRow(state, runKey(action.payload))
       state.activeVariable = action.payload.variable
+    },
+    gridSelectionChanged: (
+      state,
+      action: PayloadAction<{
+        columns: string[]
+        cells: SelectedCells | null
+      }>
+    ) => {
+      const { columns, cells } = action.payload
+      // Most changes are cell clicks, which leave the columns alone; see
+      // selectRow for why an unchanged value isn't rewritten.
+      if (!isArrayEqual(state.selectedColumns, columns)) {
+        state.selectedColumns = columns
+      }
+      state.selectedCells = cells
     },
     setColumnVisibility: (
       state,
@@ -200,6 +225,7 @@ export const {
   columnResized,
   columnsFitted,
   columnWidthsReset,
+  gridSelectionChanged,
   runDeselected,
   runSelected,
   setActive,

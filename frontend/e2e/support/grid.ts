@@ -208,6 +208,15 @@ export async function lineStrength(
   canvas: Locator,
   point: Point
 ): Promise<number> {
+  const [here] = await pixelColor(canvas, point)
+  const [right] = await pixelColor(canvas, { ...point, x: point.x + 1 })
+  return right - here
+}
+
+export async function pixelColor(
+  canvas: Locator,
+  point: Point
+): Promise<number[]> {
   return canvas.evaluate((element: HTMLCanvasElement, { x, y }) => {
     const rect = element.getBoundingClientRect()
     const scale = element.width / rect.width
@@ -215,16 +224,13 @@ export async function lineStrength(
     if (!context) {
       throw new Error('the canvas has no 2d context')
     }
-    const [here, right] = [x, x + 1].map(
-      (px) =>
-        context.getImageData(
-          Math.round((px - rect.x) * scale),
-          Math.round((y - rect.y) * scale),
-          1,
-          1
-        ).data[0]
-    )
-    return right - here
+    const data = context.getImageData(
+      Math.round((x - rect.x) * scale),
+      Math.round((y - rect.y) * scale),
+      1,
+      1
+    ).data
+    return [data[0], data[1], data[2]]
   }, point)
 }
 
