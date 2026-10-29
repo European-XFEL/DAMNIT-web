@@ -27,7 +27,8 @@ type StatusItemProps = {
   // Names an item that shows only an icon.
   'aria-label'?: string
   // A button beside the tooltip's words, in a bubble the pointer can reach.
-  // A click on the item presses it too.
+  // A click on the item presses it too, unless it is pressed from the bubble
+  // only: a costly action, such as a page reload, a tap must not set off.
   action?: {
     label: string
     icon: ReactNode
@@ -35,6 +36,7 @@ type StatusItemProps = {
     // Shows a loader in place of the label and ignores presses. Not Button's
     // `loading`, which disables the button and so drops its focus.
     busy?: boolean
+    bubbleOnly?: boolean
   }
   // An error is a solid red ground, for an item that shows only an icon: words
   // on it read under 4.5:1.
@@ -54,11 +56,14 @@ function StatusItem({
     useBubble({ enabled: action != null })
   const wordsId = useId()
   const runAction = action?.busy ? undefined : action?.onClick
+  const pressesAction = action != null && !action.bubbleOnly
 
   // The bubble opens too, so the press shows what it did.
   const press = () => {
     open()
-    runAction?.()
+    if (pressesAction) {
+      runAction?.()
+    }
   }
 
   // One element whether or not there is an action, so a state change that
@@ -92,7 +97,9 @@ function StatusItem({
             role={action ? 'button' : ariaLabel ? 'img' : undefined}
             aria-disabled={action?.busy || undefined}
             aria-label={
-              ariaLabel && action ? `${ariaLabel} ${action.label}` : ariaLabel
+              ariaLabel && pressesAction
+                ? `${ariaLabel} ${action.label}`
+                : ariaLabel
             }
             // Only while open, since the words leave the page with the bubble.
             // Left off with no action: even undefined beats the Tooltip's own.
