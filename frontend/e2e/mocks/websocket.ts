@@ -31,7 +31,11 @@ export type LiveUpdatesMock = {
   pushLatestData: (data: LatestData) => void
   // Close the socket the way an API restart does, so graphql-ws reconnects.
   // With `refuse`, that many reconnects are closed too and the waits grow.
-  dropLiveUpdates: (options?: { refuse?: number }) => Promise<void>
+  // With `stall`, the reconnect after them opens and is never acknowledged.
+  dropLiveUpdates: (options?: {
+    refuse?: number
+    stall?: boolean
+  }) => Promise<void>
   // How many sockets the app has opened, refused ones included.
   connections: () => number
   // How many subscriptions the app has opened, refused ones included.
@@ -76,6 +80,7 @@ export async function mockWebSocket(
   const pending: LatestData[] = []
   let lastMetadata: string | undefined
   let refusalsLeft = 0
+  let stallNext = false
   let connections = 0
   let subscriptions = 0
   let refused = false
@@ -139,6 +144,13 @@ export async function mockWebSocket(
       return
     }
     socket = ws
+
+    // As an API that waits on MyMdC before it answers the init
+    if (stallNext) {
+      stallNext = false
+      return
+    }
+
     ws.onMessage((message) => {
       const msg = JSON.parse(String(message))
       switch (msg.type) {
@@ -178,8 +190,9 @@ export async function mockWebSocket(
         pending.push(data)
       }
     },
-    dropLiveUpdates: async ({ refuse = 0 } = {}) => {
+    dropLiveUpdates: async ({ refuse = 0, stall = false } = {}) => {
       refusalsLeft = refuse
+      stallNext = stall
       activeId = undefined
       await socket?.close({ code: 1012, reason: 'Service Restart' })
     },
