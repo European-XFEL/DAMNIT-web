@@ -37,8 +37,9 @@ const TRY_NOW = {
 function LiveUpdatesItem() {
   const state = useReactiveVar(liveUpdates)
   const hidden = useConnectingHidden(state)
+  const tryShown = useTryShown(state)
   const lost = state.status === 'reconnecting'
-  const { name, detail } = describe(state)
+  const { name, detail } = describe(state, { tryShown })
 
   // A new icon once shown, so a quick first connect shows it already live,
   // not easing and fading out of a spin it ran while hidden.
@@ -64,7 +65,7 @@ function LiveUpdatesItem() {
             </>
           }
           icon={icon}
-          action={lost ? TRY_NOW : undefined}
+          action={lost ? { ...TRY_NOW, busy: tryShown } : undefined}
           warning={lost}
         />
       </Box>
@@ -73,7 +74,10 @@ function LiveUpdatesItem() {
   )
 }
 
-function describe({ status, since, lastPushAt }: LiveUpdatesState) {
+function describe(
+  { status, since, lastPushAt }: LiveUpdatesState,
+  { tryShown }: { tryShown: boolean }
+) {
   switch (status) {
     case 'connecting':
       return { name: 'Connecting to live updates...' }
@@ -89,7 +93,9 @@ function describe({ status, since, lastPushAt }: LiveUpdatesState) {
       return {
         name: `Lost live updates ${formatDateAndTime(since)}.`,
         // A no-break space, so a wrap never strands the unit on its own line.
-        detail: `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`,
+        detail: tryShown
+          ? 'Trying again now.'
+          : `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`,
       }
     case 'stopped':
       return {
@@ -223,6 +229,27 @@ function useConnectingHidden({ status, since }: LiveUpdatesState) {
   }, [hidden, status, since])
 
   return hidden
+}
+
+// Whether a try has run long enough to show, since most fail or connect at once.
+function useTryShown({ trying = false }: LiveUpdatesState) {
+  const [shown, setShown] = useState(false)
+
+  if (shown && !trying) {
+    setShown(false)
+  }
+
+  useEffect(() => {
+    if (!trying) {
+      return
+    }
+
+    const timeout = setTimeout(() => setShown(true), CONNECTING_DELAY)
+
+    return () => clearTimeout(timeout)
+  }, [trying])
+
+  return shown
 }
 
 export default LiveUpdatesItem
