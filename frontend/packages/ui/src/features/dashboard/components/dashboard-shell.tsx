@@ -1,5 +1,5 @@
 import { useRef, type ReactNode } from 'react'
-import { AppShell, VisuallyHidden } from '@mantine/core'
+import { AppShell, getDefaultZIndex, VisuallyHidden } from '@mantine/core'
 import { useDidUpdate, useFocusReturn } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
@@ -79,7 +79,11 @@ function DashboardShell({
               open beside the view. */}
           <DashboardBody main={main} />
         </AppShell.Main>
-        <AppShell.Footer aria-label="Status bar">
+        {/* Over the navbar's app + 1, so a status item's bubble draws above the nav. */}
+        <AppShell.Footer
+          aria-label="Status bar"
+          zIndex={getDefaultZIndex('app') + 2}
+        >
           <StatusBar>
             <LiveUpdatesItem />
             <ReadOnlyItem />
