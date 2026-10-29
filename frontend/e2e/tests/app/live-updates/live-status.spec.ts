@@ -124,6 +124,24 @@ test('Reload on stopped live updates reloads the page', async ({
   await load
 })
 
+test('a click on stopped live updates opens their bubble and keeps the page', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expect(liveItem(page)).toBeVisible()
+  api.refuseLiveUpdates()
+  await expect(stoppedItem(page)).toBeVisible({ timeout: 1000 })
+  // A reload would take the mark away
+  await page.evaluate(() => (document.body.dataset.kept = 'yes'))
+
+  await stoppedItem(page).click()
+
+  await expect(reloadButton(page)).toBeVisible()
+  await expect(page.locator('body')).toHaveAttribute('data-kept', 'yes')
+})
+
 test('an ended login shows on stopped live updates', async ({
   page,
   api,
