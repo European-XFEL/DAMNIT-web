@@ -15,11 +15,14 @@ export type LiveUpdatesState = {
   // if it opened later on a socket that was already live.
   since: number
   lastPushAt?: number
+  // graphql-ws is connecting again after a wait. Only while reconnecting.
+  trying?: boolean
 }
 
 export type LiveUpdatesEvent =
   | { type: 'subscribed' }
   | { type: 'waiting' }
+  | { type: 'trying' }
   | { type: 'connected' }
   | { type: 'closed' }
   | { type: 'pushed' }
@@ -47,7 +50,11 @@ export function nextLiveUpdates(
       // Each proposal counts its changes from when it opened. A socket still
       // retrying keeps the time it was lost; a refused one gets a fresh try.
       if (state.status === 'reconnecting') {
-        return { status: 'reconnecting', since: state.since }
+        return {
+          status: 'reconnecting',
+          since: state.since,
+          trying: state.trying,
+        }
       }
 
       return {
@@ -57,10 +64,16 @@ export function nextLiveUpdates(
     case 'waiting':
       // Each failed retry waits again, and keeps the time of the first loss.
       if (state.status === 'reconnecting') {
-        return state
+        return { ...state, trying: undefined }
       }
 
       return { ...state, status: 'reconnecting', since: now }
+    case 'trying':
+      if (state.status !== 'reconnecting') {
+        return state
+      }
+
+      return { ...state, trying: true }
     case 'closed':
       // Every loss goes through graphql-ws's retry wait. A close without one is
       // graphql-ws leaving a socket nothing uses, or reconnecting at once.
@@ -70,11 +83,11 @@ export function nextLiveUpdates(
 
       return { ...state, status: 'connecting', since: now }
     case 'connected':
-      return { ...state, status: 'live', since: now }
+      return { ...state, status: 'live', since: now, trying: undefined }
     case 'pushed':
       return { ...state, lastPushAt: now }
     case 'failed':
-      return { ...state, status: 'stopped', since: now }
+      return { ...state, status: 'stopped', since: now, trying: undefined }
     case 'disabled':
       return { status: 'off', since: now }
   }
@@ -116,6 +129,7 @@ export function liveUpdatesListeners(terminate: () => void) {
   let reloadPending = false
 
   return {
+    connecting: () => recordLiveUpdatesEvent({ type: 'trying' }),
     connected: (_socket: unknown, _payload: unknown, wasRetry: boolean) => {
       recordLiveUpdatesEvent({ type: 'connected' })
       reloadPending = wasRetry
