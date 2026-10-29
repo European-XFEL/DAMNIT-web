@@ -80,6 +80,36 @@ test('a drop is lost from its first wait through every failed retry', () => {
   expect(liveUpdates()).toEqual({ status: 'reconnecting', since: 10_000 })
 })
 
+test('a connect marks a try under way only while reconnecting', () => {
+  const listeners = liveUpdatesListeners(vi.fn())
+
+  // The first connect
+  listeners.connecting()
+  expect(liveUpdates()).toEqual({ status: 'connecting', since: 0 })
+
+  // A drop, its wait, then the retry
+  listeners.connected({}, undefined, false)
+  vi.setSystemTime(10_000)
+  listeners.closed()
+  waitBeforeRetry(0)
+  listeners.connecting()
+  expect(liveUpdates()).toEqual({
+    status: 'reconnecting',
+    since: 10_000,
+    trying: true,
+  })
+})
+
+test('a try that fails ends when the next wait starts', () => {
+  const listeners = liveUpdatesListeners(vi.fn())
+  liveUpdates({ status: 'reconnecting', since: 10_000, trying: true })
+
+  listeners.closed()
+  waitBeforeRetry(1)
+
+  expect(liveUpdates()).toEqual({ status: 'reconnecting', since: 10_000 })
+})
+
 test('a reconnect goes live again and keeps the last push', () => {
   const lost: LiveUpdatesState = {
     status: 'reconnecting',
@@ -91,6 +121,19 @@ test('a reconnect goes live again and keeps the last push', () => {
   const live = nextLiveUpdates(lost, { type: 'connected' })
 
   expect(live).toEqual({ status: 'live', since: 20_000, lastPushAt: 5000 })
+})
+
+test('a try that connects goes live with no try under way', () => {
+  const trying: LiveUpdatesState = {
+    status: 'reconnecting',
+    since: 10_000,
+    trying: true,
+  }
+
+  vi.setSystemTime(20_000)
+  const live = nextLiveUpdates(trying, { type: 'connected' })
+
+  expect(live).toEqual({ status: 'live', since: 20_000 })
 })
 
 test('graphql-ws closing a socket nothing uses reads as connecting, not lost', () => {
@@ -138,17 +181,22 @@ test('opening a proposal on a live socket forgets the last push and counts from 
   expect(opened).toEqual({ status: 'live', since: 9000 })
 })
 
-test('opening a proposal during an outage keeps the time live updates were lost', () => {
+test('opening a proposal during an outage keeps when it was lost and the try under way', () => {
   const lost: LiveUpdatesState = {
     status: 'reconnecting',
     since: 10_000,
     lastPushAt: 5000,
+    trying: true,
   }
 
   vi.setSystemTime(20_000)
   const opened = nextLiveUpdates(lost, { type: 'subscribed' })
 
-  expect(opened).toEqual({ status: 'reconnecting', since: 10_000 })
+  expect(opened).toEqual({
+    status: 'reconnecting',
+    since: 10_000,
+    trying: true,
+  })
 })
 
 test('opening a proposal after live updates stopped connects afresh', () => {

@@ -50,6 +50,23 @@ test('Try now on lost live updates reconnects without sitting out the wait', asy
   }).toPass({ timeout: 3000 })
 })
 
+test('a try the server has not answered yet shows in the lost bubble', async ({
+  page,
+  api,
+  example,
+}) => {
+  await openProposal(page, example)
+  await expect(liveItem(page)).toBeVisible()
+
+  await api.dropLiveUpdates({ stall: true })
+  await lostItem(page).hover()
+
+  await expect(statusBar(page).getByRole('dialog')).toContainText(
+    'Trying again now.'
+  )
+  await expect(tryNowButton(page)).toHaveAttribute('aria-disabled', 'true')
+})
+
 test('a push of metadata alone does not count as an update', async ({
   page,
   api,

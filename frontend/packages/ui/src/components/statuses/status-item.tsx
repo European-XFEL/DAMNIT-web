@@ -8,7 +8,7 @@ import {
   type FocusEvent,
   type ReactNode,
 } from 'react'
-import { Box, Popover, Tooltip, UnstyledButton } from '@mantine/core'
+import { Box, Loader, Popover, Tooltip, UnstyledButton } from '@mantine/core'
 
 import classes from './status-item.module.css'
 
@@ -32,6 +32,9 @@ type StatusItemProps = {
     label: string
     icon: ReactNode
     onClick: () => void
+    // Shows a loader in place of the label and ignores presses. Not Button's
+    // `loading`, which disables the button and so drops its focus.
+    busy?: boolean
   }
   warning?: boolean
 }
@@ -48,11 +51,12 @@ function StatusItem({
   const { opened, open, close, itemRef, setBubble, itemProps, bubbleProps } =
     useBubble({ enabled: action != null })
   const wordsId = useId()
+  const runAction = action?.busy ? undefined : action?.onClick
 
   // The bubble opens too, so the press shows what it did.
   const press = () => {
     open()
-    action?.onClick()
+    runAction?.()
   }
 
   // One element whether or not there is an action, so a state change that
@@ -84,6 +88,7 @@ function StatusItem({
             mod={{ action: action != null, warning }}
             tabIndex={0}
             role={action ? 'button' : ariaLabel ? 'img' : undefined}
+            aria-disabled={action?.busy || undefined}
             aria-label={
               ariaLabel && action ? `${ariaLabel} ${action.label}` : ariaLabel
             }
@@ -130,7 +135,8 @@ function StatusItem({
         {action && (
           <UnstyledButton
             className={classes.action}
-            onClick={action.onClick}
+            aria-disabled={action.busy || undefined}
+            onClick={runAction}
             // A held Enter would press it again on every repeat.
             onKeyDown={(event) => {
               if (event.repeat) {
@@ -138,8 +144,18 @@ function StatusItem({
               }
             }}
           >
-            {action.icon}
-            {action.label}
+            <span className={classes.actionLabel}>
+              {action.icon}
+              {action.label}
+            </span>
+            {action.busy && (
+              <Loader
+                className={classes.actionLoader}
+                type="dots"
+                size="xs"
+                color="white"
+              />
+            )}
           </UnstyledButton>
         )}
       </Popover.Dropdown>
