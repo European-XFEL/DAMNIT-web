@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useReactiveVar } from '@apollo/client/react'
 import { Box, Indicator, rem, Text, VisuallyHidden } from '@mantine/core'
 import { useReducedMotion } from '@mantine/hooks'
-import { IconBroadcast, IconRefresh } from '@tabler/icons-react'
+import { IconBroadcast } from '@tabler/icons-react'
 
+import RetryIcon from '#src/components/icons/retry-icon'
 import StatusItem from '#src/components/statuses/status-item'
 import { LOADER_DELAY, useShownAfter } from '#src/hooks/use-shown-after'
 import {
-  LONGEST_RETRY_DELAY,
+  describeRetry,
   liveUpdates,
   retryNow,
   type LiveUpdatesState,
@@ -21,13 +22,7 @@ const ICON_STYLE = { width: rem(16), height: rem(16) }
 
 const TRY_NOW = {
   label: 'Try now',
-  icon: (
-    <IconRefresh
-      style={{ width: rem(14), height: rem(14) }}
-      stroke={2}
-      aria-hidden
-    />
-  ),
+  icon: <RetryIcon />,
   onClick: retryNow,
 }
 
@@ -89,10 +84,7 @@ function describe(
     case 'reconnecting':
       return {
         name: `Lost live updates ${formatDateAndTime(since)}.`,
-        // A no-break space, so a wrap never strands the unit on its own line.
-        detail: tryShown
-          ? 'Trying again now.'
-          : `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`,
+        detail: describeRetry({ tryShown }),
       }
     case 'stopped':
       return {
