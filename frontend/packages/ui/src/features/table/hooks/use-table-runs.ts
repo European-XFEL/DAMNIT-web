@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useApolloClient, useQuery, useReactiveVar } from '@apollo/client/react'
-import { debounce } from 'lodash'
+import { debounce, isEqual } from 'lodash'
 
 import { VARIABLES } from '#src/constants'
 import { liveRunStamps } from '#src/data/table/run-stamps'
@@ -21,7 +21,10 @@ import type { RunCells } from '#src/data/table/table-data.types'
 import { reconnectCount, retryDelay } from '#src/graphql/live-updates'
 import { sorted } from '#src/utils/array'
 import { pageRangeForRegion } from '#src/features/table/utils/pagination'
-import type { Rectangle } from '#src/features/table/types/table.types'
+import type {
+  LoadErrors,
+  Rectangle,
+} from '#src/features/table/types/table.types'
 
 type UseTableRunsOptions = {
   proposal: string
@@ -33,6 +36,15 @@ type UseTableRuns = {
   cellsByKey: Map<string, RunCells>
   lastUpdatedByKey: ReadonlyMap<string, number>
   onVisibleRegionChanged: (region: Rectangle) => void
+  loadErrors: LoadErrors
+  // Asks again now for the failed pages in view, unless a try is already out.
+  retryNow: () => void
+}
+
+const NO_LOAD_ERRORS: LoadErrors = {
+  rows: [],
+  values: [],
+  waitsForRetry: false,
 }
 
 // One page's progress through the two passes. A failed pass waits for the
@@ -109,15 +121,31 @@ function nextDeferredPage(
   )
 }
 
-// Whether a pass on this page has failed and not landed since.
-function hasFailed(state: PageState): boolean {
-  return [state.lightweight, state.deferred].some(
-    (pass) => pass === 'failed' || pass === 'retrying'
-  )
-}
-
 function waitsForRetry(state: PageState): boolean {
   return state.lightweight === 'failed' || state.deferred === 'failed'
+}
+
+// Whether this pass has failed and not landed since.
+function failedPass(pass: PageState['lightweight' | 'deferred']): boolean {
+  return pass === 'failed' || pass === 'retrying'
+}
+
+function loadErrorsInView(
+  pages: Map<number, PageState>,
+  { visible, perPage }: { visible: ReadonlySet<number>; perPage: number }
+): LoadErrors {
+  const inView = sorted([...visible]).map((page) => ({
+    rows: { first: (page - 1) * perPage, last: page * perPage - 1 },
+    state: pageState(pages, page),
+  }))
+  const rowsWhere = (failed: (state: PageState) => boolean) =>
+    inView.filter(({ state }) => failed(state)).map(({ rows }) => rows)
+
+  return {
+    rows: rowsWhere((state) => failedPass(state.lightweight)),
+    values: rowsWhere((state) => failedPass(state.deferred)),
+    waitsForRetry: inView.some(({ state }) => waitsForRetry(state)),
+  }
 }
 
 // The cache is the render source: every page, deferred fill and pushed run
@@ -145,6 +173,8 @@ export function useTableRuns({
   // The clock calls back into the passes that start it, so it reaches the
   // retry through a ref rather than a dependency.
   const retryFailedRef = useRef(() => {})
+  // The page states are refs, so this is what renders when they fail.
+  const [loadErrors, setLoadErrors] = useState(NO_LOAD_ERRORS)
 
   // Reads what the passes have written; `cache-only` so it never fetches a page
   // of its own. Partial reads still repaint, so a page lands as it arrives.
@@ -191,16 +221,20 @@ export function useTableRuns({
     retryTimer.current = undefined
   }, [])
 
-  // Run the clock while a page in view waits to be asked again. A pass being
-  // retried still counts as failed, so its waits grow until it lands.
-  const updateRetryClock = useCallback(() => {
-    const states = [...visiblePages.current].map((page) =>
-      pageState(pageStates.current, page)
-    )
-    if (!states.some(hasFailed)) {
+  // Show the failed pages in view, and run the clock while one waits. A retried
+  // pass still counts as failed, so its waits grow until it lands.
+  const updateFailedPages = useCallback(() => {
+    const errors = loadErrorsInView(pageStates.current, {
+      visible: visiblePages.current,
+      perPage,
+    })
+    // Kept while equal, so a page that lands does not repaint the table.
+    setLoadErrors((current) => (isEqual(current, errors) ? current : errors))
+
+    if (errors.rows.length === 0 && errors.values.length === 0) {
       retries.current = 0
     }
-    if (!states.some(waitsForRetry)) {
+    if (!errors.waitsForRetry) {
       stopRetryClock()
       return
     }
@@ -211,7 +245,7 @@ export function useTableRuns({
         retryDelay(retries.current) + Math.random() * 1000
       )
     }
-  }, [stopRetryClock])
+  }, [perPage, stopRetryClock])
 
   // Fetch the values `@lightweight` held back on the page that most needs them.
   // One pass runs at a time, and this hook picks which page rather than the
@@ -245,7 +279,7 @@ export function useTableRuns({
         })
         release()
         startNext()
-        updateRetryClock()
+        updateFailedPages()
       }
 
       // `run` rides along so a deferred row normalizes onto the identity the
@@ -283,7 +317,7 @@ export function useTableRuns({
             updatePage(states, page, { deferred: 'done' })
             release()
             startNext()
-            updateRetryClock()
+            updateFailedPages()
           },
           error: (error) => {
             console.error(
@@ -295,7 +329,7 @@ export function useTableRuns({
         })
       inFlight.stop = () => subscription.unsubscribe()
     },
-    [client, proposal, perPage, updateRetryClock]
+    [client, proposal, perPage, updateFailedPages]
   )
 
   // A page that failed reads `retrying` until it answers, so the clock knows
@@ -328,7 +362,7 @@ export function useTableRuns({
           lightweight: 'failed',
           pageFetch: undefined,
         })
-        updateRetryClock()
+        updateFailedPages()
       }
 
       // `no-cache` keeps the answer scoped to this page: a cached read of
@@ -371,14 +405,14 @@ export function useTableRuns({
               heavyNames: heavyCellNames(pageData.runs),
             })
             startNextDeferred()
-            updateRetryClock()
+            updateFailedPages()
           },
           (error: Error) => {
             failPageFetch(`Page ${page} failed to load:`, error)
           }
         )
     },
-    [client, proposal, perPage, startNextDeferred, updateRetryClock]
+    [client, proposal, perPage, startNextDeferred, updateFailedPages]
   )
 
   // Ask for the lightweight pass on any of these pages not asked for yet.
@@ -394,10 +428,18 @@ export function useTableRuns({
     [fetchPage]
   )
 
+  // Called during a try, a retry would ask nothing and still grow the waits.
   const retryFailed = useCallback(() => {
+    const states = pageStates.current
+    const waiting = [...visiblePages.current].some((page) =>
+      waitsForRetry(pageState(states, page))
+    )
+    if (!waiting) {
+      return
+    }
+
     stopRetryClock()
     retries.current += 1
-    const states = pageStates.current
     for (const page of visiblePages.current) {
       const state = pageState(states, page)
       if (state.lightweight === 'failed') {
@@ -409,7 +451,15 @@ export function useTableRuns({
     }
     stopDeferredOutOfView()
     startNextDeferred()
-  }, [fetchPage, startNextDeferred, stopDeferredOutOfView, stopRetryClock])
+    // Nothing waits now, which the run count shows while the try is out.
+    updateFailedPages()
+  }, [
+    fetchPage,
+    startNextDeferred,
+    stopDeferredOutOfView,
+    stopRetryClock,
+    updateFailedPages,
+  ])
 
   useEffect(() => {
     retryFailedRef.current = retryFailed
@@ -431,9 +481,9 @@ export function useTableRuns({
         state.pageFetch?.abort()
       }
       pages.clear()
-      updateRetryClock()
+      updateFailedPages()
     }
-  }, [proposal, ensurePagesLoaded, stopDeferred, updateRetryClock, reconnects])
+  }, [proposal, ensurePagesLoaded, stopDeferred, updateFailedPages, reconnects])
 
   // Settling the per-frame scroll reports turns a scrollbar drag into a handful
   // of requests; `maxWait` keeps a slow scroll loading with no pause to wait for.
@@ -485,7 +535,7 @@ export function useTableRuns({
     stopDeferredOutOfView()
     ensurePagesLoaded(pages)
     startNextDeferred()
-    updateRetryClock()
+    updateFailedPages()
   }, [
     settledRegion,
     proposal,
@@ -493,7 +543,7 @@ export function useTableRuns({
     ensurePagesLoaded,
     startNextDeferred,
     stopDeferredOutOfView,
-    updateRetryClock,
+    updateFailedPages,
   ])
 
   const onVisibleRegionChanged = useCallback(
@@ -527,5 +577,11 @@ export function useTableRuns({
   // live push lands, so loads and deferred fills never animate a row.
   const lastUpdatedByKey = useReactiveVar(liveRunStamps)
 
-  return { cellsByKey, lastUpdatedByKey, onVisibleRegionChanged }
+  return {
+    cellsByKey,
+    lastUpdatedByKey,
+    onVisibleRegionChanged,
+    loadErrors,
+    retryNow: retryFailed,
+  }
 }

@@ -24,3 +24,17 @@ export type Rectangle = {
   width: number
   height: number
 }
+
+// Rows `first` to `last` of the table, both included.
+export type RowRange = {
+  first: number
+  last: number
+}
+
+// The pages in view whose rows or heavy values failed to load and have not
+// landed since, and whether any of them waits for the retry clock.
+export type LoadErrors = {
+  rows: RowRange[]
+  values: RowRange[]
+  waitsForRetry: boolean
+}

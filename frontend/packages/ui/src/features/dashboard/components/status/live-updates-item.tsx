@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { useReactiveVar } from '@apollo/client/react'
 import { Box, Indicator, rem, Text, VisuallyHidden } from '@mantine/core'
 import { useReducedMotion } from '@mantine/hooks'
-import { IconBroadcast, IconRefresh } from '@tabler/icons-react'
+import { IconBroadcast } from '@tabler/icons-react'
 
+import RetryIcon from '#src/components/icons/retry-icon'
 import StatusItem from '#src/components/statuses/status-item'
+import { LOADER_DELAY, useShownAfter } from '#src/hooks/use-shown-after'
 import {
-  LONGEST_RETRY_DELAY,
+  describeRetry,
   liveUpdates,
   retryNow,
   type LiveUpdatesState,
@@ -16,28 +18,18 @@ import { formatClockTime, formatLongDate } from '#src/utils/time'
 
 import classes from './live-updates-item.module.css'
 
-// Most connects take well under a second, and a spinner for that long would
-// only flicker.
-const CONNECTING_DELAY = 1000
-
 const ICON_STYLE = { width: rem(16), height: rem(16) }
 
 const TRY_NOW = {
   label: 'Try now',
-  icon: (
-    <IconRefresh
-      style={{ width: rem(14), height: rem(14) }}
-      stroke={2}
-      aria-hidden
-    />
-  ),
+  icon: <RetryIcon />,
   onClick: retryNow,
 }
 
 function LiveUpdatesItem() {
   const state = useReactiveVar(liveUpdates)
   const hidden = useConnectingHidden(state)
-  const tryShown = useTryShown(state)
+  const tryShown = useShownAfter(state.trying ?? false)
   const lost = state.status === 'reconnecting'
   const { name, detail } = describe(state, { tryShown })
 
@@ -92,10 +84,7 @@ function describe(
     case 'reconnecting':
       return {
         name: `Lost live updates ${formatDateAndTime(since)}.`,
-        // A no-break space, so a wrap never strands the unit on its own line.
-        detail: tryShown
-          ? 'Trying again now.'
-          : `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`,
+        detail: describeRetry({ tryShown }),
       }
     case 'stopped':
       return {
@@ -222,34 +211,13 @@ function useConnectingHidden({ status, since }: LiveUpdatesState) {
 
     const timeout = setTimeout(
       () => setHidden(false),
-      since + CONNECTING_DELAY - Date.now()
+      since + LOADER_DELAY - Date.now()
     )
 
     return () => clearTimeout(timeout)
   }, [hidden, status, since])
 
   return hidden
-}
-
-// Whether a try has run long enough to show, since most fail or connect at once.
-function useTryShown({ trying = false }: LiveUpdatesState) {
-  const [shown, setShown] = useState(false)
-
-  if (shown && !trying) {
-    setShown(false)
-  }
-
-  useEffect(() => {
-    if (!trying) {
-      return
-    }
-
-    const timeout = setTimeout(() => setShown(true), CONNECTING_DELAY)
-
-    return () => clearTimeout(timeout)
-  }, [trying])
-
-  return shown
 }
 
 export default LiveUpdatesItem
