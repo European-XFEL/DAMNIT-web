@@ -108,6 +108,14 @@ export function retryDelay(retries: number): number {
   return Math.min(FIRST_RETRY_DELAY * 2 ** retries, LONGEST_RETRY_DELAY)
 }
 
+// When a status item on this clock tries next. A no-break space, so a wrap
+// never strands the unit on its own line.
+export function describeRetry({ tryShown }: { tryShown: boolean }) {
+  return tryShown
+    ? 'Trying again now.'
+    : `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`
+}
+
 let endPendingWait = () => {}
 
 export function waitBeforeRetry(retries: number): Promise<void> {
