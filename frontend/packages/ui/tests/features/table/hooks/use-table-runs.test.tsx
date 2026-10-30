@@ -165,6 +165,32 @@ function createNetwork({
   return network
 }
 
+// Page reads stay out until the test fails them, oldest first, so a test can
+// hold a retry out while it looks. Heavy values never arrive.
+function createHeldNetwork() {
+  const started: number[] = []
+  const open = new Map<number, Array<() => void>>()
+
+  const link = new ApolloLink((operation) => {
+    if (operation.operationName !== LIGHTWEIGHT_NAME) {
+      return hangs()
+    }
+
+    const page = (operation.variables.page as number) ?? 1
+    started.push(page)
+
+    return new Observable<FetchResult>((observer) => {
+      const failures = open.get(page) ?? []
+      failures.push(() => observer.error(new Error('the server gave up')))
+      open.set(page, failures)
+    })
+  })
+
+  const fail = (page: number) => open.get(page)?.shift()?.()
+
+  return { link, started, fail }
+}
+
 const heavyValueFor = (cells: Map<string, RunCells>, run: number): unknown =>
   cells.get(`${PROPOSAL}:${run}`)?.get('spectrum')?.summary.value
 
@@ -1155,6 +1181,151 @@ describe('running into a page that fails to load', () => {
     await vi.waitFor(() =>
       expect(result.current.cellsByKey.has(`${PROPOSAL}:1`)).toBe(true)
     )
+  })
+
+  test('says which rows failed to load, and that they wait for the clock', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork({ failLightweight: true })
+    const { result } = await renderTableRuns(network)
+
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors).toEqual({
+        rows: [{ first: 0, last: 9 }],
+        values: [],
+        waitsForRetry: true,
+      })
+    )
+  })
+
+  test('says which rows failed when only their heavy values did', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork({ failDeferred: true })
+    const { result } = await renderTableRuns(network)
+
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors).toEqual({
+        rows: [],
+        values: [{ first: 0, last: 9 }],
+        waitsForRetry: true,
+      })
+    )
+  })
+
+  test('stops waiting for the clock while its retry is out, and waits again once that fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createHeldNetwork()
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started).toEqual([1]))
+    network.fail(1)
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors.waitsForRetry).toBe(true)
+    )
+
+    // The clock asks again.
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(network.started).toEqual([1, 1])
+    expect(result.current.loadErrors).toEqual({
+      rows: [{ first: 0, last: 9 }],
+      values: [],
+      waitsForRetry: false,
+    })
+
+    // The retry fails too.
+    network.fail(1)
+
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors.waitsForRetry).toBe(true)
+    )
+  })
+
+  test('waits for the clock again when a page fails while another is being retried', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createHeldNetwork()
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started).toEqual([1]))
+    network.fail(1)
+    result.current.onVisibleRegionChanged(regionAt(0))
+    await settle()
+
+    // The clock asks for page 1 again, while page 2 is still loading.
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(result.current.loadErrors.waitsForRetry).toBe(false)
+
+    // Page 2 fails.
+    network.fail(2)
+
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors).toEqual({
+        rows: [
+          { first: 0, last: 9 },
+          { first: 10, last: 19 },
+        ],
+        values: [],
+        waitsForRetry: true,
+      })
+    )
+  })
+
+  test('says nothing about a failed page once it scrolls out of view', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createNetwork({ failLightweight: true })
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors.rows).toEqual([{ first: 0, last: 9 }])
+    )
+
+    // The server comes back, and the user scrolls far down.
+    network.failLightweight = false
+    result.current.onVisibleRegionChanged(regionAt(200))
+    await settle()
+
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors).toEqual({
+        rows: [],
+        values: [],
+        waitsForRetry: false,
+      })
+    )
+  })
+
+  test('Try again asks for a page waiting on the clock at once', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createHeldNetwork()
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started).toEqual([1]))
+    network.fail(1)
+    await vi.waitFor(() =>
+      expect(result.current.loadErrors.waitsForRetry).toBe(true)
+    )
+
+    // No time passes, which `vi.waitFor` would let the clock's own retry use.
+    result.current.retryNow()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(network.started).toEqual([1, 1])
+  })
+
+  test('Try again during a try asks for nothing and keeps the next wait as it was', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const network = createHeldNetwork()
+    const { result } = await renderTableRuns(network)
+    await vi.waitFor(() => expect(network.started).toEqual([1]))
+    network.fail(1)
+
+    // The clock's retry is out when the user presses.
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(network.started).toEqual([1, 1])
+    result.current.retryNow()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(network.started).toEqual([1, 1])
+
+    // The retry fails, and the second wait is still 2 s.
+    network.fail(1)
+    await vi.advanceTimersByTimeAsync(1999)
+    expect(network.started).toEqual([1, 1])
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(network.started).toEqual([1, 1, 1])
   })
 
   test('asks for nothing more once the table unmounts', async () => {
