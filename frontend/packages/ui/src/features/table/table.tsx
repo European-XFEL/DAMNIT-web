@@ -22,7 +22,6 @@ import {
 import { Stack, useMantineTheme } from '@mantine/core'
 
 import { DTYPES, VARIABLES } from '#src/constants'
-import StatusItem from '#src/components/statuses/status-item'
 import { ViewStatus } from '#src/components/statuses/view-status'
 import { plotRequested } from '#src/app/store/actions'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
@@ -47,6 +46,7 @@ import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
+import { RunCountItem } from '#src/features/table/components/run-count-item'
 import ContextMenu from '#src/features/table/components/context-menu'
 import {
   useTableTooltip,
@@ -112,12 +112,6 @@ function paintInnerLine(
   ctx.restore()
 }
 
-const numberFormat = new Intl.NumberFormat('en')
-
-function formatRunCount(count: number) {
-  return `${numberFormat.format(count)} ${count === 1 ? 'run' : 'runs'}`
-}
-
 const Table = ({ paginated = true }: TableProps) => {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
@@ -129,6 +123,8 @@ const Table = ({ paginated = true }: TableProps) => {
     cellsByKey,
     lastUpdatedByKey,
     onVisibleRegionChanged: fetchOnScroll,
+    loadErrors,
+    retryNow,
   } = useTableRuns({
     proposal,
     paginated,
@@ -764,9 +760,10 @@ const Table = ({ paginated = true }: TableProps) => {
             <div id="portal" />
           </>
           <ViewStatus>
-            <StatusItem
-              tooltip="Runs in this proposal"
-              label={formatRunCount(runs.length)}
+            <RunCountItem
+              runs={runs}
+              loadErrors={loadErrors}
+              onTryAgain={retryNow}
             />
           </ViewStatus>
         </Stack>
