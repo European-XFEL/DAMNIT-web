@@ -65,9 +65,9 @@
 }
 
 .action {
+  position: relative;
   display: flex;
   flex: none;
-  gap: 6px;
   align-items: center;
   height: 26px;
   padding: 0 10px;
@@ -76,7 +76,34 @@
   font-size: inherit;
   font-weight: 600;
 
-  &:hover {
+  &:hover:not([aria-disabled]) {
     background: rgba(255, 255, 255, 0.1);
+  }
+
+  &[aria-disabled] {
+    cursor: default;
+  }
+}
+
+/* Hidden but kept, so the button keeps its width and its name. */
+.actionLabel {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+
+  .action[aria-disabled] & {
+    opacity: 0;
+  }
+}
+
+.actionLoader {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+
+  @media (prefers-reduced-motion: reduce) {
+    & span {
+      animation: none;
+    }
   }
 }
