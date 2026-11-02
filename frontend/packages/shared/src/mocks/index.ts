@@ -14,4 +14,12 @@ export {
   resolveOperation,
   type MockDataSource,
 } from './resolve'
+export {
+  HOME_PROPOSALS,
+  HOME_SEMESTERS,
+  XPCS_PROPOSAL,
+  XPCS_USER,
+  type ProposalMetadata,
+  type UserInfo,
+} from './proposals'
 export type { Meta, RunData, Runs, VariableError } from './types'

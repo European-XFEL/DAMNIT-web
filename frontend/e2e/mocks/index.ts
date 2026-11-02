@@ -82,8 +82,7 @@ export async function mockApi(
   let contextContent = example.contextFile
   let contextLastModified = 1_700_000_000
 
-  // variables.proposal arrives as a string, so hold the accessible set as strings.
-  const accessible = accessibleProposals(example).map(String)
+  const accessible = accessibleProposals(example)
 
   // Replaced rather than mutated, so editRuns leaves the shared example alone.
   let runData = withComputedTimes(example.data)
@@ -96,7 +95,7 @@ export async function mockApi(
     },
     // A push carries the run's identity, so it is delivered for the proposal the
     // subscription opened (the first accessible one in a single-proposal example).
-    ...(await mockWebSocket(page, accessible[0])),
+    ...(await mockWebSocket(page, String(accessible[0]))),
     editRuns: (runs) => {
       runData = runData.map((run) => ({
         ...run,
@@ -126,13 +125,7 @@ export async function mockApi(
         throw error
       }
     },
-    // The home page fires one ProposalMetadata query per semester, so filter to
-    // the requested numbers; otherwise a multi-semester example would leak every
-    // proposal into every sub-table.
-    proposalMetadata: async ({ proposalNumbers }) =>
-      example.proposalMetadata.filter((proposal) =>
-        (proposalNumbers ?? []).includes(proposal.number)
-      ),
+    proposalMetadata: async () => example.proposalMetadata,
   }
 
   // Registered first so the specific routes below take precedence (Playwright
@@ -202,24 +195,14 @@ export async function mockApi(
       variables?: Record<string, unknown>
     }
 
-    // A query for a proposal the user cannot access errors, the way the backend
-    // rejects one outside the session. useProposal reads that error as notFound
-    // and ProposalWrapper redirects to /not-found. Handled here, so it is not
-    // drift. Operations without a proposal (e.g. ProposalMetadata) skip.
-    const proposal = variables?.proposal
-    if (proposal != null && !accessible.includes(String(proposal))) {
-      return route.fulfill({
-        json: {
-          errors: [{ message: `No access to proposal ${proposal}` }],
-        },
-      })
-    }
-
     try {
+      // A proposal outside `accessible` gets the backend's error, which
+      // useProposal reads as notFound and ProposalWrapper sends to /not-found.
       const resolution = await resolveOperation(operationName, {
         query,
         variables: variables ?? {},
         source,
+        accessibleProposals: accessible,
       })
       if (!resolution.resolved) {
         api.unmockedRequests.push(operationName)
