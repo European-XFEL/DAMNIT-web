@@ -111,6 +111,8 @@ export function recordComputedTimes(
   let changed = recorded.key !== key
 
   for (const { run, value } of drawn) {
+    // A preview value is a JSON scalar: Apollo hands back the object it stored,
+    // even when it builds a read anew, so only a write makes a new one.
     if (kept.get(run)?.value === value) {
       continue
     }
