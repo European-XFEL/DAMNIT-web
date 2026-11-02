@@ -1,3 +1,6 @@
+import { runKey } from '#src/data/table/table-data.transforms'
+import type { RunCells } from '#src/data/table/table-data.types'
+
 import {
   type PlotMeta,
   type PlotTrace,
@@ -80,4 +83,63 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
     ...(colormapRange ? { colormap_range: colormapRange } : {}),
     ...meta,
   }
+}
+
+// Notes taken under another `key`, a proposal and variable, start over.
+export type ComputedTimeNotes = {
+  key: string
+  times: ReadonlyMap<number, { time: number; value: PreviewValue }>
+}
+
+type NoteComputedTimesOptions = {
+  proposal: string
+  variable: string
+  drawn: { run: number; value: PreviewValue }[]
+  cells: Map<string, RunCells>
+}
+
+// A run's time is noted when its data and its cell are both in, and kept until
+// new data replaces the drawn one: a push moves the cell on, not the drawing.
+export function noteComputedTimes(
+  notes: ComputedTimeNotes,
+  { proposal, variable, drawn, cells }: NoteComputedTimesOptions
+): ComputedTimeNotes {
+  const key = `${proposal}:${variable}`
+  const kept: ComputedTimeNotes['times'] =
+    notes.key === key ? notes.times : new Map()
+  const times = new Map(kept)
+  let changed = notes.key !== key
+
+  for (const { run, value } of drawn) {
+    if (kept.get(run)?.value === value) {
+      continue
+    }
+
+    const time = cells
+      .get(runKey({ proposal, run }))
+      ?.get(variable)?.computed_at
+    if (time != null) {
+      times.set(run, { time, value })
+      changed = true
+    } else if (times.delete(run)) {
+      changed = true
+    }
+  }
+
+  return changed ? { key, times } : notes
+}
+
+export function newestNotedTime(
+  notes: ComputedTimeNotes,
+  drawn: { run: number }[]
+): number | null {
+  let newest: number | null = null
+  for (const { run } of drawn) {
+    const time = notes.times.get(run)?.time
+    if (time !== undefined && (newest === null || time > newest)) {
+      newest = time
+    }
+  }
+
+  return newest
 }
