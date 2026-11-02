@@ -60,6 +60,31 @@ test('clicking a proposal opens its dashboard', async ({ page }) => {
   await tableData
 })
 
+test('searching filters the proposals by instrument and text', async ({
+  page,
+}) => {
+  await openHome(page)
+  const search = page.getByRole('textbox', { name: 'Search proposals' })
+
+  // A leading instrument name keeps only that instrument's proposals.
+  await search.fill('mid')
+  await expect(proposalNumbers(page)).toHaveText(['6996'])
+  await expect(page.getByRole('status')).toContainText(
+    'Showing only MID proposals'
+  )
+
+  // Other words search the number, the PI and the title.
+  await search.fill('6996')
+  await expect(proposalNumbers(page)).toHaveText(['6996'])
+  await search.fill('example')
+  await expect(proposalNumbers(page)).toHaveText(['700004', '700003', '700002'])
+
+  // An instrument button adds its name to the search.
+  await page.getByRole('button', { name: 'SCS' }).click()
+  await expect(search).toHaveValue('SCS example')
+  await expect(proposalNumbers(page)).toHaveText(['700003'])
+})
+
 test('expanding a proposal reveals its title and path', async ({ page }) => {
   await openHome(page)
 

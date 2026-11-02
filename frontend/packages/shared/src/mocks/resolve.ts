@@ -154,8 +154,7 @@ export async function resolveOperation(
         )
       }
       case 'ProposalMetadata': {
-        // The home page asks once per semester, for just that semester's
-        // proposals.
+        // Return only the requested proposals
         const requested = (variables.proposalNumbers as number[] | null) ?? []
         const metadata = await source.proposalMetadata()
         return resolved({
