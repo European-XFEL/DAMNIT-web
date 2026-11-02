@@ -20,6 +20,12 @@ export const selectLastFlash = (state: RootState) => state.table.lastFlash
 
 export const selectRowSelection = (state: RootState) => state.table.rowSelection
 
+export const selectSelectedColumns = (state: RootState) =>
+  state.table.selectedColumns
+
+export const selectSelectedCells = (state: RootState) =>
+  state.table.selectedCells
+
 export const selectActiveVariable = (state: RootState) =>
   state.table.activeVariable
 
