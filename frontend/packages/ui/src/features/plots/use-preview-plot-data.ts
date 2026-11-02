@@ -19,9 +19,9 @@ import {
   runForAlias,
 } from './preview-chunks'
 import {
-  type ComputedTimeNotes,
-  newestNotedTime,
-  noteComputedTimes,
+  type RecordedTimes,
+  newestRecordedTime,
+  recordComputedTimes,
   toPlotMeta,
   toPlotTrace,
 } from './preview-plot.transforms'
@@ -33,7 +33,7 @@ type UsePreviewPlotDataOptions = {
 }
 
 const NO_DATA: PlotData = { traces: [], meta: { type: 'unsupported' } }
-const NO_NOTES: ComputedTimeNotes = { key: '', times: new Map() }
+const NO_RECORDED_TIMES: RecordedTimes = { key: '', times: new Map() }
 
 // Reads a preview plot's runs back out of the Apollo cache, and hands back the
 // chunks whose loaders fill it. Watching cache-only is what makes the plot fill
@@ -126,20 +126,20 @@ export function usePreviewPlotData({
 
   const cells = indexRunCells(cellsData?.runs ?? [])
 
-  // Notes taken in an earlier render, updated during this one as React allows
+  // Times recorded in an earlier render, updated during this one as React allows
   // for state derived from props: an effect would paint a frame without them.
-  const [notes, setNotes] = useState(NO_NOTES)
-  const nextNotes = noteComputedTimes(notes, {
+  const [recorded, setRecorded] = useState(NO_RECORDED_TIMES)
+  const nextRecorded = recordComputedTimes(recorded, {
     proposal,
     variable,
     drawn,
     cells,
   })
-  if (nextNotes !== notes) {
-    setNotes(nextNotes)
+  if (nextRecorded !== recorded) {
+    setRecorded(nextRecorded)
   }
 
-  const computedAt = newestNotedTime(nextNotes, drawn)
+  const computedAt = newestRecordedTime(nextRecorded, drawn)
 
   const plotData = meta
     ? {

@@ -237,7 +237,7 @@ test('a preview whose drawn runs have no time has no data age', async () => {
   })
 })
 
-test('a preview notes the time of a run whose cell lands after its data', async () => {
+test('a preview records the time of a run whose cell lands after its data', async () => {
   const { cache, wrapper } = setup()
   writeChunk(cache, [1])
 
@@ -255,7 +255,7 @@ test('a preview notes the time of a run whose cell lands after its data', async 
   })
 })
 
-test('a preview notes the time a cell holds when its run data lands', async () => {
+test('a preview records the time a cell holds when its run data lands', async () => {
   const { cache, wrapper } = setup()
   writeCells(cache, { 1: at(1) })
 
@@ -274,7 +274,7 @@ test('a preview notes the time a cell holds when its run data lands', async () =
   })
 })
 
-test('a preview keeps the time it noted when a push brings a newer one', async () => {
+test('a preview keeps the time it recorded when a push brings a newer one', async () => {
   const { cache, wrapper } = setup()
   writeChunk(cache, [1])
   writeCells(cache, { 1: at(2) })
