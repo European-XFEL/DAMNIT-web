@@ -2,6 +2,7 @@ import { test, expect } from '#fixtures'
 import { XPCS } from '#examples/xpcs'
 import { WIDE_VIEWPORT } from '#support/grid'
 import { columnOf, openProposal, titleOf } from '#support/table'
+import { statusBar } from '#support/dashboard'
 import {
   openPreviewPlot,
   plotFigure,
@@ -9,7 +10,9 @@ import {
   selectCells,
 } from '#support/plots'
 
-test.use({ viewport: WIDE_VIEWPORT })
+// The mock computed run 1 at 22:13:20 UTC on 14 November 2023, more than a
+// week ago, so the bar shows its date.
+test.use({ viewport: WIDE_VIEWPORT, timezoneId: 'UTC' })
 
 // Variables chosen for the dtype of their *preview* data, which differs from
 // the scalar shown in the table cell. One per render branch:
@@ -31,6 +34,29 @@ test('right-clicking a cell and choosing "Plot: preview" plots its preview data'
 
   await expect(plotEntry(page, titleOf(example, SCATTER_VAR))).toBeVisible()
   await expect(plotFigure(page)).toBeVisible()
+})
+
+test('a preview plot says when the data it draws was computed', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+
+  await openPreviewPlot(page, {
+    example,
+    col: columnOf(example, SCATTER_VAR),
+    row: 0,
+  })
+
+  // The status bar shows the date.
+  const computed = statusBar(page).getByText('Computed: 14 November 2023')
+  await expect(computed).toBeVisible()
+
+  // Its tooltip shows the time too.
+  await computed.hover()
+  await expect(page.getByRole('tooltip')).toHaveText(
+    'Computed 14 November 2023 at 22:13:20'
+  )
 })
 
 test('selecting cells from two runs plots both in one figure', async ({
