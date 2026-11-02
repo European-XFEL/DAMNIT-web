@@ -77,18 +77,24 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
 
   const runNumbers = useMemo(() => runIds.map((run) => run.run), [runIds])
 
-  const { data: summaryData, computedAt } = useSummaryPlotData({
-    runIds,
-    variables: plot.variables,
-    enabled: isSummary,
-  })
-  const { data: previewData, chunks } = usePreviewPlotData({
+  const { data: summaryData, computedAt: summaryComputedAt } =
+    useSummaryPlotData({
+      runIds,
+      variables: plot.variables,
+      enabled: isSummary,
+    })
+  const {
+    data: previewData,
+    chunks,
+    computedAt: previewComputedAt,
+  } = usePreviewPlotData({
     runs: runNumbers,
     variable: plot.variables[0],
     enabled: !isSummary,
   })
 
   const { traces, meta } = summaryData ?? previewData
+  const computedAt = summaryComputedAt ?? previewComputedAt
 
   return (
     <Stack align="flex-start" justify="flex-start" maw={1200}>
