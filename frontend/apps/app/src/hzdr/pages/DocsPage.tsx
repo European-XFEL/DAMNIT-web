@@ -10,7 +10,9 @@ import {
   Title,
 } from '@mantine/core'
 import { Link } from 'react-router'
+
 import { HomePage } from '@damnit-frontend/ui'
+
 import { AppHeader } from '../components/AppHeader'
 import { DetailsSection } from '../components/ShotTable'
 

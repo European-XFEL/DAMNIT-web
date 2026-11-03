@@ -7,6 +7,7 @@ import {
   IconSearch,
 } from '@tabler/icons-react'
 import { Link, useLocation } from 'react-router'
+
 import { Header, Logo } from '@damnit-frontend/ui'
 
 function NavButton({

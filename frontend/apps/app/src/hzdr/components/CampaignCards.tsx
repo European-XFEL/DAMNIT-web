@@ -9,6 +9,7 @@ import {
   Title,
 } from '@mantine/core'
 import { Link } from 'react-router'
+
 import { requireJson } from '../utils/api'
 
 type ScicatInfo = {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
+
 import {
   SHOT_TABLE_COLUMNS,
   SHOT_TABLE_COLUMN_WIDTHS,

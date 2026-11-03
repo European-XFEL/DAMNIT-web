@@ -20,6 +20,7 @@ import {
   Title,
 } from '@mantine/core'
 import { Link } from 'react-router'
+
 import type {
   HZDRShot,
   HZDRShotDetail,
@@ -39,17 +40,10 @@ import { isPlotlyPreview } from '../utils/plotly'
 import { isNumericLinePreview, isNumericMatrixPreview } from '../utils/preview'
 import { getNumericMetadataKeys } from '../utils/metadata'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
-import {
-  MetadataTrendPreview,
-  ContextPreviewValue,
-  TruncatedCell,
-} from './previews'
-
-export { TruncatedCell }
-
-import { cellButtonStyle } from './styles'
 import { formatShotLabel, getShotRowKey, toTrendValue } from '../utils/shot-key'
-export { cellButtonStyle }
+
+import { MetadataTrendPreview, ContextPreviewValue } from './previews'
+import { cellButtonStyle } from './styles'
 
 export function DetailsSection({
   title,
