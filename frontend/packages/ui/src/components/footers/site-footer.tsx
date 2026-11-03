@@ -1,20 +1,30 @@
-import { type ReactNode } from 'react'
+import { type ElementType, type ReactNode } from 'react'
 import {
   Anchor,
   Group,
+  rem,
   type AnchorProps,
   type ElementProps,
 } from '@mantine/core'
+import {
+  IconBook,
+  IconBrandGithub,
+  IconBuilding,
+  IconScale,
+  type IconProps,
+} from '@tabler/icons-react'
+
+import classes from './site-footer.module.css'
 
 interface SiteAnchorProps
-  extends AnchorProps,
-    ElementProps<'a', keyof AnchorProps> {
+  extends AnchorProps, ElementProps<'a', keyof AnchorProps> {
+  icon: ElementType<IconProps>
   children?: ReactNode
 }
-
-function SiteAnchor({ children, ...props }: SiteAnchorProps) {
+function SiteAnchor({ icon: Icon, children, ...props }: SiteAnchorProps) {
   return (
-    <Anchor underline="hover" size="sm" c="indigo" {...props}>
+    <Anchor target="_blank" size="xs" className={classes.anchor} {...props}>
+      <Icon style={{ width: rem(14), height: rem(14) }} aria-hidden />
       {children}
     </Anchor>
   )
@@ -22,26 +32,28 @@ function SiteAnchor({ children, ...props }: SiteAnchorProps) {
 
 function SiteFooter() {
   return (
-    <Group justify="space-between" w="100%" mx={16} my={8}>
-      <Group gap="lg">
-        <SiteAnchor href="/docs" target="_blank">
+    // Padding, not margin: a margin on a full-width row runs past its parent.
+    <Group justify="space-between" w="100%" px={16} py={6}>
+      {/* Two marked links sit as far apart as the toolbar sets its own pairs. */}
+      <Group gap={24}>
+        <SiteAnchor href="/docs" icon={IconBook}>
           Documentation
         </SiteAnchor>
         <SiteAnchor
           href="https://github.com/ktippey-hzdr/DAMNIT-web-hzdr"
-          target="_blank"
+          icon={IconBrandGithub}
         >
           Source code
         </SiteAnchor>
       </Group>
-      <Group gap="lg">
+      <Group gap={24}>
         <SiteAnchor
           href="https://www.xfel.eu/legal_notice/index_eng.html"
-          target="_blank"
+          icon={IconScale}
         >
           Legal Notice
         </SiteAnchor>
-        <SiteAnchor href="https://github.com/ktippey-hzdr" target="_blank">
+        <SiteAnchor href="https://github.com/ktippey-hzdr" icon={IconBuilding}>
           Contact
         </SiteAnchor>
       </Group>

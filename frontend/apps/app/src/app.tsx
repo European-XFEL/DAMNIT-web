@@ -7,7 +7,8 @@ import {
   useLocation,
   useParams,
 } from 'react-router'
-import { Container } from '@mantine/core'
+import { Container, VisuallyHidden } from '@mantine/core'
+
 import {
   Dashboard,
   HomePage,
@@ -18,15 +19,11 @@ import {
   PrivateRoute,
   Proposals,
   history,
-  resetContextFile,
-  resetDashboard,
-  resetExtractedData,
-  resetMetadata,
-  resetPlots,
-  resetTableData,
-  resetTableView,
+  resetProposal,
+  selectAvailableProposals,
   setProposalPending,
   useAppDispatch,
+  useAppSelector,
   useProposal,
 } from '@damnit-frontend/ui'
 import { AppHeader } from './hzdr/components/AppHeader'
@@ -36,33 +33,65 @@ import { hzdrRoutes } from './hzdr/routes'
 
 const SHOULD_SUBSCRIBE = !(import.meta.env.MODE === 'test')
 
-function ProposalWrapper({ children }: PropsWithChildren) {
+type ProposalWrapperProps = PropsWithChildren<{ proposalNumber: string }>
+
+// ProposalRoute keys this on the proposal, so switching proposals remounts the
+// subtree instead of updating it in place. Unmount dispatches resetProposal;
+// see its listener for why the Apollo evict is safe to run during the switch.
+function ProposalWrapper({ proposalNumber, children }: ProposalWrapperProps) {
   const proposal = useProposal({ subscribe: SHOULD_SUBSCRIBE })
   const dispatch = useAppDispatch()
-  const { proposal_number } = useParams()
 
   useEffect(() => {
-    if (proposal_number) {
-      dispatch(setProposalPending(proposal_number))
-    }
+    dispatch(setProposalPending(proposalNumber))
 
     return () => {
-      dispatch(resetTableData())
-      dispatch(resetTableView())
-      dispatch(resetExtractedData())
-      dispatch(resetPlots())
-      dispatch(resetMetadata())
-      dispatch(resetDashboard())
-      dispatch(resetContextFile())
+      dispatch(resetProposal())
     }
-  }, [proposal_number, dispatch])
+  }, [proposalNumber, dispatch])
 
-  return proposal.loading || !proposal_number ? (
+  return proposal.loading ? (
     <div></div>
   ) : proposal.notFound ? (
     <Navigate to="/not-found" />
   ) : (
     children
+  )
+}
+
+function ProposalRoute({ children }: PropsWithChildren) {
+  const { proposal_number } = useParams()
+
+  if (!proposal_number) {
+    return <div></div>
+  }
+
+  return (
+    <ProposalWrapper key={proposal_number} proposalNumber={proposal_number}>
+      {children}
+    </ProposalWrapper>
+  )
+}
+
+function HomeRoute({ usesProposals }: { usesProposals: boolean }) {
+  const proposals = useAppSelector(selectAvailableProposals)
+
+  return (
+    <HomePage
+      header={<AppHeader />}
+      main={
+        <Container>
+          <VisuallyHidden component="h1">
+            {usesProposals ? 'Proposals' : 'Sources'}
+          </VisuallyHidden>
+          {usesProposals ? (
+            <Proposals proposals={proposals} />
+          ) : (
+            <HZDRSourceHome />
+          )}
+        </Container>
+      }
+    />
   )
 }
 
@@ -84,14 +113,7 @@ const App = () => {
           path="/home"
           element={
             <PrivateRoute>
-              <HomePage
-                header={<AppHeader />}
-                main={
-                  <Container>
-                    {usesProposals ? <Proposals /> : <HZDRSourceHome />}
-                  </Container>
-                }
-              />
+              <HomeRoute usesProposals={usesProposals} />
             </PrivateRoute>
           }
         />
@@ -99,9 +121,9 @@ const App = () => {
           path="/proposal/:proposal_number"
           element={
             <PrivateRoute>
-              <ProposalWrapper>
+              <ProposalRoute>
                 <Dashboard />
-              </ProposalWrapper>
+              </ProposalRoute>
             </PrivateRoute>
           }
         />

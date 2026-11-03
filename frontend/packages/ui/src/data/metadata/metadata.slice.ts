@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import type { DeepPartial } from '../../types'
+import { resetProposal } from '#src/app/store/actions'
+import type { DeepPartial } from '#src/types'
 
 interface Proposal {
   value: string
@@ -24,7 +25,6 @@ const slice = createSlice({
   name: 'metadata',
   initialState,
   reducers: {
-    reset: () => initialState,
     set: (state, action: PayloadAction<DeepPartial<State>>) => {
       const metadata = action.payload
       state.proposal = { ...state.proposal, ...metadata.proposal }
@@ -44,6 +44,9 @@ const slice = createSlice({
       state.proposal.notFound = true
     },
   },
+  extraReducers: (builder) => {
+    builder.addCase(resetProposal, () => initialState)
+  },
 })
 
 export default slice.reducer
@@ -52,5 +55,4 @@ export const {
   setProposalSuccess,
   setProposalNotFound,
   set: setMetadata,
-  reset: resetMetadata,
 } = slice.actions

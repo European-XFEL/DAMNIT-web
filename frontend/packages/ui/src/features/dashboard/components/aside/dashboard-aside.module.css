@@ -1,0 +1,98 @@
+/* Slides on the shell's transition. Closed, it leaves the Tab order after the
+   slide; open, it shows at once so the close button can take focus. */
+.aside {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
+  background: var(--mantine-color-white);
+  transition-property: width, visibility;
+  transition-duration: var(--app-shell-transition-duration);
+  transition-timing-function: var(--app-shell-transition-timing-function);
+
+  &[data-opened] {
+    width: 360px;
+    visibility: inherit;
+    transition-property: width;
+  }
+
+  @mixin smaller-than $mantine-breakpoint-sm {
+    position: absolute;
+    z-index: var(--mantine-z-index-app);
+    inset: 0;
+    width: auto;
+    transform: translateX(100%);
+    transition-property: transform, visibility;
+
+    &[data-opened] {
+      width: auto;
+      transform: none;
+      transition-property: transform;
+    }
+
+    /* The run belongs to the table, so over any other view it steps out of the
+       way until the table is back. */
+    &[data-off-table] {
+      display: none;
+    }
+  }
+}
+
+/* A fixed width, so the text does not re-wrap while the panel's box grows. */
+.tabs {
+  --aside-inset: 12px;
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 360px;
+  min-height: 0;
+  border-left: 1px solid var(--app-shell-border-color);
+
+  @mixin smaller-than $mantine-breakpoint-sm {
+    width: auto;
+    border-left: none;
+  }
+}
+
+/* The line sits under the 40 px row, level with the toolbar's. The tab brings
+   its own start inset, so its underline runs from the aside's edge. */
+.head {
+  flex: none;
+  flex-wrap: nowrap;
+  box-sizing: content-box;
+  height: 40px;
+  padding-block-end: 1px;
+  padding-inline-end: var(--aside-inset);
+
+  --tabs-list-border-size: 0 0 1px 0;
+  --tab-border-color: var(--app-shell-border-color);
+}
+
+/* Reaches down over the line the head keeps in its padding, and squares the
+   corner that meets the aside's border. */
+.tab {
+  margin-bottom: -1px;
+  padding-inline: var(--aside-inset);
+  border-start-start-radius: 0;
+  font-weight: 500;
+
+  /* The aside clips anything outside its box, so the ring goes inside. */
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+}
+
+.close {
+  align-self: center;
+}
+
+/* The scroll area reserves its own gutter on the right, which is the inset
+   there, so padding both sides would leave the content lopsided. */
+.panel {
+  flex: 1;
+  min-height: 0;
+  padding-inline-start: var(--aside-inset);
+}

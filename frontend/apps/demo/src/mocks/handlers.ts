@@ -1,63 +1,35 @@
 import { http, HttpResponse, graphql } from 'msw'
 
+import {
+  MockDataNotFound,
+  resolveOperation,
+  type MockDataSource,
+  type Runs,
+} from '@damnit-frontend/shared/mocks'
 import { BASE_URL } from '@damnit-frontend/ui'
 
 import { getExampleIndex } from '../utils'
 
-type Runs = {
-  meta: Meta
-  data: Data[]
-}
-
-type Meta = {
-  sources: Record<string, SourceMeta>
-  variables: Record<string, VariableMeta>
-  runs: number[]
-  tags: {
-    id: number
-    name: string
-    variables: string[]
-  }
-}
-
-type SourceMeta = {
-  proposal_number: number
-  title: string
-  principal_investigator: string
-}
-
-type VariableMeta = {
-  name: string
-  title: string
-}
-
-type Data = {
-  source: {
-    ref: string
-    run_number: number
-  }
-  variables: Record<string, VariableValue>
-}
-
-// TODO: Use types from the shared package
-type VariableValue =
-  | { dtype: 'number'; value: number }
-  | { dtype: 'string'; value: string }
-
 const api = graphql.link(`${BASE_URL}graphql`)
 const exampleIndex = await getExampleIndex()
 
-async function fetchRuns(proposal: string): Promise<Runs> {
-  const result = await fetch(
-    `${BASE_URL}${exampleIndex[proposal].base_path}/runs.json`
-  )
-
-  if (!result.ok) {
-    throw new Response(`Failed to fetch runs for "${proposal}"`, {
-      status: result.status,
-    })
+async function fetchExample(proposal: string, { path }: { path: string }) {
+  const entry = exampleIndex[proposal]
+  if (entry === undefined) {
+    throw new MockDataNotFound()
   }
-  return await result.json()
+
+  const result = await fetch(`${BASE_URL}${entry.base_path}/${path}`)
+
+  if (result.status === 404) {
+    throw new MockDataNotFound()
+  }
+  if (!result.ok) {
+    throw new Error(
+      `Failed to fetch "${path}" for "${proposal}" (${result.status})`
+    )
+  }
+  return result.json()
 }
 
 type FetchDataOptions = {
@@ -66,81 +38,33 @@ type FetchDataOptions = {
   variable: string
 }
 
-async function fetchData({ proposal, run, variable }: FetchDataOptions) {
-  const result = await fetch(
-    `${BASE_URL}${exampleIndex[proposal].base_path}/data/${run}/${variable}.json`
-  )
+const fetchRuns = (proposal: string): Promise<Runs> =>
+  fetchExample(proposal, { path: 'runs.json' })
 
-  if (!result.ok) {
-    throw new Response(
-      `Failed to fetch data for "${proposal}:${run}:${variable}"`,
-      {
-        status: result.status,
-      }
-    )
-  }
-  return await result.json()
-}
+const fetchData = ({
+  proposal,
+  run,
+  variable,
+}: FetchDataOptions): Promise<unknown> =>
+  fetchExample(proposal, { path: `data/${run}/${variable}.json` })
 
-function getMetadata(meta: Meta) {
-  return {
-    variables: meta.variables,
-    runs: meta.runs,
-    timestamp: 0,
-    tags: meta.tags,
-  }
-}
-
-async function buildTableData(proposal: string, names?: string[] | null) {
-  const { data } = await fetchRuns(proposal)
-
-  return {
-    runs: data.map((run) => ({
-      variables: Object.entries(run.variables)
-        .filter(([name]) => names == null || names.includes(name))
-        .map(([name, variable]) => ({
-          name,
-          value: variable.value,
-          dtype: variable.dtype,
-        })),
-    })),
-  }
+const source: MockDataSource = {
+  runs: fetchRuns,
+  extractedData: fetchData,
+  // The demo does not mock proposal metadata; report it as drift.
+  proposalMetadata: async () => {
+    throw new MockDataNotFound()
+  },
 }
 
 const gqlHandlers = [
-  api.query('TableMetadataQuery', async ({ variables }) => {
-    const { meta } = await fetchRuns(variables.proposal)
-
-    return HttpResponse.json({
-      data: {
-        metadata: getMetadata(meta),
-      },
+  api.operation(async ({ operationName, query, variables }) => {
+    const resolution = await resolveOperation(operationName, {
+      query,
+      variables: variables as Record<string, unknown>,
+      source,
     })
-  }),
-  api.query('TableDataQuery', async ({ variables }) => {
-    const data = await buildTableData(variables.proposal, variables.names)
-    return HttpResponse.json({ data })
-  }),
-  api.query('LightweightTableDataQuery', async ({ variables }) => {
-    const data = await buildTableData(variables.proposal, variables.names)
-    return HttpResponse.json({ data })
-  }),
-  api.query('DeferredTableDataQuery', async ({ variables }) => {
-    const data = await buildTableData(variables.proposal, variables.names)
-    return HttpResponse.json({ data })
-  }),
-  api.query('ExtractedDataQuery', async ({ variables }) => {
-    const data = await fetchData({
-      proposal: variables.proposal,
-      run: variables.run,
-      variable: variables.variable,
-    })
-
-    return HttpResponse.json({
-      data: {
-        extracted_data: data,
-      },
-    })
+    return HttpResponse.json(resolution.body)
   }),
 ]
 
@@ -171,6 +95,9 @@ const restHandlers = [
       fileContent: content,
     })
   }),
+  http.get(`${BASE_URL}contextfile/last_modified`, () =>
+    HttpResponse.json({ lastModified: 0 })
+  ),
 ]
 
 export const handlers = [...gqlHandlers, ...restHandlers]

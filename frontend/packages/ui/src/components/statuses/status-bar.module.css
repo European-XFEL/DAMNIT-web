@@ -1,0 +1,13 @@
+.bar {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 10px;
+}
+
+.side {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}

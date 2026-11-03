@@ -4,7 +4,7 @@ import reducer, {
   setProposalNotFound,
   setProposalPending,
   setProposalSuccess,
-} from '@/data/metadata/metadata.slice'
+} from '#src/data/metadata/metadata.slice'
 
 describe('proposal lifecycle', () => {
   test('pending sets the value, starts loading and clears a prior notFound', () => {

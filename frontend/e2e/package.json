@@ -1,0 +1,33 @@
+{
+  "name": "@damnit-frontend/e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "imports": {
+    "#fixtures": "./fixtures/index.ts",
+    "#support/*": "./support/*.ts",
+    "#mocks": "./mocks/index.ts",
+    "#examples/*": "./examples/*/index.ts"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "setup": "playwright install chromium",
+    "ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "lint:eslint": "eslint . --max-warnings 0",
+    "lint:prettier": "prettier --check --cache --ignore-path ../.prettierignore .",
+    "lint:tsc": "tsc -b --noEmit"
+  },
+  "devDependencies": {
+    "@damnit-frontend/config": "workspace:*",
+    "@damnit-frontend/shared": "workspace:*",
+    "@playwright/test": "catalog:testing",
+    "@types/node": "catalog:types",
+    "eslint": "catalog:linting",
+    "globals": "catalog:linting",
+    "graphql": "catalog:graphql",
+    "monaco-editor": "catalog:components",
+    "prettier": "catalog:linting",
+    "typescript": "catalog:tooling"
+  }
+}

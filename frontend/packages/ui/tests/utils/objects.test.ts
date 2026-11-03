@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { orderBy } from '@/utils/objects'
+import { orderBy } from '#src/utils/objects'
 
 describe('orderBy', () => {
   test('sorts by multiple keys with mixed directions', () => {

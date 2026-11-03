@@ -574,5 +574,5 @@
     ]
   },
   "name": "SA2_XTD1_XGM_XGM_DOOCS:output.data.intensityTD",
-  "dtype": "array"
+  "dtype": "array1d"
 }

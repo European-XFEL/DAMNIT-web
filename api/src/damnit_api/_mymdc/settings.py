@@ -25,11 +25,15 @@ class MyMdCHTTPSettings(BaseSettings):
 
 
 class MyMdCMockSettings(BaseSettings):
-    """Mock MyMdC data for testing and local development."""
+    """Mock MyMdC data for testing and local development.
 
-    mock_responses_file: FilePath | None = None
+    The data source is a recorded vcrpy cassette which contains/replays saved
+    MyMdC responses (can be refreshed with `tests/mock/record_corpus.py`).
+    """
 
-    @field_validator("mock_responses_file", mode="before")
+    cassette_file: FilePath | None = None
+
+    @field_validator("cassette_file", mode="before")
     @classmethod
     def allow_missing_file(cls, v: Path | None):
         return v if v and v.is_file() else None

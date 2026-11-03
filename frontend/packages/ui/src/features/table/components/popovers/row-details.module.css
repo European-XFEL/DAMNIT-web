@@ -1,0 +1,7 @@
+/* Mantine's Checkbox answers nothing to the pointer. Overriding the colour it
+   is built from carries the fill and the border together. */
+.checkbox:hover:not(:disabled) {
+  --checkbox-color: var(--mantine-color-indigo-filled-hover);
+
+  border-color: var(--mantine-color-indigo-filled-hover);
+}

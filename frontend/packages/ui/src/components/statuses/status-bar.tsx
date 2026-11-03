@@ -1,52 +1,19 @@
 import type { ReactNode } from 'react'
-import { Paper, Group, type PaperProps } from '@mantine/core'
 
-export type StatusBarProps = {
-  leftSection?: ReactNode
-  rightSection?: ReactNode
-  height?: number
-  zIndex?: number
-} & Omit<PaperProps, 'children'>
+import classes from './status-bar.module.css'
+import { ViewStatusTarget } from './view-status'
 
-export function StatusBar({
-  leftSection,
-  rightSection,
-  height = 22,
-  zIndex = 1000,
-  ...paperProps
-}: StatusBarProps) {
+type StatusBarProps = {
+  children: ReactNode
+}
+
+// The app's own items on the left; the open view draws its own on the right.
+function StatusBar({ children }: StatusBarProps) {
   return (
-    <Paper
-      withBorder
-      radius={0}
-      shadow="xs"
-      role="status"
-      {...paperProps}
-      style={{
-        position: 'fixed',
-        insetInline: 0,
-        bottom: 0,
-        height,
-        zIndex,
-        display: 'flex',
-        alignItems: 'center',
-        paddingInline: 6,
-        ...paperProps.style,
-      }}
-    >
-      <Group
-        gap={8}
-        style={{ flex: 1, minWidth: 0 }}
-        wrap="nowrap"
-        align="center"
-      >
-        {leftSection}
-      </Group>
-
-      <Group gap={12} justify="flex-end" wrap="nowrap" align="center">
-        {rightSection}
-      </Group>
-    </Paper>
+    <div className={classes.bar}>
+      <div className={classes.side}>{children}</div>
+      <ViewStatusTarget className={classes.side} />
+    </div>
   )
 }
 

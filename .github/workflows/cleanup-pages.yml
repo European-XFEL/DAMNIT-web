@@ -8,10 +8,20 @@ on:
 permissions:
   contents: write
 
+# All gh-pages writers share one group: they commit to the same branch, and
+# git rejects a non-fast-forward push, so only one may run at a time. Do
+# not give each workflow its own group; queue: max keeps the queue from
+# dropping runs (the default cancels the pending one).
+concurrency:
+  group: gh-pages
+  queue: max
+  cancel-in-progress: false
+
 jobs:
   cleanup-branch:
     if: github.event_name == 'delete' && github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check whether gh-pages exists
         id: check_gh_pages
@@ -27,7 +37,6 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: gh-pages
-          fetch-depth: 0
 
       - name: Remove branch folder
         shell: bash
@@ -46,6 +55,7 @@ jobs:
   cleanup-pr:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check whether gh-pages exists
         id: check_gh_pages
@@ -61,7 +71,6 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: gh-pages
-          fetch-depth: 0
 
       - name: Remove PR folder
         shell: bash

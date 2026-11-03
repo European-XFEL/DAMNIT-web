@@ -1,35 +1,36 @@
 import { useMemo } from 'react'
 
-import type { TagItem } from '../../../types'
-import { NONCONFIGURABLE_VARIABLES } from '../constants'
+import type { Tag } from '#src/data/table/table-data.types'
+import { useTableMeta } from '#src/data/table/use-table-meta'
+import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
 import {
+  selectColumnVisibility,
   selectTagSelection,
-  selectVariableVisibility,
-} from '../store/selectors'
-
-import { useAppSelector } from '../../../redux/hooks'
+} from '#src/features/table/stores/table.selectors'
+import { useAppSelector } from '#src/app/store/hooks'
 
 type ColumnVisibilityInputs = {
   variableNames: string[]
   visibility: Record<string, boolean | undefined>
-  tags: Record<string, TagItem>
+  tags: Record<string, Tag>
   tagSelection: Record<string, boolean>
 }
 
-// Columns the user can't hide (proposal, added_at, run) never appear here.
+// Columns the user can't hide (added_at, run) never appear here.
 function configurableVariables(variableNames: string[]) {
   return variableNames.filter(
     (name) => !NONCONFIGURABLE_VARIABLES.includes(name)
   )
 }
 
-// A variable is visible unless it was explicitly turned off.
+// The visibility map for the configurable columns. A column the user has not
+// touched shows, so only an explicit false hides one.
 function visibilityFromVariables(
   configurable: string[],
   visibility: ColumnVisibilityInputs['visibility']
 ) {
   return Object.fromEntries(
-    configurable.map((name) => [name, visibility[name] !== false])
+    configurable.map((name) => [name, visibility[name] ?? true])
   )
 }
 
@@ -70,16 +71,13 @@ export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
 }
 
 function useVariableNames() {
-  // TODO: Replace with GraphQL useQuery
-  const variables = useAppSelector(
-    (state) => state.tableData.metadata.variables
-  )
+  const { variables } = useTableMeta()
   return useMemo(() => Object.keys(variables), [variables])
 }
 
 export function useColumnVisibilityFromVariables() {
   const variableNames = useVariableNames()
-  const visibility = useAppSelector(selectVariableVisibility)
+  const visibility = useAppSelector(selectColumnVisibility)
 
   return useMemo(
     () =>
@@ -89,8 +87,7 @@ export function useColumnVisibilityFromVariables() {
 }
 
 export function useColumnVisibilityFromTags() {
-  // TODO: Replace with GraphQL useQuery
-  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const { tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
   const variableNames = useVariableNames()
 
@@ -104,10 +101,12 @@ export function useColumnVisibilityFromTags() {
   )
 }
 
-export function useColumnVisibility() {
+// Which columns the table actually shows. Named apart from the store's
+// `columnVisibility`, which is only one of its two inputs.
+export function useVisibleColumns() {
   const variableNames = useVariableNames()
-  const visibility = useAppSelector(selectVariableVisibility)
-  const tags = useAppSelector((state) => state.tableData.metadata.tags)
+  const visibility = useAppSelector(selectColumnVisibility)
+  const { tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
 
   return useMemo(

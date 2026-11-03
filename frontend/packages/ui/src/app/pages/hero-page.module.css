@@ -1,0 +1,20 @@
+.container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  margin: 0;
+  padding: 10px;
+}
+
+.title {
+  color: var(--mantine-color-black);
+  font-size: 200px;
+
+  @media (max-width: $mantine-breakpoint-md) {
+    font-size: 150px;
+  }
+
+  @media (max-width: $mantine-breakpoint-sm) {
+    font-size: 100px;
+  }
+}

@@ -8,10 +8,15 @@ import {
   type CheckboxProps,
 } from '@mantine/core'
 
-const headerC =
-  'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-0))'
+import SectionHeading, {
+  mutedC,
+} from '#src/components/headings/section-heading'
+
+import classes from './row-details.module.css'
+
+// gray-6 on the panel's gray-0 ground is 3.15:1, under the 4.5:1 floor.
 const unselectedC =
-  'light-dark(var(--mantine-color-gray-6), var(--mantine-color-dark-2))'
+  'light-dark(var(--mantine-color-gray-7), var(--mantine-color-dark-2))'
 const selectedC =
   'light-dark(var(--mantine-color-gray-9), var(--mantine-color-dark-0))'
 
@@ -25,7 +30,8 @@ type IndicatorRenderer = (args: {
 }) => ReactNode
 
 export type RowItemProps = {
-  children: ReactNode
+  // The label is clamped to one line, so it doubles as the item's tooltip.
+  children: string
   selected?: boolean
   renderIndicator?: IndicatorRenderer
 }
@@ -47,7 +53,7 @@ function Item({
           </Box>
         )}
 
-        <Text fz={11} lh={1.2} c={color} fw={400} lineClamp={1}>
+        <Text fz="xxs" lh={1.2} c={color} lineClamp={1} title={children}>
           {children}
         </Text>
       </Group>
@@ -60,20 +66,26 @@ function Item({
 
 type RowItemCheckboxProps = Pick<
   CheckboxProps,
-  'checked' | 'onChange' | 'variant'
+  'id' | 'checked' | 'onChange' | 'variant' | 'disabled' | 'aria-label'
 >
 
 export function RowItemCheckbox({
+  id,
   checked,
   onChange,
   variant = 'filled',
+  disabled,
+  'aria-label': label,
 }: RowItemCheckboxProps) {
   return (
     <Checkbox
+      id={id}
       variant={variant}
+      aria-label={label}
       checked={checked}
+      disabled={disabled}
       onChange={onChange}
-      onClick={(e) => e.stopPropagation()}
+      classNames={{ input: classes.checkbox }}
       color="indigo"
       size="xs"
     />
@@ -82,6 +94,11 @@ export function RowItemCheckbox({
 
 // ----------------------------------------------------------------------------
 // List
+
+const collator = new Intl.Collator(undefined, {
+  sensitivity: 'base',
+  numeric: true,
+})
 
 type RowListItem = {
   name: string
@@ -94,12 +111,7 @@ export type RowListProps = {
   renderIndicator?: IndicatorRenderer
 }
 
-function List({ items, renderIndicator }: RowListProps) {
-  const collator = new Intl.Collator(undefined, {
-    sensitivity: 'base',
-    numeric: true,
-  })
-
+export function RowList({ items, renderIndicator }: RowListProps) {
   // TODO: Change `.sort()` to `.toSorted()` when it's more widely adopted
   const sorted = [...items].sort((a, b) =>
     a.selected !== b.selected
@@ -131,21 +143,13 @@ export type RowSectionProps = {
   children: ReactNode
 }
 
-function Section({ header, info, children }: RowSectionProps) {
+export function RowSection({ header, info, children }: RowSectionProps) {
   return (
     <Stack gap={6}>
       <Group justify="space-between" gap={8}>
-        <Text
-          fz={10}
-          fw={500}
-          tt="uppercase"
-          c={headerC}
-          style={{ letterSpacing: 0.8 }}
-        >
-          {header}
-        </Text>
+        <SectionHeading>{header}</SectionHeading>
         {info != null && (
-          <Text fz={10} c={headerC} style={{ letterSpacing: 0.6 }}>
+          <Text size="xxs" c={mutedC}>
             {info}
           </Text>
         )}
@@ -155,37 +159,3 @@ function Section({ header, info, children }: RowSectionProps) {
     </Stack>
   )
 }
-
-// ----------------------------------------------------------------------------
-// Root
-
-export type RowDetailsProps = { children: ReactNode }
-
-function Root({ children }: RowDetailsProps) {
-  return (
-    <Stack
-      bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))"
-      px="md"
-      py="xs"
-      gap={6}
-      style={{
-        borderLeft:
-          '3px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-4))',
-      }}
-    >
-      {children}
-    </Stack>
-  )
-}
-
-type RowDetailsComponent = ((props: RowDetailsProps) => JSX.Element) & {
-  Section: typeof Section
-  List: typeof List
-  Item: typeof Item
-}
-
-export const RowDetails = Object.assign(Root, {
-  Section,
-  List,
-  Item,
-}) as RowDetailsComponent

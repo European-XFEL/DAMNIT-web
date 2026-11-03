@@ -2,3 +2,6 @@ pnpm-lock.yaml
 
 dist
 public
+
+test-results
+playwright-report

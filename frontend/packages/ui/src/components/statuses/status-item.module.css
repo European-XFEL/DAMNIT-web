@@ -1,0 +1,124 @@
+.item {
+  --status-item-background: var(--mantine-color-body);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  /* The box reaches into the gap on each side, so the focus ring and a
+     coloured ground clear the icon while the label keeps its place. */
+  margin: 0 -6px;
+  padding: 0 6px;
+  font-size: var(--mantine-font-size-sm);
+  line-height: var(--mantine-line-height-sm);
+  color: var(--mantine-color-gray-7);
+  white-space: nowrap;
+  background: var(--status-item-background);
+
+  /* The item fills the bar, which sits on the window's bottom edge, so the
+     ring goes inside. */
+  &:focus-visible {
+    outline-offset: -2px;
+  }
+
+  & b {
+    color: var(--mantine-color-gray-9);
+    font-weight: 600;
+    /* Source Sans 3's space is only 3 px at 15 px; this puts the value 6 px
+       from its colon, the same as the icon's gap. */
+    margin-inline-start: 3px;
+  }
+}
+
+.item[data-action] {
+  cursor: pointer;
+}
+
+.item[data-level='warning'] {
+  /* Solid, unlike Mantine's translucent tint, so an icon can draw a ring or
+     a gap in the same colour and have it blend into the background. */
+  --status-item-background: color-mix(
+    in srgb,
+    var(--mantine-color-orange-filled) 10%,
+    var(--mantine-color-body)
+  );
+
+  &:hover {
+    --status-item-background: color-mix(
+      in srgb,
+      var(--mantine-color-orange-filled) 12%,
+      var(--mantine-color-body)
+    );
+  }
+}
+
+.item[data-level='error'] {
+  --status-item-background: var(--mantine-color-red-filled);
+  color: var(--mantine-color-white);
+
+  &:hover {
+    --status-item-background: var(--mantine-color-red-filled-hover);
+  }
+
+  /* Indigo reads 1.3:1 on red, so a white ring sits inside it. The outline
+     covers the shadow's outer 2 px. */
+  &:focus-visible {
+    box-shadow: inset 0 0 0 4px var(--mantine-color-white);
+  }
+}
+
+/* The bar's tooltip, with room for a button on the right. */
+.bubble {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: min(420px, calc(100vw - 20px));
+  padding: 8px 10px;
+  border: 0;
+  background: var(--mantine-color-gray-9);
+  color: var(--mantine-color-white);
+  font-size: var(--mantine-font-size-xs);
+  line-height: var(--mantine-line-height-xs);
+}
+
+.action {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--mantine-color-white);
+  border-radius: var(--mantine-radius-default);
+  font-size: inherit;
+  font-weight: 600;
+
+  &:hover:not([aria-disabled]) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &[aria-disabled] {
+    cursor: default;
+  }
+}
+
+/* Hidden but kept, so the button keeps its width and its name. */
+.actionLabel {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+
+  .action[aria-disabled] & {
+    opacity: 0;
+  }
+}
+
+.actionLoader {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+
+  @media (prefers-reduced-motion: reduce) {
+    & span {
+      animation: none;
+    }
+  }
+}

@@ -1,12 +1,13 @@
 import { Link } from 'react-router'
 import { Card, Group, Stack, Text, Title } from '@mantine/core'
 
-import { InstrumentBadge } from '@damnit-frontend/ui'
+import { InstrumentBadge, SectionHeading } from '@damnit-frontend/ui'
 
 import classes from './examples.module.css'
 
 export type ExampleInfo = {
   id: string
+  label: string
   title: string
   subtitle: string
   instrument: string
@@ -33,21 +34,13 @@ function ExampleCard(props: ExampleCardProps) {
       </Group>
 
       <Stack gap={6} mt="sm">
-        <Text size="sm" c="dimmed" lineClamp={2} style={{ lineHeight: 1.45 }}>
+        <Text size="sm" c="gray.7" lineClamp={2}>
           {props.subtitle}
         </Text>
 
-        <Group gap="xs" c="dimmed">
-          <Text
-            size="xs"
-            tt="uppercase"
-            style={{ letterSpacing: 0.5, opacity: 0.7 }}
-          >
-            PI
-          </Text>
-          <Text size="xs" style={{ opacity: 0.9 }}>
-            {props.principal_investigator}
-          </Text>
+        <Group gap="xs" c="gray.7">
+          <SectionHeading>PI</SectionHeading>
+          <Text size="xs">{props.principal_investigator}</Text>
         </Group>
       </Stack>
     </Card>

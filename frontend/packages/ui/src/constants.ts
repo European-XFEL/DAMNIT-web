@@ -1,5 +1,26 @@
 /// <reference types="vite/client" />
+import { HEAVY_DTYPES } from '@damnit-frontend/shared/constants'
+
 import { formatUrl } from './utils/helpers'
+
+// The dtypes @lightweight holds back on the table's first pass. Shared with the
+// mock server so both track the API's HEAVY_DATA from one place.
+export { HEAVY_DTYPES }
+
+// A summary whose value is null under a heavy dtype is one @lightweight held
+// back, not a genuine absence: only heavy dtypes are blanked, so a null scalar
+// is a cell DAMNIT has no value for. Every caller that decides "still to come"
+// reads this one rule over its own cell shape, so keeping it here stops them
+// drifting.
+export function isHeavySummaryBlank({
+  value,
+  dtype,
+}: {
+  value: unknown
+  dtype: string
+}): boolean {
+  return value == null && HEAVY_DTYPES.has(dtype)
+}
 
 export const CONTACT_EMAIL = 'da@xfel.eu'
 
@@ -16,12 +37,18 @@ export const VARIABLES = {
 }
 export const DTYPES = {
   image: 'image',
-  array: 'array',
+  array1d: 'array1d',
   string: 'string',
   number: 'number',
   timestamp: 'timestamp',
 }
 
-export const EXCLUDED_VARIABLES = ['proposal', 'added_at']
+export const EXCLUDED_VARIABLES = ['added_at']
 
-export const VISIBILITY_EXCLUDED_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
+// `run` identifies the row rather than describing it, so it is never a column
+// the user configures, and the run detail panel already shows it in the header.
+export const NONCONFIGURABLE_VARIABLES = [...EXCLUDED_VARIABLES, 'run']
+
+// The tag the server adds for every variable the context file left untagged. No
+// user wrote it, so the Tags popover sets it apart.
+export const UNTAGGED_TAG = '(Untagged)'

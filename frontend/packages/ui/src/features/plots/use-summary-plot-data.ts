@@ -1,0 +1,137 @@
+import { useEffect, useMemo } from 'react'
+import { useQuery, useReactiveVar } from '@apollo/client/react'
+import { useDidUpdate } from '@mantine/hooks'
+
+import { useAppSelector } from '#src/app/store/hooks'
+import { VARIABLES } from '#src/constants'
+import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
+import {
+  TABLE_DATA_QUERY,
+  type TableDataResult,
+  type TableDataVariables,
+} from '#src/data/table/table-data.queries'
+import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
+import {
+  getTitleByName,
+  indexRunCells,
+  runKey,
+} from '#src/data/table/table-data.transforms'
+import type { RunId } from '#src/data/table/table-data.types'
+import { useTableMeta } from '#src/data/table/use-table-meta'
+import { reconnectCount } from '#src/graphql/live-updates'
+
+import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
+import { drawnCells, newestComputedTime } from './summary-plot.transforms'
+
+type UseSummaryPlotDataOptions = {
+  runIds: RunId[]
+  variables: string[]
+  enabled: boolean
+}
+
+// Summary plots chart a variable across every run in the proposal. The values
+// come from the same normalized cache the table fills (`Query.runs` is keyed by
+// database alone, so this shares the table's entry), but the paginated table
+// only caches the pages scrolled to, so this pulls the full run set itself
+// (per_page = ALL_RUNS_PAGE_SIZE, cache-and-network). cache-first would chart
+// only the runs already scrolled into cache, so it stays network-backed; the
+// merge policy returning a stable list on value-only pushes is what keeps this
+// from re-running on every cache write. A run is charted only when every
+// variable it plots is a real number. `computedAt` is when the newest charted
+// value was computed.
+export function useSummaryPlotData({
+  runIds,
+  variables,
+  enabled,
+}: UseSummaryPlotDataOptions): {
+  data: PlotData | null
+  computedAt: number | null
+} {
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
+  const { variables: variableMeta } = useTableMeta()
+
+  const skip = !enabled || !proposal
+  const { data, refetch } = useQuery<TableDataResult, TableDataVariables>(
+    TABLE_DATA_QUERY,
+    {
+      variables: {
+        proposal,
+        page: 1,
+        per_page: ALL_RUNS_PAGE_SIZE,
+        // `run` keys each row; the rest are what the plot charts.
+        names: [VARIABLES.run, ...variables],
+      },
+      fetchPolicy: 'cache-and-network',
+      // A refetch overwrites by default, cutting every cached run down to the
+      // cells charted here: the table and run panel lose every other value.
+      refetchWritePolicy: 'merge',
+      // A reload after a reconnect must not join a request sent before it, which
+      // may have read the database before the server's catch-up cursor.
+      context: { queryDeduplication: false },
+      skip,
+    }
+  )
+
+  // After a reconnect the table reloads only the pages in view, and this charts
+  // every run. The query's first fetch covers a reconnect before it started.
+  const reconnects = useReactiveVar(reconnectCount)
+  useDidUpdate(() => {
+    if (skip) {
+      return
+    }
+    refetch().catch((error: unknown) => {
+      console.error('The summary plot failed to reload:', error)
+    })
+  }, [reconnects])
+
+  const runs = data?.runs
+
+  // This path pulls the whole proposal in one page, so a full page back means
+  // runs past the cap are missing from every summary plot.
+  const runCount = runs?.length
+  useEffect(() => {
+    if (runCount !== undefined) {
+      warnIfRunsTruncated(proposal, runCount)
+    }
+  }, [proposal, runCount])
+
+  const cells = useMemo(() => indexRunCells(runs ?? []), [runs])
+
+  const computedAt = useMemo(
+    () => (enabled ? newestComputedTime({ cells, runIds, variables }) : null),
+    [enabled, cells, runIds, variables]
+  )
+
+  const plotData = useMemo(() => {
+    if (!enabled) {
+      return null
+    }
+
+    const series = variables.map(() => [] as number[])
+
+    for (const id of runIds) {
+      const points = drawnCells(cells.get(runKey(id)), variables)
+      points?.forEach((point, index) => {
+        series[index].push(point.summary.value as number)
+      })
+    }
+
+    const [xVar, yVar] = variables
+    const xName = getTitleByName(variableMeta, xVar)
+    const yName = getTitleByName(variableMeta, yVar)
+
+    const trace: PlotTrace = {
+      x: { value: series[0], name: xName },
+      y: { value: series[1], name: yName },
+    }
+    const meta: PlotMeta = {
+      type: 'scatter',
+      x: { name: xName },
+      y: { name: yName },
+    }
+
+    return { traces: [trace], meta }
+  }, [enabled, cells, runIds, variables, variableMeta])
+
+  return { data: plotData, computedAt }
+}

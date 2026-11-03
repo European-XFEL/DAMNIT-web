@@ -27,3 +27,6 @@ api/tests/fixtures/hzdr-reference/** -text
 # byte and pinned by sha256 in vendor/SOURCE.json; same reason. Re-vendor with
 # hzdr/scripts/sync-hzdr-packs.{sh,ps1}.
 api/src/damnit_api/metadata/hzdr_packs/vendor/** -text
+# pnpm copies npm's deprecation notices into its lockfile, and a notice may
+# hold any character, so the character check skips it.
+frontend/pnpm-lock.yaml -check-characters
