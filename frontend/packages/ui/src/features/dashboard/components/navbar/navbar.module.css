@@ -213,16 +213,20 @@
 /* A floating row pairs its mark with its label at half the label's size. */
 .popover .item,
 .popover .entryButton {
-  gap: 6px;
+  gap: var(--icon-gap-xs);
 }
 
-/* A floating surface reads a step under the page it sits over. */
+/* A floating row takes its size from the theme and reads a step under the page
+   it sits over; the nav's own rows keep theirs. */
 .popover .item {
   font-size: var(--mantine-font-size-xs);
+  height: var(--floating-row-height);
+  padding: 0 var(--floating-row-inset);
 }
 
 .popover .entry {
   --entry-title-size: var(--mantine-font-size-xs);
+  padding-left: var(--floating-row-inset);
 }
 
 .popover .entrySubtitle {
