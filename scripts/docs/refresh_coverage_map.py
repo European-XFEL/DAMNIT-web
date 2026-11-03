@@ -93,7 +93,10 @@ AREAS = (
             f"{T}/test_hzdr_campaign_resolution.py",
             f"{T}/test_match_rank_docs.py",
         ),
-        watch_next="Real SciCat and PID reconciliation, which the offline suite can only emulate",
+        watch_next=(
+            "Real SciCat and PID reconciliation, which the offline suite can only "
+            "emulate"
+        ),
     ),
     CoverageArea(
         name="HZDR diagnostic packs and shot containers",
@@ -142,7 +145,10 @@ AREAS = (
             f"{T}/test_hzdr_wiki.py",
             f"{T}/test_hzdr_screenshot_capture.py",
         ),
-        watch_next="`services.py` at 16%: the long-running service wiring is exercised only on a deployment",
+        watch_next=(
+            "`services.py` at 16%: the long-running service wiring is exercised only "
+            "on a deployment"
+        ),
     ),
     CoverageArea(
         name="Event ingestion (Kafka, ASAPO, spool)",
@@ -164,7 +170,9 @@ AREAS = (
             f"{T}/test_hzdr_multi_campaign.py",
             f"{T}/test_hzdr_spool.py",
         ),
-        watch_next="A live broker: everything here runs against an in-process or emulated one",
+        watch_next=(
+            "A live broker: everything here runs against an in-process or emulated one"
+        ),
     ),
     CoverageArea(
         name="GraphQL and data access",
@@ -181,7 +189,9 @@ AREAS = (
             f"{A}/runs/types.py",
         ),
         tests=(f"{T}/test_data.py",),
-        watch_next="Subscription lifecycles under a real client, and the schema directives",
+        watch_next=(
+            "Subscription lifecycles under a real client, and the schema directives"
+        ),
     ),
     CoverageArea(
         name="Context file",
@@ -206,7 +216,10 @@ AREAS = (
             f"{A}/auth/routers.py",
         ),
         tests=(f"{T}/test_auth_modes.py",),
-        watch_next="A real LDAP bind and the OAuth routers, neither reachable from the offline suite",
+        watch_next=(
+            "A real LDAP bind and the OAuth routers, neither reachable from the "
+            "offline suite"
+        ),
     ),
     CoverageArea(
         name="App core, database and settings",
@@ -240,7 +253,9 @@ AREAS = (
             f"{T}/test_hzdr_flow_activity.py",
             f"{T}/test_logging_masks.py",
         ),
-        watch_next="Application startup against a real database, and the ASGI entry point",
+        watch_next=(
+            "Application startup against a real database, and the ASGI entry point"
+        ),
     ),
     CoverageArea(
         name="MyMDC integration (vendored upstream)",
@@ -256,7 +271,10 @@ AREAS = (
             f"{A}/_mymdc/vendor/models.py",
         ),
         tests=(),
-        watch_next="Upstream European XFEL code this deployment does not use; revendor rather than test around it",
+        watch_next=(
+            "Upstream European XFEL code this deployment does not use; revendor rather "
+            "than test around it"
+        ),
     ),
 )
 
@@ -336,8 +354,10 @@ def build_coverage_map(payload: dict) -> str:
     total_text = f"{float(total_percent):.2f}%" if total_percent is not None else "n/a"
 
     return "\n".join((
-        "Use this generated map as a quick sense of which parts of the API are well covered before",
-        "changing a reconciler, a router, or the NeXus builder. Percentages come from the latest",
+        "Use this generated map as a quick sense of which parts of the API are "
+        "well covered before",
+        "changing a reconciler, a router, or the NeXus builder. Percentages come "
+        "from the latest",
         "pytest-cov JSON run over `damnit_api`; the frontend is not measured here.",
         "",
         f"Overall `{PACKAGE}` line coverage from that run: **{total_text}**.",
@@ -372,15 +392,21 @@ def refresh_document(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "coverage_json", nargs="?", type=Path, default=DEFAULT_COVERAGE_JSON,
+        "coverage_json",
+        nargs="?",
+        type=Path,
+        default=DEFAULT_COVERAGE_JSON,
         help="pytest-cov JSON output to read.",
     )
     parser.add_argument(
-        "--document", type=Path, default=DEFAULT_DOC,
+        "--document",
+        type=Path,
+        default=DEFAULT_DOC,
         help="Markdown file containing the coverage-map markers.",
     )
     parser.add_argument(
-        "--check-only", action="store_true",
+        "--check-only",
+        action="store_true",
         help="Fail if the generated coverage map is not committed.",
     )
     args = parser.parse_args(argv)
@@ -401,7 +427,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Coverage map is stale in {args.document}", file=sys.stderr)
         return 1
     print(
-        f"{'Refreshed' if changed else 'Already up to date:'} coverage map in {args.document}"
+        f"{'Refreshed' if changed else 'Already up to date:'} coverage map in "
+        f"{args.document}"
     )
     return 0
 
