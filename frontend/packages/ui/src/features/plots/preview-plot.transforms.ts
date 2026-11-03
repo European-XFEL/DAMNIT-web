@@ -98,6 +98,17 @@ type RecordComputedTimesOptions = {
   cells: Map<string, RunCells>
 }
 
+function cellTime(
+  cells: Map<string, RunCells>,
+  {
+    proposal,
+    variable,
+    run,
+  }: { proposal: string; variable: string; run: number }
+) {
+  return cells.get(runKey({ proposal, run }))?.get(variable)?.computed_at
+}
+
 // A run's time is recorded when its data and its cell are both in, and kept until
 // new data replaces the drawn one: a push moves the cell on, not the drawing.
 export function recordComputedTimes(
@@ -117,9 +128,7 @@ export function recordComputedTimes(
       continue
     }
 
-    const time = cells
-      .get(runKey({ proposal, run }))
-      ?.get(variable)?.computed_at
+    const time = cellTime(cells, { proposal, variable, run })
     if (time != null) {
       times.set(run, { time, value })
       changed = true
@@ -144,4 +153,80 @@ export function newestRecordedTime(
   }
 
   return newest
+}
+
+// The drawn runs, in run order, whose cell has moved past the time recorded
+// with the data the plot draws.
+export function outdatedRuns(
+  recorded: RecordedTimes,
+  { proposal, variable, drawn, cells }: RecordComputedTimesOptions
+): number[] {
+  return drawn.flatMap(({ run }) => {
+    const recordedTime = recorded.times.get(run)?.time
+    const time = cellTime(cells, { proposal, variable, run })
+
+    return recordedTime != null && time != null && time > recordedTime
+      ? [run]
+      : []
+  })
+}
+
+type RecordReloadedTimesOptions = {
+  proposal: string
+  variable: string
+  reloaded: { run: number; value: PreviewValue }[]
+  cellsAtPress: Map<string, RunCells>
+}
+
+// Dates reloaded runs from their cells as they stood when Reload was pressed,
+// even when the data came back equal: a push since then is newer than the answer.
+export function recordReloadedTimes(
+  recorded: RecordedTimes,
+  { proposal, variable, reloaded, cellsAtPress }: RecordReloadedTimesOptions
+): RecordedTimes {
+  if (recorded.key !== `${proposal}:${variable}`) {
+    return recorded
+  }
+
+  const times = new Map(recorded.times)
+  let changed = false
+  for (const { run, value } of reloaded) {
+    const time = cellTime(cellsAtPress, { proposal, variable, run })
+    if (time == null) {
+      continue
+    }
+
+    times.set(run, { time, value })
+    changed = true
+  }
+
+  return changed ? { key: recorded.key, times } : recorded
+}
+
+// "1 to 3, 5 and 9", with no comma before the "and", as the run count joins
+// its runs.
+const listFormat = new Intl.ListFormat('en-GB')
+
+export function describeOutdatedRuns(runs: number[]) {
+  const ranges: { first: number; last: number }[] = []
+  for (const run of runs) {
+    const previous = ranges.at(-1)
+    if (previous && run === previous.last + 1) {
+      previous.last = run
+      continue
+    }
+
+    ranges.push({ first: run, last: run })
+  }
+
+  const single = runs.length === 1
+  const list = listFormat.format(
+    ranges.map(({ first, last }) =>
+      first === last ? String(first) : `${first} to ${last}`
+    )
+  )
+
+  return single
+    ? `Run ${list} has newer data.`
+    : `Runs ${list} have newer data.`
 }
