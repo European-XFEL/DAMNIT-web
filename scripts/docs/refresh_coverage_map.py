@@ -354,10 +354,14 @@ def build_coverage_map(payload: dict) -> str:
     total_text = f"{float(total_percent):.2f}%" if total_percent is not None else "n/a"
 
     return "\n".join((
-        "Use this generated map as a quick sense of which parts of the API are "
-        "well covered before",
-        "changing a reconciler, a router, or the NeXus builder. Percentages come "
-        "from the latest",
+        (
+            "Use this generated map as a quick sense of which parts of the API are "
+            "well covered before"
+        ),
+        (
+            "changing a reconciler, a router, or the NeXus builder. Percentages come "
+            "from the latest"
+        ),
         "pytest-cov JSON run over `damnit_api`; the frontend is not measured here.",
         "",
         f"Overall `{PACKAGE}` line coverage from that run: **{total_text}**.",
