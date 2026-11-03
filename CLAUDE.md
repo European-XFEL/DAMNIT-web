@@ -350,6 +350,19 @@ manifests, instrument catalogue and per-instrument mapping rows
 (`vendor/mappings/`) in `metadata/hzdr_packs/vendor/`. `test-all.ps1` and `test-all.sh` run all three
 checks and stop on drift.
 
+## Changelog and operations
+`hzdr/CHANGELOG.md` records notable HZDR changes (add an entry with each PR that
+changes behaviour). `hzdr/docs/guides/operations.md` is the fwkt-webapps runbook:
+deploying, rebuilding a campaign by hand, and a build stuck in a CIFS write
+(state `D`, holding its campaign lock) on `//gssnfs/bigdata`. Things to know:
+- The auto-trigger rebuilds on export or event changes only, never on restart.
+- Manual multi-campaign builds must name each campaign (`--campaign`) and pass
+  `--campaign-timezone Europe/Berlin`.
+- The deployed output root is normally `/home/tippey/mnt/bigdata/HPLexp/nexus`,
+  shared with shot-aligner's output (never delete it). Since 2026-11-03 it is
+  temporarily `HPLexp/nexus_2026-11`, to step around two hung builds holding
+  locks there; switch back after the next reboot of fwkt-webapps.
+
 ## Conventions and boundaries
 - Keep work local-first; prefer the local acceptance script and the harness broker. No real broker/Mongo/ASAPO calls unless the user explicitly changes scope.
 - Do not read or print secrets, credentials, tokens, or auth files. Keep endpoints and tokens in env-specific config, never in API code.
