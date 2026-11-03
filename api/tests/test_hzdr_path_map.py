@@ -2,7 +2,13 @@ from pathlib import Path
 
 import pytest
 
-from damnit_api.shared.hzdr_paths import map_path, parse_path_map
+from damnit_api.shared import hzdr_paths
+from damnit_api.shared.hzdr_paths import (
+    fstab_mount_points,
+    map_path,
+    missing_mount,
+    parse_path_map,
+)
 
 MOUNT = "/home/tippey/mnt/bigdata"
 
@@ -90,3 +96,46 @@ def test_malformed_map_stops_settings_loading():
 
     with pytest.raises(ValidationError, match="path map"):
         MetadataSettings(path_map="oops")
+
+
+# --- missing_mount: never build into an unmounted share ---------------------
+
+
+def _fstab(tmp_path, *points):
+    fstab = tmp_path / "fstab"
+    lines = [
+        "# a comment",
+        "UUID=abc / ext4 defaults 0 1",
+        "/swap.img none swap sw 0 0",
+    ]
+    lines += [f"//server/share {point} cifs _netdev,nofail 0 0" for point in points]
+    fstab.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return fstab
+
+
+def test_fstab_mount_points_skip_comments_swap_and_decode_spaces(tmp_path):
+    fstab = _fstab(tmp_path, r"/mnt/big\040data")
+    assert fstab_mount_points(fstab) == {Path("/"), Path("/mnt/big data")}
+
+
+def test_no_fstab_and_nothing_required_is_fine(tmp_path):
+    assert missing_mount(tmp_path / "out", fstab=tmp_path / "absent") is None
+
+
+def test_an_unmounted_fstab_share_above_the_output_is_named(tmp_path):
+    share = tmp_path / "mnt" / "bigdata"
+    share.mkdir(parents=True)
+    fstab = _fstab(tmp_path, share)
+    assert missing_mount(share / "HPLexp" / "nexus", fstab=fstab) == share
+
+
+def test_a_mounted_fstab_share_passes(tmp_path, monkeypatch):
+    share = tmp_path / "mnt" / "bigdata"
+    fstab = _fstab(tmp_path, share)
+    monkeypatch.setattr(hzdr_paths.os.path, "ismount", lambda p: Path(p) == share)
+    assert missing_mount(share / "HPLexp" / "nexus", fstab=fstab) is None
+
+
+def test_a_required_path_must_be_a_mount_point(tmp_path):
+    absent = tmp_path / "absent"
+    assert missing_mount(tmp_path / "out", [tmp_path], fstab=absent) == tmp_path

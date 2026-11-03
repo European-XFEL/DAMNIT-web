@@ -43,6 +43,7 @@ from damnit_api.metadata.hzdr_nexus import (
     write_nexus_bridge,
     write_sources_catalog,
 )
+from damnit_api.shared.hzdr_paths import missing_mount
 
 
 def load_mongo_shots(args: argparse.Namespace) -> list[dict[str, Any]]:
@@ -561,6 +562,18 @@ def main() -> None:
         ),
     )
     parser.add_argument("--sources-file", type=Path)
+    parser.add_argument(
+        "--require-mount",
+        action="append",
+        type=Path,
+        default=[],
+        metavar="DIR",
+        help=(
+            "Refuse to build unless DIR is a mounted file system, e.g. the "
+            "share holding --output-root; repeatable. The nearest /etc/fstab "
+            "mount point above the output is checked either way."
+        ),
+    )
     parser.add_argument("--match-tolerance-s", type=float, default=120.0)
     parser.add_argument(
         "--campaign-timezone",
@@ -600,6 +613,16 @@ def main() -> None:
         ),
     )
     args = parser.parse_args()
+
+    output = args.output_root or (args.output_nexus and args.output_nexus.parent)
+    if output is not None:
+        unmounted = missing_mount(output, args.require_mount)
+        if unmounted is not None:
+            sys.exit(
+                f"Refusing to build: {unmounted} is not mounted, so {output} is "
+                "a folder on this machine's own disk, and the share would hide "
+                "anything written there once it is mounted again. Mount it first."
+            )
 
     if args.output_root is not None:
         conflicting = [

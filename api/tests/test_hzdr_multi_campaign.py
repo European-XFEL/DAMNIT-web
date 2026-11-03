@@ -614,3 +614,19 @@ async def test_a_ruling_requests_a_rebuild_while_the_trigger_runs(tmp_path):
     assert len(runs) == 1
     assert "--output-root" in runs[0]
     assert request_rebuild() is False
+
+
+def test_an_unmounted_share_refuses_the_build_and_writes_nothing(tmp_path, monkeypatch):
+    """2026-11-03: a build into an unmounted share landed on the local disk."""
+    site = Site(tmp_path)
+    write_export(site.curated, RADBIO, [1])
+    site.unassigned(trigger(1))
+    site.output.mkdir()
+
+    argv = site.argv(RADBIO, extra=("--require-mount", str(site.output)))
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit) as exited:
+        builder.main()
+
+    assert "Refusing to build" in str(exited.value.code)
+    assert list(site.output.iterdir()) == []
