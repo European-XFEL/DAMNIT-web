@@ -116,11 +116,15 @@ export const theme = createTheme({
   },
 })
 
-// Placeholder and dimmed are text a reader has to read, so they take the
-// secondary grey instead of Mantine's gray.5 and gray.6, both below AA.
 export const cssVariablesResolver: CSSVariablesResolver = (theme) => ({
-  variables: {},
+  variables: {
+    '--floating-row-height': rem(32),
+    '--floating-row-inset': rem(10),
+    '--icon-gap-xs': rem(6),
+  },
   light: {
+    // Placeholder and dimmed are text a reader has to read, so they take the
+    // secondary grey instead of Mantine's gray.5 and gray.6, both below AA.
     '--mantine-color-placeholder': theme.colors.gray[7],
     '--mantine-color-dimmed': theme.colors.gray[7],
     // Mantine fixes the error colour at red.6, 3.3:1 on white; red.9 reads
