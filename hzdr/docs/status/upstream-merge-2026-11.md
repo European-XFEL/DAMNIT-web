@@ -26,34 +26,30 @@ Not yet opened as a PR.
 API suite run the way CI runs it (no `api/.env`, OIDC env vars):
 **884 passed, 8 failed, 32 skipped.**
 
+- Upstream's MyMdC/OIDC parity tests run against the fork's settings
+  (mymdc provider + OIDC selected in their fixtures; optional MyMdC
+  dependency honours test overrides; OIDC login test skips without OIDC).
+- Frontend: HZDR app passes upstream's stricter ESLint config
+  (`--max-warnings 0`); prettier and tsc clean across the workspace.
+
+Results:
+- API, run the way CI runs it: **892 passed, 32 skipped**, coverage 86%,
+  ruff check + format clean. With the local HZDR `api/.env`: 891 passed,
+  1 skipped (OIDC login), 32 skipped.
+- Frontend: `apps/app` 135/135; `packages/ui` 587/587 (browser tests run
+  locally with `launchOptions.executablePath` pointed at the container's
+  Chromium, since upstream pins Playwright 1.64; CI installs its own).
+
 ## Remaining
 
-1. **Upstream parity tests that assume XFEL's MyMdC** — 6 failures in
-   `api/tests/refactor/e2e/` (auth surface, authz member, data parity) and
-   2 in `api/tests/shared/test_gql.py` (MyMdC handshake retry). Cause: the
-   fork's `main.py` bootstraps MyMdC only when
-   `DW_API_METADATA__PROVIDER=mymdc`; upstream always does, and these tests
-   force a mock MyMdC but leave the provider at its default. Likely fix: set
-   the provider to `mymdc` in those tests' fixtures (they test XFEL
-   behaviour), or bootstrap MyMdC whenever `settings.mymdc` is a mock. Check
-   `test_login_redirects_to_oidc_provider_unchanged` (307 vs 302) and the
-   userinfo shape separately — may be a genuine fork/upstream difference.
-2. **Frontend** — not yet built or tested after the merge:
-   `pnpm run lint:eslint`, `lint:prettier`, `lint:tsc`, `pnpm test` from
-   `frontend/`. Expect fixes in `apps/app` (HZDR pages) against upstream's
-   new `@damnit-frontend/ui` exports, the HZDR app's move to vitest 4, and
-   upstream's ESLint layering rules (`#src/*` imports) in `packages/ui`
-   (ported `saved-views-popover.tsx`, `login-route.tsx`).
-3. **Pre-commit / CI**: run `uv run python scripts/check-characters/check_characters.py`
-   over the tree (new upstream hook); vendored `hzdr_packs/vendor/` and
-   `hzdr-reference/` may need `-check-characters` in `.gitattributes`.
-   Check `.github/workflows` for upstream's docs build (zensical) vs the
-   fork's workflows.
-4. **Docs**: `api/zensical.toml` replaces `mkdocs.yml`; build with
-   `uv run --group docs zensical build` in `api/` and fix the nav if
-   `hzdr.md` or moved pages break it. `CLAUDE.md` still mentions
-   `db.py`/`data.py` and "pyright paused" upstream context — update.
-5. **Smoke test** the whole stack (`hzdr/scripts/hzdr-launch.sh`) and the
-   HZDR pages in a browser; run `hzdr/scripts/test-all.ps1` for the sibling
-   conformance suites.
-6. Open the PR to fork `main`.
+1. **Character check** (new upstream pre-commit hook and CI job): run
+   `uv run python scripts/check-characters/check_characters.py` over the
+   tree; vendored `hzdr_packs/vendor/` and `hzdr-reference/` may need
+   `-check-characters` in `.gitattributes`.
+2. **CI workflows**: compare upstream's `.github/workflows` changes
+   (docs via zensical, character check, e2e) with the fork's.
+3. **Docs**: build with `uv run --group docs zensical build` in `api/`;
+   update `CLAUDE.md` (mentions `db.py`/`data.py`, `api/mkdocs.yml`).
+4. **Smoke test** the whole stack (`hzdr/scripts/hzdr-launch.sh`) and the
+   HZDR pages in a browser; `hzdr/scripts/test-all.ps1` for sibling suites.
+5. Open the PR to fork `main`.
