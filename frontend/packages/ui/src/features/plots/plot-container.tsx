@@ -87,6 +87,9 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
     data: previewData,
     chunks,
     computedAt: previewComputedAt,
+    outdated,
+    reload,
+    reloading,
   } = usePreviewPlotData({
     runs: runNumbers,
     variable: plot.variables[0],
@@ -133,7 +136,12 @@ const PlotContainer = ({ plotId }: PlotContainerProps) => {
       )}
       {computedAt !== null && (
         <ViewStatus>
-          <ComputedItem time={computedAt} />
+          <ComputedItem
+            time={computedAt}
+            outdated={outdated}
+            onReload={() => void reload()}
+            reloading={reloading}
+          />
         </ViewStatus>
       )}
     </Stack>
