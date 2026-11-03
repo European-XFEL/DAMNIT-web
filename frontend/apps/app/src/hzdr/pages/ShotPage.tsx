@@ -59,6 +59,7 @@ import {
 } from '../utils/format'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
+import { summarizeShotDataSources } from '../utils/data-sources'
 import { formatShotLabel, toTrendValue } from '../utils/shot-key'
 import {
   SHOT_TABLE_COLUMNS,
@@ -208,6 +209,7 @@ export function HZDRShotPage() {
   )
   const contextRowsByShot = buildContextRowsByShot(shots, contextResults?.rows)
   const shotDayLabels = buildShotDayLabels(shots)
+  const dataSources = summarizeShotDataSources(shots)
   const contextColumnOptions =
     contextResults?.columns.map((column) => ({
       value: `context:${column.name}`,
@@ -426,7 +428,15 @@ export function HZDRShotPage() {
               <Group justify="space-between" align="center" gap="sm">
                 <Group gap="xs">
                   <Title order={3}>{source?.title ?? source_key}</Title>
-                  <Badge variant="light">Emulated package stream</Badge>
+                  {dataSources.map(({ label, shotCount }) => (
+                    <Badge
+                      key={label}
+                      variant="light"
+                      title={`${shotCount} of ${shots.length} shots have data from ${label}`}
+                    >
+                      {label} · {shotCount}
+                    </Badge>
+                  ))}
                 </Group>
                 <Group gap="xs" align="center" wrap="nowrap">
                   <Text size="sm" fw={500} component="label">
@@ -452,8 +462,9 @@ export function HZDRShotPage() {
               </Group>
               <Group gap="xs" mt={4} align="center">
                 <Text size="sm" c="dimmed">
-                  LaserData creates shots, Watchdog enriches them, and staged
-                  events feed the HDF5 builder.
+                  {dataSources.length
+                    ? 'Shots by the sources their data came from.'
+                    : 'No shots yet.'}
                 </Text>
                 <Code>{source?.damnit_path ?? '-'}</Code>
               </Group>
