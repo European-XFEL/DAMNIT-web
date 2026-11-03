@@ -60,7 +60,7 @@ def read_recorder_comment(path: Path) -> tuple[dict, str | None, str]:
         text = raw.decode("utf-16", "replace")
     else:
         text = raw.decode("utf-8", "replace")
-    text = text.replace("\r\n", "\n").replace("﻿", "")
+    text = text.replace("\r\n", "\n").replace("\ufeff", "")
 
     recorded = None
     found = _RECORDED.search(text)

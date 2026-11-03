@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+
 import { formatShotLabel, getShotRowKey, toTrendValue } from '../shot-key'
 import type { HZDRShot } from '../../types'
 

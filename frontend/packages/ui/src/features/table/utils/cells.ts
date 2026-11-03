@@ -1,0 +1,384 @@
+import {
+  AllCellRenderers,
+  GridCellKind,
+  type BaseGridCell,
+  type CustomCell,
+  type CustomRenderer,
+  type GridCell,
+  type ImageCell,
+  type Item,
+  type LoadingCell,
+  type NumberCell,
+  type TextCell,
+  type Theme,
+} from '@glideapps/glide-data-grid'
+import {
+  allCells,
+  SparklineCell as sparklineRenderer,
+  type SparklineCellType,
+} from '@glideapps/glide-data-grid-cells'
+
+import { DTYPES, HEAVY_DTYPES } from '#src/constants'
+import {
+  errorKind,
+  errorText,
+  type CellError,
+  type ErrorKind,
+} from '#src/utils/cell-errors'
+import {
+  type CellValue,
+  type SparklineValue,
+} from '#src/data/table/table-data.types'
+import { formatDate, formatNumber } from '#src/utils/helpers'
+import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
+
+// Width of the small skeleton/error box, shared by loadingCell and the
+// error cell renderer so a no-data cell and an errored cell line up.
+const SKELETON_BOX_WIDTH = 30
+
+// A Source Code Pro glyph is a fifth wider than the sans beside it, so mono
+// cells sit one step under the grid's 14 px.
+const MONO_CELL_THEME: Partial<Theme> = {
+  fontFamily: FONT_FAMILY_MONO,
+  baseFontStyle: `${FONT_SIZES.xs}px`,
+}
+
+// TODO: Handle nonconforming data type
+
+export const imageCell = (
+  value: CellValue,
+  params: Partial<BaseGridCell> = {}
+): ImageCell => {
+  const data = typeof value === 'string' ? [value] : []
+
+  return {
+    kind: GridCellKind.Image,
+    data,
+    allowOverlay: false,
+    // allowAdd: false,
+    readonly: true,
+    ...params,
+  }
+}
+
+export const textCell = (
+  value: CellValue,
+  params: Partial<BaseGridCell> = {}
+): TextCell => {
+  // Not a truthiness check: this is the fallback for a dtype with no renderer,
+  // and `false`, `0` and `NaN` are values the grid still has to show.
+  const data = value == null ? '' : String(value)
+  return {
+    kind: GridCellKind.Text,
+    displayData: data,
+    data,
+    allowOverlay: false,
+    ...params,
+  }
+}
+
+export const numberCell = (
+  value: CellValue,
+  params: Partial<BaseGridCell> = {}
+): NumberCell => {
+  const data =
+    typeof value === 'number' && Number.isFinite(value)
+      ? formatNumber(value)
+      : undefined
+
+  return {
+    kind: GridCellKind.Number,
+    displayData:
+      data != null ? String(data) : value != null ? String(value) : '',
+    data: data,
+    allowOverlay: false,
+    contentAlign: 'right',
+    themeOverride: MONO_CELL_THEME,
+    ...params,
+  }
+}
+
+export const toSparkline = (value: CellValue): SparklineValue | undefined => {
+  if (typeof value === 'object' && value !== null) {
+    return value
+  }
+  return undefined
+}
+
+// Glide pads the sparkline by 8px on each side (the default
+// cellHorizontalPadding, which our theme doesn't change). It also draws a
+// single value as two points, one at each end.
+const SPARKLINE_PAD_X = 8
+
+// Index of the point Glide's crosshair is on when the pointer is `hoverX` px
+// into the cell.
+export const sparklineIndexAt = (
+  hoverX: number,
+  width: number,
+  count: number
+): number => {
+  if (count === 1) {
+    return 0
+  }
+  const xStep = (width - 2 * SPARKLINE_PAD_X) / (count - 1)
+  return Math.min(
+    count - 1,
+    Math.max(0, Math.round((hoverX - SPARKLINE_PAD_X) / xStep))
+  )
+}
+
+export const arrayCell = (
+  value: CellValue,
+  params: Partial<BaseGridCell> = {}
+): SparklineCellType => {
+  const values = toSparkline(value)?.y ?? []
+
+  // Glide only draws the hover crosshair if displayValues is set, but it draws
+  // the labels with a hardcoded 8px font. So we pass blank labels and show the
+  // value in our own tooltip instead.
+  const data = values.length
+    ? {
+        values: values,
+        displayValues: values.map(() => ''),
+        yAxis: [Math.min(...values), Math.max(...values)] as Item,
+      }
+    : { values: [], yAxis: [0, 0] as Item }
+
+  return {
+    kind: GridCellKind.Custom,
+    allowOverlay: false,
+    copyData: '',
+    data: {
+      kind: 'sparkline-cell',
+      color: '#4C78A8',
+      graphKind: 'line',
+      hideAxis: true,
+      ...data,
+    },
+    ...params,
+  }
+}
+
+export const dateCell = (
+  value: CellValue,
+  params: Partial<BaseGridCell> = {}
+): TextCell => {
+  const data = value && typeof value === 'number' ? formatDate(value) : ''
+
+  return {
+    kind: GridCellKind.Text,
+    allowOverlay: false,
+    displayData: data,
+    data,
+    themeOverride: MONO_CELL_THEME,
+    ...params,
+  }
+}
+
+// Shown for variables that failed to execute (the run_variables row carries an
+// `error` instead of a value). Rendered as a small right-aligned glyph that
+// varies with the kind of error.
+const ERROR_CELL_KIND = 'error-cell'
+
+export interface ErrorCellProps {
+  readonly kind: typeof ERROR_CELL_KIND
+  readonly error: CellError
+}
+
+export type ErrorCell = CustomCell<ErrorCellProps>
+
+export const errorCell = (
+  error: CellError,
+  params: Partial<BaseGridCell> = {}
+): ErrorCell => {
+  return {
+    kind: GridCellKind.Custom,
+    allowOverlay: false,
+    copyData: errorText(error),
+    data: { kind: ERROR_CELL_KIND, error },
+    ...params,
+  }
+}
+
+const ERROR_ICON_SIZE = 14
+// Rasterize larger than we draw so the canvas downscales (crisp on HiDPI)
+// instead of upscaling a display-size raster.
+const ERROR_ICON_RENDER_SIZE = 56
+const ERROR_ICON_STROKE = 2
+
+// The error card's Tabler icons (v3.49.0) as raw paths, so the canvas builds
+// the SVG itself instead of pulling react-dom/server into the client bundle.
+const ERROR_ICON_PATHS: Record<ErrorKind, string> = {
+  error:
+    '<path d="M12 9v4" />' +
+    '<path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" />' +
+    '<path d="M12 16h.01" />',
+  missing:
+    '<path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />' +
+    '<path d="M12 17l0 .01" />' +
+    '<path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4" />',
+  skipped: '<path d="M7 7l5 5l-5 5" />' + '<path d="M13 7l5 5l-5 5" />',
+}
+
+// Rasterize an error glyph to a cached image keyed by kind and color so the
+// canvas renderer can drawImage() it. The SVG is built once per unique
+// (kind, color); every redraw is a cache hit.
+const iconCache = new Map<string, HTMLImageElement>()
+
+const errorIcon = (kind: ErrorKind, color: string): HTMLImageElement => {
+  const key = `${kind}|${color}`
+  let img = iconCache.get(key)
+  if (!img) {
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"` +
+      ` width="${ERROR_ICON_RENDER_SIZE}" height="${ERROR_ICON_RENDER_SIZE}"` +
+      ` fill="none" stroke="${color}" stroke-width="${ERROR_ICON_STROKE}"` +
+      ` stroke-linecap="round" stroke-linejoin="round">` +
+      `${ERROR_ICON_PATHS[kind]}</svg>`
+    img = new Image()
+    // encodeURIComponent is load-bearing: the hex `#` must become %23 or the
+    // data URL breaks.
+    img.src = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+    iconCache.set(key, img)
+  }
+  return img
+}
+
+export type ErrorColors = Record<ErrorKind, string>
+
+export const makeErrorCellRenderer = (
+  colors: ErrorColors
+): CustomRenderer<ErrorCell> => {
+  const icons: Record<ErrorKind, HTMLImageElement> = {
+    error: errorIcon('error', colors.error),
+    missing: errorIcon('missing', colors.missing),
+    skipped: errorIcon('skipped', colors.skipped),
+  }
+
+  return {
+    kind: GridCellKind.Custom,
+    isMatch: (cell: CustomCell): cell is ErrorCell =>
+      (cell.data as Partial<ErrorCellProps>).kind === ERROR_CELL_KIND,
+    // Nothing is drawn but the glyph, padded either side, so that is the whole
+    // width a double-click fit should ask for.
+    measure: (_ctx, _cell, theme) =>
+      ERROR_ICON_SIZE + 2 * theme.cellHorizontalPadding,
+    draw: ({ ctx, rect, theme, cell }) => {
+      const img = icons[errorKind(cell.data.error.cls)]
+      if (!img.complete || img.naturalWidth === 0) {
+        return
+      }
+
+      const size = Math.min(
+        ERROR_ICON_SIZE,
+        rect.height - 2 * theme.cellVerticalPadding
+      )
+      const x = rect.x + rect.width - theme.cellHorizontalPadding - size
+      const y = rect.y + (rect.height - size) / 2
+
+      ctx.drawImage(img, x, y, size, size)
+    },
+  }
+}
+
+export const loadingCell = (
+  _: CellValue,
+  params: Partial<BaseGridCell> = {}
+): LoadingCell => {
+  return {
+    kind: GridCellKind.Loading,
+    allowOverlay: false,
+    skeletonWidth: SKELETON_BOX_WIDTH,
+    ...params,
+  }
+}
+
+type CellFactory = (value: CellValue, params: Partial<BaseGridCell>) => GridCell
+
+// Typed so a lookup reads as possibly-missing: DAMNIT's dtypes are an open set
+// (boolean and complex among them) and only these five have a renderer.
+const gridCellFactory: Partial<Record<string, CellFactory>> = {
+  [DTYPES.image]: imageCell,
+  [DTYPES.string]: textCell,
+  [DTYPES.number]: numberCell,
+  [DTYPES.array1d]: arrayCell,
+  [DTYPES.timestamp]: dateCell,
+}
+
+type GetCellOptions = {
+  value: CellValue
+  dtype: string
+  options: Partial<BaseGridCell>
+}
+
+export const getCell = ({
+  value,
+  dtype,
+  options,
+}: GetCellOptions): GridCell => {
+  // A dtype with no renderer falls back to text rather than throwing on every
+  // visible cell the grid asks `getContent` for.
+  if (value != null) {
+    return (gridCellFactory[dtype] ?? textCell)(value, options)
+  }
+  // A null heavy value is one @lightweight held back, so it draws the loading
+  // skeleton until the deferred fetch fills it. A null scalar is a cell DAMNIT
+  // has no value for and nothing is coming, so it draws as empty rather than
+  // loading forever. This is `isHeavySummaryBlank` with the null already
+  // established, kept inline because the grid re-asks on every redraw.
+  return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
+}
+
+type GlideRenderer = (typeof AllCellRenderers)[number]
+
+// Glide measures every cell in the grid's font, so a mono cell would fit short
+// and lose its leading digits or its year.
+const measureInCellFont = (renderer: GlideRenderer): GlideRenderer => {
+  const { measure } = renderer
+  if (measure === undefined) {
+    return renderer
+  }
+  return {
+    ...renderer,
+    measure: (ctx, cell, theme) => {
+      const { baseFontStyle, fontFamily } = { ...theme, ...cell.themeOverride }
+      ctx.save()
+      ctx.font = `${baseFontStyle} ${fontFamily}`
+      const width = measure(ctx, cell, theme)
+      ctx.restore()
+      return width
+    },
+  }
+}
+
+// Glide copies each visible cell's text into a hidden table for screen readers.
+// An image's text is its whole data URI, which Firefox lays out on every resize.
+const withShortImageText = (renderer: GlideRenderer): GlideRenderer =>
+  renderer.kind === GridCellKind.Image
+    ? {
+        ...renderer,
+        getAccessibilityString: (cell) =>
+          cell.kind === GridCellKind.Image && cell.data.length > 0
+            ? 'image'
+            : '',
+      }
+    : renderer
+
+// Glide's own renderers, each measuring in the font its cell is drawn in, and
+// an image read out to screen readers as a word rather than its data.
+export const GRID_RENDERERS =
+  AllCellRenderers.map(measureInCellFont).map(withShortImageText)
+
+// Every renderer the grid draws with. The sparkline ships with no `measure`, so
+// a fit would land on Glide's 150px default; a sparkline has no width of its own.
+export const makeCellRenderers = (
+  colors: ErrorColors,
+  sparklineWidth: number
+) => [
+  ...allCells.map((renderer) =>
+    renderer === sparklineRenderer
+      ? { ...renderer, measure: () => sparklineWidth }
+      : renderer
+  ),
+  makeErrorCellRenderer(colors),
+]

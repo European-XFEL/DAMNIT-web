@@ -28,6 +28,8 @@ dev = [
     # Coverage for the aggregate HZDR map written by hzdr/scripts/test-all.ps1.
     "pytest-cov>=7.0.0",
     "coverage>=7.0.0",
+    # Upstream's look-alike/invisible character check (scripts/check-characters).
+    "regex>=2026.9.29",
     "ruff>=0.7",
     # Documentation screenshots (hzdr/scripts/capture-screenshots.py). Folded
     # into `dev` rather than kept as its own group: the split only meant a

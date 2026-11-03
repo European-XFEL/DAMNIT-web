@@ -43,9 +43,7 @@ def _local_proposal_meta(proposal_number: ProposalNumber) -> ProposalMeta:
 
 
 async def _local_proposal_number() -> int | None:
-    from sqlalchemy import select
-
-    from ..db import async_table, get_session
+    from ..runs.sqlite import async_active_proposal
     from ..shared.const import DEFAULT_PROPOSAL
     from ..shared.settings import settings
 
@@ -55,17 +53,7 @@ async def _local_proposal_number() -> int | None:
     if not settings.deployment.terminology.uses_proposals:
         return None
 
-    table = await async_table(DEFAULT_PROPOSAL, name="metameta")
-    if table is None:
-        return None
-
-    async with get_session(DEFAULT_PROPOSAL) as session:
-        result = await session.execute(
-            select(table.c.value).where(table.c.key == "proposal")
-        )
-        value = result.scalar()
-
-    return int(value) if value else None
+    return await async_active_proposal(DEFAULT_PROPOSAL)
 
 
 async def _fetch_proposal_meta(
@@ -175,20 +163,13 @@ async def _check_user_allowed(
     if settings.is_local:
         return
 
-    if proposal_number not in user._proposals:
+    if proposal_number not in user.proposals:
         msg = (
             f"User not authorised for proposal {proposal_number}, or proposal does not "
             "exist."
         )
-        details = None
-        if user._proposals is None:
-            details = "User has no authorised proposals."
-        await logger.ainfo(
-            "Forbidden",
-            message=msg,
-            details=details,
-        )
-        raise ForbiddenError(msg, details=details)
+        await logger.ainfo("Forbidden", message=msg)
+        raise ForbiddenError(msg)
 
     return
 

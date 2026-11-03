@@ -1,51 +1,46 @@
 // Providers
-export { Providers } from './providers'
+export { Providers } from './app/providers'
+export { ThemeProvider } from './app/theme-provider'
 
 // Components
-export { ContactButton } from './components/buttons'
-export { Header, Logo } from './components/headers'
-export { SiteFooter } from './components/footers'
-export { InstrumentBadge } from './components/badges'
+export { default as Header } from './components/headers/header'
+export { default as Logo } from './components/headers/logo'
+export { UserMenu } from './components/headers/user-menu'
+export { default as SiteFooter } from './components/footers/site-footer'
+export { default as InstrumentBadge } from './components/badges/instrument-badge'
+export { default as SectionHeading } from './components/headings/section-heading'
 
 // Features
-export {
-  default as Dashboard,
-  DashboardBase,
-  DashboardMain,
-  resetDashboard,
-  openNav,
-  closeNav,
-} from './features/dashboard'
-export {
-  HeroPage,
-  HomePage,
-  LoggedOutPage,
-  NotFoundPage,
-} from './features/pages'
-export { resetContextFile } from './features/context-file'
-export { resetPlots } from './features/plots'
-export { Proposals } from './features/proposals'
-export { resetTable as resetTableView } from './features/table'
+export { default as Dashboard } from './features/dashboard/dashboard'
+export { default as DashboardShell } from './features/dashboard/components/dashboard-shell'
+export { default as DashboardMain } from './features/dashboard/components/dashboard-main'
+export { default as ProposalIdentity } from './features/dashboard/components/proposal-identity'
+export { default as HeroPage } from './app/pages/hero-page'
+export { default as HomePage } from './app/pages/home-page'
+export { default as LoggedOutPage } from './app/pages/logged-out-page'
+export { default as NotFoundPage } from './app/pages/not-found-page'
+export { default as Proposals } from './features/proposals/proposals'
 
-// Hooks
-export { useProposal } from './hooks'
+// Auth
+export {
+  selectAvailableProposals,
+  selectUserFullName,
+} from './features/auth/auth.slice'
 
-// Redux
-export { useAppDispatch, useAppSelector } from './redux/hooks'
+// Store
+export { resetProposal } from './app/store/actions'
+export { useAppDispatch, useAppSelector } from './app/store/hooks'
 
 // Routes
-export {
-  LoginRoute,
-  LogoutRoute,
-  PrivateRoute,
-  RootRoute,
-  history,
-} from './routes'
+export { default as LoginRoute } from './app/routes/login-route'
+export { default as LogoutRoute } from './app/routes/logout-route'
+export { default as PrivateRoute } from './app/routes/private-route'
+export { default as RootRoute } from './app/routes/root-route'
+export { history } from './app/routes/history'
 
 // Data
-export { resetExtractedData } from './data/extracted'
-export { resetMetadata, setMetadata, setProposalPending } from './data/metadata'
-export { resetTable as resetTableData } from './data/table'
+export { default as useProposal } from './data/use-proposal'
+export { setMetadata, setProposalPending } from './data/metadata/metadata.slice'
 
 // Utilities
 export { formatUrl } from './utils/helpers'

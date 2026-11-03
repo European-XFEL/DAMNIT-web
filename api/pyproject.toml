@@ -48,6 +48,7 @@ dependencies = [
     # hzdr_packs reads PNG/TIFF/BMP frames with it (already installed for
     # matplotlib); 12 opens 16-bit grey PNGs as I;16, as the packs rely on.
     "pillow~=12.2",
+    "pyyaml>=6.0.3",
 ]
 
 [project.urls]
@@ -61,22 +62,30 @@ Issues = "https://github.com/ktippey-hzdr/DAMNIT-web-hzdr/issues"
 #
 # `asapo-consumer` only publishes wheels up to cp312 (no 3.13 build yet), so the
 # `python_version < "3.13"` marker keeps the base lock resolvable on this 3.13
-# project — on 3.13 the extra is a no-op until a compatible wheel exists. Where a
+# project - on 3.13 the extra is a no-op until a compatible wheel exists. Where a
 # wheel is available: uv sync --extra asapo  (or)  pip install 'damnit-api[asapo]'
 #
 # Pinned to match the standalone broker image
-# (gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0) — client and server
+# (gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0) - client and server
 # versions must match. See hzdr/docs/guides/local-development.md.
 asapo = ["asapo-consumer~=24.11.0; python_version < '3.13'"]
 
 [dependency-groups]
-test = ["pytest~=8.2", "pytest-asyncio~=0.24", "pytest-mock~=3.11", "pytest-cov~=7.0", "coverage~=7.0"]
+test = [
+    "asgi-lifespan>=2.1.0",
+    "coverage~=7.0",
+    "faker>=40.28.1",
+    "pytest~=8.2",
+    "pytest-asyncio~=0.24",
+    "pytest-cov~=7.0",
+    "pytest-mock~=3.11",
+    "pytest-recording>=0.13.4",
+    "syrupy>=5.5.2",
+]
 lint = ["pyright>=1.1.411", "ruff>=0.7"]
 docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.7.0",
-    "mkdocstrings[python]>=0.30.1",
-    "mkdocs-api-autonav>=0.4.0",
+    "zensical>=0.0.47",
+    "mkdocstrings-python>=2.0.3",
 ]
 # Additional development dependencies
 # note that this is a separate group to `dev` as toml requires arrays to

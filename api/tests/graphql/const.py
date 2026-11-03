@@ -5,6 +5,7 @@ from damnit_api.utils import create_map
 
 PROPOSAL = 900485
 RUNS = [348, 349, 350]
+RUN_IDENTIFIERS = [(PROPOSAL, run) for run in RUNS]
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -71,6 +72,8 @@ EXAMPLE_TAGS = create_map(
     [
         {"id": 1, "name": "eTOF setting"},
         {"id": 7, "name": "eTOF"},
+        # DAMNIT keeps a tag after its last variable is untagged.
+        {"id": 9, "name": "XGM"},
     ],
     key="id",
 )
@@ -78,13 +81,44 @@ EXAMPLE_TAGS = create_map(
 # -----------------------------------------------------------------------------
 # Variable -> tag mapping (as returned by async_variable_tags)
 
+# The join table has no order of its own, so the two eTOF rows come back the
+# other way round from the variables above.
 EXAMPLE_VARIABLE_TAGS = {
     "n_trains": [],
     "run_length": [],
     "xgm_intensity": [],
     "etof_settings.ret0": [1],
-    "etof.eTOF_calibration": [7],
     "etof.eTOF_response_width": [7],
+    "etof.eTOF_calibration": [7],
+}
+
+# -----------------------------------------------------------------------------
+# Groups (as `fetch_metadata` derives them from the dotted names above)
+
+EXAMPLE_GROUPS = create_map(
+    [
+        {"name": "etof_settings", "title": "eTOF settings"},
+        {"name": "etof", "title": "eTOF calib."},
+    ],
+    key="name",
+)
+
+EXAMPLE_VARIABLE_GROUPS = {
+    "etof_settings.ret0": {"group": "etof_settings"},
+    "etof.eTOF_calibration": {"group": "etof"},
+    "etof.eTOF_response_width": {"group": "etof"},
+}
+
+# What `fetch_metadata` makes of the four above: each variable carries the
+# names of its tags, not their ids, and a grouped one the key of its group.
+
+EXAMPLE_TAGGED_VARIABLES = {
+    name: {
+        **variable,
+        "tags": [EXAMPLE_TAGS[tag]["name"] for tag in EXAMPLE_VARIABLE_TAGS[name]],
+        **EXAMPLE_VARIABLE_GROUPS.get(name, {}),
+    }
+    for name, variable in EXAMPLE_VARIABLES.items()
 }
 
 # -----------------------------------------------------------------------------

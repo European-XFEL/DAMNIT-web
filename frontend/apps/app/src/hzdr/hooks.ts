@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+
 import type { RuntimeConfig } from './types'
 
 export function useRuntimeConfig() {

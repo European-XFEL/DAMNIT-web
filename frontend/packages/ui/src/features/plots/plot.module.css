@@ -1,0 +1,11 @@
+/* The plot takes the view's width, so a wide screen widens the run axis. */
+.frame {
+  width: 100%;
+}
+
+/* 16:9 until 600 px tall, then only the width grows. A heatmap sets its own
+   height from its rows instead. */
+.wide {
+  aspect-ratio: 16 / 9;
+  max-height: 600px;
+}

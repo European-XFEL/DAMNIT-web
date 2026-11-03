@@ -1,0 +1,141 @@
+import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from anyio import Path as APath
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import NullPool
+
+from ...shared.const import DEFAULT_PROPOSAL
+from ...utils import Registry, find_proposal
+
+DAMNIT_PATH = "usr/Shared/amore/"
+
+
+# -----------------------------------------------------------------------------
+# Asynchronous
+
+
+class DatabaseSessionManager(metaclass=Registry):
+    def __init__(self, proposal: str = DEFAULT_PROPOSAL, path: str | None = None):
+        self.proposal = proposal
+        self.root_path = get_damnit_path(proposal, path=path)
+        self._engine = create_async_engine(
+            f"sqlite+aiosqlite:///{self.path}",
+            isolation_level="AUTOCOMMIT",
+            poolclass=NullPool,
+        )
+        self._sessionmaker = async_sessionmaker(autocommit=False, bind=self._engine)
+
+        # SQLite keeps one kernel lock per process and file, so overlapping
+        # reads keep it held and DAMNIT's writer never gets in.
+        self._lock = _lock_for(self.root_path)
+
+    @property
+    def path(self):
+        return Path(self.root_path) / "runs.sqlite"
+
+    async def close(self):
+        if self._engine is None:
+            msg = "DatabaseSessionManager is not initialized"
+            raise Exception(msg)
+        await self._engine.dispose()
+        self._engine = None
+        self._sessionmaker = None
+
+    @asynccontextmanager
+    async def connect(self) -> AsyncIterator[AsyncConnection]:
+        if self._engine is None:
+            msg = "DatabaseSessionManager is not initialized"
+            raise Exception(msg)
+
+        async with self._lock, self._engine.begin() as connection:
+            try:
+                yield connection
+            except Exception:
+                await connection.rollback()
+                raise
+
+    @asynccontextmanager
+    async def session(self) -> AsyncIterator[AsyncSession]:
+        if self._sessionmaker is None:
+            msg = "DatabaseSessionManager is not initialized"
+            raise Exception(msg)
+
+        async with self._lock, self._sessionmaker() as session:
+            yield session
+
+
+def _lock_for(root_path):
+    """The lock of a manager already open on this database, or a new one.
+
+    Two proposal strings can name one database, such as "1234" and "001234".
+    """
+    for manager in DatabaseSessionManager.registry.values():  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+        if manager.root_path == root_path:
+            return manager._lock
+
+    return asyncio.Lock()
+
+
+def get_session(proposal) -> AsyncSession:
+    return DatabaseSessionManager(proposal).session()  # FIX: # pyright: ignore[reportReturnType]
+
+
+def get_connection(proposal) -> AsyncConnection:
+    return DatabaseSessionManager(proposal).connect()  # FIX: # pyright: ignore[reportReturnType]
+
+
+async def get_database_mtime(proposal) -> int | None:
+    """Return the modification time of the proposal's `runs.sqlite` in
+    nanoseconds, or None when the file cannot be stat'ed.
+
+    Raises RuntimeError when the proposal is not found.
+    """
+    path = APath(DatabaseSessionManager(proposal).path)
+    try:
+        stat = await path.stat()
+    except OSError:
+        return None
+
+    return stat.st_mtime_ns
+
+
+def get_lock(proposal) -> asyncio.Lock:
+    """The lock `get_session` and `get_connection` take on this database.
+
+    Hold it around reads that open the database themselves, such as DAMNIT's API.
+    """
+    return DatabaseSessionManager(proposal)._lock
+
+
+# -----------------------------------------------------------------------------
+# Etc.
+
+
+def get_damnit_path(
+    proposal_number: str = DEFAULT_PROPOSAL, path: str | Path | None = None
+) -> str:
+    """Return the DAMNIT database directory for a proposal or configured path."""
+    from ...shared.settings import settings
+
+    try:
+        return str(settings.damnit.path_for(proposal=proposal_number, path=path))
+    except RuntimeError:
+        pass
+
+    proposal_path = Path(proposal_number)
+    if proposal_path.is_absolute():
+        return str(proposal_path / settings.damnit.damnit_directory_name)
+
+    found = find_proposal(proposal_number)
+    if not found:
+        msg = f"Proposal '{proposal_number}' is not found."
+        raise RuntimeError(msg)
+    return str(Path(found) / settings.damnit.damnit_directory_name)

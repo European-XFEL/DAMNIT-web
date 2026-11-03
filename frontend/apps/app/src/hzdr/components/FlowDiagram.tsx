@@ -17,6 +17,7 @@ import {
   IconRoute,
   IconServer,
 } from '@tabler/icons-react'
+
 import type {
   FlowPacket,
   FlowMonitorState,
@@ -25,6 +26,7 @@ import type {
   ShotcounterTKey,
 } from '../types'
 import { watchdogWatcherOptions, shotcounterTKeyOptions } from '../types'
+
 import { DetailsSection } from './ShotTable'
 
 export function FlowDiagram({

@@ -182,9 +182,21 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
   `bootstrap.py` (`spool_lifespan`) is the async-context-manager that starts/stops
   the enabled consumers + trigger; `main.py`'s lifespan enters it so the fork-only
   wiring lives here, not inline in `main.py`.
-- `graphql/` (Strawberry), `db.py`/`_db/` (SQLAlchemy internal state), `auth/`
-  (LDAP/no-auth), `shared/` (`routers.py` has `GET /config/health` liveness probes),
-  `_mymdc/`, `contextfile/`, `data.py` — the original DAMNIT-web machinery.
+- `graphql/` (Strawberry), `runs/` (upstream's run reading: `runs/sqlite/`
+  `session.py` opens each DAMNIT `runs.sqlite` behind a per-database read lock,
+  `repository.py` queries it; `preview.py`/`serialization.py`), `_db/` (SQLAlchemy
+  internal state), `auth/` (LDAP/no-auth; `permissions.py` holds upstream's
+  `IsProposalMember`, which needs MyMdC membership outside local mode, and a user
+  with no MyMdC client is a member of nothing), `shared/` (`routers.py` has
+  `GET /config/health` liveness probes), `_mymdc/` (bootstrapped only for
+  `DW_API_METADATA__PROVIDER=mymdc`), `contextfile/` - the original DAMNIT-web
+  machinery. Context-file arguments read flat metadata keys, then a `meta#a.b` path or
+  the registry key a legacy name maps to (`laser_energy_j` ->
+  `laser.pulse_energy`).
+- API docs build with zensical (`api/zensical.toml`; `uv run --group docs zensical
+  build` in `api/`). Upstream's character check (`scripts/check-characters`) runs in
+  pre-commit and CI; fork-owned HZDR paths keep their typographic punctuation and
+  are marked `-check-characters` in `.gitattributes`.
 
 ### Frontend (`frontend/`)
 `apps/app` (main UI), `apps/demo`, `apps/site`; `nginx/` for serving; Vite + pnpm

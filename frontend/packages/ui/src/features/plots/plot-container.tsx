@@ -1,341 +1,18 @@
-import { useEffect, useState, type PropsWithChildren } from 'react'
-
-import { Alert, Code, Image, Skeleton, Stack, Text } from '@mantine/core'
+import { useMemo, type PropsWithChildren } from 'react'
+import { Alert, Code, Image, rem, Skeleton, Stack, Text } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
+import cx from 'clsx'
+
+import { useAppSelector } from '#src/app/store/hooks'
+import { ViewStatus } from '#src/components/statuses/view-status'
+import { useTableMeta } from '#src/data/table/use-table-meta'
+import ComputedItem from '#src/features/plots/components/computed-item'
 
 import Plot from './plot'
-import {
-  type PlotDataItem,
-  type PlotMetadata,
-  type PlotInfo,
-} from './plots.types'
-import { DTYPES } from '../../constants'
-import { createTypedSelector } from '../../redux/selectors'
-import { useAppSelector } from '../../redux/hooks'
-import {
-  type ExtractedDataItem,
-  type ExtractedMetadataItem,
-  type VariableDataItem,
-  type VariableMetadataItem,
-} from '../../types'
-import { formatRunsSubtitle } from '../../utils/helpers'
-
-type Variable = {
-  data: number[]
-  metadata: VariableMetadataItem
-}
-
-/*
- * -----------------------------
- *   Table Data
- * -----------------------------
- */
-
-const selectTableData = createTypedSelector(
-  [
-    (state) => state.tableData.data,
-    (state) => state.tableData.metadata,
-    (_, runs) => runs,
-    (_, __, variables) => variables,
-  ],
-  (tableData, tableMetadata, runs: string[], variables: string[]) => {
-    const result = variables.reduce<Record<string, Variable>>(
-      (acc, variable) => {
-        acc[variable] = {
-          data: [],
-          metadata: tableMetadata.variables[variable],
-        }
-        return acc
-      },
-      {}
-    )
-
-    for (const run of runs) {
-      const varData = variables.map((variable) => tableData[run]?.[variable])
-
-      if (
-        varData.every(
-          (data): data is VariableDataItem =>
-            data != null &&
-            typeof data.value === 'number' &&
-            [DTYPES.number].includes(data.dtype)
-        )
-      ) {
-        variables.forEach((variable, i) => {
-          result[variable].data.push(varData[i].value as number)
-        })
-      }
-    }
-
-    return result
-  }
-)
-
-type UseTableDataOptions = {
-  runs: string[]
-  variables: string[]
-  enabled: boolean
-}
-
-const useTableData = (
-  { runs, variables, enabled }: UseTableDataOptions = {
-    runs: [],
-    variables: [],
-    enabled: true,
-  }
-): PlotInfo | null => {
-  const tableData = useAppSelector((state) =>
-    selectTableData(state, runs, variables)
-  )
-
-  if (!enabled) {
-    return null
-  }
-
-  const plotData: PlotDataItem = {}
-  const plotMetadata: PlotMetadata = { type: 'scatter' }
-  const [xVar, yVar] = variables
-
-  const xName = tableData[xVar].metadata.title || xVar
-  plotData.x = {
-    value: tableData[xVar].data,
-    name: xName,
-  }
-  plotMetadata.x = { name: xName }
-
-  const yName = tableData[yVar].metadata.title || yVar
-  plotData.y = {
-    value: tableData[yVar].data,
-    name: yName,
-  }
-  plotMetadata.y = { name: yName }
-
-  return { data: [plotData], metadata: plotMetadata }
-}
-
-/*
- * -----------------------------
- *   Extracted Data
- * -----------------------------
- */
-
-type ExtractedValue = {
-  data: ExtractedDataItem | null
-  metadata: ExtractedMetadataItem
-}
-
-const selectExtractedData = createTypedSelector(
-  [
-    (state) => state.extractedData.data,
-    (_, runs) => runs,
-    (_, __, variable) => variable,
-  ],
-  (extractedData, runs: string[], variable: string) => {
-    return runs.reduce<Record<string, ExtractedDataItem>>((result, run) => {
-      const data = extractedData[run]?.[variable]
-      if (data) {
-        result[run] = data
-      }
-      return result
-    }, {})
-  }
-)
-
-const selectExtractedMetadata = createTypedSelector(
-  [
-    (state) => state.extractedData.metadata,
-    (_, runs) => runs,
-    (_, __, variable) => variable,
-  ],
-  (extractedMetadata, runs: string[], variable: string) => {
-    return runs.reduce<Record<string, ExtractedMetadataItem>>((result, run) => {
-      const metadata = extractedMetadata[run]?.[variable]
-      if (metadata) {
-        result[run] = metadata
-      }
-      return result
-    }, {})
-  }
-)
-
-const selectExtractedValues = createTypedSelector(
-  [selectExtractedData, selectExtractedMetadata, (_, runs) => runs],
-  (extractedData, extractedMetadata, runs: string[]) => {
-    return runs.reduce<Record<string, ExtractedValue>>((result, run) => {
-      if (extractedMetadata?.[run]) {
-        result[run] = {
-          data: extractedData[run] ?? null,
-          metadata: extractedMetadata[run],
-        }
-      }
-      return result
-    }, {})
-  }
-)
-
-type UseExtractedDataOptions = {
-  runs: string[]
-  variable: string
-  enabled: boolean
-}
-
-const useExtractedData = ({
-  runs,
-  variable,
-  enabled,
-}: UseExtractedDataOptions): PlotInfo => {
-  const [plotData, setPlotData] = useState<PlotDataItem[]>([])
-  const [plotMetadata, setPlotMetadata] = useState<PlotMetadata>({
-    type: 'unsupported',
-  })
-
-  const extracted = useAppSelector((state) =>
-    selectExtractedValues(state, runs, variable)
-  )
-
-  useEffect(() => {
-    if (!enabled || !extracted) {
-      return
-    }
-
-    const newEntries = Object.entries(extracted)
-      .filter(
-        ([run, extracted]) => !(run in plotData) && extracted.data != null
-      )
-      .map(
-        ([run, extracted]) => [run, getPlotData(extracted, { run })] as const
-      )
-
-    if (newEntries.length) {
-      setPlotData((prevData) => ({
-        ...prevData,
-        ...Object.fromEntries(newEntries),
-      }))
-
-      setPlotMetadata(getPlotMetadata(extracted[newEntries[0][0]]))
-    }
-  }, [enabled, runs, extracted, plotData])
-
-  return {
-    data: Object.values(plotData),
-    metadata: plotMetadata,
-  }
-}
-
-/*
- * -----------------------------
- *   Plot (Extracted) Data
- * -----------------------------
- */
-
-type getPlotDataOptions = {
-  run: string
-  coord?: string
-}
-
-const getPlotData = (
-  extracted: ExtractedValue,
-  { run, coord }: getPlotDataOptions
-) => {
-  const varData = extracted.data
-  const varMetadata = extracted.metadata
-
-  switch (varMetadata?.dtype) {
-    case 'array':
-      coord = coord ?? extracted.metadata.dims[0]
-
-      return {
-        x: { name: coord, value: varMetadata.coords[coord] },
-        y: {
-          name: `Run ${run}`,
-          value: varData,
-        },
-      }
-    case 'image': {
-      const [y, x] = varMetadata.dims.map((ax) => ({
-        name: ax,
-        value: varMetadata.coords[ax],
-      }))
-      return {
-        x,
-        y,
-        z: { value: varData },
-      }
-    }
-    case 'png':
-    default:
-      return {
-        data: { value: varData },
-      }
-  }
-}
-
-/*
- * -----------------------------
- *   Plot (Extracted) Metadata
- * -----------------------------
- */
-
-type getPlotMetadataOptions = {
-  coord?: string
-}
-
-const getPlotMetadata = (
-  extracted: ExtractedValue,
-  { coord }: getPlotMetadataOptions = {}
-) => {
-  const metadata: PlotMetadata = { type: 'unsupported' }
-
-  switch (extracted.metadata.dtype) {
-    case 'array':
-      metadata.x = {
-        name: coord ?? extracted.metadata.dims[0],
-      }
-      metadata.y = { name: extracted.metadata.name }
-      metadata.type = 'scatter'
-      break
-    case 'image':
-      metadata.type = 'heatmap'
-      break
-    case 'png':
-      metadata.type = 'image'
-      break
-    case 'number':
-    case 'string':
-    case 'boolean':
-    case 'timestamp':
-      metadata.type = 'scalar'
-      break
-  }
-
-  return {
-    ...(extracted.metadata.attrs ?? {}),
-    ...metadata,
-  }
-}
-
-/*
- * -----------------------------
- *   Other Selectors
- * -----------------------------
- */
-
-const selectRuns = createTypedSelector(
-  [
-    (state, plotId) => state.plots.data[plotId],
-    (state) => state.tableData.metadata.runs,
-  ],
-  (plot, runsArr) => {
-    // Use all runs if `plot.runs` is not defined
-    if (!plot?.runs) {
-      return runsArr
-    }
-
-    // Only get existing runs from `plot.runs`
-    const runsSet = new Set(runsArr)
-    return plot.runs.filter((run) => runsSet.has(run))
-  }
-)
+import classes from './plot.module.css'
+import PreviewChunkLoader from './preview-chunk-loader'
+import { useSummaryPlotData } from './use-summary-plot-data'
+import { usePreviewPlotData } from './use-preview-plot-data'
 
 /*
  * ------------------------------------
@@ -349,7 +26,16 @@ const UnableToDisplayAlert = ({ children }: PropsWithChildren) => {
       variant="light"
       color="orange"
       title="Unable to display the plot"
-      icon={<IconInfoCircle />}
+      // Mantine draws the icon in orange.7, 2.73:1 on the tint; orange.8 keeps
+      // it over 3:1. The theme already sets the title in the text colour.
+      styles={{ icon: { color: 'var(--mantine-color-orange-8)' } }}
+      icon={
+        <IconInfoCircle
+          style={{ width: rem(20), height: rem(20) }}
+          stroke={1.5}
+          aria-hidden
+        />
+      }
     >
       {children}
     </Alert>
@@ -367,54 +53,82 @@ type PlotContainerProps = {
 }
 
 const PlotContainer = ({ plotId }: PlotContainerProps) => {
-  const runs = useAppSelector((state) => selectRuns(state, plotId))
   const plot = useAppSelector((state) => state.plots.data[plotId])
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
+  const { runs: allRuns } = useTableMeta()
 
-  const tableData = useTableData({
-    runs,
+  const isSummary = plot.source === 'summary'
+
+  // The identity pairs this plot charts, in server order. A plot is pinned by
+  // run number, which is all the run-selection field can express, so a guest
+  // proposal sharing a number would match twice and plot two points where the
+  // user asked for one. Restricting to the proposal being viewed picks the one
+  // they meant; charting a guest run needs identity all the way down to
+  // `extracted_data`, which previews do not have yet.
+  const runIds = useMemo(() => {
+    if (!plot.runs) {
+      return allRuns
+    }
+    const wanted = new Set(plot.runs)
+    return allRuns.filter(
+      (run) => run.proposal === proposal && wanted.has(String(run.run))
+    )
+  }, [plot.runs, allRuns, proposal])
+
+  const runNumbers = useMemo(() => runIds.map((run) => run.run), [runIds])
+
+  const { data: summaryData, computedAt } = useSummaryPlotData({
+    runIds,
     variables: plot.variables,
-    enabled: plot.source === 'table',
+    enabled: isSummary,
   })
-  const extractedData = useExtractedData({
-    runs,
+  const { data: previewData, chunks } = usePreviewPlotData({
+    runs: runNumbers,
     variable: plot.variables[0],
-    enabled: plot.source === 'extracted',
+    enabled: !isSummary,
   })
 
-  const { data, metadata } = tableData ?? extractedData
+  const { traces, meta } = summaryData ?? previewData
 
   return (
-    <Stack align="flex-start" justify="flex-start">
-      <Stack gap={0} align="flex-start" justify="flex-start">
-        <Text size="lg">{plot.title}</Text>
-        <Text size="sm" c="dark.5">
-          {formatRunsSubtitle(runs)}
-        </Text>
-      </Stack>
-      {!data.length ? (
-        <Skeleton height={430} width={740} radius="xl" />
-      ) : metadata.type === 'image' ? (
+    <Stack align="flex-start" justify="flex-start" maw={1200}>
+      {chunks.map((chunk) => (
+        <PreviewChunkLoader
+          key={chunk[0]}
+          proposal={proposal}
+          runs={chunk}
+          variable={plot.variables[0]}
+        />
+      ))}
+      {!traces.length ? (
+        <Skeleton className={cx(classes.frame, classes.wide)} radius="xl" />
+      ) : meta.type === 'image' ? (
         <Image
-          src={data[0].data?.value}
-          h={metadata.shape?.[0]}
-          w={metadata.shape?.[1]}
+          src={traces[0].data?.value}
+          h={meta.shape?.[0]}
+          w={meta.shape?.[1]}
           fit="contain"
         />
-      ) : metadata.type === 'scalar' ? (
+      ) : meta.type === 'scalar' ? (
         <UnableToDisplayAlert>
           <Text size="sm">
             {"The plot can't be displayed because the value is a scalar "}
-            <Code>{data[0].data?.value as string}</Code>.
+            <Code>{traces[0].data?.value as string}</Code>.
           </Text>
         </UnableToDisplayAlert>
-      ) : metadata.type === 'unsupported' ? (
+      ) : meta.type === 'unsupported' ? (
         <UnableToDisplayAlert>
           <Text size="sm">
             {"The plot can't be displayed because the value is unsupported."}
           </Text>
         </UnableToDisplayAlert>
       ) : (
-        <Plot data={data} metadata={metadata} />
+        <Plot traces={traces} meta={meta} />
+      )}
+      {computedAt !== null && (
+        <ViewStatus>
+          <ComputedItem time={computedAt} />
+        </ViewStatus>
       )}
     </Stack>
   )

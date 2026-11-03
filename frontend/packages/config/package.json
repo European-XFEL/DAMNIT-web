@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "lint:eslint": "eslint .",
+    "lint:eslint": "eslint . --max-warnings 0",
     "lint:prettier": "prettier --check --cache ."
   },
   "exports": {
@@ -19,10 +19,13 @@
   "keywords": [],
   "author": "",
   "license": "BSD-3-Clause",
-  "packageManager": "pnpm@10.21.0",
+  "packageManager": "pnpm@10.34.6",
   "dependencies": {
     "@eslint/js": "catalog:linting",
     "eslint-config-prettier": "catalog:linting",
+    "eslint-import-resolver-typescript": "catalog:linting",
+    "eslint-plugin-boundaries": "catalog:linting",
+    "eslint-plugin-import-x": "catalog:linting",
     "eslint-plugin-react-hooks": "catalog:linting",
     "eslint-plugin-react-refresh": "catalog:linting",
     "typescript-eslint": "catalog:linting",

@@ -5374,5 +5374,5 @@
     ]
   },
   "name": "MID_SAE_FSSS_MOTOR_SCANNERY.actualPosition",
-  "dtype": "array"
+  "dtype": "array1d"
 }

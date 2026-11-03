@@ -1,0 +1,247 @@
+import { createRequire } from 'node:module'
+import path from 'node:path'
+
+import type { Page } from '@playwright/test'
+
+import {
+  MockDataNotFound,
+  REST_API_PREFIXES,
+  resolveOperation,
+  runNumber,
+  unmockedOperationError,
+  type MockDataSource,
+  type RunData,
+} from '@damnit-frontend/shared/mocks'
+import { accessibleProposals, type Example } from '#examples/xpcs'
+
+import {
+  mockWebSocket,
+  type LatestData,
+  type LiveUpdatesMock,
+} from './websocket'
+
+export { fullMetadata } from './websocket'
+
+// @monaco-editor/react does not bundle the editor; at runtime its loader fetches
+// monaco from jsDelivr. Resolve the monaco-editor package we already install and
+// serve its min/vs tree instead, so the editor loads with no network and the
+// suite keeps its "answer every request from local data" guarantee.
+const monacoVsDir = path.join(
+  path.dirname(
+    createRequire(import.meta.url).resolve('monaco-editor/package.json')
+  ),
+  'min/vs'
+)
+
+// The example data has no computed times, so give every value one, run N a
+// minute after run N - 1. DAMNIT never computes `run`, so it gets none.
+function withComputedTimes(data: RunData[]): RunData[] {
+  return data.map((run) => {
+    const computed_at = 1_700_000_000_000 + (runNumber(run) - 1) * 60_000
+    const variables = Object.fromEntries(
+      Object.entries(run.variables).map(([name, variable]) => [
+        name,
+        name === 'run' ? variable : { ...variable, computed_at },
+      ])
+    )
+
+    return { ...run, variables }
+  })
+}
+
+export type MockApi = LiveUpdatesMock & {
+  // GraphQL operations and REST paths the router had no mock for; the test
+  // fixture fails the test when any were seen, so mock drift surfaces loudly
+  // instead of as an empty response or a silent request to the real network.
+  unmockedRequests: string[]
+  // Swap the served context.py and bump its last-modified stamp, modelling the
+  // file being edited on disk between polls. The next poll then sees a newer
+  // stamp than the loaded content and triggers a refetch.
+  touchContextFile: (content: string) => void
+  // Change what the GraphQL routes serve for some runs, with no push to say so,
+  // modelling values that changed while live updates were down.
+  editRuns: (runs: LatestData['runs']) => void
+}
+
+type MockApiOptions = {
+  authenticated: boolean
+}
+
+export async function mockApi(
+  page: Page,
+  example: Example,
+  { authenticated }: MockApiOptions
+): Promise<MockApi> {
+  // Session state the routes read: userinfo answers by it, and logout flips it
+  // off so the LoggedOutPage re-fetch takes the "logged out" branch.
+  let authed = authenticated
+
+  // Content and last_modified routes share this state. A realistic epoch keeps
+  // the "Modified" time out of 1970; only the before/after delta matters to the
+  // refetch logic.
+  let contextContent = example.contextFile
+  let contextLastModified = 1_700_000_000
+
+  // variables.proposal arrives as a string, so hold the accessible set as strings.
+  const accessible = accessibleProposals(example).map(String)
+
+  // Replaced rather than mutated, so editRuns leaves the shared example alone.
+  let runData = withComputedTimes(example.data)
+
+  const api: MockApi = {
+    unmockedRequests: [],
+    touchContextFile: (content) => {
+      contextContent = content
+      contextLastModified += 1
+    },
+    // A push carries the run's identity, so it is delivered for the proposal the
+    // subscription opened (the first accessible one in a single-proposal example).
+    ...(await mockWebSocket(page, accessible[0])),
+    editRuns: (runs) => {
+      runData = runData.map((run) => ({
+        ...run,
+        variables: { ...run.variables, ...runs[runNumber(run)] },
+      }))
+    },
+  }
+
+  // One example per test, so the source ignores the requested proposal. A
+  // missing (run, variable) file surfaces as ENOENT; translate it to
+  // MockDataNotFound so the resolver reports it as clean drift. Any other error
+  // falls through to the route handler's catch below, which fails the test
+  // loudly instead of stalling.
+  const source: MockDataSource = {
+    runs: async () => ({ meta: example.meta, data: runData }),
+    extractedData: async ({ run, variable }) => {
+      try {
+        return example.extractedData(run, variable)
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          'code' in error &&
+          error.code === 'ENOENT'
+        ) {
+          throw new MockDataNotFound()
+        }
+        throw error
+      }
+    },
+    // The home page fires one ProposalMetadata query per semester, so filter to
+    // the requested numbers; otherwise a multi-semester example would leak every
+    // proposal into every sub-table.
+    proposalMetadata: async ({ proposalNumbers }) =>
+      example.proposalMetadata.filter((proposal) =>
+        (proposalNumbers ?? []).includes(proposal.number)
+      ),
+  }
+
+  // Registered first so the specific routes below take precedence (Playwright
+  // runs the last-registered matching handler first). A REST call none of them
+  // cover is recorded and failed; everything else (assets, app bundle) falls
+  // through to the server.
+  await page.route('**/*', (route) => {
+    const { pathname } = new URL(route.request().url())
+    const isUnmockedApi = REST_API_PREFIXES.some((prefix) =>
+      pathname.includes(`/${prefix}`)
+    )
+    if (isUnmockedApi) {
+      api.unmockedRequests.push(pathname)
+      return route.fulfill({
+        status: 500,
+        json: { error: `Unmocked request: ${pathname}` },
+      })
+    }
+    return route.fallback()
+  })
+
+  // After the catch-all so it wins; otherwise the editor's assets fall through
+  // to the real jsDelivr CDN. Serve them from the local min/vs tree, keyed off
+  // the path after min/vs.
+  await page.route(
+    '**/cdn.jsdelivr.net/npm/monaco-editor@*/min/vs/**',
+    (route) => {
+      const { pathname } = new URL(route.request().url())
+      const asset = pathname.split('/min/vs/')[1]
+      return route.fulfill({ path: path.join(monacoVsDir, asset) })
+    }
+  )
+
+  // Mirror the real 401 for a gone cookie: PrivateRoute reads it as isError
+  // and the LoggedOutPage as logged out.
+  await page.route('**/oauth/userinfo**', (route) =>
+    authed
+      ? route.fulfill({ json: example.userInfo })
+      : route.fulfill({
+          status: 401,
+          json: { message: 'No user info in session', status_code: 401 },
+        })
+  )
+
+  // Login is a full-page navigation to a same-origin URL. Fulfil it empty so the
+  // navigation completes (and the catch-all does not log it as drift); the login
+  // spec asserts the request itself, not the resulting blank page.
+  await page.route('**/oauth/login**', (route) =>
+    route.fulfill({ status: 200, body: '' })
+  )
+
+  // Logout returns no logout_url, so the app full-page navigates to /logged-out.
+  // Flip the session off so the LoggedOutPage re-fetch of userinfo 401s and the
+  // "You have been logged out" branch renders, modelling the cleared session
+  // cookie.
+  await page.route('**/oauth/logout**', (route) => {
+    authed = false
+    return route.fulfill({ json: {} })
+  })
+
+  await page.route('**/graphql', async (route) => {
+    const { operationName, query, variables } = (route
+      .request()
+      .postDataJSON() ?? {}) as {
+      operationName: string
+      query: string
+      variables?: Record<string, unknown>
+    }
+
+    // A query for a proposal the user cannot access errors, the way the backend
+    // rejects one outside the session. useProposal reads that error as notFound
+    // and ProposalWrapper redirects to /not-found. Handled here, so it is not
+    // drift. Operations without a proposal (e.g. ProposalMetadata) skip.
+    const proposal = variables?.proposal
+    if (proposal != null && !accessible.includes(String(proposal))) {
+      return route.fulfill({
+        json: {
+          errors: [{ message: `No access to proposal ${proposal}` }],
+        },
+      })
+    }
+
+    try {
+      const resolution = await resolveOperation(operationName, {
+        query,
+        variables: variables ?? {},
+        source,
+      })
+      if (!resolution.resolved) {
+        api.unmockedRequests.push(operationName)
+      }
+      return route.fulfill({ json: resolution.body })
+    } catch (error) {
+      api.unmockedRequests.push(
+        `${operationName} (${(error as Error).message})`
+      )
+      return route.fulfill({ json: unmockedOperationError(operationName) })
+    }
+  })
+
+  await page.route('**/contextfile/content**', (route) =>
+    route.fulfill({
+      json: { fileContent: contextContent, lastModified: contextLastModified },
+    })
+  )
+
+  await page.route('**/contextfile/last_modified**', (route) =>
+    route.fulfill({ json: { lastModified: contextLastModified } })
+  )
+
+  return api
+}

@@ -7,7 +7,7 @@
     "node": ">=24",
     "pnpm": ">=10"
   },
-  "packageManager": "pnpm@10.21.0",
+  "packageManager": "pnpm@10.34.6",
   "author": {
     "name": "European XFEL",
     "email": "da@xfel.eu"
@@ -16,23 +16,41 @@
     ".": "./src/index.ts",
     "./styles": "./src/styles.ts"
   },
+  "imports": {
+    "#src/*": [
+      "./src/*",
+      "./src/*.ts",
+      "./src/*.tsx"
+    ],
+    "#tests/*": [
+      "./tests/*",
+      "./tests/*.ts",
+      "./tests/*.tsx"
+    ]
+  },
   "sideEffects": [
     "./src/styles.ts",
     "**/*.css"
   ],
   "scripts": {
-    "lint:eslint": "eslint .",
+    "lint:eslint": "eslint . --max-warnings 0",
     "lint:prettier": "prettier --check --cache .",
     "lint:tsc": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:unit": "vitest run --project unit",
+    "test:node": "vitest run --project node",
     "test:browser": "vitest run --project browser",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@damnit-frontend/shared": "workspace:*",
+    "@fontsource-variable/source-code-pro": "catalog:fonts",
+    "@fontsource-variable/source-sans-3": "catalog:fonts"
   },
   "peerDependencies": {
     "@apollo/client": "catalog:graphql",
     "@glideapps/glide-data-grid": "catalog:components",
     "@glideapps/glide-data-grid-cells": "catalog:components",
+    "@hello-pangea/dnd": "catalog:components",
     "@mantine/core": "catalog:components",
     "@mantine/form": "catalog:components",
     "@mantine/hooks": "catalog:components",
@@ -46,6 +64,7 @@
     "lodash": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
+    "plotly.js": "catalog:components",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",
     "react-laag": "catalog:frontend",
@@ -58,6 +77,7 @@
     "@damnit-frontend/config": "workspace:*",
     "@glideapps/glide-data-grid": "catalog:components",
     "@glideapps/glide-data-grid-cells": "catalog:components",
+    "@hello-pangea/dnd": "catalog:components",
     "@mantine/core": "catalog:components",
     "@mantine/form": "catalog:components",
     "@mantine/hooks": "catalog:components",
@@ -81,6 +101,7 @@
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
     "playwright": "catalog:testing",
+    "plotly.js": "catalog:components",
     "postcss": "catalog:tooling",
     "prettier": "catalog:linting",
     "react": "catalog:frontend",

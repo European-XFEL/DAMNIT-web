@@ -1,62 +1,27 @@
 import { useEffect, useRef } from 'react'
-
-import { Box, Stack } from '@mantine/core'
+import { Alert, Box, Code, rem, Text } from '@mantine/core'
+import { IconAlertTriangle } from '@tabler/icons-react'
 import type { SerializedError } from '@reduxjs/toolkit'
 import type { FetchBaseQueryError } from '@reduxjs/toolkit/query'
+
+import CenteredLoader from '#src/components/feedback/centered-loader'
+import StatusItem from '#src/components/statuses/status-item'
+import { ViewStatus } from '#src/components/statuses/view-status'
+import { useAppSelector } from '#src/app/store/hooks'
+import { formatClockTime, formatLongDate, formatTimeAgo } from '#src/utils/time'
+import { useMinuteClock } from '#src/hooks/use-minute-clock'
 
 import {
   useCheckFileLastModifiedQuery,
   useGetFileContentQuery,
 } from './context-file.api'
-import { CenteredLoader } from '../../components/feedback'
-import {
-  ConnectionStatus,
-  LabelStatus,
-  StatusBar,
-} from '../../components/statuses/'
-import { useAppSelector } from '../../redux/hooks'
 import ContextFileEditor from './context-file-editor'
-
-function formatRelativeTime(date: Date | number | undefined) {
-  if (date == null) {
-    return 'Unknown'
-  }
-
-  const now = Date.now()
-  const then = typeof date === 'number' ? date * 1000 : date.getTime()
-  const diff = Math.max(0, now - then) // past only
-
-  const seconds = Math.floor(diff / 1000)
-  if (seconds < 10) {
-    return 'just now'
-  }
-  if (seconds < 60) {
-    return `${seconds}s ago`
-  }
-
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) {
-    return `${minutes}m ago`
-  }
-
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) {
-    return `${hours}h ago`
-  }
-
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
-}
 
 export type ContextFileProps = {
   subscribe?: boolean
-  readOnly?: boolean
 }
 
-const ContextFile = ({
-  subscribe = true,
-  readOnly = true,
-}: ContextFileProps) => {
+function ContextFile({ subscribe = true }: ContextFileProps) {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
 
   const { data, error, refetch, isLoading } = useGetFileContentQuery({
@@ -85,64 +50,62 @@ const ContextFile = ({
   }, [lastModifiedData, data?.lastModified, refetch, subscribe])
 
   return (
-    <Stack align="stretch" h="100%">
+    // Monaco fills its parent, so without the min-height it grows past the
+    // view and under the status bar.
+    <Box flex={1} mih={0}>
       {isLoading ? (
         <CenteredLoader />
       ) : error ? (
-        <Box
-          style={{
-            textAlign: 'center',
-            color: 'red',
-            padding: '20px',
-          }}
+        <Alert
+          m={20}
+          variant="light"
+          color="red"
+          title="Unable to load the context file"
+          icon={
+            <IconAlertTriangle
+              style={{ width: rem(20), height: rem(20) }}
+              stroke={1.5}
+            />
+          }
         >
-          {isApiError(error)
-            ? (error.data as { detail?: string })?.detail ||
-              'Failed to load file content'
-            : 'An unexpected error occurred while loading the context file'}
-        </Box>
+          <Text size="sm">{describeLoadError(error)}</Text>
+        </Alert>
       ) : (
         <ContextFileEditor content={data?.fileContent} />
       )}
-      <StatusBar
-        leftSection={
-          <>{readOnly && <LabelStatus label="🔒 Read-only"></LabelStatus>}</>
-        }
-        rightSection={
-          subscribe ? (
-            <WatchSection
-              connected={true}
-              lastUpdated={formatRelativeTime(data?.lastModified)}
-            />
-          ) : (
-            <DemoSection />
-          )
-        }
-      />
-    </Stack>
+      {data?.lastModified != null && (
+        <ViewStatus>
+          <ModifiedItem time={data.lastModified * 1000} />
+        </ViewStatus>
+      )}
+    </Box>
   )
 }
 
-function DemoSection() {
-  return (
-    <>
-      <LabelStatus label="Demo" value="No updates" />
-      <ConnectionStatus disabled />
-    </>
-  )
+type ModifiedItemProps = {
+  time: number
 }
 
-type WatchSection = {
-  connected: boolean
-  lastUpdated: string
-}
+function ModifiedItem({ time }: ModifiedItemProps) {
+  const now = useMinuteClock()
 
-function WatchSection({ connected, lastUpdated }: WatchSection) {
   return (
-    <>
-      <LabelStatus label="Last updated:" value={lastUpdated} />
-      <ConnectionStatus connected={connected} />
-    </>
+    <StatusItem
+      label="Modified"
+      value={formatTimeAgo(time, { now })}
+      tooltip={
+        <>
+          Modified{' '}
+          <Text span inherit fw={600}>
+            {formatLongDate(time)}
+          </Text>{' '}
+          at{' '}
+          <Text span inherit fw={600}>
+            {formatClockTime(time)}
+          </Text>
+        </>
+      }
+    />
   )
 }
 
@@ -151,6 +114,24 @@ const isApiError = (
 ): error is FetchBaseQueryError => {
   return (
     !!error && typeof error === 'object' && 'status' in error && 'data' in error
+  )
+}
+
+function describeLoadError(error: FetchBaseQueryError | SerializedError) {
+  if (!isApiError(error)) {
+    return 'Check your connection, then reload the page.'
+  }
+
+  const detail = (error.data as { detail?: unknown } | undefined)?.detail
+  if (typeof detail === 'string' && detail !== '') {
+    return detail
+  }
+
+  return (
+    <>
+      {'The server could not read '}
+      <Code>context.py</Code>. Reload the page to try again.
+    </>
   )
 }
 

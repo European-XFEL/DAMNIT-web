@@ -1,46 +1,53 @@
-import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { playwright } from '@vitest/browser-playwright'
-import { fileURLToPath } from 'node:url'
+import { defineConfig } from 'vitest/config'
 
-const alias = {
-  // Normalize to forward slashes: backslash paths break vite-node's
-  // alias resolution on Windows (imports fall through to Node's bare
-  // package resolver and every test file fails to load).
-  '@/': fileURLToPath(new URL('./src/', import.meta.url)).replace(/\\/g, '/'),
-}
+// The file extension picks the runtime: *.test.ts runs in Node (pure logic),
+// *.test.tsx runs in a real browser (anything that touches the DOM). The only
+// rule a contributor learns is "needs a DOM => name it .tsx".
+//
+// Tests reach source through '#src/' and helpers through '#tests/', the same
+// package.json subpath imports production code uses. No aliases live here.
 
 export default defineConfig({
   test: {
     projects: [
       {
         test: {
-          name: 'unit',
-          alias,
+          name: 'node',
           include: ['tests/**/*.test.ts'],
-          exclude: [...configDefaults.exclude, 'tests/**/*.browser.test.*'],
           environment: 'node',
           env: { TZ: 'UTC' },
-          setupFiles: ['./tests/test-setup.ts'],
+          setupFiles: ['./tests/support/setup.ts'],
         },
       },
       {
         plugins: [react()],
         // Pre-bundle the heavy deps the components pull in so the optimizer
         // does not discover them mid-run and reload (which Vitest warns can
-        // make browser tests flaky).
+        // make browser tests flaky). Apollo is here for a second reason: left
+        // unbundled its CommonJS interop hands the React namespace back as
+        // null, and ApolloProvider dies on the first useContext.
         optimizeDeps: {
           include: [
             'react-laag',
             'mantine-contextmenu',
             'mantine-datatable',
             '@glideapps/glide-data-grid',
+            '@apollo/client',
+            '@apollo/client/react',
+            '@apollo/client/utilities',
+            '@apollo/client/link/retry',
+            '@apollo/client/link/subscriptions',
+            '@apollo/client/link/remove-typename',
+            'graphql',
+            'clsx',
           ],
         },
         test: {
           name: 'browser',
-          alias,
-          include: ['tests/**/*.browser.test.{ts,tsx}'],
+          include: ['tests/**/*.test.tsx'],
+          setupFiles: ['./tests/support/browser-setup.ts'],
           browser: {
             enabled: true,
             provider: playwright(),

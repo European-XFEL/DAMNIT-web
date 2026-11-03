@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MantineProvider } from '@mantine/core'
 import { MemoryRouter, Route, Routes } from 'react-router'
+
 import { ContextBuilderPage } from '../ContextBuilderPage'
 
 vi.mock('@damnit-frontend/ui', () => ({

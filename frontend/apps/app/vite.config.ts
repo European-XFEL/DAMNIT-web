@@ -1,8 +1,9 @@
-import { defineConfig, loadEnv, type ProxyOptions, type UserConfig } from 'vite'
-import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
 import https from 'https'
+
+import react from '@vitejs/plugin-react'
+import { defineConfig, loadEnv, type ProxyOptions, type UserConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }): UserConfig => {
@@ -93,6 +94,8 @@ export default defineConfig(({ command, mode }): UserConfig => {
 
   return {
     base: BASE_URL,
+    // Keep every font subset a file, so unicode-range decides what downloads.
+    build: { assetsInlineLimit: 0 },
     plugins: [react()],
     server: command === 'serve' ? getServerConfig() : undefined,
     resolve: {

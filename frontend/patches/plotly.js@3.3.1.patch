@@ -1,0 +1,16 @@
+diff --git a/dist/plotly.js b/dist/plotly.js
+index 73dbb06982c92fcba36de15cf9da364565ad590e..c579acdccd544f17780511119d9dd0776b0b15b4 100644
+--- a/dist/plotly.js
++++ b/dist/plotly.js
+@@ -46692,6 +46692,11 @@ var Plotly = (() => {
+       function htmlEntityDecode(s) {
+         var hiddenDiv = d3.select("body").append("div").style({ display: "none" }).html("");
+         var replaced = s.replace(/(&[^;]*;)/gi, function(d) {
++          // toSVG's quote swap fails on a family like "Source Sans 3", so its
++          // quotes arrive escaped, and decoding them here breaks the attribute.
++          if (d === "&quot;") {
++            return "&#34;";
++          }
+           if (d === "&lt;") {
+             return "&#60;";
+           }

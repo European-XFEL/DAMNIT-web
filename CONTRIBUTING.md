@@ -9,13 +9,34 @@ See the [README](README.md) for how to set up and run the project.
 
 The git hooks give you fast feedback locally and run in stages:
 
-- On commit: ruff (backend), eslint and prettier (frontend). These lint
-  and auto-format the files you changed.
+- On commit: ruff (backend and `scripts/`), eslint and prettier
+  (frontend). These lint and auto-format the files you changed. A
+  character check also reads them; see below.
 - On push: type checks (frontend tsc and Python pyright).
 - In CI: every check runs again and gates the merge.
 
 CI is the real gate. The local hooks just let you catch issues before you
 push.
+
+## Character check
+
+`scripts/check-characters/check_characters.py` fails on characters that
+stand in for plain ASCII (curly quotes, long dashes, the minus sign, the
+ellipsis) and on invisible ones. Each hit prints as
+`path:line:column U+XXXX (advice)`, where the advice is what to use
+instead, `invisible`, or `not UTF-8` when the file was saved in another
+encoding. To keep one of these characters on purpose, write it as an
+escape, such as `'\u2014'` or `&mdash;`. To check every tracked file, run:
+
+    uv run python scripts/check-characters/check_characters.py
+
+To skip a whole file, such as a generated one that may hold any character,
+mark it in `.gitattributes`:
+
+    frontend/pnpm-lock.yaml -check-characters
+
+To skip a folder, write `folder/**`, since `folder` or `folder/` alone
+marks no file inside it.
 
 ## Bypassing hooks
 
@@ -36,7 +57,7 @@ documentation hub, so a stale map here is a stale map there.
 
 Scope is `damnit_api`. The frontend has its own suite and is not measured here.
 This is also not [`hzdr/docs/status/testing.md`](hzdr/docs/status/testing.md),
-which carries one row *per constellation repository* — that answers "how well
+which carries one row *per constellation repository* - that answers "how well
 tested is the constellation", this answers "which parts of this API are tested".
 
 <!-- test-coverage-map-start -->

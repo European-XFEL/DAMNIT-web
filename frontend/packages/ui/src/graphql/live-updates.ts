@@ -1,0 +1,195 @@
+import { makeVar } from '@apollo/client'
+import { CloseCode } from 'graphql-ws'
+
+// Goes up each time live updates come back after a drop, for the views a push
+// does not refresh. Not in `apollo.ts`, which builds the client on import.
+export const reconnectCount = makeVar(0)
+
+export const countReconnect = () => reconnectCount(reconnectCount() + 1)
+
+export type LiveUpdatesStatus =
+  'connecting' | 'live' | 'reconnecting' | 'stopped' | 'off'
+
+export type LiveUpdatesStopReason = 'login' | 'server'
+
+export type LiveUpdatesState = {
+  // When the status began. Live counts from when the proposal opened instead,
+  // if that was later, and a stop after a loss keeps the time of the loss.
+  since: number
+  lastPushAt?: number
+  // graphql-ws is connecting again after a wait. Only while reconnecting.
+  trying?: boolean
+} & (
+  | { status: Exclude<LiveUpdatesStatus, 'stopped'> }
+  | { status: 'stopped'; reason: LiveUpdatesStopReason }
+)
+
+export type LiveUpdatesEvent =
+  | { type: 'subscribed' }
+  | { type: 'waiting' }
+  | { type: 'trying' }
+  | { type: 'connected' }
+  | { type: 'closed' }
+  | { type: 'pushed' }
+  | { type: 'failed'; reason: LiveUpdatesStopReason }
+  | { type: 'disabled' }
+
+export const liveUpdates = makeVar<LiveUpdatesState>({
+  status: 'connecting',
+  since: Date.now(),
+})
+
+export function nextLiveUpdates(
+  state: LiveUpdatesState,
+  event: LiveUpdatesEvent
+): LiveUpdatesState {
+  const now = Date.now()
+
+  // graphql-ws closes a refused socket with 1000 itself, after the failure.
+  if (state.status === 'stopped' && event.type !== 'subscribed') {
+    return state
+  }
+
+  switch (event.type) {
+    case 'subscribed':
+      // Each proposal counts its changes from when it opened. A socket still
+      // retrying keeps the time it was lost; a refused one gets a fresh try.
+      if (state.status === 'reconnecting') {
+        return {
+          status: 'reconnecting',
+          since: state.since,
+          trying: state.trying,
+        }
+      }
+
+      return {
+        status: state.status === 'live' ? 'live' : 'connecting',
+        since: now,
+      }
+    case 'waiting':
+      // Each failed retry waits again, and keeps the time of the first loss.
+      if (state.status === 'reconnecting') {
+        return { ...state, trying: undefined }
+      }
+
+      return { ...state, status: 'reconnecting', since: now }
+    case 'trying':
+      if (state.status !== 'reconnecting') {
+        return state
+      }
+
+      return { ...state, trying: true }
+    case 'closed':
+      // Every loss goes through graphql-ws's retry wait. A close without one is
+      // graphql-ws leaving a socket nothing uses, or reconnecting at once.
+      if (state.status === 'reconnecting') {
+        return state
+      }
+
+      return { ...state, status: 'connecting', since: now }
+    case 'connected':
+      return { ...state, status: 'live', since: now, trying: undefined }
+    case 'pushed':
+      return { ...state, lastPushAt: now }
+    case 'failed':
+      // Nothing has arrived since a loss, so a stop after one keeps its time.
+      return {
+        ...state,
+        status: 'stopped',
+        since: state.status === 'reconnecting' ? state.since : now,
+        trying: undefined,
+        reason: event.reason,
+      }
+    case 'disabled':
+      return { status: 'off', since: now }
+  }
+}
+
+export function recordLiveUpdatesEvent(event: LiveUpdatesEvent) {
+  liveUpdates(nextLiveUpdates(liveUpdates(), event))
+}
+
+const FIRST_RETRY_DELAY = 1000
+export const LONGEST_RETRY_DELAY = 30_000
+// Not the 5 s graphql-ws suggests: a preview read stalls the API longer.
+const PONG_WAIT = 20_000
+
+// Milliseconds to wait before reconnecting. `retries` is 0 on the first try
+// after a drop.
+export function retryDelay(retries: number): number {
+  return Math.min(FIRST_RETRY_DELAY * 2 ** retries, LONGEST_RETRY_DELAY)
+}
+
+// When a status item on this clock tries next. A no-break space, so a wrap
+// never strands the unit on its own line.
+export function describeRetry({ tryShown }: { tryShown: boolean }) {
+  return tryShown
+    ? 'Trying again now.'
+    : `Trying again within ${LONGEST_RETRY_DELAY / 1000}\u00a0s.`
+}
+
+let endPendingWait = () => {}
+
+export function waitBeforeRetry(retries: number): Promise<void> {
+  recordLiveUpdatesEvent({ type: 'waiting' })
+
+  return new Promise((resolve) => {
+    // Up to 1 s of spread, so the open tabs do not all reconnect at once.
+    setTimeout(resolve, retryDelay(retries) + Math.random() * 1000)
+    endPendingWait = resolve
+  })
+}
+
+export function retryNow() {
+  endPendingWait()
+}
+
+export function liveUpdatesListeners(terminate: () => void) {
+  let pongTimeout: ReturnType<typeof setTimeout> | undefined
+  let reloadPending = false
+
+  return {
+    connecting: () => recordLiveUpdatesEvent({ type: 'trying' }),
+    connected: (_socket: unknown, _payload: unknown, wasRetry: boolean) => {
+      recordLiveUpdatesEvent({ type: 'connected' })
+      reloadPending = wasRetry
+    },
+    // Ask again for what changed during the gap once the first push shows the
+    // server has set its cursor: a restarted API sets it a second after the ack.
+    message: (message: { type: string }) => {
+      if (reloadPending && message.type === 'next') {
+        reloadPending = false
+        countReconnect()
+      }
+    },
+    ping: (received: boolean) => {
+      if (!received) {
+        pongTimeout = setTimeout(terminate, PONG_WAIT)
+      }
+    },
+    pong: (received: boolean) => {
+      if (received) {
+        clearTimeout(pongTimeout)
+      }
+    },
+    // A 4401 lands here before Apollo's `onError`, which sees it only as text.
+    closed: (event: unknown) => {
+      clearTimeout(pongTimeout)
+
+      if (isUnauthorizedClose(event)) {
+        recordLiveUpdatesEvent({ type: 'failed', reason: 'login' })
+      } else {
+        recordLiveUpdatesEvent({ type: 'closed' })
+      }
+    },
+  }
+}
+
+function isUnauthorizedClose(event: unknown) {
+  return (
+    typeof event === 'object' &&
+    event !== null &&
+    'code' in event &&
+    event.code === CloseCode.Unauthorized
+  )
+}

@@ -48,7 +48,7 @@ async def bootstrap(settings: "Settings"):
             await damnit_api.auth.__CLIENT.load_server_metadata()  # pyright: ignore[reportOptionalMemberAccess]
         except Exception as exc:
             # In debug, don't let an unreachable/invalid OIDC discovery endpoint
-            # (e.g. missing TLS certificate) abort startup — let the operator
+            # (e.g. missing TLS certificate) abort startup - let the operator
             # debug the rest of the app. Production still fails loudly.
             if not settings.debug:
                 raise

@@ -20,7 +20,9 @@ import {
   Title,
 } from '@mantine/core'
 import { Link, useParams } from 'react-router'
+
 import { history, HomePage } from '@damnit-frontend/ui'
+
 import type {
   HZDRShot,
   HZDRShotDetail,
@@ -39,8 +41,8 @@ import {
   HZDRShotSetsPanel,
   ShotDetailPanel,
   DetailsSection,
-  cellButtonStyle,
 } from '../components/ShotTable'
+import { cellButtonStyle } from '../components/styles'
 import { TruncatedCell, ContextCellContent } from '../components/previews'
 import {
   shotMatchesTableFilter,

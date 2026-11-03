@@ -1,30 +1,53 @@
-import { Image, useComputedColorScheme, useMantineTheme } from '@mantine/core'
-import { Arrow, type LayerProps, type UseLayerArrowProps } from 'react-laag'
+import {
+  Box,
+  Image,
+  getDefaultZIndex,
+  useComputedColorScheme,
+  useMantineTheme,
+  rem,
+} from '@mantine/core'
+import type { ComponentType } from 'react'
+import {
+  Arrow as LaagArrow,
+  type ArrowProps,
+  type LayerProps,
+  type UseLayerArrowProps,
+} from 'react-laag'
 
-import { type VariableError } from '../../../../types'
-import { assertNever } from '../../../../utils/helpers'
-import { ErrorContent } from './error-content'
+import CellErrorCard from '#src/components/feedback/cell-error-card'
+import { type CellError } from '#src/utils/cell-errors'
+import { assertNever, formatNumber } from '#src/utils/helpers'
+
+// react-laag's Arrow type lists two props @types/react 18.3 dropped, while its
+// ArrowProps is built from the installed @types/react.
+const Arrow = LaagArrow as unknown as ComponentType<ArrowProps>
 
 export type CellTooltip =
-  | { kind: 'error'; error: VariableError }
+  | { kind: 'error'; error: CellError }
   | { kind: 'image'; src: string }
+  | { kind: 'sparkline'; x: number; y: number }
 
 type TableTooltipProps = {
   target: CellTooltip
   layerProps: LayerProps
   arrowProps: UseLayerArrowProps
+  arrowSize: number
   onMouseEnter: () => void
   onMouseLeave: () => void
 }
 
 const IMAGE_MAX_SIZE = 300
-const SURFACE_RADIUS = 6
+const SURFACE_RADIUS = 4
 const IMAGE_MARGIN = 4
 
 function renderBody(target: CellTooltip) {
   switch (target.kind) {
     case 'error':
-      return <ErrorContent error={target.error} />
+      return (
+        <Box maw={360} px={10} py={8}>
+          <CellErrorCard error={target.error} variant="tooltip" />
+        </Box>
+      )
     case 'image':
       return (
         <Image
@@ -40,6 +63,13 @@ function renderBody(target: CellTooltip) {
           style={{ pointerEvents: 'none' }}
         />
       )
+    case 'sparkline':
+      return (
+        <Box px={8} py={4} c="white" ff="monospace" fz="xs">
+          <div>x: {formatNumber(target.x)}</div>
+          <div>y: {formatNumber(target.y)}</div>
+        </Box>
+      )
     default:
       return assertNever(target)
   }
@@ -49,13 +79,14 @@ export function TableTooltip({
   target,
   layerProps,
   arrowProps,
+  arrowSize,
   onMouseEnter,
   onMouseLeave,
 }: TableTooltipProps) {
   const theme = useMantineTheme()
   const scheme = useComputedColorScheme('light')
   const surface =
-    scheme === 'dark' ? theme.colors.dark[5] : theme.colors.dark[7]
+    scheme === 'dark' ? theme.colors.dark[5] : theme.colors.gray[9]
   const { ref, style } = layerProps
 
   return (
@@ -66,8 +97,10 @@ export function TableTooltip({
       style={{
         ...style,
         background: surface,
-        borderRadius: SURFACE_RADIUS,
-        zIndex: 1000,
+        borderRadius: rem(SURFACE_RADIUS),
+        // A tooltip inside still draws on top: at the same level, Mantine's
+        // portals come later in the page than this one.
+        zIndex: getDefaultZIndex('popover'),
         boxShadow:
           '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',
       }}
@@ -76,7 +109,7 @@ export function TableTooltip({
         {...arrowProps}
         backgroundColor={surface}
         borderWidth={0}
-        size={10}
+        size={arrowSize}
       />
       {renderBody(target)}
     </div>

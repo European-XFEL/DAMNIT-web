@@ -18,17 +18,19 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 
-import { BasePopover } from './base-popover'
-import { ControlButton } from '../control-button'
-import { useColumnVisibilityFromVariables } from '../../hooks/use-column-visibility'
+import { HTTP_URL } from '#src/constants'
+import { useColumnVisibilityFromVariables } from '#src/features/table/hooks/use-column-visibility'
 import {
+  selectColumnVisibility,
   selectTagSelection,
-  selectVariableVisibility,
-} from '../../store/selectors'
-import { setTagSelection, setVariableVisibility } from '../../table.slice'
+} from '#src/features/table/stores/table.selectors'
+import {
+  setColumnVisibility,
+  setTagSelection,
+} from '#src/features/table/stores/table.slice'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 
-import { HTTP_URL } from '../../../../constants'
-import { useAppDispatch, useAppSelector } from '../../../../redux/hooks'
+import { BasePopover } from './base-popover'
 
 type RuntimeConfig = {
   profile: string
@@ -96,7 +98,7 @@ function useHzdrSavedViewsEnabled() {
 
 function SavedViewsPanel({ sourceKey }: SavedViewsPopoverProps) {
   const dispatch = useAppDispatch()
-  const variableVisibility = useAppSelector(selectVariableVisibility)
+  const variableVisibility = useAppSelector(selectColumnVisibility)
   const completeVariableVisibility = useColumnVisibilityFromVariables()
   const tagSelection = useAppSelector(selectTagSelection)
   const [views, setViews] = useState<SavedView[]>([])
@@ -170,7 +172,7 @@ function SavedViewsPanel({ sourceKey }: SavedViewsPopoverProps) {
 
   const openView = (view: SavedView) => {
     if (view.state.variable_visibility) {
-      dispatch(setVariableVisibility(view.state.variable_visibility))
+      dispatch(setColumnVisibility(view.state.variable_visibility))
     }
     if (view.state.tag_selection) {
       dispatch(setTagSelection(view.state.tag_selection))
@@ -278,17 +280,7 @@ export function SavedViewsPopover({ sourceKey }: SavedViewsPopoverProps) {
   }
 
   return (
-    <BasePopover
-      renderTarget={({ opened, toggle }) => (
-        <ControlButton
-          onClick={toggle}
-          isActive={opened}
-          icon={IconDeviceFloppy}
-          label="Views"
-          badgeCount={0}
-        />
-      )}
-    >
+    <BasePopover icon={IconDeviceFloppy} label="Views">
       <SavedViewsPanel sourceKey={sourceKey} />
     </BasePopover>
   )

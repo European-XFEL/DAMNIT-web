@@ -1,23 +1,24 @@
 import { describe, expect, test } from 'vitest'
 
-import { computeColumnVisibility } from '@/features/table/hooks/use-column-visibility'
-import type { TagItem } from '@/types'
+import { computeColumnVisibility } from '#src/features/table/hooks/use-column-visibility'
+import reducer from '#src/features/table/stores/table.slice'
+import type { Tag } from '#src/data/table/table-data.types'
 
-const tag = (name: string, variables: string[]): TagItem => ({
+const tag = (name: string, variables: string[]): Tag => ({
   id: 0,
   name,
   variables,
 })
 
 describe('computeColumnVisibility', () => {
-  test('drops the nonconfigurable variables', () => {
+  test('drops the nonconfigurable variables but keeps proposal', () => {
     const result = computeColumnVisibility({
       variableNames: ['proposal', 'added_at', 'run', 'energy', 'x'],
       visibility: {},
       tags: {},
       tagSelection: {},
     })
-    expect(Object.keys(result)).toEqual(['energy', 'x'])
+    expect(Object.keys(result)).toEqual(['proposal', 'energy', 'x'])
   })
 
   test('a variable is visible unless it is explicitly turned off', () => {
@@ -28,6 +29,19 @@ describe('computeColumnVisibility', () => {
       tagSelection: {},
     })
     expect(result).toEqual({ a: false, b: true })
+  })
+
+  // The default is the store's seed rather than a rule here, so run a fresh
+  // store through the same map the grid reads.
+  test('the untouched store keeps the proposal column hidden', () => {
+    const { columnVisibility } = reducer(undefined, { type: 'unknown' })
+    const result = computeColumnVisibility({
+      variableNames: ['proposal', 'energy'],
+      visibility: columnVisibility,
+      tags: {},
+      tagSelection: {},
+    })
+    expect(result).toEqual({ proposal: false, energy: true })
   })
 
   test('with no selected tags there is no tag filter', () => {

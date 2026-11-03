@@ -1,0 +1,134 @@
+import {
+  createTheme,
+  DEFAULT_THEME,
+  rem,
+  type AlertFactory,
+  type AvatarFactory,
+  type BadgeFactory,
+  type CSSVariablesResolver,
+  type ExtendComponent,
+  type InputWrapperFactory,
+  type MenuFactory,
+  type ModalFactory,
+  type SegmentedControlFactory,
+  type TableFactory,
+  type TooltipFactory,
+} from '@mantine/core'
+
+import { FONT_FAMILY_MONO, FONT_FAMILY_SANS, FONT_SIZES } from './fonts'
+import classes from './theme.module.css'
+
+// Source Sans 3 sits optically small, so every step is 6% over Mantine's
+// defaults, the normalization USWDS applies to the same family.
+export const theme = createTheme({
+  fontFamily: FONT_FAMILY_SANS,
+  fontFamilyMonospace: FONT_FAMILY_MONO,
+  // Ink is the ramp's darkest grey, not pure black, the way USWDS sets its body
+  // text in gray-90.
+  black: DEFAULT_THEME.colors.gray[9],
+  // Shade 7 is where indigo reads at AA, as text on a neutral ground and as a
+  // fill under white text alike.
+  primaryColor: 'indigo',
+  primaryShade: { light: 7, dark: 8 },
+  // sm is the page's base, xs is compact controls, supporting text and
+  // anything floating, xxs is the floor.
+  fontSizes: {
+    xxs: rem(FONT_SIZES.xxs),
+    xs: rem(FONT_SIZES.xs),
+    sm: rem(FONT_SIZES.sm),
+    md: rem(FONT_SIZES.md),
+    lg: rem(FONT_SIZES.lg),
+    xl: rem(FONT_SIZES.xl),
+  },
+  // Mantine has no xxs step, so the floor borrows xs's ratio.
+  lineHeights: { xxs: DEFAULT_THEME.lineHeights.xs },
+  headings: {
+    sizes: {
+      h1: { fontSize: rem(36) },
+      h2: { fontSize: rem(28) },
+      // A whole-pixel line box; the ratio would land on 32.2 and round up.
+      h3: { fontSize: rem(23), lineHeight: rem(32) },
+      h4: { fontSize: rem(19) },
+      h5: { fontSize: rem(17) },
+      h6: { fontSize: rem(15) },
+    },
+  },
+  // Plain objects, not Component.extend(), which pulls the component into any
+  // bundle that imports the theme; `satisfies` keeps the typing.
+  components: {
+    // A light alert's title takes shade 7 of its colour, under AA on the tint
+    // (red 3.4:1, orange 2.7:1). Text colour passes; the icon keeps the hue.
+    Alert: {
+      styles: { title: { color: 'var(--mantine-color-text)' } },
+    } satisfies ExtendComponent<AlertFactory>,
+    Avatar: {
+      classNames: { root: classes.avatar },
+    } satisfies ExtendComponent<AvatarFactory>,
+    Badge: {
+      classNames: { root: classes.badge },
+    } satisfies ExtendComponent<BadgeFactory>,
+    // A field's label is compact text a step under its field; the hint goes
+    // under the input and the error under the hint.
+    InputWrapper: {
+      defaultProps: {
+        inputWrapperOrder: ['label', 'input', 'description', 'error'],
+      },
+      classNames: {
+        label: classes.inputLabel,
+        description: classes.inputDescription,
+        error: classes.inputError,
+      },
+    } satisfies ExtendComponent<InputWrapperFactory>,
+    // An item reads its classes from the menu's own styles context, so the
+    // shape of a row is set here rather than on Menu.Item.
+    Menu: {
+      classNames: {
+        item: classes.menuItem,
+        itemSection: classes.menuItemSection,
+      },
+    } satisfies ExtendComponent<MenuFactory>,
+    // A dialog's title is emphasis inside a surface, like a card's title, not
+    // a page title; Mantine already draws it at md.
+    Modal: {
+      styles: { title: { fontWeight: 600 } },
+    } satisfies ExtendComponent<ModalFactory>,
+    // Mantine sizes the control from its text, which lands it at 41 px beside
+    // 36 px fields; the label's whole-pixel line brings it level.
+    SegmentedControl: {
+      classNames: { label: classes.segmentedLabel },
+    } satisfies ExtendComponent<SegmentedControlFactory>,
+    // A plain th is the browser's bold; column headers are labels on grey and
+    // take the grid's 500.
+    Table: {
+      styles: { th: { fontWeight: 500 } },
+    } satisfies ExtendComponent<TableFactory>,
+    Tooltip: {
+      // The arrow pokes 4.7 px past the 1 px edge, so the tooltip sits 5 off.
+      // Mantine adds half the arrow to a number, and takes an object as is.
+      defaultProps: {
+        withArrow: true,
+        arrowSize: 8,
+        offset: { mainAxis: 5 },
+        events: { hover: true, focus: true, touch: false },
+      },
+      classNames: { tooltip: classes.tooltip, arrow: classes.tooltipArrow },
+    } satisfies ExtendComponent<TooltipFactory>,
+  },
+})
+
+// Placeholder and dimmed are text a reader has to read, so they take the
+// secondary grey instead of Mantine's gray.5 and gray.6, both below AA.
+export const cssVariablesResolver: CSSVariablesResolver = (theme) => ({
+  variables: {},
+  light: {
+    '--mantine-color-placeholder': theme.colors.gray[7],
+    '--mantine-color-dimmed': theme.colors.gray[7],
+    // Mantine fixes the error colour at red.6, 3.3:1 on white; red.9 reads
+    // at AA in the message, the border and the typed text alike.
+    '--mantine-color-error': theme.colors.red[9],
+    '--group-rail-color': theme.colors.gray[3],
+  },
+  dark: {
+    '--group-rail-color': theme.colors.dark[5],
+  },
+})

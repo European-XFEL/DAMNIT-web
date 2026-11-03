@@ -1,0 +1,508 @@
+import { readFileSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+import { PREVIEW_DTYPES } from '@damnit-frontend/shared/constants'
+import { columnIndex } from '#support/grid'
+import type {
+  RunData,
+  Runs,
+  VariableError,
+} from '@damnit-frontend/shared/mocks'
+
+// Wire shape returned by GET /oauth/userinfo (the app renames
+// proposals_by_year_half -> proposals).
+type UserInfoWire = {
+  uid: number
+  username: string
+  name: string
+  email: string
+  proposals_by_year_half: Record<string, number[]>
+}
+
+// Response objects for the ProposalMetadata GraphQL query.
+type ProposalMetadata = {
+  number: number
+  instrument: string
+  principal_investigator: string
+  start_date: string
+  title: string
+  damnit_path: string
+}
+
+// Wire shape of a per-run extracted-data file: the raw values plus their
+// metadata (dtype, dims, coords, attrs). Served verbatim as the ExtractedData
+// query's extracted_data field, exactly as the demo's own handler serves it.
+type ExtractedData = {
+  data: unknown
+  dtype: string
+  name: string
+  [key: string]: unknown
+}
+
+const here = dirname(fileURLToPath(import.meta.url))
+
+// The base data (runs + context file) is the demo's canonical example, read
+// directly so the two can never drift. Only the e2e-authored auth and proposal
+// responses live alongside this file.
+const base = join(here, '../../../apps/demo/public/examples/xpcs')
+
+function readJson<T>(dir: string, name: string): T {
+  return JSON.parse(readFileSync(join(dir, name), 'utf-8')) as T
+}
+
+const runs = readJson<Runs>(base, 'runs.json')
+
+// How many dimensions each preview dtype carries. A dtype that is absent here
+// is a scalar, which carries none.
+const DIMS_BY_DTYPE: Record<string, number> = { array1d: 1, array2d: 2 }
+
+function checkPreviewPayload(name: string, payload: ExtractedData): void {
+  if (!PREVIEW_DTYPES.has(payload.dtype)) {
+    throw new Error(
+      `'${name}' has an unknown preview dtype '${payload.dtype}'; ` +
+        'update the fixture or the demo data'
+    )
+  }
+
+  // A dtype that keeps its name but changes meaning passes the check above,
+  // so check the payload too: array2d has two dims, array1d one, scalar none.
+  const expected = DIMS_BY_DTYPE[payload.dtype] ?? 0
+  const dims = Array.isArray(payload.dims) ? payload.dims.length : 0
+  if (dims !== expected) {
+    throw new Error(
+      `'${name}' is '${payload.dtype}' and should carry ${expected} dims, not ${dims}`
+    )
+  }
+
+  // A picture arrives already rendered to a base64 png, never as an array.
+  if (payload.dtype === 'image' && typeof payload.data !== 'string') {
+    throw new Error(`'${name}' is an image but its data is not a base64 string`)
+  }
+
+  // One level of nesting per dimension. An empty array has no depth to read.
+  if (Array.isArray(payload.data) && payload.data.length > 0) {
+    const nested = Array.isArray(payload.data[0])
+    const shouldNest = expected > 1
+    if (nested !== shouldNest) {
+      throw new Error(
+        `'${name}' is '${payload.dtype}' but its data is ${nested ? 'nested' : 'flat'}`
+      )
+    }
+  }
+}
+
+// Every payload is checked at load. The demo serves these same files, so a
+// vocabulary change that leaves one behind fails here, not in the shipped demo.
+for (const run of readdirSync(join(base, 'data'))) {
+  for (const file of readdirSync(join(base, 'data', run))) {
+    checkPreviewPayload(
+      `${run}/${file}`,
+      readJson<ExtractedData>(join(base, 'data', run), file)
+    )
+  }
+}
+
+export const XPCS = {
+  meta: runs.meta,
+  data: runs.data,
+  userInfo: readJson<UserInfoWire>(here, 'userinfo.json'),
+  proposalMetadata: readJson<ProposalMetadata[]>(
+    here,
+    'proposal-metadata.json'
+  ),
+  contextFile: readFileSync(join(base, 'context.py'), 'utf-8'),
+
+  // Per-run extracted data lives beside runs.json, one file per table variable.
+  // Read lazily per query: some png payloads are ~190 KB, so only the requested
+  // (run, variable) is loaded when the ExtractedData query fires.
+  extractedData(run: number | string, variable: string): ExtractedData {
+    return readJson<ExtractedData>(
+      join(base, 'data', String(run)),
+      `${variable}.json`
+    )
+  },
+}
+
+export type Example = typeof XPCS
+
+// The example's numeric variables in meta order, excluding Run. dtype lives on
+// the run data, not the metadata, so read it from the first run. The plot specs
+// pick their plotted columns from here.
+export const numberVars = Object.keys(XPCS.meta.variables).filter(
+  (name) => name !== 'run' && XPCS.data[0].variables[name]?.dtype === 'number'
+)
+
+// The proposal numbers the example's user can access, flattened out of the
+// semester buckets. The mock rejects any proposal outside this set, and
+// openProposal checks the target against it.
+export function accessibleProposals(example: Example): number[] {
+  return Object.values(example.userInfo.proposals_by_year_half).flat()
+}
+
+// Run 1 fails in three ways, one per status-card kind: xgm_intensity errors on
+// its own, opt_transmission loses its source, and total_transmission is skipped
+// for that missing dependency (see context.py for the chain).
+const TRANSMISSION_SOURCE = 'MID_AUXT2_ATT/MDL/ATT'
+const XGM_SOURCE = 'SA2_XTD1_XGM/XGM/DOOCS'
+
+const ERRORED_RUN = 1
+
+type Failure = {
+  variable: string
+  title: string
+  error: VariableError
+}
+
+const FAILURES: Failure[] = [
+  {
+    variable: 'xgm_intensity',
+    title: 'Error',
+    error: {
+      cls: 'ValueError',
+      message: `No pulse energy recorded for ${XGM_SOURCE}:output in this run.`,
+    },
+  },
+  {
+    variable: 'opt_transmission',
+    title: 'Missing data',
+    error: {
+      cls: 'SourceNameError',
+      message:
+        `This data has no source named '${TRANSMISSION_SOURCE}'.\n` +
+        'See data.all_sources for available sources.',
+    },
+  },
+  {
+    variable: 'total_transmission',
+    title: 'Missing dependency',
+    error: {
+      cls: 'Skip',
+      message:
+        'Skipped due to missing dependency:\n' +
+        `└ (opt_transmission) failed: SourceNameError: This data has no ` +
+        `source named '${TRANSMISSION_SOURCE}'`,
+    },
+  },
+]
+
+// opt_transmission has no base variable, so append it as a trailing column.
+// ERROR_CELLS resolves each hover column by name, so its position is free.
+const erroredMeta: Example['meta'] = {
+  ...XPCS.meta,
+  variables: {
+    ...XPCS.meta.variables,
+    opt_transmission: {
+      name: 'opt_transmission',
+      title: 'Opt. trans.',
+      tags: [],
+    },
+  },
+}
+
+export const ERROR_CELLS = FAILURES.map((failure) => ({
+  ...failure,
+  col: columnIndex(Object.keys(erroredMeta.variables), failure.variable),
+}))
+
+// Grid row of the errored run, derived so a reordered demo still hovers it.
+export const ERROR_ROW = XPCS.meta.runs.indexOf(ERRORED_RUN)
+if (ERROR_ROW === -1) {
+  throw new Error(
+    `run ${ERRORED_RUN} is not in the example; update the fixture or the demo data`
+  )
+}
+
+// First image column of the plain XPCS example. Row 0 is run 1, whose image
+// cells hold real base64 PNGs. Keep the whole entry so the live-update spec can
+// read that run's image value without re-finding it. The dtype re-check narrows
+// the value's type; `.find` alone leaves it a union.
+const imageEntry = Object.entries(XPCS.data[0].variables).find(
+  ([, variable]) => variable.dtype === 'image'
+)
+if (imageEntry === undefined || imageEntry[1].dtype !== 'image') {
+  throw new Error('the XPCS example has no image column for the preview test')
+}
+const imageVariable = imageEntry[0]
+
+export const IMAGE_CELL = {
+  col: columnIndex(Object.keys(XPCS.meta.variables), imageVariable),
+  row: 0,
+}
+
+// The image variable's name and run 1's real base64 value. The live-update spec
+// seeds run 1 with this image absent (still extracting) and then pushes this
+// value to model the extraction completing.
+export const IMAGE_VARIABLE = imageVariable
+export const IMAGE_VALUE = imageEntry[1].value
+
+function withErrorCells(run: RunData): RunData {
+  const variables = { ...run.variables }
+  for (const { variable, error } of FAILURES) {
+    // Errored cells render from `error`; the backend nulls the value and falls
+    // back to the string dtype, so mirror that.
+    variables[variable] = { dtype: 'string', value: null, error }
+  }
+  return { ...run, variables }
+}
+
+// XPCS with run 1's transmission and XGM cells failed, so the status tooltips
+// have real errors to explain. The global XPCS export stays pristine for the
+// other specs.
+export const xpcsWithErrors: Example = {
+  ...XPCS,
+  meta: erroredMeta,
+  data: XPCS.data.map((run) =>
+    run.variables.run.value === ERRORED_RUN ? withErrorCells(run) : run
+  ),
+}
+
+// Same proposal as XPCS but before any runs landed: the variables and tags are
+// defined, so the table draws its column headers, but there are zero runs. This
+// drives the empty-proposal state: headers over a blank area, with no empty
+// message. userInfo and proposalMetadata are reused, so 6996 stays accessible.
+export const EMPTY: Example = {
+  ...XPCS,
+  meta: { ...XPCS.meta, runs: [] },
+  data: [],
+}
+
+// The run at grid row 0, whose image cell the live-update spec drives. Derived
+// from meta order (like ERROR_ROW) so a reordered demo cannot point this example
+// at a different run than IMAGE_CELL (row 0) targets.
+const PENDING_IMAGE_RUN = XPCS.meta.runs[0]
+
+// XPCS with that run's image still extracting: the image variable is absent from
+// its data, so its cell renders as a loading skeleton until a subscription push
+// delivers the value. The live-update spec drives that push.
+export const xpcsWithPendingImage: Example = {
+  ...XPCS,
+  data: XPCS.data.map((run) => {
+    if (run.variables.run.value !== PENDING_IMAGE_RUN) {
+      return run
+    }
+    const { [imageVariable]: _, ...variables } = run.variables
+    return { ...run, variables }
+  }),
+}
+
+// The demo data has no array1d variable, so this appends one as a trailing
+// column, giving every run the same five-point sparkline.
+const SPARKLINE_VARIABLE = 'xgm_trend'
+
+export const xpcsWithSparkline: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: {
+      ...XPCS.meta.variables,
+      [SPARKLINE_VARIABLE]: {
+        name: SPARKLINE_VARIABLE,
+        title: 'XGM trend',
+        tags: [],
+      },
+    },
+  },
+  data: XPCS.data.map((run) => ({
+    ...run,
+    variables: {
+      ...run.variables,
+      [SPARKLINE_VARIABLE]: {
+        dtype: 'array1d',
+        value: { x: [0, 1, 2, 3, 4], y: [10, 30, 20, 40, 50] },
+      },
+    },
+  })),
+}
+
+export const SPARKLINE_CELL = {
+  col: columnIndex(
+    Object.keys(xpcsWithSparkline.meta.variables),
+    SPARKLINE_VARIABLE
+  ),
+  row: 0,
+}
+
+// A count and a date wider than any title, the values the grid draws in mono.
+export const WIDE_NUMBER = 123456789012345
+const WIDE_DATE = Date.UTC(2024, 8, 15, 12)
+
+// XPCS with every run's Trains holding WIDE_NUMBER and Pulses WIDE_DATE, so
+// those two columns fit to their values rather than their titles.
+export const xpcsWithWideValues: Example = {
+  ...XPCS,
+  data: XPCS.data.map((run) => ({
+    ...run,
+    variables: {
+      ...run.variables,
+      n_trains: { dtype: 'number', value: WIDE_NUMBER },
+      n_pulses: { dtype: 'timestamp', value: WIDE_DATE },
+    },
+  })),
+}
+
+// Rewrite every tag's membership list, so a fixture that renames or drops a
+// variable leaves the Tags popover saying the same thing the variables do.
+function mapTagVariables(
+  tags: Example['meta']['tags'],
+  rename: (variables: string[]) => string[]
+) {
+  return Object.fromEntries(
+    Object.entries(tags).map(([name, tag]) => [
+      name,
+      { ...tag, variables: rename(tag.variables) },
+    ])
+  )
+}
+
+// Every variable in the demo data carries a tag except `run`, which the popover
+// never configures, so this drops one variable's tag to give it an untagged row.
+export const UNTAGGED_VARIABLE = 'scan_type'
+
+const untagged = XPCS.meta.variables[UNTAGGED_VARIABLE]
+if (untagged === undefined) {
+  throw new Error(
+    `${UNTAGGED_VARIABLE} is not a column in the example; update the fixture or the demo data`
+  )
+}
+
+export const xpcsWithUntagged: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: {
+      ...XPCS.meta.variables,
+      [UNTAGGED_VARIABLE]: { ...untagged, tags: [] },
+    },
+    tags: mapTagVariables(XPCS.meta.tags, (variables) =>
+      variables.filter((variable) => variable !== UNTAGGED_VARIABLE)
+    ),
+  },
+}
+
+// The demo data has no grouped proposal, so this rewrites the three sample
+// columns as a @Group the way the API serves one. They are already adjacent,
+// and the API gathers a group at its earliest member, so the order stands.
+export const SAMPLE_GROUP = { name: 'sample', title: 'Sample' }
+
+const GROUPED_VARIABLES: Record<string, { name: string; title: string }> = {
+  sample_type: { name: 'sample.type', title: 'Sample/Type' },
+  sample_x: { name: 'sample.x', title: 'Sample/X [mm]' },
+  sample_y: { name: 'sample.y', title: 'Sample/Y [mm]' },
+}
+
+function groupedName(name: string): string {
+  return GROUPED_VARIABLES[name]?.name ?? name
+}
+
+// The per-run data files on disk keep the demo's ungrouped names, so a read for
+// a renamed column maps back before it reaches the filesystem.
+const UNGROUPED_NAMES: Record<string, string> = Object.fromEntries(
+  Object.entries(GROUPED_VARIABLES).map(([name, { name: grouped }]) => [
+    grouped,
+    name,
+  ])
+)
+
+function groupSampleColumns(
+  variables: Example['meta']['variables']
+): Example['meta']['variables'] {
+  const missing = Object.keys(GROUPED_VARIABLES).filter(
+    (name) => !(name in variables)
+  )
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.join(', ')} is not a column in the example; update the fixture or the demo data`
+    )
+  }
+
+  return Object.fromEntries(
+    Object.entries(variables).map(([name, variable]) => {
+      const renamed = GROUPED_VARIABLES[name]
+      return renamed === undefined
+        ? [name, variable]
+        : [renamed.name, { ...variable, ...renamed, group: SAMPLE_GROUP.name }]
+    })
+  )
+}
+
+function groupRunCells(variables: RunData['variables']): RunData['variables'] {
+  return Object.fromEntries(
+    Object.entries(variables).map(([name, cell]) => [groupedName(name), cell])
+  )
+}
+
+// XPCS with its sample columns grouped, for the second header row. The tag
+// memberships are renamed alongside the variables so the tag filter still
+// resolves them.
+export const xpcsWithGroups: Example = {
+  ...XPCS,
+  meta: {
+    ...XPCS.meta,
+    variables: groupSampleColumns(XPCS.meta.variables),
+    tags: mapTagVariables(XPCS.meta.tags, (variables) =>
+      variables.map(groupedName)
+    ),
+    groups: { [SAMPLE_GROUP.name]: SAMPLE_GROUP },
+  },
+  data: XPCS.data.map((run) => ({
+    ...run,
+    variables: groupRunCells(run.variables),
+  })),
+  extractedData: (run, variable) =>
+    XPCS.extractedData(run, UNGROUPED_NAMES[variable] ?? variable),
+}
+
+// The home page shows one table per semester, so this example spreads proposals
+// across a few. It keeps 6996 (so the dashboard link still works) and adds the
+// real XFEL example proposals 700002/700003/700004.
+//
+// Grouping and the semester label come from the proposals_by_year_half key.
+// Don't read the semester off start_date or damnit_path: the real paths and
+// dates won't always line up with the semester a proposal sits under. (The app
+// calls this key a "cycle", but it's really the semester.)
+//
+// 6996 and 700004 share the 202401 semester, so the sub-table has two rows to
+// sort: 6996 is May 30, 700004 is May 31, and start_date-desc puts 700004 first.
+const homeProposals: ProposalMetadata[] = [
+  ...XPCS.proposalMetadata,
+  {
+    number: 700004,
+    instrument: 'SQS',
+    principal_investigator: 'Michael Meyer',
+    start_date: '2024-05-31',
+    title: 'SQS example data',
+    damnit_path: '/gpfs/exfel/d/raw/XMPL/202450/p700004/usr/damnit',
+  },
+  {
+    number: 700003,
+    instrument: 'SCS',
+    principal_investigator: 'Andreas Scherz',
+    start_date: '2023-01-30',
+    title: 'SCS example data',
+    damnit_path: '/gpfs/exfel/d/raw/XMPL/202350/p700003/usr/damnit',
+  },
+  {
+    number: 700002,
+    instrument: 'FXE',
+    principal_investigator: 'Christopher Milne',
+    start_date: '2021-09-27',
+    title: 'FXE example data',
+    damnit_path: '/gpfs/exfel/d/raw/XMPL/202150/p700002/usr/damnit',
+  },
+]
+
+// XPCS whose user owns proposals across three semesters, for the home page's
+// semester-grouped proposal list.
+export const xpcsWithProposals: Example = {
+  ...XPCS,
+  userInfo: {
+    ...XPCS.userInfo,
+    proposals_by_year_half: {
+      '202401': [6996, 700004],
+      '202350': [700003],
+      '202150': [700002],
+    },
+  },
+  proposalMetadata: homeProposals,
+}

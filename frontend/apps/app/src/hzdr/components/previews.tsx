@@ -1,5 +1,6 @@
 import Plotly from 'react-plotly.js'
 import { Card, Code, Group, Stack, Table, Text } from '@mantine/core'
+
 import type {
   PlotlyPreview,
   HZDRShot,
@@ -240,50 +241,63 @@ export function MiniImagePreview({
   )
 }
 
-export function PlotlyFigurePreview({ preview }: { preview: PlotlyPreview }) {
+type PlotlyFigure = {
+  data?: Plotly.Data[]
+  layout?: Partial<Plotly.Layout>
+  config?: Partial<Plotly.Config>
+}
+
+function parsePlotlyFigure(
+  preview: PlotlyPreview
+): { figure: PlotlyFigure } | { error: string } {
   try {
-    const figure = decodePlotlyTypedArrays(JSON.parse(preview.json)) as {
-      data?: Plotly.Data[]
-      layout?: Partial<Plotly.Layout>
-      config?: Partial<Plotly.Config>
+    return {
+      figure: decodePlotlyTypedArrays(JSON.parse(preview.json)) as PlotlyFigure,
     }
-    return (
-      <Plotly
-        data={figure.data ?? []}
-        layout={
-          {
-            ...(figure.layout ?? {}),
-            autosize: true,
-            height: 260,
-            margin: {
-              l: 44,
-              r: 16,
-              t: 24,
-              b: 42,
-              ...(figure.layout?.margin ?? {}),
-            },
-          } as Partial<Plotly.Layout>
-        }
-        config={
-          {
-            displaylogo: false,
-            responsive: true,
-            ...(figure.config ?? {}),
-          } as Partial<Plotly.Config>
-        }
-        style={{ width: '100%', height: 260 }}
-        useResizeHandler
-      />
-    )
   } catch (error) {
-    return (
-      <Code block>
-        {error instanceof Error
+    return {
+      error:
+        error instanceof Error
           ? error.message
-          : 'Could not render Plotly preview.'}
-      </Code>
-    )
+          : 'Could not render Plotly preview.',
+    }
   }
+}
+
+export function PlotlyFigurePreview({ preview }: { preview: PlotlyPreview }) {
+  const parsed = parsePlotlyFigure(preview)
+  if ('error' in parsed) {
+    return <Code block>{parsed.error}</Code>
+  }
+  const { figure } = parsed
+  return (
+    <Plotly
+      data={figure.data ?? []}
+      layout={
+        {
+          ...(figure.layout ?? {}),
+          autosize: true,
+          height: 260,
+          margin: {
+            l: 44,
+            r: 16,
+            t: 24,
+            b: 42,
+            ...(figure.layout?.margin ?? {}),
+          },
+        } as Partial<Plotly.Layout>
+      }
+      config={
+        {
+          displaylogo: false,
+          responsive: true,
+          ...(figure.config ?? {}),
+        } as Partial<Plotly.Config>
+      }
+      style={{ width: '100%', height: 260 }}
+      useResizeHandler
+    />
+  )
 }
 
 function getNumericPreviewValues(preview: unknown): number[] {
