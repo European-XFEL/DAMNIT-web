@@ -225,7 +225,11 @@ def _lock_fd(fd: int, path: Path, timeout: float = GUARD_TIMEOUT_S) -> bool:
         except OSError as error:
             if error.errno in _GUARD_UNSUPPORTED:
                 return False
-            if os.name != "nt" or error.errno not in {errno.EACCES, errno.EDEADLK}:
+            # Windows reports a held byte as EACCES/EDEADLK. An SMB/CIFS mount
+            # on Linux reports a lock another client or process holds as
+            # EACCES too, not EWOULDBLOCK: wait for it like any busy guard.
+            busy = {errno.EACCES, errno.EDEADLK} if os.name == "nt" else {errno.EACCES}
+            if error.errno not in busy:
                 raise
         else:
             return True

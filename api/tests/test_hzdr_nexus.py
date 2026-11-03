@@ -2692,3 +2692,70 @@ def test_merge_shot_metadata_keeps_labfrog_laser_keys_events_do_not_carry():
         "laser": {"pulse_energy": 12.25, "pulse_duration": 30.0},
         "status": "active",
     }
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX flock path")
+def test_lock_guard_waits_out_eacces_from_a_network_share(monkeypatch, tmp_path):
+    """An SMB/CIFS mount reports a held flock as EACCES: busy, not fatal."""
+    import errno
+    import fcntl
+
+    from damnit_api.metadata import hzdr_nexus
+
+    calls = []
+    real_flock = fcntl.flock
+
+    def flaky_flock(fd, operation):
+        calls.append(operation)
+        if len(calls) < 3:
+            raise PermissionError(errno.EACCES, "Permission denied")
+        return real_flock(fd, operation)
+
+    monkeypatch.setattr(fcntl, "flock", flaky_flock)
+    guard = tmp_path / "x.lock.guard"
+    fd = os.open(guard, os.O_RDWR | os.O_CREAT)
+    try:
+        assert hzdr_nexus._lock_fd(fd, guard, timeout=5.0) is True
+    finally:
+        os.close(fd)
+    assert len(calls) == 3
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX flock path")
+def test_lock_guard_eacces_that_never_clears_times_out(monkeypatch, tmp_path):
+    import errno
+    import fcntl
+
+    from damnit_api.metadata import hzdr_nexus
+
+    def denied(fd, operation):
+        raise PermissionError(errno.EACCES, "Permission denied")
+
+    monkeypatch.setattr(fcntl, "flock", denied)
+    guard = tmp_path / "x.lock.guard"
+    fd = os.open(guard, os.O_RDWR | os.O_CREAT)
+    try:
+        with pytest.raises(BuilderAlreadyRunningError):
+            hzdr_nexus._lock_fd(fd, guard, timeout=0.05)
+    finally:
+        os.close(fd)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX flock path")
+def test_lock_guard_other_errors_still_raise(monkeypatch, tmp_path):
+    import errno
+    import fcntl
+
+    from damnit_api.metadata import hzdr_nexus
+
+    def broken(fd, operation):
+        raise OSError(errno.EIO, "I/O error")
+
+    monkeypatch.setattr(fcntl, "flock", broken)
+    guard = tmp_path / "x.lock.guard"
+    fd = os.open(guard, os.O_RDWR | os.O_CREAT)
+    try:
+        with pytest.raises(OSError, match="I/O error"):
+            hzdr_nexus._lock_fd(fd, guard, timeout=0.05)
+    finally:
+        os.close(fd)
