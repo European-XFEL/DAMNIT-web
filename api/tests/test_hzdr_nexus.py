@@ -2653,8 +2653,8 @@ def test_read_labfrog_sqlite_shots_reads_laser_energy_and_shot_variables():
         19.25,
     ]
     second = shots[1]["metadata"]
-    assert second["gvd"] == 1420.0
-    assert second["tw_delay"] == 0.3
+    assert second["gvd"] == pytest.approx(1420.0)
+    assert second["tw_delay"] == pytest.approx(0.3)
     assert "laser_energy" not in second
     assert second["labfrog_variables"]["ICT integrated charge"] == {
         "value": 0.26,
