@@ -40,16 +40,20 @@ Results:
   locally with `launchOptions.executablePath` pointed at the container's
   Chromium, since upstream pins Playwright 1.64; CI installs its own).
 
-## Remaining
+- Upstream's character check passes over the whole tree (fork-owned HZDR
+  paths and byte-pinned vendored files/fixtures are `-check-characters`).
+- Docs build with zensical (`api/zensical.toml`); `CLAUDE.md` updated.
+- Upstream's e2e suite (142 tests) against the HZDR app: 137 pass. It caught
+  the HZDR header losing its user menu/Logout (upstream's `Header` is now
+  presentational), now fixed. The 4 table tests left (resize past the last
+  column, scrollbar drag) could not start a browser in the dev container
+  (they need Playwright 1.64's headless shell); CI installs it.
+- `main` merged in through #28.
 
-1. **Character check** (new upstream pre-commit hook and CI job): run
-   `uv run python scripts/check-characters/check_characters.py` over the
-   tree; vendored `hzdr_packs/vendor/` and `hzdr-reference/` may need
-   `-check-characters` in `.gitattributes`.
-2. **CI workflows**: compare upstream's `.github/workflows` changes
-   (docs via zensical, character check, e2e) with the fork's.
-3. **Docs**: build with `uv run --group docs zensical build` in `api/`;
-   update `CLAUDE.md` (mentions `db.py`/`data.py`, `api/mkdocs.yml`).
-4. **Smoke test** the whole stack (`hzdr/scripts/hzdr-launch.sh`) and the
-   HZDR pages in a browser; `hzdr/scripts/test-all.ps1` for sibling suites.
-5. Open the PR to fork `main`.
+## Remaining (after merge)
+
+1. Watch the first CI run on the PR, especially the e2e job's 4 table tests.
+2. Deploy on fwkt-webapps: `git pull --ff-only`, `uv sync --locked` in
+   `api/`, `pnpm install --frozen-lockfile` and the app build in `frontend/`,
+   restart `damnit-api`. The pnpm version is now 10.34.6 (`corepack enable`).
+3. `hzdr/scripts/test-all.ps1` for the sibling conformance suites.

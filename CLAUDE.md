@@ -190,9 +190,9 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
   with no MyMdC client is a member of nothing), `shared/` (`routers.py` has
   `GET /config/health` liveness probes), `_mymdc/` (bootstrapped only for
   `DW_API_METADATA__PROVIDER=mymdc`), `contextfile/` - the original DAMNIT-web
-  machinery. Context-file arguments read flat metadata keys; with
-  ktippey-hzdr/DAMNIT-web-hzdr#27 also a `meta#a.b` path or the registry key a
-  legacy name maps to (`laser_energy_j` -> `laser.pulse_energy`).
+  machinery. Context-file arguments read flat metadata keys, then a `meta#a.b` path or
+  the registry key a legacy name maps to (`laser_energy_j` ->
+  `laser.pulse_energy`).
 - API docs build with zensical (`api/zensical.toml`; `uv run --group docs zensical
   build` in `api/`). Upstream's character check (`scripts/check-characters`) runs in
   pre-commit and CI; fork-owned HZDR paths keep their typographic punctuation and
