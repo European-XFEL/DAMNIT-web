@@ -17,6 +17,8 @@ uv run pytest --snapshot-update tests/refactor/e2e/test_data_parity.py
 ```
 """
 
+from pathlib import Path
+
 import pytest
 
 pytestmark = [pytest.mark.vcr, pytest.mark.asyncio]
@@ -172,7 +174,7 @@ async def test_get_user_proposals_wire_shape_unchanged(logged_in_client, snapsho
     # damnit_path is an absolute path into the fixture tree, so it varies by
     # checkout location; pin the meaningful bit directly and replace it with
     # a placeholder before snapshotting the rest
-    assert proposal["damnit_path"].endswith("usr/Shared/amore")
+    assert Path(proposal["damnit_path"]).parts[-3:] == ("usr", "Shared", "amore")
     assert proposal["damnit_paths_searched"] == [proposal["damnit_path"]]
     proposal = {
         **proposal,

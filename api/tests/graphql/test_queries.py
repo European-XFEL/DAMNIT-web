@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import pytest
 import pytest_asyncio
@@ -247,6 +248,9 @@ async def real_damnit_db(mocker, tmp_path):
     proposal = "999999"
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
+    # DamnitDB compares the file's owner with os.getuid(), which Windows lacks.
+    if not hasattr(os, "getuid"):
+        mocker.patch.object(os, "getuid", create=True, return_value=0)
     DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
 
     mocker.patch(
@@ -470,6 +474,9 @@ async def two_proposal_db(mocker, tmp_path, request):
     guest = 888888
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
+    # DamnitDB compares the file's owner with os.getuid(), which Windows lacks.
+    if not hasattr(os, "getuid"):
+        mocker.patch.object(os, "getuid", create=True, return_value=0)
     DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
 
     mocker.patch(
