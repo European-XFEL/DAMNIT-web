@@ -48,7 +48,8 @@ behaviour; the merge PR has the details.
 - Two auto-trigger builds hung on 2026-10-28 in uninterruptible CIFS writes to
   `//gssnfs/bigdata` and held the radbio lock for six days, so no build ran
   after it. The output root moved to `/home/tippey/mnt/bigdata/HPLexp/nexus_2026-11`
-  (`DW_API_HZDR_BUILDER__OUTPUT_ROOT`, `DW_API_METADATA__SOURCES_FILE`); the old
-  `HPLexp/nexus` folder can be removed after the next reboot clears the hung
-  processes. The share's write errors (`cifs_flush` hangs, "No writable handle
+  (`DW_API_HZDR_BUILDER__OUTPUT_ROOT`, `DW_API_METADATA__SOURCES_FILE`) until
+  the next reboot clears the hung processes; then both settings go back to
+  `HPLexp/nexus`. That folder is shared with shot-aligner's output and is never
+  deleted. The share's write errors (`cifs_flush` hangs, "No writable handle
   ... rc=-13") are reported to IT. Runbook: `hzdr/docs/guides/operations.md`.

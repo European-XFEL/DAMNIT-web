@@ -72,11 +72,16 @@ Without a reboot:
 
 1. `sudo systemctl stop damnit-api`
 2. Point `DW_API_HZDR_BUILDER__OUTPUT_ROOT` and `DW_API_METADATA__SOURCES_FILE`
-   at a new folder on the share and `mkdir` it. The stuck processes only hold
-   locks in the old folder, and nothing reads it any more.
-3. Build each campaign into the new folder (command above), then
-   `sudo systemctl start damnit-api`.
-4. After the next reboot, delete the old folder.
+   at a temporary folder on the share (e.g. `HPLexp/nexus_2026-11`) and `mkdir`
+   it. The stuck processes only hold locks in the usual folder, and DAMNIT no
+   longer reads it.
+3. Build each campaign into the temporary folder (command above, with its
+   `--output-root`), then `sudo systemctl start damnit-api`.
+4. After the next reboot (the hung processes are gone), set both settings back
+   to `HPLexp/nexus`, rebuild each campaign there, restart `damnit-api`, and
+   remove the temporary folder.
+
+**Never delete `HPLexp/nexus`**: shot-aligner writes its output there too.
 
 Do **not** delete a held `.lock`/`.lock.guard` to get past it: if the share
 ever answers, the old build would publish over the new catalog.
