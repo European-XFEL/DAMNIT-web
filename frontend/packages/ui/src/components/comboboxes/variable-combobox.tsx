@@ -133,7 +133,7 @@ export function VariableCombobox({
     <Combobox
       store={combobox}
       classNames={{
-        dropdown: classes.dropdown,
+        options: classes.options,
         option: classes.option,
         group: classes.group,
         groupLabel: classes.groupLabel,
