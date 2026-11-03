@@ -4,11 +4,13 @@ import sys
 import types
 from contextlib import suppress
 from pathlib import Path
+from typing import Any
 
 from anyio import Path as APath
 from fastapi import APIRouter, HTTPException
 
 from ..auth.dependencies import OAuthUserInfo
+from ..metadata.hzdr_event import LEGACY_KEY_MAP
 from ..metadata.hzdr_sources import HZDRShot, HZDRSourceProvider
 from ..shared.settings import settings
 from . import models
@@ -388,8 +390,32 @@ def _call_context_variable(variable, shot: HZDRShot):
                 shot.metadata.get("shot_id") or f"shot-{shot.shot_number:06d}"
             )
         else:
-            kwargs[name] = shot.metadata.get(name)
+            kwargs[name] = _shot_metadata_value(shot.metadata, name, annotation)
     return variable(**kwargs)
+
+
+def _shot_metadata_value(metadata: dict, name: str, annotation) -> Any:
+    """A context argument's value from shot metadata.
+
+    A flat key of that name wins. Otherwise a ``meta#a.b`` annotation, or the
+    registry key a legacy suffixed name was replaced by (``laser_energy_j`` ->
+    ``laser.pulse_energy``), is read from the nested namespace, so context
+    files written against the old flat keys keep working.
+    """
+    if name in metadata:
+        return metadata[name]
+    if isinstance(annotation, str) and annotation.startswith("meta#"):
+        path = annotation.removeprefix("meta#")
+    else:
+        path = LEGACY_KEY_MAP.get(name)
+    if path is None:
+        return None
+    value: Any = metadata
+    for part in path.split("."):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(part)
+    return value
 
 
 def _mongo_find_one(shots: list[HZDRShot], query: dict):
