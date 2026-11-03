@@ -18,6 +18,9 @@ import {
 import { FONT_FAMILY_MONO, FONT_FAMILY_SANS, FONT_SIZES } from './fonts'
 import classes from './theme.module.css'
 
+// A menu opens this far off its button, closer than Mantine's 8.
+export const MENU_OFFSET = 4
+
 // Source Sans 3 sits optically small, so every step is 6% over Mantine's
 // defaults, the normalization USWDS applies to the same family.
 export const theme = createTheme({
@@ -82,6 +85,7 @@ export const theme = createTheme({
     // An item reads its classes from the menu's own styles context, so the
     // shape of a row is set here rather than on Menu.Item.
     Menu: {
+      defaultProps: { offset: MENU_OFFSET },
       classNames: {
         item: classes.menuItem,
         itemSection: classes.menuItemSection,
