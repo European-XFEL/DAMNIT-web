@@ -22,6 +22,11 @@ behaviour; the merge PR has the details.
   columns work again without editing workspace copies.
 
 ### Shot table
+- **Sorting and column hiding keep duplicate LabFrog records distinct.** Rows
+  now include the LabFrog record ID in their UI identity, so records sharing a
+  shot key (including revisions with the same timestamp) no longer leave stale
+  rows or cells when sorting or changing visible columns. All records remain
+  visible; canonical shot keys still identify API requests and context results.
 - **Shots that share a number are kept apart** (#25). LabFrog restarts shot
   numbers each day; Day labels, row selection and highlighting, Context Builder
   rows, trend points and the status/metadata edits now use the shot's

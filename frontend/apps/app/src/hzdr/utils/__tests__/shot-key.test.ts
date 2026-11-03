@@ -16,6 +16,23 @@ function makeShot(overrides: Partial<HZDRShot> = {}): HZDRShot {
 }
 
 describe('getShotRowKey', () => {
+  it('distinguishes LabFrog records sharing a shot key and timestamp', () => {
+    const first = makeShot({
+      shot_key: 'radbio:20260617:000040',
+      shot_number: 40,
+      fired_at: '2026-06-17T10:38:36Z',
+      labfrog_record_id: '6a3283c198541c4211b087a7',
+    })
+    const second = {
+      ...first,
+      labfrog_record_id: '6a328866ffe2f7cb85b087b5',
+    }
+    expect(getShotRowKey(first)).not.toBe(getShotRowKey(second))
+    expect(
+      getShotRowKey(makeShot({ ...first, metadata: { status: 'processed' } }))
+    ).toBe(getShotRowKey(first))
+  })
+
   it('uses the catalog shot_key when present', () => {
     expect(
       getShotRowKey(makeShot({ shot_key: 'radbio:20260421:000001' }))

@@ -16,7 +16,7 @@ export function getShotDateKey(firedAt: string) {
 }
 
 type ShotIdentity = Pick<HZDRShot, 'shot_number' | 'fired_at'> &
-  Partial<Pick<HZDRShot, 'shot_key' | 'shot_date'>>
+  Partial<Pick<HZDRShot, 'shot_key' | 'shot_date' | 'labfrog_record_id'>>
 
 function getShotDay(shot: ShotIdentity) {
   return shot.shot_date || getShotDateKey(shot.fired_at)
@@ -24,10 +24,15 @@ function getShotDay(shot: ShotIdentity) {
 
 /**
  * One table row's identity. LabFrog shot numbers restart each day, so a
- * shot_number alone is shared by several shots of a campaign.
+ * shot_number alone is shared by several shots of a campaign. Multiple
+ * LabFrog records can also share a canonical shot_key, even at the same time.
  */
 export function getShotRowKey(shot: ShotIdentity) {
-  return shot.shot_key ?? `${getShotDay(shot) ?? ''}:${shot.shot_number}`
+  const shotKey =
+    shot.shot_key ?? `${getShotDay(shot) ?? ''}:${shot.shot_number}`
+  return shot.labfrog_record_id
+    ? `${shotKey}:record:${shot.labfrog_record_id}`
+    : shotKey
 }
 
 /** "12 · 2026-04-28": the shot number with the day that makes it unique. */

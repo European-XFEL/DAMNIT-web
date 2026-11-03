@@ -224,6 +224,19 @@ describe('buildContextRowsByShot', () => {
     errors: {},
   })
 
+  it('keeps canonical context lookup when table rows have record identities', () => {
+    const shots = ['record-a', 'record-b'].map((labfrog_record_id) =>
+      makeShot({ shot_key: 'C:20260421:000001', labfrog_record_id })
+    )
+    const rows = buildContextRowsByShot(shots, [
+      row(1, 'C:20260421:000001', 10),
+    ])
+    expect(rows.size).toBe(2)
+    expect(
+      shots.map((shot) => rows.get(getShotRowKey(shot))?.values.v)
+    ).toEqual([10, 10])
+  })
+
   it('matches rows to shots by shot_key when shot numbers repeat', () => {
     const shots = [
       makeShot({ shot_key: 'C:20260421:000001' }),
