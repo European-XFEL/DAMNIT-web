@@ -222,17 +222,10 @@ export type FlowMonitorState = {
 }
 
 export type WatchdogWatcherKey =
-  | 'png-originals'
-  | 'dummy-analysis'
-  | 'lli-parser'
-  | 'tps-quick'
+  'png-originals' | 'dummy-analysis' | 'lli-parser' | 'tps-quick'
 
 export type ShotcounterTKey =
-  | 'draco01'
-  | 'draco02'
-  | 'draco04'
-  | 'draco07'
-  | 'draco08'
+  'draco01' | 'draco02' | 'draco04' | 'draco07' | 'draco08'
 
 // Mirrors the FastAPI HZDRMatchSummary.
 export type HZDRMatchSummary = {
@@ -326,12 +319,7 @@ export type PlotlyPreview = {
 }
 
 export type HZDRFilterOperator =
-  | 'includes'
-  | 'equals'
-  | 'gt'
-  | 'gte'
-  | 'lt'
-  | 'lte'
+  'includes' | 'equals' | 'gt' | 'gte' | 'lt' | 'lte'
 
 export type HZDRSortState = {
   column: string
