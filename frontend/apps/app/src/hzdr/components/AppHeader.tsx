@@ -6,9 +6,15 @@ import {
   IconRoute,
   IconSearch,
 } from '@tabler/icons-react'
-import { Link, useLocation } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 
-import { Header, Logo } from '@damnit-frontend/ui'
+import {
+  Header,
+  Logo,
+  UserMenu,
+  selectUserFullName,
+  useAppSelector,
+} from '@damnit-frontend/ui'
 
 function NavButton({
   to,
@@ -35,6 +41,11 @@ function NavButton({
 }
 
 export function AppHeader() {
+  // Upstream's Header is presentational since the 2026-11 merge: a page passes
+  // the user menu in itself, as its own routes do.
+  const userName = useAppSelector(selectUserFullName)
+  const navigate = useNavigate()
+
   return (
     <Header px={20}>
       <Group gap="md" wrap="nowrap">
@@ -56,6 +67,7 @@ export function AppHeader() {
         />
         <NavButton to="/docs" icon={<IconBook size={16} />} label="Docs" />
       </Group>
+      <UserMenu userName={userName} onLogout={() => navigate('/logout')} />
     </Header>
   )
 }
