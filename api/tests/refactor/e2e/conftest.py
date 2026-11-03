@@ -97,6 +97,12 @@ def _force_mock_mymdc(monkeypatch):
         monkeypatch.setattr(
             settings, "mymdc", MyMdCMockSettings(cassette_file=MYMDC_CASSETTE)
         )
+    # Fork: MyMdC is bootstrapped only for the mymdc metadata provider
+    # (HZDR deployments have none); these tests pin XFEL's MyMdC behaviour.
+    monkeypatch.setattr(settings.metadata, "provider", "mymdc")
+    # Fork: auth defaults to LDAP; these tests pin XFEL's OIDC login.
+    if settings.auth is not None:
+        monkeypatch.setattr(settings.auth, "mode", "oidc")
 
 
 @pytest.fixture(autouse=True)
