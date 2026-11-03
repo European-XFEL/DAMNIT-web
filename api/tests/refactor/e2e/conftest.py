@@ -103,6 +103,9 @@ def _force_mock_mymdc(monkeypatch):
     # Fork: auth defaults to LDAP; these tests pin XFEL's OIDC login.
     if settings.auth is not None:
         monkeypatch.setattr(settings.auth, "mode", "oidc")
+    # DW_API_DAMNIT_PATH (set by hzdr/scripts/test-all.ps1) switches the app to
+    # local mode, which answers every proposal without asking MyMdC.
+    monkeypatch.setattr(settings, "damnit_path", None)
 
 
 @pytest.fixture(autouse=True)
