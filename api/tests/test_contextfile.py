@@ -332,3 +332,29 @@ def reachable(run, hdf5_path):
 
     assert response.status_code == 200
     assert response.json()["rows"][0]["values"]["reachable"] == pytest.approx(1.0)
+
+
+def test_context_arguments_read_nested_registry_keys():
+    from damnit_api.contextfile.routers import _shot_metadata_value
+
+    metadata = {
+        "laser": {"pulse_energy": 12.25},
+        "vacuum": {"chamber_pressure": 2.5e-5},
+        "flat": 1,
+    }
+
+    # A legacy suffixed name follows the registry to its nested key.
+    assert _shot_metadata_value(metadata, "laser_energy_j", None) == pytest.approx(
+        12.25
+    )
+    assert _shot_metadata_value(
+        metadata, "chamber_pressure_mbar", None
+    ) == pytest.approx(2.5e-5)
+    # A meta# annotation names a nested path directly.
+    assert _shot_metadata_value(
+        metadata, "e", "meta#laser.pulse_energy"
+    ) == pytest.approx(12.25)
+    # A flat key of that name still wins; unknown names stay None.
+    assert _shot_metadata_value(metadata, "flat", None) == 1
+    assert _shot_metadata_value(metadata, "nope", None) is None
+    assert _shot_metadata_value({"laser": 3}, "laser_energy_j", None) is None
