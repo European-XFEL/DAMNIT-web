@@ -4,15 +4,19 @@ import {
   InMemoryCache,
   Observable,
 } from '@apollo/client'
+import { print } from 'graphql'
 import { renderHook } from 'vitest-browser-react'
 import { expect, test, vi } from 'vitest'
 
+import { previewRunFields } from '@damnit-frontend/shared/mocks'
 import { setupStore } from '#src/app/store/store'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import { LIGHTWEIGHT_TABLE_DATA_QUERY } from '#src/data/table/table-data.queries'
 import { buildPreviewQuery } from '#src/features/plots/preview-chunks'
 import { usePreviewPlotData } from '#src/features/plots/use-preview-plot-data'
+import { countReconnect } from '#src/graphql/live-updates'
+import { PREVIEW_DATA_QUERY_NAME } from '#src/graphql/operation-names'
 import { typePolicies } from '#src/graphql/type-policies'
 import { serverCell } from '#tests/support/cells'
 import { withProviders } from '#tests/support/render'
@@ -83,6 +87,65 @@ function writeCells(
       })),
     },
   })
+}
+
+// Answers a preview chunk with each run's data a moment later, or with a field
+// error for a failing run, and the cells query with nothing.
+function createServer({ failing = [] as number[] } = {}) {
+  const sent: string[] = []
+  const runsAskedFor: number[][] = []
+  let held: (() => void)[] | null = null
+
+  const link = new ApolloLink((operation) => {
+    sent.push(operation.operationName ?? '')
+    if (operation.operationName !== PREVIEW_DATA_QUERY_NAME) {
+      return Observable.of()
+    }
+
+    const fields = previewRunFields(print(operation.query))
+    runsAskedFor.push(fields.map(({ run }) => run))
+    const failed = fields.filter(({ run }) => failing.includes(run))
+
+    return new Observable((observer) => {
+      const answer = () => {
+        observer.next({
+          data: Object.fromEntries(
+            fields.map(({ alias, run }) => [
+              alias,
+              failing.includes(run) ? null : spectrumFor(run),
+            ])
+          ),
+          ...(failed.length && {
+            errors: failed.map(({ alias }) => ({
+              message: 'The preview could not be read',
+              path: [alias],
+            })),
+          }),
+        })
+        observer.complete()
+      }
+
+      if (held) {
+        held.push(answer)
+      } else {
+        setTimeout(answer)
+      }
+    })
+  })
+
+  return {
+    link,
+    sent,
+    runsAskedFor,
+    previewsSent: () => runsAskedFor.length,
+    hold: () => {
+      held = []
+    },
+    release: () => {
+      held?.forEach((answer) => answer())
+      held = null
+    },
+  }
 }
 
 function setup({ link = new ApolloLink(() => null) } = {}) {
@@ -379,4 +442,220 @@ test('a preview with no runs sends no query for its cells', async () => {
   await vi.waitFor(() => {
     expect(operations).toEqual(['LightweightTableDataQuery'])
   })
+})
+
+test('a reload that brings back the same data dates the run from its cell again', async () => {
+  const server = createServer()
+  const { cache, wrapper } = setup({ link: server.link })
+  writeChunk(cache, [1])
+  writeCells(cache, { 1: at(2) })
+
+  const { result } = await renderPreview([1], wrapper)
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(2))
+  })
+
+  // Run 1 is reprocessed, and gives the same numbers.
+  writeCells(cache, { 1: at(30) })
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([1])
+  })
+
+  // The cache keeps the object it holds when the reload writes equal data.
+  await result.current.reload()
+
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(30))
+  })
+  expect(result.current.outdated).toEqual([])
+  expect(server.previewsSent()).toBe(1)
+})
+
+test('a newer time in a drawn run cell marks the preview outdated and names the run', async () => {
+  const { cache, wrapper } = setup()
+  writeChunk(cache, [1, 2])
+  writeCells(cache, { 1: at(2), 2: at(3) })
+
+  const { result } = await renderPreview([1, 2], wrapper)
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(3))
+  })
+  expect(result.current.outdated).toEqual([])
+
+  // Run 1 is reprocessed after its data was drawn.
+  writeCells(cache, { 1: at(30), 2: at(3) })
+
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([1])
+  })
+  expect(result.current.computedAt).toBe(at(3))
+})
+
+test('a run whose data fails to reload keeps its data and its old time', async () => {
+  const server = createServer({ failing: [2] })
+  const { cache, wrapper } = setup({ link: server.link })
+  writeChunk(cache, [1, 2])
+  writeCells(cache, { 1: at(2), 2: at(2) })
+
+  const { result } = await renderPreview([1, 2], wrapper)
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(2))
+  })
+
+  // Both runs are reprocessed, and run 2's data cannot be read again.
+  writeCells(cache, { 1: at(30), 2: at(31) })
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([1, 2])
+  })
+
+  // Reload both runs
+  await result.current.reload()
+
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([2])
+  })
+  expect(result.current.computedAt).toBe(at(30))
+  expect(result.current.data.traces).toHaveLength(2)
+})
+
+test('a run asked for with no data yet does not mark the preview outdated when its cell gains a time', async () => {
+  const { cache, wrapper } = setup()
+  writeChunk(cache, [1])
+  writeCells(cache, { 1: at(2), 2: null })
+
+  const { result } = await renderPreview([1, 2], wrapper)
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(2))
+  })
+
+  // Run 2 gets a time but no data, and run 1 is reprocessed beside it.
+  writeCells(cache, { 1: at(5), 2: at(9) })
+
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([1])
+  })
+})
+
+test('a preview asks again for its cells after live updates reconnect, and not for its chunks', async () => {
+  const server = createServer()
+  const { wrapper } = setup({ link: server.link })
+
+  await renderPreview([1, 2], wrapper)
+  await vi.waitFor(() => {
+    expect(server.sent).toEqual(['LightweightTableDataQuery'])
+  })
+
+  countReconnect()
+
+  await vi.waitFor(() => {
+    expect(server.sent).toEqual([
+      'LightweightTableDataQuery',
+      'LightweightTableDataQuery',
+    ])
+  })
+  expect(server.previewsSent()).toBe(0)
+})
+
+test('a reload ignores presses until every chunk has answered', async () => {
+  const server = createServer()
+  const { cache, wrapper } = setup({ link: server.link })
+  writeChunk(cache, [1, 60])
+  writeCells(cache, { 1: at(2), 60: at(2) })
+
+  const { result } = await renderPreview([1, 60], wrapper)
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(2))
+  })
+
+  // Both runs are reprocessed.
+  writeCells(cache, { 1: at(30), 60: at(30) })
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([1, 60])
+  })
+  server.hold()
+
+  // Two presses in one go, then one more once the hook says it is reloading.
+  const reloaded = result.current.reload()
+  void result.current.reload()
+  await vi.waitFor(() => {
+    expect(result.current.reloading).toBe(true)
+  })
+  void result.current.reload()
+
+  await vi.waitFor(() => {
+    expect(server.previewsSent()).toBe(2)
+  })
+
+  // Every chunk answers, so a press reloads again.
+  server.release()
+  await reloaded
+  await vi.waitFor(() => {
+    expect(result.current.reloading).toBe(false)
+  })
+  writeCells(cache, { 1: at(40), 60: at(40) })
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([1, 60])
+  })
+  await result.current.reload()
+
+  expect(server.previewsSent()).toBe(4)
+})
+
+test('a run computed again while its reload is out stays outdated', async () => {
+  const server = createServer()
+  const { cache, wrapper } = setup({ link: server.link })
+  writeChunk(cache, [1], { valueFor: () => spectrumFor(99) })
+  writeCells(cache, { 1: at(2) })
+
+  const { result } = await renderPreview([1], wrapper)
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(2))
+  })
+
+  // Run 1 is reprocessed.
+  writeCells(cache, { 1: at(30) })
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([1])
+  })
+
+  // Reload goes out, and run 1 is computed again before its answer lands.
+  server.hold()
+  const reloaded = result.current.reload()
+  await vi.waitFor(() => {
+    expect(server.previewsSent()).toBe(1)
+  })
+  writeCells(cache, { 1: at(40) })
+  server.release()
+  await reloaded
+
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(30))
+  })
+  expect(result.current.outdated).toEqual([1])
+})
+
+test('a reload asks again only for the runs with newer data', async () => {
+  const server = createServer()
+  const { cache, wrapper } = setup({ link: server.link })
+  writeChunk(cache, [1, 60])
+  writeCells(cache, { 1: at(2), 60: at(2) })
+
+  const { result } = await renderPreview([1, 60], wrapper)
+  await vi.waitFor(() => {
+    expect(result.current.computedAt).toBe(at(2))
+  })
+
+  // Run 60 is reprocessed, and run 1, in another chunk, is not.
+  writeCells(cache, { 1: at(2), 60: at(30) })
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([60])
+  })
+
+  // Reload the outdated run
+  await result.current.reload()
+
+  await vi.waitFor(() => {
+    expect(result.current.outdated).toEqual([])
+  })
+  expect(server.runsAskedFor).toEqual([[60]])
 })
