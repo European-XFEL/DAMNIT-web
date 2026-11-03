@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from damnit_api.main import create_app
@@ -33,3 +34,32 @@ def test_hzdr_emulator_event_append_requires_login():
         response = client.post("/metadata/hzdr/emulator/events", json={})
 
     assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_without_mymdc_a_non_local_user_is_member_of_nothing(monkeypatch):
+    """An LDAP deployment with no MyMdC (no damnit_path) cannot look up
+    proposal membership: the user gets none instead of a crash, so a proposal
+    query is answered "forbidden" rather than "could not verify"."""
+    import pytest
+
+    from damnit_api.auth.models import OAuthUserInfo, User
+    from damnit_api.metadata.services import _check_user_allowed
+    from damnit_api.shared.errors import ForbiddenError
+
+    monkeypatch.setattr(settings, "damnit_path", None)
+    oauth = OAuthUserInfo(
+        email="tippey27@example.org",
+        family_name="T",
+        given_name="K",
+        groups=[],
+        name="K T",
+        preferred_username="tippey27",
+    )
+
+    user = await User.from_oauth_user(None, None, oauth)  # pyright: ignore[reportArgumentType]
+
+    assert user.proposals == []
+    assert user.proposals_by_year_half.root == {}
+    with pytest.raises(ForbiddenError):
+        await _check_user_allowed(6996, user)

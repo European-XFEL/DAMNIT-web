@@ -112,11 +112,25 @@ class User(BaseUserInfo):
 
     @classmethod
     async def from_oauth_user(
-        cls, mymdc: MyMdCClient, session: DBSession, oauth: OAuthUserInfo
+        cls, mymdc: MyMdCClient | None, session: DBSession, oauth: OAuthUserInfo
     ) -> Self:
         from ..shared.settings import settings
 
         if settings.is_local:  # TODO: decouple local from auth
+            return cls.model_validate({
+                **oauth.model_dump(),
+                "proposals_by_year_half": {},
+            })
+
+        if mymdc is None:
+            # Fork: a deployment without MyMdC (HZDR's LDAP + Mongo/local
+            # catalog) has no proposal membership to look up. The user is a
+            # member of nothing, so IsProposalMember answers "forbidden"
+            # instead of failing on a missing client.
+            await logger.ainfo(
+                "No MyMdC client; user has no proposal memberships",
+                user=oauth.preferred_username,
+            )
             return cls.model_validate({
                 **oauth.model_dump(),
                 "proposals_by_year_half": {},
