@@ -175,6 +175,7 @@ def laser_energy(run):
     payload = response.json()
     assert payload["columns"] == [{"name": "laser_energy", "title": "Laser energy"}]
     assert payload["rows"][0]["values"]["laser_energy"] == pytest.approx(12.5)
+    assert "shot_key" in payload["rows"][0]
 
 
 def test_context_results_tolerate_removed_common_imports(tmp_path, monkeypatch):

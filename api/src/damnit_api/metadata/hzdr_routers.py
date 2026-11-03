@@ -585,6 +585,7 @@ async def update_hzdr_shot_status(
     shot_number: int,
     payload: HZDRShotStatusUpdate,
     user: OAuthUserInfo,
+    shot_key: str | None = None,
 ) -> HZDRShot:
     """Update local emulator shot review status."""
     if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
@@ -598,6 +599,7 @@ async def update_hzdr_shot_status(
         settings.metadata.sources_file,
         source_key=source_key,
         shot_number=shot_number,
+        shot_key=shot_key,
         status=payload.status,
         note=payload.note,
         reviewed_by=user.preferred_username or user.email,
@@ -610,6 +612,7 @@ async def update_hzdr_shot_metadata(
     shot_number: int,
     payload: HZDRShotMetadataUpdate,
     user: OAuthUserInfo,
+    shot_key: str | None = None,
 ) -> HZDRShot:
     """Correct one metadata value in a local emulator shot."""
     if settings.metadata.provider != "local" or settings.metadata.sources_file is None:
@@ -624,6 +627,7 @@ async def update_hzdr_shot_metadata(
         settings.metadata.sources_file,
         source_key=source_key,
         shot_number=shot_number,
+        shot_key=shot_key,
         key=payload.key,
         value=payload.value,
         note=payload.note,
@@ -861,11 +865,33 @@ def append_emulated_shot(
     return HZDRSource.model_validate(source_record)
 
 
+def _find_local_shot(
+    source_record: dict[str, Any], shot_number: int, shot_key: str | None
+) -> dict[str, Any]:
+    """Find one shot in a local catalog record, by ``shot_key`` when given.
+
+    LabFrog restarts shot numbers each day, so a number alone can name several
+    shots of a campaign; without a key the first one is used, as before.
+    """
+    shots = source_record.get("shots", [])
+    if shot_key is not None:
+        shot = next((shot for shot in shots if shot.get("shot_key") == shot_key), None)
+    else:
+        shot = next(
+            (shot for shot in shots if int(shot.get("shot_number", 0)) == shot_number),
+            None,
+        )
+    if shot is None:
+        raise HTTPException(status_code=404, detail="HZDR shot not found.")
+    return shot
+
+
 def update_local_shot_status(
     sources_file: Path,
     *,
     source_key: str,
     shot_number: int,
+    shot_key: str | None = None,
     status: str,
     note: str | None,
     reviewed_by: str,
@@ -886,16 +912,7 @@ def update_local_shot_status(
     if source_record is None:
         raise HTTPException(status_code=404, detail="HZDR source not found.")
 
-    shot = next(
-        (
-            shot
-            for shot in source_record.get("shots", [])
-            if int(shot.get("shot_number", 0)) == shot_number
-        ),
-        None,
-    )
-    if shot is None:
-        raise HTTPException(status_code=404, detail="HZDR shot not found.")
+    shot = _find_local_shot(source_record, shot_number, shot_key)
 
     metadata = shot.setdefault("metadata", {})
     previous_status = metadata.get("status")
@@ -925,6 +942,7 @@ def update_local_shot_metadata(
     *,
     source_key: str,
     shot_number: int,
+    shot_key: str | None = None,
     key: str,
     value: Any,
     note: str | None,
@@ -957,16 +975,7 @@ def update_local_shot_metadata(
     if source_record is None:
         raise HTTPException(status_code=404, detail="HZDR source not found.")
 
-    shot = next(
-        (
-            shot
-            for shot in source_record.get("shots", [])
-            if int(shot.get("shot_number", 0)) == shot_number
-        ),
-        None,
-    )
-    if shot is None:
-        raise HTTPException(status_code=404, detail="HZDR shot not found.")
+    shot = _find_local_shot(source_record, shot_number, shot_key)
 
     metadata = shot.setdefault("metadata", {})
     previous_value = metadata.get(key)

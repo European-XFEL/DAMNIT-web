@@ -1,4 +1,5 @@
 import type { HZDRShot } from '../types'
+import { toTrendValue } from './shot-key'
 
 export function getNestedMetadataValue(
   metadata: Record<string, unknown>,
@@ -60,7 +61,7 @@ export function collectNumericMetadataTrendValues(
   return shots.flatMap((shot) => {
     const value = getNestedMetadataValue(shot.metadata, key)
     return typeof value === 'number' && Number.isFinite(value)
-      ? [{ shotNumber: shot.shot_number, value }]
+      ? [toTrendValue(shot, value)]
       : []
   })
 }

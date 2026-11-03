@@ -289,20 +289,34 @@ export type HZDRContextResults = {
   }[]
   rows: {
     shot_number: number
+    /** Absent from an older API; then rows can only be matched by number. */
+    shot_key?: string | null
     values: Record<string, unknown>
     errors: Record<string, string>
     previews?: Record<string, unknown>
   }[]
 }
 
+/** One point of a per-shot trend; rowKey/label tell same-number shots apart. */
+export type HZDRTrendValue = {
+  shotNumber: number
+  value: number
+  rowKey?: string
+  label?: string
+}
+
 export type HZDRSelectedCell = {
   shotNumber: number
+  /** The selected row's identity (getShotRowKey), never just the number. */
+  rowKey: string
+  /** Shot number plus its day, for display. */
+  shotLabel: string
   columnTitle: string
   columnName: string
   value: unknown
   error?: string
   preview?: unknown
-  trendValues?: { shotNumber: number; value: number }[]
+  trendValues?: HZDRTrendValue[]
   kind: 'metadata' | 'context'
 }
 

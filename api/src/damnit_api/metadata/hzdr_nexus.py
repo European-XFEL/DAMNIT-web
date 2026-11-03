@@ -1126,6 +1126,42 @@ def _source_target_thickness(record: dict[str, Any]) -> str | None:
     return value or unit
 
 
+def _read_labfrog_shot_variables(
+    connection: sqlite3.Connection,
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Per-shot values from LabFrog's ``shot_variables`` table, by ``mongo_id``.
+
+    Each shot maps ``variable_name`` to ``{"value", "unit", "kind"}`` (unit and
+    kind only when recorded). Returns ``{}`` for an export without the table.
+    """
+    columns = {
+        str(row[1]) for row in connection.execute("PRAGMA table_info(shot_variables)")
+    }
+    if not {"shot_id", "variable_name", "value"} <= columns:
+        return {}
+    optional = [name for name in ("unit", "variable_kind") if name in columns]
+    selected = ["shot_id", "variable_name", "value", *optional]
+    by_shot: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
+    for row in connection.execute(
+        f"SELECT {', '.join(selected)} FROM shot_variables "  # noqa: S608
+        "ORDER BY shot_id, variable_name"
+    ):
+        entry = dict(zip(selected, row, strict=True))
+        shot_id = _as_optional_string(entry["shot_id"])
+        name = _as_optional_string(entry["variable_name"])
+        if shot_id is None or name is None or entry["value"] in (None, ""):
+            continue
+        variable: dict[str, Any] = {"value": entry["value"]}
+        unit = _as_optional_string(entry.get("unit"))
+        if unit:
+            variable["unit"] = unit
+        kind = _as_optional_string(entry.get("variable_kind"))
+        if kind:
+            variable["kind"] = kind
+        by_shot[shot_id][name] = variable
+    return dict(by_shot)
+
+
 def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
     """Read LabFrog's canonical SQLite shots table using its stable columns."""
     # Guard against a partial write: labfrog-sqlite-tools writes to a .tmp file
@@ -1208,6 +1244,15 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 # Schema v13: the shot authority's number from the record's
                 # shot_details claim. An older export has no authority number.
                 "authority_shot_number",
+                # The shot parameters LabFrog records per row. laser_energy
+                # (J) becomes metadata.laser.pulse_energy; the others are
+                # kept as-is under their LabFrog names.
+                "laser_energy",
+                "gvd",
+                "tod",
+                "tw_delay",
+                "comments",
+                "mode",
             )
             if name in columns
         ]
@@ -1216,6 +1261,7 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
             "ORDER BY CASE WHEN date_time IS NULL THEN 1 ELSE 0 END, "
             "date_time, shot_number, mongo_id"
         ).fetchall()
+        variables_by_shot = _read_labfrog_shot_variables(connection)
 
     shots: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
@@ -1257,6 +1303,7 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
                 "target_gas_pressure_unit",
                 "local_count",
                 "authority_shot_number",
+                "laser_energy",
             }
             and value is not None
             and value != ""
@@ -1264,6 +1311,15 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
         target_metadata = _labfrog_target_metadata(record)
         if target_metadata:
             metadata["target"] = target_metadata
+        # Registry key laser.pulse_energy is in J, the unit LabFrog records.
+        laser_energy = _as_optional_float(record.get("laser_energy"))
+        if laser_energy is not None:
+            metadata["laser"] = {"pulse_energy": laser_energy}
+        variables = variables_by_shot.get(
+            _as_optional_string(record.get("mongo_id")) or ""
+        )
+        if variables:
+            metadata["labfrog_variables"] = variables
 
         shot_record = {
             "record_index": index,
@@ -4320,15 +4376,16 @@ def _event_api_record(event: dict[str, Any]) -> dict[str, Any]:
 def _merge_shot_metadata(
     labfrog_metadata: dict[str, Any], event_metadata: dict[str, Any]
 ) -> dict[str, Any]:
-    """Merge event metadata without flattening richer LabFrog target details."""
+    """Merge event metadata without flattening richer LabFrog namespaces.
+
+    A namespace both sides carry as a dict (``target``, ``laser``, ...) is merged
+    key by key, the event's value winning, so an event that reports one laser
+    key does not drop the pulse energy LabFrog recorded.
+    """
     merged = dict(labfrog_metadata)
     for key, value in event_metadata.items():
-        if (
-            key == "target"
-            and isinstance(merged.get("target"), dict)
-            and isinstance(value, dict)
-        ):
-            merged["target"] = {**merged["target"], **value}
+        if isinstance(merged.get(key), dict) and isinstance(value, dict):
+            merged[key] = {**merged[key], **value}
             continue
         merged[key] = value
     return merged

@@ -1,6 +1,11 @@
 import Plotly from 'react-plotly.js'
 import { Card, Code, Group, Stack, Table, Text } from '@mantine/core'
-import type { PlotlyPreview, HZDRShot, HZDRDatasetPreview } from '../types'
+import type {
+  PlotlyPreview,
+  HZDRShot,
+  HZDRDatasetPreview,
+  HZDRTrendValue,
+} from '../types'
 import { decodePlotlyTypedArrays } from '../utils/plotly'
 import { isPlotlyPreview, getPlotlySparklineValues } from '../utils/plotly'
 import { isNumericLinePreview, isNumericMatrixPreview } from '../utils/preview'
@@ -67,7 +72,7 @@ export function ContextCellContent({
 }: {
   value: unknown
   preview?: unknown
-  trendValues?: { shotNumber: number; value: number }[]
+  trendValues?: HZDRTrendValue[]
 }) {
   const sparklineValues = getPlotlySparklineValues(preview)
   const arrayPreviewValues = getNumericPreviewValues(preview)
@@ -293,7 +298,7 @@ export function MetadataTrendPreview({
   title = 'Trend preview',
   xLabel = 'shot number',
 }: {
-  values: { shotNumber: number; value: number }[]
+  values: HZDRTrendValue[]
   title?: string
   xLabel?: string
 }) {
@@ -406,7 +411,7 @@ export function MetadataTrendPreview({
           const x = xForIndex(index)
           const y = yForValue(entry.value)
           return (
-            <g key={entry.shotNumber}>
+            <g key={entry.rowKey ?? index}>
               <circle
                 cx={x}
                 cy={y}
@@ -414,7 +419,8 @@ export function MetadataTrendPreview({
                 fill="var(--mantine-color-blue-7)"
               />
               <title>
-                Shot {entry.shotNumber}: {formatTrendValue(entry.value)}
+                Shot {entry.label ?? entry.shotNumber}:{' '}
+                {formatTrendValue(entry.value)}
               </title>
             </g>
           )
