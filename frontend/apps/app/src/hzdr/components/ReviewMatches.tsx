@@ -146,7 +146,7 @@ function AmbiguousEventItem({
               <Table.Th>Shot</Table.Th>
               <Table.Th>Count</Table.Th>
               <Table.Th>LabFrog time</Table.Th>
-              <Table.Th>Event − shot</Table.Th>
+              <Table.Th>Event - shot</Table.Th>
               <Table.Th>Target</Table.Th>
               <Table.Th>Already has</Table.Th>
               <Table.Th />

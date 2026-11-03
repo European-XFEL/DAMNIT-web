@@ -57,7 +57,7 @@ documentation hub, so a stale map here is a stale map there.
 
 Scope is `damnit_api`. The frontend has its own suite and is not measured here.
 This is also not [`hzdr/docs/status/testing.md`](hzdr/docs/status/testing.md),
-which carries one row *per constellation repository* — that answers "how well
+which carries one row *per constellation repository* - that answers "how well
 tested is the constellation", this answers "which parts of this API are tested".
 
 <!-- test-coverage-map-start -->

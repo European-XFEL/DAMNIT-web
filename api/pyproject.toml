@@ -62,11 +62,11 @@ Issues = "https://github.com/ktippey-hzdr/DAMNIT-web-hzdr/issues"
 #
 # `asapo-consumer` only publishes wheels up to cp312 (no 3.13 build yet), so the
 # `python_version < "3.13"` marker keeps the base lock resolvable on this 3.13
-# project — on 3.13 the extra is a no-op until a compatible wheel exists. Where a
+# project - on 3.13 the extra is a no-op until a compatible wheel exists. Where a
 # wheel is available: uv sync --extra asapo  (or)  pip install 'damnit-api[asapo]'
 #
 # Pinned to match the standalone broker image
-# (gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0) — client and server
+# (gitlab.desy.de:5555/asapo/asapo/asapo-standalone:24.11.0) - client and server
 # versions must match. See hzdr/docs/guides/local-development.md.
 asapo = ["asapo-consumer~=24.11.0; python_version < '3.13'"]
 

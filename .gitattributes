@@ -30,3 +30,21 @@ api/src/damnit_api/metadata/hzdr_packs/vendor/** -text
 # pnpm copies npm's deprecation notices into its lockfile, and a notice may
 # hold any character, so the character check skips it.
 frontend/pnpm-lock.yaml -check-characters
+# Fork-owned HZDR text keeps its typographic punctuation (em dashes, arrows,
+# units such as degC/um written with their symbols); vendored files and
+# reference fixtures are byte-pinned by sha256. Upstream's character check
+# (scripts/check-characters) skips them; it still reads every shared file.
+hzdr/** -check-characters
+CLAUDE.md -check-characters
+api/.env*.example -check-characters
+api/src/damnit_api/consumer/** -check-characters
+api/src/damnit_api/metadata/hzdr_*.py -check-characters
+api/src/damnit_api/metadata/hzdr_packs/** -check-characters
+api/src/damnit_api/metadata/scicat.py -check-characters
+api/src/damnit_api/shared/hzdr_*.py -check-characters
+api/src/damnit_api/shared/flow_activity.py -check-characters
+api/scripts/hzdr-* -check-characters
+api/tests/fixtures/** -check-characters
+api/tests/test_hzdr_* -check-characters
+api/tests/test_metadata_keys.py -check-characters
+frontend/apps/app/src/hzdr/** -check-characters
