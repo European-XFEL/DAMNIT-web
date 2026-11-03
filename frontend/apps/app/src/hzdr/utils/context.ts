@@ -166,6 +166,8 @@ export function inferContextBuilderFormState(
 }
 
 export function inferContextBuilderFieldKind(block: string) {
+  if (block.includes('Compute this column from selected HZDR inputs'))
+    return 'function'
   if (/\bhdf5_values\b/.test(block) && /\bmetadata_value\b/.test(block)) {
     return 'function'
   }
@@ -187,11 +189,17 @@ export function inferContextBuilderFieldKind(block: string) {
   if (/\bmongo_find_one\b/.test(block)) {
     return 'metadata'
   }
+  if (/metadata_value:\s*["']meta#/.test(block)) {
+    return 'metadata'
+  }
   return 'function'
 }
 
 export function extractPythonDocGetKey(block: string) {
-  return block.match(/doc\.get\(\s*(["'])(.*?)\1\s*\)/)?.[2]
+  return (
+    block.match(/doc\.get\(\s*(["'])(.*?)\1\s*\)/)?.[2] ??
+    block.match(/metadata_value:\s*["']meta#([^"']+)["']/)?.[1]
+  )
 }
 
 export function extractPythonHdf5DatasetName(block: string) {
@@ -309,19 +317,15 @@ export function buildComputedFieldSnippet({
   const safeMongoCollection = mongoCollection.trim() || 'shots'
 
   if (fieldKind === 'metadata') {
-    return `from damnit_ctx import Skip, Variable, mongo_find_one
+    return `from damnit_ctx import Skip, Variable
 
 
 @Variable(title=${JSON.stringify(safeFieldTitle)})
-def ${safeFieldName}(run, shot_number: "meta#shot_number"):
+def ${safeFieldName}(run, metadata_value: ${JSON.stringify(`meta#${metadataKey}`)}):
     """Return a ${contextScope === 'set' ? 'trendable shot-set' : 'per-shot'} metadata value."""
-    doc = mongo_find_one("shots", query={"shot_number": shot_number})
-    if doc is None:
-        raise Skip("No shot metadata document")
-    value = doc.get(${JSON.stringify(metadataKey)})
-    if value is None:
-        raise Skip("No ${metadataKey} metadata for this shot")
-    return value
+    if metadata_value is None:
+        raise Skip(${JSON.stringify(`No ${metadataKey} metadata for this shot`)})
+    return metadata_value
 `
   }
 
@@ -417,26 +421,37 @@ def ${safeFieldName}(run, shot_number: "meta#shot_number"):
   }
 
   if (fieldKind === 'function') {
+    const hasMetadata = selectedInputs.some((input) =>
+      input.startsWith('metadata:')
+    )
+    const hasDataset = selectedInputs.some((input) => input.startsWith('hdf5:'))
+    const parameters = [
+      hasMetadata
+        ? `metadata_value: ${JSON.stringify(`meta#${metadataKey}`)}`
+        : '',
+      hasDataset ? `hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}` : '',
+    ]
+      .filter(Boolean)
+      .join(', ')
     return `import h5py
 import numpy as np
 
-from damnit_ctx import Skip, Variable, mongo_find_one
+from damnit_ctx import Skip, Variable
 
 
 @Variable(title=${JSON.stringify(safeFieldTitle)}, summary="nanmean")
-def ${safeFieldName}(run, shot_number: "meta#shot_number", hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
+def ${safeFieldName}(run, ${parameters}):
     """Compute this column from selected HZDR inputs."""
-    doc = mongo_find_one(
-        ${JSON.stringify(safeMongoCollection)},
-        query=${mongoFilter},
-    )
-    if doc is None or not hdf5_path:
-        raise Skip("Missing Mongo metadata or HDF5 path")
+${hasMetadata ? '    if metadata_value is None:\n        raise Skip("Missing metadata value")\n' : ''}${
+      hasDataset
+        ? `    if not hdf5_path:
+        raise Skip("Missing HDF5 path")
     with h5py.File(hdf5_path, "r") as handle:
         dataset_name = ${hdf5DatasetExpression}
         hdf5_values = handle[dataset_name][...]
-    metadata_value = doc.get(${JSON.stringify(metadataKey)})
-    return ${combineExpression || 'np.nanmean(hdf5_values)'}
+`
+        : ''
+    }    return ${combineExpression || (hasDataset ? 'np.nanmean(hdf5_values)' : 'metadata_value')}
 `
   }
 

@@ -60,9 +60,10 @@ import {
 import {
   flattenObjectKeys,
   getNumericMetadataKeys,
-  countNumericValues,
+  getNestedMetadataValue,
+  metadataFieldLabel,
 } from '../utils/metadata'
-import { formatSelectedInput } from '../utils/format'
+import { formatContextValue, formatSelectedInput } from '../utils/format'
 import { buildColumnPreview } from '../utils/preview'
 import { requireJson } from '../utils/api'
 
@@ -235,6 +236,7 @@ export function ContextBuilderPage() {
   useEffect(() => {
     setShotDetail(undefined)
     setDatasetPreview(undefined)
+    setColumnDetails('')
     if (!shotDetailPath) {
       return
     }
@@ -262,19 +264,18 @@ export function ContextBuilderPage() {
     () =>
       contextScope === 'set'
         ? getNumericMetadataKeys(shots)
-        : flattenObjectKeys(selectedShot?.metadata ?? {}),
-    [contextScope, selectedShot?.metadata, shots]
+        : Array.from(
+            new Set(shots.flatMap((shot) => flattenObjectKeys(shot.metadata)))
+          ).sort(),
+    [contextScope, shots]
   )
   const metadataOptions = useMemo(
     () =>
       metadataKeys.map((key) => ({
         value: `metadata:${key}`,
-        label:
-          contextScope === 'set'
-            ? `${key} (${countNumericValues(shots, key)}/${shots.length} shots)`
-            : key,
+        label: `${metadataFieldLabel(key)} (${shots.filter((shot) => getNestedMetadataValue(shot.metadata, key) != null).length}/${shots.length} shots)`,
       })),
-    [contextScope, metadataKeys, shots]
+    [metadataKeys, shots]
   )
   const datasetOptions = useMemo(
     () =>
@@ -297,6 +298,13 @@ export function ContextBuilderPage() {
   const selectedInputSummary = selectedInputs.length
     ? selectedInputs.map(formatSelectedInput).join(', ')
     : 'No inputs selected yet'
+  const selectedMetadataPath = selectedInputs
+    .find((value) => value.startsWith('metadata:'))
+    ?.slice(9)
+  const selectedMetadataValue =
+    selectedMetadataPath && selectedShot
+      ? getNestedMetadataValue(selectedShot.metadata, selectedMetadataPath)
+      : undefined
   const recipeOptions = useMemo(
     () =>
       getContextRecipeOptions({
@@ -326,13 +334,9 @@ export function ContextBuilderPage() {
   )
   const selectedContextVariable =
     selectedColumnIndex >= 0 ? contextVariables[selectedColumnIndex] : undefined
-  const showMongoFields =
-    fieldKind === 'mongo-filter' || fieldKind === 'function'
+  const showMongoFields = fieldKind === 'mongo-filter'
   const showFunctionFields = fieldKind === 'function'
-  const actionCanUseMultipleInputs =
-    fieldKind === 'function' ||
-    (contextScope === 'set' &&
-      (fieldKind === 'metadata' || fieldKind === 'hdf5'))
+  const actionCanUseMultipleInputs = fieldKind === 'function'
   const usesHdf5VisualPreview = [
     'hdf5',
     'lineout-preview',
@@ -695,6 +699,7 @@ export function ContextBuilderPage() {
   }
 
   function titleFromDataName(value: string) {
+    if (value.startsWith('metadata:')) return metadataFieldLabel(value.slice(9))
     return (
       value
         .replace(/^hdf5:/, '')
@@ -707,7 +712,32 @@ export function ContextBuilderPage() {
   }
 
   const updateSelectedInputs = (nextInputs: string[]) => {
+    if (
+      ['metadata:', 'hdf5:'].some(
+        (prefix) =>
+          nextInputs.filter((input) => input.startsWith(prefix)).length > 1
+      )
+    ) {
+      setSaveStatus(
+        'Choose one shot field and one HDF5 dataset for a custom calculation. Add separate columns for other fields.'
+      )
+      return
+    }
     setSelectedInputs(nextInputs)
+    setSaveStatus('')
+    setColumnDetails('')
+    setDatasetPreview(undefined)
+    const hasMetadata = nextInputs.some((input) =>
+      input.startsWith('metadata:')
+    )
+    const hasDataset = nextInputs.some((input) => input.startsWith('hdf5:'))
+    setCombineExpression(
+      hasMetadata && hasDataset
+        ? 'np.nanmean(hdf5_values) * float(metadata_value)'
+        : hasDataset
+          ? 'np.nanmean(hdf5_values)'
+          : 'metadata_value'
+    )
 
     const firstInput = nextInputs[0] ?? ''
     if (!firstInput) {
@@ -730,9 +760,8 @@ export function ContextBuilderPage() {
               <Stack gap={2}>
                 <Title order={3}>Context builder</Title>
                 <Text size="sm" c="dimmed">
-                  Build and save one DAMNIT context variable for{' '}
-                  {source?.title ?? source_key}. Saved files live on the API
-                  host.
+                  Choose a field, check its value on an example shot, then add
+                  it as a column for {source?.title ?? source_key}.
                 </Text>
               </Stack>
               <Button
@@ -749,23 +778,31 @@ export function ContextBuilderPage() {
                   <Stack gap="md">
                     <ContextBuilderDisclosure
                       title="Target and example shot"
-                      description="Choose the output scope and the shot used for previews."
+                      description="The example shot is used to check values before saving."
+                      open
                       summary={
                         contextScope === 'set' ? 'Per-set view' : 'Per-shot'
                       }
                     >
                       <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                         <Select
-                          label="Build target"
+                          label="Use column for"
                           value={contextScope}
                           onChange={(value) => setContextScope(value ?? 'shot')}
                           data={[
-                            { value: 'shot', label: 'Per-shot table column' },
-                            { value: 'set', label: 'Per-set trend or summary' },
+                            {
+                              value: 'shot',
+                              label: 'Table values for each shot',
+                            },
+                            {
+                              value: 'set',
+                              label: 'Numeric trend across shots',
+                            },
                           ]}
                         />
                         <Select
                           label="Example shot"
+                          searchable
                           value={selectedShotIndex?.toString() ?? null}
                           onChange={(value) =>
                             setSelectedShotIndex(
@@ -783,9 +820,119 @@ export function ContextBuilderPage() {
                       </Text>
                     </ContextBuilderDisclosure>
                     <ContextBuilderPanel
+                      tone="indigo"
+                      title="1. Choose data"
+                      description="Fields are grouped by source. Counts show how many shots contain each field."
+                    >
+                      {actionCanUseMultipleInputs ? (
+                        <Checkbox
+                          label="Combine one field with one HDF5 dataset"
+                          checked={allowMultipleInputs}
+                          onChange={(event) =>
+                            setAllowMultipleInputs(event.currentTarget.checked)
+                          }
+                        />
+                      ) : null}
+                      {allowMultipleInputs && actionCanUseMultipleInputs ? (
+                        <MultiSelect
+                          label="Data to use"
+                          maxValues={2}
+                          value={selectedInputs}
+                          onChange={updateSelectedInputs}
+                          data={inputOptions}
+                          searchable
+                          clearable
+                        />
+                      ) : (
+                        <Select
+                          label="Data to use"
+                          value={selectedInputs[0] ?? null}
+                          onChange={(value) =>
+                            updateSelectedInputs(value ? [value] : [])
+                          }
+                          data={inputOptions}
+                          searchable
+                          clearable
+                        />
+                      )}
+                      <Text size="xs" c="dimmed">
+                        Selected: {selectedInputSummary}
+                      </Text>
+                      {selectedMetadataPath ? (
+                        <Paper withBorder p="xs">
+                          <Text size="sm" fw={600}>
+                            Value on example shot
+                          </Text>
+                          <Code>
+                            {selectedMetadataValue == null
+                              ? 'Not available on this shot'
+                              : formatContextValue(selectedMetadataValue)}
+                          </Code>
+                          <Text size="xs" c="dimmed">
+                            Field: {selectedMetadataPath}
+                          </Text>
+                          {selectedMetadataValue == null ? (
+                            <Button
+                              size="xs"
+                              variant="subtle"
+                              onClick={() => {
+                                const index = shots.findIndex(
+                                  (shot) =>
+                                    getNestedMetadataValue(
+                                      shot.metadata,
+                                      selectedMetadataPath
+                                    ) != null
+                                )
+                                if (index >= 0) setSelectedShotIndex(index)
+                              }}
+                            >
+                              Use a shot with this field
+                            </Button>
+                          ) : null}
+                        </Paper>
+                      ) : null}
+                    </ContextBuilderPanel>
+                    <ContextBuilderPanel
+                      tone="teal"
+                      title="2. Choose display"
+                      description="Choose what this column can do with the selected data."
+                    >
+                      <Select
+                        label={
+                          contextScope === 'shot'
+                            ? 'What should this column do?'
+                            : 'What should this set view do?'
+                        }
+                        value={fieldKind}
+                        onChange={(value) => {
+                          if (value) {
+                            setFieldKind(value)
+                          }
+                        }}
+                        data={recipeOptions}
+                        disabled={!selectedInputs.length}
+                      />
+                      <Group gap="xs" align="flex-start" wrap="nowrap">
+                        <Badge
+                          variant="light"
+                          color={contextRecipeTone(fieldKind)}
+                          radius={4}
+                          styles={{ label: { textTransform: 'none' } }}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {contextRecipeLabel(fieldKind)}
+                        </Badge>
+                        <Text size="xs" c="dimmed">
+                          {selectedInputs.length
+                            ? recipeHelp
+                            : 'Choose data first, then available actions appear here.'}
+                        </Text>
+                      </Group>
+                    </ContextBuilderPanel>
+                    <ContextBuilderPanel
                       tone="blue"
-                      title="Column identity"
-                      description="The title drives the Python function name unless you unlock a custom one."
+                      title="3. Name column"
+                      description="Choose the name that will appear in the shot table."
                     >
                       <Stack gap="sm">
                         <TextInput
@@ -798,7 +945,10 @@ export function ContextBuilderPage() {
                             setFieldTitleEdited(nextTitle.trim() !== '')
                           }}
                         />
-                        <Paper withBorder radius={4} p="sm" bg="white">
+                        <ContextBuilderDisclosure
+                          title="Advanced naming"
+                          description="Override the automatically generated Python name if needed."
+                        >
                           <Stack gap="xs">
                             <Group justify="space-between" align="flex-start">
                               <Stack gap={0} style={{ minWidth: 0 }}>
@@ -858,88 +1008,8 @@ export function ContextBuilderPage() {
                               <Code block>{fieldName}</Code>
                             )}
                           </Stack>
-                        </Paper>
+                        </ContextBuilderDisclosure>
                       </Stack>
-                    </ContextBuilderPanel>
-                    <ContextBuilderPanel
-                      tone="indigo"
-                      title="Data"
-                      description="Choose the metadata or HDF5 data first; valid actions appear below."
-                    >
-                      {actionCanUseMultipleInputs ? (
-                        <Checkbox
-                          label={
-                            contextScope === 'set'
-                              ? 'Compare multiple columns/datasets'
-                              : 'Use multiple inputs for custom function'
-                          }
-                          checked={allowMultipleInputs}
-                          onChange={(event) =>
-                            setAllowMultipleInputs(event.currentTarget.checked)
-                          }
-                        />
-                      ) : null}
-                      {allowMultipleInputs && actionCanUseMultipleInputs ? (
-                        <MultiSelect
-                          label="Data to use"
-                          value={selectedInputs}
-                          onChange={updateSelectedInputs}
-                          data={inputOptions}
-                          searchable
-                          clearable
-                        />
-                      ) : (
-                        <Select
-                          label="Data to use"
-                          value={selectedInputs[0] ?? null}
-                          onChange={(value) =>
-                            updateSelectedInputs(value ? [value] : [])
-                          }
-                          data={inputOptions}
-                          searchable
-                          clearable
-                        />
-                      )}
-                      <Text size="xs" c="dimmed">
-                        Selected: {selectedInputSummary}
-                      </Text>
-                    </ContextBuilderPanel>
-                    <ContextBuilderPanel
-                      tone="teal"
-                      title="Action"
-                      description="Choose what this column can do with the selected data."
-                    >
-                      <Select
-                        label={
-                          contextScope === 'shot'
-                            ? 'What should this column do?'
-                            : 'What should this set view do?'
-                        }
-                        value={fieldKind}
-                        onChange={(value) => {
-                          if (value) {
-                            setFieldKind(value)
-                          }
-                        }}
-                        data={recipeOptions}
-                        disabled={!selectedInputs.length}
-                      />
-                      <Group gap="xs" align="flex-start" wrap="nowrap">
-                        <Badge
-                          variant="light"
-                          color={contextRecipeTone(fieldKind)}
-                          radius={4}
-                          styles={{ label: { textTransform: 'none' } }}
-                          style={{ flexShrink: 0 }}
-                        >
-                          {contextRecipeLabel(fieldKind)}
-                        </Badge>
-                        <Text size="xs" c="dimmed">
-                          {selectedInputs.length
-                            ? recipeHelp
-                            : 'Choose data first, then available actions appear here.'}
-                        </Text>
-                      </Group>
                     </ContextBuilderPanel>
                     {showMongoFields ? (
                       <ContextBuilderPanel
@@ -1135,7 +1205,7 @@ export function ContextBuilderPage() {
                   </ContextBuilderPanel>
                   <ContextBuilderDisclosure
                     title="Preview"
-                    description="Visual result and exact technical values in one view."
+                    description="Check input data on the example shot. Saved calculations are evaluated in the shot table."
                     summary={contextRecipeLabel(fieldKind)}
                     open
                   >
@@ -1153,7 +1223,7 @@ export function ContextBuilderPage() {
                         variant="light"
                         disabled={!canBuildColumn}
                       >
-                        Preview column
+                        Preview example data
                       </Button>
                     </Group>
                     <Grid gutter="sm">
@@ -1196,7 +1266,8 @@ export function ContextBuilderPage() {
                               Exact values used to build the visual result.
                             </Text>
                             <Code block>
-                              {columnDetails || 'Click Preview column.'}
+                              {columnDetails ||
+                                'Choose data, then preview the example.'}
                             </Code>
                           </Stack>
                         </Paper>

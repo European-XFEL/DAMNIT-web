@@ -961,7 +961,6 @@ export function HZDRShotPage() {
                                           <ContextCellContent
                                             value={formatContextValue(value)}
                                             preview={preview}
-                                            trendValues={trendValues}
                                           />
                                         )}
                                       </button>

@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MantineProvider } from '@mantine/core'
 import { MemoryRouter, Route, Routes } from 'react-router'
@@ -45,7 +51,12 @@ describe('ContextBuilderPage example shots', () => {
         shot_number: shotNumber,
         fired_at: `${day}T08:15:00Z`,
         ...(withKeys ? { shot_key: `radbio:${day}:000001` } : {}),
-        metadata: { [day === '2026-05-05' ? 'first_day' : 'second_day']: 2 },
+        metadata: {
+          [day === '2026-05-05' ? 'first_day' : 'second_day']: 2,
+          labfrog_variables: {
+            laser_energy: { value: day === '2026-05-05' ? 2 : 7.9, unit: 'J' },
+          },
+        },
         events: [],
         data_products: [],
       }))
@@ -85,7 +96,6 @@ describe('ContextBuilderPage example shots', () => {
 
       // The selector lives in a disclosure; keep the real Mantine Select so
       // duplicate option values fail here just as they do in the browser.
-      await user.click(screen.getByText('Target and example shot'))
       const selector = screen.getByRole('textbox', { name: 'Example shot' })
       await waitFor(() =>
         expect(selector).toHaveValue(`${shotNumber} - 2026-05-05T08:15:00Z`)
@@ -107,15 +117,44 @@ describe('ContextBuilderPage example shots', () => {
       const data = screen.getByRole('textbox', { name: 'Data to use' })
       await user.click(data)
       expect(
-        await screen.findByRole('option', { name: 'second_day' })
+        await screen.findByRole('option', { name: 'Second day (1/2 shots)' })
       ).toBeInTheDocument()
       expect(
-        screen.queryByRole('option', { name: 'first_day' })
-      ).not.toBeInTheDocument()
+        screen.getByRole('option', { name: 'First day (1/2 shots)' })
+      ).toBeInTheDocument()
+      await user.click(
+        screen.getByRole('option', { name: 'Laser energy (2/2 shots)' })
+      )
+      expect(screen.getByRole('textbox', { name: 'Column title' })).toHaveValue(
+        'Laser energy'
+      )
+      expect(
+        within(
+          screen.getByText('Value on example shot').parentElement!
+        ).getByText('7.9000')
+      ).toBeInTheDocument()
+      await user.click(data)
+      await user.click(
+        screen.getByRole('option', { name: 'First day (1/2 shots)' })
+      )
+      expect(screen.getByText('Not available on this shot')).toBeInTheDocument()
+      await user.click(
+        screen.getByRole('button', { name: 'Use a shot with this field' })
+      )
+      expect(selector).toHaveValue(`${shotNumber} - 2026-05-05T08:15:00Z`)
+      await user.click(selector)
+      await user.click(
+        await screen.findByRole('option', {
+          name: `${shotNumber} - 2026-05-06T08:15:00Z`,
+        })
+      )
+      await user.click(data)
       await user.click(
         await screen.findByRole('option', { name: 'signal (float64, 2)' })
       )
-      await user.click(screen.getByRole('button', { name: 'Preview column' }))
+      await user.click(
+        screen.getByRole('button', { name: 'Preview example data' })
+      )
       const query = withKeys
         ? `?${new URLSearchParams({ shot_key: shots[1].shot_key! })}`
         : ''

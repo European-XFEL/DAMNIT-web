@@ -38,6 +38,21 @@ Deploy the API and frontend using the commands above. Existing catalogs work
 without a rebuild, using their shot dates. After a campaign rebuild the exported
 `shot_day` is preserved for grouping and day labels when available.
 
+## Context columns
+
+Use Context builder to choose a field from **LabFrog fields**, **Shot metadata**
+or an HDF5 dataset group. Field counts show availability across the campaign;
+the example value is for the selected shot. If that shot lacks the field,
+**Use a shot with this field** selects one containing it. Choose the display,
+set the column title, and add it to the context file. **Preview example data**
+checks the inputs; saved calculations run when the shot table loads context.
+
+After deploying context fixes, use **Refresh context** on the shot page to
+re-evaluate saved columns. Older generated nested `doc.get(...)` columns work
+without editing the saved file. Scalar values appear as numbers or text in
+each row; campaign trends appear when selecting a numeric cell. Actual per-shot
+lineout and image previews remain in their cells.
+
 ## Rebuild a campaign by hand
 
 The auto-trigger rebuilds when an export in `CURATED_ROOT` changes (mtime or

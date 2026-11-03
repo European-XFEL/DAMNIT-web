@@ -2,6 +2,7 @@ import inspect
 import re
 import sys
 import types
+from collections import UserDict
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
@@ -266,9 +267,13 @@ class ContextCell:
 
 def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
     """Execute context variables and return shot-indexed table values."""
-    variables = _load_context_variables(context_path, shots)
+    # Legacy generated functions query by shot_number. Keep those lookups local
+    # to the record being evaluated: numbers repeat across days and versions.
+    evaluation_shots = list(shots)
+    variables = _load_context_variables(context_path, evaluation_shots)
     rows = []
     for shot in shots:
+        evaluation_shots[:] = [shot]
         values = {}
         errors = {}
         previews = {}
@@ -288,6 +293,7 @@ def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
         rows.append({
             "shot_number": shot.shot_number,
             "shot_key": shot.shot_key,
+            "labfrog_record_id": shot.labfrog_record_id,
             "values": values,
             "errors": errors,
             "previews": previews,
@@ -418,18 +424,32 @@ def _shot_metadata_value(metadata: dict, name: str, annotation) -> Any:
     return value
 
 
+class ContextMetadata(UserDict):
+    """Support dotted paths in older generated ``doc.get('a.b')`` columns."""
+
+    def get(self, key, default=None):
+        if key in self or not isinstance(key, str):
+            return super().get(key, default)
+        value: Any = self.data
+        for part in key.split("."):
+            if not isinstance(value, dict) or part not in value:
+                return default
+            value = value[part]
+        return value
+
+
 def _mongo_find_one(shots: list[HZDRShot], query: dict):
     """Use loaded shot metadata as a local Mongo stand-in for previews."""
-    requested_shot = query.get("shot_number") or query.get("shot")
+    requested_shot = query.get("shot_number", query.get("shot"))
     for shot in shots:
         if requested_shot is not None and int(requested_shot) != shot.shot_number:
             continue
-        return {
+        return ContextMetadata({
             "shot_number": shot.shot_number,
             "fired_at": shot.fired_at,
             "hdf5_path": str(shot.hdf5_path) if shot.hdf5_path else None,
             **shot.metadata,
-        }
+        })
     return None
 
 
@@ -467,6 +487,8 @@ def _array_nanmean(value):
 def _json_safe(value):
     import numpy as np
 
+    if isinstance(value, ContextMetadata):
+        return value.data
     if isinstance(value, np.generic):
         return value.item()
     if isinstance(value, np.ndarray):

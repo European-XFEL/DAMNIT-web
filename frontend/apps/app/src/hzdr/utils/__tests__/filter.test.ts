@@ -229,6 +229,31 @@ describe('shotMatchesTableFilter', () => {
 })
 
 describe('buildContextRowsByShot', () => {
+  it('matches results by record ID when versions share the canonical key', () => {
+    const shots = ['old', 'new'].map((labfrog_record_id) =>
+      makeShot({ shot_key: 'same', labfrog_record_id })
+    )
+    const rows = buildContextRowsByShot(shots, [
+      {
+        shot_number: 1,
+        shot_key: 'same',
+        labfrog_record_id: 'new',
+        values: { v: 8.2 },
+        errors: {},
+      },
+      {
+        shot_number: 1,
+        shot_key: 'same',
+        labfrog_record_id: 'old',
+        values: { v: 7.9 },
+        errors: {},
+      },
+    ])
+    expect(
+      shots.map((shot) => rows.get(getShotRowKey(shot))?.values.v)
+    ).toEqual([7.9, 8.2])
+  })
+
   const row = (shot_number: number, shot_key?: string, value = 0) => ({
     shot_number,
     shot_key,

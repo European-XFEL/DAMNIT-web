@@ -73,7 +73,6 @@ export function groupHdf5DatasetOptions(
 }
 
 export function getContextInputOptions({
-  fieldKind,
   metadataOptions,
   datasetOptions,
 }: {
@@ -81,14 +80,20 @@ export function getContextInputOptions({
   metadataOptions: SelectOption[]
   datasetOptions: HZDRDatasetOption[]
 }): SelectOptionGroup[] {
-  const compatibleDatasetOptions =
-    fieldKind === 'function'
-      ? datasetOptions
-      : datasetOptions.filter((option) => option.kind !== 'raw')
-
   return [
-    { group: 'Shot metadata', items: metadataOptions },
-    ...groupHdf5DatasetOptions(compatibleDatasetOptions),
+    {
+      group: 'LabFrog fields',
+      items: metadataOptions.filter((option) =>
+        option.value.startsWith('metadata:labfrog_variables.')
+      ),
+    },
+    {
+      group: 'Shot metadata',
+      items: metadataOptions.filter(
+        (option) => !option.value.startsWith('metadata:labfrog_variables.')
+      ),
+    },
+    ...groupHdf5DatasetOptions(datasetOptions),
   ].filter((group) => group.items.length)
 }
 

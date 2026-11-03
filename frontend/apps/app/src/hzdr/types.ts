@@ -284,6 +284,7 @@ export type HZDRContextResults = {
     shot_number: number
     /** Absent from an older API; then rows can only be matched by number. */
     shot_key?: string | null
+    labfrog_record_id?: string | null
     values: Record<string, unknown>
     errors: Record<string, string>
     previews?: Record<string, unknown>

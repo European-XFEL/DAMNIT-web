@@ -129,8 +129,13 @@ export function buildContextRowsByShot(
   rows: ContextRow[] = []
 ) {
   const rowsByKey = new Map<string, ContextRow>()
+  const rowsByRecord = new Map<string, ContextRow>()
   const rowsByNumber = new Map<number, ContextRow>()
   for (const row of rows) {
+    if (row.labfrog_record_id) {
+      rowsByRecord.set(row.labfrog_record_id, row)
+      continue
+    }
     if (row.shot_key) {
       rowsByKey.set(row.shot_key, row)
     } else if (!rowsByNumber.has(row.shot_number)) {
@@ -140,6 +145,9 @@ export function buildContextRowsByShot(
   const rowsByShot = new Map<string, ContextRow>()
   for (const shot of shots) {
     const row =
+      (shot.labfrog_record_id
+        ? rowsByRecord.get(shot.labfrog_record_id)
+        : undefined) ??
       (shot.shot_key ? rowsByKey.get(shot.shot_key) : undefined) ??
       rowsByNumber.get(shot.shot_number)
     if (row) {

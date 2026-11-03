@@ -2,6 +2,17 @@ import type { HZDRShot } from '../types'
 
 import { toTrendValue } from './shot-key'
 
+export function metadataFieldLabel(path: string) {
+  const parts = path.replace(/^labfrog_variables\./, '').split('.')
+  if (parts.at(-1) === 'value') parts.pop()
+  return parts
+    .map((part) => {
+      const text = part.replace(/_/g, ' ')
+      return text.charAt(0).toUpperCase() + text.slice(1)
+    })
+    .join(' / ')
+}
+
 export function getNestedMetadataValue(
   metadata: Record<string, unknown>,
   keyPath: string

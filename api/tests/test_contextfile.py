@@ -358,3 +358,69 @@ def test_context_arguments_read_nested_registry_keys():
     assert _shot_metadata_value(metadata, "flat", None) == 1
     assert _shot_metadata_value(metadata, "nope", None) is None
     assert _shot_metadata_value({"laser": 3}, "laser_energy_j", None) is None
+
+
+def test_legacy_nested_context_columns_use_each_record(tmp_path):
+    from damnit_api.metadata.hzdr_sources import HZDRShot
+
+    context = tmp_path / "context.py"
+    context.write_text(
+        """from damnit_ctx import Variable, mongo_find_one
+
+@Variable(title="Legacy nested value")
+def legacy(run, shot_number: "meta#shot_number"):
+    doc = mongo_find_one("shots", query={"shot_number": shot_number})
+    return doc.get("labfrog_variables.laser_energy.value")
+
+@Variable(title="Direct nested value")
+def direct(run, metadata_value: "meta#labfrog_variables.laser_energy.value"):
+    return metadata_value
+""",
+        encoding="utf-8",
+    )
+    shots = [
+        HZDRShot(
+            source_key="campaign",
+            shot_number=1,
+            shot_key=f"campaign:{day}:000001",
+            labfrog_record_id=record,
+            fired_at=f"{day}T10:00:00Z",
+            metadata={"labfrog_variables": {"laser_energy": {"value": energy}}},
+        )
+        for day, record, energy in [
+            ("2026-04-29", "first-day", 2.0),
+            ("2026-06-17", "old-version", 7.9),
+            ("2026-06-17", "new-version", 8.2),
+        ]
+    ]
+    result = routers._run_hzdr_context_file(context, shots)
+    assert [row["values"]["legacy"] for row in result["rows"]] == [2.0, 7.9, 8.2]
+    assert [row["values"]["direct"] for row in result["rows"]] == [2.0, 7.9, 8.2]
+    assert [row["labfrog_record_id"] for row in result["rows"]] == [
+        "first-day",
+        "old-version",
+        "new-version",
+    ]
+    assert all(not row["errors"] for row in result["rows"])
+    assert len(shots) == 3
+
+
+def test_legacy_context_metadata_preserves_flat_keys_defaults_and_shot_zero():
+    from damnit_api.metadata.hzdr_sources import HZDRShot
+
+    shots = [
+        HZDRShot(
+            source_key="s",
+            shot_number=n,
+            fired_at="",
+            metadata={
+                "laser.pulse_energy": n,
+                "laser": {"pulse_energy": 99},
+            },
+        )
+        for n in (1, 0)
+    ]
+    doc = routers._mongo_find_one(shots, {"shot_number": 0})
+    assert doc["shot_number"] == 0
+    assert doc.get("laser.pulse_energy") == 0
+    assert doc.get("laser.missing", "fallback") == "fallback"

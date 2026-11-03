@@ -22,6 +22,18 @@ behaviour; the merge PR has the details.
   columns work again without editing workspace copies.
 
 ### Shot table
+- **Nested context fields show the correct record's value.** Existing generated
+  `doc.get("a.b")` columns resolve nested fields, and shot-number lookups are
+  scoped to the evaluated record so days and revisions cannot borrow another
+  row's value. New columns use direct metadata annotations; context results
+  carry record IDs for unambiguous matching. Scalar cells show their values,
+  with campaign trends kept in the selected-cell panel.
+- **Context data selection starts with readable fields and example values.**
+  Fields are grouped by source, available across all shots with coverage counts,
+  and can locate an example shot containing a missing field. Data and display
+  choices precede the title; Python naming is under advanced settings. Custom
+  calculations request only their selected inputs, and example-data previews
+  are distinguished from executing saved calculations.
 - **Show current versions by default.** The table and its trends hide archived
   records and lower numbered versions of the same campaign/day/shot, even when
   the export marks several revisions active. "Show older and archived versions"

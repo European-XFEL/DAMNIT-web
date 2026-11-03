@@ -69,11 +69,9 @@ export function ContextPreviewValue({
 export function ContextCellContent({
   value,
   preview,
-  trendValues,
 }: {
   value: unknown
   preview?: unknown
-  trendValues?: HZDRTrendValue[]
 }) {
   const sparklineValues = getPlotlySparklineValues(preview)
   const arrayPreviewValues = getNumericPreviewValues(preview)
@@ -90,11 +88,6 @@ export function ContextCellContent({
       <Text size="xs" c="dimmed">
         Plot preview
       </Text>
-    )
-  }
-  if (trendValues && trendValues.length > 1) {
-    return (
-      <MiniCellSparkline values={trendValues.map((entry) => entry.value)} />
     )
   }
   if (arrayPreviewValues.length > 1) {
