@@ -239,12 +239,8 @@ describe('opening a preview', () => {
   })
 
   test('a disabled preview sends no query for its cells', async () => {
-    const operations: string[] = []
-    const link = new ApolloLink((operation) => {
-      operations.push(operation.operationName ?? '')
-      return Observable.of()
-    })
-    const { wrapper } = setup({ link })
+    const server = createServer()
+    const { wrapper } = setup({ link: server.link })
 
     // A summary plot calls the hook disabled over every run, beside its own
     // query, so a second one here would go out with every summary plot.
@@ -255,24 +251,20 @@ describe('opening a preview', () => {
     )
 
     expect(result.current.computedAt).toBeNull()
-    expect(operations).toEqual([])
+    expect(server.sent).toEqual([])
 
     // The preview is enabled, so its cells are wanted now.
     enabled = true
     await rerender()
 
     await vi.waitFor(() => {
-      expect(operations).toEqual(['LightweightTableDataQuery'])
+      expect(server.sent).toEqual(['LightweightTableDataQuery'])
     })
   })
 
   test('a preview with no runs sends no query for its cells', async () => {
-    const operations: string[] = []
-    const link = new ApolloLink((operation) => {
-      operations.push(operation.operationName ?? '')
-      return Observable.of()
-    })
-    const { wrapper } = setup({ link })
+    const server = createServer()
+    const { wrapper } = setup({ link: server.link })
 
     // With no runs, no cells are wanted.
     let runs: number[] = []
@@ -281,14 +273,14 @@ describe('opening a preview', () => {
       { wrapper }
     )
 
-    expect(operations).toEqual([])
+    expect(server.sent).toEqual([])
 
     // A run is added, so the cells are wanted now.
     runs = [1]
     await rerender()
 
     await vi.waitFor(() => {
-      expect(operations).toEqual(['LightweightTableDataQuery'])
+      expect(server.sent).toEqual(['LightweightTableDataQuery'])
     })
   })
 })
