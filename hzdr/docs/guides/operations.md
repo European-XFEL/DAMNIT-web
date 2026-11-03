@@ -11,18 +11,18 @@ cd api && uv sync --locked && sudo systemctl restart damnit-api
 cd ../frontend && pnpm install --frozen-lockfile && pnpm --filter ./apps/app build
 ```
 
-The system nginx (`/usr/sbin/nginx`, ports 80/443) serves the frontend from
-its own folder, not from `frontend/apps/app/dist`, so a build is live only after
-it is copied there. Find the folder with
-`grep -rnE "root|alias" /etc/nginx/sites-enabled/`, then copy the build in and
-hard-refresh the browser (Ctrl+Shift+R):
+The system nginx (`fwkt-damnit.fz-rossendorf.de`, ports 80/443) serves the
+frontend from `/var/www/damnit-web` at the site root and proxies the API paths
+to `127.0.0.1:8000`. A build is live only after it is copied there:
 
 ```bash
-sudo rsync -a --delete ~/DAMNIT-web-hzdr/frontend/apps/app/dist/ <nginx app folder>/
+sudo cp -a /var/www/damnit-web /var/www/damnit-web.bak-$(date +%F)
+sudo rsync -a --delete ~/DAMNIT-web-hzdr/frontend/apps/app/dist/ /var/www/damnit-web/
 ```
 
-If the app is served under a sub-path (e.g. `/app/`), build with
-`VITE_BASE_URL=/app/`.
+Then hard-refresh the browser (Ctrl+Shift+R). The app is at `/`, so build
+without `VITE_BASE_URL`. Deep links such as `/source/<key>` need
+`location / { try_files $uri /index.html; }` in the server block.
 
 ## Rebuild a campaign by hand
 
