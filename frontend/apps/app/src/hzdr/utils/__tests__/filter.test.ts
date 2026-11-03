@@ -3,6 +3,7 @@ import {
   valueMatchesTableFilter,
   compareTableValues,
   getShotDateKey,
+  buildContextRowsByShot,
   buildShotDayLabels,
   getShotRowKey,
   isScalarContextValue,
@@ -211,5 +212,34 @@ describe('shotMatchesTableFilter', () => {
     expect(shotMatchesTableFilter(shot, 'status', 'equals', 'processed')).toBe(
       true
     )
+  })
+})
+
+describe('buildContextRowsByShot', () => {
+  const row = (shot_number: number, shot_key?: string, value = 0) => ({
+    shot_number,
+    shot_key,
+    values: { v: value },
+    errors: {},
+  })
+
+  it('matches rows to shots by shot_key when shot numbers repeat', () => {
+    const shots = [
+      makeShot({ shot_key: 'C:20260421:000001' }),
+      makeShot({ shot_key: 'C:20260428:000001' }),
+    ]
+    const rows = buildContextRowsByShot(shots, [
+      row(1, 'C:20260421:000001', 10),
+      row(1, 'C:20260428:000001', 20),
+    ])
+    expect(
+      shots.map((shot) => rows.get(getShotRowKey(shot))?.values.v)
+    ).toEqual([10, 20])
+  })
+
+  it('falls back to shot_number for rows from an API without shot_key', () => {
+    const shot = makeShot({ shot_key: 'C:20260421:000007', shot_number: 7 })
+    const rows = buildContextRowsByShot([shot], [row(7, undefined, 3)])
+    expect(rows.get(getShotRowKey(shot))?.values.v).toBe(3)
   })
 })

@@ -6,6 +6,11 @@ import type {
 } from '../types'
 import { formatFiredAt } from './format'
 import { formatTargetLabel } from './metadata'
+import { getShotDateKey, getShotRowKey } from './shot-key'
+
+export { getShotDateKey, getShotRowKey } from './shot-key'
+
+type ContextRow = HZDRContextResults['rows'][number]
 
 export function shotMatchesTableFilter(
   shot: HZDRShot,
@@ -28,19 +33,19 @@ export function compareHZDRShotsForTableSort(
   leftShot: HZDRShot,
   rightShot: HZDRShot,
   sortState: HZDRSortState,
-  contextRowsByShot: Map<number, HZDRContextResults['rows'][number]>,
+  contextRowsByShot: Map<string, ContextRow>,
   shotDayLabels: Map<string, string | undefined>
 ) {
   const leftValue = getPrimaryShotSortValue(
     leftShot,
     sortState.column,
-    contextRowsByShot.get(leftShot.shot_number),
+    contextRowsByShot.get(getShotRowKey(leftShot)),
     shotDayLabels.get(getShotRowKey(leftShot))
   )
   const rightValue = getPrimaryShotSortValue(
     rightShot,
     sortState.column,
-    contextRowsByShot.get(rightShot.shot_number),
+    contextRowsByShot.get(getShotRowKey(rightShot)),
     shotDayLabels.get(getShotRowKey(rightShot))
   )
   const comparison = compareTableValues(leftValue, rightValue)
@@ -114,14 +119,33 @@ export function valueMatchesTableFilter(
 }
 
 /**
- * One table row's identity. LabFrog shot numbers restart each day, so a
- * shot_number alone is shared by several shots of a campaign.
+ * Each shot's Context Builder row, keyed by getShotRowKey. A row carrying a
+ * shot_key only matches that shot; a row from an older API (no shot_key)
+ * falls back to its shot_number.
  */
-export function getShotRowKey(shot: HZDRShot) {
-  return (
-    shot.shot_key ??
-    `${shot.shot_date ?? getShotDateKey(shot.fired_at) ?? ''}:${shot.shot_number}`
-  )
+export function buildContextRowsByShot(
+  shots: HZDRShot[],
+  rows: ContextRow[] = []
+) {
+  const rowsByKey = new Map<string, ContextRow>()
+  const rowsByNumber = new Map<number, ContextRow>()
+  for (const row of rows) {
+    if (row.shot_key) {
+      rowsByKey.set(row.shot_key, row)
+    } else if (!rowsByNumber.has(row.shot_number)) {
+      rowsByNumber.set(row.shot_number, row)
+    }
+  }
+  const rowsByShot = new Map<string, ContextRow>()
+  for (const shot of shots) {
+    const row =
+      (shot.shot_key ? rowsByKey.get(shot.shot_key) : undefined) ??
+      rowsByNumber.get(shot.shot_number)
+    if (row) {
+      rowsByShot.set(getShotRowKey(shot), row)
+    }
+  }
+  return rowsByShot
 }
 
 export function buildShotDayLabels(shots: HZDRShot[]) {
@@ -144,21 +168,6 @@ export function buildShotDayLabels(shots: HZDRShot[]) {
       ]
     })
   )
-}
-
-export function getShotDateKey(firedAt: string) {
-  if (!firedAt) {
-    return undefined
-  }
-  const isoDate = firedAt.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
-  if (isoDate) {
-    return isoDate
-  }
-  const date = new Date(firedAt)
-  if (Number.isNaN(date.getTime())) {
-    return undefined
-  }
-  return date.toISOString().slice(0, 10)
 }
 
 export function getPrimaryShotSortValue(

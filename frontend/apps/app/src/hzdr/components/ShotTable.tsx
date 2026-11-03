@@ -48,6 +48,7 @@ import {
 export { TruncatedCell }
 
 import { cellButtonStyle } from './styles'
+import { formatShotLabel, getShotRowKey, toTrendValue } from '../utils/shot-key'
 export { cellButtonStyle }
 
 export function DetailsSection({
@@ -119,7 +120,7 @@ export function SelectedCellPanel({
 }: {
   cell?: HZDRSelectedCell
   onCorrectMetadata: (
-    shotNumber: number,
+    rowKey: string,
     key: string,
     value: unknown,
     note?: string
@@ -146,7 +147,7 @@ export function SelectedCellPanel({
         <Group justify="space-between" gap="xs">
           <Stack gap={0}>
             <Text size="xs" c="dimmed">
-              Shot {cell.shotNumber}
+              Shot {cell.shotLabel}
             </Text>
             <Text fw={700}>{cell.columnTitle}</Text>
           </Stack>
@@ -198,7 +199,7 @@ export function MetadataCorrectionForm({
 }: {
   cell: HZDRSelectedCell
   onCorrectMetadata: (
-    shotNumber: number,
+    rowKey: string,
     key: string,
     value: unknown,
     note?: string
@@ -210,7 +211,7 @@ export function MetadataCorrectionForm({
   useEffect(() => {
     setDraft(formatMetadataCorrectionDraft(cell.value))
     setNote('')
-  }, [cell.columnName, cell.shotNumber, cell.value])
+  }, [cell.columnName, cell.rowKey, cell.value])
 
   return (
     <DetailsSection title="Correct bad metadata">
@@ -237,7 +238,7 @@ export function MetadataCorrectionForm({
           variant="light"
           onClick={() =>
             onCorrectMetadata(
-              cell.shotNumber,
+              cell.rowKey,
               cell.columnName,
               parseMetadataCorrectionDraft(draft),
               note.trim() || undefined
@@ -282,10 +283,12 @@ export function HZDRShotSetsPanel({ shots }: { shots: HZDRShot[] }) {
   }, [numericMetadataKeys])
 
   const trendValues = shots
-    .map((shot) => ({
-      shotNumber: shot.shot_number,
-      value: Number(getNestedMetadataValue(shot.metadata, trendKey)),
-    }))
+    .map((shot) =>
+      toTrendValue(
+        shot,
+        Number(getNestedMetadataValue(shot.metadata, trendKey))
+      )
+    )
     .filter((entry) => Number.isFinite(entry.value))
 
   return (
@@ -323,14 +326,15 @@ export function ShotDetailPanel({
   shot?: HZDRShot
   shotDetail?: HZDRShotDetail
   availableSources: HZDRSource[]
-  onUpdateStatus?: (shotNumber: number, status: string, note?: string) => void
+  onUpdateStatus?: (rowKey: string, status: string, note?: string) => void
   onCorrectMetadata?: (
-    shotNumber: number,
+    rowKey: string,
     key: string,
     value: unknown,
     note?: string
   ) => void
 }) {
+  const rowKey = shot ? getShotRowKey(shot) : undefined
   const [reviewStatus, setReviewStatus] = useState('processed')
   const [reviewNote, setReviewNote] = useState('')
   const [correctionKey, setCorrectionKey] = useState('')
@@ -340,13 +344,13 @@ export function ShotDetailPanel({
   useEffect(() => {
     setReviewStatus(String(shot?.metadata.status ?? 'processed'))
     setReviewNote(String(shot?.metadata.review_note ?? ''))
-  }, [shot?.shot_number, shot?.metadata.status, shot?.metadata.review_note])
+  }, [rowKey, shot?.metadata.status, shot?.metadata.review_note])
 
   useEffect(() => {
     setCorrectionKey('')
     setCorrectionDraft('')
     setCorrectionNote('')
-  }, [shot?.shot_number])
+  }, [rowKey])
 
   if (!shot) {
     return (
@@ -382,7 +386,7 @@ export function ShotDetailPanel({
       <Card withBorder radius={4} p="md">
         <Stack gap="sm">
           <Group justify="space-between">
-            <Title order={4}>Shot {shot.shot_number}</Title>
+            <Title order={4}>Shot {formatShotLabel(shot)}</Title>
             <Badge color={statusColor(String(shot.metadata.status ?? ''))}>
               {shot.metadata.status ?? 'unknown'}
             </Badge>
@@ -443,7 +447,7 @@ export function ShotDetailPanel({
                 color={statusColor(reviewStatus)}
                 onClick={() =>
                   onUpdateStatus?.(
-                    shot.shot_number,
+                    getShotRowKey(shot),
                     reviewStatus,
                     reviewNote.trim() || defaultReviewNote(reviewStatus)
                   )
@@ -721,7 +725,7 @@ export function ShotDetailPanel({
                 }
                 onClick={() =>
                   onCorrectMetadata?.(
-                    shot.shot_number,
+                    getShotRowKey(shot),
                     correctionKey.trim(),
                     parseMetadataCorrectionDraft(correctionDraft),
                     correctionNote.trim() || undefined

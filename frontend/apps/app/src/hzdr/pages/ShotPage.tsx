@@ -45,6 +45,7 @@ import { TruncatedCell, ContextCellContent } from '../components/previews'
 import {
   shotMatchesTableFilter,
   compareHZDRShotsForTableSort,
+  buildContextRowsByShot,
   buildShotDayLabels,
   getShotRowKey,
   isScalarContextValue,
@@ -56,6 +57,7 @@ import {
 } from '../utils/format'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
+import { formatShotLabel, toTrendValue } from '../utils/shot-key'
 import {
   SHOT_TABLE_COLUMNS,
   SHOT_TABLE_COLUMN_WIDTHS,
@@ -69,7 +71,8 @@ export function HZDRShotPage() {
   const [source, setSource] = useState<HZDRSource>()
   const [shots, setShots] = useState<HZDRShot[]>([])
   const [availableSources, setAvailableSources] = useState<HZDRSource[]>([])
-  const [selectedShotNumber, setSelectedShotNumber] = useState<number>()
+  // The selected row (getShotRowKey): shot numbers repeat across days.
+  const [selectedRowKey, setSelectedRowKey] = useState<string>()
   const [shotDetail, setShotDetail] = useState<HZDRShotDetail>()
   const [contextResults, setContextResults] = useState<HZDRContextResults>()
   const [filterColumn, setFilterColumn] = useState('all')
@@ -147,14 +150,14 @@ export function HZDRShotPage() {
       .then((response) => requireJson<HZDRShot[]>(response))
       .then((loadedShots) => {
         setShots(loadedShots)
-        setSelectedShotNumber((currentShotNumber) => {
+        setSelectedRowKey((currentRowKey) => {
           if (
-            currentShotNumber &&
-            loadedShots.some((shot) => shot.shot_number === currentShotNumber)
+            currentRowKey &&
+            loadedShots.some((shot) => getShotRowKey(shot) === currentRowKey)
           ) {
-            return currentShotNumber
+            return currentRowKey
           }
-          return loadedShots[0]?.shot_number
+          return loadedShots[0] ? getShotRowKey(loadedShots[0]) : undefined
         })
         setDataState('ready')
       })
@@ -176,7 +179,10 @@ export function HZDRShotPage() {
   }, [loadShotPageData])
 
   useEffect(() => {
-    if (!source_key || !selectedShotNumber) {
+    const selected = shots.find(
+      (shot) => getShotRowKey(shot) === selectedRowKey
+    )
+    if (!source_key || !selected) {
       setShotDetail(undefined)
       return
     }
@@ -184,26 +190,21 @@ export function HZDRShotPage() {
     // Prefer the unambiguous shot_key route: shot_number can repeat when the
     // counter restarts each day, so fetching detail by number alone is fragile.
     // Fall back to the legacy number route only when no shot_key is available.
-    const selected = shots.find(
-      (shot) => shot.shot_number === selectedShotNumber
-    )
     const shotsBase = `/metadata/hzdr/sources/${source_key}/shots`
-    const detailPath = selected?.shot_key
+    const detailPath = selected.shot_key
       ? `${shotsBase}/by-key/${encodeURIComponent(selected.shot_key)}`
-      : `${shotsBase}/${selectedShotNumber}`
+      : `${shotsBase}/${selected.shot_number}`
 
     fetch(detailPath)
       .then((response) => requireJson<HZDRShotDetail>(response))
       .then(setShotDetail)
       .catch(() => setShotDetail(undefined))
-  }, [source_key, selectedShotNumber, shots])
+  }, [source_key, selectedRowKey, shots])
 
   const selectedShot = shots.find(
-    (shot) => shot.shot_number === selectedShotNumber
+    (shot) => getShotRowKey(shot) === selectedRowKey
   )
-  const contextRowsByShot = new Map(
-    contextResults?.rows.map((row) => [row.shot_number, row]) ?? []
-  )
+  const contextRowsByShot = buildContextRowsByShot(shots, contextResults?.rows)
   const shotDayLabels = buildShotDayLabels(shots)
   const contextColumnOptions =
     contextResults?.columns.map((column) => ({
@@ -243,7 +244,7 @@ export function HZDRShotPage() {
         filterColumn,
         filterOperator,
         filterValue,
-        contextRowsByShot.get(shot.shot_number),
+        contextRowsByShot.get(getShotRowKey(shot)),
         shotDayLabels.get(getShotRowKey(shot))
       )
     )
@@ -272,18 +273,44 @@ export function HZDRShotPage() {
   }
   const buildMetadataTrendValues = (metadataKey: string) =>
     shots
-      .map((shot) => ({
-        shotNumber: shot.shot_number,
-        value: Number(getNestedMetadataValue(shot.metadata, metadataKey)),
-      }))
+      .map((shot) =>
+        toTrendValue(
+          shot,
+          Number(getNestedMetadataValue(shot.metadata, metadataKey))
+        )
+      )
       .filter((entry) => Number.isFinite(entry.value))
   const buildContextTrendValues = (columnName: string) =>
-    (contextResults?.rows ?? [])
-      .map((row) => ({
-        shotNumber: row.shot_number,
-        value: Number(row.values[columnName]),
-      }))
+    shots
+      .map((shot) =>
+        toTrendValue(
+          shot,
+          Number(
+            contextRowsByShot.get(getShotRowKey(shot))?.values[columnName] ??
+              Number.NaN
+          )
+        )
+      )
       .filter((entry) => Number.isFinite(entry.value))
+  const shotUpdateUrl = (shot: HZDRShot, field: 'status' | 'metadata') => {
+    const query = shot.shot_key
+      ? `?shot_key=${encodeURIComponent(shot.shot_key)}`
+      : ''
+    return `/metadata/hzdr/sources/${source_key}/shots/${shot.shot_number}/${field}${query}`
+  }
+  const replaceShot = (updatedShot: HZDRShot) => {
+    const updatedRowKey = getShotRowKey(updatedShot)
+    setShots((currentShots) =>
+      currentShots.map((shot) =>
+        getShotRowKey(shot) === updatedRowKey ? updatedShot : shot
+      )
+    )
+    setShotDetail((currentDetail) =>
+      currentDetail && getShotRowKey(currentDetail.shot) === updatedRowKey
+        ? { ...currentDetail, shot: updatedShot }
+        : currentDetail
+    )
+  }
   const selectMetadataCell = (
     shot: HZDRShot,
     columnTitle: string,
@@ -291,9 +318,11 @@ export function HZDRShotPage() {
     value: unknown,
     metadataTrendKey?: string
   ) => {
-    setSelectedShotNumber(shot.shot_number)
+    setSelectedRowKey(getShotRowKey(shot))
     setSelectedCell({
       shotNumber: shot.shot_number,
+      rowKey: getShotRowKey(shot),
+      shotLabel: formatShotLabel(shot),
       columnTitle,
       columnName,
       value,
@@ -303,36 +332,26 @@ export function HZDRShotPage() {
       kind: 'metadata',
     })
   }
-  const updateShotStatus = (
-    shotNumber: number,
-    status: string,
-    note?: string
-  ) => {
-    if (!source_key) {
+  const updateShotStatus = (rowKey: string, status: string, note?: string) => {
+    const shot = shots.find((entry) => getShotRowKey(entry) === rowKey)
+    if (!source_key || !shot) {
       return
     }
-    fetch(`/metadata/hzdr/sources/${source_key}/shots/${shotNumber}/status`, {
+    fetch(shotUpdateUrl(shot, 'status'), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status, note }),
     })
       .then((response) => requireJson<HZDRShot>(response))
       .then((updatedShot) => {
-        setShots((currentShots) =>
-          currentShots.map((shot) =>
-            shot.shot_number === updatedShot.shot_number ? updatedShot : shot
-          )
-        )
-        setShotDetail((currentDetail) =>
-          currentDetail?.shot.shot_number === updatedShot.shot_number
-            ? { ...currentDetail, shot: updatedShot }
-            : currentDetail
-        )
+        replaceShot(updatedShot)
         setSelectedCell(undefined)
       })
       .catch(() => {
         setSelectedCell({
-          shotNumber,
+          shotNumber: shot.shot_number,
+          rowKey,
+          shotLabel: formatShotLabel(shot),
           columnTitle: 'Status update',
           columnName: 'status',
           value: status,
@@ -342,36 +361,28 @@ export function HZDRShotPage() {
       })
   }
   const updateShotMetadata = (
-    shotNumber: number,
+    rowKey: string,
     key: string,
     value: unknown,
     note?: string
   ) => {
-    if (!source_key) {
+    const shot = shots.find((entry) => getShotRowKey(entry) === rowKey)
+    if (!source_key || !shot) {
       return
     }
-    fetch(`/metadata/hzdr/sources/${source_key}/shots/${shotNumber}/metadata`, {
+    fetch(shotUpdateUrl(shot, 'metadata'), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, value, note }),
     })
       .then((response) => requireJson<HZDRShot>(response))
       .then((updatedShot) => {
-        setShots((currentShots) =>
-          currentShots.map((shot) =>
-            shot.shot_number === updatedShot.shot_number ? updatedShot : shot
-          )
-        )
-        setShotDetail((currentDetail) =>
-          currentDetail?.shot.shot_number === updatedShot.shot_number
-            ? { ...currentDetail, shot: updatedShot }
-            : currentDetail
-        )
+        replaceShot(updatedShot)
         setSelectedCell((currentCell) => {
           if (
             !currentCell ||
             currentCell.kind !== 'metadata' ||
-            currentCell.shotNumber !== updatedShot.shot_number ||
+            currentCell.rowKey !== rowKey ||
             currentCell.columnName !== key
           ) {
             return currentCell
@@ -383,8 +394,7 @@ export function HZDRShotPage() {
             value: correctedValue,
             error: undefined,
             trendValues: currentCell.trendValues?.map((entry) =>
-              entry.shotNumber === updatedShot.shot_number &&
-              Number.isFinite(numericValue)
+              entry.rowKey === rowKey && Number.isFinite(numericValue)
                 ? { ...entry, value: numericValue }
                 : entry
             ),
@@ -397,8 +407,7 @@ export function HZDRShotPage() {
       })
       .catch(() => {
         setSelectedCell((currentCell) =>
-          currentCell?.shotNumber === shotNumber &&
-          currentCell.columnName === key
+          currentCell?.rowKey === rowKey && currentCell.columnName === key
             ? { ...currentCell, error: `Could not correct ${key}.` }
             : currentCell
         )
@@ -626,14 +635,14 @@ export function HZDRShotPage() {
                           ) : (
                             visibleShots.map((shot) => (
                               <Table.Tr
-                                key={shot.shot_number}
+                                key={getShotRowKey(shot)}
                                 onClick={() =>
-                                  setSelectedShotNumber(shot.shot_number)
+                                  setSelectedRowKey(getShotRowKey(shot))
                                 }
                                 style={{
                                   cursor: 'pointer',
                                   background:
-                                    shot.shot_number === selectedShotNumber
+                                    getShotRowKey(shot) === selectedRowKey
                                       ? 'var(--mantine-color-blue-light)'
                                       : undefined,
                                 }}
@@ -815,7 +824,7 @@ export function HZDRShotPage() {
                                 ) : null}
                                 {visibleContextColumns.map((column) => {
                                   const row = contextRowsByShot.get(
-                                    shot.shot_number
+                                    getShotRowKey(shot)
                                   )
                                   const error = row?.errors[column.name]
                                   const value = row?.values[column.name]
@@ -835,11 +844,11 @@ export function HZDRShotPage() {
                                         type="button"
                                         onClick={(event) => {
                                           event.stopPropagation()
-                                          setSelectedShotNumber(
-                                            shot.shot_number
-                                          )
+                                          setSelectedRowKey(getShotRowKey(shot))
                                           setSelectedCell({
                                             shotNumber: shot.shot_number,
+                                            rowKey: getShotRowKey(shot),
+                                            shotLabel: formatShotLabel(shot),
                                             columnTitle: column.title,
                                             columnName: column.name,
                                             value,

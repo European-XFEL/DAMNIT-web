@@ -223,3 +223,88 @@ def test_local_shot_metadata_correction_records_history(tmp_path: Path):
 
     sources = load_sources_file(package.sources_file)
     assert sources[0].shots[0].metadata["detector_signal_mean"] == pytest.approx(11.75)
+
+
+def _write_same_number_catalog(path: Path) -> Path:
+    """Two shots of one campaign sharing shot_number 1 on different days."""
+    shots = [
+        {
+            "source_key": "radbio",
+            "shot_number": 1,
+            "shot_key": f"radbio:{day}:000001",
+            "fired_at": f"{day[:4]}-{day[4:6]}-{day[6:]}T09:00:00Z",
+            "metadata": {"status": "active"},
+            "events": [],
+            "data_products": [],
+        }
+        for day in ("20260421", "20260428")
+    ]
+    sources_file = path / "hzdr_sources.json"
+    sources_file.write_text(
+        json.dumps({
+            "sources": [
+                {
+                    "key": "radbio",
+                    "title": "R",
+                    "damnit_path": str(path),
+                    "shots": shots,
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    return sources_file
+
+
+def test_local_shot_updates_use_shot_key_for_a_repeated_shot_number(
+    tmp_path: Path,
+):
+    sources_file = _write_same_number_catalog(tmp_path)
+
+    status_shot = update_local_shot_status(
+        sources_file,
+        source_key="radbio",
+        shot_number=1,
+        shot_key="radbio:20260428:000001",
+        status="revision-needed",
+        note=None,
+        reviewed_by="hzdr-dev",
+    )
+    metadata_shot = update_local_shot_metadata(
+        sources_file,
+        source_key="radbio",
+        shot_number=1,
+        shot_key="radbio:20260428:000001",
+        key="detector_signal_mean",
+        value=2.5,
+        note=None,
+        corrected_by="hzdr-dev",
+    )
+
+    assert status_shot.shot_key == "radbio:20260428:000001"
+    assert metadata_shot.shot_key == "radbio:20260428:000001"
+    first, second = load_sources_file(sources_file)[0].shots
+    assert first.metadata == {"status": "active"}
+    assert second.metadata["status"] == "revision-needed"
+    assert second.metadata["detector_signal_mean"] == pytest.approx(2.5)
+
+
+def test_local_shot_update_with_unknown_shot_key_is_not_found(tmp_path: Path):
+    from fastapi import HTTPException
+
+    sources_file = _write_same_number_catalog(tmp_path)
+
+    with pytest.raises(HTTPException) as excinfo:
+        update_local_shot_status(
+            sources_file,
+            source_key="radbio",
+            shot_number=1,
+            shot_key="radbio:20260101:000001",
+            status="processed",
+            note=None,
+            reviewed_by="hzdr-dev",
+        )
+
+    assert excinfo.value.status_code == 404
+    first, second = load_sources_file(sources_file)[0].shots
+    assert first.metadata == second.metadata == {"status": "active"}

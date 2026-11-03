@@ -285,6 +285,7 @@ def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
                 errors[name] = f"{type(exc).__name__}: {exc}"
         rows.append({
             "shot_number": shot.shot_number,
+            "shot_key": shot.shot_key,
             "values": values,
             "errors": errors,
             "previews": previews,
