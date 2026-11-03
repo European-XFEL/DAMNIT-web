@@ -29,19 +29,19 @@ export function compareHZDRShotsForTableSort(
   rightShot: HZDRShot,
   sortState: HZDRSortState,
   contextRowsByShot: Map<number, HZDRContextResults['rows'][number]>,
-  shotDayLabels: Map<number, string | undefined>
+  shotDayLabels: Map<string, string | undefined>
 ) {
   const leftValue = getPrimaryShotSortValue(
     leftShot,
     sortState.column,
     contextRowsByShot.get(leftShot.shot_number),
-    shotDayLabels.get(leftShot.shot_number)
+    shotDayLabels.get(getShotRowKey(leftShot))
   )
   const rightValue = getPrimaryShotSortValue(
     rightShot,
     sortState.column,
     contextRowsByShot.get(rightShot.shot_number),
-    shotDayLabels.get(rightShot.shot_number)
+    shotDayLabels.get(getShotRowKey(rightShot))
   )
   const comparison = compareTableValues(leftValue, rightValue)
   if (comparison === 0) {
@@ -113,6 +113,17 @@ export function valueMatchesTableFilter(
   return numericValue <= numericFilter
 }
 
+/**
+ * One table row's identity. LabFrog shot numbers restart each day, so a
+ * shot_number alone is shared by several shots of a campaign.
+ */
+export function getShotRowKey(shot: HZDRShot) {
+  return (
+    shot.shot_key ??
+    `${shot.shot_date ?? getShotDateKey(shot.fired_at) ?? ''}:${shot.shot_number}`
+  )
+}
+
 export function buildShotDayLabels(shots: HZDRShot[]) {
   const dateKeys = Array.from(
     new Set(
@@ -127,7 +138,10 @@ export function buildShotDayLabels(shots: HZDRShot[]) {
   return new Map(
     shots.map((shot) => {
       const dateKey = getShotDateKey(shot.fired_at)
-      return [shot.shot_number, dateKey ? (dayByDate.get(dateKey) ?? '-') : '-']
+      return [
+        getShotRowKey(shot),
+        dateKey ? (dayByDate.get(dateKey) ?? '-') : '-',
+      ]
     })
   )
 }

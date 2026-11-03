@@ -4,6 +4,7 @@ import {
   compareTableValues,
   getShotDateKey,
   buildShotDayLabels,
+  getShotRowKey,
   isScalarContextValue,
   shotMatchesTableFilter,
 } from '../filter'
@@ -120,15 +121,52 @@ describe('buildShotDayLabels', () => {
       makeShot({ shot_number: 3, fired_at: '2026-05-02T09:00:00Z' }),
     ]
     const labels = buildShotDayLabels(shots)
-    expect(labels.get(1)).toBe('Day 1')
-    expect(labels.get(2)).toBe('Day 1')
-    expect(labels.get(3)).toBe('Day 2')
+    expect(shots.map((shot) => labels.get(getShotRowKey(shot)))).toEqual([
+      'Day 1',
+      'Day 1',
+      'Day 2',
+    ])
+  })
+
+  it('labels each day of a shot number LabFrog restarts daily', () => {
+    const shots = [
+      makeShot({
+        shot_key: 'C:20260421:000001',
+        fired_at: '2026-04-21T09:04:53Z',
+      }),
+      makeShot({
+        shot_key: 'C:20260428:000001',
+        fired_at: '2026-04-28T10:31:57Z',
+      }),
+      makeShot({
+        shot_key: 'C:20260617:000001',
+        fired_at: '2026-06-17T08:30:53Z',
+      }),
+    ]
+    const labels = buildShotDayLabels(shots)
+    expect(shots.map((shot) => labels.get(getShotRowKey(shot)))).toEqual([
+      'Day 1',
+      'Day 2',
+      'Day 3',
+    ])
+  })
+
+  it('tells shots without a shot_key apart by date', () => {
+    const shots = [
+      makeShot({ fired_at: '2026-05-01T10:00:00Z' }),
+      makeShot({ fired_at: '2026-05-02T10:00:00Z' }),
+    ]
+    const labels = buildShotDayLabels(shots)
+    expect(shots.map((shot) => labels.get(getShotRowKey(shot)))).toEqual([
+      'Day 1',
+      'Day 2',
+    ])
   })
 
   it('returns dash for shots with missing fired_at', () => {
-    const shots = [makeShot({ shot_number: 1, fired_at: '' })]
-    const labels = buildShotDayLabels(shots)
-    expect(labels.get(1)).toBe('-')
+    const shot = makeShot({ shot_number: 1, fired_at: '' })
+    const labels = buildShotDayLabels([shot])
+    expect(labels.get(getShotRowKey(shot))).toBe('-')
   })
 })
 

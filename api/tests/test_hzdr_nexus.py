@@ -21,6 +21,7 @@ from damnit_api.metadata.hzdr_nexus import (
     _first_shot_laser,
     _first_shot_target,
     _first_shot_vacuum,
+    _merge_shot_metadata,
     append_review_decision,
     discover_labfrog_data_products,
     labfrog_shot_status,
@@ -2632,3 +2633,62 @@ def test_old_labfrog_nexus_has_no_authority_numbers(tmp_path: Path):
     shots = read_labfrog_nexus_shots(nexus_path)
 
     assert all("authority_shot_number" not in shot for shot in shots)
+
+
+_EXAMPLE_LABFROG_SQLITE = (
+    Path(__file__).resolve().parents[1]
+    / "examples"
+    / "Example_Campaign_06.2026.light.sqlite"
+)
+
+
+def test_read_labfrog_sqlite_shots_reads_laser_energy_and_shot_variables():
+    shots = read_labfrog_sqlite_shots(_EXAMPLE_LABFROG_SQLITE)
+
+    assert [shot["metadata"]["laser"]["pulse_energy"] for shot in shots] == [
+        12.25,
+        14.0,
+        15.75,
+        17.5,
+        19.25,
+    ]
+    second = shots[1]["metadata"]
+    assert second["gvd"] == 1420.0
+    assert second["tw_delay"] == 0.3
+    assert "laser_energy" not in second
+    assert second["labfrog_variables"]["ICT integrated charge"] == {
+        "value": 0.26,
+        "unit": "nC",
+        "kind": "dynamic_field",
+    }
+
+
+def test_read_labfrog_sqlite_shots_without_shot_variables_table(tmp_path):
+    sqlite_path = tmp_path / "labfrog.sqlite"
+    with contextlib.closing(sqlite3.connect(sqlite_path)) as connection:
+        connection.execute(
+            "CREATE TABLE shots (mongo_id TEXT, shot_number INTEGER, "
+            "date_time TEXT, campaign TEXT, laser_energy REAL, padding TEXT)"
+        )
+        connection.execute(
+            "INSERT INTO shots VALUES ('m1', 1, '2026-06-15 09:00:00', 'C', 3.5, ?)",
+            ("x" * 2048,),
+        )
+        connection.commit()
+
+    (shot,) = read_labfrog_sqlite_shots(sqlite_path)
+
+    assert shot["metadata"]["laser"] == {"pulse_energy": 3.5}
+    assert "labfrog_variables" not in shot["metadata"]
+
+
+def test_merge_shot_metadata_keeps_labfrog_laser_keys_events_do_not_carry():
+    merged = _merge_shot_metadata(
+        {"laser": {"pulse_energy": 12.25}, "status": "active"},
+        {"laser": {"pulse_duration": 30.0}},
+    )
+
+    assert merged == {
+        "laser": {"pulse_energy": 12.25, "pulse_duration": 30.0},
+        "status": "active",
+    }

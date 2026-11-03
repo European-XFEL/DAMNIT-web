@@ -46,6 +46,7 @@ import {
   shotMatchesTableFilter,
   compareHZDRShotsForTableSort,
   buildShotDayLabels,
+  getShotRowKey,
   isScalarContextValue,
 } from '../utils/filter'
 import {
@@ -243,7 +244,7 @@ export function HZDRShotPage() {
         filterOperator,
         filterValue,
         contextRowsByShot.get(shot.shot_number),
-        shotDayLabels.get(shot.shot_number)
+        shotDayLabels.get(getShotRowKey(shot))
       )
     )
     .sort((leftShot, rightShot) =>
@@ -670,16 +671,18 @@ export function HZDRShotPage() {
                                           shot,
                                           'Day',
                                           'shot_day',
-                                          shotDayLabels.get(shot.shot_number) ??
-                                            '-'
+                                          shotDayLabels.get(
+                                            getShotRowKey(shot)
+                                          ) ?? '-'
                                         )
                                       }}
                                       style={cellButtonStyle}
                                     >
                                       <TruncatedCell
                                         value={
-                                          shotDayLabels.get(shot.shot_number) ??
-                                          '-'
+                                          shotDayLabels.get(
+                                            getShotRowKey(shot)
+                                          ) ?? '-'
                                         }
                                       />
                                     </button>
