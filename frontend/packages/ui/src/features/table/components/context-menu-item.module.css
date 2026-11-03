@@ -1,7 +1,6 @@
-/* A floating row sits on the same 10 px inset as the menus; the library's is
-   12. */
+/* A floating row sits on the menus' inset; the library's is 12 px. */
 .item {
-  padding-inline: 10px;
+  padding-inline: var(--floating-row-inset);
 }
 
 /* The mark centres on the title's line, as a plot entry's does in the nav. */

@@ -1,12 +1,13 @@
 /* What the list lines up on: the handle column, the gap before the title, and
-   where the title starts past both. */
+   where the title starts past both and past the row's inset. */
 .row,
 .groupHeader,
 .details,
 .empty {
   --lead: 22px;
-  --gap: 6px;
+  --gap: var(--icon-gap-xs);
   --title-inset: calc(var(--lead) + var(--gap));
+  --title-start: calc(var(--floating-row-inset) + var(--title-inset));
 }
 
 /* The ground an open row shares with its details. */
@@ -40,16 +41,17 @@
   background: var(--mantine-color-body);
   display: flex;
   gap: var(--gap);
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: var(--floating-row-height);
+  padding: 0 var(--floating-row-inset);
 }
 
 /* No rows left, said where a row's title would start. */
 .empty {
   align-items: center;
   display: flex;
-  min-height: 32px;
-  padding: 0 10px 0 calc(10px + var(--title-inset));
+  min-height: var(--floating-row-height);
+  padding: 0 var(--floating-row-inset);
+  padding-left: var(--title-start);
 }
 
 /* A heading carries a 12px label, so it does not need a variable row's height.
@@ -134,7 +136,7 @@
     var(--mantine-color-dark-5)
   );
 
-  margin-inline: 10px;
+  margin-inline: var(--floating-row-inset);
 }
 
 /* Only the handle in use darkens. The colour sits on the two elements that
@@ -153,7 +155,9 @@
    from the handle that moves them, with each member's grip inside it. */
 .member,
 .memberDetails {
-  --rail-inset: calc(10px + (var(--lead) - var(--rail-width)) / 2);
+  --rail-inset: calc(
+    var(--floating-row-inset) + (var(--lead) - var(--rail-width)) / 2
+  );
   --rail-width: 2px;
 }
 
@@ -191,7 +195,8 @@
 
 .details {
   background: var(--open-bg);
-  padding: 10px 10px 10px calc(10px + var(--title-inset));
+  padding: var(--floating-row-inset);
+  padding-left: var(--title-start);
   position: relative;
 }
 
@@ -204,9 +209,9 @@
   );
   content: '';
   height: 1px;
-  left: calc(10px + var(--title-inset));
+  left: var(--title-start);
   position: absolute;
-  right: 10px;
+  right: var(--floating-row-inset);
   top: 0;
 }
 
@@ -256,7 +261,7 @@
   display: flex;
   justify-content: space-between;
   min-height: 24px;
-  padding: 0 10px;
+  padding: 0 var(--floating-row-inset);
 }
 
 /* A flex slot hands its link the link's own line height, not a line box's. */
