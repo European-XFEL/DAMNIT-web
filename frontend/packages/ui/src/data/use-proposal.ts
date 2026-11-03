@@ -109,8 +109,10 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
       },
       // graphql-ws retries every drop, so an error or a completion is the
       // server's own, and nothing will try again.
-      onError: () => recordLiveUpdatesEvent({ type: 'failed' }),
-      onComplete: () => recordLiveUpdatesEvent({ type: 'failed' }),
+      onError: () =>
+        recordLiveUpdatesEvent({ type: 'failed', reason: 'server' }),
+      onComplete: () =>
+        recordLiveUpdatesEvent({ type: 'failed', reason: 'server' }),
     }
   )
 

@@ -3,8 +3,8 @@
   display: flex;
   gap: 6px;
   align-items: center;
-  /* The box reaches into the gap on each side, so the focus ring and the
-     warning's tint clear the icon while the label keeps its place. */
+  /* The box reaches into the gap on each side, so the focus ring and a
+     coloured ground clear the icon while the label keeps its place. */
   margin: 0 -6px;
   padding: 0 6px;
   font-size: var(--mantine-font-size-sm);
@@ -32,7 +32,7 @@
   cursor: pointer;
 }
 
-.item[data-warning] {
+.item[data-level='warning'] {
   /* Solid, unlike Mantine's translucent tint, so an icon can draw a ring or
      a gap in the same colour and have it blend into the background. */
   --status-item-background: color-mix(
@@ -50,12 +50,27 @@
   }
 }
 
+.item[data-level='error'] {
+  --status-item-background: var(--mantine-color-red-filled);
+  color: var(--mantine-color-white);
+
+  &:hover {
+    --status-item-background: var(--mantine-color-red-filled-hover);
+  }
+
+  /* Indigo reads 1.3:1 on red, so a white ring sits inside it. The outline
+     covers the shadow's outer 2 px. */
+  &:focus-visible {
+    box-shadow: inset 0 0 0 4px var(--mantine-color-white);
+  }
+}
+
 /* The bar's tooltip, with room for a button on the right. */
 .bubble {
   display: flex;
   gap: 16px;
   align-items: center;
-  max-width: min(380px, calc(100vw - 20px));
+  max-width: min(420px, calc(100vw - 20px));
   padding: 8px 10px;
   border: 0;
   background: var(--mantine-color-gray-9);

@@ -46,6 +46,9 @@ export type LiveUpdatesMock = {
   // Complete the open subscription from the server's side, as the API does
   // when its stream of updates returns.
   endLiveUpdates: () => void
+  // Drop the socket, then close every reconnect at once with 4401, as the API
+  // does with a socket whose login has ended.
+  endLogin: () => Promise<void>
 }
 
 // The metadata half of a push. The client replaces its metadata wholesale, so a
@@ -84,6 +87,7 @@ export async function mockWebSocket(
   let connections = 0
   let subscriptions = 0
   let refused = false
+  let loginEnded = false
 
   // The backend stamps each push with an advancing epoch-ms timestamp, which the
   // app feeds back as its subscription cursor. Model that so the stored cursor
@@ -138,11 +142,16 @@ export async function mockWebSocket(
 
   await page.routeWebSocket('**/graphql', (ws) => {
     connections += 1
+    if (loginEnded) {
+      ws.close({ code: 4401, reason: 'Unauthorized' })
+      return
+    }
     if (refusalsLeft > 0) {
       refusalsLeft -= 1
       ws.close({ code: 1012 })
       return
     }
+
     socket = ws
 
     // As an API that waits on MyMdC before it answers the init
@@ -210,6 +219,11 @@ export async function mockWebSocket(
         socket.send(JSON.stringify({ id: activeId, type: 'complete' }))
         activeId = undefined
       }
+    },
+    endLogin: async () => {
+      loginEnded = true
+      activeId = undefined
+      await socket?.close({ code: 1012, reason: 'Service Restart' })
     },
   }
 }
