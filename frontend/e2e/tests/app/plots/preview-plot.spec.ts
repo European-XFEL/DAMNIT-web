@@ -1,5 +1,8 @@
+import type { Page, Request } from '@playwright/test'
+
 import { test, expect } from '#fixtures'
-import { XPCS } from '#examples/xpcs'
+import { XPCS, type Example } from '#examples/xpcs'
+import { fullMetadata, type MockApi } from '#mocks'
 import { WIDE_VIEWPORT } from '#support/grid'
 import { columnOf, openProposal, titleOf } from '#support/table'
 import { statusBar } from '#support/dashboard'
@@ -19,6 +22,53 @@ test.use({ viewport: WIDE_VIEWPORT, timezoneId: 'UTC' })
 const SCATTER_VAR = 'xgm_intensity' // 1-D array -> Plotly scatter
 const SCALAR_VAR = 'n_trains' // scalar number -> "unable to display" notice
 const IMAGE_VAR = 'xpcs_g2_plot' // image -> plain <img>
+
+// Run 1 is computed again to the same preview data, and a push says so.
+function recomputeRun1(api: MockApi, example: Example) {
+  const run1 = example.data.find((run) => run.variables.run.value === 1)!
+  const change = {
+    1: {
+      [SCATTER_VAR]: {
+        ...run1.variables[SCATTER_VAR],
+        computed_at: Date.UTC(2023, 11, 1, 9, 30),
+      },
+    },
+  }
+  api.editRuns(change)
+  api.pushLatestData({
+    metadata: fullMetadata(example.meta, example.meta.runs),
+    runs: change,
+  })
+}
+
+const isPreviewQuery = (request: Request) =>
+  (request.postDataJSON() as { operationName?: string } | null)
+    ?.operationName === 'PreviewDataQuery'
+
+// Opens run 1's preview, computed again once its data is drawn.
+async function openOutdatedPreview(
+  page: Page,
+  { api, example }: { api: MockApi; example: Example }
+) {
+  await openProposal(page, example)
+  await openPreviewPlot(page, {
+    example,
+    col: columnOf(example, SCATTER_VAR),
+    row: 0,
+  })
+  await expect(
+    statusBar(page).getByText('Computed: 14 November 2023')
+  ).toBeVisible()
+
+  recomputeRun1(api, example)
+
+  const item = statusBar(page).getByRole('button', {
+    name: 'Computed: 14 November 2023. Reload',
+  })
+  await expect(item).toBeVisible()
+
+  return item
+}
 
 test('right-clicking a cell and choosing "Plot: preview" plots its preview data', async ({
   page,
@@ -117,4 +167,57 @@ test('right-clicking an image cell renders the picture instead of a figure', asy
   await expect(plotEntry(page, titleOf(example, IMAGE_VAR))).toBeVisible()
   await expect(page.locator('img[src^="data:image/png"]')).toBeVisible()
   await expect(plotFigure(page)).toHaveCount(0)
+})
+
+test('a preview plot names a run it draws that was computed again', async ({
+  page,
+  api,
+  example,
+}) => {
+  const item = await openOutdatedPreview(page, { api, example })
+
+  await item.hover()
+
+  await expect(page.getByRole('dialog')).toContainText(
+    'Computed 14 November 2023 at 22:13:20Run 1 has newer data.'
+  )
+})
+
+test('a click on an outdated preview plot item reloads its data', async ({
+  page,
+  api,
+  example,
+}) => {
+  const item = await openOutdatedPreview(page, { api, example })
+  const reloaded = page.waitForRequest(isPreviewQuery)
+
+  await item.click()
+
+  await reloaded
+  await expect(
+    statusBar(page).getByText('Computed: 1 December 2023')
+  ).toBeVisible()
+  await expect(
+    statusBar(page).getByRole('button', { name: /^Computed/ })
+  ).toHaveCount(0)
+})
+
+test('Reload in an outdated preview plot bubble reloads its data', async ({
+  page,
+  api,
+  example,
+}) => {
+  const item = await openOutdatedPreview(page, { api, example })
+  await item.hover()
+  const reloaded = page.waitForRequest(isPreviewQuery)
+
+  await page.getByRole('button', { name: 'Reload', exact: true }).click()
+
+  await reloaded
+  await expect(
+    statusBar(page).getByText('Computed: 1 December 2023')
+  ).toBeVisible()
+  await expect(
+    statusBar(page).getByRole('button', { name: /^Computed/ })
+  ).toHaveCount(0)
 })
