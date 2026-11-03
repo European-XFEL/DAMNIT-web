@@ -19,6 +19,7 @@ function makeView(overrides: Partial<ShotTableView> = {}): ShotTableView {
     filterValue: 'ok',
     sortState: { column: 'fired_at', direction: 'desc' },
     hiddenTableColumns: ['target'],
+    showHistoricalVersions: false,
     ...overrides,
   }
 }
@@ -28,6 +29,15 @@ beforeEach(() => {
 })
 
 describe('saveShotTableView / loadShotTableView', () => {
+  it('defaults old saved views to hiding history and persists the history choice', () => {
+    const legacy = { ...makeView() } as Partial<ShotTableView>
+    delete legacy.showHistoricalVersions
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy))
+    expect(loadShotTableView(SOURCE_KEY)?.showHistoricalVersions).toBe(false)
+    saveShotTableView(SOURCE_KEY, makeView({ showHistoricalVersions: true }))
+    expect(loadShotTableView(SOURCE_KEY)?.showHistoricalVersions).toBe(true)
+  })
+
   it('round-trips a saved view', () => {
     const view = makeView()
     saveShotTableView(SOURCE_KEY, view)

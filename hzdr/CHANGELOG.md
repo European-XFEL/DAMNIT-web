@@ -22,6 +22,14 @@ behaviour; the merge PR has the details.
   columns work again without editing workspace copies.
 
 ### Shot table
+- **Show current versions by default.** The table and its trends hide archived
+  records and lower numbered versions of the same campaign/day/shot, even when
+  the export marks several revisions active. "Show older and archived versions"
+  restores the history and is saved per source. Equal highest or unknown
+  versions stay visible with a conflict warning. Version numbers and history
+  labels distinguish these records without rewriting LabFrog's stored status.
+  The builder now preserves exported `shot_day` metadata for grouping and labels;
+  existing catalogs fall back to their shot date until rebuilt.
 - **Sorting and column hiding keep duplicate LabFrog records distinct.** Rows
   now include the LabFrog record ID in their UI identity, so records sharing a
   shot key (including revisions with the same timestamp) no longer leave stale

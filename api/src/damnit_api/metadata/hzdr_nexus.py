@@ -1195,6 +1195,7 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
             for name in (
                 "mongo_id",
                 "shot_number",
+                "shot_day",
                 "date_time",
                 "date_time_utc",
                 "date_time_timezone",

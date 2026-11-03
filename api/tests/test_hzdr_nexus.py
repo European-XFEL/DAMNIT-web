@@ -989,6 +989,21 @@ def test_reads_curated_sqlite_linking_columns_and_marks_history(tmp_path: Path):
     assert shots[1]["metadata"]["damnit_shot_key"] == "HELPMI:20260610:000017"
 
 
+def test_sqlite_shot_day_is_preserved_for_version_display(tmp_path: Path):
+    sqlite_path = tmp_path / "campaign.sqlite"
+    with sqlite3.connect(sqlite_path) as connection:
+        connection.execute(
+            "CREATE TABLE shots (mongo_id TEXT, shot_number INTEGER, "
+            "date_time TEXT, campaign TEXT, shot_day INTEGER)"
+        )
+        connection.execute(
+            "INSERT INTO shots VALUES (?, ?, ?, ?, ?)",
+            ("record", 40, "2026-06-17T12:38:36", "campaign", 7),
+        )
+    shots = read_labfrog_sqlite_shots(sqlite_path)
+    assert shots[0]["metadata"]["shot_day"] == 7
+
+
 def test_active_keyed_supersede_warns_when_active_row_not_latest(
     tmp_path: Path, caplog
 ):

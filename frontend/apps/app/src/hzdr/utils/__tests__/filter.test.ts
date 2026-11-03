@@ -116,6 +116,18 @@ describe('getShotDateKey', () => {
 })
 
 describe('buildShotDayLabels', () => {
+  it('uses exported shot days even when sessions share a calendar date', () => {
+    const shots = [
+      makeShot({ labfrog_record_id: 'a', metadata: { shot_day: 7 } }),
+      makeShot({ labfrog_record_id: 'b', metadata: { shot_day: 8 } }),
+    ]
+    const labels = buildShotDayLabels(shots)
+    expect(shots.map((shot) => labels.get(getShotRowKey(shot)))).toEqual([
+      'Day 7',
+      'Day 8',
+    ])
+  })
+
   it('assigns sequential day labels per unique date', () => {
     const shots = [
       makeShot({ shot_number: 1, fired_at: '2026-05-01T10:00:00Z' }),

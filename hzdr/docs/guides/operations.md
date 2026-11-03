@@ -24,6 +24,20 @@ Then hard-refresh the browser (Ctrl+Shift+R). The app is at `/`, so build
 without `VITE_BASE_URL`. Deep links such as `/source/<key>` need
 `location / { try_files $uri /index.html; }` in the server block.
 
+## Shot version display
+
+The shot table defaults to the highest numbered version for each campaign,
+shot day and shot number, excluding records explicitly marked archived or
+superseded. This also applies when the export marks several revisions active.
+Use **Show older and archived versions** above the table to inspect history;
+the setting is saved per source and applies to the trends too. Tied highest
+versions or records with unknown versions remain visible with a conflict warning.
+The display policy does not modify LabFrog's recorded status or delete records.
+
+Deploy the API and frontend using the commands above. Existing catalogs work
+without a rebuild, using their shot dates. After a campaign rebuild the exported
+`shot_day` is preserved for grouping and day labels when available.
+
 ## Rebuild a campaign by hand
 
 The auto-trigger rebuilds when an export in `CURATED_ROOT` changes (mtime or

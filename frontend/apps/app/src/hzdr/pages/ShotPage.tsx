@@ -61,6 +61,7 @@ import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
 import { summarizeShotDataSources } from '../utils/data-sources'
 import { formatShotLabel, toTrendValue } from '../utils/shot-key'
+import { classifyShotVersions, getShotVersion } from '../utils/shot-versions'
 import {
   SHOT_TABLE_COLUMNS,
   SHOT_TABLE_COLUMN_WIDTHS,
@@ -87,6 +88,7 @@ export function HZDRShotPage() {
     direction: 'asc',
   })
   const [hiddenTableColumns, setHiddenTableColumns] = useState<string[]>([])
+  const [showHistoricalVersions, setShowHistoricalVersions] = useState(false)
   const [selectedCell, setSelectedCell] = useState<HZDRSelectedCell>()
   // One page-level state for the shots list only; the secondary fetches
   // (source header, available sources, context results, shot detail) fail soft.
@@ -111,6 +113,7 @@ export function HZDRShotPage() {
       savedView?.sortState ?? { column: 'shot_number', direction: 'asc' }
     )
     setHiddenTableColumns(savedView?.hiddenTableColumns ?? [])
+    setShowHistoricalVersions(savedView?.showHistoricalVersions ?? false)
   }, [source_key])
 
   useEffect(() => {
@@ -127,6 +130,7 @@ export function HZDRShotPage() {
       filterValue,
       sortState,
       hiddenTableColumns,
+      showHistoricalVersions,
     })
   }, [
     source_key,
@@ -135,6 +139,7 @@ export function HZDRShotPage() {
     filterValue,
     sortState,
     hiddenTableColumns,
+    showHistoricalVersions,
   ])
 
   const loadShotPageData = useCallback(() => {
@@ -181,10 +186,19 @@ export function HZDRShotPage() {
     loadShotPageData()
   }, [loadShotPageData])
 
-  useEffect(() => {
-    const selected = shots.find(
-      (shot) => getShotRowKey(shot) === selectedRowKey
+  const versionStates = classifyShotVersions(shots)
+  const currentShots = shots.filter((shot) =>
+    ['current', 'conflict'].includes(
+      versionStates.get(getShotRowKey(shot)) ?? ''
     )
+  )
+  const tableShots = showHistoricalVersions ? shots : currentShots
+  const selectedShot =
+    tableShots.find((shot) => getShotRowKey(shot) === selectedRowKey) ??
+    tableShots[0]
+
+  useEffect(() => {
+    const selected = selectedShot
     if (!source_key || !selected) {
       setShotDetail(undefined)
       return
@@ -202,14 +216,14 @@ export function HZDRShotPage() {
       .then((response) => requireJson<HZDRShotDetail>(response))
       .then(setShotDetail)
       .catch(() => setShotDetail(undefined))
-  }, [source_key, selectedRowKey, shots])
-
-  const selectedShot = shots.find(
-    (shot) => getShotRowKey(shot) === selectedRowKey
-  )
+  }, [source_key, selectedShot])
   const contextRowsByShot = buildContextRowsByShot(shots, contextResults?.rows)
   const shotDayLabels = buildShotDayLabels(shots)
-  const dataSources = summarizeShotDataSources(shots)
+  const historicalCount = shots.length - currentShots.length
+  const conflictCount = currentShots.filter(
+    (shot) => versionStates.get(getShotRowKey(shot)) === 'conflict'
+  ).length
+  const dataSources = summarizeShotDataSources(tableShots)
   const contextColumnOptions =
     contextResults?.columns.map((column) => ({
       value: `context:${column.name}`,
@@ -241,7 +255,7 @@ export function HZDRShotPage() {
       visibleContextColumns.length * CONTEXT_COLUMN_WIDTH
     )
   )
-  const visibleShots = shots
+  const visibleShots = tableShots
     .filter((shot) =>
       shotMatchesTableFilter(
         shot,
@@ -276,7 +290,7 @@ export function HZDRShotPage() {
     )
   }
   const buildMetadataTrendValues = (metadataKey: string) =>
-    shots
+    tableShots
       .map((shot) =>
         toTrendValue(
           shot,
@@ -285,7 +299,7 @@ export function HZDRShotPage() {
       )
       .filter((entry) => Number.isFinite(entry.value))
   const buildContextTrendValues = (columnName: string) =>
-    shots
+    tableShots
       .map((shot) =>
         toTrendValue(
           shot,
@@ -432,7 +446,7 @@ export function HZDRShotPage() {
                     <Badge
                       key={label}
                       variant="light"
-                      title={`${shotCount} of ${shots.length} shots have data from ${label}`}
+                      title={`${shotCount} of ${tableShots.length} shots have data from ${label}`}
                     >
                       {label} · {shotCount}
                     </Badge>
@@ -532,6 +546,25 @@ export function HZDRShotPage() {
                       Context builder
                     </Button>
                   </Group>
+                  <Group gap="sm" mt="sm">
+                    <Checkbox
+                      label="Show older and archived versions"
+                      checked={showHistoricalVersions}
+                      onChange={(event) =>
+                        setShowHistoricalVersions(event.currentTarget.checked)
+                      }
+                    />
+                    <Text size="xs" c="dimmed">
+                      {historicalCount} older or archived records
+                    </Text>
+                  </Group>
+                  {conflictCount > 0 ? (
+                    <Alert color="yellow" title="Version conflicts" mt="sm">
+                      {conflictCount} records share a day and shot number
+                      without a unique latest version. They remain visible for
+                      review.
+                    </Alert>
+                  ) : null}
                   <DetailsSection title="Columns">
                     <Checkbox.Group
                       value={visibleTableColumns}
@@ -641,7 +674,10 @@ export function HZDRShotPage() {
                                 <Text size="sm" c="dimmed" ta="center" py="md">
                                   {filterValue
                                     ? 'No shots match the filter.'
-                                    : 'No shots yet for this source.'}
+                                    : !showHistoricalVersions &&
+                                        historicalCount > 0
+                                      ? 'No current versions. Enable Show older and archived versions to inspect history.'
+                                      : 'No shots yet for this source.'}
                                 </Text>
                               </Table.Td>
                             </Table.Tr>
@@ -655,7 +691,9 @@ export function HZDRShotPage() {
                                 style={{
                                   cursor: 'pointer',
                                   background:
-                                    getShotRowKey(shot) === selectedRowKey
+                                    getShotRowKey(shot) ===
+                                    (selectedShot &&
+                                      getShotRowKey(selectedShot))
                                       ? 'var(--mantine-color-blue-light)'
                                       : undefined,
                                 }}
@@ -678,6 +716,11 @@ export function HZDRShotPage() {
                                       style={cellButtonStyle}
                                     >
                                       {shot.shot_number}
+                                      {getShotVersion(shot) !== undefined ? (
+                                        <Text span size="xs" c="dimmed" ml={6}>
+                                          v{getShotVersion(shot)}
+                                        </Text>
+                                      ) : null}
                                     </button>
                                   </Table.Td>
                                 ) : null}
@@ -748,11 +791,37 @@ export function HZDRShotPage() {
                                       }}
                                       style={cellButtonStyle}
                                     >
-                                      <StatusBadge
-                                        status={String(
-                                          shot.metadata.status ?? 'unknown'
-                                        )}
-                                      />
+                                      {versionStates.get(
+                                        getShotRowKey(shot)
+                                      ) === 'current' ? (
+                                        <StatusBadge
+                                          status={String(
+                                            shot.metadata.status ?? 'unknown'
+                                          )}
+                                        />
+                                      ) : (
+                                        <Badge
+                                          size="xs"
+                                          title={`Recorded LabFrog status: ${shot.metadata.status ?? 'unknown'}`}
+                                          color={
+                                            versionStates.get(
+                                              getShotRowKey(shot)
+                                            ) === 'conflict'
+                                              ? 'yellow'
+                                              : 'gray'
+                                          }
+                                        >
+                                          {versionStates.get(
+                                            getShotRowKey(shot)
+                                          ) === 'conflict'
+                                            ? 'Version conflict'
+                                            : versionStates.get(
+                                                  getShotRowKey(shot)
+                                                ) === 'older'
+                                              ? 'Older version'
+                                              : 'Archived'}
+                                        </Badge>
+                                      )}
                                     </button>
                                   </Table.Td>
                                 ) : null}
@@ -941,7 +1010,7 @@ export function HZDRShotPage() {
                     />
                   </DetailsSection>
                   <DetailsSection title="Shot sets" open>
-                    <HZDRShotSetsPanel shots={shots} />
+                    <HZDRShotSetsPanel shots={tableShots} />
                   </DetailsSection>
                   <DetailsSection title="Shot detail">
                     <ShotDetailPanel

@@ -163,9 +163,16 @@ export function buildShotDayLabels(shots: HZDRShot[]) {
   return new Map(
     shots.map((shot) => {
       const dateKey = getShotDateKey(shot.fired_at)
+      const exportedDay = shot.metadata.shot_day
       return [
         getShotRowKey(shot),
-        dateKey ? (dayByDate.get(dateKey) ?? '-') : '-',
+        typeof exportedDay === 'number' &&
+        Number.isInteger(exportedDay) &&
+        exportedDay > 0
+          ? `Day ${exportedDay}`
+          : dateKey
+            ? (dayByDate.get(dateKey) ?? '-')
+            : '-',
       ]
     })
   )

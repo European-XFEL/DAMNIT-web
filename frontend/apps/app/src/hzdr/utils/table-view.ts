@@ -34,6 +34,7 @@ export type ShotTableView = {
   filterValue: string
   sortState: HZDRSortState
   hiddenTableColumns: string[]
+  showHistoricalVersions: boolean
 }
 
 const FILTER_OPERATORS: readonly HZDRFilterOperator[] = [
@@ -91,7 +92,9 @@ export function loadShotTableView(
     typeof sortState.column !== 'string' ||
     !isSortDirection(sortState.direction) ||
     !Array.isArray(candidate.hiddenTableColumns) ||
-    !candidate.hiddenTableColumns.every((entry) => typeof entry === 'string')
+    !candidate.hiddenTableColumns.every((entry) => typeof entry === 'string') ||
+    (candidate.showHistoricalVersions !== undefined &&
+      typeof candidate.showHistoricalVersions !== 'boolean')
   ) {
     return undefined
   }
@@ -101,6 +104,7 @@ export function loadShotTableView(
     filterValue: candidate.filterValue,
     sortState: { column: sortState.column, direction: sortState.direction },
     hiddenTableColumns: candidate.hiddenTableColumns as string[],
+    showHistoricalVersions: candidate.showHistoricalVersions === true,
   }
 }
 

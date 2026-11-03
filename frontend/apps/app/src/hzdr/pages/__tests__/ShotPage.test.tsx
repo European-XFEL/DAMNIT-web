@@ -22,7 +22,9 @@ vi.mock('../../components/CampaignCards', () => ({ CampaignCards: () => null }))
 vi.mock('../../components/ShotTable', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/ShotTable')>()),
   SelectedCellPanel: () => null,
-  HZDRShotSetsPanel: () => null,
+  HZDRShotSetsPanel: ({ shots }: { shots: HZDRShot[] }) => (
+    <span>{shots.length} trend records</span>
+  ),
   ShotDetailPanel: () => null,
 }))
 
@@ -33,7 +35,7 @@ afterEach(() => {
 })
 
 describe('shot table with repeated canonical keys', () => {
-  it('preserves every record in time order and hides body cells after sorting', async () => {
+  it('defaults to latest records, flags conflicts, and preserves sortable history and column hiding', async () => {
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -56,7 +58,7 @@ describe('shot table with repeated canonical keys', () => {
       shot_key: `radbio:${String(time).slice(0, 10)}:${number}`,
       fired_at: String(time),
       labfrog_record_id: String(record),
-      metadata: { target: `target-${record}`, version },
+      metadata: { target: `target-${record}`, version, status: 'active' },
       events: [],
       data_products: [],
     }))
@@ -89,11 +91,27 @@ describe('shot table with repeated canonical keys', () => {
     )
     const table = await screen.findByRole('table')
     await waitFor(() =>
-      expect(within(table).getAllByRole('row')).toHaveLength(7)
+      expect(within(table).getAllByRole('row')).toHaveLength(5)
     )
     const rows = () => within(table).getAllByRole('row').slice(1)
     const targets = () =>
       rows().map((row) => within(row).getAllByRole('cell')[5].textContent)
+    expect(targets()).toEqual(['target-a', 'target-b', 'target-d', 'target-f'])
+    expect(screen.getByText('4 trend records')).toBeInTheDocument()
+    expect(within(table).getAllByText('Version conflict')).toHaveLength(2)
+    expect(screen.getByText('2 older or archived records')).toBeInTheDocument()
+    const history = screen.getByRole('checkbox', {
+      name: 'Show older and archived versions',
+    })
+    expect(history).not.toBeChecked()
+    await user.click(history)
+    expect(rows()).toHaveLength(6)
+    expect(screen.getByText('6 trend records')).toBeInTheDocument()
+    expect(within(table).getAllByText('Older version')).toHaveLength(2)
+    expect(
+      JSON.parse(localStorage.getItem('hzdr:shot-table-view:radbio')!)
+        .showHistoricalVersions
+    ).toBe(true)
     for (let pass = 0; pass < 2; pass++) {
       await user.click(screen.getByTitle('Sort by Fired at'))
       expect(targets()).toEqual([
@@ -132,5 +150,8 @@ describe('shot table with repeated canonical keys', () => {
       'target-b',
       'target-a',
     ])
+    await user.click(history)
+    expect(targets()).toEqual(['target-f', 'target-d', 'target-b', 'target-a'])
+    expect(screen.getByText('4 trend records')).toBeInTheDocument()
   })
 })
