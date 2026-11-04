@@ -358,10 +358,8 @@ deploying, rebuilding a campaign by hand, and a build stuck in a CIFS write
 - The auto-trigger rebuilds on export or event changes only, never on restart.
 - Manual multi-campaign builds must name each campaign (`--campaign`) and pass
   `--campaign-timezone Europe/Berlin`.
-- The deployed output root is normally `/home/tippey/mnt/bigdata/HPLexp/nexus`,
-  shared with shot-aligner's output (never delete it). Since 2026-11-03 it is
-  temporarily `HPLexp/nexus_2026-11`, to step around two hung builds holding
-  locks there; switch back after the next reboot of fwkt-webapps.
+- The deployed output root is `/home/tippey/mnt/bigdata/HPLexp/nexus`, shared
+  with shot-aligner's output (never delete it).
 
 ## Conventions and boundaries
 - Keep work local-first; prefer the local acceptance script and the harness broker. No real broker/Mongo/ASAPO calls unless the user explicitly changes scope.

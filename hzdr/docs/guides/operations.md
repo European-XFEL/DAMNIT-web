@@ -61,7 +61,7 @@ change. To rebuild now, with the same inputs the trigger uses:
 
 ```bash
 cd ~/DAMNIT-web-hzdr/api && uv run python scripts/hzdr-hdf5-builder.py \
-  --output-root /home/tippey/mnt/bigdata/HPLexp/nexus_2026-11 \
+  --output-root /home/tippey/mnt/bigdata/HPLexp/nexus \
   --curated-root /home/tippey/labfrog-sqlite-tools-repo/curated_files \
   --campaign Beamline_radbio_2026 \
   --campaign-timezone Europe/Berlin \
@@ -79,7 +79,7 @@ cd ~/DAMNIT-web-hzdr/api && uv run python scripts/hzdr-hdf5-builder.py \
 Check a build reached the catalog:
 
 ```bash
-python3 -c "import json; c=json.load(open('/home/tippey/mnt/bigdata/HPLexp/nexus_2026-11/hzdr_sources.json')); s=[x for x in c['sources'] if x['key']=='Beamline_radbio_2026'][0]['shots'][0]; print(s['shot_key'], s['metadata'].get('laser'), len(s['metadata'].get('labfrog_variables', {})))"
+python3 -c "import json; c=json.load(open('/home/tippey/mnt/bigdata/HPLexp/nexus/hzdr_sources.json')); s=[x for x in c['sources'] if x['key']=='Beamline_radbio_2026'][0]['shots'][0]; print(s['shot_key'], s['metadata'].get('laser'), len(s['metadata'].get('labfrog_variables', {})))"
 ```
 
 ## A build that never finishes
