@@ -684,7 +684,7 @@ def _prepare_context_builder(page: Page) -> None:
     page.get_by_role("option").first.click()
     page.get_by_role("textbox", name="What should this column do?").click()
     page.get_by_role("option", name="Image with reduced preview").click()
-    page.get_by_role("button", name="Preview column").click()
+    page.get_by_role("button", name="Preview example data").click()
     page.get_by_text("Image preview").first.wait_for()
     _open_details_section(page, "Generated variable")
 
@@ -790,6 +790,33 @@ def _write_receipt() -> None:
     RECEIPT_PATH.write_text(
         json.dumps(receipt, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
+    )
+
+
+def _hide_capture_folder(page: Page, folder: Path) -> None:
+    """Show the throwaway emulator folder as ``<capture folder>`` in the picture.
+
+    Sources print their full DAMNIT folder, which here is a temporary one under
+    the maintainer's user profile: their account name in a published image, and
+    a random name that makes every capture differ. Runs just before the
+    screenshot, because the page's own refresh would put the real text back.
+    """
+    page.evaluate(
+        """folders => {
+          const walker = document.createTreeWalker(
+            document.body, NodeFilter.SHOW_TEXT)
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+            for (const folder of folders) {
+              node.nodeValue = node.nodeValue.replaceAll(folder, '<capture folder>')
+            }
+          }
+          for (const field of document.querySelectorAll('input, textarea')) {
+            for (const folder of folders) {
+              field.value = field.value.replaceAll(folder, '<capture folder>')
+            }
+          }
+        }""",
+        [str(folder), folder.as_posix()],
     )
 
 
@@ -924,6 +951,7 @@ def capture() -> None:
                         page.evaluate("window.scrollTo(0, 0)")
                         _pin_fixed_chrome(page)
                         page.wait_for_timeout(250)
+                        _hide_capture_folder(page, Path(temp_dir).resolve())
                         page.screenshot(
                             path=OUT_DIR / shot.filename,
                             full_page=True,
