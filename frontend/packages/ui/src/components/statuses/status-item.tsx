@@ -74,7 +74,11 @@ function StatusItem({
       onDismiss={close}
       disabled={action == null}
       position="top"
-      offset={5}
+      withArrow
+      arrowSize={8}
+      // The arrow pokes 4.7 px past the 1 px edge, so the bubble sits 5 off.
+      // Mantine adds half the arrow to a number, and takes an object as is.
+      offset={{ mainAxis: 5 }}
       // Beside the item in the page, so Tab goes from it to the button.
       withinPortal={false}
       withRoles={false}
