@@ -4,7 +4,7 @@ import { cellId } from '@damnit-frontend/shared/mocks'
 // Apollo keys `Cell` on the id, so a fixture that spells the composite shape its
 // own way mints a second entity for the same cell, which is exactly the drift
 // these tests exist to catch.
-export function serverCell({
+export function serverCell<Value>({
   database,
   proposal,
   run,
@@ -12,7 +12,7 @@ export function serverCell({
   value,
   dtype = 'number',
   error = null,
-}: ServerCellOptions) {
+}: ServerCellOptions<Value>) {
   return {
     __typename: 'Cell',
     id: cellId({ database, proposal, run, name }),
@@ -23,12 +23,12 @@ export function serverCell({
   }
 }
 
-type ServerCellOptions = {
+type ServerCellOptions<Value> = {
   database: string
   proposal: string
   run: number
   name: string
-  value: unknown
+  value: Value
   dtype?: string
   error?: CellError | null
 }
