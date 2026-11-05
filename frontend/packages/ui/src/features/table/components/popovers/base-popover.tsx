@@ -57,10 +57,7 @@ export function BasePopover({
       position="bottom-start"
       styles={{
         dropdown: {
-          border: `1px solid var(--mantine-color-default-border)`,
-        },
-        arrow: {
-          border: `1px solid var(--mantine-color-default-border)`,
+          '--popover-border-color': 'var(--mantine-color-default-border)',
         },
       }}
     >
