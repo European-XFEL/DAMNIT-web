@@ -73,7 +73,7 @@
   max-width: min(420px, calc(100vw - 20px));
   padding: 8px 10px;
   /* Mantine draws the edge and the arrow's in this variable. */
-  --popover-border-color: var(--mantine-color-default-border);
+  --popover-border-color: var(--floating-border-color);
   background: var(--mantine-color-gray-9);
   color: var(--mantine-color-white);
   font-size: var(--mantine-font-size-xs);

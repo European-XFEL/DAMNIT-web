@@ -102,7 +102,7 @@ export function TableTooltip({
         // portals come later in the page than this one.
         zIndex: getDefaultZIndex('popover'),
         boxShadow:
-          '0 0 0 1px var(--mantine-color-default-border), var(--mantine-shadow-md)',
+          '0 0 0 1px var(--floating-border-color), var(--mantine-shadow-md)',
       }}
     >
       <Arrow

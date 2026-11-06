@@ -128,6 +128,7 @@ export const theme = createTheme({
 
 export const cssVariablesResolver: CSSVariablesResolver = (theme) => ({
   variables: {
+    '--floating-border-color': 'var(--mantine-color-default-border)',
     '--floating-row-height': rem(32),
     '--floating-row-inset': rem(10),
     '--icon-gap-xs': rem(6),
