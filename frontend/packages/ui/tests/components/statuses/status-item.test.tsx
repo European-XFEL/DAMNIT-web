@@ -50,8 +50,7 @@ const lostItemButton = (screen: Screen) =>
 const tryNowButton = (screen: Screen) =>
   screen.getByRole('button', { name: 'Try now', exact: true })
 
-// Well past the delay and the bubble's 150 ms fade, since a fading button
-// still counts as visible and a busy runner fires timers late.
+// Well past the delay, since a busy runner fires timers late.
 const waitPastCloseDelay = () =>
   new Promise((resolve) => setTimeout(resolve, BUBBLE_DELAY * 3))
 
@@ -242,7 +241,7 @@ describe('tabbing into the bubble', () => {
     await expect.element(button).toHaveFocus()
   })
 
-  test('focus coming back into the bubble as it fades keeps it open', async () => {
+  test('tabbing past the bubble closes it, and tabbing back opens it on the item', async () => {
     const screen = await renderWithPointerOff(
       <>
         {lostItem()}
@@ -254,11 +253,13 @@ describe('tabbing into the bubble', () => {
     await userEvent.tab()
     await expect.element(button).toHaveFocus()
 
-    // Tab on and straight back, inside the fade
-    await userEvent.keyboard('{Tab}{Shift>}{Tab}{/Shift}')
-    await waitPastCloseDelay()
+    // Tab on to the next button
+    await userEvent.tab()
+    await expect.element(button).not.toBeInTheDocument()
 
-    await expect.element(button).toHaveFocus()
+    // Tab back
+    await userEvent.tab({ shift: true })
+    await expect.element(lostItemButton(screen)).toHaveFocus()
     await expect.element(button).toBeVisible()
   })
 })

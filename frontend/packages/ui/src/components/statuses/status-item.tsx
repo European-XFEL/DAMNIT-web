@@ -80,6 +80,8 @@ function StatusItem({
       onDismiss={close}
       position="top"
       {...FLOATING_ARROW}
+      // Gone at once, so it never shows beside the next item's bubble.
+      transitionProps={{ exitDuration: 0 }}
       // Beside the item in the page, so Tab goes from it to the button.
       withinPortal={false}
       withRoles={false}
@@ -290,7 +292,8 @@ function useBubble() {
       onFocus: openOnKeyboardFocus,
       onBlur: closeUnlessInside,
     },
-    // Focus can land in it while it fades out, so it opens again.
+    // Mantine takes it out a render after it closes, so focus can still land
+    // in it; it opens again.
     bubbleProps: { ...hoverProps, onFocus: open, onBlur: closeUnlessInside },
   }
 }
