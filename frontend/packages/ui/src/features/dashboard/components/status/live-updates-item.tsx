@@ -71,7 +71,11 @@ function LiveUpdatesItem() {
           }
           icon={icon}
           action={
-            lost ? { ...TRY_NOW, busy: tryShown } : stopped ? RELOAD : undefined
+            lost
+              ? { ...TRY_NOW, busy: state.trying }
+              : stopped
+                ? RELOAD
+                : undefined
           }
           level={lost ? 'warning' : stopped ? 'error' : undefined}
         />

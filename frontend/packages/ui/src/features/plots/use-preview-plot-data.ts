@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useApolloClient, useQuery, useReactiveVar } from '@apollo/client/react'
 import { useDidUpdate } from '@mantine/hooks'
 
@@ -179,18 +179,10 @@ export function usePreviewPlotData({
     cells,
   })
 
-  // The loader shows only a second in and the item presses Reload until then,
-  // so the ref is what turns a second press away.
   const client = useApolloClient()
-  const reloadUnderWay = useRef(false)
   const [reloading, setReloading] = useState(false)
 
   const reload = async () => {
-    if (reloadUnderWay.current) {
-      return
-    }
-
-    reloadUnderWay.current = true
     setReloading(true)
 
     const variables = { proposal, variable }
@@ -251,7 +243,6 @@ export function usePreviewPlotData({
       }
     }
 
-    reloadUnderWay.current = false
     setReloading(false)
   }
 
