@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { Box, Loader, Popover, Tooltip, UnstyledButton } from '@mantine/core'
 
+import { useShownAfter } from '#src/hooks/use-shown-after'
 import { FLOATING_ARROW } from '#src/styles/theme'
 
 import classes from './status-item.module.css'
@@ -35,8 +36,8 @@ type StatusItemProps = {
     label: string
     icon: ReactNode
     onClick: () => void
-    // Shows a loader in place of the label and ignores presses. Not Button's
-    // `loading`, which disables the button and so drops its focus.
+    // Its work is under way: presses are ignored at once, and a loader shows
+    // a second in. Not Button's `loading`, which drops the button's focus.
     busy?: boolean
     bubbleOnly?: boolean
   }
@@ -57,6 +58,7 @@ function StatusItem({
   const { opened, open, close, itemRef, setBubble, itemProps, bubbleProps } =
     useBubble({ enabled: action != null })
   const wordsId = useId()
+  const loaderShown = useShownAfter(action?.busy ?? false)
   const runAction = action?.busy ? undefined : action?.onClick
   const pressesAction = action != null && !action.bubbleOnly
 
@@ -97,7 +99,7 @@ function StatusItem({
             mod={{ action: action != null, level }}
             tabIndex={0}
             role={action ? 'button' : ariaLabel ? 'img' : undefined}
-            aria-disabled={action?.busy || undefined}
+            aria-disabled={loaderShown || undefined}
             aria-label={
               ariaLabel && pressesAction
                 ? `${ariaLabel} ${action.label}`
@@ -146,7 +148,7 @@ function StatusItem({
         {action && (
           <UnstyledButton
             className={classes.action}
-            aria-disabled={action.busy || undefined}
+            aria-disabled={loaderShown || undefined}
             // A press can swap the action under the pointer, so the second
             // click of a double click presses nothing.
             onClick={(event) => {
@@ -165,7 +167,7 @@ function StatusItem({
               {action.icon}
               {action.label}
             </span>
-            {action.busy && (
+            {loaderShown && (
               <Loader
                 className={classes.actionLoader}
                 type="dots"

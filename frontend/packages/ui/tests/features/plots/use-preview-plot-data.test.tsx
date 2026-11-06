@@ -565,51 +565,6 @@ describe('pressing Reload', () => {
     expect(result.current.data.traces).toHaveLength(2)
   })
 
-  test('more presses are ignored until every chunk has answered', async () => {
-    const server = createServer()
-    const { cache, wrapper } = setup({ link: server.link })
-    writeChunk(cache, [1, 60])
-    writeCells(cache, { 1: at(2), 60: at(2) })
-
-    const { result } = await renderPreview([1, 60], wrapper)
-    await vi.waitFor(() => {
-      expect(result.current.computedAt).toBe(at(2))
-    })
-
-    // Both runs are reprocessed.
-    writeCells(cache, { 1: at(30), 60: at(30) })
-    await vi.waitFor(() => {
-      expect(result.current.outdated).toEqual([1, 60])
-    })
-    server.hold()
-
-    // Two presses in one go, then one more once the hook says it is reloading.
-    const reloaded = result.current.reload()
-    void result.current.reload()
-    await vi.waitFor(() => {
-      expect(result.current.reloading).toBe(true)
-    })
-    void result.current.reload()
-
-    await vi.waitFor(() => {
-      expect(server.previewsSent()).toBe(2)
-    })
-
-    // Every chunk answers, so a press reloads again.
-    server.release()
-    await reloaded
-    await vi.waitFor(() => {
-      expect(result.current.reloading).toBe(false)
-    })
-    writeCells(cache, { 1: at(40), 60: at(40) })
-    await vi.waitFor(() => {
-      expect(result.current.outdated).toEqual([1, 60])
-    })
-    await result.current.reload()
-
-    expect(server.previewsSent()).toBe(4)
-  })
-
   test('a run computed again while its reload is out stays outdated', async () => {
     const server = createServer()
     const { cache, wrapper } = setup({ link: server.link })

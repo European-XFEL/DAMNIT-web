@@ -1,12 +1,17 @@
 import type { ReactNode } from 'react'
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { userEvent } from 'vitest/browser'
 import { IconBroadcast, IconBroadcastOff } from '@tabler/icons-react'
 
 import StatusItem from '#src/components/statuses/status-item'
+import { LOADER_DELAY } from '#src/hooks/use-shown-after'
 import { renderWithProviders } from '#tests/support/render'
 
 const CLOSE_DELAY = 200
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 const TRY_NOW = { label: 'Try now', icon: null, onClick: () => {} }
 
@@ -329,7 +334,7 @@ describe('retrying', () => {
     expect(onClick).toHaveBeenCalledOnce()
   })
 
-  test('a busy button ignores presses', async () => {
+  test('a busy button ignores presses before its loader shows', async () => {
     const onClick = vi.fn()
     const screen = await renderLostItem({ onClick })
     const button = tryNowButton(screen)
@@ -341,10 +346,10 @@ describe('retrying', () => {
     await userEvent.keyboard('{Enter}')
     expect(onClick).toHaveBeenCalledOnce()
 
-    // A press while busy
+    // A press as soon as it is busy
     screen.rerender(lostItem({ onClick, busy: true }))
-    await expect.element(button).toHaveAttribute('aria-disabled', 'true')
     await userEvent.keyboard('{Enter}')
+    expect(button.element()).not.toHaveAttribute('aria-disabled')
     expect(onClick).toHaveBeenCalledOnce()
   })
 
@@ -359,12 +364,22 @@ describe('retrying', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
-  test('a busy item says it is unavailable, as its button does', async () => {
+  test('a busy item says it is unavailable a second in, until the work ends', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     const screen = await renderLostItem({ busy: true })
+    const item = lostItemButton(screen)
 
-    await expect
-      .element(lostItemButton(screen))
-      .toHaveAttribute('aria-disabled', 'true')
+    // Just before the delay
+    await vi.advanceTimersByTimeAsync(LOADER_DELAY - 1)
+    expect(item.element()).not.toHaveAttribute('aria-disabled')
+
+    // At the delay
+    await vi.advanceTimersByTimeAsync(1)
+    await expect.element(item).toHaveAttribute('aria-disabled', 'true')
+
+    // The work has ended
+    screen.rerender(lostItem({ busy: false }))
+    await expect.element(item).not.toHaveAttribute('aria-disabled')
   })
 
   test('a double click does not press the action its first click brought in', async () => {
