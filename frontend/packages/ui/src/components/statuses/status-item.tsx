@@ -10,6 +10,8 @@ import {
 } from 'react'
 import { Box, Loader, Popover, Tooltip, UnstyledButton } from '@mantine/core'
 
+import { FLOATING_ARROW } from '#src/styles/theme'
+
 import classes from './status-item.module.css'
 
 // Touch users open the tooltip too, since it carries the words. A prop
@@ -74,11 +76,7 @@ function StatusItem({
       onDismiss={close}
       disabled={action == null}
       position="top"
-      withArrow
-      arrowSize={8}
-      // The arrow pokes 4.7 px past the 1 px edge, so the bubble sits 5 off.
-      // Mantine adds half the arrow to a number, and takes an object as is.
-      offset={{ mainAxis: 5 }}
+      {...FLOATING_ARROW}
       // Beside the item in the page, so Tab goes from it to the button.
       withinPortal={false}
       withRoles={false}

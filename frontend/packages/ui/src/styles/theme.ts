@@ -10,9 +10,11 @@ import {
   type InputWrapperFactory,
   type MenuFactory,
   type ModalFactory,
+  type PopoverProps,
   type SegmentedControlFactory,
   type TableFactory,
   type TooltipFactory,
+  type TooltipProps,
 } from '@mantine/core'
 
 import { FONT_FAMILY_MONO, FONT_FAMILY_SANS, FONT_SIZES } from './fonts'
@@ -20,6 +22,14 @@ import classes from './theme.module.css'
 
 // A menu opens this far off its button, closer than Mantine's 8.
 export const MENU_OFFSET = 4
+
+// The arrow pokes 4.7 px past the 1 px edge, so the surface sits 5 off.
+// Mantine adds half the arrow to a number, and takes an object as is.
+export const FLOATING_ARROW = {
+  withArrow: true,
+  arrowSize: 8,
+  offset: { mainAxis: 5 },
+} satisfies Partial<PopoverProps & TooltipProps>
 
 // Source Sans 3 sits optically small, so every step is 6% over Mantine's
 // defaults, the normalization USWDS applies to the same family.
@@ -107,12 +117,8 @@ export const theme = createTheme({
       styles: { th: { fontWeight: 500 } },
     } satisfies ExtendComponent<TableFactory>,
     Tooltip: {
-      // The arrow pokes 4.7 px past the 1 px edge, so the tooltip sits 5 off.
-      // Mantine adds half the arrow to a number, and takes an object as is.
       defaultProps: {
-        withArrow: true,
-        arrowSize: 8,
-        offset: { mainAxis: 5 },
+        ...FLOATING_ARROW,
         events: { hover: true, focus: true, touch: false },
       },
       classNames: { tooltip: classes.tooltip, arrow: classes.tooltipArrow },

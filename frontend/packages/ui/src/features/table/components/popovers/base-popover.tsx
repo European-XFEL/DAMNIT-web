@@ -8,6 +8,8 @@ import { Popover } from '@mantine/core'
 import { useDisclosure, useFocusReturn } from '@mantine/hooks'
 import { type IconProps } from '@tabler/icons-react'
 
+import { FLOATING_ARROW } from '#src/styles/theme'
+
 import { ControlButton } from './control-button'
 
 type BasePopoverProps = {
@@ -48,12 +50,8 @@ export function BasePopover({
       closeOnClickOutside
       closeOnEscape={false}
       trapFocus
-      withArrow
+      {...FLOATING_ARROW}
       arrowPosition="side"
-      // The tooltips' arrow and gap. Mantine adds half the arrow to a number,
-      // and takes an object as is.
-      arrowSize={8}
-      offset={{ mainAxis: 5 }}
       position="bottom-start"
       styles={{
         dropdown: {
