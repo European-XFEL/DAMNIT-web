@@ -50,15 +50,14 @@ export function BasePopover({
       trapFocus
       withArrow
       arrowPosition="side"
-      arrowSize={12}
-      offset={{ mainAxis: 6 }}
+      // The tooltips' arrow and gap. Mantine adds half the arrow to a number,
+      // and takes an object as is.
+      arrowSize={8}
+      offset={{ mainAxis: 5 }}
       position="bottom-start"
       styles={{
         dropdown: {
-          border: `1px solid var(--mantine-color-default-border)`,
-        },
-        arrow: {
-          border: `1px solid var(--mantine-color-default-border)`,
+          '--popover-border-color': 'var(--mantine-color-default-border)',
         },
       }}
     >

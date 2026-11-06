@@ -1,7 +1,9 @@
-/* Small text for every row and for the empty note, through Mantine's own
-   variable; the padding stays at sm so the rail meets the heading's text. */
-.dropdown {
+/* The rows, the empty note and the headings take small text and the floating
+   row's inset, so the rail meets the heading's text. On the list, since
+   Mantine sets the padding there. */
+.options {
   --combobox-option-fz: var(--mantine-font-size-xs);
+  --combobox-option-padding: rem(6px) var(--floating-row-inset);
 }
 
 /* Rows are the Variables popover's: a light hover, and the chosen variable
@@ -9,9 +11,9 @@
 .option {
   align-items: center;
   display: flex;
-  gap: 6px;
+  gap: var(--icon-gap-xs);
   justify-content: space-between;
-  min-height: 32px;
+  min-height: var(--floating-row-height);
   position: relative;
 }
 
@@ -55,14 +57,14 @@
 
 /* Members sit on the popover's rail, which starts under the heading's text. */
 .group .option {
-  padding-left: 22px;
+  padding-left: calc(var(--floating-row-inset) + rem(12px));
 }
 
 .group .option::before {
   background: var(--group-rail-color);
   bottom: 0;
   content: '';
-  left: 10px;
+  left: var(--floating-row-inset);
   position: absolute;
   top: 0;
   width: 2px;

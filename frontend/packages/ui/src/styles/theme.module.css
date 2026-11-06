@@ -1,15 +1,15 @@
 /* A floating row reads a step under the page it sits over, in the shape the
    nav's own popovers already use. */
 .menuItem {
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: var(--floating-row-height);
+  padding: 0 var(--floating-row-inset);
   font-size: var(--mantine-font-size-xs);
 }
 
 /* A mark sits about half its label's size from it, and says the level below the
    label's unless the item carries a colour. */
 .menuItemSection[data-position='left'] {
-  margin-inline-end: 6px;
+  margin-inline-end: var(--icon-gap-xs);
   color: var(--menu-item-color, var(--mantine-color-gray-7));
 }
 

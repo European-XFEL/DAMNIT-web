@@ -27,7 +27,7 @@ const ContextMenuItem = ({
     <MantineContextMenuItem
       className={classes.item}
       title={
-        <Group gap={6} wrap="nowrap" align="flex-start">
+        <Group gap="var(--icon-gap-xs)" wrap="nowrap" align="flex-start">
           <span className={classes.icon}>
             <PlotKindIcon kind={kind} size={16} />
           </span>
