@@ -7,7 +7,7 @@ import StatusItem from '#src/components/statuses/status-item'
 import { LOADER_DELAY } from '#src/hooks/use-shown-after'
 import { renderWithProviders } from '#tests/support/render'
 
-const CLOSE_DELAY = 200
+const BUBBLE_DELAY = 200
 
 afterEach(() => {
   vi.useRealTimers()
@@ -53,9 +53,7 @@ const tryNowButton = (screen: Screen) =>
 // Well past the delay and the bubble's 150 ms fade, since a fading button
 // still counts as visible and a busy runner fires timers late.
 const waitPastCloseDelay = () =>
-  new Promise((resolve) => setTimeout(resolve, CLOSE_DELAY * 3))
-
-const nextFrame = () => new Promise(requestAnimationFrame)
+  new Promise((resolve) => setTimeout(resolve, BUBBLE_DELAY * 3))
 
 describe('pressing the item', () => {
   test('a click on an item with an action runs it', async () => {
@@ -426,7 +424,7 @@ describe('retrying', () => {
       .toHaveFocus()
   })
 
-  test("focus on the bubble's words moves to the item when the action goes", async () => {
+  test("focus on the bubble's words stays when the action goes", async () => {
     const screen = await renderLostItem()
     await userEvent.hover(lostItemButton(screen))
     await userEvent.click(screen.getByText('Lost live updates.'))
@@ -435,27 +433,24 @@ describe('retrying', () => {
     // A try works
     screen.rerender(liveItem)
 
-    await expect
-      .element(screen.getByRole('img', { name: 'Live' }))
-      .toHaveFocus()
+    await expect.element(screen.getByRole('tooltip')).toHaveFocus()
   })
 
-  test('a bubble that left with its action stays shut when the action comes back', async () => {
+  test('an open bubble stays open as its button comes and goes', async () => {
     const screen = await renderLostItem()
     const button = tryNowButton(screen)
-
-    // A try works while the pointer rests on the bubble
     await userEvent.hover(lostItemButton(screen))
     await userEvent.hover(button)
-    screen.rerender(liveItem)
-    await expect.element(button).not.toBeInTheDocument()
 
-    // Live updates drop again a while later, with the pointer elsewhere
-    await userEvent.unhover(button)
-    await waitPastCloseDelay()
+    // A try works while the pointer rests on the bubble
+    screen.rerender(liveItem)
+    await expect
+      .element(screen.getByRole('tooltip'))
+      .toHaveTextContent('Live updates.')
+
+    // Live updates drop again
     screen.rerender(lostItem())
-    await nextFrame()
-    await expect.element(button).not.toBeInTheDocument()
+    await expect.element(tryNowButton(screen)).toBeVisible()
   })
 })
 
