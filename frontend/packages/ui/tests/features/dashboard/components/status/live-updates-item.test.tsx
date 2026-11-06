@@ -150,7 +150,7 @@ test('every time in the live tooltip carries its date', async () => {
     .element(tooltip)
     .toHaveTextContent('Live updates. Last update 17 October 2026 at 18:42:10.')
 
-  // The connection drops overnight, and the bubble takes the tooltip's place
+  // The connection drops overnight, and the bubble gains its button
   liveUpdates({
     status: 'reconnecting',
     since: new Date(2026, 9, 19, 23, 58, 10).getTime(),

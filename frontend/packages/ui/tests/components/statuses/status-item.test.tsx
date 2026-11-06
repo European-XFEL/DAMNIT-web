@@ -7,7 +7,7 @@ import StatusItem from '#src/components/statuses/status-item'
 import { LOADER_DELAY } from '#src/hooks/use-shown-after'
 import { renderWithProviders } from '#tests/support/render'
 
-const CLOSE_DELAY = 200
+const BUBBLE_DELAY = 200
 
 afterEach(() => {
   vi.useRealTimers()
@@ -50,12 +50,9 @@ const lostItemButton = (screen: Screen) =>
 const tryNowButton = (screen: Screen) =>
   screen.getByRole('button', { name: 'Try now', exact: true })
 
-// Well past the delay and the bubble's 150 ms fade, since a fading button
-// still counts as visible and a busy runner fires timers late.
+// Well past the delay, since a busy runner fires timers late.
 const waitPastCloseDelay = () =>
-  new Promise((resolve) => setTimeout(resolve, CLOSE_DELAY * 3))
-
-const nextFrame = () => new Promise(requestAnimationFrame)
+  new Promise((resolve) => setTimeout(resolve, BUBBLE_DELAY * 3))
 
 describe('pressing the item', () => {
   test('a click on an item with an action runs it', async () => {
@@ -123,6 +120,22 @@ describe('opening the bubble', () => {
     await userEvent.hover(lostItemButton(screen))
 
     await expect.element(tryNowButton(screen)).toBeVisible()
+  })
+
+  test('an item with words only opens its bubble a moment after hover', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const screen = await renderWithPointerOff(liveItem)
+    const bubble = screen.getByRole('tooltip')
+
+    await userEvent.hover(screen.getByRole('img', { name: 'Live' }))
+
+    // Just before the delay
+    await vi.advanceTimersByTimeAsync(BUBBLE_DELAY - 1)
+    expect(bubble.query()).toBeNull()
+
+    // At the delay
+    await vi.advanceTimersByTimeAsync(1)
+    await expect.element(bubble).toHaveTextContent('Live updates.')
   })
 
   test('an item with an action opens its bubble on keyboard focus', async () => {
@@ -228,7 +241,7 @@ describe('tabbing into the bubble', () => {
     await expect.element(button).toHaveFocus()
   })
 
-  test('focus coming back into the bubble as it fades keeps it open', async () => {
+  test('tabbing past the bubble closes it, and tabbing back opens it on the item', async () => {
     const screen = await renderWithPointerOff(
       <>
         {lostItem()}
@@ -240,11 +253,13 @@ describe('tabbing into the bubble', () => {
     await userEvent.tab()
     await expect.element(button).toHaveFocus()
 
-    // Tab on and straight back, inside the fade
-    await userEvent.keyboard('{Tab}{Shift>}{Tab}{/Shift}')
-    await waitPastCloseDelay()
+    // Tab on to the next button
+    await userEvent.tab()
+    await expect.element(button).not.toBeInTheDocument()
 
-    await expect.element(button).toHaveFocus()
+    // Tab back
+    await userEvent.tab({ shift: true })
+    await expect.element(lostItemButton(screen)).toHaveFocus()
     await expect.element(button).toBeVisible()
   })
 })
@@ -426,7 +441,7 @@ describe('retrying', () => {
       .toHaveFocus()
   })
 
-  test("focus on the bubble's words moves to the item when the action goes", async () => {
+  test("focus on the bubble's words stays when the action goes", async () => {
     const screen = await renderLostItem()
     await userEvent.hover(lostItemButton(screen))
     await userEvent.click(screen.getByText('Lost live updates.'))
@@ -435,49 +450,60 @@ describe('retrying', () => {
     // A try works
     screen.rerender(liveItem)
 
-    await expect
-      .element(screen.getByRole('img', { name: 'Live' }))
-      .toHaveFocus()
+    await expect.element(screen.getByRole('tooltip')).toHaveFocus()
   })
 
-  test('a bubble that left with its action stays shut when the action comes back', async () => {
+  test('an open bubble stays open as its button comes and goes', async () => {
     const screen = await renderLostItem()
     const button = tryNowButton(screen)
-
-    // A try works while the pointer rests on the bubble
     await userEvent.hover(lostItemButton(screen))
     await userEvent.hover(button)
-    screen.rerender(liveItem)
-    await expect.element(button).not.toBeInTheDocument()
 
-    // Live updates drop again a while later, with the pointer elsewhere
-    await userEvent.unhover(button)
-    await waitPastCloseDelay()
+    // A try works while the pointer rests on the bubble
+    screen.rerender(liveItem)
+    await expect
+      .element(screen.getByRole('tooltip'))
+      .toHaveTextContent('Live updates.')
+
+    // Live updates drop again
     screen.rerender(lostItem())
-    await nextFrame()
-    await expect.element(button).not.toBeInTheDocument()
+    await expect.element(tryNowButton(screen)).toBeVisible()
   })
 })
 
 describe('following along with a screen reader', () => {
-  test("an item with an action is described by its bubble's words only while the bubble is open", async () => {
-    const screen = await renderLostItem()
-    const item = lostItemButton(screen)
+  test("an item is described by its bubble's words only while the bubble is open", async () => {
+    const screen = await renderWithPointerOff(liveItem)
+    const item = screen.getByRole('img', { name: 'Live' })
     await expect.element(item).not.toHaveAttribute('aria-describedby')
 
-    await userEvent.hover(item)
+    // Open it
+    await userEvent.tab()
+    await expect.element(item).toHaveAccessibleDescription('Live updates.')
 
-    await expect.element(tryNowButton(screen)).toBeVisible()
-    await expect.element(item).toHaveAccessibleDescription('Lost live updates.')
+    // Close it
+    await userEvent.keyboard('{Escape}')
+    await expect.element(item).not.toHaveAttribute('aria-describedby')
   })
 
-  test('an item with no action is described by its tooltip while it shows', async () => {
-    const screen = await renderWithPointerOff(liveItem)
+  test('a bubble with no button is a tooltip, and one with a button a dialog named by its words', async () => {
+    const screen = await renderWithPointerOff(
+      <>
+        {liveItem}
+        {lostItem()}
+      </>
+    )
 
+    // Tab to the live item
     await userEvent.tab()
-
     await expect
-      .element(screen.getByRole('img', { name: 'Live' }))
-      .toHaveAccessibleDescription('Live updates.')
+      .element(screen.getByRole('tooltip'))
+      .toHaveTextContent('Live updates.')
+
+    // Tab to the lost item
+    await userEvent.tab()
+    await expect
+      .element(screen.getByRole('dialog'))
+      .toHaveAccessibleName('Lost live updates.')
   })
 })

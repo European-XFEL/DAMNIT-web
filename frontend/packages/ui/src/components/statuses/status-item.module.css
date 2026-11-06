@@ -65,19 +65,19 @@
   }
 }
 
-/* The bar's tooltip, with room for a button on the right. */
+/* A tooltip, with room for a button on the right. The padding is Mantine's
+   Tooltip's, which lives only in Mantine's stylesheet. */
 .bubble {
+  composes: tooltip from '../../styles/theme.module.css';
   display: flex;
   gap: 16px;
   align-items: center;
   max-width: min(420px, calc(100vw - 20px));
-  padding: 8px 10px;
-  /* Mantine draws the edge and the arrow's in this variable. */
+  padding: calc(var(--mantine-spacing-xs) / 2) var(--mantine-spacing-xs);
+  /* Mantine draws the arrow's edge in this variable. */
   --popover-border-color: var(--floating-border-color);
   background: var(--mantine-color-gray-9);
   color: var(--mantine-color-white);
-  font-size: var(--mantine-font-size-xs);
-  line-height: var(--mantine-line-height-xs);
 }
 
 .action {
