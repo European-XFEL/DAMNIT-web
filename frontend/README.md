@@ -114,6 +114,20 @@ running web server. Add an `.env` file on `apps/app` with the following:
 VITE_API = "http://127.0.0.1:30200"
 ```
 
+### Mock mode
+
+To run the app without the API:
+
+```sh
+pnpm run dev:app:mock
+```
+
+API requests are mocked in the browser with [MSW](https://mswjs.io) (see
+`apps/app/src/mocks/`), so no `.env` is needed. The fake user and proposals
+are in `packages/shared/src/mocks/proposals.ts`, and every proposal shows the
+XPCS example from `apps/demo/public/examples/xpcs/`. Live updates connect but
+never push anything, and logging out just returns to the home page.
+
 ## Testing
 
 Tests live in `packages/ui/tests`. The file extension decides where a test

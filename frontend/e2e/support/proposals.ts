@@ -33,8 +33,8 @@ export function proposalRow(page: Page, proposal: number): Locator {
 
 export async function openHome(page: Page) {
   await page.goto('home')
-  // The semester table renders straight from the auth slice, but each semester's
-  // proposals arrive from a per-semester query; wait for the first row to land.
+  // The proposals are loaded by a separate metadata query, so wait for the
+  // first row.
   await expect(proposalNumbers(page).first()).toBeVisible()
 }
 

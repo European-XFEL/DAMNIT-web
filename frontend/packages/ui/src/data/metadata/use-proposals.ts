@@ -7,11 +7,30 @@ const PROPOSAL_METADATA_QUERY = gql`
       instrument
       principal_investigator
       start_date
-      title @include(if: $full)
+      title
       damnit_path @include(if: $full)
     }
   }
 `
+
+export type ProposalMetadata = {
+  number: number
+  instrument: string
+  principal_investigator: string
+  start_date: string
+  title: string
+  // Only fetched with `full`
+  damnit_path?: string | null
+}
+
+type ProposalMetadataResult = {
+  proposal_metadata: ProposalMetadata[] | null
+}
+
+type ProposalMetadataVariables = {
+  proposalNumbers: number[]
+  full: boolean
+}
 
 type UseProposalsOptions = {
   proposals: number[]
@@ -19,7 +38,10 @@ type UseProposalsOptions = {
 }
 
 function useProposals({ proposals, full = false }: UseProposalsOptions) {
-  const { loading, error, data } = useQuery(PROPOSAL_METADATA_QUERY, {
+  const { loading, error, data } = useQuery<
+    ProposalMetadataResult,
+    ProposalMetadataVariables
+  >(PROPOSAL_METADATA_QUERY, {
     variables: { proposalNumbers: proposals, full },
   })
 

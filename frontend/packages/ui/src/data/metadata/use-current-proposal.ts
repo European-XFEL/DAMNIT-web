@@ -1,5 +1,4 @@
 import { useAppSelector } from '#src/app/store/hooks'
-import { isEmpty } from '#src/utils/helpers'
 
 import useProposals from './use-proposals'
 
@@ -11,7 +10,7 @@ const useCurrentProposal = () => {
   })
 
   return {
-    proposal: isEmpty(proposals) ? undefined : proposals[0],
+    proposal: proposals?.[0],
     isLoading,
     isError,
   }

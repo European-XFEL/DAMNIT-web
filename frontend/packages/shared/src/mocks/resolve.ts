@@ -7,6 +7,7 @@ import {
   shapeTableData,
   unmockedOperationError,
 } from './shape'
+import type { ProposalMetadata } from './proposals'
 import type { Runs } from './types'
 
 // Thrown by a data source when the requested example data does not exist, so
@@ -23,7 +24,8 @@ export type MockDataSource = {
     run: number
     variable: string
   }): Promise<unknown>
-  proposalMetadata(options: { proposalNumbers?: number[] }): Promise<unknown>
+  // Every proposal the source knows; the resolver picks the requested ones.
+  proposalMetadata(): Promise<ProposalMetadata[]>
 }
 
 export type Resolution = {
@@ -69,13 +71,28 @@ export async function resolveOperation(
     query,
     variables,
     source,
+    accessibleProposals,
   }: {
     query: string
     variables: Record<string, unknown>
     source: MockDataSource
+    // When given, a query for any other proposal is refused like the backend
+    // does, which the app shows as "not found".
+    accessibleProposals?: number[]
   }
 ): Promise<Resolution> {
   const proposal = variables.proposal as string
+
+  if (
+    proposal != null &&
+    accessibleProposals !== undefined &&
+    !accessibleProposals.map(String).includes(String(proposal))
+  ) {
+    return {
+      resolved: true,
+      body: { errors: [{ message: `No access to proposal ${proposal}` }] },
+    }
+  }
 
   try {
     switch (operationName) {
@@ -137,10 +154,14 @@ export async function resolveOperation(
         )
       }
       case 'ProposalMetadata': {
-        const metadata = await source.proposalMetadata({
-          proposalNumbers: variables.proposalNumbers as number[] | undefined,
+        // Return only the requested proposals
+        const requested = (variables.proposalNumbers as number[] | null) ?? []
+        const metadata = await source.proposalMetadata()
+        return resolved({
+          proposal_metadata: metadata.filter((entry) =>
+            requested.includes(entry.number)
+          ),
         })
-        return resolved({ proposal_metadata: metadata })
       }
     }
   } catch (error) {

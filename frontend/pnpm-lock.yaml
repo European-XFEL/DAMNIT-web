@@ -292,6 +292,9 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@damnit-frontend/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@types/lodash':
         specifier: catalog:types
         version: 4.17.25
@@ -313,6 +316,9 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.39.5
+      msw:
+        specifier: catalog:testing
+        version: 2.12.7(@types/node@24.19.1)(typescript@5.9.3)
       postcss:
         specifier: catalog:tooling
         version: 8.5.29

@@ -12,7 +12,7 @@ export default function Dashboard() {
   const userName = useAppSelector(selectUserFullName)
   const navigate = useNavigate()
 
-  if (isLoading) {
+  if (isLoading || proposal == null) {
     return
   }
 
