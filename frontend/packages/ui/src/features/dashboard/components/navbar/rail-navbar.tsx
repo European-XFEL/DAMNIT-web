@@ -31,6 +31,7 @@ import {
   CONTEXT_FILE_VIEW,
   TABLE_VIEW,
 } from '#src/features/dashboard/utils/views'
+import { MENU_OFFSET } from '#src/styles/theme'
 
 import classes from './navbar.module.css'
 import PlotEntries from './plot-entries'
@@ -109,7 +110,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
           onChange={setPlotsOpened}
           position="right-start"
           width={260}
-          offset={4}
+          offset={MENU_OFFSET}
           middlewares={{ size: { padding: 8 } }}
           trapFocus
           // Like Menu, a key pressed outside closes it as a click would.

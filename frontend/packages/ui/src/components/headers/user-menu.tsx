@@ -23,14 +23,6 @@ type UserMenuProps = {
   variant?: UserMenuVariant
 }
 
-// A menu opens 4 px off its button, closer than Mantine's 8. The nav's keeps
-// the 8, which lands its bottom edge on the foot's divider.
-const OFFSETS: Record<UserMenuVariant, number> = {
-  header: 4,
-  nav: 8,
-  rail: 4,
-}
-
 const POSITIONS: Record<UserMenuVariant, MenuProps['position']> = {
   header: 'bottom-end',
   nav: 'top-start',
@@ -72,7 +64,8 @@ export function UserMenu({
     <Menu
       width={WIDTHS[variant]}
       position={POSITIONS[variant]}
-      offset={OFFSETS[variant]}
+      // The nav's keeps Mantine's 8, which lands its edge on the foot's divider.
+      offset={variant === 'nav' ? 8 : undefined}
       transitionProps={{
         transition: variant === 'header' ? 'pop-top-right' : 'pop',
       }}

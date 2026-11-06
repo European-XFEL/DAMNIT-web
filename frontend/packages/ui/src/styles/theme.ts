@@ -18,6 +18,9 @@ import {
 import { FONT_FAMILY_MONO, FONT_FAMILY_SANS, FONT_SIZES } from './fonts'
 import classes from './theme.module.css'
 
+// A menu opens this far off its button, closer than Mantine's 8.
+export const MENU_OFFSET = 4
+
 // Source Sans 3 sits optically small, so every step is 6% over Mantine's
 // defaults, the normalization USWDS applies to the same family.
 export const theme = createTheme({
@@ -82,6 +85,7 @@ export const theme = createTheme({
     // An item reads its classes from the menu's own styles context, so the
     // shape of a row is set here rather than on Menu.Item.
     Menu: {
+      defaultProps: { offset: MENU_OFFSET },
       classNames: {
         item: classes.menuItem,
         itemSection: classes.menuItemSection,
@@ -116,11 +120,15 @@ export const theme = createTheme({
   },
 })
 
-// Placeholder and dimmed are text a reader has to read, so they take the
-// secondary grey instead of Mantine's gray.5 and gray.6, both below AA.
 export const cssVariablesResolver: CSSVariablesResolver = (theme) => ({
-  variables: {},
+  variables: {
+    '--floating-row-height': rem(32),
+    '--floating-row-inset': rem(10),
+    '--icon-gap-xs': rem(6),
+  },
   light: {
+    // Placeholder and dimmed are text a reader has to read, so they take the
+    // secondary grey instead of Mantine's gray.5 and gray.6, both below AA.
     '--mantine-color-placeholder': theme.colors.gray[7],
     '--mantine-color-dimmed': theme.colors.gray[7],
     // Mantine fixes the error colour at red.6, 3.3:1 on white; red.9 reads
