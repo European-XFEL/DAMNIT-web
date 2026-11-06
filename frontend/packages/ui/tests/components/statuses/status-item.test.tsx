@@ -123,6 +123,22 @@ describe('opening the bubble', () => {
     await expect.element(tryNowButton(screen)).toBeVisible()
   })
 
+  test('an item with words only opens its bubble a moment after hover', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const screen = await renderWithPointerOff(liveItem)
+    const bubble = screen.getByRole('tooltip')
+
+    await userEvent.hover(screen.getByRole('img', { name: 'Live' }))
+
+    // Just before the delay
+    await vi.advanceTimersByTimeAsync(BUBBLE_DELAY - 1)
+    expect(bubble.query()).toBeNull()
+
+    // At the delay
+    await vi.advanceTimersByTimeAsync(1)
+    await expect.element(bubble).toHaveTextContent('Live updates.')
+  })
+
   test('an item with an action opens its bubble on keyboard focus', async () => {
     const screen = await renderLostItem()
 
@@ -455,24 +471,38 @@ describe('retrying', () => {
 })
 
 describe('following along with a screen reader', () => {
-  test("an item with an action is described by its bubble's words only while the bubble is open", async () => {
-    const screen = await renderLostItem()
-    const item = lostItemButton(screen)
+  test("an item is described by its bubble's words only while the bubble is open", async () => {
+    const screen = await renderWithPointerOff(liveItem)
+    const item = screen.getByRole('img', { name: 'Live' })
     await expect.element(item).not.toHaveAttribute('aria-describedby')
 
-    await userEvent.hover(item)
+    // Open it
+    await userEvent.tab()
+    await expect.element(item).toHaveAccessibleDescription('Live updates.')
 
-    await expect.element(tryNowButton(screen)).toBeVisible()
-    await expect.element(item).toHaveAccessibleDescription('Lost live updates.')
+    // Close it
+    await userEvent.keyboard('{Escape}')
+    await expect.element(item).not.toHaveAttribute('aria-describedby')
   })
 
-  test('an item with no action is described by its tooltip while it shows', async () => {
-    const screen = await renderWithPointerOff(liveItem)
+  test('a bubble with no button is a tooltip, and one with a button a dialog named by its words', async () => {
+    const screen = await renderWithPointerOff(
+      <>
+        {liveItem}
+        {lostItem()}
+      </>
+    )
 
+    // Tab to the live item
     await userEvent.tab()
-
     await expect
-      .element(screen.getByRole('img', { name: 'Live' }))
-      .toHaveAccessibleDescription('Live updates.')
+      .element(screen.getByRole('tooltip'))
+      .toHaveTextContent('Live updates.')
+
+    // Tab to the lost item
+    await userEvent.tab()
+    await expect
+      .element(screen.getByRole('dialog'))
+      .toHaveAccessibleName('Lost live updates.')
   })
 })
