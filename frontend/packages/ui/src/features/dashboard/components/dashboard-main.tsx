@@ -1,8 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Box } from '@mantine/core'
 
-import { type ContextFileProps } from '#src/features/context-file/context-file'
-import { type TableProps } from '#src/features/table/table'
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import { useAppSelector } from '#src/app/store/hooks'
 import { selectActiveView } from '#src/features/dashboard/stores/dashboard.selectors'
@@ -13,14 +11,9 @@ const ContextFile = lazy(
 )
 const Table = lazy(() => import('#src/features/table/table'))
 
-type DashboardMainProps = {
-  tableProps?: TableProps
-  contextFileProps?: ContextFileProps
-}
-
 // Only the active view is mounted. One boundary per view, because a shared one
 // hides the table while a plot's chunk loads and the grid then drops right-clicks.
-function DashboardMain({ tableProps, contextFileProps }: DashboardMainProps) {
+function DashboardMain() {
   const view = useAppSelector(selectActiveView)
 
   return (
@@ -29,9 +22,9 @@ function DashboardMain({ tableProps, contextFileProps }: DashboardMainProps) {
       fallback={<CenteredLoader />}
     >
       {view.kind === 'table' ? (
-        <Table {...tableProps} />
+        <Table />
       ) : view.kind === 'context-file' ? (
-        <ContextFile {...contextFileProps} />
+        <ContextFile />
       ) : (
         <Box px={20} py={14} flex={1} mih={0} style={{ overflowY: 'auto' }}>
           <PlotContainer plotId={view.id} />

@@ -13,12 +13,7 @@ type DashboardProps = {
 function Dashboard({ label, subtitle, instrument }: DashboardProps) {
   return (
     <DashboardShell
-      main={
-        <DashboardMain
-          tableProps={{ paginated: false }}
-          contextFileProps={{ subscribe: false }}
-        />
-      }
+      main={<DashboardMain />}
       heading={label}
       identity={
         <ProposalIdentity
