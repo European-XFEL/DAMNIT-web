@@ -124,7 +124,7 @@ function Table() {
     onVisibleRegionChanged: fetchOnScroll,
     loadErrors,
     retryNow,
-  } = useTableRuns({ proposal })
+  } = useTableRuns(proposal)
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()

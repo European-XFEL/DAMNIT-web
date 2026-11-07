@@ -25,10 +25,6 @@ import type {
   Rectangle,
 } from '#src/features/table/types/table.types'
 
-type UseTableRunsOptions = {
-  proposal: string
-}
-
 type UseTableRuns = {
   cellsByKey: Map<string, RunCells>
   lastUpdatedByKey: ReadonlyMap<string, number>
@@ -152,7 +148,7 @@ function loadErrorsInView(
 // merges into one normalized run there, and this hook only reads it and asks
 // for the pages the user is looking at. Switching proposals remounts the hook
 // (ProposalWrapper is keyed), so the page bookkeeping resets with it.
-export function useTableRuns({ proposal }: UseTableRunsOptions): UseTableRuns {
+export function useTableRuns(proposal: string): UseTableRuns {
   const client = useApolloClient()
 
   const pageStates = useRef(new Map<number, PageState>())

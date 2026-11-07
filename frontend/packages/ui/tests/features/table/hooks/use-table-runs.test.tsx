@@ -245,7 +245,7 @@ async function renderTableRuns(
     return strict ? <StrictMode>{tree}</StrictMode> : tree
   }
 
-  const view = await renderHook(() => useTableRuns({ proposal: PROPOSAL }), {
+  const view = await renderHook(() => useTableRuns(PROPOSAL), {
     wrapper: Providers,
   })
   return { ...view, client }
