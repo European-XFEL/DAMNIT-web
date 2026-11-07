@@ -17,7 +17,7 @@ test('an unauthenticated visit hands off to SSO login', async ({
 
   const url = new URL((await login).url())
   expect(url.searchParams.get('redirect_uri')).toBe(
-    new URL('home', baseURL).href
+    new URL('home', baseURL).pathname
   )
 })
 
