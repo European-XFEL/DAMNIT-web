@@ -3,19 +3,21 @@ import type { Page } from '@playwright/test'
 import { test, expect } from '#fixtures'
 import { statusBar } from '#support/dashboard'
 import { gridCanvas } from '#support/grid'
-import { cell, columnOf } from '#support/table'
+import { cell, columnOf, operationNameOf } from '#support/table'
 
 // Registered after the fixture's routes, so Playwright's last-wins order sees
 // the page fetches first.
 async function refuseWhileDown(page: Page, operation: string) {
   const server = { down: true, askedPages: new Set<number>() }
   await page.route('**/graphql', (route) => {
-    const { operationName, variables } = (route.request().postDataJSON() ??
-      {}) as { operationName?: string; variables?: { page?: number } }
-    if (operationName !== operation || !server.down) {
+    const request = route.request()
+    if (operationNameOf(request) !== operation || !server.down) {
       return route.fallback()
     }
 
+    const { variables } = request.postDataJSON() as {
+      variables?: { page?: number }
+    }
     server.askedPages.add(variables?.page ?? 1)
     return route.abort('failed')
   })
