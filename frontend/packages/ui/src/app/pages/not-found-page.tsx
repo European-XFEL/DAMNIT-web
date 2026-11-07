@@ -1,11 +1,13 @@
+import { useNavigate } from 'react-router'
 import { Container, Title } from '@mantine/core'
 
-import { history } from '#src/app/routes/history'
 import MainNavButton from '#src/components/buttons/main-nav-button'
 
 import styles from './not-found-page.module.css'
 
 const NotFoundPage = () => {
+  const navigate = useNavigate()
+
   return (
     <Container
       mt="xl"
@@ -20,10 +22,7 @@ const NotFoundPage = () => {
           DAMNIT! Page not found.
         </Title>
         <div className={styles.controls}>
-          <MainNavButton
-            variant="filled"
-            onClick={() => history.navigate('/home')}
-          >
+          <MainNavButton variant="filled" onClick={() => navigate('/home')}>
             Return home
           </MainNavButton>
         </div>

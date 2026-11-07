@@ -1,12 +1,5 @@
 import { type PropsWithChildren, useEffect } from 'react'
-import {
-  Navigate,
-  Route,
-  Routes,
-  useNavigate,
-  useLocation,
-  useParams,
-} from 'react-router'
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router'
 import { Container, VisuallyHidden } from '@mantine/core'
 
 import {
@@ -22,7 +15,6 @@ import {
   PrivateRoute,
   Proposals,
   UserMenu,
-  history,
   resetProposal,
   selectAvailableProposals,
   selectUserFullName,
@@ -98,10 +90,6 @@ function HomeRoute() {
 }
 
 const App = () => {
-  // Initialize routers
-  history.setNavigate(useNavigate())
-  history.setLocation(useLocation())
-
   return (
     <>
       <Routes>

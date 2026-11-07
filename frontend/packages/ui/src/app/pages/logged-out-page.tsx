@@ -1,13 +1,14 @@
+import { useNavigate } from 'react-router'
 import { Container, Text, Title } from '@mantine/core'
 
 import useUserInfo from '#src/features/auth/use-user-info'
-import { history } from '#src/app/routes/history'
 import MainNavButton from '#src/components/buttons/main-nav-button'
 
 import classes from './logged-out-page.module.css'
 
 const LoggedOutPage = () => {
   const { userInfo, isLoading, isError } = useUserInfo()
+  const navigate = useNavigate()
 
   if (isLoading) {
     return <div />
@@ -31,10 +32,7 @@ const LoggedOutPage = () => {
             Thanks for using DAMNIT!
           </Text>
           <div className={classes.controls}>
-            <MainNavButton
-              variant="filled"
-              onClick={() => history.navigate('/login')}
-            >
+            <MainNavButton variant="filled" onClick={() => navigate('/login')}>
               Log back in
             </MainNavButton>
           </div>
@@ -49,16 +47,10 @@ const LoggedOutPage = () => {
             ...
           </Title>
           <div className={classes.controls}>
-            <MainNavButton
-              variant="filled"
-              onClick={() => history.navigate('/logout')}
-            >
+            <MainNavButton variant="filled" onClick={() => navigate('/logout')}>
               Logout
             </MainNavButton>
-            <MainNavButton
-              variant="outline"
-              onClick={() => history.navigate(-1)}
-            >
+            <MainNavButton variant="outline" onClick={() => navigate(-1)}>
               Go back
             </MainNavButton>
           </div>

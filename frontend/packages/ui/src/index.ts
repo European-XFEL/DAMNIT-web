@@ -36,7 +36,6 @@ export { default as LoginRoute } from './app/routes/login-route'
 export { default as LogoutRoute } from './app/routes/logout-route'
 export { default as PrivateRoute } from './app/routes/private-route'
 export { default as RootRoute } from './app/routes/root-route'
-export { history } from './app/routes/history'
 
 // Data
 export { default as useProposal } from './data/use-proposal'
