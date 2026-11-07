@@ -20,3 +20,22 @@ test('an unauthenticated visit hands off to SSO login', async ({
     new URL('home', baseURL).href
   )
 })
+
+test('Back from the SSO login returns to the page before it', async ({
+  page,
+}) => {
+  await page.goto('logged-out')
+  await expect(
+    page.getByRole('heading', { name: 'You have been logged out.' })
+  ).toBeVisible()
+
+  // Open a private page, which hands off to SSO
+  const login = page.waitForRequest('**/oauth/login**')
+  await page.goto('home', { waitUntil: 'commit' })
+  await login
+  await expect(page).toHaveURL(/\/oauth\/login/)
+
+  // Go back
+  await page.goBack()
+  await expect(page).toHaveURL(/\/app\/logged-out$/)
+})
