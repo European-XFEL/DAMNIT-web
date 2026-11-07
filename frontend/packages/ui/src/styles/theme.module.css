@@ -65,11 +65,14 @@
    sm. */
 .tooltip {
   font-size: var(--mantine-font-size-xs);
+  line-height: var(--mantine-line-height-xs);
+  /* No word wraps alone onto the last line. Firefox ignores it. */
+  text-wrap: pretty;
 }
 
 /* The edge only shows on a dark surface, such as the hover card. A class, not
    an inline style, so the arrow keeps the edge's colour when it flips side. */
 .tooltip,
 .tooltipArrow {
-  border: 1px solid var(--mantine-color-default-border);
+  border: 1px solid var(--floating-border-color);
 }

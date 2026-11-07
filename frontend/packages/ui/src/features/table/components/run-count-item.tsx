@@ -29,8 +29,9 @@ export const RunCountItem = memo(function RunCountItem({
   onTryAgain,
 }: RunCountItemProps) {
   const failure = describeLoadErrors(loadErrors, runs)
-  // With nothing waiting for the clock, a try is out and a press does nothing.
-  const tryShown = useShownAfter(failure != null && !loadErrors.waitsForRetry)
+  // With no page waiting for its retry timer, a retry is running.
+  const retrying = failure != null && !loadErrors.waitsForRetry
+  const tryShown = useShownAfter(retrying)
   const count = formatRunCount(runs.length)
 
   // The status keeps its words while more pages fail, so it speaks once.
@@ -57,7 +58,7 @@ export const RunCountItem = memo(function RunCountItem({
                 label: 'Try again',
                 icon: <RetryIcon />,
                 onClick: onTryAgain,
-                busy: tryShown,
+                busy: retrying,
               }
             : undefined
         }
