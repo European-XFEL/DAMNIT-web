@@ -28,7 +28,6 @@
     "globals": "catalog:linting",
     "graphql": "catalog:graphql",
     "lodash-es": "catalog:frontend",
-    "monaco-editor": "catalog:components",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"
   }
