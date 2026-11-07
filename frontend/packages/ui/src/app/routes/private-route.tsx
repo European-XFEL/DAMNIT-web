@@ -3,7 +3,6 @@ import { Navigate } from 'react-router'
 
 import useUserInfo from '#src/features/auth/use-user-info'
 
-import { history } from './history'
 function PrivateRoute({ children }: PropsWithChildren) {
   const { userInfo, isLoading, isError } = useUserInfo()
 
@@ -12,7 +11,7 @@ function PrivateRoute({ children }: PropsWithChildren) {
   }
 
   if (!userInfo || isError) {
-    return <Navigate to="/login" state={{ from: history.getLocation() }} />
+    return <Navigate to="/login" />
   }
 
   return children

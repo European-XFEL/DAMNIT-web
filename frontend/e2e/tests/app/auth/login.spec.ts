@@ -2,9 +2,8 @@ import { test, expect } from '#fixtures'
 
 test.use({ authenticated: false })
 
-// LoginRoute always sends the user back to /home after SSO, ignoring the
-// state.from that PrivateRoute records, so a deep link does not survive the
-// login round-trip. We assert the hand-off itself, not a preserved destination.
+// LoginRoute always sends the user back to /home after SSO, so a deep link does
+// not survive the login round-trip. We assert the hand-off itself.
 test('an unauthenticated visit hands off to SSO login', async ({
   page,
   baseURL,
