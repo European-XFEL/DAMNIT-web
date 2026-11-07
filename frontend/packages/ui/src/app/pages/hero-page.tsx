@@ -8,9 +8,11 @@ const HeroPage = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    setTimeout(() => {
-      navigate('/home')
+    const timer = setTimeout(() => {
+      navigate('/home', { replace: true })
     }, 2000)
+
+    return () => clearTimeout(timer)
   }, [navigate])
 
   return (
