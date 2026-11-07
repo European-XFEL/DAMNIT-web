@@ -1,9 +1,8 @@
-import { type PropsWithChildren } from 'react'
-import { Navigate } from 'react-router'
+import { Navigate, Outlet } from 'react-router'
 
 import useUserInfo from '#src/features/auth/use-user-info'
 
-function PrivateRoute({ children }: PropsWithChildren) {
+function PrivateRoute() {
   const { userInfo, isLoading, isError } = useUserInfo()
 
   if (isLoading) {
@@ -14,7 +13,7 @@ function PrivateRoute({ children }: PropsWithChildren) {
     return <Navigate to="/login" />
   }
 
-  return children
+  return <Outlet />
 }
 
 export default PrivateRoute
