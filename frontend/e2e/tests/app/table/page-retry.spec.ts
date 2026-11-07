@@ -36,7 +36,7 @@ function watchFailedPages(page: Page, report: RegExp) {
   return failedPages
 }
 
-// The mock answers every page with every run, so a spec waits until the hook
+// Page 1 holds runs 1 to 10 and page 2 the rest, so a spec waits until the hook
 // has given up on every page in view. The grid's first window brings page 2.
 async function waitForEveryPageToFail(
   server: { askedPages: Set<number> },
