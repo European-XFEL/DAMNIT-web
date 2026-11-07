@@ -34,9 +34,8 @@ function withComputedTimes(data: RunData[]): RunData[] {
 }
 
 export type MockApi = LiveUpdatesMock & {
-  // GraphQL operations and REST paths the router had no mock for; the test
-  // fixture fails the test when any were seen, so mock drift surfaces loudly
-  // instead of as an empty response or a silent request to the real network.
+  // GraphQL operations, REST paths and off-site URLs the router had no mock
+  // for; the test fixture fails the test when any were seen.
   unmockedRequests: string[]
   // Swap the served context.py and bump its last-modified stamp, modelling the
   // file being edited on disk between polls. The next poll then sees a newer
@@ -49,12 +48,13 @@ export type MockApi = LiveUpdatesMock & {
 
 type MockApiOptions = {
   authenticated: boolean
+  appOrigin: string
 }
 
 export async function mockApi(
   page: Page,
   example: Example,
-  { authenticated }: MockApiOptions
+  { authenticated, appOrigin }: MockApiOptions
 ): Promise<MockApi> {
   // Session state the routes read: userinfo answers by it, and logout flips it
   // off so the LoggedOutPage re-fetch takes the "logged out" branch.
@@ -119,12 +119,19 @@ export async function mockApi(
       ),
   }
 
-  // Registered first so the specific routes below take precedence (Playwright
-  // runs the last-registered matching handler first). A REST call none of them
-  // cover is recorded and failed; everything else (assets, app bundle) falls
-  // through to the server.
+  // Playwright tries the last-registered route first, so the routes below win.
+  // Off-site requests and unmocked REST calls fail; app files fall through.
   await page.route('**/*', (route) => {
-    const { pathname } = new URL(route.request().url())
+    const url = route.request().url()
+    const { origin, pathname } = new URL(url)
+    if (origin !== appOrigin) {
+      api.unmockedRequests.push(url)
+      return route.fulfill({
+        status: 500,
+        json: { error: `Unmocked request: ${url}` },
+      })
+    }
+
     const isUnmockedApi = REST_API_PREFIXES.some((prefix) =>
       pathname.includes(`/${prefix}`)
     )

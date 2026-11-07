@@ -68,7 +68,8 @@ from the active example, and accepts the graphql-ws socket without replying.
 
 Any GraphQL operation or REST endpoint the router has no mock for is recorded
 and fails the test in teardown, so mock drift surfaces loudly instead of as an
-empty response or a silent request to the real network.
+empty response or a silent request to the real network. So does any request to
+another host, such as a CDN or an analytics script.
 
 ## Asserting on the table
 

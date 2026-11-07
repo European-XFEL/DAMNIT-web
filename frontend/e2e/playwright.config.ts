@@ -47,6 +47,9 @@ export default defineConfig({
       // without one) and the /app/ base that APP_BASE_URL expects.
       VITE_API: 'http://localhost',
       VITE_BASE_URL: '/app/',
+      // Overrides a developer's .env.development.local, so a local run sends
+      // no analytics, as in CI, and the off-site guard stays strict.
+      VITE_UMAMI_ENABLED: 'false',
     },
   },
 })
