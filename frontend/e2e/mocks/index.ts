@@ -37,12 +37,12 @@ export type MockApi = LiveUpdatesMock & {
   // GraphQL operations, REST paths and off-site URLs the router had no mock
   // for; the test fixture fails the test when any were seen.
   unmockedRequests: string[]
-  // Swap the served context.py and bump its last-modified stamp, modelling the
+  // Swap the served context.py and bump its last-modified stamp, modeling the
   // file being edited on disk between polls. The next poll then sees a newer
   // stamp than the loaded content and triggers a refetch.
   touchContextFile: (content: string) => void
   // Change what the GraphQL routes serve for some runs, with no push to say so,
-  // modelling values that changed while live updates were down.
+  // modeling values that changed while live updates were down.
   editRuns: (runs: LatestData['runs']) => void
 }
 
@@ -165,7 +165,7 @@ export async function mockApi(
 
   // Logout returns no logout_url, so the app full-page navigates to /logged-out.
   // Flip the session off so the LoggedOutPage re-fetch of userinfo 401s and the
-  // "You have been logged out" branch renders, modelling the cleared session
+  // "You have been logged out" branch renders, modeling the cleared session
   // cookie.
   await page.route('**/oauth/logout**', (route) => {
     authed = false
