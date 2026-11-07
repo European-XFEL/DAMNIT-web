@@ -16,6 +16,7 @@ import {
   TABLE_DATA_QUERY_NAME,
 } from '#src/graphql/operation-names'
 import { liveRunStamps, stampLiveRuns } from '#src/data/table/run-stamps'
+import { TABLE_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import { TABLE_DATA_QUERY } from '#src/data/table/table-data.queries'
 import { countReconnect } from '#src/graphql/live-updates'
 import { createPriorityLink } from '#src/graphql/priority-link'
@@ -27,7 +28,6 @@ import { sorted } from '#src/utils/array'
 import { serverCell } from '#tests/support/cells'
 
 const PROPOSAL = '900405'
-const PAGE_SIZE = 10
 const LIGHTWEIGHT_NAME = `Lightweight${TABLE_DATA_QUERY_NAME}`
 
 // The stamp store is module state shared across tests: reset it so one test's
@@ -87,7 +87,7 @@ const scalarRunFor = (run: number) => ({
   ],
 })
 
-// A scroll window centered on `y`. At pageSize 10 it maps to a small band of
+// A scroll window centered on `y`. At 10 runs a page it maps to a small band of
 // pages (`pageRangeForRegion`), which is all the test needs: y 0 sits on pages
 // 1 to 3, y 200 sits ~20 pages down and shares no page with it.
 const regionAt = (y: number): Rectangle => ({ x: 0, y, width: 100, height: 5 })
@@ -245,14 +245,9 @@ async function renderTableRuns(
     return strict ? <StrictMode>{tree}</StrictMode> : tree
   }
 
-  const view = await renderHook(
-    () =>
-      useTableRuns({
-        proposal: PROPOSAL,
-        pageSize: PAGE_SIZE,
-      }),
-    { wrapper: Providers }
-  )
+  const view = await renderHook(() => useTableRuns({ proposal: PROPOSAL }), {
+    wrapper: Providers,
+  })
   return { ...view, client }
 }
 
@@ -730,7 +725,7 @@ describe('waiting for the heavy values to fill in', () => {
       variables: {
         proposal: PROPOSAL,
         page: 1,
-        per_page: PAGE_SIZE,
+        per_page: TABLE_PAGE_SIZE,
         names: ['run', 'energy'],
       },
       data: {
@@ -1514,7 +1509,7 @@ describe('receiving a live update', () => {
       variables: {
         proposal: PROPOSAL,
         page: 1,
-        per_page: PAGE_SIZE,
+        per_page: TABLE_PAGE_SIZE,
         names: ['run', 'spectrum'],
       },
       data: { runs: [filledRunFor(1)] },

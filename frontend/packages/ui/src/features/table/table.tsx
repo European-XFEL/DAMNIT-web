@@ -79,8 +79,6 @@ import {
   runSelected,
 } from '#src/features/table/stores/table.slice'
 
-const PAGE_SIZE = 10
-
 // Matches the row height of desktop DAMNIT, the spreadsheet where these users
 // already read their runs.
 const ROW_HEIGHT = 30
@@ -126,10 +124,7 @@ function Table() {
     onVisibleRegionChanged: fetchOnScroll,
     loadErrors,
     retryNow,
-  } = useTableRuns({
-    proposal,
-    pageSize: PAGE_SIZE,
-  })
+  } = useTableRuns({ proposal })
 
   // Initialization: Hooks
   const dispatch = useAppDispatch()

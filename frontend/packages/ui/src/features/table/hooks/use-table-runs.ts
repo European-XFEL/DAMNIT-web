@@ -4,6 +4,7 @@ import { debounce, isEqual } from 'lodash'
 
 import { VARIABLES } from '#src/constants'
 import { liveRunStamps } from '#src/data/table/run-stamps'
+import { TABLE_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   CACHED_RUNS_QUERY,
   DEFERRED_TABLE_DATA_QUERY,
@@ -26,7 +27,6 @@ import type {
 
 type UseTableRunsOptions = {
   proposal: string
-  pageSize: number
 }
 
 type UseTableRuns = {
@@ -129,10 +129,13 @@ function failedPass(pass: PageState['lightweight' | 'deferred']): boolean {
 
 function loadErrorsInView(
   pages: Map<number, PageState>,
-  { visible, pageSize }: { visible: ReadonlySet<number>; pageSize: number }
+  visible: ReadonlySet<number>
 ): LoadErrors {
   const inView = sorted([...visible]).map((page) => ({
-    rows: { first: (page - 1) * pageSize, last: page * pageSize - 1 },
+    rows: {
+      first: (page - 1) * TABLE_PAGE_SIZE,
+      last: page * TABLE_PAGE_SIZE - 1,
+    },
     state: pageState(pages, page),
   }))
   const rowsWhere = (failed: (state: PageState) => boolean) =>
@@ -148,12 +151,8 @@ function loadErrorsInView(
 // The cache is the render source: every page, deferred fill and pushed run
 // merges into one normalized run there, and this hook only reads it and asks
 // for the pages the user is looking at. Switching proposals remounts the hook
-// (ProposalWrapper is keyed), so the page bookkeeping resets with it. The table
-// fixes `pageSize`, so nothing else changes the page size.
-export function useTableRuns({
-  proposal,
-  pageSize,
-}: UseTableRunsOptions): UseTableRuns {
+// (ProposalWrapper is keyed), so the page bookkeeping resets with it.
+export function useTableRuns({ proposal }: UseTableRunsOptions): UseTableRuns {
   const client = useApolloClient()
 
   const pageStates = useRef(new Map<number, PageState>())
@@ -218,10 +217,7 @@ export function useTableRuns({
   // Show the failed pages in view, and run the clock while one waits. A retried
   // pass still counts as failed, so its waits grow until it lands.
   const updateFailedPages = useCallback(() => {
-    const errors = loadErrorsInView(pageStates.current, {
-      visible: visiblePages.current,
-      pageSize,
-    })
+    const errors = loadErrorsInView(pageStates.current, visiblePages.current)
     // Kept while equal, so a page that lands does not repaint the table.
     setLoadErrors((current) => (isEqual(current, errors) ? current : errors))
 
@@ -239,7 +235,7 @@ export function useTableRuns({
         retryDelay(retries.current) + Math.random() * 1000
       )
     }
-  }, [pageSize, stopRetryClock])
+  }, [stopRetryClock])
 
   // Fetch the values `@lightweight` held back on the page that most needs them.
   // One pass runs at a time, and this hook picks which page rather than the
@@ -279,7 +275,12 @@ export function useTableRuns({
       // `run` rides along so a deferred row normalizes onto the identity the
       // lightweight pass wrote.
       const names = [VARIABLES.run, ...pageState(states, page).heavyNames]
-      const variables = { proposal, page, per_page: pageSize, names }
+      const variables = {
+        proposal,
+        page,
+        per_page: TABLE_PAGE_SIZE,
+        names,
+      }
       // `no-cache` keeps the answer scoped to this page: a cached read of
       // `Query.runs` hands back every page merged. The write below repaints.
       const subscription = client
@@ -323,7 +324,7 @@ export function useTableRuns({
         })
       inFlight.stop = () => subscription.unsubscribe()
     },
-    [client, proposal, pageSize, updateFailedPages]
+    [client, proposal, updateFailedPages]
   )
 
   // A page that failed reads `retrying` until it answers, so the clock knows
@@ -342,7 +343,7 @@ export function useTableRuns({
             : 'fetching',
         pageFetch,
       })
-      const variables = { proposal, page, per_page: pageSize }
+      const variables = { proposal, page, per_page: TABLE_PAGE_SIZE }
 
       // A failed page waits for the clock rather than the next scroll: RetryLink
       // has already spent five requests under this one.
@@ -406,7 +407,7 @@ export function useTableRuns({
           }
         )
     },
-    [client, proposal, pageSize, startNextDeferred, updateFailedPages]
+    [client, proposal, startNextDeferred, updateFailedPages]
   )
 
   // Ask for the lightweight pass on any of these pages not asked for yet.
@@ -499,7 +500,7 @@ export function useTableRuns({
     if (settledRegion === null || !proposal) {
       return
     }
-    const pages = pageRangeForRegion(settledRegion, pageSize)
+    const pages = pageRangeForRegion(settledRegion, TABLE_PAGE_SIZE)
     const visible = new Set(pages)
     const states = pageStates.current
 
@@ -533,7 +534,6 @@ export function useTableRuns({
   }, [
     settledRegion,
     proposal,
-    pageSize,
     ensurePagesLoaded,
     startNextDeferred,
     stopDeferredOutOfView,
