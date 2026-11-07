@@ -5,7 +5,9 @@ import MainNavButton from '#src/components/buttons/main-nav-button'
 
 import styles from './not-found-page.module.css'
 
-const NotFoundPage = () => {
+type NotFoundPageProps = { homeTo?: string }
+
+function NotFoundPage({ homeTo = '/home' }: NotFoundPageProps) {
   const navigate = useNavigate()
 
   return (
@@ -22,7 +24,7 @@ const NotFoundPage = () => {
           DAMNIT! Page not found.
         </Title>
         <div className={styles.controls}>
-          <MainNavButton variant="filled" onClick={() => navigate('/home')}>
+          <MainNavButton variant="filled" onClick={() => navigate(homeTo)}>
             Return home
           </MainNavButton>
         </div>
