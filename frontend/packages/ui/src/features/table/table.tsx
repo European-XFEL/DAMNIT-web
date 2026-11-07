@@ -79,10 +79,6 @@ import {
   runSelected,
 } from '#src/features/table/stores/table.slice'
 
-export type TableProps = {
-  paginated?: boolean
-}
-
 const PAGE_SIZE = 10
 
 // Matches the row height of desktop DAMNIT, the spreadsheet where these users
@@ -117,7 +113,7 @@ function paintInnerLine(
   ctx.restore()
 }
 
-const Table = ({ paginated = true }: TableProps) => {
+const Table = () => {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
 
@@ -132,7 +128,6 @@ const Table = ({ paginated = true }: TableProps) => {
     retryNow,
   } = useTableRuns({
     proposal,
-    paginated,
     pageSize: PAGE_SIZE,
   })
 

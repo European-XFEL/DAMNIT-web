@@ -217,13 +217,10 @@ async function renderTableRuns(
   network: { link: ApolloLink },
   {
     strict = false,
-    paginated = true,
     priorityLink = true,
     cache = new InMemoryCache({ typePolicies }),
   }: {
     strict?: boolean
-    // Off for the demo's table, which loads every run as one page.
-    paginated?: boolean
     // Off when a test needs the hook alone to hold the one-at-a-time cap.
     priorityLink?: boolean
     // Pre-seeded when a test starts from what another reader already cached.
@@ -252,7 +249,6 @@ async function renderTableRuns(
     () =>
       useTableRuns({
         proposal: PROPOSAL,
-        paginated,
         pageSize: PAGE_SIZE,
       }),
     { wrapper: Providers }
@@ -1166,21 +1162,6 @@ describe('running into a page that fails to load', () => {
     await settle()
 
     expect(started).toEqual([1, 1, 1])
-  })
-
-  test("asks for the demo table's one page again, though it never scrolls", async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const network = createNetwork({ failLightweight: true })
-    const { result } = await renderTableRuns(network, { paginated: false })
-    expect(timesStarted(network.started.lightweight, 1)).toBe(1)
-
-    // The server comes back.
-    network.failLightweight = false
-    await vi.advanceTimersByTimeAsync(1000)
-
-    await vi.waitFor(() =>
-      expect(result.current.cellsByKey.has(`${PROPOSAL}:1`)).toBe(true)
-    )
   })
 
   test('says which rows failed to load, and that they wait for the clock', async () => {

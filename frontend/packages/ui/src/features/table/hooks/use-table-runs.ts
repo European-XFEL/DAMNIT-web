@@ -4,8 +4,6 @@ import { debounce, isEqual } from 'lodash'
 
 import { VARIABLES } from '#src/constants'
 import { liveRunStamps } from '#src/data/table/run-stamps'
-import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
-import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   CACHED_RUNS_QUERY,
   DEFERRED_TABLE_DATA_QUERY,
@@ -28,7 +26,6 @@ import type {
 
 type UseTableRunsOptions = {
   proposal: string
-  paginated: boolean
   pageSize: number
 }
 
@@ -132,10 +129,10 @@ function failedPass(pass: PageState['lightweight' | 'deferred']): boolean {
 
 function loadErrorsInView(
   pages: Map<number, PageState>,
-  { visible, perPage }: { visible: ReadonlySet<number>; perPage: number }
+  { visible, pageSize }: { visible: ReadonlySet<number>; pageSize: number }
 ): LoadErrors {
   const inView = sorted([...visible]).map((page) => ({
-    rows: { first: (page - 1) * perPage, last: page * perPage - 1 },
+    rows: { first: (page - 1) * pageSize, last: page * pageSize - 1 },
     state: pageState(pages, page),
   }))
   const rowsWhere = (failed: (state: PageState) => boolean) =>
@@ -151,19 +148,16 @@ function loadErrorsInView(
 // The cache is the render source: every page, deferred fill and pushed run
 // merges into one normalized run there, and this hook only reads it and asks
 // for the pages the user is looking at. Switching proposals remounts the hook
-// (ProposalWrapper is keyed), so the page bookkeeping resets with it. Each app
-// fixes `paginated` and `pageSize`, so nothing else changes the page size.
+// (ProposalWrapper is keyed), so the page bookkeeping resets with it. The table
+// fixes `pageSize`, so nothing else changes the page size.
 export function useTableRuns({
   proposal,
-  paginated,
   pageSize,
 }: UseTableRunsOptions): UseTableRuns {
-  const perPage = paginated ? pageSize : ALL_RUNS_PAGE_SIZE
   const client = useApolloClient()
 
   const pageStates = useRef(new Map<number, PageState>())
-  // Seeded to page 1: the grid reports no region until it has laid out, and an
-  // unpaginated table never reports one at all.
+  // Seeded to page 1: the grid reports no region until it has laid out.
   const visiblePages = useRef(new Set([1]))
   const deferredFetch = useRef<DeferredFetch | null>(null)
   // One retry clock for the table, as live updates keep one: its wait doubles
@@ -226,7 +220,7 @@ export function useTableRuns({
   const updateFailedPages = useCallback(() => {
     const errors = loadErrorsInView(pageStates.current, {
       visible: visiblePages.current,
-      perPage,
+      pageSize,
     })
     // Kept while equal, so a page that lands does not repaint the table.
     setLoadErrors((current) => (isEqual(current, errors) ? current : errors))
@@ -245,7 +239,7 @@ export function useTableRuns({
         retryDelay(retries.current) + Math.random() * 1000
       )
     }
-  }, [perPage, stopRetryClock])
+  }, [pageSize, stopRetryClock])
 
   // Fetch the values `@lightweight` held back on the page that most needs them.
   // One pass runs at a time, and this hook picks which page rather than the
@@ -285,7 +279,7 @@ export function useTableRuns({
       // `run` rides along so a deferred row normalizes onto the identity the
       // lightweight pass wrote.
       const names = [VARIABLES.run, ...pageState(states, page).heavyNames]
-      const variables = { proposal, page, per_page: perPage, names }
+      const variables = { proposal, page, per_page: pageSize, names }
       // `no-cache` keeps the answer scoped to this page: a cached read of
       // `Query.runs` hands back every page merged. The write below repaints.
       const subscription = client
@@ -329,7 +323,7 @@ export function useTableRuns({
         })
       inFlight.stop = () => subscription.unsubscribe()
     },
-    [client, proposal, perPage, updateFailedPages]
+    [client, proposal, pageSize, updateFailedPages]
   )
 
   // A page that failed reads `retrying` until it answers, so the clock knows
@@ -348,7 +342,7 @@ export function useTableRuns({
             : 'fetching',
         pageFetch,
       })
-      const variables = { proposal, page, per_page: perPage }
+      const variables = { proposal, page, per_page: pageSize }
 
       // A failed page waits for the clock rather than the next scroll: RetryLink
       // has already spent five requests under this one.
@@ -412,7 +406,7 @@ export function useTableRuns({
           }
         )
     },
-    [client, proposal, perPage, startNextDeferred, updateFailedPages]
+    [client, proposal, pageSize, startNextDeferred, updateFailedPages]
   )
 
   // Ask for the lightweight pass on any of these pages not asked for yet.
@@ -465,8 +459,8 @@ export function useTableRuns({
     retryFailedRef.current = retryFailed
   }, [retryFailed])
 
-  // Load the pages in view on mount, since an unpaginated table never reports
-  // a scroll window, and again on a reconnect, which may have missed changes.
+  // Load the pages in view on mount, before the grid reports a scroll window,
+  // and again on a reconnect, which may have missed changes.
   const reconnects = useReactiveVar(reconnectCount)
   useEffect(() => {
     if (proposal) {
@@ -548,9 +542,6 @@ export function useTableRuns({
 
   const onVisibleRegionChanged = useCallback(
     (region: Rectangle) => {
-      if (!paginated) {
-        return
-      }
       // The grid reports a zero-size region before it has laid out; treat it as
       // no window rather than fetching page 1 twice.
       if (region.width === 0 || region.height === 0) {
@@ -558,18 +549,8 @@ export function useTableRuns({
       }
       settleRegion(region)
     },
-    [paginated, settleRegion]
+    [settleRegion]
   )
-
-  // The unpaginated table pulls every run in one page, so a full page back means
-  // runs past the cap are missing.
-  const runCount = runs?.length
-  useEffect(() => {
-    if (paginated || runCount === undefined) {
-      return
-    }
-    warnIfRunsTruncated(proposal, runCount)
-  }, [paginated, proposal, runCount])
 
   const cellsByKey = useMemo(() => indexRunCells(runs ?? []), [runs])
 
