@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { Container, Text, Title } from '@mantine/core'
 
 import useUserInfo from '#src/features/auth/use-user-info'
@@ -9,6 +9,12 @@ import classes from './logged-out-page.module.css'
 const LoggedOutPage = () => {
   const { userInfo, isLoading, isError } = useUserInfo()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // A page opened first, from a bookmark or a new tab, has no in-app page
+  // to go back to
+  const goBack = () =>
+    location.key === 'default' ? navigate('/home') : navigate(-1)
 
   if (isLoading) {
     return <div />
@@ -50,7 +56,7 @@ const LoggedOutPage = () => {
             <MainNavButton variant="filled" onClick={() => navigate('/logout')}>
               Logout
             </MainNavButton>
-            <MainNavButton variant="outline" onClick={() => navigate(-1)}>
+            <MainNavButton variant="outline" onClick={goBack}>
               Go back
             </MainNavButton>
           </div>
