@@ -85,7 +85,7 @@ export const useTableTooltip = (
   // Cold first-open waits DELAY.open; switching while one is already showing
   // (warm) waits the shorter DELAY.switch so the tooltip follows the cursor
   // down a column without re-incurring the full delay.
-  const scheduleOpen = useCallback((next: TooltipState) => {
+  const scheduleOpen = (next: TooltipState) => {
     window.clearTimeout(openTimerRef.current)
     const delay = tooltipRef.current ? DELAY.switch : DELAY.open
     pendingTargetRef.current = next
@@ -101,7 +101,7 @@ export const useTableTooltip = (
       tooltipRef.current = next
       setTooltip(next)
     }, delay)
-  }, [])
+  }
 
   const dismiss = useCallback(() => {
     cancelOpen()
@@ -124,87 +124,73 @@ export const useTableTooltip = (
     scheduleClose()
   }, [scheduleClose])
 
-  const resolveAt = useCallback(
-    (cell: HoveredCell | undefined): TooltipState | undefined => {
-      if (!cell) {
-        return undefined
-      }
+  const resolveAt = (
+    cell: HoveredCell | undefined
+  ): TooltipState | undefined => {
+    if (!cell) {
+      return undefined
+    }
 
-      const content = resolve(cell)
-      if (!content) {
-        return undefined
-      }
+    const content = resolve(cell)
+    if (!content) {
+      return undefined
+    }
 
-      return { target: content, bounds: toBounds(cell.bounds) }
-    },
-    [resolve]
-  )
+    return { target: content, bounds: toBounds(cell.bounds) }
+  }
 
-  const onCellHovered = useCallback(
-    (cell: HoveredCell | undefined) => {
-      if (suppressed) {
-        return
-      }
+  const onCellHovered = (cell: HoveredCell | undefined) => {
+    if (suppressed) {
+      return
+    }
 
-      const next = resolveAt(cell)
-      if (!next) {
-        cancelOpen()
-        scheduleClose()
-        return
-      }
+    const next = resolveAt(cell)
+    if (!next) {
+      cancelOpen()
+      scheduleClose()
+      return
+    }
 
-      cancelClose()
-      if (sameTarget(tooltipRef.current, next)) {
-        cancelOpen()
-        return
-      }
-      if (sameTarget(pendingTargetRef.current, next)) {
-        return
-      }
+    cancelClose()
+    if (sameTarget(tooltipRef.current, next)) {
+      cancelOpen()
+      return
+    }
+    if (sameTarget(pendingTargetRef.current, next)) {
+      return
+    }
 
-      scheduleOpen(next)
-    },
-    [
-      resolveAt,
-      cancelClose,
-      cancelOpen,
-      scheduleClose,
-      scheduleOpen,
-      suppressed,
-    ]
-  )
+    scheduleOpen(next)
+  }
 
   // Glide only fires onItemHovered when the pointer moves to another cell, so
   // this updates tooltips that depend on the pointer position within a cell.
   // Opening and closing tooltips is left to onCellHovered, so that moving
   // within a cell doesn't restart the open timer or reopen a tooltip closed
   // with Escape.
-  const onCellMouseMove = useCallback(
-    (cell: HoveredCell | undefined) => {
-      if (suppressed) {
-        return
-      }
+  const onCellMouseMove = (cell: HoveredCell | undefined) => {
+    if (suppressed) {
+      return
+    }
 
-      const next = resolveAt(cell)
-      if (!next || sameTarget(tooltipRef.current, next)) {
-        return
-      }
+    const next = resolveAt(cell)
+    if (!next || sameTarget(tooltipRef.current, next)) {
+      return
+    }
 
-      // The tooltip is already open on this cell, so update it immediately.
-      if (sameCell(tooltipRef.current, next)) {
-        cancelOpen()
-        tooltipRef.current = next
-        setTooltip(next)
-        return
-      }
+    // The tooltip is already open on this cell, so update it immediately.
+    if (sameCell(tooltipRef.current, next)) {
+      cancelOpen()
+      tooltipRef.current = next
+      setTooltip(next)
+      return
+    }
 
-      // The tooltip is about to open on this cell, so just update the target.
-      if (sameCell(pendingTargetRef.current, next)) {
-        pendingTargetRef.current = next
-      }
-    },
-    [resolveAt, cancelOpen, suppressed]
-  )
+    // The tooltip is about to open on this cell, so just update the target.
+    if (sameCell(pendingTargetRef.current, next)) {
+      pendingTargetRef.current = next
+    }
+  }
 
   useEffect(
     () => () => {

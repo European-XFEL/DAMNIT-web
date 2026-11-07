@@ -269,43 +269,42 @@ const Table = ({ paginated = true }: TableProps) => {
 
   // Cell: tooltip. Errored cells show a card; image cells show a preview; array
   // cells show the point under the sparkline's crosshair.
-  const resolveTooltip = useCallback<ResolveTooltip>(
-    ({ run, variable, bounds, offsetX }) => {
-      const item = cellsByKey.get(runKey(run))?.get(variable)
-      if (!item) {
+  const resolveTooltip: ResolveTooltip = ({
+    run,
+    variable,
+    bounds,
+    offsetX,
+  }) => {
+    const item = cellsByKey.get(runKey(run))?.get(variable)
+    if (!item) {
+      return undefined
+    }
+    if (item.error) {
+      return { kind: 'error', error: item.error }
+    }
+    if (
+      item.summary.dtype === DTYPES.image &&
+      typeof item.summary.value === 'string' &&
+      item.summary.value
+    ) {
+      return { kind: 'image', src: item.summary.value }
+    }
+    if (item.summary.dtype === DTYPES.array1d) {
+      const sparkline = toSparkline(item.summary.value)
+      if (!sparkline?.y.length) {
         return undefined
       }
-      if (item.error) {
-        return { kind: 'error', error: item.error }
-      }
-      if (
-        item.summary.dtype === DTYPES.image &&
-        typeof item.summary.value === 'string' &&
-        item.summary.value
-      ) {
-        return { kind: 'image', src: item.summary.value }
-      }
-      if (item.summary.dtype === DTYPES.array1d) {
-        const sparkline = toSparkline(item.summary.value)
-        if (!sparkline?.y.length) {
-          return undefined
-        }
-        const index = sparklineIndexAt(
-          offsetX,
-          bounds.width,
-          sparkline.y.length
-        )
-        return {
-          kind: 'sparkline',
-          x: sparkline.x[index],
-          y: sparkline.y[index],
-        }
-      }
 
-      return undefined
-    },
-    [cellsByKey]
-  )
+      const index = sparklineIndexAt(offsetX, bounds.width, sparkline.y.length)
+      return {
+        kind: 'sparkline',
+        x: sparkline.x[index],
+        y: sparkline.y[index],
+      }
+    }
+
+    return undefined
+  }
   const {
     onCellHovered,
     onCellMouseMove,
