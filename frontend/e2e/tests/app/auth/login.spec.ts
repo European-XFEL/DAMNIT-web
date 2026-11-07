@@ -9,7 +9,7 @@ test('an unauthenticated visit hands off to SSO login', async ({
   baseURL,
 }) => {
   // Arm the wait before navigating, and let goto settle at commit (not load): the
-  // SSO redirect PrivateRoute -> LoginRoute fires window.location.href after mount,
+  // SSO redirect PrivateRoute -> LoginRoute fires window.location.replace after mount,
   // which would abort a load-waiting goto. Asserting the request, not the SPA URL,
   // avoids racing that full-page redirect.
   const login = page.waitForRequest('**/oauth/login**')

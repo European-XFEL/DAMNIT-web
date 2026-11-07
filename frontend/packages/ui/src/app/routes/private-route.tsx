@@ -10,7 +10,7 @@ function PrivateRoute() {
   }
 
   if (!userInfo || isError) {
-    return <Navigate to="/login" />
+    return <Navigate to="/login" replace />
   }
 
   return <Outlet />
