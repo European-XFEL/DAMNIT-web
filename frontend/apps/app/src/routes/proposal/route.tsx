@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
-import { Navigate, Outlet, useParams } from 'react-router'
+import { Outlet, useParams } from 'react-router'
 
 import {
+  NotFoundPage,
   resetProposal,
   setProposalPending,
   useAppDispatch,
@@ -32,7 +33,7 @@ function ProposalWrapper({ proposalNumber }: ProposalWrapperProps) {
   }
 
   if (proposal.notFound) {
-    return <Navigate to="/not-found" />
+    return <NotFoundPage />
   }
 
   return <Outlet />

@@ -1,4 +1,4 @@
-import { type RouteObject, Navigate, createBrowserRouter } from 'react-router'
+import { type RouteObject, createBrowserRouter } from 'react-router'
 
 import {
   BASE_URL,
@@ -34,8 +34,7 @@ const routes: RouteObject[] = [
           },
         ],
       },
-      { path: 'not-found', Component: NotFoundPage },
-      { path: '*', element: <Navigate to="/not-found" /> },
+      { path: '*', Component: NotFoundPage },
     ],
   },
 ]

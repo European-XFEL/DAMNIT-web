@@ -16,7 +16,7 @@ test('an unknown URL shows the not-found page and returns home', async ({
 
 // The frontend has no per-proposal guard: a proposal the user cannot access is
 // not blocked client-side. ProposalWrapper fires its metadata query, the backend
-// (here the router) errors, and useProposal redirects to /not-found. The default
+// (here the router) errors, and it shows the not-found page. The default
 // XPCS user can access only 6996, so 9999 models "no access".
 test('opening a proposal you cannot access lands on not-found', async ({
   page,

@@ -88,8 +88,8 @@ export async function openDashboard(
 
 export async function openProposal(page: Page, example: Example) {
   // openProposal navigates to proposalMetadata[0], so the example's own user
-  // must be able to access it or the dashboard silently redirects to
-  // /not-found. Fail loudly here, scoped to the specs that actually open one.
+  // must be able to access it or the dashboard silently shows the not-found
+  // page. Fail loudly here, scoped to the specs that actually open one.
   const proposal = example.proposalMetadata[0].number
   if (!accessibleProposals(example).includes(proposal)) {
     throw new Error(
