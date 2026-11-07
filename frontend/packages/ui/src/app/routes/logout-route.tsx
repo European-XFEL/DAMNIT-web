@@ -8,7 +8,7 @@ const LogoutRoute = () => {
 
   useEffect(() => {
     dispatch(logout())
-  })
+  }, [dispatch])
 
   return <div />
 }
