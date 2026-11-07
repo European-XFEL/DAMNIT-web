@@ -113,7 +113,7 @@ function paintInnerLine(
   ctx.restore()
 }
 
-const Table = () => {
+function Table() {
   // Initialization: References
   const tableRef = useRef<DataEditorRef>(null)
 
