@@ -138,7 +138,7 @@ function Table() {
       return
     }
 
-    const subtitle = `${column.title}`
+    const subtitle = column.title
     const runNumbers = sorted(
       selectedRuns.map((selected) => String(selected.run))
     )
@@ -148,7 +148,7 @@ function Table() {
       subtitle,
       onClick: () =>
         addPreviewPlot({
-          variable: column.id,
+          variable,
           label: subtitle,
           runs: runNumbers,
         }),
