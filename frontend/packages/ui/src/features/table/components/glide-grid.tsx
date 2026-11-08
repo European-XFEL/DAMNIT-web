@@ -221,7 +221,7 @@ function GlideGrid(
   )
 
   // Glide fills the row numbers with the cell background, so they take the
-  // header's grey here, and the index reads in the secondary grey.
+  // header's gray here, and the index reads in the secondary gray.
   const rowMarkers = useMemo(
     () => ({
       kind: 'clickable-number' as const,
@@ -346,12 +346,12 @@ function GlideGrid(
     [leftBorderOf]
   )
 
-  // One grey at two strengths: gray.0 over white, gray.2 over the header's
+  // One gray at two strengths: gray.0 over white, gray.2 over the header's
   // gray.0, and a shade darker than any selected or flashed fill.
   const innerCellLine = withAlpha(theme.colors.gray[6], 0.055)
   const innerHeaderLine = withAlpha(theme.colors.gray[6], 0.12)
 
-  // A cell's line is blended to an opaque colour, since a one-cell repaint
+  // A cell's line is blended to an opaque color, since a one-cell repaint
   // does not clear that pixel first; Glide refills the whole header every time.
   const drawCell = useCallback<DrawCellCallback>(
     (args, drawContent) => {
@@ -414,7 +414,7 @@ function GlideGrid(
     }
 
     // The highlight follows the selected run rather than the row it sat on, so
-    // a run arriving above it cannot slide it onto its neighbour.
+    // a run arriving above it cannot slide it onto its neighbor.
     let rows = CompactSelection.empty()
     for (const key of Object.keys(rowSelection)) {
       const index = rowIndex.get(key)
