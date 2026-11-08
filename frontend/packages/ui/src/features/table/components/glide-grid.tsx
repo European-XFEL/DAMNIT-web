@@ -42,7 +42,6 @@ import {
   makeCellRenderers,
   numberCell,
   textCell,
-  type ErrorColors,
 } from '#src/features/table/utils/cells'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
@@ -182,17 +181,17 @@ function GlideGrid(
   }
 
   // Error-glyph colors resolved from the live theme; dark mode plugs in here.
-  const errorColors = useMemo<ErrorColors>(
-    () => ({
-      error: theme.colors.red[6],
-      missing: theme.colors.gray[5],
-      skipped: theme.colors.gray[5],
-    }),
-    [theme]
-  )
   const renderers = useMemo(
-    () => makeCellRenderers(errorColors, DEFAULT_COLUMN_WIDTH),
-    [errorColors]
+    () =>
+      makeCellRenderers(
+        {
+          error: theme.colors.red[6],
+          missing: theme.colors.gray[5],
+          skipped: theme.colors.gray[5],
+        },
+        DEFAULT_COLUMN_WIDTH
+      ),
+    [theme]
   )
   // The core editor takes Glide's renderers from here, so it also takes the
   // image loader and header icons the default editor would add.
