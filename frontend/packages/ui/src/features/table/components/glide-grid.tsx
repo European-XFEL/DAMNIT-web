@@ -356,6 +356,7 @@ function GlideGrid(
   const drawCell = useCallback<DrawCellCallback>(
     (args, drawContent) => {
       drawContent()
+
       // Glide hands this callback its renderers' draw args, fill included,
       // though the callback's type leaves the fill out.
       const { ctx, rect, col, cellFillColor } = args as BaseDrawArgs
@@ -374,6 +375,7 @@ function GlideGrid(
       } else {
         drawContent()
       }
+
       if (leftBorderOf(args.columnIndex) === 'inner') {
         paintInnerLine(args.ctx, { rect: args.rect, color: innerHeaderLine })
       }
@@ -394,6 +396,7 @@ function GlideGrid(
         overrideTheme: groupThemes?.[name],
       }
     }
+
     return details
   }, [groups, groupThemes])
 
@@ -523,6 +526,7 @@ function GlideGrid(
     ) {
       return
     }
+
     handleCellActivated(item)
   }
 
@@ -618,6 +622,7 @@ function GlideGrid(
     (rect: Rectangle, tx?: number, ty?: number) => {
       onVisibleRegionChanged(rect)
       scrollToViewHandler(rect)
+
       const previous = lastVisibleRegionRef.current
       const nextTx = tx ?? 0
       const nextTy = ty ?? 0
