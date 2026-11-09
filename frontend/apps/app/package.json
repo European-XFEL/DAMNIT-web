@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
+    "@damnit-frontend/shared": "workspace:*",
     "@types/lodash": "catalog:types",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
@@ -47,6 +48,7 @@
     "@types/react-plotly.js": "catalog:types",
     "@vitejs/plugin-react": "catalog:tooling",
     "eslint": "catalog:linting",
+    "msw": "catalog:testing",
     "postcss": "catalog:tooling",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling",

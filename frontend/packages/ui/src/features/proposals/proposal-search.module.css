@@ -1,0 +1,36 @@
+/* Instrument filter buttons */
+.instrumentButton {
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    filter 0.15s;
+}
+
+.instrumentButton[aria-pressed='false'] {
+  color: var(--mantine-color-gray-7);
+}
+
+.instrumentButton[aria-pressed='false']:hover {
+  background: light-dark(
+    var(--mantine-color-gray-0),
+    var(--mantine-color-dark-5)
+  );
+}
+
+.instrumentButton[aria-pressed='true']:hover {
+  filter: brightness(1.1);
+}
+
+.instrumentButton:focus-visible {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: 2px;
+}
+
+/* 12px wide including margins, the same as the check icon */
+.instrumentDot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin: 0 2px;
+  border-radius: 50%;
+}

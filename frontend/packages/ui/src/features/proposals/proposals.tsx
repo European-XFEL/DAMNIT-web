@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import {
   Anchor,
@@ -18,12 +18,16 @@ import { DataTable } from 'mantine-datatable'
 import InstrumentBadge, {
   type InstrumentBadgeProps,
 } from '#src/components/badges/instrument-badge'
+import { INSTRUMENTS } from '#src/components/badges/instruments'
 import CenteredLoader from '#src/components/feedback/centered-loader'
-import useProposals from '#src/data/metadata/use-proposals'
+import useProposals, {
+  type ProposalMetadata,
+} from '#src/data/metadata/use-proposals'
 import { type AvailableProposals } from '#src/types'
-import { isEmpty } from '#src/utils/helpers'
 import { orderBy } from '#src/utils/objects'
 
+import ProposalSearch from './proposal-search'
+import { matchesQuery, parseQuery } from './search'
 import styles from './proposals.module.css'
 
 const formatRunCycle = (date: string) => {
@@ -173,11 +177,10 @@ const ProposalContent = memo(function ProposalContent({
     )
   }
 
-  if (isEmpty(proposals)) {
+  const proposalInfo = proposals?.[0]
+  if (proposalInfo == null) {
     return <div />
   }
-
-  const proposalInfo = proposals[0]
 
   return (
     <Stack className={styles.content} p="xs" gap={6} pl={65} pr={65}>
@@ -204,16 +207,17 @@ const ProposalContent = memo(function ProposalContent({
  */
 
 type ProposalSubTableProps = {
-  proposals: number[]
+  proposals: ProposalMetadata[]
+  isLoading: boolean
 }
 
 const ProposalSubTable = memo(function ProposalSubTable({
   proposals,
+  isLoading,
 }: ProposalSubTableProps) {
   // The datatable keys its rows by `number`, so the ids it hands back are
   // numbers too.
   const [expandedProposals, setExpandedProposals] = useState<number[]>([])
-  const { proposals: proposalInfo, isLoading } = useProposals({ proposals })
 
   return (
     <DataTable
@@ -274,9 +278,9 @@ const ProposalSubTable = memo(function ProposalSubTable({
         },
       ]}
       records={
-        isLoading || proposalInfo == null
+        isLoading
           ? []
-          : proposalInfo
+          : proposals
               .concat()
               .sort(orderBy(['start_date', 'instrument'], ['desc', 'asc']))
       }
@@ -307,33 +311,103 @@ type ProposalsProps = {
 }
 
 const Proposals = ({ proposals }: ProposalsProps) => {
+  const [search, setSearch] = useState('')
+
+  // Fetch metadata for all proposals up front since the search needs it
+  const numbers = useMemo(() => Object.values(proposals).flat(), [proposals])
+  const { proposals: metadata, isLoading } = useProposals({
+    proposals: numbers,
+  })
+
+  const byNumber = useMemo(
+    () => new Map((metadata ?? []).map((record) => [record.number, record])),
+    [metadata]
+  )
+
+  // `instruments`: the ones the user has proposals for, which get buttons.
+  // Known instruments come first in beamline order, then any unknown ones.
+  // `knownInstruments`: every name recognised in the search.
+  const { instruments, knownInstruments } = useMemo(() => {
+    const present = new Set(
+      [...byNumber.values()].map((record) => record.instrument.toUpperCase())
+    )
+    const unknown = [...present]
+      .filter((name) => !INSTRUMENTS.includes(name))
+      .sort()
+    return {
+      instruments: [
+        ...INSTRUMENTS.filter((name) => present.has(name)),
+        ...unknown,
+      ],
+      knownInstruments: [...INSTRUMENTS, ...unknown],
+    }
+  }, [byNumber])
+
+  const query = useMemo(
+    () => parseQuery(search, knownInstruments),
+    [search, knownInstruments]
+  )
+
   const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
+  const records = cycles
+    .map((cycle) => ({
+      cycle,
+      proposals: proposals[cycle]
+        .map((number) => byNumber.get(number))
+        .filter((record) => record != null)
+        .filter((record) => matchesQuery(record, query)),
+    }))
+    // Show all semesters while loading
+    .filter((record) => isLoading || record.proposals.length > 0)
+
+  const matches = records.reduce(
+    (count, record) => count + record.proposals.length,
+    0
+  )
 
   return (
-    <DataTable
-      withTableBorder
-      withColumnBorders
-      highlightOnHover
-      idAccessor="cycle"
-      columns={[
-        {
-          accessor: 'cycle',
-          title: <ProposalHeader />,
-          noWrap: true,
-          render: ({ cycle }) => <CycleCell cycle={cycle} />,
-        },
-      ]}
-      records={cycles.map((cycle) => ({
-        cycle,
-        proposals: proposals[cycle],
-      }))}
-      rowExpansion={{
-        trigger: 'always',
-        content: ({ record }) => {
-          return <ProposalSubTable proposals={record.proposals} />
-        },
-      }}
-    />
+    <Stack gap="xs">
+      <ProposalSearch
+        value={search}
+        onChange={setSearch}
+        query={query}
+        instruments={instruments}
+        matches={matches}
+        total={byNumber.size}
+      />
+      <DataTable
+        withTableBorder
+        withColumnBorders
+        highlightOnHover
+        idAccessor="cycle"
+        minHeight={records.length === 0 ? 150 : undefined}
+        noRecordsText={
+          search.trim() === ''
+            ? 'No proposals'
+            : 'No proposals match your search'
+        }
+        columns={[
+          {
+            accessor: 'cycle',
+            title: <ProposalHeader />,
+            noWrap: true,
+            render: ({ cycle }) => <CycleCell cycle={cycle} />,
+          },
+        ]}
+        records={records}
+        rowExpansion={{
+          trigger: 'always',
+          content: ({ record }) => {
+            return (
+              <ProposalSubTable
+                proposals={record.proposals}
+                isLoading={isLoading}
+              />
+            )
+          },
+        }}
+      />
+    </Stack>
   )
 }
 

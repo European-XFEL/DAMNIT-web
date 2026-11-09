@@ -3,7 +3,13 @@ import fs from 'fs'
 import https from 'https'
 
 import react from '@vitejs/plugin-react'
-import { defineConfig, loadEnv, type ProxyOptions, type UserConfig } from 'vite'
+import {
+  defineConfig,
+  loadEnv,
+  type Plugin,
+  type ProxyOptions,
+  type UserConfig,
+} from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig(({ command, mode }): UserConfig => {
@@ -86,12 +92,27 @@ export default defineConfig(({ command, mode }): UserConfig => {
     }
   }
 
+  // Mock mode (src/mocks): no API proxy, serve apps/demo/public for the example
+  // data and MSW worker script, and start from src/mocks/main.ts.
+  const isMock = mode === 'mock'
+  const mockEntry: Plugin = {
+    name: 'damnit-mock-entry',
+    transformIndexHtml: (html) =>
+      html.replace('/src/main.tsx', '/src/mocks/main.ts'),
+  }
+
   return {
     base: BASE_URL,
     // Keep every font subset a file, so unicode-range decides what downloads.
     build: { assetsInlineLimit: 0 },
-    plugins: [react()],
-    server: command === 'serve' ? getServerConfig() : undefined,
+    plugins: isMock ? [react(), mockEntry] : [react()],
+    publicDir: isMock ? path.resolve(__dirname, '../demo/public') : undefined,
+    server:
+      command !== 'serve'
+        ? undefined
+        : isMock
+          ? { host: true, port: Number(VITE_PORT) || 5173 }
+          : getServerConfig(),
     resolve: {
       alias: {
         // /esm/icons/index.mjs only exports the icons statically, so no separate chunks are created

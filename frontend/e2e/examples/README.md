@@ -6,8 +6,9 @@ There is one copy, so the demo and the e2e mocks cannot drift apart; if the
 example is ever regenerated, the assertions below break loudly instead of the
 tests quietly running on stale data.
 
-Only the auth and proposal responses are authored here, because the app needs
-them but the demo does not expose them.
+Only the auth and proposal responses are authored, because the app needs them
+but the demo does not expose them. They are in
+`packages/shared/src/mocks/proposals.ts`, which the app's mock mode also uses.
 
 ## xpcs fact sheet (what tests may assert on)
 
@@ -27,9 +28,10 @@ Source: `apps/demo/public/examples/xpcs/` (proposal 6996).
 
 - `xpcs/index.ts` - loads the base data from the demo plus the authored
   responses below into the typed `xpcs` example used by the mock router.
-- `xpcs/userinfo.json` - authored wire response for `GET /oauth/userinfo`
+- `XPCS_USER` (shared) - authored wire response for `GET /oauth/userinfo`
   (`proposals_by_year_half` holds `6996`). Returning it makes the app behave as
   logged in.
-- `xpcs/proposal-metadata.json` - authored response array for the
-  `ProposalMetadata` query. Drives the dashboard header (number, instrument,
-  PI, title).
+- `XPCS_PROPOSAL` (shared) - authored entry for the `ProposalMetadata` query.
+  Drives the dashboard header (number, instrument, PI, title).
+- `HOME_PROPOSALS` / `HOME_SEMESTERS` (shared) - proposals across three
+  semesters for the home page.

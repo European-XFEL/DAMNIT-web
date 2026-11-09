@@ -4,31 +4,15 @@ import { fileURLToPath } from 'node:url'
 
 import { PREVIEW_DTYPES } from '@damnit-frontend/shared/constants'
 import { columnIndex } from '#support/grid'
-import type {
-  RunData,
-  Runs,
-  VariableError,
+import {
+  HOME_PROPOSALS,
+  HOME_SEMESTERS,
+  XPCS_PROPOSAL,
+  XPCS_USER,
+  type RunData,
+  type Runs,
+  type VariableError,
 } from '@damnit-frontend/shared/mocks'
-
-// Wire shape returned by GET /oauth/userinfo (the app renames
-// proposals_by_year_half -> proposals).
-type UserInfoWire = {
-  uid: number
-  username: string
-  name: string
-  email: string
-  proposals_by_year_half: Record<string, number[]>
-}
-
-// Response objects for the ProposalMetadata GraphQL query.
-type ProposalMetadata = {
-  number: number
-  instrument: string
-  principal_investigator: string
-  start_date: string
-  title: string
-  damnit_path: string
-}
 
 // Wire shape of a per-run extracted-data file: the raw values plus their
 // metadata (dtype, dims, coords, attrs). Served verbatim as the ExtractedData
@@ -43,8 +27,8 @@ type ExtractedData = {
 const here = dirname(fileURLToPath(import.meta.url))
 
 // The base data (runs + context file) is the demo's canonical example, read
-// directly so the two can never drift. Only the e2e-authored auth and proposal
-// responses live alongside this file.
+// directly so the two can never drift. The auth and proposal responses come
+// from @damnit-frontend/shared.
 const base = join(here, '../../../apps/demo/public/examples/xpcs')
 
 function readJson<T>(dir: string, name: string): T {
@@ -106,11 +90,8 @@ for (const run of readdirSync(join(base, 'data'))) {
 export const XPCS = {
   meta: runs.meta,
   data: runs.data,
-  userInfo: readJson<UserInfoWire>(here, 'userinfo.json'),
-  proposalMetadata: readJson<ProposalMetadata[]>(
-    here,
-    'proposal-metadata.json'
-  ),
+  userInfo: XPCS_USER,
+  proposalMetadata: [XPCS_PROPOSAL],
   contextFile: readFileSync(join(base, 'context.py'), 'utf-8'),
 
   // Per-run extracted data lives beside runs.json, one file per table variable.
@@ -453,56 +434,13 @@ export const xpcsWithGroups: Example = {
     XPCS.extractedData(run, UNGROUPED_NAMES[variable] ?? variable),
 }
 
-// The home page shows one table per semester, so this example spreads proposals
-// across a few. It keeps 6996 (so the dashboard link still works) and adds the
-// real XFEL example proposals 700002/700003/700004.
-//
-// Grouping and the semester label come from the proposals_by_year_half key.
-// Don't read the semester off start_date or damnit_path: the real paths and
-// dates won't always line up with the semester a proposal sits under. (The app
-// calls this key a "cycle", but it's really the semester.)
-//
-// 6996 and 700004 share the 202401 semester, so the sub-table has two rows to
-// sort: 6996 is May 30, 700004 is May 31, and start_date-desc puts 700004 first.
-const homeProposals: ProposalMetadata[] = [
-  ...XPCS.proposalMetadata,
-  {
-    number: 700004,
-    instrument: 'SQS',
-    principal_investigator: 'Michael Meyer',
-    start_date: '2024-05-31',
-    title: 'SQS example data',
-    damnit_path: '/gpfs/exfel/d/raw/XMPL/202450/p700004/usr/damnit',
-  },
-  {
-    number: 700003,
-    instrument: 'SCS',
-    principal_investigator: 'Andreas Scherz',
-    start_date: '2023-01-30',
-    title: 'SCS example data',
-    damnit_path: '/gpfs/exfel/d/raw/XMPL/202350/p700003/usr/damnit',
-  },
-  {
-    number: 700002,
-    instrument: 'FXE',
-    principal_investigator: 'Christopher Milne',
-    start_date: '2021-09-27',
-    title: 'FXE example data',
-    damnit_path: '/gpfs/exfel/d/raw/XMPL/202150/p700002/usr/damnit',
-  },
-]
-
 // XPCS whose user owns proposals across three semesters, for the home page's
 // semester-grouped proposal list.
 export const xpcsWithProposals: Example = {
   ...XPCS,
   userInfo: {
     ...XPCS.userInfo,
-    proposals_by_year_half: {
-      '202401': [6996, 700004],
-      '202350': [700003],
-      '202150': [700002],
-    },
+    proposals_by_year_half: HOME_SEMESTERS,
   },
-  proposalMetadata: homeProposals,
+  proposalMetadata: HOME_PROPOSALS,
 }

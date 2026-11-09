@@ -19,6 +19,7 @@
     "e2e:ui": "pnpm --filter @damnit-frontend/e2e run ui",
     "e2e:report": "pnpm --filter @damnit-frontend/e2e run report",
     "dev:app": "pnpm --filter @damnit-frontend/app dev",
+    "dev:app:mock": "pnpm --filter @damnit-frontend/app dev --mode mock",
     "build:app": "pnpm --filter @damnit-frontend/app build",
     "preview:app": "pnpm --filter @damnit-frontend/app preview",
     "dev:site": "pnpm --filter @damnit-frontend/site dev",
