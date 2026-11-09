@@ -2,6 +2,7 @@ import { http, HttpResponse, graphql } from 'msw'
 
 import {
   MockDataNotFound,
+  SEED_TIMESTAMP_MS,
   resolveOperation,
   type MockDataSource,
   type Runs,
@@ -12,6 +13,9 @@ import { getExampleIndex } from '../utils'
 
 const api = graphql.link(`${BASE_URL}graphql`)
 const exampleIndex = await getExampleIndex()
+
+// In seconds, as the API sends a file's mtime.
+const CONTEXT_FILE_MODIFIED_S = SEED_TIMESTAMP_MS / 1000
 
 async function fetchExample(proposal: string, { path }: { path: string }) {
   const entry = exampleIndex[proposal]
@@ -92,11 +96,12 @@ const restHandlers = [
 
     const content = await fetchContextFile({ proposal: proposal_number })
     return HttpResponse.json({
+      lastModified: CONTEXT_FILE_MODIFIED_S,
       fileContent: content,
     })
   }),
   http.get(`${BASE_URL}contextfile/last_modified`, () =>
-    HttpResponse.json({ lastModified: 0 })
+    HttpResponse.json({ lastModified: CONTEXT_FILE_MODIFIED_S })
   ),
 ]
 
