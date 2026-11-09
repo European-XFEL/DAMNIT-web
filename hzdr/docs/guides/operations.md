@@ -57,7 +57,11 @@ lineout and image previews remain in their cells.
 
 The auto-trigger rebuilds when an export in `CURATED_ROOT` changes (mtime or
 size) or events arrive; it does **not** rebuild on restart or after a code
-change. To rebuild now, with the same inputs the trigger uses:
+change. So after deploying a change to the file layout, rebuild every campaign
+by hand: bridge profile v6 (2026-11-09, `/entry/shots/authority_shot_number`)
+appears in a campaign only once it is rebuilt, and resolution through a
+LabFrog set's claimed shots needs an export made with labfrog-sqlite-tools
+0.2.5 (schema 14). To rebuild now, with the same inputs the trigger uses:
 
 ```bash
 cd ~/DAMNIT-web-hzdr/api && uv run python scripts/hzdr-hdf5-builder.py \

@@ -212,7 +212,7 @@ Branch: `feature/open-sqlite-explorer` — merged to `develop` (default branch)
 | Map MediaWiki campaign choice to canonical `experiment_id` alongside `Campaign` | ✅ merged to `develop` |
 | Store/preserve timezone fields (`date_time_utc`, `date_time_timezone`) | ✅ merged to `develop` |
 | Mongo `_id`/`_id_OLD`/`version`/`status` implement stable identity and history | ✅ pre-existing, documented |
-| Store/import the authoritative shot number | ✅ the shot authority's ZMQ shot details reach LabFrog (2026-10-02); a record claims the number and the export carries it as `authority_shot_number` (schema 13). The first live claim waits for a DRACO shot |
+| Store/import the authoritative shot number | ✅ the shot authority's ZMQ shot details reach LabFrog (2026-10-02); a record claims the number and the export carries it as `authority_shot_number` (schema 13) and, for every claimed shot including a set's several, in `authority_shots` (schema 14, labfrog-sqlite-tools 0.2.5, LabFrog pins it since 2026-11-09). The first live claim waits for a DRACO shot |
 
 ### `GitLab/labfrog-sqlite-tools-repo`
 
@@ -223,6 +223,7 @@ Branch: `main` (changes committed)
 | `experiment_id` column, migration, transform/export/NeXus plumbing | ✅ committed (`schema fix`) |
 | Lightweight anonymized SQLite fixture in `DAMNIT-web-hzdr/api/examples/` | ✅ committed |
 | Schedule campaign-scoped exports (cron/systemd/task-scheduler) | ⬜ external infra, not yet decided |
+| Shot-authority identity in both outputs: `authority_shots` (schema 14) in SQLite, `/entry/authority_shots` and `/entry/shots/authority_shot_number` in NeXus | ✅ released as `v0.2.5` (2026-11-09) |
 | Publish completed SQLite/NeXus pairs by atomic rename or completion marker | ✅ committed — `bundle-complete.json` marker (atomic, with per-file sha256); atomic temp+rename already in `write_sqlite`/NeXus export |
 | Retain each source export used for a canonical build | ✅ committed — opt-in `retain_exports` snapshots via `export-campaign` CLI |
 | Keep DAMNIT output separate from the immutable LabFrog export | ✅ directory layout enforces this |

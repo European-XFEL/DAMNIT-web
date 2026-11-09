@@ -115,7 +115,7 @@ broker, then merge the shotcounter branch.
 | **DAMNIT** | Identity-first matcher uses `kafka_event_id` → transport position → authoritative shot number → timestamp | ✅ committed |
 | **DAMNIT** | `_mark_superseded_labfrog_rows()` — non-active duplicates flagged, not matched | ✅ committed |
 | **labfrog** | Map MediaWiki campaign choice to canonical `experiment_id`; store UTC timezone fields | ✅ merged to `develop` |
-| **labfrog** | Store/import the authoritative shot number | ✅ from the shot authority over ZMQ `:2951` (2026-10-02); exported as `authority_shot_number` (schema 13); first live claim waits for a DRACO shot |
+| **labfrog** | Store/import the authoritative shot number | ✅ from the shot authority over ZMQ `:2951` (2026-10-02); exported as `authority_shot_number` (schema 13) and in `authority_shots` (schema 14, 0.2.5, every claimed shot); first live claim waits for a DRACO shot |
 
 **Outstanding:** (a) the export timer (`labfrog-export-refresh.timer` in
 fwkt-webapps, every 15 minutes) is built; confirm it on the host;

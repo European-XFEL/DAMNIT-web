@@ -111,8 +111,11 @@ flowchart TD
    for that record.
 2. **labfrog-sqlite-tools** exports those Mongo records into an immutable curated
    SQLite + NeXus bundle (every 15 minutes on fwkt-webapps), stamping the
-   canonical `experiment_id`, the claimed `authority_shot_number` (schema 13)
-   and linking columns (`kafka_event_id`, transport offsets, `damnit_*` hints).
+   canonical `experiment_id`, the claimed `authority_shot_number` (schema 13),
+   every claimed shot in `authority_shots` (schema 14, release 0.2.5: a set
+   that claimed several keeps each) and linking columns (`kafka_event_id`,
+   transport offsets, `damnit_*` hints). The NeXus side carries the same
+   identity (`/entry/shots/authority_shot_number`, `/entry/authority_shots`).
 3. **shotcounter** sends a ZMQ message for each channel that fires to the
    **shot authority**, a separate service on fwkt-webapps built from
    planet-watchdog's code (since 2026-10-02). The authority gives each shot its
