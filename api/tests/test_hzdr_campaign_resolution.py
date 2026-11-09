@@ -466,6 +466,37 @@ def test_unassigned_event_resolves_through_a_labfrog_record():
     assert trigger_event["shot_key"] == shots[0]["shot_key"]
 
 
+def test_a_sets_claimed_number_resolves_its_campaign_but_matches_no_row():
+    """Schema v14: a set that claimed shots 501 and 502 has no v13 number,
+    but its ``authority_shot_numbers`` name its campaign for each. The set row
+    is not one shot, so the trigger becomes a shot of its own there."""
+    set_row = labfrog_record(300, experiment_id=OTHER, claimed=False)
+    set_row["authority_shot_numbers"] = [501, 502]
+    shots, events = reconcile_canonical_shots(
+        [trigger(502, experiment_id=UNASSIGNED_EXPERIMENT_ID)],
+        experiment_id=OTHER,
+        source_key=SOURCE_KEY,
+        labfrog_shots=[set_row],
+    )
+    trigger_event = next(e for e in events if e["source"] == "DRACO-Trigger")
+    assert trigger_event["experiment_id"] == OTHER
+    assert trigger_event["experiment_id_source"] == "labfrog"
+    assert trigger_event["shot_key"] != by_number(shots)[300]["shot_key"]
+    assert 502 in by_number(shots)
+    # The same number claimed in another campaign as well is no match.
+    elsewhere = labfrog_record(502, experiment_id=CAMPAIGN)
+    _, contested = reconcile_canonical_shots(
+        [trigger(502, experiment_id=UNASSIGNED_EXPERIMENT_ID)],
+        experiment_id=UNASSIGNED_EXPERIMENT_ID,
+        source_key=SOURCE_KEY,
+        labfrog_shots=[set_row, elsewhere],
+    )
+    assert (
+        next(e for e in contested if e["source"] == "DRACO-Trigger")["experiment_id"]
+        == UNASSIGNED_EXPERIMENT_ID
+    )
+
+
 def test_unassigned_event_resolves_through_the_campaign_schedule(tmp_path: Path):
     schedule = load_campaign_schedule(
         schedule_file(

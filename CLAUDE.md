@@ -238,7 +238,9 @@ resolves to, and the `_unassigned` bucket, each to `<root>/<campaign>/<campaign>
 with its export found as `<curated_root>/<campaign>/<campaign>.sqlite`, merged
 into one shared catalog (source key = `experiment_id`) that the API must serve.
 Only the listed and spooled campaigns' exports take part in resolution step 1,
-which keys on `authority_shot_number` only (ruling R3). SciCat registration of the built NeXus file
+which keys on the authority's numbers only (ruling R3): `authority_shot_number`, plus
+from export schema 14 every claimed number in `authority_shots` (a set's too, as
+`authority_shot_numbers` on the record; routing only, never matching). SciCat registration of the built NeXus file
 is the separate `DW_API_HZDR_SCICAT__*` block (best-effort, off by default).
 `DW_API_HZDR_LASER__*` (`SYSTEM`, `WAVELENGTH`, `REPETITION_RATE`, `POLARIZATION`)
 states the deployment's *fixed* laser-system constants — the `metadata.laser.*`

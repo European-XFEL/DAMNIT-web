@@ -105,8 +105,12 @@ campaign the chain routes an `unassigned` event to, and the `_unassigned`
 bucket, into one shared catalog. Step 1 then reads the exports of the listed
 and spooled campaigns only, the same records in every build of the run, each
 record naming its campaign, so every build routes an event to the same single
-campaign and no shot is counted in two. Step 1 keys on `authority_shot_number`
-only (ruling R3), so a typed LabFrog number never routes an event. Settings and layout:
+campaign and no shot is counted in two. Step 1 keys on the shot authority's
+numbers only (ruling R3), so a typed LabFrog number never routes an event:
+a row's `authority_shot_number` (export schema 13) and, from schema 14, every
+number in the export's `authority_shots` table, so a LabFrog set that claimed
+several shots names its campaign for each. Those claimed numbers only route;
+they never match an event to the set's row, which is not one shot. Settings and layout:
 [deployment plan, Step 2b](plans/deployment-plan.md#every-campaign-at-once-output_root-recommended).
 
 Each canonical shot records the outcome in `/entry/shots/experiment_id_source`

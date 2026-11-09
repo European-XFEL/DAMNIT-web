@@ -595,6 +595,44 @@ def test_reads_labfrog_sqlite_canonical_shot_columns(tmp_path: Path):
     ]
 
 
+def test_reads_every_claimed_authority_number_from_schema_14(tmp_path: Path):
+    """``authority_shots`` (schema v14): a set keeps each claimed number."""
+    sqlite_path = tmp_path / "campaign.sqlite"
+    with contextlib.closing(sqlite3.connect(sqlite_path)) as connection, connection:
+        connection.execute(
+            "CREATE TABLE shots (mongo_id TEXT PRIMARY KEY, shot_number INTEGER, "
+            "date_time TEXT, campaign TEXT, mode TEXT, authority_shot_number INTEGER)"
+        )
+        connection.executemany(
+            "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                ("set-a", 300, "2026-06-10T14:00:00", "HELPMI", "set", None),
+                ("one", 301, "2026-06-10T14:10:00", "HELPMI", "shot", 600),
+                ("typed", 302, "2026-06-10T14:20:00", "HELPMI", "shot", None),
+            ],
+        )
+        connection.execute(
+            "CREATE TABLE authority_shots (mongo_id TEXT NOT NULL, "
+            "shot_index INTEGER NOT NULL, shot_number INTEGER, shot_key TEXT, "
+            "experiment_id TEXT, shot_id TEXT, observed_at_utc TEXT, "
+            "observation_ids_json TEXT, PRIMARY KEY (mongo_id, shot_index))"
+        )
+        connection.executemany(
+            "INSERT INTO authority_shots (mongo_id, shot_index, shot_number) "
+            "VALUES (?, ?, ?)",
+            [("set-a", 1, 502), ("set-a", 0, 501), ("set-a", 2, None), ("one", 0, 600)],
+        )
+
+    by_id = {shot["record_id"]: shot for shot in read_labfrog_sqlite_shots(sqlite_path)}
+
+    assert by_id["set-a"]["authority_shot_numbers"] == [501, 502]
+    assert "authority_shot_number" not in by_id["set-a"]
+    assert by_id["one"]["authority_shot_number"] == 600
+    assert by_id["one"]["authority_shot_numbers"] == [600]
+    assert "authority_shot_numbers" not in by_id["typed"]
+    assert "authority_shot_numbers" not in by_id["set-a"]["metadata"]
+
+
 def test_reads_labfrog_sqlite_target_columns_as_metadata_target(tmp_path: Path):
     sqlite_path = tmp_path / "campaign.sqlite"
     with sqlite3.connect(sqlite_path) as connection:

@@ -4,6 +4,19 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-09
+
+### Data
+- **Campaign resolution reads every shot a LabFrog record claimed.** From
+  labfrog-sqlite-tools schema 14 (0.2.5) the export has an `authority_shots`
+  table, one row per claimed shot, because a set that claimed several shots
+  leaves `shots.authority_shot_number` empty. `read_labfrog_sqlite_shots` now
+  attaches those numbers as `authority_shot_numbers`, and resolution step 1
+  routes an `unassigned` event whose number one of them names to that
+  record's campaign (still only when exactly one campaign claims it). They
+  are not used to match an event to the set's row: the trigger becomes a
+  shot of its own in that campaign. A schema-13 export reads as before.
+
 ## 2026-11-03
 
 ### Data
