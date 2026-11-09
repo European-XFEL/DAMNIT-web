@@ -7,6 +7,13 @@ behaviour; the merge PR has the details.
 ## 2026-11-09
 
 ### Data
+- **The shot authority's number is in the NeXus file** (bridge profile v6).
+  `/entry/shots/authority_shot_number` holds it beside each shot: the LabFrog
+  export's `authority_shot_number` for a LabFrog-backed shot (whose
+  `shot_number` is LabFrog's own and may be typed), the events' number for a
+  trigger-only or event-built shot, `-1` otherwise. A LabFrog NeXus source's
+  `-1` (labfrog-sqlite-tools 0.2.5) is read as no number. Rebuild a campaign
+  to get the column.
 - **Campaign resolution reads every shot a LabFrog record claimed.** From
   labfrog-sqlite-tools schema 14 (0.2.5) the export has an `authority_shots`
   table, one row per claimed shot, because a set that claimed several shots

@@ -2688,6 +2688,23 @@ def test_old_labfrog_nexus_has_no_authority_numbers(tmp_path: Path):
     assert all("authority_shot_number" not in shot for shot in shots)
 
 
+def test_labfrog_nexus_minus_one_is_no_authority_number(tmp_path: Path):
+    """labfrog-sqlite-tools 0.2.5 writes -1 (missing_value) where a record has
+    no authority number; authority numbers are whole numbers >= 0."""
+    nexus_path = tmp_path / "labfrog-0.2.5.nxs"
+    write_labfrog_nexus(nexus_path)
+    with h5py.File(nexus_path, "a") as handle:
+        column = handle["entry/shots/authority_shot_number"]
+        values = column[...]
+        values[0] = -1
+        column[...] = values
+
+    shots = read_labfrog_nexus_shots(nexus_path)
+
+    assert "authority_shot_number" not in shots[0]
+    assert all("authority_shot_number" in shot for shot in shots[1:])
+
+
 _EXAMPLE_LABFROG_SQLITE = (
     Path(__file__).resolve().parents[1]
     / "examples"

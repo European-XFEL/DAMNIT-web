@@ -924,9 +924,11 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
             },
         }
         # Older compact exports have no authority column; their typed number
-        # must not become a trigger-matching number by default.
+        # must not become a trigger-matching number by default. A newer one
+        # writes -1 (its missing_value) where a record has no authority
+        # number; authority numbers are whole numbers >= 0.
         authority_number = _as_optional_int(fields["authority_shot_number"][index])
-        if authority_number is not None:
+        if authority_number is not None and authority_number >= 0:
             shot_record["authority_shot_number"] = authority_number
         shots.append(shot_record)
     return shots
@@ -2664,12 +2666,20 @@ def write_nexus_laser_group(
 # bumped to match. See hzdr/docs/nxhzdr-target-profile.md (target map) and
 # hzdr/docs/nexus-semantic-maps.md (laser/vacuum/diagnostic maps).
 HZDR_TARGET_PROFILE_VERSION = "0.10"
-HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v5"
+HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v6"
 LABFROG_LOCAL_COUNT_DESCRIPTION = (
     "The experimenters' shot count from LabFrog's local-counter reset (the "
     "Count written on the Shotsheet). A user aid for finding a shot, not an "
     "identifier: shot_number is the governed shot identity. -1 where LabFrog "
     "has no count for the shot."
+)
+AUTHORITY_SHOT_NUMBER_DESCRIPTION = (
+    "The shot authority's number for this shot (planet-watchdog's shot "
+    "authority, ruling R3): from the LabFrog export's authority_shot_number "
+    "for a LabFrog-backed shot, else the shot_number its authoritative events "
+    "carried. -1 where the shot has none, e.g. a LabFrog record typed by hand "
+    "or a set that claimed several shots. For LabFrog-backed shots shot_number "
+    "is LabFrog's own number, so join on this column to find a trigger."
 )
 # On /entry/shots when DAMNIT wrote its identity rows itself, not LabFrog.
 SHOT_IDENTITY_ATTR = "damnit_shot_identity"
@@ -4597,12 +4607,34 @@ def _write_shot_bridge_columns(
             ],
             dtype=np.int64,
         ),
+        # Bridge profile v6: the shot authority's number, -1 where none.
+        "authority_shot_number": np.asarray(
+            [_shot_authority_column_value(shot) for shot in shots], dtype=np.int64
+        ),
     }
     for name, values in columns.items():
         _replace_dataset(group, name, values)
     group["labfrog_local_count"].attrs["description"] = LABFROG_LOCAL_COUNT_DESCRIPTION
+    group["authority_shot_number"].attrs["description"] = (
+        AUTHORITY_SHOT_NUMBER_DESCRIPTION
+    )
+    group["authority_shot_number"].attrs["missing_value"] = -1
     group.attrs["damnit_bridge_profile"] = HZDR_BRIDGE_PROFILE_VERSION
     group.attrs["stable_key"] = "shot_key"
+
+
+def _shot_authority_column_value(shot: Mapping[str, Any]) -> int:
+    """The shot authority's number of one canonical shot, or -1.
+
+    A LabFrog-backed shot has it only from the export (``authority_shot_number``;
+    its ``shot_number`` may be typed). A shot built from events (trigger-only,
+    or grouped by identity with no LabFrog record) carries the number its
+    events did, which only the shot authority issues.
+    """
+    number = _authority_number(shot)
+    if number is None and not shot.get("labfrog_record_id"):
+        number = _as_optional_int(shot.get("shot_number"))
+    return number if number is not None and number >= 0 else -1
 
 
 def _extend_preserved_shot_table(

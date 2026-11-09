@@ -325,6 +325,18 @@ this. `-1` means LabFrog has no count for the shot: no active reset covers it,
 the export predates v12, the LabFrog source is a NeXus projection, or the shot
 is trigger-only.
 
+**The shot authority's number** (bridge profile v6, 2026-11-09). For a
+LabFrog-backed shot, `/entry/shots/shot_number` is LabFrog's own number, which
+an operator may have typed. `/entry/shots/authority_shot_number` holds the
+shot authority's number beside it: the export's `authority_shot_number` for a
+LabFrog row, and the `shot_number` its events carried for a trigger-only shot
+or one built from events, since only the authority issues that. `-1`
+(`missing_value`) where there is none: a record typed by hand, a set that
+claimed several shots (schema 14 keeps those in labfrog-sqlite-tools'
+`authority_shots`), or an older export. Join a trigger to its shot on this
+column, never on `shot_number`. A LabFrog NeXus source written by
+labfrog-sqlite-tools 0.2.5 uses the same `-1`, which the reader skips.
+
 ## Canonical Outputs
 
 The LabFrog NeXus structure is preserved and DAMNIT adds:
@@ -333,7 +345,8 @@ The LabFrog NeXus structure is preserved and DAMNIT adds:
 /entry/definition                    NXhzdr_target application-definition declaration
 /entry/experiment_identifier         campaign id (standard NXentry field)
 /entry/shots                         canonical shot rows, match provenance, per-shot target JSON,
-                                     experiment_id_source (bridge v4), labfrog_local_count (v5)
+                                     experiment_id_source (bridge v4), labfrog_local_count (v5),
+                                     authority_shot_number (v6)
 /entry/source_events                 normalized events, including unmatched events;
                                      producer_instance_id (v3), instrument_id (v4) columns
 /entry/data_products                 files and internal dataset references

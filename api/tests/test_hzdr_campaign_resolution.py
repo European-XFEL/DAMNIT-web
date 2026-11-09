@@ -746,6 +746,41 @@ def test_builder_does_not_count_the_sentinel_as_a_campaign():
     )
 
 
+# --- bridge profile v6 -------------------------------------------------------
+
+
+def test_bridge_v6_writes_the_shot_authoritys_number(tmp_path: Path):
+    """/entry/shots/authority_shot_number: the export's number for a LabFrog
+    row, the events' number for a trigger-only shot, -1 for a typed row."""
+    typed = labfrog_record(18, claimed=False)
+    claimed = labfrog_record(17)
+    claimed["authority_shot_number"] = 501  # LabFrog typed 17; the authority said 501
+    shots, events = reconcile_canonical_shots(
+        [trigger(99, timestamp="2026-06-10T15:00:00Z")],
+        experiment_id=CAMPAIGN,
+        source_key=SOURCE_KEY,
+        labfrog_shots=[claimed, typed],
+    )
+    output = tmp_path / "canonical.nxs"
+    write_nexus_bridge(
+        output_path=output, experiment_id=CAMPAIGN, shots=shots, events=events
+    )
+    with h5py.File(output, "r") as handle:
+        group = cast("h5py.Group", handle["entry/shots"])
+        assert group.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v6"
+        column = cast("h5py.Dataset", group["authority_shot_number"])
+        assert column.dtype.kind == "i"
+        assert column.attrs["missing_value"] == -1
+        numbers = dict(
+            zip(
+                cast("h5py.Dataset", group["shot_number"])[...].tolist(),
+                column[...].tolist(),
+                strict=True,
+            )
+        )
+    assert numbers == {17: 501, 18: -1, 99: 99}
+
+
 # --- bridge profile v4 -------------------------------------------------------
 
 
@@ -764,9 +799,9 @@ def test_bridge_v4_writes_experiment_id_source_and_instrument_id(tmp_path: Path)
     write_nexus_bridge(
         output_path=output, experiment_id=CAMPAIGN, shots=shots, events=events
     )
-    assert HZDR_BRIDGE_PROFILE_VERSION == "hzdr-canonical-shot-v5"
+    assert HZDR_BRIDGE_PROFILE_VERSION == "hzdr-canonical-shot-v6"
     with h5py.File(output, "r") as handle:
-        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v5"
+        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v6"
         shot_numbers = list(cast("h5py.Dataset", handle["entry/shots/shot_number"]))
         sources = cast(
             "h5py.Dataset", handle["entry/shots/experiment_id_source"]
