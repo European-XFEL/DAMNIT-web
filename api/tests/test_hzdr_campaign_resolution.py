@@ -466,6 +466,37 @@ def test_unassigned_event_resolves_through_a_labfrog_record():
     assert trigger_event["shot_key"] == shots[0]["shot_key"]
 
 
+def test_a_sets_claimed_number_resolves_its_campaign_but_matches_no_row():
+    """Schema v14: a set that claimed shots 501 and 502 has no v13 number,
+    but its ``authority_shot_numbers`` name its campaign for each. The set row
+    is not one shot, so the trigger becomes a shot of its own there."""
+    set_row = labfrog_record(300, experiment_id=OTHER, claimed=False)
+    set_row["authority_shot_numbers"] = [501, 502]
+    shots, events = reconcile_canonical_shots(
+        [trigger(502, experiment_id=UNASSIGNED_EXPERIMENT_ID)],
+        experiment_id=OTHER,
+        source_key=SOURCE_KEY,
+        labfrog_shots=[set_row],
+    )
+    trigger_event = next(e for e in events if e["source"] == "DRACO-Trigger")
+    assert trigger_event["experiment_id"] == OTHER
+    assert trigger_event["experiment_id_source"] == "labfrog"
+    assert trigger_event["shot_key"] != by_number(shots)[300]["shot_key"]
+    assert 502 in by_number(shots)
+    # The same number claimed in another campaign as well is no match.
+    elsewhere = labfrog_record(502, experiment_id=CAMPAIGN)
+    _, contested = reconcile_canonical_shots(
+        [trigger(502, experiment_id=UNASSIGNED_EXPERIMENT_ID)],
+        experiment_id=UNASSIGNED_EXPERIMENT_ID,
+        source_key=SOURCE_KEY,
+        labfrog_shots=[set_row, elsewhere],
+    )
+    assert (
+        next(e for e in contested if e["source"] == "DRACO-Trigger")["experiment_id"]
+        == UNASSIGNED_EXPERIMENT_ID
+    )
+
+
 def test_unassigned_event_resolves_through_the_campaign_schedule(tmp_path: Path):
     schedule = load_campaign_schedule(
         schedule_file(
@@ -715,6 +746,41 @@ def test_builder_does_not_count_the_sentinel_as_a_campaign():
     )
 
 
+# --- bridge profile v6 -------------------------------------------------------
+
+
+def test_bridge_v6_writes_the_shot_authoritys_number(tmp_path: Path):
+    """/entry/shots/authority_shot_number: the export's number for a LabFrog
+    row, the events' number for a trigger-only shot, -1 for a typed row."""
+    typed = labfrog_record(18, claimed=False)
+    claimed = labfrog_record(17)
+    claimed["authority_shot_number"] = 501  # LabFrog typed 17; the authority said 501
+    shots, events = reconcile_canonical_shots(
+        [trigger(99, timestamp="2026-06-10T15:00:00Z")],
+        experiment_id=CAMPAIGN,
+        source_key=SOURCE_KEY,
+        labfrog_shots=[claimed, typed],
+    )
+    output = tmp_path / "canonical.nxs"
+    write_nexus_bridge(
+        output_path=output, experiment_id=CAMPAIGN, shots=shots, events=events
+    )
+    with h5py.File(output, "r") as handle:
+        group = cast("h5py.Group", handle["entry/shots"])
+        assert group.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v6"
+        column = cast("h5py.Dataset", group["authority_shot_number"])
+        assert column.dtype.kind == "i"
+        assert column.attrs["missing_value"] == -1
+        numbers = dict(
+            zip(
+                cast("h5py.Dataset", group["shot_number"])[...].tolist(),
+                column[...].tolist(),
+                strict=True,
+            )
+        )
+    assert numbers == {17: 501, 18: -1, 99: 99}
+
+
 # --- bridge profile v4 -------------------------------------------------------
 
 
@@ -733,9 +799,9 @@ def test_bridge_v4_writes_experiment_id_source_and_instrument_id(tmp_path: Path)
     write_nexus_bridge(
         output_path=output, experiment_id=CAMPAIGN, shots=shots, events=events
     )
-    assert HZDR_BRIDGE_PROFILE_VERSION == "hzdr-canonical-shot-v5"
+    assert HZDR_BRIDGE_PROFILE_VERSION == "hzdr-canonical-shot-v6"
     with h5py.File(output, "r") as handle:
-        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v5"
+        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v6"
         shot_numbers = list(cast("h5py.Dataset", handle["entry/shots/shot_number"]))
         sources = cast(
             "h5py.Dataset", handle["entry/shots/experiment_id_source"]

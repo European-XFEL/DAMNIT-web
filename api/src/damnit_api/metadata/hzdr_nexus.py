@@ -924,9 +924,11 @@ def read_labfrog_nexus_shots(path: Path) -> list[dict[str, Any]]:
             },
         }
         # Older compact exports have no authority column; their typed number
-        # must not become a trigger-matching number by default.
+        # must not become a trigger-matching number by default. A newer one
+        # writes -1 (its missing_value) where a record has no authority
+        # number; authority numbers are whole numbers >= 0.
         authority_number = _as_optional_int(fields["authority_shot_number"][index])
-        if authority_number is not None:
+        if authority_number is not None and authority_number >= 0:
             shot_record["authority_shot_number"] = authority_number
         shots.append(shot_record)
     return shots
@@ -1166,6 +1168,55 @@ def _read_labfrog_shot_variables(
     return dict(by_shot)
 
 
+def _read_labfrog_authority_claims(
+    connection: sqlite3.Connection,
+) -> dict[str, list[int]]:
+    """Every shot-authority number each record claimed, by ``mongo_id``.
+
+    From the ``authority_shots`` table of labfrog-sqlite-tools schema v14: one
+    row per shot a current record claimed, so a set that claimed several
+    keeps each number, while its v13 ``authority_shot_number`` is NULL. A row
+    without a whole number is skipped. Returns ``{}`` for an export without
+    the table.
+    """
+    columns = {
+        str(row[1]) for row in connection.execute("PRAGMA table_info(authority_shots)")
+    }
+    if not {"mongo_id", "shot_index", "shot_number"} <= columns:
+        return {}
+    claims: dict[str, list[int]] = defaultdict(list)
+    for mongo_id, number in connection.execute(
+        "SELECT mongo_id, shot_number FROM authority_shots "
+        "ORDER BY mongo_id, shot_index"
+    ):
+        record_id = _as_optional_string(mongo_id)
+        value = _as_optional_int(number)
+        if record_id is not None and value is not None:
+            claims[record_id].append(value)
+    return dict(claims)
+
+
+def _labfrog_authority_fields(
+    record: Mapping[str, Any], claims_by_shot: Mapping[str, list[int]]
+) -> dict[str, Any]:
+    """The shot authority's numbers of one export row, as shot-record fields."""
+    fields: dict[str, Any] = {}
+    # The shot authority's number (schema v13), the only number an
+    # authoritative trigger is matched or resolved on (ruling R3). Absent for
+    # a typed row and on every row of an older export - never defaulted to
+    # the typed shot_number.
+    authority_number = _as_optional_int(record.get("authority_shot_number"))
+    if authority_number is not None:
+        fields["authority_shot_number"] = authority_number
+    # Schema v14: every number the record claimed, a set's several too. Used
+    # only to resolve an unassigned event's campaign, never to match an event
+    # to this row (a set row is not one shot).
+    claimed = claims_by_shot.get(_as_optional_string(record.get("mongo_id")) or "")
+    if claimed:
+        fields["authority_shot_numbers"] = list(claimed)
+    return fields
+
+
 def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
     """Read LabFrog's canonical SQLite shots table using its stable columns."""
     # Guard against a partial write: labfrog-sqlite-tools writes to a .tmp file
@@ -1267,6 +1318,7 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
             "date_time, shot_number, mongo_id"
         ).fetchall()
         variables_by_shot = _read_labfrog_shot_variables(connection)
+        claims_by_shot = _read_labfrog_authority_claims(connection)
 
     shots: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
@@ -1344,13 +1396,7 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
         local_count = _as_optional_int(record.get("local_count"))
         if local_count is not None:
             shot_record["local_count"] = local_count
-        # The shot authority's number (schema v13), the only number an
-        # authoritative trigger is matched or resolved on (ruling R3). Absent
-        # for a typed row and on every row of an older export - never
-        # defaulted to the typed shot_number.
-        authority_number = _as_optional_int(record.get("authority_shot_number"))
-        if authority_number is not None:
-            shot_record["authority_shot_number"] = authority_number
+        shot_record.update(_labfrog_authority_fields(record, claims_by_shot))
         shots.append(shot_record)
     _mark_superseded_labfrog_rows(shots)
     return shots
@@ -1535,6 +1581,7 @@ def merge_labfrog_shots(
                 "record_id",
                 "shot_number",
                 "authority_shot_number",
+                "authority_shot_numbers",
                 "shot_date",
                 "labfrog_date_time",
                 "campaign",
@@ -1673,7 +1720,9 @@ def _authority_number(shot: Mapping[str, Any]) -> int | None:
     comes from the export's ``authority_shot_number`` (labfrog-sqlite-tools
     schema 13); a typed row, a set that claimed several shots and every row
     of an older export have none and are reachable only by the non-number
-    rules (identity, campaign schedule, a reviewer's ruling) or review.
+    rules (identity, campaign schedule, a reviewer's ruling) or review. A
+    set's claimed numbers (schema v14, ``authority_shot_numbers``) still
+    name its campaign in resolution step 1; they never match a shot.
     """
     return _as_optional_int(shot.get("authority_shot_number"))
 
@@ -1683,14 +1732,28 @@ def _labfrog_experiment_by_shot_number(
 ) -> dict[int, set[str]]:
     """Map each authority shot number to the campaign(s) LabFrog records it in.
 
-    Keyed on ``authority_shot_number`` only (ruling R3): a row whose number was
-    typed takes no part. A record with no experiment_id of its own belongs to
-    the export the builder was pointed at, i.e. ``default_experiment_id``.
+    Keyed on the shot authority's numbers only (ruling R3): a row whose number
+    was typed takes no part. Those are the row's ``authority_shot_number``
+    (schema v13) and, from schema v14's ``authority_shots``, every number the
+    record claimed (``authority_shot_numbers``), so a set that claimed several
+    shots names its campaign for each. A record with no experiment_id of its
+    own belongs to the export the builder was pointed at, i.e.
+    ``default_experiment_id``.
     """
     by_number: dict[int, set[str]] = defaultdict(set)
     for record in labfrog_shots:
-        number = _authority_number(record)
-        if number is None:
+        numbers = {
+            number
+            for number in (
+                _authority_number(record),
+                *(
+                    _as_optional_int(value)
+                    for value in record.get("authority_shot_numbers") or ()
+                ),
+            )
+            if number is not None
+        }
+        if not numbers:
             continue
         metadata = record.get("metadata")
         experiment_id = _as_optional_string(record.get("experiment_id")) or (
@@ -1698,7 +1761,8 @@ def _labfrog_experiment_by_shot_number(
             if isinstance(metadata, dict)
             else None
         )
-        by_number[number].add(experiment_id or default_experiment_id)
+        for number in numbers:
+            by_number[number].add(experiment_id or default_experiment_id)
     return by_number
 
 
@@ -2602,12 +2666,20 @@ def write_nexus_laser_group(
 # bumped to match. See hzdr/docs/nxhzdr-target-profile.md (target map) and
 # hzdr/docs/nexus-semantic-maps.md (laser/vacuum/diagnostic maps).
 HZDR_TARGET_PROFILE_VERSION = "0.10"
-HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v5"
+HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v6"
 LABFROG_LOCAL_COUNT_DESCRIPTION = (
     "The experimenters' shot count from LabFrog's local-counter reset (the "
     "Count written on the Shotsheet). A user aid for finding a shot, not an "
     "identifier: shot_number is the governed shot identity. -1 where LabFrog "
     "has no count for the shot."
+)
+AUTHORITY_SHOT_NUMBER_DESCRIPTION = (
+    "The shot authority's number for this shot (planet-watchdog's shot "
+    "authority, ruling R3): from the LabFrog export's authority_shot_number "
+    "for a LabFrog-backed shot, else the shot_number its authoritative events "
+    "carried. -1 where the shot has none, e.g. a LabFrog record typed by hand "
+    "or a set that claimed several shots. For LabFrog-backed shots shot_number "
+    "is LabFrog's own number, so join on this column to find a trigger."
 )
 # On /entry/shots when DAMNIT wrote its identity rows itself, not LabFrog.
 SHOT_IDENTITY_ATTR = "damnit_shot_identity"
@@ -4535,12 +4607,34 @@ def _write_shot_bridge_columns(
             ],
             dtype=np.int64,
         ),
+        # Bridge profile v6: the shot authority's number, -1 where none.
+        "authority_shot_number": np.asarray(
+            [_shot_authority_column_value(shot) for shot in shots], dtype=np.int64
+        ),
     }
     for name, values in columns.items():
         _replace_dataset(group, name, values)
     group["labfrog_local_count"].attrs["description"] = LABFROG_LOCAL_COUNT_DESCRIPTION
+    group["authority_shot_number"].attrs["description"] = (
+        AUTHORITY_SHOT_NUMBER_DESCRIPTION
+    )
+    group["authority_shot_number"].attrs["missing_value"] = -1
     group.attrs["damnit_bridge_profile"] = HZDR_BRIDGE_PROFILE_VERSION
     group.attrs["stable_key"] = "shot_key"
+
+
+def _shot_authority_column_value(shot: Mapping[str, Any]) -> int:
+    """The shot authority's number of one canonical shot, or -1.
+
+    A LabFrog-backed shot has it only from the export (``authority_shot_number``;
+    its ``shot_number`` may be typed). A shot built from events (trigger-only,
+    or grouped by identity with no LabFrog record) carries the number its
+    events did, which only the shot authority issues.
+    """
+    number = _authority_number(shot)
+    if number is None and not shot.get("labfrog_record_id"):
+        number = _as_optional_int(shot.get("shot_number"))
+    return number if number is not None and number >= 0 else -1
 
 
 def _extend_preserved_shot_table(

@@ -60,7 +60,8 @@ most important thing a projection plan has to get right.
 | --- | --- |
 | `/entry/shots/shot_index` | iteration index (0-based, stable order) |
 | `/entry/shots/shot_key` | **stable shot identity** — there is no `shot_id` column |
-| `/entry/shots/shot_number` | authoritative number (the shot authority, planet-watchdog) |
+| `/entry/shots/shot_number` | the shot's number: the shot authority's for a shot built from events, LabFrog's own (possibly typed) for a LabFrog-backed shot |
+| `/entry/shots/authority_shot_number` | the shot authority's number (planet-watchdog) for every shot that has one, `-1` otherwise (bridge v6, added 2026-11-09) |
 | `/entry/shots/fired_at` | earliest source-event timestamp = trigger time |
 | `/entry/shots/match_status`, `match_quality`, `match_time_delta_s` | reconciliation evidence |
 | `/entry/shots/target_metadata_json` | per-shot LabFrog target context (JSON text) |

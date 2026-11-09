@@ -623,7 +623,7 @@ def test_labfrog_misfire_is_built_as_a_flagged_shot_not_dropped(tmp_path: Path):
     with h5py.File(built_nexus, "r") as handle:
         assert sorted(handle["entry/shots/shot_number"][...].tolist()) == [1, 2, 3, 4]  # pyright: ignore[reportAttributeAccessIssue, reportIndexIssue]
         assert handle["entry/shots"].attrs["damnit_bridge_profile"] == (
-            "hzdr-canonical-shot-v5"
+            "hzdr-canonical-shot-v6"
         ), "shot_status must not change the bridge layout"
         events = handle["entry/source_events"]
         labfrog_status = {
@@ -713,7 +713,7 @@ def test_labfrog_local_count_rides_beside_each_shot_as_a_user_field(tmp_path: Pa
 
     with h5py.File(built_nexus, "r") as handle:
         shots = cast("h5py.Group", handle["entry/shots"])
-        assert shots.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v5"
+        assert shots.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v6"
         column = cast("h5py.Dataset", shots["labfrog_local_count"])
         assert column.dtype.kind == "i"
         description = str(column.attrs["description"])

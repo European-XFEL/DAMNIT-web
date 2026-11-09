@@ -18,7 +18,8 @@ member's `sha256`. A `/entry/data_products` row of kind `file` keeps its
 `metadata_json.event_id`, which is the join key back to the same row.
 
 Why: `data_products` stays a flat table of references, nothing is stored twice,
-and the bridge profile stays `hzdr-canonical-shot-v5`. The master is also the
+and the bridge profile stayed `hzdr-canonical-shot-v5` (v6, 2026-11-09, only
+adds `/entry/shots/authority_shot_number`). The master is also the
 one place where matching, campaign resolution and review rulings have already
 decided which shot an event belongs to, so the worker never re-runs matching
 and cannot disagree with the master it will be linked from.

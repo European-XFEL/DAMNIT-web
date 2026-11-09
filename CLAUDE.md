@@ -238,7 +238,9 @@ resolves to, and the `_unassigned` bucket, each to `<root>/<campaign>/<campaign>
 with its export found as `<curated_root>/<campaign>/<campaign>.sqlite`, merged
 into one shared catalog (source key = `experiment_id`) that the API must serve.
 Only the listed and spooled campaigns' exports take part in resolution step 1,
-which keys on `authority_shot_number` only (ruling R3). SciCat registration of the built NeXus file
+which keys on the authority's numbers only (ruling R3): `authority_shot_number`, plus
+from export schema 14 every claimed number in `authority_shots` (a set's too, as
+`authority_shot_numbers` on the record; routing only, never matching). SciCat registration of the built NeXus file
 is the separate `DW_API_HZDR_SCICAT__*` block (best-effort, off by default).
 `DW_API_HZDR_LASER__*` (`SYSTEM`, `WAVELENGTH`, `REPETITION_RATE`, `POLARIZATION`)
 states the deployment's *fixed* laser-system constants — the `metadata.laser.*`
@@ -534,9 +536,9 @@ See [hzdr/docs/target-ontology.md §5](hzdr/docs/target-ontology.md#5-units-conv
 [hzdr/docs/standards-alignment.md §3.3/§3.5](hzdr/docs/standards-alignment.md#33-laser-parameters)
 for the full rationale and HELPMI cross-walk.
 
-### NeXus bridge profile: `hzdr-canonical-shot-v5`
+### NeXus bridge profile: `hzdr-canonical-shot-v6`
 
-Stamped as `damnit_bridge_profile` on HDF5 root and `/entry/shots`. Current value: `"hzdr-canonical-shot-v5"`. Version 2 added the shot-aligned `target_metadata_json` column so campaign-varying targets are not lost behind the `/entry/sample` snapshot. **Version 3 (2026-08-31)** adds `/entry/source_events/producer_instance_id`, promoted from `metadata.producer.instance_id`, so a reviewed openPMD projection rule can name the emitting PC; see [hzdr/docs/plans/openpmd-projection-plan.md](hzdr/docs/plans/openpmd-projection-plan.md). **Version 4 (2026-09-29)** adds `/entry/shots/experiment_id_source` (why the shot is in this campaign: `labfrog` / `schedule` / `ruling` / `producer` / `unassigned`, see [architecture.md](hzdr/docs/architecture.md#campaign-resolution)) and `/entry/source_events/instrument_id` (from `metadata.instrument.id`, `""` when absent). **Version 5 (2026-10-01)** adds `/entry/shots/labfrog_local_count`: LabFrog's `shots.local_count` (labfrog-sqlite-tools schema v12), the experimenters' Count from LabFrog's local-counter reset, written beside each shot as a user aid so the NeXus file can be searched by the number on the Shotsheet. It is *not* an identifier and never stands in for the shot authority's `shot_number`; the dataset's `description` attribute says so, and the name deliberately avoids a `shot_number` prefix (the shot aligner's rule G8). `-1` where LabFrog has no count (no active reset, a pre-v12 export, a LabFrog NeXus source, or a trigger-only shot). Bump this string if the bridge table layout changes (columns added/removed from the shot or source-events groups).
+Stamped as `damnit_bridge_profile` on HDF5 root and `/entry/shots`. Current value: `"hzdr-canonical-shot-v6"`. Version 2 added the shot-aligned `target_metadata_json` column so campaign-varying targets are not lost behind the `/entry/sample` snapshot. **Version 3 (2026-08-31)** adds `/entry/source_events/producer_instance_id`, promoted from `metadata.producer.instance_id`, so a reviewed openPMD projection rule can name the emitting PC; see [hzdr/docs/plans/openpmd-projection-plan.md](hzdr/docs/plans/openpmd-projection-plan.md). **Version 4 (2026-09-29)** adds `/entry/shots/experiment_id_source` (why the shot is in this campaign: `labfrog` / `schedule` / `ruling` / `producer` / `unassigned`, see [architecture.md](hzdr/docs/architecture.md#campaign-resolution)) and `/entry/source_events/instrument_id` (from `metadata.instrument.id`, `""` when absent). **Version 5 (2026-10-01)** adds `/entry/shots/labfrog_local_count`: LabFrog's `shots.local_count` (labfrog-sqlite-tools schema v12), the experimenters' Count from LabFrog's local-counter reset, written beside each shot as a user aid so the NeXus file can be searched by the number on the Shotsheet. It is *not* an identifier and never stands in for the shot authority's `shot_number`; the dataset's `description` attribute says so, and the name deliberately avoids a `shot_number` prefix (the shot aligner's rule G8). `-1` where LabFrog has no count (no active reset, a pre-v12 export, a LabFrog NeXus source, or a trigger-only shot). **Version 6 (2026-11-09)** adds `/entry/shots/authority_shot_number`: the shot authority's number beside each shot (maintainer: the authority belongs in the SQLite export and the NeXus file) — the LabFrog export's `authority_shot_number` for a LabFrog-backed shot (whose `shot_number` is LabFrog's own and may be typed), the events' `shot_number` for a trigger-only or event-built shot, `-1` (`missing_value`) otherwise. `read_labfrog_nexus_shots` likewise treats a negative LabFrog NeXus value as none (labfrog-sqlite-tools 0.2.5 writes `-1`). Bump this string if the bridge table layout changes (columns added/removed from the shot or source-events groups).
 
 **Axes.** `/entry/shots/*` is the only shot-indexed group. `/entry/source_events` is event-indexed and `/entry/data_products` is product-indexed; both carry a `shot_key` column and must be *joined*, never zipped by position.
 
@@ -550,7 +552,7 @@ instrument group. `/entry/shot_containers` (campaign output phase 4) is an
 `NXcollection` index (`shot_key`/`container` datasets) of the per-shot
 containers in `shots/`, which the file links at its root, one relative
 external link per container named by its stem. These additive views
-keep the v5 table columns unchanged.
+keep the v6 table columns unchanged.
 
 ### Shared Pydantic field constraints (`api/src/damnit_api/shared/models.py`)
 
