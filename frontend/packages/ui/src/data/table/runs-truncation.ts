@@ -1,11 +1,11 @@
 import { ALL_RUNS_PAGE_SIZE } from './table-data.constants'
 
-// Proposals already reported, so the table and the summary plots do not each
-// warn about the same cap.
+// Proposals already reported, so each summary plot does not warn about the
+// same cap again.
 const warned = new Set<string>()
 
-// The unpaginated table and the summary plots ask for every run in one page, so
-// a full page back means anything past the cap is missing.
+// The summary plots ask for every run in one page, so a full page back means
+// anything past the cap is missing.
 export function warnIfRunsTruncated(proposal: string, count: number): void {
   if (count < ALL_RUNS_PAGE_SIZE || warned.has(proposal)) {
     return
@@ -16,8 +16,8 @@ export function warnIfRunsTruncated(proposal: string, count: number): void {
   // exact fit from a truncation.
   console.warn(
     `Loaded ${ALL_RUNS_PAGE_SIZE} runs for proposal ${proposal}, the most a ` +
-      `single request returns. Runs past that may be missing from the table ` +
-      `and summary plots.`
+      `single request returns. Runs past that may be missing from the ` +
+      `summary plots.`
   )
 }
 

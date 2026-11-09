@@ -17,11 +17,7 @@ import {
 } from './context-file.api'
 import ContextFileEditor from './context-file-editor'
 
-export type ContextFileProps = {
-  subscribe?: boolean
-}
-
-function ContextFile({ subscribe = true }: ContextFileProps) {
+function ContextFile() {
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
 
   const { data, error, refetch, isLoading } = useGetFileContentQuery({
@@ -33,21 +29,17 @@ function ContextFile({ subscribe = true }: ContextFileProps) {
       proposalNum: proposal,
     },
     {
-      pollingInterval: subscribe ? 5000 : undefined,
+      pollingInterval: 5000,
     }
   )
   const lastValidLastUpdate = useRef<number | undefined>(undefined)
 
   useEffect(() => {
-    if (!subscribe) {
-      return
-    }
-
     if (lastModifiedData?.lastModified !== lastValidLastUpdate.current) {
       refetch()
     }
     lastValidLastUpdate.current = data?.lastModified
-  }, [lastModifiedData, data?.lastModified, refetch, subscribe])
+  }, [lastModifiedData, data?.lastModified, refetch])
 
   return (
     // Monaco fills its parent, so without the min-height it grows past the
