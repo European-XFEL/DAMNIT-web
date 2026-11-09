@@ -35,6 +35,12 @@
       "note": "Set label then ordinal, and nothing else. The label may carry a suffix of its own -- set1_23K -- which is why it is not just digits; the ordinal is zero-padded on some cameras and not on others, and int() reads both. A 17-digit tail is a scope timestamp, never an ordinal."
     },
     {
+      "id": "prefixed_set_camera_and_ordinal",
+      "regex": "^(?P<prefix>.+?)_(?P<label>[Ss]et\\d+)(?:_C\\d+)+_(?P<seq>\\d+)$",
+      "example": "Nomarski_water_jet_515nm_set1_C1_C1_00001.tif",
+      "note": "A description, then a set, then one or more camera tags (_C1), then the shot ordinal (2025_10_28, Probe90). Ruled 2026-11-01 (X5): these frames belong to shots, so each frame is one shot's acquisition placed by its set and ordinal like set10_00001.tif, not one recording of conditions. Narrow on purpose: the camera tag is required, so a condition label that merely contains a set (set2_20cm_00001) is not taken."
+    },
+    {
       "id": "conditions_and_frame",
       "provides": "recording",
       "regex": "^(?P<label>.+?)_(?P<frame>\\d+)$",

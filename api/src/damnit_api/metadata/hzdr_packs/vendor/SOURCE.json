@@ -1,5 +1,5 @@
 {
-  "commit": "0f8d9e1",
+  "commit": "ac4690b",
   "files": {
     "camera_metadata.py": {
       "from": "shot_aligner/scripts/shotalign/camera_metadata.py",
@@ -187,7 +187,7 @@
     },
     "sequence_frames.json": {
       "from": "shot_aligner/scripts/shotalign/diagnostics/sequence_frames.json",
-      "sha256": "c0b1c7318ed844d6976da9fca398a3abecdbcd5b3b3b63451ea8f1ea31c1f6f6"
+      "sha256": "a298c79d3bd370572364a21a007ed2ec57297b52330146854d60993ca8e407f2"
     },
     "spectrometer_irr8.json": {
       "from": "shot_aligner/scripts/shotalign/diagnostics/spectrometer_irr8.json",
