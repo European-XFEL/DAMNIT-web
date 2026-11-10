@@ -61,7 +61,11 @@ function DashboardShell({
       footer={{ height: 28 }}
     >
       <AppShell.Header bg="gray.1">
-        <DashboardHeader identity={identity} homeTo={homeTo} />
+        <DashboardHeader
+          identity={identity}
+          heading={heading}
+          homeTo={homeTo}
+        />
       </AppShell.Header>
       <AppShell.Navbar
         ref={navRef}
