@@ -96,7 +96,6 @@ function setup(
         variables,
         tags: {},
         groups: {},
-        timestamp: 0,
       },
     },
   })

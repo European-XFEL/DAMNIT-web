@@ -149,7 +149,7 @@ export type TableDataVariables = {
 // same `metadata` cache entry, so they must select identical fields; keeping the
 // shape in one place stops them drifting (mirrors CELL_FIELDS). `variables`,
 // `tags` and `groups` are JSON scalars, so they take no sub-selection; only
-// `runs` and `timestamp` are typed on the wire.
+// `runs` is typed on the wire.
 const META_FIELDS = `
   runs {
     proposal
@@ -158,7 +158,6 @@ const META_FIELDS = `
   variables
   tags
   groups
-  timestamp
 `
 
 export const TABLE_META_QUERY = gql`

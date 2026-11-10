@@ -89,9 +89,8 @@ export async function mockWebSocket(
   let refused = false
   let loginEnded = false
 
-  // The backend stamps each push with an advancing epoch-ms timestamp, which the
-  // app feeds back as its subscription cursor. Model that so the stored cursor
-  // looks real; the exact value does not affect delivery.
+  // The backend stamps each push with an advancing epoch-ms timestamp. Model that
+  // so a push looks real; the app does not read the value.
   let clock = SEED_TIMESTAMP_MS
   const nextTimestamp = () => (clock += 1000)
 
@@ -120,7 +119,7 @@ export async function mockWebSocket(
                 })
               ),
               metadata: metadataChanged
-                ? shapeMetadata(metadata, { proposal, timestamp })
+                ? shapeMetadata(metadata, proposal)
                 : null,
               timestamp,
             },

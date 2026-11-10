@@ -1,7 +1,6 @@
 import { Kind, parse } from 'graphql'
 
 import {
-  SEED_TIMESTAMP_MS,
   runNumber,
   shapeMetadata,
   shapeTableData,
@@ -81,12 +80,7 @@ export async function resolveOperation(
     switch (operationName) {
       case 'TableMetaQuery': {
         const { meta } = await source.runs(proposal)
-        // The time of the newest value, as the backend answers it: 0 with no
-        // runs, and the client then takes its cursor from the first live push.
-        const timestamp = meta.runs.length ? SEED_TIMESTAMP_MS : 0
-        return resolved({
-          metadata: shapeMetadata(meta, { proposal, timestamp }),
-        })
+        return resolved({ metadata: shapeMetadata(meta, proposal) })
       }
       case 'TableDataQuery':
       case 'LightweightTableDataQuery':

@@ -30,7 +30,6 @@ async function renderDialog() {
         },
         tags: {},
         groups: {},
-        timestamp: 0,
       },
     },
   })
