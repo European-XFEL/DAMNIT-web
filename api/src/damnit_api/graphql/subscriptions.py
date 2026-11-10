@@ -8,7 +8,7 @@ from .. import get_logger
 from ..auth.permissions import PROPOSAL_PERMISSIONS
 from ..runs.sqlite import async_latest_rows, async_max, async_table, get_database_mtime
 from ..runs.types import DamnitRun, TableMeta, Timestamp
-from .metadata import fetch_metadata
+from .metadata import fetch_metadata, read_metadata
 from .utils import DatabaseInput, LatestData, fetch_info
 
 logger = get_logger()
@@ -43,18 +43,19 @@ async def poll_proposal(proposal):
             proposal, table="run_variables", column="timestamp"
         )
         _last_seen_timestamp[proposal] = max_timestamp or 0
+    newest_timestamp = _last_seen_timestamp[proposal]
 
     rows = await async_latest_rows(
         proposal,
         table=table,
         by="timestamp",
-        start_at=_last_seen_timestamp[proposal],
+        start_at=newest_timestamp,
     )
 
-    # A subscriber polls on its first tick, then only once the file has changed, so any
-    # write re-reads the metadata: a new run, a tag edit, a retitled variable.
+    # A subscriber polls on its first tick, then only once the file has changed, so a
+    # write may have made the `metadata` query's cached snapshot stale.
     fetch_metadata.cache_invalidate(proposal)
-    metadata = await fetch_metadata(proposal)
+    metadata = await read_metadata(proposal)
 
     runs = {}
     run_timestamps = {}
@@ -89,12 +90,15 @@ async def poll_proposal(proposal):
             runs[key] = DamnitRun.from_db(run_values, database=proposal)
             run_timestamps[key] = max(data.timestamp for data in variables.values())
 
-        _last_seen_timestamp[proposal] = latest_data.timestamp
+        newest_timestamp = latest_data.timestamp
+
+    # Moved only once every read has succeeded, so a failed one retries these rows.
+    _last_seen_timestamp[proposal] = newest_timestamp
 
     return {
         "runs": runs,
         "run_timestamps": run_timestamps,
-        "max_timestamp": _last_seen_timestamp[proposal],  # seconds
+        "max_timestamp": newest_timestamp,  # seconds
         "mtime": mtime,  # nanoseconds
         # The whole snapshot rides along so a subscriber that needs to push it
         # builds `TableMeta` from this exact metadata, rather than re-fetching and

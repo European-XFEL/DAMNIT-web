@@ -625,7 +625,6 @@ async def test_metadata_query(graphql_schema):
             variables
             tags
             groups
-            timestamp
           }
         }
     """
@@ -637,7 +636,7 @@ async def test_metadata_query(graphql_schema):
     assert result.errors is None
 
     metadata = result.data["metadata"]
-    assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags", "groups"}
+    assert set(metadata.keys()) == {"runs", "variables", "tags", "groups"}
     assert metadata["runs"] == [
         {"proposal": str(proposal), "run": run} for proposal, run in RUN_IDENTIFIERS
     ]

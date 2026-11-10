@@ -177,9 +177,8 @@ def mocked_metadata_reads(
     mocked_metadata_run_identifiers,
     mocked_metadata_all_tags,
     mocked_metadata_variable_tags,
-    mocked_metadata_max,
 ):
-    """The sqlite reads behind `fetch_metadata`, for polling the poll directly
+    """The sqlite reads behind `read_metadata`, for polling the poll directly
     instead of through the schema."""
 
 
@@ -623,9 +622,7 @@ def test_filter_for_client_cursorless_client_receives_this_tick():
 
 def test_filter_for_client_delivers_metadata_without_changed_runs():
     snapshot = _snapshot({(PROPOSAL, 1): 100.0})
-    metadata = TableMeta(
-        runs=[], variables={}, tags={}, groups={}, timestamp=snapshot["max_timestamp"]
-    )
+    metadata = TableMeta(runs=[], variables={}, tags={}, groups={})
 
     result = filter_for_client(snapshot, since=300.0, metadata=metadata)
     assert result.runs == []

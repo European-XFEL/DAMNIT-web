@@ -11,7 +11,6 @@ from ..graphql.conftest import (  # noqa: F401
     mocked_database_mtime,
     mocked_ensure_damnit_path,
     mocked_metadata_all_tags,
-    mocked_metadata_max,
     mocked_metadata_run_identifiers,
     mocked_metadata_variable_tags,
     mocked_metadata_variables,

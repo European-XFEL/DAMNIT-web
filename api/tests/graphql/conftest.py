@@ -90,14 +90,6 @@ def mocked_metadata_run_identifiers(mocker):
 
 
 @pytest.fixture
-def mocked_metadata_max(mocker):
-    mocker.patch(
-        "damnit_api.graphql.metadata.db.async_max",
-        return_value=0,
-    )
-
-
-@pytest.fixture
 def mocked_ensure_damnit_path(mocker):
     """Bypass the damnit_path validation; tests run without a request context."""
     mocker.patch(
@@ -128,7 +120,6 @@ def graphql_schema_no_auth(
 def graphql_schema(
     bypass_proposal_permission,
     mocked_ensure_damnit_path,
-    mocked_metadata_max,
     graphql_schema_no_auth,
 ):
     """Same schema as graphql_schema_no_auth, with permission and damnit-path

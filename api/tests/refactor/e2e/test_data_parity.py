@@ -63,7 +63,6 @@ def metadata_query(proposal: int) -> dict:
                 runs {{ proposal run }}
                 variables
                 tags
-                timestamp
               }}
             }}
         """
