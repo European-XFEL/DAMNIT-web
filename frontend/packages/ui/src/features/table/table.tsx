@@ -60,11 +60,7 @@ function Table() {
     gridRef.current?.resetColumnWidths()
   }, [])
 
-  const resolveTooltip: ResolveTooltip = ({
-    run,
-    variable,
-    sparklinePosition,
-  }) => {
+  const resolveTooltip: ResolveTooltip = ({ run, variable, normalizedX }) => {
     const item = cellsByKey.get(runKey(run))?.get(variable)
     if (!item) {
       return undefined
@@ -86,7 +82,7 @@ function Table() {
       }
 
       const index = sparklineIndexAt({
-        position: sparklinePosition,
+        normalizedX,
         count: sparkline.y.length,
       })
       return {

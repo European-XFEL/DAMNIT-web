@@ -12,9 +12,9 @@ import {
   getCell,
   GRID_RENDERERS,
   imageCell,
+  normalizedXAt,
   numberCell,
   sparklineIndexAt,
-  sparklinePositionAt,
   textCell,
   toSparkline,
 } from '#src/features/table/utils/cells'
@@ -143,32 +143,32 @@ describe('toSparkline', () => {
   })
 })
 
-describe('sparklinePositionAt', () => {
+describe('normalizedXAt', () => {
   // A 116 px cell leaves 100 px between the 8 px pads.
-  test('measures the pointer from the first point to the last', () => {
-    expect(sparklinePositionAt({ hoverX: 8, width: 116 })).toBe(0)
-    expect(sparklinePositionAt({ hoverX: 58, width: 116 })).toBe(0.5)
-    expect(sparklinePositionAt({ hoverX: 108, width: 116 })).toBe(1)
+  test('measures the pointer across the content between the pads', () => {
+    expect(normalizedXAt({ hoverX: 8, width: 116 })).toBe(0)
+    expect(normalizedXAt({ hoverX: 58, width: 116 })).toBe(0.5)
+    expect(normalizedXAt({ hoverX: 108, width: 116 })).toBe(1)
   })
 
   test('clamps a pointer in the padding to the ends', () => {
-    expect(sparklinePositionAt({ hoverX: 0, width: 116 })).toBe(0)
-    expect(sparklinePositionAt({ hoverX: 116, width: 116 })).toBe(1)
+    expect(normalizedXAt({ hoverX: 0, width: 116 })).toBe(0)
+    expect(normalizedXAt({ hoverX: 116, width: 116 })).toBe(1)
   })
 })
 
 describe('sparklineIndexAt', () => {
   // Five points sit a quarter of the way apart.
   test('picks the point nearest the crosshair', () => {
-    expect(sparklineIndexAt({ position: 0, count: 5 })).toBe(0)
-    expect(sparklineIndexAt({ position: 0.37, count: 5 })).toBe(1)
-    expect(sparklineIndexAt({ position: 0.38, count: 5 })).toBe(2)
-    expect(sparklineIndexAt({ position: 1, count: 5 })).toBe(4)
+    expect(sparklineIndexAt({ normalizedX: 0, count: 5 })).toBe(0)
+    expect(sparklineIndexAt({ normalizedX: 0.37, count: 5 })).toBe(1)
+    expect(sparklineIndexAt({ normalizedX: 0.38, count: 5 })).toBe(2)
+    expect(sparklineIndexAt({ normalizedX: 1, count: 5 })).toBe(4)
   })
 
   test('maps both ends of a lone value to that value', () => {
-    expect(sparklineIndexAt({ position: 0, count: 1 })).toBe(0)
-    expect(sparklineIndexAt({ position: 1, count: 1 })).toBe(0)
+    expect(sparklineIndexAt({ normalizedX: 0, count: 1 })).toBe(0)
+    expect(sparklineIndexAt({ normalizedX: 1, count: 1 })).toBe(0)
   })
 })
 

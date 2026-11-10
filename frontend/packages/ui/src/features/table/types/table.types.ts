@@ -55,12 +55,9 @@ export type CellId = {
   variable: string
 }
 
-// The cell under the pointer, with its box in viewport pixels and how far
-// along a sparkline the pointer is, from 0 at its first point to 1 at its last.
-export type HoveredCell = CellId & {
-  bounds: Rectangle
-  sparklinePosition: number
-}
+// The cell under the pointer, with its box in viewport pixels. `normalizedX` is
+// 0 at the left edge of the cell's content and 1 at its right edge.
+export type HoveredCell = CellId & { bounds: Rectangle; normalizedX: number }
 
 export type CellMenuArgs = CellId & {
   selectedRuns: RunId[]

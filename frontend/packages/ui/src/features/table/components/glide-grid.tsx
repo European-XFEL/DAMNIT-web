@@ -40,8 +40,8 @@ import {
   getCell,
   GRID_RENDERERS,
   makeCellRenderers,
+  normalizedXAt,
   numberCell,
-  sparklinePositionAt,
   textCell,
 } from '#src/features/table/utils/cells'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
@@ -295,7 +295,7 @@ function GlideGrid(
     return {
       ...cell,
       bounds: args.bounds,
-      sparklinePosition: sparklinePositionAt({
+      normalizedX: normalizedXAt({
         hoverX: args.localEventX,
         width: args.bounds.width,
       }),
