@@ -92,14 +92,13 @@ def current_timestamp():
 
 
 @pytest_asyncio.fixture
-async def subscription(graphql_schema, current_timestamp):
-    """A table opened before the new row, subscribed to its live updates."""
+async def subscription(graphql_schema):
+    """A table opened before the new row, subscribed to its live updates as the
+    app does: from 0, since the server reads only rows newer than its last-seen
+    timestamp."""
     generator = await graphql_schema.subscribe(
         SUBSCRIPTION,
-        variable_values={
-            "proposal": str(PROPOSAL),
-            "since": (current_timestamp - 1) * 1000,
-        },
+        variable_values={"proposal": str(PROPOSAL), "since": 0},
     )
     yield generator
     await generator.aclose()
@@ -223,6 +222,35 @@ async def test_run_updates(
         {"proposal": str(proposal), "run": run_number}
         for proposal, run_number in RUN_IDENTIFIERS
     ]
+
+
+@pytest.mark.asyncio
+async def test_a_table_subscribed_from_zero_gets_a_write_but_not_the_rows_it_shows(
+    mocker, subscription, current_timestamp, mocked_latest_rows, mocked_fetch_info
+):
+    # DAMNIT wrote one run before the table opened, and the new one after
+    mocker.patch(
+        "damnit_api.graphql.subscriptions.async_max",
+        return_value=current_timestamp - 10,
+    )
+    shown = create_run_variables(
+        {"n_trains": 1200},
+        proposal=PROPOSAL,
+        run=NEW_RUN - 1,
+        timestamp=current_timestamp - 20,
+    )
+    new_rows = mocked_latest_rows.side_effect
+
+    def rows_after(*args, start_at, **kwargs):
+        rows = [*shown, *new_rows(*args, **kwargs)]
+        return [row for row in rows if row["timestamp"] > start_at]
+
+    mocked_latest_rows.side_effect = rows_after
+
+    with patched_sleep:
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+
+    assert [run["run"] for run in result.data["run_updates"]["runs"]] == [NEW_RUN]
 
 
 @pytest.mark.asyncio
