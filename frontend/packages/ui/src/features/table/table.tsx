@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { Stack } from '@mantine/core'
 
-import { DTYPES, VARIABLES } from '#src/constants'
+import { VARIABLES } from '#src/constants'
 import { ViewStatus } from '#src/components/statuses/view-status'
 import { plotRequested } from '#src/app/store/actions'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
@@ -9,7 +9,7 @@ import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import { sorted } from '#src/utils/array'
 import type { PlotSource } from '#src/types'
-import { sparklineIndexAt, toSparkline } from '#src/features/table/utils/cells'
+import { cellTooltip } from '#src/features/table/utils/cell-tooltip'
 import { summaryAxes } from '#src/features/table/utils/summary-axes'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
 import { RunCountItem } from '#src/features/table/components/run-count-item'
@@ -61,38 +61,12 @@ function Table() {
   }, [])
 
   const resolveTooltip: ResolveTooltip = ({ run, variable, normalizedX }) => {
-    const item = cellsByKey.get(runKey(run))?.get(variable)
-    if (!item) {
+    const cell = cellsByKey.get(runKey(run))?.get(variable)
+    if (!cell) {
       return undefined
     }
-    if (item.error) {
-      return { kind: 'error', error: item.error }
-    }
-    if (
-      item.summary.dtype === DTYPES.image &&
-      typeof item.summary.value === 'string' &&
-      item.summary.value
-    ) {
-      return { kind: 'image', src: item.summary.value }
-    }
-    if (item.summary.dtype === DTYPES.array1d) {
-      const sparkline = toSparkline(item.summary.value)
-      if (!sparkline?.y.length) {
-        return undefined
-      }
 
-      const index = sparklineIndexAt({
-        normalizedX,
-        count: sparkline.y.length,
-      })
-      return {
-        kind: 'sparkline',
-        x: sparkline.x[index],
-        y: sparkline.y[index],
-      }
-    }
-
-    return undefined
+    return cellTooltip(cell, { normalizedX })
   }
   const {
     onCellHovered,
