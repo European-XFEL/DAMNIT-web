@@ -113,10 +113,9 @@ async def poll_proposal(proposal):
 
 
 def filter_for_client(snapshot, since, metadata=None):
-    # A cursorless client gets this tick's changed rows, not a history replay:
-    # `poll_proposal` already bounds them by the server's high-water mark. Only
-    # dropping them would be wrong, since a proposal with no runs seeds `since`
-    # from a zero timestamp and would never advance past it.
+    # A client subscribed from 0, as the app is, gets this tick's changed rows,
+    # not a history replay: `poll_proposal` reads only rows newer than its
+    # last-seen timestamp.
     runs = [
         run
         for key, run in snapshot["runs"].items()
