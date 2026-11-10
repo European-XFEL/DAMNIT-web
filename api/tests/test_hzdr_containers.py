@@ -392,6 +392,19 @@ def test_mapping_rows_with_nothing_to_point_at_are_noted_apart(reference_contain
         ("sequence_frames", "set10_00001.tif", ("set10_00001", "set10", 1)),
         ("sequence_frames", "set10_00002.tif", ("set10_00002", "set10", 2)),
         ("sequence_frames", "set10_00001.tif.rec", ("set10_00001", "set10", 1)),
+        # X5 (shot-aligner, 2026-11-01): a description, a set, camera tags and
+        # an ordinal (Probe90's Nomarski frames) are one shot's frame each,
+        # not one recording of conditions.
+        (
+            "sequence_frames",
+            "Nomarski_water_jet_515nm_set1_C1_C1_00001.tif",
+            ("Nomarski_water_jet_515nm_set1_C1_C1_00001", "set1", 1),
+        ),
+        (
+            "sequence_frames",
+            "Nomarski_water_jet_515nm_set2_C1_C1_00007.tif.rec",
+            ("Nomarski_water_jet_515nm_set2_C1_C1_00007", "set2", 7),
+        ),
         # The stamped Irr8 dialect carries no ordinal; the plain one does.
         (
             "spectrometer_irr8",

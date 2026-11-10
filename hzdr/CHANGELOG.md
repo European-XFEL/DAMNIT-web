@@ -24,6 +24,19 @@ behaviour; the merge PR has the details.
   are not used to match an event to the set's row: the trigger becomes a
   shot of its own in that campaign. A schema-13 export reads as before.
 
+### Shot containers
+- **Nomarski-style frames are one shot's frame each** (shot-aligner ruling X5,
+  2026-11-01). The vendored `sequence_frames` pack manifest is re-synced to
+  shot-aligner `ac4690b`, which adds the `prefixed_set_camera_and_ordinal`
+  name pattern: a description, a set, one or more camera tags and an ordinal
+  (`Nomarski_water_jet_515nm_set1_C1_C1_00001.tif`) is now its own
+  acquisition with label `set1` and ordinal 1, as `set10_00001.tif` already
+  was. Before, every such frame fell to `conditions_and_frame` and the whole
+  folder became one recording. A condition label without a camera tag
+  (`20cm_6kv_00001.tif`) is still a recording. The vendored files are part of
+  the conversion-code digest, so the next container-worker pass rewrites every
+  container.
+
 ## 2026-11-03
 
 ### Data
