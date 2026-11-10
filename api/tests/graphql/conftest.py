@@ -59,7 +59,7 @@ def bypass_proposal_permission(mocker):
 # so hand out a copy per call; returning the constant itself lets one call's
 # edits pile up in the next one's result.
 def _fresh(mocker, target, value):
-    mocker.patch(target, side_effect=lambda *args, **kwargs: deepcopy(value))
+    return mocker.patch(target, side_effect=lambda *args, **kwargs: deepcopy(value))
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ def mocked_metadata_variables(mocker):
 
 @pytest.fixture
 def mocked_metadata_all_tags(mocker):
-    _fresh(mocker, "damnit_api.graphql.metadata.db.async_all_tags", EXAMPLE_TAGS)
+    return _fresh(mocker, "damnit_api.graphql.metadata.db.async_all_tags", EXAMPLE_TAGS)
 
 
 @pytest.fixture

@@ -430,6 +430,38 @@ async def test_a_failed_tick_does_not_end_live_updates(
 
 
 @pytest.mark.asyncio
+async def test_a_tick_whose_metadata_read_fails_retries_the_rows_it_read(
+    subscription,
+    mocked_database_mtime,
+    mocked_latest_rows,
+    mocked_fetch_info,
+    mocked_metadata_all_tags,
+):
+    new_rows = mocked_latest_rows.side_effect
+
+    def rows_newer_than_last_seen(*args, start_at, **kwargs):
+        return [row for row in new_rows(*args, **kwargs) if row["timestamp"] > start_at]
+
+    mocked_latest_rows.side_effect = rows_newer_than_last_seen
+
+    read_tags = mocked_metadata_all_tags.side_effect
+    locked = _operational_error("database is locked")
+
+    def locked_once(*args, **kwargs):
+        if mocked_metadata_all_tags.call_count == 1:
+            raise locked
+        return read_tags(*args, **kwargs)
+
+    mocked_metadata_all_tags.side_effect = locked_once
+
+    with ticks_finding_mtimes(mocked_database_mtime, [1, 1]):
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+
+    assert not result.errors
+    assert [run["run"] for run in result.data["run_updates"]["runs"]] == [NEW_RUN]
+
+
+@pytest.mark.asyncio
 async def test_each_run_of_failed_ticks_logs_one_warning_with_its_error(
     subscription, mocked_database_mtime, mocked_latest_rows, mocked_fetch_info
 ):
