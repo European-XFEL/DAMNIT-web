@@ -1,15 +1,16 @@
-import { createAction, nanoid } from '@reduxjs/toolkit'
+import { createAction } from '@reduxjs/toolkit'
 
+import { plotAddress } from '#src/features/plots/plot-address'
 import type { PlotSpec } from '#src/types'
 
-// Store-level actions no single slice owns. It imports only @reduxjs/toolkit
-// and types, so a slice can import it without a cycle through the reducer.
+// Store-level actions no single slice owns. It imports no slice, so a slice
+// can import it without a cycle through the reducer.
 
 export const resetProposal = createAction('app/resetProposal')
 
-// Both the new-plot dialog and the table's context menu ask for plots. The
-// action carries the id, so the plots slice and the dashboard agree on it.
+// Both the new-plot dialog and the table's context menu ask for plots. A plot's
+// id is its address, so asking for a listed plot again picks the same entry.
 export const plotRequested = createAction(
   'app/plotRequested',
-  (plot: PlotSpec) => ({ payload: { ...plot, id: nanoid() } })
+  (plot: PlotSpec) => ({ payload: { ...plot, id: plotAddress(plot) } })
 )

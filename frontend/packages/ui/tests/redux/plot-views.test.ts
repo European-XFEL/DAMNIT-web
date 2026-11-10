@@ -7,14 +7,20 @@ import { viewSelected } from '#src/features/dashboard/stores/dashboard.slice'
 import { removePlot } from '#src/features/plots/plots.slice'
 import { type PlotSpec } from '#src/types'
 
-const summary: PlotSpec = {
+const trains: PlotSpec = {
   variables: ['run', 'n_trains'],
   source: 'summary',
   name: 'Trains vs. Run',
 }
 
-function openPlot(store: AppStore) {
-  const added = plotRequested(summary)
+const pulses: PlotSpec = {
+  variables: ['run', 'n_pulses'],
+  source: 'summary',
+  name: 'Pulses vs. Run',
+}
+
+function openPlot(store: AppStore, plot = trains) {
+  const added = plotRequested(plot)
   store.dispatch(added)
   return added.payload.id
 }
@@ -55,7 +61,7 @@ test('closing a plot picked again returns to the view before it', () => {
 test('closing the second plot returns to the first', () => {
   const store = setupStore()
   const first = openPlot(store)
-  const second = openPlot(store)
+  const second = openPlot(store, pulses)
 
   store.dispatch(removePlot(second))
 
@@ -68,7 +74,7 @@ test('closing the second plot returns to the first', () => {
 test('closing the shown plot falls back to the table when the view before it is closed too', () => {
   const store = setupStore()
   const first = openPlot(store)
-  const second = openPlot(store)
+  const second = openPlot(store, pulses)
   store.dispatch(viewSelected({ kind: 'plot', id: first }))
   store.dispatch(removePlot(second))
 
@@ -80,7 +86,7 @@ test('closing the shown plot falls back to the table when the view before it is 
 test('closing a plot in the background leaves the view alone', () => {
   const store = setupStore()
   const first = openPlot(store)
-  const second = openPlot(store)
+  const second = openPlot(store, pulses)
 
   store.dispatch(removePlot(first))
 

@@ -10,10 +10,10 @@ const trains: PlotSpec = {
   name: 'Trains vs. Run',
 }
 
-test('the same plot added twice opens twice', () => {
+test('the same plot asked for twice is listed once, under its address', () => {
   let state = reducer(undefined, plotRequested(trains))
 
   state = reducer(state, plotRequested(trains))
 
-  expect(Object.keys(state.data)).toHaveLength(2)
+  expect(Object.keys(state.data)).toEqual(['summary?x=run&y=n_trains'])
 })
