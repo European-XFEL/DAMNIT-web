@@ -10,6 +10,7 @@ import { useTableMeta } from '#src/data/table/use-table-meta'
 import { sorted } from '#src/utils/array'
 import type { PlotSource } from '#src/types'
 import { sparklineIndexAt, toSparkline } from '#src/features/table/utils/cells'
+import { summaryAxes } from '#src/features/table/utils/summary-axes'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
 import { RunCountItem } from '#src/features/table/components/run-count-item'
 import ContextMenu from '#src/features/table/components/context-menu'
@@ -159,22 +160,12 @@ function Table() {
     selectedVariables,
     position,
   }: HeaderMenuArgs) => {
-    if (selectedVariables.length > 2) {
+    const axes = summaryAxes({ variable, selectedVariables, columnsById })
+    if (!axes) {
       return
     }
 
-    // The right-clicked column is the y axis. The other selected one is the x
-    // axis, or Run when this column is the only one selected.
-    const y = columnsById.get(variable)
-    const firstSelected = selectedVariables.find((other) => other !== variable)
-    const x =
-      firstSelected === undefined
-        ? { id: VARIABLES.run, title: 'Run' }
-        : columnsById.get(firstSelected)
-    if (!x || !y) {
-      return
-    }
-
+    const { x, y } = axes
     const subtitle = `${y.title} vs. ${x.title}`
 
     showPlotMenu(position, {
