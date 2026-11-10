@@ -1,10 +1,10 @@
 import { afterEach, expect, test, vi } from 'vitest'
 
 import {
+  ALL_RUNS_PAGE_SIZE,
   forgetRunsTruncation,
   warnIfRunsTruncated,
-} from '#src/data/table/runs-truncation'
-import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
+} from '#src/features/plots/runs-truncation'
 
 const PROPOSAL = '900405'
 const OTHER_PROPOSAL = '900406'

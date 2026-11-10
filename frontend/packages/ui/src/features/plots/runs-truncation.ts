@@ -1,4 +1,6 @@
-import { ALL_RUNS_PAGE_SIZE } from './table-data.constants'
+// The page size for asking the server for every run at once, for the plots
+// that chart a variable across the whole proposal rather than a table page.
+export const ALL_RUNS_PAGE_SIZE = 10000
 
 // Proposals already reported, so each summary plot does not warn about the
 // same cap again.

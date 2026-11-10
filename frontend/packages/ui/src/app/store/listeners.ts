@@ -1,5 +1,5 @@
 import { contextfileApi } from '#src/features/context-file/context-file.api'
-import { forgetRunsTruncation } from '#src/data/table/runs-truncation'
+import { forgetRunsTruncation } from '#src/features/plots/runs-truncation'
 import { cache } from '#src/graphql/apollo'
 
 import { resetProposal } from './actions'
