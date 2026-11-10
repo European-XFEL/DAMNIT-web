@@ -12,11 +12,12 @@ import classes from './dashboard-body.module.css'
 
 type DashboardBodyProps = {
   main: ReactNode
+  pending: boolean
 }
 
 // The view and the run beside it, apart from the shell so a run change
 // re-renders them and not the header and nav.
-function DashboardBody({ main }: DashboardBodyProps) {
+function DashboardBody({ main, pending }: DashboardBodyProps) {
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const onTable = useOpenView()?.kind === 'table'
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
@@ -31,6 +32,7 @@ function DashboardBody({ main }: DashboardBodyProps) {
         className={classes.view}
         mod={{ covered: onTable && selectedRun != null }}
       >
+        {pending && <div className={classes.pending} />}
         {main}
       </Box>
       <DashboardAside viewRef={viewRef} onTable={onTable} />

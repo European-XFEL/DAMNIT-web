@@ -13,6 +13,9 @@ type RenderInDashboardOptions = {
   url?: string
 }
 
+// The views never draw here, so their code is left out rather than loaded.
+const viewRoutes = dashboardViewRoutes.map(({ lazy: _code, ...route }) => route)
+
 // Draws `ui` where an app draws the dashboard, over the real view routes, so
 // its links and the view on show read as in the app.
 export async function renderInDashboard(
@@ -31,7 +34,7 @@ export async function renderInDashboard(
       {
         path: '/proposal/:proposal_number',
         element: ui,
-        children: dashboardViewRoutes,
+        children: viewRoutes,
       },
     ],
     { initialEntries: [url] }

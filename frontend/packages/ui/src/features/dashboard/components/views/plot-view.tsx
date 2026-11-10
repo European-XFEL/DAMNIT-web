@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { Box, Text } from '@mantine/core'
 
@@ -11,11 +11,10 @@ import {
   parsePlotAddress,
   plotAddress,
 } from '#src/features/plots/plot-address'
+import PlotContainer from '#src/features/plots/plot-container'
 import { addPlot } from '#src/features/plots/plots.slice'
 import { plotName } from '#src/features/plots/utils'
 import { isEmpty } from '#src/utils/helpers'
-
-const PlotContainer = lazy(() => import('#src/features/plots/plot-container'))
 
 // Draws the plot its address names and lists it in the nav, or says which
 // part of the link is wrong, with no nav entry.
@@ -52,17 +51,15 @@ function PlotView() {
   }
 
   return (
-    <Suspense fallback={<CenteredLoader />}>
-      <Box px={20} py={14} flex={1} mih={0} style={{ overflowY: 'auto' }}>
-        {plot !== undefined ? (
-          <PlotContainer key={plotAddress(plot)} plot={plot} />
-        ) : (
-          <UnableToDisplayAlert title="Unable to display the plot">
-            <Text size="sm">{error}</Text>
-          </UnableToDisplayAlert>
-        )}
-      </Box>
-    </Suspense>
+    <Box px={20} py={14} flex={1} mih={0} style={{ overflowY: 'auto' }}>
+      {plot !== undefined ? (
+        <PlotContainer key={plotAddress(plot)} plot={plot} />
+      ) : (
+        <UnableToDisplayAlert title="Unable to display the plot">
+          <Text size="sm">{error}</Text>
+        </UnableToDisplayAlert>
+      )}
+    </Box>
   )
 }
 

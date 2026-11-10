@@ -1,11 +1,18 @@
 import { useRef, type ReactNode } from 'react'
 import { NavLink } from 'react-router'
-import { ActionIcon, AppShell, UnstyledButton, rem } from '@mantine/core'
+import {
+  ActionIcon,
+  AppShell,
+  Loader,
+  UnstyledButton,
+  rem,
+} from '@mantine/core'
 import { IconFileCode, IconPlus, IconTable } from '@tabler/icons-react'
 
 import { UserMenu } from '#src/components/headers/user-menu'
 import SectionHeading from '#src/components/headings/section-heading'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
+import { PENDING_DELAY, useShownAfter } from '#src/hooks/use-shown-after'
 
 import classes from './navbar.module.css'
 import PlotEntries from './plot-entries'
@@ -32,6 +39,23 @@ type NavItemProps = {
   end?: boolean
 }
 
+type NavItemIconProps = {
+  icon: ReactNode
+  pending: boolean
+}
+
+// A view whose code is still on its way swaps its icon for a spinner, after a
+// moment, so a quick load never flashes one.
+function NavItemIcon({ icon, pending }: NavItemIconProps) {
+  const shown = useShownAfter(pending, { delay: PENDING_DELAY })
+
+  return (
+    <span className={classes.icon}>
+      {shown ? <Loader size={18} color="gray.7" /> : icon}
+    </span>
+  )
+}
+
 // A link to a view, marked `aria-current` while its view is on show.
 function NavItem({ icon, label, to, end }: NavItemProps) {
   return (
@@ -41,8 +65,12 @@ function NavItem({ icon, label, to, end }: NavItemProps) {
       end={end}
       className={classes.item}
     >
-      <span className={classes.icon}>{icon}</span>
-      {label}
+      {({ isPending }: { isPending: boolean }) => (
+        <>
+          <NavItemIcon icon={icon} pending={isPending} />
+          {label}
+        </>
+      )}
     </UnstyledButton>
   )
 }
