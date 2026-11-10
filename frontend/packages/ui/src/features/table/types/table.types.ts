@@ -1,4 +1,11 @@
+import type { RunId } from '#src/data/table/table-data.types'
+
 export type Scroll = {
+  x: number
+  y: number
+}
+
+export type Point = {
   x: number
   y: number
 }
@@ -37,4 +44,13 @@ export type LoadErrors = {
   rows: RowRange[]
   values: RowRange[]
   waitsForRetry: boolean
+}
+
+// The cell under the pointer, with its box in viewport pixels and the
+// pointer's x offset into it, which places a sparkline's crosshair.
+export type HoveredCell = {
+  run: RunId
+  variable: string
+  bounds: Rectangle
+  offsetX: number
 }

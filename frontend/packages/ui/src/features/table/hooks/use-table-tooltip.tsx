@@ -6,13 +6,13 @@ import {
   useRef,
   useState,
 } from 'react'
-import { type GridMouseEventArgs } from '@glideapps/glide-data-grid'
 import { type IBounds, useLayer } from 'react-laag'
 
 import {
   TableTooltip,
   type CellTooltip,
 } from '#src/features/table/components/tooltips/table-tooltip'
+import type { HoveredCell } from '#src/features/table/types/table.types'
 import { ZERO_BOUNDS, toBounds } from '#src/features/table/utils/bounds'
 import { assertNever } from '#src/utils/helpers'
 
@@ -50,13 +50,7 @@ const sameTarget = (
   b: TooltipState
 ): boolean => !!a && sameCell(a, b) && sameContent(a.target, b.target)
 
-// `hover` is the pointer's x offset into the cell and the cell width, for
-// tooltips that depend on the pointer position (e.g. sparklines).
-export type ResolveTooltip = (
-  col: number,
-  row: number,
-  hover: { x: number; width: number }
-) => CellTooltip | undefined
+export type ResolveTooltip = (cell: HoveredCell) => CellTooltip | undefined
 
 export const useTableTooltip = (
   resolve: ResolveTooltip,
@@ -66,23 +60,11 @@ export const useTableTooltip = (
   const tooltipRef = useRef<TooltipState | undefined>(tooltip)
   const closeTimerRef = useRef<number>(0)
   const openTimerRef = useRef<number>(0)
-  const rehoverFrameRef = useRef<number>(0)
   const pendingTargetRef = useRef<TooltipState | null>(null)
-  const cursorRef = useRef<{ x: number; y: number } | null>(null)
 
   useLayoutEffect(() => {
     tooltipRef.current = tooltip
   }, [tooltip])
-
-  useEffect(() => {
-    const onMove = (event: MouseEvent) => {
-      cursorRef.current = { x: event.clientX, y: event.clientY }
-    }
-    window.addEventListener('mousemove', onMove, { passive: true })
-    return () => {
-      window.removeEventListener('mousemove', onMove)
-    }
-  }, [])
 
   const cancelClose = useCallback(() => {
     window.clearTimeout(closeTimerRef.current)
@@ -103,12 +85,12 @@ export const useTableTooltip = (
   // Cold first-open waits DELAY.open; switching while one is already showing
   // (warm) waits the shorter DELAY.switch so the tooltip follows the cursor
   // down a column without re-incurring the full delay.
-  const scheduleOpen = useCallback((next: TooltipState) => {
+  const scheduleOpen = (next: TooltipState) => {
     window.clearTimeout(openTimerRef.current)
     const delay = tooltipRef.current ? DELAY.switch : DELAY.open
     pendingTargetRef.current = next
     openTimerRef.current = window.setTimeout(() => {
-      // Read the ref because onMouseMove may have changed the target.
+      // Read the ref because onCellMouseMove may have changed the target.
       const next = pendingTargetRef.current
       if (!next) {
         return
@@ -119,7 +101,7 @@ export const useTableTooltip = (
       tooltipRef.current = next
       setTooltip(next)
     }, delay)
-  }, [])
+  }
 
   const dismiss = useCallback(() => {
     cancelOpen()
@@ -133,37 +115,6 @@ export const useTableTooltip = (
     }
   }, [suppressed, dismiss])
 
-  // Glide doesn't refire hover after a layout shift. Wait one frame for the
-  // tooltip portal to unmount, then dispatch a synthetic mousemove so Glide
-  // re-evaluates which cell is under the cursor.
-  const rehoverAtCursor = useCallback(() => {
-    const cursor = cursorRef.current
-    if (!cursor) {
-      return
-    }
-    cancelAnimationFrame(rehoverFrameRef.current)
-    rehoverFrameRef.current = requestAnimationFrame(() => {
-      const target = document.elementFromPoint(cursor.x, cursor.y)
-      if (!target) {
-        return
-      }
-      target.dispatchEvent(
-        new MouseEvent('mousemove', {
-          clientX: cursor.x,
-          clientY: cursor.y,
-          bubbles: true,
-          cancelable: true,
-          view: window,
-        })
-      )
-    })
-  }, [])
-
-  const dismissOnScroll = useCallback(() => {
-    dismiss()
-    rehoverAtCursor()
-  }, [dismiss, rehoverAtCursor])
-
   const onBodyEnter = useCallback(() => {
     cancelOpen()
     cancelClose()
@@ -173,89 +124,78 @@ export const useTableTooltip = (
     scheduleClose()
   }, [scheduleClose])
 
-  const resolveAt = useCallback(
-    (args: GridMouseEventArgs): TooltipState | undefined => {
-      if (args.kind !== 'cell') {
-        return undefined
-      }
-      const [col, row] = args.location
-      const content = resolve(col, row, {
-        x: args.localEventX,
-        width: args.bounds.width,
-      })
-      if (!content) {
-        return undefined
-      }
-      return { target: content, bounds: toBounds(args.bounds) }
-    },
-    [resolve]
-  )
+  const resolveAt = (
+    cell: HoveredCell | undefined
+  ): TooltipState | undefined => {
+    if (!cell) {
+      return undefined
+    }
 
-  const onItemHovered = useCallback(
-    (args: GridMouseEventArgs) => {
-      if (suppressed) {
-        return
-      }
-      const next = resolveAt(args)
-      if (!next) {
-        cancelOpen()
-        scheduleClose()
-        return
-      }
-      cancelClose()
-      if (sameTarget(tooltipRef.current, next)) {
-        cancelOpen()
-        return
-      }
-      if (sameTarget(pendingTargetRef.current, next)) {
-        return
-      }
-      scheduleOpen(next)
-    },
-    [
-      resolveAt,
-      cancelClose,
-      cancelOpen,
-      scheduleClose,
-      scheduleOpen,
-      suppressed,
-    ]
-  )
+    const content = resolve(cell)
+    if (!content) {
+      return undefined
+    }
+
+    return { target: content, bounds: toBounds(cell.bounds) }
+  }
+
+  const onCellHovered = (cell: HoveredCell | undefined) => {
+    if (suppressed) {
+      return
+    }
+
+    const next = resolveAt(cell)
+    if (!next) {
+      cancelOpen()
+      scheduleClose()
+      return
+    }
+
+    cancelClose()
+    if (sameTarget(tooltipRef.current, next)) {
+      cancelOpen()
+      return
+    }
+    if (sameTarget(pendingTargetRef.current, next)) {
+      return
+    }
+
+    scheduleOpen(next)
+  }
 
   // Glide only fires onItemHovered when the pointer moves to another cell, so
   // this updates tooltips that depend on the pointer position within a cell.
-  // Opening and closing tooltips is left to onItemHovered, so that moving
+  // Opening and closing tooltips is left to onCellHovered, so that moving
   // within a cell doesn't restart the open timer or reopen a tooltip closed
   // with Escape.
-  const onMouseMove = useCallback(
-    (args: GridMouseEventArgs) => {
-      if (suppressed) {
-        return
-      }
-      const next = resolveAt(args)
-      if (!next || sameTarget(tooltipRef.current, next)) {
-        return
-      }
-      // The tooltip is already open on this cell, so update it immediately.
-      if (sameCell(tooltipRef.current, next)) {
-        cancelOpen()
-        tooltipRef.current = next
-        setTooltip(next)
-        return
-      }
-      // The tooltip is about to open on this cell, so just update the target.
-      if (sameCell(pendingTargetRef.current, next)) {
-        pendingTargetRef.current = next
-      }
-    },
-    [resolveAt, cancelOpen, suppressed]
-  )
+  const onCellMouseMove = (cell: HoveredCell | undefined) => {
+    if (suppressed) {
+      return
+    }
+
+    const next = resolveAt(cell)
+    if (!next || sameTarget(tooltipRef.current, next)) {
+      return
+    }
+
+    // The tooltip is already open on this cell, so update it immediately.
+    if (sameCell(tooltipRef.current, next)) {
+      cancelOpen()
+      tooltipRef.current = next
+      setTooltip(next)
+      return
+    }
+
+    // The tooltip is about to open on this cell, so just update the target.
+    if (sameCell(pendingTargetRef.current, next)) {
+      pendingTargetRef.current = next
+    }
+  }
 
   useEffect(
     () => () => {
       window.clearTimeout(closeTimerRef.current)
       window.clearTimeout(openTimerRef.current)
-      cancelAnimationFrame(rehoverFrameRef.current)
     },
     []
   )
@@ -294,10 +234,9 @@ export const useTableTooltip = (
   })
 
   return {
-    onItemHovered,
-    onMouseMove,
+    onCellHovered,
+    onCellMouseMove,
     dismiss,
-    dismissOnScroll,
     tooltip: tooltip
       ? renderLayer(
           <TableTooltip

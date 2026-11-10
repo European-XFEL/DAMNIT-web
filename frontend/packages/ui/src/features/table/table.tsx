@@ -31,7 +31,7 @@ import { useTableMeta } from '#src/data/table/use-table-meta'
 import { isArrayEqual, sorted } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
-import { type PlotSource } from '#src/types'
+import type { PlotSource } from '#src/types'
 import {
   errorCell,
   getCell,
@@ -53,6 +53,7 @@ import {
   useTableTooltip,
   type ResolveTooltip,
 } from '#src/features/table/hooks/use-table-tooltip'
+import { useRehoverAtCursor } from '#src/features/table/hooks/use-rehover-at-cursor'
 import { useTableColumns } from '#src/features/table/hooks/use-table-columns'
 import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import { useContextMenu } from '#src/features/table/hooks/use-context-menu'
@@ -258,54 +259,69 @@ function Table() {
 
   // Cell: tooltip. Errored cells show a card; image cells show a preview; array
   // cells show the point under the sparkline's crosshair.
-  const resolveTooltip = useCallback<ResolveTooltip>(
-    (col, row, hover) => {
-      const identity = runs[row]
-      const variable = tableColumns[col]?.id
-      if (identity == null || !variable) {
-        return undefined
-      }
-      const item = cellsByKey.get(runKey(identity))?.get(variable)
-      if (!item) {
-        return undefined
-      }
-      if (item.error) {
-        return { kind: 'error', error: item.error }
-      }
-      if (
-        item.summary.dtype === DTYPES.image &&
-        typeof item.summary.value === 'string' &&
-        item.summary.value
-      ) {
-        return { kind: 'image', src: item.summary.value }
-      }
-      if (item.summary.dtype === DTYPES.array1d) {
-        const sparkline = toSparkline(item.summary.value)
-        if (!sparkline?.y.length) {
-          return undefined
-        }
-        const index = sparklineIndexAt(hover.x, hover.width, sparkline.y.length)
-        return {
-          kind: 'sparkline',
-          x: sparkline.x[index],
-          y: sparkline.y[index],
-        }
-      }
+  const resolveTooltip: ResolveTooltip = ({
+    run,
+    variable,
+    bounds,
+    offsetX,
+  }) => {
+    const item = cellsByKey.get(runKey(run))?.get(variable)
+    if (!item) {
       return undefined
-    },
-    [tableColumns, runs, cellsByKey]
-  )
+    }
+    if (item.error) {
+      return { kind: 'error', error: item.error }
+    }
+    if (
+      item.summary.dtype === DTYPES.image &&
+      typeof item.summary.value === 'string' &&
+      item.summary.value
+    ) {
+      return { kind: 'image', src: item.summary.value }
+    }
+    if (item.summary.dtype === DTYPES.array1d) {
+      const sparkline = toSparkline(item.summary.value)
+      if (!sparkline?.y.length) {
+        return undefined
+      }
+
+      const index = sparklineIndexAt(offsetX, bounds.width, sparkline.y.length)
+      return {
+        kind: 'sparkline',
+        x: sparkline.x[index],
+        y: sparkline.y[index],
+      }
+    }
+
+    return undefined
+  }
   const {
-    onItemHovered: handleItemHovered,
-    onMouseMove: handleTooltipMouseMove,
-    dismissOnScroll: dismissTooltipOnScroll,
+    onCellHovered,
+    onCellMouseMove,
+    dismiss: dismissTooltip,
     tooltip,
   } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
+  const rehoverAtCursor = useRehoverAtCursor()
 
   const selectedColumns = useAppSelector(selectSelectedColumns)
   const selectedCells = useAppSelector(selectSelectedCells)
   const rowSelection = useAppSelector(selectRowSelection)
   const selectedRun = useSelectedRun()
+
+  const toHoveredCell = (args: GridMouseEventArgs) => {
+    if (args.kind !== 'cell') {
+      return undefined
+    }
+
+    const [col, row] = args.location
+    const run = runs[row]
+    const variable = tableColumns[col]?.id
+    if (!run || !variable) {
+      return undefined
+    }
+
+    return { run, variable, bounds: args.bounds, offsetX: args.localEventX }
+  }
 
   // A row marker clicked off and the last column unselected reach Glide's
   // change handler as the same empty selection; only the header takes Ctrl/Cmd.
@@ -313,7 +329,10 @@ function Table() {
   const handleGridItemHovered = (args: GridMouseEventArgs) => {
     pointerOnHeader.current =
       (args.kind === 'header' || args.kind === 'group-header') && !args.isTouch
-    handleItemHovered(args)
+    onCellHovered(toHoveredCell(args))
+  }
+  const handleGridMouseMove = (args: GridMouseEventArgs) => {
+    onCellMouseMove(toHoveredCell(args))
   }
 
   // Glide reports a key's selection change before its keydown returns, so the
@@ -550,9 +569,12 @@ function Table() {
     event: CellClickedEventArgs | HeaderClickedEventArgs,
     item: { kind: PlotSource; subtitle: string; onClick: () => void }
   ) => {
+    // Glide's click is cell-relative; the menu wants a viewport point.
     setContextMenu({
-      localPosition: { x: event.localEventX, y: event.localEventY },
-      bounds: event.bounds,
+      position: {
+        x: event.bounds.x + event.localEventX,
+        y: event.bounds.y + event.localEventY,
+      },
       contents: [{ key: 'plot', title: `Plot: ${item.kind}`, ...item }],
     })
   }
@@ -723,11 +745,15 @@ function Table() {
         previous.tx !== nextTx ||
         previous.ty !== nextTy
       lastVisibleRegionRef.current = { rect, tx: nextTx, ty: nextTy }
+
+      // The rehover waits a frame for the card to close, so the mousemove
+      // reaches the grid rather than the card.
       if (scrolled) {
-        dismissTooltipOnScroll()
+        dismissTooltip()
+        rehoverAtCursor()
       }
     },
-    [fetchOnScroll, scrollToViewHandler, dismissTooltipOnScroll]
+    [fetchOnScroll, scrollToViewHandler, dismissTooltip, rehoverAtCursor]
   )
 
   return (
@@ -782,7 +808,7 @@ function Table() {
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
               onItemHovered={handleGridItemHovered}
-              onMouseMove={handleTooltipMouseMove}
+              onMouseMove={handleGridMouseMove}
               onKeyDown={handleGridKeyDown}
               freezeColumns={pinnedCount}
               renderers={GRID_RENDERERS}

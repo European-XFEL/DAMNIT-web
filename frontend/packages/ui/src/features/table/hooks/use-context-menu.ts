@@ -1,14 +1,13 @@
 import { useState } from 'react'
 
-import { type ContextMenuProps } from '#src/features/table/components/context-menu'
+import type { ContextMenuProps } from '#src/features/table/components/context-menu'
 
 export const useContextMenu = (): [
   ContextMenuProps,
   (newProps: ContextMenuProps) => void,
 ] => {
   const closedProps = {
-    localPosition: { x: 0, y: 0 },
-    bounds: { x: 0, y: 0, width: 0, height: 0 },
+    position: { x: 0, y: 0 },
     isOpen: false,
     contents: [],
   }
