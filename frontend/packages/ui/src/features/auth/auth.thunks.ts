@@ -2,7 +2,7 @@ import { HTTP_URL } from '#src/constants'
 import { type AppThunk } from '#src/app/store/thunks'
 
 export const login = (): AppThunk => (_) => {
-  window.location.href = `${HTTP_URL}oauth/login?redirect_uri=${HTTP_URL}home`
+  window.location.replace(`${HTTP_URL}oauth/login?redirect_uri=${HTTP_URL}home`)
 }
 
 export const logout = (): AppThunk => (_) => {

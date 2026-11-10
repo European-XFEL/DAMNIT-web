@@ -8,7 +8,7 @@ const LoginRoute = () => {
 
   useEffect(() => {
     dispatch(login())
-  })
+  }, [dispatch])
 
   return <div />
 }
