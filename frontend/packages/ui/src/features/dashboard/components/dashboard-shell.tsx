@@ -1,10 +1,12 @@
 import { useRef, type ReactNode } from 'react'
+import { useNavigation } from 'react-router'
 import { AppShell, getDefaultZIndex, VisuallyHidden } from '@mantine/core'
 import { useDidUpdate, useFocusReturn } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import StatusBar from '#src/components/statuses/status-bar'
 import { ViewStatusProvider } from '#src/components/statuses/view-status'
+import { PENDING_DELAY, useShownAfter } from '#src/hooks/use-shown-after'
 import {
   selectMobileNavOpened,
   selectNavCollapsed,
@@ -36,6 +38,11 @@ function DashboardShell({
   const navCollapsed = useAppSelector(selectNavCollapsed)
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRef = useRef<HTMLElement>(null)
+
+  // A view's code on its way. The bar waits a moment, so a quick load never
+  // flashes it.
+  const loading = useNavigation().state === 'loading'
+  const pending = useShownAfter(loading, { delay: PENDING_DELAY })
 
   // Opening the mobile nav focuses the view on show; closing it hands focus back
   // to the Burger, which useFocusReturn records before that focus moves.
@@ -77,11 +84,14 @@ function DashboardShell({
         <DashboardNavbar user={user} />
       </AppShell.Navbar>
       <ViewStatusProvider>
-        <AppShell.Main className={classes.main}>
+        <AppShell.Main
+          className={classes.main}
+          aria-busy={loading || undefined}
+        >
           <VisuallyHidden component="h1">{heading}</VisuallyHidden>
           {/* The run sits below the band, which names the page whatever is
               open beside the view. */}
-          <DashboardBody main={main} />
+          <DashboardBody main={main} pending={pending} />
         </AppShell.Main>
         {/* Over the navbar's app + 1, so a status item's bubble draws above the nav. */}
         <AppShell.Footer
