@@ -41,6 +41,7 @@ import {
   GRID_RENDERERS,
   makeCellRenderers,
   numberCell,
+  sparklinePositionAt,
   textCell,
 } from '#src/features/table/utils/cells'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
@@ -291,7 +292,14 @@ function GlideGrid(
       return undefined
     }
 
-    return { ...cell, bounds: args.bounds, offsetX: args.localEventX }
+    return {
+      ...cell,
+      bounds: args.bounds,
+      sparklinePosition: sparklinePositionAt({
+        hoverX: args.localEventX,
+        width: args.bounds.width,
+      }),
+    }
   }
 
   // A row marker clicked off and the last column unselected reach Glide's

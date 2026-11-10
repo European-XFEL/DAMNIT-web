@@ -55,9 +55,12 @@ export type CellId = {
   variable: string
 }
 
-// The cell under the pointer, with its box in viewport pixels and the
-// pointer's x offset into it, which places a sparkline's crosshair.
-export type HoveredCell = CellId & { bounds: Rectangle; offsetX: number }
+// The cell under the pointer, with its box in viewport pixels and how far
+// along a sparkline the pointer is, from 0 at its first point to 1 at its last.
+export type HoveredCell = CellId & {
+  bounds: Rectangle
+  sparklinePosition: number
+}
 
 export type CellMenuArgs = CellId & {
   selectedRuns: RunId[]

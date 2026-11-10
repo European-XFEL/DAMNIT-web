@@ -63,8 +63,7 @@ function Table() {
   const resolveTooltip: ResolveTooltip = ({
     run,
     variable,
-    bounds,
-    offsetX,
+    sparklinePosition,
   }) => {
     const item = cellsByKey.get(runKey(run))?.get(variable)
     if (!item) {
@@ -86,7 +85,10 @@ function Table() {
         return undefined
       }
 
-      const index = sparklineIndexAt(offsetX, bounds.width, sparkline.y.length)
+      const index = sparklineIndexAt({
+        position: sparklinePosition,
+        count: sparkline.y.length,
+      })
       return {
         kind: 'sparkline',
         x: sparkline.x[index],

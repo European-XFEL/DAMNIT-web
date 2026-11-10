@@ -106,26 +106,28 @@ export const toSparkline = (value: CellValue): SparklineValue | undefined => {
 }
 
 // Glide pads the sparkline by 8px on each side (the default
-// cellHorizontalPadding, which our theme doesn't change). It also draws a
-// single value as two points, one at each end.
+// cellHorizontalPadding, which our theme doesn't change).
 const SPARKLINE_PAD_X = 8
 
-// Index of the point Glide's crosshair is on when the pointer is `hoverX` px
-// into the cell.
-export const sparklineIndexAt = (
-  hoverX: number,
-  width: number,
-  count: number
-): number => {
-  if (count === 1) {
-    return 0
-  }
-  const xStep = (width - 2 * SPARKLINE_PAD_X) / (count - 1)
-  return Math.min(
-    count - 1,
-    Math.max(0, Math.round((hoverX - SPARKLINE_PAD_X) / xStep))
-  )
+type SparklinePositionAtParams = { hoverX: number; width: number }
+
+// How far along Glide's sparkline the pointer is, from 0 at its first point to
+// 1 at its last, when the pointer is `hoverX` px into the cell.
+export const sparklinePositionAt = ({
+  hoverX,
+  width,
+}: SparklinePositionAtParams): number => {
+  const plotWidth = width - 2 * SPARKLINE_PAD_X
+  return Math.min(1, Math.max(0, (hoverX - SPARKLINE_PAD_X) / plotWidth))
 }
+
+type SparklineIndexAtParams = { position: number; count: number }
+
+// Index of the point a crosshair at `position` along the sparkline is on.
+export const sparklineIndexAt = ({
+  position,
+  count,
+}: SparklineIndexAtParams): number => Math.round(position * (count - 1))
 
 export const arrayCell = (
   value: CellValue,
