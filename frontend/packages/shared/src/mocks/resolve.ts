@@ -103,8 +103,19 @@ export async function resolveOperation(
               )
             )
           : data
+
+        // The API's defaults, so a query that sends no `per_page`, such as
+        // SelectedRunQuery, gets the same 10 runs it would from the server.
+        const page = (variables.page as number | null | undefined) ?? 1
+        const perPage = (variables.per_page as number | null | undefined) ?? 10
+
+        // The API pages in run order, whatever order an example lists them in.
+        const pageRuns = [...runs]
+          .sort((a, b) => runNumber(a) - runNumber(b))
+          .slice((page - 1) * perPage, page * perPage)
+
         return resolved(
-          shapeTableData(runs, {
+          shapeTableData(pageRuns, {
             proposal,
             names,
             lightweight: operationName === 'LightweightTableDataQuery',

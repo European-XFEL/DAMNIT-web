@@ -1,16 +1,19 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router'
 import { Container, Title } from '@mantine/core'
-
-import { history } from '#src/app/routes/history'
 
 import classes from './hero-page.module.css'
 
 const HeroPage = () => {
+  const navigate = useNavigate()
+
   useEffect(() => {
-    setTimeout(() => {
-      history.navigate('/home')
+    const timer = setTimeout(() => {
+      navigate('/home', { replace: true })
     }, 2000)
-  }, [])
+
+    return () => clearTimeout(timer)
+  }, [navigate])
 
   return (
     <Container className={classes.container} size="md">

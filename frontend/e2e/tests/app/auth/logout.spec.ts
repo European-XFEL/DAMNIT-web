@@ -38,3 +38,11 @@ test('the logged-out page recognises a live session', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Go back' })).toBeVisible()
 })
+
+test('Go back on a logged-out page opened first goes home', async ({
+  page,
+}) => {
+  await page.goto('logged-out')
+  await page.getByRole('button', { name: 'Go back' }).click()
+  await expect(page).toHaveURL(/\/app\/home$/)
+})

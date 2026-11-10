@@ -204,7 +204,7 @@ export async function mockApi(
 
     // A query for a proposal the user cannot access errors, the way the backend
     // rejects one outside the session. useProposal reads that error as notFound
-    // and ProposalWrapper redirects to /not-found. Handled here, so it is not
+    // and ProposalWrapper shows the not-found page. Handled here, so it is not
     // drift. Operations without a proposal (e.g. ProposalMetadata) skip.
     const proposal = variables?.proposal
     if (proposal != null && !accessible.includes(String(proposal))) {

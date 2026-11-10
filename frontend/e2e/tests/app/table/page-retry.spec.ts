@@ -3,19 +3,21 @@ import type { Page } from '@playwright/test'
 import { test, expect } from '#fixtures'
 import { statusBar } from '#support/dashboard'
 import { gridCanvas } from '#support/grid'
-import { cell, columnOf } from '#support/table'
+import { cell, columnOf, operationNameOf } from '#support/table'
 
 // Registered after the fixture's routes, so Playwright's last-wins order sees
 // the page fetches first.
 async function refuseWhileDown(page: Page, operation: string) {
   const server = { down: true, askedPages: new Set<number>() }
   await page.route('**/graphql', (route) => {
-    const { operationName, variables } = (route.request().postDataJSON() ??
-      {}) as { operationName?: string; variables?: { page?: number } }
-    if (operationName !== operation || !server.down) {
+    const request = route.request()
+    if (operationNameOf(request) !== operation || !server.down) {
       return route.fallback()
     }
 
+    const { variables } = request.postDataJSON() as {
+      variables?: { page?: number }
+    }
     server.askedPages.add(variables?.page ?? 1)
     return route.abort('failed')
   })
@@ -36,7 +38,7 @@ function watchFailedPages(page: Page, report: RegExp) {
   return failedPages
 }
 
-// The mock answers every page with every run, so a spec waits until the hook
+// Page 1 holds runs 1 to 10 and page 2 the rest, so a spec waits until the hook
 // has given up on every page in view. The grid's first window brings page 2.
 async function waitForEveryPageToFail(
   server: { askedPages: Set<number> },

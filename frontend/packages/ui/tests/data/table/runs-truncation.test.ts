@@ -18,7 +18,7 @@ afterEach(() => {
 test('warns once per proposal when a full page comes back', () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-  // The unpaginated table and the summary plots both read the same capped list.
+  // Every summary plot reads the same capped list.
   warnIfRunsTruncated(PROPOSAL, ALL_RUNS_PAGE_SIZE)
   warnIfRunsTruncated(PROPOSAL, ALL_RUNS_PAGE_SIZE)
 
@@ -53,8 +53,8 @@ test('hedges the message, because a count cannot tell full from truncated', () =
 test('names the cap, not a count that can come in above it', () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-  // Both callers read a cache field shared with the paginated table, so the
-  // count they pass can exceed what one request returned.
+  // The summary plots read a cache field shared with the table, so the count
+  // they pass can exceed what one request returned.
   warnIfRunsTruncated(PROPOSAL, ALL_RUNS_PAGE_SIZE + 4)
 
   expect(warn).toHaveBeenCalledWith(

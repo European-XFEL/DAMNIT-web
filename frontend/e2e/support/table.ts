@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test'
+import { expect, type Locator, type Page, type Request } from '@playwright/test'
 
 import { accessibleProposals, type Example } from '#examples/xpcs'
 import {
@@ -66,11 +66,15 @@ export function waitForTableData(page: Page) {
     if (!response.url().includes('/graphql')) {
       return false
     }
-    const { operationName } = (response.request().postDataJSON() ?? {}) as {
-      operationName?: string
-    }
-    return (operationName ?? '').endsWith('TableDataQuery')
+    return (operationNameOf(response.request()) ?? '').endsWith(
+      'TableDataQuery'
+    )
   })
+}
+
+export function operationNameOf(request: Request) {
+  const body = request.postDataJSON() as { operationName?: string } | null
+  return body?.operationName
 }
 
 // Navigate to a dashboard and wait for its grid to paint and its cell data to
@@ -88,8 +92,8 @@ export async function openDashboard(
 
 export async function openProposal(page: Page, example: Example) {
   // openProposal navigates to proposalMetadata[0], so the example's own user
-  // must be able to access it or the dashboard silently redirects to
-  // /not-found. Fail loudly here, scoped to the specs that actually open one.
+  // must be able to access it or the dashboard silently shows the not-found
+  // page. Fail loudly here, scoped to the specs that actually open one.
   const proposal = example.proposalMetadata[0].number
   if (!accessibleProposals(example).includes(proposal)) {
     throw new Error(

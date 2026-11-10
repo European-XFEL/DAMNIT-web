@@ -1,7 +1,7 @@
 import { previewRunFields } from '@damnit-frontend/shared/mocks'
 import { test, expect } from '#fixtures'
 import { WIDE_VIEWPORT } from '#support/grid'
-import { openProposal, titleOf } from '#support/table'
+import { openProposal, operationNameOf, titleOf } from '#support/table'
 import {
   chooseVariable,
   openPlotDialog,
@@ -62,11 +62,11 @@ test('plotting a preview for runs "7,9" fetches only runs 7 and 9, not the range
     if (!request.url().includes('/graphql')) {
       return
     }
-    const { operationName, query } = (request.postDataJSON() ?? {}) as {
-      operationName?: string
-      query?: string
+    if (operationNameOf(request) !== 'PreviewDataQuery') {
+      return
     }
-    if (operationName === 'PreviewDataQuery' && query) {
+    const { query } = request.postDataJSON() as { query?: string }
+    if (query) {
       requestedRuns.push(...previewRunFields(query).map((field) => field.run))
     }
   })

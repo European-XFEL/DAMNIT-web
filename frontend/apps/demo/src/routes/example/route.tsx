@@ -34,7 +34,7 @@ function ExampleDashboard({ info }: ExampleDashboardProps) {
   }, [info?.id, dispatch])
 
   return proposal.notFound || !info ? (
-    <NotFoundPage />
+    <NotFoundPage homeTo="/" />
   ) : (
     <Dashboard
       label={info.label}

@@ -4,7 +4,12 @@ import { test, expect } from '#fixtures'
 import { XPCS, type Example } from '#examples/xpcs'
 import { fullMetadata, type MockApi } from '#mocks'
 import { WIDE_VIEWPORT } from '#support/grid'
-import { columnOf, openProposal, titleOf } from '#support/table'
+import {
+  columnOf,
+  openProposal,
+  operationNameOf,
+  titleOf,
+} from '#support/table'
 import { statusBar } from '#support/dashboard'
 import {
   openPreviewPlot,
@@ -42,8 +47,7 @@ function recomputeRun1(api: MockApi, example: Example) {
 }
 
 const isPreviewQuery = (request: Request) =>
-  (request.postDataJSON() as { operationName?: string } | null)
-    ?.operationName === 'PreviewDataQuery'
+  operationNameOf(request) === 'PreviewDataQuery'
 
 // Opens run 1's preview, computed again once its data is drawn.
 async function openOutdatedPreview(
