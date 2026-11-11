@@ -38,6 +38,9 @@ collection readable, `DAMNIT_API_URL`, `BEAMTIME_RULES_DIR`), then setting up
 
 ## Open
 
+The server part of this list is scripted: [Next on the server](../guides/next-on-server.md).
+
+
 1. **DAMNIT registers a new SciCat dataset on every rebuild** (combo ledger
    `I7`, not met). `register_campaign_nexus` reuses the dataset only when the
    file's SHA-256 matches the last registration, but every build stamps

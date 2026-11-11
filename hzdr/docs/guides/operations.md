@@ -93,21 +93,27 @@ deploying a change to the file layout, rebuild every campaign by hand: bridge
 profile v6 (2026-11-09, deployed 2026-11-11, `/entry/shots/authority_shot_number`)
 appears in a campaign only once it is rebuilt, and resolution through a
 LabFrog set's claimed shots needs an export made with labfrog-sqlite-tools
-0.2.5 (schema 14). To rebuild now, with the same inputs the trigger uses:
+0.2.5 (schema 14). To rebuild now, with exactly the trigger's inputs (the
+command is assembled from `api/.env` by the API's own code):
 
 ```bash
-cd ~/DAMNIT-web-hzdr/api && uv run python scripts/hzdr-hdf5-builder.py \
-  --output-root /home/tippey/mnt/bigdata/HPLexp/nexus \
-  --curated-root /home/tippey/labfrog-sqlite-tools-repo/curated_files \
-  --campaign Beamline_radbio_2026 \
-  --campaign-timezone Europe/Berlin \
-  --trigger-spool /data/damnit/hzdr/spool/kafka trigger.jsonl
+cd ~/DAMNIT-web-hzdr/api
+uv run --no-sync python scripts/hzdr-rebuild.py --print        # show the command
+uv run --no-sync python scripts/hzdr-rebuild.py                # rebuild, then check v6
+uv run --no-sync python scripts/hzdr-rebuild.py --check-only   # v6 check only
+uv run --no-sync python scripts/hzdr-rebuild.py --campaign Beamline_radbio_2026
 ```
 
-- Name every campaign with `--campaign` (repeatable). Without it the builder
-  builds only configured/spooled campaigns and the `_unassigned` bucket.
-- `--campaign-timezone Europe/Berlin` (or `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE`)
-  matters: LabFrog times are local, and the day decides each shot's identity.
+- It builds what the trigger builds: the `CAMPAIGNS` list, every spooled
+  campaign and the `_unassigned` bucket. `--campaign` (repeatable) adds one,
+  `--all-exports` every campaign with an export; a named campaign's export may
+  claim `unassigned` triggers during that build.
+- After the build it checks each `<OUTPUT_ROOT>/<c>/<c>.nxs` for
+  `/entry/shots/authority_shot_number` and exits 1 if one lacks it.
+- `hzdr/scripts/next-on-server.sh` runs it as its `rebuild` step.
+- `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE=Europe/Berlin` must be set in
+  `api/.env` (`--print` shows it as `--campaign-timezone`): LabFrog times are
+  local, and the day decides each shot's identity.
 - Expected warnings: "multiple rows active" (fix in LabFrog) and "metadata
   block differs" (per-shot values are still all stored).
 - The API reads the catalog on request; reload the page.

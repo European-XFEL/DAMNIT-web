@@ -4,6 +4,21 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-11
+
+### Operations
+- **`hzdr/scripts/next-on-server.sh`**: the open server work on fwkt-webapps
+  in one script, look-only unless `--apply`: pull, restart every unit still
+  running code older than its checkout (after `uv sync`), the two expected
+  untracked-file warnings, the 2024-08-08 rulings copy, a campaign rebuild
+  with the v6 check, Beamtime Setup's settings, and the reports. What needs a
+  person is in `hzdr/docs/guides/next-on-server.md`.
+- **`api/scripts/hzdr-rebuild.py`** rebuilds by hand with exactly the
+  auto-trigger's command, assembled by the API's own code
+  (`consumer/bootstrap.builder_command`, which reads the spool layout without
+  building a consumer, so the running API keeps its Kafka partitions), then
+  checks each campaign file for `/entry/shots/authority_shot_number`.
+
 ## 2026-11-09
 
 ### Data
