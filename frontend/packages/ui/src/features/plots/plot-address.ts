@@ -72,3 +72,25 @@ export function parsePlotAddress(
 
   return { plot: { source, variables: [x, y], runs } }
 }
+
+type FindLinkErrorOptions = {
+  variables: string[]
+  runs: number[]
+}
+
+// A well-formed link can still name what the proposal lacks. Some of its runs
+// missing is fine, since the plot draws the ones that exist.
+export function findLinkError(
+  plot: PlotSpec,
+  { variables, runs }: FindLinkErrorOptions
+) {
+  const missing = plot.variables.find((name) => !variables.includes(name))
+  if (missing !== undefined) {
+    return `The proposal has no variable "${missing}"`
+  }
+
+  const known = new Set(runs.map(String))
+  if (plot.runs !== undefined && !plot.runs.some((run) => known.has(run))) {
+    return `The proposal has none of the runs ${formatRunSelection(plot.runs)}`
+  }
+}

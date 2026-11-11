@@ -1,7 +1,7 @@
 import { test, expect } from '#fixtures'
 import { numberVars } from '#examples/xpcs'
 import { openContextFile } from '#support/context-file'
-import { allRunsNavItem } from '#support/dashboard'
+import { allRunsNavItem, dashboardNav } from '#support/dashboard'
 import { closePlot, plotEntry, plotFigure } from '#support/plots'
 import { openProposal, titleOf } from '#support/table'
 
@@ -44,4 +44,18 @@ test('a plot link opened fresh draws the plot and lists it, and Back after closi
   await page.goBack()
   await expect(plotFigure(page)).toBeVisible()
   await expect(plotEntry(page, name)).toHaveAttribute('aria-current', 'page')
+})
+
+test('a link to no view keeps the dashboard and says so, with a way to All runs', async ({
+  page,
+  example,
+}) => {
+  const proposal = example.proposalMetadata[0].number
+
+  await page.goto(`proposal/${proposal}/tabel`)
+  await expect(page.getByText('This link points at no view.')).toBeVisible()
+  await expect(dashboardNav(page)).toBeVisible()
+
+  await page.getByRole('link', { name: 'Open All runs' }).click()
+  await expect(page).toHaveURL(/\/table$/)
 })

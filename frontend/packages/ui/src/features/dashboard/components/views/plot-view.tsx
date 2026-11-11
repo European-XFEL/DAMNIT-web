@@ -2,11 +2,15 @@ import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { Box, Text } from '@mantine/core'
 
-import { useAppDispatch } from '#src/app/store/hooks'
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import UnableToDisplayAlert from '#src/features/plots/components/unable-to-display-alert'
-import { parsePlotAddress, plotAddress } from '#src/features/plots/plot-address'
+import {
+  findLinkError,
+  parsePlotAddress,
+  plotAddress,
+} from '#src/features/plots/plot-address'
 import { addPlot } from '#src/features/plots/plots.slice'
 import { plotName } from '#src/features/plots/utils'
 import { isEmpty } from '#src/utils/helpers'
@@ -23,12 +27,23 @@ function PlotView() {
     () => parsePlotAddress(kind, searchParams),
     [kind, searchParams]
   )
-  const { variables } = useTableMeta()
+  const { variables, runs } = useTableMeta()
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
 
   // Every proposal has the run variable, so none means the metadata is still
   // on its way, and the link cannot be checked yet.
   const loading = isEmpty(variables)
-  const error = 'error' in address ? address.error : undefined
+  const error =
+    'error' in address
+      ? address.error
+      : loading
+        ? undefined
+        : findLinkError(address.plot, {
+            variables: Object.keys(variables),
+            runs: runs
+              .filter((run) => run.proposal === proposal)
+              .map((run) => run.run),
+          })
   const plot =
     'plot' in address && !loading && error === undefined
       ? address.plot

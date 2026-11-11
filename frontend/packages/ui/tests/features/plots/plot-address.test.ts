@@ -1,6 +1,10 @@
 import { expect, test } from 'vitest'
 
-import { parsePlotAddress, plotAddress } from '#src/features/plots/plot-address'
+import {
+  findLinkError,
+  parsePlotAddress,
+  plotAddress,
+} from '#src/features/plots/plot-address'
 import type { PlotSpec } from '#src/types'
 
 function parse(address: string) {
@@ -82,4 +86,36 @@ test('an address with unreadable runs names the runs', () => {
   expect(parse('preview?variable=detector_image&runs=abc')).toEqual({
     error: 'The link\'s runs are unreadable: "abc" is not a run or a range',
   })
+})
+
+const proposal = { variables: ['run', 'pulses'], runs: [1, 2, 3] }
+
+test('a link to a variable the proposal does not have names the variable', () => {
+  const plot: PlotSpec = { source: 'summary', variables: ['run', 'energy'] }
+
+  expect(findLinkError(plot, proposal)).toBe(
+    'The proposal has no variable "energy"'
+  )
+})
+
+test("a link to none of the proposal's runs names the runs", () => {
+  const plot: PlotSpec = {
+    source: 'summary',
+    variables: ['run', 'pulses'],
+    runs: ['8', '9'],
+  }
+
+  expect(findLinkError(plot, proposal)).toBe(
+    'The proposal has none of the runs 8-9'
+  )
+})
+
+test('a link to some runs the proposal lacks is still a plot', () => {
+  const plot: PlotSpec = {
+    source: 'summary',
+    variables: ['run', 'pulses'],
+    runs: ['3', '4'],
+  }
+
+  expect(findLinkError(plot, proposal)).toBeUndefined()
 })
