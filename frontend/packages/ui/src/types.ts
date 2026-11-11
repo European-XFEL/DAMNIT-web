@@ -21,7 +21,7 @@ export type AvailableProposals = {
 export type PlotSource = 'summary' | 'preview'
 
 // What a plot shows, which is all its address carries. A summary with no runs
-// draws them all; a preview always names its runs.
+// draws them all.
 export type PlotSpec =
   | { source: 'summary'; variables: [x: string, y: string]; runs?: string[] }
   | { source: 'preview'; variables: [variable: string]; runs: string[] }
