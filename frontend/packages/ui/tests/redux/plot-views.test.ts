@@ -4,16 +4,15 @@ import { plotRequested } from '#src/app/store/actions'
 import { setupStore, type AppStore } from '#src/app/store/store'
 import { selectActiveView } from '#src/features/dashboard/stores/dashboard.selectors'
 import { viewSelected } from '#src/features/dashboard/stores/dashboard.slice'
-import { removePlot } from '#src/features/plots/plots.slice'
-import { type PlotSpec } from '#src/types'
+import { removePlot, type ListedPlot } from '#src/features/plots/plots.slice'
 
-const trains: PlotSpec = {
+const trains: ListedPlot = {
   variables: ['run', 'n_trains'],
   source: 'summary',
   name: 'Trains vs. Run',
 }
 
-const pulses: PlotSpec = {
+const pulses: ListedPlot = {
   variables: ['run', 'n_pulses'],
   source: 'summary',
   name: 'Pulses vs. Run',

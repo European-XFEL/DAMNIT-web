@@ -2,14 +2,12 @@ import type { PlotSource, PlotSpec } from '#src/types'
 
 import { formatRunSelection, parseRunSelection } from './utils'
 
-type PlotContent = Omit<PlotSpec, 'name'>
-
 const PLOT_SOURCES: PlotSource[] = ['summary', 'preview']
 
 // A plot's kind and search, such as `summary?x=run&y=pulses&runs=1-20,25` or
 // `preview?variable=detector_image&runs=5`. Its parts go in one order, so the
 // same plot always gets the same address.
-export function plotAddress({ source, variables, runs }: PlotContent) {
+export function plotAddress({ source, variables, runs }: PlotSpec) {
   // `x` and `y` only ever name axes, so a preview can later take them for the
   // coordinates it plots against.
   const keys =
@@ -34,40 +32,43 @@ export function plotAddress({ source, variables, runs }: PlotContent) {
 export function parsePlotAddress(
   kind: string,
   search: URLSearchParams
-): { plot: PlotContent } | { error: string } {
+): { plot: PlotSpec } | { error: string } {
   const source = PLOT_SOURCES.find((known) => known === kind)
   if (source === undefined) {
     return { error: `"${kind}" is not a kind of plot` }
   }
 
-  let variables: string[]
+  const runsInput = search.get('runs')
+  const selection =
+    runsInput === null ? undefined : parseRunSelection(runsInput)
+  if (selection !== undefined && 'error' in selection) {
+    return { error: `The link's runs are unreadable: ${selection.error}` }
+  }
+
+  const runs = selection?.runs
   if (source === 'preview') {
     const variable = search.get('variable')
     if (!variable) {
       return { error: 'The link names no variable' }
     }
-    variables = [variable]
-  } else {
-    const y = search.get('y')
-    if (!y) {
-      return { error: 'The link names no y variable' }
+
+    // A preview of every run would fetch the whole proposal's images.
+    if (runs === undefined) {
+      return { error: 'The link names no runs' }
     }
-    const x = search.get('x')
-    if (!x) {
-      return { error: 'The link names no x variable' }
-    }
-    variables = [x, y]
+
+    return { plot: { source, variables: [variable], runs } }
   }
 
-  const runsInput = search.get('runs')
-  if (runsInput === null) {
-    return { plot: { source, variables } }
+  const y = search.get('y')
+  if (!y) {
+    return { error: 'The link names no y variable' }
   }
 
-  const selection = parseRunSelection(runsInput)
-  if ('error' in selection) {
-    return { error: `The link's runs are unreadable: ${selection.error}` }
+  const x = search.get('x')
+  if (!x) {
+    return { error: 'The link names no x variable' }
   }
 
-  return { plot: { source, variables, runs: selection.runs } }
+  return { plot: { source, variables: [x, y], ...(runs && { runs }) } }
 }

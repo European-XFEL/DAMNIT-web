@@ -12,25 +12,25 @@ import {
   viewSelected,
 } from '#src/features/dashboard/stores/dashboard.slice'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
-import { type PlotSpec } from '#src/types'
+import type { ListedPlot } from '#src/features/plots/plots.slice'
 import { withProviders } from '#tests/support/render'
 import { resizeViewport } from '#tests/support/viewport'
 
-const trains: PlotSpec = {
+const trains: ListedPlot = {
   variables: ['run', 'n_trains'],
   runs: ['1', '2', '3'],
   source: 'summary',
   name: 'Trains vs. Run',
 }
 
-const pulses: PlotSpec = {
+const pulses: ListedPlot = {
   variables: ['run', 'n_pulses'],
   runs: ['4', '5'],
   source: 'summary',
   name: 'Pulses vs. Run',
 }
 
-const intensity: PlotSpec = {
+const intensity: ListedPlot = {
   variables: ['run', 'xgm_intensity'],
   runs: ['6'],
   source: 'summary',

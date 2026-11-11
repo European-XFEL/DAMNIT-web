@@ -12,5 +12,7 @@ export const resetProposal = createAction('app/resetProposal')
 // id is its address, so asking for a listed plot again picks the same entry.
 export const plotRequested = createAction(
   'app/plotRequested',
-  (plot: PlotSpec) => ({ payload: { ...plot, id: plotAddress(plot) } })
+  (plot: PlotSpec & { name: string }) => ({
+    payload: { ...plot, id: plotAddress(plot) },
+  })
 )

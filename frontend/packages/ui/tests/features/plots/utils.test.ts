@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 import {
   formatRunSelection,
   parseRunSelection,
+  plotName,
 } from '#src/features/plots/utils'
 
 test('a run selection expands a range into every run it covers', () => {
@@ -93,4 +94,24 @@ test('a run list writes runs in a row as one range', () => {
 test('a run list writes a run picked twice once', () => {
   // Two cells picked in one row of the table give that row's run twice.
   expect(formatRunSelection(['5', '5', '6'])).toBe('5-6')
+})
+
+test("a summary plot is named y vs. x by the variables' titles", () => {
+  const titles = {
+    run: { name: 'run', title: 'Run', tags: [] },
+    xgm_pulses: { name: 'xgm_pulses', title: 'Pulses', tags: [] },
+  }
+
+  expect(
+    plotName({ source: 'summary', variables: ['run', 'xgm_pulses'] }, titles)
+  ).toBe('Pulses vs. Run')
+})
+
+test('a variable with no title names its plot by its own name', () => {
+  expect(
+    plotName(
+      { source: 'preview', variables: ['detector_image'], runs: ['5'] },
+      {}
+    )
+  ).toBe('detector_image')
 })

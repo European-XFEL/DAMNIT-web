@@ -1,10 +1,9 @@
 import { expect, test } from 'vitest'
 
 import { plotRequested } from '#src/app/store/actions'
-import reducer from '#src/features/plots/plots.slice'
-import { type PlotSpec } from '#src/types'
+import reducer, { type ListedPlot } from '#src/features/plots/plots.slice'
 
-const trains: PlotSpec = {
+const trains: ListedPlot = {
   variables: ['run', 'n_trains'],
   source: 'summary',
   name: 'Trains vs. Run',

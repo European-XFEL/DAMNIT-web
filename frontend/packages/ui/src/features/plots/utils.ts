@@ -1,4 +1,20 @@
+import { getTitleByName } from '#src/data/table/table-data.transforms'
+import type { Variable } from '#src/data/table/table-data.types'
+import type { PlotSpec } from '#src/types'
 import { sorted } from '#src/utils/array'
+
+// "Pulses vs. Run" for a summary, "Detector image" for a preview. A variable
+// with no title goes by its name.
+export function plotName(
+  { source, variables }: PlotSpec,
+  titles: Record<string, Variable>
+) {
+  const titleOf = (name: string) => getTitleByName(titles, name)
+
+  return source === 'summary'
+    ? `${titleOf(variables[1])} vs. ${titleOf(variables[0])}`
+    : titleOf(variables[0])
+}
 
 // A single run reads as a range of one.
 const RUN_OR_RANGE = /^(\d+)(?:\s*-\s*(\d+))?$/

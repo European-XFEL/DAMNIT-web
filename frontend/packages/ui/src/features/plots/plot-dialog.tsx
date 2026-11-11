@@ -8,6 +8,7 @@ import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
 import { buildVariableBlocks } from '#src/data/table/variable-blocks'
 
 import { PlotForm } from './plot-form'
+import { plotName } from './utils'
 
 type PlotDialogProps = {
   opened: boolean
@@ -18,7 +19,7 @@ type PlotDialogProps = {
 function PlotDialog({ opened, close }: PlotDialogProps) {
   const dispatch = useAppDispatch()
   const variables = useTableVariables()
-  const { groups } = useTableMeta()
+  const { groups, variables: titles } = useTableMeta()
 
   const blocks = useMemo(
     () =>
@@ -47,7 +48,7 @@ function PlotDialog({ opened, close }: PlotDialogProps) {
       <PlotForm
         blocks={blocks}
         onSubmit={(plot) => {
-          dispatch(plotRequested(plot))
+          dispatch(plotRequested({ ...plot, name: plotName(plot, titles) }))
           close()
         }}
         onCancel={close}

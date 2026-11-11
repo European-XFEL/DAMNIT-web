@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 
 import { parsePlotAddress, plotAddress } from '#src/features/plots/plot-address'
+import type { PlotSpec } from '#src/types'
 
 function parse(address: string) {
   const [kind, search] = address.split('?')
@@ -8,8 +9,8 @@ function parse(address: string) {
 }
 
 test('a summary plot with chosen runs reads back from its address', () => {
-  const plot = {
-    source: 'summary' as const,
+  const plot: PlotSpec = {
+    source: 'summary',
     variables: ['run', 'pulses'],
     runs: ['1', '2', '3', '25'],
   }
@@ -21,8 +22,8 @@ test('a summary plot with chosen runs reads back from its address', () => {
 })
 
 test('a preview plot reads back from its address', () => {
-  const plot = {
-    source: 'preview' as const,
+  const plot: PlotSpec = {
+    source: 'preview',
     variables: ['detector_image'],
     runs: ['5'],
   }
@@ -42,8 +43,14 @@ test('two addresses that differ only in the order of their parts are one plot', 
 
 test('an address leaves out the parts that are not the plot', () => {
   // The plot window adds its own flag to the same address.
-  expect(parse('preview?variable=detector_image&window')).toEqual({
-    plot: { source: 'preview', variables: ['detector_image'] },
+  expect(parse('preview?variable=detector_image&runs=5&window')).toEqual({
+    plot: { source: 'preview', variables: ['detector_image'], runs: ['5'] },
+  })
+})
+
+test('a preview address with no runs names the runs as missing', () => {
+  expect(parse('preview?variable=detector_image')).toEqual({
+    error: 'The link names no runs',
   })
 })
 
