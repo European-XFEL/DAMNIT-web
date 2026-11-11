@@ -20,13 +20,14 @@ behaviour; the merge PR has the details.
   campaign (registered new / unchanged, kept / not registered), and the
   auto-trigger copies those lines into the API's log.
 - **`api/scripts/hzdr-scicat-duplicates.py`** removes the duplicates already
-  in SciCat. It deletes only older, superseded registrations of the same
-  file: same name, created before the catalog's dataset, at least a day old,
-  same source folder, not published. It keeps anything newer than the
-  catalog's dataset (a registration that has not reached DAMNIT yet), and
-  everything of a campaign whose catalog dataset SciCat lacks. Look-only
-  unless `--apply`; logs in with the plugin's own env file; `--report` for a
-  SciCat admin.
+  in SciCat, and only provable replicates. Every check must pass: the same
+  name and `experiment_id`, the same creating account and no other editor,
+  the same source folder, created before the catalog's dataset and at least a
+  day ago, and not published. An unreadable field means keep. A campaign
+  whose catalog dataset SciCat lacks, or lacks DAMNIT's marks, loses nothing.
+  It only looks unless `--apply --expect N` names the count it just printed.
+  It re-checks each dataset on a fresh copy right before deleting it, logs in
+  with the plugin's env file, and writes `--report` for a SciCat admin.
 
 ### Operations
 - **`hzdr/scripts/next-on-server.sh`**: the open server work on fwkt-webapps

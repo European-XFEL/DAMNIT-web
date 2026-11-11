@@ -94,25 +94,32 @@ sudo ../.venv/bin/python scripts/hzdr-scicat-duplicates.py \
     --env-file /etc/fwkt-webapps/scicatplugin.env \
     --sources-file /home/tippey/mnt/bigdata/HPLexp/nexus/hzdr_sources.json \
     --report ~/scicat-duplicates-$(date +%F).json          # look only
-# the same with --apply deletes; add --campaign Beamline_radbio_2026 for one
+# it ends with the count N; then the same with --apply --expect N
 ```
 
 It reads SciCat's address and login from the plugin's env file (root-only,
-hence `sudo`) and prints nothing secret. It handles more than SciCat's
-100-per-answer limit. It deletes only what is provably an older, superseded
-registration of the same file: a dataset named `HZDR canonical campaign
-(<experiment_id>)` that was created **before** the one DAMNIT's catalog
-points at (`scicat_pid`), is at least 24 hours old (`--min-age-hours`), has
-the same source folder, and is not published. It keeps:
+hence `sudo`) and prints nothing secret. It deletes only **provable
+replicates**: older registrations DAMNIT made of the very file the catalog's
+dataset (`scicat_pid`) names. Every check must pass:
 
-- a dataset **newer** than the catalog's: a registration that has not
-  reached DAMNIT's catalog yet, or a build that failed after registering;
-- every dataset of a campaign whose catalog dataset SciCat does not have
-  (nothing of that campaign is deleted; the summary says so);
-- a dataset from another source folder, or without a readable creation time;
-- every dataset with another name, including campaigns DAMNIT does not know.
-If the functional account may not delete (HTTP 401/403), it stops and the
-`--report` file lists what a SciCat admin should remove.
+- same name, and the same `experiment_id` in the dataset's metadata;
+- created by the same account as the catalog's dataset, never edited by
+  anyone else;
+- same source folder (the same file);
+- created before the catalog's dataset, at least 24 hours ago
+  (`--min-age-hours`), and not published.
+
+A field it cannot read counts as not proven, so that dataset stays. A dataset
+**newer** than the catalog's stays: it may be a registration that has not
+reached DAMNIT yet. If SciCat lacks the catalog's dataset, or that dataset
+lacks DAMNIT's marks, nothing of that campaign is deleted. Datasets with any
+other name are never even read.
+
+To delete, pass the count the look-only run printed: `--apply --expect N`.
+If the count has changed since, nothing is deleted. Each dataset is fetched
+again just before it is deleted and kept if it no longer passes every check.
+If the account may not delete (HTTP 401/403), it stops and the `--report`
+file lists the planned replicates for a SciCat admin.
 
 Still open, needs a decision: **LabFrog's full hub** (`plan.md` item 24): four
 decisions before phase 0.
