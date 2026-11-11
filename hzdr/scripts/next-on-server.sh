@@ -267,6 +267,13 @@ step_labfrog() {
         if [ -n "$found" ]; then ok "$key set in $found"
         else would "$key not set in instance/*.cfg (see next-on-server.md, Beamtime Setup)"; fi
     done
+    # LabFrog 0.10.0 is the release with Beamtime Setup and the shot intake.
+    local version
+    version="$(sed -n 's/^version = "\(.*\)"/\1/p' "$ROOT/labfrog/pyproject.toml" 2>/dev/null | head -1)"
+    case "$version" in
+        0.[0-9]|0.[0-9].*|"") warn "LabFrog checkout is ${version:-unknown}, older than 0.10.0: run steps pull and deploy" ;;
+        *) ok "LabFrog checkout is $version (labfrog-shotsheet runs it once step deploy reports it current)" ;;
+    esac
     if curl -fsS -m 5 "$DAMNIT_URL/config/health" >/dev/null 2>&1; then
         ok "DAMNIT answers at $DAMNIT_URL/config/health (a value for DAMNIT_API_URL)"
     else
