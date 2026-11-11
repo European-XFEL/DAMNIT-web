@@ -2,7 +2,9 @@ import type { PropsWithChildren } from 'react'
 import { Alert, rem } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
 
-function UnableToDisplayAlert({ children }: PropsWithChildren) {
+type UnableToDisplayAlertProps = PropsWithChildren
+
+function UnableToDisplayAlert({ children }: UnableToDisplayAlertProps) {
   return (
     <Alert
       variant="light"
