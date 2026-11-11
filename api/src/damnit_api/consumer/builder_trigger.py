@@ -71,6 +71,11 @@ _MAX_LOGGED_OUTPUT = 2000
 _RUNNING: dict[str, BuilderTrigger] = {}
 
 
+def scicat_lines(output: str) -> list[str]:
+    """The builder's ``SciCat:`` outcome lines (one per campaign registered)."""
+    return [line.strip() for line in output.splitlines() if line.startswith("SciCat: ")]
+
+
 def request_rebuild() -> bool:
     """Ask the running auto-trigger for a debounced rebuild.
 
@@ -512,6 +517,8 @@ class BuilderTrigger:
             return
         if returncode == 0:
             logger.info("Auto-trigger: builder finished successfully")
+            for line in scicat_lines(output):
+                logger.info("Auto-trigger: %s", line)
             if self._settings.containers_enabled:
                 await self._start_container_worker("after")  # validates when done
             else:

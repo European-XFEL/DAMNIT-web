@@ -445,7 +445,8 @@ def _register_scicat(
 
     if not settings.hzdr_scicat.enabled:
         return None
-    return register_campaign_nexus(
+    previous = read_previous_registration(sources_file, source_key)
+    result = register_campaign_nexus(
         settings=settings.hzdr_scicat,
         nexus_path=output_nexus,
         experiment_id=experiment_id,
@@ -455,8 +456,26 @@ def _register_scicat(
             "shot_count": len(shots),
         },
         source_folder=str(output_nexus.parent),
-        previous=read_previous_registration(sources_file, source_key),
+        previous=previous,
     )
+    # One line per build on stdout: the auto-trigger copies "SciCat:" lines
+    # into the API's log, so every registration is visible in the journal.
+    print(scicat_outcome(source_key, previous, result), flush=True)
+    return result
+
+
+def scicat_outcome(
+    source_key: str,
+    previous: dict[str, Any] | None,
+    result: dict[str, Any] | None,
+) -> str:
+    """The ``SciCat:`` line for one campaign's registration step."""
+    if result is None:
+        return f"SciCat: {source_key}: not registered (see the builder's log)"
+    pid = result.get("scicat_pid")
+    if previous and previous.get("scicat_pid") == pid:
+        return f"SciCat: {source_key}: unchanged, kept dataset {pid}"
+    return f"SciCat: {source_key}: registered new dataset {pid}"
 
 
 def main() -> None:

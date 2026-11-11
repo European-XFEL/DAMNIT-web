@@ -41,14 +41,11 @@ collection readable, `DAMNIT_API_URL`, `BEAMTIME_RULES_DIR`), then setting up
 The server part of this list is scripted: [Next on the server](../guides/next-on-server.md).
 
 
-1. **DAMNIT registers a new SciCat dataset on every rebuild** (combo ledger
-   `I7`, not met). `register_campaign_nexus` reuses the dataset only when the
-   file's SHA-256 matches the last registration, but every build stamps
-   `damnit_bridge_updated_at`, so it never matches. Successful registrations
-   are not logged (the builder sets up no logging; the trigger logs output only
-   on failure). The fix (register again only when the content changes, log each
-   registration) and the clean-up of the duplicates already in SciCat wait on
-   the maintainer.
+1. **SciCat duplicates (`I7`).** Fixed on 2026-11-11: registration now
+   compares a content fingerprint that leaves the build stamp out, and every
+   build logs one `SciCat:` line. Left: deploy, rebuild, then remove the
+   duplicates already in SciCat with `api/scripts/hzdr-scicat-duplicates.py`
+   (steps in [Next on the server](../guides/next-on-server.md)).
 2. **A rebuilt campaign has `/entry/shots/authority_shot_number`** (bridge v6):
    not yet checked on the host. The auto-trigger does not rebuild after a code
    update; the hand rebuild is in the operations guide.

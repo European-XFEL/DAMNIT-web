@@ -69,16 +69,44 @@ files still `MISSING` the column.
    restart/replay pass (ledger `I5`) and a real watchdog event in DAMNIT's
    spool (`I6`), as in the hub's pilot runbook.
 
-## 3. Needs a decision first
+## 3. SciCat: clean up the duplicate datasets
 
-- **DAMNIT makes a new SciCat dataset on every rebuild** (ledger `I7`). Every
-  build stamps `damnit_bridge_updated_at`, so the file's SHA-256 never matches
-  the last registration. The proposed fix: register again only when the
-  content changes, and log each registration. That is a code change in this
-  repository, ready to make once it is agreed. Separately: whether to clean up
-  the duplicates already in SciCat. Running `rebuild` above adds one more
-  dataset per campaign until this is fixed.
-- **LabFrog's full hub** (`plan.md` item 24): four decisions before phase 0.
+Until the fix of 2026-11-11, every rebuild registered a **new SciCat
+dataset** (ledger `I7`): each build stamps `damnit_bridge_updated_at`, so the
+file's SHA-256 never matched the last registration. DAMNIT now compares a
+**content fingerprint** that leaves that stamp out, so a rebuild with the
+same content keeps its dataset. Every build prints one `SciCat:` line, and
+the auto-trigger copies it into the `damnit-api` journal:
+
+```bash
+journalctl -u damnit-api --since today | grep 'SciCat:'
+#  SciCat: Beamline_radbio_2026: unchanged, kept dataset HZDR/...
+```
+
+The first build after the deploy registers **once more** per campaign: the
+catalog has no fingerprint yet to compare with. From then on, a new dataset
+appears only when the content changed. So clean up **after** step `rebuild`
+above:
+
+```bash
+cd ~/DAMNIT-web-hzdr/api
+sudo ../.venv/bin/python scripts/hzdr-scicat-duplicates.py \
+    --env-file /etc/fwkt-webapps/scicatplugin.env \
+    --sources-file /home/tippey/mnt/bigdata/HPLexp/nexus/hzdr_sources.json \
+    --report ~/scicat-duplicates-$(date +%F).json          # look only
+# the same with --apply deletes; add --campaign Beamline_radbio_2026 for one
+```
+
+It reads SciCat's address and login from the plugin's env file (root-only,
+hence `sudo`) and prints nothing secret. For each campaign in DAMNIT's catalog
+it keeps the dataset the catalog points at (`scicat_pid`) and every published
+dataset, and deletes the others with the same name (`HZDR canonical campaign
+(<experiment_id>)`). It handles more than SciCat's 100-per-answer limit.
+If the functional account may not delete (HTTP 401/403), it stops and the
+`--report` file lists what a SciCat admin should remove.
+
+Still open, needs a decision: **LabFrog's full hub** (`plan.md` item 24): four
+decisions before phase 0.
 
 ## 4. Waiting on people
 
