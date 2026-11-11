@@ -373,3 +373,121 @@ def test_endpoint_404_for_unknown_source(tmp_path, monkeypatch):
     with TestClient(app) as client:
         resp = client.get("/metadata/hzdr/sources/nope/scicat")
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Content fingerprint: a rebuild of the same content is not a new dataset (I7)
+# ---------------------------------------------------------------------------
+
+
+def _h5_campaign(path: Path, *, stamp: str, energies=(1.0, 2.0)) -> Path:
+    import h5py
+    import numpy as np
+
+    with h5py.File(path, "w") as f:
+        f.attrs["damnit_bridge_updated_at"] = stamp
+        f.attrs["experiment_id"] = EXPERIMENT_ID
+        shots = f.create_group("entry/shots")
+        shots["energy"] = np.array(energies)
+        shots["shot_key"] = np.array([b"a", b"b"])
+        f["20261111_000001"] = h5py.ExternalLink("shots/20261111_000001.nxs", "/entry")
+    return path
+
+
+def test_fingerprint_ignores_the_build_stamp(tmp_path):
+    from damnit_api.metadata.scicat import content_fingerprint
+
+    one = _h5_campaign(tmp_path / "one.nxs", stamp="2026-11-11T09:44:00+00:00")
+    two = _h5_campaign(tmp_path / "two.nxs", stamp="2026-11-11T10:24:00+00:00")
+    assert one.read_bytes() != two.read_bytes()
+    assert content_fingerprint(one) == content_fingerprint(two)
+
+
+def test_fingerprint_sees_a_changed_value_and_link(tmp_path):
+    import h5py
+
+    from damnit_api.metadata.scicat import content_fingerprint
+
+    base = content_fingerprint(_h5_campaign(tmp_path / "a.nxs", stamp="t1"))
+    changed = _h5_campaign(tmp_path / "b.nxs", stamp="t1", energies=(1.0, 2.5))
+    assert content_fingerprint(changed) != base
+    relinked = _h5_campaign(tmp_path / "c.nxs", stamp="t1")
+    with h5py.File(relinked, "r+") as f:
+        del f["20261111_000001"]
+        f["20261111_000001"] = h5py.ExternalLink("shots/other.nxs", "/entry")
+    assert content_fingerprint(relinked) != base
+
+
+def test_rebuild_with_same_content_keeps_the_dataset(tmp_path, monkeypatch):
+    post = _FakePost({"ok": True, "pid": "pid-first"})
+    nexus = _h5_campaign(tmp_path / "campaign.nxs", stamp="09:44")
+    first = _register(tmp_path, _settings(), monkeypatch, post, nexus=nexus)
+    assert first is not None
+    assert first["scicat_content_fingerprint"]
+
+    _h5_campaign(nexus, stamp="10:24")  # rebuilt: new stamp, new bytes
+    second = _register(
+        tmp_path, _settings(), monkeypatch, post, nexus=nexus, previous=first
+    )
+    assert second is not None
+    assert second["scicat_pid"] == "pid-first"
+    assert len(post.calls) == 1
+
+
+def test_previous_without_fingerprint_registers_once_more(tmp_path, monkeypatch):
+    """A catalog from before the fix has no fingerprint: one more dataset, then none."""
+    nexus = _h5_campaign(tmp_path / "campaign.nxs", stamp="09:44")
+    old = {"scicat_pid": "pid-old", "scicat_source_sha256": "not-this-file"}
+    post = _FakePost({"ok": True, "pid": "pid-new"})
+    second = _register(
+        tmp_path, _settings(), monkeypatch, post, nexus=nexus, previous=old
+    )
+    assert second is not None
+    assert second["scicat_pid"] == "pid-new"
+    _h5_campaign(nexus, stamp="10:24")
+    third = _register(
+        tmp_path, _settings(), monkeypatch, post, nexus=nexus, previous=second
+    )
+    assert third is not None
+    assert third["scicat_pid"] == "pid-new"
+    assert len(post.calls) == 1
+
+
+def test_fingerprint_survives_the_catalog_roundtrip(tmp_path, monkeypatch):
+    post = _FakePost({"ok": True, "pid": "pid-first"})
+    nexus = _h5_campaign(tmp_path / "campaign.nxs", stamp="09:44")
+    first = _register(tmp_path, _settings(), monkeypatch, post, nexus=nexus)
+    sources = tmp_path / "hzdr_sources.json"
+    write_sources_catalog(
+        sources_file=sources,
+        source_key=SOURCE_KEY,
+        experiment_id=EXPERIMENT_ID,
+        nexus_path=nexus,
+        shots=[],
+        scicat=first,
+    )
+    previous = read_previous_registration(sources, SOURCE_KEY)
+    assert previous is not None
+    assert previous["scicat_content_fingerprint"] == first["scicat_content_fingerprint"]
+
+
+def test_each_build_reports_its_scicat_outcome():
+    import importlib.util
+
+    from damnit_api.consumer.builder_trigger import scicat_lines
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "hzdr-hdf5-builder.py"
+    spec = importlib.util.spec_from_file_location("hzdr_builder_for_scicat", script)
+    assert spec is not None
+    assert spec.loader is not None
+    builder = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(builder)
+
+    kept = builder.scicat_outcome("radbio", {"scicat_pid": "p1"}, {"scicat_pid": "p1"})
+    new = builder.scicat_outcome("radbio", {"scicat_pid": "p1"}, {"scicat_pid": "p2"})
+    failed = builder.scicat_outcome("radbio", None, None)
+    assert kept == "SciCat: radbio: unchanged, kept dataset p1"
+    assert new == "SciCat: radbio: registered new dataset p2"
+    assert failed.startswith("SciCat: radbio: not registered")
+    output = f"Canonical NeXus: x\n{new}\nDAMNIT source catalog: y\n"
+    assert scicat_lines(output) == [new]

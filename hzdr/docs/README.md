@@ -74,6 +74,7 @@ Shipped features, kept for the design rationale and history.
 | [Protocol status](status/protocol-status.md) | Per-source / per-repo done-vs-outstanding matrix for all four data-transfer paths |
 | [Testing](status/testing.md) | Verified coverage and remaining acceptance tests |
 | [Handoff](status/handoff.md) | Short current-state snapshot for the next session |
+| [Next on the server](guides/next-on-server.md) | The open server work on fwkt-webapps: one script (`hzdr/scripts/next-on-server.sh`) plus what needs a person |
 
 ## Guides
 

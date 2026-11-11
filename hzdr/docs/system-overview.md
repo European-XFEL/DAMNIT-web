@@ -108,9 +108,13 @@ flowchart TD
 
 1. **Operators** enter campaign and shot metadata in **LabFrog**, which stores
    it in MongoDB. Selecting a shot in LabFrog claims the shot authority's number
-   for that record.
+   for that record; on fwkt-webapps the numbers arrive through LabFrog's own
+   intake service (`labfrog-shot-intake`, since 2026-11-11). A campaign is
+   prepared in LabFrog's **Beamtime Setup**, which writes the form, each
+   instrument PC's watchdog rules and the campaign line for DAMNIT's builder.
 2. **labfrog-sqlite-tools** exports those Mongo records into an immutable curated
-   SQLite + NeXus bundle (every 15 minutes on fwkt-webapps), stamping the
+   SQLite + NeXus bundle (every 15 minutes on fwkt-webapps, rewriting only
+   changed campaigns), stamping the
    canonical `experiment_id`, the claimed `authority_shot_number` (schema 13),
    every claimed shot in `authority_shots` (schema 14, release 0.2.5: a set
    that claimed several keeps each) and linking columns (`kafka_event_id`,

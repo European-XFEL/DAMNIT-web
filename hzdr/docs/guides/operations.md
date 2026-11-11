@@ -53,29 +53,67 @@ without editing the saved file. Scalar values appear as numbers or text in
 each row; campaign trends appear when selecting a numeric cell. Actual per-shot
 lineout and image previews remain in their cells.
 
+## A new beamtime from LabFrog's Beamtime Setup
+
+Since 2026-11-11 a campaign is prepared in LabFrog under Form Builder >
+Beamtime Setup. Its **Outputs** section gives the line for DAMNIT,
+`DW_API_HZDR_BUILDER__CAMPAIGNS: add <experiment_id>`. DAMNIT does not read
+LabFrog's setup itself; carry the line over by hand:
+
+1. Make sure the campaign is exported: its `experiment_id` is in
+   `campaigns.txt` in `~/labfrog-sqlite-tools-repo` (the list the
+   `labfrog-export-refresh` timer exports every 15 minutes), and
+   `curated_files/<experiment_id>/<experiment_id>.sqlite` appears after the
+   next run.
+2. Add the id to `DW_API_HZDR_BUILDER__CAMPAIGNS` in `api/.env` (a JSON list,
+   e.g. `["Helical_coils_2026"]`). Only listed (and spooled) campaigns' exports
+   may claim `unassigned` triggers, and LabFrog numbers restart every campaign,
+   so list a campaign only while it takes shots: take the previous beamtime
+   out when it ends.
+3. `sudo systemctl restart damnit-api`. The new campaign is built at the next
+   export change or event; to build it now, use the hand rebuild below with
+   its `--campaign`.
+
+Beamtime Setup's **Check connections** reports DAMNIT as answering when
+LabFrog's `DAMNIT_API_URL` is set and DAMNIT's `GET /config/health` responds;
+it is skipped when the setting is empty.
+
 ## Rebuild a campaign by hand
 
 The auto-trigger rebuilds when an export in `CURATED_ROOT` changes (mtime or
-size) or events arrive; it does **not** rebuild on restart or after a code
-change. So after deploying a change to the file layout, rebuild every campaign
-by hand: bridge profile v6 (2026-11-09, `/entry/shots/authority_shot_number`)
+size) or events arrive. Since 2026-11-11 the export timer leaves an unchanged
+campaign's files alone (labfrog-sqlite-tools `export-mongo --skip-unchanged`;
+`FORCE=1 ./export_campaigns.sh` rewrites everything), so a quiet campaign is no
+longer rebuilt every 15 minutes. A restart of `labfrog-explorer` still counts
+as one change for its landing database (radbio): the Explorer writes its schema
+and views there on start, so DAMNIT rebuilds that campaign once.
+
+The trigger does **not** rebuild on restart or after a code change. So after
+deploying a change to the file layout, rebuild every campaign by hand: bridge
+profile v6 (2026-11-09, deployed 2026-11-11, `/entry/shots/authority_shot_number`)
 appears in a campaign only once it is rebuilt, and resolution through a
 LabFrog set's claimed shots needs an export made with labfrog-sqlite-tools
-0.2.5 (schema 14). To rebuild now, with the same inputs the trigger uses:
+0.2.5 (schema 14). To rebuild now, with exactly the trigger's inputs (the
+command is assembled from `api/.env` by the API's own code):
 
 ```bash
-cd ~/DAMNIT-web-hzdr/api && uv run python scripts/hzdr-hdf5-builder.py \
-  --output-root /home/tippey/mnt/bigdata/HPLexp/nexus \
-  --curated-root /home/tippey/labfrog-sqlite-tools-repo/curated_files \
-  --campaign Beamline_radbio_2026 \
-  --campaign-timezone Europe/Berlin \
-  --trigger-spool /data/damnit/hzdr/spool/kafka trigger.jsonl
+cd ~/DAMNIT-web-hzdr/api
+uv run --no-sync python scripts/hzdr-rebuild.py --print        # show the command
+uv run --no-sync python scripts/hzdr-rebuild.py                # rebuild, then check v6
+uv run --no-sync python scripts/hzdr-rebuild.py --check-only   # v6 check only
+uv run --no-sync python scripts/hzdr-rebuild.py --campaign Beamline_radbio_2026
 ```
 
-- Name every campaign with `--campaign` (repeatable). Without it the builder
-  builds only configured/spooled campaigns and the `_unassigned` bucket.
-- `--campaign-timezone Europe/Berlin` (or `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE`)
-  matters: LabFrog times are local, and the day decides each shot's identity.
+- It builds what the trigger builds: the `CAMPAIGNS` list, every spooled
+  campaign and the `_unassigned` bucket. `--campaign` (repeatable) adds one,
+  `--all-exports` every campaign with an export; a named campaign's export may
+  claim `unassigned` triggers during that build.
+- After the build it checks each `<OUTPUT_ROOT>/<c>/<c>.nxs` for
+  `/entry/shots/authority_shot_number` and exits 1 if one lacks it.
+- `hzdr/scripts/next-on-server.sh` runs it as its `rebuild` step.
+- `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE=Europe/Berlin` must be set in
+  `api/.env` (`--print` shows it as `--campaign-timezone`): LabFrog times are
+  local, and the day decides each shot's identity.
 - Expected warnings: "multiple rows active" (fix in LabFrog) and "metadata
   block differs" (per-shot values are still all stored).
 - The API reads the catalog on request; reload the page.

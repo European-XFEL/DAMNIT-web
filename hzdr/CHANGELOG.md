@@ -4,6 +4,44 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-11
+
+### SciCat
+- **A rebuild no longer registers a new SciCat dataset** (ledger `I7`). Each
+  build stamps `damnit_bridge_updated_at`, so the file's SHA-256 never
+  matched the last registration and every rebuild (about 100 a day for
+  radbio) made a new dataset. `register_campaign_nexus` now also compares a
+  content fingerprint (`scicat_content_fingerprint` in the catalog): SHA-256
+  over every group, dataset, attribute and link, leaving out
+  `damnit_bridge_updated_at` and the HDF5 layout. Two builds of the same
+  inputs were checked to give the same fingerprint. The first build after
+  the deploy registers once more, since the catalog has no fingerprint yet.
+- **Every registration is logged.** The builder prints one `SciCat:` line per
+  campaign (registered new / unchanged, kept / not registered), and the
+  auto-trigger copies those lines into the API's log.
+- **`api/scripts/hzdr-scicat-duplicates.py`** removes the duplicates already
+  in SciCat, and only provable replicates. Every check must pass: the same
+  name and `experiment_id`, the same creating account and no other editor,
+  the same source folder, created before the catalog's dataset and at least a
+  day ago, and not published. An unreadable field means keep. A campaign
+  whose catalog dataset SciCat lacks, or lacks DAMNIT's marks, loses nothing.
+  It only looks unless `--apply --expect N` names the count it just printed.
+  It re-checks each dataset on a fresh copy right before deleting it, logs in
+  with the plugin's env file, and writes `--report` for a SciCat admin.
+
+### Operations
+- **`hzdr/scripts/next-on-server.sh`**: the open server work on fwkt-webapps
+  in one script, look-only unless `--apply`: pull, restart every unit still
+  running code older than its checkout (after `uv sync`), the two expected
+  untracked-file warnings, the 2024-08-08 rulings copy, a campaign rebuild
+  with the v6 check, Beamtime Setup's settings, and the reports. What needs a
+  person is in `hzdr/docs/guides/next-on-server.md`.
+- **`api/scripts/hzdr-rebuild.py`** rebuilds by hand with exactly the
+  auto-trigger's command, assembled by the API's own code
+  (`consumer/bootstrap.builder_command`, which reads the spool layout without
+  building a consumer, so the running API keeps its Kafka partitions), then
+  checks each campaign file for `/entry/shots/authority_shot_number`.
+
 ## 2026-11-09
 
 ### Data

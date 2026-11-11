@@ -132,15 +132,19 @@ class KafkaSpoolConsumer(HZDRSpoolConsumer):
             return
         await asyncio.to_thread(self._consumer.commit, token)
 
-    @classmethod
-    def from_settings(cls, spool_root: Path) -> KafkaSpoolConsumer:
-        """Build from the ``DW_API_HZDR_KAFKA_SPOOL__*`` settings block."""
+    @staticmethod
+    def config_from_settings(spool_root: Path) -> SpoolConfig:
+        """The spool layout from ``DW_API_HZDR_KAFKA_SPOOL__*``, without a client.
+
+        Building the consumer itself would join its consumer group, so code
+        that only needs the paths (the rebuild command) calls this instead.
+        """
         from ..shared.settings import settings
 
         cfg_settings = settings.hzdr_kafka_spool
         raw_dir = cfg_settings.spool_dir
         spool_dir = raw_dir if raw_dir.is_absolute() else spool_root / raw_dir
-        cfg = SpoolConfig(
+        return SpoolConfig(
             campaign=cfg_settings.campaign,
             consumer_group=cfg_settings.consumer_group,
             spool_dir=spool_dir,
@@ -148,6 +152,14 @@ class KafkaSpoolConsumer(HZDRSpoolConsumer):
             batch_size=cfg_settings.batch_size,
             filename=cfg_settings.filename,
         )
+
+    @classmethod
+    def from_settings(cls, spool_root: Path) -> KafkaSpoolConsumer:
+        """Build from the ``DW_API_HZDR_KAFKA_SPOOL__*`` settings block."""
+        from ..shared.settings import settings
+
+        cfg_settings = settings.hzdr_kafka_spool
+        cfg = cls.config_from_settings(spool_root)
         consumer = _build_kafka_consumer(
             bootstrap_servers=cfg_settings.bootstrap_servers,
             topics=cfg_settings.topics,

@@ -64,20 +64,27 @@ class AsapoSpoolConsumer(HZDRSpoolConsumer):
         response = await self._client.post(url, json=token)
         response.raise_for_status()
 
-    @classmethod
-    def from_settings(cls, spool_root: Path) -> HZDRSpoolConsumer:
-        """Build from the DW_API_HZDR_SPOOL__* settings block."""
+    @staticmethod
+    def config_from_settings(spool_root: Path) -> SpoolConfig:
+        """The spool layout from DW_API_HZDR_SPOOL__*, without a broker client."""
         from ..shared.settings import settings
 
         raw_dir = settings.hzdr_spool.spool_dir
         spool_dir = raw_dir if raw_dir.is_absolute() else spool_root / raw_dir
-        cfg = SpoolConfig(
+        return SpoolConfig(
             campaign=settings.hzdr_spool.campaign,
             consumer_group=settings.hzdr_spool.consumer_group,
             spool_dir=spool_dir,
             poll_interval=settings.hzdr_spool.poll_interval,
             batch_size=settings.hzdr_spool.batch_size,
         )
+
+    @classmethod
+    def from_settings(cls, spool_root: Path) -> HZDRSpoolConsumer:
+        """Build from the DW_API_HZDR_SPOOL__* settings block."""
+        from ..shared.settings import settings
+
+        cfg = cls.config_from_settings(spool_root)
         if settings.hzdr_spool.broker_kind == "asapo":
             return RealAsapoSpoolConsumer(
                 config=cfg,

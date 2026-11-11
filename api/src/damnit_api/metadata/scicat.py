@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 _PID_KEY = "scicat_pid"
 _VERSION_HASH_KEY = "scicat_version_hash"
 _SHA256_KEY = "scicat_source_sha256"
+_FINGERPRINT_KEY = "scicat_content_fingerprint"
 _REGISTERED_AT_KEY = "scicat_registered_at"
 _DATASET_URL_KEY = "scicat_dataset_url"
 _ENDPOINT_KEY = "scicat_endpoint"
@@ -41,6 +42,69 @@ def _sha256(path: Path) -> str:
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
             digest.update(chunk)
+    return digest.hexdigest()
+
+
+# Attributes a build rewrites every time without changing the content. The
+# file's SHA-256 changes with them, which made every rebuild a new SciCat
+# dataset (ledger I7); the content fingerprint leaves them out.
+VOLATILE_ATTRS = frozenset({"damnit_bridge_updated_at"})
+
+
+def _hash_value(digest: Any, value: Any) -> None:
+    import numpy as np
+
+    array = np.asarray(value)
+    digest.update(array.dtype.str.encode())
+    digest.update(repr(array.shape).encode())
+    if array.dtype.kind in {"O", "U", "S", "V"}:
+        digest.update(repr(array.tolist()).encode())
+    else:
+        digest.update(np.ascontiguousarray(array).tobytes())
+
+
+def _hash_attrs(digest: Any, obj: Any) -> None:
+    for name in sorted(obj.attrs):
+        if name in VOLATILE_ATTRS:
+            continue
+        digest.update(b"@" + name.encode())
+        _hash_value(digest, obj.attrs[name])
+
+
+def content_fingerprint(path: Path) -> str:
+    """SHA-256 over the file's content: every group, dataset, attribute and link.
+
+    Unlike the file's own SHA-256 it ignores ``VOLATILE_ATTRS`` and the HDF5
+    layout (free space, object order, timestamps in object headers), so two
+    builds of the same content give the same fingerprint. Soft and external
+    links count by their target; external files are not opened.
+    """
+    import h5py
+
+    digest = hashlib.sha256()
+
+    def walk(group: Any, prefix: str) -> None:
+        _hash_attrs(digest, group)
+        for name in sorted(group):
+            path_name = f"{prefix}/{name}"
+            link = group.get(name, getlink=True)
+            if isinstance(link, h5py.ExternalLink):
+                digest.update(f"E{path_name}>{link.filename}:{link.path}".encode())
+                continue
+            if isinstance(link, h5py.SoftLink):
+                digest.update(f"S{path_name}>{link.path}".encode())
+                continue
+            item = group[name]
+            if isinstance(item, h5py.Group):
+                digest.update(f"G{path_name}".encode())
+                walk(item, path_name)
+            else:
+                digest.update(f"D{path_name}".encode())
+                _hash_attrs(digest, item)
+                _hash_value(digest, item[()])
+
+    with h5py.File(path, "r") as handle:
+        walk(handle, "")
     return digest.hexdigest()
 
 
@@ -56,9 +120,9 @@ def read_previous_registration(
 ) -> dict[str, Any] | None:
     """Return the SciCat block persisted in an existing catalog, or None.
 
-    Used to skip re-registration when a rebuild is byte-identical (the auto
-    builder-trigger can rebuild frequently, so avoiding a needless SciCat POST on
-    every debounced rebuild matters).
+    Used to skip re-registration when a rebuild has the same content (the auto
+    builder-trigger can rebuild frequently, and each needless POST creates a
+    new SciCat dataset).
     """
     if not sources_file.exists():
         return None
@@ -77,6 +141,7 @@ def read_previous_registration(
             _PID_KEY: pid,
             _VERSION_HASH_KEY: metadata.get(_VERSION_HASH_KEY),
             _SHA256_KEY: metadata.get(_SHA256_KEY),
+            _FINGERPRINT_KEY: metadata.get(_FINGERPRINT_KEY),
             _REGISTERED_AT_KEY: metadata.get(_REGISTERED_AT_KEY),
             _DATASET_URL_KEY: metadata.get(_DATASET_URL_KEY),
             _ENDPOINT_KEY: metadata.get(_ENDPOINT_KEY),
@@ -116,6 +181,43 @@ def _build_body(
     return body
 
 
+def _try_fingerprint(nexus_path: Path) -> str | None:
+    try:
+        return content_fingerprint(nexus_path)
+    except Exception:
+        logger.warning(
+            "SciCat: could not fingerprint %s; using sha256 only", nexus_path
+        )
+        return None
+
+
+def _reuse_previous(
+    previous: dict[str, Any] | None,
+    nexus_path: Path,
+    source_sha256: str,
+    fingerprint: str | None,
+) -> dict[str, Any] | None:
+    """``previous`` (plus the fingerprint) when its content matches, else None."""
+    if not previous or not previous.get(_PID_KEY):
+        return None
+    same_bytes = previous.get(_SHA256_KEY) == source_sha256
+    same_content = (
+        fingerprint is not None and previous.get(_FINGERPRINT_KEY) == fingerprint
+    )
+    if not (same_bytes or same_content):
+        return None
+    logger.info(
+        "SciCat: %s unchanged (%s match); reusing pid %s",
+        nexus_path.name,
+        "sha256" if same_bytes else "content",
+        previous[_PID_KEY],
+    )
+    reused = {k: v for k, v in previous.items() if v is not None}
+    if fingerprint is not None:
+        reused[_FINGERPRINT_KEY] = fingerprint
+    return reused
+
+
 def register_campaign_nexus(
     *,
     settings: HZDRScicatSettings,
@@ -130,8 +232,9 @@ def register_campaign_nexus(
 
     Returns a metadata block (``scicat_pid`` etc.) to stamp into the source
     catalog, or None when disabled / unregistered / failed.  When ``previous``
-    carries a pid for an identical NeXus file (same sha256), the POST is skipped
-    and ``previous`` is returned unchanged.
+    carries a pid for a NeXus file with the same content (same content
+    fingerprint, or the same sha256), the POST is skipped and ``previous`` is
+    returned, with the fingerprint added if it lacked one.
     """
     if not settings.enabled:
         return None
@@ -145,17 +248,10 @@ def register_campaign_nexus(
         logger.exception("SciCat: could not hash %s; skipping", nexus_path)
         return None
 
-    if (
-        previous
-        and previous.get(_SHA256_KEY) == source_sha256
-        and previous.get(_PID_KEY)
-    ):
-        logger.info(
-            "SciCat: %s unchanged (sha256 match); reusing pid %s",
-            nexus_path.name,
-            previous[_PID_KEY],
-        )
-        return previous
+    fingerprint = _try_fingerprint(nexus_path)
+    reused = _reuse_previous(previous, nexus_path, source_sha256, fingerprint)
+    if reused is not None:
+        return reused
 
     body = _build_body(
         settings,
@@ -188,6 +284,8 @@ def register_campaign_nexus(
         _REGISTERED_AT_KEY: datetime.now(UTC).isoformat(),
         _ENDPOINT_KEY: settings.endpoint,
     }
+    if fingerprint is not None:
+        result[_FINGERPRINT_KEY] = fingerprint
     if data.get("version_hash"):
         result[_VERSION_HASH_KEY] = str(data["version_hash"])
     dataset_url = _dataset_url(settings.frontend_url, pid)
