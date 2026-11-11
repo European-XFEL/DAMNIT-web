@@ -105,8 +105,11 @@ export function PlotForm({ blocks, onSubmit, onCancel }: PlotFormProps) {
         source: 'summary',
         runs,
       })
-    } else if (runs !== undefined) {
-      // The runs field refuses a preview with none, so this always holds.
+    } else {
+      if (runs === undefined) {
+        throw new Error('The runs field let a preview through with no runs')
+      }
+
       onSubmit({
         variables: [values.y],
         source: 'preview',
