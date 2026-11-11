@@ -109,7 +109,7 @@ broker, then merge the shotcounter branch.
 | **labfrog-sqlite-tools** | `bundle-complete.json` completion marker (atomic rename, per-file sha256) signals the pair is ready | ✅ committed |
 | **labfrog-sqlite-tools** | Opt-in immutable `retain_exports` snapshots via `export-campaign` CLI | ✅ committed |
 | **labfrog-sqlite-tools** | Linking columns in curated SQLite: `kafka_event_id`, `kafka_topic/partition/offset`, `damnit_*` hints | ✅ committed (curated schema v7/v8) |
-| **labfrog-sqlite-tools** | Schedule campaign-scoped exports (cron/systemd) | 🟡 `labfrog-export-refresh.timer` in fwkt-webapps (every 15 minutes) |
+| **labfrog-sqlite-tools** | Schedule campaign-scoped exports (cron/systemd) | ✅ `labfrog-export-refresh.timer` on fwkt-webapps (every 15 minutes, since 2026-10-28); since 2026-11-11 an unchanged campaign is skipped (`--skip-unchanged`) and a second run waits on a lock; every export is schema 14 |
 | **DAMNIT** | `read_labfrog_sqlite_shots()` reads curated SQLite; preserves all linking columns | ✅ committed |
 | **DAMNIT** | Size guard (< 1 KiB → `ValueError`) catches a partially written export before opening | ✅ committed |
 | **DAMNIT** | Identity-first matcher uses `kafka_event_id` → transport position → authoritative shot number → timestamp | ✅ committed |
@@ -117,9 +117,12 @@ broker, then merge the shotcounter branch.
 | **labfrog** | Map MediaWiki campaign choice to canonical `experiment_id`; store UTC timezone fields | ✅ merged to `develop` |
 | **labfrog** | Store/import the authoritative shot number | ✅ from the shot authority over ZMQ `:2951` (2026-10-02); exported as `authority_shot_number` (schema 13) and in `authority_shots` (schema 14, 0.2.5, every claimed shot); first live claim waits for a DRACO shot |
 
-**Outstanding:** (a) the export timer (`labfrog-export-refresh.timer` in
-fwkt-webapps, every 15 minutes) is built; confirm it on the host;
-(b) the first live authority claim in LabFrog.
+**Outstanding:** the first live authority claim in LabFrog. Since 2026-11-11
+LabFrog's ZMQ intake runs as its own unit (`labfrog-shot-intake`), so a web-app
+restart no longer drops shots; no DRACO trigger has reached the shot authority
+yet. LabFrog's Beamtime Setup (deployed 2026-11-11) gives the
+`DW_API_HZDR_BUILDER__CAMPAIGNS` line for each new campaign; see the
+operations guide.
 
 ---
 

@@ -14,6 +14,8 @@ connections remain on the combo root's `planning/CHECK_FWKT.md`. Older "blocked 
 shotcounter merge" rows below are historical. Since 2026-10-02 the shotcounter
 Kafka branch is parked, not a gate (see the 2026-10-02 update).
 
+**2026-11-11 update:** the host runs DAMNIT `main` `34cc0958` (bridge profile v6, schema-14 resolution; restarted 2026-11-11, it had run the 2026-11-04 code), LabFrog `develop` `99f5958` with Beamtime Setup, and LabFrog's ZMQ intake as its own unit `labfrog-shot-intake`. Every LabFrog export is schema 14, and the export timer skips unchanged campaigns, ending a rebuild every 15 minutes. Still no trigger has reached the shot authority. New finding: DAMNIT registers a new SciCat dataset on every rebuild (ledger `I7`, not met). Current state: [handoff.md](handoff.md).
+
 **2026-10-02 update:** the shot authority (`planet-watchdog-shot-authority`) has been running since 2026-10-02 and publishes stamped triggers to `draco.trigger` (none yet: no DRACO trigger has arrived, re-checked 2026-10-28); `shot_number` and `shot_id` come only from it, not from shotcounter or TANGO. shotcounter keeps sending ZMQ triggers without a number; its own Kafka publisher (`feature/hzdr-canonical-trigger-event`) is parked: not merged, not deployed, and not needed. Full story: `planet-watchdog/docs/SHOT_AUTHORITY.md` and the hub page [Shot numbers](https://fwkt-data-management-hub.readthedocs.io/en/latest/architecture/shot-numbers/). DAMNIT's Kafka spool consumer has run since 2026-10-03 (combo `integration-status.json` I2).
 
 **2026-07-23 review:** local code and documentation were reconciled without

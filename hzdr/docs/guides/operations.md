@@ -53,12 +53,44 @@ without editing the saved file. Scalar values appear as numbers or text in
 each row; campaign trends appear when selecting a numeric cell. Actual per-shot
 lineout and image previews remain in their cells.
 
+## A new beamtime from LabFrog's Beamtime Setup
+
+Since 2026-11-11 a campaign is prepared in LabFrog under Form Builder >
+Beamtime Setup. Its **Outputs** section gives the line for DAMNIT,
+`DW_API_HZDR_BUILDER__CAMPAIGNS: add <experiment_id>`. DAMNIT does not read
+LabFrog's setup itself; carry the line over by hand:
+
+1. Make sure the campaign is exported: its `experiment_id` is in
+   `campaigns.txt` in `~/labfrog-sqlite-tools-repo` (the list the
+   `labfrog-export-refresh` timer exports every 15 minutes), and
+   `curated_files/<experiment_id>/<experiment_id>.sqlite` appears after the
+   next run.
+2. Add the id to `DW_API_HZDR_BUILDER__CAMPAIGNS` in `api/.env` (a JSON list,
+   e.g. `["Helical_coils_2026"]`). Only listed (and spooled) campaigns' exports
+   may claim `unassigned` triggers, and LabFrog numbers restart every campaign,
+   so list a campaign only while it takes shots: take the previous beamtime
+   out when it ends.
+3. `sudo systemctl restart damnit-api`. The new campaign is built at the next
+   export change or event; to build it now, use the hand rebuild below with
+   its `--campaign`.
+
+Beamtime Setup's **Check connections** reports DAMNIT as answering when
+LabFrog's `DAMNIT_API_URL` is set and DAMNIT's `GET /config/health` responds;
+it is skipped when the setting is empty.
+
 ## Rebuild a campaign by hand
 
 The auto-trigger rebuilds when an export in `CURATED_ROOT` changes (mtime or
-size) or events arrive; it does **not** rebuild on restart or after a code
-change. So after deploying a change to the file layout, rebuild every campaign
-by hand: bridge profile v6 (2026-11-09, `/entry/shots/authority_shot_number`)
+size) or events arrive. Since 2026-11-11 the export timer leaves an unchanged
+campaign's files alone (labfrog-sqlite-tools `export-mongo --skip-unchanged`;
+`FORCE=1 ./export_campaigns.sh` rewrites everything), so a quiet campaign is no
+longer rebuilt every 15 minutes. A restart of `labfrog-explorer` still counts
+as one change for its landing database (radbio): the Explorer writes its schema
+and views there on start, so DAMNIT rebuilds that campaign once.
+
+The trigger does **not** rebuild on restart or after a code change. So after
+deploying a change to the file layout, rebuild every campaign by hand: bridge
+profile v6 (2026-11-09, deployed 2026-11-11, `/entry/shots/authority_shot_number`)
 appears in a campaign only once it is rebuilt, and resolution through a
 LabFrog set's claimed shots needs an export made with labfrog-sqlite-tools
 0.2.5 (schema 14). To rebuild now, with the same inputs the trigger uses:
