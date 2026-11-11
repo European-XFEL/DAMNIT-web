@@ -70,5 +70,5 @@ export function parsePlotAddress(
     return { error: 'The link names no x variable' }
   }
 
-  return { plot: { source, variables: [x, y], ...(runs && { runs }) } }
+  return { plot: { source, variables: [x, y], runs } }
 }
