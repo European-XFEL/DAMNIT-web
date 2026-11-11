@@ -97,13 +97,16 @@ test('a run list writes a run picked twice once', () => {
 })
 
 test("a summary plot is named y vs. x by the variables' titles", () => {
-  const titles = {
+  const variableMeta = {
     run: { name: 'run', title: 'Run', tags: [] },
     xgm_pulses: { name: 'xgm_pulses', title: 'Pulses', tags: [] },
   }
 
   expect(
-    plotName({ source: 'summary', variables: ['run', 'xgm_pulses'] }, titles)
+    plotName(
+      { source: 'summary', variables: ['run', 'xgm_pulses'] },
+      variableMeta
+    )
   ).toBe('Pulses vs. Run')
 })
 

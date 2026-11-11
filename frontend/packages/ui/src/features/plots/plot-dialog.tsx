@@ -19,7 +19,7 @@ type PlotDialogProps = {
 function PlotDialog({ opened, close }: PlotDialogProps) {
   const dispatch = useAppDispatch()
   const variables = useTableVariables()
-  const { groups, variables: titles } = useTableMeta()
+  const { groups, variables: variableMeta } = useTableMeta()
 
   const blocks = useMemo(
     () =>
@@ -48,7 +48,9 @@ function PlotDialog({ opened, close }: PlotDialogProps) {
       <PlotForm
         blocks={blocks}
         onSubmit={(plot) => {
-          dispatch(plotRequested({ ...plot, name: plotName(plot, titles) }))
+          dispatch(
+            plotRequested({ ...plot, name: plotName(plot, variableMeta) })
+          )
           close()
         }}
         onCancel={close}

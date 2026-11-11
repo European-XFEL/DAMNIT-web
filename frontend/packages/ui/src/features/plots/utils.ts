@@ -7,9 +7,9 @@ import { sorted } from '#src/utils/array'
 // with no title goes by its name.
 export function plotName(
   { source, variables }: PlotSpec,
-  titles: Record<string, Variable>
+  variableMeta: Record<string, Variable>
 ) {
-  const titleOf = (name: string) => getTitleByName(titles, name)
+  const titleOf = (name: string) => getTitleByName(variableMeta, name)
 
   return source === 'summary'
     ? `${titleOf(variables[1])} vs. ${titleOf(variables[0])}`
