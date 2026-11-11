@@ -110,7 +110,7 @@ test("a summary plot is named y vs. x by the variables' titles", () => {
   ).toBe('Pulses vs. Run')
 })
 
-test('a variable with no title names its plot by its own name', () => {
+test('a variable missing from the metadata names its plot by its own name', () => {
   expect(
     plotName(
       { source: 'preview', variables: ['detector_image'], runs: ['5'] },
