@@ -98,10 +98,19 @@ sudo ../.venv/bin/python scripts/hzdr-scicat-duplicates.py \
 ```
 
 It reads SciCat's address and login from the plugin's env file (root-only,
-hence `sudo`) and prints nothing secret. For each campaign in DAMNIT's catalog
-it keeps the dataset the catalog points at (`scicat_pid`) and every published
-dataset, and deletes the others with the same name (`HZDR canonical campaign
-(<experiment_id>)`). It handles more than SciCat's 100-per-answer limit.
+hence `sudo`) and prints nothing secret. It handles more than SciCat's
+100-per-answer limit. It deletes only what is provably an older, superseded
+registration of the same file: a dataset named `HZDR canonical campaign
+(<experiment_id>)` that was created **before** the one DAMNIT's catalog
+points at (`scicat_pid`), is at least 24 hours old (`--min-age-hours`), has
+the same source folder, and is not published. It keeps:
+
+- a dataset **newer** than the catalog's: a registration that has not
+  reached DAMNIT's catalog yet, or a build that failed after registering;
+- every dataset of a campaign whose catalog dataset SciCat does not have
+  (nothing of that campaign is deleted; the summary says so);
+- a dataset from another source folder, or without a readable creation time;
+- every dataset with another name, including campaigns DAMNIT does not know.
 If the functional account may not delete (HTTP 401/403), it stops and the
 `--report` file lists what a SciCat admin should remove.
 

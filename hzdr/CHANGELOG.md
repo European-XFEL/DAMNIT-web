@@ -20,9 +20,13 @@ behaviour; the merge PR has the details.
   campaign (registered new / unchanged, kept / not registered), and the
   auto-trigger copies those lines into the API's log.
 - **`api/scripts/hzdr-scicat-duplicates.py`** removes the duplicates already
-  in SciCat: per campaign it keeps the catalog's dataset and any published
-  one and deletes the rest of that name. Look-only unless `--apply`; logs in
-  with the plugin's own env file; `--report` for a SciCat admin.
+  in SciCat. It deletes only older, superseded registrations of the same
+  file: same name, created before the catalog's dataset, at least a day old,
+  same source folder, not published. It keeps anything newer than the
+  catalog's dataset (a registration that has not reached DAMNIT yet), and
+  everything of a campaign whose catalog dataset SciCat lacks. Look-only
+  unless `--apply`; logs in with the plugin's own env file; `--report` for a
+  SciCat admin.
 
 ### Operations
 - **`hzdr/scripts/next-on-server.sh`**: the open server work on fwkt-webapps

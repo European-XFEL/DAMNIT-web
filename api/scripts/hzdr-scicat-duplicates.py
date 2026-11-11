@@ -4,8 +4,15 @@
 Until the content-fingerprint fix, every rebuild of a campaign registered a
 new SciCat dataset (about 100 a day for radbio). Each campaign's datasets
 share DAMNIT's name for it, ``HZDR canonical campaign (<experiment_id>)``.
-For every campaign in DAMNIT's catalog this keeps the dataset the catalog
-points at (``scicat_pid``) and every published one, and deletes the rest.
+For every campaign in DAMNIT's catalog it deletes only what is provably an
+older, superseded registration of the same file: a dataset of that name,
+created before the one the catalog points at (``scicat_pid``), at least
+``--min-age-hours`` old (24), with the same source folder, and not
+published. Everything else is kept: a dataset newer than the catalog's (a
+registration that has not reached DAMNIT's catalog yet), another folder's,
+and every dataset of a campaign whose catalog dataset SciCat does not have.
+Datasets with any other name, including campaigns DAMNIT does not know, are
+never looked at.
 
 SciCat's address and login are the scicat_plugin's own, read from its env
 file (``SCICAT_URL`` and ``SCICAT_USERNAME``/``SCICAT_PASSWORD``, or
@@ -28,6 +35,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -145,28 +154,68 @@ class SciCat:
         return resp.status_code
 
 
-def plan(datasets: list[dict[str, Any]], current_pid: str) -> list[dict[str, Any]]:
-    """Each dataset with ``action`` keep/delete and why."""
-    pids = {d["pid"] for d in datasets}
-    keep = current_pid if current_pid in pids else None
-    if keep is None and datasets:
-        keep = datasets[-1]["pid"]  # the catalog's is gone: keep the newest
+def _when(dataset: dict[str, Any]) -> datetime | None:
+    try:
+        when = datetime.fromisoformat(str(dataset.get("creationTime")))
+    except ValueError:
+        return None
+    return when if when.tzinfo else when.replace(tzinfo=UTC)
+
+
+def plan(
+    datasets: list[dict[str, Any]],
+    current_pid: str,
+    *,
+    now: datetime | None = None,
+    min_age: timedelta = timedelta(hours=24),
+) -> list[dict[str, Any]]:
+    """Each dataset with ``action`` keep/delete and why.
+
+    Deletes only what is provably an older, superseded registration of the
+    file the catalog's dataset names. Anything else is kept: the catalog's
+    dataset, published ones, any created after it (a build that registered but
+    has not reached DAMNIT's catalog yet, or failed to), any younger than
+    ``min_age`` (a build may be running), any with another source folder (not
+    that file), and any without a readable creation time. If the catalog's
+    dataset is not in SciCat, nothing of that campaign is deleted.
+    """
+    now = now or datetime.now(UTC)
+    current = next((d for d in datasets if d["pid"] == current_pid), None)
+    if current is None:
+        why = "kept: the catalog's dataset is not in SciCat, nothing is deleted"
+        return [{**d, "action": "keep", "why": why} for d in datasets]
+    current_time = _when(current)
     rows = []
     for d in datasets:
-        if d["pid"] == keep:
-            why = "current" if keep == current_pid else "newest (catalog pid not found)"
-            rows.append({**d, "action": "keep", "why": why})
+        created = _when(d)
+        if d["pid"] == current_pid:
+            why = "current"
         elif d.get("isPublished"):
-            rows.append({**d, "action": "keep", "why": "published"})
+            why = "published"
+        elif created is None or current_time is None:
+            why = "no readable creation time"
+        elif created >= current_time:
+            why = "newer than the catalog's dataset (not in DAMNIT yet)"
+        elif now - created < min_age:
+            why = f"younger than {min_age}"
+        elif d.get("sourceFolder") != current.get("sourceFolder"):
+            why = "another source folder (not DAMNIT's file)"
         else:
-            rows.append({**d, "action": "delete", "why": "duplicate"})
+            rows.append({**d, "action": "delete", "why": "older registration"})
+            continue
+        rows.append({**d, "action": "keep", "why": why})
     return rows
 
 
 def _summarise(experiment_id: str, rows: list[dict[str, Any]]) -> None:
-    kept = ", ".join(f"{r['pid']} ({r['why']})" for r in rows if r["action"] == "keep")
     doomed = sum(r["action"] == "delete" for r in rows)
-    print(f"{experiment_id}: {len(rows)} datasets; keep {kept}; {doomed} duplicate(s)")
+    reasons = Counter(r["why"] for r in rows if r["action"] == "keep")
+    kept = "; ".join(f"{n} {why}" for why, n in sorted(reasons.items()))
+    current = next((r["pid"] for r in rows if r["why"] == "current"), "none")
+    print(
+        f"{experiment_id}: {len(rows)} datasets, catalog's {current}; "
+        f"keep {kept or 'none'}; {doomed} older registration(s) to delete"
+    )
 
 
 def _delete(scicat: SciCat, rows: list[dict[str, Any]]) -> tuple[int, bool]:
@@ -199,8 +248,16 @@ def main(argv: list[str] | None = None, client: httpx.Client | None = None) -> i
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--sources-file", type=Path, required=True)
     parser.add_argument("--campaign", action="append", default=[])
-    parser.add_argument("--apply", action="store_true", help="delete duplicates")
+    parser.add_argument(
+        "--apply", action="store_true", help="delete the older registrations"
+    )
     parser.add_argument("--report", type=Path, help="write the plan as JSON")
+    parser.add_argument(
+        "--min-age-hours",
+        type=float,
+        default=24,
+        help="never delete a dataset younger than this (default 24)",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -217,6 +274,7 @@ def main(argv: list[str] | None = None, client: httpx.Client | None = None) -> i
             rows = plan(
                 scicat.datasets_named(TITLE.format(experiment_id=experiment_id)),
                 current,
+                min_age=timedelta(hours=args.min_age_hours),
             )
         except httpx.HTTPError as exc:
             print(f"{experiment_id}: SciCat query failed: {exc}", file=sys.stderr)
@@ -235,9 +293,11 @@ def main(argv: list[str] | None = None, client: httpx.Client | None = None) -> i
         print(f"Report: {args.report}")
     total = sum(r["action"] == "delete" for r in report)
     if args.apply:
-        print(f"Deleted {total - failed} of {total} duplicate(s).")
+        print(f"Deleted {total - failed} of {total} older registration(s).")
     else:
-        print(f"{total} duplicate(s) would be deleted; run again with --apply.")
+        print(
+            f"{total} older registration(s) would be deleted; run again with --apply."
+        )
     return 1 if failed else 0
 
 
