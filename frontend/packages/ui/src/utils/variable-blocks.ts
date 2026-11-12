@@ -1,4 +1,4 @@
-import escapeRegExp from 'lodash/escapeRegExp'
+import { escapeRegExp } from 'lodash-es'
 
 // One variable as a list shows it. `title` is whole, so search and screen
 // readers get the group's words; `columnTitle` drops what the heading carries.

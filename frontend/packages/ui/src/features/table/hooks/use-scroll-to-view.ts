@@ -6,7 +6,7 @@ import {
   useState,
   type RefObject,
 } from 'react'
-import { debounce } from 'lodash'
+import { debounce } from 'lodash-es'
 import { type DataEditorRef } from '@glideapps/glide-data-grid'
 
 import { useAppDispatch, useAppStore } from '#src/app/store/hooks'

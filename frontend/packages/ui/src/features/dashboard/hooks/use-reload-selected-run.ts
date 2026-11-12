@@ -1,7 +1,7 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client'
 import { useApolloClient, useReactiveVar } from '@apollo/client/react'
 import { useDidUpdate } from '@mantine/hooks'
-import isEqual from 'lodash/isEqual'
+import { isEqual } from 'lodash-es'
 
 import {
   RUN_FRAGMENT,
