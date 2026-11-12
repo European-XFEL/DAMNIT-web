@@ -73,6 +73,14 @@ LabFrog's setup itself; carry the line over by hand:
    may claim `unassigned` triggers, and LabFrog numbers restart every campaign,
    so list a campaign only while it takes shots: take the previous beamtime
    out when it ends.
+   One line does it, with a copy first:
+   `cp .env .env.bak-$(date +%Y%m%d)` and
+   `sed -i 's/^DW_API_HZDR_BUILDER__CAMPAIGNS=.*/DW_API_HZDR_BUILDER__CAMPAIGNS=["<experiment_id>"]/' .env`.
+   `DW_API_HZDR_KAFKA_SPOOL__CAMPAIGN` is only the fallback for a message
+   with no `experiment_id`; set it to the same campaign for consistency. A
+   test campaign (`DataMgmtDemo` on fwkt-webapps) may stay listed beside the
+   real one: its records claim no shot-authority numbers, so it cannot take
+   the beamtime's triggers, but it is registered in SciCat like any other.
 3. `sudo systemctl restart damnit-api`. The new campaign is built at the next
    export change or event; to build it now, use the hand rebuild below with
    its `--campaign`.

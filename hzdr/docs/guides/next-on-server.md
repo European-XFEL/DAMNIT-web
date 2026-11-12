@@ -38,8 +38,13 @@ files still `MISSING` the column.
 
 ## 2. By hand, in order
 
-1. **Beamtime Setup settings in LabFrog** (`~/labfrog/instance/<config>.cfg`,
-   then `sudo systemctl restart labfrog-shot-intake labfrog-shotsheet`):
+1. **Beamtime Setup settings in LabFrog**, in the `.cfg` the service runs:
+   `grep CONFIG_NAME ~/labfrog/.env` names it (on fwkt-webapps
+   `shotsheet_protected.cfg`, not the tracked `default.cfg`, whose lines are
+   empty placeholders). Then `sudo systemctl restart labfrog-shot-intake
+   labfrog-shotsheet`. The script's `labfrog` step only sees that a key is in
+   some `.cfg`, so an empty `DAMNIT_API_URL = ""` in `default.cfg` passes it;
+   **Check connections** is the real test (DAMNIT `ok ... answers`):
     - `DAMNIT_API_URL = "http://127.0.0.1:8000"`. DAMNIT runs on the same
       host; **Check connections** then probes its `/config/health`.
     - `WATCHDOG_COLLECTION`: the collection the DAQ File Watchdogs write to,
