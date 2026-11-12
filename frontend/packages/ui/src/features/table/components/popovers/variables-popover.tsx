@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import lodashSize from 'lodash/size'
+import { size as lodashSize } from 'lodash-es'
 import {
   DragDropContext,
   Draggable,

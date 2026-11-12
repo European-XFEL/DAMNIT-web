@@ -1,4 +1,4 @@
-import { upperFirst } from 'lodash'
+import { upperFirst } from 'lodash-es'
 
 import type { RunId } from '#src/data/table/table-data.types'
 import type {

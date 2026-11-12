@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useApolloClient, useQuery, useReactiveVar } from '@apollo/client/react'
-import { debounce, isEqual } from 'lodash'
+import { debounce, isEqual } from 'lodash-es'
 
 import { VARIABLES } from '#src/constants'
 import { liveRunStamps } from '#src/data/table/run-stamps'
