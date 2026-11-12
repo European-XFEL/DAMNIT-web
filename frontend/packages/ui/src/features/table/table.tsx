@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { Stack } from '@mantine/core'
+import { sortBy } from 'lodash-es'
 
 import { VARIABLES } from '#src/constants'
 import { ViewStatus } from '#src/components/statuses/view-status'
@@ -7,7 +8,6 @@ import { plotRequested } from '#src/app/store/actions'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { sorted } from '#src/utils/array'
 import type { PlotSource } from '#src/types'
 import { cellTooltip } from '#src/features/table/utils/cell-tooltip'
 import { summaryAxes } from '#src/features/table/utils/summary-axes'
@@ -112,8 +112,8 @@ function Table() {
     }
 
     const subtitle = column.title
-    const runNumbers = sorted(
-      selectedRuns.map((selected) => String(selected.run))
+    const runNumbers = sortBy(selectedRuns.map((selected) => selected.run)).map(
+      String
     )
 
     showPlotMenu(position, {
