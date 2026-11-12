@@ -510,6 +510,9 @@ importers:
       '@playwright/test':
         specifier: catalog:testing
         version: 1.64.0
+      '@types/lodash-es':
+        specifier: catalog:types
+        version: 4.17.12
       '@types/node':
         specifier: catalog:types
         version: 24.19.1
@@ -522,6 +525,9 @@ importers:
       graphql:
         specifier: catalog:graphql
         version: 16.14.2
+      lodash-es:
+        specifier: catalog:frontend
+        version: 4.18.1
       monaco-editor:
         specifier: catalog:components
         version: 0.55.1
@@ -580,12 +586,18 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../config
+      '@types/lodash-es':
+        specifier: catalog:types
+        version: 4.17.12
       eslint:
         specifier: catalog:linting
         version: 9.39.5
       graphql:
         specifier: catalog:graphql
         version: 16.14.2
+      lodash-es:
+        specifier: catalog:frontend
+        version: 4.18.1
       prettier:
         specifier: catalog:linting
         version: 3.9.9
