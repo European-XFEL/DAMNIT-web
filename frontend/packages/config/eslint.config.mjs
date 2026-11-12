@@ -74,10 +74,20 @@ export default defineConfig(
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
-          name: 'react-redux',
-          importNames: ['useDispatch', 'useSelector'],
-          message:
-            'Use typed hooks `useAppDispatch` and `useAppSelector` instead.',
+          paths: [
+            {
+              name: 'react-redux',
+              importNames: ['useDispatch', 'useSelector'],
+              message:
+                'Use typed hooks `useAppDispatch` and `useAppSelector` instead.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['lodash', 'lodash/*'],
+              message: "Import from 'lodash-es' instead.",
+            },
+          ],
         },
       ],
       'import-x/no-cycle': ['error', { ignoreExternal: true }],
