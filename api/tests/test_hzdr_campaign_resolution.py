@@ -38,6 +38,7 @@ from damnit_api.metadata.hzdr_nexus import (
     reconcile_canonical_shots,
     review_sidecar_path,
     write_nexus_bridge,
+    write_sources_catalog,
 )
 from damnit_api.shared.hzdr_settings import HZDRBuilderSettings
 
@@ -901,3 +902,176 @@ def test_builder_defaults_keep_time_matching_off(tmp_path: Path):
     )
     assert "--time-match-autoassign" in BuilderTrigger(opted_in).build_command()
     assert "--campaign-schedule" not in command
+
+
+# --- D-C01: every retained event is attached once or review-visible once ------
+
+
+def _text_column(handle: h5py.File, path: str) -> list[str]:
+    dataset = handle[path]
+    assert isinstance(dataset, h5py.Dataset), path
+    return [str(value) for value in dataset.asstr()[...]]
+
+
+def undecidable(status: str, *, candidates: list[int] | None = None) -> dict[str, Any]:
+    """A watchdog file the PC could not attribute: no shot number, no campaign."""
+    attribution: dict[str, Any] = {"method": "trigger_window", "status": status}
+    if candidates is not None:
+        attribution["candidates"] = candidates
+    event_id = f"watchdog-{status}"
+    return {
+        "schema_version": "hzdr-event-v1",
+        "event_id": event_id,
+        "experiment_id": UNASSIGNED_EXPERIMENT_ID,
+        "shot_id": f"unassigned-{event_id}",
+        "shot_number": None,
+        "source": "DAQ-File-Watchdog",
+        "kind": "watchdog.pre_shot",
+        "timestamp": "2026-06-10T12:00:05Z",
+        "transport": "kafka",
+        "payload_ref": {"path": f"/data/{status}.txt"},
+        "metadata": {
+            "attribution": attribution,
+            "instrument": {"id": "probe135", "format": "spectrometer_irr8"},
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "status", ["no_trigger", "ambiguous", "unregistered", "rescan"]
+)
+def test_an_undecidable_event_in_a_bucket_without_labfrog_rows_is_review_visible(
+    tmp_path: Path, status: str
+):
+    """D-C01 (emulator scenario C5): spool, master and catalogue agree.
+
+    The bucket has no LabFrog rows and no shot. The event has no shot number,
+    so it founds no shot; it must still be offered for review exactly once,
+    with its own identity and no invented shot or campaign.
+    """
+    event = undecidable(status)
+    shots, events = reconcile_canonical_shots(
+        [event],
+        experiment_id=UNASSIGNED_EXPERIMENT_ID,
+        source_key=UNASSIGNED_EXPERIMENT_ID,
+    )
+    assert shots == []
+    assert [item["event_id"] for item in events] == [event["event_id"]]
+    assert events[0]["match_status"] == "unmatched"
+    assert events[0]["match_quality"] == "unmatched"
+    assert events[0]["shot_key"] == ""
+    assert events[0]["candidate_shot_keys"] == []
+    assert events[0]["shot_number"] is None
+    assert events[0]["experiment_id"] == UNASSIGNED_EXPERIMENT_ID
+
+    nexus = tmp_path / "unassigned.nxs"
+    sources_file = tmp_path / "hzdr_sources.json"
+    for _replay in range(2):  # a rebuild keeps the same state
+        write_nexus_bridge(
+            output_path=nexus,
+            experiment_id=UNASSIGNED_EXPERIMENT_ID,
+            shots=shots,
+            events=events,
+        )
+        write_sources_catalog(
+            sources_file=sources_file,
+            source_key=UNASSIGNED_EXPERIMENT_ID,
+            experiment_id=UNASSIGNED_EXPERIMENT_ID,
+            nexus_path=nexus,
+            shots=shots,
+            events=events,
+        )
+        source = json.loads(sources_file.read_text(encoding="utf-8"))["sources"][0]
+        assert source["shots"] == []
+        assert [item["event_id"] for item in source["review_events"]] == [
+            event["event_id"]
+        ]
+        assert source["review_events"][0]["match_status"] == "unmatched"
+        assert source["match_summary"]["unmatched"] == 1
+        with h5py.File(nexus, "r") as handle:
+            assert _text_column(handle, "entry/source_events/event_id") == [
+                event["event_id"]
+            ]
+            assert _text_column(handle, "entry/source_events/shot_key") == [""]
+            assert _text_column(handle, "entry/source_events/match_status") == [
+                "unmatched"
+            ]
+
+
+def test_every_retained_event_is_attached_once_or_in_review_once():
+    """The conservation rule, with and without LabFrog rows.
+
+    Three triggers found shots; a file naming two of them as candidates is
+    offered with those choices; a file naming nothing is offered bare.
+    """
+    events = [
+        trigger(1, experiment_id=UNASSIGNED_EXPERIMENT_ID, event_id="t1"),
+        trigger(2, experiment_id=UNASSIGNED_EXPERIMENT_ID, event_id="t2"),
+        trigger(3, experiment_id=UNASSIGNED_EXPERIMENT_ID, event_id="t3"),
+        undecidable("ambiguous", candidates=[1, 2]),
+        undecidable("no_trigger"),
+    ]
+    for labfrog_shots in ([], [labfrog_record(1)]):
+        campaign = CAMPAIGN if labfrog_shots else UNASSIGNED_EXPERIMENT_ID
+        shots, built = reconcile_canonical_shots(
+            [dict(event) for event in events],
+            experiment_id=campaign,
+            source_key=SOURCE_KEY,
+            labfrog_shots=labfrog_shots,
+            # With rows, shot 1 resolves through LabFrog and the rest by ruling.
+            experiment_rulings=dict.fromkeys((2, 3), campaign) if labfrog_shots else {},
+        )
+        attached = [
+            item["event_id"]
+            for shot in shots
+            for item in shot["events"]
+            if item["source"] != "LabFrog"
+        ]
+        review = [
+            item["event_id"]
+            for item in built
+            if item.get("match_status") in {"ambiguous", "unmatched"}
+        ]
+        retained = [item["event_id"] for item in built if item["source"] != "LabFrog"]
+        assert sorted(attached + review) == sorted(retained), labfrog_shots
+        assert len(set(attached) & set(review)) == 0
+
+    # Without rows: the candidates name the event-built shots, as choices only.
+    shots, built = reconcile_canonical_shots(
+        [dict(event) for event in events],
+        experiment_id=UNASSIGNED_EXPERIMENT_ID,
+        source_key=SOURCE_KEY,
+    )
+    keys = {shot["shot_number"]: shot["shot_key"] for shot in shots}
+    by_id = {item["event_id"]: item for item in built}
+    assert set(keys) == {1, 2, 3}
+    assert by_id["watchdog-ambiguous"]["match_status"] == "ambiguous"
+    assert by_id["watchdog-ambiguous"]["candidate_shot_keys"] == [keys[1], keys[2]]
+    assert by_id["watchdog-ambiguous"]["shot_key"] == ""
+    assert by_id["watchdog-no_trigger"]["match_status"] == "unmatched"
+    assert all(len(shot["events"]) == 1 for shot in shots)
+
+
+def test_a_later_authority_claim_takes_the_event_out_of_review():
+    """The same file, re-sent with the authority's number, joins its shot."""
+    first = undecidable("no_trigger")
+    shots, built = reconcile_canonical_shots(
+        [trigger(4, experiment_id=UNASSIGNED_EXPERIMENT_ID), first],
+        experiment_id=UNASSIGNED_EXPERIMENT_ID,
+        source_key=SOURCE_KEY,
+    )
+    assert [item["match_status"] for item in built] == ["matched", "unmatched"]
+
+    claimed = {**first, "shot_number": 4, "shot_id": "shot-000004"}
+    shots, built = reconcile_canonical_shots(
+        [trigger(4, experiment_id=UNASSIGNED_EXPERIMENT_ID), claimed],
+        experiment_id=UNASSIGNED_EXPERIMENT_ID,
+        source_key=SOURCE_KEY,
+    )
+    assert [item["event_id"] for item in built] == [
+        "trigger-4-unassigned",
+        first["event_id"],
+    ]
+    assert {item["match_status"] for item in built} == {"matched"}
+    assert len(shots) == 1
+    assert len(shots[0]["events"]) == 2

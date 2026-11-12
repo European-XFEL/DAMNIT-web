@@ -6,6 +6,19 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-12
 
+### Review matches
+- **An event that belongs to no shot is listed for review even when the
+  campaign has no LabFrog rows** (emulator finding D-C01,
+  [status note](docs/status/emulator-clock-findings-2026-11-12.md)). A
+  watchdog file the PC could not attribute (`no_trigger`, `ambiguous`,
+  `unregistered`, `rescan`) has no shot number. In a build without LabFrog
+  rows, which is always the case for the `_unassigned` bucket, it was written
+  to the master's `/entry/source_events` but got no match status, so the
+  catalog's review list and counts left it out. It is now `unmatched`, or
+  `ambiguous` with the shots its attribution candidates name as choices. No
+  shot, number or campaign is invented. The emulator's C2/C3/C5/C11 schedules
+  have not been re-run against the fix yet.
+
 ### Flow Monitor emulator
 - **The demo writes the envelopes the real producers send** (flow mesh plan
   M9; contradictions X13, X14, X19). The Shotcounter button now stages the

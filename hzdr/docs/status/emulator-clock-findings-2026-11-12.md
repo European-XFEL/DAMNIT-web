@@ -38,6 +38,29 @@ existing rule that a typed number never becomes an authority number.
 The harness does not patch statuses or fabricate a catalogue row to turn the
 scenario green. Fix and test this seam in DAMNIT through its normal review.
 
+### Fix (2026-11-12, not yet re-run on the real chain)
+
+The inferred seam was the cause. Without LabFrog rows,
+`_canonical_from_event_identities()` skipped an event with no shot number and
+left it with no `match_status`, so `write_sources_catalog()` never selected it.
+`reconcile_canonical_shots()` now ends that path with
+`_offer_unplaced_events_for_review()`: such an event leaves `unmatched`, or
+`ambiguous` when its `attribution.candidates` name shots of the same build
+(offered as `candidate_shot_keys`, never attached). No shot key, shot number or
+campaign is invented, and the event keeps its `event_id`.
+
+Regression tests: `no_trigger`, `ambiguous`, `unregistered` and `rescan` in a
+bucket with no LabFrog rows, through master and catalog, twice
+(`test_hzdr_campaign_resolution.py`); the attached-once-or-in-review-once rule
+with and without LabFrog rows; a later authority claim taking the event out of
+review; and the C5 situation through the real multi-campaign builder
+(`test_hzdr_multi_campaign.py`).
+
+**Still open:** the unchanged C2/C3/C5/C11 schedules have not been run against
+this fix. They need the emulator's Docker stack; the session that made the fix
+had no Docker daemon. Until those receipts exist, D-C01 is fixed in unit and
+builder tests only.
+
 ## Recommended improvement order
 
 1. Give every retained undecidable event a review-visible state at one
