@@ -5,6 +5,7 @@ import {
   Observable,
 } from '@apollo/client'
 import { print } from 'graphql'
+import { times } from 'lodash-es'
 import { renderHook } from 'vitest-browser-react'
 import { describe, expect, test, vi } from 'vitest'
 
@@ -148,15 +149,14 @@ function createServer({ failing = [] as number[] } = {}) {
   }
 }
 
-function setup({ link = new ApolloLink(() => null) } = {}) {
+function setup({ failing = [] as number[] } = {}) {
   const store = setupStore()
   store.dispatch(setProposalPending(PROPOSAL))
   const cache = new InMemoryCache({ typePolicies })
-  // Only the cells query reaches the link, and the default one answers nothing,
-  // so the seeded cache is the only source.
-  const client = new ApolloClient({ cache, link })
+  const server = createServer({ failing })
+  const client = new ApolloClient({ cache, link: server.link })
 
-  return { store, cache, wrapper: withProviders({ store, client }) }
+  return { server, cache, wrapper: withProviders({ store, client }) }
 }
 
 const renderPreview = (
@@ -212,7 +212,7 @@ describe('opening a preview', () => {
     // Runs 1-51 straddle the boundary at 50. The caller renders a loader per
     // chunk, so this is what decides how many go out.
     const { result } = await renderPreview(
-      Array.from({ length: 51 }, (_, i) => i + 1),
+      times(51, (i) => i + 1),
       wrapper
     )
 
@@ -239,8 +239,7 @@ describe('opening a preview', () => {
   })
 
   test('a disabled preview sends no query for its cells', async () => {
-    const server = createServer()
-    const { wrapper } = setup({ link: server.link })
+    const { server, wrapper } = setup()
 
     // A summary plot calls the hook disabled over every run, beside its own
     // query, so a second one here would go out with every summary plot.
@@ -263,8 +262,7 @@ describe('opening a preview', () => {
   })
 
   test('a preview with no runs sends no query for its cells', async () => {
-    const server = createServer()
-    const { wrapper } = setup({ link: server.link })
+    const { server, wrapper } = setup()
 
     // With no runs, no cells are wanted.
     let runs: number[] = []
@@ -486,8 +484,7 @@ describe('seeing a preview go outdated', () => {
 
 describe('pressing Reload', () => {
   test('only the runs with newer data are asked for again', async () => {
-    const server = createServer()
-    const { cache, wrapper } = setup({ link: server.link })
+    const { server, cache, wrapper } = setup()
     writeChunk(cache, [1, 60])
     writeCells(cache, { 1: at(2), 60: at(2) })
 
@@ -512,8 +509,7 @@ describe('pressing Reload', () => {
   })
 
   test('the same data coming back dates the run from its cell again', async () => {
-    const server = createServer()
-    const { cache, wrapper } = setup({ link: server.link })
+    const { server, cache, wrapper } = setup()
     writeChunk(cache, [1])
     writeCells(cache, { 1: at(2) })
 
@@ -539,8 +535,7 @@ describe('pressing Reload', () => {
   })
 
   test('a run whose data fails to reload keeps its data and its old time', async () => {
-    const server = createServer({ failing: [2] })
-    const { cache, wrapper } = setup({ link: server.link })
+    const { cache, wrapper } = setup({ failing: [2] })
     writeChunk(cache, [1, 2])
     writeCells(cache, { 1: at(2), 2: at(2) })
 
@@ -566,8 +561,7 @@ describe('pressing Reload', () => {
   })
 
   test('a run computed again while its reload is out stays outdated', async () => {
-    const server = createServer()
-    const { cache, wrapper } = setup({ link: server.link })
+    const { server, cache, wrapper } = setup()
     writeChunk(cache, [1], { valueFor: () => spectrumFor(99) })
     writeCells(cache, { 1: at(2) })
 
@@ -601,8 +595,7 @@ describe('pressing Reload', () => {
 
 describe('live updates reconnecting', () => {
   test('a preview asks again for its cells, and not for its chunks', async () => {
-    const server = createServer()
-    const { wrapper } = setup({ link: server.link })
+    const { server, wrapper } = setup()
 
     await renderPreview([1, 2], wrapper)
     await vi.waitFor(() => {

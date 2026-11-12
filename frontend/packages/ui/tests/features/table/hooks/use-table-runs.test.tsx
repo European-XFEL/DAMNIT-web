@@ -8,6 +8,7 @@ import {
   type Operation,
 } from '@apollo/client'
 import { ApolloProvider } from '@apollo/client/react'
+import { sortBy } from 'lodash-es'
 import { renderHook } from 'vitest-browser-react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
@@ -24,7 +25,6 @@ import { typePolicies } from '#src/graphql/type-policies'
 import { useTableRuns } from '#src/features/table/hooks/use-table-runs'
 import type { Rectangle } from '#src/features/table/types/table.types'
 import type { RunCells } from '#src/data/table/table-data.types'
-import { sorted } from '#src/utils/array'
 import { serverCell } from '#tests/support/cells'
 
 const PROPOSAL = '900405'
@@ -1559,7 +1559,7 @@ describe('reconnecting after an outage', () => {
     // or not. The pages scrolled past load again when the user returns.
     await vi.waitFor(() => expect(network.started.lightweight).toHaveLength(3))
     await settle()
-    expect(sorted(network.started.lightweight)).toEqual([1, 2, 3])
+    expect(sortBy(network.started.lightweight)).toEqual([1, 2, 3])
   })
 
   test('stops the deferred pass in flight and starts it again on the reloaded page', async () => {

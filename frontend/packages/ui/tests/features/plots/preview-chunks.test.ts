@@ -1,4 +1,5 @@
 import { print } from 'graphql'
+import { times } from 'lodash-es'
 import { describe, expect, test } from 'vitest'
 
 import {
@@ -10,7 +11,7 @@ import {
 } from '#src/features/plots/preview-chunks'
 
 const runsFrom = (start: number, count: number) =>
-  Array.from({ length: count }, (_, i) => start + i)
+  times(count, (i) => start + i)
 
 describe('chunkRuns', () => {
   test('keeps runs that fall inside one boundary together', () => {

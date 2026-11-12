@@ -28,12 +28,11 @@ import {
   type Theme,
 } from '@glideapps/glide-data-grid'
 import { useMantineTheme } from '@mantine/core'
+import { isEqual } from 'lodash-es'
 
 import { VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { runKey } from '#src/data/table/table-data.transforms'
-import { isArrayEqual } from '#src/utils/array'
-import { isEmpty } from '#src/utils/helpers'
 import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
 import {
   errorCell,
@@ -479,18 +478,18 @@ function GlideGrid(
       keyPressed.current &&
       selectedRun != null &&
       movedTo != null &&
-      !isArrayEqual(movedTo, gridSelection.current?.cell ?? [])
+      !isEqual(movedTo, gridSelection.current?.cell)
     ) {
       handleCellActivated(movedTo)
     }
 
     // Clear range stack if cells from the other column are currently selected
     const rangeStack =
-      current && !isEmpty(current.cell) && !isEmpty(current.rangeStack)
+      current && current.rangeStack.length !== 0
         ? current.cell[0] !== current.rangeStack[0].x
           ? []
           : current.rangeStack.filter(
-              (range) => !isArrayEqual(current.cell, [range.x, range.y])
+              (range) => !isEqual(current.cell, [range.x, range.y])
             )
         : undefined
 
@@ -549,7 +548,7 @@ function GlideGrid(
     let selectedRange = gridSelection.current?.rangeStack ?? []
 
     if (
-      !isArrayEqual(selectedCell, [col, row]) &&
+      !isEqual(selectedCell, [col, row]) &&
       !selectedRange.some((rect) => rect.x === col && rect.y === row)
     ) {
       selectedCell = [col, row]

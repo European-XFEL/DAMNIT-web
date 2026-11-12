@@ -1,6 +1,5 @@
 import dayjs from 'dayjs'
-
-import { sorted } from './array'
+import { sortBy, uniq } from 'lodash-es'
 
 export function formatDate(timestamp: number) {
   const formattedDate = dayjs(timestamp).format('DD MMMM YYYY')
@@ -15,7 +14,7 @@ export function formatRunsSubtitle(runs: string[] | undefined) {
     return 'All runs'
   }
 
-  const numbers = sorted([...new Set(runs.map(Number))])
+  const numbers = sortBy(uniq(runs.map(Number)))
   if (numbers.length === 0) {
     return ''
   }
@@ -42,31 +41,6 @@ function formatFloat(number: number, { offset = 2 } = {}) {
 
 export function formatUrl(url: string) {
   return (url || '/').replace(/\/?$/, '/')
-}
-
-type MaybeObjectOrArray<T> =
-  Record<string, unknown> | ReadonlyArray<T> | null | undefined
-
-export function isEmpty<T>(value: MaybeObjectOrArray<T>) {
-  return value == null || size(value) === 0
-}
-
-export function size<T>(value: MaybeObjectOrArray<T>) {
-  if (value == null) {
-    return 0
-  }
-  if (Array.isArray(value)) {
-    return value.length
-  }
-  return Object.keys(value).length
-}
-
-export function createMap<T>(array: T[], by: keyof T): Map<T[keyof T], T> {
-  const map = new Map<T[keyof T], T>()
-  array.forEach((obj) => {
-    map.set(obj[by], obj)
-  })
-  return map
 }
 
 export function assertNever(value: never): never {

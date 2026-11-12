@@ -50,7 +50,7 @@ Imports run one way: `components / lib / utils / graphql` <- `features` <-
   ESLint sees imports, not state reads, so that one is on you.
 
 Imports outside a file's own folder use the `#src/*` subpath import
-(`#src/utils/array`), never `../`. Same-folder imports stay relative (`./`).
+(`#src/utils/helpers`), never `../`. Same-folder imports stay relative (`./`).
 That keeps a file's imports stable when the tree moves, and it is enforced.
 
 ### Data flow

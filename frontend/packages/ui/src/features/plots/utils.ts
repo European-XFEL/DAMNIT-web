@@ -1,4 +1,4 @@
-import { sorted } from '#src/utils/array'
+import { sortBy } from 'lodash-es'
 
 // A single run reads as a range of one.
 const RUN_OR_RANGE = /^(\d+)(?:\s*-\s*(\d+))?$/
@@ -47,6 +47,6 @@ export function parseRunSelection(
   }
 
   return {
-    runs: sorted([...runs]).map(String),
+    runs: sortBy([...runs]).map(String),
   }
 }

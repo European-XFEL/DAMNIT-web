@@ -1,4 +1,5 @@
 import { Kind, parse } from 'graphql'
+import { sortBy } from 'lodash-es'
 
 import {
   SEED_TIMESTAMP_MS,
@@ -110,9 +111,10 @@ export async function resolveOperation(
         const perPage = (variables.per_page as number | null | undefined) ?? 10
 
         // The API pages in run order, whatever order an example lists them in.
-        const pageRuns = [...runs]
-          .sort((a, b) => runNumber(a) - runNumber(b))
-          .slice((page - 1) * perPage, page * perPage)
+        const pageRuns = sortBy(runs, runNumber).slice(
+          (page - 1) * perPage,
+          page * perPage
+        )
 
         return resolved(
           shapeTableData(pageRuns, {

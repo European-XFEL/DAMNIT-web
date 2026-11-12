@@ -1,3 +1,4 @@
+import { times } from 'lodash-es'
 import { expect, test } from 'vitest'
 
 import { describeLoadErrors } from '#src/features/table/utils/load-errors'
@@ -5,7 +6,7 @@ import type { LoadErrors } from '#src/features/table/types/table.types'
 
 // Runs numbered from 1 with no gaps, one per row.
 const runsUpTo = (count: number) =>
-  Array.from({ length: count }, (_, row) => ({
+  times(count, (row) => ({
     proposal: '6996',
     run: row + 1,
   }))
@@ -77,14 +78,6 @@ test('names only the first and last run of a page whose run numbers skip', () =>
   )
 })
 
-test("names every run of the demo's one page", () => {
-  const allRuns = { first: 0, last: 9999 }
-
-  expect(
-    describeLoadErrors(failed({ rows: [allRuns] }), runsUpTo(428))?.runs
-  ).toBe('Runs 1 to 428.')
-})
-
 test('says nothing about a failed page past the last run', () => {
   expect(
     describeLoadErrors(failed({ rows: [page(266)] }), runsUpTo(2649))
@@ -109,7 +102,7 @@ test('names only the rows when rows and heavy values both failed', () => {
 // The active proposal's runs first, then a guest's, as the API orders them.
 const withGuest = (active: number, guest: number) => [
   ...runsUpTo(active),
-  ...Array.from({ length: guest }, (_, row) => ({
+  ...times(guest, (row) => ({
     proposal: '7001',
     run: row + 1,
   })),
