@@ -1,4 +1,5 @@
 import { test as base, expect } from '@playwright/test'
+import { uniq } from 'lodash-es'
 
 import { mockApi, type MockApi } from '#mocks'
 import { XPCS, type Example } from '#examples/xpcs'
@@ -23,7 +24,7 @@ export const test = base.extend<Fixtures>({
       const api = await mockApi(page, example, { authenticated })
       await use(api)
       if (api.unmockedRequests.length > 0) {
-        const names = [...new Set(api.unmockedRequests)].join(', ')
+        const names = uniq(api.unmockedRequests).join(', ')
         throw new Error(`Unmocked API requests: ${names}`)
       }
     },
