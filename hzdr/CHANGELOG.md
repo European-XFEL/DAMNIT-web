@@ -16,8 +16,9 @@ behaviour; the merge PR has the details.
   to the master's `/entry/source_events` but got no match status, so the
   catalog's review list and counts left it out. It is now `unmatched`, or
   `ambiguous` with the shots its attribution candidates name as choices. No
-  shot, number or campaign is invented. The emulator's C2/C3/C5/C11 schedules
-  have not been re-run against the fix yet.
+  shot, number or campaign is invented. The emulator's C3, C5 and C11
+  schedules pass against the fix on the real local chain; C2's remaining
+  failure is the watchdog's wrong shot number.
 
 ### Flow Monitor emulator
 - **The demo writes the envelopes the real producers send** (flow mesh plan

@@ -38,7 +38,7 @@ existing rule that a typed number never becomes an authority number.
 The harness does not patch statuses or fabricate a catalogue row to turn the
 scenario green. Fix and test this seam in DAMNIT through its normal review.
 
-### Fix (2026-11-12, not yet re-run on the real chain)
+### Fix (2026-11-12)
 
 The inferred seam was the cause. Without LabFrog rows,
 `_canonical_from_event_identities()` skipped an event with no shot number and
@@ -56,10 +56,38 @@ with and without LabFrog rows; a later authority claim taking the event out of
 review; and the C5 situation through the real multi-campaign builder
 (`test_hzdr_multi_campaign.py`).
 
-**Still open:** the unchanged C2/C3/C5/C11 schedules have not been run against
-this fix. They need the emulator's Docker stack; the session that made the fix
-had no Docker daemon. Until those receipts exist, D-C01 is fixed in unit and
-builder tests only.
+### Real-chain re-run (2026-11-12, a cloud session, not the laptop of the first runs)
+
+The unchanged schedules of hzdr-combo `planning/emulator-test-plan` (`854d1a6`)
+were run against this fix: DAMNIT `a5ebbe65`, planet-watchdog `master`
+`cf3addc7` (the same runtime source hash as the `6c75fec` the first runs
+used), LabFrog `43ffa6b5`, labfrog-sqlite-tools `d14e390f`. Local emulation
+only: one Linux container, local folders, fake SciCat, emulated triggers.
+
+| Case | Result | What the receipt says | Receipt SHA-256 (first 12) |
+| --- | --- | --- | --- |
+| C5, DAMNIT `main` `bec39916` (control) | fail | `catalogue_file_shots loses or invents files`: D-C01 reproduced | `71883e8acc62` |
+| C5 | **pass** | 4 of 4 records; build and replay agree | `f96df62874b7` |
+| C3 | **pass** | 8 of 8 | `ecc53358c03b` |
+| C11 | **pass** | 8 of 8 | `f905872d00b8` |
+| C2 (strengthened) | fail | report and replay complete; the one failure left is the producer's wrong shot (W-C04, planet-watchdog) | `3c71ad124f1f` |
+| G1/G2 | pass | 48 of 48 | `a85397d72302` |
+| C1, C6, C10 | pass | | `b58cf95f9bb5`, `851e32a1df05`, `3411103970cd` |
+| C4 (calibrated, all 60 shots) | pass | 240 of 240; measured drift 0.99999 s/min | `8a5cb77a6eed` |
+| C7 | fail | duplicate emission (W-C02, planet-watchdog) | `cda867b71d3c` |
+| C8 | fail | wrong shot across midnight (W-C03, planet-watchdog); one worker needed SIGKILL | `8f4f879f8a19` |
+| C9 | fail | no verdict failure; one worker needed SIGKILL at teardown (the W-C01 shutdown question) | `0c229744ba70` |
+
+So D-C01 is closed on the real chain: C3, C5 and C11 pass, and C2 no longer
+has a catalogue failure. Every remaining red case is a planet-watchdog
+finding or the harness's teardown, not DAMNIT.
+
+One substitution: `ghcr.io/shopify/toxiproxy:2.9.0` could not be pulled
+there, so the image was built locally from the upstream v2.9.0 release binary
+(`toxiproxy-server-linux-amd64`, SHA-256 `8468ff159d95...`, as in the
+release's `checksums.txt`). The scratch receipts were not kept; the hashes
+above are all that remains of them, so combo's evidence file should take its
+own re-run rather than cite these.
 
 ## Recommended improvement order
 
