@@ -43,31 +43,6 @@ export function formatUrl(url: string) {
   return (url || '/').replace(/\/?$/, '/')
 }
 
-type MaybeObjectOrArray<T> =
-  Record<string, unknown> | ReadonlyArray<T> | null | undefined
-
-export function isEmpty<T>(value: MaybeObjectOrArray<T>) {
-  return value == null || size(value) === 0
-}
-
-export function size<T>(value: MaybeObjectOrArray<T>) {
-  if (value == null) {
-    return 0
-  }
-  if (Array.isArray(value)) {
-    return value.length
-  }
-  return Object.keys(value).length
-}
-
-export function createMap<T>(array: T[], by: keyof T): Map<T[keyof T], T> {
-  const map = new Map<T[keyof T], T>()
-  array.forEach((obj) => {
-    map.set(obj[by], obj)
-  })
-  return map
-}
-
 export function assertNever(value: never): never {
   throw new Error(`Unhandled case: ${JSON.stringify(value)}`)
 }

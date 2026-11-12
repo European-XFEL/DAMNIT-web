@@ -1,5 +1,6 @@
+import { isEmpty } from 'lodash-es'
+
 import { useAppSelector } from '#src/app/store/hooks'
-import { isEmpty } from '#src/utils/helpers'
 
 import useProposals from './use-proposals'
 

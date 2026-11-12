@@ -33,7 +33,6 @@ import { isEqual } from 'lodash-es'
 import { VARIABLES } from '#src/constants'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { runKey } from '#src/data/table/table-data.transforms'
-import { isEmpty } from '#src/utils/helpers'
 import { FONT_FAMILY_SANS, FONT_SIZE_DATA, FONT_SIZES } from '#src/styles/fonts'
 import {
   errorCell,
@@ -486,7 +485,7 @@ function GlideGrid(
 
     // Clear range stack if cells from the other column are currently selected
     const rangeStack =
-      current && !isEmpty(current.cell) && !isEmpty(current.rangeStack)
+      current && current.rangeStack.length !== 0
         ? current.cell[0] !== current.rangeStack[0].x
           ? []
           : current.rangeStack.filter(
