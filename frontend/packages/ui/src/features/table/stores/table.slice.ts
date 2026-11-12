@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { isEmpty, isEqual } from 'lodash-es'
+import { isEmpty, isEqual, union } from 'lodash-es'
 
 import { resetProposal } from '#src/app/store/actions'
 import { VARIABLES } from '#src/constants'
@@ -152,8 +152,8 @@ const slice = createSlice({
         state.columnOrder = order
         state.lastFlash = { ...moved, at }
         const since = state.movedSinceReset
-        since.columns = [...new Set([...since.columns, ...moved.columns])]
-        since.groups = [...new Set([...since.groups, ...moved.groups])]
+        since.columns = union(since.columns, moved.columns)
+        since.groups = union(since.groups, moved.groups)
       },
       prepare: (payload: { order: string[]; moved: ChangedColumns }) => ({
         payload: { ...payload, at: performance.now() },

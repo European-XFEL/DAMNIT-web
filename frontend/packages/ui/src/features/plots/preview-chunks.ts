@@ -1,5 +1,6 @@
 import { gql } from '@apollo/client'
 import { type DocumentNode } from 'graphql'
+import { groupBy, sortBy, uniq } from 'lodash-es'
 
 import { PREVIEW_DATA_QUERY_NAME } from '#src/graphql/operation-names'
 
@@ -32,20 +33,12 @@ export function chunkRuns(
   runs: number[],
   size = PREVIEW_CHUNK_SIZE
 ): number[][] {
-  const buckets = new Map<number, number[]>()
-
   // A run asked for twice is one field: a repeat would alias to the same name,
   // and give two chunks the same key.
-  for (const run of new Set(runs)) {
-    const key = Math.floor(run / size)
-    const bucket = buckets.get(key) ?? []
-    bucket.push(run)
-    buckets.set(key, bucket)
-  }
+  const sortedRuns = sortBy(uniq(runs))
+  const buckets = groupBy(sortedRuns, (run) => Math.floor(run / size))
 
-  return [...buckets.entries()]
-    .sort(([first], [second]) => first - second)
-    .map(([, bucket]) => bucket.sort((first, second) => first - second))
+  return Object.values(buckets)
 }
 
 // A watcher's document cannot be conditional, so a hook with nothing to ask for

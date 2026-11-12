@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useApolloClient, useQuery, useReactiveVar } from '@apollo/client/react'
 import { useDidUpdate } from '@mantine/hooks'
+import { sortBy } from 'lodash-es'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import { VARIABLES } from '#src/constants'
@@ -133,16 +134,15 @@ export function usePreviewPlotData({
 
   // A chunk still in flight leaves its runs out of the partial result, and a
   // run the backend has no value for comes back null: neither is plotted yet.
-  const values = Object.entries(data ?? {})
-    .flatMap(([alias, value]) => {
-      const run = runForAlias(alias)
-      if (run === null || value?.data == null) {
-        return []
-      }
+  const cached = Object.entries(data ?? {}).flatMap(([alias, value]) => {
+    const run = runForAlias(alias)
+    if (run === null || value?.data == null) {
+      return []
+    }
 
-      return [{ run, value }]
-    })
-    .sort((first, second) => first.run - second.run)
+    return [{ run, value }]
+  })
+  const values = sortBy(cached, (entry) => entry.run)
 
   // Every run of one variable shares a dtype and dimensions, so any of them
   // settles the plot's type and axes. This is the lowest run cached so far,
