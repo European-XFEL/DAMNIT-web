@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { Box, Text } from '@mantine/core'
+import { isEmpty } from 'lodash-es'
 
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import CenteredLoader from '#src/components/feedback/centered-loader'
@@ -14,7 +15,6 @@ import {
 import PlotContainer from '#src/features/plots/plot-container'
 import { addPlot } from '#src/features/plots/plots.slice'
 import { plotName } from '#src/features/plots/utils'
-import { isEmpty } from '#src/utils/helpers'
 
 // Draws the plot its address names and lists it in the nav, or says which
 // part of the link is wrong, with no nav entry.

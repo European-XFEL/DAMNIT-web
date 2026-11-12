@@ -1,11 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
-import { isEqual } from 'lodash-es'
+import { isEmpty, isEqual } from 'lodash-es'
 
 import { resetProposal } from '#src/app/store/actions'
 import { VARIABLES } from '#src/constants'
 import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
-import { isEmpty } from '#src/utils/helpers'
 import type {
   ChangedColumns,
   Scroll,
@@ -77,7 +76,7 @@ const initialState: TableState = {
 // A click that changed nothing leaves the slot alone, so it cannot cut a flash
 // still fading.
 function stampFlash(state: TableState, flash: ColumnFlash) {
-  if (!isEmpty(flash.columns)) {
+  if (flash.columns.length !== 0) {
     state.lastFlash = flash
   }
 }
@@ -162,7 +161,7 @@ const slice = createSlice({
     },
     columnOrderReset: {
       reducer: (state, action: PayloadAction<{ at: number }>) => {
-        if (isEmpty(state.columnOrder)) {
+        if (state.columnOrder.length === 0) {
           return
         }
         state.columnOrder = []

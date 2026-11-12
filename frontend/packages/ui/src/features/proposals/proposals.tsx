@@ -13,7 +13,7 @@ import {
 import { IconCalendarEvent, IconChevronRight } from '@tabler/icons-react'
 import cx from 'clsx'
 import dayjs from 'dayjs'
-import { orderBy } from 'lodash-es'
+import { isEmpty, orderBy } from 'lodash-es'
 import { DataTable } from 'mantine-datatable'
 
 import InstrumentBadge, {
@@ -22,7 +22,6 @@ import InstrumentBadge, {
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import useProposals from '#src/data/metadata/use-proposals'
 import { type AvailableProposals } from '#src/types'
-import { isEmpty } from '#src/utils/helpers'
 
 import styles from './proposals.module.css'
 

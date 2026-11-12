@@ -7,7 +7,6 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { size as lodashSize } from 'lodash-es'
 import {
   DragDropContext,
   Draggable,
@@ -102,7 +101,7 @@ function VariableDetails({ tags }: VariableDetailsProps) {
   return (
     <RowSection
       header="Tags"
-      info={`${selectedCount}/${lodashSize(items)} selected`}
+      info={`${selectedCount}/${items.length} selected`}
     >
       <RowList
         items={items}

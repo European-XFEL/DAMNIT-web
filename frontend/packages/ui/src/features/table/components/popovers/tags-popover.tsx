@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { isEmpty, size as lodashSize } from 'lodash-es'
 import { rem } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
@@ -64,7 +63,7 @@ function TagDetails({ name }: TagDetailsProps) {
   return (
     <RowSection
       header="Variables"
-      info={`${visibleCount}/${lodashSize(items)} visible`}
+      info={`${visibleCount}/${items.length} visible`}
     >
       <RowList
         items={items}
@@ -102,7 +101,7 @@ function TagList() {
     [tags, variables, selection]
   )
 
-  if (isEmpty(records)) {
+  if (records.length === 0) {
     return null
   }
 
