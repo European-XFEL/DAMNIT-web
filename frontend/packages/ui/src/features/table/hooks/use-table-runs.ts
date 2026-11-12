@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useApolloClient, useQuery, useReactiveVar } from '@apollo/client/react'
-import { debounce, isEqual } from 'lodash-es'
+import { debounce, isEqual, sortBy } from 'lodash-es'
 
 import { VARIABLES } from '#src/constants'
 import { liveRunStamps } from '#src/data/table/run-stamps'
@@ -18,7 +18,6 @@ import {
 } from '#src/data/table/table-data.transforms'
 import type { RunCells } from '#src/data/table/table-data.types'
 import { reconnectCount, retryDelay } from '#src/graphql/live-updates'
-import { sorted } from '#src/utils/array'
 import { pageRangeForRegion } from '#src/features/table/utils/pagination'
 import type {
   LoadErrors,
@@ -106,9 +105,10 @@ function nextDeferredPage(
   pages: Map<number, PageState>,
   visible: ReadonlySet<number>
 ): number | undefined {
-  const ready = sorted([...visible]).filter((page) =>
+  const ready = sortBy([...visible]).filter((page) =>
     readyForDeferred(pageState(pages, page))
   )
+
   return (
     ready.find((page) => pageState(pages, page).deferred === 'idle') ?? ready[0]
   )
@@ -127,7 +127,7 @@ function loadErrorsInView(
   pages: Map<number, PageState>,
   visible: ReadonlySet<number>
 ): LoadErrors {
-  const inView = sorted([...visible]).map((page) => ({
+  const inView = sortBy([...visible]).map((page) => ({
     rows: {
       first: (page - 1) * TABLE_PAGE_SIZE,
       last: page * TABLE_PAGE_SIZE - 1,

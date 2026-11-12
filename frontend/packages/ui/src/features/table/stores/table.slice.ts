@@ -1,10 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { isEqual } from 'lodash-es'
 
 import { resetProposal } from '#src/app/store/actions'
 import { VARIABLES } from '#src/constants'
 import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
-import { isArrayEqual } from '#src/utils/array'
 import { isEmpty } from '#src/utils/helpers'
 import type {
   ChangedColumns,
@@ -127,7 +127,7 @@ const slice = createSlice({
       const { columns, cells } = action.payload
       // Most changes are cell clicks, which leave the columns alone; see
       // selectRow for why an unchanged value isn't rewritten.
-      if (!isArrayEqual(state.selectedColumns, columns)) {
+      if (!isEqual(state.selectedColumns, columns)) {
         state.selectedColumns = columns
       }
       state.selectedCells = cells

@@ -1,6 +1,5 @@
 import dayjs from 'dayjs'
-
-import { sorted } from './array'
+import { sortBy, uniq } from 'lodash-es'
 
 export function formatDate(timestamp: number) {
   const formattedDate = dayjs(timestamp).format('DD MMMM YYYY')
@@ -15,7 +14,7 @@ export function formatRunsSubtitle(runs: string[] | undefined) {
     return 'All runs'
   }
 
-  const numbers = sorted([...new Set(runs.map(Number))])
+  const numbers = sortBy(uniq(runs.map(Number)))
   if (numbers.length === 0) {
     return ''
   }
