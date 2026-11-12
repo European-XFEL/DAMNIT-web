@@ -630,3 +630,49 @@ def test_an_unmounted_share_refuses_the_build_and_writes_nothing(tmp_path, monke
 
     assert "Refusing to build" in str(exited.value.code)
     assert list(site.output.iterdir()) == []
+
+
+def test_an_unattributed_file_in_the_bucket_is_listed_for_review(tmp_path, monkeypatch):
+    """Finding D-C01 (emulator scenario C5), through the real builder.
+
+    A watchdog PC could not attribute a file (``no_trigger``): no shot number,
+    no campaign. It lands in the ``_unassigned`` bucket, which has no LabFrog
+    rows. Spool, master and catalog must all hold it: once, in review, with no
+    shot invented for it; a second build changes nothing.
+    """
+    site = Site(tmp_path)
+    write_export(site.curated, RADBIO, [1])
+    orphan = {
+        "schema_version": "hzdr-event-v1",
+        "event_id": "watchdog-orphan",
+        "experiment_id": UNASSIGNED_EXPERIMENT_ID,
+        "shot_id": "unassigned-watchdog-orphan",
+        "shot_number": None,
+        "source": "DAQ-File-Watchdog",
+        "kind": "watchdog.pre_shot",
+        "timestamp": "2026-06-10T12:00:30Z",
+        "transport": "kafka",
+        "payload_ref": {"path": "/data/pre_shot/shot_000001.Irr8.txt"},
+        "metadata": {
+            "attribution": {"method": "trigger_window", "status": "no_trigger"}
+        },
+    }
+    site.unassigned(trigger(1), orphan)
+
+    for _build in range(2):
+        assert run_builder(monkeypatch, site.argv(RADBIO)) == 0
+
+        assert set(site.shots(RADBIO)) == {1}
+        bucket = site.sources()[UNASSIGNED_EXPERIMENT_ID]
+        assert bucket["shots"] == []
+        assert [event["event_id"] for event in bucket["review_events"]] == [
+            "watchdog-orphan"
+        ]
+        assert bucket["review_events"][0]["match_status"] == "unmatched"
+        assert bucket["review_events"][0].get("shot_number") is None
+        assert bucket["match_summary"]["unmatched"] == 1
+        with h5py.File(site.output / "_unassigned" / "unassigned.nxs", "r") as handle:
+            for column, expected in (("event_id", "watchdog-orphan"), ("shot_key", "")):
+                dataset = handle[f"entry/source_events/{column}"]
+                assert isinstance(dataset, h5py.Dataset)
+                assert [str(value) for value in dataset.asstr()[...]] == [expected]

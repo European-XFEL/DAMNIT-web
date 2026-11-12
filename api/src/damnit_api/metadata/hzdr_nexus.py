@@ -33,7 +33,7 @@ from .hzdr_event import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Container, Iterable, Iterator, Mapping
+    from collections.abc import Callable, Container, Iterable, Iterator, Mapping
     from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -2052,6 +2052,7 @@ def reconcile_canonical_shots(  # noqa: C901
             source_key,
             campaign_timezone=campaign_timezone,
         )
+        _offer_unplaced_events_for_review(normalized_events, canonical)
 
     events_by_id = {event["event_id"]: event for event in normalized_events}
     for shot in canonical:
@@ -4047,6 +4048,46 @@ def _canonical_from_event_identities(
     )
 
 
+def _offer_unplaced_events_for_review(
+    events: list[dict[str, Any]], shots: list[dict[str, Any]]
+) -> None:
+    """Give every event that founded no shot a review state (finding D-C01).
+
+    Without LabFrog rows the shots are the events' own identities, so an event
+    with no shot number (a watchdog file the PC could not attribute:
+    ``no_trigger``, ``ambiguous``, ``unregistered``, ``rescan``) belongs to
+    none. It used to keep no ``match_status`` at all: written to the master's
+    ``/entry/source_events``, but absent from the catalog's review list. It
+    now leaves here ``unmatched``, or ``ambiguous`` when its attribution
+    candidates name shots of this build, the same two states the LabFrog path
+    gives it. Nothing is invented: no shot key, no shot number, no campaign.
+    """
+    for event in events:
+        if event.get("match_status"):
+            continue
+        candidate_shot_keys = _attribution_candidate_keys(
+            event, shots, number_of=_event_built_shot_number
+        )
+        status = "ambiguous" if candidate_shot_keys else "unmatched"
+        event["match_quality"] = status
+        event["match_status"] = status
+        event["match_time_delta_s"] = None
+        event["shot_key"] = ""
+        event["candidate_shot_keys"] = candidate_shot_keys
+
+
+def _event_built_shot_number(shot: Mapping[str, Any]) -> int | None:
+    """The number of a shot built from the events themselves.
+
+    Such a shot is grouped by the events' ``shot_number``, which only the shot
+    authority issues, so it is the authority's number (bridge v6 writes it as
+    ``authority_shot_number`` for these shots too).
+    """
+    if shot.get("match_quality") != "event_identity":
+        return None
+    return _as_optional_int(shot.get("shot_number"))
+
+
 def _identity_match_result(
     matches: list[dict[str, Any]], quality: str
 ) -> tuple[dict[str, Any] | None, str, str, list[str]] | None:
@@ -4164,12 +4205,16 @@ def _match_event(
 
 
 def _attribution_candidate_keys(
-    event: dict[str, Any], shots: list[dict[str, Any]]
+    event: dict[str, Any],
+    shots: list[dict[str, Any]],
+    *,
+    number_of: Callable[[Mapping[str, Any]], int | None] = _authority_number,
 ) -> list[str]:
     """Offer watchdog candidate numbers as review choices, never as an auto-match.
 
     The candidates are authority numbers, so they name only rows carrying
     them as ``authority_shot_number`` (ruling R3), never a typed number.
+    ``number_of`` reads that number from a shot.
     """
     metadata = event.get("metadata")
     attribution = metadata.get("attribution") if isinstance(metadata, dict) else None
@@ -4181,7 +4226,7 @@ def _attribution_candidate_keys(
         dict.fromkeys(
             shot["shot_key"]
             for shot in shots
-            if _authority_number(shot) in candidate_numbers
+            if number_of(shot) in candidate_numbers
             and not _as_bool(shot.get("metadata", {}).get("has_newer_version"))
         )
     )

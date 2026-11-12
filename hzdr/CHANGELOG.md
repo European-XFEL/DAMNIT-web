@@ -4,6 +4,52 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-12
+
+### Review matches
+- **An event that belongs to no shot is listed for review even when the
+  campaign has no LabFrog rows** (emulator finding D-C01,
+  [status note](docs/status/emulator-clock-findings-2026-11-12.md)). A
+  watchdog file the PC could not attribute (`no_trigger`, `ambiguous`,
+  `unregistered`, `rescan`) has no shot number. In a build without LabFrog
+  rows, which is always the case for the `_unassigned` bucket, it was written
+  to the master's `/entry/source_events` but got no match status, so the
+  catalog's review list and counts left it out. It is now `unmatched`, or
+  `ambiguous` with the shots its attribution candidates name as choices. No
+  shot, number or campaign is invented. The emulator's C3, C5 and C11
+  schedules pass against the fix on the real local chain; C2's remaining
+  failure is the watchdog's wrong shot number.
+
+### Flow Monitor emulator
+- **The demo writes the envelopes the real producers send** (flow mesh plan
+  M9; contradictions X13, X14, X19). The Shotcounter button now stages the
+  shot authority's trigger: source `DRACO-Trigger`, kind
+  `trigger.threshold_crossing`, `experiment_id: "unassigned"`, topic
+  `draco.trigger` (was `Shotcounter` / `shot_counter_event` on
+  `shotcounter.shots`, with DAMNIT naming the campaign), in
+  `events/draco-trigger.jsonl` (was `shotcounter.jsonl`). The Watchdog button
+  stages a DAQ File Watchdog file event attributed to the latest shot, also
+  `unassigned`, with `instrument.*`, `attribution.*`, `acquisition.*` and
+  `producer.instance_id`. Both are checked against `HZDREventV1` before they
+  are written. A shot opened by a trigger is marked
+  `experiment_id_source: "schedule"`: the emulator plays the authority and
+  the campaign resolution. `POST /metadata/hzdr/emulator/events` still
+  accepts `source: "Shotcounter"` and answers with the same trigger. The
+  LaserData button's event kind is `laser.pulse`, no longer the superseded
+  key `pulse_energy_j`. The diagram itself is unchanged (boxes: M3 to M7).
+- **Producer status reads the real envelopes** (M11, X15). A shot authority
+  trigger counts as the Shotcounter (channel from `payload_ref.channel_id` or
+  `metadata.trigger.channel_id`), so Source Home no longer shows it `absent`
+  on real data. A watchdog card is one PC, named by
+  `metadata.producer.instance_id`, with the rule from
+  `metadata.watch.watch_name`; before, every PC collapsed into one card named
+  after the Kafka topic. Events without those keys are grouped as before.
+- **`hzdr-local-acceptance.py --real-topology`** (flow mesh plan step 6)
+  rehearses the deployed flow on generated data: unassigned triggers and a
+  watchdog file event in a spool, a LabFrog export, a campaign schedule, the
+  real multi-campaign builder, a ruling over HTTP, the rebuild. The
+  `-WithAcceptance` / `--with-acceptance` test runs include it.
+
 ## 2026-11-11
 
 ### SciCat

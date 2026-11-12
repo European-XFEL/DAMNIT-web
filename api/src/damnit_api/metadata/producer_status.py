@@ -2,11 +2,17 @@
 
 Both views are derived purely from the events already loaded on an
 ``HZDRSource`` (each shot's ``events`` plus the source's ``review_events``) - no
-new I/O, no broker, no database.  There is no dedicated "host" field on the
-``hzdr-event-v1`` envelope today, so the watchdog host is taken from the best
-available traceability field on each event (payload_ref endpoint/topic/path,
-then ``metadata.watch_name``); the model documents that derivation rather than
-implying a real hostname exists.
+new I/O, no broker, no database.  A DAQ File Watchdog PC names itself in the
+registered ``metadata.producer.instance_id`` (then ``producer.host``), and its
+rule in ``metadata.watch.watch_name``; those win.  An event without them (an
+older producer, a hand-written fixture) falls back to the best available
+traceability field (payload_ref endpoint/topic/path, then a flat
+``metadata.watch_name``), which is a label, not a hostname.
+
+A shot trigger is the shot authority's (source ``DRACO-Trigger``, kind
+``trigger.threshold_crossing``; flow mesh plan M11) or, in older catalogs, a
+``Shotcounter`` event.  Its channel is ``payload_ref.channel_id`` /
+``metadata.trigger.channel_id`` (``Draco01``), reported lower-case.
 """
 
 from __future__ import annotations
@@ -81,10 +87,13 @@ def _payload_field(event: AnyEvent, *names: str) -> str | None:
 
 
 def _metadata_field(event: AnyEvent, *names: str) -> str | None:
+    """Return the first set metadata value; ``a.b`` reads a nested namespace."""
     metadata: dict[str, Any] = event.metadata or {}
     for name in names:
-        value = metadata.get(name)
-        if value not in (None, ""):
+        value: Any = metadata
+        for part in name.split("."):
+            value = value.get(part) if isinstance(value, dict) else None
+        if value not in (None, "") and not isinstance(value, dict | list):
             return str(value)
     return None
 
@@ -95,22 +104,28 @@ def _is_watchdog(event: AnyEvent) -> bool:
 
 def _is_shotcounter(event: AnyEvent) -> bool:
     haystack = f"{event.source or ''} {event.kind or ''}".lower()
-    if "shotcounter" in haystack:
+    if "shotcounter" in haystack or "draco-trigger" in haystack:
         return True
     return bool(_TKEY_PATTERN.search(haystack))
 
 
 def _watchdog_host(event: AnyEvent) -> str:
     return (
-        _payload_field(event, "endpoint", "host", "hostname", "topic", "path", "uri")
-        or _metadata_field(event, "watch_name", "host", "hostname", "computer")
+        _metadata_field(event, "producer.instance_id", "producer.host")
+        or _payload_field(event, "endpoint", "host", "hostname", "topic", "path", "uri")
+        or _metadata_field(
+            event, "watch.host", "watch_name", "host", "hostname", "computer"
+        )
         or event.source
         or "unknown"
     )
 
 
 def _watchdog_watcher(event: AnyEvent) -> str | None:
-    return _metadata_field(event, "watch_name", "watcher", "rule") or event.kind
+    return (
+        _metadata_field(event, "watch.watch_name", "watch_name", "watcher", "rule")
+        or event.kind
+    )
 
 
 def derive_watchdog_hosts(source: HZDRSource) -> list[WatchdogHost]:
@@ -147,7 +162,11 @@ def derive_shotcounter_status(source: HZDRSource) -> ShotcounterStatus:
         if not _is_shotcounter(event):
             continue
         count += 1
-        tkey = _metadata_field(event, "tkey") or ""
+        tkey = (
+            _metadata_field(event, "tkey", "trigger.channel_id")
+            or _payload_field(event, "channel_id")
+            or ""
+        )
         haystack = f"{event.source or ''} {event.kind or ''} {tkey}"
         tkeys.update(match.lower() for match in _TKEY_PATTERN.findall(haystack))
         if event.timestamp and (

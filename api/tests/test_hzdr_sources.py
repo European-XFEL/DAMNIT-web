@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 import h5py
@@ -7,7 +8,16 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from damnit_api.metadata.hzdr_event import lint_metadata_keys
+from damnit_api.metadata.hzdr_event import (
+    UNASSIGNED_EXPERIMENT_ID,
+    HZDREventV1,
+    lint_metadata_keys,
+)
+from damnit_api.metadata.hzdr_nexus import (
+    load_campaign_schedule,
+    load_normalized_events,
+    reconcile_canonical_shots,
+)
 from damnit_api.metadata.hzdr_routers import append_emulated_shot, hzdr_router
 from damnit_api.metadata.hzdr_sources import (
     HZDRShot,
@@ -428,8 +438,12 @@ def test_single_value_hdf5_vector_previews_as_scalar(tmp_path: Path):
     assert line_preview.preview == [1.0, 1.5]
 
 
-def test_watchdog_flow_monitor_event_uses_kafka_shape(tmp_path: Path):
-    """Watchdog enrichment should look like the production Kafka path."""
+def test_watchdog_flow_monitor_event_is_the_watchdogs_envelope(tmp_path: Path):
+    """A watchdog enrichment is the event a DAQ File Watchdog PC sends.
+
+    Flow mesh plan M9: attributed to the shot, campaign left to DAMNIT, and
+    the registered instrument/attribution/acquisition/producer metadata.
+    """
     sources_file = write_source_fixture(tmp_path)
 
     source = append_emulated_shot(
@@ -440,44 +454,158 @@ def test_watchdog_flow_monitor_event_uses_kafka_shape(tmp_path: Path):
         action="enrich",
     )
 
-    assert source.shots[-1].metadata["emulated_last_enrichment_source"] == (
-        "DAQ-File-Watchdog"
-    )
+    shot = source.shots[-1]
+    assert shot.metadata["emulated_last_enrichment_source"] == "DAQ-File-Watchdog"
     event_path = tmp_path / "events" / "daq-file-watchdog.jsonl"
     event = orjson.loads(event_path.read_bytes().splitlines()[-1])
+    assert HZDREventV1.model_validate(event).event_id.startswith("watchdog-")
+    assert event["experiment_id"] == UNASSIGNED_EXPERIMENT_ID
+    assert event["shot_number"] == shot.shot_number
+    assert event["shot_id"] == f"shot-{shot.shot_number:06d}"
+    assert event["kind"] == "watchdog.M1_Spec_Fib_Cer"
     assert event["transport"] == "kafka"
-    assert event["payload_ref"] == {
-        "offset": 1,
-        "partition": 0,
-        "producer": "planet-watchdog",
-        "topic": "planet.watchdog.events",
+    assert event["values"] is None
+    assert event["payload_ref"]["topic"] == "planet.watchdog.events"
+    assert event["payload_ref"]["path"].endswith(event["payload_ref"]["filename"])
+    metadata = event["metadata"]
+    assert metadata["watch"]["watch_name"] == "M1_Spec_Fib_Cer"
+    assert metadata["watch"]["configured_experiment_id"] == "exp-emulated"
+    assert metadata["instrument"] == {
+        "id": "m1_spec_fib_cer",
+        "group": "ions",
+        "timing_role": "on_shot",
+        "format": "camera_png_csv",
+        "record_source": "catalogue",
     }
+    assert metadata["attribution"]["status"] == "attributed"
+    assert metadata["attribution"]["method"] == "trigger_window"
+    assert metadata["attribution"]["candidates"] == [shot.shot_number]
+    assert metadata["acquisition"]["time_source"] == "first_seen"
+    assert metadata["producer"]["instance_id"] == "watchdog-ions-01"
+    assert lint_metadata_keys(metadata) == []
 
 
-def test_shotcounter_flow_monitor_event_uses_zmq_kafka_shape(tmp_path: Path):
-    """Shotcounter starts new shots through a ZMQ/Kafka-shaped event."""
+def test_watchdog_flow_monitor_events_on_one_shot_have_their_own_ids(tmp_path: Path):
+    """Two files of one shot are two events; a replay would resend each id."""
+    sources_file = write_source_fixture(tmp_path)
+    for _ in range(2):
+        append_emulated_shot(
+            sources_file,
+            source_key="hzdr-local",
+            event_source="DAQ-File-Watchdog",
+            event_kind="watchdog.M1_Spec_Fib_Cer",
+            action="enrich",
+        )
+
+    event_path = tmp_path / "events" / "daq-file-watchdog.jsonl"
+    events = [orjson.loads(line) for line in event_path.read_bytes().splitlines()]
+    assert len({event["event_id"] for event in events}) == 2
+    assert [event["payload_ref"]["offset"] for event in events] == [1, 2]
+
+
+@pytest.mark.parametrize(
+    ("source", "kind"),
+    [
+        ("DRACO-Trigger", "trigger.threshold_crossing"),
+        # The request name older frontends send: the same trigger.
+        ("Shotcounter", "shot_counter_event"),
+    ],
+)
+def test_trigger_flow_monitor_event_is_the_shot_authoritys_envelope(
+    tmp_path: Path, source: str, kind: str
+):
+    """A new shot starts with the shot authority's ``draco.trigger`` event.
+
+    Flow mesh plan M9 (contradictions X13/X14): the authority issues the
+    number and names no campaign; DAMNIT resolves the campaign.
+    """
     sources_file = write_source_fixture(tmp_path)
 
-    source = append_emulated_shot(
+    result = append_emulated_shot(
         sources_file,
         source_key="hzdr-local",
-        event_source="Shotcounter",
-        event_kind="shot_counter_event",
+        event_source=source,
+        event_kind=kind,
         action="append",
     )
 
-    assert source.shots[-1].metadata["emulated_source"] == "Shotcounter"
-    assert source.shots[-1].metadata["shotcounter_status"] == "shot-opened"
-    event_path = tmp_path / "events" / "shotcounter.jsonl"
+    shot = result.shots[-1]
+    assert shot.metadata["emulated_source"] == "DRACO-Trigger"
+    assert shot.metadata["emulated_kind"] == "trigger.threshold_crossing"
+    assert shot.metadata["shotcounter_status"] == "shot-opened"
+    # The campaign was not the producer's to name.
+    assert shot.experiment_id_source == "schedule"
+    assert not (tmp_path / "events" / "shotcounter.jsonl").exists()
+    event_path = tmp_path / "events" / "draco-trigger.jsonl"
     event = orjson.loads(event_path.read_bytes().splitlines()[-1])
-    assert event["transport"] == "zmq+kafka"
+    HZDREventV1.model_validate(event)
+    assert event["source"] == "DRACO-Trigger"
+    assert event["kind"] == "trigger.threshold_crossing"
+    assert event["experiment_id"] == UNASSIGNED_EXPERIMENT_ID
+    assert event["shot_number"] == shot.shot_number
+    assert event["shot_id"] == f"shot-{shot.shot_number:06d}"
+    assert event["transport"] == "kafka"
+    assert event["values"] is None
     assert event["payload_ref"] == {
-        "endpoint": "shotcounter-zmq",
-        "offset": 3,
+        "channel_id": "Draco01",
+        "run_id": 3,
+        "topic": "draco.trigger",
         "partition": 0,
-        "producer": "shotcounter",
-        "topic": "shotcounter.shots",
+        "offset": 3,
     }
+    assert event["metadata"]["trigger"]["role"] == "threshold_crossing"
+    assert event["metadata"]["trigger"]["channel_id"] == "Draco01"
+    assert set(event["metadata"]) == {"trigger", "shot_authority"}
+
+
+def test_emulated_trigger_and_watchdog_events_build_one_shot(tmp_path: Path):
+    """The builder resolves both emulated events to one shot of the campaign."""
+    sources_file = write_source_fixture(tmp_path)
+    for source, action in (
+        ("DRACO-Trigger", "append"),
+        ("DAQ-File-Watchdog", "enrich"),
+    ):
+        append_emulated_shot(
+            sources_file,
+            source_key="hzdr-local",
+            event_source=source,
+            event_kind="",
+            action=action,
+        )
+    events = load_normalized_events(sorted((tmp_path / "events").glob("*.jsonl")))
+    trigger_time = datetime.fromisoformat(events[0]["timestamp"])
+    schedule = {
+        "schema": "labfrog-campaign-schedule-v1",
+        "timezone": "UTC",
+        "campaigns": [
+            {
+                "campaign": "exp-emulated",
+                "experiment_id": "exp-emulated",
+                "start": trigger_time.date().isoformat(),
+                "end": trigger_time.date().isoformat(),
+                "source": "emulated",
+            }
+        ],
+        "warnings": [],
+    }
+    schedule_path = tmp_path / "schedule.json"
+    schedule_path.write_bytes(orjson.dumps(schedule))
+
+    shots, built_events = reconcile_canonical_shots(
+        events,
+        experiment_id="exp-emulated",
+        source_key="hzdr-local",
+        campaign_schedule=load_campaign_schedule(schedule_path),
+        campaign_timezone="UTC",
+    )
+
+    assert len(shots) == 1
+    assert shots[0]["experiment_id_source"] == "schedule"
+    assert {event["source"] for event in shots[0]["events"]} == {
+        "DRACO-Trigger",
+        "DAQ-File-Watchdog",
+    }
+    assert {event["experiment_id"] for event in built_events} == {"exp-emulated"}
 
 
 def test_flow_monitor_emulator_emits_namespaced_bare_keys(tmp_path: Path):

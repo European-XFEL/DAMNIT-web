@@ -56,4 +56,5 @@ uv run pytest
 
 if [[ "$WITH_ACCEPTANCE" == true ]]; then
   uv run python scripts/hzdr-local-acceptance.py
+  uv run python scripts/hzdr-local-acceptance.py --real-topology
 fi

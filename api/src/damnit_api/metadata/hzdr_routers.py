@@ -7,6 +7,7 @@ router stays small.  Mounted from ``main.py`` alongside ``metadata.router``;
 paths are unchanged (``/metadata/hzdr/*``).
 """
 
+import hashlib
 import json
 import logging
 import secrets
@@ -24,6 +25,7 @@ from ..auth.dependencies import OAuthUserInfo
 from ..consumer.builder_trigger import request_rebuild
 from ..shared.hzdr_settings import HZDRWikiSettings
 from ..shared.settings import settings
+from .hzdr_event import UNASSIGNED_EXPERIMENT_ID, HZDREventV1
 from .hzdr_nexus import (
     REVIEW_LEVELS,
     append_experiment_ruling,
@@ -54,11 +56,49 @@ from .producer_status import HZDRProducerStatus, derive_producer_status
 hzdr_router = APIRouter(prefix="/metadata", tags=["metadata"])
 log = logging.getLogger(__name__)
 
+# The two pilot topics, as kafka-broker-docker's topics.env names them.
 WATCHDOG_KAFKA_TOPIC = "planet.watchdog.events"
-SHOTCOUNTER_KAFKA_TOPIC = "shotcounter.shots"
-KAFKA_EVENT_SOURCES = {
-    "daq-file-watchdog": (WATCHDOG_KAFKA_TOPIC, "planet-watchdog"),
+DRACO_TRIGGER_KAFKA_TOPIC = "draco.trigger"
+
+# The flow-monitor emulator writes the envelopes the real producers send
+# (flow mesh plan M9), so the demo shows the pipeline that is deployed:
+#
+# - a trigger is the shot authority's: planet-watchdog's
+#   ``shot_authority.trigger_event`` (source ``DRACO-Trigger``, kind
+#   ``trigger.threshold_crossing``, ``experiment_id: "unassigned"``, the
+#   number in ``shot_number``). ``Shotcounter`` is still accepted as the
+#   request's source name and means the same trigger: the device feeds the
+#   authority, it issues no shot number itself.
+# - a file event is a DAQ File Watchdog's (``kafka_output``): attributed to
+#   the shot, also ``unassigned``, with the registered ``instrument.*``,
+#   ``attribution.*``, ``acquisition.*`` and ``producer.*`` metadata.
+#
+# The emulator stands in for the authority (it issues the next number) and
+# for the builder's campaign resolution (the shot lands in the campaign
+# selected in the monitor, recorded as ``experiment_id_source: "schedule"``).
+TRIGGER_SOURCE = "DRACO-Trigger"
+TRIGGER_KIND = "trigger.threshold_crossing"
+WATCHDOG_SOURCE = "DAQ-File-Watchdog"
+_TRIGGER_SOURCE_STEMS = frozenset({"draco-trigger", "shotcounter"})
+_WATCHDOG_SOURCE_STEMS = frozenset({"daq-file-watchdog"})
+EMULATED_AUTHORITY_ID = "emulated-shot-authority"
+EMULATED_TRIGGER_CHANNEL = "Draco01"
+# One watch rule on one instrument PC: the Ions PC and an instrument of the
+# reference fixture (api/tests/fixtures/hzdr-reference), so the emulated
+# event reads like the first PC the rollout plans to install.
+EMULATED_WATCH_NAME = "M1_Spec_Fib_Cer"
+EMULATED_INSTRUMENT = {
+    "id": "m1_spec_fib_cer",
+    "group": "ions",
+    "timing_role": "on_shot",
+    "format": "camera_png_csv",
+    "record_source": "catalogue",
 }
+EMULATED_PRODUCER = {
+    "instance_id": "watchdog-ions-01",
+    "host": "daq-watchdog-ions",
+}
+EMULATED_ATTRIBUTION_DELTA_S = 1.4
 
 
 class HZDREmulatorEvent(BaseModel):
@@ -811,6 +851,12 @@ def append_emulated_shot(
     if source_record is None:
         raise HTTPException(status_code=404, detail="HZDR source not found.")
 
+    if _is_trigger_source(event_source):
+        event_source, event_kind = TRIGGER_SOURCE, TRIGGER_KIND
+    elif _is_watchdog_source(event_source):
+        event_source = WATCHDOG_SOURCE
+        event_kind = f"watchdog.{EMULATED_WATCH_NAME}"
+
     shots = source_record.setdefault("shots", [])
     if action == "enrich" and shots:
         return enrich_latest_emulated_shot(
@@ -843,19 +889,25 @@ def append_emulated_shot(
         event_kind=event_kind,
     )
 
-    shots.append({
+    shot_record: dict[str, Any] = {
         "source_key": source_record["key"],
         "shot_number": next_shot_number,
         "fired_at": fired_at,
         "hdf5_path": hdf5_path,
         "metadata": metadata,
-    })
+    }
+    if event_source == TRIGGER_SOURCE:
+        # The trigger named no campaign; the emulator resolved it to the
+        # selected one, as the builder does from the campaign schedule.
+        shot_record["experiment_id_source"] = "schedule"
+    shots.append(shot_record)
     _write_sources_payload(sources_file, payload, sources)
 
     _append_staged_emulator_event(
         sources_file=sources_file,
         experiment_id=experiment_id,
         shot_id=shot_id,
+        shot_number=next_shot_number,
         fired_at=fired_at,
         event_source=event_source,
         event_kind=event_kind,
@@ -1275,6 +1327,7 @@ def enrich_latest_emulated_shot(
         sources_file=sources_file,
         experiment_id=str(metadata.get("experiment_id", "exp-emulated")),
         shot_id=str(metadata.get("shot_id", f"shot-{shot.get('shot_number', 0):06d}")),
+        shot_number=int(shot.get("shot_number", 0)),
         fired_at=str(shot.get("fired_at", "")),
         event_source=event_source,
         event_kind=event_kind,
@@ -1372,15 +1425,14 @@ def _apply_event_source_metadata(
     metadata: dict, *, event_source: str, event_kind: str, sequence: int
 ) -> None:
     """Add source-specific enrichment fields used by the local flow monitor."""
-    source = _event_file_stem(event_source)
-    if source == "daq-file-watchdog":
+    if _is_watchdog_source(event_source):
         metadata["watchdog_event_count"] = _next_metadata_counter(
             metadata, "watchdog_event_count"
         )
         metadata["watchdog_last_kind"] = event_kind
         metadata["watchdog_status"] = "shot-event-seen"
         return
-    if source == "shotcounter":
+    if _is_trigger_source(event_source):
         metadata["shotcounter_event_count"] = _next_metadata_counter(
             metadata, "shotcounter_event_count"
         )
@@ -1402,26 +1454,53 @@ def _append_staged_emulator_event(
     sources_file: Path,
     experiment_id: str,
     shot_id: str,
+    shot_number: int,
     fired_at: str,
     event_source: str,
     event_kind: str,
     metadata: dict,
 ) -> None:
-    """Append one production-shaped JSONL event for the flow monitor."""
+    """Append one production-shaped JSONL event for the flow monitor.
+
+    ``metadata`` is the catalog shot's metadata. A trigger and a watchdog
+    event carry their producer's own metadata instead (see the constants at
+    the top of this module) and are checked against ``HZDREventV1`` before
+    they are written, so the emulator cannot drift from the contract.
+    """
     events_dir = sources_file.parent / "events"
     events_dir.mkdir(parents=True, exist_ok=True)
     event_path = events_dir / f"{_event_file_stem(event_source)}.jsonl"
-    event = {
-        "experiment_id": experiment_id,
-        "shot_id": shot_id,
-        "source": event_source,
-        "kind": event_kind,
-        "timestamp": fired_at,
-        "transport": _transport_for_event_source(event_source),
-        "payload_ref": _payload_ref_for_event_source(event_source, metadata),
-        "values": _values_for_event_source(event_source, metadata),
-        "metadata": metadata,
-    }
+    if _is_trigger_source(event_source):
+        event = _emulated_trigger_event(
+            shot_number=shot_number, fired_at=fired_at, metadata=metadata
+        )
+        HZDREventV1.model_validate(event)
+    elif _is_watchdog_source(event_source):
+        event = _emulated_watchdog_event(
+            campaign=experiment_id,
+            shot_number=shot_number,
+            fired_at=fired_at,
+            metadata=metadata,
+        )
+        HZDREventV1.model_validate(event)
+    else:
+        message_id = _emulated_message_id(metadata)
+        event = {
+            "schema_version": "hzdr-event-v1",
+            "event_id": (
+                f"{_event_file_stem(event_source)}-emulated-"
+                f"{experiment_id}-{shot_id}-{message_id}"
+            ),
+            "experiment_id": experiment_id,
+            "shot_id": shot_id,
+            "source": event_source,
+            "kind": event_kind,
+            "timestamp": fired_at,
+            "transport": _transport_for_event_source(event_source),
+            "payload_ref": _payload_ref_for_event_source(event_source, metadata),
+            "values": _values_for_event_source(event_source, metadata),
+            "metadata": metadata,
+        }
     with event_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(event, sort_keys=True) + "\n")
 
@@ -1431,13 +1510,157 @@ def _event_file_stem(event_source: str) -> str:
     return event_source.lower().replace(" ", "-").replace("_", "-")
 
 
+def _is_trigger_source(event_source: str) -> bool:
+    """A shot trigger: the authority's source name, or the legacy Shotcounter."""
+    return _event_file_stem(event_source) in _TRIGGER_SOURCE_STEMS
+
+
+def _is_watchdog_source(event_source: str) -> bool:
+    return _event_file_stem(event_source) in _WATCHDOG_SOURCE_STEMS
+
+
+def _emulated_trigger_event(
+    *, shot_number: int, fired_at: str, metadata: dict
+) -> dict[str, Any]:
+    """The shot authority's ``draco.trigger`` envelope for one emulated shot.
+
+    Field for field planet-watchdog's ``shot_authority.trigger_event``; the
+    Kafka position is added to ``payload_ref`` the way a consumer sees it.
+    """
+    sequence = _emulated_message_id(metadata)
+    digest = hashlib.sha256(
+        f"{EMULATED_AUTHORITY_ID}|0|{shot_number}|{EMULATED_TRIGGER_CHANNEL}".encode()
+    ).hexdigest()
+    return {
+        "schema_version": "hzdr-event-v1",
+        "event_id": f"{EMULATED_AUTHORITY_ID}:{digest[:24]}",
+        "experiment_id": UNASSIGNED_EXPERIMENT_ID,
+        "shot_id": f"shot-{shot_number:06d}",
+        "shot_number": shot_number,
+        "source": TRIGGER_SOURCE,
+        "kind": TRIGGER_KIND,
+        "timestamp": fired_at,
+        "transport": "kafka",
+        "payload_ref": {
+            "channel_id": EMULATED_TRIGGER_CHANNEL,
+            "run_id": sequence,
+            "topic": DRACO_TRIGGER_KAFKA_TOPIC,
+            "partition": 0,
+            "offset": sequence,
+        },
+        "values": None,
+        "metadata": {
+            "trigger": {
+                "channel_id": EMULATED_TRIGGER_CHANNEL,
+                "nickname": "emulated",
+                "role": "threshold_crossing",
+                "threshold": 0.5,
+                "adc_value": 0.81,
+                "channel_trigger_count": sequence,
+                "sample_counter_10hz": sequence * 10,
+                "counter_epoch": 0,
+                "configured_campaign": None,
+            },
+            "shot_authority": {
+                "source_id": EMULATED_AUTHORITY_ID,
+                "version": "emulated",
+                "time_source": "device_local",
+                "received_utc": fired_at,
+            },
+        },
+    }
+
+
+def _emulated_watchdog_event(
+    *, campaign: str, shot_number: int, fired_at: str, metadata: dict
+) -> dict[str, Any]:
+    """A DAQ File Watchdog file event attributed to one emulated shot.
+
+    The shape planet-watchdog's ``kafka_output`` sends for a rule that opted
+    in to attribution: the campaign is left to DAMNIT (``unassigned``, the
+    configured one rides along as advisory metadata), the shot number comes
+    from the trigger window, and the registered metadata namespaces say which
+    instrument, which PC and how the file was attributed. The file is not
+    written: ``payload_ref`` only names where it would be.
+    """
+    try:
+        sequence = int(metadata.get("watchdog_event_count", 1))
+    except (TypeError, ValueError):
+        sequence = 1
+    try:
+        fired = datetime.fromisoformat(fired_at)
+    except ValueError:
+        fired = datetime(2026, 5, 22, 8, 30, 1, tzinfo=UTC)
+    acquired = fired + timedelta(seconds=EMULATED_ATTRIBUTION_DELTA_S)
+    seen = acquired + timedelta(seconds=0.3)
+    stamp = fired.strftime("%Y-%m-%d_%Hh-%Mm-%Ss")
+    filename = f"set1_{stamp}_{sequence}_original.png"
+    folder = f"/bigdata/HPLexp/{campaign}/{EMULATED_WATCH_NAME}"
+    path = f"{folder}/{filename}"
+    timestamp = seen.isoformat()
+    identity = {
+        "experiment_id": UNASSIGNED_EXPERIMENT_ID,
+        "watch_name": EMULATED_WATCH_NAME,
+        "timestamp": timestamp,
+        "filepath": path,
+        "filename": filename,
+        "shot_number": shot_number,
+    }
+    digest = hashlib.sha256(
+        json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    return {
+        "schema_version": "hzdr-event-v1",
+        "event_id": f"watchdog-{digest[:24]}",
+        "experiment_id": UNASSIGNED_EXPERIMENT_ID,
+        "shot_id": f"shot-{shot_number:06d}",
+        "shot_number": shot_number,
+        "source": WATCHDOG_SOURCE,
+        "kind": f"watchdog.{EMULATED_WATCH_NAME}",
+        "timestamp": timestamp,
+        "transport": "kafka",
+        "payload_ref": {
+            "filename": filename,
+            "path": path,
+            "uri": f"file://{path}",
+            "zmq_topic": EMULATED_TRIGGER_CHANNEL,
+            "topic": WATCHDOG_KAFKA_TOPIC,
+            "partition": 0,
+            "offset": sequence,
+        },
+        "values": None,
+        "metadata": {
+            "watch": {
+                "watch_name": EMULATED_WATCH_NAME,
+                "watch_path": folder,
+                "watch_pattern": "*_original.png",
+                "host": EMULATED_PRODUCER["host"],
+                "configured_experiment_id": campaign,
+            },
+            "analysis": {},
+            "instrument": dict(EMULATED_INSTRUMENT),
+            "attribution": {
+                "method": "trigger_window",
+                "status": "attributed",
+                "delta_s": EMULATED_ATTRIBUTION_DELTA_S,
+                "candidates": [shot_number],
+            },
+            "acquisition": {
+                "time": acquired.isoformat(),
+                "time_source": "first_seen",
+            },
+            "producer": dict(EMULATED_PRODUCER),
+            "shot_number_provenance": {
+                "authoritative": True,
+                "source": "watchdog attribution (trigger_window)",
+            },
+        },
+    }
+
+
 def _transport_for_event_source(event_source: str) -> str:
     """Mirror the production transport used by well-known HZDR sources."""
     source = _event_file_stem(event_source)
-    if source == "shotcounter":
-        return "zmq+kafka"
-    if source in KAFKA_EVENT_SOURCES:
-        return "kafka"
     if source == "laserdata":
         return "asapo"
     return "flow-monitor"
@@ -1449,23 +1672,6 @@ def _payload_ref_for_event_source(
     """Build the staged payload reference for a flow-monitor event."""
     message_id = _emulated_message_id(metadata)
     source = _event_file_stem(event_source)
-    kafka_source = KAFKA_EVENT_SOURCES.get(source)
-    if kafka_source:
-        topic, producer = kafka_source
-        return {
-            "topic": topic,
-            "partition": 0,
-            "offset": message_id,
-            "producer": producer,
-        }
-    if source == "shotcounter":
-        return {
-            "endpoint": "shotcounter-zmq",
-            "topic": SHOTCOUNTER_KAFKA_TOPIC,
-            "partition": 0,
-            "offset": message_id,
-            "producer": "shotcounter",
-        }
     if source == "laserdata":
         return {
             "endpoint": "local-asapo-broker",

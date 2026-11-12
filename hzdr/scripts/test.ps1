@@ -27,6 +27,7 @@ try {
 
     if ($WithAcceptance) {
         uv run python scripts/hzdr-local-acceptance.py
+        uv run python scripts/hzdr-local-acceptance.py --real-topology
     }
 } finally {
     Pop-Location
