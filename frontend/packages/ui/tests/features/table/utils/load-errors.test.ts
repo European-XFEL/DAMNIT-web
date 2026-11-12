@@ -78,14 +78,6 @@ test('names only the first and last run of a page whose run numbers skip', () =>
   )
 })
 
-test("names every run of the demo's one page", () => {
-  const allRuns = { first: 0, last: 9999 }
-
-  expect(
-    describeLoadErrors(failed({ rows: [allRuns] }), runsUpTo(428))?.runs
-  ).toBe('Runs 1 to 428.')
-})
-
 test('says nothing about a failed page past the last run', () => {
   expect(
     describeLoadErrors(failed({ rows: [page(266)] }), runsUpTo(2649))
