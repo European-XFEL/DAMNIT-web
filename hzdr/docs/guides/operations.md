@@ -60,11 +60,14 @@ Beamtime Setup. Its **Outputs** section gives the line for DAMNIT,
 `DW_API_HZDR_BUILDER__CAMPAIGNS: add <experiment_id>`. DAMNIT does not read
 LabFrog's setup itself; carry the line over by hand:
 
-1. Make sure the campaign is exported: its `experiment_id` is in
-   `campaigns.txt` in `~/labfrog-sqlite-tools-repo` (the list the
-   `labfrog-export-refresh` timer exports every 15 minutes), and
-   `curated_files/<experiment_id>/<experiment_id>.sqlite` appears after the
-   next run.
+1. Make sure the campaign is exported: its LabFrog campaign **name**, exactly
+   as LabFrog shows it and with its spaces (`CoilsBordeaux 2026`, not the
+   experiment ID `CoilsBordeaux_2026`), is a line of `campaigns.txt` in
+   `~/labfrog-sqlite-tools-repo` (the list the `labfrog-export-refresh` timer
+   exports every 15 minutes; `sudo systemctl start
+   labfrog-export-refresh.service` runs it now). The exporter names the
+   folder after the experiment ID: `curated_files/<experiment_id>/<experiment_id>.sqlite`
+   appears after the next run, once the campaign has a record.
 2. Add the id to `DW_API_HZDR_BUILDER__CAMPAIGNS` in `api/.env` (a JSON list,
    e.g. `["Helical_coils_2026"]`). Only listed (and spooled) campaigns' exports
    may claim `unassigned` triggers, and LabFrog numbers restart every campaign,
