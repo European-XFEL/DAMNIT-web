@@ -42,7 +42,7 @@ export { default as useProposal } from './data/use-proposal'
 export { setMetadata, setProposalPending } from './data/metadata/metadata.slice'
 
 // Utilities
-export { formatUrl } from './utils/helpers'
+export { formatUrl } from './utils/format'
 
 // Constants
 export { BASE_URL } from './constants'

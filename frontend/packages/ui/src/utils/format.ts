@@ -42,7 +42,3 @@ function formatFloat(number: number, { offset = 2 } = {}) {
 export function formatUrl(url: string) {
   return (url || '/').replace(/\/?$/, '/')
 }
-
-export function assertNever(value: never): never {
-  throw new Error(`Unhandled case: ${JSON.stringify(value)}`)
-}

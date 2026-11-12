@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 import { HEAVY_DTYPES } from '@damnit-frontend/shared/constants'
 
-import { formatUrl } from './utils/helpers'
+import { formatUrl } from './utils/format'
 
 // The dtypes @lightweight holds back on the table's first pass. Shared with the
 // mock server so both track the API's HEAVY_DATA from one place.

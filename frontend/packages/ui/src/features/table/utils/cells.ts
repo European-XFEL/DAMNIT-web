@@ -30,7 +30,7 @@ import {
   type CellValue,
   type SparklineValue,
 } from '#src/data/table/table-data.types'
-import { formatDate, formatNumber } from '#src/utils/helpers'
+import { formatDate, formatNumber } from '#src/utils/format'
 import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
