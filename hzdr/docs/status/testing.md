@@ -171,7 +171,13 @@ pnpm build:app
 
 `hzdr/scripts/test.ps1` (repo root) runs the API ruff/pytest steps above in one
 go — it `cd`s into `api/` and copies `.env.test.example` to `.env` if missing.
-Pass `-WithAcceptance` to also run `hzdr-local-acceptance.py`.
+Pass `-WithAcceptance` to also run `hzdr-local-acceptance.py`, and after it
+`hzdr-local-acceptance.py --real-topology`: the deployed flow rehearsed on
+generated data (unassigned triggers and a watchdog file event in a spool, a
+LabFrog export, a campaign schedule, the multi-campaign builder, then a ruling
+over HTTP and the rebuild). It asserts each shot's `experiment_id_source`
+(`labfrog`, `schedule`, `unassigned`, then `ruling`) and the watchdog event's
+`producer_instance_id` and `instrument_id` columns.
 
 ## Still Needed
 

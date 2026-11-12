@@ -17,6 +17,14 @@ Usage:
     cd api
     uv run python scripts/hzdr-local-acceptance.py
     uv run python scripts/hzdr-local-acceptance.py --keep  # inspect output after
+    uv run python scripts/hzdr-local-acceptance.py --real-topology
+
+``--real-topology`` rehearses the deployed flow instead (flow mesh plan step
+6): the shot authority's ``unassigned`` triggers and a DAQ File Watchdog's
+attributed file event in a Kafka-style spool, a LabFrog export and a campaign
+schedule, built by the real multi-campaign builder; then a reviewer's ruling
+over HTTP and the rebuild that moves the shot. Still nothing outside this
+repository, and still a rehearsal: it is never evidence about the server.
 
 Exits non-zero (and prints which step failed) if any step does not hold.
 """
@@ -30,6 +38,7 @@ import math
 import os
 import shutil
 import sqlite3
+import subprocess
 import sys
 import tempfile
 from datetime import UTC, datetime
@@ -45,6 +54,19 @@ SEMANTIC_FIXTURE = (
     REPO_ROOT / "api" / "tests" / "fixtures" / "semantic-golden-domain.synthetic.json"
 )
 SEMANTIC_EVENT_ID = "acc-evt-semantic-2"
+BUILDER_SCRIPT = REPO_ROOT / "api" / "scripts" / "hzdr-hdf5-builder.py"
+
+# --real-topology: three campaigns, one for each way a shot gets its campaign.
+LABFROG_CAMPAIGN = "Rehearsal_LabFrog_2026"  # has a LabFrog export
+SCHEDULE_CAMPAIGN = "Rehearsal_Schedule_2026"  # only a schedule window
+UNASSIGNED_SOURCE_KEY = "unassigned"
+REHEARSAL_SHOTS = {
+    # shot number: (trigger time UTC, how the campaign is found)
+    1: ("2026-06-10T10:00:00+00:00", "labfrog"),
+    2: ("2026-06-10T10:05:00+00:00", "labfrog"),
+    3: ("2026-06-12T10:00:00+00:00", "schedule"),
+    4: ("2026-06-14T10:00:00+00:00", "unassigned"),  # until a reviewer rules
+}
 
 
 def write_minimal_labfrog_sqlite(path: Path) -> None:
@@ -716,6 +738,300 @@ def run_acceptance(*, keep: bool, output_dir: Path | None = None) -> bool:
     return ok
 
 
+def write_rehearsal_spool(spool: Path) -> dict[str, Any]:
+    """Spool the events the real producers send, all of them ``unassigned``.
+
+    The envelopes are the flow-monitor emulator's, which are planet-watchdog's
+    ``shot_authority.trigger_event`` and ``kafka_output`` shapes: one trigger
+    per shot, and one attributed file event from the Ions watchdog PC for
+    shot 1. Both topics land in the one spool file, as on the server.
+    """
+    from damnit_api.metadata.hzdr_event import HZDREventV1
+    from damnit_api.metadata.hzdr_routers import (
+        _emulated_trigger_event,
+        _emulated_watchdog_event,
+    )
+
+    events = [
+        _emulated_trigger_event(
+            shot_number=number,
+            fired_at=fired_at,
+            metadata={"emulated_sequence": number},
+        )
+        for number, (fired_at, _) in REHEARSAL_SHOTS.items()
+    ]
+    file_event = _emulated_watchdog_event(
+        campaign=LABFROG_CAMPAIGN,
+        shot_number=1,
+        fired_at=REHEARSAL_SHOTS[1][0],
+        metadata={},
+    )
+    events.append(file_event)
+    for event in events:
+        HZDREventV1.model_validate(event)
+        assert event["experiment_id"] == UNASSIGNED_SOURCE_KEY
+    path = spool / "_unassigned" / "trigger.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "".join(json.dumps(event, sort_keys=True) + "\n" for event in events),
+        encoding="utf-8",
+    )
+    return file_event
+
+
+def write_rehearsal_export(curated_root: Path) -> None:
+    """A curated LabFrog export whose rows claim the authority's shots 1 and 2."""
+    folder = curated_root / LABFROG_CAMPAIGN
+    folder.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(folder / f"{LABFROG_CAMPAIGN}.sqlite")
+    try:
+        connection.execute(
+            "CREATE TABLE shots (mongo_id TEXT PRIMARY KEY, shot_number INTEGER, "
+            "date_time TEXT, date_time_utc TEXT, campaign TEXT, experiment_id TEXT, "
+            "authority_shot_number INTEGER)"
+        )
+        for number in (1, 2):
+            utc = datetime.fromisoformat(REHEARSAL_SHOTS[number][0])
+            connection.execute(
+                "INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    f"{LABFROG_CAMPAIGN}-{number}",
+                    number,
+                    utc.strftime("%Y-%m-%dT%H:%M:%S"),
+                    utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    LABFROG_CAMPAIGN.replace("_", " "),
+                    None,
+                    number,
+                ),
+            )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def write_rehearsal_schedule(path: Path) -> None:
+    """A ``labfrog-campaign-schedule-v1`` export: one window per campaign."""
+    document = {
+        "schema": "labfrog-campaign-schedule-v1",
+        "timezone": "UTC",
+        "window_rule": "[start 00:00, end+1 00:00) local time in `timezone`",
+        "campaigns": [
+            {
+                "campaign": LABFROG_CAMPAIGN.replace("_", " "),
+                "experiment_id": LABFROG_CAMPAIGN,
+                "start": "2026-06-10",
+                "end": "2026-06-10",
+                "source": "rehearsal",
+            },
+            {
+                "campaign": SCHEDULE_CAMPAIGN.replace("_", " "),
+                "experiment_id": SCHEDULE_CAMPAIGN,
+                "start": "2026-06-12",
+                "end": "2026-06-12",
+                "source": "rehearsal",
+            },
+        ],
+        "warnings": [],
+    }
+    path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+
+def run_multi_campaign_builder(
+    *, spool: Path, curated_root: Path, schedule: Path, output_root: Path
+) -> None:
+    """Run the real builder the way the auto-trigger does in multi-campaign mode."""
+    env = dict(os.environ)
+    # A developer's api/.env may enable SciCat; a rehearsal never posts.
+    env["DW_API_HZDR_SCICAT__ENABLED"] = "false"
+    command = [
+        sys.executable,
+        str(BUILDER_SCRIPT),
+        "--output-root",
+        str(output_root),
+        "--curated-root",
+        str(curated_root),
+        "--trigger-spool",
+        str(spool),
+        "trigger.jsonl",
+        "--campaign",
+        LABFROG_CAMPAIGN,
+        "--campaign-schedule",
+        str(schedule),
+        "--campaign-timezone",
+        "UTC",
+    ]
+    result = subprocess.run(
+        command, env=env, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        message = (
+            f"builder exited {result.returncode}:\n{result.stdout}\n{result.stderr}"
+        )
+        raise AssertionError(message)
+
+
+def rehearsal_shots(sources_file: Path) -> dict[str, dict[int, dict[str, Any]]]:
+    """``{source key: {shot number: shot}}`` from the shared catalog."""
+    payload = json.loads(sources_file.read_text(encoding="utf-8"))
+    return {
+        source["key"]: {shot["shot_number"]: shot for shot in source["shots"]}
+        for source in payload["sources"]
+    }
+
+
+def run_real_topology(*, keep: bool, output_dir: Path | None = None) -> bool:
+    """Rehearse the deployed topology end to end (flow mesh plan step 6)."""
+    if output_dir is None:
+        work_dir = Path(tempfile.mkdtemp(prefix="hzdr-real-topology-"))
+    else:
+        work_dir = output_dir.resolve()
+        if work_dir.exists() and any(work_dir.iterdir()):
+            message = f"--output-dir must be absent or empty: {work_dir}"
+            raise ValueError(message)
+        work_dir.mkdir(parents=True, exist_ok=True)
+        keep = True
+    ok = True
+    try:
+        spool = work_dir / "spool" / "kafka"
+        curated_root = work_dir / "curated_files"
+        schedule = work_dir / "campaign-schedule.json"
+        output_root = work_dir / "nexus"
+        sources_file = output_root / "hzdr_sources.json"
+
+        # Before the first damnit_api import; see run_acceptance.
+        os.environ["DW_API_DAMNIT_PATH"] = str(work_dir)
+        os.environ["DW_API_METADATA__PROVIDER"] = "local"
+        os.environ["DW_API_METADATA__SOURCES_FILE"] = str(sources_file)
+
+        def build() -> dict[str, dict[int, dict[str, Any]]]:
+            run_multi_campaign_builder(
+                spool=spool,
+                curated_root=curated_root,
+                schedule=schedule,
+                output_root=output_root,
+            )
+            return rehearsal_shots(sources_file)
+
+        with Step("Spool the shot authority's triggers and a watchdog file event"):
+            file_event = write_rehearsal_spool(spool)
+
+        with Step("Write the LabFrog export and the campaign schedule"):
+            write_rehearsal_export(curated_root)
+            write_rehearsal_schedule(schedule)
+
+        with Step("Build every campaign with the multi-campaign builder"):
+            shots = build()
+            assert set(shots) == {
+                LABFROG_CAMPAIGN,
+                SCHEDULE_CAMPAIGN,
+                UNASSIGNED_SOURCE_KEY,
+            }, f"unexpected sources: {sorted(shots)}"
+
+        with Step("Each shot is in the campaign its resolution step names"):
+            placed = {
+                number: (key, shot["experiment_id_source"])
+                for key, by_number in shots.items()
+                for number, shot in by_number.items()
+            }
+            print(f"  shots: {placed}")
+            assert placed == {
+                1: (LABFROG_CAMPAIGN, "labfrog"),
+                2: (LABFROG_CAMPAIGN, "labfrog"),
+                3: (SCHEDULE_CAMPAIGN, "schedule"),
+                4: (UNASSIGNED_SOURCE_KEY, "unassigned"),
+            }, f"campaign resolution changed: {placed}"
+
+        with Step("The watchdog file follows its shot, PC and instrument named"):
+            import h5py
+
+            sources = {
+                event["source"] for event in shots[LABFROG_CAMPAIGN][1]["events"]
+            }
+            assert sources >= {"DRACO-Trigger", "DAQ-File-Watchdog"}, sources
+            nexus = output_root / LABFROG_CAMPAIGN / f"{LABFROG_CAMPAIGN}.nxs"
+            with h5py.File(nexus, "r") as handle:
+
+                def column(path: str) -> list[str]:
+                    dataset = handle[path]
+                    assert isinstance(dataset, h5py.Dataset), path
+                    return [str(value) for value in dataset.asstr()[...]]
+
+                row = column("entry/source_events/event_id").index(
+                    file_event["event_id"]
+                )
+                instance = column("entry/source_events/producer_instance_id")[row]
+                instrument = column("entry/source_events/instrument_id")[row]
+                how = set(column("entry/shots/experiment_id_source"))
+            assert instance == file_event["metadata"]["producer"]["instance_id"]
+            assert instrument == file_event["metadata"]["instrument"]["id"]
+            assert how == {"labfrog"}, how
+
+        with Step("Boot API: the unassigned shot waits in Review matches"):
+            from fastapi.testclient import TestClient
+
+            from damnit_api.main import create_app
+            from damnit_api.shared.settings import settings
+
+            settings.auth = None  # see run_acceptance
+
+            with TestClient(create_app()) as client:
+                review = client.get(
+                    f"/metadata/hzdr/sources/{UNASSIGNED_SOURCE_KEY}/review"
+                )
+                review.raise_for_status()
+                waiting = [
+                    shot["shot_number"] for shot in review.json()["unassigned_shots"]
+                ]
+                assert waiting == [4], f"unassigned shots: {waiting}"
+
+                with Step("Rule over HTTP: shot 4 belongs to the schedule campaign"):
+                    ruling = client.post(
+                        "/metadata/hzdr/experiment-rulings",
+                        json={
+                            "shot_number": 4,
+                            "experiment_id": SCHEDULE_CAMPAIGN,
+                            "note": "real-topology rehearsal",
+                        },
+                    )
+                    assert ruling.status_code == 202, ruling.text
+                    assert ruling.json()["status"] == "pending_rebuild"
+
+                with Step("Rebuild: the ruling moves the shot out of the bucket"):
+                    shots = build()
+                    assert set(shots[UNASSIGNED_SOURCE_KEY]) == set(), shots[
+                        UNASSIGNED_SOURCE_KEY
+                    ]
+                    moved = shots[SCHEDULE_CAMPAIGN]
+                    assert set(moved) == {3, 4}, sorted(moved)
+                    assert moved[4]["experiment_id_source"] == "ruling"
+                    assert moved[3]["experiment_id_source"] == "schedule"
+                    assert set(shots[LABFROG_CAMPAIGN]) == {1, 2}
+
+                with Step("Re-fetch review: nothing is left unassigned"):
+                    review = client.get(
+                        f"/metadata/hzdr/sources/{UNASSIGNED_SOURCE_KEY}/review"
+                    )
+                    review.raise_for_status()
+                    assert review.json()["unassigned_shots"] == []
+
+        print("\nAll real-topology rehearsal steps passed.")
+        print(f"Catalog: {sources_file}")
+        print(f"Output root: {output_root}")
+        print(f"Generated at: {datetime.now(UTC).isoformat()}")
+    except AssertionError as exc:
+        print(f"\nRehearsal check failed: {exc}", file=sys.stderr)
+        ok = False
+    except Exception as exc:
+        print(f"\nUnexpected error: {exc}", file=sys.stderr)
+        ok = False
+    finally:
+        if keep:
+            print(f"\n--keep set: left local state at {work_dir}")
+        else:
+            shutil.rmtree(work_dir, ignore_errors=True)
+    return ok
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -728,9 +1044,19 @@ def main() -> None:
         type=Path,
         help="Write the inspectable synthetic bundle to a new or empty directory.",
     )
+    parser.add_argument(
+        "--real-topology",
+        action="store_true",
+        help=(
+            "Rehearse the deployed flow instead: unassigned triggers, a LabFrog "
+            "export, a campaign schedule, the multi-campaign builder and a "
+            "reviewer's ruling."
+        ),
+    )
     args = parser.parse_args()
 
-    if not run_acceptance(keep=args.keep, output_dir=args.output_dir):
+    run = run_real_topology if args.real_topology else run_acceptance
+    if not run(keep=args.keep, output_dir=args.output_dir):
         raise SystemExit(1)
 
 

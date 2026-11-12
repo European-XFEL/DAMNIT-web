@@ -124,6 +124,7 @@ $allSuites = [ordered]@{
             if ($WithAcceptance) {
                 Write-Host "  [acceptance]"
                 uv run python scripts/hzdr-local-acceptance.py
+                uv run python scripts/hzdr-local-acceptance.py --real-topology
             }
             if ($DockerTests) {
                 Write-Host "  [broker integration tests]"

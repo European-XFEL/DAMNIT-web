@@ -67,6 +67,7 @@ python api/scripts/hzdr-hdf5-builder.py --experiment-id <id> --campaign-timezone
 python api/scripts/hzdr-container-worker.py --master <c>.nxs   # shot containers into <c's folder>/shots/ (or --output-root)
 python api/scripts/hzdr-compare-containers.py --damnit <campaign folder> --aligner <shot-aligner build>   # phase 6: diff against shot-aligner's containers
 python api/scripts/hzdr-local-acceptance.py        # emulator events through Confirm Matches, no broker
+python api/scripts/hzdr-local-acceptance.py --real-topology   # the deployed flow rehearsed: unassigned triggers, export, schedule, multi-campaign build, a ruling
 python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hzdr-event-v1 schema + sample fixtures
 ```
 

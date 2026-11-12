@@ -334,7 +334,7 @@ export function HZDRFlowMonitorPage() {
 
     appendEmulatedShot(
       'LaserData',
-      'pulse_energy_j',
+      'laser.pulse',
       'enrich',
       'laser',
       'LaserData enrichment',
@@ -376,12 +376,14 @@ export function HZDRFlowMonitorPage() {
       .map((option) => option.label)
       .join(', ')
     appendEmulatedShot(
+      // The emulator answers with the event a watchdog PC sends: attributed
+      // to the latest shot, campaign left to DAMNIT.
       'DAQ-File-Watchdog',
-      'watchdog_shot_event',
+      'watchdog.M1_Spec_Fib_Cer',
       'enrich',
       'watchdog',
-      'Watchdog shot event',
-      `DAQ File Watchdog (${watcherLabels}) -> Kafka broker`,
+      'Watchdog file event',
+      `DAQ File Watchdog (${watcherLabels}) -> Kafka planet.watchdog.events`,
       false
     )
     setFlowState((current) => ({
@@ -414,12 +416,14 @@ export function HZDRFlowMonitorPage() {
       mongoPending: receiverConfig.mongo,
     })
     appendEmulatedShot(
-      'Shotcounter',
-      'shot_counter_event',
+      // The shot authority's envelope: it issues the shot number and names
+      // no campaign; DAMNIT resolves the campaign.
+      'DRACO-Trigger',
+      'trigger.threshold_crossing',
       'append',
       'shotcounter',
-      'Shotcounter event',
-      `Shotcounter (${tkeyLabels}) -> ZMQ -> Kafka fanout -> subscribed systems`
+      'Shot trigger',
+      `Shotcounter (${tkeyLabels}) -> ZMQ -> shot authority issues the shot number -> Kafka draco.trigger (campaign unassigned)`
     )
   }
 

@@ -107,3 +107,20 @@ without building a real pilot file, run
 `uv run python scripts/hzdr-local-acceptance.py` from `api`, or
 `hzdr/scripts/test.ps1 -WithAcceptance` from the repo root. Testing commands are
 in [testing.md](../status/testing.md).
+
+To rehearse the flow as it is deployed, add `--real-topology`. The shot
+authority's triggers and a DAQ File Watchdog file event arrive `unassigned` in
+a Kafka-style spool; a LabFrog export and a campaign schedule resolve the
+campaigns; the multi-campaign builder builds them; a ruling posted over HTTP
+moves the one shot nothing could place. It is a rehearsal on generated data,
+not evidence about the server.
+
+The Flow Monitor's demo buttons write the same envelopes: **Shotcounter**
+stages the shot authority's `draco.trigger` event (`DRACO-Trigger`,
+`trigger.threshold_crossing`, `experiment_id: "unassigned"`, the number in
+`shot_number`) in `events/draco-trigger.jsonl`, and **Watchdog** stages a file
+event attributed to the latest shot, with `instrument.*`, `attribution.*`,
+`acquisition.*` and `producer.instance_id`, in `events/daq-file-watchdog.jsonl`.
+The emulator stands in for the authority (it issues the next number) and for
+campaign resolution (the shot lands in the selected campaign, marked
+`experiment_id_source: "schedule"`).
