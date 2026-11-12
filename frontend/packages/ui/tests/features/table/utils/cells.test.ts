@@ -12,6 +12,7 @@ import {
   getCell,
   GRID_RENDERERS,
   imageCell,
+  normalizedXAt,
   numberCell,
   sparklineIndexAt,
   textCell,
@@ -142,23 +143,32 @@ describe('toSparkline', () => {
   })
 })
 
-describe('sparklineIndexAt', () => {
-  // A 116 px cell leaves 100 px between the 8 px pads: points every 25 px.
-  test('picks the point nearest the pointer', () => {
-    expect(sparklineIndexAt(8, 116, 5)).toBe(0)
-    expect(sparklineIndexAt(8 + 37, 116, 5)).toBe(1)
-    expect(sparklineIndexAt(8 + 38, 116, 5)).toBe(2)
-    expect(sparklineIndexAt(108, 116, 5)).toBe(4)
+describe('normalizedXAt', () => {
+  // A 116 px cell leaves 100 px between the 8 px pads.
+  test('measures the pointer across the content between the pads', () => {
+    expect(normalizedXAt({ hoverX: 8, width: 116 })).toBe(0)
+    expect(normalizedXAt({ hoverX: 58, width: 116 })).toBe(0.5)
+    expect(normalizedXAt({ hoverX: 108, width: 116 })).toBe(1)
   })
 
   test('clamps a pointer in the padding to the ends', () => {
-    expect(sparklineIndexAt(0, 116, 5)).toBe(0)
-    expect(sparklineIndexAt(116, 116, 5)).toBe(4)
+    expect(normalizedXAt({ hoverX: 0, width: 116 })).toBe(0)
+    expect(normalizedXAt({ hoverX: 116, width: 116 })).toBe(1)
+  })
+})
+
+describe('sparklineIndexAt', () => {
+  // Five points sit a quarter of the way apart.
+  test('picks the point nearest the crosshair', () => {
+    expect(sparklineIndexAt({ normalizedX: 0, count: 5 })).toBe(0)
+    expect(sparklineIndexAt({ normalizedX: 0.37, count: 5 })).toBe(1)
+    expect(sparklineIndexAt({ normalizedX: 0.38, count: 5 })).toBe(2)
+    expect(sparklineIndexAt({ normalizedX: 1, count: 5 })).toBe(4)
   })
 
   test('maps both ends of a lone value to that value', () => {
-    expect(sparklineIndexAt(0, 116, 1)).toBe(0)
-    expect(sparklineIndexAt(116, 116, 1)).toBe(0)
+    expect(sparklineIndexAt({ normalizedX: 0, count: 1 })).toBe(0)
+    expect(sparklineIndexAt({ normalizedX: 1, count: 1 })).toBe(0)
   })
 })
 
