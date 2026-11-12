@@ -1,4 +1,5 @@
 import { AppShell } from '@mantine/core'
+import { times } from 'lodash-es'
 import { beforeEach, describe, expect, test } from 'vitest'
 import { userEvent } from 'vitest/browser'
 
@@ -488,7 +489,7 @@ describe('folding the nav to a rail', () => {
   test('the rail popover stays inside a short window, its plots scrolling above New plot, which stays in full view', async () => {
     await resizeViewport({ width: 1024, height: 480 })
     const { screen } = await renderRail(
-      Array.from({ length: 15 }, (_, i) => ({
+      times(15, (i) => ({
         ...trains,
         runs: [String(i + 1)],
       }))

@@ -17,6 +17,7 @@ import {
   SparklineCell as sparklineRenderer,
   type SparklineCellType,
 } from '@glideapps/glide-data-grid-cells'
+import { clamp } from 'lodash-es'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
@@ -118,7 +119,7 @@ export const normalizedXAt = ({
   width,
 }: NormalizedXAtParams): number => {
   const contentWidth = width - 2 * CELL_PADDING_X
-  return Math.min(1, Math.max(0, (hoverX - CELL_PADDING_X) / contentWidth))
+  return clamp((hoverX - CELL_PADDING_X) / contentWidth, 0, 1)
 }
 
 type SparklineIndexAtParams = { normalizedX: number; count: number }

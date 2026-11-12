@@ -1,6 +1,7 @@
 import Plotly from 'react-plotly.js'
 import { DEFAULT_THEME } from '@mantine/core'
 import cx from 'clsx'
+import { clamp } from 'lodash-es'
 
 import { FONT_FAMILY_SANS, FONT_SIZES } from '#src/styles/fonts'
 
@@ -68,7 +69,7 @@ const getDynamicHeight = (height: number) => {
   const minHeight = 400
   const maxHeight = 720
 
-  return Math.min(Math.max(height * yScale, minHeight), maxHeight)
+  return clamp(height * yScale, minHeight, maxHeight)
 }
 
 const heatmapPlot = ({ traces, meta }: PlotData): Plot => {

@@ -1,4 +1,4 @@
-import { upperFirst } from 'lodash-es'
+import { sortBy, upperFirst } from 'lodash-es'
 
 import type { RunId } from '#src/data/table/table-data.types'
 import type {
@@ -45,13 +45,12 @@ export function describeLoadErrors(errors: LoadErrors, runs: RunId[]) {
 // A page past the last run holds none, and pages side by side read as one
 // stretch, cut where the proposal changes.
 function runRanges(ranges: RowRange[], runs: RunId[]) {
-  const clipped = ranges
+  const clipped = sortBy(ranges, (range) => range.first)
     .map(({ first, last }) => ({
       first,
       last: Math.min(last, runs.length - 1),
     }))
     .filter(({ first, last }) => first <= last)
-    .sort((a, b) => a.first - b.first)
 
   const merged: RowRange[] = []
   for (const range of clipped) {

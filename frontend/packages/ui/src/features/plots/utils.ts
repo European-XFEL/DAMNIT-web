@@ -1,4 +1,4 @@
-import { sortBy } from 'lodash-es'
+import { sortBy, uniq } from 'lodash-es'
 
 import { getTitleByName } from '#src/data/table/table-data.transforms'
 import type { RunId, Variable } from '#src/data/table/table-data.types'
@@ -76,7 +76,7 @@ export function parseRunSelection(
 export function formatRunSelection(runs: string[]) {
   const ranges: { first: number; last: number }[] = []
 
-  for (const run of sortBy([...new Set(runs.map(Number))])) {
+  for (const run of sortBy(uniq(runs.map(Number)))) {
     const range = ranges.at(-1)
     if (range !== undefined && run === range.last + 1) {
       range.last = run

@@ -5,6 +5,7 @@ import {
   Observable,
 } from '@apollo/client'
 import { print } from 'graphql'
+import { times } from 'lodash-es'
 import { renderHook } from 'vitest-browser-react'
 import { describe, expect, test, vi } from 'vitest'
 
@@ -212,7 +213,7 @@ describe('opening a preview', () => {
     // Runs 1-51 straddle the boundary at 50. The caller renders a loader per
     // chunk, so this is what decides how many go out.
     const { result } = await renderPreview(
-      Array.from({ length: 51 }, (_, i) => i + 1),
+      times(51, (i) => i + 1),
       wrapper
     )
 

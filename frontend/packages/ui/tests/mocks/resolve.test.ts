@@ -1,3 +1,4 @@
+import { times } from 'lodash-es'
 import { expect, test } from 'vitest'
 
 import {
@@ -11,7 +12,7 @@ const PROPOSAL = '1234'
 
 // Thirteen runs, as in the xpcs example, so ten fit on the first page. Listed
 // newest first, so a page that skips sorting shows the wrong runs.
-const RUNS: RunData[] = Array.from({ length: 13 }, (_, index) => ({
+const RUNS: RunData[] = times(13, (index) => ({
   source: { ref: 'raw', run_number: 13 - index },
   variables: {},
 }))
