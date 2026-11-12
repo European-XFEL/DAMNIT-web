@@ -37,3 +37,26 @@ existing rule that a typed number never becomes an authority number.
 
 The harness does not patch statuses or fabricate a catalogue row to turn the
 scenario green. Fix and test this seam in DAMNIT through its normal review.
+
+## Recommended improvement order
+
+1. Give every retained undecidable event a review-visible state at one
+   reconciliation boundary, including the no-LabFrog unassigned-bucket path.
+   Derive the catalogue and master from the same normalized event set; do not
+   invent a shot or campaign to make a row visible.
+2. Add an invariant test across spool, master and catalogue: every retained
+   event is either attached to one canonical shot or present in review once.
+   Exercise an empty bucket, null identity, replay and a later legitimate
+   authority claim. Keep event IDs unchanged.
+3. Preserve the authority-first matcher. C9's real +180 s consumer-clock
+   control retained correct authority matches while catalogue time deltas
+   exposed about 177-180 s discrepancies. Make those discrepancies easy to
+   review; do not replace a known authority identity with nearest-time guessing.
+4. Keep clock-client qualification distinct from application correctness.
+   Blanket preload produced heartbeat/condition-wait failures in exploratory
+   runs. Record the active clock scope, broker offsets and elapsed-time
+   evidence before classifying that behavior as a DAMNIT defect.
+
+The first change should be a small reconciliation/catalogue fix with a
+regression test, followed by the unchanged C2/C3/C5/C11 real-chain receipts.
+It should not alter spool acknowledgement, SciCat identity or deployed state.
