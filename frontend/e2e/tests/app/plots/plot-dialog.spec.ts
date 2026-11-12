@@ -1,3 +1,5 @@
+import { sortBy, uniq } from 'lodash-es'
+
 import { previewRunFields } from '@damnit-frontend/shared/mocks'
 import { test, expect } from '#fixtures'
 import { WIDE_VIEWPORT } from '#support/grid'
@@ -85,5 +87,5 @@ test('plotting a preview for runs "7,9" fetches only runs 7 and 9, not the range
   await expect(entry).toBeVisible()
   await expect(entry).toContainText('2 runs, 7-9')
   await expect(plotFigure(page)).toBeVisible()
-  expect([...new Set(requestedRuns)].sort((a, b) => a - b)).toEqual([7, 9])
+  expect(sortBy(uniq(requestedRuns))).toEqual([7, 9])
 })
