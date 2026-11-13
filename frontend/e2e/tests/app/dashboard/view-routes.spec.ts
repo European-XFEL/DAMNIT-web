@@ -59,3 +59,20 @@ test('a link to no view keeps the dashboard and says so, with a way to All runs'
   await page.getByRole('link', { name: 'Open All runs' }).click()
   await expect(page).toHaveURL(/\/table$/)
 })
+
+test("a plot link to none of the proposal's runs says so in the view's place", async ({
+  page,
+  example,
+}) => {
+  const proposal = example.proposalMetadata[0].number
+  const y = numberVars[0]
+
+  await page.goto(
+    `proposal/${proposal}/plots/summary?x=run&y=${y}&runs=900-901`
+  )
+  await expect(
+    page.getByText('The proposal has none of the runs 900-901')
+  ).toBeVisible()
+  await expect(dashboardNav(page)).toBeVisible()
+  await expect(plotEntry(page, `${titleOf(example, y)} vs. Run`)).toHaveCount(0)
+})
