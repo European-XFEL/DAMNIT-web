@@ -20,11 +20,8 @@ export type AvailableProposals = {
 // show a single variable's extracted value per run.
 export type PlotSource = 'summary' | 'preview'
 
-// A plot's definition, shared by table (requester) and plots (store). `name`
-// is the plot alone ("Pulses vs. Run"); the kind comes from `source`.
-export type PlotSpec = {
-  variables: string[]
-  runs?: string[]
-  source: PlotSource
-  name: string
-}
+// What a plot shows, which is all its address carries. A summary with no runs
+// draws them all.
+export type PlotSpec =
+  | { source: 'summary'; variables: [x: string, y: string]; runs?: string[] }
+  | { source: 'preview'; variables: [variable: string]; runs: string[] }

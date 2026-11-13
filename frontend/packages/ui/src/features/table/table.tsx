@@ -152,7 +152,7 @@ function Table() {
     variables,
     label,
   }: {
-    variables: string[]
+    variables: [x: string, y: string]
     label: string
   }) => {
     dispatch(

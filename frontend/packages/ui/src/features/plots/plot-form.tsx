@@ -58,8 +58,7 @@ type PlotFormProps = {
 }
 
 export function PlotForm({ blocks, onSubmit, onCancel }: PlotFormProps) {
-  const titles = new Map(itemsOf(blocks).map((item) => [item.name, item.title]))
-  const titleOf = (name: string) => titles.get(name) ?? name
+  const names = new Set(itemsOf(blocks).map((item) => item.name))
 
   // A name the options no longer hold, say after a context file reload, shows
   // as a blank field, so it is refused like one.
@@ -72,9 +71,9 @@ export function PlotForm({ blocks, onSubmit, onCancel }: PlotFormProps) {
       runs: '',
     },
     validate: {
-      y: (value) => (titles.has(value) ? null : 'Choose a variable'),
+      y: (value) => (names.has(value) ? null : 'Choose a variable'),
       x: (value, values) =>
-        values.kind === 'summary' && !titles.has(value)
+        values.kind === 'summary' && !names.has(value)
           ? 'Choose a variable'
           : null,
       runs: (value, values) => {
@@ -104,14 +103,16 @@ export function PlotForm({ blocks, onSubmit, onCancel }: PlotFormProps) {
       onSubmit({
         variables: [values.x, values.y],
         source: 'summary',
-        name: `${titleOf(values.y)} vs. ${titleOf(values.x)}`,
         runs,
       })
     } else {
+      if (runs === undefined) {
+        throw new Error('The runs field let a preview through with no runs')
+      }
+
       onSubmit({
         variables: [values.y],
         source: 'preview',
-        name: titleOf(values.y),
         runs,
       })
     }

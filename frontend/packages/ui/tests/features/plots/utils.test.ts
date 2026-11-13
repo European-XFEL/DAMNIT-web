@@ -1,6 +1,10 @@
 import { expect, test } from 'vitest'
 
-import { parseRunSelection } from '#src/features/plots/utils'
+import {
+  formatRunSelection,
+  parseRunSelection,
+  plotName,
+} from '#src/features/plots/utils'
 
 test('a run selection expands a range into every run it covers', () => {
   expect(parseRunSelection('6-9')).toEqual({ runs: ['6', '7', '8', '9'] })
@@ -64,9 +68,61 @@ test('a run selection refuses a range wider than 10000 runs', () => {
   })
 })
 
+test('a run selection refuses more runs in total than one range may span', () => {
+  expect(parseRunSelection('1-9000,20001-29000')).toEqual({
+    error: 'The selection holds more than 10000 runs',
+  })
+})
+
 test('a run selection refuses a range past the largest safe number', () => {
   // Counting up from 2^53 never moves, so the range would never end.
   expect(parseRunSelection('9007199254740992-9007199254740999')).toEqual({
     error: '"9007199254740992-9007199254740999" is not a run or a range',
   })
+})
+
+test('a run list writes runs in a row as one range', () => {
+  const firstTwenty = Array.from({ length: 20 }, (_, index) =>
+    String(index + 1)
+  )
+
+  expect(formatRunSelection([...firstTwenty, '25', '27', '28'])).toBe(
+    '1-20,25,27-28'
+  )
+})
+
+test('a run list writes a run picked twice once', () => {
+  // Two cells picked in one row of the table give that row's run twice.
+  expect(formatRunSelection(['5', '5', '6'])).toBe('5-6')
+})
+
+test("a summary plot is named y vs. x by the variables' titles", () => {
+  const variableMeta = {
+    run: { name: 'run', title: 'Run', tags: [] },
+    xgm_pulses: { name: 'xgm_pulses', title: 'Pulses', tags: [] },
+  }
+
+  expect(
+    plotName(
+      { source: 'summary', variables: ['run', 'xgm_pulses'] },
+      variableMeta
+    )
+  ).toBe('Pulses vs. Run')
+})
+
+test("a preview plot is named by its variable's title", () => {
+  const variableMeta = {
+    detector_image: {
+      name: 'detector_image',
+      title: 'Detector image',
+      tags: [],
+    },
+  }
+
+  expect(
+    plotName(
+      { source: 'preview', variables: ['detector_image'], runs: ['5'] },
+      variableMeta
+    )
+  ).toBe('Detector image')
 })

@@ -4,13 +4,15 @@ import { useDidUpdate } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import { VARIABLES } from '#src/constants'
-import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
 import {
   TABLE_DATA_QUERY,
   type TableDataResult,
   type TableDataVariables,
 } from '#src/data/table/table-data.queries'
-import { warnIfRunsTruncated } from '#src/data/table/runs-truncation'
+import {
+  ALL_RUNS_PAGE_SIZE,
+  warnIfRunsTruncated,
+} from '#src/features/plots/runs-truncation'
 import {
   getTitleByName,
   indexRunCells,

@@ -1,10 +1,15 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
 import { plotRequested, resetProposal } from '#src/app/store/actions'
-import { type PlotSpec } from '#src/types'
+import type { PlotSpec } from '#src/types'
+
+// A plot in the nav. `name` is the plot alone, such as "Pulses vs. Run"; the
+// kind comes from `source`.
+export type ListedPlot = PlotSpec & { name: string }
 
 type PlotsState = {
-  data: Record<string, PlotSpec>
+  // By address
+  data: Record<string, ListedPlot>
 }
 
 const initialState: PlotsState = {
