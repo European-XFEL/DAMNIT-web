@@ -67,11 +67,10 @@ export type RunId = {
 
 export type RunCells = Map<string, Cell>
 
-// The table's shape: its columns, row order, tags, groups, and freshness.
+// The table's shape: its columns, row order, tags and groups.
 export type TableMeta = {
   variables: Record<string, Variable>
   runs: RunId[]
   tags: Record<string, Tag>
   groups: Record<string, VariableGroup>
-  timestamp: number
 }

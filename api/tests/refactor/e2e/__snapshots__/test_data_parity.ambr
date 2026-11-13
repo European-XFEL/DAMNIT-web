@@ -112,7 +112,6 @@
         ]),
       }),
     }),
-    'timestamp': 1725552555671.8381,
     'variables': dict({
       'added_at': dict({
         'name': 'added_at',

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useQuery, useSubscription } from '@apollo/client/react'
 
 import {
@@ -26,14 +26,6 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
   const proposal = useAppSelector((state) => state.metadata.proposal)
   const dispatch = useAppDispatch()
 
-  // The subscription cursor, seeded once from the metadata snapshot and then
-  // left alone. The server keeps its own high-water mark per proposal, so it
-  // already bounds each tick to rows it has not shipped; this cursor only has
-  // to cover the gap between the snapshot and the subscription opening.
-  // Advancing it on every push would change a subscription variable, which
-  // tears the subscription down and re-opens it on every run update.
-  const [since, setSince] = useState(0)
-
   // Synchronize the server and the client table metadata. The result lands in
   // the Apollo cache, which is the only home the server metadata has; this query
   // just drives the proposal's navigation state.
@@ -52,12 +44,10 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
       return
     }
 
-    const metadata = metadataResult?.metadata
-    if (metadata === undefined) {
+    if (metadataResult?.metadata === undefined) {
       return
     }
 
-    setSince((current) => (current === 0 ? metadata.timestamp : current))
     dispatch(setProposalSuccess())
   }, [metadataResult, metadataError, dispatch])
 
@@ -67,7 +57,10 @@ const useProposal = ({ subscribe = true }: UseProposalOptions) => {
   useSubscription<RunUpdatesResult, RunUpdatesVariables>(
     RUN_UPDATES_SUBSCRIPTION,
     {
-      variables: { proposal: proposal.value, since },
+      // The server reads only rows newer than its last-seen timestamp, so 0 is
+      // enough. A poll another subscriber cached can still resend rows this
+      // table already has.
+      variables: { proposal: proposal.value, since: 0 },
       skip: !shouldSubscribe,
       // `onData` below writes every push into the cache itself, so Apollo's own
       // write would be the same payload a second time, filed under

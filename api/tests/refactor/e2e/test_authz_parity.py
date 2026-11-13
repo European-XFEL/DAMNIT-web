@@ -33,7 +33,7 @@ def metadata_query(proposal: int) -> dict:
     return {
         "query": f"""
             query {{
-              metadata(database: {{ proposal: "{proposal}" }}) {{ timestamp }}
+              metadata(database: {{ proposal: "{proposal}" }}) {{ tags }}
             }}
         """
     }

@@ -227,7 +227,10 @@ class TableMeta:
     variables: JSON
     tags: JSON
     groups: JSON
-    timestamp: Timestamp
+    # Kept one release for tabs still open on a frontend that selects it.
+    timestamp: Timestamp = strawberry.field(
+        default=0, deprecation_reason="Always 0: live updates start from since: 0."
+    )
 
     @classmethod
     def from_snapshot(cls, snapshot):
@@ -239,5 +242,4 @@ class TableMeta:
             variables=snapshot["variables"],
             tags=snapshot["tags"],
             groups=snapshot["groups"],
-            timestamp=snapshot["timestamp"],
         )

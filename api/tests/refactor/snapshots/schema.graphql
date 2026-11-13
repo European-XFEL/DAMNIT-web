@@ -106,7 +106,7 @@ type TableMeta {
   variables: JSON!
   tags: JSON!
   groups: JSON!
-  timestamp: Timestamp!
+  timestamp: Timestamp! @deprecated(reason: "Always 0: live updates start from since: 0.")
 }
 
 scalar Timestamp
