@@ -37,7 +37,7 @@ function DashboardBody({ main }: DashboardBodyProps) {
       >
         {main}
       </Box>
-      <DashboardAside viewRef={viewRef} />
+      <DashboardAside viewRef={viewRef} onTable={onTable} />
     </Box>
   )
 }
