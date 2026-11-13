@@ -27,7 +27,7 @@ function PlotContainer({ plot }: PlotContainerProps) {
   const isSummary = plot.source === 'summary'
 
   const runIds = useMemo(
-    () => plotRunIds(allRuns, { proposal, runs: plot.runs }),
+    () => plotRunIds(allRuns, { proposal, selection: plot.runs }),
     [plot.runs, allRuns, proposal]
   )
 
