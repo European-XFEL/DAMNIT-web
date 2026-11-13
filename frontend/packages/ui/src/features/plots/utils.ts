@@ -1,5 +1,5 @@
 import { getTitleByName } from '#src/data/table/table-data.transforms'
-import type { Variable } from '#src/data/table/table-data.types'
+import type { RunId, Variable } from '#src/data/table/table-data.types'
 import type { PlotSpec } from '#src/types'
 import { sorted } from '#src/utils/array'
 
@@ -89,4 +89,26 @@ export function formatRunSelection(runs: string[]) {
       first === last ? `${first}` : `${first}-${last}`
     )
     .join(',')
+}
+
+type PlotRunIdsOptions = {
+  proposal: string
+  selection?: string[]
+}
+
+// A plot names runs by number only, so it leaves out a guest proposal's run:
+// charting one needs its identity in `extracted_data`, which previews lack.
+export function plotRunIds(
+  allRuns: RunId[],
+  { proposal, selection }: PlotRunIdsOptions
+) {
+  if (selection === undefined) {
+    return allRuns
+  }
+
+  const wanted = new Set(selection)
+
+  return allRuns.filter(
+    (run) => run.proposal === proposal && wanted.has(String(run.run))
+  )
 }

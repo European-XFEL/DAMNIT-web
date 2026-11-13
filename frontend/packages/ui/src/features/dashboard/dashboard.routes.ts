@@ -1,6 +1,7 @@
 import { replace, type RouteObject } from 'react-router'
 
 import ContextFileView from '#src/features/dashboard/components/views/context-file-view'
+import NotFoundView from '#src/features/dashboard/components/views/not-found-view'
 import PlotView from '#src/features/dashboard/components/views/plot-view'
 import TableView from '#src/features/dashboard/components/views/table-view'
 import type { View } from '#src/features/dashboard/types/dashboard.types'
@@ -30,4 +31,5 @@ export const dashboardViewRoutes: RouteObject[] = [
     Component: PlotView,
     handle: { view: 'plot' } satisfies ViewHandle,
   },
+  { path: '*', Component: NotFoundView },
 ]

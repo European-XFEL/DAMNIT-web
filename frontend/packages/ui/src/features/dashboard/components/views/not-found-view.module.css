@@ -1,0 +1,11 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Mantine underlines only the words, so its line breaks at the icon. This
+   one runs under the whole link. */
+.link:hover {
+  box-shadow: inset 0 -1px 0 currentColor;
+}

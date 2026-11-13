@@ -24,7 +24,7 @@ export function useTrackPreviousView() {
   const view = useOpenView()
   const kind = view?.kind
   const plotId = view?.kind === 'plot' ? view.id : undefined
-  const shown = useRef<PreviousView & { kind?: View['kind'] }>()
+  const shown = useRef<PreviousView & { kind: View['kind'] }>()
 
   useEffect(() => {
     const url = pathname + search
@@ -51,6 +51,7 @@ export function useTrackPreviousView() {
       dispatch(mobileNavClosed())
     }
 
-    shown.current = { url, plotId, kind }
+    // A link to no view drew only a message, so a close never goes back to it.
+    shown.current = kind === undefined ? undefined : { url, plotId, kind }
   }, [key, pathname, search, kind, plotId, closedPlot, store, dispatch])
 }
