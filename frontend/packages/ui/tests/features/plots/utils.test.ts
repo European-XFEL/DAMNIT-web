@@ -135,7 +135,7 @@ test("a plot's runs leave out a guest proposal's run of the same number", () => 
     { proposal: '7001', run: 2 },
   ]
 
-  expect(plotRunIds(allRuns, { proposal: '6996', runs: ['2', '3'] })).toEqual([
-    { proposal: '6996', run: 2 },
-  ])
+  expect(
+    plotRunIds(allRuns, { proposal: '6996', selection: ['2', '3'] })
+  ).toEqual([{ proposal: '6996', run: 2 }])
 })

@@ -93,7 +93,7 @@ export function findLinkError(
 
   if (
     plot.runs !== undefined &&
-    plotRunIds(runs, { proposal, runs: plot.runs }).length === 0
+    plotRunIds(runs, { proposal, selection: plot.runs }).length === 0
   ) {
     return `The proposal has none of the runs ${formatRunSelection(plot.runs)}`
   }

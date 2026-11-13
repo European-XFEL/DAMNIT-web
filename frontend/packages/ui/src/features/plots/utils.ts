@@ -93,20 +93,20 @@ export function formatRunSelection(runs: string[]) {
 
 type PlotRunIdsOptions = {
   proposal: string
-  runs?: string[]
+  selection?: string[]
 }
 
 // A plot names runs by number only, so it leaves out a guest proposal's run:
 // charting one needs its identity in `extracted_data`, which previews lack.
 export function plotRunIds(
   allRuns: RunId[],
-  { proposal, runs }: PlotRunIdsOptions
+  { proposal, selection }: PlotRunIdsOptions
 ) {
-  if (runs === undefined) {
+  if (selection === undefined) {
     return allRuns
   }
 
-  const wanted = new Set(runs)
+  const wanted = new Set(selection)
 
   return allRuns.filter(
     (run) => run.proposal === proposal && wanted.has(String(run.run))
