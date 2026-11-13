@@ -291,7 +291,7 @@ describe('closing a plot', () => {
     expect(currentUrl(router)).toBe(CONTEXT_FILE)
   })
 
-  test('the plot on show never goes back to a link that points at no view', async () => {
+  test('the plot on show never goes back to a link to no page', async () => {
     const store = setupStore()
     store.dispatch(addPlot(trains))
     const { screen, router } = await renderNav(store, {

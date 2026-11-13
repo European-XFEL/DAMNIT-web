@@ -5,7 +5,7 @@ import { Box, Text } from '@mantine/core'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import UnableToDisplayAlert from '#src/features/plots/components/unable-to-display-alert'
+import UnableToDisplayAlert from '#src/components/feedback/unable-to-display-alert'
 import {
   findLinkError,
   parsePlotAddress,
@@ -57,7 +57,7 @@ function PlotView() {
         {plot !== undefined ? (
           <PlotContainer key={plotAddress(plot)} plot={plot} />
         ) : (
-          <UnableToDisplayAlert>
+          <UnableToDisplayAlert title="Unable to display the plot">
             <Text size="sm">{error}</Text>
           </UnableToDisplayAlert>
         )}

@@ -6,7 +6,7 @@ import { useAppSelector } from '#src/app/store/hooks'
 import { ViewStatus } from '#src/components/statuses/view-status'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import ComputedItem from '#src/features/plots/components/computed-item'
-import UnableToDisplayAlert from '#src/features/plots/components/unable-to-display-alert'
+import UnableToDisplayAlert from '#src/components/feedback/unable-to-display-alert'
 import type { PlotSpec } from '#src/types'
 
 import Plot from './plot'
@@ -75,14 +75,14 @@ function PlotContainer({ plot }: PlotContainerProps) {
           fit="contain"
         />
       ) : meta.type === 'scalar' ? (
-        <UnableToDisplayAlert>
+        <UnableToDisplayAlert title="Unable to display the plot">
           <Text size="sm">
             {"The plot can't be displayed because the value is a scalar "}
             <Code>{traces[0].data?.value as string}</Code>.
           </Text>
         </UnableToDisplayAlert>
       ) : meta.type === 'unsupported' ? (
-        <UnableToDisplayAlert>
+        <UnableToDisplayAlert title="Unable to display the plot">
           <Text size="sm">
             {"The plot can't be displayed because the value is unsupported."}
           </Text>

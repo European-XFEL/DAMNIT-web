@@ -46,14 +46,16 @@ test('a plot link opened fresh draws the plot and lists it, and Back after closi
   await expect(plotEntry(page, name)).toHaveAttribute('aria-current', 'page')
 })
 
-test('a link to no view keeps the dashboard and says so, with a way to All runs', async ({
+test('a link to no page keeps the dashboard and says so, with a way to All runs', async ({
   page,
   example,
 }) => {
   const proposal = example.proposalMetadata[0].number
 
   await page.goto(`proposal/${proposal}/tabel`)
-  await expect(page.getByText('This link points at no view.')).toBeVisible()
+  await expect(
+    page.getByText('The proposal has no page "tabel".')
+  ).toBeVisible()
   await expect(dashboardNav(page)).toBeVisible()
 
   await page.getByRole('link', { name: 'Open All runs' }).click()
