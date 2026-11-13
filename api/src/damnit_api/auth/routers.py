@@ -1,4 +1,4 @@
-from urllib.parse import parse_qs, unquote, urlencode
+from urllib.parse import urlencode
 
 from authlib.integrations.starlette_client import OAuthError
 from fastapi import APIRouter, HTTPException, Request
@@ -15,18 +15,39 @@ router = APIRouter(prefix="/oauth", tags=["auth"])
 
 TOKEN_STORE = {}
 
+DEFAULT_LOGIN_REDIRECT = "/app/home"
+
+
+def _sanitize_redirect_target(target: str | None) -> str:
+    """Return `target` when it is a path on this site, else the default page."""
+    # Browsers read `\` as `/` and drop tabs and newlines, so `/\host` and
+    # `/<tab>/host` would leave the site as `//host` does.
+    if (
+        not target
+        or not target.startswith("/")
+        or target.startswith("//")
+        or "\\" in target
+        or any(ord(char) < 0x20 for char in target)
+    ):
+        return DEFAULT_LOGIN_REDIRECT
+    return target
+
 
 @router.get("/login", status_code=307)
 async def auth(
     request: Request,
-    redirect_uri: dependencies.RedirectURI,
     client: dependencies.Client,
+    redirect_uri: str | None = None,
 ) -> RedirectResponse:
     """Initiate the OAuth2 login flow."""
+    target = _sanitize_redirect_target(redirect_uri)
+
     # Note: session is managed by Starlette's SessionMiddleware, which handles
     # expiration.
     if request.session.get("user"):
-        return RedirectResponse(url=redirect_uri)
+        return RedirectResponse(url=target)
+
+    request.session["_login_redirect"] = target
 
     callback_uri = request.url_for("callback")
 
@@ -45,7 +66,6 @@ async def auth(
 @router.get("/callback", status_code=307)
 async def callback(
     request: Request,
-    redirect_uri: dependencies.RedirectURI,
     client: dependencies.Client,
 ) -> RedirectResponse:
     """OAuth2 callback endpoint to handle the response from the OAuth provider."""
@@ -55,17 +75,14 @@ async def callback(
     except OAuthError as e:
         raise HTTPException(status_code=401, detail=str(e)) from e
 
-    state = request.query_params.get("state", "")
-    state_params = parse_qs(state)
-    redirect_uri = state_params.get("redirect_uri", [redirect_uri])[0]
-
     request.session["user"] = dict(user)
 
     # TODO: could (should?) be stored in db for persistence across server restarts
     # NOTE: required for revoking tokens on logout
     TOKEN_STORE[user["sub"]] = token
 
-    return RedirectResponse(url=unquote(str(redirect_uri)))
+    target = request.session.pop("_login_redirect", DEFAULT_LOGIN_REDIRECT)
+    return RedirectResponse(url=target)
 
 
 @router.post("/logout")

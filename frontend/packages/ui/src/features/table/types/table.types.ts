@@ -1,4 +1,8 @@
-import type { RunId } from '#src/data/table/table-data.types'
+import type {
+  RunCells,
+  RunId,
+  TableMeta,
+} from '#src/data/table/table-data.types'
 
 export type Scroll = {
   x: number
@@ -46,11 +50,48 @@ export type LoadErrors = {
   waitsForRetry: boolean
 }
 
-// The cell under the pointer, with its box in viewport pixels and the
-// pointer's x offset into it, which places a sparkline's crosshair.
-export type HoveredCell = {
+export type CellId = {
   run: RunId
   variable: string
-  bounds: Rectangle
-  offsetX: number
+}
+
+// The cell under the pointer, with its box in viewport pixels. `normalizedX` is
+// 0 at the left edge of the cell's content and 1 at its right edge.
+export type HoveredCell = CellId & { bounds: Rectangle; normalizedX: number }
+
+export type CellMenuArgs = CellId & {
+  selectedRuns: RunId[]
+  position: Point
+}
+
+// `selectedVariables` always includes `variable`: a right-click outside the
+// selection replaces it with that one column.
+export type HeaderMenuArgs = {
+  variable: string
+  selectedVariables: string[]
+  position: Point
+}
+
+export type RunGridRef = {
+  fitAllColumns: () => void
+  resetColumnWidths: () => void
+}
+
+// What both run grids take, in run ids and variable names, never in a grid's
+// own positions, so the table's menus and hover card are written once.
+export type RunGridProps = {
+  columns: TableColumn[]
+  pinnedCount: number
+  groups: TableMeta['groups']
+  runs: RunId[]
+  cellsByKey: Map<string, RunCells>
+  lastUpdatedByKey: ReadonlyMap<string, number>
+  // Indices into `runs` and `columns`, not pixels: it says which pages to load.
+  onVisibleRegionChanged: (region: Rectangle) => void
+  onScroll: () => void
+  onCellHovered: (cell: HoveredCell | undefined) => void
+  onCellMouseMove: (cell: HoveredCell | undefined) => void
+  onCellActivated: (cell: CellId) => void
+  onCellContextMenu: (args: CellMenuArgs) => void
+  onHeaderContextMenu: (args: HeaderMenuArgs) => void
 }
