@@ -33,15 +33,12 @@ function PlotView() {
   // Every proposal has the run variable, so none means the metadata is still
   // on its way, and the link cannot be checked yet.
   const loading = isEmpty(variables)
-  const linkError =
-    'plot' in address && !loading
-      ? findLinkError(address.plot, { variables, runs, proposal })
-      : undefined
-  const error = 'error' in address ? address.error : linkError
-  const plot =
-    'plot' in address && !loading && error === undefined
-      ? address.plot
-      : undefined
+  const linked = 'plot' in address && !loading ? address.plot : undefined
+  const error =
+    'error' in address
+      ? address.error
+      : linked && findLinkError(linked, { variables, runs, proposal })
+  const plot = error === undefined ? linked : undefined
   const name = plot && plotName(plot, variables)
 
   useEffect(() => {
