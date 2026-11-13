@@ -4,7 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { render } from 'vitest-browser-react'
 
 import type { AppStore } from '#src/app/store/store'
-import { dashboardViewRoutes } from '#src/features/dashboard/dashboard-routes'
+import { dashboardViewRoutes } from '#src/features/dashboard/dashboard.routes'
 import { withProviders } from '#tests/support/render'
 
 type RenderInDashboardOptions = {

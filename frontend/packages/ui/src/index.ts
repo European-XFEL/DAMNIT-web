@@ -13,7 +13,7 @@ export { default as SectionHeading } from './components/headings/section-heading
 // Features
 export { default as Dashboard } from './features/dashboard/dashboard'
 export { default as DashboardShell } from './features/dashboard/components/dashboard-shell'
-export { dashboardViewRoutes } from './features/dashboard/dashboard-routes'
+export { dashboardViewRoutes } from './features/dashboard/dashboard.routes'
 export { default as ProposalIdentity } from './features/dashboard/components/proposal-identity'
 export { default as HeroPage } from './app/pages/hero-page'
 export { default as HomePage } from './app/pages/home-page'
