@@ -102,7 +102,7 @@ function openRun({
       cellActivated({ proposal: PROPOSAL, run: RUN, variable: activeVariable })
     )
   }
-  return render(<DashboardAside viewRef={createRef()} />, {
+  return render(<DashboardAside viewRef={createRef()} onTable />, {
     wrapper: withProviders({ store, client: runClient(cells) }),
   })
 }
