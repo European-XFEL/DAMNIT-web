@@ -112,6 +112,35 @@ def test_summary_is_bounded_and_unknowns_are_explicit():
     assert campaign_summary("empty", [], [])["shot_count"] == 0
 
 
+def test_duplicate_active_records_remain_visible_without_picking_a_version():
+    rows = [
+        {
+            "shot_key": "same-key",
+            "labfrog_record_id": "record-a",
+            "metadata": {"version": 2},
+        },
+        {
+            "shot_key": "same-key",
+            "labfrog_record_id": "record-b",
+            "metadata": {"version": 3},
+        },
+        {"shot_key": "same-key", "metadata": {"has_newer_version": True}},
+        {"shot_key": "another-key", "metadata": {}},
+        {"metadata": {}},
+    ]
+    summary = campaign_summary("campaign", rows, [])
+    assert summary["shot_count"] == 4
+    assert summary["superseded_shot_records"] == 1
+    assert summary["record_identity_coverage"] == {
+        "distinct_shot_keys": 2,
+        "records_missing_shot_key": 1,
+        "duplicate_shot_key_groups": 1,
+        "records_in_duplicate_groups": 2,
+        "duplicate_shot_keys": {"values": ["same-key"], "truncated": False},
+        "source_review_required": True,
+    }
+
+
 def test_selects_only_explicit_containers_and_rejects_missing_or_escape(master):
     container = master.parent / "shots" / "shot.nxs"
     container.parent.mkdir()

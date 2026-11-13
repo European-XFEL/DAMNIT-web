@@ -7,6 +7,9 @@ behaviour; the merge PR has the details.
 ## 2026-11-13
 
 ### SciCat campaign publishing
+- Campaign summaries distinguish current-record counts from distinct shot keys
+  and explicitly flag duplicate active-key groups for source-owner review.
+  Status remains authoritative; no record is discarded by version-number guesses.
 - Canonical bridge builds now persist each row's `has_newer_version` flag.
   Fresh SQLite-based masters retain version history while allowing inspection
   to distinguish current catalogue records from superseded LabFrog versions.

@@ -52,6 +52,11 @@ shot-key/LabFrog-record coverage, earliest/latest canonical `fired_at`, separate
 authority-number and LabFrog-local-count coverage/ranges, instrument IDs,
 multiple target descriptions and canonical units, normalized event sources,
 match statuses and review levels, bridge profile and available package version.
+`shot_count` counts current canonical records. `record_identity_coverage` also
+reports distinct shot keys, missing keys, duplicate active-key groups and a
+bounded list of affected keys. Duplicate active records remain present with
+`source_review_required=true`; the publisher never selects the highest version
+or treats repeated shot numbers as distinct physical-shot identities.
 Unknown times/ranges are omitted; missing counts are explicit. Review levels
 describe what is present in normalized events at this post-step, not a new
 scientific approval or a substitute for catalogue sidecar rulings.
