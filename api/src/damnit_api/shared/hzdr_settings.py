@@ -399,7 +399,16 @@ class HZDRScicatSettings(BaseModel):
 
     enabled: bool = False
     plugin_url: str = ""
-    endpoint: Literal["from-json", "push"] = "from-json"
+    endpoint: Literal["from-json", "push", "publish"] = "from-json"
+    api_key: SecretStr = SecretStr("")
+    publisher: str = "damnit"
+    catalogue_instrument_id: str = ""
+    catalogue_proposal_id: str = ""
+    catalogue_sample_id: str = ""
+    preview_path: Path | None = None
+    preview_caption: str = Field(
+        default="Campaign overview", min_length=1, max_length=512
+    )
     instrument_id: str = ""
     owner_group: str = ""
     access_groups: list[str] = Field(default_factory=list)
@@ -415,6 +424,17 @@ class HZDRScicatSettings(BaseModel):
                 "DW_API_HZDR_SCICAT__ENABLED=true."
             )
             raise ValueError(msg)
+        if self.enabled and self.endpoint == "publish":
+            if not self.api_key.get_secret_value() or not self.publisher.strip():
+                msg = (
+                    "Managed SciCat publishing requires API_KEY and a stable PUBLISHER."
+                )
+                raise ValueError(msg)
+            if self.dataset_type != "raw":
+                msg = (
+                    "Managed campaign publishing currently supports raw datasets only."
+                )
+                raise ValueError(msg)
         return self
 
 

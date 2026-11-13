@@ -72,6 +72,8 @@ AREAS = (
             f"{A}/metadata/models.py",
             f"{A}/metadata/producer_status.py",
             f"{A}/metadata/scicat.py",
+            f"{A}/metadata/hzdr_scicat_summary.py",
+            f"{A}/metadata/hzdr_scicat_publishing.py",
         ),
         tests=(
             f"{T}/test_hzdr_nexus.py",
@@ -85,6 +87,7 @@ AREAS = (
             f"{T}/test_hzdr_producer_status.py",
             f"{T}/test_hzdr_scicat.py",
             f"{T}/test_hzdr_scicat_duplicates.py",
+            f"{T}/test_hzdr_scicat_publishing.py",
             f"{T}/test_hzdr_semantic_golden_fixture.py",
             f"{T}/test_metadata_keys.py",
             f"{T}/test_hzdr_simulation_link.py",

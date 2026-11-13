@@ -257,7 +257,12 @@ def build(
         )
         scicat = (
             _register_scicat(
-                output_nexus, sources_file, experiment_id, args.source_key, shots
+                output_nexus,
+                sources_file,
+                experiment_id,
+                args.source_key,
+                shots,
+                events=normalized_events,
             )
             if register_scicat
             else None
@@ -435,6 +440,8 @@ def _register_scicat(
     experiment_id: str,
     source_key: str,
     shots: list[dict[str, Any]],
+    *,
+    events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any] | None:
     """Best-effort SciCat registration post-step (no-op unless configured)."""
     from damnit_api.metadata.scicat import (
@@ -446,15 +453,17 @@ def _register_scicat(
     if not settings.hzdr_scicat.enabled:
         return None
     previous = read_previous_registration(sources_file, source_key)
+    scientific_metadata = {"experiment_id": experiment_id, "shot_count": len(shots)}
+    if settings.hzdr_scicat.endpoint == "publish":
+        from damnit_api.metadata.hzdr_scicat_summary import campaign_summary
+
+        scientific_metadata = campaign_summary(experiment_id, shots, events or [])
     result = register_campaign_nexus(
         settings=settings.hzdr_scicat,
         nexus_path=output_nexus,
         experiment_id=experiment_id,
         source_key=source_key,
-        scientific_metadata={
-            "experiment_id": experiment_id,
-            "shot_count": len(shots),
-        },
+        scientific_metadata=scientific_metadata,
         source_folder=str(output_nexus.parent),
         previous=previous,
     )
@@ -473,6 +482,11 @@ def scicat_outcome(
     if result is None:
         return f"SciCat: {source_key}: not registered (see the builder's log)"
     pid = result.get("scicat_pid")
+    action = result.get("scicat_action")
+    if action:
+        stage = result.get("scicat_failed_stage")
+        suffix = f" (stage: {stage})" if stage else ""
+        return f"SciCat: {source_key}: {action}, dataset {pid or 'pending'}{suffix}"
     if previous and previous.get("scicat_pid") == pid:
         return f"SciCat: {source_key}: unchanged, kept dataset {pid}"
     return f"SciCat: {source_key}: registered new dataset {pid}"

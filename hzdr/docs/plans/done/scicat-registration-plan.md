@@ -1,5 +1,11 @@
 # SciCat registration plan
 
+The original legacy wiring described here remains supported. The newer opt-in
+[managed publishing contract](../../guides/scicat-managed-publishing.md) adds
+bounded campaign summaries, explicit companion selection, PID reuse and partial
+recovery. Existing legacy PIDs require reviewed migration; this does not claim
+that the running deployment has switched modes.
+
 **Status:** ✅ implemented 2026-07-04 · **Roadmap item:** "Register the canonical
 campaign NeXus file in SciCat and back-populate `payload_ref.scicat_pid`" ·
 **Effort:** Low–Medium ·

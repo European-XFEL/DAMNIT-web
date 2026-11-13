@@ -4,6 +4,26 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-13
+
+### SciCat campaign publishing
+- Opt-in `ENDPOINT=publish` uses the plugin's journal-managed PID lifecycle,
+  authenticates with a plugin service key, preserves partial registration PIDs
+  and logs actual created/updated/unchanged/partial outcomes. Legacy defaults
+  remain unchanged; existing legacy PIDs require reviewed migration.
+- Searchable campaign summaries now carry time coverage, distinct instruments,
+  multiple targets with canonical units, authority-number coverage, separate
+  LabFrog counts, match/review coverage as present in normalized events and source
+  provenance. Summaries omit notes and bound distinct values.
+- Register the master and only explicitly linked shot containers. Metadata-only
+  and companion-content changes participate in skip detection. Campaign slugs
+  and display names are not promoted to catalogue IDs in managed mode.
+- Optional explicit overview PNG/JPEG references include preview contents in
+  skip detection. Optional preview failures retain the core PID and remain
+  retryable. Production/HZDR/pilot examples select managed DAMNIT publishing,
+  with registration disabled until journal, service key and migration are ready;
+  normal Watchdog/site/pilot configurations keep direct SciCat push off.
+
 ## 2026-11-12
 
 ### Review matches

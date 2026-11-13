@@ -35,6 +35,16 @@ _FINGERPRINT_KEY = "scicat_content_fingerprint"
 _REGISTERED_AT_KEY = "scicat_registered_at"
 _DATASET_URL_KEY = "scicat_dataset_url"
 _ENDPOINT_KEY = "scicat_endpoint"
+_MANAGED_KEYS = (
+    "scicat_identity",
+    "scicat_publisher",
+    "scicat_plugin_url",
+    "scicat_action",
+    "scicat_failed_stage",
+    "scicat_publish_fingerprint",
+    "scicat_preview_state",
+    "scicat_manifest_digest",
+)
 
 
 def _sha256(path: Path) -> str:
@@ -135,7 +145,7 @@ def read_previous_registration(
             continue
         metadata = source.get("metadata", {})
         pid = metadata.get(_PID_KEY)
-        if not pid:
+        if not pid and metadata.get(_ENDPOINT_KEY) != "publish":
             return None
         return {
             _PID_KEY: pid,
@@ -145,6 +155,7 @@ def read_previous_registration(
             _REGISTERED_AT_KEY: metadata.get(_REGISTERED_AT_KEY),
             _DATASET_URL_KEY: metadata.get(_DATASET_URL_KEY),
             _ENDPOINT_KEY: metadata.get(_ENDPOINT_KEY),
+            **{key: metadata[key] for key in _MANAGED_KEYS if key in metadata},
         }
     return None
 
@@ -218,7 +229,7 @@ def _reuse_previous(
     return reused
 
 
-def register_campaign_nexus(
+def _register_legacy_campaign(
     *,
     settings: HZDRScicatSettings,
     nexus_path: Path,
@@ -236,8 +247,6 @@ def register_campaign_nexus(
     fingerprint, or the same sha256), the POST is skipped and ``previous`` is
     returned, with the fingerprint added if it lacked one.
     """
-    if not settings.enabled:
-        return None
     if not nexus_path.exists():
         logger.warning("SciCat: NeXus file %s does not exist; skipping", nexus_path)
         return None
@@ -266,7 +275,13 @@ def register_campaign_nexus(
     try:
         import httpx
 
-        response = httpx.post(url, json=body, timeout=settings.timeout)
+        headers = (
+            {"X-SciCat-Plugin-Key": settings.api_key.get_secret_value()}
+            if settings.api_key.get_secret_value()
+            else {}
+        )
+        options = {"headers": headers} if headers else {}
+        response = httpx.post(url, json=body, timeout=settings.timeout, **options)
         response.raise_for_status()
         data = response.json()
     except Exception:
@@ -293,3 +308,38 @@ def register_campaign_nexus(
         result[_DATASET_URL_KEY] = dataset_url
     logger.info("SciCat: registered %s as pid %s", nexus_path.name, pid)
     return result
+
+
+def register_campaign_nexus(
+    *,
+    settings: HZDRScicatSettings,
+    nexus_path: Path,
+    experiment_id: str,
+    source_key: str,
+    scientific_metadata: dict[str, Any],
+    source_folder: str,
+    previous: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Best-effort registration through the explicitly configured plugin contract."""
+    if not settings.enabled:
+        return None
+    if settings.endpoint == "publish":
+        from .hzdr_scicat_publishing import register_managed_campaign
+
+        return register_managed_campaign(
+            settings,
+            nexus_path,
+            experiment_id,
+            source_key,
+            scientific_metadata,
+            previous,
+        )
+    return _register_legacy_campaign(
+        settings=settings,
+        nexus_path=nexus_path,
+        experiment_id=experiment_id,
+        source_key=source_key,
+        scientific_metadata=scientific_metadata,
+        source_folder=source_folder,
+        previous=previous,
+    )

@@ -176,7 +176,7 @@ class Site:
 @pytest.fixture(autouse=True)
 def _no_scicat(monkeypatch):
     """A developer's api/.env may enable SciCat; never post from a test."""
-    monkeypatch.setattr(builder, "_register_scicat", lambda *args: None)
+    monkeypatch.setattr(builder, "_register_scicat", lambda *args, **kwargs: None)
 
 
 def run_builder(monkeypatch, argv: list[str]) -> int:

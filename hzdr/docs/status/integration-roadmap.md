@@ -542,6 +542,11 @@ replay each consumer, then verify:
 
 ## SciCat Registration
 
+The opt-in managed contract adds richer campaign metadata, selected companion
+files and PID reuse. See [managed publishing](../guides/scicat-managed-publishing.md)
+for configuration, field ownership, migration limits and verification status.
+Legacy callers retain their existing behavior until explicitly migrated.
+
 **Status:** ✅ DAMNIT-side wiring implemented 2026-07-04 (see
 `hzdr/docs/plans/done/scicat-registration-plan.md`); enable with `DW_API_HZDR_SCICAT__ENABLED=true`
 + `PLUGIN_URL` · **Effort:** Low–Medium · **Added:** 2026-06-26

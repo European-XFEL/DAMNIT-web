@@ -1,0 +1,43 @@
+{
+  "publisher": "damnit",
+  "identity": "hzdr-labfrog/Pilot_Verification_07.2026",
+  "operation": "create",
+  "title": "HZDR campaign: Pilot_Verification_07.2026",
+  "description": "Canonical campaign master and 0 linked shot containers. Metadata summarizes canonical shots and normalized source events.",
+  "dataset_type": "raw",
+  "source_folder": "/data/campaigns/Pilot_Verification_07.2026",
+  "files": [
+    {
+      "path": "/data/campaigns/Pilot_Verification_07.2026/campaign.nxs",
+      "checksum": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "checksum_policy": "verify",
+  "meta": {
+    "campaign_id": "Pilot_Verification_07.2026",
+    "shot_count": 3,
+    "time_coverage": {
+      "start": "2026-07-01T08:00:00+00:00",
+      "end": "2026-07-01T16:30:00+00:00",
+      "shots_with_time": 3,
+      "shots_missing_time": 0
+    },
+    "instruments": {"values": ["camera-a", "spectrometer-b"], "truncated": false},
+    "targets": {
+      "values": [
+        {"material": "Cu", "thickness": {"value": 100, "unit": "nm"}},
+        {"material": "Ni", "thickness": {"value": 200, "unit": "nm"}}
+      ],
+      "truncated": false
+    },
+    "configured_instrument": "DRACO"
+  },
+  "keywords": ["HZDR", "campaign", "Pilot_Verification_07.2026"],
+  "instrument_id": null,
+  "proposal_id": null,
+  "sample_id": null,
+  "start_time": "2026-07-01T08:00:00+00:00",
+  "end_time": "2026-07-01T16:30:00+00:00",
+  "owner_group": "hzdr-fwkt",
+  "access_groups": ["hzdr-fwkt"]
+}
