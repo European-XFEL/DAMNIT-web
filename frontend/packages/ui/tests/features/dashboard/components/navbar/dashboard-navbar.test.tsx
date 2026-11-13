@@ -4,7 +4,10 @@ import { userEvent } from 'vitest/browser'
 
 import { setupStore, type AppStore } from '#src/app/store/store'
 import DashboardNavbar from '#src/features/dashboard/components/navbar/dashboard-navbar'
-import { navCollapsed } from '#src/features/dashboard/stores/dashboard.slice'
+import {
+  mobileNavToggled,
+  navCollapsed,
+} from '#src/features/dashboard/stores/dashboard.slice'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
 import { addPlot, type ListedPlot } from '#src/features/plots/plots.slice'
 import { currentUrl, renderInDashboard } from '#tests/support/dashboard-router'
@@ -39,6 +42,7 @@ const ada: DashboardUser = {
 const TABLE = '/proposal/6996/table'
 const CONTEXT_FILE = '/proposal/6996/context-file'
 const TRAINS = '/proposal/6996/plots/summary?x=run&y=n_trains&runs=1-3'
+const PULSES = '/proposal/6996/plots/summary?x=run&y=n_pulses&runs=4-5'
 
 // No proposal is set, so the plot dialog's variables read is skipped and Apollo
 // only has to be present, never reached.
@@ -240,6 +244,71 @@ describe('closing a plot', () => {
     expect(currentUrl(router)).toBe(TRAINS)
   })
 
+  test('the plot on show never goes back to a plot closed before it', async () => {
+    const store = setupStore()
+    store.dispatch(addPlot(trains))
+    store.dispatch(addPlot(pulses))
+    const { screen, router } = await renderNav(store)
+    const entry = (name: RegExp) => screen.getByRole('link', { name })
+
+    // Show Trains, then Pulses, and close Pulses
+    await entry(/^Trains vs. Run/).click()
+    await entry(/^Pulses vs. Run/).click()
+    await closePlot(screen, 'Pulses vs. Run')
+    expect(currentUrl(router)).toBe(TRAINS)
+
+    // Close Trains, the view before it being the closed Pulses
+    await closePlot(screen, 'Trains vs. Run')
+    expect(currentUrl(router)).toBe(TABLE)
+  })
+
+  test('a plot opened at another address of it never goes back to itself', async () => {
+    const store = setupStore()
+    store.dispatch(addPlot(trains))
+    const { screen, router } = await renderNav(store, {
+      url: '/proposal/6996/plots/summary?y=n_trains&x=run&runs=1-3',
+    })
+    const entry = screen.getByRole('link', { name: /^Trains vs. Run/ })
+
+    // Move to the plot's own address through its entry, then close it
+    await entry.click()
+    await closePlot(screen, 'Trains vs. Run')
+    expect(currentUrl(router)).toBe(TABLE)
+  })
+
+  test('the plot on show never goes back to a plot link that drew no plot', async () => {
+    const store = setupStore()
+    store.dispatch(addPlot(trains))
+    const { screen, router } = await renderNav(store, { url: CONTEXT_FILE })
+    const entry = screen.getByRole('link', { name: /^Trains vs. Run/ })
+
+    // Open a plot link with no y variable, then show Trains
+    await router.navigate('/proposal/6996/plots/summary?x=run')
+    await entry.click()
+
+    // Close Trains
+    await closePlot(screen, 'Trains vs. Run')
+    expect(currentUrl(router)).toBe(CONTEXT_FILE)
+  })
+
+  test('a plot in the background leaves the view alone, and the view before it forgets it', async () => {
+    const store = setupStore()
+    store.dispatch(addPlot(trains))
+    store.dispatch(addPlot(pulses))
+    const { screen, router } = await renderNav(store)
+    const entry = (name: RegExp) => screen.getByRole('link', { name })
+
+    // Show Trains, then Pulses, and close Trains behind it
+    await entry(/^Trains vs. Run/).click()
+    await entry(/^Pulses vs. Run/).click()
+    await closePlot(screen, 'Trains vs. Run')
+    expect(currentUrl(router)).toBe(PULSES)
+
+    // Close Pulses
+    await closePlot(screen, 'Pulses vs. Run')
+    expect(currentUrl(router)).toBe(TABLE)
+  })
+
   test('focus moves to the entry below, the one above, then New plot', async () => {
     const store = setupStore()
     store.dispatch(addPlot(trains))
@@ -429,7 +498,31 @@ describe('folding the nav to a rail', () => {
   })
 })
 
+// The nav alone draws nothing for its mobile state, which the shell reads from
+// the store, so these assert the store.
 describe('opening the nav on a phone', () => {
+  test('picking a view closes the mobile nav, and closing the plot on show leaves it open', async () => {
+    const store = setupStore()
+    store.dispatch(addPlot(trains))
+    const { screen, router } = await renderNav(store)
+    const entry = screen.getByRole('link', { name: /^Trains vs. Run/ })
+    const mobileOpened = () => store.getState().dashboard.nav.mobileOpened
+
+    // Pick the plot with the nav open
+    store.dispatch(mobileNavToggled())
+    await entry.click()
+    await expect.poll(mobileOpened).toBe(false)
+
+    // Close it with the nav open, waiting for the move back to be recorded
+    store.dispatch(mobileNavToggled())
+    await closePlot(screen, 'Trains vs. Run')
+    expect(currentUrl(router)).toBe(TABLE)
+    await expect
+      .poll(() => store.getState().dashboard.previousView)
+      .toBeUndefined()
+    expect(mobileOpened()).toBe(true)
+  })
+
   test('below the sm breakpoint a collapsed nav still opens in full', async () => {
     const store = setupStore()
     store.dispatch(navCollapsed())
