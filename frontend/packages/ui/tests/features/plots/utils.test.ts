@@ -4,6 +4,7 @@ import {
   formatRunSelection,
   parseRunSelection,
   plotName,
+  plotRunIds,
 } from '#src/features/plots/utils'
 
 test('a run selection expands a range into every run it covers', () => {
@@ -125,4 +126,16 @@ test("a preview plot is named by its variable's title", () => {
       variableMeta
     )
   ).toBe('Detector image')
+})
+
+test("a plot's runs leave out a guest proposal's run of the same number", () => {
+  const allRuns = [
+    { proposal: '6996', run: 1 },
+    { proposal: '6996', run: 2 },
+    { proposal: '7001', run: 2 },
+  ]
+
+  expect(plotRunIds(allRuns, { proposal: '6996', runs: ['2', '3'] })).toEqual([
+    { proposal: '6996', run: 2 },
+  ])
 })

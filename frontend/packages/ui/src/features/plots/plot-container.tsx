@@ -14,6 +14,7 @@ import classes from './plot.module.css'
 import PreviewChunkLoader from './preview-chunk-loader'
 import { useSummaryPlotData } from './use-summary-plot-data'
 import { usePreviewPlotData } from './use-preview-plot-data'
+import { plotRunIds } from './utils'
 
 type PlotContainerProps = {
   plot: PlotSpec
@@ -25,21 +26,10 @@ function PlotContainer({ plot }: PlotContainerProps) {
 
   const isSummary = plot.source === 'summary'
 
-  // The identity pairs this plot charts, in server order. A plot is pinned by
-  // run number, which is all the run-selection field can express, so a guest
-  // proposal sharing a number would match twice and plot two points where the
-  // user asked for one. Restricting to the proposal being viewed picks the one
-  // they meant; charting a guest run needs identity all the way down to
-  // `extracted_data`, which previews do not have yet.
-  const runIds = useMemo(() => {
-    if (!plot.runs) {
-      return allRuns
-    }
-    const wanted = new Set(plot.runs)
-    return allRuns.filter(
-      (run) => run.proposal === proposal && wanted.has(String(run.run))
-    )
-  }, [plot.runs, allRuns, proposal])
+  const runIds = useMemo(
+    () => plotRunIds(allRuns, { proposal, runs: plot.runs }),
+    [plot.runs, allRuns, proposal]
+  )
 
   const runNumbers = useMemo(() => runIds.map((run) => run.run), [runIds])
 

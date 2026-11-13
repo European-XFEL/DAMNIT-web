@@ -1,5 +1,5 @@
 import { getTitleByName } from '#src/data/table/table-data.transforms'
-import type { Variable } from '#src/data/table/table-data.types'
+import type { RunId, Variable } from '#src/data/table/table-data.types'
 import type { PlotSpec } from '#src/types'
 import { sorted } from '#src/utils/array'
 
@@ -89,4 +89,27 @@ export function formatRunSelection(runs: string[]) {
       first === last ? `${first}` : `${first}-${last}`
     )
     .join(',')
+}
+
+type PlotRunIdsOptions = {
+  proposal: string
+  runs?: string[]
+}
+
+// The runs a plot charts, in server order. A plot names runs by number only,
+// so a guest proposal sharing a number is left out: charting a guest run needs
+// identity all the way down to `extracted_data`, which previews lack.
+export function plotRunIds(
+  allRuns: RunId[],
+  { proposal, runs }: PlotRunIdsOptions
+) {
+  if (runs === undefined) {
+    return allRuns
+  }
+
+  const wanted = new Set(runs)
+
+  return allRuns.filter(
+    (run) => run.proposal === proposal && wanted.has(String(run.run))
+  )
 }

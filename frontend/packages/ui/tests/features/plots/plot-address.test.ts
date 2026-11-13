@@ -88,7 +88,14 @@ test('an address with unreadable runs names the runs', () => {
   })
 })
 
-const proposal = { variables: ['run', 'pulses'], runs: [1, 2, 3] }
+const proposal = {
+  variables: {
+    run: { name: 'run', tags: [] },
+    pulses: { name: 'pulses', tags: [] },
+  },
+  runs: [1, 2, 3].map((run) => ({ proposal: '6996', run })),
+  proposal: '6996',
+}
 
 test('a link to a variable the proposal does not have names the variable', () => {
   const plot: PlotSpec = { source: 'summary', variables: ['run', 'energy'] }
