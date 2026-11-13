@@ -88,6 +88,7 @@ AREAS = (
             f"{T}/test_hzdr_scicat.py",
             f"{T}/test_hzdr_scicat_duplicates.py",
             f"{T}/test_hzdr_scicat_publishing.py",
+            f"{T}/test_hzdr_scicat_verification.py",
             f"{T}/test_hzdr_semantic_golden_fixture.py",
             f"{T}/test_metadata_keys.py",
             f"{T}/test_hzdr_simulation_link.py",

@@ -100,6 +100,39 @@ register guards both copies.
 
 ## Verification status
 
+### Controlled deployment test and shareable results
+
+Deploy the managed plugin feature branch first, with a service API key and
+`SCICAT_REGISTRATION_DB` pointing to persistent local storage. Keep automatic
+campaign registration disabled during this synthetic test. The plugin must see
+the same work-directory paths as the caller. From the DAMNIT repo, with the
+shared key already exported as `DW_API_HZDR_SCICAT__API_KEY`:
+
+```bash
+uv run --no-sync python hzdr/scripts/verify-scicat-publishing.py \
+  --plugin-url http://127.0.0.1:5001 \
+  --work-dir /home/tippey/scicat-verification
+```
+
+Choose a new empty directory visible to the plugin; do not use a real campaign
+directory. The runner creates two tiny synthetic NeXus files and one dataset,
+then checks unchanged replay, metadata-only updates and companion-file updates.
+It saves `scicat-publishing-results.json` in that directory after every step,
+including failures and any known PID. `--out /path/results.json` selects another
+results file. The receipt contains no credentials, request headers or raw error
+responses. It records exception types, test outcomes, the plugin URL, synthetic
+identity, PID and registration state. Inspect the hostname and paths before
+sharing outside the project.
+
+When the status is `restart_pending`, restart only the plugin using the normal
+deployment procedure, keeping its journal, then repeat the same command with
+`--after-restart`. This checks remote unchanged replay with the same PID.
+The runner records a changed systemd invocation ID when available; otherwise it
+labels the restart evidence `operator-attested`. It does not restart services.
+Send the resulting JSON file back for review, even if the run fails. Keep the
+directory and journal for investigation; no automatic cleanup or deletion occurs.
+Optional previews are omitted from this test.
+
 The plugin has been tested against one synthetic dataset on the HZDR SciCat API,
 including PID reuse, lost-write-response recovery and metadata/file updates.
 DAMNIT's new caller is tested offline; it has not been enabled against production
