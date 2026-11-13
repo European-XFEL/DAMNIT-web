@@ -7,6 +7,9 @@ behaviour; the merge PR has the details.
 ## 2026-11-13
 
 ### SciCat campaign publishing
+- Verification receipts retain the HTTP status and recognized action of the
+  latest direct replay response, including failed unchanged checks, without
+  copying arbitrary response bodies.
 - Standalone verification imports no longer initialize API server routers or
   require production authentication settings. Server router exports remain
   available on demand. Fresh test checkouts must sync the `damnit-api` workspace

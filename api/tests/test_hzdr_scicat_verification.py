@@ -146,3 +146,25 @@ def test_refuses_unowned_directory_and_restart_without_initial(runner, tmp_path)
     (tmp_path / "verification/user-data.txt").write_text("preserve")
     with pytest.raises(ValueError, match="empty"):
         runner.Verification(arguments(tmp_path))
+
+
+def test_unexpected_replay_action_is_saved_without_raw_response(
+    runner, tmp_path, monkeypatch
+):
+    verification = runner.Verification(arguments(tmp_path))
+    verification.report.update(last_metadata={}, registration={})
+    monkeypatch.setattr(runner, "publishing_body", lambda *a: {})
+    monkeypatch.setattr(
+        runner.httpx,
+        "post",
+        lambda url, **k: httpx.Response(
+            200,
+            json={"action": "update", "pid": "HZDR/synthetic", "detail": "private-key"},
+            request=httpx.Request("POST", url),
+        ),
+    )
+    assert not verification.step("remote-unchanged", verification.remote_unchanged)
+    report = json.loads(verification.output.read_text())
+    assert report["last_plugin_response"] == {"http_status": 200, "action": "update"}
+    assert report["pid"] == "HZDR/synthetic"
+    assert "private-key" not in verification.output.read_text()

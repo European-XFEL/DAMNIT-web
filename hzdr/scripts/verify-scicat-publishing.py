@@ -291,6 +291,14 @@ class Verification:
             timeout=self.args.timeout,
         )
         data = response.json()
+        actions = {"create", "update", "unchanged", "partial", "reconciliation"}
+        self.report["last_plugin_response"] = {
+            "http_status": response.status_code,
+            "action": data.get("action")
+            if data.get("action") in actions
+            else "unexpected",
+        }
+        self.save()
         self.record_pid(data)
         if response.is_error or data.get("action") != "unchanged":
             message = f"Expected remote unchanged; HTTP {response.status_code}"
