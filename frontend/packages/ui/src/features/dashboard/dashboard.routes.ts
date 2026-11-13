@@ -3,7 +3,11 @@ import { replace, type RouteObject } from 'react-router'
 import ContextFileView from '#src/features/dashboard/components/views/context-file-view'
 import PlotView from '#src/features/dashboard/components/views/plot-view'
 import TableView from '#src/features/dashboard/components/views/table-view'
-import type { ViewHandle } from '#src/features/dashboard/hooks/use-open-view'
+import type { View } from '#src/features/dashboard/types/dashboard.types'
+
+// What each view route carries in its `handle`, so code anywhere under the
+// dashboard can tell which view the address shows.
+export type ViewHandle = { view: View['kind'] }
 
 // Each view has its own Suspense: a shared one hides the table while a plot's
 // chunk loads, and the grid then drops right-clicks.

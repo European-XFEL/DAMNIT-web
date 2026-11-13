@@ -1,12 +1,9 @@
 import { useMemo } from 'react'
 import { type UIMatch, useLocation, useMatches } from 'react-router'
 
+import type { ViewHandle } from '#src/features/dashboard/dashboard.routes'
 import type { View } from '#src/features/dashboard/types/dashboard.types'
 import { parsePlotAddress, plotAddress } from '#src/features/plots/plot-address'
-
-// What each view route carries in its `handle`, so code anywhere under the
-// dashboard can tell which view the address shows.
-export type ViewHandle = { view: View['kind'] }
 
 function isViewHandle(handle: unknown): handle is ViewHandle {
   return typeof handle === 'object' && handle !== null && 'view' in handle
