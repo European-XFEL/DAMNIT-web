@@ -7,6 +7,10 @@ behaviour; the merge PR has the details.
 ## 2026-11-13
 
 ### SciCat campaign publishing
+- Standalone verification imports no longer initialize API server routers or
+  require production authentication settings. Server router exports remain
+  available on demand. Fresh test checkouts must sync the `damnit-api` workspace
+  package to install the runner's runtime dependencies.
 - Opt-in `ENDPOINT=publish` uses the plugin's journal-managed PID lifecycle,
   authenticates with a plugin service key, preserves partial registration PIDs
   and logs actual created/updated/unchanged/partial outcomes. Legacy defaults

@@ -3,10 +3,37 @@
 import argparse
 import importlib.util
 import json
+import os
+import subprocess  # noqa: S404 -- isolated interpreter import regression test
+import sys
 from pathlib import Path
 
 import httpx
 import pytest
+
+
+def test_standalone_runner_does_not_load_server_settings():
+    script = (
+        Path(__file__).resolve().parents[2] / "hzdr/scripts/verify-scicat-publishing.py"
+    )
+    environment = {
+        key: value for key, value in os.environ.items() if not key.startswith("DW_API_")
+    }
+    code = (
+        "import runpy, sys; "
+        "runpy.run_path(sys.argv[1], run_name='verification_import'); "
+        "assert 'damnit_api.shared.settings' not in sys.modules; "
+        "assert 'damnit_api.metadata.hzdr_routers' not in sys.modules"
+    )
+    result = subprocess.run(  # noqa: S603 -- fixed interpreter and local script
+        [sys.executable, "-c", code, str(script)],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 @pytest.fixture

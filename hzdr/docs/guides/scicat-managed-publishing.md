@@ -106,7 +106,10 @@ Deploy the managed plugin feature branch first, with a service API key and
 `SCICAT_REGISTRATION_DB` pointing to persistent local storage. Keep automatic
 campaign registration disabled during this synthetic test. The plugin must see
 the same work-directory paths as the caller. From the DAMNIT repo, with the
-shared key already exported as `DW_API_HZDR_SCICAT__API_KEY`:
+shared key already exported as `DW_API_HZDR_SCICAT__API_KEY`, run the commands below.
+
+The standalone runner does not need the API server's authentication settings
+or a copy of its production `.env`.
 
 ```bash
 uv sync --locked --package damnit-api
