@@ -34,7 +34,7 @@ export function navBurger(page: Page): Locator {
 
 // Exact, since a plot entry that follows every run also reads "All runs".
 export function allRunsNavItem(page: Page): Locator {
-  return dashboardNav(page).getByRole('button', {
+  return dashboardNav(page).getByRole('link', {
     name: 'All runs',
     exact: true,
   })

@@ -134,14 +134,14 @@ function entryName(name: string) {
 }
 
 export function plotEntry(page: Page, name: string): Locator {
-  return plotEntries(page).getByRole('button', { name: entryName(name) })
+  return plotEntries(page).getByRole('link', { name: entryName(name) })
 }
 
 // Each row has its own mark, shown only on hover or focus. A hidden button is
 // not in the accessibility tree, so hover the row first.
 export async function closePlot(page: Page, name: string) {
   const entry = plotEntries(page).filter({
-    has: page.getByRole('button', { name: entryName(name) }),
+    has: page.getByRole('link', { name: entryName(name) }),
   })
   await entry.hover()
   await entry.getByRole('button', { name: /^Close / }).click()

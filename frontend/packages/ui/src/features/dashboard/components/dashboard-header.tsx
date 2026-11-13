@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { Link } from 'react-router'
 import {
   ActionIcon,
   Box,
@@ -20,7 +21,6 @@ import {
 import Logo from '#src/components/headers/logo'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import {
-  selectActiveView,
   selectMobileNavOpened,
   selectNavCollapsed,
 } from '#src/features/dashboard/stores/dashboard.selectors'
@@ -31,10 +31,9 @@ import {
   mobileNavToggled,
   navCollapsed,
   navExpanded,
-  viewSelected,
 } from '#src/features/dashboard/stores/dashboard.slice'
+import { useOpenView } from '#src/features/dashboard/hooks/use-open-view'
 import { usePlotEntries } from '#src/features/dashboard/hooks/use-plot-entries'
-import { TABLE_VIEW } from '#src/features/dashboard/utils/views'
 
 import classes from './dashboard-header.module.css'
 
@@ -52,10 +51,10 @@ type Crumb = {
 }
 
 function useViewCrumbs(): Crumb[] {
-  const view = useAppSelector(selectActiveView)
+  const view = useOpenView()
   const plots = usePlotEntries()
 
-  switch (view.kind) {
+  switch (view?.kind) {
     case 'table':
       return [
         { label: 'Table' },
@@ -64,7 +63,7 @@ function useViewCrumbs(): Crumb[] {
     case 'context-file':
       return [{ label: 'Context file', icon: <IconFileCode stroke={1.5} /> }]
     case 'plot': {
-      const plot = plots.find((entry) => entry.view.id === view.id)
+      const plot = plots.find((entry) => entry.id === view.id)
       if (!plot) {
         return [{ label: 'Plots' }]
       }
@@ -78,6 +77,8 @@ function useViewCrumbs(): Crumb[] {
         },
       ]
     }
+    case undefined:
+      return []
   }
 }
 
@@ -144,8 +145,9 @@ function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
             }}
           >
             <UnstyledButton
+              component={Link}
+              to="table"
               className={classes.identity}
-              onClick={() => dispatch(viewSelected(TABLE_VIEW))}
             >
               {identity}
             </UnstyledButton>

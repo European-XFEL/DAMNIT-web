@@ -10,7 +10,7 @@ export function editorLine(page: Page, text: string): Locator {
 }
 
 export function contextFileNavItem(page: Page): Locator {
-  return dashboardNav(page).getByRole('button', { name: 'Context file' })
+  return dashboardNav(page).getByRole('link', { name: 'Context file' })
 }
 
 // Open the context file view and wait until Monaco has mounted with its content.

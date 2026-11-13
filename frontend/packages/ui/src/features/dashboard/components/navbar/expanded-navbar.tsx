@@ -1,15 +1,11 @@
 import { useRef, type ReactNode } from 'react'
+import { NavLink } from 'react-router'
 import { ActionIcon, AppShell, UnstyledButton, rem } from '@mantine/core'
 import { IconFileCode, IconPlus, IconTable } from '@tabler/icons-react'
 
 import { UserMenu } from '#src/components/headers/user-menu'
 import SectionHeading from '#src/components/headings/section-heading'
-import { useViews } from '#src/features/dashboard/hooks/use-views'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
-import {
-  CONTEXT_FILE_VIEW,
-  TABLE_VIEW,
-} from '#src/features/dashboard/utils/views'
 
 import classes from './navbar.module.css'
 import PlotEntries from './plot-entries'
@@ -32,17 +28,18 @@ function NavHeader({ label, action }: NavHeaderProps) {
 type NavItemProps = {
   icon: ReactNode
   label: string
-  active: boolean
-  onClick: () => void
+  to: string
+  end?: boolean
 }
 
-function NavItem({ icon, label, active, onClick }: NavItemProps) {
+// A link to a view, marked `aria-current` while its view is on show.
+function NavItem({ icon, label, to, end }: NavItemProps) {
   return (
     <UnstyledButton
+      component={NavLink}
+      to={to}
+      end={end}
       className={classes.item}
-      mod={{ active }}
-      aria-current={active ? 'page' : undefined}
-      onClick={onClick}
     >
       <span className={classes.icon}>{icon}</span>
       {label}
@@ -56,7 +53,6 @@ type ExpandedNavbarProps = {
 }
 
 function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
-  const views = useViews()
   const newPlotRef = useRef<HTMLButtonElement>(null)
 
   return (
@@ -75,8 +71,9 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
                     />
                   }
                   label="All runs"
-                  active={views.isActive(TABLE_VIEW)}
-                  onClick={() => views.select(TABLE_VIEW)}
+                  // Every saved table view will sit under this path.
+                  to="table"
+                  end
                 />
               </li>
             </ul>
@@ -115,8 +112,7 @@ function ExpandedNavbar({ user, onNewPlot }: ExpandedNavbarProps) {
                 />
               }
               label="Context file"
-              active={views.isActive(CONTEXT_FILE_VIEW)}
-              onClick={() => views.select(CONTEXT_FILE_VIEW)}
+              to="context-file"
             />
           </li>
         </ul>
