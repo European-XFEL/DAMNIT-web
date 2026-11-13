@@ -5,13 +5,48 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from pathlib import Path
 
 import h5py
 
-from damnit_api.metadata.hzdr_nexus import write_json_atomic
+from damnit_api.metadata.hzdr_nexus import (
+    _as_bool,
+    _read_hdf5_column,
+    write_json_atomic,
+)
 from damnit_api.metadata.hzdr_scicat_summary import campaign_files, campaign_summary
 from damnit_api.metadata.scicat import read_previous_registration
+
+
+def _master_rows(master: Path, campaign: str):
+    with h5py.File(master, "r") as handle:
+        if handle.attrs.get("experiment_id") != campaign:
+            message = "Master campaign identity is missing or differs from --campaign"
+            raise ValueError(message)
+        table = handle.get("entry/shots/shot_key")
+        if not isinstance(table, h5py.Dataset) or table.ndim != 1:
+            message = "Master has no canonical shot-key column"
+            raise ValueError(message)
+        master_keys = table.asstr()[...].tolist()
+        group = handle["entry/shots"]
+        has_version_flags = "has_newer_version" in group
+        flags = _read_hdf5_column(group, "has_newer_version", len(master_keys))
+        if len(flags) != len(master_keys):
+            message = "Master version flags do not align with its shot-key rows"
+            raise ValueError(message)
+        current_indices = [
+            index for index, flag in enumerate(flags) if not _as_bool(flag)
+        ]
+        record_ids = _read_hdf5_column(group, "record_id", len(master_keys))
+        master_ids_available = "record_id" in group
+    return (
+        master_keys,
+        current_indices,
+        record_ids,
+        has_version_flags,
+        master_ids_available,
+    )
 
 
 def inspect_campaign(catalog: Path, master: Path, campaign: str) -> dict:
@@ -60,15 +95,14 @@ def inspect_campaign(catalog: Path, master: Path, campaign: str) -> dict:
         if previous
         else None
     )
-    with h5py.File(master, "r") as handle:
-        if handle.attrs.get("experiment_id") != campaign:
-            message = "Master campaign identity is missing or differs from --campaign"
-            raise ValueError(message)
-        table = handle.get("entry/shots/shot_key")
-        if not isinstance(table, h5py.Dataset) or table.ndim != 1:
-            message = "Master has no canonical shot-key column"
-            raise ValueError(message)
-        master_keys = table.asstr()[...].tolist()
+    (
+        master_keys,
+        current_indices,
+        record_ids,
+        has_version_flags,
+        master_ids_available,
+    ) = _master_rows(master, campaign)
+    current_keys = [master_keys[index] for index in current_indices]
     catalog_keys = [shot.get("shot_key") for shot in shots]
     selected = campaign_files(master)
     warnings = [
@@ -77,10 +111,26 @@ def inspect_campaign(catalog: Path, master: Path, campaign: str) -> dict:
         "Superseded-record counts describe this catalogue snapshot only.",
         "Local readability does not establish SciCat download/archive/retrieve access.",
     ]
-    keys_match = master_keys == catalog_keys
+    keys_match = Counter(current_keys) == Counter(catalog_keys)
+    ids_match = None
+    if master_ids_available:
+        ids_match = Counter(
+            (master_keys[index], record_ids[index] or "") for index in current_indices
+        ) == Counter(
+            (shot.get("shot_key"), shot.get("labfrog_record_id") or "")
+            for shot in shots
+        )
     if not keys_match:
         warnings.append(
             "Catalogue/master shot keys differ; reconcile before publishing."
+        )
+    if ids_match is False:
+        warnings.append(
+            "Current LabFrog record identities differ; reconcile before publishing."
+        )
+    if not has_version_flags:
+        warnings.append(
+            "Master has no version flags; comparison includes every master row."
         )
     migration = bool(previous and previous.get("scicat_endpoint") != "publish")
     if migration:
@@ -97,7 +147,15 @@ def inspect_campaign(catalog: Path, master: Path, campaign: str) -> dict:
         "registration": registration,
         "legacy_migration_required": migration,
         "catalogue_shot_keys_match_master": keys_match,
+        "catalogue_record_ids_match_master": ids_match,
+        "comparison_basis": "current-master-rows"
+        if has_version_flags
+        else "all-master-rows-no-version-flags",
         "master_shot_rows": len(master_keys),
+        "master_current_rows": len(current_keys),
+        "master_superseded_rows": len(master_keys) - len(current_keys)
+        if has_version_flags
+        else None,
         "metadata_preview": summary,
         "inventory": [
             {"path": str(path), "size": path.stat().st_size} for path in selected

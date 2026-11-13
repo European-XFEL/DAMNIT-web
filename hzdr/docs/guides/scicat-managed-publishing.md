@@ -121,6 +121,11 @@ containers. Notes/property bags are excluded by the same campaign-summary
 allowlist used by the managed caller. Missing companions fail rather than being
 silently omitted; a mismatched master campaign is rejected. A catalogue/master
 shot-key mismatch is reported for reconciliation before publishing.
+When the master retains LabFrog version history, compare only rows explicitly
+marked current by `has_newer_version`; report total/current/superseded row counts
+separately. Compare `(shot_key, record_id)` identities as well when the master
+has record IDs. Without version flags the report labels its comparison as all
+master rows rather than assuming which versions are current.
 
 This inspection is not the builder's full normalized event payload: event review
 fields may be absent from catalogue projections, and superseded-record counts

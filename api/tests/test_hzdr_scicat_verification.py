@@ -130,6 +130,27 @@ def test_inspection_reports_catalogue_master_mismatch(inspection):
     assert any("reconcile" in note for note in result["warnings"])
 
 
+def test_inspection_compares_current_master_versions_by_record_identity(inspection):
+    module, catalog, master, _ = inspection
+    with h5py.File(master, "r+") as handle:
+        group = handle["entry/shots"]
+        del group["shot_key"]
+        group.create_dataset("shot_key", data=["campaign/key", "campaign/key"])
+        group.create_dataset("record_id", data=["old-id", "stable-id"])
+        group.create_dataset("has_newer_version", data=["true", "false"])
+    result = module.inspect_campaign(catalog, master, "campaign")
+    assert result["master_shot_rows"] == 2
+    assert result["master_superseded_rows"] == 1
+    assert result["master_current_rows"] == 1
+    assert result["catalogue_shot_keys_match_master"]
+    assert result["catalogue_record_ids_match_master"]
+    with h5py.File(master, "r+") as handle:
+        handle["entry/shots/record_id"][1] = "another-current-id"
+    mismatch = module.inspect_campaign(catalog, master, "campaign")
+    assert mismatch["catalogue_shot_keys_match_master"]
+    assert not mismatch["catalogue_record_ids_match_master"]
+
+
 def arguments(tmp_path, **updates):
     return argparse.Namespace(**{
         "work_dir": tmp_path / "verification",

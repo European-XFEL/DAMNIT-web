@@ -7,6 +7,9 @@ behaviour; the merge PR has the details.
 ## 2026-11-13
 
 ### SciCat campaign publishing
+- Campaign inspection compares the catalogue with explicitly current master
+  rows, reports retained version-history counts and verifies LabFrog record IDs
+  when present. Historical master rows no longer alone imply a mismatch.
 - Add a standalone read-only campaign inspection command that saves bounded
   metadata, explicit linked-file inventory, existing PID/migration state and
   catalogue/master shot-key agreement before any real campaign publishing.
