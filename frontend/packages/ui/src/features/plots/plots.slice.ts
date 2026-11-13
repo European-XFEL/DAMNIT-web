@@ -1,7 +1,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import { plotRequested, resetProposal } from '#src/app/store/actions'
+import { resetProposal } from '#src/app/store/actions'
 import type { PlotSpec } from '#src/types'
+
+import { plotAddress } from './plot-address'
 
 // A plot in the nav. `name` is the plot alone, such as "Pulses vs. Run"; the
 // kind comes from `source`.
@@ -20,19 +22,17 @@ const slice = createSlice({
   name: 'plots',
   initialState,
   reducers: {
+    addPlot: (state, action: PayloadAction<ListedPlot>) => {
+      state.data[plotAddress(action.payload)] ??= action.payload
+    },
     removePlot: (state, action: PayloadAction<string>) => {
       delete state.data[action.payload]
     },
   },
   extraReducers: (builder) => {
-    builder
-      .addCase(plotRequested, (state, action) => {
-        const { id, ...plot } = action.payload
-        state.data[id] = plot
-      })
-      .addCase(resetProposal, () => initialState)
+    builder.addCase(resetProposal, () => initialState)
   },
 })
 
 export default slice.reducer
-export const { removePlot } = slice.actions
+export const { addPlot, removePlot } = slice.actions

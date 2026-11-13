@@ -10,6 +10,7 @@ import {
   NotFoundPage,
   PrivateRoute,
   RootRoute,
+  dashboardViewRoutes,
 } from '@damnit-frontend/ui'
 
 import { HomeRoute, ProposalRoute } from './routes'
@@ -30,7 +31,7 @@ const routes: RouteObject[] = [
           {
             path: 'proposal/:proposal_number',
             Component: ProposalRoute,
-            children: [{ index: true, Component: Dashboard }],
+            children: [{ Component: Dashboard, children: dashboardViewRoutes }],
           },
         ],
       },

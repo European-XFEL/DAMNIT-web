@@ -1,8 +1,6 @@
-import {
-  DashboardShell,
-  DashboardMain,
-  ProposalIdentity,
-} from '@damnit-frontend/ui'
+import { Outlet } from 'react-router'
+
+import { DashboardShell, ProposalIdentity } from '@damnit-frontend/ui'
 
 type DashboardProps = {
   label: string
@@ -13,7 +11,7 @@ type DashboardProps = {
 function Dashboard({ label, subtitle, instrument }: DashboardProps) {
   return (
     <DashboardShell
-      main={<DashboardMain />}
+      main={<Outlet />}
       heading={label}
       identity={
         <ProposalIdentity

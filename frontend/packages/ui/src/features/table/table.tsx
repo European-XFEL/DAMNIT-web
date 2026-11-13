@@ -6,7 +6,6 @@ import { ViewStatus } from '#src/components/statuses/view-status'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { sorted } from '#src/utils/array'
 import type { PlotSource, PlotSpec } from '#src/types'
 import { cellTooltip } from '#src/features/table/utils/cell-tooltip'
 import { summaryAxes } from '#src/features/table/utils/summary-axes'
@@ -115,9 +114,7 @@ function Table({ onPlot }: TableProps) {
     }
 
     const subtitle = column.title
-    const runNumbers = sorted(
-      selectedRuns.map((selected) => String(selected.run))
-    )
+    const runNumbers = selectedRuns.map((selected) => String(selected.run))
 
     showPlotMenu(position, {
       kind: 'preview',

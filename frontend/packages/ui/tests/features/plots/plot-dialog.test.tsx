@@ -1,13 +1,12 @@
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client'
 import { expect, test, vi } from 'vitest'
 import { userEvent } from 'vitest/browser'
-import { render } from 'vitest-browser-react'
 
 import { setupStore } from '#src/app/store/store'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { TABLE_META_QUERY } from '#src/data/table/table-data.queries'
 import PlotDialog from '#src/features/plots/plot-dialog'
-import { withProviders } from '#tests/support/render'
+import { currentUrl, renderInDashboard } from '#tests/support/dashboard-router'
 
 const PROPOSAL = '6996'
 
@@ -37,24 +36,22 @@ async function renderDialog() {
   const client = new ApolloClient({ cache, link: new ApolloLink(() => null) })
 
   const close = vi.fn()
-  const dialog = await render(<PlotDialog opened close={close} />, {
-    wrapper: withProviders({ store, client }),
-  })
-  return { dialog, store, close }
+  const { screen: dialog, router } = await renderInDashboard(
+    <PlotDialog opened close={close} />,
+    { store, client }
+  )
+
+  return { dialog, router, close }
 }
 
-test('a plot made in the dialog opens as the view and closes the dialog', async () => {
-  const { dialog, store, close } = await renderDialog()
+test('a plot made in the dialog opens at its address and closes the dialog', async () => {
+  const { dialog, router, close } = await renderDialog()
 
   await dialog.getByLabelText('Y axis').fill('Energy')
   await dialog.getByRole('option', { name: 'Energy' }).click()
   await dialog.getByRole('button', { name: 'Plot' }).click()
 
-  const { activeView } = store.getState().dashboard
-  expect(activeView.kind).toBe('plot')
-  expect(Object.values(store.getState().plots.data)).toEqual([
-    { variables: ['run', 'energy'], source: 'summary', name: 'Energy vs. Run' },
-  ])
+  expect(currentUrl(router)).toBe('/proposal/6996/plots/summary?x=run&y=energy')
   expect(close).toHaveBeenCalledOnce()
 })
 

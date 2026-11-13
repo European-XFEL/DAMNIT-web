@@ -1,14 +1,13 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router'
 import { Modal, rem } from '@mantine/core'
 import { IconX } from '@tabler/icons-react'
 
-import { plotRequested } from '#src/app/store/actions'
-import { useAppDispatch } from '#src/app/store/hooks'
 import { useTableMeta, useTableVariables } from '#src/data/table/use-table-meta'
 import { buildVariableBlocks } from '#src/data/table/variable-blocks'
 
+import { plotAddress } from './plot-address'
 import { PlotForm } from './plot-form'
-import { plotName } from './utils'
 
 type PlotDialogProps = {
   opened: boolean
@@ -16,10 +15,11 @@ type PlotDialogProps = {
 }
 
 // The form unmounts with the closed modal, so every opening starts it afresh.
+// The dashboard's nav draws it, so a plot's path is relative to the dashboard.
 function PlotDialog({ opened, close }: PlotDialogProps) {
-  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
   const variables = useTableVariables()
-  const { groups, variables: variableMeta } = useTableMeta()
+  const { groups } = useTableMeta()
 
   const blocks = useMemo(
     () =>
@@ -48,9 +48,7 @@ function PlotDialog({ opened, close }: PlotDialogProps) {
       <PlotForm
         blocks={blocks}
         onSubmit={(plot) => {
-          dispatch(
-            plotRequested({ ...plot, name: plotName(plot, variableMeta) })
-          )
+          navigate(`plots/${plotAddress(plot)}`)
           close()
         }}
         onCancel={close}

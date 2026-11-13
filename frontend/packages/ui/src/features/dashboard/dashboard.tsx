@@ -1,10 +1,9 @@
-import { useNavigate } from 'react-router'
+import { Outlet, useNavigate } from 'react-router'
 
 import { selectUserFullName } from '#src/features/auth/auth.slice'
 import useCurrentProposal from '#src/data/metadata/use-current-proposal'
 import { useAppSelector } from '#src/app/store/hooks'
 import DashboardShell from '#src/features/dashboard/components/dashboard-shell'
-import DashboardMain from '#src/features/dashboard/components/dashboard-main'
 import ProposalIdentity from '#src/features/dashboard/components/proposal-identity'
 
 export default function Dashboard() {
@@ -20,7 +19,7 @@ export default function Dashboard() {
 
   return (
     <DashboardShell
-      main={<DashboardMain />}
+      main={<Outlet />}
       heading={label}
       identity={
         <ProposalIdentity

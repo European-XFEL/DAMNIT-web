@@ -1,6 +1,6 @@
 import { type RouteObject, createHashRouter } from 'react-router'
 
-import { RootRoute } from '@damnit-frontend/ui'
+import { RootRoute, dashboardViewRoutes } from '@damnit-frontend/ui'
 
 import {
   ExampleRoute,
@@ -19,6 +19,11 @@ const routes: RouteObject[] = [
         path: 'example/:example_name',
         Component: ExampleRoute,
         loader: loadExampleData,
+        // A plot's search changes on every move between views, which would
+        // otherwise fetch the example index again.
+        shouldRevalidate: ({ currentParams, nextParams }) =>
+          currentParams.example_name !== nextParams.example_name,
+        children: dashboardViewRoutes,
       },
     ],
   },

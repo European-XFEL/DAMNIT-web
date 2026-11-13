@@ -1,7 +1,9 @@
 import { expect, test } from 'vitest'
 
-import { plotRequested } from '#src/app/store/actions'
-import reducer, { type ListedPlot } from '#src/features/plots/plots.slice'
+import reducer, {
+  addPlot,
+  type ListedPlot,
+} from '#src/features/plots/plots.slice'
 
 const trains: ListedPlot = {
   variables: ['run', 'n_trains'],
@@ -9,10 +11,10 @@ const trains: ListedPlot = {
   name: 'Trains vs. Run',
 }
 
-test('the same plot asked for twice is listed once, under its address', () => {
-  let state = reducer(undefined, plotRequested(trains))
+test('the same plot added twice is listed once, under its address', () => {
+  let state = reducer(undefined, addPlot(trains))
 
-  state = reducer(state, plotRequested(trains))
+  state = reducer(state, addPlot(trains))
 
   expect(Object.keys(state.data)).toEqual(['summary?x=run&y=n_trains'])
 })

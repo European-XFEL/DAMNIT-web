@@ -76,7 +76,7 @@ test('the proposal in the crumb row closes the open mobile nav', async ({
   await navBurger(page).click()
   await expect(dashboardNav(page)).toBeVisible()
 
-  await breadcrumb(page).getByRole('button').click()
+  await breadcrumb(page).getByRole('link', { name: /p6996/ }).click()
 
   await expect(dashboardNav(page)).toBeHidden()
   await expect(gridCanvas(page)).toBeVisible()

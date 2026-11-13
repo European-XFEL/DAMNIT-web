@@ -6,7 +6,7 @@ test('a signed-out visit hands its path to the SSO login', async ({
   page,
   baseURL,
 }) => {
-  const path = 'proposal/1234?x=run&y=pulses'
+  const path = 'proposal/1234/plots/summary?x=run&y=pulses'
 
   // Arm the wait before navigating, and let goto settle at commit (not load): the
   // SSO redirect PrivateRoute -> LoginRoute fires window.location.replace after mount,

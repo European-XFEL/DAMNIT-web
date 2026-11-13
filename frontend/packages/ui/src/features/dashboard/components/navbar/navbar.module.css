@@ -61,7 +61,7 @@
 .railButton {
   border-radius: var(--mantine-radius-sm);
 
-  &:hover:not([data-active]) {
+  &:hover:not([data-active], [aria-current='page']) {
     background-color: var(--mantine-color-gray-2);
   }
 }
@@ -73,18 +73,18 @@
 
 /* Accent text on the accent's own tint is a shade darker than on a plain
    ground, where indigo.7 already reads. */
-.item[data-active],
+.item[aria-current='page'],
 .entry[data-active],
-.railButton[data-active] {
+.railButton[aria-current='page'] {
   background-color: var(--mantine-color-indigo-0);
   color: var(--mantine-color-indigo-8);
 }
 
-.item[data-active] {
+.item[aria-current='page'] {
   font-weight: 500;
 }
 
-.item[data-active] .icon,
+.item[aria-current='page'] .icon,
 .entry[data-active] .icon {
   color: inherit;
 }

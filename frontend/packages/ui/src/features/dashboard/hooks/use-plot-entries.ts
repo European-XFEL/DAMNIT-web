@@ -11,7 +11,7 @@ export function usePlotEntries() {
       Object.entries(plots).map(([id, plot]) => {
         const subtitle = formatRunsSubtitle(plot.runs)
         return {
-          view: { kind: 'plot' as const, id },
+          id,
           kind: plot.source,
           name: plot.name,
           subtitle,
