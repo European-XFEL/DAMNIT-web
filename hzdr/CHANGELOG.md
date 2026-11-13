@@ -7,6 +7,9 @@ behaviour; the merge PR has the details.
 ## 2026-11-13
 
 ### SciCat campaign publishing
+- Add a standalone read-only campaign inspection command that saves bounded
+  metadata, explicit linked-file inventory, existing PID/migration state and
+  catalogue/master shot-key agreement before any real campaign publishing.
 - Verification receipts retain the HTTP status and recognized action of the
   latest direct replay response, including failed unchanged checks, without
   copying arbitrary response bodies.

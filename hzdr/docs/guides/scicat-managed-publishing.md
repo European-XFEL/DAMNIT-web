@@ -100,6 +100,35 @@ register guards both copies.
 
 ## Verification status
 
+### Inspect a representative campaign before publishing
+
+After the synthetic test passes, inspect one existing campaign without changing
+its files or SciCat record. From the DAMNIT repository:
+
+```bash
+uv run --no-sync --package damnit-api python hzdr/scripts/inspect-scicat-campaign.py \
+  --catalogue /home/tippey/mnt/bigdata/HPLexp/nexus/hzdr_sources.json \
+  --master /home/tippey/mnt/bigdata/HPLexp/nexus/Beamline_radbio_2026/Beamline_radbio_2026.nxs \
+  --campaign Beamline_radbio_2026 \
+  --out /home/tippey/scicat-campaign-preview.json
+```
+
+This needs no plugin key or production API settings and makes no HTTP requests.
+The output contains a bounded summary from canonical shots in the current source
+catalogue, deduplicated catalogue event projections, the existing registration
+identity/PID and an inventory of only the master and explicitly linked shot
+containers. Notes/property bags are excluded by the same campaign-summary
+allowlist used by the managed caller. Missing companions fail rather than being
+silently omitted; a mismatched master campaign is rejected. A catalogue/master
+shot-key mismatch is reported for reconciliation before publishing.
+
+This inspection is not the builder's full normalized event payload: event review
+fields may be absent from catalogue projections, and superseded-record counts
+describe only the current catalogue snapshot. Those limitations are recorded in
+the report. Review it before choosing a migration procedure or enabling writes.
+An existing legacy PID is never adopted or replaced by this command. Local file
+readability does not establish downstream catalogue download/access support.
+
 ### Controlled deployment test and shareable results
 
 Deploy the managed plugin feature branch first, with a service API key and

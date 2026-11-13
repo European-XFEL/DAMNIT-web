@@ -8,14 +8,16 @@ import subprocess  # noqa: S404 -- isolated interpreter import regression test
 import sys
 from pathlib import Path
 
+import h5py
 import httpx
 import pytest
 
 
-def test_standalone_runner_does_not_load_server_settings():
-    script = (
-        Path(__file__).resolve().parents[2] / "hzdr/scripts/verify-scicat-publishing.py"
-    )
+@pytest.mark.parametrize(
+    "name", ["verify-scicat-publishing.py", "inspect-scicat-campaign.py"]
+)
+def test_standalone_runner_does_not_load_server_settings(name):
+    script = Path(__file__).resolve().parents[2] / "hzdr/scripts" / name
     environment = {
         key: value for key, value in os.environ.items() if not key.startswith("DW_API_")
     }
@@ -45,6 +47,87 @@ def runner():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+@pytest.fixture
+def inspection(tmp_path):
+    path = (
+        Path(__file__).resolve().parents[2] / "hzdr/scripts/inspect-scicat-campaign.py"
+    )
+    spec = importlib.util.spec_from_file_location("scicat_inspection", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    master = tmp_path / "campaign.nxs"
+    companion = tmp_path / "shots/shot.nxs"
+    companion.parent.mkdir()
+    with h5py.File(companion, "w") as handle:
+        handle.create_group("entry")
+    with h5py.File(master, "w") as handle:
+        handle.attrs["experiment_id"] = "campaign"
+        handle.create_dataset("entry/shots/shot_key", data=["campaign/key"])
+        handle["shot"] = h5py.ExternalLink("shots/shot.nxs", "/entry")
+    event = {"event_id": "same-event", "source": "Watchdog", "match_status": "matched"}
+    source = {
+        "key": "campaign",
+        "metadata": {"experiment_id": "campaign", "scicat_pid": "old/pid"},
+        "shots": [
+            {
+                "shot_key": "campaign/key",
+                "labfrog_record_id": "stable-id",
+                "labfrog_local_count": 3,
+                "authority_shot_number": 57,
+                "metadata": {
+                    "target": {"material": "Cu", "notes": "private-note"},
+                    "instrument": {"id": "detector"},
+                },
+                "events": [event],
+            }
+        ],
+        "review_events": [event],
+    }
+    catalog = tmp_path / "sources.json"
+    catalog.write_text(json.dumps({"sources": [source]}))
+    return module, catalog, master, companion
+
+
+def test_inspection_keeps_pid_metadata_and_inventory_read_only(inspection):
+    module, catalog, master, companion = inspection
+    before = {path: path.read_bytes() for path in (catalog, master, companion)}
+    result = module.inspect_campaign(catalog, master, "campaign")
+    assert result["read_only"]
+    assert result["registration"]["scicat_pid"] == "old/pid"
+    assert result["legacy_migration_required"]
+    assert result["catalogue_shot_keys_match_master"]
+    assert result["file_count"] == 2
+    assert result["metadata_preview"]["event_count"] == 1
+    assert result["metadata_preview"]["authority_numbers"]["maximum"] == 57
+    assert result["metadata_preview"]["labfrog_local_counts"]["maximum"] == 3
+    assert result["metadata_preview"]["instruments"]["values"] == ["detector"]
+    assert "private-note" not in json.dumps(result)
+    assert all(path.read_bytes() == content for path, content in before.items())
+
+
+def test_inspection_rejects_wrong_master_campaign_and_missing_companion(inspection):
+    module, catalog, master, companion = inspection
+    with h5py.File(master, "r+") as handle:
+        handle.attrs["experiment_id"] = "other"
+    with pytest.raises(ValueError, match="identity"):
+        module.inspect_campaign(catalog, master, "campaign")
+    with h5py.File(master, "r+") as handle:
+        handle.attrs["experiment_id"] = "campaign"
+    companion.unlink()
+    with pytest.raises(FileNotFoundError):
+        module.inspect_campaign(catalog, master, "campaign")
+
+
+def test_inspection_reports_catalogue_master_mismatch(inspection):
+    module, catalog, master, _ = inspection
+    payload = json.loads(catalog.read_text())
+    payload["sources"][0]["shots"][0]["shot_key"] = "campaign/changed"
+    catalog.write_text(json.dumps(payload))
+    result = module.inspect_campaign(catalog, master, "campaign")
+    assert not result["catalogue_shot_keys_match_master"]
+    assert any("reconcile" in note for note in result["warnings"])
 
 
 def arguments(tmp_path, **updates):
