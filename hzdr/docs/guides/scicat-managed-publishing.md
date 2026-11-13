@@ -109,7 +109,8 @@ the same work-directory paths as the caller. From the DAMNIT repo, with the
 shared key already exported as `DW_API_HZDR_SCICAT__API_KEY`:
 
 ```bash
-uv run --no-sync python hzdr/scripts/verify-scicat-publishing.py \
+uv sync --locked --package damnit-api
+uv run --no-sync --package damnit-api python hzdr/scripts/verify-scicat-publishing.py \
   --plugin-url http://127.0.0.1:5001 \
   --work-dir /home/tippey/scicat-verification
 ```
