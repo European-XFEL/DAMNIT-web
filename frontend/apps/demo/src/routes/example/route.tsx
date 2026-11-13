@@ -33,9 +33,17 @@ function ExampleDashboard({ info }: ExampleDashboardProps) {
     }
   }, [info?.id, dispatch])
 
-  return proposal.notFound || !info ? (
-    <NotFoundPage homeTo="/" />
-  ) : (
+  if (proposal.notFound || !info) {
+    return <NotFoundPage homeTo="/" />
+  }
+
+  // The effect above sets the proposal only after this first draw, and no view
+  // draws without one, as in the app.
+  if (!proposal.value) {
+    return <div></div>
+  }
+
+  return (
     <Dashboard
       label={info.label}
       subtitle={info.subtitle}
