@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
-import isEmpty from 'lodash/isEmpty'
-import lodashSize from 'lodash/size'
+import { isEmpty, size as lodashSize } from 'lodash-es'
 import { rem } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { IconEye, IconEyeClosed, IconHash } from '@tabler/icons-react'
