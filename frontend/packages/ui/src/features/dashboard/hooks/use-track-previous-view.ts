@@ -30,11 +30,13 @@ export function useTrackPreviousView() {
     const url = pathname + search
     const left = shown.current
 
-    // A plot the nav does not list drew only an alert, so a close never goes
-    // back to it.
+    // A link to no view, or to a plot the nav does not list, drew only a
+    // message, so a close never goes back to it.
     const leftOpen =
-      left?.kind !== 'plot' ||
-      (left.plotId !== undefined && left.plotId in store.getState().plots.data)
+      left?.kind !== undefined &&
+      (left.kind !== 'plot' ||
+        (left.plotId !== undefined &&
+          left.plotId in store.getState().plots.data))
 
     // A plot has more than one address, such as its keys in another order.
     const moved = (left?.plotId ?? left?.url) !== (plotId ?? url)
