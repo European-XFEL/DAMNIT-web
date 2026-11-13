@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react'
+import { NavLink } from 'react-router'
 import {
   AppShell,
   Divider,
@@ -25,12 +26,8 @@ import cx from 'clsx'
 
 import { UserMenu } from '#src/components/headers/user-menu'
 import { usePlotEntries } from '#src/features/dashboard/hooks/use-plot-entries'
-import { useViews } from '#src/features/dashboard/hooks/use-views'
+import { useOpenView } from '#src/features/dashboard/hooks/use-open-view'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
-import {
-  CONTEXT_FILE_VIEW,
-  TABLE_VIEW,
-} from '#src/features/dashboard/utils/views'
 import { MENU_OFFSET } from '#src/styles/theme'
 
 import classes from './navbar.module.css'
@@ -51,7 +48,6 @@ const RailButton = forwardRef<HTMLButtonElement, RailButtonProps>(
           {...others}
           ref={ref}
           className={classes.railButton}
-          mod={{ active }}
           aria-label={label}
           aria-current={active ? 'page' : undefined}
         >
@@ -62,15 +58,37 @@ const RailButton = forwardRef<HTMLButtonElement, RailButtonProps>(
   }
 )
 
+type RailLinkProps = {
+  icon: ReactNode
+  label: string
+  to: string
+  end?: boolean
+}
+
+function RailLink({ icon, label, to, end }: RailLinkProps) {
+  return (
+    <Tooltip label={label} position="right">
+      <UnstyledButton
+        component={NavLink}
+        to={to}
+        end={end}
+        className={classes.railButton}
+        aria-label={label}
+      >
+        {icon}
+      </UnstyledButton>
+    </Tooltip>
+  )
+}
+
 type RailNavbarProps = {
   user?: DashboardUser
   onNewPlot: () => void
 }
 
 function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
-  const views = useViews()
   const plots = usePlotEntries()
-  const plotActive = plots.some(({ view }) => views.isActive(view))
+  const plotActive = useOpenView()?.kind === 'plot'
   const [plotsOpened, setPlotsOpened] = useState(false)
   const plotsRef = useRef<HTMLButtonElement>(null)
   const newPlotRef = useRef<HTMLButtonElement>(null)
@@ -94,7 +112,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
   return (
     <>
       <AppShell.Section grow className={classes.rail}>
-        <RailButton
+        <RailLink
           icon={
             <IconTable
               style={{ width: rem(20), height: rem(20) }}
@@ -102,8 +120,8 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
             />
           }
           label="Table"
-          active={views.isActive(TABLE_VIEW)}
-          onClick={() => views.select(TABLE_VIEW)}
+          to="table"
+          end
         />
         <Popover
           opened={plotsOpened}
@@ -159,7 +177,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
             </UnstyledButton>
           </Popover.Dropdown>
         </Popover>
-        <RailButton
+        <RailLink
           icon={
             <IconFileCode
               style={{ width: rem(20), height: rem(20) }}
@@ -167,8 +185,7 @@ function RailNavbar({ user, onNewPlot }: RailNavbarProps) {
             />
           }
           label="Context file"
-          active={views.isActive(CONTEXT_FILE_VIEW)}
-          onClick={() => views.select(CONTEXT_FILE_VIEW)}
+          to="context-file"
         />
       </AppShell.Section>
       {user && (

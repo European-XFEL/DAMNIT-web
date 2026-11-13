@@ -16,6 +16,8 @@ export type ExampleInfo = {
 
 type ExampleCardProps = ExampleInfo
 
+// Straight to the table: the bare address redirects there, which runs the
+// example's loader again.
 function ExampleCard(props: ExampleCardProps) {
   return (
     <Card
@@ -24,7 +26,7 @@ function ExampleCard(props: ExampleCardProps) {
       padding="xl"
       className={classes.card}
       component={Link}
-      to={`/example/${props.id}`}
+      to={`/example/${props.id}/table`}
     >
       <Group justify="space-between" align="flex-start" gap="md">
         <Title order={4} style={{ lineHeight: 1.2, margin: 0 }}>

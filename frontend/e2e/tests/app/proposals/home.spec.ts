@@ -52,9 +52,9 @@ test('clicking a proposal opens its dashboard', async ({ page }) => {
   const tableData = waitForTableData(page)
   await proposalLink(page, PROPOSAL.number).click()
 
-  await expect(page).toHaveURL(/\/app\/proposal\/6996$/)
+  await expect(page).toHaveURL(/\/app\/proposal\/6996\/table$/)
   await expect(
-    breadcrumb(page).getByRole('button', { name: /p6996/ })
+    breadcrumb(page).getByRole('link', { name: /p6996/ })
   ).toContainText(PROPOSAL.principal_investigator)
 
   await tableData

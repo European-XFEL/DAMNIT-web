@@ -1,44 +1,40 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
 
-import { plotRequested, resetProposal } from '#src/app/store/actions'
+import { resetProposal } from '#src/app/store/actions'
 import { removePlot } from '#src/features/plots/plots.slice'
-import { type View } from '#src/features/dashboard/types/dashboard.types'
-import { isSameView, TABLE_VIEW } from '#src/features/dashboard/utils/views'
 
 type NavState = {
   collapsed: boolean
   mobileOpened: boolean
 }
 
+// `plotId` is set when the view was a plot, so closing that plot forgets it.
+export type PreviousView = {
+  url: string
+  plotId?: string
+}
+
 type DashboardState = {
-  activeView: View
-  previousView?: View
+  previousView?: PreviousView
   nav: NavState
 }
 
 const initialState: DashboardState = {
-  activeView: TABLE_VIEW,
   nav: {
     collapsed: false,
     mobileOpened: false,
   },
 }
 
-// Below `sm` the nav covers the view, so whatever picks a view also closes it.
-function selectView(state: DashboardState, view: View) {
-  if (!isSameView(state.activeView, view)) {
-    state.previousView = state.activeView
-    state.activeView = view
-  }
-  state.nav.mobileOpened = false
-}
-
 const slice = createSlice({
   name: 'dashboard',
   initialState,
   reducers: {
-    viewSelected: (state, action: PayloadAction<View>) => {
-      selectView(state, action.payload)
+    viewLeft: (state, action: PayloadAction<PreviousView>) => {
+      state.previousView = action.payload
+    },
+    mobileNavClosed: (state) => {
+      state.nav.mobileOpened = false
     },
     navCollapsed: (state) => {
       state.nav.collapsed = true
@@ -52,19 +48,8 @@ const slice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(plotRequested, (state, action) => {
-        selectView(state, { kind: 'plot', id: action.payload.id })
-      })
-      // Closing the plot on show goes back to the view before it. A closed plot
-      // is dropped from `previousView` too, so that step back never lands on one.
       .addCase(removePlot, (state, action) => {
-        const isClosed = (view?: View) =>
-          view?.kind === 'plot' && view.id === action.payload
-
-        if (isClosed(state.activeView)) {
-          state.activeView = state.previousView ?? TABLE_VIEW
-          state.previousView = undefined
-        } else if (isClosed(state.previousView)) {
+        if (state.previousView?.plotId === action.payload) {
           state.previousView = undefined
         }
       })
@@ -73,5 +58,10 @@ const slice = createSlice({
 })
 
 export default slice.reducer
-export const { viewSelected, navCollapsed, navExpanded, mobileNavToggled } =
-  slice.actions
+export const {
+  viewLeft,
+  mobileNavClosed,
+  navCollapsed,
+  navExpanded,
+  mobileNavToggled,
+} = slice.actions
