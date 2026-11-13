@@ -38,6 +38,10 @@ def get_preview_data(proposal, run, variable):
                 drop=True  # FIX: # pyright: ignore[reportCallIssue]
             )
 
+    # Masks come back as bool arrays, from read() as well, and interp needs numbers
+    if isinstance(data, np.ndarray | xr.DataArray) and data.dtype == bool:
+        data = data.astype(np.uint8)
+
     try:
         dtype = get_damnit_type(data, type_hint=type_hint)
     except ValueError:
