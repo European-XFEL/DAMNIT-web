@@ -24,19 +24,17 @@ export function useTrackPreviousView() {
   const view = useOpenView()
   const kind = view?.kind
   const plotId = view?.kind === 'plot' ? view.id : undefined
-  const shown = useRef<PreviousView & { kind?: View['kind'] }>()
+  const shown = useRef<PreviousView & { kind: View['kind'] }>()
 
   useEffect(() => {
     const url = pathname + search
     const left = shown.current
 
-    // A link to no view, or to a plot the nav does not list, drew only a
-    // message, so a close never goes back to it.
+    // A plot the nav does not list drew only an alert, so a close never goes
+    // back to it.
     const leftOpen =
-      left?.kind !== undefined &&
-      (left.kind !== 'plot' ||
-        (left.plotId !== undefined &&
-          left.plotId in store.getState().plots.data))
+      left?.kind !== 'plot' ||
+      (left.plotId !== undefined && left.plotId in store.getState().plots.data)
 
     // A plot has more than one address, such as its keys in another order.
     const moved = (left?.plotId ?? left?.url) !== (plotId ?? url)
@@ -53,6 +51,7 @@ export function useTrackPreviousView() {
       dispatch(mobileNavClosed())
     }
 
-    shown.current = { url, plotId, kind }
+    // A link to no view drew only a message, so a close never goes back to it.
+    shown.current = kind === undefined ? undefined : { url, plotId, kind }
   }, [key, pathname, search, kind, plotId, closedPlot, store, dispatch])
 }
