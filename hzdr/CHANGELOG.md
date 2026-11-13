@@ -7,6 +7,9 @@ behaviour; the merge PR has the details.
 ## 2026-11-13
 
 ### SciCat campaign publishing
+- Canonical bridge builds now persist each row's `has_newer_version` flag.
+  Fresh SQLite-based masters retain version history while allowing inspection
+  to distinguish current catalogue records from superseded LabFrog versions.
 - Campaign inspection compares the catalogue with explicitly current master
   rows, reports retained version-history counts and verifies LabFrog record IDs
   when present. Historical master rows no longer alone imply a mismatch.

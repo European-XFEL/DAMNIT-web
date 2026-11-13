@@ -4620,6 +4620,10 @@ def _write_shot_bridge_columns(
         )
     columns = {
         "shot_key": [shot["shot_key"] for shot in shots],
+        "has_newer_version": [
+            _as_bool(shot.get("metadata", {}).get("has_newer_version"))
+            for shot in shots
+        ],
         "fired_at": [shot.get("fired_at") or "" for shot in shots],
         "labfrog_date_time": [shot.get("labfrog_date_time") or "" for shot in shots],
         "match_status": [shot.get("match_status") or "" for shot in shots],

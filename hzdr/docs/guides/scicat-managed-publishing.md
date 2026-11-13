@@ -134,6 +134,28 @@ the report. Review it before choosing a migration procedure or enabling writes.
 An existing legacy PID is never adopted or replaced by this command. Local file
 readability does not establish downstream catalogue download/access support.
 
+### Isolated rebuild of an older archive
+
+If an older master lacks version flags, first test a fresh single-campaign
+build from its curated SQLite export. Use a new output directory and disable
+SciCat for that command, without altering the running API configuration:
+
+```bash
+SCICAT_TEST_DIR=$(mktemp -d "$HOME/scicat-radbio-build.XXXXXX")
+DW_API_HZDR_SCICAT__ENABLED=false uv run --no-sync --package damnit-api python api/scripts/hzdr-hdf5-builder.py \
+  --labfrog-sqlite /home/tippey/labfrog-sqlite-tools-repo/curated_files/Beamline_radbio_2026/Beamline_radbio_2026.sqlite \
+  --experiment-id Beamline_radbio_2026 --source-key Beamline_radbio_2026 \
+  --output-nexus "$SCICAT_TEST_DIR/Beamline_radbio_2026.nxs" \
+  --campaign-timezone Europe/Berlin
+```
+
+This is a LabFrog-only metadata/version test. It does not consume the live
+Kafka spool, claim unassigned triggers, build acquisition-data containers or
+establish full campaign acceptance. Its default catalogue is
+`$SCICAT_TEST_DIR/hzdr_sources.json`; inspect it with the same read-only tool,
+using the new master and a report path outside the temporary build directory.
+Keep the live catalogue and its legacy PID unchanged while reviewing the result.
+
 ### Controlled deployment test and shareable results
 
 Deploy the managed plugin feature branch first, with a service API key and
