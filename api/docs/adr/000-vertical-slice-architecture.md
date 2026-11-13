@@ -68,7 +68,7 @@ damnit_api/
 │   ├── errors.py    #   Shared error classes; see ADR-001
 │   ├── types.py     #   `ProposalNumber`, pure value types (no I/O)
 │   ├── const.py     #   DamnitType etc.
-│   └── conversions.py  # b64image, blob2numpy, type mapping
+│   └── conversions.py  # b64image, type mapping
 │
 ├── proposals/       # proposal identity, metadata, discovery
 │   ├── models.py    #   `ProposalMeta` + domain models
