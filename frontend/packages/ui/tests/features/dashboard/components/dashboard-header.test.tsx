@@ -85,7 +85,7 @@ test('a plot that follows every run says all runs in its crumb', async () => {
     .toHaveTextContent('Pulses vs. Run, summary plot (All runs)')
 })
 
-test('the tab names the proposal, then the view on show, and gets its own title back when the dashboard goes', async () => {
+test('the page title names the proposal, then the view on show, and goes back to the one before when the dashboard goes', async () => {
   document.title = 'DAMNIT'
   const store = setupStore()
   store.dispatch(

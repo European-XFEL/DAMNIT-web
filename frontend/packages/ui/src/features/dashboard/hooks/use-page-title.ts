@@ -1,8 +1,8 @@
 import { useLayoutEffect } from 'react'
 
-// Names the browser tab, and hands the page's own title back when the
-// dashboard goes.
-export function useTabTitle(title: string) {
+// Sets the page title, and puts back the one before when the dashboard
+// goes.
+export function usePageTitle(title: string) {
   useLayoutEffect(() => {
     const before = document.title
     document.title = title
