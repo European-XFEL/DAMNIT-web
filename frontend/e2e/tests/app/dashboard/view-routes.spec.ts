@@ -9,9 +9,11 @@ test('the context file stays open over a reload, and Back lands on All runs', as
   page,
   example,
 }) => {
+  // Open the context file
   await openProposal(page, example)
   await openContextFile(page)
   await expect(page).toHaveURL(/\/context-file$/)
+  await expect(page).toHaveTitle('p6996: Context file')
 
   // Reload
   await page.reload()
@@ -31,6 +33,7 @@ test('a plot link opened fresh draws the plot and lists it, and Back after closi
   const y = numberVars[0]
   const name = `${titleOf(example, y)} vs. Run`
 
+  // Open the link
   await page.goto(`proposal/${proposal}/plots/summary?x=run&y=${y}`)
   await expect(plotFigure(page)).toBeVisible()
   await expect(plotEntry(page, name)).toHaveAttribute('aria-current', 'page')
@@ -52,12 +55,14 @@ test('a link to no page keeps the dashboard and says so, with a way to All runs'
 }) => {
   const proposal = example.proposalMetadata[0].number
 
+  // A mistyped view
   await page.goto(`proposal/${proposal}/tabel`)
   await expect(
     page.getByText('The proposal has no page "tabel".')
   ).toBeVisible()
   await expect(dashboardNav(page)).toBeVisible()
 
+  // Follow the way out
   await page.getByRole('link', { name: 'Open All runs' }).click()
   await expect(page).toHaveURL(/\/table$/)
 })

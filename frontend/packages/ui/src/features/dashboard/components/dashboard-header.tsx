@@ -34,11 +34,14 @@ import {
 } from '#src/features/dashboard/stores/dashboard.slice'
 import { useOpenView } from '#src/features/dashboard/hooks/use-open-view'
 import { usePlotEntries } from '#src/features/dashboard/hooks/use-plot-entries'
+import { usePageTitle } from '#src/features/dashboard/hooks/use-page-title'
 
 import classes from './dashboard-header.module.css'
 
 type DashboardHeaderProps = {
   identity: ReactNode
+  // The proposal as the page title names it, such as "p6996"
+  heading: string
   homeTo: string
 }
 
@@ -104,11 +107,24 @@ function NavToggle() {
   )
 }
 
-function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
+// The page title names the proposal, then the view on show as its crumb
+// does: "p6996: Pulses vs. Run (All runs)".
+function pageTitle(heading: string, crumb: Crumb | undefined) {
+  if (crumb === undefined) {
+    return heading
+  }
+
+  const detail = crumb.detail ? ` (${crumb.detail})` : ''
+
+  return `${heading}: ${crumb.label}${detail}`
+}
+
+function DashboardHeader({ identity, heading, homeTo }: DashboardHeaderProps) {
   const dispatch = useAppDispatch()
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRail = useNavRail()
   const crumbs = useViewCrumbs()
+  usePageTitle(pageTitle(heading, crumbs.at(-1)))
   // Below `sm` the row has no width for the group a view sits in. Not
   // `hiddenFrom`: Mantine leaves the separator of a hidden crumb behind.
   const shown = useIsMobile() ? crumbs.slice(-1) : crumbs

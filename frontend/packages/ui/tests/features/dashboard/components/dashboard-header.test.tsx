@@ -8,7 +8,7 @@ import { currentUrl, renderInDashboard } from '#tests/support/dashboard-router'
 import { resizeViewport } from '#tests/support/viewport'
 
 // The real identity, so the row is the one the app draws.
-async function renderHeader(store: AppStore, url?: string) {
+async function renderHeader(store: AppStore, { url }: { url?: string } = {}) {
   return renderInDashboard(
     <DashboardHeader
       identity={
@@ -18,6 +18,7 @@ async function renderHeader(store: AppStore, url?: string) {
           detail="Christian Gutt"
         />
       }
+      heading="p6996"
       homeTo="/home"
     />,
     { store, url }
@@ -75,14 +76,41 @@ test('a plot that follows every run says all runs in its crumb', async () => {
       name: 'Pulses vs. Run',
     })
   )
-  const { screen } = await renderHeader(
-    store,
-    '/proposal/6996/plots/summary?x=run&y=n_pulses'
-  )
+  const { screen } = await renderHeader(store, {
+    url: '/proposal/6996/plots/summary?x=run&y=n_pulses',
+  })
 
   await expect
     .element(screen.getByText('Pulses vs. Run'))
     .toHaveTextContent('Pulses vs. Run, summary plot (All runs)')
+})
+
+test('the page title names the proposal, then the view on show, and goes back to the one before when the dashboard goes', async () => {
+  document.title = 'DAMNIT'
+  const store = setupStore()
+  store.dispatch(
+    addPlot({
+      variables: ['run', 'n_pulses'],
+      source: 'summary',
+      name: 'Pulses vs. Run',
+    })
+  )
+  const { screen, router } = await renderHeader(store, {
+    url: '/proposal/6996/plots/summary?x=run&y=n_pulses',
+  })
+
+  // A plot, with its runs
+  await expect
+    .poll(() => document.title)
+    .toBe('p6996: Pulses vs. Run (All runs)')
+
+  // The table, without the group it sits in
+  await router.navigate('/proposal/6996/table')
+  await expect.poll(() => document.title).toBe('p6996: All runs')
+
+  // Leaving the dashboard
+  await screen.unmount()
+  expect(document.title).toBe('DAMNIT')
 })
 
 test('the row drops the group a view sits in below `sm`', async () => {
@@ -116,10 +144,9 @@ test('the toggle folds the nav to the rail and back', async () => {
 
 test('the proposal links to All runs', async () => {
   const store = setupStore()
-  const { screen, router } = await renderHeader(
-    store,
-    '/proposal/6996/context-file'
-  )
+  const { screen, router } = await renderHeader(store, {
+    url: '/proposal/6996/context-file',
+  })
 
   await screen.getByRole('link', { name: /p6996/ }).click()
 
