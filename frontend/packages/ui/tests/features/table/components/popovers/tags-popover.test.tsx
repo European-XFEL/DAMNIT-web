@@ -42,7 +42,6 @@ const METADATA = {
     Timing: { id: 3, name: 'Timing', variables: ['run'] },
   },
   groups: {},
-  timestamp: 0,
 }
 
 let store: AppStore

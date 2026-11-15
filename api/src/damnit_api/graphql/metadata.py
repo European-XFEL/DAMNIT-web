@@ -9,14 +9,12 @@ from ..runs.types import DamnitRun
 from ..utils import create_map
 
 
-@alru_cache(ttl=10)
-async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
-    """Fetch the per-proposal metadata snapshot from SQLite.
+async def read_metadata(proposal):
+    """Read the per-proposal metadata snapshot from SQLite.
 
-    Returns a dict with `runs`, `variables`, `tags`, `groups`, and
-    `timestamp`. `runs` is a server-ordered list of (proposal, run) pairs
-    (active block first). Result is TTL-cached; an open `run_updates`
-    subscription invalidates it whenever the database file changes.
+    Returns a dict with `runs`, `variables`, `tags`, `groups` and `signature`.
+    `runs` is a server-ordered list of (proposal, run) pairs (active block
+    first).
     """
     # One after another: the database lock runs them in turn anyway, and a
     # failed read stops the rest instead of leaving them queued on the lock.
@@ -24,9 +22,6 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
     variables = await db.async_variables(proposal)
     variable_tags = await db.async_variable_tags(proposal)
     runs = await db.async_run_identifiers(proposal)
-    max_timestamp = await db.async_max(
-        proposal, table="run_variables", column="timestamp"
-    )
 
     variables = {**DamnitRun.known_variables(), **variables}
     groups = _assign_groups(variables)
@@ -53,10 +48,13 @@ async def fetch_metadata(proposal=db.DEFAULT_PROPOSAL):
         "variables": variables,
         "tags": tags,
         "groups": groups,
-        "timestamp": max_timestamp or 0,
     }
     snapshot["signature"] = _signature(snapshot)
     return snapshot
+
+
+# An open `run_updates` subscription invalidates it whenever the file changes.
+fetch_metadata = alru_cache(ttl=10)(read_metadata)
 
 
 def _assign_groups(variables):
@@ -117,12 +115,7 @@ def _signature(snapshot) -> str:
     """Hash of everything a subscriber would be pushed.
 
     Computed here so it costs one pass per actual read rather than one per
-    subscription tick. `timestamp` is left out: it moves whenever any value
-    changes, which would make every tick look like a metadata change.
+    subscription tick.
     """
-    payload = json.dumps(
-        {key: value for key, value in snapshot.items() if key != "timestamp"},
-        sort_keys=True,
-        default=str,
-    )
+    payload = json.dumps(snapshot, sort_keys=True, default=str)
     return hashlib.sha256(payload.encode()).hexdigest()

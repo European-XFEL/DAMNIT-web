@@ -41,7 +41,6 @@ const METADATA = {
     position: { name: 'position', variables: ['sample.x'] },
   },
   groups: { sample: { name: 'sample', title: 'Sample' } },
-  timestamp: 0,
 }
 
 let store: AppStore

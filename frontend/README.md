@@ -81,12 +81,13 @@ proposals in one file (`typePolicies` in `graphql/type-policies.ts`).
 
 Liveness comes from the cache. The `run_updates` subscription (`use-proposal`)
 writes changed runs into the normalized cache and, when the run list, variables,
-or tags change, replaces the `TableMeta` entry; the `since` cursor advances with
-each push. Leaving a proposal drops its cached fields and collects the runs they
-referenced (`app/store/listeners.ts`), deferred until the departing page's
-watchers have unsubscribed so the eviction cannot send them back to the network.
-There is no stale-proposal guard: the three-part key makes a departed proposal's
-runs unreadable by the next one.
+or tags change, replaces the `TableMeta` entry. It subscribes with `since: 0`,
+as the server reads only rows newer than its last-seen timestamp. Leaving a
+proposal drops its cached fields and collects the runs they referenced
+(`app/store/listeners.ts`), deferred until the departing page's watchers have
+unsubscribed so the eviction cannot send them back to the network. There is no
+stale-proposal guard: the three-part key makes a departed proposal's runs
+unreadable by the next one.
 
 ## Installation
 
