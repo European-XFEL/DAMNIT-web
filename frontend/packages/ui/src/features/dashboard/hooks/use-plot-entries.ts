@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useAppSelector } from '#src/app/store/hooks'
-import { formatRunsSubtitle } from '#src/utils/helpers'
+import { formatRunsSubtitle } from '#src/utils/format'
 
 export function usePlotEntries() {
   const plots = useAppSelector((state) => state.plots.data)

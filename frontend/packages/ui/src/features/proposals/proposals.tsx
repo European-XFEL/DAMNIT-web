@@ -13,6 +13,7 @@ import {
 import { IconCalendarEvent, IconChevronRight } from '@tabler/icons-react'
 import cx from 'clsx'
 import dayjs from 'dayjs'
+import { isEmpty, orderBy } from 'lodash-es'
 import { DataTable } from 'mantine-datatable'
 
 import InstrumentBadge, {
@@ -21,8 +22,6 @@ import InstrumentBadge, {
 import CenteredLoader from '#src/components/feedback/centered-loader'
 import useProposals from '#src/data/metadata/use-proposals'
 import { type AvailableProposals } from '#src/types'
-import { isEmpty } from '#src/utils/helpers'
-import { orderBy } from '#src/utils/objects'
 
 import styles from './proposals.module.css'
 
@@ -276,9 +275,14 @@ const ProposalSubTable = memo(function ProposalSubTable({
       records={
         isLoading || proposalInfo == null
           ? []
-          : proposalInfo
-              .concat()
-              .sort(orderBy(['start_date', 'instrument'], ['desc', 'asc']))
+          : orderBy(
+              proposalInfo,
+              [
+                (proposal) => proposal.start_date,
+                (proposal) => proposal.instrument,
+              ],
+              ['desc', 'asc']
+            )
       }
       fetching={isLoading}
       rowExpansion={{
@@ -307,7 +311,7 @@ type ProposalsProps = {
 }
 
 const Proposals = ({ proposals }: ProposalsProps) => {
-  const cycles = Object.keys(proposals).sort((a, b) => Number(b) - Number(a))
+  const cycles = orderBy(Object.keys(proposals), Number, 'desc')
 
   return (
     <DataTable

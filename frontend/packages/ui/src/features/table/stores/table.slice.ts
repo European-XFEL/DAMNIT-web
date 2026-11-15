@@ -1,11 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { isEmpty, isEqual, union } from 'lodash-es'
 
 import { resetProposal } from '#src/app/store/actions'
 import { VARIABLES } from '#src/constants'
 import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunId } from '#src/data/table/table-data.types'
-import { isArrayEqual } from '#src/utils/array'
-import { isEmpty } from '#src/utils/helpers'
 import type {
   ChangedColumns,
   Scroll,
@@ -77,7 +76,7 @@ const initialState: TableState = {
 // A click that changed nothing leaves the slot alone, so it cannot cut a flash
 // still fading.
 function stampFlash(state: TableState, flash: ColumnFlash) {
-  if (!isEmpty(flash.columns)) {
+  if (flash.columns.length !== 0) {
     state.lastFlash = flash
   }
 }
@@ -127,7 +126,7 @@ const slice = createSlice({
       const { columns, cells } = action.payload
       // Most changes are cell clicks, which leave the columns alone; see
       // selectRow for why an unchanged value isn't rewritten.
-      if (!isArrayEqual(state.selectedColumns, columns)) {
+      if (!isEqual(state.selectedColumns, columns)) {
         state.selectedColumns = columns
       }
       state.selectedCells = cells
@@ -153,8 +152,8 @@ const slice = createSlice({
         state.columnOrder = order
         state.lastFlash = { ...moved, at }
         const since = state.movedSinceReset
-        since.columns = [...new Set([...since.columns, ...moved.columns])]
-        since.groups = [...new Set([...since.groups, ...moved.groups])]
+        since.columns = union(since.columns, moved.columns)
+        since.groups = union(since.groups, moved.groups)
       },
       prepare: (payload: { order: string[]; moved: ChangedColumns }) => ({
         payload: { ...payload, at: performance.now() },
@@ -162,7 +161,7 @@ const slice = createSlice({
     },
     columnOrderReset: {
       reducer: (state, action: PayloadAction<{ at: number }>) => {
-        if (isEmpty(state.columnOrder)) {
+        if (state.columnOrder.length === 0) {
           return
         }
         state.columnOrder = []

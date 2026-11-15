@@ -13,12 +13,15 @@
     "lint:tsc": "tsc -b --noEmit"
   },
   "peerDependencies": {
-    "graphql": "catalog:graphql"
+    "graphql": "catalog:graphql",
+    "lodash-es": "catalog:frontend"
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
+    "@types/lodash-es": "catalog:types",
     "eslint": "catalog:linting",
     "graphql": "catalog:graphql",
+    "lodash-es": "catalog:frontend",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"
   }

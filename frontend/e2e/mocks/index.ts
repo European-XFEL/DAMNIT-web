@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import path from 'node:path'
 
 import type { Page } from '@playwright/test'
+import { mapValues } from 'lodash-es'
 
 import {
   MockDataNotFound,
@@ -38,11 +39,8 @@ const monacoVsDir = path.join(
 function withComputedTimes(data: RunData[]): RunData[] {
   return data.map((run) => {
     const computed_at = 1_700_000_000_000 + (runNumber(run) - 1) * 60_000
-    const variables = Object.fromEntries(
-      Object.entries(run.variables).map(([name, variable]) => [
-        name,
-        name === 'run' ? variable : { ...variable, computed_at },
-      ])
+    const variables = mapValues(run.variables, (variable, name) =>
+      name === 'run' ? variable : { ...variable, computed_at }
     )
 
     return { ...run, variables }

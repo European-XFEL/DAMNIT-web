@@ -22,10 +22,12 @@
     "@damnit-frontend/config": "workspace:*",
     "@damnit-frontend/shared": "workspace:*",
     "@playwright/test": "catalog:testing",
+    "@types/lodash-es": "catalog:types",
     "@types/node": "catalog:types",
     "eslint": "catalog:linting",
     "globals": "catalog:linting",
     "graphql": "catalog:graphql",
+    "lodash-es": "catalog:frontend",
     "monaco-editor": "catalog:components",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"

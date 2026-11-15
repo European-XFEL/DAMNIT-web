@@ -8,7 +8,7 @@ import SectionHeading, {
 import { DTYPES } from '#src/constants'
 import type { RunId } from '#src/data/table/table-data.types'
 import { FONT_SIZE_DATA } from '#src/styles/fonts'
-import { formatDate } from '#src/utils/helpers'
+import { formatDate } from '#src/utils/format'
 import {
   blockKey,
   type VariableBlock,

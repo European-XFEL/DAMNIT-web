@@ -1,7 +1,8 @@
+import { sortBy, uniq } from 'lodash-es'
+
 import { getTitleByName } from '#src/data/table/table-data.transforms'
 import type { RunId, Variable } from '#src/data/table/table-data.types'
 import type { PlotSpec } from '#src/types'
-import { sorted } from '#src/utils/array'
 
 // "Pulses vs. Run" for a summary, "Detector image" for a preview. A variable
 // with no title goes by its name.
@@ -66,7 +67,7 @@ export function parseRunSelection(
   }
 
   return {
-    runs: sorted([...runs]).map(String),
+    runs: sortBy([...runs]).map(String),
   }
 }
 
@@ -75,7 +76,7 @@ export function parseRunSelection(
 export function formatRunSelection(runs: string[]) {
   const ranges: { first: number; last: number }[] = []
 
-  for (const run of sorted([...new Set(runs.map(Number))])) {
+  for (const run of sortBy(uniq(runs.map(Number)))) {
     const range = ranges.at(-1)
     if (range !== undefined && run === range.last + 1) {
       range.last = run

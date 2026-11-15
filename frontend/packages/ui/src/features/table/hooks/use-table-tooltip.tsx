@@ -14,7 +14,7 @@ import {
 } from '#src/features/table/components/tooltips/table-tooltip'
 import type { HoveredCell } from '#src/features/table/types/table.types'
 import { ZERO_BOUNDS, toBounds } from '#src/features/table/utils/bounds'
-import { assertNever } from '#src/utils/helpers'
+import { assertNever } from '#src/utils/asserts'
 
 const DELAY = { open: 200, switch: 60, close: 200 }
 const ARROW_DEPTH = 8
