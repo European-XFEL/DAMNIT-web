@@ -90,6 +90,16 @@ by position silently misattributes data.
 `dataset_path`, `preview_kind`, `dtype`, `shape_json`, `units`,
 `metadata_json`. Same join rule as above.
 
+### LabFrog history — `/entry/labfrog_history`, **never** an iteration
+
+`history_index`, `record_id`, `shot_number`, `authority_shot_number`,
+`superseded_by` (bridge v7, added 2026-11-15): the LabFrog record versions a
+later version replaced. They are not shots and carry no `shot_key`; since v7
+they are in neither `/entry/shots` nor `/entry/source_events`. The preflight
+classifies the group as its own axis (`labfrog_history`), so a rule on it is
+`source_axis_unaligned` for a mesh or attribute and
+`reference_join_column_missing` for a reference.
+
 ### Per-event payloads
 
 `/entry/<source_group>/<kind>/<event_id>/values`, where `<source_group>` comes

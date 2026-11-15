@@ -768,7 +768,7 @@ def test_bridge_v6_writes_the_shot_authoritys_number(tmp_path: Path):
     )
     with h5py.File(output, "r") as handle:
         group = cast("h5py.Group", handle["entry/shots"])
-        assert group.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v6"
+        assert group.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v7"
         column = cast("h5py.Dataset", group["authority_shot_number"])
         assert column.dtype.kind == "i"
         assert column.attrs["missing_value"] == -1
@@ -800,9 +800,9 @@ def test_bridge_v4_writes_experiment_id_source_and_instrument_id(tmp_path: Path)
     write_nexus_bridge(
         output_path=output, experiment_id=CAMPAIGN, shots=shots, events=events
     )
-    assert HZDR_BRIDGE_PROFILE_VERSION == "hzdr-canonical-shot-v6"
+    assert HZDR_BRIDGE_PROFILE_VERSION == "hzdr-canonical-shot-v7"
     with h5py.File(output, "r") as handle:
-        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v6"
+        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v7"
         shot_numbers = list(cast("h5py.Dataset", handle["entry/shots/shot_number"]))
         sources = cast(
             "h5py.Dataset", handle["entry/shots/experiment_id_source"]

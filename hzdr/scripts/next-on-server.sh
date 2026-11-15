@@ -16,6 +16,7 @@
 #            on purpose; move the 2024-08-08 rulings copy aside once it matches
 #   rebuild  rebuild the DAMNIT campaigns with the auto-trigger's own command,
 #            then check each campaign file for bridge v6's authority_shot_number
+#            and v7's labfrog_history
 #   labfrog  Beamtime Setup's settings: which are set (values are never printed)
 #   report   check-shot-intake, server-report.sh, report-deployed.sh (snapshot)
 #
@@ -238,9 +239,9 @@ step_rebuild() {
             || warn "could not assemble the command"
         say "  check of the files as they are now:"
         if (cd "$api" && "$UV" run --no-sync python scripts/hzdr-rebuild.py --check-only); then
-            ok "every campaign file has authority_shot_number"
+            ok "every campaign file has the current layout (bridge v7)"
         else
-            would "rebuild (the files marked MISSING lack bridge v6)"
+            would "rebuild (the files marked MISSING lack bridge v6 or v7)"
         fi
         return
     fi
@@ -251,8 +252,8 @@ step_rebuild() {
     local rc=0
     (cd "$api" && "$UV" run --no-sync python scripts/hzdr-rebuild.py "${extra[@]}") || rc=$?
     case "$rc" in
-        0) ok "rebuilt; every campaign file has authority_shot_number" ;;
-        1) fail "a campaign file still lacks the column; rerun with --all-campaigns for old campaigns" ;;
+        0) ok "rebuilt; every campaign file has the current layout (bridge v7)" ;;
+        1) fail "a campaign file still lacks the layout; rerun with --all-campaigns for old campaigns" ;;
         *) fail "rebuild exited $rc (a held lock: see the operations guide, 'A build that never finishes')" ;;
     esac
 }
