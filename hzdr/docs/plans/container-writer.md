@@ -19,7 +19,8 @@ member's `sha256`. A `/entry/data_products` row of kind `file` keeps its
 
 Why: `data_products` stays a flat table of references, nothing is stored twice,
 and the bridge profile stayed `hzdr-canonical-shot-v5` (v6, 2026-11-09, only
-adds `/entry/shots/authority_shot_number`). The master is also the
+adds `/entry/shots/authority_shot_number`; v7, 2026-11-15, moves superseded
+LabFrog versions to `/entry/labfrog_history`, which no container reads). The master is also the
 one place where matching, campaign resolution and review rulings have already
 decided which shot an event belongs to, so the worker never re-runs matching
 and cannot disagree with the master it will be linked from.

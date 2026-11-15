@@ -4,6 +4,43 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-15
+
+### Superseded LabFrog versions leave the shot table: bridge profile v7
+- A LabFrog record version that a later one replaced (an operator's
+  correction; `archived`, or a non-active row beside an active one of the same
+  campaign, day and number) was kept in `/entry/shots`, and its LabFrog row in
+  `/entry/source_events`, with nothing in the file marking it as history: after
+  a typed 44 was corrected to 4, a reader saw two shots with authority number 4.
+  Such a version is now a row of **`/entry/labfrog_history`** (`NXcollection`:
+  `history_index`, `record_id`, `shot_number` as typed,
+  `authority_shot_number`, `superseded_by`) and of neither table. The group is
+  written by every build, empty when nothing was superseded. Maintainer's
+  decision of 2026-11-14 on the constellation emulator's E13: history
+  reachable but not mixed in.
+- `superseded_by` is the `record_id` of the version that replaced the row:
+  from the export's `shot_version_links` table (LabFrog's `_id_OLD`), else the
+  one active row of the same campaign, day and number, else empty.
+- The profile string is `hzdr-canonical-shot-v7` (root, `/entry/shots`, and
+  the catalog's `integration_profile`). Shot identity is as in v6: a
+  LabFrog-backed shot keeps LabFrog's own, possibly typed, number as
+  `shot_number` and in `shot_key`, the authority's beside it.
+- The catalog, the API and the frontend are unchanged: the catalog never
+  listed a superseded version. `/entry/sample` and the laser/vacuum snapshots
+  no longer read a superseded version.
+- A shot table preserved from a LabFrog NeXus file (`--labfrog-nexus`) keeps
+  its history rows: the table is LabFrog's, other groups refer to its rows by
+  position, and its own `has_newer_version` column marks them. Their events
+  still leave `/entry/source_events`, and the history group is written.
+- The openPMD preflight gives `/entry/labfrog_history` its own axis
+  (`labfrog_history`): a rule on it is never read as shot-aligned by a
+  coincidence of lengths and never joined to an iteration.
+- `api/scripts/hzdr-rebuild.py` now also reports a campaign file without
+  `/entry/labfrog_history` as `MISSING`. **Deploying:** the trigger does not
+  rebuild after a code change, so rebuild every campaign by hand
+  ([operations guide](docs/guides/operations.md)); nexus-design-studio's copy
+  of the profile and the combo's ledgers follow separately.
+
 ## 2026-11-14
 
 ### A corrected LabFrog record replaces its typo (D-E13)

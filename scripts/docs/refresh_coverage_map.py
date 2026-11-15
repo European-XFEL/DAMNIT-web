@@ -96,6 +96,7 @@ AREAS = (
             f"{T}/test_hzdr_package_emulator.py",
             f"{T}/test_hzdr_integration.py",
             f"{T}/test_hzdr_campaign_resolution.py",
+            f"{T}/test_hzdr_labfrog_history.py",
             f"{T}/test_match_rank_docs.py",
         ),
         watch_next=(

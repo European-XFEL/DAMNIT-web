@@ -292,8 +292,11 @@ and fallback:
 Steps 4-6 attach only when time auto-assignment is on; by default they propose.
 
 Archived/superseded LabFrog rows from curated exports are kept as provenance but
-are excluded from automatic matching when an active row for the same
-campaign/date/shot number exists. If more than one row is marked `active`, all
+are excluded from automatic matching: an `archived` row always, any other
+non-active row when an active row for the same campaign/date/shot number
+exists. They are not shots: since bridge profile v7 the NeXus file holds them
+in `/entry/labfrog_history`, not in `/entry/shots` (see below), and the
+catalog never lists them. If more than one row is marked `active`, all
 remain current because source status is authoritative, but DAMNIT logs a
 source-owner-review warning even when their version numbers match. The result
 records `match_status`, `match_quality`, and `match_time_delta_s`. No ambiguous
@@ -336,6 +339,30 @@ claimed several shots (schema 14 keeps those in labfrog-sqlite-tools'
 `authority_shots`), or an older export. Join a trigger to its shot on this
 column, never on `shot_number`. A LabFrog NeXus source written by
 labfrog-sqlite-tools 0.2.5 uses the same `-1`, which the reader skips.
+
+**LabFrog history** (bridge profile v7, 2026-11-15). An operator who corrects
+a record makes a new version in LabFrog; the old one is archived and the
+export carries both. Only the current version is a shot. A superseded one is a
+row of `/entry/labfrog_history` (`NXcollection`, indexed by `history_index`):
+
+| Dataset | Carries |
+| --- | --- |
+| `record_id` | the superseded version's LabFrog record id |
+| `shot_number` | LabFrog's own number on that version, as typed |
+| `authority_shot_number` | the shot authority's number it claimed, `-1` where none |
+| `superseded_by` | `record_id` of the version that replaced it (join `/entry/shots/record_id`); `""` where the export does not say |
+
+It has no row in `/entry/shots` and no LabFrog row in `/entry/source_events`,
+so the shot table holds each authority number once. The group is written by
+every build and is empty when nothing was superseded. `superseded_by` comes
+from the export's `shot_version_links` table, else from the one active row of
+the same campaign, day and number. Until the correction is exported the typed
+number is the shot's `shot_number` and `shot_key` (v6's identity, kept), with
+the authority's number beside it; the build on the corrected export replaces
+that shot with the corrected one. One exception: a shot table preserved from a
+LabFrog NeXus file is LabFrog's own and other groups refer to its rows by
+position, so its history rows stay in `/entry/shots`, marked by LabFrog's
+`has_newer_version` column; their events still leave.
 
 ## Canonical Outputs
 

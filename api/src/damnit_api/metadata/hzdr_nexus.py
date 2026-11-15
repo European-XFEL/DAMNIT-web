@@ -1196,6 +1196,31 @@ def _read_labfrog_authority_claims(
     return dict(claims)
 
 
+def _read_labfrog_version_links(connection: sqlite3.Connection) -> dict[str, str]:
+    """The record that replaced each previous version, by its ``mongo_id``.
+
+    From the export's ``shot_version_links`` table (``shot_id`` is the newer
+    version of ``previous_shot_id``, LabFrog's ``_id_OLD``). Returns ``{}``
+    for an export without the table.
+    """
+    columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(shot_version_links)")
+    }
+    if not {"shot_id", "previous_shot_id"} <= columns:
+        return {}
+    links: dict[str, str] = {}
+    for newer, previous in connection.execute(
+        "SELECT shot_id, previous_shot_id FROM shot_version_links "
+        "WHERE previous_shot_id IS NOT NULL ORDER BY rowid"
+    ):
+        previous_id = _as_optional_string(previous)
+        newer_id = _as_optional_string(newer)
+        if previous_id and newer_id:
+            links[previous_id] = newer_id
+    return links
+
+
 def _labfrog_authority_fields(
     record: Mapping[str, Any], claims_by_shot: Mapping[str, list[int]]
 ) -> dict[str, Any]:
@@ -1319,6 +1344,7 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
         ).fetchall()
         variables_by_shot = _read_labfrog_shot_variables(connection)
         claims_by_shot = _read_labfrog_authority_claims(connection)
+        newer_version = _read_labfrog_version_links(connection)
 
     shots: list[dict[str, Any]] = []
     for index, row in enumerate(rows):
@@ -1397,6 +1423,11 @@ def read_labfrog_sqlite_shots(path: Path) -> list[dict[str, Any]]:
         if local_count is not None:
             shot_record["local_count"] = local_count
         shot_record.update(_labfrog_authority_fields(record, claims_by_shot))
+        # The version that replaced this one, where the export links them
+        # (/entry/labfrog_history/superseded_by, bridge profile v7).
+        superseded_by = newer_version.get(shot_record["record_id"] or "")
+        if superseded_by:
+            shot_record["superseded_by"] = superseded_by
         shots.append(shot_record)
     _mark_superseded_labfrog_rows(shots)
     return shots
@@ -1494,6 +1525,10 @@ def _mark_superseded_labfrog_rows(shots: list[dict[str, Any]]) -> None:
                 row.setdefault("metadata", {}).setdefault("has_newer_version", False)
             else:
                 row.setdefault("metadata", {})["has_newer_version"] = True
+                # Without a version link, the one active row of the same
+                # campaign, day and number is the version that replaced it.
+                if len(active_rows) == 1 and active_rows[0].get("record_id"):
+                    row.setdefault("superseded_by", active_rows[0]["record_id"])
 
 
 def normalize_labfrog_mongo_shots(
@@ -2300,13 +2335,24 @@ def write_nexus_bridge(
             entry.attrs["damnit_source_events"] = "source_events"
             entry.attrs["damnit_data_products"] = "data_products"
 
-            _write_campaign_time_bounds(entry, shots)
-            _write_semantic_metadata_groups(entry, shots, laser_config)
-
             shots_group = entry.require_group("shots")
             if "NX_class" not in shots_group.attrs:
                 shots_group.attrs["NX_class"] = "NXcollection"
             existing_count = _table_length(shots_group)
+            # Bridge profile v7: a superseded LabFrog version is history, not
+            # a shot. It and its LabFrog row leave the shot and event tables
+            # for /entry/labfrog_history. A shot table preserved from a
+            # LabFrog NeXus file is LabFrog's own (other groups refer to its
+            # rows by position), so there the rows stay, marked by LabFrog's
+            # has_newer_version column, and only the event rows leave.
+            history, shots, events = split_labfrog_history(
+                shots, events, keep_rows=existing_count > 0
+            )
+            _write_labfrog_history(entry, history)
+
+            _write_campaign_time_bounds(entry, shots)
+            _write_semantic_metadata_groups(entry, shots, laser_config)
+
             if existing_count > len(shots):
                 message = (
                     "Canonical shot count does not match the preserved LabFrog "
@@ -2337,6 +2383,84 @@ def write_nexus_bridge(
         temp_path.unlink(missing_ok=True)
         raise
     return products
+
+
+def split_labfrog_history(
+    shots: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+    *,
+    keep_rows: bool = False,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Take the superseded LabFrog versions out of a build's shots and events.
+
+    Returns ``(history, shots, events)``: the superseded versions
+    (``metadata.has_newer_version``), the shots without them (all of them
+    with ``keep_rows``), and the events without the LabFrog row each
+    superseded version was cited by. No other event is dropped: the matcher
+    never attaches one to a superseded version.
+    """
+    history = [
+        shot
+        for shot in shots
+        if _as_bool(shot.get("metadata", {}).get("has_newer_version"))
+    ]
+    if not history:
+        return [], shots, events
+    gone = {id(shot) for shot in history}
+    history_event_ids = {
+        event.get("event_id")
+        for shot in history
+        for event in shot.get("events", [])
+        if event.get("source") == LABFROG_EVENT_SOURCE
+        and event.get("kind") == LABFROG_EVENT_KIND
+    }
+    return (
+        history,
+        shots if keep_rows else [shot for shot in shots if id(shot) not in gone],
+        [event for event in events if event.get("event_id") not in history_event_ids],
+    )
+
+
+def _write_labfrog_history(entry: h5py.Group, history: list[dict[str, Any]]) -> None:
+    """Write `/entry/labfrog_history`: the LabFrog versions a later one replaced.
+
+    Always written, empty when no version was superseded, so a reader can
+    tell "no history" from a file that predates the group.
+    """
+    group = _replace_group(entry, LABFROG_HISTORY_GROUP)
+    group.attrs["NX_class"] = "NXcollection"
+    group.attrs["damnit_source"] = LABFROG_HISTORY_GROUP
+    group.attrs["description"] = LABFROG_HISTORY_DESCRIPTION
+    string = h5py.string_dtype(encoding="utf-8")
+    group.create_dataset("history_index", data=np.arange(len(history), dtype=np.int64))
+    group.create_dataset(
+        "record_id",
+        data=[shot.get("labfrog_record_id") or "" for shot in history],
+        dtype=string,
+    )
+    number = group.create_dataset(
+        "shot_number",
+        data=np.asarray([int(shot["shot_number"]) for shot in history], dtype=np.int64),
+    )
+    number.attrs["description"] = (
+        "LabFrog's own shot number on the superseded version, as typed."
+    )
+    authority = group.create_dataset(
+        "authority_shot_number",
+        data=np.asarray(
+            [_shot_authority_column_value(shot) for shot in history], dtype=np.int64
+        ),
+    )
+    authority.attrs["missing_value"] = -1
+    superseded_by = group.create_dataset(
+        "superseded_by",
+        data=[shot.get("labfrog_superseded_by") or "" for shot in history],
+        dtype=string,
+    )
+    superseded_by.attrs["description"] = (
+        "record_id of the LabFrog version that replaced this one; join "
+        '/entry/shots/record_id on it. "" where the export does not say.'
+    )
 
 
 def _write_campaign_time_bounds(entry: h5py.Group, shots: list[dict[str, Any]]) -> None:
@@ -2697,7 +2821,18 @@ def write_nexus_laser_group(
 # bumped to match. See hzdr/docs/nxhzdr-target-profile.md (target map) and
 # hzdr/docs/nexus-semantic-maps.md (laser/vacuum/diagnostic maps).
 HZDR_TARGET_PROFILE_VERSION = "0.10"
-HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v6"
+HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v7"
+# Bridge profile v7: superseded LabFrog versions, out of the shot table.
+LABFROG_HISTORY_GROUP = "labfrog_history"
+LABFROG_HISTORY_DESCRIPTION = (
+    "LabFrog record versions a later version replaced (an operator's "
+    "correction). History only: none of them is a shot, none is in "
+    "/entry/shots (unless that table was preserved from a LabFrog NeXus file) "
+    "and none has a row in /entry/source_events. Indexed by history_index, "
+    "not by shot."
+)
+LABFROG_EVENT_SOURCE = "LabFrog"
+LABFROG_EVENT_KIND = "shotsheet.row"
 LABFROG_LOCAL_COUNT_DESCRIPTION = (
     "The experimenters' shot count from LabFrog's local-counter reset (the "
     "Count written on the Shotsheet). A user aid for finding a shot, not an "
@@ -3978,6 +4113,9 @@ def _canonical_from_labfrog(
     authority_number = _authority_number(record)
     if authority_number is not None:
         canonical["authority_shot_number"] = authority_number
+    superseded_by = _as_optional_string(record.get("superseded_by"))
+    if superseded_by:
+        canonical["labfrog_superseded_by"] = superseded_by
     return canonical
 
 
@@ -3987,8 +4125,8 @@ def _labfrog_source_event(shot: dict[str, Any], experiment_id: str) -> dict[str,
         "experiment_id": experiment_id,
         "shot_id": f"shot-{shot['shot_number']:06d}",
         "shot_number": shot["shot_number"],
-        "source": "LabFrog",
-        "kind": "shotsheet.row",
+        "source": LABFROG_EVENT_SOURCE,
+        "kind": LABFROG_EVENT_KIND,
         "timestamp": shot.get("labfrog_date_time") or shot.get("fired_at") or "",
         "transport": "nexus",
         "payload_ref": {"record_id": record_id, "nexus_path": "/entry/shots"},

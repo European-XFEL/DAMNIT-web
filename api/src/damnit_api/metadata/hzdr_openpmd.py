@@ -58,6 +58,7 @@ SUPPORTED_MATERIALIZATIONS = frozenset({INLINE, RESOLVE_PAYLOAD, REFERENCE_ONLY}
 SHOT_AXIS = "shot"
 EVENT_AXIS = "event"
 PRODUCT_AXIS = "product"
+HISTORY_AXIS = "labfrog_history"
 CAMPAIGN_AXIS = "campaign"
 UNALIGNED_AXIS = "unaligned"
 
@@ -66,10 +67,14 @@ UNALIGNED_AXIS = "unaligned"
 _TABLE_AXES = {
     "source_events": EVENT_AXIS,
     "data_products": PRODUCT_AXIS,
+    # Bridge profile v7: superseded LabFrog versions. No shot_key column, so
+    # a rule reaching it is never attributed to an iteration.
+    "labfrog_history": HISTORY_AXIS,
 }
 _TABLE_COUNT_COLUMNS = {
     EVENT_AXIS: "event_index",
     PRODUCT_AXIS: "product_index",
+    HISTORY_AXIS: "history_index",
 }
 
 # Payload limits. Kept in step with nexus_design_studio's OpenPMDPayloadPolicy,

@@ -687,6 +687,40 @@ def test_a_reference_on_an_unjoinable_axis_is_rejected(
     assert "source_axis_unaligned" in _codes(_rule(report, "loose_reference"))
 
 
+def test_labfrog_history_is_its_own_axis_and_never_an_iteration(
+    fixture_paths: dict[str, Path], plan: dict[str, Any]
+):
+    """Bridge profile v7: a superseded LabFrog version is not a shot."""
+    broken = copy.deepcopy(plan)
+    broken["rules"] = [
+        {
+            "source": "labfrog",
+            "source_path": "/entry/labfrog_history/authority_shot_number",
+            "role": "scalar_mesh",
+            "target_name": "history_number",
+            "component": "value",
+            "materialization": "inline",
+        },
+        {
+            "source": "labfrog",
+            "source_path": "/entry/labfrog_history/record_id",
+            "role": "reference",
+            "target_name": "history_record",
+            "materialization": "reference_only",
+        },
+    ]
+
+    report = preflight_projection(
+        nexus_path=fixture_paths["canonical_nexus"], plan=broken
+    )
+
+    number = _rule(report, "history_number")
+    assert number["axis"] == "labfrog_history"
+    assert "source_axis_unaligned" in _codes(number)
+    # No shot_key column: a history row cannot be joined to an iteration.
+    assert "reference_join_column_missing" in _codes(_rule(report, "history_record"))
+
+
 # --------------------------------------------------------------------------
 # Payload policy
 # --------------------------------------------------------------------------

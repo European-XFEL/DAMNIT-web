@@ -6,15 +6,21 @@ record is then corrected (a new version; the old one is archived).
 """
 
 import contextlib
+import json
 import sqlite3
 from pathlib import Path
+from typing import cast
 
 import h5py
 
 from damnit_api.metadata.hzdr_nexus import (
+    _mark_superseded_labfrog_rows,
+    read_labfrog_nexus_shots,
     read_labfrog_sqlite_shots,
     reconcile_canonical_shots,
+    split_labfrog_history,
     write_nexus_bridge,
+    write_sources_catalog,
 )
 
 CAMPAIGN = "C"
@@ -86,8 +92,12 @@ def build(tmp_path: Path, *, corrected: bool, links: bool = True) -> Path:
     return output
 
 
+def dataset_at(handle: h5py.File, path: str) -> h5py.Dataset:
+    return cast("h5py.Dataset", handle[path])
+
+
 def column(handle: h5py.File, path: str) -> list:
-    dataset = handle[path]
+    dataset = dataset_at(handle, path)
     if h5py.check_string_dtype(dataset.dtype) is not None:
         return list(dataset.asstr()[...])
     return [int(value) for value in dataset[...]]
@@ -123,11 +133,162 @@ def test_before_the_correction_the_typed_number_is_the_shot_beside_the_authority
         assert labfrog_rows(handle) == ["one", "typo"]
 
 
-def test_v6_keeps_a_superseded_version_in_the_shot_and_event_tables(tmp_path: Path):
-    """Characterization of bridge profile v6, before the history group."""
+def test_a_superseded_version_leaves_the_shot_and_event_tables(tmp_path: Path):
+    """Bridge profile v7: history is reachable, not mixed in."""
     with h5py.File(build(tmp_path, corrected=True), "r") as handle:
-        assert column(handle, "entry/shots/record_id") == ["one", "fixed", "typo"]
-        assert column(handle, "entry/shots/shot_number") == [3, 4, 44]
-        assert column(handle, "entry/shots/authority_shot_number") == [3, 4, 4]
-        assert labfrog_rows(handle) == ["fixed", "one", "typo"]
-        assert "labfrog_history" not in handle["entry"]
+        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v7"
+        assert column(handle, "entry/shots/record_id") == ["one", "fixed"]
+        assert column(handle, "entry/shots/shot_index") == [0, 1]
+        assert column(handle, "entry/shots/shot_number") == [3, 4]
+        assert column(handle, "entry/shots/authority_shot_number") == [3, 4]
+        assert labfrog_rows(handle) == ["fixed", "one"]
+        events = column(handle, "entry/source_events/event_id")
+        assert column(handle, "entry/source_events/event_index") == list(
+            range(len(events))
+        )
+        assert {"trigger-3", "trigger-4"} <= set(events)
+        assert not any(
+            key.endswith(":000044")
+            for key in column(handle, "entry/source_events/shot_key")
+        )
+
+        assert handle["entry/labfrog_history"].attrs["NX_class"] == "NXcollection"
+        assert column(handle, "entry/labfrog_history/history_index") == [0]
+        assert column(handle, "entry/labfrog_history/record_id") == ["typo"]
+        assert column(handle, "entry/labfrog_history/shot_number") == [44]
+        assert column(handle, "entry/labfrog_history/authority_shot_number") == [4]
+        assert column(handle, "entry/labfrog_history/superseded_by") == ["fixed"]
+        authority = dataset_at(handle, "entry/labfrog_history/authority_shot_number")
+        assert authority.attrs["missing_value"] == -1
+
+
+def test_the_history_group_is_written_empty_when_nothing_was_superseded(
+    tmp_path: Path,
+):
+    with h5py.File(build(tmp_path, corrected=False), "r") as handle:
+        assert handle["entry/labfrog_history"].attrs["NX_class"] == "NXcollection"
+        for name in (
+            "history_index",
+            "record_id",
+            "shot_number",
+            "authority_shot_number",
+            "superseded_by",
+        ):
+            assert dataset_at(handle, f"entry/labfrog_history/{name}").shape == (0,)
+        record_id = dataset_at(handle, "entry/labfrog_history/record_id")
+        assert h5py.check_string_dtype(record_id.dtype) is not None
+
+
+def test_a_rebuild_on_the_corrected_export_replaces_the_earlier_file(tmp_path: Path):
+    """The emulator's order: the export with the typo, then the corrected one."""
+    build(tmp_path, corrected=False)
+    with h5py.File(build(tmp_path, corrected=True), "r") as handle:
+        assert column(handle, "entry/shots/shot_number") == [3, 4]
+        assert column(handle, "entry/labfrog_history/shot_number") == [44]
+
+
+def test_superseded_by_is_empty_when_the_export_names_no_newer_version(
+    tmp_path: Path,
+):
+    """A changed number without a version link: nothing says which replaced it."""
+    with h5py.File(build(tmp_path, corrected=True, links=False), "r") as handle:
+        assert column(handle, "entry/labfrog_history/record_id") == ["typo"]
+        assert column(handle, "entry/labfrog_history/superseded_by") == [""]
+
+
+def test_an_edit_that_keeps_the_number_names_the_active_version(tmp_path: Path):
+    """No link table: the one active row of the same day and number replaced it."""
+    rows = [
+        {
+            "record_id": record_id,
+            "shot_number": 17,
+            "authority_shot_number": 17,
+            "shot_date": "2026-06-10",
+            "labfrog_date_time": "2026-06-10T12:00:10Z",
+            "campaign": CAMPAIGN,
+            "metadata": {"status": status},
+        }
+        for record_id, status in (("old", "archived"), ("current", "active"))
+    ]
+    _mark_superseded_labfrog_rows(rows)
+    shots, events = reconcile_canonical_shots(
+        [], experiment_id=CAMPAIGN, source_key=CAMPAIGN, labfrog_shots=rows
+    )
+    history, current, current_events = split_labfrog_history(shots, events)
+
+    assert [shot["labfrog_record_id"] for shot in history] == ["old"]
+    assert history[0]["labfrog_superseded_by"] == "current"
+    # The two versions share one shot_key: they are told apart as records.
+    assert history[0]["shot_key"] == current[0]["shot_key"]
+    assert [shot["labfrog_record_id"] for shot in current] == ["current"]
+    assert [event["payload_ref"]["record_id"] for event in current_events] == [
+        "current"
+    ]
+    # The lists the catalog writer gets are untouched.
+    assert len(shots) == 2
+    assert len(events) == 2
+
+
+def test_the_catalog_lists_the_corrected_shot_only(tmp_path: Path):
+    export = tmp_path / "export.sqlite"
+    write_export(export, corrected=True)
+    shots, events = reconcile_canonical_shots(
+        [trigger(3, 0), trigger(4, 1)],
+        experiment_id=CAMPAIGN,
+        source_key=CAMPAIGN,
+        labfrog_shots=read_labfrog_sqlite_shots(export),
+    )
+    catalog = tmp_path / "hzdr_sources.json"
+    write_sources_catalog(
+        sources_file=catalog,
+        source_key=CAMPAIGN,
+        experiment_id=CAMPAIGN,
+        nexus_path=tmp_path / "campaign.nxs",
+        shots=shots,
+        events=events,
+    )
+    source = json.loads(catalog.read_text(encoding="utf-8"))["sources"][0]
+
+    assert [shot["shot_number"] for shot in source["shots"]] == [3, 4]
+    assert source["metadata"]["integration_profile"] == "hzdr-canonical-shot-v7"
+
+
+def test_a_preserved_labfrog_table_keeps_its_rows_and_loses_the_event(
+    tmp_path: Path,
+):
+    """A LabFrog NeXus shot table is LabFrog's: its history rows stay, marked."""
+    source = tmp_path / "labfrog.nxs"
+    string = h5py.string_dtype(encoding="utf-8")
+    with h5py.File(source, "w") as handle:
+        group = handle.create_group("entry/shots")
+        group.create_dataset("record_index", data=[0, 1])
+        group.create_dataset("record_id", data=["typo", "fixed"], dtype=string)
+        group.create_dataset("shot_number", data=[44, 4])
+        group.create_dataset("authority_shot_number", data=[4, 4])
+        group.create_dataset(
+            "date_time", data=["2026-11-14T10:01:00Z"] * 2, dtype=string
+        )
+        group.create_dataset("has_newer_version", data=[True, False])
+    shots, events = reconcile_canonical_shots(
+        [trigger(4, 1)],
+        experiment_id=CAMPAIGN,
+        source_key=CAMPAIGN,
+        labfrog_shots=read_labfrog_nexus_shots(source),
+    )
+    output = tmp_path / "campaign.nxs"
+    write_nexus_bridge(
+        output_path=output,
+        experiment_id=CAMPAIGN,
+        shots=shots,
+        events=events,
+        source_nexus=source,
+    )
+
+    with h5py.File(output, "r") as handle:
+        assert column(handle, "entry/shots/shot_number") == [44, 4]
+        marks = dataset_at(handle, "entry/shots/has_newer_version")[...]
+        assert [bool(mark) for mark in marks] == [True, False]
+        assert labfrog_rows(handle) == ["fixed"]
+        assert column(handle, "entry/labfrog_history/record_id") == ["typo"]
+        assert column(handle, "entry/labfrog_history/shot_number") == [44]
+        assert column(handle, "entry/labfrog_history/superseded_by") == [""]
