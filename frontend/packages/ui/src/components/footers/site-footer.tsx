@@ -11,6 +11,7 @@ import {
   IconBrandGithub,
   IconBuilding,
   IconScale,
+  IconShieldLock,
   type IconProps,
 } from '@tabler/icons-react'
 
@@ -47,6 +48,9 @@ function SiteFooter() {
         </SiteAnchor>
       </Group>
       <Group gap={24}>
+        <SiteAnchor href="/privacy" icon={IconShieldLock}>
+          Privacy
+        </SiteAnchor>
         <SiteAnchor
           href="https://www.xfel.eu/legal_notice/index_eng.html"
           icon={IconScale}
