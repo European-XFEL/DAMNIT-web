@@ -6,6 +6,17 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-15
 
+### Kafka consumer: a backlog over about 1 MB is read again (D-M01)
+- kafka-python's defaults let one fetch reply exceed what the client
+  accepts (`max_partition_fetch_bytes` 1 MiB per partition against
+  `receive_message_max_bytes` 1,000,000 bytes), so a consumer behind by
+  more than about 1 MB was refused every reply ("Invalid frame length") and
+  never caught up. `consumer/kafka.py` now sets `FETCH_LIMITS` (1 MiB per
+  partition, 4 MiB per fetch, 8 MiB accepted). Found by the constellation
+  emulator's 200-shot mixed day (M1) in its own reader, which uses the same
+  library with the same defaults. Tests:
+  `api/tests/test_hzdr_kafka_fetch_limits.py`.
+
 ### History rows in a preserved LabFrog NeXus shot table: accepted
 - Documentation only. A shot table preserved from a LabFrog NeXus file
   (`--labfrog-nexus`) keeps its superseded versions, because other groups
