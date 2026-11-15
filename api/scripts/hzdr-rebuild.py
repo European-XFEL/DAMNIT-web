@@ -12,7 +12,7 @@ Run from ``api/`` as the user who owns the output (on fwkt-webapps: tippey)::
     uv run --no-sync python scripts/hzdr-rebuild.py --print       # show it only
     uv run --no-sync python scripts/hzdr-rebuild.py               # rebuild
     uv run --no-sync python scripts/hzdr-rebuild.py --all-exports # every export
-    uv run --no-sync python scripts/hzdr-rebuild.py --check-only  # v6 check only
+    uv run --no-sync python scripts/hzdr-rebuild.py --check-only  # layout check only
 
 ``--all-exports`` adds every campaign that has an export
 (``<CURATED_ROOT>/<c>/<c>.sqlite``). A named campaign's export may claim
@@ -21,8 +21,9 @@ the campaigns taking shots; use it for a one-off rebuild of old campaigns.
 
 After the build (or with ``--check-only``) every campaign file under
 ``OUTPUT_ROOT`` is checked for ``/entry/shots/authority_shot_number``
-(bridge profile v6). Exit status: the builder's, else 1 when a file lacks the
-column, 2 when the auto-trigger is not configured, 0 otherwise.
+(bridge profile v6) and ``/entry/labfrog_history`` (v7). Exit status: the
+builder's, else 1 when a file lacks either, 2 when the auto-trigger is not
+configured, 0 otherwise.
 """
 
 from __future__ import annotations
@@ -34,6 +35,8 @@ import sys
 from pathlib import Path  # noqa: TC003
 
 V6_DATASET = "/entry/shots/authority_shot_number"
+# Written by every v7 build, empty when no LabFrog version was superseded.
+V7_GROUP = "/entry/labfrog_history"
 
 
 def _export_campaigns(curated_root: Path) -> list[str]:
@@ -67,16 +70,17 @@ def campaign_files(output_root: Path) -> list[Path]:
     )
 
 
-def check_v6(paths: list[Path]) -> int:
-    """Print one line per file; return how many lack the v6 column."""
+def check_layout(paths: list[Path]) -> int:
+    """Print one line per file; return how many lack the current layout."""
     import h5py
 
     missing = 0
     for path in paths:
         try:
             with h5py.File(path, "r") as f:
-                if V6_DATASET not in f:
-                    print(f"MISSING {path}: no {V6_DATASET} (rebuild it)")
+                lacking = [name for name in (V6_DATASET, V7_GROUP) if name not in f]
+                if lacking:
+                    print(f"MISSING {path}: no {', '.join(lacking)} (rebuild it)")
                     missing += 1
                     continue
                 values = f[V6_DATASET][()]
@@ -105,7 +109,9 @@ def main(argv: list[str] | None = None) -> int:
         help="also build every campaign that has a LabFrog export",
     )
     parser.add_argument(
-        "--check-only", action="store_true", help="skip the build, only check v6"
+        "--check-only",
+        action="store_true",
+        help="skip the build, only check the layout",
     )
     args = parser.parse_args(argv)
 
@@ -144,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
         if output_root is not None
         else [p for p in [builder.output_nexus] if p is not None and p.is_file()]
     )
-    return 1 if check_v6(paths) else 0
+    return 1 if check_layout(paths) else 0
 
 
 if __name__ == "__main__":

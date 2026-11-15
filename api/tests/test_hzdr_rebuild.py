@@ -116,17 +116,22 @@ def test_export_campaigns_need_their_sqlite(tmp_path):
     assert rebuild._export_campaigns(tmp_path) == ["A"]
 
 
-def test_check_v6_counts_files_without_the_column(tmp_path, capsys):
-    for name, with_column in (("new", True), ("old", False)):
+def test_check_layout_counts_files_built_before_the_current_profile(tmp_path, capsys):
+    for name, profile in (("new", 7), ("old", 5), ("v6", 6)):
         folder = tmp_path / name
         folder.mkdir()
         with h5py.File(folder / f"{name}.nxs", "w") as f:
             shots = f.create_group("entry/shots")
-            if with_column:
+            if profile >= 6:
                 shots["authority_shot_number"] = np.array([-1, 7, 8])
+            if profile >= 7:
+                f.create_group("entry/labfrog_history")
     paths = rebuild.campaign_files(tmp_path)
-    assert [p.name for p in paths] == ["new.nxs", "old.nxs"]
-    assert rebuild.check_v6(paths) == 1
+    assert [p.name for p in paths] == ["new.nxs", "old.nxs", "v6.nxs"]
+    assert rebuild.check_layout(paths) == 2
     out = capsys.readouterr().out
     assert "3 shots, 2 with a number" in out
-    assert "MISSING" in out
+    assert "v6.nxs: no /entry/labfrog_history (rebuild it)" in out
+    assert "old.nxs: no /entry/shots/authority_shot_number, /entry/labfrog_history" in (
+        out
+    )

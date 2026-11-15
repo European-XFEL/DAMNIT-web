@@ -102,7 +102,8 @@ and views there on start, so DAMNIT rebuilds that campaign once.
 The trigger does **not** rebuild on restart or after a code change. So after
 deploying a change to the file layout, rebuild every campaign by hand: bridge
 profile v6 (2026-11-09, deployed 2026-11-11, `/entry/shots/authority_shot_number`)
-appears in a campaign only once it is rebuilt, and resolution through a
+and v7 (2026-11-15, `/entry/labfrog_history`, superseded LabFrog versions out
+of `/entry/shots`) appear in a campaign only once it is rebuilt, and resolution through a
 LabFrog set's claimed shots needs an export made with labfrog-sqlite-tools
 0.2.5 (schema 14). To rebuild now, with exactly the trigger's inputs (the
 command is assembled from `api/.env` by the API's own code):
@@ -110,8 +111,8 @@ command is assembled from `api/.env` by the API's own code):
 ```bash
 cd ~/DAMNIT-web-hzdr/api
 uv run --no-sync python scripts/hzdr-rebuild.py --print        # show the command
-uv run --no-sync python scripts/hzdr-rebuild.py                # rebuild, then check v6
-uv run --no-sync python scripts/hzdr-rebuild.py --check-only   # v6 check only
+uv run --no-sync python scripts/hzdr-rebuild.py                # rebuild, then check the layout
+uv run --no-sync python scripts/hzdr-rebuild.py --check-only   # layout check only
 uv run --no-sync python scripts/hzdr-rebuild.py --campaign Beamline_radbio_2026
 ```
 
@@ -120,7 +121,8 @@ uv run --no-sync python scripts/hzdr-rebuild.py --campaign Beamline_radbio_2026
   `--all-exports` every campaign with an export; a named campaign's export may
   claim `unassigned` triggers during that build.
 - After the build it checks each `<OUTPUT_ROOT>/<c>/<c>.nxs` for
-  `/entry/shots/authority_shot_number` and exits 1 if one lacks it.
+  `/entry/shots/authority_shot_number` and `/entry/labfrog_history` and exits
+  1 if one lacks either.
 - `hzdr/scripts/next-on-server.sh` runs it as its `rebuild` step.
 - `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE=Europe/Berlin` must be set in
   `api/.env` (`--print` shows it as `--campaign-timezone`): LabFrog times are
