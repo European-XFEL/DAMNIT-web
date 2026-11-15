@@ -46,6 +46,18 @@ class _KafkaConsumerLike(Protocol):
     def close(self) -> None: ...
 
 
+#: kafka-python's defaults contradict each other: a fetch may return 1 MiB per
+#: partition (and 50 MiB in all) but a reply over 1,000,000 bytes is refused
+#: ("Invalid frame length"), so a consumer behind by more than about 1 MB
+#: never catches up (emulator finding D-M01, 2026-11-15). Every reply the
+#: broker may send must fit what the client accepts.
+FETCH_LIMITS = {
+    "max_partition_fetch_bytes": 1024 * 1024,
+    "fetch_max_bytes": 4 * 1024 * 1024,
+    "receive_message_max_bytes": 8 * 1024 * 1024,
+}
+
+
 def _build_kafka_consumer(
     bootstrap_servers: str | list[str],
     topics: list[str],
@@ -66,6 +78,7 @@ def _build_kafka_consumer(
         enable_auto_commit=False,
         auto_offset_reset="earliest",
         value_deserializer=_deserialize_value,
+        **FETCH_LIMITS,
     )
 
 
