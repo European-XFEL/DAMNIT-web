@@ -6,6 +6,14 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-15
 
+### History rows in a preserved LabFrog NeXus shot table: accepted
+- Documentation only. A shot table preserved from a LabFrog NeXus file
+  (`--labfrog-nexus`) keeps its superseded versions, because other groups
+  refer to its rows by position. Maintainer, 2026-11-15: fine for now, as
+  long as they can be filtered. They can: `/entry/shots/has_newer_version`
+  is true on those rows (`hzdr/docs/architecture.md`). Bridge profile v7
+  passed the constellation emulator's E13 3 of 3 on the SQLite path.
+
 ### Superseded LabFrog versions leave the shot table: bridge profile v7
 - A LabFrog record version that a later one replaced (an operator's
   correction; `archived`, or a non-active row beside an active one of the same

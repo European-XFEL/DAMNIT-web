@@ -362,7 +362,9 @@ the authority's number beside it; the build on the corrected export replaces
 that shot with the corrected one. One exception: a shot table preserved from a
 LabFrog NeXus file is LabFrog's own and other groups refer to its rows by
 position, so its history rows stay in `/entry/shots`, marked by LabFrog's
-`has_newer_version` column; their events still leave.
+`has_newer_version` column; their events still leave. The maintainer accepted
+this on 2026-11-15, as long as the rows can be filtered: in such a file, read
+`/entry/shots` where `has_newer_version` is false to get the current shots.
 
 ## Canonical Outputs
 
