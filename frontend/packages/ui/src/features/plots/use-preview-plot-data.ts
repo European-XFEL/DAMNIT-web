@@ -4,7 +4,7 @@ import { useDidUpdate } from '@mantine/hooks'
 
 import { useAppSelector } from '#src/app/store/hooks'
 import { VARIABLES } from '#src/constants'
-import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
+import { ALL_RUNS_PAGE_SIZE } from '#src/features/plots/runs-truncation'
 import {
   LIGHTWEIGHT_TABLE_DATA_QUERY,
   type TableDataResult,

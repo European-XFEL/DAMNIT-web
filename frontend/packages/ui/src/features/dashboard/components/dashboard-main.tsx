@@ -15,6 +15,9 @@ const Table = lazy(() => import('#src/features/table/table'))
 // hides the table while a plot's chunk loads and the grid then drops right-clicks.
 function DashboardMain() {
   const view = useAppSelector(selectActiveView)
+  const plot = useAppSelector((state) =>
+    view.kind === 'plot' ? state.plots.data[view.id] : undefined
+  )
 
   return (
     <Suspense
@@ -27,7 +30,7 @@ function DashboardMain() {
         <ContextFile />
       ) : (
         <Box px={20} py={14} flex={1} mih={0} style={{ overflowY: 'auto' }}>
-          <PlotContainer plotId={view.id} />
+          {plot && <PlotContainer plot={plot} />}
         </Box>
       )}
     </Suspense>

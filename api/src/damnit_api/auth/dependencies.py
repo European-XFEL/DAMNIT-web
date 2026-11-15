@@ -9,15 +9,6 @@ from .bootstrap import get_oauth_client
 from .models import OAuthUserInfo as _OAuthUserInfo
 from .models import User as _User
 
-
-# TODO: Get from settings
-def _get_default_redirect_login_uri() -> str:
-    return "/app/home"
-
-
-RedirectURI = Annotated[str, Depends(_get_default_redirect_login_uri)]
-"""Type alias for the redirect URI dependency."""
-
 Client = Annotated[StarletteOAuth2App, Depends(get_oauth_client)]
 """Type alias for the OAuth client dependency."""
 

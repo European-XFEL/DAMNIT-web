@@ -26,7 +26,8 @@ export function useColumnResize(
   columns: TableColumn[]
 ) {
   const dispatch = useAppDispatch()
-  // Read when clicked, so a drag frame does not hand the toolbar new handlers.
+  // Read when clicked: a fit needs the widths right after Glide remeasures,
+  // before any render.
   const store = useAppStore()
   const columnSizing = useAppSelector(selectColumnSizing)
 

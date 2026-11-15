@@ -1,9 +1,13 @@
 import { HTTP_URL } from '#src/constants'
 import { type AppThunk } from '#src/app/store/thunks'
 
-export const login = (): AppThunk => (_) => {
-  window.location.replace(`${HTTP_URL}oauth/login?redirect_uri=${HTTP_URL}home`)
-}
+export const login =
+  (target: string): AppThunk =>
+  (_) => {
+    window.location.replace(
+      `${HTTP_URL}oauth/login?redirect_uri=${encodeURIComponent(target)}`
+    )
+  }
 
 export const logout = (): AppThunk => (_) => {
   fetch(`${HTTP_URL}oauth/logout?redirect_uri=${HTTP_URL}logged-out`, {

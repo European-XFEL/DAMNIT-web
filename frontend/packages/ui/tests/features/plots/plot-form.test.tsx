@@ -96,7 +96,6 @@ test('a summary plots Y against X over all runs', async () => {
   expect(onSubmit).toHaveBeenCalledWith({
     variables: ['run', 'energy'],
     source: 'summary',
-    name: 'Energy vs. Run',
   })
 })
 
@@ -112,7 +111,6 @@ test('a preview plots the variable over the runs typed', async () => {
     variables: ['xgm_pulses'],
     source: 'preview',
     runs: ['7', '9'],
-    name: 'XGM/Pulses',
   })
 })
 

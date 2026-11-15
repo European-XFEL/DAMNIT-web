@@ -10,8 +10,8 @@ type TableToolbarProps = {
   onResetColumnWidths: () => void
 }
 
-// Memoised because a drag writes a width per mouse-move, which re-renders the
-// table but changes nothing here.
+// Memoized because the hover card and every page load re-render the table but
+// change nothing here.
 export const TableToolbar = memo(function TableToolbar({
   onFitAllColumns,
   onResetColumnWidths,
@@ -25,7 +25,7 @@ export const TableToolbar = memo(function TableToolbar({
       style={{
         flex: 'none',
         // The rule sits under the 40 px row rather than inside it, so the
-        // buttons centre on a whole pixel.
+        // buttons center on a whole pixel.
         boxSizing: 'content-box',
         borderBottom: '1px solid var(--app-shell-border-color)',
       }}

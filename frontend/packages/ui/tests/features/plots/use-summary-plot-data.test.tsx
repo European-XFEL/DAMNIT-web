@@ -9,7 +9,7 @@ import { renderHook } from 'vitest-browser-react'
 import { expect, test, vi } from 'vitest'
 
 import { setupStore } from '#src/app/store/store'
-import { ALL_RUNS_PAGE_SIZE } from '#src/data/table/table-data.constants'
+import { ALL_RUNS_PAGE_SIZE } from '#src/features/plots/runs-truncation'
 import {
   RUN_FRAGMENT,
   TABLE_DATA_QUERY,
