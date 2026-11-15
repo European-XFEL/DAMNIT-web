@@ -1052,7 +1052,6 @@ podman<span class="w"> </span>compose<span class="w"> </span>up
     }
     variables
     tags
-    timestamp
   }
 }
 </code></pre></div>
@@ -1064,7 +1063,6 @@ podman<span class="w"> </span>compose<span class="w"> </span>up
 <li><code>variables</code> - map of variable name to its title and tags (includes the
   known variables listed below alongside any user-defined ones)</li>
 <li><code>tags</code> - map of tag name to its id and the variables it groups</li>
-<li><code>timestamp</code> - last update time, in milliseconds since the Unix epoch</li>
 </ul>
 <h3 id="2-query-the-runs">2. Query the runs<a class="headerlink" href="#2-query-the-runs" title="Permanent link">&para;</a></h3>
 <p>For instance, to fetch the first 10 runs of proposal <code>2956</code> along with all
@@ -1127,7 +1125,6 @@ ones from the proposal's context file:</p>
       }
       variables
       tags
-      timestamp
     }
     timestamp
   }
