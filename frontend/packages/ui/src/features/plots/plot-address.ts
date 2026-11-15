@@ -1,6 +1,7 @@
+import type { RunId, Variable } from '#src/data/table/table-data.types'
 import type { PlotSource, PlotSpec } from '#src/types'
 
-import { formatRunSelection, parseRunSelection } from './utils'
+import { formatRunSelection, parseRunSelection, plotRunIds } from './utils'
 
 const PLOT_SOURCES: PlotSource[] = ['summary', 'preview']
 
@@ -71,4 +72,29 @@ export function parsePlotAddress(
   }
 
   return { plot: { source, variables: [x, y], runs } }
+}
+
+type FindLinkErrorOptions = {
+  variables: Record<string, Variable>
+  runs: RunId[]
+  proposal: string
+}
+
+// A well-formed link can still name what the proposal lacks. Some of its runs
+// missing is fine, since the plot draws the ones that exist.
+export function findLinkError(
+  plot: PlotSpec,
+  { variables, runs, proposal }: FindLinkErrorOptions
+) {
+  const missing = plot.variables.find((name) => !(name in variables))
+  if (missing !== undefined) {
+    return `The proposal has no variable "${missing}"`
+  }
+
+  if (
+    plot.runs !== undefined &&
+    plotRunIds(runs, { proposal, selection: plot.runs }).length === 0
+  ) {
+    return `The proposal has none of the runs ${formatRunSelection(plot.runs)}`
+  }
 }

@@ -2,14 +2,14 @@ import type { PropsWithChildren } from 'react'
 import { Alert, rem } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
 
-type UnableToDisplayAlertProps = PropsWithChildren
+type UnableToDisplayAlertProps = PropsWithChildren<{ title: string }>
 
-function UnableToDisplayAlert({ children }: UnableToDisplayAlertProps) {
+function UnableToDisplayAlert({ title, children }: UnableToDisplayAlertProps) {
   return (
     <Alert
       variant="light"
       color="orange"
-      title="Unable to display the plot"
+      title={title}
       // Mantine draws the icon in orange.7, 2.73:1 on the tint; orange.8 keeps
       // it over 3:1. The theme already sets the title in the text color.
       styles={{ icon: { color: 'var(--mantine-color-orange-8)' } }}

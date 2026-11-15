@@ -44,7 +44,7 @@ test('opening a proposal you cannot access lands on not-found, and Back leaves i
   await expect(
     page.getByRole('heading', { name: 'DAMNIT! Page not found.' })
   ).toBeVisible()
-  await expect(page).toHaveURL(/\/app\/proposal\/9999$/)
+  await expect(page).toHaveURL(/\/app\/proposal\/9999\/table$/)
 
   // Go back home
   await page.goBack()

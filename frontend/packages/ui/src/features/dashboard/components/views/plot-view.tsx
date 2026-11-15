@@ -1,0 +1,66 @@
+import { useEffect, useMemo } from 'react'
+import { useParams, useSearchParams } from 'react-router'
+import { Box, Text } from '@mantine/core'
+
+import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
+import CenteredLoader from '#src/components/feedback/centered-loader'
+import { useTableMeta } from '#src/data/table/use-table-meta'
+import UnableToDisplayAlert from '#src/components/feedback/unable-to-display-alert'
+import {
+  findLinkError,
+  parsePlotAddress,
+  plotAddress,
+} from '#src/features/plots/plot-address'
+import PlotContainer from '#src/features/plots/plot-container'
+import { addPlot } from '#src/features/plots/plots.slice'
+import { plotName } from '#src/features/plots/utils'
+import { isEmpty } from '#src/utils/helpers'
+
+// Draws the plot its address names and lists it in the nav, or says which
+// part of the link is wrong, with no nav entry.
+function PlotView() {
+  const dispatch = useAppDispatch()
+  const { kind = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const address = useMemo(
+    () => parsePlotAddress(kind, searchParams),
+    [kind, searchParams]
+  )
+  const { variables, runs } = useTableMeta()
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
+
+  // Every proposal has the run variable, so none means the metadata is still
+  // on its way, and the link cannot be checked yet.
+  const loading = isEmpty(variables)
+  const linked = 'plot' in address && !loading ? address.plot : undefined
+  const error =
+    'error' in address
+      ? address.error
+      : linked && findLinkError(linked, { variables, runs, proposal })
+  const plot = error === undefined ? linked : undefined
+  const name = plot && plotName(plot, variables)
+
+  useEffect(() => {
+    if (plot !== undefined && name !== undefined) {
+      dispatch(addPlot({ ...plot, name }))
+    }
+  }, [plot, name, dispatch])
+
+  if (error === undefined && plot === undefined) {
+    return <CenteredLoader />
+  }
+
+  return (
+    <Box px={20} py={14} flex={1} mih={0} style={{ overflowY: 'auto' }}>
+      {plot !== undefined ? (
+        <PlotContainer key={plotAddress(plot)} plot={plot} />
+      ) : (
+        <UnableToDisplayAlert title="Unable to display the plot">
+          <Text size="sm">{error}</Text>
+        </UnableToDisplayAlert>
+      )}
+    </Box>
+  )
+}
+
+export default PlotView
