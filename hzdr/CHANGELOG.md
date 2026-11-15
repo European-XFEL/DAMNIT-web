@@ -6,6 +6,14 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-15
 
+### Data rights and privacy notice
+- New public page `/privacy` (`HZDRPrivacyPage`), linked as "Privacy" in the
+  site footer. Worded after LabFrog's notice, with the same controller (HZDR)
+  and data protection officer, and stating what this app stores about a
+  person: the sign-in details in the session cookie, the user name on review
+  decisions and saved table views, the browser's table layout, and request
+  logs. Readable without signing in, as LabFrog's is.
+
 ### History rows in a preserved LabFrog NeXus shot table: accepted
 - Documentation only. A shot table preserved from a LabFrog NeXus file
   (`--labfrog-nexus`) keeps its superseded versions, because other groups

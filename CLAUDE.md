@@ -205,7 +205,8 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
 `apps/app` (main UI), `apps/demo`, `apps/site`; `nginx/` for serving; Vite + pnpm
 workspace. HZDR-specific UI code lives under `apps/app/src/hzdr/`:
 - `pages/` — `ShotPage`, `ReviewMatchesPage`, `FlowMonitorPage`, `ContextBuilderPage`,
-  `DocsPage`, `SourceHome`
+  `DocsPage`, `PrivacyPage` (public `/privacy`, linked from the site footer;
+  keep its "What we process" list in step with what the API stores), `SourceHome`
 - `components/` — `ShotTable`, `ReviewMatches`, `FlowDiagram`, `AppHeader`, `previews`
 - `utils/` — `api`, `filter`, `format`, `hdf5`, `review`, `metadata`, `plotly`,
   `preview`, `context`
