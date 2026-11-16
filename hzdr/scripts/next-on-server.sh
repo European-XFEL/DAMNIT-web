@@ -172,17 +172,44 @@ step_frontend() {
     moved="$(head_moved "$repo")"
     built="$(stat -c %Y "$dist" 2>/dev/null || echo 0)"
     if [ "$built" -ge "$moved" ]; then
-        ok "DAMNIT frontend built after the last pull"; return
-    fi
-    if [ "$APPLY" -eq 0 ]; then
+        ok "DAMNIT frontend built after the last pull"
+    elif [ "$APPLY" -eq 0 ]; then
         would "DAMNIT frontend: pnpm install --frozen-lockfile && pnpm --filter ./apps/app build"
         return
-    fi
-    act "building DAMNIT's frontend"
-    if (cd "$repo/frontend" && pnpm install --frozen-lockfile && pnpm --filter ./apps/app build); then
-        ok "frontend built"
     else
-        fail "frontend build failed (the old build is still served)"
+        act "building DAMNIT's frontend"
+        if (cd "$repo/frontend" && pnpm install --frozen-lockfile && pnpm --filter ./apps/app build); then
+            ok "frontend built"
+        else
+            fail "frontend build failed (the old build is still served)"
+            return
+        fi
+    fi
+    publish_frontend "$repo/frontend/apps/app/dist"
+}
+
+# nginx serves the frontend from DAMNIT_WEB_ROOT, not from the build folder:
+# a build is live only once it is copied there (hzdr/docs/guides/operations.md).
+publish_frontend() {
+    local dist="$1" web="${DAMNIT_WEB_ROOT:-/var/www/damnit-web}" backup
+    [ -f "$dist/index.html" ] || { warn "no frontend build in $dist to publish"; return; }
+    if diff -rq "$dist" "$web" >/dev/null 2>&1; then
+        ok "frontend build is what $web serves"; return
+    fi
+    if [ "$APPLY" -eq 0 ]; then
+        would "publish the frontend: sudo rsync -a --checksum --delete $dist/ $web/"
+        return
+    fi
+    backup="$web.bak-$(date +%F)"
+    if [ -d "$web" ] && [ ! -e "$backup" ]; then
+        act "sudo cp -a $web $backup"
+        sudo cp -a "$web" "$backup" || { fail "could not back up $web; not published"; return; }
+    fi
+    act "sudo rsync -a --checksum --delete $dist/ $web/"
+    if sudo rsync -a --checksum --delete "$dist/" "$web/"; then
+        ok "frontend published to $web (reload the page with Ctrl+Shift+R)"
+    else
+        fail "publishing the frontend to $web failed"
     fi
 }
 

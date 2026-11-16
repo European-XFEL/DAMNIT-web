@@ -6,6 +6,14 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-16
 
+### next-on-server.sh publishes the frontend it builds
+- The script built the frontend into `frontend/apps/app/dist` but never
+  copied it to `/var/www/damnit-web`, which nginx serves, so the site kept
+  the old icon, guide and pages after a deploy. `--apply` now copies the
+  build there (dated backup first) whenever the two differ, comparing by
+  content (`rsync --checksum`); without `--apply` it lists the step.
+  `DAMNIT_WEB_ROOT` overrides the folder.
+
 ### Context: suggested starter columns from the campaign's LabFrog records
 - A user's first context.py for a campaign has up to six columns: values the
   campaign's LabFrog records hold on enough shots and that vary, numbers with
