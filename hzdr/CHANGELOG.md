@@ -6,6 +6,21 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-16
 
+### Flow monitor Live keeps the diagram; HZDR legal notice and contact; user guide
+- Live mode shows the diagram (without the emulation buttons) above the
+  health cards and moves real traffic through it: a lane animates when its
+  Kafka topic, ASAPO stream or DAMNIT's spool gained messages since the last
+  5 s poll (`utils/flow-activity.ts`).
+- Footer: Legal Notice opens a new local `/legal` page (HZDR as service
+  provider, worded after LabFrog's imprint) instead of European XFEL's;
+  Contact, Send feedback and the user menu write to the HZDR maintainer
+  instead of `da@xfel.eu`.
+- `/docs` is rewritten as a user guide for the deployed flow (shot authority,
+  watchdogs, LabFrog export, matching, Review matches, the table, context
+  columns, the campaign file and SciCat, troubleshooting); the emulator-era
+  text (LaserData making shots through ASAPO, JSONL as the combine boundary)
+  is gone, and the developer commands are in a collapsed last section.
+
 ### Shot table: drag columns into any order; no starter columns
 - Drag a column header onto another to move it; the order is kept per
   campaign with the rest of the table view, and "Reset order" in Columns
