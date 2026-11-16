@@ -161,6 +161,13 @@ def laser_energy_mj(run, laser_energy_j=None):
                     ; a value that is not a number shows in red, so a typo in
                     LabFrog is easy to spot.
                   </Text>
+                  <Text size="sm" c="dimmed">
+                    <b>Variants</b>: Save as keeps another version of the file
+                    (for example a test). The shot table always uses the active
+                    one, <Code>context.py</Code>; choose a variant under Context
+                    file and press <b>Make … active</b> to use it. The file it
+                    replaces is kept as <Code>context_previous.py</Code>.
+                  </Text>
                 </Stack>
               </DetailsSection>
               <DetailsSection title="Review matches">

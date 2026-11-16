@@ -6,6 +6,12 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-16
 
+### Context: make a saved variant the active one
+- The shot table runs `context.py`; a variant saved with Save as had no way
+  to become active. Context Builder now shows "Make <variant> active" for a
+  selected variant: it writes the editor's text to `context.py` and keeps the
+  replaced file as `context_previous.py`. `/docs` explains variants.
+
 ### next-on-server.sh publishes the frontend it builds
 - The script built the frontend into `frontend/apps/app/dist` but never
   copied it to `/var/www/damnit-web`, which nginx serves, so the site kept
