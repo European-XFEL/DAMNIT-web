@@ -13,12 +13,18 @@ cd ../frontend && pnpm install --frozen-lockfile && pnpm --filter ./apps/app bui
 
 The system nginx (`fwkt-damnit.fz-rossendorf.de`, ports 80/443) serves the
 frontend from `/var/www/damnit-web` at the site root and proxies the API paths
-to `127.0.0.1:8000`. A build is live only after it is copied there:
+to `127.0.0.1:8000`. A build is live only after it is copied there.
+`hzdr/scripts/next-on-server.sh --apply` does that on its own: it builds when
+the checkout moved, and copies the build (with a dated backup) whenever it
+differs from what nginx serves. By hand:
 
 ```bash
 sudo cp -a /var/www/damnit-web /var/www/damnit-web.bak-$(date +%F)
-sudo rsync -a --delete ~/DAMNIT-web-hzdr/frontend/apps/app/dist/ /var/www/damnit-web/
+sudo rsync -a --checksum --delete ~/DAMNIT-web-hzdr/frontend/apps/app/dist/ /var/www/damnit-web/
 ```
+
+`--checksum` matters: a new `index.html` can have the old one's size and
+time, and plain `rsync -a` then keeps the old page.
 
 Then hard-refresh the browser (Ctrl+Shift+R). The app is at `/`, so build
 without `VITE_BASE_URL`. Deep links such as `/source/<key>` need
