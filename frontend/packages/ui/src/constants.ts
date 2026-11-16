@@ -22,7 +22,9 @@ export function isHeavySummaryBlank({
   return value == null && HEAVY_DTYPES.has(dtype)
 }
 
-export const CONTACT_EMAIL = 'da@xfel.eu'
+// HZDR: feedback goes to the service's maintainer at HZDR, not to European
+// XFEL's DA group (upstream's da@xfel.eu).
+export const CONTACT_EMAIL = 'k.tippey@hzdr.de'
 
 export const BASE_URL = formatUrl(import.meta.env.VITE_BASE_URL)
 export const HTTP_URL = window.location.origin + BASE_URL

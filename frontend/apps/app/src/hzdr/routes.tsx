@@ -6,6 +6,7 @@ import {
   ContextBuilderPage,
   HZDRDocsPage,
   HZDRFlowMonitorPage,
+  HZDRLegalPage,
   HZDRPrivacyPage,
   HZDRShotPage,
   LegacyReviewMatchesRedirect,
@@ -35,6 +36,7 @@ export function hzdrRoutes() {
       />
       {/* Public, as LabFrog's is: readable before signing in. */}
       <Route path="/privacy" element={<HZDRPrivacyPage />} />
+      <Route path="/legal" element={<HZDRLegalPage />} />
       <Route
         path="/flow-monitor"
         element={
