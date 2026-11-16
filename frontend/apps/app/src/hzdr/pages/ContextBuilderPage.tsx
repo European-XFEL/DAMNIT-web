@@ -655,6 +655,21 @@ export function ContextBuilderPage() {
       .catch(() => setSaveStatus('Save failed'))
   }
 
+  const loadSuggestedContext = () => {
+    if (!source_key) {
+      return
+    }
+    fetch(`/contextfile/campaign/${source_key}/suggested`)
+      .then((response) => requireJson<{ fileContent: string }>(response))
+      .then((suggested) => {
+        setContextContent(suggested.fileContent)
+        setSaveStatus(
+          "Loaded suggested columns from this campaign's LabFrog records. Review, then save."
+        )
+      })
+      .catch(() => setSaveStatus('Could not load suggested columns'))
+  }
+
   const loadContextVariant = (fileName: string | null) => {
     if (!source_key || !fileName) {
       return
@@ -1316,6 +1331,13 @@ export function ContextBuilderPage() {
                     summary={selectedContextFile}
                   >
                     <Group justify="flex-end">
+                      <Button
+                        variant="light"
+                        onClick={loadSuggestedContext}
+                        title="Replace the editor's text with a few columns from what this campaign's LabFrog records hold. Nothing is saved until you press Save."
+                      >
+                        Load suggested columns
+                      </Button>
                       <Button onClick={saveManualContext}>
                         Save {selectedContextFile}
                       </Button>
