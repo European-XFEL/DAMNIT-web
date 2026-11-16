@@ -763,7 +763,7 @@ SHOTS = (
         "docs.png",
         "/docs",
         "heading",
-        "DAMNIT-web HZDR workflow",
+        "Using DAMNIT-web at HZDR",
         _prepare_docs,
     ),
     Shot(
