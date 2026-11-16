@@ -6,6 +6,34 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-16
 
+### Flow monitor Live keeps the diagram; HZDR legal notice and contact; user guide
+- Live mode shows the diagram (without the emulation buttons) above the
+  health cards and moves real traffic through it: a lane animates when its
+  Kafka topic, ASAPO stream or DAMNIT's spool gained messages since the last
+  5 s poll (`utils/flow-activity.ts`).
+- Footer: Legal Notice opens a new local `/legal` page (HZDR as service
+  provider, worded after LabFrog's imprint) instead of European XFEL's;
+  Contact, Send feedback and the user menu write to the HZDR maintainer
+  instead of `da@xfel.eu`.
+- `/docs` is rewritten as a user guide for the deployed flow (shot authority,
+  watchdogs, LabFrog export, matching, Review matches, the table, context
+  columns, the campaign file and SciCat, troubleshooting); the emulator-era
+  text (LaserData making shots through ASAPO, JSONL as the combine boundary)
+  is gone, and the developer commands are in a collapsed last section.
+
+### Shot table: drag columns into any order; no starter columns
+- Drag a column header onto another to move it; the order is kept per
+  campaign with the rest of the table view, and "Reset order" in Columns
+  restores the default. New context variables join at the end. Before, the
+  fixed columns had a fixed order and context columns could only be moved
+  by reordering the variables in context.py.
+- A new user's context.py defines no variable: the four starter columns
+  (owner, campaign, a copy of Energy, and "Computed field", a made-up
+  product that was Missing on every shot) only cluttered the table. The
+  examples remain as comments. Existing workspaces keep their file.
+- Shot detail: a long shot key or record id wraps inside its column instead
+  of running into the next one.
+
 ### Kafka consumer starts again on kafka-python-ng 2.2.3
 - The D-M01 fetch limits passed `receive_message_max_bytes`, which only
   kafka-python 3.0 knows; the locked 2.2.3 refused it ("Unrecognized

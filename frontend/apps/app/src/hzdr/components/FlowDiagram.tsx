@@ -49,6 +49,7 @@ export function FlowDiagram({
   onSendWatchdog,
   onBuildPackage,
   onRefreshDamnit,
+  live = false,
 }: {
   packets: FlowPacket[]
   damnitPulse: boolean
@@ -69,6 +70,8 @@ export function FlowDiagram({
   onSendWatchdog: () => void
   onBuildPackage: () => void
   onRefreshDamnit: () => void
+  /** Live mode: real traffic drives the diagram, so no emulation buttons. */
+  live?: boolean
 }) {
   const activeShotcounter = packets.some(
     (packet) => packet.lane === 'shotcounter'
@@ -210,7 +213,9 @@ export function FlowDiagram({
             active={activeShotcounter}
             icon={<IconServer size={24} />}
             color="grape"
-            actions={[{ label: 'New shot', onClick: onSendShotcounter }]}
+            actions={
+              live ? [] : [{ label: 'New shot', onClick: onSendShotcounter }]
+            }
             style={{ gridColumn: 1, gridRow: 1 }}
           />
           <FlowConnector
@@ -240,13 +245,17 @@ export function FlowDiagram({
             buffered={flowState.laserBuffered}
             icon={<IconServer size={24} />}
             color="blue"
-            actions={[
-              {
-                label: 'Enrich latest',
-                onClick: onSendLaserData,
-                disabled: !receiverConfig.laserData,
-              },
-            ]}
+            actions={
+              live
+                ? []
+                : [
+                    {
+                      label: 'Enrich latest',
+                      onClick: onSendLaserData,
+                      disabled: !receiverConfig.laserData,
+                    },
+                  ]
+            }
             style={{ gridColumn: 1, gridRow: 2 }}
           />
           <FlowConnector
@@ -280,14 +289,19 @@ export function FlowDiagram({
             buffered={flowState.watchdogBuffered}
             icon={<IconActivityHeartbeat size={24} />}
             color="orange"
-            actions={[
-              {
-                label: 'Enrich latest',
-                onClick: onSendWatchdog,
-                disabled:
-                  !receiverConfig.watchdog || !selectedWatchdogWatchers.length,
-              },
-            ]}
+            actions={
+              live
+                ? []
+                : [
+                    {
+                      label: 'Enrich latest',
+                      onClick: onSendWatchdog,
+                      disabled:
+                        !receiverConfig.watchdog ||
+                        !selectedWatchdogWatchers.length,
+                    },
+                  ]
+            }
             style={{ gridColumn: 1, gridRow: 3 }}
           />
           <FlowConnector
@@ -354,10 +368,14 @@ export function FlowDiagram({
             buffered={damnitPulse}
             icon={<IconBellRinging size={24} />}
             color="teal"
-            actions={[
-              { label: 'Poll live', onClick: onRefreshDamnit },
-              { label: 'Build HDF5', onClick: onBuildPackage },
-            ]}
+            actions={
+              live
+                ? []
+                : [
+                    { label: 'Poll live', onClick: onRefreshDamnit },
+                    { label: 'Build HDF5', onClick: onBuildPackage },
+                  ]
+            }
             style={{ gridColumn: 7, gridRow: '1 / 4', alignSelf: 'stretch' }}
           />
           <ProgramNode

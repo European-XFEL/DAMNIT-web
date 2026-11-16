@@ -46,4 +46,4 @@ export { setMetadata, setProposalPending } from './data/metadata/metadata.slice'
 export { formatUrl } from './utils/helpers'
 
 // Constants
-export { BASE_URL } from './constants'
+export { BASE_URL, CONTACT_EMAIL } from './constants'

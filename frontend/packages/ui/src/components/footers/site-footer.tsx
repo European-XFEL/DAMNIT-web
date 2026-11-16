@@ -15,6 +15,8 @@ import {
   type IconProps,
 } from '@tabler/icons-react'
 
+import { CONTACT_EMAIL } from '#src/constants'
+
 import classes from './site-footer.module.css'
 
 interface SiteAnchorProps
@@ -51,13 +53,10 @@ function SiteFooter() {
         <SiteAnchor href="/privacy" icon={IconShieldLock}>
           Privacy
         </SiteAnchor>
-        <SiteAnchor
-          href="https://www.xfel.eu/legal_notice/index_eng.html"
-          icon={IconScale}
-        >
+        <SiteAnchor href="/legal" icon={IconScale}>
           Legal Notice
         </SiteAnchor>
-        <SiteAnchor href="https://github.com/ktippey-hzdr" icon={IconBuilding}>
+        <SiteAnchor href={`mailto:${CONTACT_EMAIL}`} icon={IconBuilding}>
           Contact
         </SiteAnchor>
       </Group>
