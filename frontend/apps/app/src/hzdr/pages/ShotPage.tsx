@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Anchor,
@@ -67,6 +67,8 @@ import {
   SHOT_TABLE_COLUMN_WIDTHS,
   CONTEXT_COLUMN_WIDTH,
   loadShotTableView,
+  moveColumn,
+  orderColumns,
   saveShotTableView,
 } from '../utils/table-view'
 
@@ -88,6 +90,7 @@ export function HZDRShotPage() {
     direction: 'asc',
   })
   const [hiddenTableColumns, setHiddenTableColumns] = useState<string[]>([])
+  const [columnOrder, setColumnOrder] = useState<string[]>([])
   const [showHistoricalVersions, setShowHistoricalVersions] = useState(false)
   const [selectedCell, setSelectedCell] = useState<HZDRSelectedCell>()
   // One page-level state for the shots list only; the secondary fetches
@@ -113,6 +116,7 @@ export function HZDRShotPage() {
       savedView?.sortState ?? { column: 'shot_number', direction: 'asc' }
     )
     setHiddenTableColumns(savedView?.hiddenTableColumns ?? [])
+    setColumnOrder(savedView?.columnOrder ?? [])
     setShowHistoricalVersions(savedView?.showHistoricalVersions ?? false)
   }, [source_key])
 
@@ -131,6 +135,7 @@ export function HZDRShotPage() {
       sortState,
       hiddenTableColumns,
       showHistoricalVersions,
+      columnOrder,
     })
   }, [
     source_key,
@@ -140,6 +145,7 @@ export function HZDRShotPage() {
     sortState,
     hiddenTableColumns,
     showHistoricalVersions,
+    columnOrder,
   ])
 
   const loadShotPageData = useCallback(() => {
@@ -238,9 +244,18 @@ export function HZDRShotPage() {
     ...SHOT_TABLE_COLUMNS.map(({ value, label }) => ({ value, label })),
     ...contextColumnOptions,
   ]
-  const visibleTableColumns = tableColumnOptions
-    .map((option) => option.value)
-    .filter((column) => !hiddenTableColumns.includes(column))
+  const orderedTableColumns = orderColumns(
+    tableColumnOptions.map((option) => option.value),
+    columnOrder
+  )
+  const orderedColumnOptions = orderedTableColumns.map((value) =>
+    tableColumnOptions.find((option) => option.value === value)!
+  )
+  const visibleTableColumns = orderedTableColumns.filter(
+    (column) => !hiddenTableColumns.includes(column)
+  )
+  const moveTableColumn = (from: string, to: string) =>
+    setColumnOrder(moveColumn(orderedTableColumns, from, to))
   const isTableColumnVisible = (column: string) =>
     visibleTableColumns.includes(column)
   const visibleContextColumns =
@@ -576,7 +591,7 @@ export function HZDRShotPage() {
                       }}
                     >
                       <Group gap="sm" mt="xs">
-                        {tableColumnOptions.map((option) => (
+                        {orderedColumnOptions.map((option) => (
                           <Checkbox
                             key={option.value}
                             value={option.value}
@@ -584,6 +599,20 @@ export function HZDRShotPage() {
                             size="xs"
                           />
                         ))}
+                      </Group>
+                      <Group gap="xs" mt="xs">
+                        <Text size="xs" c="dimmed">
+                          Drag a column header onto another to move it.
+                        </Text>
+                        {columnOrder.length > 0 ? (
+                          <Button
+                            size="compact-xs"
+                            variant="subtle"
+                            onClick={() => setColumnOrder([])}
+                          >
+                            Reset order
+                          </Button>
+                        ) : null}
                       </Group>
                     </Checkbox.Group>
                   </DetailsSection>
@@ -622,28 +651,28 @@ export function HZDRShotPage() {
                       >
                         <Table.Thead>
                           <Table.Tr>
-                            {SHOT_TABLE_COLUMNS.filter((column) =>
-                              isTableColumnVisible(column.value)
-                            ).map((column) => (
-                              <SortableHeader
-                                key={column.value}
-                                width={column.width}
-                                label={column.label}
-                                column={column.value}
-                                sortState={sortState}
-                                onSort={toggleSort}
-                              />
-                            ))}
-                            {visibleContextColumns.map((column) => (
-                              <SortableHeader
-                                key={column.name}
-                                width={CONTEXT_COLUMN_WIDTH}
-                                label={column.title}
-                                column={`context:${column.name}`}
-                                sortState={sortState}
-                                onSort={toggleSort}
-                              />
-                            ))}
+                            {visibleTableColumns.map((value) => {
+                              const fixed = SHOT_TABLE_COLUMNS.find(
+                                (column) => column.value === value
+                              )
+                              return (
+                                <SortableHeader
+                                  key={value}
+                                  width={fixed?.width ?? CONTEXT_COLUMN_WIDTH}
+                                  label={
+                                    fixed?.label ??
+                                    tableColumnOptions.find(
+                                      (option) => option.value === value
+                                    )?.label ??
+                                    value
+                                  }
+                                  column={value}
+                                  sortState={sortState}
+                                  onSort={toggleSort}
+                                  onMove={moveTableColumn}
+                                />
+                              )
+                            })}
                           </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
@@ -698,275 +727,312 @@ export function HZDRShotPage() {
                                       : undefined,
                                 }}
                               >
-                                {isTableColumnVisible('shot_number') ? (
-                                  <Table.Td
-                                    w={SHOT_TABLE_COLUMN_WIDTHS.shot_number}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        selectMetadataCell(
-                                          shot,
-                                          'Shot',
-                                          'shot_number',
-                                          shot.shot_number
-                                        )
-                                      }}
-                                      style={cellButtonStyle}
-                                    >
-                                      {shot.shot_number}
-                                      {getShotVersion(shot) !== undefined ? (
-                                        <Text span size="xs" c="dimmed" ml={6}>
-                                          v{getShotVersion(shot)}
-                                        </Text>
-                                      ) : null}
-                                    </button>
-                                  </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('shot_day') ? (
-                                  <Table.Td
-                                    w={SHOT_TABLE_COLUMN_WIDTHS.shot_day}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        selectMetadataCell(
-                                          shot,
-                                          'Day',
-                                          'shot_day',
-                                          shotDayLabels.get(
-                                            getShotRowKey(shot)
-                                          ) ?? '-'
-                                        )
-                                      }}
-                                      style={cellButtonStyle}
-                                    >
-                                      <TruncatedCell
-                                        value={
-                                          shotDayLabels.get(
-                                            getShotRowKey(shot)
-                                          ) ?? '-'
-                                        }
-                                      />
-                                    </button>
-                                  </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('fired_at') ? (
-                                  <Table.Td
-                                    w={SHOT_TABLE_COLUMN_WIDTHS.fired_at}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        selectMetadataCell(
-                                          shot,
-                                          'Fired at',
-                                          'fired_at',
-                                          formatFiredAt(shot.fired_at)
-                                        )
-                                      }}
-                                      style={cellButtonStyle}
-                                    >
-                                      <TruncatedCell
-                                        value={formatFiredAt(shot.fired_at)}
-                                      />
-                                    </button>
-                                  </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('status') ? (
-                                  <Table.Td w={SHOT_TABLE_COLUMN_WIDTHS.status}>
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        selectMetadataCell(
-                                          shot,
-                                          'Status',
-                                          'status',
-                                          shot.metadata.status ?? 'unknown'
-                                        )
-                                      }}
-                                      style={cellButtonStyle}
-                                    >
-                                      {versionStates.get(
-                                        getShotRowKey(shot)
-                                      ) === 'current' ? (
-                                        <StatusBadge
-                                          status={String(
-                                            shot.metadata.status ?? 'unknown'
-                                          )}
-                                        />
-                                      ) : (
-                                        <Badge
-                                          size="xs"
-                                          title={`Recorded LabFrog status: ${shot.metadata.status ?? 'unknown'}`}
-                                          color={
-                                            versionStates.get(
-                                              getShotRowKey(shot)
-                                            ) === 'conflict'
-                                              ? 'yellow'
-                                              : 'gray'
-                                          }
+                                {(() => {
+                                  const cells: Record<string, ReactNode> = {
+                                    shot_number: (
+                                      <Table.Td
+                                        key="shot_number"
+                                        w={SHOT_TABLE_COLUMN_WIDTHS.shot_number}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            selectMetadataCell(
+                                              shot,
+                                              'Shot',
+                                              'shot_number',
+                                              shot.shot_number
+                                            )
+                                          }}
+                                          style={cellButtonStyle}
+                                        >
+                                          {shot.shot_number}
+                                          {getShotVersion(shot) !==
+                                          undefined ? (
+                                            <Text
+                                              span
+                                              size="xs"
+                                              c="dimmed"
+                                              ml={6}
+                                            >
+                                              v{getShotVersion(shot)}
+                                            </Text>
+                                          ) : null}
+                                        </button>
+                                      </Table.Td>
+                                    ),
+                                    shot_day: (
+                                      <Table.Td
+                                        key="shot_day"
+                                        w={SHOT_TABLE_COLUMN_WIDTHS.shot_day}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            selectMetadataCell(
+                                              shot,
+                                              'Day',
+                                              'shot_day',
+                                              shotDayLabels.get(
+                                                getShotRowKey(shot)
+                                              ) ?? '-'
+                                            )
+                                          }}
+                                          style={cellButtonStyle}
+                                        >
+                                          <TruncatedCell
+                                            value={
+                                              shotDayLabels.get(
+                                                getShotRowKey(shot)
+                                              ) ?? '-'
+                                            }
+                                          />
+                                        </button>
+                                      </Table.Td>
+                                    ),
+                                    fired_at: (
+                                      <Table.Td
+                                        key="fired_at"
+                                        w={SHOT_TABLE_COLUMN_WIDTHS.fired_at}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            selectMetadataCell(
+                                              shot,
+                                              'Fired at',
+                                              'fired_at',
+                                              formatFiredAt(shot.fired_at)
+                                            )
+                                          }}
+                                          style={cellButtonStyle}
+                                        >
+                                          <TruncatedCell
+                                            value={formatFiredAt(shot.fired_at)}
+                                          />
+                                        </button>
+                                      </Table.Td>
+                                    ),
+                                    status: (
+                                      <Table.Td
+                                        key="status"
+                                        w={SHOT_TABLE_COLUMN_WIDTHS.status}
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            selectMetadataCell(
+                                              shot,
+                                              'Status',
+                                              'status',
+                                              shot.metadata.status ?? 'unknown'
+                                            )
+                                          }}
+                                          style={cellButtonStyle}
                                         >
                                           {versionStates.get(
                                             getShotRowKey(shot)
-                                          ) === 'conflict'
-                                            ? 'Version conflict'
-                                            : versionStates.get(
-                                                  getShotRowKey(shot)
-                                                ) === 'older'
-                                              ? 'Older version'
-                                              : 'Archived'}
-                                        </Badge>
-                                      )}
-                                    </button>
-                                  </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('laser_energy_j') ? (
-                                  <Table.Td
-                                    w={SHOT_TABLE_COLUMN_WIDTHS.laser_energy_j}
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        selectMetadataCell(
-                                          shot,
-                                          'Energy',
-                                          'laser_energy_j',
-                                          getNestedMetadataValue(
-                                            shot.metadata,
-                                            'laser.pulse_energy'
-                                          ),
-                                          'laser.pulse_energy'
-                                        )
-                                      }}
-                                      style={cellButtonStyle}
-                                    >
-                                      <TruncatedCell
-                                        value={
-                                          getNestedMetadataValue(
-                                            shot.metadata,
-                                            'laser.pulse_energy'
-                                          ) ?? '-'
-                                        }
-                                      />
-                                    </button>
-                                  </Table.Td>
-                                ) : null}
-                                {isTableColumnVisible('target') ? (
-                                  <Table.Td w={SHOT_TABLE_COLUMN_WIDTHS.target}>
-                                    <Group gap={6} wrap="nowrap">
-                                      <button
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation()
-                                          selectMetadataCell(
-                                            shot,
-                                            'Target',
-                                            'target',
-                                            formatTargetLabel(
-                                              shot.metadata.target
-                                            )
-                                          )
-                                        }}
-                                        style={cellButtonStyle}
-                                      >
-                                        <TruncatedCell
-                                          value={
-                                            formatTargetLabel(
-                                              shot.metadata.target
-                                            ) ?? '-'
-                                          }
-                                        />
-                                      </button>
-                                      {shot.target_wiki_ref ? (
-                                        <Anchor
-                                          href={shot.target_wiki_ref}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          size="xs"
-                                          onClick={(event) =>
-                                            event.stopPropagation()
-                                          }
-                                          title={
-                                            shot.target_wiki_page ??
-                                            'Open target wiki'
-                                          }
-                                          style={{ flex: '0 0 auto' }}
-                                        >
-                                          Wiki
-                                        </Anchor>
-                                      ) : null}
-                                    </Group>
-                                  </Table.Td>
-                                ) : null}
-                                {visibleContextColumns.map((column) => {
-                                  const row = contextRowsByShot.get(
-                                    getShotRowKey(shot)
-                                  )
-                                  const error = row?.errors[column.name]
-                                  const value = row?.values[column.name]
-                                  const preview = row?.previews?.[column.name]
-                                  const trendValues = isScalarContextValue(
-                                    value,
-                                    preview
-                                  )
-                                    ? buildContextTrendValues(column.name)
-                                    : undefined
-                                  return (
-                                    <Table.Td
-                                      key={column.name}
-                                      w={CONTEXT_COLUMN_WIDTH}
-                                    >
-                                      <button
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation()
-                                          setSelectedRowKey(getShotRowKey(shot))
-                                          setSelectedCell({
-                                            shotNumber: shot.shot_number,
-                                            rowKey: getShotRowKey(shot),
-                                            shotLabel: formatShotLabel(shot),
-                                            columnTitle: column.title,
-                                            columnName: column.name,
-                                            value,
-                                            error,
-                                            preview,
-                                            trendValues,
-                                            kind: 'context',
-                                          })
-                                        }}
-                                        style={cellButtonStyle}
-                                      >
-                                        {error ? (
-                                          isMissingContextValueError(error) ? (
-                                            <Badge
-                                              variant="light"
-                                              color="gray"
-                                              title={error}
-                                            >
-                                              Missing
-                                            </Badge>
-                                          ) : (
-                                            <TruncatedCell
-                                              value={error}
-                                              c="red"
+                                          ) === 'current' ? (
+                                            <StatusBadge
+                                              status={String(
+                                                shot.metadata.status ??
+                                                  'unknown'
+                                              )}
                                             />
-                                          )
-                                        ) : (
-                                          <ContextCellContent
-                                            value={formatContextValue(value)}
-                                            preview={preview}
+                                          ) : (
+                                            <Badge
+                                              size="xs"
+                                              title={`Recorded LabFrog status: ${shot.metadata.status ?? 'unknown'}`}
+                                              color={
+                                                versionStates.get(
+                                                  getShotRowKey(shot)
+                                                ) === 'conflict'
+                                                  ? 'yellow'
+                                                  : 'gray'
+                                              }
+                                            >
+                                              {versionStates.get(
+                                                getShotRowKey(shot)
+                                              ) === 'conflict'
+                                                ? 'Version conflict'
+                                                : versionStates.get(
+                                                      getShotRowKey(shot)
+                                                    ) === 'older'
+                                                  ? 'Older version'
+                                                  : 'Archived'}
+                                            </Badge>
+                                          )}
+                                        </button>
+                                      </Table.Td>
+                                    ),
+                                    laser_energy_j: (
+                                      <Table.Td
+                                        key="laser_energy_j"
+                                        w={
+                                          SHOT_TABLE_COLUMN_WIDTHS.laser_energy_j
+                                        }
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            selectMetadataCell(
+                                              shot,
+                                              'Energy',
+                                              'laser_energy_j',
+                                              getNestedMetadataValue(
+                                                shot.metadata,
+                                                'laser.pulse_energy'
+                                              ),
+                                              'laser.pulse_energy'
+                                            )
+                                          }}
+                                          style={cellButtonStyle}
+                                        >
+                                          <TruncatedCell
+                                            value={
+                                              getNestedMetadataValue(
+                                                shot.metadata,
+                                                'laser.pulse_energy'
+                                              ) ?? '-'
+                                            }
                                           />
-                                        )}
-                                      </button>
-                                    </Table.Td>
+                                        </button>
+                                      </Table.Td>
+                                    ),
+                                    target: (
+                                      <Table.Td
+                                        key="target"
+                                        w={SHOT_TABLE_COLUMN_WIDTHS.target}
+                                      >
+                                        <Group gap={6} wrap="nowrap">
+                                          <button
+                                            type="button"
+                                            onClick={(event) => {
+                                              event.stopPropagation()
+                                              selectMetadataCell(
+                                                shot,
+                                                'Target',
+                                                'target',
+                                                formatTargetLabel(
+                                                  shot.metadata.target
+                                                )
+                                              )
+                                            }}
+                                            style={cellButtonStyle}
+                                          >
+                                            <TruncatedCell
+                                              value={
+                                                formatTargetLabel(
+                                                  shot.metadata.target
+                                                ) ?? '-'
+                                              }
+                                            />
+                                          </button>
+                                          {shot.target_wiki_ref ? (
+                                            <Anchor
+                                              href={shot.target_wiki_ref}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              size="xs"
+                                              onClick={(event) =>
+                                                event.stopPropagation()
+                                              }
+                                              title={
+                                                shot.target_wiki_page ??
+                                                'Open target wiki'
+                                              }
+                                              style={{ flex: '0 0 auto' }}
+                                            >
+                                              Wiki
+                                            </Anchor>
+                                          ) : null}
+                                        </Group>
+                                      </Table.Td>
+                                    ),
+                                    ...Object.fromEntries(
+                                      visibleContextColumns.map((column) => {
+                                        const row = contextRowsByShot.get(
+                                          getShotRowKey(shot)
+                                        )
+                                        const error = row?.errors[column.name]
+                                        const value = row?.values[column.name]
+                                        const preview =
+                                          row?.previews?.[column.name]
+                                        const trendValues =
+                                          isScalarContextValue(value, preview)
+                                            ? buildContextTrendValues(
+                                                column.name
+                                              )
+                                            : undefined
+                                        const cell = (
+                                          <Table.Td
+                                            key={column.name}
+                                            w={CONTEXT_COLUMN_WIDTH}
+                                          >
+                                            <button
+                                              type="button"
+                                              onClick={(event) => {
+                                                event.stopPropagation()
+                                                setSelectedRowKey(
+                                                  getShotRowKey(shot)
+                                                )
+                                                setSelectedCell({
+                                                  shotNumber: shot.shot_number,
+                                                  rowKey: getShotRowKey(shot),
+                                                  shotLabel:
+                                                    formatShotLabel(shot),
+                                                  columnTitle: column.title,
+                                                  columnName: column.name,
+                                                  value,
+                                                  error,
+                                                  preview,
+                                                  trendValues,
+                                                  kind: 'context',
+                                                })
+                                              }}
+                                              style={cellButtonStyle}
+                                            >
+                                              {error ? (
+                                                isMissingContextValueError(
+                                                  error
+                                                ) ? (
+                                                  <Badge
+                                                    variant="light"
+                                                    color="gray"
+                                                    title={error}
+                                                  >
+                                                    Missing
+                                                  </Badge>
+                                                ) : (
+                                                  <TruncatedCell
+                                                    value={error}
+                                                    c="red"
+                                                  />
+                                                )
+                                              ) : (
+                                                <ContextCellContent
+                                                  value={formatContextValue(
+                                                    value
+                                                  )}
+                                                  preview={preview}
+                                                />
+                                              )}
+                                            </button>
+                                          </Table.Td>
+                                        )
+                                        return [`context:${column.name}`, cell]
+                                      })
+                                    ),
+                                  }
+                                  return visibleTableColumns.map(
+                                    (column) => cells[column]
                                   )
-                                })}
+                                })()}
                               </Table.Tr>
                             ))
                           )}

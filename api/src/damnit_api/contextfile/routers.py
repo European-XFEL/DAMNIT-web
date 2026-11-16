@@ -217,38 +217,29 @@ def _user_slug(user: OAuthUserInfo) -> str:
 
 
 def _starter_context(campaign: str, user: OAuthUserInfo) -> str:
-    """Create the starter context.py content for one HZDR user workspace."""
-    return f'''"""User context for HZDR campaign/source {campaign}."""
+    """Create the starter context.py content for one HZDR user workspace.
 
-from damnit_ctx import Skip, Variable
+    It defines no variable: every variable becomes a table column, and a
+    starter column (a constant, a copy of Energy, a made-up product) only
+    cluttered the table. The examples stay as comments to copy from.
+    """
+    owner = user.preferred_username or user.email or "this user"
+    return f'''"""User context for HZDR campaign/source {campaign} ({owner}).
 
+Every @Variable below becomes a column in the shot table. Examples to copy:
 
-@Variable(title="HZDR/User context owner")
-def hzdr_context_owner(run):
-    """Show which user workspace produced this context."""
-    return {user.preferred_username!r}
+    @Variable(title="Laser energy (mJ)")
+    def laser_energy_mj(run, laser_energy_j=None):
+        # The laser energy in mJ.
+        if laser_energy_j is None:
+            raise Skip("No laser energy for this shot")
+        return laser_energy_j * 1000
 
+A variable that needs metadata a shot does not have raises Skip; the cell
+then shows Missing.
+"""
 
-@Variable(title="HZDR/Campaign")
-def hzdr_campaign(run):
-    """Show the campaign/source key for this context."""
-    return {campaign!r}
-
-
-@Variable(title="HZDR/Laser energy J")
-def hzdr_laser_energy_j(run, laser_energy_j=None):
-    """Show the emulated laser energy metadata for this shot."""
-    if laser_energy_j is None:
-        raise Skip("No laser_energy_j metadata for this shot")
-    return laser_energy_j
-
-
-@Variable(title="HZDR/Computed field")
-def hzdr_computed_field(run, laser_energy_j=None, chamber_pressure_mbar=None):
-    """Small starter calculation that behaves like a real table column."""
-    if laser_energy_j is None or chamber_pressure_mbar is None:
-        raise Skip("Missing laser energy or chamber pressure metadata")
-    return round(float(laser_energy_j) * float(chamber_pressure_mbar) * 1_000_000, 4)
+from damnit_ctx import Skip, Variable  # noqa: F401
 '''
 
 

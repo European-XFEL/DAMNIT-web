@@ -1,4 +1,9 @@
-import { type PropsWithChildren, useEffect, useState } from 'react'
+import {
+  type DragEvent,
+  type PropsWithChildren,
+  useEffect,
+  useState,
+} from 'react'
 import {
   Anchor,
   Badge,
@@ -66,22 +71,59 @@ export function DetailsSection({
   )
 }
 
+const COLUMN_DRAG_TYPE = 'application/x-hzdr-column'
+
 export function SortableHeader({
   width,
   label,
   column,
   sortState,
   onSort,
+  onMove,
 }: {
   width: number
   label: string
   column: string
   sortState: HZDRSortState
   onSort: (column: string) => void
+  /** Given, the header can be dragged onto another one to move the column. */
+  onMove?: (from: string, to: string) => void
 }) {
   const active = sortState.column === column
+  const [dropTarget, setDropTarget] = useState(false)
+  const dragProps = onMove
+    ? {
+        draggable: true,
+        title: `Drag to move ${label}`,
+        onDragStart: (event: DragEvent) => {
+          event.dataTransfer.setData(COLUMN_DRAG_TYPE, column)
+          event.dataTransfer.effectAllowed = 'move'
+        },
+        onDragOver: (event: DragEvent) => {
+          if (event.dataTransfer.types.includes(COLUMN_DRAG_TYPE)) {
+            event.preventDefault()
+            setDropTarget(true)
+          }
+        },
+        onDragLeave: () => setDropTarget(false),
+        onDrop: (event: DragEvent) => {
+          event.preventDefault()
+          setDropTarget(false)
+          const from = event.dataTransfer.getData(COLUMN_DRAG_TYPE)
+          if (from && from !== column) {
+            onMove(from, column)
+          }
+        },
+        style: {
+          cursor: 'grab',
+          boxShadow: dropTarget
+            ? 'inset 3px 0 0 var(--mantine-color-blue-filled)'
+            : undefined,
+        },
+      }
+    : {}
   return (
-    <Table.Th w={width}>
+    <Table.Th w={width} {...dragProps}>
       <button
         type="button"
         onClick={() => onSort(column)}
@@ -464,7 +506,13 @@ export function ShotDetailPanel({
                 : ''}
             </Text>
           ) : null}
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+          {/* Shot keys and record ids have no spaces: let them wrap inside
+              their own column instead of running into the next one. */}
+          <SimpleGrid
+            cols={{ base: 1, sm: 2 }}
+            spacing="xs"
+            style={{ overflowWrap: 'anywhere' }}
+          >
             <Stack gap={2}>
               <Text size="xs" c="dimmed">
                 Fired at

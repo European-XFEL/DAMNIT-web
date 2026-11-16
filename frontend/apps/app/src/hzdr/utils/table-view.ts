@@ -35,6 +35,37 @@ export type ShotTableView = {
   sortState: HZDRSortState
   hiddenTableColumns: string[]
   showHistoricalVersions: boolean
+  /** Column keys in the order the user arranged them; [] = default order. */
+  columnOrder?: string[]
+}
+
+/**
+ * The available columns in the user's order: saved keys that still exist
+ * first, then every column the saved order does not know (a new context
+ * variable) in its default position.
+ */
+export function orderColumns(available: string[], order: string[]): string[] {
+  const known = order.filter((column) => available.includes(column))
+  return [...known, ...available.filter((column) => !known.includes(column))]
+}
+
+/**
+ * Move one column onto another's place: dropped left of where it was, it
+ * lands before the target; dropped right, after it.
+ */
+export function moveColumn(
+  ordered: string[],
+  from: string,
+  to: string
+): string[] {
+  const fromIndex = ordered.indexOf(from)
+  const toIndex = ordered.indexOf(to)
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+    return ordered
+  }
+  const next = ordered.filter((column) => column !== from)
+  next.splice(toIndex, 0, from)
+  return next
 }
 
 const FILTER_OPERATORS: readonly HZDRFilterOperator[] = [
@@ -94,7 +125,10 @@ export function loadShotTableView(
     !Array.isArray(candidate.hiddenTableColumns) ||
     !candidate.hiddenTableColumns.every((entry) => typeof entry === 'string') ||
     (candidate.showHistoricalVersions !== undefined &&
-      typeof candidate.showHistoricalVersions !== 'boolean')
+      typeof candidate.showHistoricalVersions !== 'boolean') ||
+    (candidate.columnOrder !== undefined &&
+      (!Array.isArray(candidate.columnOrder) ||
+        !candidate.columnOrder.every((entry) => typeof entry === 'string')))
   ) {
     return undefined
   }
@@ -105,6 +139,7 @@ export function loadShotTableView(
     sortState: { column: sortState.column, direction: sortState.direction },
     hiddenTableColumns: candidate.hiddenTableColumns as string[],
     showHistoricalVersions: candidate.showHistoricalVersions === true,
+    columnOrder: (candidate.columnOrder as string[] | undefined) ?? [],
   }
 }
 

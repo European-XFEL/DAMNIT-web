@@ -108,7 +108,10 @@ def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
         assert response.status_code == 200
         payload = response.json()
         assert payload["campaign"] == "hzdr-example"
-        assert "hzdr_computed_field" in payload["fileContent"]
+        # The starter defines no column; its example is a comment.
+        assert "from damnit_ctx import Skip, Variable" in payload["fileContent"]
+        assert "\n@Variable" not in payload["fileContent"]
+        compile(payload["fileContent"], "context.py", "exec")
 
         save_response = local_client.put(
             "/contextfile/campaign/hzdr-example/me",

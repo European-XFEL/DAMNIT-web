@@ -5,6 +5,8 @@ import {
   SHOT_TABLE_COLUMN_WIDTHS,
   CONTEXT_COLUMN_WIDTH,
   loadShotTableView,
+  moveColumn,
+  orderColumns,
   saveShotTableView,
 } from '../table-view'
 import type { ShotTableView } from '../table-view'
@@ -20,6 +22,7 @@ function makeView(overrides: Partial<ShotTableView> = {}): ShotTableView {
     sortState: { column: 'fired_at', direction: 'desc' },
     hiddenTableColumns: ['target'],
     showHistoricalVersions: false,
+    columnOrder: [],
     ...overrides,
   }
 }
@@ -42,6 +45,21 @@ describe('saveShotTableView / loadShotTableView', () => {
     const view = makeView()
     saveShotTableView(SOURCE_KEY, view)
     expect(loadShotTableView(SOURCE_KEY)).toEqual(view)
+  })
+
+  it('keeps the column order and defaults an older view to the default order', () => {
+    saveShotTableView(
+      SOURCE_KEY,
+      makeView({ columnOrder: ['fired_at', 'shot_number'] })
+    )
+    expect(loadShotTableView(SOURCE_KEY)?.columnOrder).toEqual([
+      'fired_at',
+      'shot_number',
+    ])
+    const legacy = { ...makeView() } as Partial<ShotTableView>
+    delete legacy.columnOrder
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(legacy))
+    expect(loadShotTableView(SOURCE_KEY)?.columnOrder).toEqual([])
   })
 
   it('keeps views separate per source key', () => {
@@ -142,5 +160,32 @@ describe('SHOT_TABLE_COLUMNS', () => {
       target: 146,
     })
     expect(CONTEXT_COLUMN_WIDTH).toBe(180)
+  })
+})
+
+describe('orderColumns / moveColumn', () => {
+  const available = ['shot_number', 'fired_at', 'context:gvd', 'context:tod']
+
+  it('puts saved columns first and appends the ones the order does not know', () => {
+    expect(
+      orderColumns(available, ['context:tod', 'gone', 'fired_at'])
+    ).toEqual(['context:tod', 'fired_at', 'shot_number', 'context:gvd'])
+    expect(orderColumns(available, [])).toEqual(available)
+  })
+
+  it('moves a column before a target on its left and after one on its right', () => {
+    expect(moveColumn(available, 'context:tod', 'shot_number')).toEqual([
+      'context:tod',
+      'shot_number',
+      'fired_at',
+      'context:gvd',
+    ])
+    expect(moveColumn(available, 'shot_number', 'context:gvd')).toEqual([
+      'fired_at',
+      'context:gvd',
+      'shot_number',
+      'context:tod',
+    ])
+    expect(moveColumn(available, 'shot_number', 'missing')).toEqual(available)
   })
 })

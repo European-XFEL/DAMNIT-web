@@ -6,6 +6,19 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-16
 
+### Shot table: drag columns into any order; no starter columns
+- Drag a column header onto another to move it; the order is kept per
+  campaign with the rest of the table view, and "Reset order" in Columns
+  restores the default. New context variables join at the end. Before, the
+  fixed columns had a fixed order and context columns could only be moved
+  by reordering the variables in context.py.
+- A new user's context.py defines no variable: the four starter columns
+  (owner, campaign, a copy of Energy, and "Computed field", a made-up
+  product that was Missing on every shot) only cluttered the table. The
+  examples remain as comments. Existing workspaces keep their file.
+- Shot detail: a long shot key or record id wraps inside its column instead
+  of running into the next one.
+
 ### Kafka consumer starts again on kafka-python-ng 2.2.3
 - The D-M01 fetch limits passed `receive_message_max_bytes`, which only
   kafka-python 3.0 knows; the locked 2.2.3 refused it ("Unrecognized
