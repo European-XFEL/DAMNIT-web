@@ -380,6 +380,17 @@ export async function hoverCell(
   await page.mouse.move(cell.x, cell.y)
 }
 
+// Hover a column title by real pointer coordinates, mirroring hoverCell: the
+// header is painted on the canvas and has no mirrored element to hover.
+export async function hoverHeader(
+  page: Page,
+  { example, col }: { example: Example; col: number }
+) {
+  const box = await gridBox(page)
+  const { x, y } = headerPoint(box, { col, grouped: hasGroups(example) })
+  await page.mouse.move(x, y)
+}
+
 // Right-click a cell by real pointer coordinates, mirroring hoverCell. Glide's
 // context menu fires from the canvas mouse callback, so the click must land on
 // the cell center rather than going through the a11y mirror.
