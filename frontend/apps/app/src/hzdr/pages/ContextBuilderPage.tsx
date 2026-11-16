@@ -713,6 +713,45 @@ export function ContextBuilderPage() {
       .catch(() => setSaveStatus('Save as failed'))
   }
 
+  // The shot table always runs context.py, so a variant becomes active by
+  // being written there. The file it replaces is kept as context_previous.py.
+  const makeContextActive = () => {
+    if (!source_key || selectedContextFile === 'context.py') {
+      return
+    }
+    const base = `/contextfile/campaign/${source_key}/me/files`
+    const put = (name: string, fileContent: string) =>
+      fetch(`${base}/${name}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileContent }),
+      }).then((response) => requireJson<CampaignContextFile>(response))
+    const variant = selectedContextFile
+    setSaveStatus(`Making ${variant} active...`)
+    fetch(`${base}/context.py`)
+      .then((response) => requireJson<CampaignContextFile>(response))
+      .then((previous) =>
+        put('context_previous.py', previous.fileContent ?? '')
+      )
+      .then(() => put('context.py', contextContent))
+      .then((activeContext) => {
+        setContextFile(activeContext)
+        setContextContent(activeContext.fileContent ?? '')
+        setSelectedContextFile('context.py')
+        setSaveStatus(
+          `${variant} is now active (context.py); the file it replaced is context_previous.py.`
+        )
+        return fetch(base)
+      })
+      .then((response) => requireJson<unknown>(response))
+      .then((loadedFiles) => {
+        setContextFiles(
+          Array.isArray(loadedFiles) ? (loadedFiles as ContextFileEntry[]) : []
+        )
+      })
+      .catch(() => setSaveStatus(`Could not make ${variant} active`))
+  }
+
   function titleFromDataName(value: string) {
     if (value.startsWith('metadata:')) return metadataFieldLabel(value.slice(9))
     return (
@@ -1123,18 +1162,30 @@ export function ContextBuilderPage() {
                       </Group>
                     </Group>
                     <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm">
-                      <Select
-                        label="Context file"
-                        value={selectedContextFile}
-                        onChange={loadContextVariant}
-                        data={contextFiles.map((entry) => ({
-                          value: entry.name,
-                          label: entry.active
-                            ? `${entry.name} (active)`
-                            : entry.name,
-                        }))}
-                        searchable
-                      />
+                      <Stack gap={6}>
+                        <Select
+                          label="Context file"
+                          description="The shot table uses the active file, context.py."
+                          value={selectedContextFile}
+                          onChange={loadContextVariant}
+                          data={contextFiles.map((entry) => ({
+                            value: entry.name,
+                            label: entry.active
+                              ? `${entry.name} (active)`
+                              : entry.name,
+                          }))}
+                          searchable
+                        />
+                        {selectedContextFile !== 'context.py' ? (
+                          <Button
+                            variant="light"
+                            onClick={makeContextActive}
+                            title="Write this variant (as shown in the editor) to context.py, keeping the current context.py as context_previous.py."
+                          >
+                            Make {selectedContextFile} active
+                          </Button>
+                        ) : null}
+                      </Stack>
                       <Paper withBorder radius={4} p="sm">
                         <Stack gap="xs">
                           <Select
