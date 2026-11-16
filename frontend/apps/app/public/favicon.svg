@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- DAMNIT at HZDR: the HZDR fork of European XFEL's DAMNIT-web.
+       One line per institution, in each one's logo colour. -->
+  <rect width="64" height="64" rx="8" fill="#ffffff"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-weight="700" text-anchor="middle"
+     textLength="58" lengthAdjust="spacingAndGlyphs">
+    <text x="32" y="28" font-size="25" fill="#005aa0" textLength="58" lengthAdjust="spacingAndGlyphs">HZDR</text>
+    <text x="32" y="56" font-size="25" fill="#192442" textLength="58" lengthAdjust="spacingAndGlyphs">XFEL</text>
+  </g>
+</svg>
