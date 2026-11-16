@@ -552,6 +552,20 @@ def test_labfrog_version_history_matches_only_current_record(tmp_path: Path):
     source = load_sources_file(sources_file)[0]
     assert [shot.labfrog_record_id for shot in source.shots] == ["current"]
 
+    master = tmp_path / "HELPMI.nxs"
+    write_nexus_bridge(
+        output_path=master, experiment_id="HELPMI", shots=shots, events=events
+    )
+    with h5py.File(master, "r") as handle:
+        flags = handle["entry/shots/has_newer_version"][...].tolist()
+        assert flags == [True, False]
+        assert handle["entry/shots/record_id"].asstr()[...].tolist() == [
+            "old",
+            "current",
+        ]
+    reread = read_labfrog_nexus_shots(master)
+    assert [row["metadata"]["has_newer_version"] for row in reread] == [True, False]
+
 
 def test_reads_labfrog_sqlite_canonical_shot_columns(tmp_path: Path):
     sqlite_path = tmp_path / "campaign.sqlite"

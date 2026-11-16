@@ -139,11 +139,24 @@ def campaign_summary(
         s for s in shots if not _as_bool(s.get("metadata", {}).get("has_newer_version"))
     ]
     instruments = _bounded(_instrument_id(record) for record in chain(active, events))
+    keys = Counter(s["shot_key"] for s in active if _text(s.get("shot_key")))
+    duplicate_keys = {key: count for key, count in keys.items() if count > 1}
     summary = {
         "schema_version": "hzdr-scicat-campaign-summary-v1",
         "campaign_id": experiment_id,
         "facility": "HZDR",
         "shot_count": len(active),
+        "shot_count_semantics": (
+            "current canonical records; not a distinct physical-shot count"
+        ),
+        "record_identity_coverage": {
+            "distinct_shot_keys": len(keys),
+            "records_missing_shot_key": len(active) - sum(keys.values()),
+            "duplicate_shot_key_groups": len(duplicate_keys),
+            "records_in_duplicate_groups": sum(duplicate_keys.values()),
+            "duplicate_shot_keys": _bounded(duplicate_keys),
+            "source_review_required": bool(duplicate_keys),
+        },
         "superseded_shot_records": len(shots) - len(active),
         "time_coverage": _time_coverage(active),
         "authority_numbers": _number_coverage(
