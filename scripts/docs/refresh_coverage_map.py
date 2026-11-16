@@ -173,6 +173,7 @@ AREAS = (
             f"{T}/test_hzdr_builder_trigger.py",
             f"{T}/test_hzdr_consumer_bootstrap.py",
             f"{T}/test_hzdr_rebuild.py",
+            f"{T}/test_hzdr_kafka_fetch_limits.py",
             f"{T}/test_hzdr_kafka_spool.py",
             f"{T}/test_hzdr_multi_campaign.py",
             f"{T}/test_hzdr_spool.py",
@@ -206,8 +207,12 @@ AREAS = (
             f"{A}/contextfile/__init__.py",
             f"{A}/contextfile/models.py",
             f"{A}/contextfile/routers.py",
+            f"{A}/contextfile/suggested.py",
         ),
-        tests=(f"{T}/test_contextfile.py",),
+        tests=(
+            f"{T}/test_contextfile.py",
+            f"{T}/test_hzdr_context_suggested.py",
+        ),
         watch_next="Variable evaluation against a real DAMNIT context file on disk",
     ),
     CoverageArea(
