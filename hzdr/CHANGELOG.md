@@ -16,6 +16,13 @@ behaviour; the merge PR has the details.
   emulator's 200-shot mixed day (M1) in its own reader, which uses the same
   library with the same defaults. Tests:
   `api/tests/test_hzdr_kafka_fetch_limits.py`.
+### Data rights and privacy notice
+- New public page `/privacy` (`HZDRPrivacyPage`), linked as "Privacy" in the
+  site footer. Worded after LabFrog's notice, with the same controller (HZDR)
+  and data protection officer, and stating what this app stores about a
+  person: the sign-in details in the session cookie, the user name on review
+  decisions and saved table views, the browser's table layout, and request
+  logs. Readable without signing in, as LabFrog's is.
 
 ### History rows in a preserved LabFrog NeXus shot table: accepted
 - Documentation only. A shot table preserved from a LabFrog NeXus file
