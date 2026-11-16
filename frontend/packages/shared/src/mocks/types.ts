@@ -25,6 +25,7 @@ type SourceMeta = {
 type VariableMeta = {
   name: string
   title: string
+  description?: string
   tags: string[]
   group?: string
 }

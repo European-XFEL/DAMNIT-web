@@ -30,6 +30,8 @@ export type Cell = {
 export type Variable = {
   name: string
   title?: string
+  // As its author wrote it, line breaks included; absent when blank.
+  description?: string
   tags: string[]
   group?: string
 }

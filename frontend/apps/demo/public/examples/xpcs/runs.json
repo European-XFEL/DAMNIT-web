@@ -46,6 +46,7 @@
       "xgm_intensity": {
         "name": "xgm_intensity",
         "title": "XGM intensity [uJ]",
+        "description": "Pulse energy measured by the XTD1 XGM.\nAveraged over every pulse of every train.",
         "tags": ["Beam properties"]
       },
       "total_transmission": {
