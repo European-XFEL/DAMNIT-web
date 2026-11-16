@@ -94,6 +94,17 @@ rather than treating every repeated PID as unchanged.
 
 An existing legacy PID, changed publisher identity or changed plugin target
 returns `migration_required`, preserving the current link without a write.
+
+**Reviewed migration of a legacy campaign.** Name the campaign in
+`DW_API_HZDR_SCICAT__MIGRATE_LEGACY` (a JSON list, for example
+`'["Beamline_radbio_2026"]'`). Its next build creates one new managed dataset
+and records the old PID as `scicat_legacy_pid`; the scientific metadata names
+it as `legacy_pid_reference` on this and every later update. The legacy
+dataset is not written, adopted or deleted; retiring it is a SciCat
+administrator's step. Only a legacy (`from-json`/`push`) registration moves
+this way: another publisher, identity or plugin target still returns
+`migration_required`. Add campaigns one at a time and read each new dataset
+back before adding the next.
 The plugin does not infer which historical file blocks it owns. Choose and
 review a per-campaign migration procedure before enabling this mode for existing
 campaigns. It does not bulk migrate, merge or delete duplicate candidates.

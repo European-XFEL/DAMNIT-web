@@ -4,6 +4,23 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-16
+
+### SciCat: campaigns move to managed publishing one at a time
+- `DW_API_HZDR_SCICAT__MIGRATE_LEGACY` (JSON list of experiment ids) lets a
+  campaign registered through `from-json`/`push` move to the managed
+  `publish` route, which sends the `hzdr-scicat-campaign-summary-v1` block.
+  The listed campaign gets one new managed dataset; its legacy PID is kept as
+  `scicat_legacy_pid` and sent as `legacy_pid_reference`, and the legacy
+  dataset is never written. An unlisted campaign, and any other incompatible
+  state (another publisher, identity or plugin target), still reports
+  `migration_required` without a write. Tests:
+  `api/tests/test_hzdr_scicat_publishing.py`.
+- Brings DAMNIT's managed-campaign refinements of 2026-11-13 to `main`
+  (`5bdedc17` and the six commits before it: record-count semantics,
+  `record_identity_coverage` for active duplicate records, version flags,
+  replay diagnostics).
+
 ## 2026-11-15
 
 ### Kafka consumer: a backlog over about 1 MB is read again (D-M01)

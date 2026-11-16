@@ -57,6 +57,8 @@ def publishing_body(
     scientific_metadata = dict(scientific_metadata)
     if settings.instrument_id:
         scientific_metadata.setdefault("configured_instrument", settings.instrument_id)
+    if previous and previous.get("scicat_legacy_pid"):
+        scientific_metadata["legacy_pid_reference"] = previous["scicat_legacy_pid"]
     coverage = scientific_metadata.get("time_coverage", {})
     body: dict[str, Any] = {
         "publisher": settings.publisher,
@@ -107,6 +109,54 @@ def _compatible_previous(
     )
 
 
+def _legacy_registration(previous: dict[str, Any]) -> bool:
+    """A registration made through a legacy route, never through ``publish``."""
+    return (
+        bool(previous.get("scicat_pid"))
+        and previous.get("scicat_endpoint") != "publish"
+    )
+
+
+def _moved_aside(previous: dict[str, Any]) -> dict[str, Any]:
+    """Keep the legacy PID as a reference and drop the legacy route's state.
+
+    The managed route then creates one new dataset.  The legacy dataset itself
+    is never written: the plugin does not adopt PIDs it did not create.
+    """
+    kept = {k: v for k, v in previous.items() if not k.startswith("scicat_")}
+    kept["scicat_legacy_pid"] = previous["scicat_pid"]
+    if previous.get("scicat_registered_at"):
+        kept["scicat_legacy_registered_at"] = previous["scicat_registered_at"]
+    return kept
+
+
+def _previous_for_publish(
+    previous: dict[str, Any] | None,
+    settings: HZDRScicatSettings,
+    identity: str,
+    experiment_id: str,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """``(state to publish from, None)``, or ``(None, migration_required)``.
+
+    Only a legacy registration of a campaign named in ``migrate_legacy`` is
+    moved aside; any other incompatible state (another publisher, identity or
+    plugin target) still waits for a reviewed migration.
+    """
+    if not previous or _compatible_previous(previous, settings, identity):
+        return previous, None
+    if _legacy_registration(previous) and experiment_id in settings.migrate_legacy:
+        logger.info(
+            "SciCat: migrating %s from legacy dataset %s to a managed dataset",
+            experiment_id,
+            previous["scicat_pid"],
+        )
+        return _moved_aside(previous), None
+    logger.warning(
+        "SciCat: existing registration needs reviewed managed-mode migration"
+    )
+    return None, {**previous, "scicat_action": "migration_required"}
+
+
 def register_managed_campaign(
     settings: HZDRScicatSettings,
     nexus_path: Path,
@@ -116,11 +166,11 @@ def register_managed_campaign(
     previous: dict[str, Any] | None,
 ) -> dict[str, Any] | None:
     identity = f"{source_key}/{experiment_id}"
-    if previous and not _compatible_previous(previous, settings, identity):
-        logger.warning(
-            "SciCat: existing registration needs reviewed managed-mode migration"
-        )
-        return {**previous, "scicat_action": "migration_required"}
+    previous, blocked = _previous_for_publish(
+        previous, settings, identity, experiment_id
+    )
+    if blocked is not None:
+        return blocked
     try:
         body = publishing_body(
             settings,

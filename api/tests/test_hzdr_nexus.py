@@ -556,15 +556,14 @@ def test_labfrog_version_history_matches_only_current_record(tmp_path: Path):
     write_nexus_bridge(
         output_path=master, experiment_id="HELPMI", shots=shots, events=events
     )
+    # Bridge profile v7: the replaced version is history, not a shot row.
     with h5py.File(master, "r") as handle:
-        flags = handle["entry/shots/has_newer_version"][...].tolist()
-        assert flags == [True, False]
-        assert handle["entry/shots/record_id"].asstr()[...].tolist() == [
-            "old",
-            "current",
-        ]
+        assert handle["entry/shots/has_newer_version"][...].tolist() == [False]
+        assert handle["entry/shots/record_id"].asstr()[...].tolist() == ["current"]
+        history = handle["entry/labfrog_history"]
+        assert history["record_id"].asstr()[...].tolist() == ["old"]
     reread = read_labfrog_nexus_shots(master)
-    assert [row["metadata"]["has_newer_version"] for row in reread] == [True, False]
+    assert [row["metadata"]["has_newer_version"] for row in reread] == [False]
 
 
 def test_reads_labfrog_sqlite_canonical_shot_columns(tmp_path: Path):
