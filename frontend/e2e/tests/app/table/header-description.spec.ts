@@ -74,7 +74,7 @@ test('a drag across the headers opens no description card', async ({
   const start = headerPoint(box, { col: col - 1, grouped })
   const end = headerPoint(box, { col, grouped })
 
-  // Drag onto the described header, then wait past the 200ms open delay
+  // Wait past the 200ms open delay.
   await page.mouse.move(start.x, start.y)
   await page.mouse.down()
   await page.mouse.move(end.x, end.y, { steps: 5 })
@@ -82,7 +82,6 @@ test('a drag across the headers opens no description card', async ({
   await expect(card).toBeHidden()
   await page.mouse.up()
 
-  // The same header shows its card once the button is up
   await page.mouse.move(0, 0)
   await hoverHeader(page, { example, col })
   await expect(card).toBeVisible()

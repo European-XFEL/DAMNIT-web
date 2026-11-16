@@ -380,8 +380,7 @@ export async function hoverCell(
   await page.mouse.move(cell.x, cell.y)
 }
 
-// Hover a column title by real pointer coordinates, mirroring hoverCell: the
-// header is painted on the canvas and has no mirrored element to hover.
+// The header is painted on the canvas and has no mirrored element to hover.
 export async function hoverHeader(
   page: Page,
   { example, col }: { example: Example; col: number }
