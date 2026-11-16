@@ -6,6 +6,13 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-16
 
+### Kafka consumer starts again on kafka-python-ng 2.2.3
+- The D-M01 fetch limits passed `receive_message_max_bytes`, which only
+  kafka-python 3.0 knows; the locked 2.2.3 refused it ("Unrecognized
+  configs") and `damnit-api` stopped at startup. Only the limits the
+  installed client knows are passed now (`supported_fetch_limits`). The
+  tests mocked the consumer; one now builds the real client's settings.
+
 ### SciCat: campaigns move to managed publishing one at a time
 - `DW_API_HZDR_SCICAT__MIGRATE_LEGACY` (JSON list of experiment ids) lets a
   campaign registered through `from-json`/`push` move to the managed

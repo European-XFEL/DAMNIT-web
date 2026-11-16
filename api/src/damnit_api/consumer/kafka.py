@@ -51,11 +51,19 @@ class _KafkaConsumerLike(Protocol):
 #: ("Invalid frame length"), so a consumer behind by more than about 1 MB
 #: never catches up (emulator finding D-M01, 2026-11-15). Every reply the
 #: broker may send must fit what the client accepts.
+#: ``receive_message_max_bytes`` exists only from kafka-python 3.0; the locked
+#: kafka-python-ng 2.2.3 refuses it ("Unrecognized configs") and has no such
+#: limit, so only the settings the installed client knows are passed.
 FETCH_LIMITS = {
     "max_partition_fetch_bytes": 1024 * 1024,
     "fetch_max_bytes": 4 * 1024 * 1024,
     "receive_message_max_bytes": 8 * 1024 * 1024,
 }
+
+
+def supported_fetch_limits(default_config: dict[str, Any]) -> dict[str, int]:
+    """The FETCH_LIMITS this client accepts (its ``DEFAULT_CONFIG`` keys)."""
+    return {k: v for k, v in FETCH_LIMITS.items() if k in default_config}
 
 
 def _build_kafka_consumer(
@@ -78,7 +86,7 @@ def _build_kafka_consumer(
         enable_auto_commit=False,
         auto_offset_reset="earliest",
         value_deserializer=_deserialize_value,
-        **FETCH_LIMITS,
+        **supported_fetch_limits(KafkaConsumer.DEFAULT_CONFIG),
     )
 
 
