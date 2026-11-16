@@ -4,6 +4,23 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-16
+
+### SciCat: campaigns move to managed publishing one at a time
+- `DW_API_HZDR_SCICAT__MIGRATE_LEGACY` (JSON list of experiment ids) lets a
+  campaign registered through `from-json`/`push` move to the managed
+  `publish` route, which sends the `hzdr-scicat-campaign-summary-v1` block.
+  The listed campaign gets one new managed dataset; its legacy PID is kept as
+  `scicat_legacy_pid` and sent as `legacy_pid_reference`, and the legacy
+  dataset is never written. An unlisted campaign, and any other incompatible
+  state (another publisher, identity or plugin target), still reports
+  `migration_required` without a write. Tests:
+  `api/tests/test_hzdr_scicat_publishing.py`.
+- Brings DAMNIT's managed-campaign refinements of 2026-11-13 to `main`
+  (`5bdedc17` and the six commits before it: record-count semantics,
+  `record_identity_coverage` for active duplicate records, version flags,
+  replay diagnostics).
+
 ## 2026-11-15
 
 ### Kafka consumer: a backlog over about 1 MB is read again (D-M01)
@@ -113,6 +130,25 @@ behaviour; the merge PR has the details.
 ## 2026-11-13
 
 ### SciCat campaign publishing
+- Campaign summaries distinguish current-record counts from distinct shot keys
+  and explicitly flag duplicate active-key groups for source-owner review.
+  Status remains authoritative; no record is discarded by version-number guesses.
+- Canonical bridge builds now persist each row's `has_newer_version` flag.
+  Fresh SQLite-based masters retain version history while allowing inspection
+  to distinguish current catalogue records from superseded LabFrog versions.
+- Campaign inspection compares the catalogue with explicitly current master
+  rows, reports retained version-history counts and verifies LabFrog record IDs
+  when present. Historical master rows no longer alone imply a mismatch.
+- Add a standalone read-only campaign inspection command that saves bounded
+  metadata, explicit linked-file inventory, existing PID/migration state and
+  catalogue/master shot-key agreement before any real campaign publishing.
+- Verification receipts retain the HTTP status and recognized action of the
+  latest direct replay response, including failed unchanged checks, without
+  copying arbitrary response bodies.
+- Standalone verification imports no longer initialize API server routers or
+  require production authentication settings. Server router exports remain
+  available on demand. Fresh test checkouts must sync the `damnit-api` workspace
+  package to install the runner's runtime dependencies.
 - Opt-in `ENDPOINT=publish` uses the plugin's journal-managed PID lifecycle,
   authenticates with a plugin service key, preserves partial registration PIDs
   and logs actual created/updated/unchanged/partial outcomes. Legacy defaults

@@ -112,6 +112,35 @@ def test_summary_is_bounded_and_unknowns_are_explicit():
     assert campaign_summary("empty", [], [])["shot_count"] == 0
 
 
+def test_duplicate_active_records_remain_visible_without_picking_a_version():
+    rows = [
+        {
+            "shot_key": "same-key",
+            "labfrog_record_id": "record-a",
+            "metadata": {"version": 2},
+        },
+        {
+            "shot_key": "same-key",
+            "labfrog_record_id": "record-b",
+            "metadata": {"version": 3},
+        },
+        {"shot_key": "same-key", "metadata": {"has_newer_version": True}},
+        {"shot_key": "another-key", "metadata": {}},
+        {"metadata": {}},
+    ]
+    summary = campaign_summary("campaign", rows, [])
+    assert summary["shot_count"] == 4
+    assert summary["superseded_shot_records"] == 1
+    assert summary["record_identity_coverage"] == {
+        "distinct_shot_keys": 2,
+        "records_missing_shot_key": 1,
+        "duplicate_shot_key_groups": 1,
+        "records_in_duplicate_groups": 2,
+        "duplicate_shot_keys": {"values": ["same-key"], "truncated": False},
+        "source_review_required": True,
+    }
+
+
 def test_selects_only_explicit_containers_and_rejects_missing_or_escape(master):
     container = master.parent / "shots" / "shot.nxs"
     container.parent.mkdir()
@@ -196,6 +225,93 @@ def test_legacy_pid_is_preserved_for_reviewed_migration(master, monkeypatch):
     )
     assert result["scicat_pid"] == "legacy/1"
     assert result["scicat_action"] == "migration_required"
+
+
+def test_listed_campaign_migrates_once_and_keeps_its_legacy_reference(
+    master, monkeypatch
+):
+    calls = []
+
+    def post(url, *, json, headers, timeout):
+        calls.append(json)
+        return httpx.Response(
+            200, json={"ok": True, "pid": "managed/1", "action": "create"}
+        )
+
+    monkeypatch.setattr(httpx, "post", post)
+    settings = managed_settings(migrate_legacy=["campaign"])
+    options = {
+        "settings": settings,
+        "nexus_path": master,
+        "experiment_id": "campaign",
+        "source_key": "source",
+        "scientific_metadata": {"shot_count": 1},
+        "source_folder": str(master.parent),
+    }
+    legacy = {
+        "scicat_pid": "legacy/1",
+        "scicat_endpoint": "from-json",
+        "scicat_registered_at": "2026-11-15T16:55:46+00:00",
+        "scicat_version_hash": "old",
+    }
+    migrated = register_campaign_nexus(**options, previous=legacy)
+    assert calls[0]["operation"] == "create"
+    assert "pid" not in calls[0]
+    assert calls[0]["meta"]["legacy_pid_reference"] == "legacy/1"
+    assert migrated["scicat_pid"] == "managed/1"
+    assert migrated["scicat_legacy_pid"] == "legacy/1"
+    assert migrated["scicat_legacy_registered_at"] == "2026-11-15T16:55:46+00:00"
+    assert migrated["scicat_endpoint"] == "publish"
+    assert "scicat_version_hash" not in migrated
+
+    # The next build is an ordinary managed one: same body, so no POST.
+    again = register_campaign_nexus(**options, previous=migrated)
+    assert again["scicat_action"] == "unchanged"
+    assert len(calls) == 1
+
+    # A change updates the managed PID and still names the legacy one.
+    changed = register_campaign_nexus(
+        **{**options, "scientific_metadata": {"shot_count": 2}}, previous=migrated
+    )
+    assert calls[1]["operation"] == "update"
+    assert calls[1]["pid"] == "managed/1"
+    assert calls[1]["meta"]["legacy_pid_reference"] == "legacy/1"
+    assert changed["scicat_legacy_pid"] == "legacy/1"
+
+
+def test_unlisted_campaign_and_other_publishers_are_not_migrated(master, monkeypatch):
+    monkeypatch.setattr(
+        httpx, "post", lambda *a, **kw: pytest.fail("Unexpected migration write")
+    )
+    settings = managed_settings(migrate_legacy=["another"])
+    options = {
+        "settings": settings,
+        "nexus_path": master,
+        "experiment_id": "campaign",
+        "source_key": "source",
+        "scientific_metadata": {},
+        "source_folder": str(master.parent),
+    }
+    legacy = {"scicat_pid": "legacy/1", "scicat_endpoint": "push"}
+    assert (
+        register_campaign_nexus(**options, previous=legacy)["scicat_action"]
+        == "migration_required"
+    )
+    # A managed registration under another publisher is not a legacy one.
+    foreign = {
+        "scicat_pid": "managed/9",
+        "scicat_endpoint": "publish",
+        "scicat_publisher": "someone-else",
+        "scicat_identity": "source/campaign",
+        "scicat_plugin_url": "http://plugin.test",
+    }
+    listed = managed_settings(migrate_legacy=["campaign"])
+    assert (
+        register_campaign_nexus(**{**options, "settings": listed}, previous=foreign)[
+            "scicat_action"
+        ]
+        == "migration_required"
+    )
 
 
 def test_partial_pid_is_retained_and_retried_without_skip(

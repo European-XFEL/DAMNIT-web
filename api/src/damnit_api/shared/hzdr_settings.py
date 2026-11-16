@@ -395,6 +395,14 @@ class HZDRScicatSettings(BaseModel):
     ``push`` (returns a deterministic ``version_hash`` for rebuild detection).
     ``frontend_url`` is the public SciCat web UI base used only to build a
     human-clickable dataset link; leave unset to omit the link.
+
+    ``migrate_legacy`` lists the campaigns (experiment ids) whose registration
+    from a legacy route (``from-json``/``push``) may move to the managed
+    ``publish`` route.  Such a campaign gets one new managed dataset; its legacy
+    PID is kept as ``scicat_legacy_pid`` and sent as ``legacy_pid_reference``,
+    and the legacy dataset is left untouched.  A campaign not listed keeps
+    reporting ``migration_required`` without a write.  JSON list in the env:
+    ``DW_API_HZDR_SCICAT__MIGRATE_LEGACY='["Beamline_radbio_2026"]'``.
     """
 
     enabled: bool = False
@@ -415,6 +423,7 @@ class HZDRScicatSettings(BaseModel):
     dataset_type: str = "raw"
     frontend_url: str = ""
     timeout: float = 10.0
+    migrate_legacy: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _require_plugin_url_when_enabled(self) -> "HZDRScicatSettings":
