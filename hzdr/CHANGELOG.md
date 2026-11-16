@@ -6,6 +6,18 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-16
 
+### Context: suggested starter columns from the campaign's LabFrog records
+- A user's first context.py for a campaign has up to six columns: values the
+  campaign's LabFrog records hold on enough shots and that vary, numbers with
+  units first (`contextfile/suggested.py`). Diagnostic on/off settings,
+  constant flags, bookkeeping and what the table already shows are left out.
+  Titles are tidied (`proton_energy_tps45` -> "Proton energy TPS45"), every
+  micro spelling (`u`, Greek mu, mis-decoded) reads as the micro sign, and a
+  decimal comma is read as a number; a value that is not a number shows red.
+- `GET /contextfile/campaign/{campaign}/suggested` returns that file without
+  writing it; Context Builder's manual editor has "Load suggested columns"
+  (review, then save) for existing workspaces. `/docs` explains both.
+
 ### Flow monitor Live keeps the diagram; HZDR legal notice and contact; user guide
 - Live mode shows the diagram (without the emulation buttons) above the
   health cards and moves real traffic through it: a lane animates when its

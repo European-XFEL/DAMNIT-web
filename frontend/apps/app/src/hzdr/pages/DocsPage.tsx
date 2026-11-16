@@ -130,7 +130,7 @@ export function HZDRDocsPage() {
                   </List>
                 </Stack>
               </DetailsSection>
-              <DetailsSection title="Add your own columns (context)">
+              <DetailsSection title="Your own columns (context)">
                 <Stack gap="xs">
                   <Text size="sm">
                     Each user has a <Code>context.py</Code> per campaign. Every{' '}
@@ -146,10 +146,20 @@ def laser_energy_mj(run, laser_energy_j=None):
         raise Skip("No laser energy for this shot")
     return laser_energy_j * 1000`}
                   </Code>
+                  <Text size="sm">
+                    <b>To start with</b>, your first context file for a campaign
+                    has a few suggested columns: values the campaign&apos;s
+                    LabFrog records hold that change from shot to shot (numbers
+                    with units first, such as charge, dose or GVD). To get them
+                    in an older file, open Context, then{' '}
+                    <b>Manual context editor</b> → <b>Load suggested columns</b>
+                    , check the text and press Save. Delete any column you do
+                    not need the same way.
+                  </Text>
                   <Text size="sm" c="dimmed">
-                    A shot without the value the variable needs shows{' '}
-                    <i>Missing</i>. A new context file starts empty; delete
-                    variables you no longer want in Context.
+                    A shot without the value a column needs shows <i>Missing</i>
+                    ; a value that is not a number shows in red, so a typo in
+                    LabFrog is easy to spot.
                   </Text>
                 </Stack>
               </DetailsSection>

@@ -15,6 +15,7 @@ from ..metadata.hzdr_event import LEGACY_KEY_MAP
 from ..metadata.hzdr_sources import HZDRShot, HZDRSourceProvider
 from ..shared.settings import settings
 from . import models
+from .suggested import suggested_context
 
 router = APIRouter(prefix="/contextfile")
 
@@ -128,6 +129,22 @@ async def save_campaign_context_file(
     return await _write_campaign_context(campaign, payload, user, context_path)
 
 
+@router.get("/campaign/{campaign}/suggested")
+async def get_suggested_campaign_context(
+    campaign: str,
+    user: OAuthUserInfo,
+) -> dict[str, str]:
+    """A starter context.py for this campaign, built from its LabFrog records.
+
+    Nothing is written: the Context Builder loads it into the editor, and the
+    user saves it like any other edit.
+    """
+    return {
+        "campaign": campaign,
+        "fileContent": suggested_context(campaign, _campaign_shots(campaign)),
+    }
+
+
 @router.get("/campaign/{campaign}/me/results")
 async def get_campaign_context_results(
     campaign: str,
@@ -217,30 +234,17 @@ def _user_slug(user: OAuthUserInfo) -> str:
 
 
 def _starter_context(campaign: str, user: OAuthUserInfo) -> str:
-    """Create the starter context.py content for one HZDR user workspace.
+    """A new workspace's context.py: the campaign's suggested columns.
 
-    It defines no variable: every variable becomes a table column, and a
-    starter column (a constant, a copy of Energy, a made-up product) only
-    cluttered the table. The examples stay as comments to copy from.
+    A few columns from what the campaign's LabFrog records hold (see
+    ``suggested.py``); none when the campaign is unknown or has no such value.
     """
-    owner = user.preferred_username or user.email or "this user"
-    return f'''"""User context for HZDR campaign/source {campaign} ({owner}).
+    return suggested_context(campaign, _campaign_shots(campaign))
 
-Every @Variable below becomes a column in the shot table. Examples to copy:
 
-    @Variable(title="Laser energy (mJ)")
-    def laser_energy_mj(run, laser_energy_j=None):
-        # The laser energy in mJ.
-        if laser_energy_j is None:
-            raise Skip("No laser energy for this shot")
-        return laser_energy_j * 1000
-
-A variable that needs metadata a shot does not have raises Skip; the cell
-then shows Missing.
-"""
-
-from damnit_ctx import Skip, Variable  # noqa: F401
-'''
+def _campaign_shots(campaign: str) -> list[HZDRShot]:
+    source = HZDRSourceProvider(settings.metadata).get_source(campaign)
+    return list(source.shots) if source is not None else []
 
 
 class ContextSkip(Exception):  # noqa: N818
