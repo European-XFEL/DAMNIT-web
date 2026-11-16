@@ -34,6 +34,8 @@ const sameContent = (a: TooltipContent, b: TooltipContent): boolean => {
       return b.kind === 'image' && a.src === b.src
     case 'sparkline':
       return b.kind === 'sparkline' && a.x === b.x && a.y === b.y
+    case 'description':
+      return b.kind === 'description' && a.text === b.text
     default:
       return assertNever(a)
   }

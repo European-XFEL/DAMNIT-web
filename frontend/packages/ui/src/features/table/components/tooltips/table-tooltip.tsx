@@ -1,6 +1,7 @@
 import {
   Box,
   Image,
+  Text,
   getDefaultZIndex,
   useComputedColorScheme,
   useMantineTheme,
@@ -27,6 +28,7 @@ export type TooltipContent =
   | { kind: 'error'; error: CellError }
   | { kind: 'image'; src: string }
   | { kind: 'sparkline'; x: number; y: number }
+  | { kind: 'description'; text: string }
 
 type TableTooltipProps = {
   content: TooltipContent
@@ -71,6 +73,20 @@ function renderBody(content: TooltipContent) {
           <div>y: {formatNumber(content.y)}</div>
         </Box>
       )
+    case 'description':
+      // Authors hard-wrap their docstrings, so their breaks are kept as typed.
+      return (
+        <Text
+          size="xs"
+          c="white"
+          maw="100ch"
+          px={10}
+          py={8}
+          style={{ whiteSpace: 'pre-wrap' }}
+        >
+          {content.text}
+        </Text>
+      )
     default:
       return assertNever(content)
   }
@@ -97,6 +113,9 @@ export function TableTooltip({
       onMouseLeave={onMouseLeave}
       style={{
         ...style,
+        // A header's card covers the next headers, so it lets the pointer
+        // through to them instead of holding itself open.
+        pointerEvents: content.kind === 'description' ? 'none' : undefined,
         background: surface,
         borderRadius: rem(SURFACE_RADIUS),
         // A tooltip inside still draws on top: at the same level, Mantine's

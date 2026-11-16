@@ -40,7 +40,7 @@ function Table({ onPlot }: TableProps) {
   const gridRef = useRef<RunGridRef>(null)
 
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
-  const { runs, groups } = useTableMeta()
+  const { runs, groups, variables } = useTableMeta()
   const {
     cellsByKey,
     lastUpdatedByKey,
@@ -62,13 +62,18 @@ function Table({ onPlot }: TableProps) {
     gridRef.current?.resetColumnWidths()
   }, [])
 
-  const resolveTooltip: ResolveTooltip = ({ run, variable, normalizedX }) => {
-    const cell = cellsByKey.get(runKey(run))?.get(variable)
+  const resolveTooltip: ResolveTooltip = (target) => {
+    if (target.kind === 'header') {
+      const text = variables[target.variable]?.description
+      return text ? { kind: 'description', text } : undefined
+    }
+
+    const cell = cellsByKey.get(runKey(target.run))?.get(target.variable)
     if (!cell) {
       return undefined
     }
 
-    return cellTooltip(cell, { normalizedX })
+    return cellTooltip(cell, { normalizedX: target.normalizedX })
   }
   const {
     onHoverChange,
@@ -166,6 +171,7 @@ function Table({ onPlot }: TableProps) {
               lastUpdatedByKey={lastUpdatedByKey}
               onVisibleRegionChanged={fetchOnScroll}
               onScroll={dismissTooltip}
+              onColumnResizeStart={dismissTooltip}
               onHoverChange={onHoverChange}
               onHoverMove={onHoverMove}
               onCellActivated={handleCellActivated}

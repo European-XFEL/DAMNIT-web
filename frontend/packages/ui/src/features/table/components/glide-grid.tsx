@@ -53,6 +53,7 @@ import { useColumnFlash } from '#src/features/table/hooks/use-column-flash'
 import { useSelectedRun } from '#src/features/table/hooks/use-selected-run'
 import type {
   CellId,
+  HoverTarget,
   RunGridProps,
   RunGridRef,
 } from '#src/features/table/types/table.types'
@@ -124,6 +125,7 @@ function GlideGrid(
     lastUpdatedByKey,
     onVisibleRegionChanged,
     onScroll,
+    onColumnResizeStart,
     onHoverChange,
     onHoverMove,
     onCellActivated,
@@ -144,7 +146,7 @@ function GlideGrid(
   const {
     columnSizing,
     onColumnResize,
-    onColumnResizeStart,
+    onColumnResizeStart: recordResizedColumn,
     onColumnResizeEnd,
     fitAllColumns,
     resetColumnWidths,
@@ -281,7 +283,19 @@ function GlideGrid(
     return { run, variable }
   }
 
-  const toHoverTarget = (args: GridMouseEventArgs) => {
+  const toHoverTarget = (args: GridMouseEventArgs): HoverTarget | undefined => {
+    if (args.kind === 'header') {
+      // A held button over the headers is a column selection or a resize,
+      // which a description card would only get in the way of.
+      if (args.buttons !== 0) {
+        return undefined
+      }
+
+      const variable = tableColumns[args.location[0]]?.id
+      return variable
+        ? { kind: 'header', variable, bounds: args.bounds }
+        : undefined
+    }
     if (args.kind !== 'cell') {
       return undefined
     }
@@ -293,6 +307,7 @@ function GlideGrid(
 
     return {
       ...cell,
+      kind: 'cell',
       bounds: args.bounds,
       normalizedX: normalizedXAt({
         hoverX: args.localEventX,
@@ -671,7 +686,10 @@ function GlideGrid(
       onGroupHeaderContextMenu={(_col, event) => event.preventDefault()}
       getCellContent={getContent}
       onColumnResize={onColumnResize}
-      onColumnResizeStart={onColumnResizeStart}
+      onColumnResizeStart={(column) => {
+        recordResizedColumn(column)
+        onColumnResizeStart()
+      }}
       onColumnResizeEnd={onColumnResizeEnd}
       // Lets Glide measure the visible cells, which is what its
       // built-in double-click fit needs.
