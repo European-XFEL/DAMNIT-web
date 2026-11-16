@@ -97,13 +97,22 @@ async def async_variables(proposal):
     variables = await async_table(proposal, name="variables")
     if variables is None:
         return {}
-    selection_variables = select(variables.c.name, variables.c.title)
+
+    selection_variables = select(
+        variables.c.name, variables.c.title, variables.c.description
+    )
     async with get_session(proposal) as session:
         result = await session.execute(selection_variables)
 
-    variable_rows = result.mappings().all()
+    variable_map = create_map(result.mappings().all(), key="name")
+    for variable in variable_map.values():
+        description = (variable["description"] or "").strip()
+        if description:
+            variable["description"] = description
+        else:
+            del variable["description"]
 
-    return create_map(variable_rows, key="name")
+    return variable_map
 
 
 async def async_latest_rows(
