@@ -10,19 +10,19 @@ import { type IBounds, useLayer } from 'react-laag'
 
 import {
   TableTooltip,
-  type CellTooltip,
+  type TooltipContent,
 } from '#src/features/table/components/tooltips/table-tooltip'
-import type { HoveredCell } from '#src/features/table/types/table.types'
+import type { HoverTarget } from '#src/features/table/types/table.types'
 import { ZERO_BOUNDS, toBounds } from '#src/features/table/utils/bounds'
 import { assertNever } from '#src/utils/asserts'
 
 const DELAY = { open: 200, switch: 60, close: 200 }
 const ARROW_DEPTH = 8
 
-type TooltipState = { target: CellTooltip; bounds: IBounds }
+type TooltipState = { content: TooltipContent; bounds: IBounds }
 type UseTableTooltipOptions = { suppressed?: boolean }
 
-const sameContent = (a: CellTooltip, b: CellTooltip): boolean => {
+const sameContent = (a: TooltipContent, b: TooltipContent): boolean => {
   switch (a.kind) {
     case 'error':
       return (
@@ -39,18 +39,18 @@ const sameContent = (a: CellTooltip, b: CellTooltip): boolean => {
   }
 }
 
-const sameCell = (
+const sameTarget = (
   a: TooltipState | null | undefined,
   b: TooltipState
 ): boolean =>
   !!a && a.bounds.left === b.bounds.left && a.bounds.top === b.bounds.top
 
-const sameTarget = (
+const sameTooltip = (
   a: TooltipState | null | undefined,
   b: TooltipState
-): boolean => !!a && sameCell(a, b) && sameContent(a.target, b.target)
+): boolean => !!a && sameTarget(a, b) && sameContent(a.content, b.content)
 
-export type ResolveTooltip = (cell: HoveredCell) => CellTooltip | undefined
+export type ResolveTooltip = (target: HoverTarget) => TooltipContent | undefined
 
 export const useTableTooltip = (
   resolve: ResolveTooltip,
@@ -60,7 +60,7 @@ export const useTableTooltip = (
   const tooltipRef = useRef<TooltipState | undefined>(tooltip)
   const closeTimerRef = useRef<number>(0)
   const openTimerRef = useRef<number>(0)
-  const pendingTargetRef = useRef<TooltipState | null>(null)
+  const pendingTooltipRef = useRef<TooltipState | null>(null)
 
   useLayoutEffect(() => {
     tooltipRef.current = tooltip
@@ -79,7 +79,7 @@ export const useTableTooltip = (
 
   const cancelOpen = useCallback(() => {
     window.clearTimeout(openTimerRef.current)
-    pendingTargetRef.current = null
+    pendingTooltipRef.current = null
   }, [])
 
   // Cold first-open waits DELAY.open; switching while one is already showing
@@ -88,14 +88,14 @@ export const useTableTooltip = (
   const scheduleOpen = (next: TooltipState) => {
     window.clearTimeout(openTimerRef.current)
     const delay = tooltipRef.current ? DELAY.switch : DELAY.open
-    pendingTargetRef.current = next
+    pendingTooltipRef.current = next
     openTimerRef.current = window.setTimeout(() => {
-      // Read the ref because onCellMouseMove may have changed the target.
-      const next = pendingTargetRef.current
+      // Read the ref because onHoverMove may have changed the content.
+      const next = pendingTooltipRef.current
       if (!next) {
         return
       }
-      pendingTargetRef.current = null
+      pendingTooltipRef.current = null
       // Sync the bounds ref before the state commit so react-laag positions
       // against the new cell on first paint instead of flashing at the old one.
       tooltipRef.current = next
@@ -125,26 +125,26 @@ export const useTableTooltip = (
   }, [scheduleClose])
 
   const resolveAt = (
-    cell: HoveredCell | undefined
+    target: HoverTarget | undefined
   ): TooltipState | undefined => {
-    if (!cell) {
+    if (!target) {
       return undefined
     }
 
-    const content = resolve(cell)
+    const content = resolve(target)
     if (!content) {
       return undefined
     }
 
-    return { target: content, bounds: toBounds(cell.bounds) }
+    return { content, bounds: toBounds(target.bounds) }
   }
 
-  const onCellHovered = (cell: HoveredCell | undefined) => {
+  const onHoverChange = (target: HoverTarget | undefined) => {
     if (suppressed) {
       return
     }
 
-    const next = resolveAt(cell)
+    const next = resolveAt(target)
     if (!next) {
       cancelOpen()
       scheduleClose()
@@ -152,11 +152,11 @@ export const useTableTooltip = (
     }
 
     cancelClose()
-    if (sameTarget(tooltipRef.current, next)) {
+    if (sameTooltip(tooltipRef.current, next)) {
       cancelOpen()
       return
     }
-    if (sameTarget(pendingTargetRef.current, next)) {
+    if (sameTooltip(pendingTooltipRef.current, next)) {
       return
     }
 
@@ -165,30 +165,30 @@ export const useTableTooltip = (
 
   // Glide only fires onItemHovered when the pointer moves to another cell, so
   // this updates tooltips that depend on the pointer position within a cell.
-  // Opening and closing tooltips is left to onCellHovered, so that moving
+  // Opening and closing tooltips is left to onHoverChange, so that moving
   // within a cell doesn't restart the open timer or reopen a tooltip closed
   // with Escape.
-  const onCellMouseMove = (cell: HoveredCell | undefined) => {
+  const onHoverMove = (target: HoverTarget | undefined) => {
     if (suppressed) {
       return
     }
 
-    const next = resolveAt(cell)
-    if (!next || sameTarget(tooltipRef.current, next)) {
+    const next = resolveAt(target)
+    if (!next || sameTooltip(tooltipRef.current, next)) {
       return
     }
 
-    // The tooltip is already open on this cell, so update it immediately.
-    if (sameCell(tooltipRef.current, next)) {
+    // The tooltip is already open on this target, so update it immediately.
+    if (sameTarget(tooltipRef.current, next)) {
       cancelOpen()
       tooltipRef.current = next
       setTooltip(next)
       return
     }
 
-    // The tooltip is about to open on this cell, so just update the target.
-    if (sameCell(pendingTargetRef.current, next)) {
-      pendingTargetRef.current = next
+    // The tooltip is about to open on this target, so just update its content.
+    if (sameTarget(pendingTooltipRef.current, next)) {
+      pendingTooltipRef.current = next
     }
   }
 
@@ -234,13 +234,13 @@ export const useTableTooltip = (
   })
 
   return {
-    onCellHovered,
-    onCellMouseMove,
+    onHoverChange,
+    onHoverMove,
     dismiss,
     tooltip: tooltip
       ? renderLayer(
           <TableTooltip
-            target={tooltip.target}
+            content={tooltip.content}
             layerProps={layerProps}
             arrowProps={arrowProps}
             arrowSize={ARROW_DEPTH}

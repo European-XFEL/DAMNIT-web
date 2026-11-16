@@ -57,7 +57,7 @@ export type CellId = {
 
 // The cell under the pointer, with its box in viewport pixels. `normalizedX` is
 // 0 at the left edge of the cell's content and 1 at its right edge.
-export type HoveredCell = CellId & { bounds: Rectangle; normalizedX: number }
+export type HoverTarget = CellId & { bounds: Rectangle; normalizedX: number }
 
 export type CellMenuArgs = CellId & {
   selectedRuns: RunId[]
@@ -89,8 +89,8 @@ export type RunGridProps = {
   // Indices into `runs` and `columns`, not pixels: it says which pages to load.
   onVisibleRegionChanged: (region: Rectangle) => void
   onScroll: () => void
-  onCellHovered: (cell: HoveredCell | undefined) => void
-  onCellMouseMove: (cell: HoveredCell | undefined) => void
+  onHoverChange: (target: HoverTarget | undefined) => void
+  onHoverMove: (target: HoverTarget | undefined) => void
   onCellActivated: (cell: CellId) => void
   onCellContextMenu: (args: CellMenuArgs) => void
   onHeaderContextMenu: (args: HeaderMenuArgs) => void

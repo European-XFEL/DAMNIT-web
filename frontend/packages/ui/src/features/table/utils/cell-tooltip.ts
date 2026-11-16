@@ -1,6 +1,6 @@
 import { DTYPES } from '#src/constants'
 import type { Cell } from '#src/data/table/table-data.types'
-import type { CellTooltip } from '#src/features/table/components/tooltips/table-tooltip'
+import type { TooltipContent } from '#src/features/table/components/tooltips/table-tooltip'
 import { sparklineIndexAt, toSparkline } from '#src/features/table/utils/cells'
 
 // The card a hovered cell shows, if any. `normalizedX` is where the pointer is
@@ -8,7 +8,7 @@ import { sparklineIndexAt, toSparkline } from '#src/features/table/utils/cells'
 export const cellTooltip = (
   cell: Cell,
   { normalizedX }: { normalizedX: number }
-): CellTooltip | undefined => {
+): TooltipContent | undefined => {
   const { value, dtype } = cell.summary
 
   if (cell.error) {

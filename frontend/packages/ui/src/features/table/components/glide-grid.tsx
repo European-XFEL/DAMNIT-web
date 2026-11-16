@@ -124,8 +124,8 @@ function GlideGrid(
     lastUpdatedByKey,
     onVisibleRegionChanged,
     onScroll,
-    onCellHovered,
-    onCellMouseMove,
+    onHoverChange,
+    onHoverMove,
     onCellActivated,
     onCellContextMenu,
     onHeaderContextMenu,
@@ -281,7 +281,7 @@ function GlideGrid(
     return { run, variable }
   }
 
-  const toHoveredCell = (args: GridMouseEventArgs) => {
+  const toHoverTarget = (args: GridMouseEventArgs) => {
     if (args.kind !== 'cell') {
       return undefined
     }
@@ -307,10 +307,10 @@ function GlideGrid(
   const handleGridItemHovered = (args: GridMouseEventArgs) => {
     pointerOnHeader.current =
       (args.kind === 'header' || args.kind === 'group-header') && !args.isTouch
-    onCellHovered(toHoveredCell(args))
+    onHoverChange(toHoverTarget(args))
   }
   const handleGridMouseMove = (args: GridMouseEventArgs) => {
-    onCellMouseMove(toHoveredCell(args))
+    onHoverMove(toHoverTarget(args))
   }
 
   // Glide reports a key's selection change before its keydown returns, so the

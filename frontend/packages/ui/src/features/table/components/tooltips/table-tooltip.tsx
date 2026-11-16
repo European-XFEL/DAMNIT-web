@@ -23,13 +23,13 @@ import { formatNumber } from '#src/utils/format'
 // ArrowProps is built from the installed @types/react.
 const Arrow = LaagArrow as unknown as ComponentType<ArrowProps>
 
-export type CellTooltip =
+export type TooltipContent =
   | { kind: 'error'; error: CellError }
   | { kind: 'image'; src: string }
   | { kind: 'sparkline'; x: number; y: number }
 
 type TableTooltipProps = {
-  target: CellTooltip
+  content: TooltipContent
   layerProps: LayerProps
   arrowProps: UseLayerArrowProps
   arrowSize: number
@@ -41,18 +41,18 @@ const IMAGE_MAX_SIZE = 300
 const SURFACE_RADIUS = 4
 const IMAGE_MARGIN = 4
 
-function renderBody(target: CellTooltip) {
-  switch (target.kind) {
+function renderBody(content: TooltipContent) {
+  switch (content.kind) {
     case 'error':
       return (
         <Box maw={360} px={10} py={8}>
-          <CellErrorCard error={target.error} variant="tooltip" />
+          <CellErrorCard error={content.error} variant="tooltip" />
         </Box>
       )
     case 'image':
       return (
         <Image
-          src={target.src}
+          src={content.src}
           alt=""
           decoding="async"
           draggable={false}
@@ -67,17 +67,17 @@ function renderBody(target: CellTooltip) {
     case 'sparkline':
       return (
         <Box px={8} py={4} c="white" ff="monospace" fz="xs">
-          <div>x: {formatNumber(target.x)}</div>
-          <div>y: {formatNumber(target.y)}</div>
+          <div>x: {formatNumber(content.x)}</div>
+          <div>y: {formatNumber(content.y)}</div>
         </Box>
       )
     default:
-      return assertNever(target)
+      return assertNever(content)
   }
 }
 
 export function TableTooltip({
-  target,
+  content,
   layerProps,
   arrowProps,
   arrowSize,
@@ -112,7 +112,7 @@ export function TableTooltip({
         borderWidth={0}
         size={arrowSize}
       />
-      {renderBody(target)}
+      {renderBody(content)}
     </div>
   )
 }

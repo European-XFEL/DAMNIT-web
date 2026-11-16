@@ -71,8 +71,8 @@ function Table({ onPlot }: TableProps) {
     return cellTooltip(cell, { normalizedX })
   }
   const {
-    onCellHovered,
-    onCellMouseMove,
+    onHoverChange,
+    onHoverMove,
     dismiss: dismissTooltip,
     tooltip,
   } = useTableTooltip(resolveTooltip, { suppressed: contextMenu.isOpen })
@@ -166,8 +166,8 @@ function Table({ onPlot }: TableProps) {
               lastUpdatedByKey={lastUpdatedByKey}
               onVisibleRegionChanged={fetchOnScroll}
               onScroll={dismissTooltip}
-              onCellHovered={onCellHovered}
-              onCellMouseMove={onCellMouseMove}
+              onHoverChange={onHoverChange}
+              onHoverMove={onHoverMove}
               onCellActivated={handleCellActivated}
               onCellContextMenu={handleCellContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
