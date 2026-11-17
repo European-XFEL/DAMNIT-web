@@ -23,7 +23,6 @@ import ViewCrumbs from './view-crumbs'
 
 type DashboardHeaderProps = {
   identity: ReactNode
-  // The proposal as the page title names it, such as "p6996"
   heading: string
   homeTo: string
 }
