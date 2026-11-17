@@ -1,0 +1,49 @@
+/* Copies of the dashboard's rules, not `composes` from its modules: in a build
+   that broke the mobile nav's crumb (mobile-overlays.spec.ts). */
+.band {
+  display: flex;
+  height: 100%;
+}
+
+.logoCell {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 0 16px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 1px;
+    height: 20px;
+    background: var(--mantine-color-gray-3);
+    translate: 0 -50%;
+  }
+}
+
+.crumbRow {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 10px 0 11px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+.view {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}

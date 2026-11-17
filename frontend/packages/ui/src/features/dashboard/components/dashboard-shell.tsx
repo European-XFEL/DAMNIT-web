@@ -13,11 +13,13 @@ import {
 } from '#src/features/dashboard/stores/dashboard.selectors'
 import DashboardNavbar from '#src/features/dashboard/components/navbar/dashboard-navbar'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
+import { useIsPlotWindow } from '#src/features/dashboard/hooks/use-is-plot-window'
 
 import classes from './dashboard-shell.module.css'
 import DashboardBody from './dashboard-body'
 import DashboardHeader from './dashboard-header'
 import PageTitle from './page-title'
+import PlotWindow from './plot-window'
 import LiveUpdatesItem from './status/live-updates-item'
 import ReadOnlyItem from './status/read-only-item'
 
@@ -29,21 +31,23 @@ type DashboardShellProps = {
   homeTo: string
 }
 
-function DashboardShell({
+type DashboardWindowProps = DashboardShellProps & {
+  loading: boolean
+  pending: boolean
+}
+
+function DashboardWindow({
   main,
   identity,
   heading,
   user,
   homeTo,
-}: DashboardShellProps) {
+  loading,
+  pending,
+}: DashboardWindowProps) {
   const navCollapsed = useAppSelector(selectNavCollapsed)
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRef = useRef<HTMLElement>(null)
-
-  // A view's code on its way. The bar waits a moment, so a quick load never
-  // flashes it.
-  const loading = useNavigation().state === 'loading'
-  const pending = useShownAfter(loading, { delay: PENDING_DELAY })
 
   // Opening the mobile nav focuses the view on show; closing it hands focus back
   // to the Burger, which useFocusReturn records before that focus moves.
@@ -104,6 +108,32 @@ function DashboardShell({
       </ViewStatusProvider>
     </AppShell>
   )
+}
+
+function DashboardShell(props: DashboardShellProps) {
+  const isPlotWindow = useIsPlotWindow()
+
+  // A view's code on its way. The bar waits a moment, so a quick load never
+  // flashes it.
+  const loading = useNavigation().state === 'loading'
+  const pending = useShownAfter(loading, { delay: PENDING_DELAY })
+
+  if (isPlotWindow) {
+    const { main, identity, heading, homeTo } = props
+
+    return (
+      <PlotWindow
+        main={main}
+        identity={identity}
+        heading={heading}
+        homeTo={homeTo}
+        loading={loading}
+        pending={pending}
+      />
+    )
+  }
+
+  return <DashboardWindow {...props} loading={loading} pending={pending} />
 }
 
 export default DashboardShell
