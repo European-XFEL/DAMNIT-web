@@ -126,7 +126,8 @@ async def _fetch_proposal_meta(
 async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
     """Search for the DAMNIT directory of the proposal at `path`.
 
-    Looks in `usr/Shared/amore` only: `usr/Shared/amore-online` is not read."""
+    Looks in `usr/Shared/amore` only, since runs are opened from there alone: a
+    proposal found in `usr/Shared/amore-online` would be listed and then not open."""
     damnit_path = APath(path) / DAMNIT_PATH
     try:
         damnit_path = await damnit_path.resolve()
