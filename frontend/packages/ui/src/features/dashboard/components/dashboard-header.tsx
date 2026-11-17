@@ -23,7 +23,6 @@ import ViewCrumbs from './view-crumbs'
 
 type DashboardHeaderProps = {
   identity: ReactNode
-  heading: string
   homeTo: string
 }
 
@@ -49,7 +48,7 @@ function NavToggle() {
   )
 }
 
-function DashboardHeader({ identity, heading, homeTo }: DashboardHeaderProps) {
+function DashboardHeader({ identity, homeTo }: DashboardHeaderProps) {
   const dispatch = useAppDispatch()
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRail = useNavRail()
@@ -70,7 +69,7 @@ function DashboardHeader({ identity, heading, homeTo }: DashboardHeaderProps) {
           aria-controls="dashboard-nav"
         />
         <NavToggle />
-        <ViewCrumbs identity={identity} heading={heading} />
+        <ViewCrumbs identity={identity} />
       </div>
     </div>
   )

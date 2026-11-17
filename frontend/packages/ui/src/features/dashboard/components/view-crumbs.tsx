@@ -7,76 +7,19 @@ import {
   VisuallyHidden,
   rem,
 } from '@mantine/core'
-import { IconChevronRight, IconFileCode, IconTable } from '@tabler/icons-react'
+import { IconChevronRight } from '@tabler/icons-react'
 
-import PlotKindIcon from '#src/components/icons/plot-kind-icon'
 import { useIsMobile } from '#src/features/dashboard/hooks/use-is-mobile'
-import { useOpenView } from '#src/features/dashboard/hooks/use-open-view'
-import { usePlotEntries } from '#src/features/dashboard/hooks/use-plot-entries'
-import { usePageTitle } from '#src/features/dashboard/hooks/use-page-title'
+import { useViewCrumbs } from '#src/features/dashboard/hooks/use-view-crumbs'
 
 import classes from './view-crumbs.module.css'
 
 type ViewCrumbsProps = {
   identity: ReactNode
-  // The proposal as the page title names it, such as "p6996"
-  heading: string
 }
 
-type Crumb = {
-  label: string
-  icon?: ReactNode
-  // Read after the label, since the icon itself is hidden from screen readers.
-  iconLabel?: string
-  detail?: string
-}
-
-function useViewCrumbs(): Crumb[] {
-  const view = useOpenView()
-  const plots = usePlotEntries()
-
-  switch (view?.kind) {
-    case 'table':
-      return [
-        { label: 'Table' },
-        { label: 'All runs', icon: <IconTable stroke={1.5} /> },
-      ]
-    case 'context-file':
-      return [{ label: 'Context file', icon: <IconFileCode stroke={1.5} /> }]
-    case 'plot': {
-      const plot = plots.find((entry) => entry.id === view.id)
-      if (!plot) {
-        return [{ label: 'Plots' }]
-      }
-
-      return [
-        { label: 'Plots' },
-        {
-          label: plot.name,
-          icon: <PlotKindIcon kind={plot.kind} />,
-          iconLabel: `${plot.kind} plot`,
-          detail: plot.subtitle,
-        },
-      ]
-    }
-    case undefined:
-      return []
-  }
-}
-
-function pageTitle(heading: string, crumb: Crumb | undefined) {
-  if (crumb === undefined) {
-    return heading
-  }
-
-  const detail = crumb.detail ? ` (${crumb.detail})` : ''
-
-  return `${heading}: ${crumb.label}${detail}`
-}
-
-function ViewCrumbs({ identity, heading }: ViewCrumbsProps) {
+function ViewCrumbs({ identity }: ViewCrumbsProps) {
   const crumbs = useViewCrumbs()
-  usePageTitle(pageTitle(heading, crumbs.at(-1)))
 
   // Below `sm` the row has no width for the group a view sits in. Not
   // `hiddenFrom`: Mantine leaves the separator of a hidden crumb behind.

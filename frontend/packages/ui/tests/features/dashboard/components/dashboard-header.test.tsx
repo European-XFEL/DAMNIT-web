@@ -18,7 +18,6 @@ async function renderHeader(store: AppStore, { url }: { url?: string } = {}) {
           detail="Christian Gutt"
         />
       }
-      heading="p6996"
       homeTo="/home"
     />,
     { store, url }
@@ -83,34 +82,6 @@ test('a plot that follows every run says all runs in its crumb', async () => {
   await expect
     .element(screen.getByText('Pulses vs. Run'))
     .toHaveTextContent('Pulses vs. Run, summary plot (All runs)')
-})
-
-test('the page title names the proposal, then the view on show, and goes back to the one before when the dashboard goes', async () => {
-  document.title = 'DAMNIT'
-  const store = setupStore()
-  store.dispatch(
-    addPlot({
-      variables: ['run', 'n_pulses'],
-      source: 'summary',
-      name: 'Pulses vs. Run',
-    })
-  )
-  const { screen, router } = await renderHeader(store, {
-    url: '/proposal/6996/plots/summary?x=run&y=n_pulses',
-  })
-
-  // A plot, with its runs
-  await expect
-    .poll(() => document.title)
-    .toBe('p6996: Pulses vs. Run (All runs)')
-
-  // The table, without the group it sits in
-  await router.navigate('/proposal/6996/table')
-  await expect.poll(() => document.title).toBe('p6996: All runs')
-
-  // Leaving the dashboard
-  await screen.unmount()
-  expect(document.title).toBe('DAMNIT')
 })
 
 test('the row drops the group a view sits in below `sm`', async () => {

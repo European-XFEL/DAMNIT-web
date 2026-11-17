@@ -12,6 +12,7 @@ import {
   selectNavCollapsed,
 } from '#src/features/dashboard/stores/dashboard.selectors'
 import DashboardNavbar from '#src/features/dashboard/components/navbar/dashboard-navbar'
+import { usePageTitle } from '#src/features/dashboard/hooks/use-page-title'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
 
 import classes from './dashboard-shell.module.css'
@@ -38,6 +39,7 @@ function DashboardShell({
   const navCollapsed = useAppSelector(selectNavCollapsed)
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRef = useRef<HTMLElement>(null)
+  usePageTitle(heading)
 
   // A view's code on its way. The bar waits a moment, so a quick load never
   // flashes it.
@@ -68,11 +70,7 @@ function DashboardShell({
       footer={{ height: 28 }}
     >
       <AppShell.Header bg="gray.1">
-        <DashboardHeader
-          identity={identity}
-          heading={heading}
-          homeTo={homeTo}
-        />
+        <DashboardHeader identity={identity} homeTo={homeTo} />
       </AppShell.Header>
       <AppShell.Navbar
         ref={navRef}
