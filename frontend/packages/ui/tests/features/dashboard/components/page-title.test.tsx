@@ -1,15 +1,9 @@
 import { expect, test } from 'vitest'
 
 import { setupStore } from '#src/app/store/store'
-import { usePageTitle } from '#src/features/dashboard/hooks/use-page-title'
+import PageTitle from '#src/features/dashboard/components/page-title'
 import { addPlot } from '#src/features/plots/plots.slice'
 import { renderInDashboard } from '#tests/support/dashboard-router'
-
-function PageTitle() {
-  usePageTitle('p6996')
-
-  return null
-}
 
 test('the page title names the proposal, then the view on show, and goes back to the one before when the dashboard goes', async () => {
   document.title = 'DAMNIT'
@@ -21,10 +15,13 @@ test('the page title names the proposal, then the view on show, and goes back to
       name: 'Pulses vs. Run',
     })
   )
-  const { screen, router } = await renderInDashboard(<PageTitle />, {
-    store,
-    url: '/proposal/6996/plots/summary?x=run&y=n_pulses',
-  })
+  const { screen, router } = await renderInDashboard(
+    <PageTitle heading="p6996" />,
+    {
+      store,
+      url: '/proposal/6996/plots/summary?x=run&y=n_pulses',
+    }
+  )
 
   // A plot, with its runs
   await expect

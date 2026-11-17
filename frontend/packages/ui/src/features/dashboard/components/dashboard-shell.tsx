@@ -12,12 +12,12 @@ import {
   selectNavCollapsed,
 } from '#src/features/dashboard/stores/dashboard.selectors'
 import DashboardNavbar from '#src/features/dashboard/components/navbar/dashboard-navbar'
-import { usePageTitle } from '#src/features/dashboard/hooks/use-page-title'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
 
 import classes from './dashboard-shell.module.css'
 import DashboardBody from './dashboard-body'
 import DashboardHeader from './dashboard-header'
+import PageTitle from './page-title'
 import LiveUpdatesItem from './status/live-updates-item'
 import ReadOnlyItem from './status/read-only-item'
 
@@ -39,7 +39,6 @@ function DashboardShell({
   const navCollapsed = useAppSelector(selectNavCollapsed)
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRef = useRef<HTMLElement>(null)
-  usePageTitle(heading)
 
   // A view's code on its way. The bar waits a moment, so a quick load never
   // flashes it.
@@ -87,6 +86,7 @@ function DashboardShell({
           aria-busy={loading || undefined}
         >
           <VisuallyHidden component="h1">{heading}</VisuallyHidden>
+          <PageTitle heading={heading} />
           {/* The run sits below the band, which names the page whatever is
               open beside the view. */}
           <DashboardBody main={main} pending={pending} />
