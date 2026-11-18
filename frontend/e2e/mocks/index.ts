@@ -1,6 +1,3 @@
-import { createRequire } from 'node:module'
-import path from 'node:path'
-
 import type { Page } from '@playwright/test'
 import { mapValues } from 'lodash-es'
 
@@ -23,17 +20,6 @@ import {
 
 export { fullMetadata } from './websocket'
 
-// @monaco-editor/react does not bundle the editor; at runtime its loader fetches
-// monaco from jsDelivr. Resolve the monaco-editor package we already install and
-// serve its min/vs tree instead, so the editor loads with no network and the
-// suite keeps its "answer every request from local data" guarantee.
-const monacoVsDir = path.join(
-  path.dirname(
-    createRequire(import.meta.url).resolve('monaco-editor/package.json')
-  ),
-  'min/vs'
-)
-
 // The example data has no computed times, so give every value one, run N a
 // minute after run N - 1. DAMNIT never computes `run`, so it gets none.
 function withComputedTimes(data: RunData[]): RunData[] {
@@ -48,27 +34,27 @@ function withComputedTimes(data: RunData[]): RunData[] {
 }
 
 export type MockApi = LiveUpdatesMock & {
-  // GraphQL operations and REST paths the router had no mock for; the test
-  // fixture fails the test when any were seen, so mock drift surfaces loudly
-  // instead of as an empty response or a silent request to the real network.
+  // GraphQL operations, REST paths and off-site URLs the router had no mock
+  // for; the test fixture fails the test when any were seen.
   unmockedRequests: string[]
-  // Swap the served context.py and bump its last-modified stamp, modelling the
+  // Swap the served context.py and bump its last-modified stamp, modeling the
   // file being edited on disk between polls. The next poll then sees a newer
   // stamp than the loaded content and triggers a refetch.
   touchContextFile: (content: string) => void
   // Change what the GraphQL routes serve for some runs, with no push to say so,
-  // modelling values that changed while live updates were down.
+  // modeling values that changed while live updates were down.
   editRuns: (runs: LatestData['runs']) => void
 }
 
 type MockApiOptions = {
   authenticated: boolean
+  appOrigin: string
 }
 
 export async function mockApi(
   page: Page,
   example: Example,
-  { authenticated }: MockApiOptions
+  { authenticated, appOrigin }: MockApiOptions
 ): Promise<MockApi> {
   // Session state the routes read: userinfo answers by it, and logout flips it
   // off so the LoggedOutPage re-fetch takes the "logged out" branch.
@@ -133,12 +119,19 @@ export async function mockApi(
       ),
   }
 
-  // Registered first so the specific routes below take precedence (Playwright
-  // runs the last-registered matching handler first). A REST call none of them
-  // cover is recorded and failed; everything else (assets, app bundle) falls
-  // through to the server.
+  // Playwright tries the last-registered route first, so the routes below win.
+  // Off-site requests and unmocked REST calls fail; app files fall through.
   await page.route('**/*', (route) => {
-    const { pathname } = new URL(route.request().url())
+    const url = route.request().url()
+    const { origin, pathname } = new URL(url)
+    if (origin !== appOrigin) {
+      api.unmockedRequests.push(url)
+      return route.fulfill({
+        status: 500,
+        json: { error: `Unmocked request: ${url}` },
+      })
+    }
+
     const isUnmockedApi = REST_API_PREFIXES.some((prefix) =>
       pathname.includes(`/${prefix}`)
     )
@@ -151,18 +144,6 @@ export async function mockApi(
     }
     return route.fallback()
   })
-
-  // After the catch-all so it wins; otherwise the editor's assets fall through
-  // to the real jsDelivr CDN. Serve them from the local min/vs tree, keyed off
-  // the path after min/vs.
-  await page.route(
-    '**/cdn.jsdelivr.net/npm/monaco-editor@*/min/vs/**',
-    (route) => {
-      const { pathname } = new URL(route.request().url())
-      const asset = pathname.split('/min/vs/')[1]
-      return route.fulfill({ path: path.join(monacoVsDir, asset) })
-    }
-  )
 
   // Mirror the real 401 for a gone cookie: PrivateRoute reads it as isError
   // and the LoggedOutPage as logged out.
@@ -184,7 +165,7 @@ export async function mockApi(
 
   // Logout returns no logout_url, so the app full-page navigates to /logged-out.
   // Flip the session off so the LoggedOutPage re-fetch of userinfo 401s and the
-  // "You have been logged out" branch renders, modelling the cleared session
+  // "You have been logged out" branch renders, modeling the cleared session
   // cookie.
   await page.route('**/oauth/logout**', (route) => {
     authed = false

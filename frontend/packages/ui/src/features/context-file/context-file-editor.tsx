@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { Editor as Monaco, type OnMount } from '@monaco-editor/react'
+import type { OnMount } from '@monaco-editor/react'
 
 import CenteredLoader from '#src/components/feedback/centered-loader'
+import { Editor as Monaco } from '#src/lib/monaco/monaco'
 import { useAppDispatch, useAppStore } from '#src/app/store/hooks'
 import { FONT_FAMILY_MONO, FONT_NAME_MONO } from '#src/styles/fonts'
 

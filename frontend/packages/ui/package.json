@@ -30,6 +30,7 @@
   },
   "sideEffects": [
     "./src/styles.ts",
+    "./src/lib/monaco/*.ts",
     "**/*.css"
   ],
   "scripts": {
@@ -64,6 +65,7 @@
     "lodash-es": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
+    "monaco-editor": "catalog:components",
     "plotly.js": "catalog:components",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",
@@ -101,6 +103,7 @@
     "lodash-es": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
+    "monaco-editor": "catalog:components",
     "playwright": "catalog:testing",
     "plotly.js": "catalog:components",
     "postcss": "catalog:tooling",

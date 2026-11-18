@@ -15,6 +15,7 @@ import { proposalLink } from '#support/proposals'
 import {
   cell,
   columnOf,
+  expectRunRows,
   hoverCell,
   moveAway,
   openProposal,
@@ -36,7 +37,6 @@ const WAIT_RUNS_OUT = (2 ** REFUSALS + 2) * 1000
 
 test('a finished run appears as a new row', async ({ page, api, example }) => {
   await openProposal(page, example)
-  const grid = page.locator('[role="grid"]')
   const seedRuns = XPCS.meta.runs.length
 
   // Wait for the seed's data to land before pushing, so the page's own rows
@@ -47,8 +47,7 @@ test('a finished run appears as a new row', async ({ page, api, example }) => {
     cell(page, { col: columnOf(example, 'n_trains'), row: 0 })
   ).not.toBeEmpty()
 
-  // aria-rowcount counts the header row too, so the seed shows seedRuns + 1.
-  await expect(grid).toHaveAttribute('aria-rowcount', String(seedRuns + 1))
+  await expectRunRows(page, seedRuns)
 
   const newRun = XPCS.meta.runs[seedRuns - 1] + 1
   api.pushLatestData({
@@ -65,7 +64,7 @@ test('a finished run appears as a new row', async ({ page, api, example }) => {
   // mount and does not paint the appended bottom row in this harness, so this
   // asserts the accessibility row count (what a screen reader hears), not the new
   // run's cells; test 2 covers a pushed value rendering into a cell.
-  await expect(grid).toHaveAttribute('aria-rowcount', String(seedRuns + 2))
+  await expectRunRows(page, seedRuns + 1)
 })
 
 test("an existing run's value updates live", async ({ page, api, example }) => {

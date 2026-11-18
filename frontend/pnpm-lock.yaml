@@ -273,6 +273,9 @@ importers:
       mantine-datatable:
         specifier: catalog:components
         version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+      monaco-editor:
+        specifier: catalog:components
+        version: 0.55.1
       plotly.js:
         specifier: catalog:components
         version: 3.3.1(patch_hash=081afae7dec1206bf1422742352cbdeb0d25cb50c4895b4e40d8806044969e6f)(mapbox-gl@1.13.3)
@@ -391,6 +394,9 @@ importers:
       mantine-datatable:
         specifier: catalog:components
         version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+      monaco-editor:
+        specifier: catalog:components
+        version: 0.55.1
       msw:
         specifier: catalog:testing
         version: 2.12.7(@types/node@24.19.1)(typescript@5.9.3)
@@ -528,9 +534,6 @@ importers:
       lodash-es:
         specifier: catalog:frontend
         version: 4.18.1
-      monaco-editor:
-        specifier: catalog:components
-        version: 0.55.1
       prettier:
         specifier: catalog:linting
         version: 3.9.9
@@ -701,6 +704,9 @@ importers:
       mantine-datatable:
         specifier: catalog:components
         version: 7.17.1(@mantine/core@7.17.5(patch_hash=c98067e90eb197eaf959df6b7c0e31c2f9dfc902e2314650993b932bda62f0bc)(@mantine/hooks@7.17.5(react@18.3.1))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@mantine/hooks@7.17.5(react@18.3.1))(clsx@2.1.1)(react@18.3.1)
+      monaco-editor:
+        specifier: catalog:components
+        version: 0.55.1
       playwright:
         specifier: catalog:testing
         version: 1.64.0
