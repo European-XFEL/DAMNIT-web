@@ -1,4 +1,4 @@
-"""Fixtures for the recorded end-to-end API tests.
+"""Fixtures for the end-to-end API tests, in auth mode or local mode.
 
 Tests defined here should only interact with the app via HTTP, never python calls.
 
@@ -10,8 +10,9 @@ This conftest is the only place allowed to touch the app, and only via:
   (Starlette `SessionMiddleware` over `itsdangerous`)
   - The framework-swap branch must update this one helper and nothing else
 
-Outbound HTTP is recorded and replayed with pytest-recording. Cassettes stored in
-`cassettes/<module>/<test>.yaml` next to this package.
+In auth mode, outbound HTTP is recorded and replayed with pytest-recording. Cassettes
+stored in `cassettes/<module>/<test>.yaml` next to this package. Local mode serves a
+DAMNIT folder and makes no outbound call.
 
 Secrets should **never** be stored in the cassettes, if you modify the tests you should
 check this before committing files. In theory, the `vcr_config` filters strip auth
@@ -79,8 +80,12 @@ def _reset_bootstrap_globals():
     _reset()
 
 
-DATA_ROOT = Path(__file__).parents[2] / "mock" / "data" / "gpfs" / "exfel" / "exp"
-MYMDC_CASSETTE = Path(__file__).parents[2] / "mock" / "mymdc" / "mymdc.yaml"
+MOCK_DIR = Path(__file__).parents[2] / "mock"
+DATA_ROOT = MOCK_DIR / "data" / "gpfs" / "exfel" / "exp"
+PROPOSALS_DIR = MOCK_DIR / "proposals"
+ALL_VALUE_TYPES_DIR = PROPOSALS_DIR / "all-value-types"
+NO_RUNS_DIR = PROPOSALS_DIR / "no-runs"
+MYMDC_CASSETTE = MOCK_DIR / "mymdc" / "mymdc.yaml"
 
 
 @pytest.fixture(autouse=True)
@@ -150,6 +155,34 @@ async def e2e_client(vcr, _fresh_app_db):
     startup performs the OIDC discovery fetch.
     """
     from damnit_api.main import create_app
+
+    app = create_app()
+    async with LifespanManager(app) as manager:
+        transport = httpx.ASGITransport(app=manager.app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            yield client
+
+
+@pytest.fixture
+def damnit_dir():
+    """The DAMNIT folder `local_client` serves; parametrize it to serve another."""
+    return ALL_VALUE_TYPES_DIR
+
+
+@pytest_asyncio.fixture
+async def local_client(monkeypatch, damnit_dir, _fresh_app_db):
+    """HTTPX client for the ASGI app in local mode, serving `damnit_dir`.
+
+    Local mode logs nobody in and makes no outbound call, so it needs no cassette.
+    """
+    from damnit_api.main import create_app
+    from damnit_api.shared.settings import settings
+
+    # Settings switch to local mode only when built, so set what the switch sets
+    monkeypatch.setattr(settings, "damnit_path", damnit_dir)
+    monkeypatch.setattr(settings, "auth", None)
 
     app = create_app()
     async with LifespanManager(app) as manager:
