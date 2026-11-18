@@ -60,7 +60,7 @@ The key rules are:
   - This means that services should not apply authorisation rules themselves.
 5. **No `if settings.is_local:` outside the composition root:** Local mode is selected by composition, not conditionals throughout the codebase.
 
-Note that these are currently only enforced by convention/review. Import linter/archetecture check tool is planned to be added.
+The direction of module dependencies is checked by `tach` against `api/tach.toml`. The other rules, including private-name imports and framework-type placement, are enforced by review.
 
 !!! warning "Current issues"
 
