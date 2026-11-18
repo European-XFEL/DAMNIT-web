@@ -110,5 +110,4 @@ damnit_api/
 
 ### Follow-up / TODOs
 
-- Import linting
 - `appdb` naming
