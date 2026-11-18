@@ -1,7 +1,8 @@
 # Import-boundary baseline for the vertical-slice architecture
 #
 # Current dependency graph, derived with `tach sync`
-# TODO marks an edge the vertical-slice rules forbid, with the import causing it
+# `deprecated` marks an edge the vertical-slice rules forbid, with a comment on
+# the import causing it. `tach check` prints each use of a deprecated edge
 
 source_roots = ["src"]
 exact = true
@@ -16,19 +17,19 @@ depends_on = [
     "damnit_api",
     "damnit_api._db",
     "damnit_api._mymdc",
-    # TODO: auth imports shared.errors, shared.settings and shared.gql
-    "damnit_api.shared",
-    # TODO: auth and metadata import each other; auth reads proposal metadata and
+    # auth imports shared.errors, shared.settings and shared.gql
+    { path = "damnit_api.shared", deprecated = true },
+    # auth and metadata import each other, auth reads proposal metadata and
     # membership from metadata, which the proposals slice and a proposal
     # directory port should replace
-    "damnit_api.metadata",
+    { path = "damnit_api.metadata", deprecated = true },
 ]
 
 [[modules]]
 path = "damnit_api.contextfile"
 depends_on = [
-    # TODO: contextfile imports metadata
-    "damnit_api.metadata",
+    # contextfile imports metadata
+    { path = "damnit_api.metadata", deprecated = true },
 ]
 
 [[modules]]
@@ -37,26 +38,26 @@ depends_on = [
     "damnit_api",
     "damnit_api._db",
     "damnit_api._mymdc",
-    # TODO: metadata imports shared.errors, shared.models, shared.const,
+    # metadata imports shared.errors, shared.models, shared.const,
     # shared.settings and shared.gql
-    "damnit_api.shared",
-    # TODO: metadata/services.py, routers.py and gql.py import
+    { path = "damnit_api.shared", deprecated = true },
+    # metadata/services.py, routers.py and gql.py import
     # auth.dependencies and auth.permissions
-    "damnit_api.auth",
-    # TODO: metadata/services.py imports runs.sqlite for local mode
-    "damnit_api.runs",
+    { path = "damnit_api.auth", deprecated = true },
+    # metadata/services.py imports runs.sqlite for local mode
+    { path = "damnit_api.runs", deprecated = true },
 ]
 
 [[modules]]
 path = "damnit_api.runs"
 depends_on = [
     "damnit_api",
-    # TODO: runs imports shared.const (DamnitType, DEFAULT_PROPOSAL) and
+    # runs imports shared.const (DamnitType, DEFAULT_PROPOSAL) and
     # shared.settings in runs/sqlite/session.py
-    "damnit_api.shared",
-    # TODO: runs imports utils (b64image, blob2numpy, create_map,
+    { path = "damnit_api.shared", deprecated = true },
+    # runs imports utils (b64image, blob2numpy, create_map,
     # Registry, find_proposal)
-    "damnit_api.utils",
+    { path = "damnit_api.utils", deprecated = true },
 ]
 
 [[modules]]
@@ -64,27 +65,27 @@ path = "damnit_api.graphql"
 depends_on = [
     "damnit_api",
     "damnit_api.shared",
-    # TODO: graphql/metadata.py imports utils.create_map
-    "damnit_api.utils",
-    # TODO: graphql/{queries,subscriptions,directives,metadata,utils}.py
+    # graphql/metadata.py imports utils.create_map
+    { path = "damnit_api.utils", deprecated = true },
+    # graphql/{queries,subscriptions,directives,metadata,utils}.py
     # import runs, auth and metadata internals
-    "damnit_api.runs",
-    "damnit_api.auth",
-    "damnit_api.metadata",
+    { path = "damnit_api.runs", deprecated = true },
+    { path = "damnit_api.auth", deprecated = true },
+    { path = "damnit_api.metadata", deprecated = true },
 ]
 
 [[modules]]
 path = "damnit_api.shared"
 depends_on = [
     "damnit_api",
-    # TODO: shared/gql.py assembles the schema from every feature
-    "damnit_api.graphql",
-    "damnit_api.metadata",
-    "damnit_api.auth",
-    "damnit_api.runs",
+    # shared/gql.py assembles the schema from every feature
+    { path = "damnit_api.graphql", deprecated = true },
+    { path = "damnit_api.metadata", deprecated = true },
+    { path = "damnit_api.auth", deprecated = true },
+    { path = "damnit_api.runs", deprecated = true },
     "damnit_api._db",
-    # TODO: shared/settings.py imports _mymdc settings models
-    "damnit_api._mymdc",
+    # shared/settings.py imports _mymdc settings models
+    { path = "damnit_api._mymdc", deprecated = true },
 ]
 
 [[modules]]
@@ -92,8 +93,8 @@ path = "damnit_api._db"
 depends_on = [
     "damnit_api",
     "damnit_api.shared",
-    # TODO: _db/bootstrap.py imports metadata.models to register its tables
-    "damnit_api.metadata",
+    # _db/bootstrap.py imports metadata.models to register its tables
+    { path = "damnit_api.metadata", deprecated = true },
 ]
 
 [[modules]]
