@@ -1,0 +1,122 @@
+# Import-boundary baseline for the vertical-slice architecture
+#
+# Current dependency graph, derived with `tach sync`
+# TODO marks an edge the vertical-slice rules forbid, with the import causing it
+
+source_roots = ["src"]
+exact = true
+
+[[modules]]
+path = "damnit_api"
+depends_on = ["damnit_api._logging"]
+
+[[modules]]
+path = "damnit_api.auth"
+depends_on = [
+    "damnit_api",
+    "damnit_api._db",
+    "damnit_api._mymdc",
+    # TODO: auth imports shared.errors, shared.settings and shared.gql
+    "damnit_api.shared",
+    # TODO: auth and metadata import each other; auth reads proposal metadata and
+    # membership from metadata, which the proposals slice and a proposal
+    # directory port should replace
+    "damnit_api.metadata",
+]
+
+[[modules]]
+path = "damnit_api.contextfile"
+depends_on = [
+    # TODO: contextfile imports metadata
+    "damnit_api.metadata",
+]
+
+[[modules]]
+path = "damnit_api.metadata"
+depends_on = [
+    "damnit_api",
+    "damnit_api._db",
+    "damnit_api._mymdc",
+    # TODO: metadata imports shared.errors, shared.models, shared.const,
+    # shared.settings and shared.gql
+    "damnit_api.shared",
+    # TODO: metadata/services.py, routers.py and gql.py import
+    # auth.dependencies and auth.permissions
+    "damnit_api.auth",
+    # TODO: metadata/services.py imports runs.sqlite for local mode
+    "damnit_api.runs",
+]
+
+[[modules]]
+path = "damnit_api.runs"
+depends_on = [
+    "damnit_api",
+    # TODO: runs imports shared.const (DamnitType, DEFAULT_PROPOSAL) and
+    # shared.settings in runs/sqlite/session.py
+    "damnit_api.shared",
+    # TODO: runs imports utils (b64image, blob2numpy, create_map,
+    # Registry, find_proposal)
+    "damnit_api.utils",
+]
+
+[[modules]]
+path = "damnit_api.graphql"
+depends_on = [
+    "damnit_api",
+    "damnit_api.shared",
+    # TODO: graphql/metadata.py imports utils.create_map
+    "damnit_api.utils",
+    # TODO: graphql/{queries,subscriptions,directives,metadata,utils}.py
+    # import runs, auth and metadata internals
+    "damnit_api.runs",
+    "damnit_api.auth",
+    "damnit_api.metadata",
+]
+
+[[modules]]
+path = "damnit_api.shared"
+depends_on = [
+    "damnit_api",
+    # TODO: shared/gql.py assembles the schema from every feature
+    "damnit_api.graphql",
+    "damnit_api.metadata",
+    "damnit_api.auth",
+    "damnit_api.runs",
+    "damnit_api._db",
+    # TODO: shared/settings.py imports _mymdc settings models
+    "damnit_api._mymdc",
+]
+
+[[modules]]
+path = "damnit_api._db"
+depends_on = [
+    "damnit_api",
+    "damnit_api.shared",
+    # TODO: _db/bootstrap.py imports metadata.models to register its tables
+    "damnit_api.metadata",
+]
+
+[[modules]]
+path = "damnit_api._mymdc"
+depends_on = ["damnit_api", "damnit_api.shared"]
+
+[[modules]]
+path = "damnit_api._logging"
+depends_on = ["damnit_api.shared"]
+
+[[modules]]
+path = "damnit_api.utils"
+depends_on = ["damnit_api.shared"]
+
+# Composition root
+[[modules]]
+path = "damnit_api.main"
+depends_on = [
+    "damnit_api._db",
+    "damnit_api.shared",
+    "damnit_api._mymdc",
+    "damnit_api._logging",
+    "damnit_api.metadata",
+    "damnit_api.contextfile",
+    "damnit_api.auth",
+]
