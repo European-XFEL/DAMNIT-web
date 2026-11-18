@@ -11,7 +11,8 @@ The git hooks give you fast feedback locally and run in stages:
 
 - On commit: ruff (backend and `scripts/`), eslint and prettier
   (frontend). These lint and auto-format the files you changed. A
-  character check also reads them; see below.
+  character check also reads them; see below. tach checks the backend
+  import boundaries.
 - On push: type checks (frontend tsc; pyright once re-enabled).
 - In CI: every check runs again and gates the merge.
 
