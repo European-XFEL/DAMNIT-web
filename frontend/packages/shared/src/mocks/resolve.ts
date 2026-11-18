@@ -1,7 +1,7 @@
 import { Kind, parse } from 'graphql'
+import { sortBy } from 'lodash-es'
 
 import {
-  SEED_TIMESTAMP_MS,
   runNumber,
   shapeMetadata,
   shapeTableData,
@@ -81,12 +81,7 @@ export async function resolveOperation(
     switch (operationName) {
       case 'TableMetaQuery': {
         const { meta } = await source.runs(proposal)
-        // The time of the newest value, as the backend answers it: 0 with no
-        // runs, and the client then takes its cursor from the first live push.
-        const timestamp = meta.runs.length ? SEED_TIMESTAMP_MS : 0
-        return resolved({
-          metadata: shapeMetadata(meta, { proposal, timestamp }),
-        })
+        return resolved({ metadata: shapeMetadata(meta, proposal) })
       }
       case 'TableDataQuery':
       case 'LightweightTableDataQuery':
@@ -110,9 +105,10 @@ export async function resolveOperation(
         const perPage = (variables.per_page as number | null | undefined) ?? 10
 
         // The API pages in run order, whatever order an example lists them in.
-        const pageRuns = [...runs]
-          .sort((a, b) => runNumber(a) - runNumber(b))
-          .slice((page - 1) * perPage, page * perPage)
+        const pageRuns = sortBy(runs, runNumber).slice(
+          (page - 1) * perPage,
+          page * perPage
+        )
 
         return resolved(
           shapeTableData(pageRuns, {

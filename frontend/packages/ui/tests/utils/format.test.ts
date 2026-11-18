@@ -5,7 +5,7 @@ import {
   formatNumber,
   formatRunsSubtitle,
   formatUrl,
-} from '#src/utils/helpers'
+} from '#src/utils/format'
 
 describe('formatNumber', () => {
   test('passes integers through unchanged', () => {

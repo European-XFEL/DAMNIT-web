@@ -3,12 +3,10 @@ import { Stack } from '@mantine/core'
 
 import { VARIABLES } from '#src/constants'
 import { ViewStatus } from '#src/components/statuses/view-status'
-import { plotRequested } from '#src/app/store/actions'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { sorted } from '#src/utils/array'
-import type { PlotSource } from '#src/types'
+import type { PlotSource, PlotSpec } from '#src/types'
 import { cellTooltip } from '#src/features/table/utils/cell-tooltip'
 import { summaryAxes } from '#src/features/table/utils/summary-axes'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
@@ -34,7 +32,11 @@ import {
   runSelected,
 } from '#src/features/table/stores/table.slice'
 
-function Table() {
+type TableProps = {
+  onPlot: (plot: PlotSpec) => void
+}
+
+function Table({ onPlot }: TableProps) {
   const gridRef = useRef<RunGridRef>(null)
 
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
@@ -112,17 +114,15 @@ function Table() {
     }
 
     const subtitle = column.title
-    const runNumbers = sorted(
-      selectedRuns.map((selected) => String(selected.run))
-    )
+    const runNumbers = selectedRuns.map((selected) => String(selected.run))
 
     showPlotMenu(position, {
       kind: 'preview',
       subtitle,
       onClick: () =>
-        addPreviewPlot({
-          variable,
-          label: subtitle,
+        onPlot({
+          source: 'preview',
+          variables: [variable],
           runs: runNumbers,
         }),
     })
@@ -143,44 +143,8 @@ function Table() {
     showPlotMenu(position, {
       kind: 'summary',
       subtitle,
-      onClick: () =>
-        addSummaryPlot({ variables: [x.id, y.id], label: subtitle }),
+      onClick: () => onPlot({ source: 'summary', variables: [x.id, y.id] }),
     })
-  }
-
-  const addSummaryPlot = ({
-    variables,
-    label,
-  }: {
-    variables: [x: string, y: string]
-    label: string
-  }) => {
-    dispatch(
-      plotRequested({
-        variables,
-        source: 'summary',
-        name: label,
-      })
-    )
-  }
-
-  const addPreviewPlot = ({
-    variable,
-    label,
-    runs,
-  }: {
-    variable: string
-    label: string
-    runs: string[]
-  }) => {
-    dispatch(
-      plotRequested({
-        runs,
-        variables: [variable],
-        source: 'preview',
-        name: label,
-      })
-    )
   }
 
   return (

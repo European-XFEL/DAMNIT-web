@@ -79,6 +79,9 @@ export default defineConfig(({ command, mode }): UserConfig => {
       proxy: {
         [withBaseUrl('graphql')]: { ...defaultProxyConfig, ws: true },
         [withBaseUrl('oauth')]: { ...defaultProxyConfig },
+        // Keycloak returns to this address, which the API builds without the
+        // base. Deployment redirects it in nginx.
+        '/oauth/callback': { ...defaultProxyConfig },
         [withBaseUrl('metadata')]: { ...defaultProxyConfig },
         [withBaseUrl('contextfile')]: { ...defaultProxyConfig },
       },

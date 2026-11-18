@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 import { useAppSelector } from '#src/app/store/hooks'
-import { formatRunsSubtitle } from '#src/utils/helpers'
+import { formatRunsSubtitle } from '#src/utils/format'
 
 export function usePlotEntries() {
   const plots = useAppSelector((state) => state.plots.data)
@@ -11,7 +11,7 @@ export function usePlotEntries() {
       Object.entries(plots).map(([id, plot]) => {
         const subtitle = formatRunsSubtitle(plot.runs)
         return {
-          view: { kind: 'plot' as const, id },
+          id,
           kind: plot.source,
           name: plot.name,
           subtitle,

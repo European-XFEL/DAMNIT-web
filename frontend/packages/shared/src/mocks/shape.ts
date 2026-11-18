@@ -8,7 +8,7 @@ import type { Meta, RunData } from './types'
 export const REST_API_PREFIXES = ['oauth/', 'contextfile/']
 
 // The time the seeded examples were computed at. Live pushes are stamped after
-// it, so the client's cursor only moves forward.
+// it, as the server stamps each push later than the data before it.
 export const SEED_TIMESTAMP_MS = 1_700_000_000_000
 
 // The metadata snapshot for one proposal. `runs` is a list of (proposal, run)
@@ -17,7 +17,7 @@ export const SEED_TIMESTAMP_MS = 1_700_000_000_000
 // normalize the runs the same way the real server lets it.
 export function shapeMetadata(
   meta: Pick<Meta, 'variables' | 'runs' | 'tags' | 'groups'>,
-  { proposal, timestamp }: ShapeMetadataOptions
+  proposal: string
 ) {
   return {
     __typename: 'TableMeta',
@@ -27,7 +27,6 @@ export function shapeMetadata(
       proposal,
       run,
     })),
-    timestamp,
     tags: meta.tags,
     groups: meta.groups ?? {},
   }
@@ -108,11 +107,6 @@ export function shapeTableData(
       })
     ),
   }
-}
-
-type ShapeMetadataOptions = {
-  proposal: string
-  timestamp: number
 }
 
 type CellIdParts = {

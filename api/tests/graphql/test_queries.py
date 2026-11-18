@@ -625,7 +625,6 @@ async def test_metadata_query(graphql_schema):
             variables
             tags
             groups
-            timestamp
           }
         }
     """
@@ -637,7 +636,7 @@ async def test_metadata_query(graphql_schema):
     assert result.errors is None
 
     metadata = result.data["metadata"]
-    assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags", "groups"}
+    assert set(metadata.keys()) == {"runs", "variables", "tags", "groups"}
     assert metadata["runs"] == [
         {"proposal": str(proposal), "run": run} for proposal, run in RUN_IDENTIFIERS
     ]
@@ -648,6 +647,50 @@ async def test_metadata_query(graphql_schema):
     assert metadata["groups"] == EXAMPLE_GROUPS
     assert "(Untagged)" in metadata["tags"]
     assert "eTOF" in metadata["tags"]
+
+
+@pytest.mark.asyncio
+async def test_metadata_query_does_not_scan_for_the_newest_timestamp(
+    mocker, graphql_schema
+):
+    scan = mocker.patch("damnit_api.graphql.metadata.db.async_max")
+    query = """
+        query TableMetadataQuery($proposal: String) {
+          metadata(database: { proposal: $proposal }) {
+            runs { proposal run }
+          }
+        }
+    """
+    result = await graphql_schema.execute(
+        query,
+        variable_values={"proposal": str(PROPOSAL)},
+    )
+
+    assert result.errors is None
+    assert result.data["metadata"]["runs"]
+    # A skipped scan changes no output, so only the call count shows it.
+    scan.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_a_tab_on_the_old_frontend_still_gets_a_metadata_timestamp_of_0(
+    graphql_schema,
+):
+    query = """
+        query TableMetadataQuery($proposal: String) {
+          metadata(database: { proposal: $proposal }) {
+            runs { proposal run }
+            timestamp
+          }
+        }
+    """
+    result = await graphql_schema.execute(
+        query,
+        variable_values={"proposal": str(PROPOSAL)},
+    )
+
+    assert result.errors is None
+    assert result.data["metadata"]["timestamp"] == 0
 
 
 @pytest.mark.asyncio

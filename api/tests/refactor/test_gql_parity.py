@@ -162,7 +162,6 @@ async def test_metadata_query_wire_shape_unchanged(graphql_schema):
             runs { proposal run }
             variables
             tags
-            timestamp
           }
         }
     """
@@ -174,7 +173,7 @@ async def test_metadata_query_wire_shape_unchanged(graphql_schema):
     assert result.errors is None
 
     metadata = result.data["metadata"]
-    assert set(metadata.keys()) == {"runs", "variables", "timestamp", "tags"}
+    assert set(metadata.keys()) == {"runs", "variables", "tags"}
     assert isinstance(metadata["runs"], list)
     for identifier in metadata["runs"]:
         assert set(identifier.keys()) == {"proposal", "run"}
@@ -182,7 +181,6 @@ async def test_metadata_query_wire_shape_unchanged(graphql_schema):
         **DamnitRun.known_variables(),
         **EXAMPLE_TAGGED_VARIABLES,
     }
-    assert isinstance(metadata["timestamp"], int | float)
 
 
 @pytest.fixture

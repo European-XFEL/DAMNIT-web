@@ -92,14 +92,13 @@ def current_timestamp():
 
 
 @pytest_asyncio.fixture
-async def subscription(graphql_schema, current_timestamp):
-    """A table opened before the new row, subscribed to its live updates."""
+async def subscription(graphql_schema):
+    """A table opened before the new row, subscribed to its live updates as the
+    app does: from 0, since the server reads only rows newer than its last-seen
+    timestamp."""
     generator = await graphql_schema.subscribe(
         SUBSCRIPTION,
-        variable_values={
-            "proposal": str(PROPOSAL),
-            "since": (current_timestamp - 1) * 1000,
-        },
+        variable_values={"proposal": str(PROPOSAL), "since": 0},
     )
     yield generator
     await generator.aclose()
@@ -177,9 +176,8 @@ def mocked_metadata_reads(
     mocked_metadata_run_identifiers,
     mocked_metadata_all_tags,
     mocked_metadata_variable_tags,
-    mocked_metadata_max,
 ):
-    """The sqlite reads behind `fetch_metadata`, for polling the poll directly
+    """The sqlite reads behind `read_metadata`, for polling the poll directly
     instead of through the schema."""
 
 
@@ -224,6 +222,35 @@ async def test_run_updates(
         {"proposal": str(proposal), "run": run_number}
         for proposal, run_number in RUN_IDENTIFIERS
     ]
+
+
+@pytest.mark.asyncio
+async def test_a_table_subscribed_from_zero_gets_a_write_but_not_the_rows_it_shows(
+    mocker, subscription, current_timestamp, mocked_latest_rows, mocked_fetch_info
+):
+    # DAMNIT wrote one run before the table opened, and the new one after
+    mocker.patch(
+        "damnit_api.graphql.subscriptions.async_max",
+        return_value=current_timestamp - 10,
+    )
+    shown = create_run_variables(
+        {"n_trains": 1200},
+        proposal=PROPOSAL,
+        run=NEW_RUN - 1,
+        timestamp=current_timestamp - 20,
+    )
+    new_rows = mocked_latest_rows.side_effect
+
+    def rows_after(*args, start_at, **kwargs):
+        rows = [*shown, *new_rows(*args, **kwargs)]
+        return [row for row in rows if row["timestamp"] > start_at]
+
+    mocked_latest_rows.side_effect = rows_after
+
+    with patched_sleep:
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+
+    assert [run["run"] for run in result.data["run_updates"]["runs"]] == [NEW_RUN]
 
 
 @pytest.mark.asyncio
@@ -430,6 +457,38 @@ async def test_a_failed_tick_does_not_end_live_updates(
 
 
 @pytest.mark.asyncio
+async def test_a_tick_whose_metadata_read_fails_retries_the_rows_it_read(
+    subscription,
+    mocked_database_mtime,
+    mocked_latest_rows,
+    mocked_fetch_info,
+    mocked_metadata_all_tags,
+):
+    new_rows = mocked_latest_rows.side_effect
+
+    def rows_newer_than_last_seen(*args, start_at, **kwargs):
+        return [row for row in new_rows(*args, **kwargs) if row["timestamp"] > start_at]
+
+    mocked_latest_rows.side_effect = rows_newer_than_last_seen
+
+    read_tags = mocked_metadata_all_tags.side_effect
+    locked = _operational_error("database is locked")
+
+    def locked_once(*args, **kwargs):
+        if mocked_metadata_all_tags.call_count == 1:
+            raise locked
+        return read_tags(*args, **kwargs)
+
+    mocked_metadata_all_tags.side_effect = locked_once
+
+    with ticks_finding_mtimes(mocked_database_mtime, [1, 1]):
+        result = await asyncio.wait_for(anext(subscription), timeout=2)
+
+    assert not result.errors
+    assert [run["run"] for run in result.data["run_updates"]["runs"]] == [NEW_RUN]
+
+
+@pytest.mark.asyncio
 async def test_each_run_of_failed_ticks_logs_one_warning_with_its_error(
     subscription, mocked_database_mtime, mocked_latest_rows, mocked_fetch_info
 ):
@@ -591,9 +650,7 @@ def test_filter_for_client_cursorless_client_receives_this_tick():
 
 def test_filter_for_client_delivers_metadata_without_changed_runs():
     snapshot = _snapshot({(PROPOSAL, 1): 100.0})
-    metadata = TableMeta(
-        runs=[], variables={}, tags={}, groups={}, timestamp=snapshot["max_timestamp"]
-    )
+    metadata = TableMeta(runs=[], variables={}, tags={}, groups={})
 
     result = filter_for_client(snapshot, since=300.0, metadata=metadata)
     assert result.runs == []

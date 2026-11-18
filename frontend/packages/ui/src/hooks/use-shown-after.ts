@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 // flicker.
 export const LOADER_DELAY = 1000
 
-// Whether `active` has held for LOADER_DELAY. It drops back as soon as `active`
-// does.
-export function useShownAfter(active: boolean) {
+// A view's code mostly lands within this, so a quick move never flashes a bar.
+export const PENDING_DELAY = 150
+
+// Whether `active` has held for `delay`. It drops back as soon as `active` does.
+export function useShownAfter(active: boolean, { delay = LOADER_DELAY } = {}) {
   const [shown, setShown] = useState(false)
 
   if (shown && !active) {
@@ -18,10 +20,10 @@ export function useShownAfter(active: boolean) {
       return
     }
 
-    const timeout = setTimeout(() => setShown(true), LOADER_DELAY)
+    const timeout = setTimeout(() => setShown(true), delay)
 
     return () => clearTimeout(timeout)
-  }, [active])
+  }, [active, delay])
 
   return shown
 }

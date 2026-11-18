@@ -12,6 +12,7 @@
 }
 
 .view {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -26,5 +27,40 @@
   @mixin smaller-than $mantine-breakpoint-sm {
     visibility: hidden;
     transition: visibility var(--app-shell-transition-duration);
+  }
+}
+
+/* A view on its way: a short bar runs along the top of the one still shown. */
+.pending {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: 2px;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 40%;
+    background-color: var(--mantine-color-indigo-7);
+    animation: pending-run 1.2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::before {
+      width: 100%;
+      animation: none;
+    }
+  }
+}
+
+@keyframes pending-run {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(250%);
   }
 }

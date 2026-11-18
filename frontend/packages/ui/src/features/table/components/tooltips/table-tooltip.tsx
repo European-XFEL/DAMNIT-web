@@ -16,7 +16,8 @@ import {
 
 import CellErrorCard from '#src/components/feedback/cell-error-card'
 import { type CellError } from '#src/utils/cell-errors'
-import { assertNever, formatNumber } from '#src/utils/helpers'
+import { assertNever } from '#src/utils/asserts'
+import { formatNumber } from '#src/utils/format'
 
 // react-laag's Arrow type lists two props @types/react 18.3 dropped, while its
 // ArrowProps is built from the installed @types/react.

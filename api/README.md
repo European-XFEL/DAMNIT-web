@@ -50,7 +50,6 @@ query TableMetadataQuery {
     }
     variables
     tags
-    timestamp
   }
 }
 ```
@@ -63,7 +62,6 @@ This returns a `TableMeta` snapshot for the proposal:
 - `variables` - map of variable name to its title and tags (includes the
   known variables listed below alongside any user-defined ones)
 - `tags` - map of tag name to its id and the variables it groups
-- `timestamp` - last update time, in milliseconds since the Unix epoch
 
 ### 2. Query the runs
 
@@ -137,7 +135,6 @@ subscription RunUpdatesSubscription {
       }
       variables
       tags
-      timestamp
     }
     timestamp
   }

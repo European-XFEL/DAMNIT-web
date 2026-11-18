@@ -44,6 +44,12 @@ export async function selectColumns(
   )
 }
 
+// The address moves to the plot once its code has arrived, and a click
+// elsewhere before then drops the plot, so wait for the move.
+async function waitForPlotView(page: Page) {
+  await expect(page).toHaveURL(/\/plots\/(summary|preview)\?/)
+}
+
 // Right-click a header and pick "Plot: summary". Scope the click to the menu:
 // a bare "Plot" also matches the nav's "New plot" button.
 export async function openSummaryPlot(
@@ -52,6 +58,7 @@ export async function openSummaryPlot(
 ) {
   await rightClickHeader(page, { example, col })
   await contextMenu(page).getByText('Plot: summary').click()
+  await waitForPlotView(page)
 }
 
 // The cells must share one column, or the grid clears the range stack.
@@ -76,6 +83,7 @@ export async function openPreviewPlot(
 ) {
   await rightClickCell(page, { example, col, row })
   await contextMenu(page).getByText('Plot: preview').click()
+  await waitForPlotView(page)
 }
 
 // The nav's "New plot" dialog. Returns the dialog locator so callers scope
@@ -117,6 +125,7 @@ export async function plotVariable(
     title: titleOf(example, variable),
   })
   await submitPlot(dialog)
+  await waitForPlotView(page)
 }
 
 // One row per open plot, under the nav's Plots header.
@@ -134,14 +143,14 @@ function entryName(name: string) {
 }
 
 export function plotEntry(page: Page, name: string): Locator {
-  return plotEntries(page).getByRole('button', { name: entryName(name) })
+  return plotEntries(page).getByRole('link', { name: entryName(name) })
 }
 
 // Each row has its own mark, shown only on hover or focus. A hidden button is
 // not in the accessibility tree, so hover the row first.
 export async function closePlot(page: Page, name: string) {
   const entry = plotEntries(page).filter({
-    has: page.getByRole('button', { name: entryName(name) }),
+    has: page.getByRole('link', { name: entryName(name) }),
   })
   await entry.hover()
   await entry.getByRole('button', { name: /^Close / }).click()

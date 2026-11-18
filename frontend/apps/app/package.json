@@ -28,8 +28,10 @@
     "graphql": "catalog:graphql",
     "graphql-ws": "catalog:graphql",
     "lodash": "catalog:frontend",
+    "lodash-es": "catalog:frontend",
     "mantine-contextmenu": "catalog:components",
     "mantine-datatable": "catalog:components",
+    "monaco-editor": "catalog:components",
     "plotly.js": "catalog:components",
     "react": "catalog:frontend",
     "react-dom": "catalog:frontend",
@@ -40,7 +42,6 @@
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
-    "@types/lodash": "catalog:types",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",

@@ -2,6 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { mapKeys, mapValues } from 'lodash-es'
+
 import { PREVIEW_DTYPES } from '@damnit-frontend/shared/constants'
 import { columnIndex } from '#support/grid'
 import type {
@@ -347,12 +349,10 @@ function mapTagVariables(
   tags: Example['meta']['tags'],
   rename: (variables: string[]) => string[]
 ) {
-  return Object.fromEntries(
-    Object.entries(tags).map(([name, tag]) => [
-      name,
-      { ...tag, variables: rename(tag.variables) },
-    ])
-  )
+  return mapValues(tags, (tag) => ({
+    ...tag,
+    variables: rename(tag.variables),
+  }))
 }
 
 // Every variable in the demo data carries a tag except `run`, which the popover
@@ -427,9 +427,7 @@ function groupSampleColumns(
 }
 
 function groupRunCells(variables: RunData['variables']): RunData['variables'] {
-  return Object.fromEntries(
-    Object.entries(variables).map(([name, cell]) => [groupedName(name), cell])
-  )
+  return mapKeys(variables, (_, name) => groupedName(name))
 }
 
 // XPCS with its sample columns grouped, for the second header row. The tag

@@ -68,6 +68,9 @@ const gqlHandlers = [
       variables: variables as Record<string, unknown>,
       source,
     })
+    if (!resolution.resolved) {
+      console.error(`Unmocked GraphQL operation: ${operationName}`)
+    }
     return HttpResponse.json(resolution.body)
   }),
 ]

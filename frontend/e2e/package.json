@@ -5,12 +5,15 @@
   "type": "module",
   "imports": {
     "#fixtures": "./fixtures/index.ts",
+    "#fixtures/*": "./fixtures/*.ts",
     "#support/*": "./support/*.ts",
     "#mocks": "./mocks/index.ts",
     "#examples/*": "./examples/*/index.ts"
   },
   "scripts": {
     "test": "playwright test",
+    "test:site": "playwright test -c playwright.site.config.ts",
+    "test:demo": "playwright test -c playwright.demo.config.ts",
     "setup": "playwright install chromium",
     "ui": "playwright test --ui",
     "report": "playwright show-report",
@@ -22,11 +25,12 @@
     "@damnit-frontend/config": "workspace:*",
     "@damnit-frontend/shared": "workspace:*",
     "@playwright/test": "catalog:testing",
+    "@types/lodash-es": "catalog:types",
     "@types/node": "catalog:types",
     "eslint": "catalog:linting",
     "globals": "catalog:linting",
     "graphql": "catalog:graphql",
-    "monaco-editor": "catalog:components",
+    "lodash-es": "catalog:frontend",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"
   }

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { flushSync } from 'react-dom'
+import { times } from 'lodash-es'
 import { userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
 import { beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest'
@@ -41,7 +42,6 @@ const METADATA = {
     position: { name: 'position', variables: ['sample.x'] },
   },
   groups: { sample: { name: 'sample', title: 'Sample' } },
-  timestamp: 0,
 }
 
 let store: AppStore
@@ -118,7 +118,7 @@ const longListClient = () =>
     variables: {
       ...METADATA.variables,
       ...Object.fromEntries(
-        Array.from({ length: 60 }, (_, index) => [
+        times(60, (index) => [
           `v${index}`,
           { name: `v${index}`, title: `Variable ${index}`, tags: [] },
         ])

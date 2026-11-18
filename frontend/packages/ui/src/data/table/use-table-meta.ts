@@ -17,7 +17,6 @@ const EMPTY_META: TableMeta = {
   runs: [],
   tags: {},
   groups: {},
-  timestamp: 0,
 }
 
 // The server metadata's only home is the Apollo cache. useProposal fetches it

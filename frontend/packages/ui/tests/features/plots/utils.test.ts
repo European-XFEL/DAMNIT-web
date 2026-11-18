@@ -1,9 +1,11 @@
+import { times } from 'lodash-es'
 import { expect, test } from 'vitest'
 
 import {
   formatRunSelection,
   parseRunSelection,
   plotName,
+  plotRunIds,
 } from '#src/features/plots/utils'
 
 test('a run selection expands a range into every run it covers', () => {
@@ -16,7 +18,7 @@ test('a run selection expands a range whose ends differ in length', () => {
   const selection = parseRunSelection('6-20')
 
   expect(selection).toEqual({
-    runs: Array.from({ length: 15 }, (_, index) => String(index + 6)),
+    runs: times(15, (index) => String(index + 6)),
   })
 })
 
@@ -57,7 +59,7 @@ test('a run selection with no runs in it asks for one', () => {
 
 test('a run selection takes a range of up to 10000 runs', () => {
   expect(parseRunSelection('1-10000')).toEqual({
-    runs: Array.from({ length: 10000 }, (_, index) => String(index + 1)),
+    runs: times(10000, (index) => String(index + 1)),
   })
 })
 
@@ -82,9 +84,7 @@ test('a run selection refuses a range past the largest safe number', () => {
 })
 
 test('a run list writes runs in a row as one range', () => {
-  const firstTwenty = Array.from({ length: 20 }, (_, index) =>
-    String(index + 1)
-  )
+  const firstTwenty = times(20, (index) => String(index + 1))
 
   expect(formatRunSelection([...firstTwenty, '25', '27', '28'])).toBe(
     '1-20,25,27-28'
@@ -125,4 +125,16 @@ test("a preview plot is named by its variable's title", () => {
       variableMeta
     )
   ).toBe('Detector image')
+})
+
+test("a plot's runs leave out a guest proposal's run of the same number", () => {
+  const allRuns = [
+    { proposal: '6996', run: 1 },
+    { proposal: '6996', run: 2 },
+    { proposal: '7001', run: 2 },
+  ]
+
+  expect(
+    plotRunIds(allRuns, { proposal: '6996', selection: ['2', '3'] })
+  ).toEqual([{ proposal: '6996', run: 2 }])
 })
