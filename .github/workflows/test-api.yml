@@ -51,6 +51,9 @@ jobs:
       - name: Ruff format check
         run: uv run --no-sync ruff format --check .
 
+      - name: Tach check
+        run: uv run --no-sync tach check
+
       - name: Pytest
         run: uv run --no-sync pytest
         env:
