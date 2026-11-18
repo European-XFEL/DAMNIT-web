@@ -134,3 +134,13 @@ depends_on = [
     "damnit_api.contextfile",
     "damnit_api.auth",
 ]
+
+# Only public names can be imported across modules, nothing with a leading underscore
+[[interfaces]]
+expose = ["([^_.][^.]*\\.)*[^_.][^.]*"]
+
+# TODO: auth and graphql import private metadata.services helpers, make them
+# public or move them then delete this entry
+[[interfaces]]
+expose = ["services\\._(get_proposal_meta_many|local_proposal_meta|local_proposal_number|check_user_allowed|get_proposal_meta|update_proposal_meta)"]
+from = ["damnit_api.metadata"]
