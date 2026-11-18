@@ -20,12 +20,15 @@ export const test = base.extend<Fixtures>({
   example: [XPCS, { option: true }],
   authenticated: [true, { option: true }],
   api: [
-    async ({ page, example, authenticated }, use) => {
-      const api = await mockApi(page, example, { authenticated })
+    async ({ page, example, authenticated, baseURL }, use) => {
+      const api = await mockApi(page, example, {
+        authenticated,
+        appOrigin: new URL(baseURL!).origin,
+      })
       await use(api)
       if (api.unmockedRequests.length > 0) {
         const names = uniq(api.unmockedRequests).join(', ')
-        throw new Error(`Unmocked API requests: ${names}`)
+        throw new Error(`Unmocked requests: ${names}`)
       }
     },
     { auto: true },
