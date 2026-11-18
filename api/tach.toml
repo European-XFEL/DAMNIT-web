@@ -7,6 +7,19 @@
 source_roots = ["src"]
 exact = true
 
+# TODO: enable once the auth <-> metadata and shared -> feature cycles are gone
+# forbid_circular_dependencies = true
+
+# TODO: enable once the layout renames land and every module has a layer. Layers
+# replace most `depends_on` lists, and an edge to a higher layer can't be baselined
+# layers = ["app", "graphql", "features", "core"]
+
+# TODO: add once shared is renamed to core, every module can then import it
+# [[modules]]
+# path = "damnit_api.core"
+# utility = true
+# depends_on = []
+
 [[modules]]
 path = "damnit_api"
 depends_on = ["damnit_api._logging"]
