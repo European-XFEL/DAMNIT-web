@@ -6,7 +6,7 @@ import { DAMNIT_DIR, MOCK_PROPOSAL } from './support/stack'
 
 const APP_PORT = 6176
 const API_PORT = 6177
-const APP_BASE_URL = `http://localhost:${APP_PORT}/app/`
+const APP_BASE_URL = `http://127.0.0.1:${APP_PORT}/app/`
 const API_URL = `http://127.0.0.1:${API_PORT}`
 
 const use = {
@@ -44,10 +44,11 @@ export default defineConfig({
     },
     {
       // Builds on every run, as the site and demo suites do. vite preview takes
-      // the dev server's proxy table, which forwards the API's paths.
+      // the dev server's proxy table and its `host: true`, so --host keeps the
+      // unauthenticated API off the network.
       command:
         'pnpm --filter @damnit-frontend/app exec vite build && ' +
-        `pnpm --filter @damnit-frontend/app exec vite preview --port ${APP_PORT} --strictPort`,
+        `pnpm --filter @damnit-frontend/app exec vite preview --host 127.0.0.1 --port ${APP_PORT} --strictPort`,
       url: APP_BASE_URL,
       timeout: 300_000,
       // Set in full here, so they beat a developer's own env files.
