@@ -1,4 +1,4 @@
-import { tmpdir } from 'node:os'
+import { tmpdir, userInfo } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -34,5 +34,9 @@ export async function columnOfTitle(page: Page, title: string) {
 }
 
 // The API's web server copies the proposal here as it starts, so the suite
-// never writes to the one in git.
-export const DAMNIT_DIR = join(tmpdir(), 'damnit-e2e-stack')
+// never writes to the one in git. Named per user, since a shared /tmp keeps
+// another user's copy out of reach of our `rm -rf`.
+export const DAMNIT_DIR = join(
+  tmpdir(),
+  `damnit-e2e-stack-${userInfo().username}`
+)
