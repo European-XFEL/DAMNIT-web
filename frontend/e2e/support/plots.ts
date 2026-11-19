@@ -5,6 +5,7 @@ import { dashboardNav } from '#support/dashboard'
 import { type Cell, cellPoint, gridBox, headerPoint } from '#support/grid'
 import {
   contextMenu,
+  type Grouping,
   hasGroups,
   rightClickCell,
   rightClickHeader,
@@ -34,7 +35,7 @@ async function multiClick(page: Page, points: { x: number; y: number }[]) {
 // The right-clicked column becomes the summary plot's Y axis.
 export async function selectColumns(
   page: Page,
-  { example, cols }: { example: Example; cols: number[] }
+  { example, cols }: { example: Grouping; cols: number[] }
 ) {
   const box = await gridBox(page)
   const grouped = hasGroups(example)
@@ -54,7 +55,7 @@ async function waitForPlotView(page: Page) {
 // a bare "Plot" also matches the nav's "New plot" button.
 export async function openSummaryPlot(
   page: Page,
-  { example, col }: { example: Example; col: number }
+  { example, col }: { example: Grouping; col: number }
 ) {
   await rightClickHeader(page, { example, col })
   await contextMenu(page).getByText('Plot: summary').click()
@@ -64,7 +65,7 @@ export async function openSummaryPlot(
 // The cells must share one column, or the grid clears the range stack.
 export async function selectCells(
   page: Page,
-  { example, cells }: { example: Example; cells: Cell[] }
+  { example, cells }: { example: Grouping; cells: Cell[] }
 ) {
   const box = await gridBox(page)
   const grouped = hasGroups(example)
@@ -79,7 +80,7 @@ export async function selectCells(
 // with selectCells first, then right-click one of the selected cells.
 export async function openPreviewPlot(
   page: Page,
-  { example, col, row }: Cell & { example: Example }
+  { example, col, row }: Cell & { example: Grouping }
 ) {
   await rightClickCell(page, { example, col, row })
   await contextMenu(page).getByText('Plot: preview').click()
