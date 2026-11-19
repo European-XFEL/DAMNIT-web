@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 import { baseConfig } from './playwright.base'
 import { WIDE_VIEWPORT } from './support/grid'
-import { DAMNIT_DIR, MOCK_PROPOSAL } from './support/stack'
+import { DAMNIT_DIR, MOCK_PROPOSAL } from './support/real-api'
 
 const APP_PORT = 6176
 const API_PORT = 6177
@@ -20,11 +20,11 @@ export default defineConfig({
   // More workers starve the one API and preview server, and the canvas specs
   // time out. Two is what a CI runner gets.
   workers: 2,
-  testDir: 'tests/stack',
-  outputDir: 'test-results/stack',
+  testDir: 'tests/real-api',
+  outputDir: 'test-results/real-api',
   projects: [
     {
-      name: 'stack-chromium',
+      name: 'real-api-chromium',
       use,
     },
   ],
