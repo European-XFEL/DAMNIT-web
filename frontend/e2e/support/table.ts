@@ -38,6 +38,10 @@ export function dataCells(page: Page): Locator {
   return page.locator(`[data-testid^="${CELL_TESTID_PREFIX}"]`)
 }
 
+export function columnCells(page: Page, col: number): Locator {
+  return page.locator(`[data-testid^="${CELL_TESTID_PREFIX}${col}-"]`)
+}
+
 // A single mirrored cell by its a11y column/row index (row marker 0, Run 1).
 // Shares cellTestId so the testid format stays in one place.
 export function cell(
