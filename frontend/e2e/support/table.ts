@@ -130,11 +130,15 @@ export function lastVariableOf(example: Example): string {
   return names[names.length - 1]
 }
 
+// All the grid's geometry reads from an example, so a spec against the real API
+// can pass its proposal's groups alone.
+export type Grouping = { meta: Pick<Example['meta'], 'groups'> }
+
 // A grouped proposal draws a second header row, which pushes every point below
 // it down. Read from the example, so hiding every grouped column leaves this
 // saying true after Glide has dropped the row: it enables the row from the
 // visible columns, not from the metadata.
-export function hasGroups(example: Example): boolean {
+export function hasGroups(example: Grouping): boolean {
   return Object.keys(example.meta.groups ?? {}).length > 0
 }
 
@@ -204,7 +208,7 @@ export async function headerEdge(
     example,
     col,
     overshoot = 0,
-  }: { example: Example; col: number; overshoot?: number }
+  }: { example: Grouping; col: number; overshoot?: number }
 ): Promise<Point> {
   const box = await gridBox(page)
   const { x, y } = headerEdgePoint(box, { col, grouped: hasGroups(example) })
@@ -220,7 +224,7 @@ export function contextMenu(page: Page): Locator {
 // rightClickCell.
 export async function rightClickHeader(
   page: Page,
-  { example, col }: { example: Example; col: number }
+  { example, col }: { example: Grouping; col: number }
 ) {
   const box = await gridBox(page)
   const { x, y } = headerPoint(box, { col, grouped: hasGroups(example) })
@@ -329,7 +333,7 @@ export async function rowDetails(page: Page, name: string): Promise<Locator> {
 // `row` must be within the initial vertical fold; this does not scroll it in.
 export async function selectRun(
   page: Page,
-  { example, row }: { example: Example; row: number }
+  { example, row }: { example: Grouping; row: number }
 ) {
   // The a11y tree renders a beat after the canvas, and Glide only mirrors rows
   // in the current vertical window, so wait for the target row to exist.
@@ -377,7 +381,7 @@ export async function hoverCell(
     col,
     row,
     waitForContent = true,
-  }: Cell & { example: Example; waitForContent?: boolean }
+  }: Cell & { example: Grouping; waitForContent?: boolean }
 ) {
   // The deferred table data loads after the canvas paints, so the target cell
   // can still be empty when the pointer arrives, and hovering an empty cell
@@ -402,7 +406,7 @@ export async function hoverCell(
 // the cell center rather than going through the a11y mirror.
 export async function rightClickCell(
   page: Page,
-  { example, col, row }: Cell & { example: Example }
+  { example, col, row }: Cell & { example: Grouping }
 ) {
   const box = await gridBox(page)
   const { x, y } = cellPoint(box, { col, row, grouped: hasGroups(example) })
@@ -416,7 +420,7 @@ export async function rightClickCell(
 // column through to activation.
 export async function activateCell(
   page: Page,
-  { example, col, row }: Cell & { example: Example }
+  { example, col, row }: Cell & { example: Grouping }
 ) {
   const box = await gridBox(page)
   const { x, y } = cellPoint(box, { col, row, grouped: hasGroups(example) })
