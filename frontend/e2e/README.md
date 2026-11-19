@@ -124,6 +124,10 @@ The API serves a copy of `api/tests/mock/proposals/all-value-types/`, as
 the copy each time it starts, so the suite never writes to the one in git. The
 last run's copy stays, for a look after a red run.
 
+`live-updates.spec.ts` has DAMNIT extract a new run into the copy, which
+changes every other spec's table. So the spec has the project
+`real-api-live-chromium` to itself, which runs after every other spec.
+
 ## Asserting on the table
 
 The run table draws on a `<canvas>` (`@glideapps/glide-data-grid`), and the

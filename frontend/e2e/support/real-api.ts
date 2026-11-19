@@ -1,6 +1,8 @@
+import { execFile } from 'node:child_process'
 import { tmpdir, userInfo } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { promisify } from 'node:util'
 
 import type { Page } from '@playwright/test'
 
@@ -8,6 +10,7 @@ import { columnTitles, type Grouping, openDashboard } from '#support/table'
 
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 const PROPOSALS_DIR = join(REPO_ROOT, 'api/tests/mock/proposals')
+const BUILDER = join(PROPOSALS_DIR, 'build_proposals.py')
 export const MOCK_PROPOSAL = join(PROPOSALS_DIR, 'all-value-types')
 
 // Copies of the builder's PROPOSAL and this case's RUNS.
@@ -50,3 +53,17 @@ export const DAMNIT_DIR = join(
   tmpdir(),
   `damnit-e2e-real-api-${userInfo().username}`
 )
+
+// A retry or a rerun on the same copy adds a run of its own.
+export async function addNextRun() {
+  await promisify(execFile)('uv', [
+    'run',
+    '--no-sync',
+    '--project',
+    REPO_ROOT,
+    'python',
+    BUILDER,
+    '--next-run',
+    DAMNIT_DIR,
+  ])
+}
