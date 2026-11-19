@@ -57,7 +57,7 @@ jobs:
       - name: Test
         run: pnpm test
 
-  e2e:
+  e2e-mocked:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -140,7 +140,7 @@ jobs:
       - name: e2e
         run: pnpm e2e:${{ matrix.suite }}
 
-      # always() and ignore for the same reasons as in the e2e job.
+      # always() and ignore for the same reasons as in the e2e-mocked job.
       - name: Upload traces
         if: always()
         uses: actions/upload-artifact@v7
