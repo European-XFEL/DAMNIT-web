@@ -58,10 +58,9 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
 
-      # The API, and DAMNIT itself for the live spec to extract a run with.
       - name: Sync API dependencies
         working-directory: .
-        run: uv sync --locked --all-packages --group damnit-backend --no-default-groups
+        run: uv sync --locked --all-packages --no-default-groups
 
       # No build step: the suite's web server builds the app on every run.
       - name: e2e
