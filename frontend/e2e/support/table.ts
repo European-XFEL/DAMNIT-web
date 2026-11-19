@@ -158,6 +158,14 @@ export async function expectRunRows(page: Page, count: number) {
   )
 }
 
+export async function readRunRows(page: Page) {
+  const rowCount = await page
+    .locator('[role="grid"]')
+    .getAttribute('aria-rowcount')
+
+  return Number(rowCount) - 1
+}
+
 // Glide only mirrors headers within the horizontal viewport, so toHaveCount(1)
 // means on-screen and toHaveCount(0) means hidden. For whether a column exists
 // at all, use expectVisibleColumns.

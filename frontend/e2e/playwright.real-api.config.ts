@@ -25,6 +25,16 @@ export default defineConfig({
   projects: [
     {
       name: 'real-api-chromium',
+      testIgnore: 'live-updates.spec.ts',
+      use,
+    },
+    {
+      // Last, so the run it adds changes no other spec's table.
+      name: 'real-api-live-chromium',
+      testMatch: 'live-updates.spec.ts',
+      dependencies: ['real-api-chromium'],
+      // One at a time, so two repeats never add the same next run.
+      workers: 1,
       use,
     },
   ],
