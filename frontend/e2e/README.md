@@ -113,10 +113,10 @@ The suite starts two servers:
 - the app's production build on 6176 at `/app/`, whose `vite preview` forwards
   the API's paths to the API.
 
-Before the first run, install the API and DAMNIT from the repo root:
+Before the first run, install the API from the repo root:
 
 ```
-uv sync --all-packages --group damnit-backend
+uv sync --all-packages
 ```
 
 The API serves a copy of `api/tests/mock/proposals/all-value-types/`, as
