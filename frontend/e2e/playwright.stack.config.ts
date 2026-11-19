@@ -30,7 +30,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // Playwright runs this only once it finds the port free, so listing tests
+      // Playwright runs this only when nothing answers the url, so listing tests
       // or a second run never replaces the copy a running suite serves.
       command:
         `rm -rf '${DAMNIT_DIR}' && cp -r '${MOCK_PROPOSAL}' '${DAMNIT_DIR}' && ` +
