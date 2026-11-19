@@ -56,7 +56,6 @@ async function openOutdatedPreview(
 ) {
   await openProposal(page, example)
   await openPreviewPlot(page, {
-    example,
     col: columnOf(example, SCATTER_VAR),
     row: 0,
   })
@@ -81,7 +80,6 @@ test('right-clicking a cell and choosing "Plot: preview" plots its preview data'
   await openProposal(page, example)
 
   await openPreviewPlot(page, {
-    example,
     col: columnOf(example, SCATTER_VAR),
     row: 0,
   })
@@ -97,7 +95,6 @@ test('a preview plot says when the data it draws was computed', async ({
   await openProposal(page, example)
 
   await openPreviewPlot(page, {
-    example,
     col: columnOf(example, SCATTER_VAR),
     row: 0,
   })
@@ -122,13 +119,12 @@ test('selecting cells from two runs plots both in one figure', async ({
   const col = columnOf(example, SCATTER_VAR)
   // Ctrl-click builds the run range; right-clicking a selected cell plots it.
   await selectCells(page, {
-    example,
     cells: [
       { col, row: 0 },
       { col, row: 1 },
     ],
   })
-  await openPreviewPlot(page, { example, col, row: 1 })
+  await openPreviewPlot(page, { col, row: 1 })
 
   const entry = plotEntry(page, titleOf(example, SCATTER_VAR))
   await expect(entry).toBeVisible()
@@ -146,7 +142,6 @@ test('right-clicking a scalar cell shows the unable-to-display notice', async ({
   const scalarValue = XPCS.data[0].variables[SCALAR_VAR].value
 
   await openPreviewPlot(page, {
-    example,
     col: columnOf(example, SCALAR_VAR),
     row: 0,
   })
@@ -163,7 +158,6 @@ test('right-clicking an image cell renders the picture instead of a figure', asy
   await openProposal(page, example)
 
   await openPreviewPlot(page, {
-    example,
     col: columnOf(example, IMAGE_VAR),
     row: 0,
   })

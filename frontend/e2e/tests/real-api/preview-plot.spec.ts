@@ -1,10 +1,6 @@
 import { test, expect } from '#fixtures/production'
 import { openPreviewPlot, plotEntry, plotFigure } from '#support/plots'
-import {
-  ALL_VALUE_TYPES,
-  columnOfTitle,
-  openMockProposal,
-} from '#support/real-api'
+import { columnOfTitle, openMockProposal } from '#support/real-api'
 
 test("a 2-D array's preview plot draws it as an image of its own shape", async ({
   page,
@@ -12,7 +8,6 @@ test("a 2-D array's preview plot draws it as an image of its own shape", async (
   await openMockProposal(page)
 
   await openPreviewPlot(page, {
-    example: ALL_VALUE_TYPES,
     col: await columnOfTitle(page, 'Detector image'),
     row: 0,
   })

@@ -1,11 +1,6 @@
 import { test, expect } from '#fixtures/production'
 import { hoverCell, tooltipCard } from '#support/table'
-import {
-  ALL_VALUE_TYPES,
-  columnOfTitle,
-  openMockProposal,
-  RUNS,
-} from '#support/real-api'
+import { columnOfTitle, openMockProposal, RUNS } from '#support/real-api'
 
 // The app suite covers each kind of failure, and the API's tests each message.
 test("hovering run 2's failed Fit cell shows DAMNIT's error", async ({
@@ -14,7 +9,6 @@ test("hovering run 2's failed Fit cell shows DAMNIT's error", async ({
   await openMockProposal(page)
 
   await hoverCell(page, {
-    example: ALL_VALUE_TYPES,
     col: await columnOfTitle(page, 'Fit'),
     row: RUNS.indexOf(2),
   })

@@ -21,7 +21,7 @@ test('the column selection stays on its column when one to its left is hidden', 
 }) => {
   await openProposal(page, example)
 
-  await selectColumns(page, { example, cols: [columnOf(example, 'n_pulses')] })
+  await selectColumns(page, { cols: [columnOf(example, 'n_pulses')] })
   await expect(selectedColumnHeaders(page)).toHaveText(['Pulses'])
 
   // Hide Trains, which sits between Run and the selected Pulses.

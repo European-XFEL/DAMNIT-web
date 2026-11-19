@@ -13,7 +13,6 @@ test('right-clicking a cell and choosing "Plot: preview" plots its preview data'
   await openExample(page, 'xpcs')
 
   await openPreviewPlot(page, {
-    example: XPCS,
     col: columnOf(XPCS, SCATTER_VAR),
     row: 0,
   })

@@ -22,7 +22,7 @@ test('a run pushed above the selected one moves its highlight, not its selection
   await openProposal(page, example)
 
   // Select run 2, the second row, so there are rows on both sides of it.
-  await selectRun(page, { example, row: 1 })
+  await selectRun(page, { row: 1 })
   await expect(selectedRunTab(page)).toHaveText('Run 2')
   await expect(highlightedRow(page, { row: 1 })).toBeAttached()
 

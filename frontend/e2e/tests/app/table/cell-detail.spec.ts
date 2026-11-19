@@ -27,7 +27,6 @@ test('activating a single cell shows only that variable', async ({
 
   // The first row is run 1 in the XPCS example.
   await activateCell(page, {
-    example,
     col: columnOf(example, 'sample_type'),
     row: 0,
   })
@@ -49,7 +48,7 @@ test('activating the run number opens the whole run', async ({
 }) => {
   await openProposal(page, example)
 
-  await activateCell(page, { example, col: columnOf(example, 'run'), row: 0 })
+  await activateCell(page, { col: columnOf(example, 'run'), row: 0 })
 
   const panel = page.getByRole('complementary')
   await expect(panel.getByText(titleOf(example, 'sample_type'))).toBeVisible()
@@ -67,7 +66,7 @@ test.describe('errored cell', () => {
 
     // xgm_intensity failed for run 1, so its cell carries an error and no value.
     const errored = ERROR_CELLS[0]
-    await activateCell(page, { example, col: errored.col, row: ERROR_ROW })
+    await activateCell(page, { col: errored.col, row: ERROR_ROW })
 
     const panel = page.getByRole('complementary')
     await expect(selectedRunTab(page)).toBeVisible()
@@ -95,7 +94,6 @@ test.describe('grouped cell', () => {
     await openProposal(page, example)
 
     await activateCell(page, {
-      example,
       col: columnOf(example, 'sample.type'),
       row: 0,
     })
@@ -122,7 +120,6 @@ test('activating a cell highlights the row of the run it belongs to', async ({
 
   // The second row is run 2 in the XPCS example.
   await activateCell(page, {
-    example,
     col: columnOf(example, 'sample_type'),
     row: 1,
   })
@@ -142,7 +139,6 @@ test('the drilled-into variable stays in the aside when its column is hidden', a
   const sampleType = titleOf(example, 'sample_type')
 
   await activateCell(page, {
-    example,
     col: columnOf(example, 'sample_type'),
     row: 0,
   })
@@ -168,7 +164,6 @@ test('selecting a run after drilling in shows its variables again', async ({
 
   // Drill into one cell of the first run.
   await activateCell(page, {
-    example,
     col: columnOf(example, 'sample_type'),
     row: 0,
   })
@@ -178,7 +173,7 @@ test('selecting a run after drilling in shows its variables again', async ({
   )
 
   // Select another run outright.
-  await selectRun(page, { example, row: 1 })
+  await selectRun(page, { row: 1 })
 
   await expect(selectedRunTab(page)).toHaveText('Run 2')
   await expect(panel.getByText(titleOf(example, 'sample_type'))).toBeVisible()

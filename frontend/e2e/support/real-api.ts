@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 
 import type { Page } from '@playwright/test'
 
-import { columnTitles, type Grouping, openDashboard } from '#support/table'
+import { columnTitles, openDashboard } from '#support/table'
 
 const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url))
 const PROPOSALS_DIR = join(REPO_ROOT, 'api/tests/mock/proposals')
@@ -16,16 +16,6 @@ export const MOCK_PROPOSAL = join(PROPOSALS_DIR, 'all-value-types')
 // Copies of the builder's PROPOSAL and this case's RUNS.
 export const PROPOSAL = 999001
 export const RUNS = [1, 2, 3, 5]
-
-// Its context file makes two Stage groups, so the grid draws a group row.
-export const ALL_VALUE_TYPES: Grouping = {
-  meta: {
-    groups: {
-      sample_x: { name: 'sample_x', title: 'Sample X' },
-      sample_y: { name: 'sample_y', title: 'Sample Y' },
-    },
-  },
-}
 
 export async function openMockProposal(page: Page) {
   await openDashboard(page, () => page.goto(`proposal/${PROPOSAL}`))

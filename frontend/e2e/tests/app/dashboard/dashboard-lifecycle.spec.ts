@@ -33,14 +33,13 @@ test('clicking the logo tears down the dashboard state', async ({
   // coordinate-driven and assume uniform columns, so this must precede the hide.
   // Trains (numberVars[0]) is hidden below, so plot the next column instead.
   await openSummaryPlot(page, {
-    example,
     col: columnOf(example, numberVars[1]),
   })
   await expect(plotEntries(page)).toHaveCount(1)
   await showTable(page)
 
   // Select a run.
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
   // Hide the Trains column.
@@ -71,14 +70,13 @@ test('switching dashboard views keeps the run selection and sidebar', async ({
   await openProposal(page, example)
 
   // Select a run and confirm the sidebar shows its values.
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   const panel = page.getByRole('complementary')
   await expect(selectedRunTab(page)).toHaveText('Run 1')
   await expect(panel.getByText('silica')).toBeVisible()
 
   // Open a plot (which switches to its view), then switch back to the table.
   await openSummaryPlot(page, {
-    example,
     col: columnOf(example, numberVars[0]),
   })
   await expect(plotEntries(page)).toHaveCount(1)
