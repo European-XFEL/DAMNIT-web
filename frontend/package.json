@@ -17,6 +17,7 @@
     "e2e": "pnpm --filter @damnit-frontend/e2e run test",
     "e2e:site": "pnpm --filter @damnit-frontend/e2e run test:site",
     "e2e:demo": "pnpm --filter @damnit-frontend/e2e run test:demo",
+    "e2e:stack": "pnpm --filter @damnit-frontend/e2e run test:stack",
     "e2e:setup": "pnpm --filter @damnit-frontend/e2e run setup",
     "e2e:ui": "pnpm --filter @damnit-frontend/e2e run ui",
     "e2e:report": "pnpm --filter @damnit-frontend/e2e run report",
