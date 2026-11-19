@@ -247,7 +247,7 @@ async def real_damnit_db(mocker, tmp_path):
     proposal = "999999"
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
-    DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
+    DamnitDB.from_dir(proposal_root / DAMNIT_PATH, create=True).close()
 
     mocker.patch(
         "damnit_api.runs.sqlite.session.find_proposal",
@@ -470,7 +470,7 @@ async def two_proposal_db(mocker, tmp_path, request):
     guest = 888888
     proposal_root = tmp_path / "proposal"
     (proposal_root / DAMNIT_PATH).mkdir(parents=True)
-    DamnitDB.from_dir(proposal_root / DAMNIT_PATH).close()
+    DamnitDB.from_dir(proposal_root / DAMNIT_PATH, create=True).close()
 
     mocker.patch(
         "damnit_api.runs.sqlite.session.find_proposal",
