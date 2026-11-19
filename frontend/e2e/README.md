@@ -126,7 +126,10 @@ run's copy stays, for a look after a red run.
 
 ## Asserting on the table
 
-The run table renders on a `<canvas>` (`@glideapps/glide-data-grid`), so its
-cells are not in the DOM and cannot be queried by role or text. Assert on the
-surrounding DOM (header, dialogs, popovers) or wait on the table-data response,
-as `open-proposal.spec.ts` does.
+The run table draws on a `<canvas>` (`@glideapps/glide-data-grid`), and the
+grid also renders a hidden accessibility mirror, a `<table role="grid">` with
+one cell per value on screen. Read cells, headers and the row count through the
+helpers in `support/table.ts`, such as `cell`, `columnCells`, `columnTitles`
+and `expectRunRows`. The mirror holds only the rows and columns in view.
+Hovering, right-clicking and selecting need real mouse events on the canvas,
+which `hoverCell`, `rightClickCell` and `selectRun` send.
