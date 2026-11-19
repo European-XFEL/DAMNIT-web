@@ -118,7 +118,7 @@ test('the run beside a plot shows a value changed during an outage once live upd
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   const panel = page.getByRole('complementary', { name: 'Run' })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
   await expect(panel.getByText(titleOf(example, 'n_trains'))).toBeVisible()
@@ -128,7 +128,6 @@ test('the run beside a plot shows a value changed during an outage once live upd
   // A plot of another variable takes the table's place, and the run stays
   // beside it on a wide screen.
   await openSummaryPlot(page, {
-    example,
     col: columnOf(example, numberVars[1]),
   })
   await expect(plotEntries(page)).toHaveCount(1)
@@ -201,7 +200,7 @@ test.describe('a deferred image resolves after its run finished', () => {
     // shows no preview. Wait past the 200ms tooltip open delay, then the portal
     // stays empty (assert the whole portal, not just an <img>).
     await expect(imageCell).toBeEmpty()
-    await hoverCell(page, { example, ...IMAGE_CELL, waitForContent: false })
+    await hoverCell(page, { ...IMAGE_CELL, waitForContent: false })
     await page.waitForTimeout(400)
     await expect(card.locator(':scope > *')).toHaveCount(0)
     await moveAway(page)
@@ -213,7 +212,7 @@ test.describe('a deferred image resolves after its run finished', () => {
       runs: { 1: { [IMAGE_VARIABLE]: { dtype: 'image', value: IMAGE_VALUE } } },
     })
     await waitForCellLoaded(page, IMAGE_CELL)
-    await hoverCell(page, { example, ...IMAGE_CELL })
+    await hoverCell(page, IMAGE_CELL)
     await expect(preview).toBeVisible()
   })
 })

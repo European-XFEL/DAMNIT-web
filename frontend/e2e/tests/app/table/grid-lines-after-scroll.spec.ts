@@ -22,7 +22,6 @@ import {
   columnOf,
   columnTitles,
   expectLeadingColumns,
-  hasGroups,
   openProposal,
 } from '#support/table'
 
@@ -69,11 +68,8 @@ async function redrawInFull(page: Page) {
 }
 
 // The line on the left of `col`, on the second row of an unscrolled grid.
-function leftLinePoint(
-  box: Box,
-  { col, grouped }: { col: number; grouped: boolean }
-): Point {
-  const cell = cellPoint(box, { col, row: 1, grouped })
+function leftLinePoint(box: Box, { col }: { col: number }): Point {
+  const cell = cellPoint(box, { col, row: 1 })
   return { x: cell.x - COLUMN_WIDTH / 2, y: cell.y }
 }
 
@@ -92,10 +88,7 @@ test('the pinned edge stays drawn while the grid scrolls horizontally', async ({
   await scrollHorizontally(page)
 
   // Run is the one pinned column, so the edge is on the left of column 2.
-  const pinnedEdge = leftLinePoint(box, {
-    col: 2,
-    grouped: hasGroups(example),
-  })
+  const pinnedEdge = leftLinePoint(box, { col: 2 })
   await expectEdgeAt(gridCanvas(page), pinnedEdge)
 
   const inGroupBand = { ...pinnedEdge, y: groupHeaderPoint(box, 2).y }
@@ -111,10 +104,7 @@ test('a group edge stays on its column when a scrolled grid redraws', async ({
   await scrollHorizontally(page)
   await redrawInFull(page)
 
-  const groupStart = leftLinePoint(box, {
-    col: SAMPLE_COLUMN,
-    grouped: hasGroups(example),
-  })
+  const groupStart = leftLinePoint(box, { col: SAMPLE_COLUMN })
   const groupEdge = { ...groupStart, x: groupStart.x - SCROLL }
   await expectEdgeAt(gridCanvas(page), groupEdge)
 })
