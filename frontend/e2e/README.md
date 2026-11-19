@@ -120,9 +120,9 @@ uv sync --all-packages --group damnit-backend
 ```
 
 The API serves a copy of `api/tests/mock/proposals/all-value-types/`, as
-`damnit-e2e-stack/` in the system's temp folder. Its server replaces the copy
-each time it starts, so the suite never writes to the one in git. The last
-run's copy stays, for a look after a red run.
+`damnit-e2e-stack-<user>/` in the system's temp folder. Its server replaces
+the copy each time it starts, so the suite never writes to the one in git. The
+last run's copy stays, for a look after a red run.
 
 ## Asserting on the table
 
