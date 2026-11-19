@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures/production'
 import { columnCells, columnTitles, expectRunRows } from '#support/table'
-import { columnOfTitle, openMockProposal, RUNS } from '#support/stack'
+import { columnOfTitle, openMockProposal, RUNS } from '#support/real-api'
 
 async function cellsOfTitle(page: Page, title: string) {
   return columnCells(page, await columnOfTitle(page, title))

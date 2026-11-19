@@ -38,5 +38,5 @@ export async function columnOfTitle(page: Page, title: string) {
 // another user's copy out of reach of our `rm -rf`.
 export const DAMNIT_DIR = join(
   tmpdir(),
-  `damnit-e2e-stack-${userInfo().username}`
+  `damnit-e2e-real-api-${userInfo().username}`
 )

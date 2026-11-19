@@ -9,7 +9,7 @@ Playwright tests for the three frontend apps, in four suites:
   and `@damnit-frontend/demo` with nothing intercepted, so a change in the
   shared `packages/ui` that breaks either one fails a check. The demo answers
   from its own MSW mocks.
-- `stack` runs the production build of `@damnit-frontend/app` against the
+- `real-api` runs the production build of `@damnit-frontend/app` against the
   real API, which serves a mock proposal DAMNIT built. It has one spec per
   workflow, and the app suite keeps each workflow's cases.
 
@@ -22,7 +22,7 @@ pnpm e2e:setup   # once: install the Chromium browser
 pnpm e2e         # run the app suite
 pnpm e2e:site    # run the site suite
 pnpm e2e:demo    # run the demo suite
-pnpm e2e:stack   # run the stack suite (see below for its one-time setup)
+pnpm e2e:real-api  # run the real-API suite (see below for its one-time setup)
 pnpm e2e:ui      # run the app suite in Playwright's watch UI
 pnpm e2e:report  # open the last HTML report
 ```
@@ -39,7 +39,7 @@ demo on 6175 at `/demo/` as it is deployed.
 
 - `tests/<project>/` - specs for one suite, a Playwright **project**: `app` in
   `playwright.config.ts`, `site` in `playwright.site.config.ts`, `demo` in
-  `playwright.demo.config.ts` and `stack` in `playwright.stack.config.ts`.
+  `playwright.demo.config.ts` and `real-api` in `playwright.real-api.config.ts`.
   Settings all four share live in `playwright.base.ts`. Under the app
   project, specs live in **domain folders** grouped by the capability a user
   exercises, so a newcomer finds a test by asking "what can a user do here"
@@ -64,7 +64,7 @@ demo on 6175 at `/demo/` as it is deployed.
 
 - `fixtures/` - Playwright harness glue (`test.extend`). `index.ts` exports the
   extended `test` and `expect` and installs the auto-used `api` fixture.
-  `production.ts` does the same for the site, demo and stack suites, with the
+  `production.ts` does the same for the site, demo and real-API suites, with the
   error check described below instead of any mocks.
 - `mocks/` - the network layer, mirroring the app's API. `index.ts` is the
   route table the `api` fixture installs (auth, GraphQL, context file); it
@@ -105,7 +105,7 @@ To route or watch the demo's requests to other sites, use `context`, not
 `page`: the service worker sends them on itself, and only the context sees
 them.
 
-## The stack suite
+## The real-API suite
 
 The suite starts two servers:
 
@@ -120,7 +120,7 @@ uv sync --all-packages
 ```
 
 The API serves a copy of `api/tests/mock/proposals/all-value-types/`, as
-`damnit-e2e-stack-<user>/` in the system's temp folder. Its server replaces
+`damnit-e2e-real-api-<user>/` in the system's temp folder. Its server replaces
 the copy each time it starts, so the suite never writes to the one in git. The
 last run's copy stays, for a look after a red run.
 
