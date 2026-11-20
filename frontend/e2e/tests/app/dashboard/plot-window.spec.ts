@@ -2,7 +2,12 @@ import type { BrowserContext, Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
 import { numberVars, type Example } from '#examples/xpcs'
-import { dashboardHeader, dashboardNav, statusBar } from '#support/dashboard'
+import {
+  dashboardHeader,
+  dashboardNav,
+  showTable,
+  statusBar,
+} from '#support/dashboard'
 import { openSummaryPlot, plotFigure } from '#support/plots'
 import {
   columnOf,
@@ -31,7 +36,7 @@ async function openPlotPopup(
   return popup
 }
 
-test('the table menu opens a plot alone in a popup, which takes the next click on the same plot and leads back to the dashboard', async ({
+test('the table menu opens a plot alone in a popup, which takes the next click on the same plot and hands the plot back to the dashboard', async ({
   page,
   context,
   example,
@@ -57,9 +62,51 @@ test('the table menu opens a plot alone in a popup, which takes the next click o
   await expect(popup.locator('body')).toHaveAttribute('data-kept', 'yes')
   expect(context.pages()).toHaveLength(2)
 
-  // Open in dashboard
-  await popup.getByRole('link', { name: 'Open in dashboard' }).click()
-  await expect(popup).toHaveURL(dashboardUrl)
-  await expect(dashboardNav(popup)).toBeVisible()
-  await expect(plotFigure(popup)).toBeVisible()
+  // Open in dashboard, with the dashboard back on the table
+  await showTable(page)
+  await Promise.all([
+    popup.waitForEvent('close'),
+    popup.getByRole('link', { name: 'Open in dashboard' }).click(),
+  ])
+  await expect(page).toHaveURL(dashboardUrl)
+  await expect(plotFigure(page)).toBeVisible()
+  expect(context.pages()).toEqual([page])
+})
+
+test('with the dashboard closed, the popup opens the plot in a new dashboard tab and closes', async ({
+  page,
+  context,
+  example,
+}) => {
+  const popup = await openPlotPopup(page, { context, example })
+  await page.close()
+
+  const [dashboard] = await Promise.all([
+    context.waitForEvent('page'),
+    popup.waitForEvent('close'),
+    popup.getByRole('link', { name: 'Open in dashboard' }).click(),
+  ])
+  await expect(dashboard).toHaveURL(dashboardUrl)
+  await expect(dashboardNav(dashboard)).toBeVisible()
+  await expect(plotFigure(dashboard)).toBeVisible()
+  expect(context.pages()).toEqual([dashboard])
+})
+
+// The wait for an answer still counts as the click, so the tab is not blocked.
+test('with the opener on the proposals list, the popup waits for an answer, then opens the plot in a new dashboard tab and closes', async ({
+  page,
+  context,
+  example,
+}) => {
+  const popup = await openPlotPopup(page, { context, example })
+  await page.goto('home')
+
+  const [dashboard] = await Promise.all([
+    context.waitForEvent('page'),
+    popup.waitForEvent('close'),
+    popup.getByRole('link', { name: 'Open in dashboard' }).click(),
+  ])
+  await expect(dashboard).toHaveURL(dashboardUrl)
+  await expect(plotFigure(dashboard)).toBeVisible()
+  await expect(page).toHaveURL(/\/home$/)
 })
