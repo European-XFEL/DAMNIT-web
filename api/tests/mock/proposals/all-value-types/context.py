@@ -5,6 +5,7 @@ failure on run 2. `build_proposals.py` runs it on mock runs.
 """
 
 import numpy as np
+import xarray as xr
 from damnit_ctx import Group, Variable
 from extra_data import SourceNameError
 from matplotlib.figure import Figure
@@ -54,6 +55,16 @@ def trace(run, run_number: "meta#run_number"):
 def detector_image(run, run_number: "meta#run_number"):
     # Not square, so a test can tell rows from columns
     return noise(run_number, (16, 24))
+
+
+@Variable(title="Pulse energy [uJ]")
+def pulse_energy(run, run_number: "meta#run_number"):
+    train_ids = 1_000_000 + 1000 * run_number + np.arange(100)
+
+    # Its own seed, so its values differ from trace's and fit's
+    energy = 500 + 20 * noise(run_number + 100, 100)
+
+    return xr.DataArray(energy, dims="trainId", coords={"trainId": train_ids})
 
 
 # A small figure: DAMNIT stores a figure as uncompressed RGBA pixels
