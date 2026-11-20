@@ -5,9 +5,7 @@ const POPUP_SIZE = 'width=960,height=640'
 // Size features with no toolbar make the browser open a popup, not a tab, and a
 // window named by its address takes the next click on the same link.
 export function openPopup(event: MouseEvent<HTMLAnchorElement>) {
-  const modified =
-    event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
-  if (event.button !== 0 || modified) {
+  if (!isPlainClick(event)) {
     return
   }
 
@@ -27,4 +25,11 @@ export function openPopup(event: MouseEvent<HTMLAnchorElement>) {
   if (popup.location.href !== href) {
     popup.location.href = href
   }
+}
+
+export function isPlainClick(event: MouseEvent<HTMLAnchorElement>) {
+  const modified =
+    event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+
+  return event.button === 0 && !modified
 }
