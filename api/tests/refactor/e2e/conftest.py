@@ -2,7 +2,7 @@
 
 Tests defined here should only interact with the app via HTTP, never python calls.
 
-`tests/conftest.py` sets up the global resets and the app database.
+`tests/conftest.py` sets up the global resets, the MyMdC mock and the app database.
 Apart from those, this conftest is the only place allowed to touch the app, and only
 via:
 
@@ -57,23 +57,6 @@ def vcr_config():
 
 
 DATA_ROOT = MOCK_DIR / "data" / "gpfs" / "exfel" / "exp"
-MYMDC_CASSETTE = MOCK_DIR / "mymdc" / "mymdc.yaml"
-
-
-@pytest.fixture(autouse=True)
-def _force_mock_mymdc(monkeypatch):
-    """Always run against the cassette-backed MyMdC mock.
-
-    If `DW_API_MYMDC__*` is set `Settings()` will pick it up, select the real HTTP
-    client, and the app would try to talk to MyMdC over HTTP instead of the mock.
-    """
-    from damnit_api._mymdc.settings import MyMdCMockSettings
-    from damnit_api.shared.settings import settings
-
-    if not isinstance(settings.mymdc, MyMdCMockSettings):
-        monkeypatch.setattr(
-            settings, "mymdc", MyMdCMockSettings(cassette_file=MYMDC_CASSETTE)
-        )
 
 
 @pytest.fixture(autouse=True)
