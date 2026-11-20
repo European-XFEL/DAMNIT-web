@@ -40,12 +40,13 @@
   padding: 0;
 }
 
-/* 11 px in, so the toggle's icon lands on the Variables icon's x. */
+/* 11 px in puts the toggle's icon on the Variables icon's x; 10 px on the
+   right puts Open in new window where Open in dashboard sits. */
 .crumbRow {
   display: flex;
   flex: 1;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 0 16px 0 11px;
+  padding: 0 10px 0 11px;
 }
