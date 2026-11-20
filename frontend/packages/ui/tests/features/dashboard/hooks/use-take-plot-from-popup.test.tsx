@@ -1,6 +1,8 @@
+import { useLocation } from 'react-router'
 import { afterEach, expect, onTestFinished, test, vi } from 'vitest'
 
 import { setupStore } from '#src/app/store/store'
+import { usePageTitle } from '#src/features/dashboard/hooks/use-page-title'
 import { useTakePlotFromPopup } from '#src/features/dashboard/hooks/use-take-plot-from-popup'
 import { currentUrl, renderInDashboard } from '#tests/support/dashboard-router'
 
@@ -10,9 +12,16 @@ afterEach(() => {
 })
 
 function Listener() {
-  useTakePlotFromPopup()
+  const takenWhileHidden = useTakePlotFromPopup()
+  usePageTitle('p6996: Table', { marked: takenWhileHidden })
+  const { search } = useLocation()
 
-  return <p>The dashboard</p>
+  return (
+    <>
+      <p>The dashboard</p>
+      <p>Showing {search}</p>
+    </>
+  )
 }
 
 const PLOT = {
@@ -28,6 +37,11 @@ const PULSES_PLOT = {
 }
 
 const PULSES_PLOT_URL = '/proposal/6996/plots/summary?x=run&y=pulses'
+
+// A test cannot hide its own tab, so the tab says it is hidden.
+function stubVisibility(state: DocumentVisibilityState) {
+  return vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(state)
+}
 
 async function renderDashboard() {
   const answers: unknown[] = []
@@ -114,6 +128,7 @@ test("a popup's plot of this proposal is accepted, shown on the popup's go, and 
       { type: 'view-shown', id: 'p1' },
     ])
   )
+  expect(document.title).toBe('p6996: Table')
 })
 
 test('a plot the dashboard moves away from before it draws is never reported shown, so its popup stays open', async () => {
@@ -129,6 +144,38 @@ test('a plot the dashboard moves away from before it draws is never reported sho
     expect(answers).toEqual([{ type: 'view-shown', id: 'p2' }])
   )
   expect(currentUrl(router)).toBe(PLOT_URL)
+})
+
+test('a plot taken while the tab is hidden marks the title until the tab is on show', async () => {
+  const { router } = await renderDashboard()
+  const visibility = stubVisibility('hidden')
+
+  // A plot comes in while the tab is hidden
+  sendFromPopup('show-view', PLOT)
+
+  await vi.waitFor(() => expect(currentUrl(router)).toBe(PLOT_URL))
+  await vi.waitFor(() => expect(document.title).toBe('● p6996: Table'))
+
+  // The tab comes on show
+  visibility.mockReturnValue('visible')
+  document.dispatchEvent(new Event('visibilitychange'))
+
+  await vi.waitFor(() => expect(document.title).toBe('p6996: Table'))
+})
+
+test('a tab on show again before the mark is drawn drops it', async () => {
+  const { screen } = await renderDashboard()
+
+  // Hidden when the plot comes in, on show by the time the mark would draw.
+  stubVisibility('visible').mockReturnValueOnce('hidden')
+
+  sendFromPopup('show-view', PLOT)
+
+  // The plot on show means the render that set the mark has run.
+  await expect
+    .element(screen.getByText('Showing ?x=run&y=n_pulses'))
+    .toBeVisible()
+  await vi.waitFor(() => expect(document.title).toBe('p6996: Table'))
 })
 
 test.each([
