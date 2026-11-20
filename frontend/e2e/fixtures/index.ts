@@ -20,8 +20,8 @@ export const test = base.extend<Fixtures>({
   example: [XPCS, { option: true }],
   authenticated: [true, { option: true }],
   api: [
-    async ({ page, example, authenticated, baseURL }, use) => {
-      const api = await mockApi(page, example, {
+    async ({ context, example, authenticated, baseURL }, use) => {
+      const api = await mockApi(context, example, {
         authenticated,
         appOrigin: new URL(baseURL!).origin,
       })
