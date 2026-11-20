@@ -17,6 +17,7 @@ MOCK_DIR = Path(__file__).parent / "mock"
 PROPOSALS_DIR = MOCK_DIR / "proposals"
 ALL_VALUE_TYPES_DIR = PROPOSALS_DIR / "all-value-types"
 NO_RUNS_DIR = PROPOSALS_DIR / "no-runs"
+MYMDC_CASSETTE = MOCK_DIR / "mymdc" / "mymdc.yaml"
 
 
 @pytest.fixture(autouse=True)
@@ -56,6 +57,21 @@ def _reset_bootstrap_globals():
     _reset()
     yield
     _reset()
+
+
+@pytest.fixture(autouse=True)
+def _force_mock_mymdc(monkeypatch):
+    """Always run against the cassette-backed MyMdC mock.
+
+    `Settings()` reads `DW_API_MYMDC__*` from the environment, which selects the real
+    HTTP client.
+    """
+    from damnit_api._mymdc.settings import MyMdCMockSettings
+    from damnit_api.shared.settings import settings
+
+    monkeypatch.setattr(
+        settings, "mymdc", MyMdCMockSettings(cassette_file=MYMDC_CASSETTE)
+    )
 
 
 @pytest.fixture
