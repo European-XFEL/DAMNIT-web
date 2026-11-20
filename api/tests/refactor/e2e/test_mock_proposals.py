@@ -44,6 +44,14 @@ DETECTOR_IMAGE_QUERY = f"""
     }}
 """
 
+PULSE_ENERGY_QUERY = f"""
+    query {{
+      extracted_data(
+        database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "pulse_energy"
+      )
+    }}
+"""
+
 
 async def post_query(client, query):
     response = await client.post("/graphql", json={"query": query})
@@ -188,6 +196,16 @@ async def test_detector_image_extracted_data_is_16_rows_of_24(local_client):
     assert image["dims"] == ["y", "x"]
     assert len(image["data"]) == 16
     assert {len(row) for row in image["data"]} == {24}
+
+
+async def test_a_dataarray_keeps_its_dimension_and_train_ids_through_damnit(
+    local_client,
+):
+    data = await post_query(local_client, PULSE_ENERGY_QUERY)
+
+    array = data["extracted_data"]
+    assert array["dims"] == ["trainId"]
+    assert array["coords"]["trainId"] == list(range(1_001_000, 1_001_100))
 
 
 @pytest.mark.parametrize("damnit_dir", [NO_RUNS_DIR], ids=["no runs"])
