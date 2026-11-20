@@ -1,4 +1,4 @@
-import type { Page, WebSocketRoute } from '@playwright/test'
+import type { BrowserContext, WebSocketRoute } from '@playwright/test'
 
 import {
   SEED_TIMESTAMP_MS,
@@ -72,9 +72,10 @@ export function fullMetadata(
 // The backend owns that cursor filtering and tests it directly, so it is out of
 // scope here.
 export async function mockWebSocket(
-  page: Page,
+  context: BrowserContext,
   proposal: string
 ): Promise<LiveUpdatesMock> {
+  // The page that connected last gets every push.
   let socket: WebSocketRoute | undefined
   let activeId: string | undefined
   // Pushes made before the app has subscribed (the handshake can lag the grid
@@ -139,7 +140,7 @@ export async function mockWebSocket(
     )
   }
 
-  await page.routeWebSocket('**/graphql', (ws) => {
+  await context.routeWebSocket('**/graphql', (ws) => {
     connections += 1
     if (loginEnded) {
       ws.close({ code: 4401, reason: 'Unauthorized' })
