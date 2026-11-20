@@ -1,8 +1,10 @@
-"""Fixtures for the end-to-end API tests, in auth mode or local mode.
+"""Fixtures for the recorded end-to-end API tests.
 
 Tests defined here should only interact with the app via HTTP, never python calls.
 
-This conftest is the only place allowed to touch the app, and only via:
+`tests/conftest.py` sets up the global resets and the app database.
+Apart from those, this conftest is the only place allowed to touch the app, and only
+via:
 
 - the app factory (`damnit_api.main.create_app`), imported lazily inside a fixture
 - `mint_session_cookie`, which forges the signed session cookie OAuth callback would set
@@ -10,9 +12,8 @@ This conftest is the only place allowed to touch the app, and only via:
   (Starlette `SessionMiddleware` over `itsdangerous`)
   - The framework-swap branch must update this one helper and nothing else
 
-In auth mode, outbound HTTP is recorded and replayed with pytest-recording. Cassettes
-stored in `cassettes/<module>/<test>.yaml` next to this package. Local mode serves a
-DAMNIT folder and makes no outbound call.
+Outbound HTTP is recorded and replayed with pytest-recording. Cassettes stored in
+`cassettes/<module>/<test>.yaml` next to this package.
 
 Secrets should **never** be stored in the cassettes, if you modify the tests you should
 check this before committing files. In theory, the `vcr_config` filters strip auth
@@ -21,13 +22,14 @@ headers and OAuth client credentials at record time, but you should still check.
 
 import base64
 import json
-from pathlib import Path
 
 import httpx
 import pytest
 import pytest_asyncio
 from asgi_lifespan import LifespanManager
 from itsdangerous import TimestampSigner
+
+from ...conftest import MOCK_DIR
 
 SESSION_COOKIE = "session"
 
@@ -54,37 +56,7 @@ def vcr_config():
     }
 
 
-@pytest.fixture(autouse=True)
-def _reset_bootstrap_globals():
-    """Reset the clients/engines cached in module-level globals between tests.
-
-    !!! warning
-
-        Without the auth reset, only the first test's startup performs the OIDC
-        discovery fetch and later cassettes cannot replay standalone. Without the db
-        reset, later tests keep the first test's engine and ignore their own
-        `settings.db_path`.
-    """
-    import damnit_api._db
-    import damnit_api._mymdc
-    import damnit_api.auth
-
-    def _reset():
-        damnit_api.auth.__CLIENT = None
-        damnit_api._mymdc.CLIENT = None
-        damnit_api._db.__ENGINE = None
-        damnit_api._db.__SESSION_LOCAL = None
-
-    _reset()
-    yield
-    _reset()
-
-
-MOCK_DIR = Path(__file__).parents[2] / "mock"
 DATA_ROOT = MOCK_DIR / "data" / "gpfs" / "exfel" / "exp"
-PROPOSALS_DIR = MOCK_DIR / "proposals"
-ALL_VALUE_TYPES_DIR = PROPOSALS_DIR / "all-value-types"
-NO_RUNS_DIR = PROPOSALS_DIR / "no-runs"
 MYMDC_CASSETTE = MOCK_DIR / "mymdc" / "mymdc.yaml"
 
 
@@ -124,29 +96,6 @@ def _fixture_data_root(monkeypatch):
     monkeypatch.setattr(utils, "DATA_ROOT_DIR", str(DATA_ROOT.resolve()))
 
 
-@pytest.fixture
-def _fresh_app_db(tmp_path):
-    """Point the app at a fresh, empty application database.
-
-    Keeps e2e tests from writing proposal metadata into the repo's dev
-    `dw_api.sqlite`, and keeps them independent of its contents. Schema creation
-    mirrors `_db.bootstrap.init_db`, which is only runnable as a script.
-    """
-    from sqlalchemy import create_engine
-    from sqlmodel import SQLModel
-
-    from damnit_api.metadata import models  # noqa: F401 - registers the tables
-    from damnit_api.shared.settings import settings
-
-    db_path = tmp_path / "dw_api.sqlite"
-    SQLModel.metadata.create_all(create_engine(f"sqlite:///{db_path}"))
-
-    original = settings.db_path
-    settings.db_path = db_path
-    yield
-    settings.db_path = original
-
-
 @pytest_asyncio.fixture
 async def e2e_client(vcr, _fresh_app_db):
     """HTTPX client for the ASGI app.
@@ -155,34 +104,6 @@ async def e2e_client(vcr, _fresh_app_db):
     startup performs the OIDC discovery fetch.
     """
     from damnit_api.main import create_app
-
-    app = create_app()
-    async with LifespanManager(app) as manager:
-        transport = httpx.ASGITransport(app=manager.app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://testserver"
-        ) as client:
-            yield client
-
-
-@pytest.fixture
-def damnit_dir():
-    """The DAMNIT folder `local_client` serves; parametrize it to serve another."""
-    return ALL_VALUE_TYPES_DIR
-
-
-@pytest_asyncio.fixture
-async def local_client(monkeypatch, damnit_dir, _fresh_app_db):
-    """HTTPX client for the ASGI app in local mode, serving `damnit_dir`.
-
-    Local mode logs nobody in and makes no outbound call, so it needs no cassette.
-    """
-    from damnit_api.main import create_app
-    from damnit_api.shared.settings import settings
-
-    # Settings switch to local mode only when built, so set what the switch sets
-    monkeypatch.setattr(settings, "damnit_path", damnit_dir)
-    monkeypatch.setattr(settings, "auth", None)
 
     app = create_app()
     async with LifespanManager(app) as manager:

@@ -6,7 +6,7 @@ Each folder under `tests/mock/proposals/` is one mock proposal, built by
 
 import pytest
 
-from .conftest import NO_RUNS_DIR
+from ...conftest import NO_RUNS_DIR
 
 pytestmark = pytest.mark.asyncio
 
