@@ -6,7 +6,7 @@ import { ViewStatus } from '#src/components/statuses/view-status'
 import { useAppDispatch, useAppSelector } from '#src/app/store/hooks'
 import { hasValue, runKey } from '#src/data/table/table-data.transforms'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import type { PlotSource, PlotSpec } from '#src/types'
+import type { PlotSpec } from '#src/types'
 import { cellTooltip } from '#src/features/table/utils/cell-tooltip'
 import { summaryAxes } from '#src/features/table/utils/summary-axes'
 import { TableToolbar } from '#src/features/table/components/table-toolbar'
@@ -34,9 +34,10 @@ import {
 
 type TableProps = {
   onPlot: (plot: PlotSpec) => void
+  plotWindowLink?: (plot: PlotSpec) => string
 }
 
-function Table({ onPlot }: TableProps) {
+function Table({ onPlot, plotWindowLink }: TableProps) {
   const gridRef = useRef<RunGridRef>(null)
 
   const proposal = useAppSelector((state) => state.metadata.proposal.value)
@@ -88,14 +89,23 @@ function Table({ onPlot }: TableProps) {
   }
 
   // Every context menu is a single plot entry placed at the pointer, so the
-  // menus differ only in what that entry says and does.
+  // menus differ only in the plot that entry draws.
   const showPlotMenu = (
     position: Point,
-    item: { kind: PlotSource; subtitle: string; onClick: () => void }
+    { plot, subtitle }: { plot: PlotSpec; subtitle: string }
   ) => {
     setContextMenu({
       position,
-      contents: [{ key: 'plot', title: `Plot: ${item.kind}`, ...item }],
+      contents: [
+        {
+          key: 'plot',
+          kind: plot.source,
+          title: `Plot: ${plot.source}`,
+          subtitle,
+          onClick: () => onPlot(plot),
+          windowLink: plotWindowLink?.(plot),
+        },
+      ],
     })
   }
 
@@ -117,14 +127,8 @@ function Table({ onPlot }: TableProps) {
     const runNumbers = selectedRuns.map((selected) => String(selected.run))
 
     showPlotMenu(position, {
-      kind: 'preview',
+      plot: { source: 'preview', variables: [variable], runs: runNumbers },
       subtitle,
-      onClick: () =>
-        onPlot({
-          source: 'preview',
-          variables: [variable],
-          runs: runNumbers,
-        }),
     })
   }
   const handleHeaderContextMenu = ({
@@ -141,9 +145,8 @@ function Table({ onPlot }: TableProps) {
     const subtitle = `${y.title} vs. ${x.title}`
 
     showPlotMenu(position, {
-      kind: 'summary',
+      plot: { source: 'summary', variables: [x.id, y.id] },
       subtitle,
-      onClick: () => onPlot({ source: 'summary', variables: [x.id, y.id] }),
     })
   }
 
