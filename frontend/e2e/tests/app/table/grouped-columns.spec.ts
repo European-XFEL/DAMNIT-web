@@ -58,7 +58,7 @@ test('a plot from a grouped column keeps the group in its label', async ({
 }) => {
   await openProposal(page, example)
 
-  await openSummaryPlot(page, { example, col: columnOf(example, SAMPLE_X) })
+  await openSummaryPlot(page, { col: columnOf(example, SAMPLE_X) })
 
   // No group header sits over a plot, so the label carries the words the column
   // header drops. Two groups can share a leaf title.
@@ -78,7 +78,7 @@ test('clicking the blank group box selects nothing, pinned Run included', async 
   // A header menu only opens over one or two selected columns, so it opening at
   // all says the group click left the block, pinned Run and every other
   // ungrouped column, unselected.
-  await rightClickHeader(page, { example, col: TRAINS_COLUMN })
+  await rightClickHeader(page, { col: TRAINS_COLUMN })
   await expect(contextMenu(page).getByText('Plot: summary')).toBeVisible()
   await expect(selectedColumnHeaders(page)).toHaveText(['Trains'])
 })

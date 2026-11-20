@@ -67,7 +67,15 @@ export function columnIndex(order: string[], name: string): number {
   return index + 1
 }
 
-export type Box = { x: number; y: number; width: number; height: number }
+// `headerTop` is where the title row starts: below the group row when Glide
+// draws one.
+export type Box = {
+  x: number
+  y: number
+  width: number
+  height: number
+  headerTop: number
+}
 export type Cell = { col: number; row: number }
 export type Point = { x: number; y: number }
 
@@ -81,7 +89,22 @@ export async function gridBox(page: Page): Promise<Box> {
   if (!box) {
     throw new Error('grid canvas has no bounding box')
   }
-  return box
+
+  return { ...box, headerTop: await readHeaderTop(page) }
+}
+
+// Glide sizes its header canvas to the header rows it draws, plus a 1px border,
+// so the height says whether the group row is there.
+async function readHeaderTop(page: Page): Promise<number> {
+  const ungrouped = HEADER_HEIGHT + 1
+  const grouped = GROUP_HEADER_HEIGHT + ungrouped
+  let height: number | undefined
+  await expect(async () => {
+    height = (await headerCanvas(page).boundingBox())?.height
+    expect([ungrouped, grouped], 'the header canvas height').toContain(height)
+  }).toPass({ timeout: 5_000 })
+
+  return height === grouped ? GROUP_HEADER_HEIGHT : 0
 }
 
 // `col` is the a11y column index: row marker 0, Run 1, first variable 2.
@@ -96,28 +119,16 @@ export function columnCenter(box: Box, col: number): number {
   return x
 }
 
-// Everything below the group row starts this far down. Callers derive `grouped`
-// from the example under test rather than deciding it per call.
-function headerTop(grouped: boolean): number {
-  return grouped ? GROUP_HEADER_HEIGHT : 0
-}
-
 // The title of a column, below the group row if there is one.
-export function headerPoint(
-  box: Box,
-  { col, grouped = false }: { col: number; grouped?: boolean }
-) {
+export function headerPoint(box: Box, { col }: { col: number }) {
   return {
     x: columnCenter(box, col),
-    y: box.y + headerTop(grouped) + HEADER_HEIGHT / 2,
+    y: box.y + box.headerTop + HEADER_HEIGHT / 2,
   }
 }
 
 // The seam a resize gesture aims at: the right edge of `col` on the title row.
-export function headerEdgePoint(
-  box: Box,
-  options: { col: number; grouped?: boolean }
-) {
+export function headerEdgePoint(box: Box, options: { col: number }) {
   const point = headerPoint(box, options)
   return { ...point, x: point.x + COLUMN_WIDTH / 2 }
 }
@@ -161,30 +172,20 @@ export function groupHeaderPoint(box: Box, col: number) {
 }
 
 // Rows start below the header rows; `row` is 0-based.
-function rowCenter(box: Box, row: number, grouped: boolean): number {
+function rowCenter(box: Box, row: number): number {
   return (
-    box.y +
-    headerTop(grouped) +
-    HEADER_HEIGHT +
-    row * ROW_HEIGHT +
-    ROW_HEIGHT / 2
+    box.y + box.headerTop + HEADER_HEIGHT + row * ROW_HEIGHT + ROW_HEIGHT / 2
   )
 }
 
-export function cellPoint(
-  box: Box,
-  { col, row, grouped = false }: Cell & { grouped?: boolean }
-) {
-  return { x: columnCenter(box, col), y: rowCenter(box, row, grouped) }
+export function cellPoint(box: Box, { col, row }: Cell) {
+  return { x: columnCenter(box, col), y: rowCenter(box, row) }
 }
 
 // The row's marker, which Glide draws left of the first column. `columnCenter`
 // starts at the first data column, so the marker needs an x of its own.
-export function rowMarkerPoint(
-  box: Box,
-  { row, grouped = false }: { row: number; grouped?: boolean }
-) {
-  return { x: box.x + ROW_MARKER_WIDTH / 2, y: rowCenter(box, row, grouped) }
+export function rowMarkerPoint(box: Box, { row }: { row: number }) {
+  return { x: box.x + ROW_MARKER_WIDTH / 2, y: rowCenter(box, row) }
 }
 
 export type Axis = 'horizontal' | 'vertical'

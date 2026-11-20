@@ -41,7 +41,10 @@ COMPUTE_DELAY = 60  # s
 
 
 def main():
-    out = parse_args().out
+    args = parse_args()
+    if args.next_run:
+        extract_next_run(args.next_run)
+        return
 
     for case, runs in RUNS.items():
         with tempfile.TemporaryDirectory() as tmp:
@@ -53,7 +56,7 @@ def main():
                 extract_runs(damnit_dir, runs)
                 pin_times(damnit_dir, runs)
 
-            write_built_files(damnit_dir, out / case, runs)
+            write_built_files(damnit_dir, args.out / case, runs)
 
 
 def parse_args():
@@ -65,6 +68,15 @@ def parse_args():
         help=(
             "folder to write each case's built files into, such as a temporary"
             " one to compare a rebuild with the committed files"
+        ),
+    )
+    parser.add_argument(
+        "--next-run",
+        type=Path,
+        metavar="DAMNIT_DIR",
+        help=(
+            "extract a mock run after the last one in this built case, as DAMNIT"
+            " does when a run ends, instead of building every case"
         ),
     )
 
@@ -104,6 +116,13 @@ def extract_runs(damnit_dir, runs):
 
     # DAMNIT 0.4.0 writes fragments that only the combiner adds to runs.sqlite
     run_damnit(damnit_dir, "combiner", "now", ".")
+
+
+def extract_next_run(damnit_dir):
+    with DamnitDB.from_dir(damnit_dir) as db:
+        last_run = db.conn.execute("SELECT max(run) FROM runs").fetchone()[0]
+
+    extract_runs(damnit_dir, [last_run + 1])
 
 
 def pin_times(damnit_dir, runs):

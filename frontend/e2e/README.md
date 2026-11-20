@@ -113,16 +113,20 @@ The suite starts two servers:
 - the app's production build on 6176 at `/app/`, whose `vite preview` forwards
   the API's paths to the API.
 
-Before the first run, install the API from the repo root:
+Before the first run, install the API and DAMNIT from the repo root:
 
 ```
-uv sync --all-packages
+uv sync --all-packages --group damnit-backend
 ```
 
 The API serves a copy of `api/tests/mock/proposals/all-value-types/`, as
 `damnit-e2e-real-api-<user>/` in the system's temp folder. Its server replaces
 the copy each time it starts, so the suite never writes to the one in git. The
 last run's copy stays, for a look after a red run.
+
+`live-updates.spec.ts` has DAMNIT extract a new run into the copy, which
+changes every other spec's table. So the spec has the project
+`real-api-live-chromium` to itself, which runs after every other spec.
 
 ## Asserting on the table
 
