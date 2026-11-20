@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react'
 import { afterEach, expect, test, vi } from 'vitest'
 
-import { openPopup } from '#src/utils/popup'
+import { nameDashboardWindow, openPopup } from '#src/utils/popup'
 
 const PLOT_HREF =
   'http://localhost/proposal/6996/plots/summary?x=run&y=n_pulses&window'
@@ -91,4 +91,28 @@ test.each([
 
   expect(open).not.toHaveBeenCalled()
   expect(event.preventDefault).not.toHaveBeenCalled()
+})
+
+test.each([
+  {
+    name: 'an unnamed dashboard names its window, so a popup can raise it',
+    before: '',
+    after: /^dashboard:[a-z0-9]+$/,
+  },
+  {
+    name: 'a popup turned into the dashboard drops its popup name, so its own new window for the plot opens apart',
+    before: 'popup:/proposal/6996/plots/summary?x=run&y=n_pulses&window',
+    after: /^dashboard:[a-z0-9]+$/,
+  },
+  {
+    name: 'a dashboard keeps a window name another page gave it',
+    before: 'results',
+    after: /^results$/,
+  },
+])('$name', ({ before, after }) => {
+  vi.stubGlobal('window', { name: before })
+
+  nameDashboardWindow()
+
+  expect(window.name).toMatch(after)
 })
