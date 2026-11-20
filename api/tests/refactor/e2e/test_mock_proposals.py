@@ -129,6 +129,7 @@ async def test_each_type_of_value_arrives_with_its_dtype(local_client):
         "beam_on": "number",
         "amplitude": "string",
         "trace": "array1d",
+        "pulse_energy": "array1d",
         "detector_image": "image",
         "trace_plot": "image",
     }
@@ -168,7 +169,14 @@ async def test_tags_come_from_the_context_file(local_client):
         "Detector": ["detector_image"],
         "Run details": ["n_trains", "sample_name"],
         "Sample": ["sample_x.position", "sample_y.position"],
-        "(Untagged)": ["added_at", "proposal", "run", "start_time", "trace"],
+        "(Untagged)": [
+            "added_at",
+            "proposal",
+            "pulse_energy",
+            "run",
+            "start_time",
+            "trace",
+        ],
     }
 
 
