@@ -9,6 +9,7 @@ import { useOpenView } from '#src/features/dashboard/hooks/use-open-view'
 import { useReloadSelectedRun } from '#src/features/dashboard/hooks/use-reload-selected-run'
 
 import classes from './dashboard-body.module.css'
+import PendingBar from './pending-bar'
 
 type DashboardBodyProps = {
   main: ReactNode
@@ -32,7 +33,7 @@ function DashboardBody({ main, pending }: DashboardBodyProps) {
         className={classes.view}
         mod={{ covered: onTable && selectedRun != null }}
       >
-        {pending && <div className={classes.pending} />}
+        {pending && <PendingBar />}
         {main}
       </Box>
       <DashboardAside viewRef={viewRef} onTable={onTable} />
