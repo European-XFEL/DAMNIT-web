@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useResolvedPath } from 'react-router'
 
 import {
@@ -10,6 +10,7 @@ import {
 import { nameDashboardWindow } from '#src/utils/popup'
 
 // Through the router, so the nav's plot list and the table's state stay.
+// Returns whether a plot came in while the tab was hidden, until it is on show.
 export function useTakePlotFromPopup() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -19,6 +20,7 @@ export function useTakePlotFromPopup() {
     to: ViewAddress
     source: MessageEventSource | null
   }>(undefined)
+  const [takenWhileHidden, setTakenWhileHidden] = useState(false)
 
   useEffect(() => {
     nameDashboardWindow()
@@ -38,6 +40,9 @@ export function useTakePlotFromPopup() {
       // A second plot replaces the first, whose popup then stays open.
       taken.current = { id, to, source: event.source }
       void navigate(to)
+      if (document.visibilityState === 'hidden') {
+        setTakenWhileHidden(true)
+      }
     }
 
     window.addEventListener('message', onMessage)
@@ -60,4 +65,24 @@ export function useTakePlotFromPopup() {
     taken.current = undefined
     reportPlotShown(plot.source, plot.id)
   }, [location])
+
+  useEffect(() => {
+    if (!takenWhileHidden) {
+      return
+    }
+
+    const clearOnShow = () => {
+      if (document.visibilityState === 'visible') {
+        setTakenWhileHidden(false)
+      }
+    }
+
+    // The tab can come forward before this effect runs, when Chrome raises it.
+    clearOnShow()
+    document.addEventListener('visibilitychange', clearOnShow)
+
+    return () => document.removeEventListener('visibilitychange', clearOnShow)
+  }, [takenWhileHidden])
+
+  return takenWhileHidden
 }
