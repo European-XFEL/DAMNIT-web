@@ -26,8 +26,8 @@ export const GROUP_HEADER_HEIGHT = 24
 // expanded 280px nav, which the coordinate helpers and columnTitles need.
 export const WIDE_VIEWPORT = { width: 1840, height: 900 }
 
-// Headless Chromium hides scrollbars by default, leaving only overlay ones,
-// which take no layout space. Spread into the `test.use` of specs that need one.
+// Headless Chromium hides scrollbars by default, so they take no space at all.
+// Spread into the `test.use` of specs that need one.
 export const REAL_SCROLLBARS = {
   launchOptions: { ignoreDefaultArgs: ['--hide-scrollbars'] },
 }

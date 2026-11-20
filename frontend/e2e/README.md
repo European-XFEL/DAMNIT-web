@@ -1,11 +1,17 @@
 # Frontend e2e tests
 
-Playwright tests for the three frontend apps. The app suite drives
-`@damnit-frontend/app` against a fully mocked backend. No live API, database,
-or auth server is needed: the browser intercepts every request and answers it
-from local data. The site and demo suites run the production builds of
-`@damnit-frontend/site` and `@damnit-frontend/demo` with nothing intercepted,
-so a change in the shared `packages/ui` that breaks either one fails a check.
+Playwright tests for the three frontend apps, in four suites:
+
+- `app` drives `@damnit-frontend/app` against a fully mocked backend. No
+  live API, database, or auth server is needed: the browser intercepts every
+  request and answers it from local data.
+- `site` and `demo` run the production builds of `@damnit-frontend/site`
+  and `@damnit-frontend/demo` with nothing intercepted, so a change in the
+  shared `packages/ui` that breaks either one fails a check. The demo answers
+  from its own MSW mocks.
+- `real-api` runs the production build of `@damnit-frontend/app` against the
+  real API, which serves a mock proposal DAMNIT built. It has one spec per
+  workflow, and the app suite keeps each workflow's cases.
 
 ## Running
 
@@ -16,6 +22,7 @@ pnpm e2e:setup   # once: install the Chromium browser
 pnpm e2e         # run the app suite
 pnpm e2e:site    # run the site suite
 pnpm e2e:demo    # run the demo suite
+pnpm e2e:real-api  # run the real-API suite (see below for its one-time setup)
 pnpm e2e:ui      # run the app suite in Playwright's watch UI
 pnpm e2e:report  # open the last HTML report
 ```
@@ -30,13 +37,13 @@ demo on 6175 at `/demo/` as it is deployed.
 
 ## Layout
 
-- `tests/<project>/` - specs for one app, a Playwright **project**: `app` in
-  `playwright.config.ts`, `site` in `playwright.site.config.ts` and `demo` in
-  `playwright.demo.config.ts`. Settings all three share live in
-  `playwright.base.ts`. Under the app project, specs live in **domain
-  folders** grouped by the capability a user exercises, so a newcomer finds a
-  test by asking "what can a user do here" and reading the behavioral
-  filename:
+- `tests/<project>/` - specs for one suite, a Playwright **project**: `app` in
+  `playwright.config.ts`, `site` in `playwright.site.config.ts`, `demo` in
+  `playwright.demo.config.ts` and `real-api` in `playwright.real-api.config.ts`.
+  Settings all four share live in `playwright.base.ts`. Under the app
+  project, specs live in **domain folders** grouped by the capability a user
+  exercises, so a newcomer finds a test by asking "what can a user do here"
+  and reading the behavioral filename:
 
   ```
   tests/app/
@@ -57,8 +64,8 @@ demo on 6175 at `/demo/` as it is deployed.
 
 - `fixtures/` - Playwright harness glue (`test.extend`). `index.ts` exports the
   extended `test` and `expect` and installs the auto-used `api` fixture.
-  `production.ts` does the same for the site and demo suites, with the error
-  check described below instead of any mocks.
+  `production.ts` does the same for the site, demo and real-API suites, with the
+  error check described below instead of any mocks.
 - `mocks/` - the network layer, mirroring the app's API. `index.ts` is the
   route table the `api` fixture installs (auth, GraphQL, context file); it
   splits into `graphql.ts` / `auth.ts` / `contextfile.ts` as it grows.
@@ -98,9 +105,31 @@ To route or watch the demo's requests to other sites, use `context`, not
 `page`: the service worker sends them on itself, and only the context sees
 them.
 
+## The real-API suite
+
+The suite starts two servers:
+
+- the API in local mode, on 6177;
+- the app's production build on 6176 at `/app/`, whose `vite preview` forwards
+  the API's paths to the API.
+
+Before the first run, install the API from the repo root:
+
+```
+uv sync --all-packages
+```
+
+The API serves a copy of `api/tests/mock/proposals/all-value-types/`, as
+`damnit-e2e-real-api-<user>/` in the system's temp folder. Its server replaces
+the copy each time it starts, so the suite never writes to the one in git. The
+last run's copy stays, for a look after a red run.
+
 ## Asserting on the table
 
-The run table renders on a `<canvas>` (`@glideapps/glide-data-grid`), so its
-cells are not in the DOM and cannot be queried by role or text. Assert on the
-surrounding DOM (header, dialogs, popovers) or wait on the table-data response,
-as `open-proposal.spec.ts` does.
+The run table draws on a `<canvas>` (`@glideapps/glide-data-grid`), and the
+grid also renders a hidden accessibility mirror, a `<table role="grid">` with
+one cell per value on screen. Read cells, headers and the row count through the
+helpers in `support/table.ts`, such as `cell`, `columnCells`, `columnTitles`
+and `expectRunRows`. The mirror holds only the rows and columns in view.
+Hovering, right-clicking and selecting need real mouse events on the canvas,
+which `hoverCell`, `rightClickCell` and `selectRun` send.

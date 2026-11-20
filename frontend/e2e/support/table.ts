@@ -28,14 +28,23 @@ const RUN_COLUMN = 1
 // tracks Glide's version.
 const CELL_TESTID_PREFIX = 'glide-cell-'
 
+// The trailing separator keeps column 1 from matching column 10.
+function columnTestIdPrefix(col: number): string {
+  return `${CELL_TESTID_PREFIX}${col}-`
+}
+
 function cellTestId({ col, row }: { col: number; row: number }): string {
-  return `${CELL_TESTID_PREFIX}${col}-${row}`
+  return `${columnTestIdPrefix(col)}${row}`
 }
 
 // Every mirrored data cell, for asserting an empty grid. Shares cellTestId's
 // single owner so the testid format stays in one place.
 export function dataCells(page: Page): Locator {
   return page.locator(`[data-testid^="${CELL_TESTID_PREFIX}"]`)
+}
+
+export function columnCells(page: Page, col: number): Locator {
+  return page.locator(`[data-testid^="${columnTestIdPrefix(col)}"]`)
 }
 
 // A single mirrored cell by its a11y column/row index (row marker 0, Run 1).
