@@ -668,7 +668,7 @@ def _prepare_shot_table(page: Page) -> None:
     page.get_by_role("button", name="All shots").first.wait_for()
     compare = page.get_by_role("textbox", name="Compare with")
     compare.click()
-    option = page.get_by_role("option", name=re.compile("X-ray counts"))
+    option = page.get_by_role("option", name=re.compile(r"X-ray counts"))
     if option.count():
         option.first.click()
     else:
