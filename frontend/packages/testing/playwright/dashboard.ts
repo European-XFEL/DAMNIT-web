@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { gridCanvas } from '#support/grid'
+import { gridCanvas } from './grid'
 
 // The band across the top: the logo home, the nav toggle, the crumb row.
 export function dashboardHeader(page: Page): Locator {

@@ -1,14 +1,13 @@
-import { test, expect } from '#fixtures'
-import { WIDE_VIEWPORT } from '#support/grid'
+import { test, expect } from '#tests/integration/fixtures'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
 import {
-  columnOf,
   expectVisibleColumns,
   openPopover,
-  openProposal,
   rowCheckbox,
   selectedColumnHeaders,
-} from '#support/table'
-import { selectColumns } from '#support/plots'
+} from '@damnit-frontend/testing/playwright/table'
+import { columnOf, openProposal } from '#tests/integration/support/example'
+import { selectColumns } from '@damnit-frontend/testing/playwright/plots'
 
 test.use({ viewport: WIDE_VIEWPORT })
 

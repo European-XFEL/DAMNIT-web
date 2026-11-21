@@ -1,6 +1,10 @@
-import { test, expect } from '#fixtures'
-import { EMPTY } from '#examples/xpcs'
-import { dataCells, expectVisibleColumns, openProposal } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import { EMPTY } from '#tests/integration/examples/xpcs'
+import {
+  dataCells,
+  expectVisibleColumns,
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 test.use({ example: EMPTY })
 

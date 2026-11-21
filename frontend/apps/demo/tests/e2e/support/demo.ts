@@ -2,13 +2,13 @@ import { readFileSync } from 'node:fs'
 
 import type { Page } from '@playwright/test'
 
-import { openDashboard } from '#support/table'
+import { openDashboard } from '@damnit-frontend/testing/playwright/table'
 
 // The examples the demo's gallery lists, keyed by id. Read from the demo's own
 // public folder, so the specs follow whatever it ships.
 export const GALLERY = JSON.parse(
   readFileSync(
-    new URL('../../apps/demo/public/examples/index.json', import.meta.url),
+    new URL('../../../public/examples/index.json', import.meta.url),
     'utf-8'
   )
 ) as Record<string, { title: string; label: string; instrument: string }>

@@ -1,4 +1,4 @@
-import { test, expect } from '#fixtures/production'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
 
 test('the home page names DAMNIT and links "View proposals" to the app', async ({
   page,

@@ -1,20 +1,29 @@
-import { test, expect } from '#fixtures'
-import { XPCS, numberVars, xpcsWithProposals } from '#examples/xpcs'
-import { WIDE_VIEWPORT } from '#support/grid'
+import { test, expect } from '#tests/integration/fixtures'
+import {
+  XPCS,
+  numberVars,
+  xpcsWithProposals,
+} from '#tests/integration/examples/xpcs'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
 import {
   columnHeader,
-  columnOf,
   expectVisibleColumns,
   openDashboard,
   openPopover,
-  openProposal,
   rowCheckbox,
   selectRun,
   selectedRunTab,
-} from '#support/table'
-import { homeLink, showTable } from '#support/dashboard'
-import { openSummaryPlot, plotEntries } from '#support/plots'
-import { proposalLink } from '#support/proposals'
+} from '@damnit-frontend/testing/playwright/table'
+import { columnOf, openProposal } from '#tests/integration/support/example'
+import {
+  homeLink,
+  showTable,
+} from '@damnit-frontend/testing/playwright/dashboard'
+import {
+  openSummaryPlot,
+  plotEntries,
+} from '@damnit-frontend/testing/playwright/plots'
+import { proposalLink } from '#tests/integration/support/proposals'
 
 // The multi-semester example makes the home page issue one proposal query per
 // semester. A single-proposal user only issues one, which is enough to hide a

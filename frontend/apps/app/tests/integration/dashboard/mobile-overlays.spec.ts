@@ -1,20 +1,26 @@
-import { test, expect } from '#fixtures'
-import { contextFileNavItem, openContextFile } from '#support/context-file'
+import { test, expect } from '#tests/integration/fixtures'
+import {
+  contextFileNavItem,
+  openContextFile,
+} from '@damnit-frontend/testing/playwright/context-file'
 import {
   allRunsNavItem,
   breadcrumb,
   dashboardNav,
   navBurger,
-} from '#support/dashboard'
-import { gridCanvas } from '#support/grid'
-import { plotVariable, selectCells } from '#support/plots'
+} from '@damnit-frontend/testing/playwright/dashboard'
+import { gridCanvas } from '@damnit-frontend/testing/playwright/grid'
+import { selectCells } from '@damnit-frontend/testing/playwright/plots'
 import {
   asideCloseButton,
   closeAside,
-  openProposal,
   selectRun,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  openProposal,
+  plotVariable,
   titleOf,
-} from '#support/table'
+} from '#tests/integration/support/example'
 
 // Below `sm` the nav and the run aside cover the view instead of sitting beside
 // it. Playwright counts an element slid off screen as visible, so these catch it.

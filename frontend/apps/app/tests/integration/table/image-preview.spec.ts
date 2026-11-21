@@ -1,14 +1,14 @@
-import { test, expect } from '#fixtures'
-import { IMAGE_CELL } from '#examples/xpcs'
-import { WIDE_VIEWPORT } from '#support/grid'
+import { test, expect } from '#tests/integration/fixtures'
+import { IMAGE_CELL } from '#tests/integration/examples/xpcs'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
 import {
   hoverCell,
   moveAway,
-  openProposal,
   rightClickCell,
   tooltipCard,
   waitForCellLoaded,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 test.use({ viewport: WIDE_VIEWPORT })
 

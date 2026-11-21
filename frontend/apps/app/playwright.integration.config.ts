@@ -1,20 +1,19 @@
 import { defineConfig, devices } from '@playwright/test'
 
-import { baseConfig, isCI } from './playwright.base'
+import { baseConfig, isCI } from '@damnit-frontend/testing/playwright/base'
 
-// A dedicated port keeps the e2e server independent of any dev server a
-// developer may already run on 5173. Projects are named by surface, so a
-// browser variant (app-firefox) appends cleanly.
+// A dedicated port keeps this server apart from a dev server on 5173. Projects
+// are named by suite, so a browser variant such as integration-firefox fits.
 const PORT = 6173
 const APP_BASE_URL = `http://localhost:${PORT}/app/`
 
 export default defineConfig({
   ...baseConfig,
-  outputDir: 'test-results/app',
+  outputDir: 'test-results/integration',
   projects: [
     {
-      name: 'app-chromium',
-      testDir: 'tests/app',
+      name: 'integration-chromium',
+      testDir: 'tests/integration',
       use: { ...devices['Desktop Chrome'], baseURL: APP_BASE_URL },
     },
   ],

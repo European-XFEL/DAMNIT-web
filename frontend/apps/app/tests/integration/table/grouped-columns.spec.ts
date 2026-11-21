@@ -1,24 +1,29 @@
-import { test, expect } from '#fixtures'
-import { xpcsWithGroups } from '#examples/xpcs'
-import { WIDE_VIEWPORT } from '#support/grid'
-import { openSummaryPlot, plotEntry } from '#support/plots'
+import { test, expect } from '#tests/integration/fixtures'
+import { xpcsWithGroups } from '#tests/integration/examples/xpcs'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
+import {
+  openSummaryPlot,
+  plotEntry,
+} from '@damnit-frontend/testing/playwright/plots'
 import {
   clickGroupHeader,
   columnHandle,
-  columnOf,
   columnTitles,
   contextMenu,
   expectVisibleColumns,
   groupAction,
   openPopover,
-  openProposal,
   rightClickHeader,
   rowCheckbox,
   searchMarks,
   selectedColumnHeaders,
   tabToMatch,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOf,
+  openProposal,
   titleOf,
-} from '#support/table'
+} from '#tests/integration/support/example'
 
 // A column under each header box: Trains under the blank one, Type under
 // Sample's.

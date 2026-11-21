@@ -10,7 +10,10 @@ import {
   type MockDataSource,
   type RunData,
 } from '@damnit-frontend/shared/mocks'
-import { accessibleProposals, type Example } from '#examples/xpcs'
+import {
+  accessibleProposals,
+  type Example,
+} from '#tests/integration/examples/xpcs'
 
 import {
   mockWebSocket,

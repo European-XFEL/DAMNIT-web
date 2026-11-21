@@ -1,13 +1,13 @@
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 import {
   columnHeader,
   expectVisibleColumns,
   openPopover,
-  openProposal,
   popoverAction,
   rowCheckbox,
   searchMarks,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 test('hiding a variable removes its column from the table', async ({
   page,

@@ -1,21 +1,26 @@
 import type { BrowserContext, Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { numberVars, type Example } from '#examples/xpcs'
+import { test, expect } from '#tests/integration/fixtures'
+import { numberVars, type Example } from '#tests/integration/examples/xpcs'
 import {
   dashboardHeader,
   dashboardNav,
   showTable,
   statusBar,
-} from '#support/dashboard'
-import { openSummaryPlot, plotFigure } from '#support/plots'
+} from '@damnit-frontend/testing/playwright/dashboard'
+import {
+  openSummaryPlot,
+  plotFigure,
+} from '@damnit-frontend/testing/playwright/plots'
+import {
+  contextMenu,
+  rightClickHeader,
+} from '@damnit-frontend/testing/playwright/table'
 import {
   columnOf,
-  contextMenu,
   openProposal,
-  rightClickHeader,
   titleOf,
-} from '#support/table'
+} from '#tests/integration/support/example'
 
 const y = numberVars[0]
 const windowUrl = new RegExp(`/plots/summary\\?x=run&y=${y}&window$`)

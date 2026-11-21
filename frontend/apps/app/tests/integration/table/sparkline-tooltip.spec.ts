@@ -1,17 +1,21 @@
-import { test, expect } from '#fixtures'
-import { IMAGE_CELL, SPARKLINE_CELL, xpcsWithSparkline } from '#examples/xpcs'
+import { test, expect } from '#tests/integration/fixtures'
+import {
+  IMAGE_CELL,
+  SPARKLINE_CELL,
+  xpcsWithSparkline,
+} from '#tests/integration/examples/xpcs'
 import {
   WIDE_VIEWPORT,
   cellPoint,
   gridBox,
   threeQuartersAcross,
-} from '#support/grid'
+} from '@damnit-frontend/testing/playwright/grid'
 import {
   hoverCell,
-  openProposal,
   tooltipCard,
   waitForCellLoaded,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 test.use({ example: xpcsWithSparkline, viewport: WIDE_VIEWPORT })
 

@@ -1,6 +1,10 @@
-import { test, expect } from '#fixtures/production'
-import { openPreviewPlot, plotEntry, plotFigure } from '#support/plots'
-import { columnOfTitle, openMockProposal } from '#support/real-api'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  openPreviewPlot,
+  plotEntry,
+  plotFigure,
+} from '@damnit-frontend/testing/playwright/plots'
+import { columnOfTitle, openMockProposal } from '#tests/e2e/support/real-api'
 
 test("a 2-D array's preview plot draws it as an image of its own shape", async ({
   page,

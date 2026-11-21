@@ -1,5 +1,5 @@
-import { test, expect } from '#fixtures'
-import { XPCS, xpcsWithProposals } from '#examples/xpcs'
+import { test, expect } from '#tests/integration/fixtures'
+import { XPCS, xpcsWithProposals } from '#tests/integration/examples/xpcs'
 import {
   semesterLabels,
   expandProposal,
@@ -7,9 +7,9 @@ import {
   proposalLink,
   proposalNumbers,
   proposalRow,
-} from '#support/proposals'
-import { breadcrumb } from '#support/dashboard'
-import { waitForTableData } from '#support/table'
+} from '#tests/integration/support/proposals'
+import { breadcrumb } from '@damnit-frontend/testing/playwright/dashboard'
+import { waitForTableData } from '@damnit-frontend/testing/playwright/table'
 
 test.use({ example: xpcsWithProposals })
 

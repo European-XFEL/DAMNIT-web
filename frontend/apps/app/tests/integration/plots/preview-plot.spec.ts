@@ -1,22 +1,22 @@
 import type { Page, Request } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { XPCS, type Example } from '#examples/xpcs'
-import { fullMetadata, type MockApi } from '#mocks'
-import { WIDE_VIEWPORT } from '#support/grid'
+import { test, expect } from '#tests/integration/fixtures'
+import { XPCS, type Example } from '#tests/integration/examples/xpcs'
+import { fullMetadata, type MockApi } from '#tests/integration/mocks'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
+import { operationNameOf } from '@damnit-frontend/testing/playwright/table'
 import {
   columnOf,
   openProposal,
-  operationNameOf,
   titleOf,
-} from '#support/table'
-import { statusBar } from '#support/dashboard'
+} from '#tests/integration/support/example'
+import { statusBar } from '@damnit-frontend/testing/playwright/dashboard'
 import {
   openPreviewPlot,
   plotFigure,
   plotEntry,
   selectCells,
-} from '#support/plots'
+} from '@damnit-frontend/testing/playwright/plots'
 
 // The mock computed run 1 at 22:13:20 UTC on 14 November 2023, more than a
 // week ago, so the bar shows its date.

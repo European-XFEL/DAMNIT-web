@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
+  "imports": {
+    "#tests/integration/mocks": "./tests/integration/mocks/index.ts",
+    "#tests/integration/examples/*": "./tests/integration/examples/*/index.ts",
+    "#tests/*": "./tests/*.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -42,12 +47,17 @@
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
+    "@damnit-frontend/shared": "workspace:*",
+    "@damnit-frontend/testing": "workspace:*",
+    "@playwright/test": "catalog:testing",
+    "@types/lodash-es": "catalog:types",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",
     "@types/react-plotly.js": "catalog:types",
     "@vitejs/plugin-react": "catalog:tooling",
     "eslint": "catalog:linting",
+    "globals": "catalog:linting",
     "postcss": "catalog:tooling",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling",

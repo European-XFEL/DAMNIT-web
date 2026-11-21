@@ -1,8 +1,8 @@
 import { type Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { openContextFile } from '#support/context-file'
-import { showTable } from '#support/dashboard'
+import { test, expect } from '#tests/integration/fixtures'
+import { openContextFile } from '@damnit-frontend/testing/playwright/context-file'
+import { showTable } from '@damnit-frontend/testing/playwright/dashboard'
 import {
   type Box,
   type Cell,
@@ -13,8 +13,9 @@ import {
   pixelColor,
   ROW_HEIGHT,
   WIDE_VIEWPORT,
-} from '#support/grid'
-import { columnOf, openProposal, selectedRunTab } from '#support/table'
+} from '@damnit-frontend/testing/playwright/grid'
+import { selectedRunTab } from '@damnit-frontend/testing/playwright/table'
+import { columnOf, openProposal } from '#tests/integration/support/example'
 
 test.use({ viewport: WIDE_VIEWPORT })
 

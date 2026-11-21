@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { dashboardNav } from '#support/dashboard'
+import { dashboardNav } from './dashboard'
 
 // Monaco renders each visible source line into a `.view-line` node. It
 // virtualizes, so only lines in the viewport exist in the DOM; match on a line

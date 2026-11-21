@@ -1,26 +1,37 @@
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 import {
   ERROR_CELLS,
   ERROR_ROW,
   SAMPLE_GROUP,
   xpcsWithErrors,
   xpcsWithGroups,
-} from '#examples/xpcs'
-import { cellPoint, gridBox, gridCanvas, headerPoint } from '#support/grid'
-import { clickWithModifier, selectCells, selectColumns } from '#support/plots'
+} from '#tests/integration/examples/xpcs'
+import {
+  cellPoint,
+  gridBox,
+  gridCanvas,
+  headerPoint,
+} from '@damnit-frontend/testing/playwright/grid'
+import {
+  clickWithModifier,
+  selectCells,
+  selectColumns,
+} from '@damnit-frontend/testing/playwright/plots'
 import {
   activateCell,
   closeAside,
-  columnOf,
   openPopover,
-  openProposal,
   highlightedRow,
   rowCheckbox,
   selectRun,
   selectedColumnHeaders,
   selectedRunTab,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOf,
+  openProposal,
   titleOf,
-} from '#support/table'
+} from '#tests/integration/support/example'
 
 test('selecting a run shows all its variables', async ({ page, example }) => {
   await openProposal(page, example)

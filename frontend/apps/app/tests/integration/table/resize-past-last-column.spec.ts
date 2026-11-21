@@ -1,7 +1,7 @@
 // Guards our glide-data-grid fix for a resize past the last column
 // (patches/README.md). Drop the fix only once this passes without it.
 
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 import {
   COLUMN_WIDTH,
   REAL_SCROLLBARS,
@@ -12,17 +12,19 @@ import {
   gridScroller,
   threeQuartersAcross,
   waitOutDoubleClick,
-} from '#support/grid'
-import { selectColumns } from '#support/plots'
+} from '@damnit-frontend/testing/playwright/grid'
+import { selectColumns } from '@damnit-frontend/testing/playwright/plots'
 import {
   clickAndExpectColumn,
-  columnOf,
   headerEdge,
+  selectedColumnHeaders,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOf,
   lastVariableOf,
   openProposal,
-  selectedColumnHeaders,
   titleOf,
-} from '#support/table'
+} from '#tests/integration/support/example'
 
 // Every gesture here aims at the dead strip beside the last column, which is
 // only there when scrollbars take layout space.

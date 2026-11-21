@@ -1,6 +1,9 @@
-import { test, expect } from '#fixtures/production'
-import { selectedRunTab, selectRun } from '#support/table'
-import { openMockProposal, RUNS } from '#support/real-api'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  selectedRunTab,
+  selectRun,
+} from '@damnit-frontend/testing/playwright/table'
+import { openMockProposal, RUNS } from '#tests/e2e/support/real-api'
 
 test('selecting a run shows its values in the run panel', async ({ page }) => {
   await openMockProposal(page)

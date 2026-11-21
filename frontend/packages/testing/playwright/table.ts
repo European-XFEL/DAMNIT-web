@@ -1,10 +1,8 @@
 import { expect, type Locator, type Page, type Request } from '@playwright/test'
 
-import { accessibleProposals, type Example } from '#examples/xpcs'
 import {
   type Cell,
   cellPoint,
-  columnIndex,
   gridBox,
   gridCanvas,
   groupHeaderPoint,
@@ -12,7 +10,7 @@ import {
   headerPoint,
   type Point,
   rowMarkerPoint,
-} from '#support/grid'
+} from './grid'
 
 // The grid is a <canvas>. Glide Data Grid mirrors the visible columns into a
 // <table role="grid"> as canvas fallback content, which the browser never
@@ -97,37 +95,6 @@ export async function openDashboard(
   await navigate()
   await expect(gridCanvas(page)).toBeVisible()
   await tableData
-}
-
-export async function openProposal(page: Page, example: Example) {
-  // openProposal navigates to proposalMetadata[0], so the example's own user
-  // must be able to access it or the dashboard silently shows the not-found
-  // page. Fail loudly here, scoped to the specs that actually open one.
-  const proposal = example.proposalMetadata[0].number
-  if (!accessibleProposals(example).includes(proposal)) {
-    throw new Error(
-      `proposalMetadata[0] (${proposal}) is not accessible to this example's ` +
-        `user; update its userInfo or proposalMetadata so openProposal lands ` +
-        `on an accessible proposal`
-    )
-  }
-
-  await openDashboard(page, () => page.goto(`proposal/${proposal}`))
-}
-
-export function columnOf(example: Example, name: string): number {
-  return columnIndex(Object.keys(example.meta.variables), name)
-}
-
-// The display title the table header and plot entries render for a variable.
-export function titleOf(example: Example, name: string): string {
-  return example.meta.variables[name].title
-}
-
-// The example's trailing variable, which the table draws as its last column.
-export function lastVariableOf(example: Example): string {
-  const names = Object.keys(example.meta.variables)
-  return names[names.length - 1]
 }
 
 // aria-colcount is the live data-column count, excluding the row-marker column.

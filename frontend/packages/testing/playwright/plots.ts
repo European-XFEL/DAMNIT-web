@@ -1,14 +1,8 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
-import { type Example } from '#examples/xpcs'
-import { dashboardNav } from '#support/dashboard'
-import { type Cell, cellPoint, gridBox, headerPoint } from '#support/grid'
-import {
-  contextMenu,
-  rightClickCell,
-  rightClickHeader,
-  titleOf,
-} from '#support/table'
+import { dashboardNav } from './dashboard'
+import { type Cell, cellPoint, gridBox, headerPoint } from './grid'
+import { contextMenu, rightClickCell, rightClickHeader } from './table'
 
 // Glide reads Cmd on macOS and Ctrl elsewhere; ControlOrMeta lets Playwright
 // send the modifier the current platform expects, so this works on every host.
@@ -41,7 +35,7 @@ export async function selectColumns(page: Page, { cols }: { cols: number[] }) {
 
 // The address moves to the plot once its code has arrived, and a click
 // elsewhere before then drops the plot, so wait for the move.
-async function waitForPlotView(page: Page) {
+export async function waitForPlotView(page: Page) {
   await expect(page).toHaveURL(/\/plots\/(summary|preview)\?/)
 }
 
@@ -96,21 +90,6 @@ export async function chooseVariable(
 // Submit the dialog. Exact match keeps it off any other "Plot" in the dialog.
 export async function submitPlot(dialog: Locator) {
   await dialog.getByRole('button', { name: 'Plot', exact: true }).click()
-}
-
-// A plot of one variable against Run, for tests where an open plot is the
-// setup rather than the subject. The dialog's X axis already defaults to Run.
-export async function plotVariable(
-  page: Page,
-  { example, variable }: { example: Example; variable: string }
-) {
-  const dialog = await openPlotDialog(page)
-  await chooseVariable(dialog, {
-    label: 'Y axis',
-    title: titleOf(example, variable),
-  })
-  await submitPlot(dialog)
-  await waitForPlotView(page)
 }
 
 // One row per open plot, under the nav's Plots header.

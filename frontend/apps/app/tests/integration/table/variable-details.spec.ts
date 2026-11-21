@@ -1,12 +1,14 @@
-import { test, expect } from '#fixtures'
-import { UNTAGGED_VARIABLE, xpcsWithUntagged } from '#examples/xpcs'
+import { test, expect } from '#tests/integration/fixtures'
+import {
+  UNTAGGED_VARIABLE,
+  xpcsWithUntagged,
+} from '#tests/integration/examples/xpcs'
 import {
   columnDisclosure,
   openPopover,
-  openProposal,
   rowDetails,
-  titleOf,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal, titleOf } from '#tests/integration/support/example'
 
 // The details a row opens are its tags and nothing else, so this example gives
 // the popover one variable with none.

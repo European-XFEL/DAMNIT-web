@@ -3,8 +3,8 @@
 
 import { type Locator, type Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { xpcsWithGroups } from '#examples/xpcs'
+import { test, expect } from '#tests/integration/fixtures'
+import { xpcsWithGroups } from '#tests/integration/examples/xpcs'
 import {
   canScroll,
   cellPoint,
@@ -17,13 +17,12 @@ import {
   lineStrength,
   type Box,
   type Point,
-} from '#support/grid'
+} from '@damnit-frontend/testing/playwright/grid'
 import {
-  columnOf,
   columnTitles,
   expectLeadingColumns,
-  openProposal,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import { columnOf, openProposal } from '#tests/integration/support/example'
 
 // Glide scrolls in whole columns. One is enough for its visible positions to
 // part from the source columns, and it puts Pulses, not an edge, at the freeze.

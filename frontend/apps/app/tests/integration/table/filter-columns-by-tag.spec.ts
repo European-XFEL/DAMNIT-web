@@ -1,11 +1,11 @@
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 import {
   columnHeader,
   expectVisibleColumns,
   openPopover,
-  openProposal,
   rowCheckbox,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 test("selecting a tag shows only that tag's columns", async ({
   page,

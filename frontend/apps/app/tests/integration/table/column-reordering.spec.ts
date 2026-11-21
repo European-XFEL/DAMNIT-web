@@ -1,15 +1,15 @@
-import { test, expect } from '#fixtures'
-import { xpcsWithGroups } from '#examples/xpcs'
-import { WIDE_VIEWPORT } from '#support/grid'
+import { test, expect } from '#tests/integration/fixtures'
+import { xpcsWithGroups } from '#tests/integration/examples/xpcs'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
 import {
   columnHandle,
   dragColumn,
   expectLeadingColumns,
   openPopover,
-  openProposal,
   searchCount,
   tabToMatch,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 test.use({ example: xpcsWithGroups, viewport: WIDE_VIEWPORT })
 

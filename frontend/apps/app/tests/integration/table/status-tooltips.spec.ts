@@ -1,7 +1,15 @@
-import { test, expect } from '#fixtures'
-import { ERROR_CELLS, ERROR_ROW, xpcsWithErrors } from '#examples/xpcs'
-import { WIDE_VIEWPORT } from '#support/grid'
-import { hoverCell, openProposal, tooltipCard } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import {
+  ERROR_CELLS,
+  ERROR_ROW,
+  xpcsWithErrors,
+} from '#tests/integration/examples/xpcs'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
+import {
+  hoverCell,
+  tooltipCard,
+} from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 // Run 1 fails in three ways (see the XPCS fixture for the dependency story), one
 // per status-card kind.

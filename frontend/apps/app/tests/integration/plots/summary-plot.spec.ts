@@ -1,11 +1,21 @@
 import { type Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { numberVars, XPCS } from '#examples/xpcs'
-import { fullMetadata } from '#mocks'
-import { gridCanvas, WIDE_VIEWPORT } from '#support/grid'
-import { columnOf, openProposal, titleOf } from '#support/table'
-import { showTable, statusBar } from '#support/dashboard'
+import { test, expect } from '#tests/integration/fixtures'
+import { numberVars, XPCS } from '#tests/integration/examples/xpcs'
+import { fullMetadata } from '#tests/integration/mocks'
+import {
+  gridCanvas,
+  WIDE_VIEWPORT,
+} from '@damnit-frontend/testing/playwright/grid'
+import {
+  columnOf,
+  openProposal,
+  titleOf,
+} from '#tests/integration/support/example'
+import {
+  showTable,
+  statusBar,
+} from '@damnit-frontend/testing/playwright/dashboard'
 import {
   closePlot,
   openSummaryPlot,
@@ -13,7 +23,7 @@ import {
   plotEntry,
   plotFigure,
   selectColumns,
-} from '#support/plots'
+} from '@damnit-frontend/testing/playwright/plots'
 
 // The mock computed run 13, the newest, at 22:25:20 UTC on 14 November 2023,
 // more than a week ago, so the bar shows its date.

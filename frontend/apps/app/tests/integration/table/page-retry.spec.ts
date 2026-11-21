@@ -1,9 +1,13 @@
 import type { Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { statusBar } from '#support/dashboard'
-import { gridCanvas } from '#support/grid'
-import { cell, columnOf, operationNameOf } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import { statusBar } from '@damnit-frontend/testing/playwright/dashboard'
+import { gridCanvas } from '@damnit-frontend/testing/playwright/grid'
+import {
+  cell,
+  operationNameOf,
+} from '@damnit-frontend/testing/playwright/table'
+import { columnOf } from '#tests/integration/support/example'
 
 // Registered after the fixture's routes, so Playwright's last-wins order sees
 // the page fetches first.

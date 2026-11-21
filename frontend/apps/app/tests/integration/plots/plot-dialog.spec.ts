@@ -1,16 +1,17 @@
 import { sortBy, uniq } from 'lodash-es'
 
 import { previewRunFields } from '@damnit-frontend/shared/mocks'
-import { test, expect } from '#fixtures'
-import { WIDE_VIEWPORT } from '#support/grid'
-import { openProposal, operationNameOf, titleOf } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
+import { operationNameOf } from '@damnit-frontend/testing/playwright/table'
+import { openProposal, titleOf } from '#tests/integration/support/example'
 import {
   chooseVariable,
   openPlotDialog,
   plotFigure,
   plotEntry,
   submitPlot,
-} from '#support/plots'
+} from '@damnit-frontend/testing/playwright/plots'
 
 test.use({ viewport: WIDE_VIEWPORT })
 

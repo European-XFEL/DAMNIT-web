@@ -1,18 +1,18 @@
 import { defineConfig, devices } from '@playwright/test'
 
-import { baseConfig } from './playwright.base'
-import { WIDE_VIEWPORT } from './support/grid'
+import { baseConfig } from '@damnit-frontend/testing/playwright/base'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
 
 const PORT = 6175
 const DEMO_BASE_URL = `http://localhost:${PORT}/demo/`
 
 export default defineConfig({
   ...baseConfig,
-  outputDir: 'test-results/demo',
+  outputDir: 'test-results',
   projects: [
     {
       name: 'demo-chromium',
-      testDir: 'tests/demo',
+      testDir: 'tests/e2e',
       use: {
         ...devices['Desktop Chrome'],
         baseURL: DEMO_BASE_URL,

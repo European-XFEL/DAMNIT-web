@@ -1,17 +1,17 @@
 import { defineConfig, devices } from '@playwright/test'
 
-import { baseConfig } from './playwright.base'
+import { baseConfig } from '@damnit-frontend/testing/playwright/base'
 
 const PORT = 6174
 const SITE_BASE_URL = `http://localhost:${PORT}/`
 
 export default defineConfig({
   ...baseConfig,
-  outputDir: 'test-results/site',
+  outputDir: 'test-results',
   projects: [
     {
       name: 'site-chromium',
-      testDir: 'tests/site',
+      testDir: 'tests/e2e',
       use: { ...devices['Desktop Chrome'], baseURL: SITE_BASE_URL },
     },
   ],

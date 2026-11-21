@@ -1,6 +1,6 @@
-import { test, expect } from '#fixtures'
-import { XPCS } from '#examples/xpcs'
-import { openUserMenu } from '#support/auth'
+import { test, expect } from '#tests/integration/fixtures'
+import { XPCS } from '#tests/integration/examples/xpcs'
+import { openUserMenu } from '#tests/integration/support/auth'
 
 const USER_NAME = XPCS.userInfo.name
 

@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { test, expect } from '#fixtures/production'
-import { editorLine, openContextFile } from '#support/context-file'
-import { DAMNIT_DIR, openMockProposal } from '#support/real-api'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  editorLine,
+  openContextFile,
+} from '@damnit-frontend/testing/playwright/context-file'
+import { DAMNIT_DIR, openMockProposal } from '#tests/e2e/support/real-api'
 
 test("the context file view shows the proposal's context.py", async ({
   page,

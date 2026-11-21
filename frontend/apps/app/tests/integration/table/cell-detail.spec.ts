@@ -1,23 +1,25 @@
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 import {
   ERROR_CELLS,
   ERROR_ROW,
   SAMPLE_GROUP,
   xpcsWithErrors,
   xpcsWithGroups,
-} from '#examples/xpcs'
+} from '#tests/integration/examples/xpcs'
 import {
   activateCell,
-  columnOf,
   expectVisibleColumns,
   openPopover,
-  openProposal,
   rowCheckbox,
   highlightedRow,
   selectRun,
   selectedRunTab,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOf,
+  openProposal,
   titleOf,
-} from '#support/table'
+} from '#tests/integration/support/example'
 
 test('activating a single cell shows only that variable', async ({
   page,

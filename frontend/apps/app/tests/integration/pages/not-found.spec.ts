@@ -1,5 +1,5 @@
-import { test, expect } from '#fixtures'
-import { openHome } from '#support/proposals'
+import { test, expect } from '#tests/integration/fixtures'
+import { openHome } from '#tests/integration/support/proposals'
 
 test('an unknown URL shows the not-found page and returns home', async ({
   page,

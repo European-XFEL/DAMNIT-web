@@ -1,8 +1,8 @@
 import { test as base, expect } from '@playwright/test'
 import { uniq } from 'lodash-es'
 
-import { mockApi, type MockApi } from '#mocks'
-import { XPCS, type Example } from '#examples/xpcs'
+import { mockApi, type MockApi } from '#tests/integration/mocks'
+import { XPCS, type Example } from '#tests/integration/examples/xpcs'
 
 type Fixtures = {
   example: Example

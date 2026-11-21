@@ -1,10 +1,13 @@
-import { test, expect } from '#fixtures/production'
-import { XPCS } from '#examples/xpcs'
-import { editorLine, openContextFile } from '#support/context-file'
-import { statusBar } from '#support/dashboard'
-import { openExample } from '#support/demo'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  editorLine,
+  openContextFile,
+} from '@damnit-frontend/testing/playwright/context-file'
+import { statusBar } from '@damnit-frontend/testing/playwright/dashboard'
+import { openExample } from '#tests/e2e/support/demo'
+import { CONTEXT_FILE } from '#tests/e2e/support/example'
 
-const firstLine = XPCS.contextFile.split('\n')[0]
+const firstLine = CONTEXT_FILE.split('\n')[0]
 
 test('the context file shows the example code, and the status bar says the demo has no live updates', async ({
   page,

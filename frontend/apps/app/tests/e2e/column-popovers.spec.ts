@@ -1,11 +1,11 @@
-import { test, expect } from '#fixtures/production'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
 import {
   columnHeader,
   columnTitles,
   openPopover,
   rowCheckbox,
-} from '#support/table'
-import { openMockProposal } from '#support/real-api'
+} from '@damnit-frontend/testing/playwright/table'
+import { openMockProposal } from '#tests/e2e/support/real-api'
 
 test("selecting a tag shows only that tag's columns", async ({ page }) => {
   await openMockProposal(page)

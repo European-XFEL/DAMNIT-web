@@ -1,9 +1,16 @@
-import { test, expect } from '#fixtures'
-import { numberVars } from '#examples/xpcs'
-import { openContextFile } from '#support/context-file'
-import { allRunsNavItem, dashboardNav } from '#support/dashboard'
-import { closePlot, plotEntry, plotFigure } from '#support/plots'
-import { openProposal, titleOf } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import { numberVars } from '#tests/integration/examples/xpcs'
+import { openContextFile } from '@damnit-frontend/testing/playwright/context-file'
+import {
+  allRunsNavItem,
+  dashboardNav,
+} from '@damnit-frontend/testing/playwright/dashboard'
+import {
+  closePlot,
+  plotEntry,
+  plotFigure,
+} from '@damnit-frontend/testing/playwright/plots'
+import { openProposal, titleOf } from '#tests/integration/support/example'
 
 test('the context file stays open over a reload, and Back lands on All runs', async ({
   page,

@@ -1,5 +1,5 @@
-import { test, expect } from '#fixtures/production'
-import { GALLERY } from '#support/demo'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import { GALLERY } from '#tests/e2e/support/demo'
 
 test('the gallery links to every example the demo ships', async ({ page }) => {
   const examples = Object.entries(GALLERY)

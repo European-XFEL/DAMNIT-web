@@ -1,13 +1,13 @@
-import { test, expect } from '#fixtures'
-import { XPCS } from '#examples/xpcs'
+import { test, expect } from '#tests/integration/fixtures'
+import { XPCS } from '#tests/integration/examples/xpcs'
 import {
   contextFileNavItem,
   editorLine,
   openContextFile,
   scrollEditorToEnd,
-} from '#support/context-file'
-import { showTable } from '#support/dashboard'
-import { openProposal } from '#support/table'
+} from '@damnit-frontend/testing/playwright/context-file'
+import { showTable } from '@damnit-frontend/testing/playwright/dashboard'
+import { openProposal } from '#tests/integration/support/example'
 
 // Derive the first and last lines from the fixture so the assertions track the
 // example instead of hard-coding its contents.

@@ -1,8 +1,8 @@
-import { test, expect } from '#fixtures/production'
-import { XPCS } from '#examples/xpcs'
-import { breadcrumb } from '#support/dashboard'
-import { GALLERY, openExample } from '#support/demo'
-import { expectRunRows } from '#support/table'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import { breadcrumb } from '@damnit-frontend/testing/playwright/dashboard'
+import { GALLERY, openExample } from '#tests/e2e/support/demo'
+import { RUN_COUNT } from '#tests/e2e/support/example'
+import { expectRunRows } from '@damnit-frontend/testing/playwright/table'
 
 test('an example opens on its instrument and name and a table of all its runs', async ({
   page,
@@ -14,5 +14,5 @@ test('an example opens on its instrument and name and a table of all its runs', 
   await expect(identity).toContainText(instrument)
   await expect(identity).toContainText(label)
 
-  await expectRunRows(page, XPCS.meta.runs.length)
+  await expectRunRows(page, RUN_COUNT)
 })

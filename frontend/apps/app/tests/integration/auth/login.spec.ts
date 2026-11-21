@@ -1,4 +1,4 @@
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 
 test.use({ authenticated: false })
 

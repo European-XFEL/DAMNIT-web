@@ -1,11 +1,15 @@
 import type { Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { XPCS, xpcsWithProposals } from '#examples/xpcs'
-import { fullMetadata } from '#mocks'
-import { homeLink, statusBar } from '#support/dashboard'
-import { proposalLink } from '#support/proposals'
-import { openDashboard, openProposal } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import { XPCS, xpcsWithProposals } from '#tests/integration/examples/xpcs'
+import { fullMetadata } from '#tests/integration/mocks'
+import {
+  homeLink,
+  statusBar,
+} from '@damnit-frontend/testing/playwright/dashboard'
+import { proposalLink } from '#tests/integration/support/proposals'
+import { openDashboard } from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 // graphql-ws waits about 1, 2 and 4 s before the first three reconnects, so
 // once the mock has refused three the next wait runs 8 to 9 s.

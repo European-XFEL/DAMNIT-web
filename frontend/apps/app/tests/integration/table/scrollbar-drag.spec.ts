@@ -1,15 +1,15 @@
 // Guards our glide-data-grid fix for scrollbar presses (patches/README.md).
 // Drop the fix only once this passes without it.
 
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 import {
   REAL_SCROLLBARS,
   canScroll,
   dragBy,
   gridScroller,
   scrollbarThumb,
-} from '#support/grid'
-import { openProposal } from '#support/table'
+} from '@damnit-frontend/testing/playwright/grid'
+import { openProposal } from '#tests/integration/support/example'
 
 // Small enough that the example's columns overflow horizontally and its rows
 // overflow vertically, so the grid has both scrollbars and somewhere to scroll.

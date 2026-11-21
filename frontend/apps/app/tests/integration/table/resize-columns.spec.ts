@@ -1,7 +1,10 @@
 import { type Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures'
-import { WIDE_NUMBER, xpcsWithWideValues } from '#examples/xpcs'
+import { test, expect } from '#tests/integration/fixtures'
+import {
+  WIDE_NUMBER,
+  xpcsWithWideValues,
+} from '#tests/integration/examples/xpcs'
 import {
   COLUMN_WIDTH,
   WIDE_VIEWPORT,
@@ -10,16 +13,18 @@ import {
   gridBox,
   threeQuartersAcross,
   waitOutDoubleClick,
-} from '#support/grid'
-import { selectColumns } from '#support/plots'
+} from '@damnit-frontend/testing/playwright/grid'
+import { selectColumns } from '@damnit-frontend/testing/playwright/plots'
 import {
   clickAndExpectColumn,
-  columnOf,
   headerEdge,
-  openProposal,
   selectedColumnHeaders,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOf,
+  openProposal,
   titleOf,
-} from '#support/table'
+} from '#tests/integration/support/example'
 
 test.use({ viewport: WIDE_VIEWPORT })
 

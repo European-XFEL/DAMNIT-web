@@ -1,6 +1,13 @@
-import { test, expect } from '#fixtures/production'
-import { hoverCell, tooltipCard } from '#support/table'
-import { columnOfTitle, openMockProposal, RUNS } from '#support/real-api'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  hoverCell,
+  tooltipCard,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOfTitle,
+  openMockProposal,
+  RUNS,
+} from '#tests/e2e/support/real-api'
 
 // The app suite covers each kind of failure, and the API's tests each message.
 test("hovering run 2's failed Fit cell shows DAMNIT's error", async ({

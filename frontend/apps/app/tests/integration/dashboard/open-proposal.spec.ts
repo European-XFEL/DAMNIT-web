@@ -1,7 +1,8 @@
-import { test, expect } from '#fixtures'
-import { XPCS } from '#examples/xpcs'
-import { breadcrumb } from '#support/dashboard'
-import { openProposal, waitForTableData } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import { XPCS } from '#tests/integration/examples/xpcs'
+import { breadcrumb } from '@damnit-frontend/testing/playwright/dashboard'
+import { waitForTableData } from '@damnit-frontend/testing/playwright/table'
+import { openProposal } from '#tests/integration/support/example'
 
 const PROPOSAL = XPCS.proposalMetadata[0]
 

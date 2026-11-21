@@ -1,7 +1,7 @@
-import { test, expect } from '#fixtures'
-import { openContextFile } from '#support/context-file'
-import { statusBar } from '#support/dashboard'
-import { openProposal } from '#support/table'
+import { test, expect } from '#tests/integration/fixtures'
+import { openContextFile } from '@damnit-frontend/testing/playwright/context-file'
+import { statusBar } from '@damnit-frontend/testing/playwright/dashboard'
+import { openProposal } from '#tests/integration/support/example'
 
 // The mock's context file was last modified at 22:13:20 UTC on 14 November
 // 2023, more than a week ago, so the bar shows its date.

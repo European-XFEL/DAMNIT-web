@@ -1,8 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
-import { baseConfig } from './playwright.base'
-import { WIDE_VIEWPORT } from './support/grid'
-import { DAMNIT_DIR, MOCK_PROPOSAL } from './support/real-api'
+import { baseConfig } from '@damnit-frontend/testing/playwright/base'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
+
+import { DAMNIT_DIR, MOCK_PROPOSAL } from './tests/e2e/support/real-api'
 
 const APP_PORT = 6176
 const API_PORT = 6177
@@ -20,19 +21,19 @@ export default defineConfig({
   // More workers starve the one API and preview server, and the canvas specs
   // time out. Two is what a CI runner gets.
   workers: 2,
-  testDir: 'tests/real-api',
-  outputDir: 'test-results/real-api',
+  testDir: 'tests/e2e',
+  outputDir: 'test-results/e2e',
   projects: [
     {
-      name: 'real-api-chromium',
+      name: 'e2e-app-chromium',
       testIgnore: 'live-updates.spec.ts',
       use,
     },
     {
       // Last, so the run it adds changes no other spec's table.
-      name: 'real-api-live-chromium',
+      name: 'e2e-app-live-chromium',
       testMatch: 'live-updates.spec.ts',
-      dependencies: ['real-api-chromium'],
+      dependencies: ['e2e-app-chromium'],
       // One at a time, so two repeats never add the same next run.
       workers: 1,
       use,

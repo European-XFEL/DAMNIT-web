@@ -1,6 +1,14 @@
-import { test, expect } from '#fixtures/production'
-import { cell, expectRunRows, readRunRows } from '#support/table'
-import { addNextRun, columnOfTitle, openMockProposal } from '#support/real-api'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  cell,
+  expectRunRows,
+  readRunRows,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  addNextRun,
+  columnOfTitle,
+  openMockProposal,
+} from '#tests/e2e/support/real-api'
 
 test('a run DAMNIT extracts while the proposal is open appears with no reload', async ({
   page,

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { mapKeys, mapValues } from 'lodash-es'
 
 import { PREVIEW_DTYPES } from '@damnit-frontend/shared/constants'
-import { columnIndex } from '#support/grid'
+import { columnIndex } from '@damnit-frontend/testing/playwright/grid'
 import type {
   RunData,
   Runs,
@@ -44,10 +44,9 @@ type ExtractedData = {
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-// The base data (runs + context file) is the demo's canonical example, read
-// directly so the two can never drift. Only the e2e-authored auth and proposal
-// responses live alongside this file.
-const base = join(here, '../../../apps/demo/public/examples/xpcs')
+// The runs and context file are the demo's own example, read directly so the
+// two never drift. Only the auth and proposal responses are written here.
+const base = join(here, '../../../../../demo/public/examples/xpcs')
 
 function readJson<T>(dir: string, name: string): T {
   return JSON.parse(readFileSync(join(dir, name), 'utf-8')) as T

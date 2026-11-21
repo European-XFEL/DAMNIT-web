@@ -1,0 +1,23 @@
+{
+  "name": "@damnit-frontend/testing",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./playwright/*": "./playwright/*.ts"
+  },
+  "scripts": {
+    "lint:eslint": "eslint . --max-warnings 0",
+    "lint:prettier": "prettier --check --cache --ignore-path ../../.prettierignore .",
+    "lint:tsc": "tsc -b --noEmit"
+  },
+  "devDependencies": {
+    "@damnit-frontend/config": "workspace:*",
+    "@playwright/test": "catalog:testing",
+    "@types/node": "catalog:types",
+    "eslint": "catalog:linting",
+    "globals": "catalog:linting",
+    "prettier": "catalog:linting",
+    "typescript": "catalog:tooling"
+  }
+}

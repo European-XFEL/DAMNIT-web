@@ -1,8 +1,16 @@
 import type { Page } from '@playwright/test'
 
-import { test, expect } from '#fixtures/production'
-import { columnCells, columnTitles, expectRunRows } from '#support/table'
-import { columnOfTitle, openMockProposal, RUNS } from '#support/real-api'
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  columnCells,
+  columnTitles,
+  expectRunRows,
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOfTitle,
+  openMockProposal,
+  RUNS,
+} from '#tests/e2e/support/real-api'
 
 async function cellsOfTitle(page: Page, title: string) {
   return columnCells(page, await columnOfTitle(page, title))

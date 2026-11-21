@@ -1,4 +1,4 @@
-import { test, expect } from '#fixtures'
+import { test, expect } from '#tests/integration/fixtures'
 import {
   XPCS,
   IMAGE_CELL,
@@ -6,25 +6,30 @@ import {
   IMAGE_VALUE,
   numberVars,
   xpcsWithPendingImage,
-} from '#examples/xpcs'
-import { fullMetadata } from '#mocks'
-import { homeLink } from '#support/dashboard'
-import { WIDE_VIEWPORT } from '#support/grid'
-import { openSummaryPlot, plotEntries } from '#support/plots'
-import { proposalLink } from '#support/proposals'
+} from '#tests/integration/examples/xpcs'
+import { fullMetadata } from '#tests/integration/mocks'
+import { homeLink } from '@damnit-frontend/testing/playwright/dashboard'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
+import {
+  openSummaryPlot,
+  plotEntries,
+} from '@damnit-frontend/testing/playwright/plots'
+import { proposalLink } from '#tests/integration/support/proposals'
 import {
   cell,
-  columnOf,
   expectRunRows,
   hoverCell,
   moveAway,
-  openProposal,
   selectRun,
   selectedRunTab,
-  titleOf,
   tooltipCard,
   waitForCellLoaded,
-} from '#support/table'
+} from '@damnit-frontend/testing/playwright/table'
+import {
+  columnOf,
+  openProposal,
+  titleOf,
+} from '#tests/integration/support/example'
 
 // Every updated run sits in the initial vertical fold.
 test.use({ viewport: WIDE_VIEWPORT })
