@@ -275,6 +275,16 @@ def test_get_preview_data_dataarray(mocker):
     assert_coords(actual["coords"], data.coords)
 
 
+def test_get_preview_data_downsamples_a_large_bool_array_as_numbers(mocker):
+    data = np.arange(20_000) % 2 == 0
+
+    mock_damnit_class(mocker, data=data, type_hint=None)
+    actual = get_preview_data(proposal=1234, run=1, variable="some_mask")
+
+    assert actual["dtype"] == DamnitType.ARRAY_1D.value
+    assert len(actual["data"]) == 10_000
+
+
 def test_get_preview_data_image(mocker):
     name = "some_image"
     dtype = DamnitType.IMAGE  # a colour array is rendered to a PNG string

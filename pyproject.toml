@@ -18,6 +18,7 @@ dev = [
     "regex>=2026.9.29",
     "ruff>=0.7",
 ]
+damnit-backend = ["damnit[backend]~=0.4.0"]
 
 [tool.uv]
 default-groups = ["dev"]

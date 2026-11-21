@@ -8,4 +8,7 @@
 .wide {
   aspect-ratio: 16 / 9;
   max-height: 600px;
+  /* In the flex column around it, min-height: auto keeps the frame as tall as
+     the last drawing, so it would never shrink back. */
+  min-height: 0;
 }

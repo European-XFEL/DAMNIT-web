@@ -1,10 +1,10 @@
 from datetime import datetime
 
 import numpy as np
-from damnit.api import blob2complex
+from damnit.api import blob2complex, blob2numpy
 
 from ..shared.const import DamnitType
-from ..utils import b64image, blob2numpy
+from ..utils import b64image
 
 
 def to_javascript_string(value):

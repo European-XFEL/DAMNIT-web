@@ -5,6 +5,8 @@ import { formatRunSelection, parseRunSelection, plotRunIds } from './utils'
 
 const PLOT_SOURCES: PlotSource[] = ['summary', 'preview']
 
+export const WINDOW_FLAG = 'window'
+
 // A plot's kind and search, such as `summary?x=run&y=pulses&runs=1-20,25` or
 // `preview?variable=detector_image&runs=5`. Its parts go in one order, so the
 // same plot always gets the same address.
@@ -26,6 +28,12 @@ export function plotAddress({ source, variables, runs }: PlotSpec) {
   }
 
   return `${source}?${parts.join('&')}`
+}
+
+// The flag is written by hand, since `URLSearchParams` would add an empty
+// `window=`.
+export function plotWindowAddress(spec: PlotSpec) {
+  return `${plotAddress(spec)}&${WINDOW_FLAG}`
 }
 
 // Reads back what `plotAddress` writes, or names the part a link got wrong.
@@ -72,6 +80,20 @@ export function parsePlotAddress(
   }
 
   return { plot: { source, variables: [x, y], runs } }
+}
+
+export function withWindowFlag(search: string) {
+  return search ? `${search}&${WINDOW_FLAG}` : `?${WINDOW_FLAG}`
+}
+
+// The other parts stay as written, so the runs keep their readable commas.
+export function withoutWindowFlag(search: string) {
+  const parts = search
+    .replace(/^\?/, '')
+    .split('&')
+    .filter((part) => part !== '' && part.split('=')[0] !== WINDOW_FLAG)
+
+  return parts.length > 0 ? `?${parts.join('&')}` : ''
 }
 
 type FindLinkErrorOptions = {
