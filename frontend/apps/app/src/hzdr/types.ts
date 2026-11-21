@@ -474,6 +474,8 @@ export type HZDRSourceSummary = {
   key: string
   title: string
   damnit_path: string
+  /** The catalog's metadata.experiment_id (older APIs: absent). */
+  experiment_id?: string | null
   shot_count: number
   /** The highest shot number (older APIs: absent). */
   latest_shot_number?: number | null

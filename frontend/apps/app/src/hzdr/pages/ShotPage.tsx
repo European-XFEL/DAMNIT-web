@@ -640,7 +640,9 @@ export function HZDRShotPage() {
                 <Text size="sm" c="dimmed">
                   {dataSources.length
                     ? 'Shots by the sources their data came from.'
-                    : 'No shots yet.'}
+                    : shots.length
+                      ? 'No data source is known for these shots yet.'
+                      : 'No shots yet.'}
                 </Text>
                 <Code style={{ overflowWrap: 'anywhere' }}>
                   {source?.damnit_path ?? '-'}

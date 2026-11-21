@@ -29,11 +29,12 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 
 ## Found along the way
 
-- [ ] Review matches (`utils/review.ts`) still loads the full sources list
+- [x] Review matches (`utils/review.ts`) still loads the full sources list
   to pick the busiest campaign; it could open on the summaries and fetch
-  only the chosen campaign.
+  only the chosen campaign. Done: it reads the summaries (which gained
+  `experiment_id`) and no longer fetches every campaign's review to count.
 
-- [ ] The shot page's campaign strip says "No shots yet." whenever no shot
+- [x] The shot page's campaign strip says "No shots yet." whenever no shot
   names a data source (`summarizeShotDataSources`), even with shots in the
   table; it should say that no data source is known yet.
 

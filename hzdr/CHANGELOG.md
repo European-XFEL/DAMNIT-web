@@ -19,6 +19,14 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### Review matches: one summary request instead of a review per campaign
+- Review matches opens on the busiest campaign from the summary route (its
+  `waiting` counts as the page does, and it now carries `experiment_id` for
+  the campaign suggestions); it no longer loads every campaign's shots and
+  every campaign's review to count what waits.
+- The shot page says "No data source is known for these shots yet." when
+  shots exist but none names a source, instead of "No shots yet.".
+
 ### Shot detail: "Add as column" for a shot container's datasets
 - A dataset inside the shot's container (`<YYYYMMDD>_<NNNNNN>/...`, read
   through the campaign file's root link) is offered as a column, as

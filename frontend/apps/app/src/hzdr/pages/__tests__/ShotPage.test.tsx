@@ -262,6 +262,10 @@ describe('shot page quick filters and keyboard', () => {
     expect(
       screen.queryByRole('link', { name: 'Context builder' })
     ).not.toBeInTheDocument()
+    // Shots with no LabFrog record or event: shots, just no known source.
+    expect(
+      await screen.findByText('No data source is known for these shots yet.')
+    ).toBeInTheDocument()
   })
 
   it('filters by status and day chips, combined with the text filter', async () => {

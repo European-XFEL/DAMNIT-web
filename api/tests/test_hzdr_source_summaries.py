@@ -35,6 +35,7 @@ SOURCE = {
     "key": "new",
     "title": "HZDR canonical campaign (Target_Alignment_11.2026)",
     "damnit_path": "/data/new",
+    "metadata": {"experiment_id": "Target_Alignment_11.2026"},
     "shots": [
         _shot("2026-11-20T09:00:00Z", metadata={"status": "needs-review"}),
         _shot("2026-11-21T08:00:00+01:00", metadata={"status": "revision-needed"}),
@@ -56,6 +57,7 @@ def test_summary_counts_what_home_shows():
     summary = summarize_source(HZDRSource.model_validate(SOURCE), BERLIN_MIDNIGHT)
     assert summary.shot_count == 5
     assert summary.latest_shot_number == 1
+    assert summary.experiment_id == "Target_Alignment_11.2026"
     # The naive 10:00 is read in the zone of `since` and is the latest.
     assert summary.last_shot_at == "2026-11-21T10:00:00"
     assert summary.fired_since == 2
@@ -78,6 +80,7 @@ def test_summary_of_an_empty_campaign():
     )
     assert summary.shot_count == 0
     assert summary.latest_shot_number is None
+    assert summary.experiment_id is None
     assert summary.last_shot_at is None
     assert summary.waiting == 0
 

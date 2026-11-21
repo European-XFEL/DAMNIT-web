@@ -191,11 +191,12 @@ describe('campaignSuggestions', () => {
       { key: 'Beamline_radbio_2026' },
     ] as unknown as LabFrogCampaignRef[]
     const sources = [
-      { metadata: { experiment_id: 'unassigned' } },
-      { metadata: { experiment_id: 'Pilot_2026' } },
-      { metadata: { experiment_id: 'Beamline_radbio_2026' } },
-      { metadata: {} },
-    ] as unknown as HZDRSource[]
+      { experiment_id: 'unassigned' },
+      { experiment_id: 'Pilot_2026' },
+      { experiment_id: 'Beamline_radbio_2026' },
+      { experiment_id: null },
+      {},
+    ]
     expect(campaignSuggestions(campaigns, sources)).toEqual([
       'Beamline_radbio_2026',
       'Pilot_2026',

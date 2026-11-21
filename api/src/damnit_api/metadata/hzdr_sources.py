@@ -60,6 +60,8 @@ class HZDRSourceSummary(BaseModel):
     key: str
     title: str
     damnit_path: Path
+    # The catalog's metadata.experiment_id (Review matches suggests it).
+    experiment_id: str | None = None
     shot_count: int = 0
     # The highest shot number in the campaign (Flow monitor's next shot).
     latest_shot_number: int | None = None
@@ -130,6 +132,11 @@ def summarize_source(
         key=source.key,
         title=source.title,
         damnit_path=source.damnit_path,
+        experiment_id=(
+            experiment_id
+            if isinstance(experiment_id := source.metadata.get("experiment_id"), str)
+            else None
+        ),
         shot_count=len(source.shots),
         latest_shot_number=max(
             (shot.shot_number for shot in source.shots), default=None

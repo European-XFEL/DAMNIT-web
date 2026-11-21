@@ -60,10 +60,6 @@ function postJson(url: string, body: unknown) {
   })
 }
 
-export async function fetchHZDRSources(): Promise<HZDRSource[]> {
-  return readJson<HZDRSource[]>(await fetch('/metadata/hzdr/sources'))
-}
-
 export async function fetchHZDRSource(sourceKey: string): Promise<HZDRSource> {
   return readJson<HZDRSource>(await fetch(sourcePath(sourceKey)))
 }
@@ -197,10 +193,10 @@ export function formatSeconds(seconds: number | null): string {
 /** Campaign ids a reviewer can assign a shot to, curated campaigns first. */
 export function campaignSuggestions(
   campaigns: LabFrogCampaignRef[],
-  sources: HZDRSource[]
+  sources: Array<{ experiment_id?: string | null }>
 ): string[] {
   const fromSources = sources
-    .map((source) => (source.metadata as Record<string, unknown>).experiment_id)
+    .map((source) => source.experiment_id)
     .filter((value): value is string => typeof value === 'string')
   return [
     ...new Set([...campaigns.map((campaign) => campaign.key), ...fromSources]),
@@ -282,7 +278,7 @@ export function reviewWaiting(review: HZDRReview): ReviewWaiting {
  * so with nothing waiting anywhere the first campaign opens as before.
  */
 export function busiestSourceKey(
-  sources: HZDRSource[],
+  sources: Array<{ key: string }>,
   waiting: Record<string, number | null | undefined>
 ): string | null {
   let best: string | null = sources[0]?.key ?? null
