@@ -124,15 +124,40 @@ A box is ticked in the commit that does the work.
       `api/.env.production.example`, `operations.md` (section on the
       schedule and the rules), `next-on-server.md`, `review-automation.md`
       (status), the in-app Docs page, `hzdr/CHANGELOG.md`
-- [ ] **Gates:** ruff, pyright at its baseline (197), full pytest, the new
-      test modules in `scripts/docs/refresh_coverage_map.py`, vitest,
-      `lint:tsc`, eslint, prettier, the HZDR e2e specs,
-      `hzdr-local-acceptance.py` and `--real-topology` (the builder changed)
-- [ ] **GitLab notes:** hzdr-combo `NEXT.md` (the ruling, for its rulings
+- [x] **Gates:** ruff clean; pyright 197 (baseline); pytest 1076 passed,
+      33 skipped; `test_hzdr_review_automation.py` in
+      `scripts/docs/refresh_coverage_map.py` (`test_coverage_docs.py`
+      passes); vitest 323 passed; `lint:tsc`, eslint, prettier clean; HZDR
+      e2e 8/8; `hzdr-local-acceptance.py` 11/11 OK and `--real-topology`
+      "All real-topology rehearsal steps passed"
+- [x] **GitLab notes:** hzdr-combo `NEXT.md` (the ruling, for its rulings
       record) and the fwkt-webapps DAMNIT page
-- [ ] PR #58 description: what changed, deployment notes (the setting to
+- [x] PR #58 description: what changed, deployment notes (the setting to
       turn on, a rebuild to apply it)
 
 ## Results and what is left
 
-(Filled in at the end.)
+- **Done:** every box above, each in its own commit on PR #58. 27 new tests
+  in `test_hzdr_review_automation.py` (6 characterization, 12 one-to-one, 3
+  reasons, 3 suggestions, 1 campaign suggestion, 3 never-shot kinds) and 4
+  component tests.
+- **Behaviour on deploy without new settings:** no change in what the
+  builder attaches (both rules are off by default). The page gains the
+  reasons, the suggestions and the campaign suggestions at once. The reasons
+  and suggestions appear on a campaign once it is rebuilt.
+- **For the maintainer, at deploy:** set
+  `DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true` (and
+  `NEVER_SHOT_KINDS` once the test-fire kinds are known), restart, rebuild
+  (`scripts/hzdr-rebuild.py`), then check Review matches: events now
+  attached show `time_one_to_one` in their shot's events.
+- **Not done here, needs real data:** a run against a real shot day
+  without authority numbers, to see how many events the rule pairs and
+  whether the 120 s tolerance suits DRACO's shot spacing. shot-aligner's
+  equivalent check is also still open (its plan: "a run against a real
+  schema-14 export").
+- **Left as it was, noted:** under A7 a time proposal still offers only the
+  nearest shot as a candidate (the reason `several_shots_in_tolerance` now
+  says when others were close). Offering all shots in the tolerance would
+  change what reviewers see on every campaign; that is a separate decision.
+  The never-shot rule closes events in the catalog only; it writes nothing
+  to the review sidecar, by design (D4).
