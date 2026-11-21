@@ -1,6 +1,6 @@
 """HZDR source metadata providers for file and MongoDB backed tests."""
 
-from datetime import datetime
+from datetime import UTC, datetime, tzinfo
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +42,91 @@ class HZDRSource(BaseModel):
             if event.source != "LabFrog"
         )
         return matched_events + len(self.review_events)
+
+
+class HZDRSourceSummary(BaseModel):
+    """One campaign as Home lists it: counts only, no shots or events.
+
+    Home polls every few seconds; the full source list carries every shot of
+    every campaign, so this is the light shape it reads instead
+    (``GET /metadata/hzdr/source-summaries``). ``waiting`` counts what Review
+    matches shows as open: ambiguous events, unacknowledged unmatched events
+    and shots whose campaign is still ``unassigned``.
+    """
+
+    key: str
+    title: str
+    damnit_path: Path
+    shot_count: int = 0
+    # The latest shot's fired_at, exactly as the catalog records it.
+    last_shot_at: str | None = None
+    # Shots fired at or after the request's ``since`` (0 without one).
+    fired_since: int = 0
+    waiting: int = 0
+    needs_review: int = 0
+    needs_revision: int = 0
+
+
+def _shot_time(value: str, default_tz: tzinfo) -> datetime | None:
+    """A shot's fired_at as an aware datetime; a naive one takes ``default_tz``."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=default_tz)
+
+
+def summarize_source(
+    source: HZDRSource, since: datetime | None = None
+) -> HZDRSourceSummary:
+    """Count one campaign's shots and open review items for Home.
+
+    A naive ``since`` is read as UTC. A naive ``fired_at`` is read in the zone
+    of ``since`` (the browser sends its local midnight with its offset), so it
+    counts the way the browser would read the same string.
+    """
+    if since is not None and since.tzinfo is None:
+        since = since.replace(tzinfo=UTC)
+    default_tz: tzinfo = UTC
+    if since is not None and since.tzinfo is not None:
+        default_tz = since.tzinfo
+    latest: datetime | None = None
+    last_shot_at: str | None = None
+    fired_since = needs_review = needs_revision = unassigned = 0
+    for shot in source.shots:
+        fired = _shot_time(shot.fired_at, default_tz)
+        if fired is not None:
+            if latest is None or fired > latest:
+                latest = fired
+                last_shot_at = shot.fired_at
+            if since is not None and fired >= since:
+                fired_since += 1
+        status = shot.metadata.get("status")
+        if status == "needs-review":
+            needs_review += 1
+        elif status == "revision-needed":
+            needs_revision += 1
+        if shot.experiment_id_source == "unassigned":
+            unassigned += 1
+    open_events = sum(
+        1
+        for event in source.review_events
+        if event.match_status == "ambiguous"
+        or (event.match_status == "unmatched" and not event.acknowledged)
+    )
+    return HZDRSourceSummary(
+        key=source.key,
+        title=source.title,
+        damnit_path=source.damnit_path,
+        shot_count=len(source.shots),
+        last_shot_at=last_shot_at,
+        fired_since=fired_since,
+        waiting=open_events + unassigned,
+        needs_review=needs_review,
+        needs_revision=needs_revision,
+    )
 
 
 class HZDRMatchSummary(BaseModel):

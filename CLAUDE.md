@@ -215,6 +215,8 @@ workspace. HZDR-specific UI code lives under `apps/app/src/hzdr/`:
 - `pages/` — `ShotPage`, `ReviewMatchesPage`, `FlowMonitorPage`, `ContextBuilderPage`,
   `DocsPage`, `PrivacyPage` (public `/privacy`, linked from the site footer;
   keep its "What we process" list in step with what the API stores), `SourceHome`
+  (polls `GET /metadata/hzdr/source-summaries`, counts only, not the full
+  sources list; `components/homeCampaignSummary.ts` maps it)
 - `components/` — `ShotTable`, `ShotDetailPanel` (`utils/shot-datasets`: only
   the selected shot's datasets, the campaign file behind a toggle),
   `ShotCampaignStrip`, `HomeCampaignList`, `ReviewMatches`, `FlowDiagram`,

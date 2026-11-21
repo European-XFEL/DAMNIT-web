@@ -6,6 +6,15 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Home: a light summary route instead of every shot
+- `GET /metadata/hzdr/source-summaries?since=<ISO>` returns each campaign's
+  counts (shots, latest shot time, shots since `since`, decisions waiting,
+  shots needing review or revision) without its shots or events. Home polls
+  it every 5 s with the browser's local midnight as `since`, instead of
+  `GET /metadata/hzdr/sources`, which carries every shot of every campaign.
+  A `fired_at` without an offset is read in the zone of `since`, as the
+  browser read it before. Deploy the API with the frontend.
+
 ### Shot table: links to a shot, and trend points that open their shot
 - The selected shot is in the address (`?shot=<shot_key>`, or a shot
   number), so a copied URL opens the campaign on that shot; Shot detail has

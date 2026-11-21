@@ -14,7 +14,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from random import Random
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import quote
 
 import httpx
@@ -43,7 +43,9 @@ from .hzdr_sources import (
     HZDRShotDetail,
     HZDRSource,
     HZDRSourceProvider,
+    HZDRSourceSummary,
     HZDRWikiInfo,
+    summarize_source,
 )
 from .labfrog_sqlite import (
     LabFrogCampaignRef,
@@ -202,6 +204,26 @@ class HZDRAssignExperimentRequest(BaseModel):
 async def list_hzdr_sources() -> list[HZDRSource]:
     """List configured HZDR sources from the active local metadata provider."""
     return HZDRSourceProvider(settings.metadata).list_sources()
+
+
+@hzdr_router.get("/hzdr/source-summaries")
+async def list_hzdr_source_summaries(
+    since: Annotated[
+        datetime | None,
+        Query(
+            description=(
+                "Count shots fired at or after this time as fired_since (Home "
+                "sends the browser's local midnight with its UTC offset). A "
+                "fired_at without an offset is read in this value's zone."
+            ),
+        ),
+    ] = None,
+) -> list[HZDRSourceSummary]:
+    """Per-campaign counts for Home, without the shots themselves."""
+    return [
+        summarize_source(source, since)
+        for source in HZDRSourceProvider(settings.metadata).list_sources()
+    ]
 
 
 @hzdr_router.get("/hzdr/campaigns")

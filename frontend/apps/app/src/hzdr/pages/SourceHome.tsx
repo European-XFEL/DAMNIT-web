@@ -13,10 +13,11 @@ import { IconSearch } from '@tabler/icons-react'
 import { HomeCampaignList } from '../components/HomeCampaignList'
 import { HomeGuide, HomeWelcome } from '../components/HomeOrientation'
 import {
-  type HomeSource,
+  type HZDRSourceSummary,
   filterCampaigns,
   readLastCampaign,
   sortNewestFirst,
+  sourceSummariesUrl,
   summarizeCampaign,
 } from '../components/homeCampaignSummary'
 import { requireJson } from '../utils/api'
@@ -28,15 +29,15 @@ function countLine(campaigns: number, shots: number) {
 }
 
 export function HZDRSourceHome() {
-  const [sources, setSources] = useState<HomeSource[]>()
+  const [sources, setSources] = useState<HZDRSourceSummary[]>()
   const [pollFailed, setPollFailed] = useState(false)
   const [query, setQuery] = useState('')
   const [lastCampaignKey] = useState(readLastCampaign)
 
   useEffect(() => {
     const loadSources = () => {
-      fetch('/metadata/hzdr/sources')
-        .then((response) => requireJson<HomeSource[]>(response))
+      fetch(sourceSummariesUrl())
+        .then((response) => requireJson<HZDRSourceSummary[]>(response))
         .then((loadedSources) => {
           setSources(loadedSources)
           setPollFailed(false)
