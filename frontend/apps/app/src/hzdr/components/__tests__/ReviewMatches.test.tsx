@@ -174,6 +174,59 @@ describe('AmbiguousMatchesCard', () => {
   })
 })
 
+describe('AmbiguousMatchesCard clear time choices', () => {
+  it('lists the clear cases, then confirms them on a second click', () => {
+    const onConfirmMany = vi.fn()
+    const shots = new Map(
+      [1, 2].map((n) => [
+        `exp:20260505:00000${n}`,
+        makeShot({ shot_number: n, shot_key: `exp:20260505:00000${n}` }),
+      ])
+    )
+    const clear = makeEvent({ event_id: 'evt-clear' })
+    const unclear = makeEvent({ event_id: 'evt-unclear' })
+    withMantine(
+      <AmbiguousMatchesCard
+        events={[clear, unclear]}
+        shotsByKey={shots}
+        gaps={{
+          'evt-clear': {
+            'exp:20260505:000001': -8,
+            'exp:20260505:000002': 400,
+          },
+          'evt-unclear': {
+            'exp:20260505:000001': 20,
+            'exp:20260505:000002': 60,
+          },
+        }}
+        busyKey={null}
+        onConfirm={vi.fn()}
+        onConfirmMany={onConfirmMany}
+      />
+    )
+    expect(screen.getByText(/one shot clearly closest in time/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Confirm these/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Review the 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm these 1' }))
+    expect(onConfirmMany).toHaveBeenCalledWith([
+      { event: clear, shotKey: 'exp:20260505:000001', gapS: -8 },
+    ])
+  })
+
+  it('offers nothing in bulk when no case is clear', () => {
+    withMantine(
+      <AmbiguousMatchesCard
+        events={[makeEvent()]}
+        shotsByKey={new Map()}
+        busyKey={null}
+        onConfirm={vi.fn()}
+        onConfirmMany={vi.fn()}
+      />
+    )
+    expect(screen.queryByText(/clearly closest in time/)).toBeNull()
+  })
+})
+
 describe('UnmatchedEventsCard', () => {
   it('acknowledges an event, and disables buttons while saving', () => {
     const onDismiss = vi.fn()

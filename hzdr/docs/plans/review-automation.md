@@ -35,12 +35,48 @@ Every decision was one click per event or shot.
 
 - **Refresh** (PR #58): the page reads the summaries every 30 s and reloads
   the open campaign only when its counts changed.
+- **Candidate gaps from the API and bulk confirm of clear time cases**
+  (PR #58), see §3a.
 - **Batch decisions** (PR #58):
   - **Acknowledge all N** for one producer and kind, behind a second click.
   - **Assign several** for every waiting unassigned shot, or one day's.
 
   Each is still one recorded decision per event or shot, with the reviewer's
   name, through the existing routes.
+
+## 3a. Until every trigger carries the shot authority's number
+
+Until the shot authority is installed everywhere, new events may arrive with
+`shot_number: null`. What the builder does with them:
+
+- **With LabFrog records**, such an event can match only by time, which
+  A7 never lets attach on its own. Every one becomes **ambiguous**, with the
+  shots within the tolerance as candidates.
+- **Without LabFrog records**, it cannot form an event-built shot (those are
+  grouped by number) and stays **unmatched**.
+- **Campaign routing** still works through the campaign schedule, which goes
+  by trigger time. Resolution step 1 (the export's authority numbers) does
+  not apply.
+
+Two ways through that period:
+
+1. **Bulk confirm of clear cases** (done, PR #58). The API now gives each
+   candidate's gap in the campaign's time zone (`candidate_gaps_s`). Before
+   this, LabFrog's naive local times left the browser unable to compute any
+   gap. Where one shot is within 30 s and every other candidate is 2 min or
+   more further, the page lists those events. A person confirms them in one
+   go, each decision noting why. The decisions are stored, so they survive
+   when the authority arrives.
+2. **`DW_API_HZDR_BUILDER__TIME_MATCH_AUTOASSIGN=true`** (setting only,
+   reversible). This restores the earlier ladder: the builder attaches by
+   nearest time within the tolerance (120 s), with no person involved. It
+   is fast, but wrong when shots are closer together than the tolerance or a
+   clock is off, and it is the exact behaviour ruling A7 turned off. Setting
+   it back to `false` returns the unconfirmed time matches to review at the
+   next build (nothing is stored). Use it only as a deliberate, dated
+   decision.
+
+Recommended: option 1, with the campaign schedule kept current.
 
 ## 4. Next steps that need a decision
 

@@ -446,7 +446,11 @@ def laser_energy_mj(run, laser_energy_j=None):
                   <List.Item>
                     <b>Ambiguous</b>: an event fits several shots. Compare its
                     number and time with the candidates and confirm one only
-                    when the evidence fits.
+                    when the evidence fits. Where one shot is clearly closest in
+                    time (within 30 s, every other candidate 2 min or more
+                    further), <b>Review the N</b> lists those cases and{' '}
+                    <b>Confirm these N</b> confirms them together; each decision
+                    notes that it was made in bulk and why.
                   </List.Item>
                   <List.Item>
                     <b>Unmatched</b>: an event fits no shot. Acknowledge it if

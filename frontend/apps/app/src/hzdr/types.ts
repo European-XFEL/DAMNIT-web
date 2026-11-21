@@ -279,7 +279,14 @@ export type HZDRReview = {
   review_events: HZDRReviewEvent[]
   unassigned_shots: HZDRShot[]
   experiment_rulings: HZDRExperimentRuling[]
+  /**
+   * event_id -> candidate shot_key -> seconds from the shot to the event,
+   * read by the API in the campaign's time zone (older APIs: absent).
+   */
+  candidate_gaps_s?: Record<string, Record<string, number>>
 }
+
+export type CandidateGaps = Record<string, Record<string, number>>
 
 export type HZDRContextResults = {
   columns: {

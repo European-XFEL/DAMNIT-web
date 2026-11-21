@@ -254,7 +254,11 @@ redirects there) is where a person resolves what the builder will not guess:
 ambiguous events (confirm one of `candidate_shot_keys`), unmatched events
 (acknowledge), and `unassigned` shots (assign a campaign, written as an
 experiment ruling). It reads `GET .../sources/{key}/review`, which also lists
-`unassigned_shots` and their pending `experiment_rulings`.
+`unassigned_shots`, their pending `experiment_rulings` and
+`candidate_gaps_s` (each candidate's gap to the event, in the campaign's time
+zone), from which the page offers the clear-cut time cases
+(`utils/review.clearTimeChoices`) for a person to confirm in bulk, plus
+batch acknowledge and assign.
 Saved table views are persisted in `hzdr_sources.views.json` alongside
 `hzdr_sources.json` (same directory, same stem with `.views.json` suffix); the API
 manages them via `GET/POST/DELETE /metadata/hzdr/sources/{key}/views[/{id}]`; the shot table shows them as chips (`components/SavedViewChips`).

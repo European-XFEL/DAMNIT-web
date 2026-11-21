@@ -18,6 +18,7 @@ import {
 } from '@mantine/core'
 
 import type {
+  CandidateGaps,
   HZDRExperimentRuling,
   HZDRMatchSummary,
   HZDRReviewEvent,
@@ -26,6 +27,10 @@ import type {
 import { NOT_RECORDED, formatShotTime } from '../utils/format'
 import { formatTargetLabel } from '../utils/metadata'
 import {
+  CLEAR_TIME_CHOICE,
+  candidateGap,
+  clearTimeChoices,
+  type TimeChoice,
   groupUnmatched,
   waitingUnassignedByDay,
   REVIEW_SECTIONS,
@@ -33,7 +38,6 @@ import {
   formatSeconds,
   reviewHeadingId,
   payloadPointer,
-  secondsBetween,
   uniqueCandidateKeys,
   type ReviewSection,
   type ShotConfirmation,
@@ -214,17 +218,19 @@ export function ReviewAllClear({
 function AmbiguousEventItem({
   event,
   shotsByKey,
+  gaps,
   busy,
   onConfirm,
 }: {
   event: HZDRReviewEvent
   shotsByKey: Map<string, HZDRShot>
+  gaps?: CandidateGaps
   busy: boolean
   onConfirm: (event: HZDRReviewEvent, shotKey: string, note: string) => void
 }) {
   const [note, setNote] = useState('')
   const candidates = uniqueCandidateKeys(event)
-  const closest = closestCandidateKey(event, shotsByKey)
+  const closest = closestCandidateKey(event, shotsByKey, gaps)
   return (
     <Card withBorder radius={4} p="sm">
       <Stack gap="xs">
@@ -268,7 +274,9 @@ function AmbiguousEventItem({
                     </Table.Td>
                     <Table.Td>{formatShotTime(shotTime)}</Table.Td>
                     <Table.Td>
-                      {formatSeconds(secondsBetween(shotTime, event.timestamp))}
+                      {formatSeconds(
+                        candidateGap(event, shotKey, shotsByKey, gaps)
+                      )}
                       {isClosest ? (
                         <>
                           {' '}
@@ -315,16 +323,106 @@ function AmbiguousEventItem({
   )
 }
 
+/**
+ * The clear-cut time cases, offered to confirm together. Shown only when
+ * some exist; the list is opened and read before the confirm button shows.
+ */
+function ConfirmClearChoices({
+  choices,
+  shotsByKey,
+  busy,
+  onConfirmMany,
+}: {
+  choices: TimeChoice[]
+  shotsByKey: Map<string, HZDRShot>
+  busy: boolean
+  onConfirmMany: (choices: TimeChoice[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  if (!choices.length) return null
+  return (
+    <Alert color="blue" variant="light" p="sm">
+      <Stack gap="xs">
+        <Text size="sm">
+          <b>{choices.length}</b>{' '}
+          {choices.length === 1 ? 'event has' : 'events have'} one shot clearly
+          closest in time: within {CLEAR_TIME_CHOICE.withinS} s, and every other
+          candidate at least {CLEAR_TIME_CHOICE.othersFurtherS / 60} min further
+          away. Time alone never decides; check the list and confirm them
+          yourself.
+        </Text>
+        {open ? (
+          <>
+            <ReviewTableScroll>
+              <Table withTableBorder fz="xs" miw={420}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Event</Table.Th>
+                    <Table.Th>Shot</Table.Th>
+                    <Table.Th>Event - shot</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {choices.map((choice) => (
+                    <Table.Tr key={choice.event.event_id}>
+                      <Table.Td>
+                        {choice.event.source} {choice.event.kind},{' '}
+                        {formatShotTime(choice.event.timestamp)}
+                      </Table.Td>
+                      <Table.Td>
+                        {shotsByKey.get(choice.shotKey)?.shot_number ?? '?'}{' '}
+                        <Text span size="xs" c="dimmed">
+                          {choice.shotKey}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>{formatSeconds(choice.gapS)}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ReviewTableScroll>
+            <Group gap="xs">
+              <Button
+                size="xs"
+                disabled={busy}
+                onClick={() => {
+                  setOpen(false)
+                  onConfirmMany(choices)
+                }}
+              >
+                Confirm these {choices.length}
+              </Button>
+              <Button size="xs" variant="subtle" onClick={() => setOpen(false)}>
+                Close
+              </Button>
+            </Group>
+          </>
+        ) : (
+          <Group>
+            <Button size="xs" variant="light" onClick={() => setOpen(true)}>
+              Review the {choices.length}
+            </Button>
+          </Group>
+        )}
+      </Stack>
+    </Alert>
+  )
+}
+
 export function AmbiguousMatchesCard({
   events,
   shotsByKey,
+  gaps,
   busyKey,
   onConfirm,
+  onConfirmMany,
 }: {
   events: HZDRReviewEvent[]
   shotsByKey: Map<string, HZDRShot>
+  gaps?: CandidateGaps
   busyKey: string | null
   onConfirm: (event: HZDRReviewEvent, shotKey: string, note: string) => void
+  onConfirmMany?: (choices: TimeChoice[]) => void
 }) {
   if (!events.length) {
     return (
@@ -345,11 +443,20 @@ export function AmbiguousMatchesCard({
       <Text size="sm">
         Closest in time is highlighted; time alone never decides.
       </Text>
+      {onConfirmMany ? (
+        <ConfirmClearChoices
+          choices={clearTimeChoices(events, shotsByKey, gaps)}
+          shotsByKey={shotsByKey}
+          busy={busyKey !== null}
+          onConfirmMany={onConfirmMany}
+        />
+      ) : null}
       {events.map((event) => (
         <AmbiguousEventItem
           key={event.event_id}
           event={event}
           shotsByKey={shotsByKey}
+          gaps={gaps}
           busy={busyKey !== null}
           onConfirm={onConfirm}
         />

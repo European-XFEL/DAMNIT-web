@@ -31,6 +31,7 @@ from .hzdr_nexus import (
     append_experiment_ruling,
     append_review_decision,
     load_experiment_ruling_records,
+    parse_datetime,
     review_sidecar_path,
     write_json_atomic,
 )
@@ -174,6 +175,11 @@ class HZDRReviewResponse(BaseModel):
     review_events: list[HZDRReviewEvent]
     unassigned_shots: list[HZDRShot] = Field(default_factory=list)
     experiment_rulings: list[HZDRExperimentRuling] = Field(default_factory=list)
+    # event_id -> candidate shot_key -> seconds from the shot to the event
+    # (positive: the event came later). LabFrog times are naive campaign-local
+    # times, read in DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE as the builder
+    # reads them; a browser cannot. Only gaps that are known are listed.
+    candidate_gaps_s: dict[str, dict[str, float]] = Field(default_factory=dict)
 
 
 class HZDRConfirmMatchRequest(BaseModel):
@@ -722,7 +728,34 @@ async def get_hzdr_review(source_key: str) -> HZDRReviewResponse:
         experiment_rulings=_pending_experiment_rulings({
             shot.shot_number for shot in unassigned_shots
         }),
+        candidate_gaps_s=_candidate_gaps(source),
     )
+
+
+def _candidate_gaps(source: HZDRSource) -> dict[str, dict[str, float]]:
+    """Each review event's time gap to each of its candidate shots."""
+    timezone = settings.hzdr_builder.campaign_timezone
+    shots = {shot.shot_key: shot for shot in source.shots if shot.shot_key}
+    gaps: dict[str, dict[str, float]] = {}
+    for event in source.review_events:
+        event_time = parse_datetime(event.timestamp)
+        if event_time is None:
+            continue
+        row: dict[str, float] = {}
+        for shot_key in dict.fromkeys(event.candidate_shot_keys):
+            shot = shots.get(shot_key)
+            shot_time = (
+                parse_datetime(
+                    shot.labfrog_date_time or shot.fired_at, naive_timezone=timezone
+                )
+                if shot
+                else None
+            )
+            if shot_time is not None:
+                row[shot_key] = (event_time - shot_time).total_seconds()
+        if row:
+            gaps[event.event_id] = row
+    return gaps
 
 
 def _pending_experiment_rulings(shot_numbers: set[int]) -> list[HZDRExperimentRuling]:

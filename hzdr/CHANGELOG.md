@@ -17,6 +17,20 @@ behaviour; the merge PR has the details.
   header compares the two, so an API-only update no longer shows *Out of
   step with the API*. damnit-api 0.3.2.
 
+### Review matches: time gaps in the campaign's zone, clear cases in bulk
+- `GET .../sources/{key}/review` adds `candidate_gaps_s` (event_id ->
+  candidate shot_key -> seconds from the shot to the event), read in
+  `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE` as the builder reads LabFrog's
+  naive local times. The browser could not, so on real LabFrog data the
+  "closest in time" highlight and the gap column were mostly empty; they now
+  use the API's figures.
+- Where one shot is clearly closest (within 30 s, every other candidate 2 min
+  or more further, all gaps known), **Review the N** lists those events and
+  **Confirm these N** confirms them together. A person still decides (ruling
+  A7); each decision's note says it was confirmed in bulk, with the gap.
+  Meant for the time until every trigger carries the shot authority's
+  number, when events match by time only.
+
 ### Review matches: decisions in batches
 - **Acknowledge all N** for unmatched events from one producer and kind (a
   test series, a source that never belongs to a shot), behind a second click

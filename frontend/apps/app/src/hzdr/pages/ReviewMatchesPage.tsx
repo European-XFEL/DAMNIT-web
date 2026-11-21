@@ -34,6 +34,8 @@ import { requireJson } from '../utils/api'
 import { usePolling } from '../hooks'
 import { campaignTitle } from '../utils/format'
 import {
+  type TimeChoice,
+  timeChoiceNote,
   assignShotExperiment,
   busiestSourceKey,
   campaignSuggestions,
@@ -318,6 +320,22 @@ export function ReviewMatchesPage() {
     setBusyKey(null)
   }
 
+  const confirmMany = (choices: TimeChoice[]) => {
+    if (!sourceKey) return
+    void runBatch(
+      'confirm-many',
+      choices,
+      (choice) =>
+        confirmReviewEvent(
+          sourceKey,
+          choice.event.event_id,
+          choice.shotKey,
+          timeChoiceNote(choice)
+        ),
+      (count) => `${count} events confirmed to their closest shot.`
+    )
+  }
+
   const dismissMany = (events: HZDRReviewEvent[]) => {
     if (!sourceKey) return
     void runBatch(
@@ -430,8 +448,10 @@ export function ReviewMatchesPage() {
                   <AmbiguousMatchesCard
                     events={grouped.ambiguous}
                     shotsByKey={shotLookup}
+                    gaps={loaded.review.candidate_gaps_s}
                     busyKey={busyKey}
                     onConfirm={confirm}
+                    onConfirmMany={confirmMany}
                   />
                 )}
                 {/* Shots assigned but not moved yet still show, with who

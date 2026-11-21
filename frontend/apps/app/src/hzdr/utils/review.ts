@@ -1,4 +1,5 @@
 import type {
+  CandidateGaps,
   HZDRExperimentRuling,
   HZDRReview,
   HZDRReviewEvent,
@@ -294,23 +295,40 @@ export function busiestSourceKey(
 }
 
 /**
+ * Seconds from a candidate shot to the event: the API's figure (read in the
+ * campaign's time zone) when it gave one, else the browser's, which needs
+ * both times to name their zone.
+ */
+export function candidateGap(
+  event: HZDRReviewEvent,
+  shotKey: string,
+  shots: Map<string, HZDRShot>,
+  gaps?: CandidateGaps
+): number | null {
+  const fromAPI = gaps?.[event.event_id]?.[shotKey]
+  if (typeof fromAPI === 'number') return fromAPI
+  const shot = shots.get(shotKey)
+  return secondsBetween(
+    shot?.labfrog_date_time ?? shot?.fired_at,
+    event.timestamp
+  )
+}
+
+/**
  * The candidate whose shot time is closest to the event's, or null when no
  * gap is known or two candidates tie. A hint for the reviewer only: it is
  * never selected or confirmed for them.
  */
 export function closestCandidateKey(
   event: HZDRReviewEvent,
-  shots: Map<string, HZDRShot>
+  shots: Map<string, HZDRShot>,
+  gaps?: CandidateGaps
 ): string | null {
   let best: string | null = null
   let bestGap = Infinity
   let tied = false
   for (const shotKey of uniqueCandidateKeys(event)) {
-    const shot = shots.get(shotKey)
-    const gap = secondsBetween(
-      shot?.labfrog_date_time ?? shot?.fired_at,
-      event.timestamp
-    )
+    const gap = candidateGap(event, shotKey, shots, gaps)
     if (gap === null) {
       continue
     }
@@ -324,6 +342,55 @@ export function closestCandidateKey(
     }
   }
   return tied ? null : best
+}
+
+/** How close and how clear a time-only choice must be to be offered in bulk. */
+export const CLEAR_TIME_CHOICE = { withinS: 30, othersFurtherS: 120 }
+
+export interface TimeChoice {
+  event: HZDRReviewEvent
+  shotKey: string
+  gapS: number
+}
+
+/**
+ * Ambiguous events whose closest candidate is unmistakable: within
+ * `withinS` of the event, every other candidate's gap known and at least
+ * `othersFurtherS` further away, and the shot in the catalog. They are
+ * offered to a person to confirm together; nothing is confirmed for them.
+ */
+export function clearTimeChoices(
+  events: HZDRReviewEvent[],
+  shots: Map<string, HZDRShot>,
+  gaps?: CandidateGaps,
+  rule = CLEAR_TIME_CHOICE
+): TimeChoice[] {
+  const choices: TimeChoice[] = []
+  for (const event of events) {
+    const candidates = uniqueCandidateKeys(event)
+    const sized = candidates.map((shotKey) => ({
+      shotKey,
+      gap: candidateGap(event, shotKey, shots, gaps),
+    }))
+    if (!sized.length || sized.some((item) => item.gap === null)) continue
+    sized.sort((a, b) => Math.abs(a.gap!) - Math.abs(b.gap!))
+    const [best, next] = sized
+    if (!shots.has(best.shotKey)) continue
+    if (Math.abs(best.gap!) > rule.withinS) continue
+    if (
+      next &&
+      Math.abs(next.gap!) - Math.abs(best.gap!) < rule.othersFurtherS
+    ) {
+      continue
+    }
+    choices.push({ event, shotKey: best.shotKey, gapS: best.gap! })
+  }
+  return choices
+}
+
+/** The note each bulk-confirmed decision carries, so its reason is on record. */
+export function timeChoiceNote(choice: TimeChoice) {
+  return `Confirmed in bulk: closest in time (${formatSeconds(choice.gapS)}), every other candidate ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min or more further.`
 }
 
 /** The page's sections; a count chip jumps to `<id>-heading`. */

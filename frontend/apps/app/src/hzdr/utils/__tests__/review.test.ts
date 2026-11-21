@@ -4,6 +4,8 @@ import {
   assignShotExperiment,
   busiestSourceKey,
   campaignSuggestions,
+  candidateGap,
+  clearTimeChoices,
   closestCandidateKey,
   confirmReviewEvent,
   dismissReviewEvent,
@@ -334,5 +336,69 @@ describe('reviewWaiting / busiestSourceKey / closestCandidateKey', () => {
     expect(
       closestCandidateKey({ ...event, candidate_shot_keys: ['gone'] }, shots)
     ).toBeNull()
+  })
+})
+
+describe('clearTimeChoices', () => {
+  const shot = (key: string) =>
+    ({
+      source_key: 'c',
+      shot_number: Number(key.slice(-1)),
+      shot_key: key,
+      fired_at: '',
+      metadata: {},
+      events: [],
+      data_products: [],
+    }) as HZDRShot
+  const shots = new Map(['c:1', 'c:2'].map((key) => [key, shot(key)]))
+  const event = (id: string, keys: string[]) =>
+    ({
+      event_id: id,
+      experiment_id: 'c',
+      source: 'DRACO-Trigger',
+      kind: 'draco.trigger',
+      timestamp: '2026-11-21T10:00:00Z',
+      payload_ref: {},
+      metadata: {},
+      match_status: 'ambiguous',
+      candidate_shot_keys: keys,
+      acknowledged: false,
+    }) as HZDRReviewEvent
+
+  it('offers only an unmistakable closest shot', () => {
+    const events = [
+      event('clear', ['c:1', 'c:2']),
+      event('too-far', ['c:1', 'c:2']),
+      event('too-close-call', ['c:1', 'c:2']),
+      event('unknown-gap', ['c:1', 'c:2']),
+      event('single', ['c:2']),
+    ]
+    const gaps = {
+      clear: { 'c:1': 12, 'c:2': -300 },
+      'too-far': { 'c:1': 45, 'c:2': 400 },
+      'too-close-call': { 'c:1': 10, 'c:2': -100 },
+      'unknown-gap': { 'c:1': 5 },
+      single: { 'c:2': -20 },
+    }
+    expect(
+      clearTimeChoices(events, shots, gaps).map((choice) => [
+        choice.event.event_id,
+        choice.shotKey,
+        choice.gapS,
+      ])
+    ).toEqual([
+      ['clear', 'c:1', 12],
+      ['single', 'c:2', -20],
+    ])
+  })
+
+  it("prefers the API's gap over the browser's", () => {
+    const zoned = new Map([
+      ['c:1', { ...shot('c:1'), fired_at: '2026-11-21T09:00:00Z' }],
+    ])
+    const one = event('e', ['c:1'])
+    expect(candidateGap(one, 'c:1', zoned)).toBe(3600)
+    expect(candidateGap(one, 'c:1', zoned, { e: { 'c:1': 7 } })).toBe(7)
+    expect(candidateGap(one, 'c:9', zoned)).toBeNull()
   })
 })
