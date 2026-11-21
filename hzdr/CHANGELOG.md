@@ -19,6 +19,13 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### Header: a warning when the frontend and the API are out of step
+- `GET /config/version` returns the `damnit-api` version and the checkout's
+  commit when the process started. A frontend built with
+  `VITE_DAMNIT_COMMIT` (`next-on-server.sh` sets it) shows *Out of step with
+  the API* in the header when the two commits differ, so a missed rebuild or
+  restart after a pull is visible. Unknown on either side: no warning.
+
 ### Polling: paused in a hidden tab, slower while the API is down
 - Home, Flow monitor (its campaign list and, in Live, health and activity)
   poll through one hook (`usePolling`): nothing while the tab is hidden, at

@@ -1,7 +1,11 @@
 """Shared API routes for runtime application configuration."""
 
 import asyncio
+import subprocess  # noqa: S404 -- git rev-parse, fixed arguments
 import time
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -12,6 +16,46 @@ from .flow_activity import FlowActivity, collect_flow_activity
 from .settings import settings
 
 router = APIRouter(prefix="/config", tags=["config"])
+
+
+def _checkout_commit() -> str | None:
+    """The git commit of the checkout this code runs from, or None.
+
+    None for an install without a git checkout (a wheel under /opt) or
+    without git on the PATH.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short=12", "HEAD"],  # noqa: S607
+            cwd=Path(__file__).resolve().parent,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=True,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout.strip() or None
+
+
+def _package_version() -> str | None:
+    try:
+        return package_version("damnit-api")
+    except PackageNotFoundError:
+        return None
+
+
+# Read once, when the process starts: the commit of the code that is
+# running, even after a later `git pull` that has not been restarted onto.
+_RUNNING_COMMIT = _checkout_commit()
+_RUNNING_VERSION = _package_version()
+
+
+class VersionInfo(BaseModel):
+    """What the API process runs, so a frontend can tell it is out of step."""
+
+    version: str | None
+    commit: str | None
 
 
 class TerminologyConfig(BaseModel):
@@ -173,6 +217,12 @@ async def get_flow_activity() -> FlowActivity:
     unconfigured yields ``available=false`` rather than failing the request.
     """
     return await asyncio.to_thread(collect_flow_activity)
+
+
+@router.get("/version")
+async def get_version() -> VersionInfo:
+    """The damnit-api package version and the checkout's commit at start-up."""
+    return VersionInfo(version=_RUNNING_VERSION, commit=_RUNNING_COMMIT)
 
 
 @router.get("/runtime")

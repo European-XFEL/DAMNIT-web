@@ -52,7 +52,9 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [x] **Unparseable shot times are visible.** A `fired_at` the API cannot
   parse is skipped silently; count it in the summary. Done:
   `unreadable_times`, a grey badge on the Home row.
-- [ ] **Version endpoint.** Expose the API version and git commit, so the
-  frontend can warn when it is deployed without its matching API.
+- [x] **Version endpoint.** Expose the API version and git commit, so the
+  frontend can warn when it is deployed without its matching API. Done:
+  `GET /config/version` (commit read once at start-up), the build's
+  `VITE_DAMNIT_COMMIT`, a header badge from `sm` up.
 - [ ] **End-to-end smoke test of Home** against the local acceptance stack,
   next to the phone-width check.
