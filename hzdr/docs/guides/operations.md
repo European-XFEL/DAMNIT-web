@@ -123,6 +123,31 @@ without editing the saved file. Scalar values appear as numbers or text in
 each row; campaign trends appear when selecting a numeric cell. Actual per-shot
 lineout and image previews remain in their cells.
 
+## Review matches: the campaign schedule and the automatic rules
+
+Until every trigger carries the shot authority's number, events arrive
+without one, and three settings decide how much waits in Review matches
+(plan: `hzdr/docs/plans/plan-review-automation.md`):
+
+- **`DW_API_HZDR_BUILDER__CAMPAIGN_SCHEDULE`**: LabFrog's
+  `labfrog-campaign-schedule-v1` export. It routes `unassigned` triggers to
+  a campaign by trigger time; without it every such shot waits as
+  *Unassigned*. `next-on-server.sh`'s `labfrog` step reports whether it is
+  set, whether the file exists, and how old it is (a warning after 7 days).
+- **`DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true`** (ruling
+  R-2026-11-21): an event without a shot number attaches to a LabFrog shot
+  when the two are each other's only neighbour within
+  `MATCH_TOLERANCE_S` (120 s) among events of its kind and instrument,
+  shot-aligner's rule (`match_quality` `time_one_to_one`). Everything else
+  stays in review, with its reason shown.
+- **`DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS=["..."]`**: event kinds that are
+  never a shot (test fires); their unmatched events are acknowledged by rule
+  and listed under Resolved. Removing a kind reopens them at the next build.
+
+All three apply at the next build: restart `damnit-api` after changing
+them, then rebuild (`scripts/hzdr-rebuild.py`), since a restart builds
+nothing.
+
 ## A new beamtime from LabFrog's Beamtime Setup
 
 Since 2026-11-11 a campaign is prepared in LabFrog under Form Builder >

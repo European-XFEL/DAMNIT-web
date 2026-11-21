@@ -111,10 +111,13 @@ A box is ticked in the commit that does the work.
       who). Ambiguous events and a person's decision are left alone; nothing
       goes into the sidecar, so removing a kind reopens its events at the
       next build. Tests: 3
-- [ ] **Item 1, the campaign schedule** (operations): `next-on-server.sh`
-      reports whether `CAMPAIGN_SCHEDULE` is set, the file exists and how old
-      it is; `operations.md` says why it matters while triggers lack the
-      authority's number
+- [x] **Item 1, the campaign schedule** (operations): `next-on-server.sh`'s
+      `labfrog` step runs `check_campaign_schedule`: not set (warning), set
+      but the file missing (FAIL), older than 7 days (warning), else OK;
+      read through the API's settings code, only the file's name and age
+      printed. `operations.md` has a section on the schedule and the two
+      new rules; `next-on-server.md`'s step table says so. Checked by hand
+      with the three cases
 - [ ] **Docs:** `architecture.md` (the ladder, the stream rule, the new
       rank), `CLAUDE.md` (match ranks, settings, review fields),
       `api/.env.production.example`, `review-automation.md` (status),

@@ -321,6 +321,34 @@ step_labfrog() {
     else
         warn "DAMNIT does not answer at $DAMNIT_URL/config/health"
     fi
+    check_campaign_schedule
+}
+
+# The campaign schedule routes "unassigned" events by trigger time. Until every
+# trigger carries the shot authority's number it is the only automatic
+# routing, so its absence or age is worth a line. Read through the API's own
+# settings code (api/.env); only the file's name and age are printed.
+check_campaign_schedule() {
+    local api="$ROOT/DAMNIT-web-hzdr/api" schedule hours
+    [ -d "$api" ] || return
+    if ! schedule="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings; print(settings.hzdr_builder.campaign_schedule or "")' \
+        2>/dev/null | tail -1)"; then
+        warn "DAMNIT settings could not be read to check the campaign schedule"
+        return
+    fi
+    if [ -z "$schedule" ]; then
+        warn "DAMNIT campaign schedule not set (DW_API_HZDR_BUILDER__CAMPAIGN_SCHEDULE): unassigned triggers wait in Review matches (operations.md)"
+    elif [ ! -f "$schedule" ]; then
+        fail "DAMNIT campaign schedule is set, but its file $(basename "$schedule") is missing"
+    else
+        hours=$(( ( $(date +%s) - $(stat -c %Y "$schedule") ) / 3600 ))
+        if [ "$hours" -gt 168 ]; then
+            warn "DAMNIT campaign schedule $(basename "$schedule") is ${hours} h old: is LabFrog still exporting it?"
+        else
+            ok "DAMNIT campaign schedule $(basename "$schedule"), updated ${hours} h ago"
+        fi
+    fi
 }
 
 # --- report -----------------------------------------------------------------
