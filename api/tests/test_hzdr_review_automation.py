@@ -567,3 +567,107 @@ def test_the_trigger_passes_never_shot_kinds(tmp_path):
     command = BuilderTrigger(settings, trigger_jsonl=[]).build_command()
     joined = " ".join(command)
     assert "--never-shot-kind draco.test_fire --never-shot-kind heartbeat" in joined
+
+
+# --- the evaluation script (plan-time-rule-real-data.md) -----------------------
+
+
+def _evaluation_module():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "scripts/hzdr-evaluate-time-rule.py"
+    spec = importlib.util.spec_from_file_location("hzdr_evaluate_time_rule", path)
+    assert spec
+    assert spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _day_index():
+    """Three rows 5 min apart (Berlin); cam_a on time, cam_b's clock 4 min fast."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    berlin = ZoneInfo("Europe/Berlin")
+
+    def epoch(hhmmss: str) -> float:
+        return (
+            datetime
+            .fromisoformat(f"2025-12-03T{hhmmss}")
+            .replace(tzinfo=berlin)
+            .timestamp()
+        )
+
+    rows = [{"excel_row": 4 + n, "time_seconds": 12 * 3600 + 300 * n} for n in range(3)]
+    events = []
+    for rank in (1, 2, 3):
+        on_time = epoch(f"12:{(rank - 1) * 5:02d}:10")
+        events.append({
+            "rank": rank,
+            "acquisitions": [
+                {"key": f"cam_a|{rank}", "instrument": "cam_a", "timestamp": on_time},
+                # 4 min fast: lands next to the following row.
+                {
+                    "key": f"cam_b|{rank}",
+                    "instrument": "cam_b",
+                    "timestamp": on_time + 240,
+                },
+            ],
+        })
+    return {
+        "date": "2025_12_03",
+        "campaign": "Synthetic",
+        "statistics": {"decisions": {"checked": 3}},
+        "shotsheet": {"rows": rows},
+        "sets": {
+            "set1": {
+                "events": events,
+                "links": [
+                    {
+                        "event_rank": rank,
+                        "excel_row": 3 + rank,
+                        "status": "matched",
+                        "band": "confirmed",
+                    }
+                    for rank in (1, 2, 3)
+                ],
+            }
+        },
+        "auxiliary": [
+            {"key": "bam|synchro", "instrument": "bam", "iso": "2025-12-03T11:00:00"}
+        ],
+    }
+
+
+def test_the_evaluation_scores_right_wrong_and_waiting():
+    module = _evaluation_module()
+    result = module.score(_day_index(), 90.0, "Europe/Berlin")
+    # cam_a pairs right three times; cam_b's fast clock puts files 1 and 2
+    # next to the following rows (wrong), file 3 beyond every row (waiting).
+    assert result["right"] == 3
+    assert result["wrong"] == 2
+    assert result["waiting"] == 1
+    assert result["waiting_reasons"] == {"no_shot_in_tolerance": 1}
+    assert result["wrong_by_instrument"] == {"cam_b": 2}
+    assert result["auxiliary_paired"] == 0
+    assert result["shot_files"] == 6
+
+
+def test_the_evaluation_reports_spacing_and_clock_offsets():
+    module = _evaluation_module()
+    day = module.context(_day_index(), "Europe/Berlin")
+    assert day["rows"] == 3
+    assert day["row_spacing_s"]["median"] == 300
+    assert day["instrument_offset_s"]["cam_a"]["median"] == 10
+    assert day["instrument_offset_s"]["cam_b"]["median"] == 250
+    # Unreviewed links count only with truth_from="matched".
+    index = _day_index()
+    for link in index["sets"]["set1"]["links"]:
+        link["band"] = "high"
+    assert module.score(index, 90.0, "Europe/Berlin")["shot_files"] == 0
+    assert (
+        module.score(index, 90.0, "Europe/Berlin", truth_from="matched")["shot_files"]
+        == 6
+    )

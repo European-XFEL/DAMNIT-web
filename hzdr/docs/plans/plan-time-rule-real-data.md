@@ -46,15 +46,19 @@ the server with the same script (below), not here.
 ## Checklist
 
 - [x] Plan written first (this file), linked from `plan-review-automation.md`
-- [ ] **Evaluation script** `api/scripts/hzdr-evaluate-time-rule.py`: reads
-      one or more shot-aligner day indexes, builds the E2 events and shots,
-      runs `reconcile_canonical_shots` with `time_match_one_to_one=True` per
-      tolerance, scores against E1, prints a table and writes `--json`.
-      No share access, no network; runs on the server against any
-      `index/<date>.index.json`
-- [ ] **Tests** for the script on a small synthetic index (a right pair, a
-      wrong pair, a waiting event; the tolerance sweep), in
-      `test_hzdr_review_automation.py`
+- [x] **Evaluation script** `api/scripts/hzdr-evaluate-time-rule.py`: reads
+      shot-aligner day indexes, builds the E2 events (acquisitions, raw
+      instrument time; auxiliary files too, which belong to no shot) and
+      shots (rows keyed by their spreadsheet line, since Counts restart per
+      set), runs `reconcile_canonical_shots` with the rule on per tolerance,
+      and scores right / wrong / waiting (by reason) / auxiliary paired,
+      with row spacing and each instrument's clock offset. `--truth
+      matched` scores an unreviewed day against the aligner's own links
+      (labelled NOT reviewed); `--clock corrected` uses the aligner's
+      corrected times as an upper bound. No share, no network
+- [x] **Tests:** 2 in `test_hzdr_review_automation.py` on a synthetic day
+      (one instrument on time, one 4 min fast: 3 right, 2 wrong, 1 waiting;
+      spacing, offsets, the truth switch)
 - [ ] **Run** on 2025-12-01 and 2025-12-03; the results table and what it
       means written into this plan
 - [ ] **Recommendation** from the numbers: whether to turn the rule on, and
