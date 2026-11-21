@@ -227,6 +227,7 @@ def build(
         campaign_schedule=schedule,
         experiment_rulings=rulings,
         time_match_autoassign=getattr(args, "time_match_autoassign", False),
+        time_match_one_to_one=getattr(args, "time_match_one_to_one", False),
         include_trigger_only=True,
         resolution_labfrog_shots=resolution_labfrog_shots,
     )
@@ -643,6 +644,17 @@ def main() -> None:
             "pre-2026-09-30 ladder. Off by default (ruling A7): they propose "
             "review candidates, and a shot_number naming exactly one shot "
             "attaches on the number alone."
+        ),
+    )
+    parser.add_argument(
+        "--time-match-one-to-one",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Attach an event without a shot number to a LabFrog shot when the "
+            "two are each other's only neighbour within --match-tolerance-s in "
+            "the event's stream (shot-aligner's one-to-one rule, ruling "
+            "R-2026-11-21). Anything less stays in review."
         ),
     )
     args = parser.parse_args()

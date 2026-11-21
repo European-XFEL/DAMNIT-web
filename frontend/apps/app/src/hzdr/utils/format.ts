@@ -134,6 +134,7 @@ const MATCH_QUALITY_LABELS: Record<string, string> = {
   shot_number: 'Matched by shot number',
   exact_day_shot_number_time_window: 'Shot number and time, same day',
   shot_number_time_window: 'Shot number and time',
+  time_one_to_one: 'By time, one to one (the only shot and the only event)',
   nearest_time: 'Nearest in time',
   labfrog_only: 'LabFrog record only, no events',
   unmatched: 'Not matched',

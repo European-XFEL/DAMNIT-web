@@ -40,6 +40,13 @@ not a match"*, every non-match reported as a finding with guidance.
   evidence. Item 4 writes a decision *by rule*, named as such
   (`acknowledged_by: "rule:never_shot_kinds"`), visible under Resolved and
   undone by removing the kind from the setting.
+- **D6 (this plan, found while placing it): numbered events never pair by
+  time.** A trigger whose authority number LabFrog lacks keeps founding its
+  trigger-only shot, as under A7; pulling it onto a neighbouring LabFrog shot
+  by time was the bug A7 fixed (triggers 1 and 3 merged into shot 2). The
+  one-to-one rule is for events *without* a number, which is what arrives
+  until the shot authority is installed everywhere. An event whose watchdog
+  attribution names candidates pairs only with one of them.
 - **D5 (this plan): no bridge-profile bump.** `match_quality` is a string
   column; a new value changes no layout. damnit-api is already 0.3.2 on this
   branch, and the new API fields are additive.
@@ -58,11 +65,15 @@ A box is ticked in the commit that does the work.
       tolerance, and with no LabFrog record, `unmatched`; a unique authority
       number attaches. The two marked outcomes are gaps the findings item
       closes
-- [ ] **Item 5, the one-to-one time rule** (builder):
-      `hzdr_nexus` pass after the per-event loop, the D1 streams,
-      `time_one_to_one` in `MATCH_RANK` between `nearest_time` and
-      `shot_number_time_window`, setting + CLI flag, the trigger passes it,
-      `hzdr-rebuild.py --print` shows it
+- [x] **Item 5, the one-to-one time rule** (builder):
+      `hzdr_nexus._pair_time_one_to_one` / `_one_to_one_pairs` after the
+      per-event loop (pairs found on a snapshot, applied together), the D1
+      streams (`_event_stream`), D6, `time_one_to_one` (3) in `MATCH_RANK`
+      (the ranks above it move up by one; CLAUDE.md's ladder updated, held
+      by `test_match_rank_docs.py`), `TIME_MATCH_ONE_TO_ONE` +
+      `--time-match-one-to-one`, the trigger always passes it explicitly (so
+      `hzdr-rebuild.py --print` shows it), the frontend label. 12 tests in
+      `test_hzdr_review_automation.py`
 - [ ] **Findings with a reason** (builder, API, UI): every review event
       carries `review_reason`, as shot-aligner's findings do: `no_time`,
       `no_shot_in_tolerance`, `several_shots_in_tolerance`,

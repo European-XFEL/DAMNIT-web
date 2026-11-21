@@ -607,7 +607,7 @@ keep the table columns unchanged.
 
 ### Match quality ranks (ascending, `hzdr_nexus.MATCH_RANK`)
 
-`unmatched` (0) → `labfrog_only` (1) → `nearest_time` (2) → `shot_number_time_window` (3) → `exact_day_shot_number_time_window` (4) → `shot_number` (5) → `exact_day_shot_number` (6) → `event_identity` (7) → `exact_transport_position` (8) → `exact_kafka_event_id` (9)
+`unmatched` (0) → `labfrog_only` (1) → `nearest_time` (2) → `time_one_to_one` (3) → `shot_number_time_window` (4) → `exact_day_shot_number_time_window` (5) → `shot_number` (6) → `exact_day_shot_number` (7) → `event_identity` (8) → `exact_transport_position` (9) → `exact_kafka_event_id` (10)
 
 Higher rank wins when two matches compete for the same shot. `_match_event_ranked`
 tries them top down: the event's Kafka `event_id`, then its `topic/partition/offset`,
@@ -622,7 +622,13 @@ built from the events themselves, grouped by shot number with no LabFrog record
 reached. The three time-based ranks
 (`_TIME_BASED_MATCH_QUALITIES`) become review candidates instead of attaching
 unless `TIME_MATCH_AUTOASSIGN` is `true`, and the `shot_number` rank is used
-only while it is `false`, so opting back in restores the earlier ladder exactly. `ambiguous` is a status, not a rank
+only while it is `false`, so opting back in restores the earlier ladder exactly.
+`time_one_to_one` (ruling R-2026-11-21, `TIME_MATCH_ONE_TO_ONE`, off by
+default) is shot-aligner's rule applied after the ladder: an event without a
+shot number and a LabFrog shot that are each other's only neighbour within
+the tolerance, within the event's stream (source, kind, instrument), attach;
+`hzdr_nexus._pair_time_one_to_one`, plan
+[plan-review-automation.md](hzdr/docs/plans/plan-review-automation.md). `ambiguous` is a status, not a rank
 (`MATCH_RANK.get(q, 0)`).
 
 ### Review levels (ascending, `hzdr_nexus.REVIEW_LEVELS`)

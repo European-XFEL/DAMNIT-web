@@ -304,6 +304,11 @@ class BuilderTrigger:
             if s.time_match_autoassign
             else "--no-time-match-autoassign"
         )
+        args.append(
+            "--time-match-one-to-one"
+            if s.time_match_one_to_one
+            else "--no-time-match-one-to-one"
+        )
         return args
 
     async def _run_subprocess(self, cmd: Sequence[str]) -> tuple[int, str]:

@@ -491,16 +491,20 @@ MATCH_RANK = {
     "unmatched": 0,
     "labfrog_only": 1,
     "nearest_time": 2,
-    "shot_number_time_window": 3,
-    "exact_day_shot_number_time_window": 4,
+    # An unnumbered event and a shot, each the other's only neighbour within
+    # the tolerance in the event's stream (shot-aligner's one-to-one rule,
+    # ruling R-2026-11-21, behind TIME_MATCH_ONE_TO_ONE).
+    "time_one_to_one": 3,
+    "shot_number_time_window": 4,
+    "exact_day_shot_number_time_window": 5,
     # The authoritative number names exactly one shot, on another day or with
     # no event day: attached on the number alone (plan W6.2), only while the
     # time-based ranks are off, i.e. while numbers are trusted as identity.
-    "shot_number": 5,
-    "exact_day_shot_number": 6,
-    "event_identity": 7,
-    "exact_transport_position": 8,
-    "exact_kafka_event_id": 9,
+    "shot_number": 6,
+    "exact_day_shot_number": 7,
+    "event_identity": 8,
+    "exact_transport_position": 9,
+    "exact_kafka_event_id": 10,
 }
 
 
@@ -1985,6 +1989,7 @@ def reconcile_canonical_shots(  # noqa: C901
     time_match_autoassign: bool = False,
     include_trigger_only: bool = True,
     resolution_labfrog_shots: list[dict[str, Any]] | None = None,
+    time_match_one_to_one: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Link normalized source events to canonical shots.
 
@@ -2003,6 +2008,11 @@ def reconcile_canonical_shots(  # noqa: C901
     become review candidates, and an authoritative ``shot_number`` that names
     exactly one shot attaches on the number alone. ``time_match_autoassign=True``
     restores the pre-2026-09-30 ladder exactly.
+
+    ``time_match_one_to_one=True`` (ruling R-2026-11-21) then pairs what is
+    left the way shot-aligner does: an event without a shot number and a
+    LabFrog shot that are each other's only neighbour within the tolerance,
+    within the event's stream (``_pair_time_one_to_one``).
     """
     labfrog_shots = labfrog_shots or []
     trigger_only_keys: set[str] = set()
@@ -2069,6 +2079,13 @@ def reconcile_canonical_shots(  # noqa: C901
             ):
                 match["match_quality"] = quality
                 match["match_time_delta_s"] = delta
+        if time_match_one_to_one and not time_match_autoassign:
+            _pair_time_one_to_one(
+                normalized_events,
+                canonical,
+                match_tolerance_s=match_tolerance_s,
+                campaign_timezone=campaign_timezone,
+            )
         for shot in canonical:
             shot["experiment_id_source"] = "labfrog"
         if include_trigger_only:
@@ -4370,6 +4387,131 @@ def _match_event(
     ):
         return result
     return None, "ambiguous", "ambiguous", candidates or [match["shot_key"]]
+
+
+def _event_stream(event: dict[str, Any]) -> tuple[str, str, str]:
+    """What one event is one of: its source, kind and instrument (decision D1).
+
+    A shot has at most one event per stream, so the one-to-one rule is applied
+    within a stream: a trigger and a camera file of the same shot never compete.
+    The instrument is ``metadata.instrument.id``, else the producer instance.
+    """
+    metadata = event.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    instrument = metadata.get("instrument")
+    producer = metadata.get("producer")
+    instrument_id = instrument.get("id") if isinstance(instrument, dict) else None
+    producer_id = producer.get("instance_id") if isinstance(producer, dict) else None
+    return (
+        str(event.get("source") or ""),
+        str(event.get("kind") or ""),
+        str(instrument_id or producer_id or ""),
+    )
+
+
+def _pair_time_one_to_one(
+    events: list[dict[str, Any]],
+    shots: list[dict[str, Any]],
+    *,
+    match_tolerance_s: float,
+    campaign_timezone: str,
+) -> int:
+    """Attach unnumbered events by shot-aligner's one-to-one time rule.
+
+    shot-aligner's ``labfrog._match_by_time``: "a pair is one row and one
+    shot, each the other's only neighbour within the tolerance. Anything less
+    is ambiguous, not a match." Here a pair is an event without a shot number
+    that is not matched yet and a current LabFrog shot. The shot must be the
+    only one within the tolerance of the event, and the event the shot's
+    only one of its stream (every event of the stream counts, matched or
+    not). The shot must not already hold an event of that stream. If the
+    watchdog's attribution names candidates, the shot must be one of them.
+    Numbered events never pair by time (decision D6): a number LabFrog lacks
+    founds its trigger-only shot, as under A7.
+
+    Pairs are found on a snapshot and applied together, so the outcome does
+    not depend on order. Returns how many events were attached.
+    """
+    pairs = _one_to_one_pairs(
+        events,
+        shots,
+        match_tolerance_s=match_tolerance_s,
+        campaign_timezone=campaign_timezone,
+    )
+    for event, shot, delta in pairs:
+        event["shot_key"] = shot["shot_key"]
+        event["match_quality"] = "time_one_to_one"
+        event["match_status"] = "matched"
+        event["candidate_shot_keys"] = []
+        event["match_time_delta_s"] = delta
+        shot["events"].append(_event_api_record(event))
+        shot["match_status"] = "matched"
+        if MATCH_RANK["time_one_to_one"] >= MATCH_RANK.get(
+            str(shot.get("match_quality")), 0
+        ):
+            shot["match_quality"] = "time_one_to_one"
+            shot["match_time_delta_s"] = delta
+    return len(pairs)
+
+
+def _one_to_one_pairs(
+    events: list[dict[str, Any]],
+    shots: list[dict[str, Any]],
+    *,
+    match_tolerance_s: float,
+    campaign_timezone: str,
+) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
+    """The (event, shot, seconds from event to shot) pairs the rule allows."""
+    current = [
+        shot
+        for shot in shots
+        if not _as_bool(shot.get("metadata", {}).get("has_newer_version"))
+    ]
+    shot_times = [
+        (shot, shot_time)
+        for shot in current
+        if (
+            shot_time := parse_datetime(
+                shot.get("labfrog_date_time"), naive_timezone=campaign_timezone
+            )
+        )
+        is not None
+    ]
+    timed_events = [
+        (event, event_time, _event_stream(event))
+        for event in events
+        if (event_time := parse_datetime(event.get("timestamp"))) is not None
+    ]
+    held_streams = {
+        (event.get("shot_key"), _event_stream(event))
+        for event in events
+        if event.get("shot_key")
+    }
+
+    def within(left: datetime, right: datetime) -> bool:
+        return abs((left - right).total_seconds()) <= match_tolerance_s
+
+    pairs: list[tuple[dict[str, Any], dict[str, Any], float]] = []
+    for event, event_time, stream in timed_events:
+        if event.get("shot_key") or _event_shot_number(event) is not None:
+            continue
+        near_shots = [item for item in shot_times if within(item[1], event_time)]
+        if len(near_shots) != 1:
+            continue
+        shot, shot_time = near_shots[0]
+        rivals = [
+            other
+            for other, other_time, other_stream in timed_events
+            if other_stream == stream and within(other_time, shot_time)
+        ]
+        attributed = _attribution_candidate_keys(event, current)
+        if (
+            rivals == [event]
+            and (shot["shot_key"], stream) not in held_streams
+            and (not attributed or shot["shot_key"] in attributed)
+        ):
+            pairs.append((event, shot, (shot_time - event_time).total_seconds()))
+    return pairs
 
 
 def _attribution_candidate_keys(

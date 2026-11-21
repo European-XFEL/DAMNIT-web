@@ -267,6 +267,13 @@ class HZDRBuilderSettings(BaseModel):
     # with no LabFrog shot 1 was attached by nearest time to LabFrog shot 2.
     # True restores the pre-A7 ladder exactly.
     time_match_autoassign: bool = False
+    # Ruling R-2026-11-21 (hzdr/docs/plans/plan-review-automation.md): with
+    # this true, an event without a shot number attaches to a LabFrog shot
+    # when the two are each other's only neighbour within match_tolerance_s
+    # in the event's stream, shot-aligner's one-to-one rule
+    # (match_quality "time_one_to_one"). Anything less stays in review.
+    # time_match_autoassign=True takes precedence.
+    time_match_one_to_one: bool = False
     # LabFrog labfrog-campaign-schedule-v1 export whose windows route
     # "unassigned" events (plan W1, decision D4).
     campaign_schedule: Path | None = None
