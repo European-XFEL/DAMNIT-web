@@ -28,18 +28,21 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [ ] **Flow monitor and ShotPage off the full list.** Flow monitor polls
   `GET /metadata/hzdr/sources` to count shots; ShotPage fetches it only for
   the campaign switcher. Both can read the summaries.
-- [ ] **Cache the catalog in the API, modestly.** Every request parses
+- [x] **Cache the catalog in the API, modestly.** Every request parses
   `hzdr_sources.json` again. Keep the *one* most recent parse per file,
   reused while the file's size, mtime and inode stay the same; no per-request
   or per-campaign copies, no unbounded maps. Mongo is not cached.
+  Done: `hzdr_sources.load_sources_file`; a file changed in the last 2 s is
+  always re-read (timestamps can be too coarse to see a quick rewrite).
 - [ ] **Pause polling in a hidden tab, back off on failures.** Home and Flow
   monitor poll every 5 s even in the background and keep retrying at 5 s
   when the API is down.
-- [ ] **"Waiting" agrees with Review matches.** Home counts every
+- [x] **"Waiting" agrees with Review matches.** Home counts every
   `unassigned` shot; Review matches leaves out shots with a pending
   experiment ruling. The summary route subtracts them.
-- [ ] **Unparseable shot times are visible.** A `fired_at` the API cannot
-  parse is skipped silently; count it in the summary.
+- [x] **Unparseable shot times are visible.** A `fired_at` the API cannot
+  parse is skipped silently; count it in the summary. Done:
+  `unreadable_times`, a grey badge on the Home row.
 - [ ] **Version endpoint.** Expose the API version and git commit, so the
   frontend can warn when it is deployed without its matching API.
 - [ ] **End-to-end smoke test of Home** against the local acceptance stack,

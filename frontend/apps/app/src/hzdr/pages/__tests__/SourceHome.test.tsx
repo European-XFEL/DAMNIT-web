@@ -35,6 +35,7 @@ const SOURCES: HZDRSourceSummary[] = [
     waiting: 0,
     needs_review: 1,
     needs_revision: 1,
+    unreadable_times: 2,
   },
   {
     key: 'new',
@@ -123,6 +124,10 @@ describe('HZDRSourceHome', () => {
     expect(
       within(rows[1]).getByText('1 shot needs revision')
     ).toBeInTheDocument()
+    expect(
+      within(rows[1]).getByText('2 shot times unreadable')
+    ).toBeInTheDocument()
+    expect(within(rows[0]).queryByText(/unreadable/)).toBeNull()
     // The old emulator cards that repeated the header are gone.
     expect(screen.queryByText('Watch the flow')).toBeNull()
 

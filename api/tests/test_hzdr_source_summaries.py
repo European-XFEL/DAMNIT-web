@@ -8,6 +8,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from damnit_api.metadata.hzdr_nexus import append_experiment_ruling
 from damnit_api.metadata.hzdr_routers import hzdr_router
 from damnit_api.metadata.hzdr_sources import HZDRSource, summarize_source
 from damnit_api.shared.settings import MetadataSettings
@@ -113,3 +114,26 @@ def test_route_rejects_a_malformed_since(client):
         "/metadata/hzdr/source-summaries", params={"since": "yesterday"}
     )
     assert response.status_code == 422
+
+
+def test_a_pending_ruling_stops_an_unassigned_shot_waiting():
+    summary = summarize_source(HZDRSource.model_validate(SOURCE), BERLIN_MIDNIGHT, {1})
+    # ambiguous + unacknowledged unmatched; the unassigned shot 1 is ruled
+    assert summary.waiting == 2
+
+
+def test_unreadable_times_are_counted_not_hidden():
+    summary = summarize_source(HZDRSource.model_validate(SOURCE), BERLIN_MIDNIGHT)
+    # "not a time" is unreadable; an empty fired_at is just not recorded
+    assert summary.unreadable_times == 1
+
+
+def test_route_counts_a_ruling_written_beside_the_catalog(client, tmp_path):
+    append_experiment_ruling(
+        tmp_path / "hzdr_sources.json",
+        shot_number=1,
+        experiment_id="new",
+        by="reviewer",
+    )
+    (summary,) = client.get("/metadata/hzdr/source-summaries").json()
+    assert summary["waiting"] == 2

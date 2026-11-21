@@ -220,10 +220,19 @@ async def list_hzdr_source_summaries(
     ] = None,
 ) -> list[HZDRSourceSummary]:
     """Per-campaign counts for Home, without the shots themselves."""
+    ruled = _ruled_shot_numbers()
     return [
-        summarize_source(source, since)
+        summarize_source(source, since, ruled)
         for source in HZDRSourceProvider(settings.metadata).list_sources()
     ]
+
+
+def _ruled_shot_numbers() -> set[int]:
+    """Shot numbers with an experiment ruling beside the served catalog."""
+    sources_file = settings.metadata.sources_file
+    if settings.metadata.provider != "local" or sources_file is None:
+        return set()
+    return set(load_experiment_ruling_records([review_sidecar_path(sources_file)]))
 
 
 @hzdr_router.get("/hzdr/campaigns")

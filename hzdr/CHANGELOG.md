@@ -14,6 +14,18 @@ behaviour; the merge PR has the details.
   `GET /metadata/hzdr/sources`, which carries every shot of every campaign.
   A `fired_at` without an offset is read in the zone of `since`, as the
   browser read it before. Deploy the API with the frontend.
+- The summary's `waiting` leaves out an `unassigned` shot with a pending
+  experiment ruling, as Review matches does, and `unreadable_times` counts
+  shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
+  Home row) instead of skipping them silently.
+
+### API: the parsed catalog is reused while the file is unchanged
+- `hzdr_sources.load_sources_file` keeps the one most recent parse of
+  `hzdr_sources.json` and reuses it while the file's inode, size, mtime and
+  ctime stay the same; a different file replaces it, so memory stays at one
+  catalog. A file changed in the last 2 s is always read again. Mongo is not
+  cached. Polled routes no longer parse and validate the whole catalog on
+  every request.
 
 ### Shot table: links to a shot, and trend points that open their shot
 - The selected shot is in the address (`?shot=<shot_key>`, or a shot

@@ -72,6 +72,19 @@ function CampaignRow({ campaign }: { campaign: HomeCampaignSummary }) {
               )}
             </Badge>
           ) : null}
+          {campaign.unreadableTimes > 0 ? (
+            <Badge
+              variant="light"
+              color="gray"
+              title="Shot times that are set but are no ISO-8601 time; check the catalog"
+            >
+              {plural(
+                campaign.unreadableTimes,
+                'shot time unreadable',
+                'shot times unreadable'
+              )}
+            </Badge>
+          ) : null}
         </Group>
       </Group>
     </Card>

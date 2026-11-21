@@ -15,6 +15,8 @@ export type HZDRSourceSummary = {
   waiting: number
   needs_review: number
   needs_revision: number
+  /** Shots whose fired_at is set but unreadable (older APIs: absent). */
+  unreadable_times?: number
 }
 
 export type HomeCampaignSummary = {
@@ -30,6 +32,7 @@ export type HomeCampaignSummary = {
   waiting: number
   needsReview: number
   needsRevision: number
+  unreadableTimes: number
 }
 
 /** Local midnight of `now` as ISO-8601 with this browser's UTC offset. */
@@ -68,6 +71,7 @@ export function summarizeCampaign(
     waiting: summary.waiting,
     needsReview: summary.needs_review,
     needsRevision: summary.needs_revision,
+    unreadableTimes: summary.unreadable_times ?? 0,
   }
 }
 
