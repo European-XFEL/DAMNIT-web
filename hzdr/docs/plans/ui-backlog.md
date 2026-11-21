@@ -87,9 +87,11 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   summary and fetches the shots again only when the count, newest shot or
   review counts changed (`utils/new-shots.ts` `shotListChangeKey`,
   `usePolling`); quiet, so selection and filters stay.
-- [ ] **Docs page and screenshots up to date** with Views, Download CSV,
+- [x] **Docs page and screenshots up to date** with Views, Download CSV,
   New since your last visit, Compare with, the self-refresh and
-  `{container}` columns.
+  `{container}` columns. Done: DocsPage text, all seven captures (the
+  shot-table capture saves a view and picks Compare with), the in-app
+  shot-table JPEG (how to refresh one: `hzdr/docs/screenshots.md`).
 - [x] **Containers go-live checklist** in `hzdr/docs/guides/operations.md`:
   the settings to turn on, what to check after the first build. Phase 6
   (one campaign built by both us and shot-aligner, compared with

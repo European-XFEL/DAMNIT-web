@@ -6,6 +6,12 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Docs and screenshots
+- The in-app Docs page describes Views, Download CSV, New since your last
+  visit, the self-refresh, Trends' Compare with and columns on a shot's
+  container. The screenshots are recaptured; the shot-table capture now
+  shows a saved view and a second trend value.
+
 ### Shot table: new shots appear without a reload
 - The campaign page reads the campaign summary every 20 s while its tab is
   visible (the same light route Home polls) and fetches the shots and your

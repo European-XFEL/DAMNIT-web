@@ -289,7 +289,20 @@ export function HZDRDocsPage() {
                   <List.Item>
                     <b>Quick filters</b>: the <b>Needs review</b> and{' '}
                     <b>Needs revision</b> chips above the table show only those
-                    shots. For anything else use the filter row.
+                    shots, the day chips one shot day.{' '}
+                    <b>New since your last visit</b> shows the shots fired after
+                    the newest one this browser showed you last time. For
+                    anything else use the filter row.
+                  </List.Item>
+                  <List.Item>
+                    <b>New shots appear by themselves</b>: the page checks the
+                    campaign every 20 seconds and adds new shots without a
+                    reload; your selection and filters stay.
+                  </List.Item>
+                  <List.Item>
+                    <b>Views</b>: <b>Save view</b> names the current filter,
+                    sort and columns; the view then sits as a chip above the
+                    quick filters, one click away. The x on a chip deletes it.
                   </List.Item>
                   <List.Item>
                     <b>Choose columns</b> under Columns; <b>Add columns</b> next
@@ -297,7 +310,8 @@ export function HZDRDocsPage() {
                     <Anchor href="#own-columns">Your own columns</Anchor>).{' '}
                     <b>Move a column</b> by dragging its header onto another;{' '}
                     <b>Reset order</b> puts them back. Your choice is kept per
-                    campaign in this browser.
+                    campaign in this browser. <b>Download CSV</b> saves the
+                    table as shown: its rows, order and visible columns.
                   </List.Item>
                   <List.Item>
                     <b>Sort</b> by clicking a header.
@@ -309,9 +323,11 @@ export function HZDRDocsPage() {
                     Shot detail copies a link that opens on it.
                   </List.Item>
                   <List.Item>
-                    <b>Trends</b>, at the top of the side panel: pick a value to
-                    plot it over the shots the table shows (the filters apply).
-                    Click a point to open that shot.
+                    <b>Trends</b>, at the top of the side panel: pick a value (a
+                    metadata value or one of your numeric columns) to plot it
+                    over the shots the table shows (the filters apply).{' '}
+                    <b>Compare with</b> adds a second value on its own axis at
+                    the right. Click a point to open that shot.
                   </List.Item>
                   <List.Item>
                     <b>Click a cell</b> for its value; a number opens a trend
@@ -344,7 +360,11 @@ export function HZDRDocsPage() {
                   A data product in the campaign file has a preview. Where its
                   dataset is stored the same way for every shot,{' '}
                   <b>Add as column</b> turns it into a column of your shot
-                  table.
+                  table. That includes a dataset in the shot&apos;s own
+                  container (listed as{' '}
+                  <Code style={WRAP}>&lt;YYYYMMDD&gt;_&lt;NNNNNN&gt;/...</Code>
+                  ): the column reads the same dataset from every shot&apos;s
+                  container and shows <i>Missing</i> where a shot has none.
                 </Text>
               </DocSection>
 

@@ -23,6 +23,15 @@ To use a Chromium that is already installed instead of Playwright's download,
 set `HZDR_CHROMIUM_EXECUTABLE` to its binary.
 Server output and browser errors are printed to the terminal for troubleshooting.
 
+The in-app Docs page shows smaller copies in
+`frontend/apps/app/src/hzdr/assets/docs/` (900 px wide JPEGs of each page's
+top). They are not written by the capture; after one, refresh a copy whose
+page changed, for example the shot table:
+
+```bash
+python3 -c "from PIL import Image; Image.open('hzdr/docs/screenshots/shot-table.png').convert('RGB').crop((0, 0, 1920, 1160)).resize((900, 544), Image.LANCZOS).save('frontend/apps/app/src/hzdr/assets/docs/docs-shot-table.jpg', quality=85, optimize=True)"
+```
+
 ## What the fixture stack contains
 
 The capture script authors the whole campaign itself, so the pages show a run
@@ -63,9 +72,12 @@ the shots needing review or revision; the DAMNIT folder is small print.
 A campaign page (`/source/{source_key}`): DAMNIT's per-shot table with
 status badges, campaign/context columns and inline image and trend previews.
 Above it, one line of status chips (SciCat, wiki, producers, Flow monitor),
-quick filters for review status and day, and **Add columns** beside Columns.
-The side panel opens with **Trends** (pick a value; it plots the shots the
-table shows). The capture clicks a camera-image cell of shot 7, so below it
+quick filters for review status and day, and **Add columns** and **Download
+CSV** beside Columns. The capture saves the table as a view named "All
+shots", so a chip shows under **Views** beside Save view. The side panel
+opens with **Trends** (pick a value; it plots the shots the table shows);
+the capture picks the X-ray counts column under **Compare with**, drawn
+dashed on its own right-hand axis. It clicks a camera-image cell of shot 7, so below it
 Selected cell shows the full preview, then Shot detail (open by default:
 facts, the review control, events, data products and only that shot's
 datasets as a tree).

@@ -654,6 +654,29 @@ def _select_camera_image_cell(page: Page) -> None:
     page.get_by_text("Image preview").first.wait_for()
 
 
+def _prepare_shot_table(page: Page) -> None:
+    """Show a saved view, a second trend value and an opened image cell.
+
+    Saves the default table as a view named "All shots" (so a chip shows
+    beside Save view), picks the X-ray counts column under Compare with (so
+    Trends draws its second axis) and opens the camera-image cell of shot 7.
+    """
+    page.get_by_role("button", name="Save view").click()
+    name = page.get_by_role("textbox", name="View name")
+    name.fill("All shots")
+    name.press("Enter")
+    page.get_by_role("button", name="All shots").first.wait_for()
+    compare = page.get_by_role("textbox", name="Compare with")
+    compare.click()
+    option = page.get_by_role("option", name=re.compile("X-ray counts"))
+    if option.count():
+        option.first.click()
+    else:
+        print("warning: no X-ray counts option under Compare with", file=sys.stderr)
+        page.keyboard.press("Escape")
+    _select_camera_image_cell(page)
+
+
 def _context_column_index(page: Page, title: str) -> int | None:
     """Find a context column's cell index by its header title."""
     headers = page.locator("table thead th")
@@ -767,7 +790,7 @@ SHOTS = (
         f"/source/{PRIMARY.source_key}",
         "selector",
         "table",
-        _select_camera_image_cell,
+        _prepare_shot_table,
     ),
     Shot(
         "context-assist.png",
