@@ -1884,8 +1884,54 @@ def test_a_preview_reads_one_frame_of_a_stack(tmp_path, monkeypatch):
     assert image.preview_kind == "image"
     assert len(image.preview) <= 65
     assert image.shape == [3, 130, 70]
+    assert image.summary is not None
+    assert image.summary_exact is False
     line = preview_hdf5_dataset(path, "line")
-    assert len(line.preview) == 200
+    # The whole lineout, thinned evenly (not its first 200 samples), with
+    # the exact mean of every sample.
+    assert isinstance(line.preview, list)
+    assert len(line.preview) == 500
+    assert line.preview[0] == 0
+    assert line.preview[-1] == 998
+    assert line.summary == pytest.approx(499.5)
+    assert line.summary_exact is True
+
+
+def test_a_preview_samples_the_whole_frame_and_says_what_it_cannot_sum(tmp_path):
+    """A 100-pixel side is strided, not cut to its first 64 pixels; values a
+    column cannot average get no summary rather than a wrong one."""
+    from damnit_api.metadata.hzdr_sources import preview_hdf5_dataset
+
+    path = tmp_path / "odd.h5"
+    with h5py.File(path, "w") as handle:
+        handle.create_dataset("ramp", data=np.arange(100 * 100).reshape(100, 100))
+        # An HDF5 array type: shape [20], each element 1000 numbers (numpy's
+        # subarray dtype would be expanded by h5py into a plain 20x1000).
+        array_type = h5py.h5t.array_create(h5py.h5t.py_create(np.dtype("f8")), (1000,))
+        h5py.h5d.create(handle.id, b"rows", array_type, h5py.h5s.create_simple((20,)))
+        handle.create_dataset("names", data=np.array([b"a", b"b", b"c"]))
+        handle.create_dataset("gappy", data=np.array([1.0, np.nan, 3.0]))
+        handle.create_dataset("blown", data=np.array([1.0, np.inf, 3.0]))
+
+    ramp = preview_hdf5_dataset(path, "ramp")
+    assert isinstance(ramp.preview, list)
+    assert ramp.summary is not None
+    assert len(ramp.preview) == 50
+    assert len(ramp.preview[0]) == 50
+    # the strided mean is near the true 4999.5, not the 3181.5 of a corner
+    assert abs(ramp.summary - 4999.5) < 100
+    assert ramp.summary_exact is False
+
+    rows = preview_hdf5_dataset(path, "rows")
+    assert rows.preview is None
+    assert rows.summary is None
+    names = preview_hdf5_dataset(path, "names")
+    assert names.preview is None
+    assert names.summary is None
+
+    # np.nanmean, as the generated column computes it
+    assert preview_hdf5_dataset(path, "gappy").summary == pytest.approx(2.0)
+    assert preview_hdf5_dataset(path, "blown").summary is None
 
 
 def test_relink_asks_for_a_build_when_the_master_cannot_be_read(campaign, monkeypatch):

@@ -73,6 +73,24 @@ def test_runtime_config_defaults_to_hzdr_terms(monkeypatch):
     assert payload["terminology"]["uses_mymdc"] is False
 
 
+def test_runtime_config_reports_live_traffic_when_a_spool_consumer_runs(
+    monkeypatch,
+):
+    """The flow monitor opens in Live mode when real traffic is configured."""
+    monkeypatch.setattr(settings.hzdr_spool, "enabled", False)
+    monkeypatch.setattr(settings.hzdr_kafka_spool, "enabled", False)
+    with TestClient(create_app()) as client:
+        payload = client.get("/config/runtime").json()
+    assert payload["flow_monitor"]["live_traffic"] is False
+
+    # Only the response is under test; the lifespan (which would start the
+    # consumer) has already run with the consumer off.
+    with TestClient(create_app()) as client:
+        monkeypatch.setattr(settings.hzdr_kafka_spool, "enabled", True)
+        payload = client.get("/config/runtime").json()
+    assert payload["flow_monitor"]["live_traffic"] is True
+
+
 def test_runtime_config_reports_configured_ldap_form(monkeypatch):
     """The frontend needs to know when it should show the LDAP login form.
 

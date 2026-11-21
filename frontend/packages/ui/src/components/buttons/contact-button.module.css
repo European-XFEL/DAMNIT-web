@@ -2,6 +2,23 @@
    rows pair theirs. Mantine's default is the 10 px spacing. */
 .section[data-position='left'] {
   margin-inline-end: 8px;
+
+  @media (max-width: $mantine-breakpoint-xs) {
+    margin-inline-end: 0;
+  }
+}
+
+/* On a phone the pill shrinks to its mark, so it covers no content. */
+.label {
+  @media (max-width: $mantine-breakpoint-xs) {
+    display: none;
+  }
+}
+
+.button {
+  @media (max-width: $mantine-breakpoint-xs) {
+    padding-inline: 10px;
+  }
 }
 
 /* Below xs the footer's links wrap to two rows, so the pill goes up one. */

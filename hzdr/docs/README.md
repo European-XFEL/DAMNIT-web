@@ -24,7 +24,7 @@ branch merge (I3). See the [roadmap](status/integration-roadmap.md) and short
 | --- | --- |
 | [System overview](system-overview.md) | The seven pilot-runtime repositories, the end-to-end data flow, shared contracts, and the end products |
 | [Architecture](architecture.md) | Canonical identity, event model, NeXus layout, and system boundaries |
-| [Screenshots](screenshots.md) | Current UI: home, shot table, context builder, review matches (stale capture), in-app docs, flow monitor |
+| [Screenshots](screenshots.md) | Current UI: home, shot table, context builder (Help me choose and the builder), review matches, in-app docs, flow monitor |
 | [User guide](guides/user-guide.md) | Find a campaign, inspect shots, and resolve review cases |
 
 ## Reference — data model & standards

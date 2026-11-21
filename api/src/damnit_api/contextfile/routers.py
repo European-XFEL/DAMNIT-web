@@ -15,6 +15,7 @@ from ..metadata.hzdr_event import LEGACY_KEY_MAP
 from ..metadata.hzdr_sources import HZDRShot, HZDRSourceProvider
 from ..shared.settings import settings
 from . import models
+from .assist import column_suggestions
 from .suggested import suggested_context
 
 router = APIRouter(prefix="/contextfile")
@@ -142,6 +143,23 @@ async def get_suggested_campaign_context(
     return {
         "campaign": campaign,
         "fileContent": suggested_context(campaign, _campaign_shots(campaign)),
+    }
+
+
+@router.get("/campaign/{campaign}/assist")
+async def get_campaign_column_suggestions(
+    campaign: str,
+    user: OAuthUserInfo,
+) -> dict[str, Any]:
+    """Context Builder's "Help me": every column worth offering, best first.
+
+    Each suggestion says why it was picked and what the column will do, and
+    carries a self-contained ``@Variable`` block. Nothing is written; the
+    builder adds the ones the user accepts (see ``assist.py``).
+    """
+    return {
+        "campaign": campaign,
+        "suggestions": column_suggestions(_campaign_shots(campaign)),
     }
 
 

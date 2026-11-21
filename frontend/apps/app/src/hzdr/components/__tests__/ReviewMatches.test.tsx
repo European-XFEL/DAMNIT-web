@@ -6,6 +6,8 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import {
   AmbiguousMatchesCard,
   ResolvedCard,
+  ReviewAllClear,
+  ReviewSummary,
   UnassignedShotsCard,
   UnmatchedEventsCard,
 } from '../ReviewMatches'
@@ -94,6 +96,18 @@ describe('AmbiguousMatchesCard', () => {
     expect(screen.getByText('17')).toBeInTheDocument()
     expect(screen.getByText('+2 min')).toBeInTheDocument()
     expect(screen.getByText('-3 min')).toBeInTheDocument()
+    // Shot 1 is 2 min from the event, shot 2 is 3 min: shot 1 is highlighted.
+    expect(
+      screen.getByText(
+        'Closest in time is highlighted; time alone never decides.'
+      )
+    ).toBeInTheDocument()
+    const closest = screen.getByText('closest in time').closest('tr')
+    expect(closest).toHaveAttribute('data-closest')
+    expect(closest).toHaveTextContent('Confirm shot 1')
+    expect(
+      screen.getByRole('button', { name: 'Confirm shot 2' }).closest('tr')
+    ).not.toHaveAttribute('data-closest')
     fireEvent.change(screen.getByLabelText('Note (optional)'), {
       target: { value: 'logbook' },
     })
@@ -104,6 +118,32 @@ describe('AmbiguousMatchesCard', () => {
       'exp:20260505:000002',
       'logbook'
     )
+  })
+
+  it('highlights nothing when the gap is unknown, and confirms nothing itself', () => {
+    const onConfirm = vi.fn()
+    const naive = (n: number) =>
+      makeShot({
+        shot_number: n,
+        shot_key: `exp:20260505:00000${n}`,
+        fired_at: '',
+        labfrog_date_time: `2026-05-05T08:1${n}:00`,
+      })
+    withMantine(
+      <AmbiguousMatchesCard
+        events={[makeEvent()]}
+        shotsByKey={
+          new Map([
+            ['exp:20260505:000001', naive(1)],
+            ['exp:20260505:000002', naive(2)],
+          ])
+        }
+        busyKey={null}
+        onConfirm={onConfirm}
+      />
+    )
+    expect(screen.queryByText('closest in time')).not.toBeInTheDocument()
+    expect(onConfirm).not.toHaveBeenCalled()
   })
 
   it('will not confirm a candidate missing from the catalog', () => {
@@ -236,12 +276,67 @@ describe('ResolvedCard', () => {
         ]}
       />
     )
+    // Folded by default, with its count.
+    expect(screen.queryByText('Event e1 → shot 4')).not.toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
+    const toggle = screen.getByRole('button', { name: /Resolved/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('Event e1 → shot 4')).toBeInTheDocument()
     expect(screen.getByText('kim')).toBeInTheDocument()
     expect(
       screen.getByText('Event e2 acknowledged, no shot')
     ).toBeInTheDocument()
     expect(screen.getByText('lee')).toBeInTheDocument()
+  })
+})
+
+describe('ReviewSummary', () => {
+  it('makes chips with something behind them jump; zero chips are inert', () => {
+    const onJump = vi.fn()
+    withMantine(
+      <ReviewSummary
+        summary={{
+          matched: 16,
+          ambiguous: 2,
+          unmatched: 0,
+          confirmed: 1,
+          dismissed: 0,
+        }}
+        ambiguous={2}
+        unmatched={0}
+        unassigned={3}
+        onJump={onJump}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: '2 ambiguous' }))
+    expect(onJump).toHaveBeenLastCalledWith('ambiguous')
+    fireEvent.click(screen.getByRole('button', { name: '3 unassigned shots' }))
+    expect(onJump).toHaveBeenLastCalledWith('unassigned')
+    fireEvent.click(
+      screen.getByRole('button', { name: '1 confirmed by a reviewer' })
+    )
+    expect(onJump).toHaveBeenLastCalledWith('resolved')
+    expect(
+      screen.queryByRole('button', { name: '0 unmatched' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('0 unmatched')).toBeInTheDocument()
+    // Matched has no section to jump to.
+    expect(
+      screen.queryByRole('button', { name: '16 matched' })
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe('ReviewAllClear', () => {
+  it('says the campaign is clear and how many events matched', () => {
+    withMantine(<ReviewAllClear campaign="Pilot_2026" matched={16} />)
+    expect(
+      screen.getByText(
+        'Pilot_2026: all clear. 16 events matched; nothing is waiting for a decision.'
+      )
+    ).toBeInTheDocument()
   })
 })
 

@@ -46,12 +46,54 @@ without a rebuild, using their shot dates. After a campaign rebuild the exported
 
 ## Context columns
 
-Use Context builder to choose a field from **LabFrog fields**, **Shot metadata**
+Context builder opens on **Help me choose**: ranked suggestions for the
+campaign (`GET /contextfile/campaign/{campaign}/assist`), each with why it was
+picked, a few example values and what the column will do. LabFrog values that
+vary come first (the starter's picks marked **Top pick**), then registered
+metadata keys whose values are numbers that vary, with their canonical unit
+(and the trigger's ADC value; never the record namespaces `acquisition`,
+`attribution`, `instrument`, `producer` and `run`, so no counter), then the
+example shot's HDF5 images, lineouts and scalars. A column's function name
+never takes a Python keyword or builtin, or a name the file uses (`np`,
+`Skip`, ...): `class` becomes `class_column`. A LabFrog name with a dot in it
+is read by name from `meta#labfrog_variables`, since `meta#` paths split on
+dots. Each suggestion is a row with a checkbox; tick several and **Add N
+columns** appends their `@Variable` blocks to the destination file in one
+save (nothing is added when the save fails), or **Ignore ticked**. Selecting
+a row shows its preview, reason and single **Add this column** / **Ignore
+this suggestion** / **Customise** / **Show code** in the right column (under
+the row on narrow screens). Ignoring hides a suggestion in this browser only
+(localStorage, per campaign; **Show ignored suggestions again** brings them
+back); **Customise** opens it in the builder. The file's existing columns are
+a list with Edit, Move up/down and Delete (confirmed in the page). A link
+`/source/<campaign>/context-builder?add=hdf5:<dataset>` (or
+`?add=metadata:<path>`, optional `&shot=<shot_key or number>`) opens the
+builder with that data chosen; Shot detail's **Add as column** uses it for a
+dataset stored per shot (`by_shot/`, `shots/`, `shot/`), passing the shot. A suggestion drops off once the file reads its data
+path (quoted); a column that only shares its function name reads other data,
+so the suggestion stays and is renamed when added. A column reading the same
+data through a helper is not recognised either, so that suggestion stays
+until it is ignored.
+
+In **Build a column myself**, choose a field from **LabFrog fields**, **Shot metadata**
 or an HDF5 dataset group. Field counts show availability across the campaign;
 the example value is for the selected shot. If that shot lacks the field,
 **Use a shot with this field** selects one containing it. Choose the display,
-set the column title, and add it to the context file. **Preview example data**
-checks the inputs; saved calculations run when the shot table loads context.
+set the column title, and add it to the context file.
+
+**Preview** (in the builder, and for the selected suggestion)
+follows the choices as they are made, with nothing to press. *In the table*
+is the example shot's cell as the column will show it: the value with its
+unit (a LabFrog decimal comma read as a number), *Missing* when the shot has
+none, red when it is not a number; for a dataset, the scalar or the mean of
+the lineout or image (marked ≈ when estimated from the reduced preview of a
+large image). *On double-click* is the image or curve the cell panel opens.
+*Across the campaign* is the value on every shot: a trend for numbers, the
+labels and how many shots carry each for text. A custom function or a MongoDB
+lookup is calculated only when the shot table loads, and the preview says so.
+The dataset preview (`GET .../shots/{n}/datasets/{name}`) reads one strided
+frame of an image and thins a lineout evenly over its whole length (at most
+512 points), and returns `summary`/`summary_exact` for the cell.
 
 After deploying context fixes, use **Refresh context** on the shot page to
 re-evaluate saved columns. Older generated nested `doc.get(...)` columns work

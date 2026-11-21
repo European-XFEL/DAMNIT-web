@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Anchor,
+  Alert,
   Badge,
   Button,
   Container,
   Divider,
   Group,
   Paper,
-  ScrollArea,
   SegmentedControl,
   Select,
   SimpleGrid,
@@ -17,6 +16,7 @@ import {
 } from '@mantine/core'
 import {
   IconBellRinging,
+  IconFlask,
   IconRefresh,
   IconVolume,
   IconVolumeOff,
@@ -28,7 +28,6 @@ import { HomePage } from '@damnit-frontend/ui'
 import type {
   HZDRSource,
   FlowPacket,
-  FlowLogEntry,
   FlowReceiverConfig,
   FlowMonitorState,
   FlowMonitorMode,
@@ -45,8 +44,20 @@ import {
 import { useRuntimeConfig } from '../hooks'
 import { AppHeader } from '../components/AppHeader'
 import { FlowDiagram } from '../components/FlowDiagram'
+import { FlowTrafficLog } from '../components/FlowTrafficLog'
 import { requireJson } from '../utils/api'
 import { activityChanges } from '../utils/flow-activity'
+import {
+  type FlowTrafficEntry,
+  initialFlowMode,
+  laneSource,
+  readStoredFlowMode,
+  storeFlowMode,
+} from '../utils/flow-mode'
+import { campaignTitle } from '../utils/format'
+
+export const DEMO_BANNER =
+  'Demo mode: emulated traffic; nothing here reaches a campaign.'
 
 function formatClock(iso?: string | null): string {
   if (!iso) {
@@ -58,13 +69,22 @@ function formatClock(iso?: string | null): string {
 
 export function HZDRFlowMonitorPage() {
   const runtimeConfig = useRuntimeConfig()
-  const [monitorMode, setMonitorMode] = useState<FlowMonitorMode>('demo')
+  // An explicit choice (this visit or remembered) wins; until there is one,
+  // the mode follows whether the deployment receives real traffic.
+  const [chosenMode, setChosenMode] = useState<FlowMonitorMode | null>(
+    readStoredFlowMode
+  )
+  const monitorMode = initialFlowMode(chosenMode, runtimeConfig)
+  const chooseMode = useCallback((mode: FlowMonitorMode) => {
+    setChosenMode(mode)
+    storeFlowMode(mode)
+  }, [])
   const [health, setHealth] = useState<FlowMonitorHealth | null>(null)
   const prevHealth = useRef<FlowMonitorHealth | null>(null)
   const [activity, setActivity] = useState<FlowActivity | null>(null)
   const [sources, setSources] = useState<HZDRSource[]>([])
   const [packets, setPackets] = useState<FlowPacket[]>([])
-  const [logEntries, setLogEntries] = useState<FlowLogEntry[]>([])
+  const [logEntries, setLogEntries] = useState<FlowTrafficEntry[]>([])
   const [soundEnabled, setSoundEnabled] = useState(false)
   const [damnitPulse, setDamnitPulse] = useState(false)
   const [livePollPulse, setLivePollPulse] = useState(false)
@@ -117,15 +137,23 @@ export function HZDRFlowMonitorPage() {
   const nextShotNumber = latestShotNumber ? latestShotNumber + 1 : 123
 
   const addLogEntry = useCallback(
-    (label: string, detail: string, tone: FlowLogEntry['tone']) => {
-      const entry: FlowLogEntry = {
+    (
+      source: string,
+      label: string,
+      detail: string,
+      tone: FlowTrafficEntry['tone'],
+      shot: number | null = null
+    ) => {
+      const entry: FlowTrafficEntry = {
         id: nextLogId.current++,
         at: new Date().toLocaleTimeString(),
+        source,
         label,
         detail,
         tone,
+        shot,
       }
-      setLogEntries((currentEntries) => [entry, ...currentEntries].slice(0, 16))
+      setLogEntries((currentEntries) => [entry, ...currentEntries].slice(0, 50))
     },
     []
   )
@@ -154,9 +182,9 @@ export function HZDRFlowMonitorPage() {
   }, [soundEnabled])
 
   const triggerDamnitPulse = useCallback(
-    (detail: string) => {
+    (detail: string, shot: number | null = null) => {
       setDamnitPulse(true)
-      addLogEntry('DAMNIT received', detail, 'receive')
+      addLogEntry('DAMNIT', 'DAMNIT received', detail, 'receive', shot)
       playBleep()
       window.setTimeout(() => setDamnitPulse(false), 850)
     },
@@ -209,6 +237,11 @@ export function HZDRFlowMonitorPage() {
           const now = data[service]?.reachable
           if (was !== undefined && was !== now) {
             addLogEntry(
+              service === 'mongo'
+                ? 'MongoDB'
+                : service === 'kafka'
+                  ? 'Kafka'
+                  : 'ASAPO',
               `${service.toUpperCase()} ${now ? 'reachable' : 'unreachable'}`,
               now
                 ? `probe ok (${data[service].latency_ms ?? '?'} ms)`
@@ -231,7 +264,12 @@ export function HZDRFlowMonitorPage() {
     (lane: FlowPacket['lane'], label: string, detail: string) => {
       const packet: FlowPacket = { id: nextPacketId.current++, lane, label }
       setPackets((currentPackets) => [...currentPackets, packet])
-      addLogEntry(label, detail, lane === 'damnit' ? 'receive' : 'send')
+      addLogEntry(
+        laneSource(lane),
+        label,
+        detail,
+        lane === 'damnit' ? 'receive' : 'send'
+      )
       window.setTimeout(() => {
         setPackets((currentPackets) =>
           currentPackets.filter((current) => current.id !== packet.id)
@@ -276,7 +314,8 @@ export function HZDRFlowMonitorPage() {
   const sendPacket = (
     lane: FlowPacket['lane'],
     label: string,
-    detail: string
+    detail: string,
+    shot: number | null = null
   ) => {
     const packet: FlowPacket = {
       id: nextPacketId.current++,
@@ -284,16 +323,24 @@ export function HZDRFlowMonitorPage() {
       label,
     }
     setPackets((currentPackets) => [...currentPackets, packet])
-    addLogEntry(label, detail, lane === 'damnit' ? 'receive' : 'send')
+    addLogEntry(
+      laneSource(lane),
+      label,
+      detail,
+      lane === 'damnit' ? 'receive' : 'send',
+      shot
+    )
     window.setTimeout(() => {
       setPackets((currentPackets) =>
         currentPackets.filter((currentPacket) => currentPacket.id !== packet.id)
       )
       if (lane !== 'damnit') {
         addLogEntry(
+          'Event log',
           'Staged package',
           `${label} appended to events JSONL`,
-          'stage'
+          'stage',
+          shot
         )
       }
     }, 1450)
@@ -313,7 +360,8 @@ export function HZDRFlowMonitorPage() {
     sendPacket(
       lane,
       label,
-      `${detail}; ${action === 'append' ? 'appending' : 'enriching'} shot ${targetShotNumber}`
+      `${detail}; ${action === 'append' ? 'appending' : 'enriching'} shot ${targetShotNumber}`,
+      targetShotNumber
     )
     fetch('/metadata/hzdr/emulator/events', {
       method: 'POST',
@@ -332,12 +380,14 @@ export function HZDRFlowMonitorPage() {
           triggerDamnitPulse(
             action === 'append'
               ? `Shot ${targetShotNumber} appended to local emulator`
-              : `Shot ${targetShotNumber} enriched in local emulator`
+              : `Shot ${targetShotNumber} enriched in local emulator`,
+            targetShotNumber
           )
         }
       })
       .catch(() => {
         addLogEntry(
+          'Emulator',
           'Append failed',
           'Local emulator endpoint did not accept the event',
           'stage'
@@ -348,6 +398,7 @@ export function HZDRFlowMonitorPage() {
   const sendLaserData = () => {
     if (!receiverConfig.laserData) {
       addLogEntry(
+        'LaserData',
         'LaserData disabled',
         'Enable LaserData in the launcher flow-monitor config.',
         'stage'
@@ -365,21 +416,19 @@ export function HZDRFlowMonitorPage() {
       false
     )
 
-    setFlowState((current) => {
-      console.log('before LaserData enrich', current)
-      return {
-        ...current,
-        laserBuffered: false,
-        laserBrokerPending: true,
-        laserStaged: false,
-        hdf5Built: false,
-      }
-    })
+    setFlowState((current) => ({
+      ...current,
+      laserBuffered: false,
+      laserBrokerPending: true,
+      laserStaged: false,
+      hdf5Built: false,
+    }))
   }
 
   const sendWatchdog = () => {
     if (!receiverConfig.watchdog) {
       addLogEntry(
+        'DAQ File Watchdog',
         'Watchdog disabled',
         'Enable DAQ File Watchdog in the launcher flow-monitor config.',
         'stage'
@@ -388,6 +437,7 @@ export function HZDRFlowMonitorPage() {
     }
     if (!selectedWatchdogWatchers.length) {
       addLogEntry(
+        'DAQ File Watchdog',
         'No Watchdog watchers selected',
         'Select at least one DAQ File Watchdog watcher rule.',
         'stage'
@@ -421,6 +471,7 @@ export function HZDRFlowMonitorPage() {
   const sendShotcounter = () => {
     if (!selectedShotcounterTKeys.length) {
       addLogEntry(
+        'Shot trigger',
         'No Shotcounter TKEYs selected',
         'Select at least one Shotcounter TKEY before publishing a shot notice.',
         'stage'
@@ -488,19 +539,43 @@ export function HZDRFlowMonitorPage() {
       }))
     }, 1100)
   }
+
+  const live = monitorMode === 'live'
+  const diagram = (
+    <FlowDiagram
+      live={live}
+      packets={packets}
+      damnitPulse={damnitPulse}
+      livePollPulse={livePollPulse}
+      shotTotal={shotTotal}
+      sourceTotal={sources.length}
+      latestShotNumber={latestShotNumber}
+      nextShotNumber={nextShotNumber}
+      receiverConfig={receiverConfig}
+      selectedWatchdogWatchers={selectedWatchdogWatchers}
+      selectedShotcounterTKeys={selectedShotcounterTKeys}
+      flowState={flowState}
+      onSelectedWatchdogWatchersChange={setSelectedWatchdogWatchers}
+      onSelectedShotcounterTKeysChange={setSelectedShotcounterTKeys}
+      onSendShotcounter={sendShotcounter}
+      onSendLaserData={sendLaserData}
+      onSendWatchdog={sendWatchdog}
+      onBuildPackage={buildPackage}
+      onRefreshDamnit={refreshDamnit}
+    />
+  )
+
   return (
     <HomePage
       header={<AppHeader />}
       main={
-        <Container fluid py="md">
+        <Container
+          fluid
+          py="md"
+          style={{ maxWidth: '100%', overflowX: 'hidden' }}
+        >
           <style>
             {`
-              @keyframes hzdrPacketMove {
-                from { transform: translateX(0); opacity: 0; }
-                12% { opacity: 1; }
-                84% { opacity: 1; }
-                to { transform: translateX(calc(100vw - 520px)); opacity: 0; }
-              }
               @keyframes hzdrFlowDash {
                 to { stroke-dashoffset: -28; }
               }
@@ -517,19 +592,19 @@ export function HZDRFlowMonitorPage() {
             `}
           </style>
           <Stack gap="md">
-            <Group justify="space-between" align="flex-end">
-              <Stack gap={2}>
+            <Group justify="space-between" align="flex-end" gap="sm">
+              <Stack gap={2} style={{ minWidth: 0 }}>
                 <Title order={3}>HZDR flow monitor</Title>
                 <Text size="sm" c="dimmed">
-                  {monitorMode === 'live'
-                    ? 'Live mode polls the API every 5s: broker reachability plus real data-flow activity (Kafka/ASAPO message counts and DAMNIT spool ingest).'
-                    : 'Demo mode: LaserData is a passive live stream; local buttons emulate shotcounter, Watchdog, and builder events.'}
+                  {live
+                    ? 'Shows real traffic reaching this deployment. Checks the brokers and DAMNIT every 5 seconds.'
+                    : 'Try the flow with emulated events. The buttons in the diagram send them.'}
                 </Text>
               </Stack>
               <Group gap="xs">
                 <SegmentedControl
                   value={monitorMode}
-                  onChange={(value) => setMonitorMode(value as FlowMonitorMode)}
+                  onChange={(value) => chooseMode(value as FlowMonitorMode)}
                   data={[
                     { label: 'Demo', value: 'demo' },
                     { label: 'Live', value: 'live' },
@@ -553,47 +628,35 @@ export function HZDRFlowMonitorPage() {
                   leftSection={<IconRefresh size={16} />}
                   onClick={refreshDamnit}
                 >
-                  Poll DAMNIT
+                  Check now
                 </Button>
               </Group>
             </Group>
 
+            {!live ? (
+              <Alert
+                color="yellow"
+                variant="filled"
+                radius={4}
+                icon={<IconFlask size={18} />}
+                role="status"
+              >
+                {DEMO_BANNER}
+              </Alert>
+            ) : null}
+
             <Grid gutter="md">
-              <Grid.Col span={{ base: 12, xl: 9 }}>
-                {monitorMode === 'live' ? (
+              <Grid.Col span={{ base: 12, xl: 9 }} style={{ minWidth: 0 }}>
+                {live ? (
                   <Stack gap="md">
-                    <FlowDiagram
-                      live
-                      packets={packets}
-                      damnitPulse={damnitPulse}
-                      livePollPulse={livePollPulse}
-                      shotTotal={shotTotal}
-                      sourceTotal={sources.length}
-                      latestShotNumber={latestShotNumber}
-                      nextShotNumber={nextShotNumber}
-                      receiverConfig={receiverConfig}
-                      selectedWatchdogWatchers={selectedWatchdogWatchers}
-                      selectedShotcounterTKeys={selectedShotcounterTKeys}
-                      flowState={flowState}
-                      onSelectedWatchdogWatchersChange={
-                        setSelectedWatchdogWatchers
-                      }
-                      onSelectedShotcounterTKeysChange={
-                        setSelectedShotcounterTKeys
-                      }
-                      onSendShotcounter={sendShotcounter}
-                      onSendLaserData={sendLaserData}
-                      onSendWatchdog={sendWatchdog}
-                      onBuildPackage={buildPackage}
-                      onRefreshDamnit={refreshDamnit}
-                    />
+                    {diagram}
                     <Paper withBorder radius={4} p="md">
                       <Stack gap="md">
                         <Group justify="space-between" align="flex-end">
                           <Stack gap={2}>
-                            <Text fw={700}>Live endpoint health</Text>
+                            <Text fw={700}>Broker health</Text>
                             <Text size="xs" c="dimmed">
-                              Source: GET /config/health · refreshes every 5s
+                              Checked every 5 seconds
                             </Text>
                           </Stack>
                           <Button
@@ -636,11 +699,15 @@ export function HZDRFlowMonitorPage() {
                                           : 'down'}
                                     </Badge>
                                   </Group>
-                                  <Text size="xs" c="dimmed">
+                                  <Text
+                                    size="xs"
+                                    c="dimmed"
+                                    style={{ overflowWrap: 'anywhere' }}
+                                  >
                                     {probe?.reachable
                                       ? `Latency ${probe.latency_ms ?? '?'} ms`
                                       : (probe?.detail ??
-                                        'Awaiting first probe…')}
+                                        'Waiting for the first check…')}
                                   </Text>
                                 </Stack>
                               </Paper>
@@ -648,13 +715,10 @@ export function HZDRFlowMonitorPage() {
                           })}
                         </SimpleGrid>
 
-                        <Divider
-                          label="Data flow activity"
-                          labelPosition="left"
-                        />
+                        <Divider label="Data flow" labelPosition="left" />
                         <Text size="xs" c="dimmed">
-                          Source: GET /config/flow-activity · producer output
-                          (broker) vs DAMNIT ingest (spool)
+                          What producers sent to the brokers, and what DAMNIT
+                          has taken in.
                         </Text>
                         <SimpleGrid cols={{ base: 1, md: 2 }}>
                           <Paper withBorder radius={4} p="md">
@@ -695,9 +759,13 @@ export function HZDRFlowMonitorPage() {
                                   </Text>
                                 )
                               ) : (
-                                <Text size="xs" c="dimmed">
+                                <Text
+                                  size="xs"
+                                  c="dimmed"
+                                  style={{ overflowWrap: 'anywhere' }}
+                                >
                                   {activity?.kafka.detail ??
-                                    'Awaiting first poll…'}
+                                    'Waiting for the first check…'}
                                 </Text>
                               )}
                             </Stack>
@@ -735,9 +803,13 @@ export function HZDRFlowMonitorPage() {
                                   </Text>
                                 )
                               ) : (
-                                <Text size="xs" c="dimmed">
+                                <Text
+                                  size="xs"
+                                  c="dimmed"
+                                  style={{ overflowWrap: 'anywhere' }}
+                                >
                                   {activity?.asapo.detail ??
-                                    'Awaiting first poll…'}
+                                    'Waiting for the first check…'}
                                 </Text>
                               )}
                             </Stack>
@@ -746,7 +818,7 @@ export function HZDRFlowMonitorPage() {
 
                         <Paper withBorder radius={4} p="md">
                           <Stack gap="xs">
-                            <Text fw={600}>DAMNIT spool (ingested events)</Text>
+                            <Text fw={600}>DAMNIT spool (events taken in)</Text>
                             {activity?.spool.files.length ? (
                               activity.spool.files.map((file) => (
                                 <Group
@@ -764,7 +836,7 @@ export function HZDRFlowMonitorPage() {
                               ))
                             ) : (
                               <Text size="xs" c="dimmed">
-                                No spool files yet — enable a consumer
+                                No spool files yet. Enable a consumer
                                 (DW_API_HZDR_*SPOOL__ENABLED) and publish
                                 events.
                               </Text>
@@ -775,212 +847,128 @@ export function HZDRFlowMonitorPage() {
                     </Paper>
                   </Stack>
                 ) : (
-                  <FlowDiagram
-                    packets={packets}
-                    damnitPulse={damnitPulse}
-                    livePollPulse={livePollPulse}
-                    shotTotal={shotTotal}
-                    sourceTotal={sources.length}
-                    latestShotNumber={latestShotNumber}
-                    nextShotNumber={nextShotNumber}
-                    receiverConfig={receiverConfig}
-                    selectedWatchdogWatchers={selectedWatchdogWatchers}
-                    selectedShotcounterTKeys={selectedShotcounterTKeys}
-                    flowState={flowState}
-                    onSelectedWatchdogWatchersChange={
-                      setSelectedWatchdogWatchers
-                    }
-                    onSelectedShotcounterTKeysChange={
-                      setSelectedShotcounterTKeys
-                    }
-                    onSendShotcounter={sendShotcounter}
-                    onSendLaserData={sendLaserData}
-                    onSendWatchdog={sendWatchdog}
-                    onBuildPackage={buildPackage}
-                    onRefreshDamnit={refreshDamnit}
-                  />
+                  diagram
                 )}
               </Grid.Col>
 
-              <Grid.Col span={{ base: 12, xl: 3 }}>
-                <Stack gap="md">
-                  <Paper
-                    withBorder
-                    radius={4}
-                    p="md"
-                    style={{
-                      animation: damnitPulse
-                        ? 'hzdrPulse 0.85s ease-out'
-                        : undefined,
-                      borderColor: damnitPulse
-                        ? 'var(--mantine-color-teal-5)'
-                        : undefined,
-                    }}
-                  >
-                    <Stack gap="sm">
-                      <Group justify="space-between">
-                        <Stack gap={2}>
-                          <Text fw={700}>DAMNIT-web</Text>
-                          <Text size="xs" c="dimmed">
-                            API metadata provider and HDF5 reader
-                          </Text>
-                        </Stack>
-                        <IconBellRinging
-                          size={24}
-                          color={
-                            damnitPulse
-                              ? 'var(--mantine-color-teal-7)'
-                              : 'var(--mantine-color-gray-5)'
-                          }
-                        />
-                      </Group>
+              <Grid.Col span={{ base: 12, xl: 3 }} style={{ minWidth: 0 }}>
+                <Paper
+                  withBorder
+                  radius={4}
+                  p="md"
+                  style={{
+                    animation: damnitPulse
+                      ? 'hzdrPulse 0.85s ease-out'
+                      : undefined,
+                    borderColor: damnitPulse
+                      ? 'var(--mantine-color-teal-5)'
+                      : undefined,
+                  }}
+                >
+                  <Stack gap="sm">
+                    <Group justify="space-between" wrap="nowrap">
+                      <Stack gap={2}>
+                        <Text fw={700}>DAMNIT-web</Text>
+                        <Text size="xs" c="dimmed">
+                          What DAMNIT shows right now
+                        </Text>
+                      </Stack>
+                      <IconBellRinging
+                        size={24}
+                        color={
+                          damnitPulse
+                            ? 'var(--mantine-color-teal-7)'
+                            : 'var(--mantine-color-gray-5)'
+                        }
+                      />
+                    </Group>
+                    <SimpleGrid cols={2}>
+                      <Stack gap={0}>
+                        <Text size="xs" c="dimmed">
+                          Campaigns
+                        </Text>
+                        <Text size="xl" fw={700}>
+                          {sources.length}
+                        </Text>
+                      </Stack>
+                      <Stack gap={0}>
+                        <Text size="xs" c="dimmed">
+                          Shots
+                        </Text>
+                        <Text size="xl" fw={700}>
+                          {shotTotal}
+                        </Text>
+                      </Stack>
+                    </SimpleGrid>
+                    <Paper withBorder radius={4} p="sm" bg="gray.0">
                       <SimpleGrid cols={2}>
                         <Stack gap={0}>
                           <Text size="xs" c="dimmed">
-                            Sources
+                            Latest shot
                           </Text>
                           <Text size="xl" fw={700}>
-                            {sources.length}
+                            {latestShotNumber || '-'}
                           </Text>
                         </Stack>
                         <Stack gap={0}>
                           <Text size="xs" c="dimmed">
-                            Shots
+                            Next send
                           </Text>
                           <Text size="xl" fw={700}>
-                            {shotTotal}
+                            {nextShotNumber}
                           </Text>
                         </Stack>
                       </SimpleGrid>
-                      <Paper withBorder radius={4} p="sm" bg="gray.0">
-                        <SimpleGrid cols={2}>
-                          <Stack gap={0}>
-                            <Text size="xs" c="dimmed">
-                              Latest shot
-                            </Text>
-                            <Text size="xl" fw={700}>
-                              {latestShotNumber || '-'}
-                            </Text>
-                          </Stack>
-                          <Stack gap={0}>
-                            <Text size="xs" c="dimmed">
-                              Next send
-                            </Text>
-                            <Text size="xl" fw={700}>
-                              {nextShotNumber}
-                            </Text>
-                          </Stack>
-                        </SimpleGrid>
-                      </Paper>
-                      <Divider />
-                      <Stack gap="xs">
-                        <Select
-                          label="Current source"
-                          value={selectedSource?.key ?? null}
-                          onChange={setSelectedSourceKey}
-                          data={sources.map((source) => ({
-                            value: source.key,
-                            label: source.title,
-                          }))}
-                          placeholder="No source loaded"
-                          searchable
-                        />
-                        <Group gap="xs" grow>
-                          <Button
-                            component="a"
-                            href={
-                              selectedSource
-                                ? `/source/${selectedSource.key}`
-                                : '#'
-                            }
-                            variant="light"
-                            disabled={!selectedSource}
-                          >
-                            Table data
-                          </Button>
-                          <Button
-                            component="a"
-                            href={
-                              selectedSource
-                                ? `/source/${selectedSource.key}/context-builder`
-                                : '#'
-                            }
-                            variant="light"
-                            disabled={!selectedSource}
-                          >
-                            Context
-                          </Button>
-                        </Group>
-                      </Stack>
-                      <Divider />
-                      <Stack gap={6}>
-                        {sources.slice(0, 5).map((source) => (
-                          <Group key={source.key} justify="space-between">
-                            <Anchor href={`/source/${source.key}`} size="sm">
-                              {source.title}
-                            </Anchor>
-                            <Badge size="sm" variant="light">
-                              {source.shots.length}
-                            </Badge>
-                          </Group>
-                        ))}
-                        {!sources.length ? (
-                          <Text size="sm" c="dimmed">
-                            No HZDR sources visible from the API yet.
-                          </Text>
-                        ) : null}
-                      </Stack>
-                    </Stack>
-                  </Paper>
-
-                  <Paper withBorder radius={4} p="md">
-                    <Stack gap="xs">
-                      <Text fw={700}>Traffic log</Text>
-                      <ScrollArea h={290} type="auto">
-                        <Stack gap="xs">
-                          {logEntries.map((entry) => (
-                            <Paper
-                              key={entry.id}
-                              withBorder
-                              radius={4}
-                              p="xs"
-                              style={{
-                                borderLeft: `4px solid ${
-                                  entry.tone === 'receive'
-                                    ? 'var(--mantine-color-teal-6)'
-                                    : entry.tone === 'stage'
-                                      ? 'var(--mantine-color-indigo-6)'
-                                      : 'var(--mantine-color-orange-6)'
-                                }`,
-                              }}
-                            >
-                              <Group justify="space-between" gap="xs">
-                                <Text size="sm" fw={600}>
-                                  {entry.label}
-                                </Text>
-                                <Text size="xs" c="dimmed">
-                                  {entry.at}
-                                </Text>
-                              </Group>
-                              <Text size="xs" c="dimmed">
-                                {entry.detail}
-                              </Text>
-                            </Paper>
-                          ))}
-                          {!logEntries.length ? (
-                            <Text size="sm" c="dimmed">
-                              LaserData is streaming when enabled. Use
-                              Shotcounter, Watchdog, or DAMNIT actions to add
-                              trace entries.
-                            </Text>
-                          ) : null}
-                        </Stack>
-                      </ScrollArea>
-                    </Stack>
-                  </Paper>
-                </Stack>
+                    </Paper>
+                    <Divider />
+                    <Select
+                      label="Campaign"
+                      value={selectedSource?.key ?? null}
+                      onChange={setSelectedSourceKey}
+                      data={sources.map((source) => ({
+                        value: source.key,
+                        label: campaignTitle(source.title) || source.key,
+                      }))}
+                      placeholder="No campaign yet"
+                      searchable
+                    />
+                    <Group gap="xs" grow>
+                      <Button
+                        component="a"
+                        href={
+                          selectedSource ? `/source/${selectedSource.key}` : '#'
+                        }
+                        variant="light"
+                        disabled={!selectedSource}
+                      >
+                        Shot table
+                      </Button>
+                      <Button
+                        component="a"
+                        href={
+                          selectedSource
+                            ? `/source/${selectedSource.key}/context-builder`
+                            : '#'
+                        }
+                        variant="light"
+                        disabled={!selectedSource}
+                      >
+                        Add columns
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Paper>
               </Grid.Col>
             </Grid>
+
+            <FlowTrafficLog
+              entries={logEntries}
+              emptyText={
+                live
+                  ? 'No traffic yet. New messages show here as they arrive.'
+                  : 'No traffic yet. Press New shot in the diagram to send one.'
+              }
+            />
           </Stack>
         </Container>
       }

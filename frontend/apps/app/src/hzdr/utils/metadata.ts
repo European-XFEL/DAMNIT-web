@@ -1,7 +1,5 @@
 import type { HZDRShot } from '../types'
 
-import { toTrendValue } from './shot-key'
-
 export function metadataFieldLabel(path: string) {
   const parts = path.replace(/^labfrog_variables\./, '').split('.')
   if (parts.at(-1) === 'value') parts.pop()
@@ -64,18 +62,6 @@ export function countNumericValues(shots: HZDRShot[], key: string) {
     const value = getNestedMetadataValue(shot.metadata, key)
     return typeof value === 'number' && Number.isFinite(value)
   }).length
-}
-
-export function collectNumericMetadataTrendValues(
-  shots: HZDRShot[],
-  key: string
-) {
-  return shots.flatMap((shot) => {
-    const value = getNestedMetadataValue(shot.metadata, key)
-    return typeof value === 'number' && Number.isFinite(value)
-      ? [toTrendValue(shot, value)]
-      : []
-  })
 }
 
 /**

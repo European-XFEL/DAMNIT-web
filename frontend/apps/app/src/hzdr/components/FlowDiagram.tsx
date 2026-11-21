@@ -26,6 +26,7 @@ import type {
   ShotcounterTKey,
 } from '../types'
 import { watchdogWatcherOptions, shotcounterTKeyOptions } from '../types'
+import { activePathsLabel } from '../utils/flow-mode'
 
 import { DetailsSection } from './ShotTable'
 
@@ -118,19 +119,18 @@ export function FlowDiagram({
       radius={4}
       p="md"
       style={{
-        minHeight: 'calc(100vh - 210px)',
-        overflow: 'auto',
+        minWidth: 0,
         background: '#f8fafc',
       }}
     >
       <Stack gap="sm">
-        <Group justify="space-between">
-          <Stack gap={0}>
-            <Text fw={700}>Live system diagram</Text>
+        <Group justify="space-between" gap="xs">
+          <Stack gap={0} style={{ minWidth: 0 }}>
+            <Text fw={700}>System diagram</Text>
             <Text size="xs" c="dimmed">
-              Producers append live events, DAMNIT-web watches staged state, and
-              the HDF5 combine step is visible whether traffic is emulated or
-              real.
+              {live
+                ? 'A box lights up when real traffic passes through it.'
+                : 'Press a button to send an emulated event and watch where it goes.'}
             </Text>
           </Stack>
           <Group gap="xs">
@@ -138,8 +138,8 @@ export function FlowDiagram({
             <Badge variant="light" color="teal">
               next {nextShotNumber}
             </Badge>
-            <Badge variant="light">
-              {packets.length + steadyTrafficCount} traffic path(s)
+            <Badge variant="light" color="gray">
+              {activePathsLabel(packets.length + steadyTrafficCount)}
             </Badge>
           </Group>
         </Group>
@@ -196,213 +196,218 @@ export function FlowDiagram({
         </DetailsSection>
 
         <div
-          style={{
-            width: '100%',
-            display: 'grid',
-            gridTemplateColumns:
-              'minmax(150px, 1.1fr) minmax(70px, 0.5fr) minmax(150px, 1.1fr) minmax(70px, 0.5fr) minmax(170px, 1.2fr) minmax(70px, 0.5fr) minmax(180px, 1.25fr)',
-            gridTemplateRows: 'repeat(5, minmax(104px, auto))',
-            gap: 12,
-            alignItems: 'center',
-            minWidth: 920,
-          }}
+          data-testid="flow-diagram-scroll"
+          style={{ width: '100%', maxWidth: '100%', overflowX: 'auto' }}
         >
-          <ProgramNode
-            title="Shotcounter"
-            subtitle="ZMQ shot notice, Kafka fanout"
-            active={activeShotcounter}
-            icon={<IconServer size={24} />}
-            color="grape"
-            actions={
-              live ? [] : [{ label: 'New shot', onClick: onSendShotcounter }]
-            }
-            style={{ gridColumn: 1, gridRow: 1 }}
-          />
-          <FlowConnector
-            active={activeShotcounter || hasFanoutBuffer}
-            color="grape"
-            label="kafka fanout"
-            style={{ gridColumn: 2, gridRow: 1 }}
-          />
-          <ProgramNode
-            title="Kafka fanout"
-            subtitle="shot notice distributed to subscribers"
-            active={activeShotcounter || hasFanoutBuffer}
-            icon={<IconRoute size={24} />}
-            color="grape"
-            style={{ gridColumn: 3, gridRow: 1 }}
-          />
-          <FlowConnector
-            active={activeShotcounter || hasFanoutBuffer}
-            color="cyan"
-            label="buffer"
-            style={{ gridColumn: 4, gridRow: 1 }}
-          />
-          <ProgramNode
-            title="LaserData"
-            subtitle="primary laser measurements"
-            active={activeLaser}
-            buffered={flowState.laserBuffered}
-            icon={<IconServer size={24} />}
-            color="blue"
-            actions={
-              live
-                ? []
-                : [
-                    {
-                      label: 'Enrich latest',
-                      onClick: onSendLaserData,
-                      disabled: !receiverConfig.laserData,
-                    },
-                  ]
-            }
-            style={{ gridColumn: 1, gridRow: 2 }}
-          />
-          <FlowConnector
-            active={activeLaserPacket || flowState.laserBrokerPending}
-            color="blue"
-            label="ASAPO"
-            style={{ gridColumn: 2, gridRow: 2 }}
-          />
-          <ProgramNode
-            title="ASAPO broker"
-            subtitle="LaserData metadata topic"
-            active={activeLaserBroker}
-            buffered={flowState.laserBrokerPending || flowState.laserStaged}
-            icon={<IconRoute size={24} />}
-            color="blue"
-            style={{ gridColumn: 3, gridRow: 2 }}
-          />
-          <FlowConnector
-            active={
-              flowState.laserStaged ||
-              (livePollPulse && flowState.laserBrokerPending)
-            }
-            color="blue"
-            label="poll"
-            style={{ gridColumn: 4, gridRow: 2 }}
-          />
-          <ProgramNode
-            title="DAQ File Watchdog"
-            subtitle={`${selectedWatchdogWatchers.length} watcher rule(s) selected`}
-            active={activeWatchdog}
-            buffered={flowState.watchdogBuffered}
-            icon={<IconActivityHeartbeat size={24} />}
-            color="orange"
-            actions={
-              live
-                ? []
-                : [
-                    {
-                      label: 'Enrich latest',
-                      onClick: onSendWatchdog,
-                      disabled:
-                        !receiverConfig.watchdog ||
-                        !selectedWatchdogWatchers.length,
-                    },
-                  ]
-            }
-            style={{ gridColumn: 1, gridRow: 3 }}
-          />
-          <FlowConnector
-            active={activeWatchdogBroker}
-            color="orange"
-            label="kafka"
-            style={{ gridColumn: 2, gridRow: 3 }}
-          />
-          <ProgramNode
-            title="Kafka"
-            subtitle="watchdog transport, local or production"
-            active={activeWatchdogBroker}
-            buffered={
-              flowState.watchdogBrokerPending || flowState.watchdogStaged
-            }
-            icon={<IconRoute size={24} />}
-            color="orange"
-            style={{ gridColumn: 3, gridRow: 3 }}
-          />
-          <FlowConnector
-            active={
-              flowState.watchdogStaged ||
-              (livePollPulse && flowState.watchdogBrokerPending)
-            }
-            color="orange"
-            label="poll"
-            style={{ gridColumn: 4, gridRow: 3 }}
-          />
+          <div
+            style={{
+              width: '100%',
+              display: 'grid',
+              gridTemplateColumns:
+                'minmax(150px, 1.1fr) minmax(70px, 0.5fr) minmax(150px, 1.1fr) minmax(70px, 0.5fr) minmax(170px, 1.2fr) minmax(70px, 0.5fr) minmax(180px, 1.25fr)',
+              gridTemplateRows: 'repeat(4, minmax(88px, auto))',
+              gap: 12,
+              alignItems: 'center',
+              minWidth: 920,
+            }}
+          >
+            <ProgramNode
+              title="Shotcounter"
+              subtitle="ZMQ shot notice, Kafka fanout"
+              active={activeShotcounter}
+              icon={<IconServer size={24} />}
+              color="grape"
+              actions={
+                live ? [] : [{ label: 'New shot', onClick: onSendShotcounter }]
+              }
+              style={{ gridColumn: 1, gridRow: 1 }}
+            />
+            <FlowConnector
+              active={activeShotcounter || hasFanoutBuffer}
+              color="grape"
+              label="kafka fanout"
+              style={{ gridColumn: 2, gridRow: 1 }}
+            />
+            <ProgramNode
+              title="Kafka fanout"
+              subtitle="shot notice distributed to subscribers"
+              active={activeShotcounter || hasFanoutBuffer}
+              icon={<IconRoute size={24} />}
+              color="grape"
+              style={{ gridColumn: 3, gridRow: 1 }}
+            />
+            <FlowConnector
+              active={activeShotcounter || hasFanoutBuffer}
+              color="cyan"
+              label="buffer"
+              style={{ gridColumn: 4, gridRow: 1 }}
+            />
+            <ProgramNode
+              title="LaserData"
+              subtitle="primary laser measurements"
+              active={activeLaser}
+              buffered={flowState.laserBuffered}
+              icon={<IconServer size={24} />}
+              color="blue"
+              actions={
+                live
+                  ? []
+                  : [
+                      {
+                        label: 'Enrich latest',
+                        onClick: onSendLaserData,
+                        disabled: !receiverConfig.laserData,
+                      },
+                    ]
+              }
+              style={{ gridColumn: 1, gridRow: 2 }}
+            />
+            <FlowConnector
+              active={activeLaserPacket || flowState.laserBrokerPending}
+              color="blue"
+              label="ASAPO"
+              style={{ gridColumn: 2, gridRow: 2 }}
+            />
+            <ProgramNode
+              title="ASAPO broker"
+              subtitle="LaserData metadata topic"
+              active={activeLaserBroker}
+              buffered={flowState.laserBrokerPending || flowState.laserStaged}
+              icon={<IconRoute size={24} />}
+              color="blue"
+              style={{ gridColumn: 3, gridRow: 2 }}
+            />
+            <FlowConnector
+              active={
+                flowState.laserStaged ||
+                (livePollPulse && flowState.laserBrokerPending)
+              }
+              color="blue"
+              label="poll"
+              style={{ gridColumn: 4, gridRow: 2 }}
+            />
+            <ProgramNode
+              title="DAQ File Watchdog"
+              subtitle={`${selectedWatchdogWatchers.length} watcher rule(s) selected`}
+              active={activeWatchdog}
+              buffered={flowState.watchdogBuffered}
+              icon={<IconActivityHeartbeat size={24} />}
+              color="orange"
+              actions={
+                live
+                  ? []
+                  : [
+                      {
+                        label: 'Enrich latest',
+                        onClick: onSendWatchdog,
+                        disabled:
+                          !receiverConfig.watchdog ||
+                          !selectedWatchdogWatchers.length,
+                      },
+                    ]
+              }
+              style={{ gridColumn: 1, gridRow: 3 }}
+            />
+            <FlowConnector
+              active={activeWatchdogBroker}
+              color="orange"
+              label="kafka"
+              style={{ gridColumn: 2, gridRow: 3 }}
+            />
+            <ProgramNode
+              title="Kafka"
+              subtitle="watchdog transport, local or production"
+              active={activeWatchdogBroker}
+              buffered={
+                flowState.watchdogBrokerPending || flowState.watchdogStaged
+              }
+              icon={<IconRoute size={24} />}
+              color="orange"
+              style={{ gridColumn: 3, gridRow: 3 }}
+            />
+            <FlowConnector
+              active={
+                flowState.watchdogStaged ||
+                (livePollPulse && flowState.watchdogBrokerPending)
+              }
+              color="orange"
+              label="poll"
+              style={{ gridColumn: 4, gridRow: 3 }}
+            />
 
-          <ProgramNode
-            title="MongoDB shotsheet"
-            subtitle="shot metadata source"
-            active={activeMongo}
-            buffered={flowState.mongoPending}
-            icon={<IconDatabase size={24} />}
-            color="teal"
-            style={{ gridColumn: 1, gridRow: 4 }}
-          />
-          <FlowConnector
-            active={activeMongoQuery}
-            color="teal"
-            label="query"
-            style={{ gridColumn: '2 / 5', gridRow: 4 }}
-          />
-          <ProgramNode
-            title="Live event log"
-            subtitle="staged packages keyed by shot_id"
-            active={activeLive || activePackagePacket}
-            buffered={activeLiveEventLog}
-            icon={<IconDatabase size={24} />}
-            color="teal"
-            style={{ gridColumn: 5, gridRow: '1 / 4', alignSelf: 'stretch' }}
-          />
-          <FlowConnector
-            active={activeDamnitLive}
-            color="teal"
-            label="visible"
-            style={{ gridColumn: 6, gridRow: '1 / 4' }}
-          />
-          <ProgramNode
-            title="DAMNIT-web live view"
-            subtitle={`${sourceTotal} source(s), ${shotTotal} shot(s) visible`}
-            active={activeDamnitLive}
-            buffered={damnitPulse}
-            icon={<IconBellRinging size={24} />}
-            color="teal"
-            actions={
-              live
-                ? []
-                : [
-                    { label: 'Poll live', onClick: onRefreshDamnit },
-                    { label: 'Build HDF5', onClick: onBuildPackage },
-                  ]
-            }
-            style={{ gridColumn: 7, gridRow: '1 / 4', alignSelf: 'stretch' }}
-          />
-          <ProgramNode
-            title="HDF5 builder"
-            subtitle="combines staged event packages"
-            active={activeHdf5Builder}
-            buffered={activeCombinedHdf5}
-            icon={<IconServer size={24} />}
-            color="teal"
-            style={{ gridColumn: 5, gridRow: 4 }}
-          />
+            <ProgramNode
+              title="MongoDB shotsheet"
+              subtitle="shot metadata source"
+              active={activeMongo}
+              buffered={flowState.mongoPending}
+              icon={<IconDatabase size={24} />}
+              color="teal"
+              style={{ gridColumn: 1, gridRow: 4 }}
+            />
+            <FlowConnector
+              active={activeMongoQuery}
+              color="teal"
+              label="query"
+              style={{ gridColumn: '2 / 5', gridRow: 4 }}
+            />
+            <ProgramNode
+              title="Live event log"
+              subtitle="staged packages keyed by shot_id"
+              active={activeLive || activePackagePacket}
+              buffered={activeLiveEventLog}
+              icon={<IconDatabase size={24} />}
+              color="teal"
+              style={{ gridColumn: 5, gridRow: '1 / 4', alignSelf: 'center' }}
+            />
+            <FlowConnector
+              active={activeDamnitLive}
+              color="teal"
+              label="visible"
+              style={{ gridColumn: 6, gridRow: '1 / 4' }}
+            />
+            <ProgramNode
+              title="DAMNIT-web live view"
+              subtitle={`${sourceTotal} source(s), ${shotTotal} shot(s) visible`}
+              active={activeDamnitLive}
+              buffered={damnitPulse}
+              icon={<IconBellRinging size={24} />}
+              color="teal"
+              actions={
+                live
+                  ? []
+                  : [
+                      { label: 'Refresh', onClick: onRefreshDamnit },
+                      { label: 'Build HDF5', onClick: onBuildPackage },
+                    ]
+              }
+              style={{ gridColumn: 7, gridRow: '1 / 4', alignSelf: 'center' }}
+            />
+            <ProgramNode
+              title="HDF5 builder"
+              subtitle="combines staged event packages"
+              active={activeHdf5Builder}
+              buffered={activeCombinedHdf5}
+              icon={<IconServer size={24} />}
+              color="teal"
+              style={{ gridColumn: 5, gridRow: 4 }}
+            />
 
-          <FlowConnector
-            active={activeHdf5Builder}
-            color="teal"
-            label="writes"
-            style={{ gridColumn: 6, gridRow: 4 }}
-          />
+            <FlowConnector
+              active={activeHdf5Builder}
+              color="teal"
+              label="writes"
+              style={{ gridColumn: 6, gridRow: 4 }}
+            />
 
-          <ProgramNode
-            title="combined HDF5"
-            subtitle="reader-ready experiment file"
-            active={activeCombinedHdf5}
-            icon={<IconDatabase size={24} />}
-            color="teal"
-            style={{ gridColumn: 7, gridRow: 4 }}
-          />
+            <ProgramNode
+              title="combined HDF5"
+              subtitle="reader-ready experiment file"
+              active={activeCombinedHdf5}
+              icon={<IconDatabase size={24} />}
+              color="teal"
+              style={{ gridColumn: 7, gridRow: 4 }}
+            />
+          </div>
         </div>
       </Stack>
     </Paper>
@@ -437,7 +442,7 @@ export function ProgramNode({
       style={{
         width: '100%',
         height: '100%',
-        minHeight: 104,
+        minHeight: 88,
         borderColor: active ? colorVar : 'var(--mantine-color-gray-3)',
         background:
           active || buffered ? `var(--mantine-color-${color}-0)` : 'white',

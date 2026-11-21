@@ -180,7 +180,14 @@ Select any table cell to inspect it in the right panel.
 <details>
 <summary>Context builder</summary>
 
-Open a source, then choose **Context builder** from the table toolbar.
+Open a campaign, then choose **Add columns** beside the table's Columns control.
+
+It opens on **Help me choose**: suggested columns from what the campaign's
+shots record (`GET /contextfile/campaign/{campaign}/assist`), each with the
+reason it was picked and what the column will do; tick several and **Add N
+columns**, or add, ignore or customise one. `?add=hdf5:<dataset>` or
+`?add=metadata:<path>` on the page's URL opens the builder with that data
+chosen. **Build a column myself** is the builder below.
 
 The builder writes editable context files under the configured API-side context
 workspace:

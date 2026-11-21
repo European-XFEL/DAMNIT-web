@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   Container,
@@ -23,12 +23,15 @@ import { AppHeader } from '../components/AppHeader'
 import {
   AmbiguousMatchesCard,
   ResolvedCard,
+  ReviewAllClear,
   ReviewSummary,
   UnassignedShotsCard,
   UnmatchedEventsCard,
 } from '../components/ReviewMatches'
+import { campaignTitle } from '../utils/format'
 import {
   assignShotExperiment,
+  busiestSourceKey,
   campaignSuggestions,
   confirmReviewEvent,
   dismissReviewEvent,
@@ -37,13 +40,32 @@ import {
   fetchHZDRSource,
   fetchHZDRSources,
   groupReviewEvents,
+  reviewHeadingId,
+  reviewWaiting,
   rulingsByShotNumber,
   shotConfirmations,
   shotsByKey,
   type LabFrogCampaignRef,
+  type ReviewSection,
 } from '../utils/review'
 
 type Loaded = { review: HZDRReview; source: HZDRSource }
+
+/** Cases waiting per catalog key; null where that catalog's review failed. */
+type WaitingCounts = Record<string, number | null>
+
+function waitingLabel(count: number | null | undefined) {
+  if (count === undefined || count === null) return ''
+  return count ? ` · ${count} waiting` : ' · all clear'
+}
+
+/** Scroll a section into view and move focus to its heading. */
+function focusSection(section: ReviewSection) {
+  const heading = document.getElementById(reviewHeadingId(section))
+  if (!heading) return
+  heading.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  heading.focus({ preventScroll: true })
+}
 
 /**
  * Review matches: the one place a person resolves what DAMNIT will not guess.
@@ -53,6 +75,10 @@ type Loaded = { review: HZDRReview; source: HZDRSource }
  * is left over lands here, per campaign catalog: ambiguous events with their
  * candidate shots, unmatched events, and shots no campaign claimed. Decisions
  * go through the review API and are replayed by every rebuild.
+ *
+ * With no `?source=` the page opens the campaign with the most cases waiting;
+ * empty sections fold to one line, and a campaign with nothing waiting shows
+ * one "all clear" banner.
  */
 export function ReviewMatchesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -64,6 +90,9 @@ export function ReviewMatchesPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string>()
   const [actionMessage, setActionMessage] = useState<string>()
+  const [waitingCounts, setWaitingCounts] = useState<WaitingCounts>()
+  const [resolvedOpen, setResolvedOpen] = useState(false)
+  const [pendingJump, setPendingJump] = useState<ReviewSection | null>(null)
 
   useEffect(() => {
     fetchHZDRSources()
@@ -78,11 +107,44 @@ export function ReviewMatchesPage() {
       .catch(() => setCampaigns([]))
   }, [])
 
+  // How many cases wait in each catalog, for the picker and the first pick.
+  // A catalog whose review fails just shows no count.
+  useEffect(() => {
+    if (!sources?.length) {
+      setWaitingCounts(sources ? {} : undefined)
+      return
+    }
+    let active = true
+    Promise.allSettled(sources.map((source) => fetchHZDRReview(source.key)))
+      .then((results) => {
+        if (!active) return
+        const counts: WaitingCounts = {}
+        results.forEach((result, index) => {
+          counts[sources[index].key] =
+            result.status === 'fulfilled'
+              ? reviewWaiting(result.value).total
+              : null
+        })
+        setWaitingCounts(counts)
+      })
+      .catch(() => {
+        if (active) setWaitingCounts({})
+      })
+    return () => {
+      active = false
+    }
+  }, [sources])
+
+  // An explicit choice (the URL's ?source=) wins; otherwise open the catalog
+  // with the most cases waiting, once the counts are in.
   const requestedKey = searchParams.get('source')
-  const sourceKey =
-    sources?.find((source) => source.key === requestedKey)?.key ??
-    sources?.[0]?.key ??
-    null
+  const requested = sources?.find((source) => source.key === requestedKey)
+  const autoKey = useMemo(() => {
+    if (!sources?.length) return null
+    if (sources.length === 1) return sources[0].key
+    return waitingCounts ? busiestSourceKey(sources, waitingCounts) : null
+  }, [sources, waitingCounts])
+  const sourceKey = requested?.key ?? autoKey
 
   useEffect(() => {
     if (!sourceKey) {
@@ -111,6 +173,31 @@ export function ReviewMatchesPage() {
   // Never show one catalog's cases under another's name while switching.
   const loaded = fetched?.source.key === sourceKey ? fetched : undefined
 
+  const waiting = useMemo(
+    () => (loaded ? reviewWaiting(loaded.review) : undefined),
+    [loaded]
+  )
+  // The open catalog's count is the freshest: it reloads after each decision.
+  const pickerCounts = useMemo<WaitingCounts>(
+    () =>
+      loaded && waiting
+        ? { ...waitingCounts, [loaded.source.key]: waiting.total }
+        : { ...waitingCounts },
+    [loaded, waiting, waitingCounts]
+  )
+
+  // A jump to Resolved opens it first (same render); focus once it is there.
+  useEffect(() => {
+    if (!pendingJump) return
+    focusSection(pendingJump)
+    setPendingJump(null)
+  }, [pendingJump])
+
+  const jumpTo = useCallback((section: ReviewSection) => {
+    if (section === 'resolved') setResolvedOpen(true)
+    setPendingJump(section)
+  }, [])
+
   const grouped = useMemo(
     () => groupReviewEvents(loaded?.review.review_events ?? []),
     [loaded]
@@ -135,6 +222,7 @@ export function ReviewMatchesPage() {
   const selectSource = (key: string | null) => {
     setActionError(undefined)
     setActionMessage(undefined)
+    setResolvedOpen(false)
     setSearchParams(key ? { source: key } : {})
   }
 
@@ -199,12 +287,12 @@ export function ReviewMatchesPage() {
             </Stack>
             <Group align="end">
               <Select
-                label="Campaign catalog"
+                label="Campaign"
                 value={sourceKey}
                 onChange={selectSource}
                 data={(sources ?? []).map((source) => ({
                   value: source.key,
-                  label: source.title,
+                  label: `${campaignTitle(source.title) || source.key}${waitingLabel(pickerCounts[source.key])}`,
                 }))}
                 placeholder={
                   sources === undefined
@@ -216,7 +304,9 @@ export function ReviewMatchesPage() {
                 searchable
                 w={{ base: '100%', sm: 420 }}
               />
-              {sources === undefined || (sourceKey && !loaded && !loadError) ? (
+              {sources === undefined ||
+              (sources.length > 0 && !sourceKey && !loadError) ||
+              (sourceKey && !loaded && !loadError) ? (
                 <Loader size="sm" />
               ) : null}
             </Group>
@@ -244,33 +334,54 @@ export function ReviewMatchesPage() {
                 {actionMessage}
               </Alert>
             ) : null}
-            {loaded ? (
+            {loaded && waiting ? (
               <>
                 <ReviewSummary
                   summary={loaded.review.match_summary}
-                  unassigned={loaded.review.unassigned_shots.length}
+                  ambiguous={waiting.ambiguous}
+                  unmatched={waiting.unmatched}
+                  unassigned={waiting.unassigned}
+                  onJump={jumpTo}
                 />
-                <AmbiguousMatchesCard
-                  events={grouped.ambiguous}
-                  shotsByKey={shotLookup}
-                  busyKey={busyKey}
-                  onConfirm={confirm}
-                />
-                <UnassignedShotsCard
-                  shots={loaded.review.unassigned_shots}
-                  rulings={rulings}
-                  suggestions={suggestions}
-                  busyKey={busyKey}
-                  onAssign={assign}
-                />
-                <UnmatchedEventsCard
-                  events={grouped.unmatched}
-                  busyKey={busyKey}
-                  onDismiss={dismiss}
-                />
+                {waiting.total === 0 ? (
+                  <ReviewAllClear
+                    campaign={
+                      campaignTitle(loaded.source.title) || loaded.source.key
+                    }
+                    matched={loaded.review.match_summary.matched}
+                  />
+                ) : (
+                  <AmbiguousMatchesCard
+                    events={grouped.ambiguous}
+                    shotsByKey={shotLookup}
+                    busyKey={busyKey}
+                    onConfirm={confirm}
+                  />
+                )}
+                {/* Shots assigned but not moved yet still show, with who
+                    assigned them, even when nothing else waits. */}
+                {waiting.total > 0 ||
+                loaded.review.unassigned_shots.length > 0 ? (
+                  <UnassignedShotsCard
+                    shots={loaded.review.unassigned_shots}
+                    rulings={rulings}
+                    suggestions={suggestions}
+                    busyKey={busyKey}
+                    onAssign={assign}
+                  />
+                ) : null}
+                {waiting.total > 0 ? (
+                  <UnmatchedEventsCard
+                    events={grouped.unmatched}
+                    busyKey={busyKey}
+                    onDismiss={dismiss}
+                  />
+                ) : null}
                 <ResolvedCard
                   confirmations={confirmations}
                   acknowledged={grouped.acknowledged}
+                  opened={resolvedOpen}
+                  onToggle={() => setResolvedOpen((open) => !open)}
                 />
               </>
             ) : null}

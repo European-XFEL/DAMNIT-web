@@ -4,6 +4,118 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-21
+
+### UI cleanup across every page (from the UI review)
+- **Header:** "Inspect sources" is now **Campaigns**. Below tablet width the
+  tabs fold into a menu button, so every page is reachable on a phone;
+  **Send feedback** shrinks to its icon there.
+- **Home** opens on the campaign list, newest first, with a filter box.
+  Each campaign shows its last shot, "+N today", how many decisions wait in
+  Review matches (a link there) and how many shots need review or revision.
+  The three cards that repeated the tabs are gone; the DAMNIT folder is
+  small print.
+- **Shot table:** the table and its context previews stay the page's main
+  content. Around it: one line of status chips (SciCat, wiki, producers,
+  Flow monitor) replaces the three cards; quick filters for *Needs review*,
+  *Needs revision* and each day; **Add columns** (was Context builder) sits
+  beside Columns; the trend picker names fields in words; the arrow keys
+  move between shots.
+- **Shot detail** opens by default, above Shot sets. It lists only the
+  selected shot's datasets, as a folding tree with a search box; the rest
+  of the campaign file is behind a toggle (it listed every shot's datasets,
+  13,000 px for 16 shots). Facts come first, then a compact OK / Review /
+  Revise control. Times, match quality and empty values read in words; the
+  shot key has a copy button. Data products in the campaign file preview
+  inline (a product recorded with the campaign file as its path counts),
+  with **Add as column** where the dataset is stored per shot (`by_shot/`,
+  `shots/`, `shot/`): a dataset named for one event or container would
+  repeat that shot's value in every row, so it gets no such link.
+- **Review matches** says "All clear" when nothing waits instead of four
+  empty cards; the campaign picker shows what waits in each campaign and
+  opens on the busiest one unless you chose; the count chips jump to their
+  section; in an ambiguous case the candidate closest in time is
+  highlighted (time alone still never decides).
+- **Flow monitor** opens in Live where live traffic is configured and
+  remembers your choice per browser; Demo shows a banner. The traffic log is
+  a full-width table under the diagram; "Poll DAMNIT" is **Check now**; the
+  right rail shows the current campaign instead of repeating Home's list.
+  API: `GET /config/runtime` returns `flow_monitor.live_traffic` (true when
+  a spool consumer is enabled).
+- **Context Builder** (page title *Add columns*): tick several suggestions
+  and **Add N columns** in one save; the selected suggestion's preview shows
+  in the right column (under its row on narrow screens); the file's existing
+  columns are a list with Edit, Move up/down and Delete (confirmed in the
+  page); the example shot reads "Shot 7 · 1 Jul, 11:36". A link
+  `?add=hdf5:<dataset>` or `?add=metadata:<path>` (optional `&shot=`) opens
+  the builder with that data chosen.
+- Context Builder previewed a per-shot dataset (`by_shot/<id>/...`) from the
+  campaign file's last shot whatever the example shot was (shot 16's image
+  labelled Shot 1); it now reads the example shot's own copy.
+- **Docs:** a contents list beside the text on wide screens, sections
+  linkable as `/docs#review-matches`, a screenshot per section, and names
+  that match the buttons. The launcher commands moved out to
+  `hzdr/docs/guides/operations.md`.
+
+## 2026-11-20
+
+### Context Builder: generated columns that cannot break a context file
+- A LabFrog variable named like a Python keyword, builtin or one of the
+  file's own names (`class`, `str`, `float`, `np`, `Skip`) produced a
+  function that did not compile, or one that replaced `float`/`np` for every
+  other column in the file. Such names now get a suffix (`class_column`),
+  in suggestions and in a new workspace's starter `context.py`.
+- A LabFrog name with a dot in it ("E. field") gave a column that was always
+  Missing, since `meta#` paths split on dots; it is now read by name.
+- Values "nan" and "inf" no longer count as numbers ("from nan to nan").
+- A suggestion is hidden only when the file reads its data, not when some
+  column merely shares its function name.
+- Switching campaigns drops the earlier campaign's late suggestions, so Add
+  cannot write them into the wrong file.
+- Dataset previews: an image side of 65-127 pixels is strided instead of
+  cut to its first 64 (the summary was a corner's); a lineout is read whole
+  only up to 8 MiB; text, compound and HDF5 array values get no summary; the
+  summary is `np.nanmean`'s, none when infinite; a lineout's missing values
+  leave gaps instead of drawing as zero. Previews already read are reused.
+
+### Context Builder: previews show the real column, and follow the form
+- One preview for the builder and for each "Help me choose" suggestion (a
+  **Preview** button on every card). *In the table* is the example shot's
+  actual cell: the value with its unit, *Missing*, or red when not a number,
+  and for a dataset the scalar or the mean, not `nanmean(<path>)` placeholder
+  text. *On double-click* is the image (now drawn on a canvas) or the curve.
+  *Across the campaign* is a trend for numbers or label counts for text.
+- The builder previews as you choose: the **Preview example data** button
+  and the JSON *Technical values* box are gone.
+- LabFrog values typed with a decimal comma now count as numbers in the
+  campaign trend (they were left out).
+- API: a dataset preview returns `summary` (the scalar, or the mean) and
+  `summary_exact`; a lineout is thinned evenly over its whole length (at
+  most 512 points) instead of cut at its first 200 samples. Shot-table image
+  thumbnails draw on a canvas too.
+
+### Context Builder: "Help me choose" suggests columns to add or ignore
+- Context Builder now opens on **Help me choose**: a ranked list of columns
+  worth adding, each saying why it was picked (how many shots record it, the
+  range or labels it holds, example values) and what the column will do
+  (number, label, image or lineout preview). **Add this column** appends it
+  to the context file and saves; **Ignore this suggestion** hides it in this
+  browser (per campaign; it can be shown again); **Customise** opens it in
+  the builder. The old form is **Build a column myself**; its preview and
+  generated-code panels show only there. Six suggestions show first, the
+  rest behind **Show more**; a suggestion leaves the list once the file
+  reads its data.
+- API: `GET /contextfile/campaign/{campaign}/assist` (`contextfile/assist.py`).
+  LabFrog values are ranked as the starter is (its picks marked "Top pick");
+  beyond them registered metadata keys whose values are varying numbers,
+  with their canonical unit (degC shown as °C), and the trigger's ADC value
+  are offered, never the record namespaces (acquisition, attribution,
+  instrument, producer, run) or counters. Each suggestion's `@Variable` is self-contained, so it works
+  in any existing file. The example shot's HDF5 images, lineouts and scalars
+  are suggested by the browser.
+- Screenshots: a seventh capture, `context-assist.png`; the capture can use
+  an installed Chromium (`HZDR_CHROMIUM_EXECUTABLE`).
+
 ## 2026-11-16
 
 ### Context: make a saved variant the active one

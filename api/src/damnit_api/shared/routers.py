@@ -65,6 +65,9 @@ class FlowMonitorProducersConfig(BaseModel):
 class FlowMonitorConfig(BaseModel):
     receivers: FlowMonitorReceiversConfig
     producers: FlowMonitorProducersConfig
+    # True when a spool consumer (ASAPO or Kafka) is enabled, so real traffic
+    # reaches this deployment; the flow monitor then opens in Live mode.
+    live_traffic: bool = False
 
 
 class RuntimeConfig(BaseModel):
@@ -193,8 +196,11 @@ async def get_runtime_config() -> RuntimeConfig:
             settings.auth is not None and settings.auth.ldap.server_url
         ),
         metadata_provider=settings.metadata.provider,
-        flow_monitor=FlowMonitorConfig.model_validate(
-            settings.flow_monitor.model_dump()
-        ),
+        flow_monitor=FlowMonitorConfig.model_validate({
+            **settings.flow_monitor.model_dump(),
+            "live_traffic": bool(
+                settings.hzdr_spool.enabled or settings.hzdr_kafka_spool.enabled
+            ),
+        }),
         terminology=TerminologyConfig.model_validate(terminology.model_dump()),
     )

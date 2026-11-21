@@ -249,3 +249,97 @@ export function payloadPointer(event: HZDRReviewEvent): string | null {
   }
   return null
 }
+
+/** How many cases in one review still wait for a person, per section. */
+export interface ReviewWaiting {
+  ambiguous: number
+  unmatched: number
+  unassigned: number
+  total: number
+}
+
+export function reviewWaiting(review: HZDRReview): ReviewWaiting {
+  const grouped = groupReviewEvents(review.review_events ?? [])
+  const ruled = new Set(
+    (review.experiment_rulings ?? []).map((ruling) => ruling.shot_number)
+  )
+  const unassigned = (review.unassigned_shots ?? []).filter(
+    (shot) => !ruled.has(shot.shot_number)
+  ).length
+  const ambiguous = grouped.ambiguous.length
+  const unmatched = grouped.unmatched.length
+  return {
+    ambiguous,
+    unmatched,
+    unassigned,
+    total: ambiguous + unmatched + unassigned,
+  }
+}
+
+/**
+ * The campaign to open when nobody chose one: the one with the most cases
+ * waiting. Ties, and campaigns whose count is unknown, keep the list order,
+ * so with nothing waiting anywhere the first campaign opens as before.
+ */
+export function busiestSourceKey(
+  sources: HZDRSource[],
+  waiting: Record<string, number | null | undefined>
+): string | null {
+  let best: string | null = sources[0]?.key ?? null
+  let most = 0
+  for (const source of sources) {
+    const count = waiting[source.key] ?? 0
+    if (count > most) {
+      best = source.key
+      most = count
+    }
+  }
+  return best
+}
+
+/**
+ * The candidate whose shot time is closest to the event's, or null when no
+ * gap is known or two candidates tie. A hint for the reviewer only: it is
+ * never selected or confirmed for them.
+ */
+export function closestCandidateKey(
+  event: HZDRReviewEvent,
+  shots: Map<string, HZDRShot>
+): string | null {
+  let best: string | null = null
+  let bestGap = Infinity
+  let tied = false
+  for (const shotKey of uniqueCandidateKeys(event)) {
+    const shot = shots.get(shotKey)
+    const gap = secondsBetween(
+      shot?.labfrog_date_time ?? shot?.fired_at,
+      event.timestamp
+    )
+    if (gap === null) {
+      continue
+    }
+    const size = Math.abs(gap)
+    if (size < bestGap) {
+      best = shotKey
+      bestGap = size
+      tied = false
+    } else if (size === bestGap) {
+      tied = true
+    }
+  }
+  return tied ? null : best
+}
+
+/** The page's sections; a count chip jumps to `<id>-heading`. */
+export const REVIEW_SECTIONS = {
+  ambiguous: 'review-ambiguous',
+  unmatched: 'review-unmatched',
+  unassigned: 'review-unassigned',
+  resolved: 'review-resolved',
+} as const
+
+export type ReviewSection = keyof typeof REVIEW_SECTIONS
+
+export function reviewHeadingId(section: ReviewSection) {
+  return `${REVIEW_SECTIONS[section]}-heading`
+}

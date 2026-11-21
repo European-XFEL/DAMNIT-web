@@ -1,36 +1,37 @@
-import { useEffect, useState } from 'react'
-import {
-  Alert,
-  Anchor,
-  Badge,
-  Button,
-  Card,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  Title,
-} from '@mantine/core'
-import { IconBook, IconDatabase, IconRoute } from '@tabler/icons-react'
-import { Link } from 'react-router'
+import { useEffect, useMemo, useState } from 'react'
+import { Alert, Group, Stack, Text, TextInput, Title } from '@mantine/core'
+import { IconSearch } from '@tabler/icons-react'
 
-import type { HZDRSource } from '../types'
+import { HomeCampaignList } from '../components/HomeCampaignList'
+import {
+  type HomeSource,
+  filterCampaigns,
+  sortNewestFirst,
+  summarizeCampaign,
+} from '../components/homeCampaignSummary'
 import { requireJson } from '../utils/api'
 
+function countLine(campaigns: number, shots: number) {
+  const c = campaigns === 1 ? '1 campaign' : `${campaigns} campaigns`
+  const s = shots === 1 ? '1 shot' : `${shots} shots`
+  return `${c}, ${s}. Newest first.`
+}
+
 export function HZDRSourceHome() {
-  const [sources, setSources] = useState<HZDRSource[]>([])
+  const [sources, setSources] = useState<HomeSource[]>()
   const [pollFailed, setPollFailed] = useState(false)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     const loadSources = () => {
       fetch('/metadata/hzdr/sources')
-        .then((response) => requireJson<HZDRSource[]>(response))
+        .then((response) => requireJson<HomeSource[]>(response))
         .then((loadedSources) => {
           setSources(loadedSources)
           setPollFailed(false)
         })
         .catch((error) => {
-          console.error('Failed to load HZDR sources', error)
+          console.error('Failed to load HZDR campaigns', error)
           setPollFailed(true)
         })
     }
@@ -40,115 +41,50 @@ export function HZDRSourceHome() {
     return () => window.clearInterval(timer)
   }, [])
 
-  const shotTotal = sources.reduce(
-    (total, source) => total + source.shots.length,
-    0
+  const campaigns = useMemo(
+    () =>
+      sortNewestFirst(
+        (sources ?? []).map((source) => summarizeCampaign(source))
+      ),
+    [sources]
   )
+  const shown = filterCampaigns(campaigns, query)
+  const shotTotal = campaigns.reduce((total, c) => total + c.shotCount, 0)
 
   return (
-    <Stack gap="lg" py="md">
-      <Group justify="space-between" align="flex-end">
-        <Stack gap={4}>
-          <Title order={2}>DAMNIT! HZDR workspace</Title>
-          <Text c="dimmed">
-            Follow live source traffic into staged packages, context columns,
-            trends, and HDF5 previews.
+    <Stack gap="md" py="md">
+      <Group justify="space-between" align="flex-end" gap="sm">
+        <Stack gap={2}>
+          <Title order={2}>Campaigns</Title>
+          <Text size="sm" c="dimmed">
+            {countLine(campaigns.length, shotTotal)}
           </Text>
         </Stack>
-        <Group gap="xs">
-          <Badge variant="light">{sources.length} sources</Badge>
-          <Badge variant="light">{shotTotal} shots</Badge>
-        </Group>
+        <TextInput
+          aria-label="Filter campaigns"
+          placeholder="Filter campaigns"
+          leftSection={<IconSearch size={16} />}
+          value={query}
+          onChange={(event) => setQuery(event.currentTarget.value)}
+          w={{ base: '100%', xs: 280 }}
+        />
       </Group>
 
       {pollFailed ? (
         <Alert color="yellow" variant="light" py="xs">
           <Text size="sm" c="dimmed">
-            Could not reach the API — retrying.
+            Could not reach the API. Retrying.
           </Text>
         </Alert>
       ) : null}
 
-      <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-        <Card withBorder radius={4} p="md">
-          <Stack gap="xs">
-            <Group gap="xs">
-              <IconRoute size={18} />
-              <Title order={4}>Watch the flow</Title>
-            </Group>
-            <Text size="sm" c="dimmed">
-              Watch the passive LaserData stream plus local Shotcounter and
-              Watchdog events as they move through DAMNIT.
-            </Text>
-            <Button component={Link} to="/flow-monitor" variant="light">
-              Flow monitor
-            </Button>
-          </Stack>
-        </Card>
-        <Card withBorder radius={4} p="md">
-          <Stack gap="xs">
-            <Group gap="xs">
-              <IconDatabase size={18} />
-              <Title order={4}>Inspect sources</Title>
-            </Group>
-            <Text size="sm" c="dimmed">
-              Open the shot table, select numeric cells for trends, and preview
-              context-rendered data.
-            </Text>
-            <Button
-              component={Link}
-              to={sources[0] ? `/source/${sources[0].key}` : '/home'}
-              variant="light"
-              disabled={!sources[0]}
-            >
-              Open latest source
-            </Button>
-          </Stack>
-        </Card>
-        <Card withBorder radius={4} p="md">
-          <Stack gap="xs">
-            <Group gap="xs">
-              <IconBook size={18} />
-              <Title order={4}>Read the workflow</Title>
-            </Group>
-            <Text size="sm" c="dimmed">
-              Use the HZDR docs page for the local launcher, connections, and
-              package boundaries.
-            </Text>
-            <Button component={Link} to="/docs" variant="light">
-              Documentation
-            </Button>
-          </Stack>
-        </Card>
-      </SimpleGrid>
-
-      <Stack gap="sm">
-        <Group justify="space-between">
-          <Title order={3}>Sources</Title>
-          <Text size="sm" c="dimmed">
-            DAMNIT folders currently visible to the HZDR provider.
-          </Text>
-        </Group>
-        {sources.map((source) => (
-          <Card key={source.key} withBorder radius={4} p="md">
-            <Group justify="space-between" align="flex-start">
-              <Stack gap={4}>
-                <Anchor component={Link} to={`/source/${source.key}`} fw={600}>
-                  {source.title}
-                </Anchor>
-                <Text size="sm" c="dimmed">
-                  {source.metadata.facility ?? 'HZDR'} /{' '}
-                  {source.metadata.instrument ?? source.key}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  DAMNIT folder: {source.damnit_path}
-                </Text>
-              </Stack>
-              <Badge>{source.shots.length} shots</Badge>
-            </Group>
-          </Card>
-        ))}
-      </Stack>
+      {sources && campaigns.length === 0 ? (
+        <Text c="dimmed">No campaigns yet.</Text>
+      ) : null}
+      {campaigns.length > 0 && shown.length === 0 ? (
+        <Text c="dimmed">No campaign matches &quot;{query.trim()}&quot;.</Text>
+      ) : null}
+      <HomeCampaignList campaigns={shown} />
     </Stack>
   )
 }

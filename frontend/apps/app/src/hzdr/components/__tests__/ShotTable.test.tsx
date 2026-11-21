@@ -1,8 +1,16 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
 
-import { StatusBadge, DetailsSection } from '../ShotTable'
+import type { HZDRShot } from '../../types'
+import { StatusBadge, DetailsSection, HZDRShotSetsPanel } from '../ShotTable'
+
+vi.mock('../previews', () => ({
+  MetadataTrendPreview: ({ values }: { values: unknown[] }) => (
+    <div>{values.length} trend points</div>
+  ),
+  ContextPreviewValue: () => null,
+}))
 
 function withMantine(ui: React.ReactElement) {
   return render(<MantineProvider>{ui}</MantineProvider>)
@@ -67,5 +75,32 @@ describe('DetailsSection', () => {
     )
     const details = container.querySelector('details')
     expect(details).toHaveAttribute('open')
+  })
+})
+
+describe('HZDRShotSetsPanel', () => {
+  it('labels trend values readably and keeps the key as the value', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    )
+    const shots: HZDRShot[] = [1, 2].map((number) => ({
+      source_key: 'demo',
+      shot_number: number,
+      fired_at: '2026-07-01T10:00:00Z',
+      metadata: { diagnostic: { alignment_score: 0.8 + number / 100 } },
+      events: [],
+      data_products: [],
+    }))
+    withMantine(<HZDRShotSetsPanel shots={shots} />)
+    expect(screen.getByRole('textbox', { name: 'Trend value' })).toHaveValue(
+      'Diagnostic / Alignment score'
+    )
+    expect(screen.getByText('2 trend points')).toBeInTheDocument()
+    vi.unstubAllGlobals()
   })
 })

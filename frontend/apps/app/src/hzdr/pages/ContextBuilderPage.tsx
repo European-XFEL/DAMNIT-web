@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PropsWithChildren } from 'react'
 import {
   Badge,
@@ -11,6 +11,7 @@ import {
   Group,
   MultiSelect,
   Paper,
+  SegmentedControl,
   Select,
   SimpleGrid,
   Stack,
@@ -18,23 +19,31 @@ import {
   Textarea,
   TextInput,
   Title,
+  useMantineTheme,
 } from '@mantine/core'
-import { IconArrowDown, IconArrowUp, IconRefresh } from '@tabler/icons-react'
-import { useParams } from 'react-router'
+import { useMediaQuery } from '@mantine/hooks'
+import { IconRefresh } from '@tabler/icons-react'
+import { useParams, useSearchParams } from 'react-router'
 
 import { HomePage } from '@damnit-frontend/ui'
 
 import type {
+  ColumnSuggestion,
   HZDRShot,
   HZDRShotDetail,
   HZDRSource,
-  HZDRDatasetPreview,
   CampaignContextFile,
   ContextFileEntry,
   SelectOptionGroup,
 } from '../types'
 import { AppHeader } from '../components/AppHeader'
-import { VisualPreview } from '../components/previews'
+import { ColumnPreview } from '../components/ColumnPreview'
+import type { ColumnPreviewInput } from '../components/ColumnPreview'
+import {
+  ContextAssistant,
+  SuggestionDetail,
+} from '../components/ContextAssistant'
+import { ContextColumnList } from '../components/ContextColumnList'
 import {
   buildHdf5DatasetOptions,
   getContextInputOptions,
@@ -63,9 +72,32 @@ import {
   getNestedMetadataValue,
   metadataFieldLabel,
 } from '../utils/metadata'
-import { formatContextValue, formatSelectedInput } from '../utils/format'
-import { buildColumnPreview } from '../utils/preview'
+import {
+  campaignTitle,
+  formatContextValue,
+  formatSelectedInput,
+  formatShotLabel,
+} from '../utils/format'
+import { useDatasetPreview } from '../utils/columnPreview'
 import { requireJson } from '../utils/api'
+import {
+  appendSuggestionBlocks,
+  datasetSuggestions,
+  inputFormState,
+  isAlreadyInContext,
+  loadIgnoredSuggestions,
+  saveIgnoredSuggestions,
+  suggestionFormState,
+} from '../utils/contextAssist'
+
+type BuilderMode = 'help' | 'build'
+
+/** What Customise and a deep link load into the builder form. */
+type BuilderFormState = {
+  fieldKind: string
+  selectedInputs: string[]
+  fieldTitle: string
+}
 
 function ContextBuilderSectionTitle({
   title,
@@ -178,11 +210,33 @@ export function ContextBuilderPage() {
     'np.nanmean(hdf5_values) * float(metadata_value)'
   )
   const [generatedDraft, setGeneratedDraft] = useState('')
-  const [columnDetails, setColumnDetails] = useState('')
-  const [datasetPreview, setDatasetPreview] = useState<HZDRDatasetPreview>()
   const [saveStatus, setSaveStatus] = useState('')
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null)
   const [generatedEditorCompact, setGeneratedEditorCompact] = useState(true)
+  const [mode, setMode] = useState<BuilderMode>('help')
+  const [serverSuggestions, setServerSuggestions] = useState<
+    ColumnSuggestion[]
+  >([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true)
+  const [suggestionsError, setSuggestionsError] = useState('')
+  const [ignoredSuggestionIds, setIgnoredSuggestionIds] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const [selectedSuggestionId, setSelectedSuggestionId] = useState<
+    string | null
+  >(null)
+  const [checkedSuggestionIds, setCheckedSuggestionIds] = useState<string[]>([])
+  const [shotsLoaded, setShotsLoaded] = useState(false)
+  const [shotDetailLoadedPath, setShotDetailLoadedPath] = useState<string>()
+  const [deepLinkNote, setDeepLinkNote] = useState('')
+  const [searchParams] = useSearchParams()
+  // ?add=<input> (and optionally &shot=<shot key or number>): open the
+  // builder with that input chosen, e.g. from a shot's "Add as column".
+  const addInput = searchParams.get('add')
+  const addShot = searchParams.get('shot')
+  const handledAddRef = useRef<string | null>(null)
+  const appliedShotRef = useRef<string | null>(null)
+  const theme = useMantineTheme()
+  const wide = useMediaQuery(`(min-width: ${theme.breakpoints.lg})`) ?? false
 
   useEffect(() => {
     if (!source_key) {
@@ -200,9 +254,19 @@ export function ContextBuilderPage() {
         }
         const nextShots = loadedShots as HZDRShot[]
         setShots(nextShots)
-        setSelectedShotIndex(nextShots.length ? 0 : undefined)
+        // A deep link's shot (&shot=) stays the example shot even when the
+        // shots load again (a second load would otherwise reset it to the first).
+        const linked = addShot
+          ? nextShots.findIndex(
+              (shot) =>
+                shot.shot_key === addShot ||
+                String(shot.shot_number) === addShot
+            )
+          : -1
+        setSelectedShotIndex(nextShots.length ? Math.max(linked, 0) : undefined)
       })
       .catch(() => setSaveStatus('Could not load source shots.'))
+      .finally(() => setShotsLoaded(true))
     fetch(`/contextfile/campaign/${source_key}/me`)
       .then((response) => requireJson<CampaignContextFile>(response))
       .then((loadedContext: CampaignContextFile) => {
@@ -218,6 +282,41 @@ export function ContextBuilderPage() {
         )
       })
       .catch(() => setContextFiles([]))
+  }, [addShot, source_key])
+
+  // Suggestions for this campaign only: a late answer for the campaign the
+  // page showed before is dropped, so Add never writes its blocks here.
+  useEffect(() => {
+    if (!source_key) {
+      return
+    }
+    let active = true
+    setIgnoredSuggestionIds(loadIgnoredSuggestions(source_key))
+    setServerSuggestions([])
+    setSuggestionsLoading(true)
+    setSuggestionsError('')
+    fetch(`/contextfile/campaign/${source_key}/assist`)
+      .then((response) =>
+        requireJson<{ suggestions?: ColumnSuggestion[] }>(response)
+      )
+      .then((loaded) => {
+        if (!active) return
+        setServerSuggestions(
+          Array.isArray(loaded.suggestions) ? loaded.suggestions : []
+        )
+      })
+      .catch(() => {
+        if (!active) return
+        setSuggestionsError(
+          'Could not load suggestions for this campaign. You can still build columns yourself.'
+        )
+      })
+      .finally(() => {
+        if (active) setSuggestionsLoading(false)
+      })
+    return () => {
+      active = false
+    }
   }, [source_key])
 
   // Select a row rather than a shot number: numbers may repeat across days,
@@ -235,8 +334,6 @@ export function ContextBuilderPage() {
 
   useEffect(() => {
     setShotDetail(undefined)
-    setDatasetPreview(undefined)
-    setColumnDetails('')
     if (!shotDetailPath) {
       return
     }
@@ -248,6 +345,9 @@ export function ContextBuilderPage() {
       })
       .catch(() => {
         if (active) setShotDetail(undefined)
+      })
+      .finally(() => {
+        if (active) setShotDetailLoadedPath(shotDetailPath)
       })
     return () => {
       active = false
@@ -277,10 +377,20 @@ export function ContextBuilderPage() {
       })),
     [metadataKeys, shots]
   )
+  // The shot whose datasets are listed: per-shot previews read its own copy.
+  const exampleShotMetadataId = shotDetail?.shot.metadata?.shot_id
+  const exampleShotId =
+    typeof exampleShotMetadataId === 'string'
+      ? exampleShotMetadataId
+      : undefined
   const datasetOptions = useMemo(
     () =>
-      buildHdf5DatasetOptions(shotDetail?.hdf5_datasets ?? [], contextScope),
-    [contextScope, shotDetail?.hdf5_datasets]
+      buildHdf5DatasetOptions(
+        shotDetail?.hdf5_datasets ?? [],
+        contextScope,
+        exampleShotId
+      ),
+    [contextScope, exampleShotId, shotDetail?.hdf5_datasets]
   )
   const inputOptions = useMemo<SelectOptionGroup[]>(
     () =>
@@ -328,22 +438,117 @@ export function ContextBuilderPage() {
   const canBuildColumn = selectedInputs.length > 0
   const canSaveGeneratedColumn =
     canBuildColumn && Boolean(extractPythonFunctionName(generatedDraft))
-  const contextVariables = parseContextVariableBlocks(contextContent)
+  const contextVariables = useMemo(
+    () => parseContextVariableBlocks(contextContent),
+    [contextContent]
+  )
   const selectedColumnIndex = contextVariables.findIndex(
     (block) => block.id === selectedColumnId
   )
   const selectedContextVariable =
     selectedColumnIndex >= 0 ? contextVariables[selectedColumnIndex] : undefined
+  const exampleShotLabel = selectedShot
+    ? formatShotLabel(selectedShot.shot_number, selectedShot.fired_at)
+    : 'none'
+  const shotDatasetOptions = useMemo(
+    () =>
+      buildHdf5DatasetOptions(
+        shotDetail?.hdf5_datasets ?? [],
+        'shot',
+        exampleShotId
+      ),
+    [exampleShotId, shotDetail?.hdf5_datasets]
+  )
+  const shotDatasetSuggestions = useMemo(
+    () => datasetSuggestions(shotDatasetOptions, exampleShotLabel),
+    [exampleShotLabel, shotDatasetOptions]
+  )
+  const exampleShotOptions = useMemo(
+    () =>
+      shots.map((shot, index) => ({
+        value: index.toString(),
+        label: formatShotLabel(shot.shot_number, shot.fired_at),
+      })),
+    [shots]
+  )
+  // Sorted once per change of the file, the list or what is ignored (not on
+  // every render, e.g. each keystroke elsewhere on the page).
+  const { openSuggestions, inContextCount, ignoredOpenCount } = useMemo(() => {
+    const ignored = new Set(ignoredSuggestionIds)
+    const open: ColumnSuggestion[] = []
+    let inContext = 0
+    let ignoredOpen = 0
+    for (const suggestion of [
+      ...serverSuggestions,
+      ...shotDatasetSuggestions,
+    ]) {
+      if (isAlreadyInContext(suggestion, contextContent)) inContext += 1
+      else if (ignored.has(suggestion.id)) ignoredOpen += 1
+      else open.push(suggestion)
+    }
+    return {
+      openSuggestions: open,
+      inContextCount: inContext,
+      ignoredOpenCount: ignoredOpen,
+    }
+  }, [
+    contextContent,
+    ignoredSuggestionIds,
+    serverSuggestions,
+    shotDatasetSuggestions,
+  ])
+  // On wide screens the right column always previews one suggestion: the
+  // one picked, else the first. On narrow ones it opens under its row.
+  const selectedSuggestion =
+    openSuggestions.find(
+      (suggestion) => suggestion.id === selectedSuggestionId
+    ) ?? (wide ? openSuggestions[0] : undefined)
+  const selectSuggestion = useCallback(
+    (id: string) =>
+      setSelectedSuggestionId((current) =>
+        !wide && current === id ? null : id
+      ),
+    [wide]
+  )
   const showMongoFields = fieldKind === 'mongo-filter'
   const showFunctionFields = fieldKind === 'function'
   const actionCanUseMultipleInputs = fieldKind === 'function'
-  const usesHdf5VisualPreview = [
+  // The builder's preview follows the form: what the column would show on
+  // the example shot, read again whenever the data or the shot changes.
+  const selectedDatasetOption = selectedInputs
+    .map((value) => datasetOptions.find((option) => option.value === value))
+    .find(Boolean)
+  const previewsDataset = [
     'hdf5',
     'lineout-preview',
     'image-preview',
     'plotly-trend',
-    'function',
   ].includes(fieldKind)
+  const builderDataset = useDatasetPreview(
+    source_key,
+    selectedShot,
+    mode === 'build' && previewsDataset
+      ? selectedDatasetOption?.previewName
+      : undefined
+  )
+  const builderPreviewInput: ColumnPreviewInput = !selectedInputs.length
+    ? {
+        source: 'computed',
+        note: 'Choose data to see what this column will show.',
+      }
+    : fieldKind === 'metadata' && selectedMetadataPath
+      ? { source: 'metadata', field: selectedMetadataPath, type: 'auto' }
+      : previewsDataset && selectedDatasetOption
+        ? { source: 'hdf5', display: fieldKind, ...builderDataset }
+        : fieldKind === 'function'
+          ? {
+              source: 'computed',
+              note: 'A custom function is calculated when the shot table loads, so its value cannot be shown here. Check each input first by previewing it as its own column.',
+            }
+          : {
+              source: 'computed',
+              note: 'This value is looked up in MongoDB when the shot table loads, so it cannot be shown here.',
+            }
   const rawSnippet = buildComputedFieldSnippet({
     fieldKind,
     contextScope,
@@ -404,20 +609,20 @@ export function ContextBuilderPage() {
     selectedInputs,
   ])
 
-  const appendToContext = () => {
+  // Append one @Variable block (imports first) to the destination file and
+  // save it: the builder's "Add to context" and the assistant's "Add this
+  // column" both go through here.
+  const appendBlockToContext = (draft: string, savedMessage: string) => {
     if (!source_key || !contextFile) {
       return
     }
-    if (!canBuildColumn) {
-      setSaveStatus('Choose data before adding a column.')
-      return
-    }
-    const { imports, body } = splitPythonImportBlock(generatedDraft)
+    const { imports, body } = splitPythonImportBlock(draft)
     if (!extractPythonFunctionName(body)) {
       setSaveStatus('Generated variable needs a valid Python function name.')
       return
     }
     setSaveStatus('Saving...')
+    setSaving(true)
     const uniqueBody = makeContextVariableBlockUnique(body, contextVariables)
     const contextWithImports = mergeImportsAtTop(contextContent, imports)
     const fileContent = `${contextWithImports.trimEnd()}\n\n${uniqueBody.trimEnd()}\n`
@@ -433,9 +638,187 @@ export function ContextBuilderPage() {
       .then((savedContext: CampaignContextFile) => {
         setContextFile(savedContext)
         setContextContent(savedContext.fileContent ?? '')
-        setSaveStatus(`Saved to ${selectedContextFile}`)
+        setSaveStatus(savedMessage)
       })
       .catch(() => setSaveStatus('Save failed'))
+      .finally(() => setSaving(false))
+  }
+
+  const appendToContext = () => {
+    if (!canBuildColumn) {
+      setSaveStatus('Choose data before adding a column.')
+      return
+    }
+    appendBlockToContext(generatedDraft, `Saved to ${selectedContextFile}`)
+  }
+
+  const addSuggestion = (suggestion: ColumnSuggestion) => {
+    appendBlockToContext(
+      suggestion.block,
+      `Added “${suggestion.title}” to ${selectedContextFile}.`
+    )
+  }
+
+  // All ticked suggestions in one save: the file is written once, so a
+  // failure adds none of them.
+  const addSuggestions = (picked: ColumnSuggestion[]) => {
+    if (!source_key || !contextFile || !picked.length) {
+      return
+    }
+    const { fileContent, added, skipped } = appendSuggestionBlocks(
+      contextContent,
+      picked
+    )
+    const skippedNote = skipped.length
+      ? ` Skipped ${skipped.length} already in the file.`
+      : ''
+    if (!added.length) {
+      setSaveStatus(`Nothing to add.${skippedNote}`)
+      return
+    }
+    const columns = `${added.length} column${added.length === 1 ? '' : 's'}`
+    const addedIds = new Set(added.map((suggestion) => suggestion.id))
+    setSaveStatus(`Adding ${columns}...`)
+    setSaving(true)
+    fetch(
+      `/contextfile/campaign/${source_key}/me/files/${selectedContextFile}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileContent }),
+      }
+    )
+      .then((response) => requireJson<CampaignContextFile>(response))
+      .then((savedContext: CampaignContextFile) => {
+        setContextFile(savedContext)
+        setContextContent(savedContext.fileContent ?? '')
+        setCheckedSuggestionIds((current) =>
+          current.filter((id) => !addedIds.has(id))
+        )
+        setSaveStatus(
+          `Added ${columns} to ${selectedContextFile}: ${added
+            .map((suggestion) => suggestion.title)
+            .join(', ')}.${skippedNote}`
+        )
+      })
+      .catch(() =>
+        setSaveStatus(
+          `Save failed: none of the ${columns} was added to ${selectedContextFile}.`
+        )
+      )
+      .finally(() => setSaving(false))
+  }
+
+  const updateIgnoredSuggestions = (ids: string[]) => {
+    setIgnoredSuggestionIds(ids)
+    if (source_key) saveIgnoredSuggestions(source_key, ids)
+  }
+
+  const ignoreSuggestions = (picked: ColumnSuggestion[]) => {
+    const ids = new Set(picked.map((suggestion) => suggestion.id))
+    updateIgnoredSuggestions([...new Set([...ignoredSuggestionIds, ...ids])])
+    setCheckedSuggestionIds((current) => current.filter((id) => !ids.has(id)))
+    setSaveStatus(
+      picked.length === 1
+        ? `Ignored “${picked[0].title}”.`
+        : `Ignored ${picked.length} suggestions.`
+    )
+  }
+
+  const ignoreSuggestion = (suggestion: ColumnSuggestion) =>
+    ignoreSuggestions([suggestion])
+
+  // Setters only, so this stays the same function across renders.
+  const loadIntoBuilder = useCallback(
+    (state: BuilderFormState, message: string) => {
+      setMode('build')
+      setSelectedColumnId(null)
+      setContextScope('shot')
+      setAllowMultipleInputs(false)
+      setSelectedInputs(state.selectedInputs)
+      setFieldKind(state.fieldKind)
+      setFieldTitle(state.fieldTitle)
+      setFieldTitleEdited(true)
+      setFieldNameOverridden(false)
+      setSaveStatus(message)
+    },
+    []
+  )
+
+  const customiseSuggestion = (suggestion: ColumnSuggestion) => {
+    loadIntoBuilder(
+      suggestionFormState(suggestion),
+      `Loaded “${suggestion.title}” into the builder. Adjust it, preview, then Add to context.`
+    )
+  }
+
+  // A deep link's example shot first, so its datasets are the ones offered.
+  useEffect(() => {
+    if (!addShot || !shotsLoaded || appliedShotRef.current === addShot) {
+      return
+    }
+    appliedShotRef.current = addShot
+    const index = shots.findIndex(
+      (shot) =>
+        shot.shot_key === addShot || String(shot.shot_number) === addShot
+    )
+    if (index >= 0) setSelectedShotIndex(index)
+  }, [addShot, shots, shotsLoaded])
+
+  const deepLinkMetadataKeys = useMemo(
+    () =>
+      addInput?.startsWith('metadata:')
+        ? new Set(shots.flatMap((shot) => flattenObjectKeys(shot.metadata)))
+        : new Set<string>(),
+    [addInput, shots]
+  )
+
+  // ?add=: once the shots (and, for a dataset, the example shot's datasets)
+  // are known, open the builder with that input, or say it was not found.
+  useEffect(() => {
+    if (!addInput || handledAddRef.current === addInput || !shotsLoaded) {
+      return
+    }
+    if (addShot && appliedShotRef.current !== addShot) {
+      return
+    }
+    if (
+      addInput.startsWith('hdf5:') &&
+      shotDetailPath &&
+      shotDetailLoadedPath !== shotDetailPath
+    ) {
+      return
+    }
+    handledAddRef.current = addInput
+    const state = inputFormState(addInput, {
+      metadataKeys: deepLinkMetadataKeys,
+      datasetOptions: shotDatasetOptions,
+    })
+    if (!state) {
+      setDeepLinkNote(
+        `Could not find “${formatSelectedInput(addInput)}” in this campaign. Pick a suggestion or build the column yourself.`
+      )
+      return
+    }
+    setDeepLinkNote('')
+    loadIntoBuilder(
+      state,
+      `Loaded “${state.fieldTitle}” into the builder. Check the preview, then Add to context.`
+    )
+  }, [
+    addInput,
+    addShot,
+    deepLinkMetadataKeys,
+    loadIntoBuilder,
+    shotDatasetOptions,
+    shotDetailLoadedPath,
+    shotDetailPath,
+    shotsLoaded,
+  ])
+
+  const editColumn = (columnId: string) => {
+    setMode('build')
+    selectAndLoadColumn(columnId)
   }
 
   const selectAndLoadColumn = (columnId: string | null) => {
@@ -488,8 +871,6 @@ export function ContextBuilderPage() {
     if (formState.combineExpression) {
       setCombineExpression(formState.combineExpression)
     }
-    setColumnDetails('')
-    setDatasetPreview(undefined)
     setGeneratedDraft(selectedBlock.block.trim())
     setSaveStatus(`Loaded ${selectedBlock.name} into the builder form`)
   }
@@ -535,9 +916,9 @@ export function ContextBuilderPage() {
     )
   }
 
-  const deleteSelectedColumn = () => {
+  const deleteColumn = (columnId: string) => {
     const selectedBlock = contextVariables.find(
-      (block) => block.id === selectedColumnId
+      (block) => block.id === columnId
     )
     if (!source_key || !selectedBlock) {
       return
@@ -548,21 +929,24 @@ export function ContextBuilderPage() {
     )}${contextContent.slice(selectedBlock.end)}`.trimEnd()
     setSaveStatus(`Deleting ${selectedBlock.name}...`)
     saveContextContent(`${fileContent}\n`, `Deleted ${selectedBlock.name}`)
-    setSelectedColumnId(null)
+    if (columnId === selectedColumnId) setSelectedColumnId(null)
   }
 
-  const moveSelectedColumn = (direction: -1 | 1) => {
-    const targetIndex = selectedColumnIndex + direction
+  const moveColumn = (columnId: string, direction: -1 | 1) => {
+    const columnIndex = contextVariables.findIndex(
+      (block) => block.id === columnId
+    )
+    const targetIndex = columnIndex + direction
     if (
-      selectedColumnIndex < 0 ||
+      columnIndex < 0 ||
       targetIndex < 0 ||
       targetIndex >= contextVariables.length
     ) {
-      setSaveStatus('Select a column that can move in that direction.')
+      setSaveStatus('That column cannot move further.')
       return
     }
     const reorderedBlocks = [...contextVariables]
-    const [selectedBlock] = reorderedBlocks.splice(selectedColumnIndex, 1)
+    const [selectedBlock] = reorderedBlocks.splice(columnIndex, 1)
     reorderedBlocks.splice(targetIndex, 0, selectedBlock)
     const prefix = contextContent.slice(0, contextVariables[0].start)
     const suffix = contextContent.slice(
@@ -573,42 +957,6 @@ export function ContextBuilderPage() {
       .join('\n\n')}\n${suffix}`
     setSaveStatus(`Moving ${selectedBlock.name}...`)
     saveContextContent(fileContent, `Moved ${selectedBlock.name}`)
-  }
-
-  const previewColumn = () => {
-    if (!canBuildColumn) {
-      setColumnDetails('Choose data before previewing a column.')
-      setDatasetPreview(undefined)
-      return
-    }
-    const preview = buildColumnPreview({
-      fieldKind,
-      selectedInputs,
-      selectedShot,
-      datasetOptions,
-      combineExpression,
-    })
-    setColumnDetails(preview)
-    const selectedDataset = selectedInputs
-      .map((value) => datasetOptions.find((option) => option.value === value))
-      .find(Boolean)
-    if (
-      usesHdf5VisualPreview &&
-      source_key &&
-      selectedShot &&
-      selectedDataset
-    ) {
-      const query = selectedShot.shot_key
-        ? `?${new URLSearchParams({ shot_key: selectedShot.shot_key })}`
-        : ''
-      fetch(
-        `/metadata/hzdr/sources/${source_key}/shots/${selectedShot.shot_number}/datasets/${selectedDataset.previewName}${query}`
-      )
-        .then((response) => response.json())
-        .then(setDatasetPreview)
-    } else {
-      setDatasetPreview(undefined)
-    }
   }
 
   const saveManualContext = () => {
@@ -779,8 +1127,6 @@ export function ContextBuilderPage() {
     }
     setSelectedInputs(nextInputs)
     setSaveStatus('')
-    setColumnDetails('')
-    setDatasetPreview(undefined)
     const hasMetadata = nextInputs.some((input) =>
       input.startsWith('metadata:')
     )
@@ -804,6 +1150,20 @@ export function ContextBuilderPage() {
       setFieldTitle(nextTitle)
     }
   }
+  const campaignName = campaignTitle(source?.title) || source_key
+  const suggestionDetail = selectedSuggestion ? (
+    <SuggestionDetail
+      key={selectedSuggestion.id}
+      suggestion={selectedSuggestion}
+      busy={saving || !contextFile}
+      sourceKey={source_key}
+      exampleShot={selectedShot}
+      shots={shots}
+      onAdd={addSuggestion}
+      onIgnore={ignoreSuggestion}
+      onCustomise={customiseSuggestion}
+    />
+  ) : null
   return (
     <HomePage
       header={<AppHeader />}
@@ -812,10 +1172,11 @@ export function ContextBuilderPage() {
           <Stack gap="md">
             <Group justify="space-between">
               <Stack gap={2}>
-                <Title order={3}>Context builder</Title>
+                <Title order={3}>Add columns</Title>
                 <Text size="sm" c="dimmed">
-                  Choose a field, check its value on an example shot, then add
-                  it as a column for {source?.title ?? source_key}.
+                  Choose columns for the {campaignName} shot table: tick
+                  suggestions, or build one yourself and check it on an example
+                  shot.
                 </Text>
               </Stack>
               <Button
@@ -830,6 +1191,21 @@ export function ContextBuilderPage() {
               <Grid.Col span={{ base: 12, lg: 5 }}>
                 <Card withBorder radius={4} p="md">
                   <Stack gap="md">
+                    {deepLinkNote ? (
+                      <Text size="sm" c="orange.8" role="status">
+                        {deepLinkNote}
+                      </Text>
+                    ) : null}
+                    <SegmentedControl
+                      fullWidth
+                      aria-label="How to add columns"
+                      value={mode}
+                      onChange={(value) => setMode(value as BuilderMode)}
+                      data={[
+                        { value: 'help', label: 'Help me choose' },
+                        { value: 'build', label: 'Build a column myself' },
+                      ]}
+                    />
                     <ContextBuilderDisclosure
                       title="Target and example shot"
                       description="The example shot is used to check values before saving."
@@ -863,292 +1239,350 @@ export function ContextBuilderPage() {
                               value ? Number(value) : undefined
                             )
                           }
-                          data={shots.map((shot, index) => ({
-                            value: index.toString(),
-                            label: `${shot.shot_number} - ${shot.fired_at}`,
-                          }))}
+                          data={exampleShotOptions}
                         />
                       </SimpleGrid>
                       <Text size="xs" c="dimmed">
-                        Source: {source?.title ?? source_key}
+                        Campaign: {campaignName}
                       </Text>
                     </ContextBuilderDisclosure>
-                    <ContextBuilderPanel
-                      tone="indigo"
-                      title="1. Choose data"
-                      description="Fields are grouped by source. Counts show how many shots contain each field."
-                    >
-                      {actionCanUseMultipleInputs ? (
-                        <Checkbox
-                          label="Combine one field with one HDF5 dataset"
-                          checked={allowMultipleInputs}
-                          onChange={(event) =>
-                            setAllowMultipleInputs(event.currentTarget.checked)
-                          }
-                        />
-                      ) : null}
-                      {allowMultipleInputs && actionCanUseMultipleInputs ? (
-                        <MultiSelect
-                          label="Data to use"
-                          maxValues={2}
-                          value={selectedInputs}
-                          onChange={updateSelectedInputs}
-                          data={inputOptions}
-                          searchable
-                          clearable
-                        />
-                      ) : (
-                        <Select
-                          label="Data to use"
-                          value={selectedInputs[0] ?? null}
-                          onChange={(value) =>
-                            updateSelectedInputs(value ? [value] : [])
-                          }
-                          data={inputOptions}
-                          searchable
-                          clearable
-                        />
-                      )}
-                      <Text size="xs" c="dimmed">
-                        Selected: {selectedInputSummary}
-                      </Text>
-                      {selectedMetadataPath ? (
-                        <Paper withBorder p="xs">
-                          <Text size="sm" fw={600}>
-                            Value on example shot
-                          </Text>
-                          <Code>
-                            {selectedMetadataValue == null
-                              ? 'Not available on this shot'
-                              : formatContextValue(selectedMetadataValue)}
-                          </Code>
-                          <Text size="xs" c="dimmed">
-                            Field: {selectedMetadataPath}
-                          </Text>
-                          {selectedMetadataValue == null ? (
-                            <Button
-                              size="xs"
-                              variant="subtle"
-                              onClick={() => {
-                                const index = shots.findIndex(
-                                  (shot) =>
-                                    getNestedMetadataValue(
-                                      shot.metadata,
-                                      selectedMetadataPath
-                                    ) != null
-                                )
-                                if (index >= 0) setSelectedShotIndex(index)
-                              }}
-                            >
-                              Use a shot with this field
-                            </Button>
-                          ) : null}
-                        </Paper>
-                      ) : null}
-                    </ContextBuilderPanel>
-                    <ContextBuilderPanel
-                      tone="teal"
-                      title="2. Choose display"
-                      description="Choose what this column can do with the selected data."
-                    >
-                      <Select
-                        label={
-                          contextScope === 'shot'
-                            ? 'What should this column do?'
-                            : 'What should this set view do?'
-                        }
-                        value={fieldKind}
-                        onChange={(value) => {
-                          if (value) {
-                            setFieldKind(value)
-                          }
-                        }}
-                        data={recipeOptions}
-                        disabled={!selectedInputs.length}
-                      />
-                      <Group gap="xs" align="flex-start" wrap="nowrap">
-                        <Badge
-                          variant="light"
-                          color={contextRecipeTone(fieldKind)}
-                          radius={4}
-                          styles={{ label: { textTransform: 'none' } }}
-                          style={{ flexShrink: 0 }}
-                        >
-                          {contextRecipeLabel(fieldKind)}
-                        </Badge>
-                        <Text size="xs" c="dimmed">
-                          {selectedInputs.length
-                            ? recipeHelp
-                            : 'Choose data first, then available actions appear here.'}
-                        </Text>
-                      </Group>
-                    </ContextBuilderPanel>
-                    <ContextBuilderPanel
-                      tone="blue"
-                      title="3. Name column"
-                      description="Choose the name that will appear in the shot table."
-                    >
-                      <Stack gap="sm">
-                        <TextInput
-                          label="Column title"
-                          value={fieldTitle}
-                          onChange={(event) => {
-                            const nextTitle = event.currentTarget.value
-
-                            setFieldTitle(nextTitle)
-                            setFieldTitleEdited(nextTitle.trim() !== '')
-                          }}
-                        />
-                        <ContextBuilderDisclosure
-                          title="Advanced naming"
-                          description="Override the automatically generated Python name if needed."
-                        >
-                          <Stack gap="xs">
-                            <Group justify="space-between" align="flex-start">
-                              <Stack gap={0} style={{ minWidth: 0 }}>
-                                <Text size="sm" fw={600}>
-                                  Python function name
-                                </Text>
-                                <Text size="xs" c="dimmed">
-                                  {fieldNameOverridden
-                                    ? 'Custom name is enabled.'
-                                    : 'This stays synced to the title.'}
-                                </Text>
-                              </Stack>
-                              <Group gap="xs">
-                                {fieldNameOverridden ? (
-                                  <Button
-                                    size="xs"
-                                    variant="subtle"
-                                    onClick={() =>
-                                      setFieldNameOverridden(false)
-                                    }
-                                  >
-                                    Use title name
-                                  </Button>
-                                ) : null}
-                                <Button
-                                  size="xs"
-                                  variant="light"
-                                  onClick={() => {
-                                    if (!fieldNameOverridden) {
-                                      setFieldNameOverridden(true)
-                                    }
-                                  }}
-                                >
-                                  {fieldNameOverridden
-                                    ? 'Custom name'
-                                    : 'Override name'}
-                                </Button>
-                              </Group>
-                            </Group>
-                            {fieldNameOverridden ? (
-                              <TextInput
-                                value={fieldName}
-                                error={
-                                  isValidPythonFunctionName(fieldName)
-                                    ? undefined
-                                    : 'Use a valid, non-reserved Python function name.'
-                                }
-                                onChange={(event) =>
-                                  setFieldName(
-                                    pythonNameFromTitle(
-                                      event.currentTarget.value
-                                    )
-                                  )
-                                }
-                              />
-                            ) : (
-                              <Code block>{fieldName}</Code>
-                            )}
-                          </Stack>
-                        </ContextBuilderDisclosure>
-                      </Stack>
-                    </ContextBuilderPanel>
-                    {showMongoFields ? (
-                      <ContextBuilderPanel
-                        tone="yellow"
-                        title="Mongo query"
-                        description="Write the Mongo-style filter object used to find the row, then choose which field from that row appears in the table."
-                      >
-                        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-                          <TextInput
-                            label="Query collection"
-                            value={mongoCollection}
-                            onChange={(event) =>
-                              setMongoCollection(event.currentTarget.value)
-                            }
-                          />
-                          <Card withBorder radius={4} p="sm">
-                            <Stack gap={2}>
-                              <Text size="xs" c="dimmed">
-                                Filter variable
-                              </Text>
-                              <Code>shot_number</Code>
-                            </Stack>
-                          </Card>
-                        </SimpleGrid>
-                        <Textarea
-                          label="Mongo filter object"
-                          description="Use shot_number from the current shot. The result should be one JSON-like object."
-                          minRows={5}
-                          value={mongoFilter}
-                          onChange={(event) =>
-                            setMongoFilter(event.currentTarget.value)
-                          }
-                        />
-                        <Code block>
-                          {'{\n  "shot_number": shot_number\n}'}
-                        </Code>
-                      </ContextBuilderPanel>
-                    ) : null}
-                    {showFunctionFields ? (
-                      <ContextBuilderPanel
-                        tone="violet"
-                        title="Custom function"
-                        description="Combine the selected inputs into the value returned by the column."
-                      >
-                        <Textarea
-                          label="Function expression"
-                          minRows={3}
-                          value={combineExpression}
-                          onChange={(event) =>
-                            setCombineExpression(event.currentTarget.value)
-                          }
-                        />
-                      </ContextBuilderPanel>
-                    ) : null}
                     <Paper
                       withBorder
                       radius={4}
                       p="sm"
                       bg="var(--mantine-color-gray-0)"
                     >
-                      <Text size="sm" c="dimmed">
+                      <Text size="sm" c="dimmed" role="status">
                         {saveStatus || contextFile?.path || '-'}
                       </Text>
                     </Paper>
+                    {mode === 'help' ? (
+                      <ContextAssistant
+                        suggestions={openSuggestions}
+                        loading={suggestionsLoading}
+                        error={suggestionsError}
+                        destination={selectedContextFile}
+                        busy={saving || !contextFile}
+                        ignoredCount={ignoredOpenCount}
+                        addedCount={inContextCount}
+                        selectedId={selectedSuggestion?.id ?? null}
+                        onSelect={selectSuggestion}
+                        checkedIds={checkedSuggestionIds}
+                        onCheckedChange={setCheckedSuggestionIds}
+                        onAddMany={addSuggestions}
+                        onIgnoreMany={ignoreSuggestions}
+                        onRestoreIgnored={() => updateIgnoredSuggestions([])}
+                        selectedDetail={wide ? undefined : suggestionDetail}
+                        shots={shots}
+                      />
+                    ) : null}
+                    {mode === 'build' ? (
+                      <>
+                        <ContextBuilderPanel
+                          tone="indigo"
+                          title="1. Choose data"
+                          description="Fields are grouped by source. Counts show how many shots contain each field."
+                        >
+                          {actionCanUseMultipleInputs ? (
+                            <Checkbox
+                              label="Combine one field with one HDF5 dataset"
+                              checked={allowMultipleInputs}
+                              onChange={(event) =>
+                                setAllowMultipleInputs(
+                                  event.currentTarget.checked
+                                )
+                              }
+                            />
+                          ) : null}
+                          {allowMultipleInputs && actionCanUseMultipleInputs ? (
+                            <MultiSelect
+                              label="Data to use"
+                              maxValues={2}
+                              value={selectedInputs}
+                              onChange={updateSelectedInputs}
+                              data={inputOptions}
+                              searchable
+                              clearable
+                            />
+                          ) : (
+                            <Select
+                              label="Data to use"
+                              value={selectedInputs[0] ?? null}
+                              onChange={(value) =>
+                                updateSelectedInputs(value ? [value] : [])
+                              }
+                              data={inputOptions}
+                              searchable
+                              clearable
+                            />
+                          )}
+                          <Text size="xs" c="dimmed">
+                            Selected: {selectedInputSummary}
+                          </Text>
+                          {selectedMetadataPath ? (
+                            <Paper withBorder p="xs">
+                              <Text size="sm" fw={600}>
+                                Value on example shot
+                              </Text>
+                              <Code>
+                                {selectedMetadataValue == null
+                                  ? 'Not available on this shot'
+                                  : formatContextValue(selectedMetadataValue)}
+                              </Code>
+                              <Text size="xs" c="dimmed">
+                                Field: {selectedMetadataPath}
+                              </Text>
+                              {selectedMetadataValue == null ? (
+                                <Button
+                                  size="xs"
+                                  variant="subtle"
+                                  onClick={() => {
+                                    const index = shots.findIndex(
+                                      (shot) =>
+                                        getNestedMetadataValue(
+                                          shot.metadata,
+                                          selectedMetadataPath
+                                        ) != null
+                                    )
+                                    if (index >= 0) setSelectedShotIndex(index)
+                                  }}
+                                >
+                                  Use a shot with this field
+                                </Button>
+                              ) : null}
+                            </Paper>
+                          ) : null}
+                        </ContextBuilderPanel>
+                        <ContextBuilderPanel
+                          tone="teal"
+                          title="2. Choose display"
+                          description="Choose what this column can do with the selected data."
+                        >
+                          <Select
+                            label={
+                              contextScope === 'shot'
+                                ? 'What should this column do?'
+                                : 'What should this set view do?'
+                            }
+                            value={fieldKind}
+                            onChange={(value) => {
+                              if (value) {
+                                setFieldKind(value)
+                              }
+                            }}
+                            data={recipeOptions}
+                            disabled={!selectedInputs.length}
+                          />
+                          <Group gap="xs" align="flex-start" wrap="nowrap">
+                            <Badge
+                              variant="light"
+                              color={contextRecipeTone(fieldKind)}
+                              radius={4}
+                              styles={{ label: { textTransform: 'none' } }}
+                              style={{ flexShrink: 0 }}
+                            >
+                              {contextRecipeLabel(fieldKind)}
+                            </Badge>
+                            <Text size="xs" c="dimmed">
+                              {selectedInputs.length
+                                ? recipeHelp
+                                : 'Choose data first, then available actions appear here.'}
+                            </Text>
+                          </Group>
+                        </ContextBuilderPanel>
+                        <ContextBuilderPanel
+                          tone="blue"
+                          title="3. Name column"
+                          description="Choose the name that will appear in the shot table."
+                        >
+                          <Stack gap="sm">
+                            <TextInput
+                              label="Column title"
+                              value={fieldTitle}
+                              onChange={(event) => {
+                                const nextTitle = event.currentTarget.value
+
+                                setFieldTitle(nextTitle)
+                                setFieldTitleEdited(nextTitle.trim() !== '')
+                              }}
+                            />
+                            <ContextBuilderDisclosure
+                              title="Advanced naming"
+                              description="Override the automatically generated Python name if needed."
+                            >
+                              <Stack gap="xs">
+                                <Group
+                                  justify="space-between"
+                                  align="flex-start"
+                                >
+                                  <Stack gap={0} style={{ minWidth: 0 }}>
+                                    <Text size="sm" fw={600}>
+                                      Python function name
+                                    </Text>
+                                    <Text size="xs" c="dimmed">
+                                      {fieldNameOverridden
+                                        ? 'Custom name is enabled.'
+                                        : 'This stays synced to the title.'}
+                                    </Text>
+                                  </Stack>
+                                  <Group gap="xs">
+                                    {fieldNameOverridden ? (
+                                      <Button
+                                        size="xs"
+                                        variant="subtle"
+                                        onClick={() =>
+                                          setFieldNameOverridden(false)
+                                        }
+                                      >
+                                        Use title name
+                                      </Button>
+                                    ) : null}
+                                    <Button
+                                      size="xs"
+                                      variant="light"
+                                      onClick={() => {
+                                        if (!fieldNameOverridden) {
+                                          setFieldNameOverridden(true)
+                                        }
+                                      }}
+                                    >
+                                      {fieldNameOverridden
+                                        ? 'Custom name'
+                                        : 'Override name'}
+                                    </Button>
+                                  </Group>
+                                </Group>
+                                {fieldNameOverridden ? (
+                                  <TextInput
+                                    value={fieldName}
+                                    error={
+                                      isValidPythonFunctionName(fieldName)
+                                        ? undefined
+                                        : 'Use a valid, non-reserved Python function name.'
+                                    }
+                                    onChange={(event) =>
+                                      setFieldName(
+                                        pythonNameFromTitle(
+                                          event.currentTarget.value
+                                        )
+                                      )
+                                    }
+                                  />
+                                ) : (
+                                  <Code block>{fieldName}</Code>
+                                )}
+                              </Stack>
+                            </ContextBuilderDisclosure>
+                          </Stack>
+                        </ContextBuilderPanel>
+                        {showMongoFields ? (
+                          <ContextBuilderPanel
+                            tone="yellow"
+                            title="Mongo query"
+                            description="Write the Mongo-style filter object used to find the row, then choose which field from that row appears in the table."
+                          >
+                            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+                              <TextInput
+                                label="Query collection"
+                                value={mongoCollection}
+                                onChange={(event) =>
+                                  setMongoCollection(event.currentTarget.value)
+                                }
+                              />
+                              <Card withBorder radius={4} p="sm">
+                                <Stack gap={2}>
+                                  <Text size="xs" c="dimmed">
+                                    Filter variable
+                                  </Text>
+                                  <Code>shot_number</Code>
+                                </Stack>
+                              </Card>
+                            </SimpleGrid>
+                            <Textarea
+                              label="Mongo filter object"
+                              description="Use shot_number from the current shot. The result should be one JSON-like object."
+                              minRows={5}
+                              value={mongoFilter}
+                              onChange={(event) =>
+                                setMongoFilter(event.currentTarget.value)
+                              }
+                            />
+                            <Code block>
+                              {'{\n  "shot_number": shot_number\n}'}
+                            </Code>
+                          </ContextBuilderPanel>
+                        ) : null}
+                        {showFunctionFields ? (
+                          <ContextBuilderPanel
+                            tone="violet"
+                            title="Custom function"
+                            description="Combine the selected inputs into the value returned by the column."
+                          >
+                            <Textarea
+                              label="Function expression"
+                              minRows={3}
+                              value={combineExpression}
+                              onChange={(event) =>
+                                setCombineExpression(event.currentTarget.value)
+                              }
+                            />
+                          </ContextBuilderPanel>
+                        ) : null}
+                      </>
+                    ) : null}
                   </Stack>
                 </Card>
               </Grid.Col>
               <Grid.Col span={{ base: 12, lg: 7 }}>
                 <Stack gap="sm">
+                  {mode === 'help' && wide ? (
+                    <div
+                      style={{
+                        position: 'sticky',
+                        top: 'calc(var(--app-shell-header-offset, 0rem) + var(--mantine-spacing-md))',
+                        zIndex: 2,
+                        maxHeight:
+                          'calc(100vh - var(--app-shell-header-offset, 0rem) - var(--app-shell-footer-offset, 0rem) - 2 * var(--mantine-spacing-md))',
+                        overflowY: 'auto',
+                        background: 'var(--mantine-color-body)',
+                      }}
+                    >
+                      {suggestionDetail ?? (
+                        <Paper withBorder radius={4} p="sm">
+                          <Text size="sm" c="dimmed">
+                            Select a suggestion to preview it here.
+                          </Text>
+                        </Paper>
+                      )}
+                    </div>
+                  ) : null}
                   <ContextBuilderPanel
                     tone="gray"
                     title="Context file and existing columns"
-                    description="Choose the destination, manage existing columns, and add the generated variable."
+                    description="Choose the file, then edit, reorder or delete its columns."
                   >
                     <Group justify="space-between" gap="xs">
                       <Badge variant="light" radius={4}>
                         Destination: {selectedContextFile}
                       </Badge>
                       <Group gap="xs">
-                        <Button
-                          onClick={appendToContext}
-                          disabled={!canSaveGeneratedColumn}
-                        >
-                          Add to context
-                        </Button>
+                        {mode === 'build' ? (
+                          <Button
+                            onClick={appendToContext}
+                            disabled={!canSaveGeneratedColumn}
+                          >
+                            Add to context
+                          </Button>
+                        ) : null}
+                        {mode === 'build' && selectedContextVariable ? (
+                          <Button
+                            variant="light"
+                            onClick={replaceSelectedColumn}
+                            disabled={!canSaveGeneratedColumn}
+                          >
+                            Replace {selectedContextVariable.title}
+                          </Button>
+                        ) : null}
                         <Button onClick={saveManualContext}>
                           Save {selectedContextFile}
                         </Button>
@@ -1161,219 +1595,107 @@ export function ContextBuilderPage() {
                         </Button>
                       </Group>
                     </Group>
-                    <SimpleGrid cols={{ base: 1, md: 2 }} spacing="sm">
-                      <Stack gap={6}>
-                        <Select
-                          label="Context file"
-                          description="The shot table uses the active file, context.py."
-                          value={selectedContextFile}
-                          onChange={loadContextVariant}
-                          data={contextFiles.map((entry) => ({
-                            value: entry.name,
-                            label: entry.active
-                              ? `${entry.name} (active)`
-                              : entry.name,
-                          }))}
-                          searchable
-                        />
-                        {selectedContextFile !== 'context.py' ? (
-                          <Button
-                            variant="light"
-                            onClick={makeContextActive}
-                            title="Write this variant (as shown in the editor) to context.py, keeping the current context.py as context_previous.py."
-                          >
-                            Make {selectedContextFile} active
-                          </Button>
-                        ) : null}
-                      </Stack>
-                      <Paper withBorder radius={4} p="sm">
-                        <Stack gap="xs">
-                          <Select
-                            label="Selected existing column"
-                            description="The actions below apply to this column."
-                            value={selectedColumnId}
-                            onChange={selectAndLoadColumn}
-                            data={contextVariables.map((block, index) => ({
-                              value: block.id,
-                              label: block.title
-                                ? `${index + 1}. ${block.title} (${block.name})`
-                                : `${index + 1}. ${block.name}`,
-                            }))}
-                            placeholder="Choose a @Variable"
-                            searchable
-                          />
-                          {selectedContextVariable ? (
-                            <Text size="xs" c="dimmed">
-                              Position {selectedColumnIndex + 1} of{' '}
-                              {contextVariables.length}
-                            </Text>
-                          ) : null}
-                          <Group gap="xs">
-                            <Button
-                              size="xs"
-                              variant="light"
-                              onClick={() => {
-                                setSelectedColumnId(null)
-                                setSaveStatus(
-                                  'Existing column deselected. Add to context will create a new column.'
-                                )
-                              }}
-                              disabled={!selectedContextVariable}
-                            >
-                              Deselect / new column
-                            </Button>
-                            <Button
-                              size="xs"
-                              variant="light"
-                              onClick={replaceSelectedColumn}
-                              disabled={
-                                !selectedContextVariable ||
-                                !canSaveGeneratedColumn
-                              }
-                            >
-                              Replace selected
-                            </Button>
-                            <Button
-                              size="xs"
-                              variant="light"
-                              leftSection={<IconArrowUp size={16} />}
-                              onClick={() => moveSelectedColumn(-1)}
-                              disabled={selectedColumnIndex <= 0}
-                            >
-                              Move selected up
-                            </Button>
-                            <Button
-                              size="xs"
-                              variant="light"
-                              leftSection={<IconArrowDown size={16} />}
-                              onClick={() => moveSelectedColumn(1)}
-                              disabled={
-                                selectedColumnIndex < 0 ||
-                                selectedColumnIndex >=
-                                  contextVariables.length - 1
-                              }
-                            >
-                              Move selected down
-                            </Button>
-                            <Button
-                              size="xs"
-                              variant="light"
-                              color="red"
-                              onClick={deleteSelectedColumn}
-                              disabled={!selectedContextVariable}
-                            >
-                              Delete selected column
-                            </Button>
-                          </Group>
-                        </Stack>
-                      </Paper>
-                    </SimpleGrid>
-                  </ContextBuilderPanel>
-                  <ContextBuilderDisclosure
-                    title="Preview"
-                    description="Check input data on the example shot. Saved calculations are evaluated in the shot table."
-                    summary={contextRecipeLabel(fieldKind)}
-                    open
-                  >
-                    <Group justify="space-between" gap="sm">
-                      <Stack gap={2}>
-                        <Text size="xs" c="dimmed">
-                          Selected input
-                        </Text>
-                        <Text size="sm" fw={600}>
-                          {selectedInputSummary}
-                        </Text>
-                      </Stack>
-                      <Button
-                        onClick={previewColumn}
-                        variant="light"
-                        disabled={!canBuildColumn}
-                      >
-                        Preview example data
-                      </Button>
+                    <Group gap="xs" align="flex-end">
+                      <Select
+                        label="Context file"
+                        description="The shot table uses the active file, context.py."
+                        value={selectedContextFile}
+                        onChange={loadContextVariant}
+                        data={contextFiles.map((entry) => ({
+                          value: entry.name,
+                          label: entry.active
+                            ? `${entry.name} (active)`
+                            : entry.name,
+                        }))}
+                        searchable
+                        style={{ flex: 1, minWidth: 200 }}
+                      />
+                      {selectedContextFile !== 'context.py' ? (
+                        <Button
+                          variant="light"
+                          onClick={makeContextActive}
+                          title="Write this variant (as shown in the editor) to context.py, keeping the current context.py as context_previous.py."
+                        >
+                          Make {selectedContextFile} active
+                        </Button>
+                      ) : null}
                     </Group>
-                    <Grid gutter="sm">
-                      <Grid.Col span={{ base: 12, md: 7 }}>
-                        <Paper
-                          withBorder
-                          radius={4}
-                          p="sm"
-                          bg="var(--mantine-color-blue-0)"
-                          h="100%"
-                        >
-                          <Stack gap="xs">
-                            <Text size="sm" fw={700}>
-                              Visual preview
-                            </Text>
-                            <VisualPreview
-                              contextScope={contextScope}
-                              datasetPreview={datasetPreview}
-                              fieldKind={fieldKind}
-                              fieldTitle={fieldTitle}
-                              columnDetails={columnDetails}
-                              shots={shots}
-                            />
-                          </Stack>
-                        </Paper>
-                      </Grid.Col>
-                      <Grid.Col span={{ base: 12, md: 5 }}>
-                        <Paper
-                          withBorder
-                          radius={4}
-                          p="sm"
-                          bg="var(--mantine-color-gray-0)"
-                          h="100%"
-                        >
-                          <Stack gap="xs">
-                            <Text size="sm" fw={700}>
-                              Technical values
-                            </Text>
-                            <Text size="xs" c="dimmed">
-                              Exact values used to build the visual result.
-                            </Text>
-                            <Code block>
-                              {columnDetails ||
-                                'Choose data, then preview the example.'}
-                            </Code>
-                          </Stack>
-                        </Paper>
-                      </Grid.Col>
-                    </Grid>
-                  </ContextBuilderDisclosure>
-                  <ContextBuilderDisclosure
-                    title="Generated variable"
-                    description="Review or edit the generated Python before saving it."
-                    summary={generatedEditorCompact ? 'Compact' : 'Expanded'}
-                  >
-                    <Group justify="flex-end" gap="xs">
-                      <Button
-                        variant="subtle"
-                        onClick={() =>
-                          setGeneratedEditorCompact((compact) => !compact)
+                    <Stack gap={4}>
+                      <Text size="sm" fw={600}>
+                        Columns in {selectedContextFile} (
+                        {contextVariables.length})
+                      </Text>
+                      <ContextColumnList
+                        columns={contextVariables}
+                        selectedId={selectedContextVariable?.id ?? null}
+                        onEdit={editColumn}
+                        onStopEditing={() => {
+                          setSelectedColumnId(null)
+                          setSaveStatus(
+                            'Stopped editing. Add to context will create a new column.'
+                          )
+                        }}
+                        onMove={moveColumn}
+                        onDelete={deleteColumn}
+                      />
+                    </Stack>
+                  </ContextBuilderPanel>
+                  {mode === 'build' ? (
+                    <>
+                      <ContextBuilderDisclosure
+                        title="Preview"
+                        description="What this column will show for the example shot, and across the campaign. It follows your choices as you make them."
+                        summary={contextRecipeLabel(fieldKind)}
+                        open
+                      >
+                        <Text size="xs" c="dimmed">
+                          Data: {selectedInputSummary}
+                        </Text>
+                        <ColumnPreview
+                          title={fieldTitle}
+                          input={builderPreviewInput}
+                          exampleShot={selectedShot}
+                          shots={shots}
+                        />
+                      </ContextBuilderDisclosure>
+                      <ContextBuilderDisclosure
+                        title="Generated variable"
+                        description="Review or edit the generated Python before saving it."
+                        summary={
+                          generatedEditorCompact ? 'Compact' : 'Expanded'
                         }
                       >
-                        {generatedEditorCompact
-                          ? 'Expand editor'
-                          : 'Compact editor'}
-                      </Button>
-                    </Group>
-                    <Textarea
-                      value={generatedDraft}
-                      onChange={(event) =>
-                        setGeneratedDraft(event.currentTarget.value)
-                      }
-                      autosize
-                      minRows={generatedEditorCompact ? 6 : 18}
-                      maxRows={generatedEditorCompact ? 10 : 28}
-                      styles={{
-                        input: {
-                          fontFamily:
-                            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                          fontSize: '12px',
-                        },
-                      }}
-                    />
-                  </ContextBuilderDisclosure>
+                        <Group justify="flex-end" gap="xs">
+                          <Button
+                            variant="subtle"
+                            onClick={() =>
+                              setGeneratedEditorCompact((compact) => !compact)
+                            }
+                          >
+                            {generatedEditorCompact
+                              ? 'Expand editor'
+                              : 'Compact editor'}
+                          </Button>
+                        </Group>
+                        <Textarea
+                          value={generatedDraft}
+                          onChange={(event) =>
+                            setGeneratedDraft(event.currentTarget.value)
+                          }
+                          autosize
+                          minRows={generatedEditorCompact ? 6 : 18}
+                          maxRows={generatedEditorCompact ? 10 : 28}
+                          styles={{
+                            input: {
+                              fontFamily:
+                                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                              fontSize: '12px',
+                            },
+                          }}
+                        />
+                      </ContextBuilderDisclosure>
+                    </>
+                  ) : null}
                   <ContextBuilderDisclosure
                     title="Manual context editor"
                     description={

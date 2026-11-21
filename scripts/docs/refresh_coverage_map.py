@@ -208,10 +208,12 @@ AREAS = (
             f"{A}/contextfile/models.py",
             f"{A}/contextfile/routers.py",
             f"{A}/contextfile/suggested.py",
+            f"{A}/contextfile/assist.py",
         ),
         tests=(
             f"{T}/test_contextfile.py",
             f"{T}/test_hzdr_context_suggested.py",
+            f"{T}/test_hzdr_context_assist.py",
         ),
         watch_next="Variable evaluation against a real DAMNIT context file on disk",
     ),

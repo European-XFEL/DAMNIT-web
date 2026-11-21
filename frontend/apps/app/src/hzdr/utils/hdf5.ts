@@ -6,9 +6,16 @@ import type {
   SelectOptionGroup,
 } from '../types'
 
+/**
+ * The builder's dataset choices. Per-shot datasets (`by_shot/<id>/...`) fold
+ * into one `{shot_id}` template; its `previewName` is the example shot's own
+ * copy (`exampleShotId`, the shot's `metadata.shot_id`) when the file has
+ * one, so a preview labelled with the example shot reads that shot's data.
+ */
 export function buildHdf5DatasetOptions(
   datasets: HZDRHDF5Dataset[],
-  contextScope: string
+  contextScope: string,
+  exampleShotId?: string | null
 ): HZDRDatasetOption[] {
   const byShotOptions = new Map<string, HZDRDatasetOption>()
   const directOptions: HZDRDatasetOption[] = []
@@ -18,6 +25,15 @@ export function buildHdf5DatasetOptions(
     const kind = classifyHdf5Dataset(dataset)
 
     if (contextScope === 'shot' && templateName) {
+      const existing = byShotOptions.get(templateName)
+      if (
+        existing &&
+        exampleShotId &&
+        existing.previewName ===
+          templateName.replace('{shot_id}', exampleShotId)
+      ) {
+        continue
+      }
       byShotOptions.set(templateName, {
         value: `hdf5:${templateName}`,
         label: `${dataset.name.split('/').at(-1)} (${dataset.dtype}, ${formatShape(dataset.shape)})`,

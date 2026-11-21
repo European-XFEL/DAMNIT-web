@@ -1,4 +1,11 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import {
   Alert,
   Anchor,
@@ -6,6 +13,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Chip,
   Code,
   Container,
   Grid,
@@ -33,13 +41,13 @@ import type {
   HZDRSortState,
 } from '../types'
 import { AppHeader } from '../components/AppHeader'
-import { CampaignCards } from '../components/CampaignCards'
+import { ShotCampaignStrip } from '../components/ShotCampaignStrip'
+import { ShotDetailPanel } from '../components/ShotDetailPanel'
 import {
   SortableHeader,
   SelectedCellPanel,
   StatusBadge,
   HZDRShotSetsPanel,
-  ShotDetailPanel,
   DetailsSection,
 } from '../components/ShotTable'
 import { cellButtonStyle } from '../components/styles'
@@ -53,15 +61,30 @@ import {
   isScalarContextValue,
 } from '../utils/filter'
 import {
+  campaignTitle,
   formatFiredAt,
   isMissingContextValueError,
   formatContextValue,
+  statusColor,
+  statusLabel,
 } from '../utils/format'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
 import { summarizeShotDataSources } from '../utils/data-sources'
 import { formatShotLabel, toTrendValue } from '../utils/shot-key'
 import { classifyShotVersions, getShotVersion } from '../utils/shot-versions'
+import {
+  SHOT_STATUS_FILTERS,
+  type ShotStatusFilter,
+  countShotQuickFilters,
+  shotDayOptions,
+  shotMatchesDayFilter,
+  shotMatchesStatusFilter,
+} from '../utils/shot-quick-filter'
+import {
+  isTableArrowKey,
+  shouldIgnoreTableArrowKey,
+} from '../utils/shot-keyboard'
 import {
   SHOT_TABLE_COLUMNS,
   SHOT_TABLE_COLUMN_WIDTHS,
@@ -93,6 +116,9 @@ export function HZDRShotPage() {
   const [columnOrder, setColumnOrder] = useState<string[]>([])
   const [showHistoricalVersions, setShowHistoricalVersions] = useState(false)
   const [selectedCell, setSelectedCell] = useState<HZDRSelectedCell>()
+  // Quick filters (status and day chips): not saved with the table view.
+  const [statusFilter, setStatusFilter] = useState<ShotStatusFilter>('all')
+  const [dayFilter, setDayFilter] = useState('')
   // One page-level state for the shots list only; the secondary fetches
   // (source header, available sources, context results, shot detail) fail soft.
   const [dataState, setDataState] = useState<'loading' | 'ready' | 'error'>(
@@ -118,6 +144,8 @@ export function HZDRShotPage() {
     setHiddenTableColumns(savedView?.hiddenTableColumns ?? [])
     setColumnOrder(savedView?.columnOrder ?? [])
     setShowHistoricalVersions(savedView?.showHistoricalVersions ?? false)
+    setStatusFilter('all')
+    setDayFilter('')
   }, [source_key])
 
   useEffect(() => {
@@ -270,16 +298,31 @@ export function HZDRShotPage() {
       visibleContextColumns.length * CONTEXT_COLUMN_WIDTH
     )
   )
-  const visibleShots = tableShots
-    .filter((shot) =>
-      shotMatchesTableFilter(
-        shot,
-        filterColumn,
-        filterOperator,
-        filterValue,
-        contextRowsByShot.get(getShotRowKey(shot)),
-        shotDayLabels.get(getShotRowKey(shot))
-      )
+  const textFilteredShots = tableShots.filter((shot) =>
+    shotMatchesTableFilter(
+      shot,
+      filterColumn,
+      filterOperator,
+      filterValue,
+      contextRowsByShot.get(getShotRowKey(shot)),
+      shotDayLabels.get(getShotRowKey(shot))
+    )
+  )
+  const dayOptions = shotDayOptions(tableShots, shotDayLabels)
+  // A day that left the table (history hidden, shots rebuilt) shows every day.
+  const activeDayFilter = dayOptions.includes(dayFilter) ? dayFilter : ''
+  const quickFilterCounts = countShotQuickFilters(
+    textFilteredShots,
+    { status: statusFilter, day: activeDayFilter },
+    shotDayLabels,
+    dayOptions
+  )
+  const quickFiltered = statusFilter !== 'all' || Boolean(activeDayFilter)
+  const visibleShots = textFilteredShots
+    .filter(
+      (shot) =>
+        shotMatchesStatusFilter(shot, statusFilter) &&
+        shotMatchesDayFilter(shot, activeDayFilter, shotDayLabels)
     )
     .sort((leftShot, rightShot) =>
       compareHZDRShotsForTableSort(
@@ -292,8 +335,52 @@ export function HZDRShotPage() {
     )
   const sourceOptions = availableSources.map((entry) => ({
     value: entry.key,
-    label: `${entry.title} (${entry.shots.length})`,
+    label: `${campaignTitle(entry.title) || entry.key} (${entry.shots.length})`,
   }))
+  const tableRef = useRef<HTMLDivElement>(null)
+  // Up/Down in the table select the previous/next visible shot, as a click on
+  // its row would, and keep focus on the same column of the new row.
+  const handleTableKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!isTableArrowKey(event) || shouldIgnoreTableArrowKey(event.target)) {
+      return
+    }
+    const currentKey = selectedShot && getShotRowKey(selectedShot)
+    const index = visibleShots.findIndex(
+      (shot) => getShotRowKey(shot) === currentKey
+    )
+    const nextIndex =
+      index === -1
+        ? 0
+        : Math.min(
+            Math.max(index + (event.key === 'ArrowDown' ? 1 : -1), 0),
+            visibleShots.length - 1
+          )
+    const next = visibleShots[nextIndex]
+    if (!next) {
+      return
+    }
+    event.preventDefault()
+    const nextKey = getShotRowKey(next)
+    setSelectedRowKey(nextKey)
+    const row = Array.from(
+      tableRef.current?.querySelectorAll<HTMLTableRowElement>(
+        'tr[data-row-key]'
+      ) ?? []
+    ).find((element) => element.dataset.rowKey === nextKey)
+    if (!row) {
+      return
+    }
+    const cell = (event.target as HTMLElement).closest('td')
+    const column = cell?.parentElement
+      ? Array.from(cell.parentElement.children).indexOf(cell)
+      : -1
+    const target =
+      column >= 0 ? row.children[column]?.querySelector('button') : null
+    if (target instanceof HTMLElement) {
+      target.focus()
+    }
+    row.scrollIntoView?.({ block: 'nearest' })
+  }
   const toggleSort = (column: string) => {
     setSortState((currentSort) =>
       currentSort.column === column
@@ -455,8 +542,10 @@ export function HZDRShotPage() {
           <Stack gap="md">
             <Card withBorder radius={4} p="md">
               <Group justify="space-between" align="center" gap="sm">
-                <Group gap="xs">
-                  <Title order={3}>{source?.title ?? source_key}</Title>
+                <Group gap="xs" style={{ minWidth: 0 }}>
+                  <Title order={3} style={{ overflowWrap: 'anywhere' }}>
+                    {campaignTitle(source?.title) || source_key}
+                  </Title>
                   {dataSources.map(({ label, shotCount }) => (
                     <Badge
                       key={label}
@@ -467,12 +556,17 @@ export function HZDRShotPage() {
                     </Badge>
                   ))}
                 </Group>
-                <Group gap="xs" align="center" wrap="nowrap">
+                <Group
+                  gap="xs"
+                  align="center"
+                  wrap="nowrap"
+                  style={{ flex: '1 1 260px', maxWidth: 420, minWidth: 0 }}
+                >
                   <Text size="sm" fw={500} component="label">
-                    Source
+                    Campaign
                   </Text>
                   <Select
-                    aria-label="Source"
+                    aria-label="Campaign"
                     value={source_key ?? null}
                     data={sourceOptions}
                     onChange={(value) => {
@@ -485,7 +579,7 @@ export function HZDRShotPage() {
                       width: 'max-content',
                       position: 'bottom-end',
                     }}
-                    style={{ minWidth: 320 }}
+                    style={{ flex: 1, minWidth: 0 }}
                   />
                 </Group>
               </Group>
@@ -495,17 +589,66 @@ export function HZDRShotPage() {
                     ? 'Shots by the sources their data came from.'
                     : 'No shots yet.'}
                 </Text>
-                <Code>{source?.damnit_path ?? '-'}</Code>
+                <Code style={{ overflowWrap: 'anywhere' }}>
+                  {source?.damnit_path ?? '-'}
+                </Code>
               </Group>
+              {source_key && source_key !== '_unassigned' ? (
+                <Stack mt="xs">
+                  <ShotCampaignStrip sourceKey={source_key} />
+                </Stack>
+              ) : null}
             </Card>
-
-            {source_key && source_key !== '_unassigned' ? (
-              <CampaignCards sourceKey={source_key} />
-            ) : null}
 
             <Grid gutter="md">
               <Grid.Col span={{ base: 12, lg: 9 }}>
                 <Card withBorder radius={4} p="md">
+                  <Group gap="xs" mb="sm" wrap="wrap">
+                    <Chip.Group
+                      value={statusFilter}
+                      onChange={(value) =>
+                        setStatusFilter(value as ShotStatusFilter)
+                      }
+                    >
+                      {SHOT_STATUS_FILTERS.map((status) => (
+                        <Chip
+                          key={status}
+                          value={status}
+                          size="xs"
+                          color={
+                            status === 'all' ? 'blue' : statusColor(status)
+                          }
+                        >
+                          {status === 'all' ? 'All' : statusLabel(status)}{' '}
+                          {quickFilterCounts.status[status]}
+                        </Chip>
+                      ))}
+                    </Chip.Group>
+                    {dayOptions.length > 1 ? (
+                      <Chip.Group
+                        value={activeDayFilter || 'all-days'}
+                        onChange={(value) =>
+                          setDayFilter(
+                            value === 'all-days' ? '' : String(value)
+                          )
+                        }
+                      >
+                        <Chip value="all-days" size="xs" variant="outline">
+                          All days {quickFilterCounts.allDays}
+                        </Chip>
+                        {dayOptions.map((day) => (
+                          <Chip
+                            key={day}
+                            value={day}
+                            size="xs"
+                            variant="outline"
+                          >
+                            {day} {quickFilterCounts.day[day]}
+                          </Chip>
+                        ))}
+                      </Chip.Group>
+                    ) : null}
+                  </Group>
                   <Group align="flex-end" gap="sm">
                     <Select
                       label="Filter column"
@@ -553,13 +696,6 @@ export function HZDRShotPage() {
                     >
                       Clear
                     </Button>
-                    <Button
-                      component={Link}
-                      to={`/source/${source_key}/context-builder`}
-                      variant="light"
-                    >
-                      Context builder
-                    </Button>
                   </Group>
                   <Group gap="sm" mt="sm">
                     <Checkbox
@@ -580,42 +716,57 @@ export function HZDRShotPage() {
                       review.
                     </Alert>
                   ) : null}
-                  <DetailsSection title="Columns">
-                    <Checkbox.Group
-                      value={visibleTableColumns}
-                      onChange={(selectedColumns) => {
-                        const nextHiddenColumns = tableColumnOptions
-                          .map((option) => option.value)
-                          .filter((column) => !selectedColumns.includes(column))
-                        setHiddenTableColumns(nextHiddenColumns)
-                      }}
+                  <Group align="flex-start" gap="sm" wrap="nowrap">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <DetailsSection title="Columns">
+                        <Checkbox.Group
+                          value={visibleTableColumns}
+                          onChange={(selectedColumns) => {
+                            const nextHiddenColumns = tableColumnOptions
+                              .map((option) => option.value)
+                              .filter(
+                                (column) => !selectedColumns.includes(column)
+                              )
+                            setHiddenTableColumns(nextHiddenColumns)
+                          }}
+                        >
+                          <Group gap="sm" mt="xs">
+                            {orderedColumnOptions.map((option) => (
+                              <Checkbox
+                                key={option.value}
+                                value={option.value}
+                                label={option.label}
+                                size="xs"
+                              />
+                            ))}
+                          </Group>
+                          <Group gap="xs" mt="xs">
+                            <Text size="xs" c="dimmed">
+                              Drag a column header onto another to move it.
+                            </Text>
+                            {columnOrder.length > 0 ? (
+                              <Button
+                                size="compact-xs"
+                                variant="subtle"
+                                onClick={() => setColumnOrder([])}
+                              >
+                                Reset order
+                              </Button>
+                            ) : null}
+                          </Group>
+                        </Checkbox.Group>
+                      </DetailsSection>
+                    </div>
+                    <Button
+                      component={Link}
+                      to={`/source/${source_key}/context-builder`}
+                      variant="light"
+                      size="xs"
+                      mt={4}
                     >
-                      <Group gap="sm" mt="xs">
-                        {orderedColumnOptions.map((option) => (
-                          <Checkbox
-                            key={option.value}
-                            value={option.value}
-                            label={option.label}
-                            size="xs"
-                          />
-                        ))}
-                      </Group>
-                      <Group gap="xs" mt="xs">
-                        <Text size="xs" c="dimmed">
-                          Drag a column header onto another to move it.
-                        </Text>
-                        {columnOrder.length > 0 ? (
-                          <Button
-                            size="compact-xs"
-                            variant="subtle"
-                            onClick={() => setColumnOrder([])}
-                          >
-                            Reset order
-                          </Button>
-                        ) : null}
-                      </Group>
-                    </Checkbox.Group>
-                  </DetailsSection>
+                      Add columns
+                    </Button>
+                  </Group>
                 </Card>
                 <Card withBorder radius={4} p={0}>
                   {dataState === 'error' ? (
@@ -636,6 +787,10 @@ export function HZDRShotPage() {
                     </Alert>
                   ) : (
                     <ScrollArea
+                      ref={tableRef}
+                      tabIndex={0}
+                      aria-label="Shots"
+                      onKeyDown={handleTableKeyDown}
                       style={{ height: 'calc(100vh - 340px)', minHeight: 320 }}
                       type="always"
                       offsetScrollbars
@@ -701,7 +856,7 @@ export function HZDRShotPage() {
                                 )}
                               >
                                 <Text size="sm" c="dimmed" ta="center" py="md">
-                                  {filterValue
+                                  {filterValue || quickFiltered
                                     ? 'No shots match the filter.'
                                     : !showHistoricalVersions &&
                                         historicalCount > 0
@@ -714,6 +869,11 @@ export function HZDRShotPage() {
                             visibleShots.map((shot) => (
                               <Table.Tr
                                 key={getShotRowKey(shot)}
+                                data-row-key={getShotRowKey(shot)}
+                                aria-selected={
+                                  getShotRowKey(shot) ===
+                                  (selectedShot && getShotRowKey(selectedShot))
+                                }
                                 onClick={() =>
                                   setSelectedRowKey(getShotRowKey(shot))
                                 }
@@ -1074,17 +1234,18 @@ export function HZDRShotPage() {
                       onCorrectMetadata={updateShotMetadata}
                     />
                   </DetailsSection>
-                  <DetailsSection title="Shot sets" open>
-                    <HZDRShotSetsPanel shots={tableShots} />
-                  </DetailsSection>
-                  <DetailsSection title="Shot detail">
+                  <DetailsSection title="Shot detail" open>
                     <ShotDetailPanel
                       shot={selectedShot}
                       shotDetail={shotDetail}
+                      sourceKey={source_key}
                       availableSources={availableSources}
                       onUpdateStatus={updateShotStatus}
                       onCorrectMetadata={updateShotMetadata}
                     />
+                  </DetailsSection>
+                  <DetailsSection title="Shot sets" open>
+                    <HZDRShotSetsPanel shots={tableShots} />
                   </DetailsSection>
                 </Stack>
               </Grid.Col>

@@ -11,6 +11,9 @@ left out, and so are the values the shot table already shows (energy, target).
 
 from __future__ import annotations
 
+import builtins
+import keyword
+import math
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -64,12 +67,14 @@ def as_number(value: object) -> float | None:
     if isinstance(value, bool):
         return None
     if isinstance(value, int | float):
-        return float(value)
-    text = str(value).strip().replace(",", ".")
-    try:
-        return float(text)
-    except ValueError:
-        return None
+        number = float(value)
+    else:
+        try:
+            number = float(str(value).strip().replace(",", "."))
+        except ValueError:
+            return None
+    # "nan" and "inf" parse, but no column can show them as a value.
+    return number if math.isfinite(number) else None
 
 
 MICRO = "\u00b5"
@@ -88,10 +93,32 @@ def _unit(unit: str) -> str:
     return _U_MICRO.sub(MICRO, text)
 
 
+#: Names a column's function must not take: Python's keywords and builtins
+#: (``def class`` does not compile; ``def float`` breaks every ``float(...)``
+#: in the file) and the names context files use (``np``, ``Skip``, ...).
+RESERVED_NAMES = frozenset({
+    *keyword.kwlist,
+    *keyword.softkwlist,
+    *dir(builtins),
+    "np",
+    "h5py",
+    "px",
+    "run",
+    "value",
+    "labfrog",
+    "skip",
+    "variable",
+    "cell",
+    "mongo_find_one",
+})
+
+
 def _python_name(name: str, taken: set[str]) -> str:
     base = re.sub(r"[^0-9a-zA-Z]+", "_", name).strip("_").lower() or "value"
     if base[0].isdigit():
         base = f"v_{base}"
+    if base in RESERVED_NAMES:
+        base = f"{base}_column"
     candidate, index = base, 2
     while candidate in taken:
         candidate, index = f"{base}_{index}", index + 1
@@ -159,7 +186,11 @@ def _collect(shots: Iterable[HZDRShot]) -> tuple[dict[str, _Seen], int]:
 
 def suggested_columns(shots: Iterable[HZDRShot]) -> list[dict[str, str]]:
     """The LabFrog variables worth a column: name, title, python name, type."""
-    seen, total = _collect(shots)
+    return _columns_from(*_collect(shots))
+
+
+def _columns_from(seen: dict[str, _Seen], total: int) -> list[dict[str, str]]:
+    """``suggested_columns`` from an already collected campaign."""
     minimum = max(3, round(total * 0.1))
     numeric, text = [], []
     for name, record in seen.items():
@@ -198,6 +229,20 @@ def suggested_columns(shots: Iterable[HZDRShot]) -> list[dict[str, str]]:
             "type": kind,
         })
     return columns
+
+
+def labfrog_argument(name: str) -> tuple[str, str]:
+    """A column's parameter for one LabFrog variable, and the value's expression.
+
+    ``meta#a.b`` paths split on every dot, so a name with a dot in it ("E.
+    field") is read by name from the whole ``labfrog_variables`` mapping.
+    """
+    if "." in name:
+        return (
+            "labfrog: 'meta#labfrog_variables' = None",
+            f"((labfrog or {{}}).get({name!r}) or {{}}).get('value')",
+        )
+    return f"value: {f'meta#labfrog_variables.{name}.value'!r} = None", "value"
 
 
 _HELPERS = '''
@@ -241,13 +286,13 @@ def suggested_context(campaign: str, shots: Iterable[HZDRShot]) -> str:
             "# shot yet; add your own @Variable here.",
         ]
     for column in columns:
-        path = f"meta#labfrog_variables.{column['name']}.value"
+        parameter, expression = labfrog_argument(column["name"])
         reader = "_number" if column["type"] == "number" else "_text"
         lines += [
             "",
             "",
             f"@Variable(title={column['title']!r})",
-            f"def {column['function']}(run, value: {path!r} = None):",
-            f"    return {reader}(value)",
+            f"def {column['function']}(run, {parameter}):",
+            f"    return {reader}({expression})",
         ]
     return "\n".join(lines) + "\n"

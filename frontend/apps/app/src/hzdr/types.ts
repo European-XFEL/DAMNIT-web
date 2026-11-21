@@ -6,6 +6,8 @@ export type RuntimeConfig = {
 
       mongo: boolean
     }
+    /** True when a spool consumer (ASAPO or Kafka) is enabled. */
+    live_traffic?: boolean
   }
   terminology: {
     uses_proposals: boolean
@@ -128,6 +130,10 @@ export type HZDRDatasetPreview = {
   shape: number[]
   preview: number[][] | number[] | number | null
   preview_kind: 'image' | 'line' | 'scalar'
+  /** What a summarizing column shows: the scalar, or the mean. */
+  summary?: number | null
+  /** False when `summary` is estimated from the strided preview. */
+  summary_exact?: boolean
 }
 
 export type FlowPacket = {
@@ -430,4 +436,32 @@ export const emptyFlowMonitorState: FlowMonitorState = {
   watchdogStaged: false,
   mongoPending: false,
   hdf5Built: false,
+}
+
+/** One "Help me" column suggestion (GET /contextfile/campaign/{c}/assist,
+ * or an HDF5 dataset on the example shot, suggested in the browser). */
+export type ColumnSuggestion = {
+  id: string
+  title: string
+  function: string
+  origin: 'labfrog' | 'metadata' | 'hdf5'
+  originLabel: string
+  /** The builder form's input key, without its `metadata:`/`hdf5:` prefix. */
+  field: string
+  path: string
+  type: string
+  unit: string
+  count: number
+  total: number
+  examples: string[]
+  reason: string
+  starter: boolean
+  /** HDF5 only: the example shot's own dataset name, for its preview. */
+  previewName?: string
+  /** A self-contained @Variable block, imports first. */
+  block: string
+  /** What the column does: the builder's field kind for HDF5 suggestions. */
+  display: string
+  displayLabel: string
+  displayHelp: string
 }

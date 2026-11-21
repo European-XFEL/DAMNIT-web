@@ -2,13 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   assignShotExperiment,
+  busiestSourceKey,
   campaignSuggestions,
+  closestCandidateKey,
   confirmReviewEvent,
   dismissReviewEvent,
   formatSeconds,
   groupReviewEvents,
   payloadPointer,
   readJson,
+  reviewWaiting,
   secondsBetween,
   shotConfirmations,
   shotsByKey,
@@ -250,5 +253,85 @@ describe('payloadPointer', () => {
       )
     ).toBe('t@1:7')
     expect(payloadPointer(makeEvent())).toBeNull()
+  })
+})
+
+describe('reviewWaiting / busiestSourceKey / closestCandidateKey', () => {
+  const shot = (n: number, firedAt: string): HZDRShot => ({
+    source_key: 'src',
+    shot_number: n,
+    shot_key: `k${n}`,
+    fired_at: firedAt,
+    metadata: {},
+    events: [],
+    data_products: [],
+  })
+
+  it('counts what still waits, leaving out acknowledged and ruled cases', () => {
+    const review = {
+      match_summary: {
+        matched: 0,
+        ambiguous: 9,
+        unmatched: 9,
+        confirmed: 0,
+        dismissed: 0,
+      },
+      review_events: [
+        makeEvent({ event_id: 'a' }),
+        makeEvent({ event_id: 'u', match_status: 'unmatched' }),
+        makeEvent({
+          event_id: 'd',
+          match_status: 'unmatched',
+          acknowledged: true,
+        }),
+      ],
+      unassigned_shots: [shot(9, ''), shot(10, '')],
+      experiment_rulings: [{ shot_number: 10, experiment_id: 'X' }],
+    }
+    expect(reviewWaiting(review)).toEqual({
+      ambiguous: 1,
+      unmatched: 1,
+      unassigned: 1,
+      total: 3,
+    })
+  })
+
+  it('picks the campaign with most waiting; ties and unknowns keep list order', () => {
+    const sources = ['a', 'b', 'c'].map(
+      (key) =>
+        ({ key, title: key, shots: [], metadata: {} }) as unknown as HZDRSource
+    )
+    expect(busiestSourceKey(sources, { a: 1, b: 3, c: 3 })).toBe('b')
+    expect(busiestSourceKey(sources, { a: 0, b: null, c: 0 })).toBe('a')
+    expect(busiestSourceKey(sources, {})).toBe('a')
+    expect(busiestSourceKey([], {})).toBeNull()
+  })
+
+  it('finds the closest candidate in time, and none on a tie', () => {
+    const shots = new Map([
+      ['k1', shot(1, '2026-05-05T08:10:00Z')],
+      ['k2', shot(2, '2026-05-05T08:20:00Z')],
+      ['k3', shot(3, '2026-05-05T08:15:00Z')],
+    ])
+    const event = makeEvent({ timestamp: '2026-05-05T08:16:00Z' })
+    expect(
+      closestCandidateKey(
+        { ...event, candidate_shot_keys: ['k1', 'k2', 'k3'] },
+        shots
+      )
+    ).toBe('k3')
+    expect(
+      closestCandidateKey(
+        {
+          ...event,
+          timestamp: '2026-05-05T08:15:00Z',
+          candidate_shot_keys: ['k1', 'k2'],
+        },
+        shots
+      )
+    ).toBeNull()
+    expect(
+      closestCandidateKey({ ...event, candidate_shot_keys: ['gone'] }, shots)
+    ).toBeNull()
   })
 })

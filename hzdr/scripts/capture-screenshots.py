@@ -1,8 +1,11 @@
-"""Capture the six HZDR frontend documentation views from a local fixture stack.
+"""Capture the seven HZDR frontend documentation views from a local fixture stack.
 
 Run from the repository root:
 
     uv run python hzdr/scripts/capture-screenshots.py
+
+Set HZDR_CHROMIUM_EXECUTABLE to a Chromium binary to launch that instead of
+Playwright's own download (for a machine with a browser already installed).
 
 The command builds two disposable campaigns in a temporary directory -
 normalized `hzdr-event-v1` packages for a multi-day run and a shorter one, a
@@ -25,6 +28,7 @@ import json
 import math
 import os
 import random
+import re
 import shutil
 import signal
 import socket
@@ -638,9 +642,9 @@ def _select_camera_image_cell(page: Page) -> None:
     """Open the camera-image cell of a mid-run shot in the selected-cell panel.
 
     Shows what a context image column does on click - the full preview and the
-    column trend - instead of the empty "click a cell" placeholder. The Shot
-    detail panel below it stays folded: its HDF5 dataset list is thousands of
-    rows long, and a full-page capture would be mostly that list.
+    column trend - instead of the empty "click a cell" placeholder. Shot
+    detail, open below it, lists only that shot's datasets, so the capture
+    shows it too.
     """
     column_index = _context_column_index(page, "HZDR/Camera image")
     if column_index is None:
@@ -670,13 +674,33 @@ def _open_details_section(page: Page, title: str) -> None:
         summary.click()
 
 
+def _prepare_context_assist(page: Page) -> None:
+    """Show the builder's default "Help me choose" view with its suggestions.
+
+    Waits for the suggestion rows and for the "Show more" button that appears
+    once the example shot's dataset suggestions have joined them (the capture
+    campaign has more than the first page), ticks three rows so the "Add N
+    columns" bar is live, and waits for the first row's preview, which the
+    right column shows on a wide screen.
+    """
+    _open_details_section(page, "Target and example shot")
+    page.get_by_text("Suggested columns").first.wait_for()
+    page.get_by_role("button", name="more suggestions").wait_for()
+    ticks = page.get_by_role("checkbox", name=re.compile(r"^Tick (?!all shown)"))
+    for index in range(3):
+        ticks.nth(index).check()
+    page.get_by_text("Across the campaign").first.wait_for()
+
+
 def _prepare_context_builder(page: Page) -> None:
     """Build one image column so the page shows a real recipe, not empty slots.
 
-    Picks the per-shot camera frame, chooses the image-preview action, and
-    renders the preview, with the target/example-shot and generated-Python
-    panels unfolded around it.
+    Switches to "Build a column myself", picks the per-shot camera frame and
+    the image-preview action, and waits for the preview the form reads by
+    itself, with the target/example-shot and generated-Python panels
+    unfolded around it.
     """
+    page.get_by_text("Build a column myself").click()
     _open_details_section(page, "Target and example shot")
     data_picker = page.get_by_role("textbox", name="Data to use")
     data_picker.click()
@@ -684,8 +708,8 @@ def _prepare_context_builder(page: Page) -> None:
     page.get_by_role("option").first.click()
     page.get_by_role("textbox", name="What should this column do?").click()
     page.get_by_role("option", name="Image with reduced preview").click()
-    page.get_by_role("button", name="Preview example data").click()
-    page.get_by_text("Image preview").first.wait_for()
+    # The preview follows the form: wait for the image it reads on its own.
+    page.get_by_text("On double-click").first.wait_for()
     _open_details_section(page, "Generated variable")
 
 
@@ -702,12 +726,13 @@ def _prepare_docs(page: Page) -> None:
 
 
 def _prepare_review_matches(page: Page) -> None:
-    """Wait for the first catalog's review lists to load.
+    """Wait for the chosen campaign's review lists to load.
 
-    The page selects the first campaign catalog itself; the cards appear only
-    once its review list and shots have arrived.
+    The page picks the campaign with the most waiting itself; the cards, or
+    the "all clear" banner when nothing waits, appear once its review list
+    and shots have arrived.
     """
-    page.get_by_text("Ambiguous matches").first.wait_for()
+    page.get_by_text(re.compile("all clear|Ambiguous matches")).first.wait_for()
 
 
 def _prepare_flow_monitor(page: Page) -> None:
@@ -723,7 +748,7 @@ def _prepare_flow_monitor(page: Page) -> None:
         page.get_by_role("button", name="New shot"),
         page.get_by_role("button", name="Enrich latest").first,
         page.get_by_role("button", name="Enrich latest").last,
-        page.get_by_role("button", name="Poll live"),
+        page.get_by_role("button", name="Refresh"),
         page.get_by_role("button", name="Build HDF5"),
     ):
         button.click(force=True)
@@ -736,7 +761,7 @@ def _prepare_flow_monitor(page: Page) -> None:
 # Capture order matters: the flow monitor's demo actions mutate the fixture
 # stack, so it runs after every page that photographs the unmodified campaign.
 SHOTS = (
-    Shot("home.png", "/home", "heading", "DAMNIT! HZDR workspace"),
+    Shot("home.png", "/home", "heading", "Campaigns"),
     Shot(
         "shot-table.png",
         f"/source/{PRIMARY.source_key}",
@@ -745,10 +770,17 @@ SHOTS = (
         _select_camera_image_cell,
     ),
     Shot(
+        "context-assist.png",
+        f"/source/{PRIMARY.source_key}/context-builder",
+        "heading",
+        "Add columns",
+        _prepare_context_assist,
+    ),
+    Shot(
         "context-builder.png",
         f"/source/{PRIMARY.source_key}/context-builder",
         "heading",
-        "Context builder",
+        "Add columns",
         _prepare_context_builder,
     ),
     # The file keeps its old name until the screenshot revamp recaptures it.
@@ -908,7 +940,12 @@ def capture() -> None:
 
             with sync_playwright() as playwright:
                 try:
-                    browser = playwright.chromium.launch(headless=True)
+                    # HZDR_CHROMIUM_EXECUTABLE: a Chromium to use instead of
+                    # Playwright's own download (a preinstalled browser).
+                    executable = os.environ.get("HZDR_CHROMIUM_EXECUTABLE")
+                    browser = playwright.chromium.launch(
+                        headless=True, executable_path=executable or None
+                    )
                 except PlaywrightError as exc:
                     raise SystemExit(
                         "Playwright Chromium is not installed. Run "

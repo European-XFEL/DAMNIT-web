@@ -1,18 +1,12 @@
+import { useEffect, useRef } from 'react'
 import Plotly from 'react-plotly.js'
-import { Card, Code, Group, Stack, Table, Text } from '@mantine/core'
+import { Card, Code, Group, Stack, Text } from '@mantine/core'
 
-import type {
-  PlotlyPreview,
-  HZDRShot,
-  HZDRDatasetPreview,
-  HZDRTrendValue,
-} from '../types'
+import type { PlotlyPreview, HZDRTrendValue } from '../types'
 import { decodePlotlyTypedArrays } from '../utils/plotly'
 import { isPlotlyPreview, getPlotlySparklineValues } from '../utils/plotly'
 import { isNumericLinePreview, isNumericMatrixPreview } from '../utils/preview'
 import { formatTrendValue } from '../utils/format'
-import { collectNumericMetadataTrendValues } from '../utils/metadata'
-import { parseColumnDetails } from '../utils/preview'
 
 export function TruncatedCell({
   value,
@@ -199,38 +193,75 @@ export function MiniImagePreview({
   values: number[][]
   size?: number
 }) {
-  const flattened = values.flat()
-  const minValue = Math.min(...flattened)
-  const maxValue = Math.max(...flattened)
-  const range = maxValue - minValue || 1
+  return <CanvasImage values={values} maxWidth={size} />
+}
+
+/** A matrix drawn on a canvas, one pixel per value, scaled to its range. */
+export function CanvasImage({
+  values,
+  maxWidth = 320,
+}: {
+  values: number[][]
+  maxWidth?: number
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const height = values.length
+  const width = values[0]?.length ?? 0
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    // jsdom and very old browsers have no 2D context: draw nothing there.
+    let context: CanvasRenderingContext2D | null = null
+    try {
+      context = canvas?.getContext('2d') ?? null
+    } catch {
+      context = null
+    }
+    if (!canvas || !context || !width || !height) return
+    // A loop, not Math.min(...values): spreading a large image overflows
+    // the call stack.
+    let minimum = Infinity
+    let maximum = -Infinity
+    for (const row of values) {
+      for (const value of row) {
+        if (!Number.isFinite(value)) continue
+        if (value < minimum) minimum = value
+        if (value > maximum) maximum = value
+      }
+    }
+    const range = maximum - minimum || 1
+    const image = context.createImageData(width, height)
+    values.forEach((row, y) =>
+      row.forEach((value, x) => {
+        const shade = Number.isFinite(value)
+          ? Math.round(((value - minimum) / range) * 255)
+          : 0
+        const offset = (y * width + x) * 4
+        image.data[offset] = shade
+        image.data[offset + 1] = shade
+        image.data[offset + 2] = shade
+        image.data[offset + 3] = 255
+      })
+    )
+    context.putImageData(image, 0, 0)
+  }, [values, width, height])
+
   return (
-    <div
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
       role="img"
       aria-label="Image preview"
       style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${values[0]?.length ?? 1}, 1fr)`,
+        display: 'block',
         width: '100%',
-        maxWidth: size,
-        aspectRatio: '1 / 1',
+        maxWidth,
+        aspectRatio: `${width || 1} / ${height || 1}`,
+        imageRendering: 'pixelated',
         border: '1px solid var(--mantine-color-gray-4)',
-        overflow: 'hidden',
       }}
-    >
-      {values.flatMap((row, rowIndex) =>
-        row.map((value, columnIndex) => {
-          const shade = Math.round(((value - minValue) / range) * 255)
-          return (
-            <div
-              key={`${rowIndex}-${columnIndex}`}
-              style={{
-                backgroundColor: `rgb(${shade}, ${shade}, ${shade})`,
-              }}
-            />
-          )
-        })
-      )}
-    </div>
+    />
   )
 }
 
@@ -460,186 +491,6 @@ export function MetadataTrendPreview({
           {xLabel}
         </text>
       </svg>
-    </Stack>
-  )
-}
-
-export function ColumnCellPreview({
-  fieldTitle,
-  details,
-}: {
-  fieldTitle: string
-  details: Record<string, unknown>
-}) {
-  const value =
-    details.value ??
-    details.displayed_value ??
-    details.metadata_value ??
-    details.mongo_query ??
-    'Click Preview column.'
-  return (
-    <Card withBorder radius={4} p="md">
-      <Stack gap="xs">
-        <Text size="sm" fw={700}>
-          Table cell preview
-        </Text>
-        <Table withTableBorder withColumnBorders>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Shot</Table.Th>
-              <Table.Th>{fieldTitle || 'Generated column'}</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            <Table.Tr>
-              <Table.Td>{String(details.shot_number ?? '-')}</Table.Td>
-              <Table.Td>{String(value)}</Table.Td>
-            </Table.Tr>
-          </Table.Tbody>
-        </Table>
-        {details.dataset ? (
-          <Text size="xs" c="dimmed">
-            Dataset: {String(details.dataset)}
-            {details.shape ? ` [${String(details.shape)}]` : ''}
-          </Text>
-        ) : null}
-        {details.input ? (
-          <Text size="xs" c="dimmed">
-            Input: {String(details.input)}
-          </Text>
-        ) : null}
-      </Stack>
-    </Card>
-  )
-}
-
-export function VisualPreview({
-  contextScope,
-  datasetPreview,
-  fieldKind,
-  fieldTitle,
-  columnDetails,
-  shots,
-}: {
-  contextScope: string
-  datasetPreview?: HZDRDatasetPreview
-  fieldKind: string
-  fieldTitle: string
-  columnDetails: string
-  shots: HZDRShot[]
-}) {
-  const parsedDetails = parseColumnDetails(columnDetails)
-  const metadataInput =
-    typeof parsedDetails.input === 'string' ? parsedDetails.input : undefined
-
-  if (contextScope === 'set' && fieldKind === 'metadata' && metadataInput) {
-    return (
-      <Stack gap="xs">
-        <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
-        <MetadataTrendPreview
-          values={collectNumericMetadataTrendValues(shots, metadataInput)}
-          title={`${metadataInput} trend`}
-        />
-      </Stack>
-    )
-  }
-
-  if (
-    ![
-      'hdf5',
-      'lineout-preview',
-      'image-preview',
-      'plotly-trend',
-      'function',
-    ].includes(fieldKind)
-  ) {
-    return <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
-  }
-
-  if (!datasetPreview) {
-    return <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
-  }
-
-  if (datasetPreview.preview_kind === 'image') {
-    const pixels = datasetPreview.preview as number[][]
-    return (
-      <Stack gap="xs">
-        <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
-        <Text size="sm" fw={600}>
-          {datasetPreview.name}
-        </Text>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: `repeat(${pixels[0]?.length ?? 1}, 1fr)`,
-            width: '100%',
-            maxWidth: 420,
-            aspectRatio: '1 / 1',
-            border: '1px solid var(--mantine-color-gray-4)',
-          }}
-        >
-          {pixels.flatMap((row, rowIndex) =>
-            row.map((value, columnIndex) => (
-              <div
-                key={`${rowIndex}-${columnIndex}`}
-                style={{
-                  backgroundColor: `rgb(${Math.round(value * 255)}, ${Math.round(value * 255)}, ${Math.round(value * 255)})`,
-                }}
-              />
-            ))
-          )}
-        </div>
-      </Stack>
-    )
-  }
-
-  if (datasetPreview.preview_kind === 'line') {
-    const values = datasetPreview.preview as number[]
-    const minValue = Math.min(...values)
-    const maxValue = Math.max(...values)
-    const points = values
-      .map((value, index) => {
-        const x = (index / Math.max(values.length - 1, 1)) * 100
-        const y =
-          90 - ((value - minValue) / Math.max(maxValue - minValue, 1e-9)) * 80
-        return `${x},${y}`
-      })
-      .join(' ')
-    return (
-      <Stack gap="xs">
-        <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
-        <Text size="sm" fw={600}>
-          {datasetPreview.name}
-        </Text>
-        <svg
-          viewBox="0 0 100 100"
-          width="100%"
-          height="220"
-          role="img"
-          style={{ border: '1px solid var(--mantine-color-gray-4)' }}
-        >
-          <polyline
-            points={points}
-            fill="none"
-            stroke="var(--mantine-color-blue-7)"
-            strokeWidth="1.5"
-          />
-        </svg>
-      </Stack>
-    )
-  }
-
-  return (
-    <Stack gap="xs">
-      <ColumnCellPreview fieldTitle={fieldTitle} details={parsedDetails} />
-      <Card withBorder radius={4} p="md">
-        <Stack gap={4}>
-          <Text size="sm" fw={600}>
-            {datasetPreview.name}
-          </Text>
-          <Text size="xl">{String(datasetPreview.preview)}</Text>
-        </Stack>
-      </Card>
     </Stack>
   )
 }

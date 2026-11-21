@@ -29,7 +29,14 @@ function ContactButton() {
           component="a"
           href={`mailto:${CONTACT_EMAIL}`}
           radius="xl"
-          classNames={{ section: classes.section }}
+          // Icon only on a phone (the label hides below xs), so the name
+          // stays for screen readers.
+          aria-label="Send feedback"
+          classNames={{
+            root: classes.button,
+            section: classes.section,
+            label: classes.label,
+          }}
           leftSection={
             <IconMail
               stroke={1.5}

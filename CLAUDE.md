@@ -37,12 +37,13 @@ pnpm run dev:app          # Vite dev server at http://localhost:5173
 # point it at the API via apps/app/.env or root .env:  VITE_API=http://127.0.0.1:8000
 ```
 
-**Refresh all six HZDR documentation screenshots:**
+**Refresh all seven HZDR documentation screenshots:**
 ```
 uv run playwright install chromium  # one-time
 uv run python hzdr/scripts/capture-screenshots.py
 ```
-The capture uses only a disposable local package-emulator stack.
+The capture uses only a disposable local package-emulator stack
+(`HZDR_CHROMIUM_EXECUTABLE` launches an already-installed Chromium instead).
 
 **Whole stack (API + frontend + local broker):**
 ```
@@ -195,7 +196,14 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
   `DW_API_METADATA__PROVIDER=mymdc`), `contextfile/` - the original DAMNIT-web
   machinery. Context-file arguments read flat metadata keys, then a `meta#a.b` path or
   the registry key a legacy name maps to (`laser_energy_j` ->
-  `laser.pulse_energy`).
+  `laser.pulse_energy`). HZDR additions: `suggested.py` (a new workspace's
+  starter `context.py`) and `assist.py` (`GET .../campaign/{c}/assist`, Context
+  Builder's "Help me choose": ranked suggestions with a reason and a
+  self-contained `@Variable` block each; LabFrog values, then registered
+  numeric metadata keys plus `trigger.adc_value`, never the record namespaces
+  or counters). Generated function names avoid keywords, builtins and the
+  file's globals (`suggested.RESERVED_NAMES`); a LabFrog name with a dot is
+  read by name (`suggested.labfrog_argument`).
 - API docs build with zensical (`api/zensical.toml`; `uv run --group docs zensical
   build` in `api/`). Upstream's character check (`scripts/check-characters`) runs in
   pre-commit and CI; fork-owned HZDR paths keep their typographic punctuation and
@@ -207,11 +215,30 @@ workspace. HZDR-specific UI code lives under `apps/app/src/hzdr/`:
 - `pages/` — `ShotPage`, `ReviewMatchesPage`, `FlowMonitorPage`, `ContextBuilderPage`,
   `DocsPage`, `PrivacyPage` (public `/privacy`, linked from the site footer;
   keep its "What we process" list in step with what the API stores), `SourceHome`
-- `components/` — `ShotTable`, `ReviewMatches`, `FlowDiagram`, `AppHeader`, `previews`
+- `components/` — `ShotTable`, `ShotDetailPanel` (`utils/shot-datasets`: only
+  the selected shot's datasets, the campaign file behind a toggle),
+  `ShotCampaignStrip`, `HomeCampaignList`, `ReviewMatches`, `FlowDiagram`,
+  `FlowTrafficLog`, `AppHeader` (a menu below `sm`), `ContextAssistant`,
+  `ContextColumnList`, `ColumnPreview`, `previews`
 - `utils/` — `api`, `filter`, `format`, `hdf5`, `review`, `metadata`, `plotly`,
   `preview`, `context`
 - `types.ts`, `hooks.ts`, `index.ts`
 
+`ContextBuilderPage` opens on "Help me choose" (`components/ContextAssistant`,
+`utils/contextAssist`: the API's suggestions plus the example shot's HDF5
+datasets as tickable rows; "Add N columns" appends the ticked blocks in one
+save, Ignore is per browser in localStorage, the selected row's preview and
+Customise sit in the right column; `?add=hdf5:<dataset>` /
+`?add=metadata:<path>` opens the builder with that input) beside "Build a
+column myself". The campaign page stays DAMNIT's table of shots with
+context-column previews; cleanups go around the table, not into it.
+Labels for people (`formatShotTime`, `matchQualityLabel`, `campaignTitle`,
+`NOT_RECORDED`) live in `utils/format.ts`. Flow monitor opens in Live when
+`GET /config/runtime` says `flow_monitor.live_traffic` (a spool consumer
+is enabled), else Demo, unless the browser stored a choice. Both
+preview a column with `components/ColumnPreview` (`utils/columnPreview`: the
+example shot's cell, the double-click image/curve, the campaign trend or label
+counts; live, no button), which reads `HZDRDatasetPreview.summary`.
 `ShotPage.tsx` fetches shot detail via the `by-key/{shot_key}` route when a
 `shot_key` is present (falling back to `{shot_number}`).
 The `ReviewMatchesPage` (`/review-matches`; the old `/link-shot-records` path

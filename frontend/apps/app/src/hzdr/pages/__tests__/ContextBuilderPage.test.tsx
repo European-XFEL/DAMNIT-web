@@ -12,12 +12,19 @@ import { MantineProvider } from '@mantine/core'
 import { MemoryRouter, Route, Routes } from 'react-router'
 
 import { ContextBuilderPage } from '../ContextBuilderPage'
+import { formatShotLabel } from '../../utils/format'
 
 vi.mock('@damnit-frontend/ui', () => ({
   HomePage: ({ main }: { main: ReactNode }) => main,
 }))
 vi.mock('../../components/AppHeader', () => ({ AppHeader: () => null }))
-vi.mock('../../components/previews', () => ({ VisualPreview: () => null }))
+// Plotly is heavy in jsdom; the charts themselves are not under test here.
+vi.mock('../../components/previews', () => ({
+  MetadataTrendPreview: ({ title }: { title: string }) => (
+    <div>Trend: {title}</div>
+  ),
+  CanvasImage: () => <div role="img" aria-label="Image preview" />,
+}))
 
 afterEach(() => {
   cleanup()
@@ -98,15 +105,19 @@ describe('ContextBuilderPage example shots', () => {
       // duplicate option values fail here just as they do in the browser.
       const selector = screen.getByRole('textbox', { name: 'Example shot' })
       await waitFor(() =>
-        expect(selector).toHaveValue(`${shotNumber} - 2026-05-05T08:15:00Z`)
+        expect(selector).toHaveValue(
+          formatShotLabel(shotNumber, '2026-05-05T08:15:00Z')
+        )
       )
       await user.click(selector)
       await user.click(
         await screen.findByRole('option', {
-          name: `${shotNumber} - 2026-05-06T08:15:00Z`,
+          name: formatShotLabel(shotNumber, '2026-05-06T08:15:00Z'),
         })
       )
-      expect(selector).toHaveValue(`${shotNumber} - 2026-05-06T08:15:00Z`)
+      expect(selector).toHaveValue(
+        formatShotLabel(shotNumber, '2026-05-06T08:15:00Z')
+      )
       await waitFor(() =>
         expect(fetchMock).toHaveBeenCalledWith(
           withKeys
@@ -114,6 +125,8 @@ describe('ContextBuilderPage example shots', () => {
             : `${base}/shots/${shotNumber}`
         )
       )
+      // The builder opens on "Help me choose"; the form is the other mode.
+      await user.click(screen.getByText('Build a column myself'))
       const data = screen.getByRole('textbox', { name: 'Data to use' })
       await user.click(data)
       expect(
@@ -141,25 +154,28 @@ describe('ContextBuilderPage example shots', () => {
       await user.click(
         screen.getByRole('button', { name: 'Use a shot with this field' })
       )
-      expect(selector).toHaveValue(`${shotNumber} - 2026-05-05T08:15:00Z`)
+      expect(selector).toHaveValue(
+        formatShotLabel(shotNumber, '2026-05-05T08:15:00Z')
+      )
       await user.click(selector)
       await user.click(
         await screen.findByRole('option', {
-          name: `${shotNumber} - 2026-05-06T08:15:00Z`,
+          name: formatShotLabel(shotNumber, '2026-05-06T08:15:00Z'),
         })
       )
       await user.click(data)
       await user.click(
         await screen.findByRole('option', { name: 'signal (float64, 2)' })
       )
-      await user.click(
-        screen.getByRole('button', { name: 'Preview example data' })
-      )
+      // The preview follows the form: choosing the dataset reads it on the
+      // example shot, with no button to press.
       const query = withKeys
         ? `?${new URLSearchParams({ shot_key: shots[1].shot_key! })}`
         : ''
-      expect(fetchMock).toHaveBeenCalledWith(
-        `${base}/shots/${shotNumber}/datasets/signal${query}`
+      await waitFor(() =>
+        expect(fetchMock).toHaveBeenCalledWith(
+          `${base}/shots/${shotNumber}/datasets/signal${query}`
+        )
       )
     }
   )
