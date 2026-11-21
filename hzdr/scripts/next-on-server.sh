@@ -178,7 +178,10 @@ step_frontend() {
         return
     else
         act "building DAMNIT's frontend"
-        if (cd "$repo/frontend" && pnpm install --frozen-lockfile && pnpm --filter ./apps/app build); then
+        # The build records its commit; the header warns when the API runs another.
+        if (cd "$repo/frontend" && pnpm install --frozen-lockfile \
+            && VITE_DAMNIT_COMMIT="$(git -C "$repo" rev-parse --short=12 HEAD)" \
+               pnpm --filter ./apps/app build); then
             ok "frontend built"
         else
             fail "frontend build failed (the old build is still served)"

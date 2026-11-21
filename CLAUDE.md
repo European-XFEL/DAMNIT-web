@@ -196,7 +196,9 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
   `DW_API_METADATA__PROVIDER=mymdc`), `contextfile/` - the original DAMNIT-web
   machinery. Context-file arguments read flat metadata keys, then a `meta#a.b` path or
   the registry key a legacy name maps to (`laser_energy_j` ->
-  `laser.pulse_energy`). HZDR additions: `suggested.py` (a new workspace's
+  `laser.pulse_energy`). `meta#shot_container` is the shot's container link
+  name in the campaign file (`<YYYYMMDD>_<NNNNNN>`, from its `shot_key`), for
+  columns on `{container}/...` datasets. HZDR additions: `suggested.py` (a new workspace's
   starter `context.py`) and `assist.py` (`GET .../campaign/{c}/assist`, Context
   Builder's "Help me choose": ranked suggestions with a reason and a
   self-contained `@Variable` block each; LabFrog values, then registered
@@ -215,6 +217,8 @@ workspace. HZDR-specific UI code lives under `apps/app/src/hzdr/`:
 - `pages/` — `ShotPage`, `ReviewMatchesPage`, `FlowMonitorPage`, `ContextBuilderPage`,
   `DocsPage`, `PrivacyPage` (public `/privacy`, linked from the site footer;
   keep its "What we process" list in step with what the API stores), `SourceHome`
+  (polls `GET /metadata/hzdr/source-summaries`, counts only, not the full
+  sources list; `components/homeCampaignSummary.ts` maps it)
 - `components/` — `ShotTable`, `ShotDetailPanel` (`utils/shot-datasets`: only
   the selected shot's datasets, the campaign file behind a toggle),
   `ShotCampaignStrip`, `HomeCampaignList`, `ReviewMatches`, `FlowDiagram`,
@@ -251,7 +255,7 @@ experiment ruling). It reads `GET .../sources/{key}/review`, which also lists
 `unassigned_shots` and their pending `experiment_rulings`.
 Saved table views are persisted in `hzdr_sources.views.json` alongside
 `hzdr_sources.json` (same directory, same stem with `.views.json` suffix); the API
-manages them via `GET/POST/DELETE /metadata/hzdr/views`.
+manages them via `GET/POST/DELETE /metadata/hzdr/sources/{key}/views[/{id}]`; the shot table shows them as chips (`components/SavedViewChips`).
 
 ### Configuration
 Pydantic settings via `DW_API_*` env vars with `__` as the nested delimiter (e.g.
@@ -635,4 +639,4 @@ Values: `none`, `number`, `string`, `boolean`, `timestamp`, `complex`, `array`, 
 
 ### API package version
 
-`damnit-api` current: **`0.3.1`** (see `api/pyproject.toml`). No runtime version endpoint exists; bump this when the public schema changes.
+`damnit-api` current: **`0.3.1`** (see `api/pyproject.toml`). `GET /config/version` reports it and the checkout's commit at start-up (a frontend built with `VITE_DAMNIT_COMMIT` warns in its header when the two commits differ); bump the version when the public schema changes.

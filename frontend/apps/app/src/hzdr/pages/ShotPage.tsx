@@ -31,11 +31,15 @@ import { Link, useParams, useSearchParams } from 'react-router'
 
 import { history, HomePage } from '@damnit-frontend/ui'
 
-import { rememberLastCampaign } from '../components/homeCampaignSummary'
+import {
+  rememberLastCampaign,
+  sourceSummariesUrl,
+} from '../components/homeCampaignSummary'
 import type {
   HZDRShot,
   HZDRShotDetail,
   HZDRSource,
+  HZDRSourceSummary,
   HZDRContextResults,
   HZDRSelectedCell,
   HZDRFilterOperator,
@@ -99,7 +103,15 @@ import {
   moveColumn,
   orderColumns,
   saveShotTableView,
+  type ShotTableView,
 } from '../utils/table-view'
+import { downloadText, shotTableCsv } from '../utils/csv'
+import {
+  isNewShot,
+  readLastSeenShot,
+  rememberLastSeenShot,
+} from '../utils/new-shots'
+import { SavedViewChips } from '../components/SavedViewChips'
 
 export function HZDRShotPage() {
   const { source_key } = useParams()
@@ -109,7 +121,9 @@ export function HZDRShotPage() {
   const linkedShotRef = useRef(linkedShot)
   const [source, setSource] = useState<HZDRSource>()
   const [shots, setShots] = useState<HZDRShot[]>([])
-  const [availableSources, setAvailableSources] = useState<HZDRSource[]>([])
+  const [availableSources, setAvailableSources] = useState<HZDRSourceSummary[]>(
+    []
+  )
   // The selected row (getShotRowKey): shot numbers repeat across days.
   const [selectedRowKey, setSelectedRowKey] = useState<string>()
   const [shotDetail, setShotDetail] = useState<HZDRShotDetail>()
@@ -129,6 +143,10 @@ export function HZDRShotPage() {
   // Quick filters (status and day chips): not saved with the table view.
   const [statusFilter, setStatusFilter] = useState<ShotStatusFilter>('all')
   const [dayFilter, setDayFilter] = useState('')
+  // The newest shot time the last visit showed, read once per campaign and
+  // kept for this visit, so a refresh does not clear what is new.
+  const [lastSeenShot, setLastSeenShot] = useState<number | null>(null)
+  const [newOnly, setNewOnly] = useState(false)
   // One page-level state for the shots list only; the secondary fetches
   // (source header, available sources, context results, shot detail) fail soft.
   const [dataState, setDataState] = useState<'loading' | 'ready' | 'error'>(
@@ -139,25 +157,38 @@ export function HZDRShotPage() {
   // filter/sort states still hold the previous source's values on that pass.
   const skipNextViewSave = useRef(false)
 
+  // A view's filter, sort and columns; undefined resets to the defaults.
+  // State setters only, so the identity never changes.
+  const applyTableView = useCallback((view?: ShotTableView) => {
+    setFilterColumn(view?.filterColumn ?? 'all')
+    setFilterOperator(view?.filterOperator ?? 'includes')
+    setFilterValue(view?.filterValue ?? '')
+    setSortState(view?.sortState ?? { column: 'shot_number', direction: 'asc' })
+    setHiddenTableColumns(view?.hiddenTableColumns ?? [])
+    setColumnOrder(view?.columnOrder ?? [])
+    setShowHistoricalVersions(view?.showHistoricalVersions ?? false)
+  }, [])
+
   useEffect(() => {
     if (!source_key) {
       return
     }
     skipNextViewSave.current = true
     rememberLastCampaign(source_key)
-    const savedView = loadShotTableView(source_key)
-    setFilterColumn(savedView?.filterColumn ?? 'all')
-    setFilterOperator(savedView?.filterOperator ?? 'includes')
-    setFilterValue(savedView?.filterValue ?? '')
-    setSortState(
-      savedView?.sortState ?? { column: 'shot_number', direction: 'asc' }
-    )
-    setHiddenTableColumns(savedView?.hiddenTableColumns ?? [])
-    setColumnOrder(savedView?.columnOrder ?? [])
-    setShowHistoricalVersions(savedView?.showHistoricalVersions ?? false)
+    applyTableView(loadShotTableView(source_key))
     setStatusFilter('all')
     setDayFilter('')
-  }, [source_key])
+    setLastSeenShot(readLastSeenShot(source_key))
+    setNewOnly(false)
+  }, [source_key, applyTableView])
+
+  useEffect(() => {
+    if (!source_key) return
+    rememberLastSeenShot(
+      source_key,
+      shots.filter((shot) => shot.source_key === source_key)
+    )
+  }, [source_key, shots])
 
   useEffect(() => {
     if (!source_key) {
@@ -222,8 +253,8 @@ export function HZDRShotPage() {
       })
       .catch(() => setDataState('error'))
 
-    fetch('/metadata/hzdr/sources')
-      .then((response) => requireJson<HZDRSource[]>(response))
+    fetch(sourceSummariesUrl())
+      .then((response) => requireJson<HZDRSourceSummary[]>(response))
       .then(setAvailableSources)
       .catch(() => setAvailableSources([]))
 
@@ -351,11 +382,16 @@ export function HZDRShotPage() {
     dayOptions
   )
   const quickFiltered = statusFilter !== 'all' || Boolean(activeDayFilter)
+  const newShotCount = textFilteredShots.filter((shot) =>
+    isNewShot(shot, lastSeenShot)
+  ).length
+  const showNewOnly = newOnly && newShotCount > 0
   const visibleShots = textFilteredShots
     .filter(
       (shot) =>
         shotMatchesStatusFilter(shot, statusFilter) &&
-        shotMatchesDayFilter(shot, activeDayFilter, shotDayLabels)
+        shotMatchesDayFilter(shot, activeDayFilter, shotDayLabels) &&
+        (!showNewOnly || isNewShot(shot, lastSeenShot))
     )
     .sort((leftShot, rightShot) =>
       compareHZDRShotsForTableSort(
@@ -366,9 +402,32 @@ export function HZDRShotPage() {
         shotDayLabels
       )
     )
+  const currentTableView: ShotTableView = {
+    filterColumn,
+    filterOperator,
+    filterValue,
+    sortState,
+    hiddenTableColumns,
+    showHistoricalVersions,
+    columnOrder,
+  }
+  // The rows the table shows, in its order, with its visible columns.
+  const downloadShotsCsv = () =>
+    downloadText(
+      `${source_key ?? 'shots'}-shots.csv`,
+      shotTableCsv(
+        visibleShots,
+        orderedColumnOptions.filter((option) =>
+          visibleTableColumns.includes(option.value)
+        ),
+        contextRowsByShot,
+        shotDayLabels
+      ),
+      'text/csv;charset=utf-8'
+    )
   const sourceOptions = availableSources.map((entry) => ({
     value: entry.key,
-    label: `${campaignTitle(entry.title) || entry.key} (${entry.shots.length})`,
+    label: `${campaignTitle(entry.title) || entry.key} (${entry.shot_count})`,
   }))
   const tableRef = useRef<HTMLDivElement>(null)
   const scrollRowIntoView = (rowKey: string) => {
@@ -634,7 +693,9 @@ export function HZDRShotPage() {
                 <Text size="sm" c="dimmed">
                   {dataSources.length
                     ? 'Shots by the sources their data came from.'
-                    : 'No shots yet.'}
+                    : shots.length
+                      ? 'No data source is known for these shots yet.'
+                      : 'No shots yet.'}
                 </Text>
                 <Code style={{ overflowWrap: 'anywhere' }}>
                   {source?.damnit_path ?? '-'}
@@ -650,6 +711,13 @@ export function HZDRShotPage() {
             <Grid gutter="md">
               <Grid.Col span={{ base: 12, lg: 9 }}>
                 <Card withBorder radius={4} p="md">
+                  {source_key ? (
+                    <SavedViewChips
+                      sourceKey={source_key}
+                      currentView={currentTableView}
+                      onApply={applyTableView}
+                    />
+                  ) : null}
                   <Group gap="xs" mb="sm" wrap="wrap">
                     <Chip.Group
                       value={statusFilter}
@@ -694,6 +762,18 @@ export function HZDRShotPage() {
                           </Chip>
                         ))}
                       </Chip.Group>
+                    ) : null}
+                    {newShotCount > 0 ? (
+                      <Chip
+                        size="xs"
+                        color="grape"
+                        variant="outline"
+                        checked={showNewOnly}
+                        onChange={setNewOnly}
+                        title="Shots fired after the newest one you saw on your last visit (this browser)"
+                      >
+                        New since your last visit {newShotCount}
+                      </Chip>
                     ) : null}
                   </Group>
                   <Group align="flex-end" gap="sm">
@@ -812,6 +892,15 @@ export function HZDRShotPage() {
                       mt={4}
                     >
                       Add columns
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      mt={4}
+                      onClick={downloadShotsCsv}
+                      disabled={visibleShots.length === 0}
+                    >
+                      Download CSV
                     </Button>
                   </Group>
                 </Card>
@@ -1284,6 +1373,8 @@ export function HZDRShotPage() {
                         selectedShot && getShotRowKey(selectedShot)
                       }
                       onSelectShot={selectRowFromTrend}
+                      contextColumns={contextResults?.columns ?? []}
+                      contextRowsByShot={contextRowsByShot}
                     />
                   </DetailsSection>
                   <DetailsSection title="Selected cell" open>

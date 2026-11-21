@@ -1,6 +1,9 @@
 """HZDR source metadata providers for file and MongoDB backed tests."""
 
-from datetime import datetime
+import threading
+import time
+from datetime import UTC, datetime, tzinfo
+from operator import itemgetter
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +45,113 @@ class HZDRSource(BaseModel):
             if event.source != "LabFrog"
         )
         return matched_events + len(self.review_events)
+
+
+class HZDRSourceSummary(BaseModel):
+    """One campaign as Home lists it: counts only, no shots or events.
+
+    Home polls every few seconds; the full source list carries every shot of
+    every campaign, so this is the light shape it reads instead
+    (``GET /metadata/hzdr/source-summaries``). ``waiting`` counts what Review
+    matches shows as open: ambiguous events, unacknowledged unmatched events
+    and shots whose campaign is still ``unassigned``.
+    """
+
+    key: str
+    title: str
+    damnit_path: Path
+    # The catalog's metadata.experiment_id (Review matches suggests it).
+    experiment_id: str | None = None
+    shot_count: int = 0
+    # The highest shot number in the campaign (Flow monitor's next shot).
+    latest_shot_number: int | None = None
+    # The latest shot's fired_at, exactly as the catalog records it.
+    last_shot_at: str | None = None
+    # Shots fired at or after the request's ``since`` (0 without one).
+    fired_since: int = 0
+    waiting: int = 0
+    needs_review: int = 0
+    needs_revision: int = 0
+    # Shots whose fired_at is set but is no ISO-8601 time; they are left out
+    # of last_shot_at and fired_since, and counted here so bad data shows.
+    unreadable_times: int = 0
+
+
+def _shot_time(value: str, default_tz: tzinfo) -> datetime | None:
+    """A shot's fired_at as an aware datetime; a naive one takes ``default_tz``."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=default_tz)
+
+
+def _open_review_event_count(source: HZDRSource) -> int:
+    """Ambiguous events plus unmatched ones nobody has acknowledged."""
+    return sum(
+        1
+        for event in source.review_events
+        if event.match_status == "ambiguous"
+        or (event.match_status == "unmatched" and not event.acknowledged)
+    )
+
+
+def summarize_source(
+    source: HZDRSource,
+    since: datetime | None = None,
+    ruled_shot_numbers: set[int] | frozenset[int] = frozenset(),
+) -> HZDRSourceSummary:
+    """Count one campaign's shots and open review items for Home.
+
+    An ``unassigned`` shot with a pending experiment ruling
+    (``ruled_shot_numbers``) is not waiting, as on Review matches.
+
+    A naive ``since`` is read as UTC. A naive ``fired_at`` is read in the zone
+    of ``since`` (the browser sends its local midnight with its offset), so it
+    counts the way the browser would read the same string.
+    """
+    if since is not None and since.tzinfo is None:
+        since = since.replace(tzinfo=UTC)
+    default_tz: tzinfo = UTC
+    if since is not None and since.tzinfo is not None:
+        default_tz = since.tzinfo
+    times = [(_shot_time(shot.fired_at, default_tz), shot) for shot in source.shots]
+    timed = [(fired, shot) for fired, shot in times if fired is not None]
+    latest = max(timed, key=itemgetter(0), default=None)
+    statuses = [shot.metadata.get("status") for shot in source.shots]
+    unassigned = sum(
+        1
+        for shot in source.shots
+        if shot.experiment_id_source == "unassigned"
+        and shot.shot_number not in ruled_shot_numbers
+    )
+    open_events = _open_review_event_count(source)
+    return HZDRSourceSummary(
+        key=source.key,
+        title=source.title,
+        damnit_path=source.damnit_path,
+        experiment_id=(
+            experiment_id
+            if isinstance(experiment_id := source.metadata.get("experiment_id"), str)
+            else None
+        ),
+        shot_count=len(source.shots),
+        latest_shot_number=max(
+            (shot.shot_number for shot in source.shots), default=None
+        ),
+        last_shot_at=None if latest is None else latest[1].fired_at,
+        fired_since=sum(
+            1 for fired, _ in timed if since is not None and fired >= since
+        ),
+        waiting=open_events + unassigned,
+        needs_review=statuses.count("needs-review"),
+        needs_revision=statuses.count("revision-needed"),
+        unreadable_times=sum(
+            1 for fired, shot in times if fired is None and shot.fired_at.strip()
+        ),
+    )
 
 
 class HZDRMatchSummary(BaseModel):
@@ -425,14 +535,69 @@ class HZDRSourceProvider:
         return preview_hdf5_dataset(local_path, dataset_name)
 
 
+# One parsed catalog, the most recent one read. Home, Flow monitor and the
+# shot page poll every few seconds and each request used to parse and
+# validate the whole file again. Only one entry is ever kept (a different
+# file replaces it), so memory stays at one catalog's worth.
+_SOURCES_CACHE_LOCK = threading.Lock()
+_sources_cache: tuple[tuple, list[HZDRSource]] | None = None
+# A file changed this recently is re-read every time: a filesystem's
+# timestamps can be too coarse to tell two quick writes apart (git's "racy"
+# rule). The builder publishes by rename, which changes the inode anyway.
+_SOURCES_CACHE_SETTLE_S = 2.0
+
+
+def _sources_file_identity(path: Path) -> tuple | None:
+    """What must stay the same for a cached parse to still be this file."""
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    if time.time() - stat.st_mtime < _SOURCES_CACHE_SETTLE_S:
+        return None
+    return (
+        str(path.resolve()),
+        stat.st_dev,
+        stat.st_ino,
+        stat.st_size,
+        stat.st_mtime_ns,
+        stat.st_ctime_ns,
+    )
+
+
+def clear_sources_cache() -> None:
+    """Forget the cached catalog (tests, or after an in-place edit)."""
+    global _sources_cache
+    with _SOURCES_CACHE_LOCK:
+        _sources_cache = None
+
+
 def load_sources_file(path: Path | None) -> list[HZDRSource]:
-    """Load tracked HZDR source metadata from a JSON file."""
+    """Load tracked HZDR source metadata from a JSON file.
+
+    The parse is reused while the file is unchanged (see ``_sources_cache``).
+    The returned models are shared between requests: read them, copy them
+    (``model_copy``) to change them, never modify them in place.
+    """
+    global _sources_cache
     if path is None or not path.exists():
         return []
 
+    identity = _sources_file_identity(path)
+    if identity is not None:
+        with _SOURCES_CACHE_LOCK:
+            cached = _sources_cache
+        if cached is not None and cached[0] == identity:
+            return list(cached[1])
+
     payload = orjson.loads(path.read_bytes())
     records = payload["sources"] if isinstance(payload, dict) else payload
-    return [HZDRSource.model_validate(record) for record in records]
+    sources = [HZDRSource.model_validate(record) for record in records]
+    # Store only if the file did not change while it was being read.
+    if identity is not None and _sources_file_identity(path) == identity:
+        with _SOURCES_CACHE_LOCK:
+            _sources_cache = (identity, sources)
+    return list(sources)
 
 
 def list_hdf5_datasets(path: Path) -> list[HZDRHDF5Dataset]:

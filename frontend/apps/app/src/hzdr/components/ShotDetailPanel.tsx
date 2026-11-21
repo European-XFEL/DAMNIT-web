@@ -19,7 +19,7 @@ import {
 } from '@mantine/core'
 import { Link } from 'react-router'
 
-import type { HZDRShot, HZDRShotDetail, HZDRSource } from '../types'
+import type { HZDRShot, HZDRShotDetail, HZDRSourceSummary } from '../types'
 import {
   NOT_RECORDED,
   defaultReviewNote,
@@ -364,7 +364,7 @@ export function ShotDetailPanel({
   shotDetail?: HZDRShotDetail
   /** The campaign the page shows; the shot's own source_key otherwise. */
   sourceKey?: string
-  availableSources: HZDRSource[]
+  availableSources: Pick<HZDRSourceSummary, 'key' | 'shot_count'>[]
   onUpdateStatus?: (rowKey: string, status: string, note?: string) => void
   onCorrectMetadata?: MetadataCorrection
 }) {
@@ -382,7 +382,7 @@ export function ShotDetailPanel({
               component={Link}
               to={`/source/${entry.key}`}
             >
-              {entry.key} ({entry.shots.length} shots)
+              {entry.key} ({entry.shot_count} shots)
             </Anchor>
           ))}
         </Stack>

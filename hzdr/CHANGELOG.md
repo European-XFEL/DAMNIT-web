@@ -6,6 +6,89 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Home: a light summary route instead of every shot
+- `GET /metadata/hzdr/source-summaries?since=<ISO>` returns each campaign's
+  counts (shots, latest shot time, shots since `since`, decisions waiting,
+  shots needing review or revision) without its shots or events. Home polls
+  it every 5 s with the browser's local midnight as `since`, instead of
+  `GET /metadata/hzdr/sources`, which carries every shot of every campaign.
+  A `fired_at` without an offset is read in the zone of `since`, as the
+  browser read it before. Deploy the API with the frontend.
+- The summary's `waiting` leaves out an `unassigned` shot with a pending
+  experiment ruling, as Review matches does, and `unreadable_times` counts
+  shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
+  Home row) instead of skipping them silently.
+
+### Shot table: what is new since your last visit
+- A quick-filter chip beside the status and day chips, **New since your
+  last visit N**, shows only the shots fired after the newest one this
+  browser showed when you last opened the campaign. The mark is kept for the
+  whole visit (a reload does not clear it) and moves on for the next one.
+  Nothing on a first visit; the table itself is unchanged.
+
+### Trends: your columns, and a second value to compare
+- Trends offers your numeric context columns beside the metadata values
+  (marked "your column"; image and array columns are left out).
+- **Compare with** adds a second value over the same shots, drawn dashed on
+  its own axis at the right, with a legend; a shot without the second value
+  is a gap in that line.
+
+### Shot table: saved views as chips, and Download CSV
+- Above the quick filters, **Views** lists your named table views (filter,
+  sort, hidden and ordered columns) as chips: one click applies a view, the
+  current one is marked, **Save view** names the current state, x deletes.
+  They use the existing per-user `.../sources/{key}/views` store beside the
+  catalog; where it is unavailable (Mongo) the row does not show.
+- **Download CSV** (beside Add columns) saves the shots the table shows, in
+  its order and with its visible columns, `shot_key` first. Images and
+  arrays are left empty; text that would start a spreadsheet formula is
+  prefixed with an apostrophe.
+
+### Review matches: one summary request instead of a review per campaign
+- Review matches opens on the busiest campaign from the summary route (its
+  `waiting` counts as the page does, and it now carries `experiment_id` for
+  the campaign suggestions); it no longer loads every campaign's shots and
+  every campaign's review to count what waits.
+- The shot page says "No data source is known for these shots yet." when
+  shots exist but none names a source, instead of "No shots yet.".
+
+### Shot detail: "Add as column" for a shot container's datasets
+- A dataset inside the shot's container (`<YYYYMMDD>_<NNNNNN>/...`, read
+  through the campaign file's root link) is offered as a column, as
+  `{container}/...`. The generated column takes
+  `container: "meta#shot_container"`, which the API fills with the shot's
+  link name (from its `shot_key`), and reads each shot's own container.
+- A column on any templated path (`{shot_id}` or `{container}`) now skips a
+  shot that lacks the dataset instead of failing.
+
+### e2e: HZDR pages at phone width, and Home's summary route
+- `frontend/e2e/tests/app/hzdr/`: Home, Flow monitor, Review matches, Docs
+  and the shot table must not scroll sideways at 390 px; Home must read
+  `source-summaries` and never the full sources list. The HZDR routes are
+  mocked in `frontend/e2e/support/hzdr.ts`; CI's e2e job runs them.
+
+### Header: a warning when the frontend and the API are out of step
+- `GET /config/version` returns the `damnit-api` version and the checkout's
+  commit when the process started. A frontend built with
+  `VITE_DAMNIT_COMMIT` (`next-on-server.sh` sets it) shows *Out of step with
+  the API* in the header when the two commits differ, so a missed rebuild or
+  restart after a pull is visible. Unknown on either side: no warning.
+
+### Polling: paused in a hidden tab, slower while the API is down
+- Home, Flow monitor (its campaign list and, in Live, health and activity)
+  poll through one hook (`usePolling`): nothing while the tab is hidden, at
+  once on return, and a failed poll doubles the wait up to 60 s. Flow
+  monitor and the shot page's campaign switcher read the summary route too
+  (it now carries `latest_shot_number`), not every shot of every campaign.
+
+### API: the parsed catalog is reused while the file is unchanged
+- `hzdr_sources.load_sources_file` keeps the one most recent parse of
+  `hzdr_sources.json` and reuses it while the file's inode, size, mtime and
+  ctime stay the same; a different file replaces it, so memory stays at one
+  catalog. A file changed in the last 2 s is always read again. Mongo is not
+  cached. Polled routes no longer parse and validate the whole catalog on
+  every request.
+
 ### Shot table: links to a shot, and trend points that open their shot
 - The selected shot is in the address (`?shot=<shot_key>`, or a shot
   number), so a copied URL opens the campaign on that shot; Shot detail has

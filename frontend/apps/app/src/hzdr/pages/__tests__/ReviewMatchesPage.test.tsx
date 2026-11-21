@@ -6,6 +6,7 @@ import { MantineProvider } from '@mantine/core'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 
 import { ReviewMatchesPage } from '../ReviewMatchesPage'
+import { reviewWaiting } from '../../utils/review'
 import type { HZDRReview, HZDRShot, HZDRSource } from '../../types'
 
 vi.mock('@damnit-frontend/ui', () => ({
@@ -103,6 +104,19 @@ const REVIEWS: Record<string, HZDRReview> = {
   },
 }
 
+// The summaries count what waits as the page does (reviewWaiting).
+const SUMMARIES = SOURCES.map((source) => ({
+  key: source.key,
+  title: source.title,
+  damnit_path: '',
+  shot_count: 0,
+  last_shot_at: null,
+  fired_since: 0,
+  waiting: REVIEWS[source.key] ? reviewWaiting(REVIEWS[source.key]).total : 1,
+  needs_review: 0,
+  needs_revision: 0,
+}))
+
 function respond(value: unknown, ok = true) {
   return Promise.resolve({
     ok,
@@ -125,7 +139,9 @@ beforeEach(() => {
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string) => {
-      if (url === '/metadata/hzdr/sources') return respond(SOURCES)
+      if (url.startsWith('/metadata/hzdr/source-summaries')) {
+        return respond(SUMMARIES)
+      }
       if (url === '/metadata/hzdr/campaigns') return respond([])
       const match = /^\/metadata\/hzdr\/sources\/([^/]+)(\/review)?$/.exec(url)
       const key = match?.[1] ?? ''
@@ -193,9 +209,9 @@ describe('ReviewMatchesPage', () => {
     expect(
       await screen.findByRole('option', { name: 'Alpha_2026 · all clear' })
     ).toBeInTheDocument()
-    // A catalog whose review failed just has no count.
+    // The count comes from the catalog summary, even where the review fails.
     expect(
-      screen.getByRole('option', { name: 'Broken_2026' })
+      screen.getByRole('option', { name: 'Broken_2026 · 1 waiting' })
     ).toBeInTheDocument()
   })
 

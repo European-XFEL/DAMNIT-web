@@ -18,6 +18,7 @@ import type {
   HZDRReviewEvent,
   HZDRShot,
   HZDRSource,
+  HZDRSourceSummary,
 } from '../types'
 import { AppHeader } from '../components/AppHeader'
 import {
@@ -28,6 +29,8 @@ import {
   UnassignedShotsCard,
   UnmatchedEventsCard,
 } from '../components/ReviewMatches'
+import { sourceSummariesUrl } from '../components/homeCampaignSummary'
+import { requireJson } from '../utils/api'
 import { campaignTitle } from '../utils/format'
 import {
   assignShotExperiment,
@@ -38,7 +41,6 @@ import {
   fetchHZDRCampaigns,
   fetchHZDRReview,
   fetchHZDRSource,
-  fetchHZDRSources,
   groupReviewEvents,
   reviewHeadingId,
   reviewWaiting,
@@ -82,7 +84,7 @@ function focusSection(section: ReviewSection) {
  */
 export function ReviewMatchesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [sources, setSources] = useState<HZDRSource[]>()
+  const [sources, setSources] = useState<HZDRSourceSummary[]>()
   const [campaigns, setCampaigns] = useState<LabFrogCampaignRef[]>([])
   const [fetched, setFetched] = useState<Loaded>()
   const [loadError, setLoadError] = useState<string>()
@@ -90,12 +92,12 @@ export function ReviewMatchesPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string>()
   const [actionMessage, setActionMessage] = useState<string>()
-  const [waitingCounts, setWaitingCounts] = useState<WaitingCounts>()
   const [resolvedOpen, setResolvedOpen] = useState(false)
   const [pendingJump, setPendingJump] = useState<ReviewSection | null>(null)
 
   useEffect(() => {
-    fetchHZDRSources()
+    fetch(sourceSummariesUrl())
+      .then((response) => requireJson<HZDRSourceSummary[]>(response))
       .then(setSources)
       .catch((error: Error) => {
         setSources([])
@@ -107,33 +109,14 @@ export function ReviewMatchesPage() {
       .catch(() => setCampaigns([]))
   }, [])
 
-  // How many cases wait in each catalog, for the picker and the first pick.
-  // A catalog whose review fails just shows no count.
-  useEffect(() => {
-    if (!sources?.length) {
-      setWaitingCounts(sources ? {} : undefined)
-      return
-    }
-    let active = true
-    Promise.allSettled(sources.map((source) => fetchHZDRReview(source.key)))
-      .then((results) => {
-        if (!active) return
-        const counts: WaitingCounts = {}
-        results.forEach((result, index) => {
-          counts[sources[index].key] =
-            result.status === 'fulfilled'
-              ? reviewWaiting(result.value).total
-              : null
-        })
-        setWaitingCounts(counts)
-      })
-      .catch(() => {
-        if (active) setWaitingCounts({})
-      })
-    return () => {
-      active = false
-    }
-  }, [sources])
+  // How many cases wait in each catalog, for the picker and the first pick:
+  // the summaries count them as this page does.
+  const waitingCounts = useMemo<WaitingCounts | undefined>(
+    () =>
+      sources &&
+      Object.fromEntries(sources.map((source) => [source.key, source.waiting])),
+    [sources]
+  )
 
   // An explicit choice (the URL's ?source=) wins; otherwise open the catalog
   // with the most cases waiting, once the counts are in.

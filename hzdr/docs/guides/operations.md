@@ -8,8 +8,14 @@ Day-to-day fixes for the deployed API, builder and frontend. Settings live in
 ```bash
 cd ~/DAMNIT-web-hzdr && git checkout main && git pull --ff-only
 cd api && uv sync --locked && sudo systemctl restart damnit-api
-cd ../frontend && pnpm install --frozen-lockfile && pnpm --filter ./apps/app build
+cd ../frontend && pnpm install --frozen-lockfile
+VITE_DAMNIT_COMMIT=$(git rev-parse --short=12 HEAD) pnpm --filter ./apps/app build
 ```
+
+`VITE_DAMNIT_COMMIT` records the build's commit. When it differs from the
+one the API started from (`GET /config/version`), the header shows *Out of
+step with the API*: the frontend was not rebuilt, or the API not restarted,
+after a pull. A build without it shows no warning.
 
 The system nginx (`fwkt-damnit.fz-rossendorf.de`, ports 80/443) serves the
 frontend from `/var/www/damnit-web` at the site root and proxies the API paths
@@ -69,7 +75,12 @@ a list with Edit, Move up/down and Delete (confirmed in the page). A link
 `/source/<campaign>/context-builder?add=hdf5:<dataset>` (or
 `?add=metadata:<path>`, optional `&shot=<shot_key or number>`) opens the
 builder with that data chosen; Shot detail's **Add as column** uses it for a
-dataset stored per shot (`by_shot/`, `shots/`, `shot/`), passing the shot. A suggestion drops off once the file reads its data
+dataset stored per shot (`by_shot/`, `shots/`, `shot/`, or inside the
+shot's container, `<YYYYMMDD>_<NNNNNN>/...`), passing the shot. A container
+dataset becomes `{container}/...`: the column takes a
+`container: "meta#shot_container"` argument (the shot's root link in the
+campaign file, from its `shot_key`) and skips a shot whose container is not
+linked yet. A suggestion drops off once the file reads its data
 path (quoted); a column that only shares its function name reads other data,
 so the suggestion stays and is renamed when added. A column reading the same
 data through a helper is not recognised either, so that suggestion stays

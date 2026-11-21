@@ -1,13 +1,7 @@
-import type { HZDRReviewEvent, HZDRSource } from '../types'
+import type { HZDRSourceSummary } from '../types'
 import { campaignTitle } from '../utils/format'
-import { groupReviewEvents } from '../utils/review'
 
-/**
- * The sources list (GET /metadata/hzdr/sources) already carries every
- * campaign's shots and its ambiguous/unmatched `review_events` (the same list
- * GET .../review returns), so Home needs no fetch per campaign.
- */
-export type HomeSource = HZDRSource & { review_events?: HZDRReviewEvent[] }
+export type { HZDRSourceSummary }
 
 export type HomeCampaignSummary = {
   key: string
@@ -22,55 +16,46 @@ export type HomeCampaignSummary = {
   waiting: number
   needsReview: number
   needsRevision: number
+  unreadableTimes: number
 }
 
-function sameLocalDay(a: Date, b: Date) {
+/** Local midnight of `now` as ISO-8601 with this browser's UTC offset. */
+export function localMidnightIso(now: Date = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const offset = -now.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const abs = Math.abs(offset)
   return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+    `T00:00:00${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
   )
 }
 
+/** The summaries URL Home polls, counting today from local midnight. */
+export function sourceSummariesUrl(now: Date = new Date()) {
+  const since = encodeURIComponent(localMidnightIso(now))
+  return `/metadata/hzdr/source-summaries?since=${since}`
+}
+
 export function summarizeCampaign(
-  source: HomeSource,
-  now: Date = new Date()
+  summary: HZDRSourceSummary
 ): HomeCampaignSummary {
-  let lastShotMs: number | null = null
-  let lastShotAt: string | null = null
-  let firedToday = 0
-  let needsReview = 0
-  let needsRevision = 0
-  let unassigned = 0
-  for (const shot of source.shots ?? []) {
-    const time = shot.fired_at ? new Date(shot.fired_at) : null
-    const ms = time?.getTime()
-    if (time && ms !== undefined && !Number.isNaN(ms)) {
-      if (lastShotMs === null || ms > lastShotMs) {
-        lastShotMs = ms
-        lastShotAt = shot.fired_at
-      }
-      if (sameLocalDay(time, now)) {
-        firedToday += 1
-      }
-    }
-    const status = shot.metadata?.status
-    if (status === 'needs-review') needsReview += 1
-    if (status === 'revision-needed') needsRevision += 1
-    if (shot.experiment_id_source === 'unassigned') unassigned += 1
-  }
-  const events = groupReviewEvents(source.review_events ?? [])
+  const ms = summary.last_shot_at
+    ? new Date(summary.last_shot_at).getTime()
+    : Number.NaN
+  const valid = !Number.isNaN(ms)
   return {
-    key: source.key,
-    title: campaignTitle(source.title) || source.key,
-    damnitPath: source.damnit_path,
-    shotCount: source.shots?.length ?? 0,
-    lastShotAt,
-    lastShotMs,
-    firedToday,
-    waiting: events.ambiguous.length + events.unmatched.length + unassigned,
-    needsReview,
-    needsRevision,
+    key: summary.key,
+    title: campaignTitle(summary.title) || summary.key,
+    damnitPath: summary.damnit_path,
+    shotCount: summary.shot_count,
+    lastShotAt: valid ? summary.last_shot_at : null,
+    lastShotMs: valid ? ms : null,
+    firedToday: summary.fired_since,
+    waiting: summary.waiting,
+    needsReview: summary.needs_review,
+    needsRevision: summary.needs_revision,
+    unreadableTimes: summary.unreadable_times ?? 0,
   }
 }
 

@@ -17,6 +17,8 @@ import {
   useAppSelector,
 } from '@damnit-frontend/ui'
 
+import { VersionMismatch } from './VersionMismatch'
+
 type NavTab = { to: string; icon: ReactNode; label: string }
 
 /** The header's tabs, in order; desktop and the phone menu share them. */
@@ -110,7 +112,10 @@ export function AppHeader() {
           ))}
         </Group>
       </Group>
-      <UserMenu userName={userName} onLogout={() => navigate('/logout')} />
+      <Group gap="sm" wrap="nowrap">
+        <VersionMismatch />
+        <UserMenu userName={userName} onLogout={() => navigate('/logout')} />
+      </Group>
     </Header>
   )
 }

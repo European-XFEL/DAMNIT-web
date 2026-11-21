@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   Alert,
   Grid,
@@ -13,12 +13,14 @@ import { IconSearch } from '@tabler/icons-react'
 import { HomeCampaignList } from '../components/HomeCampaignList'
 import { HomeGuide, HomeWelcome } from '../components/HomeOrientation'
 import {
-  type HomeSource,
+  type HZDRSourceSummary,
   filterCampaigns,
   readLastCampaign,
   sortNewestFirst,
+  sourceSummariesUrl,
   summarizeCampaign,
 } from '../components/homeCampaignSummary'
+import { usePolling } from '../hooks'
 import { requireJson } from '../utils/api'
 
 function countLine(campaigns: number, shots: number) {
@@ -28,29 +30,28 @@ function countLine(campaigns: number, shots: number) {
 }
 
 export function HZDRSourceHome() {
-  const [sources, setSources] = useState<HomeSource[]>()
+  const [sources, setSources] = useState<HZDRSourceSummary[]>()
   const [pollFailed, setPollFailed] = useState(false)
   const [query, setQuery] = useState('')
   const [lastCampaignKey] = useState(readLastCampaign)
 
-  useEffect(() => {
-    const loadSources = () => {
-      fetch('/metadata/hzdr/sources')
-        .then((response) => requireJson<HomeSource[]>(response))
+  const loadSources = useCallback(
+    () =>
+      fetch(sourceSummariesUrl())
+        .then((response) => requireJson<HZDRSourceSummary[]>(response))
         .then((loadedSources) => {
           setSources(loadedSources)
           setPollFailed(false)
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           console.error('Failed to load HZDR campaigns', error)
           setPollFailed(true)
-        })
-    }
-
-    loadSources()
-    const timer = window.setInterval(loadSources, 5000)
-    return () => window.clearInterval(timer)
-  }, [])
+          throw error
+        }),
+    []
+  )
+  // Every 5 s while the tab is visible; slower while the API is down.
+  usePolling(loadSources, 5000)
 
   const campaigns = useMemo(
     () =>

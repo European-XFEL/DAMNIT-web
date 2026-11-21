@@ -427,3 +427,61 @@ def test_legacy_context_metadata_preserves_flat_keys_defaults_and_shot_zero():
     assert doc["shot_number"] == 0
     assert doc.get("laser.pulse_energy") == 0
     assert doc.get("laser.missing", "fallback") == "fallback"
+
+
+def test_a_container_column_reads_each_shots_own_container(tmp_path):
+    """meta#shot_container names the root link the builder writes per shot."""
+    import h5py
+    import numpy as np
+
+    from damnit_api.metadata.hzdr_sources import HZDRShot
+
+    shots_dir = tmp_path / "shots"
+    shots_dir.mkdir()
+    for number, level in ((103, 2.0), (104, 5.0)):
+        with h5py.File(shots_dir / f"20261121_{number:06d}.nxs", "w") as container:
+            container["entry/instrument/cam/data"] = np.full((4, 4), level)
+    master = tmp_path / "campaign.nxs"
+    with h5py.File(master, "w") as handle:
+        for number in (103, 104):
+            stem = f"20261121_{number:06d}"
+            handle[stem] = h5py.ExternalLink(f"shots/{stem}.nxs", "/entry")
+
+    # The block Context Builder writes for "{container}/entry/instrument/cam/data"
+    def cam_mean(run, hdf5_path, container):
+        with h5py.File(hdf5_path, "r") as handle:
+            dataset_name = f"{container}/instrument/cam/data"
+            if dataset_name not in handle:
+                return None  # the generated block raises Skip here
+            dataset = handle[dataset_name]
+            assert isinstance(dataset, h5py.Dataset)
+            return float(np.nanmean(dataset[...]))
+
+    cam_mean.__annotations__.update(
+        hdf5_path="meta#hdf5_path", container="meta#shot_container"
+    )
+
+    def shot(number):
+        return HZDRShot(
+            source_key="c",
+            shot_number=number,
+            fired_at="2026-11-21T10:00:00Z",
+            shot_key=f"c:20261121:{number:06d}",
+            hdf5_path=master,
+        )
+
+    assert routers._call_context_variable(cam_mean, shot(103)) == pytest.approx(2.0)
+    assert routers._call_context_variable(cam_mean, shot(104)) == pytest.approx(5.0)
+    # A shot whose container is not linked (yet) has no such dataset.
+    assert routers._call_context_variable(cam_mean, shot(105)) is None
+
+
+def test_shot_container_link_needs_a_shot_key():
+    from damnit_api.metadata.hzdr_sources import HZDRShot
+
+    shot = HZDRShot(source_key="c", shot_number=7, fired_at="")
+    assert routers.shot_container_link(shot) == ""
+    shot = shot.model_copy(update={"shot_key": "not-a-key"})
+    assert routers.shot_container_link(shot) == ""
+    shot = shot.model_copy(update={"shot_key": "c:20261121:000007"})
+    assert routers.shot_container_link(shot) == "20261121_000007"

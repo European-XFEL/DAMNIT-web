@@ -27,6 +27,7 @@ import { HomePage } from '@damnit-frontend/ui'
 
 import type {
   HZDRSource,
+  HZDRSourceSummary,
   FlowPacket,
   FlowReceiverConfig,
   FlowMonitorState,
@@ -41,10 +42,11 @@ import {
   watchdogWatcherOptions,
   shotcounterTKeyOptions,
 } from '../types'
-import { useRuntimeConfig } from '../hooks'
+import { usePolling, useRuntimeConfig } from '../hooks'
 import { AppHeader } from '../components/AppHeader'
 import { FlowDiagram } from '../components/FlowDiagram'
 import { FlowTrafficLog } from '../components/FlowTrafficLog'
+import { sourceSummariesUrl } from '../components/homeCampaignSummary'
 import { requireJson } from '../utils/api'
 import { activityChanges } from '../utils/flow-activity'
 import {
@@ -82,7 +84,7 @@ export function HZDRFlowMonitorPage() {
   const [health, setHealth] = useState<FlowMonitorHealth | null>(null)
   const prevHealth = useRef<FlowMonitorHealth | null>(null)
   const [activity, setActivity] = useState<FlowActivity | null>(null)
-  const [sources, setSources] = useState<HZDRSource[]>([])
+  const [sources, setSources] = useState<HZDRSourceSummary[]>([])
   const [packets, setPackets] = useState<FlowPacket[]>([])
   const [logEntries, setLogEntries] = useState<FlowTrafficEntry[]>([])
   const [soundEnabled, setSoundEnabled] = useState(false)
@@ -124,16 +126,12 @@ export function HZDRFlowMonitorPage() {
   }, [runtimeConfig?.flow_monitor?.receivers])
 
   const shotTotal = sources.reduce(
-    (total, source) => total + source.shots.length,
+    (total, source) => total + source.shot_count,
     0
   )
   const selectedSource =
     sources.find((source) => source.key === selectedSourceKey) ?? sources[0]
-  const selectedSourceShots = selectedSource?.shots ?? []
-  const latestShotNumber = selectedSourceShots.reduce(
-    (latest, shot) => Math.max(latest, shot.shot_number),
-    0
-  )
+  const latestShotNumber = selectedSource?.latest_shot_number ?? 0
   const nextShotNumber = latestShotNumber ? latestShotNumber + 1 : 123
 
   const addLogEntry = useCallback(
@@ -191,12 +189,13 @@ export function HZDRFlowMonitorPage() {
     [addLogEntry, playBleep]
   )
 
+  // Resolves false when the API did not answer, so the poll can back off.
   const loadSources = useCallback(() => {
-    fetch('/metadata/hzdr/sources')
-      .then((response) => (response.ok ? response.json() : []))
-      .then((loadedSources: HZDRSource[]) => {
+    return fetch(sourceSummariesUrl())
+      .then((response) => requireJson<HZDRSourceSummary[]>(response))
+      .then((loadedSources) => {
         const loadedShotTotal = loadedSources.reduce(
-          (total, source) => total + source.shots.length,
+          (total, source) => total + source.shot_count,
           0
         )
         setSources(loadedSources)
@@ -212,24 +211,30 @@ export function HZDRFlowMonitorPage() {
           )
         }
         lastShotTotal.current = loadedShotTotal
+        return true
       })
       .catch(() => {
         setSources([])
+        return false
       })
   }, [triggerDamnitPulse])
 
-  useEffect(() => {
-    loadSources()
-    const timer = window.setInterval(loadSources, 3000)
-    return () => window.clearInterval(timer)
-  }, [loadSources])
+  const pollSources = useCallback(
+    () =>
+      loadSources().then((ok) => {
+        if (!ok) throw new Error('sources unavailable')
+      }),
+    [loadSources]
+  )
+  usePolling(pollSources, 3000)
 
+  // Both live loaders resolve false when the API did not answer.
   const loadHealth = useCallback(() => {
-    fetch('/config/health')
+    return fetch('/config/health')
       .then((response) => (response.ok ? response.json() : null))
       .then((data: FlowMonitorHealth | null) => {
         if (!data) {
-          return
+          return false
         }
         const previous = prevHealth.current
         ;(['asapo', 'kafka', 'mongo'] as const).forEach((service) => {
@@ -252,9 +257,11 @@ export function HZDRFlowMonitorPage() {
         })
         prevHealth.current = data
         setHealth(data)
+        return true
       })
       .catch(() => {
         // A failed /config/health fetch leaves the last snapshot in place.
+        return false
       })
   }, [addLogEntry])
 
@@ -280,36 +287,37 @@ export function HZDRFlowMonitorPage() {
   )
 
   const loadActivity = useCallback(() => {
-    fetch('/config/flow-activity')
+    return fetch('/config/flow-activity')
       .then((response) => (response.ok ? response.json() : null))
       .then((data: FlowActivity | null) => {
-        if (data) {
-          for (const change of activityChanges(lastActivity.current, data)) {
-            showLivePacket(change.lane, change.label, change.detail)
-          }
-          lastActivity.current = data
-          setActivity(data)
+        if (!data) {
+          return false
         }
+        for (const change of activityChanges(lastActivity.current, data)) {
+          showLivePacket(change.lane, change.label, change.detail)
+        }
+        lastActivity.current = data
+        setActivity(data)
+        return true
       })
       .catch(() => {
         // A failed fetch leaves the last activity snapshot in place.
+        return false
       })
   }, [showLivePacket])
 
   useEffect(() => {
-    if (monitorMode !== 'live') {
-      return
-    }
     // The first snapshot after switching to live is a baseline, not traffic.
-    lastActivity.current = null
-    const poll = () => {
-      loadHealth()
-      loadActivity()
-    }
-    poll()
-    const timer = window.setInterval(poll, 5000)
-    return () => window.clearInterval(timer)
-  }, [monitorMode, loadHealth, loadActivity])
+    if (monitorMode === 'live') lastActivity.current = null
+  }, [monitorMode])
+  const pollLive = useCallback(
+    () =>
+      Promise.all([loadHealth(), loadActivity()]).then((answers) => {
+        if (!answers.every(Boolean)) throw new Error('API unavailable')
+      }),
+    [loadHealth, loadActivity]
+  )
+  usePolling(pollLive, 5000, { enabled: monitorMode === 'live' })
 
   const sendPacket = (
     lane: FlowPacket['lane'],

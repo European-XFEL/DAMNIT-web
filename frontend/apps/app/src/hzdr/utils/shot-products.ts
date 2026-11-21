@@ -54,9 +54,10 @@ export function previewableProductDataset(
  * Context Builder, opened with this HDF5 dataset as the column's input, or
  * undefined when the dataset cannot become a column. A column reads the same
  * path on every shot, so only a dataset the builder can generalise (one under
- * `by_shot/`, `shots/` or `shot/<id>/`, see hdf5PerShotTemplateName) is
- * offered; an event's values or a container path name one shot, and a column
- * of them would repeat that shot's value in every row. The link carries the
+ * `by_shot/`, `shots/` or `shot/<id>/`, or inside the shot's container
+ * `<YYYYMMDD>_<NNNNNN>/`, see hdf5PerShotTemplateName) is offered; an
+ * event's values name one shot, and a column of them would repeat that
+ * shot's value in every row. The link carries the
  * per-shot template and the shot (`&shot=`) as the builder's example shot:
  * `?add=hdf5:<template>&shot=<shot key>`, with `:`, `/` and braces readable.
  */

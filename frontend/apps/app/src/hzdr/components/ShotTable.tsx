@@ -28,7 +28,7 @@ import { isPlotlyPreview } from '../utils/plotly'
 import { isNumericLinePreview, isNumericMatrixPreview } from '../utils/preview'
 import { getNumericMetadataKeys, metadataFieldLabel } from '../utils/metadata'
 import { getNestedMetadataValue } from '../utils/metadata'
-import { toTrendValue } from '../utils/shot-key'
+import { getShotRowKey, toTrendValue } from '../utils/shot-key'
 import {
   formatMetadataCorrectionDraft,
   isCorrectableMetadataKey,
@@ -298,32 +298,85 @@ export function StatusBadge({ status }: { status: string }) {
   )
 }
 
+type TrendContextRow = { values: Record<string, unknown> }
+
+/** A numeric value of one shot for a trend key, or NaN when it has none. */
+function trendNumber(
+  shot: HZDRShot,
+  key: string,
+  contextRow: TrendContextRow | undefined
+): number {
+  if (key.startsWith('context:')) {
+    const value = contextRow?.values[key.slice('context:'.length)]
+    return typeof value === 'number' ? value : Number.NaN
+  }
+  return Number(getNestedMetadataValue(shot.metadata, key))
+}
+
 export function HZDRShotSetsPanel({
   shots,
   selectedRowKey,
   onSelectShot,
+  contextColumns = [],
+  contextRowsByShot,
 }: {
   shots: HZDRShot[]
   /** The table's selected shot, marked on the curve. */
   selectedRowKey?: string
   /** Clicking a point selects its shot in the table. */
   onSelectShot?: (rowKey: string) => void
+  /** Your context columns; those with numbers can be plotted too. */
+  contextColumns?: Array<{ name: string; title: string }>
+  contextRowsByShot?: Map<string, TrendContextRow>
 }) {
   const numericMetadataKeys = getNumericMetadataKeys(shots)
+  const rowOf = (shot: HZDRShot) => contextRowsByShot?.get(getShotRowKey(shot))
+  const numericContextColumns = contextColumns.filter((column) =>
+    shots.some((shot) =>
+      Number.isFinite(trendNumber(shot, `context:${column.name}`, rowOf(shot)))
+    )
+  )
+  const options = [
+    ...numericMetadataKeys.map((key) => ({
+      value: key,
+      label: metadataFieldLabel(key),
+    })),
+    ...numericContextColumns.map((column) => ({
+      value: `context:${column.name}`,
+      label: `${column.title} (your column)`,
+    })),
+  ]
+  const labelOf = (key: string) =>
+    options.find((option) => option.value === key)?.label ?? key
   const [trendKey, setTrendKey] = useState(numericMetadataKeys[0] ?? '')
+  const [compareKey, setCompareKey] = useState('')
 
   useEffect(() => {
     setTrendKey((currentKey) => currentKey || numericMetadataKeys[0] || '')
   }, [numericMetadataKeys])
 
-  const trendValues = shots
-    .map((shot) =>
-      toTrendValue(
-        shot,
-        Number(getNestedMetadataValue(shot.metadata, trendKey))
-      )
-    )
+  // The shots with a first value, in table order; the second value follows
+  // them one for one, null where a shot has none.
+  const plotted = shots
+    .map((shot) => ({
+      shot,
+      value: trendNumber(shot, trendKey, rowOf(shot)),
+    }))
     .filter((entry) => Number.isFinite(entry.value))
+  const trendValues = plotted.map(({ shot, value }) =>
+    toTrendValue(shot, value)
+  )
+  const comparing = Boolean(compareKey) && compareKey !== trendKey
+  const secondary = comparing
+    ? {
+        label: labelOf(compareKey),
+        primaryLabel: labelOf(trendKey),
+        values: plotted.map(({ shot }) => {
+          const value = trendNumber(shot, compareKey, rowOf(shot))
+          return Number.isFinite(value) ? value : null
+        }),
+      }
+    : undefined
 
   return (
     <Card withBorder radius={4} p="md">
@@ -338,16 +391,23 @@ export function HZDRShotSetsPanel({
           label="Trend value"
           value={trendKey}
           onChange={(value) => setTrendKey(value ?? '')}
-          data={numericMetadataKeys.map((key) => ({
-            value: key,
-            label: metadataFieldLabel(key),
-          }))}
+          data={options}
           searchable
+        />
+        <Select
+          label="Compare with"
+          placeholder="A second value (optional)"
+          value={compareKey || null}
+          onChange={(value) => setCompareKey(value ?? '')}
+          data={options.filter((option) => option.value !== trendKey)}
+          searchable
+          clearable
         />
         <MetadataTrendPreview
           values={trendValues}
           selectedRowKey={selectedRowKey}
           onSelectPoint={onSelectShot}
+          secondary={secondary}
         />
       </Stack>
     </Card>
