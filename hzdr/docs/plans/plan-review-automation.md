@@ -50,11 +50,14 @@ A box is ticked in the commit that does the work.
 
 - [x] Plan, rulings and decisions written down first (this file), linked
       from `review-automation.md` and `ui-backlog.md`
-- [ ] **Characterization first:** tests that pin today's review outcomes
-      (a time-only trigger with LabFrog records is `ambiguous` with one
-      candidate; with two shots inside the tolerance, both; an unnumbered
-      event with no LabFrog record is `unmatched`), so the changes below
-      show exactly what they move
+- [x] **Characterization first:** `tests/test_hzdr_review_automation.py`
+      pins today's outcomes. A time-only trigger with LabFrog records is
+      `ambiguous` with its nearest shot as the only candidate; of two shots
+      in the tolerance **only the nearest is offered**; two equally near
+      shots leave the event **`unmatched` with no candidate**; beyond the
+      tolerance, and with no LabFrog record, `unmatched`; a unique authority
+      number attaches. The two marked outcomes are gaps the findings item
+      closes
 - [ ] **Item 5, the one-to-one time rule** (builder):
       `hzdr_nexus` pass after the per-event loop, the D1 streams,
       `time_one_to_one` in `MATCH_RANK` between `nearest_time` and
