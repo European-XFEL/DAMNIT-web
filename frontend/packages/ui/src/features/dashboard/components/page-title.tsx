@@ -6,6 +6,7 @@ import {
 
 type PageTitleProps = {
   heading: string
+  marked?: boolean
 }
 
 function pageTitle(heading: string, crumb: Crumb | undefined) {
@@ -20,8 +21,8 @@ function pageTitle(heading: string, crumb: Crumb | undefined) {
 
 // A component of its own, not a hook in the shell, so a plot added or removed
 // re-renders only this and not the whole shell.
-function PageTitle({ heading }: PageTitleProps) {
-  usePageTitle(pageTitle(heading, useViewCrumbs().at(-1)))
+function PageTitle({ heading, marked }: PageTitleProps) {
+  usePageTitle(pageTitle(heading, useViewCrumbs().at(-1)), { marked })
 
   return null
 }
