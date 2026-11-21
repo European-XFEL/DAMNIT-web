@@ -450,11 +450,15 @@ def laser_energy_mj(run, laser_energy_j=None):
                   </List.Item>
                   <List.Item>
                     <b>Unmatched</b>: an event fits no shot. Acknowledge it if
-                    it is not a shot.
+                    it is not a shot. Several from one producer and kind (a test
+                    series) can be acknowledged together with{' '}
+                    <b>Acknowledge all</b>.
                   </List.Item>
                   <List.Item>
                     <b>Unassigned</b>: a shot no LabFrog record or campaign
-                    schedule placed in a campaign. Assign its campaign.
+                    schedule placed in a campaign. Assign its campaign, or use{' '}
+                    <b>Assign several</b> for every waiting shot or one
+                    day&apos;s.
                   </List.Item>
                 </List>
                 <Text size="sm" c="dimmed">

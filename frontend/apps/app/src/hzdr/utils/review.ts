@@ -339,3 +339,53 @@ export type ReviewSection = keyof typeof REVIEW_SECTIONS
 export function reviewHeadingId(section: ReviewSection) {
   return `${REVIEW_SECTIONS[section]}-heading`
 }
+
+export interface UnmatchedGroup {
+  key: string
+  source: string
+  kind: string
+  events: HZDRReviewEvent[]
+}
+
+/** Unmatched events by producer and kind, the largest group first. */
+export function groupUnmatched(events: HZDRReviewEvent[]): UnmatchedGroup[] {
+  const groups = new Map<string, UnmatchedGroup>()
+  for (const event of events) {
+    const key = `${event.source}\u0000${event.kind}`
+    const group = groups.get(key) ?? {
+      key,
+      source: event.source,
+      kind: event.kind,
+      events: [],
+    }
+    group.events.push(event)
+    groups.set(key, group)
+  }
+  return [...groups.values()].sort(
+    (a, b) =>
+      b.events.length - a.events.length ||
+      a.source.localeCompare(b.source) ||
+      a.kind.localeCompare(b.kind)
+  )
+}
+
+/** A shot's campaign-local day: its shot_date, else the date of fired_at. */
+export function shotDay(shot: HZDRShot): string {
+  return shot.shot_date || (shot.fired_at ?? '').slice(0, 10) || 'unknown day'
+}
+
+/** Unassigned shots still without a ruling, by day (oldest day first). */
+export function waitingUnassignedByDay(
+  shots: HZDRShot[],
+  rulings: Map<number, HZDRExperimentRuling>
+): Array<{ day: string; shots: HZDRShot[] }> {
+  const days = new Map<string, HZDRShot[]>()
+  for (const shot of shots) {
+    if (rulings.has(shot.shot_number)) continue
+    const day = shotDay(shot)
+    days.set(day, [...(days.get(day) ?? []), shot])
+  }
+  return [...days.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, dayShots]) => ({ day, shots: dayShots }))
+}

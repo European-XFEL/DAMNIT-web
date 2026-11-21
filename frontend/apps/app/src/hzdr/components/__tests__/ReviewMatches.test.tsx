@@ -187,6 +187,7 @@ describe('UnmatchedEventsCard', () => {
         events={[event]}
         busyKey={null}
         onDismiss={onDismiss}
+        onDismissMany={vi.fn()}
       />
     )
     fireEvent.click(
@@ -200,12 +201,93 @@ describe('UnmatchedEventsCard', () => {
           events={[event]}
           busyKey="dismiss:evt-unmatched-1"
           onDismiss={onDismiss}
+          onDismissMany={vi.fn()}
         />
       </MantineProvider>
     )
     expect(
       screen.getByRole('button', { name: 'Acknowledge, no shot' })
     ).toBeDisabled()
+  })
+})
+
+describe('UnmatchedEventsCard batch', () => {
+  it('acknowledges a producer and kind in one go after a second click', () => {
+    const onDismissMany = vi.fn()
+    const tests = [1, 2, 3].map((n) =>
+      makeEvent({
+        event_id: `evt-test-${n}`,
+        source: 'TestFire',
+        kind: 'draco.trigger',
+        match_status: 'unmatched',
+        candidate_shot_keys: [],
+      })
+    )
+    const single = makeEvent({
+      event_id: 'evt-other',
+      source: 'Watchdog',
+      kind: 'daq.file',
+      match_status: 'unmatched',
+      candidate_shot_keys: [],
+    })
+    withMantine(
+      <UnmatchedEventsCard
+        events={[...tests, single]}
+        busyKey={null}
+        onDismiss={vi.fn()}
+        onDismissMany={onDismissMany}
+      />
+    )
+    // Only groups of two or more get a batch button.
+    expect(
+      screen.getAllByRole('button', { name: /^Acknowledge all/ })
+    ).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge all 3' }))
+    expect(onDismissMany).not.toHaveBeenCalled()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Yes, acknowledge 3 with no shot',
+      })
+    )
+    expect(onDismissMany).toHaveBeenCalledWith(tests)
+  })
+})
+
+describe('UnassignedShotsCard batch', () => {
+  it('assigns one day of waiting shots to one campaign', () => {
+    const onAssignMany = vi.fn()
+    const dayOne = [1, 2].map((n) =>
+      makeShot({
+        shot_number: n,
+        shot_key: `u:${n}`,
+        shot_date: '2026-11-20',
+      })
+    )
+    const dayTwo = makeShot({
+      shot_number: 3,
+      shot_key: 'u:3',
+      shot_date: '2026-11-21',
+    })
+    withMantine(
+      <UnassignedShotsCard
+        shots={[...dayOne, dayTwo]}
+        rulings={new Map()}
+        suggestions={['Pilot_2026']}
+        busyKey={null}
+        onAssign={vi.fn()}
+        onAssignMany={onAssignMany}
+      />
+    )
+    expect(
+      screen.getByRole('button', { name: 'Assign 3 shots' })
+    ).toBeDisabled()
+    fireEvent.click(screen.getByRole('textbox', { name: 'Assign several' }))
+    fireEvent.click(screen.getByRole('option', { name: '2026-11-20 (2)' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'to campaign' }), {
+      target: { value: 'Pilot_2026' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Assign 2 shots' }))
+    expect(onAssignMany).toHaveBeenCalledWith(dayOne, 'Pilot_2026')
   })
 })
 
@@ -233,6 +315,7 @@ describe('UnassignedShotsCard', () => {
         suggestions={['Beamline_radbio_2026']}
         busyKey={null}
         onAssign={onAssign}
+        onAssignMany={vi.fn()}
       />
     )
 

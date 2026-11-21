@@ -8,6 +8,7 @@ import {
   Card,
   Code,
   Group,
+  Select,
   Stack,
   Table,
   Text,
@@ -25,6 +26,8 @@ import type {
 import { NOT_RECORDED, formatShotTime } from '../utils/format'
 import { formatTargetLabel } from '../utils/metadata'
 import {
+  groupUnmatched,
+  waitingUnassignedByDay,
   REVIEW_SECTIONS,
   closestCandidateKey,
   formatSeconds,
@@ -355,14 +358,83 @@ export function AmbiguousMatchesCard({
   )
 }
 
+/**
+ * One button per producer and kind with several unmatched events: a test
+ * series or a source that never belongs to a shot is acknowledged in one
+ * go, after a second click that names the count.
+ */
+function AcknowledgeGroups({
+  events,
+  busy,
+  onDismissMany,
+}: {
+  events: HZDRReviewEvent[]
+  busy: boolean
+  onDismissMany: (events: HZDRReviewEvent[]) => void
+}) {
+  const [asking, setAsking] = useState<string | null>(null)
+  const groups = groupUnmatched(events).filter(
+    (group) => group.events.length > 1
+  )
+  if (!groups.length) return null
+  return (
+    <Stack gap={6} mb="sm">
+      <Text size="xs" c="dimmed">
+        Several from one producer and kind:
+      </Text>
+      {groups.map((group) => (
+        <Group key={group.key} gap="xs" wrap="wrap">
+          <Text size="xs">
+            <b>{group.events.length}</b> from <b>{group.source}</b> (
+            <Code fz="xs">{group.kind}</Code>)
+          </Text>
+          {asking === group.key ? (
+            <>
+              <Button
+                size="compact-xs"
+                color="orange"
+                disabled={busy}
+                onClick={() => {
+                  setAsking(null)
+                  onDismissMany(group.events)
+                }}
+              >
+                Yes, acknowledge {group.events.length} with no shot
+              </Button>
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                onClick={() => setAsking(null)}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="compact-xs"
+              variant="light"
+              disabled={busy}
+              onClick={() => setAsking(group.key)}
+            >
+              Acknowledge all {group.events.length}
+            </Button>
+          )}
+        </Group>
+      ))}
+    </Stack>
+  )
+}
+
 export function UnmatchedEventsCard({
   events,
   busyKey,
   onDismiss,
+  onDismissMany,
 }: {
   events: HZDRReviewEvent[]
   busyKey: string | null
   onDismiss: (event: HZDRReviewEvent) => void
+  onDismissMany: (events: HZDRReviewEvent[]) => void
 }) {
   if (!events.length) {
     return (
@@ -380,6 +452,11 @@ export function UnmatchedEventsCard({
       count={events.length}
       hint="Events with no shot to belong to. Leave them if a shot may still arrive; acknowledge one only when it is known not to be a shot (a test fire, a glitch). It stays on record either way."
     >
+      <AcknowledgeGroups
+        events={events}
+        busy={busyKey !== null}
+        onDismissMany={onDismissMany}
+      />
       <ReviewTableScroll>
         <Table withTableBorder fz="xs" miw={420}>
           <Table.Thead>
@@ -464,18 +541,82 @@ function UnassignedShotRow({
   )
 }
 
+const ALL_DAYS = 'all'
+
+/** Assign every waiting shot, or one day's, to one campaign. */
+function AssignMany({
+  shots,
+  rulings,
+  suggestions,
+  busy,
+  onAssignMany,
+}: {
+  shots: HZDRShot[]
+  rulings: Map<number, HZDRExperimentRuling>
+  suggestions: string[]
+  busy: boolean
+  onAssignMany: (shots: HZDRShot[], experimentId: string) => void
+}) {
+  const days = waitingUnassignedByDay(shots, rulings)
+  const [day, setDay] = useState(ALL_DAYS)
+  const [experimentId, setExperimentId] = useState('')
+  const waitingCount = days.reduce((sum, item) => sum + item.shots.length, 0)
+  if (waitingCount < 2) return null
+  const chosen =
+    day === ALL_DAYS
+      ? days.flatMap((item) => item.shots)
+      : (days.find((item) => item.day === day)?.shots ?? [])
+  return (
+    <Group gap="xs" align="flex-end" wrap="wrap" mb="sm">
+      <Select
+        size="xs"
+        label="Assign several"
+        value={day}
+        onChange={(value) => setDay(value ?? ALL_DAYS)}
+        data={[
+          { value: ALL_DAYS, label: `Every waiting shot (${waitingCount})` },
+          ...days.map((item) => ({
+            value: item.day,
+            label: `${item.day} (${item.shots.length})`,
+          })),
+        ]}
+        allowDeselect={false}
+        w={220}
+      />
+      <Autocomplete
+        size="xs"
+        label="to campaign"
+        placeholder="Campaign id"
+        data={suggestions}
+        value={experimentId}
+        onChange={setExperimentId}
+        w={240}
+      />
+      <Button
+        size="xs"
+        disabled={busy || !experimentId.trim() || !chosen.length}
+        onClick={() => onAssignMany(chosen, experimentId)}
+      >
+        Assign {chosen.length} {chosen.length === 1 ? 'shot' : 'shots'}
+      </Button>
+    </Group>
+  )
+}
+
 export function UnassignedShotsCard({
   shots,
   rulings,
   suggestions,
   busyKey,
   onAssign,
+  onAssignMany,
 }: {
   shots: HZDRShot[]
   rulings: Map<number, HZDRExperimentRuling>
   suggestions: string[]
   busyKey: string | null
   onAssign: (shot: HZDRShot, experimentId: string) => void
+  onAssignMany: (shots: HZDRShot[], experimentId: string) => void
 }) {
   if (!shots.length) {
     return (
@@ -493,6 +634,13 @@ export function UnassignedShotsCard({
       count={shots.filter((shot) => !rulings.has(shot.shot_number)).length}
       hint="No LabFrog record and no campaign schedule placed these shots in a campaign. Assign one to the campaign it belongs to; the builder moves it there on its next run."
     >
+      <AssignMany
+        shots={shots}
+        rulings={rulings}
+        suggestions={suggestions}
+        busy={busyKey !== null}
+        onAssignMany={onAssignMany}
+      />
       <ReviewTableScroll>
         <Table withTableBorder fz="xs" miw={520}>
           <Table.Thead>

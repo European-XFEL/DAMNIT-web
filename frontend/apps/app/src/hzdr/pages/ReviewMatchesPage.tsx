@@ -288,6 +288,56 @@ export function ReviewMatchesPage() {
     )
   }
 
+  // Several decisions in a row, one request each (the API takes one at a
+  // time); a failure is reported and the rest still go, then one reload.
+  const runBatch = async <T,>(
+    key: string,
+    items: T[],
+    action: (item: T) => Promise<unknown>,
+    done: (count: number) => string
+  ) => {
+    setBusyKey(key)
+    setActionError(undefined)
+    setActionMessage(undefined)
+    const failures: string[] = []
+    for (const item of items) {
+      try {
+        await action(item)
+      } catch (error) {
+        failures.push((error as Error).message)
+      }
+    }
+    const succeeded = items.length - failures.length
+    if (succeeded) setActionMessage(done(succeeded))
+    if (failures.length) {
+      setActionError(
+        `${failures.length} of ${items.length} failed: ${failures[0]}`
+      )
+    }
+    setReloadToken((token) => token + 1)
+    setBusyKey(null)
+  }
+
+  const dismissMany = (events: HZDRReviewEvent[]) => {
+    if (!sourceKey) return
+    void runBatch(
+      'dismiss-many',
+      events,
+      (event) => dismissReviewEvent(sourceKey, event.event_id),
+      (count) => `${count} events acknowledged with no shot.`
+    )
+  }
+
+  const assignMany = (shots: HZDRShot[], experimentId: string) => {
+    void runBatch(
+      'assign-many',
+      shots,
+      (shot) => assignShotExperiment(shot.shot_number, experimentId),
+      (count) =>
+        `${count} shots assigned to ${experimentId.trim()}; they move there at the next rebuild.`
+    )
+  }
+
   const assign = (shot: HZDRShot, experimentId: string) => {
     runAction(
       `assign:${shot.shot_number}`,
@@ -394,6 +444,7 @@ export function ReviewMatchesPage() {
                     suggestions={suggestions}
                     busyKey={busyKey}
                     onAssign={assign}
+                    onAssignMany={assignMany}
                   />
                 ) : null}
                 {waiting.total > 0 ? (
@@ -401,6 +452,7 @@ export function ReviewMatchesPage() {
                     events={grouped.unmatched}
                     busyKey={busyKey}
                     onDismiss={dismiss}
+                    onDismissMany={dismissMany}
                   />
                 ) : null}
                 <ResolvedCard

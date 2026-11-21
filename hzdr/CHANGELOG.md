@@ -6,6 +6,16 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Review matches: decisions in batches
+- **Acknowledge all N** for unmatched events from one producer and kind (a
+  test series, a source that never belongs to a shot), behind a second click
+  that names the count.
+- **Assign several**: every waiting unassigned shot, or one day's, to one
+  campaign in one go.
+- Both still record one decision per event or shot, with your name, through
+  the existing routes; a failure is reported and the rest still go. Nothing
+  about what the builder decides on its own has changed (ruling A7).
+
 ### Review matches refreshes itself
 - The page reads the campaign summaries every 30 s while visible, so the
   picker's counts stay current, and reloads the open campaign's lists only

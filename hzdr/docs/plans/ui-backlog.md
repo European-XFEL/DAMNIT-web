@@ -107,6 +107,10 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [x] **The capture writes the Docs page's images** (`DOCS_ASSETS` in
   `hzdr/scripts/capture-screenshots.py`), so they cannot fall behind the
   screenshots; the script is also ruff-clean under the root config now.
+- [x] **Review matches in batches**: Acknowledge all N per producer and
+  kind (second click names the count), Assign several (all waiting or one
+  day's) to one campaign. Assessment and next steps that need decisions:
+  [review-automation.md](review-automation.md).
 - [x] **Deployment notes**: `hzdr/docs/guides/next-on-server.md` items 6
   (what to check in the web UI after a deploy) and 7 (containers, only on a
   decision, through the runbook's go-live checklist). `next-on-server.sh`

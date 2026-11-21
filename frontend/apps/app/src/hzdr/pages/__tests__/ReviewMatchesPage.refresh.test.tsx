@@ -128,3 +128,88 @@ describe('Review matches refreshes itself', () => {
     await waitFor(() => expect(reviewFetches('beta')).toBe(2))
   })
 })
+
+describe('Review matches batch actions', () => {
+  it('acknowledges a group with one request per event and one reload', async () => {
+    Element.prototype.scrollIntoView = vi.fn()
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    )
+    const unmatched = ['a', 'b'].map((id) => ({
+      event_id: `evt-${id}`,
+      experiment_id: 'beta',
+      source: 'TestFire',
+      kind: 'draco.trigger',
+      timestamp: '2026-11-21T10:00:00Z',
+      payload_ref: {},
+      metadata: {},
+      match_status: 'unmatched',
+      candidate_shot_keys: [],
+      acknowledged: false,
+    }))
+    const review: HZDRReview = {
+      ...EMPTY_REVIEW,
+      match_summary: { ...EMPTY_REVIEW.match_summary, unmatched: 2 },
+      review_events: unmatched,
+    }
+    const fetchMock = vi.fn((url: string, init?: RequestInit) => {
+      const value = url.startsWith('/metadata/hzdr/source-summaries')
+        ? [summary('beta', 2)]
+        : url === '/metadata/hzdr/campaigns'
+          ? []
+          : url.endsWith('/review')
+            ? review
+            : init?.method === 'POST'
+              ? { key: 'beta', title: 'beta_2026', damnit_path: '', shots: [] }
+              : {
+                  key: 'beta',
+                  title: 'beta_2026',
+                  damnit_path: '',
+                  metadata: {},
+                  shots: [],
+                }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(value),
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(
+      <MantineProvider>
+        <MemoryRouter initialEntries={['/review-matches']}>
+          <Routes>
+            <Route path="/review-matches" element={<ReviewMatchesPage />} />
+          </Routes>
+        </MemoryRouter>
+      </MantineProvider>
+    )
+    await act(() => polling.poll!())
+    const reviewFetches = () =>
+      fetchMock.mock.calls.filter(([url]) => url.endsWith('/review')).length
+    await screen.findByRole('button', { name: 'Acknowledge all 2' })
+    const before = reviewFetches()
+    await act(async () => {
+      screen.getByRole('button', { name: 'Acknowledge all 2' }).click()
+    })
+    await act(async () => {
+      screen
+        .getByRole('button', { name: 'Yes, acknowledge 2 with no shot' })
+        .click()
+    })
+    await screen.findByText('2 events acknowledged with no shot.')
+    const posts = fetchMock.mock.calls
+      .filter(([, init]) => init?.method === 'POST')
+      .map(([url]) => url)
+    expect(posts).toEqual([
+      '/metadata/hzdr/sources/beta/review/evt-a/dismiss',
+      '/metadata/hzdr/sources/beta/review/evt-b/dismiss',
+    ])
+    await waitFor(() => expect(reviewFetches()).toBe(before + 1))
+  })
+})
