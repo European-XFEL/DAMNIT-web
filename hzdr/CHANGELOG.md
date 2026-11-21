@@ -19,6 +19,15 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### Shot detail: "Add as column" for a shot container's datasets
+- A dataset inside the shot's container (`<YYYYMMDD>_<NNNNNN>/...`, read
+  through the campaign file's root link) is offered as a column, as
+  `{container}/...`. The generated column takes
+  `container: "meta#shot_container"`, which the API fills with the shot's
+  link name (from its `shot_key`), and reads each shot's own container.
+- A column on any templated path (`{shot_id}` or `{container}`) now skips a
+  shot that lacks the dataset instead of failing.
+
 ### e2e: HZDR pages at phone width, and Home's summary route
 - `frontend/e2e/tests/app/hzdr/`: Home, Flow monitor, Review matches, Docs
   and the shot table must not scroll sideways at 390 px; Home must read

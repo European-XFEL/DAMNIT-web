@@ -10,10 +10,12 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 
 - [x] **Home summary route.** `GET /metadata/hzdr/source-summaries?since=`
   returns counts only; Home polls it instead of every shot of every campaign.
-- [ ] **"Add as column" for shot containers** (`<YYYYMMDD>_<NNNNNN>/...`): a
+- [x] **"Add as column" for shot containers** (`<YYYYMMDD>_<NNNNNN>/...`): a
   context-variable input for "this shot's container" (API) plus a
   `{container}` template in `utils/hdf5.ts` (`hdf5PerShotTemplateName`).
-  Before containers go live.
+  Before containers go live. Done: `meta#shot_container` in
+  `contextfile/routers.py` (`shot_container_link`), the `{container}`
+  template, and a templated column skips a shot without the dataset.
 - [x] **Phone-width CI check:** an e2e at 390 px that fails on horizontal
   scroll. Done: `frontend/e2e/tests/app/hzdr/phone-width.spec.ts` (Home,
   Flow monitor, Review matches, Docs, the shot table), HZDR routes mocked

@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 
 from ..auth.dependencies import OAuthUserInfo
 from ..metadata.hzdr_event import LEGACY_KEY_MAP
+from ..metadata.hzdr_nexus import shot_container_name
 from ..metadata.hzdr_sources import HZDRShot, HZDRSourceProvider
 from ..shared.settings import settings
 from . import models
@@ -408,9 +409,28 @@ def _call_context_variable(variable, shot: HZDRShot):
             kwargs[name] = (
                 shot.metadata.get("shot_id") or f"shot-{shot.shot_number:06d}"
             )
+        elif annotation == "meta#shot_container" or name == "shot_container":
+            kwargs[name] = shot_container_link(shot)
         else:
             kwargs[name] = _shot_metadata_value(shot.metadata, name, annotation)
     return variable(**kwargs)
+
+
+def shot_container_link(shot: HZDRShot) -> str:
+    """The root link to the shot's container in the campaign file, or "".
+
+    The builder links each container at the campaign file's root under its
+    stem (``<YYYYMMDD>_<NNNNNN>``, from the ``shot_key``), so a column reads
+    ``f"{container}/entry/..."`` from ``hdf5_path`` on every shot. "" for a
+    shot without a ``shot_key``; whether the link exists is the column's
+    business (it raises ``Skip`` when the dataset is missing).
+    """
+    if not shot.shot_key:
+        return ""
+    try:
+        return shot_container_name(shot.shot_key).removesuffix(".nxs")
+    except ValueError:
+        return ""
 
 
 def _shot_metadata_value(metadata: dict, name: str, annotation) -> Any:

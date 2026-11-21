@@ -141,13 +141,22 @@ describe('previewable data products', () => {
   })
 
   it('offers no column for a dataset named for one shot', () => {
-    // an event's values and a container path would repeat this shot's value
+    // an event's values would repeat this shot's value in every row
     expect(
       shotAddColumnPath('demo', 'entry/laserdata/waveform/ev-1/values')
     ).toBe(undefined)
+  })
+
+  it("offers a column of each shot's container dataset", () => {
     expect(
-      shotAddColumnPath('demo', '20260701_000007/instrument/camera/data')
-    ).toBe(undefined)
+      shotAddColumnPath(
+        'demo',
+        '20260701_000007/instrument/camera/data',
+        'demo:20260701:000007'
+      )
+    ).toBe(
+      '/source/demo/context-builder?add=hdf5:{container}/instrument/camera/data&shot=demo:20260701:000007'
+    )
   })
 })
 

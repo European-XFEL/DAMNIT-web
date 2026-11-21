@@ -313,7 +313,7 @@ export function buildComputedFieldSnippet({
     selectedInputs.find((value) => value.startsWith('hdf5:'))?.slice(5) ??
     'signal'
   const hdf5ShotIdParameter = pythonShotIdParameter(datasetName)
-  const hdf5DatasetExpression = pythonHdf5DatasetExpression(datasetName)
+  const hdf5DatasetLines = pythonHdf5DatasetLines(datasetName)
   const safeMongoCollection = mongoCollection.trim() || 'shots'
 
   if (fieldKind === 'metadata') {
@@ -341,8 +341,7 @@ def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        dataset_name = ${hdf5DatasetExpression}
-        values = handle[dataset_name][...]
+${hdf5DatasetLines}        values = handle[dataset_name][...]
     return float(np.nanmean(values))
 `
   }
@@ -360,8 +359,7 @@ def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        dataset_name = ${hdf5DatasetExpression}
-        lineout = np.asarray(handle[dataset_name][...])
+${hdf5DatasetLines}        lineout = np.asarray(handle[dataset_name][...])
     return Cell(lineout, summary="nanmean", preview=lineout)
 `
   }
@@ -379,8 +377,7 @@ def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        dataset_name = ${hdf5DatasetExpression}
-        image = np.asarray(handle[dataset_name][...])
+${hdf5DatasetLines}        image = np.asarray(handle[dataset_name][...])
     return Cell(image, summary="nanmean", preview=image[::8, ::8])
 `
   }
@@ -399,8 +396,7 @@ def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-        dataset_name = ${hdf5DatasetExpression}
-        values = np.asarray(handle[dataset_name][...])
+${hdf5DatasetLines}        values = np.asarray(handle[dataset_name][...])
     fig = px.line(x=np.arange(values.size), y=values, labels={"x": "Index", "y": "Signal"})
     return Cell(values, summary="nanmean", preview=fig)
 `
@@ -447,8 +443,7 @@ ${hasMetadata ? '    if metadata_value is None:\n        raise Skip("Missing met
         ? `    if not hdf5_path:
         raise Skip("Missing HDF5 path")
     with h5py.File(hdf5_path, "r") as handle:
-        dataset_name = ${hdf5DatasetExpression}
-        hdf5_values = handle[dataset_name][...]
+${hdf5DatasetLines}        hdf5_values = handle[dataset_name][...]
 `
         : ''
     }    return ${combineExpression || (hasDataset ? 'np.nanmean(hdf5_values)' : 'metadata_value')}
@@ -522,15 +517,51 @@ export function getContextRecipeInputValues(
   )
 }
 
+/** The per-shot parts a templated dataset name can hold, and their argument. */
+const HDF5_TEMPLATE_ARGUMENTS: [placeholder: string, argument: string][] = [
+  ['{shot_id}', 'shot_id: "meta#shot_id"'],
+  // The shot's container, linked at the campaign file's root by its stem.
+  ['{container}', 'container: "meta#shot_container"'],
+]
+
+export function isTemplatedHdf5Dataset(datasetName: string) {
+  return HDF5_TEMPLATE_ARGUMENTS.some(([placeholder]) =>
+    datasetName.includes(placeholder)
+  )
+}
+
+/** The extra arguments a templated dataset needs, each as `, name: "meta#.."`. */
 export function pythonShotIdParameter(datasetName: string) {
-  return datasetName.includes('{shot_id}') ? ', shot_id: "meta#shot_id"' : ''
+  return HDF5_TEMPLATE_ARGUMENTS.filter(([placeholder]) =>
+    datasetName.includes(placeholder)
+  )
+    .map(([, argument]) => `, ${argument}`)
+    .join('')
 }
 
 export function pythonHdf5DatasetExpression(datasetName: string) {
-  if (!datasetName.includes('{shot_id}')) {
+  if (!isTemplatedHdf5Dataset(datasetName)) {
     return JSON.stringify(datasetName)
   }
   return `f${JSON.stringify(datasetName)}`
+}
+
+/**
+ * The lines inside `with h5py.File(...) as handle:` that pick the dataset.
+ * A templated path names each shot's own copy, which a shot may not have
+ * (no container yet): that shot is skipped rather than failing the column.
+ */
+export function pythonHdf5DatasetLines(datasetName: string) {
+  const lines = [
+    `        dataset_name = ${pythonHdf5DatasetExpression(datasetName)}\n`,
+  ]
+  if (isTemplatedHdf5Dataset(datasetName)) {
+    lines.push(
+      '        if dataset_name not in handle:\n',
+      '            raise Skip(f"No {dataset_name} for this shot")\n'
+    )
+  }
+  return lines.join('')
 }
 
 const PYTHON_RESERVED_NAMES = new Set([

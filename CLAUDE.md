@@ -196,7 +196,9 @@ python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hz
   `DW_API_METADATA__PROVIDER=mymdc`), `contextfile/` - the original DAMNIT-web
   machinery. Context-file arguments read flat metadata keys, then a `meta#a.b` path or
   the registry key a legacy name maps to (`laser_energy_j` ->
-  `laser.pulse_energy`). HZDR additions: `suggested.py` (a new workspace's
+  `laser.pulse_energy`). `meta#shot_container` is the shot's container link
+  name in the campaign file (`<YYYYMMDD>_<NNNNNN>`, from its `shot_key`), for
+  columns on `{container}/...` datasets. HZDR additions: `suggested.py` (a new workspace's
   starter `context.py`) and `assist.py` (`GET .../campaign/{c}/assist`, Context
   Builder's "Help me choose": ranked suggestions with a reason and a
   self-contained `@Variable` block each; LabFrog values, then registered

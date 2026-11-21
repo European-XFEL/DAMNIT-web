@@ -8,7 +8,9 @@ import type {
 
 /**
  * The builder's dataset choices. Per-shot datasets (`by_shot/<id>/...`) fold
- * into one `{shot_id}` template; its `previewName` is the example shot's own
+ * into one `{shot_id}` template, a shot container's into `{container}/...`
+ * (only the example shot's container is listed); its `previewName` is the
+ * example shot's own
  * copy (`exampleShotId`, the shot's `metadata.shot_id`) when the file has
  * one, so a preview labelled with the example shot reads that shot's data.
  */
@@ -173,7 +175,17 @@ export function isNumericHdf5Dtype(dtype: string) {
   )
 }
 
+/**
+ * A dataset name generalised to every shot, or null when it names one shot
+ * only. A dataset inside a shot container (`<YYYYMMDD>_<NNNNNN>/...`, read
+ * through the campaign file's root link) becomes `{container}/...`; one
+ * under `by_shot/`, `shots/` or `shot/<id>/` becomes `{shot_id}`.
+ */
 export function hdf5PerShotTemplateName(datasetName: string) {
+  const container = datasetName.match(/^\d{8}_\d{6}(\/.+)$/)
+  if (container) {
+    return `{container}${container[1]}`
+  }
   const patterns = [
     /^(.*\/by_shot\/)([^/]+)(\/.+)$/,
     /^(.*\/shots\/)([^/]+)(\/.+)$/,
