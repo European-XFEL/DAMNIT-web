@@ -1,4 +1,4 @@
-name: Test e2e real API
+name: Test e2e app
 
 on:
   push:
@@ -8,14 +8,14 @@ on:
       - "api/**"
       - "pyproject.toml"
       - "uv.lock"
-      - ".github/workflows/test-e2e-real-api.yml"
+      - ".github/workflows/test-e2e-app.yml"
   pull_request:
     paths:
       - "frontend/**"
       - "api/**"
       - "pyproject.toml"
       - "uv.lock"
-      - ".github/workflows/test-e2e-real-api.yml"
+      - ".github/workflows/test-e2e-app.yml"
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  e2e-real-api:
+  e2e-app:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -49,7 +49,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browser
-        run: pnpm --filter @damnit-frontend/e2e exec playwright install --with-deps --only-shell chromium
+        run: pnpm --filter @damnit-frontend/testing exec playwright install --with-deps --only-shell chromium
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.1.0
@@ -65,13 +65,13 @@ jobs:
 
       # No build step: the suite's web server builds the app on every run.
       - name: e2e
-        run: pnpm e2e:real-api
+        run: pnpm e2e:app
 
       # always() and ignore for the same reasons as in test-frontend.yml.
       - name: Upload traces
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-traces-real-api
-          path: frontend/e2e/test-results/real-api/
+          name: playwright-traces-e2e-app
+          path: frontend/apps/app/test-results/e2e/
           if-no-files-found: ignore
