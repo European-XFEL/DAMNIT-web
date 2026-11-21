@@ -117,6 +117,13 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   needs no change: its `deploy` step already rebuilds the frontend with
   `VITE_DAMNIT_COMMIT`.
 
+## Review automation (2026-11-21)
+
+All five options of [review-automation.md](review-automation.md) §4, chosen
+by the maintainer; plan, rulings and checklist in
+[plan-review-automation.md](plan-review-automation.md) (boxes ticked there,
+in the commit that does the work).
+
 ## Notes for the next session
 
 - **e2e here:** the e2e package pins Playwright 1.64, the container's

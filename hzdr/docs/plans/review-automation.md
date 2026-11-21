@@ -1,7 +1,9 @@
 # Review matches: how it works, and making it more automatic
 
 Assessment of 2026-11-21, after DAMNIT PR #58. Status: the first tier is
-done (§3); the rest needs maintainer decisions (§4).
+done (§3). The maintainer chose all of §4 on 2026-11-21, with shot-aligner's
+one-to-one time rule for item 5; the work is planned and ticked off in
+[plan-review-automation.md](plan-review-automation.md).
 
 ## 1. How it works today
 
