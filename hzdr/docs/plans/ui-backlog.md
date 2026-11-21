@@ -35,8 +35,8 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   The table itself is unchanged; the page does not poll for shots.
 - [ ] Reset or delete branch `claude/dazzling-noether-br3edr` on GitHub
   (needs the maintainer: a force-push or delete).
-- [ ] shotcounter MR !1: today's handoff says close it, the 2026-11-12 combo
-  handoff says "parked". Maintainer to decide.
+- [x] shotcounter MR !1: stays open and parked (maintainer, 2026-11-21);
+  not closed.
 
 ## Found along the way
 
