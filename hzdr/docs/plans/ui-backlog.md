@@ -80,3 +80,25 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   next to the phone-width check. Done, mocked rather than against the
   acceptance stack (CI has no API): `tests/app/hzdr/home.spec.ts` checks
   Home reads the summary route and never the full list.
+
+## Notes for the next session
+
+- **e2e here:** the e2e package pins Playwright 1.64, the container's
+  Chromium is 1.63's (`/opt/pw-browsers/chromium`). Run locally through a
+  throwaway config next to `playwright.config.ts` that spreads it and sets
+  `use.launchOptions.executablePath` to that path; do not commit it. Four
+  upstream table specs (`resize-past-last-column`, `scrollbar-drag`) fail
+  that way on `main` too; CI's own browser is the reference.
+- **HZDR e2e mocks** (`frontend/e2e/support/hzdr.ts`) match `/metadata/` and
+  `/config/` at the URL root only: the dev server serves modules such as
+  `.../data/metadata/metadata.slice.ts`, which a looser pattern breaks.
+- **Browser pass on the real stack:** import
+  `hzdr/scripts/capture-screenshots.py`, set `OUT_DIR` and `RECEIPT_PATH` to
+  a scratch folder, replace `SHOTS` with `Shot(..., prepare)` hooks, and call
+  `capture()` (Node 24 on `PATH`, `HZDR_CHROMIUM_EXECUTABLE`). Record
+  requests with `page.on("request")` and a reload: the resource-timing
+  buffer fills with Vite modules.
+- **Mantine Chip** inputs are visually hidden: in Playwright click the label
+  text, not `get_by_role("checkbox")`.
+- **Catalog cache:** `load_sources_file` returns shared models. Copy before
+  changing one (`model_copy`); never modify in place.
