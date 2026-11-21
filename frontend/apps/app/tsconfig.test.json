@@ -1,11 +1,7 @@
 {
-  "extends": "@damnit-frontend/config/tsconfig/node",
+  "extends": "@damnit-frontend/config/tsconfig/playwright",
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
-    // Specs run in node, but page.evaluate bodies run in the browser and need
-    // to name DOM types.
-    "lib": ["ES2023", "DOM"],
-    "types": ["node", "@playwright/test"]
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo"
   },
   "include": ["tests", "playwright*.config.ts"]
 }

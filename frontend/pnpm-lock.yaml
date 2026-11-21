@@ -331,9 +331,6 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.39.5
-      globals:
-        specifier: catalog:linting
-        version: 16.5.0
       postcss:
         specifier: catalog:tooling
         version: 8.5.29
@@ -464,9 +461,6 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.39.5
-      globals:
-        specifier: catalog:linting
-        version: 16.5.0
       postcss:
         specifier: catalog:tooling
         version: 8.5.29
@@ -522,9 +516,6 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.39.5
-      globals:
-        specifier: catalog:linting
-        version: 16.5.0
       postcss:
         specifier: catalog:tooling
         version: 8.5.29
@@ -619,9 +610,6 @@ importers:
       eslint:
         specifier: catalog:linting
         version: 9.39.5
-      globals:
-        specifier: catalog:linting
-        version: 16.5.0
       prettier:
         specifier: catalog:linting
         version: 3.9.9

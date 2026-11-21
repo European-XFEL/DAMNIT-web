@@ -10,10 +10,12 @@
   },
   "exports": {
     "./eslint": "./eslint.config.mjs",
+    "./eslint/playwright": "./eslint.playwright.mjs",
     "./prettier": "./prettier.config.mjs",
     "./tsconfig/base": "./tsconfig/base.json",
     "./tsconfig/app": "./tsconfig/app.json",
     "./tsconfig/node": "./tsconfig/node.json",
+    "./tsconfig/playwright": "./tsconfig/playwright.json",
     "./postcss": "./postcss.config.cjs"
   },
   "keywords": [],

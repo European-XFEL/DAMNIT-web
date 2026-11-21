@@ -16,7 +16,6 @@
     "@playwright/test": "catalog:testing",
     "@types/node": "catalog:types",
     "eslint": "catalog:linting",
-    "globals": "catalog:linting",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling"
   }

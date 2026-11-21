@@ -57,7 +57,6 @@
     "@types/react-plotly.js": "catalog:types",
     "@vitejs/plugin-react": "catalog:tooling",
     "eslint": "catalog:linting",
-    "globals": "catalog:linting",
     "postcss": "catalog:tooling",
     "prettier": "catalog:linting",
     "typescript": "catalog:tooling",
