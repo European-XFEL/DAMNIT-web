@@ -322,6 +322,32 @@ step_labfrog() {
         warn "DAMNIT does not answer at $DAMNIT_URL/config/health"
     fi
     check_campaign_schedule
+    check_review_rules
+}
+
+# The two Review matches rules (ruling R-2026-11-21) are settings a person
+# turns on; say whether they are, so a deploy does not leave them off unseen.
+# Both are booleans or kind names, not secrets.
+check_review_rules() {
+    local api="$ROOT/DAMNIT-web-hzdr/api" rules one_to_one kinds
+    [ -d "$api" ] || return
+    if ! rules="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings; b = settings.hzdr_builder; print(int(b.time_match_one_to_one), len(b.never_shot_kinds))' \
+        2>/dev/null | tail -1)"; then
+        warn "DAMNIT settings could not be read to check the review rules"
+        return
+    fi
+    read -r one_to_one kinds <<< "$rules"
+    if [ "$one_to_one" = 1 ]; then
+        ok "DAMNIT one-to-one time rule is on (TIME_MATCH_ONE_TO_ONE)"
+    else
+        would "DAMNIT one-to-one time rule is off: set DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true, restart, rebuild (next-on-server.md item 8)"
+    fi
+    if [ "${kinds:-0}" -gt 0 ]; then
+        ok "DAMNIT never-shot kinds: $kinds listed (NEVER_SHOT_KINDS)"
+    else
+        ok "DAMNIT never-shot kinds: none listed (set NEVER_SHOT_KINDS once the test-fire kinds are known)"
+    fi
 }
 
 # The campaign schedule routes "unassigned" events by trigger time. Until every

@@ -27,7 +27,7 @@ of steps that ended in `FAIL`.
 | `deploy` | Finds every unit that started before its checkout last moved, so it still runs the old code. On 2026-11-11 every unit but LabFrog had done so for a week. Also checks whether DAMNIT's frontend was built from the last commit that changed `frontend/` | `uv sync` with that app's flags, then `sudo systemctl restart`, then checks the unit is active. The intake restarts before the web app. Rebuilds the frontend only if `frontend/` changed (`vite build` alone, about a minute; `FRONTEND_TYPECHECK=1` adds `tsc`) |
 | `tidy` | The two untracked folders `server-report.sh` warns about (asapo's `.env`, labfrog-sqlite-tools' `retained_exports/`, both kept on purpose). The `~/2024_08_08.decisions.json.server` copy | Adds each folder to that checkout's `.git/info/exclude` (this host only, nothing committed). Moves the rulings copy to `~/archive/cleanup-<date>/` if it is byte for byte the committed file; if it differs, it reports `FAIL` and leaves both |
 | `rebuild` | Prints the auto-trigger's own builder command and checks each campaign file for `/entry/shots/authority_shot_number` (bridge v6) and `/entry/labfrog_history` (v7) | Rebuilds with that command (`api/scripts/hzdr-rebuild.py`), then checks again. `--all-campaigns` also rebuilds campaigns that are not listed in `CAMPAIGNS`, see below |
-| `labfrog` | That the LabFrog checkout is 0.10.0 or later. Which Beamtime Setup settings are in `~/labfrog/instance/*.cfg` (names only, never values), and whether DAMNIT answers `/config/health`. Whether DAMNIT's campaign schedule is set, exists and is under 7 days old (name and age only) | nothing: settings are a person's call (item 2) |
+| `labfrog` | That the LabFrog checkout is 0.10.0 or later. Which Beamtime Setup settings are in `~/labfrog/instance/*.cfg` (names only, never values), and whether DAMNIT answers `/config/health`. Whether DAMNIT's campaign schedule is set, exists and is under 7 days old (name and age only), and whether the review rules are on (`TIME_MATCH_ONE_TO_ONE`, how many `NEVER_SHOT_KINDS`) | nothing: settings are a person's call (item 2) |
 | `report` | `poe check-shot-intake`, `server-report.sh` (`--quick` when looking only) | also writes `~/deployed-<time>.json` with `report-deployed.sh` |
 
 `--all-campaigns`: the auto-trigger names only campaigns taking shots,
@@ -90,6 +90,25 @@ files still `MISSING` the column.
    compared with `hzdr-compare-containers.py`), then
    `DW_API_HZDR_BUILDER__CONTAINERS_ENABLED=true` and a first worker pass by
    hand.
+8. **Review matches rules (DAMNIT PR #58, ruling R-2026-11-21).** After the
+   deploy, in `~/DAMNIT-web-hzdr/api/.env`:
+   ```bash
+   DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true
+   # once the test-fire kinds are known (look in Review matches > Unmatched):
+   # DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS=["draco.test_fire"]
+   ```
+   Check `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE=Europe/Berlin` and
+   `CAMPAIGN_SCHEDULE` too (the `labfrog` step reports both rules and the
+   schedule). Then `sudo systemctl restart damnit-api` and rebuild, since a
+   restart builds nothing:
+   `cd ~/DAMNIT-web-hzdr/api && uv run --no-sync python scripts/hzdr-rebuild.py`.
+   Open Review matches: every waiting event says *why it waits*. Events the
+   rule attached show *By time, one to one* among their shot's events.
+   **At the first shot day without authority numbers,** count how many
+   events paired and how many wait as `several_shots_in_tolerance` or
+   `shot_has_other_event`. If shots come closer together than 120 s, lower
+   `DW_API_HZDR_BUILDER__MATCH_TOLERANCE_S` and rebuild. To undo, set the
+   rule back to `false` and rebuild: nothing it attached is stored.
 
 ## 3. SciCat: clean up the duplicate datasets
 

@@ -124,7 +124,26 @@ by the maintainer; plan, rulings and checklist in
 [plan-review-automation.md](plan-review-automation.md) (boxes ticked there,
 in the commit that does the work).
 
-## Notes for the next session
+## Next steps (after PR #58)
+
+On the server (maintainer), in order; `hzdr/docs/guides/next-on-server.md`:
+1. Deploy #57 and #58 together: `next-on-server.sh`, look first, then
+   `--apply` (item 6 says what to check in the browser).
+2. Turn on the review rules and rebuild (item 8):
+   `TIME_MATCH_ONE_TO_ONE=true`; `NEVER_SHOT_KINDS` once the test-fire
+   kinds are known; check `CAMPAIGN_TIMEZONE` and `CAMPAIGN_SCHEDULE`.
+3. At the first shot day without authority numbers: count what the
+   one-to-one rule paired and what waits, and set `MATCH_TOLERANCE_S` if
+   DRACO's shots come closer than 120 s.
+4. Shot containers only on a decision: phase 6 first (item 7,
+   `operations.md` go-live checklist).
+5. Merge GitLab hzdr-combo !117 (and !116) and fwkt-webapps !106; delete or
+   reset GitHub branch `claude/dazzling-noether-br3edr`.
+
+For a later session (needs a decision): offer every shot in the tolerance
+as a candidate instead of only the nearest (changes what reviewers see on
+every campaign; `plan-review-automation.md`, results).
+
 
 - **e2e here:** the e2e package pins Playwright 1.64, the container's
   Chromium is 1.63's (`/opt/pw-browsers/chromium`). Run locally through a
