@@ -255,7 +255,7 @@ experiment ruling). It reads `GET .../sources/{key}/review`, which also lists
 `unassigned_shots` and their pending `experiment_rulings`.
 Saved table views are persisted in `hzdr_sources.views.json` alongside
 `hzdr_sources.json` (same directory, same stem with `.views.json` suffix); the API
-manages them via `GET/POST/DELETE /metadata/hzdr/views`.
+manages them via `GET/POST/DELETE /metadata/hzdr/sources/{key}/views[/{id}]`; the shot table shows them as chips (`components/SavedViewChips`).
 
 ### Configuration
 Pydantic settings via `DW_API_*` env vars with `__` as the nested delimiter (e.g.
@@ -639,4 +639,4 @@ Values: `none`, `number`, `string`, `boolean`, `timestamp`, `complex`, `array`, 
 
 ### API package version
 
-`damnit-api` current: **`0.3.1`** (see `api/pyproject.toml`). No runtime version endpoint exists; bump this when the public schema changes.
+`damnit-api` current: **`0.3.1`** (see `api/pyproject.toml`). `GET /config/version` reports it and the checkout's commit at start-up (a frontend built with `VITE_DAMNIT_COMMIT` warns in its header when the two commits differ); bump the version when the public schema changes.
