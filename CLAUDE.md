@@ -298,6 +298,14 @@ events by trigger time) and `DW_API_HZDR_BUILDER__TIME_MATCH_AUTOASSIGN`
 propose review candidates, and an authoritative `shot_number` naming exactly
 one shot attaches on the number alone; `true` restores the earlier ladder,
 which attached a numbered trigger to a neighbouring LabFrog shot by time).
+`DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE` (default `false`; ruling
+R-2026-11-21) adds shot-aligner's one-to-one time rule for events without a
+shot number (`time_one_to_one`, see Match quality ranks), and
+`DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS` (JSON list, default empty) has the
+catalog acknowledge unmatched events of those kinds by rule
+(`rule:never_shot_kinds`). Review events carry `review_reason` and, from
+non-time evidence, `suggested_shot_key`/`suggestion_reason`; the review
+route adds `candidate_gaps_s` and `campaign_suggestions`.
 `DW_API_HZDR_BUILDER__VALIDATION_PYTHON` (default empty: off) names a Python
 with nexus-design-studio and pynxtools (NDS's own `.venv`); set, the trigger
 runs `api/scripts/hzdr-nexus-validate.py` (campaign output phase 5) after each

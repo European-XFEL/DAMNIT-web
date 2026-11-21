@@ -6,6 +6,34 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Review matches made more automatic, the way shot-aligner does it
+Ruling R-2026-11-21 (maintainer: all options, "use how shot aligner does
+it"); plan and checklist in `hzdr/docs/plans/plan-review-automation.md`.
+- **One-to-one time rule** (`DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE`,
+  off by default, `--time-match-one-to-one`): an event without a shot number
+  attaches to a LabFrog shot when the two are each other's only neighbour
+  within the tolerance among events of its source, kind and instrument,
+  shot-aligner's `labfrog._match_by_time`. New match quality
+  `time_one_to_one` (rank 3; the ranks above move up by one). Numbered events
+  never pair by time; a watchdog attribution naming other shots wins.
+- **Why it waits**: every review event carries `review_reason`, and the page
+  shows one line of guidance for it.
+- **Suggestions from evidence other than time**: `suggested_shot_key` when
+  the watchdog's attribution names one candidate, or one candidate alone
+  lacks that instrument's file. The page badges it and confirms suggestions
+  in bulk, noting the evidence.
+- **A campaign for an unassigned shot**: `campaign_suggestions` when the
+  shots before and after it that day are in one campaign. The page pre-fills
+  it, and **Assign the N suggested** assigns them.
+- **Kinds that are never a shot** (`DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS`):
+  their unmatched events are acknowledged by rule (`rule:never_shot_kinds`)
+  in the catalog.
+- `next-on-server.sh` reports whether the campaign schedule is set and
+  current.
+- Characterization tests pin what A7 did before: of two shots in the
+  tolerance only the nearest was offered, and a tie left the event unmatched
+  with no candidate. The reasons now name both cases.
+
 ### Faster deploys: the frontend is built only when it changed
 - `next-on-server.sh` rebuilds the frontend only when `frontend/` changed
   since the last build (recorded in `dist/.damnit-frontend-commit`), and

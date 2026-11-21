@@ -435,12 +435,16 @@ def laser_energy_mj(run, laser_energy_j=None):
 
               <DocSection id="review-matches">
                 <Text size="sm">
-                  DAMNIT never attaches an event to a shot by time alone. When
-                  it is unsure, the case waits on the Review matches page. It
-                  opens on the campaign with the most waiting, and says{' '}
-                  <b>All clear</b> when nothing does. It checks every 30 seconds
-                  and reloads the open campaign&apos;s lists when new cases
-                  arrive; it never switches campaign by itself.
+                  DAMNIT never attaches an event to a shot by nearest time
+                  alone. Where it is switched on, an event without a shot number
+                  joins a LabFrog shot when the two are each other&apos;s only
+                  match in time (the shot aligner&apos;s one-to-one rule). When
+                  it is unsure, the case waits on the Review matches page,
+                  saying <b>why it waits</b>. It opens on the campaign with the
+                  most waiting, and says <b>All clear</b> when nothing does. It
+                  checks every 30 seconds and reloads the open campaign&apos;s
+                  lists when new cases arrive; it never switches campaign by
+                  itself.
                 </Text>
                 <List size="sm" spacing={4}>
                   <List.Item>
@@ -450,7 +454,11 @@ def laser_energy_mj(run, laser_energy_j=None):
                     time (within 30 s, every other candidate 2 min or more
                     further), <b>Review the N</b> lists those cases and{' '}
                     <b>Confirm these N</b> confirms them together; each decision
-                    notes that it was made in bulk and why.
+                    notes that it was made in bulk and why. A shot marked{' '}
+                    <i>suggested</i> was picked by evidence other than time (the
+                    watchdog named it, or it is the only one without that
+                    instrument&apos;s file); those can be confirmed together
+                    too.
                   </List.Item>
                   <List.Item>
                     <b>Unmatched</b>: an event fits no shot. Acknowledge it if
@@ -462,7 +470,9 @@ def laser_energy_mj(run, laser_energy_j=None):
                     <b>Unassigned</b>: a shot no LabFrog record or campaign
                     schedule placed in a campaign. Assign its campaign, or use{' '}
                     <b>Assign several</b> for every waiting shot or one
-                    day&apos;s.
+                    day&apos;s. Where the shots before and after it that day are
+                    in one campaign, that campaign is filled in, and{' '}
+                    <b>Assign the N suggested</b> assigns all such shots.
                   </List.Item>
                 </List>
                 <Text size="sm" c="dimmed">

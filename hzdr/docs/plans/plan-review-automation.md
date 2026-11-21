@@ -118,10 +118,12 @@ A box is ticked in the commit that does the work.
       printed. `operations.md` has a section on the schedule and the two
       new rules; `next-on-server.md`'s step table says so. Checked by hand
       with the three cases
-- [ ] **Docs:** `architecture.md` (the ladder, the stream rule, the new
-      rank), `CLAUDE.md` (match ranks, settings, review fields),
-      `api/.env.production.example`, `review-automation.md` (status),
-      the in-app Docs page, `hzdr/CHANGELOG.md`
+- [x] **Docs:** `architecture.md` (step 6a, the stream rule, the
+      reasons, suggestions, never-shot kinds), `CLAUDE.md` (match ranks with
+      `time_one_to_one`, the two settings, the review fields),
+      `api/.env.production.example`, `operations.md` (section on the
+      schedule and the rules), `next-on-server.md`, `review-automation.md`
+      (status), the in-app Docs page, `hzdr/CHANGELOG.md`
 - [ ] **Gates:** ruff, pyright at its baseline (197), full pytest, the new
       test modules in `scripts/docs/refresh_coverage_map.py`, vitest,
       `lint:tsc`, eslint, prettier, the HZDR e2e specs,

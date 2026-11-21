@@ -287,9 +287,33 @@ and fallback:
    duplicate current LabFrog rows remain.
 5. Same `shot_number` and unique nearest timestamp within tolerance.
 6. Unique nearest timestamp within tolerance.
-7. Otherwise retain the event as ambiguous or unmatched.
+   6a. With `TIME_MATCH_ONE_TO_ONE` (ruling R-2026-11-21, off by default):
+      an event **without** a shot number and a LabFrog shot that are each
+      other's only neighbour within the tolerance, within the event's *stream*
+      (same `source`, `kind` and instrument: `metadata.instrument.id`, else the
+      producer instance), attach as `time_one_to_one`. This is shot-aligner's
+      rule (`labfrog._match_by_time`: "each the other's only neighbour within
+      the tolerance; anything less is ambiguous"). Every event of the stream
+      counts as a neighbour, matched or not, so a shot never gets a second
+      event of one stream by time. A shot that already holds one is skipped,
+      and a watchdog attribution that names other candidates wins. Numbered
+      events never pair by time: a number LabFrog lacks founds its trigger-only
+      shot, as under A7. Pairs are found on a snapshot and applied together
+      (`hzdr_nexus._pair_time_one_to_one`).
+7. Otherwise retain the event as ambiguous or unmatched. Each such event
+   says why (`review_reason`: `no_time`, `no_labfrog_record`,
+   `no_shot_in_tolerance`, `several_shots_in_tolerance`,
+   `shot_has_other_event`, `attribution_disagrees`, `time_rule_off`,
+   `number_held_by_several`, `identity_conflict`). An ambiguous event may
+   carry a `suggested_shot_key` from evidence other than time
+   (`watchdog_attribution`, `instrument_free`), which the page preselects
+   and a person confirms.
 
 Steps 4-6 attach only when time auto-assignment is on; by default they propose.
+Step 6a attaches only with `TIME_MATCH_ONE_TO_ONE`, and never when time
+auto-assignment is on (that restores the old ladder exactly).
+Unmatched events of a kind in `NEVER_SHOT_KINDS` are acknowledged in the
+catalog by the rule `rule:never_shot_kinds` (not stored as decisions).
 
 Archived/superseded LabFrog rows from curated exports are kept as provenance but
 are excluded from automatic matching: an `archived` row always, any other
