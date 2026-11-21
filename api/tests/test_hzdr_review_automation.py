@@ -366,3 +366,66 @@ def test_the_reason_reaches_the_catalog_review_record():
     )
     record = _review_event_api_record(next(e for e in built if e["event_id"] == "t1"))
     assert record["review_reason"] == "no_shot_in_tolerance"
+
+
+# --- item 2: suggestions from evidence other than time -----------------------
+
+
+def suggestion(events, event_id):
+    event = next(item for item in events if item["event_id"] == event_id)
+    return event.get("suggested_shot_key"), event.get("suggestion_reason")
+
+
+def test_the_watchdog_attribution_suggests_its_shot():
+    attributed = camera_file("f1", "2026-06-10T12:00:10Z")
+    attributed["metadata"]["attribution"] = {"candidates": [7]}
+    shots, built = build(
+        [attributed],
+        [
+            labfrog_row("a", "2026-06-10T12:00:00Z", number=6),
+            labfrog_row("bb", "2026-06-10T12:10:00Z", number=7),
+        ],
+    )
+    shot_7 = next(shot for shot in shots if shot["labfrog_record_id"] == "bb")
+    assert outcome(built, "f1")[0] == "ambiguous"
+    assert suggestion(built, "f1") == (shot_7["shot_key"], "watchdog_attribution")
+
+
+def test_the_only_shot_without_that_instrument_is_suggested():
+    rows = [
+        labfrog_row("a", "2026-06-09T12:00:00Z", number=9),
+        labfrog_row("bb", "2026-06-10T12:00:00Z", number=9),
+    ]
+    rows[0]["shot_date"] = "2026-06-09"
+    # cam_a's file of 2026-06-09 sits on shot "a" by its day and number.
+    held = camera_file("f-held", "2026-06-09T12:00:05Z")
+    held["shot_number"] = 9
+    # A cam_a file numbered 9 from another day fits both shots by number.
+    waiting = camera_file("f2", "2026-06-11T12:00:00Z")
+    waiting["shot_number"] = 9
+    shots, built = build([held, waiting], rows)
+    key_a = next(shot["shot_key"] for shot in shots if shot["labfrog_record_id"] == "a")
+    key_b = next(
+        shot["shot_key"] for shot in shots if shot["labfrog_record_id"] == "bb"
+    )
+    assert key_a != key_b
+    assert outcome(built, "f-held")[:2] == ("matched", key_a)
+    assert outcome(built, "f2") == ("ambiguous", "", [key_a, key_b])
+    assert suggestion(built, "f2") == (key_b, "instrument_free")
+
+
+def test_disagreeing_evidence_suggests_nothing():
+    from damnit_api.metadata.hzdr_nexus import _set_suggestions
+
+    shots = [
+        {"shot_key": "s6", "authority_shot_number": 6, "metadata": {}},
+        {"shot_key": "s7", "authority_shot_number": 7, "metadata": {}},
+    ]
+    held = camera_file("f-held", "2026-06-10T12:00:00Z")
+    held["shot_key"] = "s7"
+    event = camera_file("f1", "2026-06-10T12:00:10Z")
+    event["metadata"]["attribution"] = {"candidates": [7]}
+    event.update(match_status="ambiguous", candidate_shot_keys=["s6", "s7"])
+    _set_suggestions([held, event], shots)
+    # The watchdog names s7, but s7 already has cam_a's file: no suggestion.
+    assert "suggested_shot_key" not in event

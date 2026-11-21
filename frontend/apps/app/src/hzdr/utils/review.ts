@@ -347,9 +347,17 @@ export function closestCandidateKey(
 /** How close and how clear a time-only choice must be to be offered in bulk. */
 export const CLEAR_TIME_CHOICE = { withinS: 30, othersFurtherS: 120 }
 
-export interface TimeChoice {
+/** One event and the shot a person may confirm it to in bulk, and why. */
+export interface BulkChoice {
   event: HZDRReviewEvent
   shotKey: string
+  /** Shown in the list: the gap, or the evidence. */
+  detail: string
+  /** Written into the decision's note. */
+  note: string
+}
+
+export interface TimeChoice extends BulkChoice {
   gapS: number
 }
 
@@ -383,14 +391,51 @@ export function clearTimeChoices(
     ) {
       continue
     }
-    choices.push({ event, shotKey: best.shotKey, gapS: best.gap! })
+    const gapS = best.gap!
+    choices.push({
+      event,
+      shotKey: best.shotKey,
+      gapS,
+      detail: formatSeconds(gapS),
+      note: timeChoiceNote(gapS),
+    })
   }
   return choices
 }
 
 /** The note each bulk-confirmed decision carries, so its reason is on record. */
-export function timeChoiceNote(choice: TimeChoice) {
-  return `Confirmed in bulk: closest in time (${formatSeconds(choice.gapS)}), every other candidate ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min or more further.`
+export function timeChoiceNote(gapS: number) {
+  return `Confirmed in bulk: closest in time (${formatSeconds(gapS)}), every other candidate ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min or more further.`
+}
+
+/** The builder's suggestion reasons in words (hzdr_nexus.SUGGESTION_REASONS). */
+export const SUGGESTION_TEXT: Record<string, string> = {
+  watchdog_attribution: 'the watchdog named this shot',
+  instrument_free: "the only candidate without this instrument's file yet",
+}
+
+/**
+ * Ambiguous events with a suggestion from evidence other than time, whose
+ * shot is in the catalog: offered to a person to confirm together.
+ */
+export function suggestedChoices(
+  events: HZDRReviewEvent[],
+  shots: Map<string, HZDRShot>
+): BulkChoice[] {
+  return events.flatMap((event) => {
+    const shotKey = event.suggested_shot_key
+    if (!shotKey || !shots.has(shotKey)) return []
+    const reason = event.suggestion_reason ?? ''
+    const detail = SUGGESTION_TEXT[reason] ?? reason.replace(/_/g, ' ')
+    return [
+      {
+        event,
+        shotKey,
+        detail,
+        note: `Confirmed in bulk: suggested because ${detail}.`,
+      },
+    ]
+  })
 }
 
 /**

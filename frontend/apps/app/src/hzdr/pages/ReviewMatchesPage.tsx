@@ -34,8 +34,7 @@ import { requireJson } from '../utils/api'
 import { usePolling } from '../hooks'
 import { campaignTitle } from '../utils/format'
 import {
-  type TimeChoice,
-  timeChoiceNote,
+  type BulkChoice,
   assignShotExperiment,
   busiestSourceKey,
   campaignSuggestions,
@@ -320,7 +319,7 @@ export function ReviewMatchesPage() {
     setBusyKey(null)
   }
 
-  const confirmMany = (choices: TimeChoice[]) => {
+  const confirmMany = (choices: BulkChoice[]) => {
     if (!sourceKey) return
     void runBatch(
       'confirm-many',
@@ -330,9 +329,9 @@ export function ReviewMatchesPage() {
           sourceKey,
           choice.event.event_id,
           choice.shotKey,
-          timeChoiceNote(choice)
+          choice.note
         ),
-      (count) => `${count} events confirmed to their closest shot.`
+      (count) => `${count} events confirmed.`
     )
   }
 

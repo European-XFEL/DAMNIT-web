@@ -2149,12 +2149,14 @@ def reconcile_canonical_shots(  # noqa: C901
             labfrog_event = _labfrog_source_event(shot, experiment_id)
             normalized_events.append(labfrog_event)
             shot["events"].append(_event_api_record(labfrog_event))
+    producer_events = [
+        event
+        for event in normalized_events
+        if event.get("source") != LABFROG_EVENT_SOURCE
+    ]
+    _set_suggestions(producer_events, canonical)
     _set_review_reasons(
-        [
-            event
-            for event in normalized_events
-            if event.get("source") != LABFROG_EVENT_SOURCE
-        ],
+        producer_events,
         canonical,
         has_labfrog=bool(labfrog_shots),
         match_tolerance_s=match_tolerance_s,
@@ -3681,6 +3683,8 @@ def _review_event_api_record(event: dict[str, Any]) -> dict[str, Any]:
             "match_quality",
             "candidate_shot_keys",
             "review_reason",
+            "suggested_shot_key",
+            "suggestion_reason",
         )
         if event.get(key) is not None
     }
@@ -4592,6 +4596,59 @@ def _one_to_one_pairs(
         ).items()
         if verdict == "pair" and shot is not None and delta is not None
     ]
+
+
+#: Evidence other than time that can single out one candidate (decision D4:
+#: a suggestion is shown and preselected, never applied).
+SUGGESTION_REASONS = ("watchdog_attribution", "instrument_free")
+
+
+def _set_suggestions(events: list[dict[str, Any]], shots: list[dict[str, Any]]) -> None:
+    """Suggest one candidate of an ambiguous event from non-time evidence.
+
+    ``watchdog_attribution``: the watchdog's ``attribution.candidates``
+    (authority numbers, ruling R3) name exactly one of the event's candidates.
+    ``instrument_free``: the event names its instrument, and exactly one
+    candidate has no event of that stream yet. When both apply and disagree,
+    nothing is suggested.
+    """
+    current = [
+        shot
+        for shot in shots
+        if not _as_bool(shot.get("metadata", {}).get("has_newer_version"))
+    ]
+    held_streams = {
+        (event.get("shot_key"), _event_stream(event))
+        for event in events
+        if event.get("shot_key")
+    }
+    for event in events:
+        if event.get("match_status") != "ambiguous" or event.get("shot_key"):
+            continue
+        candidates = list(dict.fromkeys(event.get("candidate_shot_keys") or []))
+        if len(candidates) < 2:
+            continue
+        attributed = [
+            key
+            for key in _attribution_candidate_keys(event, current)
+            if key in candidates
+        ]
+        stream = _event_stream(event)
+        free = (
+            [key for key in candidates if (key, stream) not in held_streams]
+            if stream[2]
+            else []
+        )
+        by_attribution = attributed[0] if len(attributed) == 1 else None
+        by_instrument = free[0] if len(free) == 1 else None
+        if by_attribution and by_instrument and by_attribution != by_instrument:
+            continue
+        if by_attribution:
+            event["suggested_shot_key"] = by_attribution
+            event["suggestion_reason"] = "watchdog_attribution"
+        elif by_instrument:
+            event["suggested_shot_key"] = by_instrument
+            event["suggestion_reason"] = "instrument_free"
 
 
 def _set_review_reasons(

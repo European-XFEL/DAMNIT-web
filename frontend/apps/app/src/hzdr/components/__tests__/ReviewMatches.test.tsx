@@ -209,7 +209,12 @@ describe('AmbiguousMatchesCard clear time choices', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review the 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Confirm these 1' }))
     expect(onConfirmMany).toHaveBeenCalledWith([
-      { event: clear, shotKey: 'exp:20260505:000001', gapS: -8 },
+      expect.objectContaining({
+        event: clear,
+        shotKey: 'exp:20260505:000001',
+        gapS: -8,
+        note: expect.stringContaining('closest in time'),
+      }),
     ])
   })
 
@@ -496,6 +501,53 @@ describe('LegacyReviewMatchesRedirect', () => {
     expect(
       screen.getByText('/review-matches?source=hzdr-local')
     ).toBeInTheDocument()
+  })
+})
+
+describe('suggestions from evidence other than time', () => {
+  it('marks the suggested candidate and confirms suggestions in bulk', () => {
+    const onConfirmMany = vi.fn()
+    const shots = new Map(
+      [1, 2].map((n) => [
+        `exp:20260505:00000${n}`,
+        makeShot({ shot_number: n, shot_key: `exp:20260505:00000${n}` }),
+      ])
+    )
+    const suggested = makeEvent({
+      event_id: 'evt-suggested',
+      suggested_shot_key: 'exp:20260505:000002',
+      suggestion_reason: 'watchdog_attribution',
+    })
+    withMantine(
+      <AmbiguousMatchesCard
+        events={[suggested]}
+        shotsByKey={shots}
+        gaps={{
+          // Clear by time too, but it is offered once, as a suggestion.
+          'evt-suggested': {
+            'exp:20260505:000001': 5,
+            'exp:20260505:000002': 600,
+          },
+        }}
+        busyKey={null}
+        onConfirm={vi.fn()}
+        onConfirmMany={onConfirmMany}
+      />
+    )
+    expect(
+      screen.getByText(/suggested: the watchdog named this shot/)
+    ).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: /^Review the/ })).toHaveLength(
+      1
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Review the 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm these 1' }))
+    expect(onConfirmMany).toHaveBeenCalledWith([
+      expect.objectContaining({
+        shotKey: 'exp:20260505:000002',
+        note: 'Confirmed in bulk: suggested because the watchdog named this shot.',
+      }),
+    ])
   })
 })
 

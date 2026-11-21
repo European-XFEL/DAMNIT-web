@@ -28,10 +28,12 @@ import { NOT_RECORDED, formatShotTime } from '../utils/format'
 import { formatTargetLabel } from '../utils/metadata'
 import {
   REVIEW_REASON_TEXT,
+  SUGGESTION_TEXT,
   CLEAR_TIME_CHOICE,
   candidateGap,
   clearTimeChoices,
-  type TimeChoice,
+  suggestedChoices,
+  type BulkChoice,
   groupUnmatched,
   waitingUnassignedByDay,
   REVIEW_SECTIONS,
@@ -261,6 +263,7 @@ function AmbiguousEventItem({
                 const shot = shotsByKey.get(shotKey)
                 const shotTime = shot?.labfrog_date_time ?? shot?.fired_at
                 const isClosest = shotKey === closest
+                const isSuggested = shotKey === event.suggested_shot_key
                 return (
                   <Table.Tr
                     key={shotKey}
@@ -276,6 +279,16 @@ function AmbiguousEventItem({
                       <Text span size="xs" c="dimmed">
                         {shotKey}
                       </Text>
+                      {isSuggested ? (
+                        <>
+                          {' '}
+                          <Badge size="xs" variant="light" color="blue">
+                            suggested:{' '}
+                            {SUGGESTION_TEXT[event.suggestion_reason ?? ''] ??
+                              event.suggestion_reason}
+                          </Badge>
+                        </>
+                      ) : null}
                     </Table.Td>
                     <Table.Td>
                       {shot?.labfrog_local_count ?? NOT_RECORDED}
@@ -332,19 +345,24 @@ function AmbiguousEventItem({
 }
 
 /**
- * The clear-cut time cases, offered to confirm together. Shown only when
- * some exist; the list is opened and read before the confirm button shows.
+ * Events a person may confirm together (the clear-cut time cases, or the
+ * builder's suggestions). Shown only when some exist; the list is opened and
+ * read before the confirm button shows.
  */
-function ConfirmClearChoices({
+function BulkConfirm({
+  intro,
+  detailHeading,
   choices,
   shotsByKey,
   busy,
   onConfirmMany,
 }: {
-  choices: TimeChoice[]
+  intro: ReactNode
+  detailHeading: string
+  choices: BulkChoice[]
   shotsByKey: Map<string, HZDRShot>
   busy: boolean
-  onConfirmMany: (choices: TimeChoice[]) => void
+  onConfirmMany: (choices: BulkChoice[]) => void
 }) {
   const [open, setOpen] = useState(false)
   if (!choices.length) return null
@@ -353,11 +371,7 @@ function ConfirmClearChoices({
       <Stack gap="xs">
         <Text size="sm">
           <b>{choices.length}</b>{' '}
-          {choices.length === 1 ? 'event has' : 'events have'} one shot clearly
-          closest in time: within {CLEAR_TIME_CHOICE.withinS} s, and every other
-          candidate at least {CLEAR_TIME_CHOICE.othersFurtherS / 60} min further
-          away. Time alone never decides; check the list and confirm them
-          yourself.
+          {choices.length === 1 ? 'event has' : 'events have'} {intro}
         </Text>
         {open ? (
           <>
@@ -367,7 +381,7 @@ function ConfirmClearChoices({
                   <Table.Tr>
                     <Table.Th>Event</Table.Th>
                     <Table.Th>Shot</Table.Th>
-                    <Table.Th>Event - shot</Table.Th>
+                    <Table.Th>{detailHeading}</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -383,7 +397,7 @@ function ConfirmClearChoices({
                           {choice.shotKey}
                         </Text>
                       </Table.Td>
-                      <Table.Td>{formatSeconds(choice.gapS)}</Table.Td>
+                      <Table.Td>{choice.detail}</Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -417,6 +431,49 @@ function ConfirmClearChoices({
   )
 }
 
+/** Suggestions first; the clear time cases among the rest. */
+function BulkSections({
+  events,
+  shotsByKey,
+  gaps,
+  busy,
+  onConfirmMany,
+}: {
+  events: HZDRReviewEvent[]
+  shotsByKey: Map<string, HZDRShot>
+  gaps?: CandidateGaps
+  busy: boolean
+  onConfirmMany: (choices: BulkChoice[]) => void
+}) {
+  const suggested = suggestedChoices(events, shotsByKey)
+  const suggestedIds = new Set(suggested.map((choice) => choice.event.event_id))
+  const timed = clearTimeChoices(
+    events.filter((event) => !suggestedIds.has(event.event_id)),
+    shotsByKey,
+    gaps
+  )
+  return (
+    <>
+      <BulkConfirm
+        intro="a suggested shot from evidence other than time: the watchdog named it, or it is the only candidate without this instrument's file. Check the list and confirm them yourself."
+        detailHeading="Why"
+        choices={suggested}
+        shotsByKey={shotsByKey}
+        busy={busy}
+        onConfirmMany={onConfirmMany}
+      />
+      <BulkConfirm
+        intro={`one shot clearly closest in time: within ${CLEAR_TIME_CHOICE.withinS} s, and every other candidate at least ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min further away. Time alone never decides; check the list and confirm them yourself.`}
+        detailHeading="Event - shot"
+        choices={timed}
+        shotsByKey={shotsByKey}
+        busy={busy}
+        onConfirmMany={onConfirmMany}
+      />
+    </>
+  )
+}
+
 export function AmbiguousMatchesCard({
   events,
   shotsByKey,
@@ -430,7 +487,7 @@ export function AmbiguousMatchesCard({
   gaps?: CandidateGaps
   busyKey: string | null
   onConfirm: (event: HZDRReviewEvent, shotKey: string, note: string) => void
-  onConfirmMany?: (choices: TimeChoice[]) => void
+  onConfirmMany?: (choices: BulkChoice[]) => void
 }) {
   if (!events.length) {
     return (
@@ -452,9 +509,10 @@ export function AmbiguousMatchesCard({
         Closest in time is highlighted; time alone never decides.
       </Text>
       {onConfirmMany ? (
-        <ConfirmClearChoices
-          choices={clearTimeChoices(events, shotsByKey, gaps)}
+        <BulkSections
+          events={events}
           shotsByKey={shotsByKey}
+          gaps={gaps}
           busy={busyKey !== null}
           onConfirmMany={onConfirmMany}
         />

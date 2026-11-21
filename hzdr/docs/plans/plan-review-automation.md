@@ -84,12 +84,16 @@ A box is ticked in the commit that does the work.
       `HZDRReviewEvent`; the page shows "Why it waits" with one line of
       guidance each (`REVIEW_REASON_TEXT`). Tests: 3 in
       `test_hzdr_review_automation.py`, 1 in `ReviewMatches.test.tsx`
-- [ ] **Item 2, suggestions from non-time evidence** (builder, API, UI):
-      `suggested_shot_key` + `suggestion_reason` on an ambiguous event when
-      exactly one candidate is named by the watchdog's
-      `attribution.candidates` (authority numbers, R3) or is the only one
-      without that instrument yet; the page preselects it, and **Confirm the
-      N suggested** confirms them, each note naming the evidence
+- [x] **Item 2, suggestions from non-time evidence** (builder, API, UI):
+      `hzdr_nexus._set_suggestions` writes `suggested_shot_key` +
+      `suggestion_reason` (`watchdog_attribution`: the watchdog's
+      `attribution.candidates` name exactly one candidate, R3;
+      `instrument_free`: the only candidate without an event of the event's
+      stream; disagreeing evidence suggests nothing). The page badges the
+      suggested candidate and offers **Review the N** / **Confirm these N**
+      before the clear time cases (an event is offered once), each note
+      naming the evidence (`utils/review.suggestedChoices`, one `BulkConfirm`
+      component for both). Tests: 3 builder, 1 component
 - [ ] **Item 3, a campaign for an unassigned shot** (API, UI): the review
       route suggests the campaign of the nearest shots before and after it on
       the same local day when both are in one campaign; the page pre-fills it

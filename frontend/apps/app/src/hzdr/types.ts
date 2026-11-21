@@ -263,6 +263,9 @@ export type HZDRReviewEvent = {
   review_level?: string | null
   /** Why it waits (hzdr_nexus.REVIEW_REASONS; older catalogs: absent). */
   review_reason?: string | null
+  /** One candidate singled out by evidence other than time (never applied). */
+  suggested_shot_key?: string | null
+  suggestion_reason?: string | null
 }
 
 // Mirrors the FastAPI HZDRExperimentRuling: a ruling waiting for a rebuild.
