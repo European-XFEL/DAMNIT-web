@@ -199,6 +199,25 @@ describe('ShotDetailPanel datasets', () => {
   })
 })
 
+describe('ShotDetailPanel link', () => {
+  it('copies a link that opens the campaign on this shot', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    renderPanel()
+    await user.click(screen.getByRole('button', { name: 'Copy link' }))
+    expect(writeText).toHaveBeenCalledWith(
+      `${window.location.origin}/source/${CAMPAIGN}?shot=${encodeURIComponent(shot.shot_key!)}`
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Link copied' })
+    ).toBeInTheDocument()
+  })
+})
+
 describe('ShotDetailPanel data products', () => {
   it('links Add as column for a per-shot dataset, with the shot', () => {
     const perShot = 'fixtures/by_shot/shot-000007/images/camera_raw'

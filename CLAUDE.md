@@ -239,7 +239,9 @@ is enabled), else Demo, unless the browser stored a choice. Both
 preview a column with `components/ColumnPreview` (`utils/columnPreview`: the
 example shot's cell, the double-click image/curve, the campaign trend or label
 counts; live, no button), which reads `HZDRDatasetPreview.summary`.
-`ShotPage.tsx` fetches shot detail via the `by-key/{shot_key}` route when a
+`ShotPage.tsx` keeps the selected shot in `?shot=<shot_key or number>` (a
+shared link opens on it) and lists Trends first in its side panel (points
+select their shot). It fetches shot detail via the `by-key/{shot_key}` route when a
 `shot_key` is present (falling back to `{shot_number}`).
 The `ReviewMatchesPage` (`/review-matches`; the old `/link-shot-records` path
 redirects there) is where a person resolves what the builder will not guess:

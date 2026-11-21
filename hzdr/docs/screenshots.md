@@ -48,8 +48,11 @@ was ever fired.
 
 ## Home — campaigns
 
-The landing page (`/home`, the **Campaigns** tab): every campaign the HZDR
-provider sees, newest first, with a filter box. Each row has its last shot
+The landing page (`/home`, the **Campaigns** tab): a welcome card with the
+figures at a glance (campaigns, shots today, decisions waiting, the newest
+shot) and, once a campaign was opened in this browser, **Continue with** it;
+then every campaign the HZDR provider sees, newest first, with a filter box,
+and *How it works* beside the list. Each row has its last shot
 time, shot count, "+N today", the decisions waiting in Review matches and
 the shots needing review or revision; the DAMNIT folder is small print.
 
@@ -61,10 +64,11 @@ A campaign page (`/source/{source_key}`): DAMNIT's per-shot table with
 status badges, campaign/context columns and inline image and trend previews.
 Above it, one line of status chips (SciCat, wiki, producers, Flow monitor),
 quick filters for review status and day, and **Add columns** beside Columns.
-The capture clicks a camera-image cell of shot 7, so the side panel shows the
-full preview, then Shot detail (open by default: facts, the review control,
-events, data products and only that shot's datasets as a tree), then Shot
-sets with a trend.
+The side panel opens with **Trends** (pick a value; it plots the shots the
+table shows). The capture clicks a camera-image cell of shot 7, so below it
+Selected cell shows the full preview, then Shot detail (open by default:
+facts, the review control, events, data products and only that shot's
+datasets as a tree).
 
 ![Shot table](screenshots/shot-table.png)
 

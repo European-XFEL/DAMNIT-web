@@ -95,3 +95,45 @@ export function filterCampaigns(
     campaign.title.toLowerCase().includes(needle)
   )
 }
+
+const LAST_CAMPAIGN_KEY = 'hzdr.home.lastCampaign'
+
+/** Remember the campaign a person opened, for "Continue with" on Home. */
+export function rememberLastCampaign(key: string) {
+  try {
+    window.localStorage.setItem(LAST_CAMPAIGN_KEY, key)
+  } catch {
+    // blocked storage: Home simply offers no "Continue with"
+  }
+}
+
+export function readLastCampaign(): string | null {
+  try {
+    return window.localStorage.getItem(LAST_CAMPAIGN_KEY)
+  } catch {
+    return null
+  }
+}
+
+/** The numbers a person scans first: what exists, what is new, what waits. */
+export function homeGlance(campaigns: HomeCampaignSummary[]) {
+  let shots = 0
+  let today = 0
+  let waiting = 0
+  let newest: HomeCampaignSummary | undefined
+  for (const campaign of campaigns) {
+    shots += campaign.shotCount
+    today += campaign.firedToday
+    waiting += campaign.waiting
+    if (
+      campaign.lastShotMs !== null &&
+      (newest?.lastShotMs == null || campaign.lastShotMs > newest.lastShotMs)
+    ) {
+      newest = campaign
+    }
+  }
+  const busiest = campaigns
+    .filter((campaign) => campaign.waiting > 0)
+    .sort((a, b) => b.waiting - a.waiting)[0]
+  return { campaigns: campaigns.length, shots, today, waiting, newest, busiest }
+}

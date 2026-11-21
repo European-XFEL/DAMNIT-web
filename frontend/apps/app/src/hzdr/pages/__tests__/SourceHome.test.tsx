@@ -135,7 +135,7 @@ describe('HZDRSourceHome', () => {
       </MantineProvider>
     )
     expect(screen.getByRole('heading', { name: 'Campaigns' })).toBeTruthy()
-    await screen.findByRole('link', { name: 'Target_Alignment_11.2026' })
+    await screen.findAllByTestId('home-campaign-row')
     const rows = screen.getAllByTestId('home-campaign-row')
     expect(rows).toHaveLength(2)
     expect(
@@ -159,7 +159,9 @@ describe('HZDRSourceHome', () => {
     })
     expect(screen.getAllByTestId('home-campaign-row')).toHaveLength(1)
     expect(
-      screen.getByRole('link', { name: 'Pilot_Old_01.2026' })
+      within(screen.getByTestId('home-campaign-row')).getByRole('link', {
+        name: 'Pilot_Old_01.2026',
+      })
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Filter campaigns'), {
@@ -167,5 +169,38 @@ describe('HZDRSourceHome', () => {
     })
     expect(screen.queryAllByTestId('home-campaign-row')).toHaveLength(0)
     expect(screen.getByText(/No campaign matches/)).toBeInTheDocument()
+  })
+
+  it('helps people get oriented: figures, the last campaign and a guide', async () => {
+    window.localStorage.setItem('hzdr.home.lastCampaign', 'old')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve(SOURCES) })
+      )
+    )
+    render(
+      <MantineProvider>
+        <MemoryRouter>
+          <HZDRSourceHome />
+        </MemoryRouter>
+      </MantineProvider>
+    )
+    await screen.findAllByTestId('home-campaign-row')
+    expect(
+      screen.getByRole('heading', { name: 'DAMNIT-web at HZDR' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Continue with Pilot_Old_01.2026' })
+    ).toHaveAttribute('href', '/source/old')
+    expect(screen.getByText('Waiting for a decision')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Open Review matches' })
+    ).toHaveAttribute('href', '/review-matches?source=new')
+    expect(screen.getByRole('heading', { name: 'How it works' })).toBeTruthy()
+    expect(
+      screen.getByRole('link', { name: 'Your own columns' })
+    ).toHaveAttribute('href', '/docs#own-columns')
+    window.localStorage.clear()
   })
 })

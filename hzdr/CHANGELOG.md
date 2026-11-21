@@ -6,6 +6,29 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Shot table: links to a shot, and trend points that open their shot
+- The selected shot is in the address (`?shot=<shot_key>`, or a shot
+  number), so a copied URL opens the campaign on that shot; Shot detail has
+  **Copy link** beside the shot key, for a logbook or a chat.
+- A point on the Trends curve is a button: clicking it (or Enter) selects
+  that shot in the table and scrolls to it; the selected shot is marked on
+  the curve.
+
+### Home: help to get oriented
+- Home opens with what DAMNIT-web is for, the figures at a glance
+  (campaigns, shots today, decisions waiting with a link to Review matches,
+  the newest shot and its campaign) and **Continue with** the campaign last
+  opened in this browser (localStorage). Beside the campaign list, *How it
+  works* gives three steps (open a campaign, add your own columns, settle
+  what DAMNIT will not guess), each linking its Docs section, and points to
+  Flow monitor when shots are not arriving.
+
+### Shot table: Trends at the top of the side panel
+- The trend (pick a value, see it over the shots) is now the first panel
+  beside the table, named **Trends**, above Selected cell and Shot detail;
+  it was at the bottom as "Shot sets", below the long Shot detail. It plots
+  the shots the table shows, so the quick filters and the text filter apply.
+
 ### UI cleanup across every page (from the UI review)
 - **Header:** "Inspect sources" is now **Campaigns**. Below tablet width the
   tabs fold into a menu button, so every page is reachable on a phone;

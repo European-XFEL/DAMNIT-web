@@ -49,3 +49,14 @@ export function toTrendValue(shot: HZDRShot, value: number): HZDRTrendValue {
     label: formatShotLabel(shot),
   }
 }
+
+/** The value `?shot=` carries for a shot: its shot_key, else its number. */
+export function shotLinkValue(shot: HZDRShot): string {
+  return shot.shot_key || String(shot.shot_number)
+}
+
+/** Whether a `?shot=` value names this shot (its shot_key or its number). */
+export function shotMatchesLink(shot: HZDRShot, link: string | null): boolean {
+  if (!link) return false
+  return shot.shot_key === link || String(shot.shot_number) === link
+}

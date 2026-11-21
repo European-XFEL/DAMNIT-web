@@ -335,10 +335,16 @@ export function MetadataTrendPreview({
   values,
   title = 'Trend preview',
   xLabel = 'shot number',
+  selectedRowKey,
+  onSelectPoint,
 }: {
   values: HZDRTrendValue[]
   title?: string
   xLabel?: string
+  /** The shot to mark on the curve (the table's selected shot). */
+  selectedRowKey?: string
+  /** Given, each point with a rowKey is a button that selects its shot. */
+  onSelectPoint?: (rowKey: string) => void
 }) {
   if (!values.length) {
     return (
@@ -398,7 +404,10 @@ export function MetadataTrendPreview({
         viewBox={`0 0 ${chart.width} ${chart.height}`}
         width="100%"
         height="240"
-        role="img"
+        role={onSelectPoint ? 'group' : 'img'}
+        aria-label={
+          onSelectPoint ? `${title}: click a point to open its shot` : undefined
+        }
         preserveAspectRatio="xMidYMid meet"
         style={{
           border: '1px solid var(--mantine-color-gray-4)',
@@ -448,18 +457,60 @@ export function MetadataTrendPreview({
         {values.map((entry, index) => {
           const x = xForIndex(index)
           const y = yForValue(entry.value)
+          const selected =
+            selectedRowKey !== undefined && entry.rowKey === selectedRowKey
+          const description = `Shot ${entry.label ?? entry.shotNumber}: ${formatTrendValue(entry.value)}`
+          const rowKey = entry.rowKey
+          const clickable = Boolean(onSelectPoint && rowKey)
+          const select = () => {
+            if (onSelectPoint && rowKey) onSelectPoint(rowKey)
+          }
           return (
-            <g key={entry.rowKey ?? index}>
+            <g
+              key={rowKey ?? index}
+              data-selected={selected || undefined}
+              {...(clickable
+                ? {
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-label': `Open ${description}`,
+                    'aria-pressed': selected,
+                    style: { cursor: 'pointer' },
+                    onClick: select,
+                    onKeyDown: (event: React.KeyboardEvent) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        select()
+                      }
+                    },
+                  }
+                : {})}
+            >
+              {clickable ? (
+                // A larger, invisible target: a 3 px dot is hard to hit.
+                <circle cx={x} cy={y} r="8" fill="transparent" />
+              ) : null}
+              {selected ? (
+                <circle
+                  cx={x}
+                  cy={y}
+                  r="6.5"
+                  fill="none"
+                  stroke="var(--mantine-color-orange-6)"
+                  strokeWidth="2"
+                />
+              ) : null}
               <circle
                 cx={x}
                 cy={y}
-                r="3.2"
-                fill="var(--mantine-color-blue-7)"
+                r={selected ? 4 : 3.2}
+                fill={
+                  selected
+                    ? 'var(--mantine-color-orange-6)'
+                    : 'var(--mantine-color-blue-7)'
+                }
               />
-              <title>
-                Shot {entry.label ?? entry.shotNumber}:{' '}
-                {formatTrendValue(entry.value)}
-              </title>
+              <title>{description}</title>
             </g>
           )
         })}

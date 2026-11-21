@@ -261,8 +261,12 @@ export function HZDRDocsPage() {
               <DocSection id="find-your-campaign">
                 <Text size="sm">
                   Open <b>Campaigns</b> in the header (on a phone, the menu
-                  button at the top left). The newest campaign comes first; type
-                  in <b>Filter campaigns</b> to find one by name. Each row shows
+                  button at the top left). The top of the page has the figures
+                  at a glance (campaigns, shots today, decisions waiting, the
+                  newest shot), <b>Continue with</b> the campaign you last
+                  opened in this browser, and a short <i>How it works</i> beside
+                  the list. The newest campaign comes first; type in{' '}
+                  <b>Filter campaigns</b> to find one by name. Each row shows
                   the last shot, the number of shots and how many came today,
                   and what waits for you: decisions in Review matches (click the
                   chip to go there) and shots marked <i>Needs review</i> or{' '}
@@ -300,7 +304,14 @@ export function HZDRDocsPage() {
                   </List.Item>
                   <List.Item>
                     <b>Click a shot</b> to open it in Shot detail; the{' '}
-                    <b>arrow keys</b> move to the shot above or below.
+                    <b>arrow keys</b> move to the shot above or below. The
+                    address names the selected shot, and <b>Copy link</b> in
+                    Shot detail copies a link that opens on it.
+                  </List.Item>
+                  <List.Item>
+                    <b>Trends</b>, at the top of the side panel: pick a value to
+                    plot it over the shots the table shows (the filters apply).
+                    Click a point to open that shot.
                   </List.Item>
                   <List.Item>
                     <b>Click a cell</b> for its value; a number opens a trend

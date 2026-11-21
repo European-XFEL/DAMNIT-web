@@ -28,7 +28,11 @@ import {
   statusColor,
 } from '../utils/format'
 import { formatTargetLabel } from '../utils/metadata'
-import { formatShotLabel, getShotRowKey } from '../utils/shot-key'
+import {
+  formatShotLabel,
+  getShotRowKey,
+  shotLinkValue,
+} from '../utils/shot-key'
 import {
   formatMetadataCorrectionDraft,
   isCorrectableMetadataKey,
@@ -80,8 +84,49 @@ function ShotField({
   )
 }
 
+/** A link to the campaign page opened on this shot (`?shot=`). */
+function shotLinkUrl(sourceKey: string | undefined, shot: HZDRShot) {
+  if (!sourceKey) return undefined
+  const params = new URLSearchParams({ shot: shotLinkValue(shot) })
+  return `${window.location.origin}/source/${encodeURIComponent(sourceKey)}?${params.toString()}`
+}
+
+function CopyLinkButton({ link }: { link: string }) {
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  useEffect(() => setState('idle'), [link])
+  const copy = () => {
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(link))
+      .then(() => setState('copied'))
+      .catch(() => setState('failed'))
+  }
+  return (
+    <Button
+      size="compact-xs"
+      variant="subtle"
+      color={state === 'failed' ? 'red' : undefined}
+      onClick={copy}
+      title={link}
+      style={{ flex: '0 0 auto' }}
+    >
+      {state === 'copied'
+        ? 'Link copied'
+        : state === 'failed'
+          ? 'Could not copy'
+          : 'Copy link'}
+    </Button>
+  )
+}
+
 /** The shot key in monospace, wrapping at any character, with a copy button. */
-export function ShotKeyField({ shotKey }: { shotKey?: string }) {
+export function ShotKeyField({
+  shotKey,
+  link,
+}: {
+  shotKey?: string
+  /** A link that opens the campaign on this shot, to paste in a logbook. */
+  link?: string
+}) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>(
     'idle'
   )
@@ -119,6 +164,7 @@ export function ShotKeyField({ shotKey }: { shotKey?: string }) {
               ? 'Could not copy'
               : 'Copy'}
         </Button>
+        {link ? <CopyLinkButton link={link} /> : null}
       </Group>
     </ShotField>
   )
@@ -414,7 +460,10 @@ export function ShotDetailPanel({
             <ShotField label="LabFrog record" value={shot.labfrog_record_id} />
             <ShotField label="LabFrog local count" value={localCount} />
           </SimpleGrid>
-          <ShotKeyField shotKey={shot.shot_key} />
+          <ShotKeyField
+            shotKey={shot.shot_key}
+            link={shotLinkUrl(sourceKey, shot)}
+          />
           <ShotField label="HDF5 file">
             {shot.hdf5_path ? (
               <Code
