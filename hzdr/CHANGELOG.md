@@ -6,6 +6,20 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### The one-to-one time rule measured on real shot days
+- `api/scripts/hzdr-evaluate-time-rule.py` scores the rule against
+  shot-aligner's day indexes: each acquisition as the watchdog event DAMNIT
+  receives (raw instrument clock), each Shotsheet row as a shot, every pair
+  checked against the reviewer's link.
+- On 2025-12-01 and 2025-12-03 (Vanlife) the rule mispairs 21 to 56 % of
+  what it pairs at 90 s or less, and pairs 0.4 to 16 % of files at 120 s or
+  more. Instrument clocks run up to about two minutes off, `Zeit` is typed to
+  the minute, and shots are a median 60 s apart on 12-03. **Leave
+  `TIME_MATCH_ONE_TO_ONE` off**; `next-on-server.md` item 8 says so and how to
+  measure a LabFrog day with triggers on the server. Results and the next
+  options (clock-offset fitting as shot-aligner does; the rule for triggers
+  only): `hzdr/docs/plans/plan-time-rule-real-data.md`.
+
 ### Review matches made more automatic, the way shot-aligner does it
 Ruling R-2026-11-21 (maintainer: all options, "use how shot aligner does
 it"); plan and checklist in `hzdr/docs/plans/plan-review-automation.md`.

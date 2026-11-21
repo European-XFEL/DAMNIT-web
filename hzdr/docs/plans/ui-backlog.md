@@ -129,12 +129,14 @@ in the commit that does the work).
 On the server (maintainer), in order; `hzdr/docs/guides/next-on-server.md`:
 1. Deploy #57 and #58 together: `next-on-server.sh`, look first, then
    `--apply` (item 6 says what to check in the browser).
-2. Turn on the review rules and rebuild (item 8):
-   `TIME_MATCH_ONE_TO_ONE=true`; `NEVER_SHOT_KINDS` once the test-fire
-   kinds are known; check `CAMPAIGN_TIMEZONE` and `CAMPAIGN_SCHEDULE`.
-3. At the first shot day without authority numbers: count what the
-   one-to-one rule paired and what waits, and set `MATCH_TOLERANCE_S` if
-   DRACO's shots come closer than 120 s.
+2. Review rules (item 8): leave `TIME_MATCH_ONE_TO_ONE` off (measured on
+   real shot days: it mispairs watchdog files;
+   [plan-time-rule-real-data.md](plan-time-rule-real-data.md)); set
+   `NEVER_SHOT_KINDS` once the test-fire kinds are known; check
+   `CAMPAIGN_TIMEZONE` and `CAMPAIGN_SCHEDULE`; rebuild.
+3. Measure more days on the server with `hzdr-evaluate-time-rule.py`,
+   above all a LabFrog day with DRACO triggers. Then decide R2 (clock-offset
+   fitting, as shot-aligner does) and R3 (the rule for triggers only).
 4. Shot containers only on a decision: phase 6 first (item 7,
    `operations.md` go-live checklist).
 5. Merge GitLab hzdr-combo !117 (and !116) and fwkt-webapps !106; delete or

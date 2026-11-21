@@ -4,6 +4,10 @@ Assessment of 2026-11-21, after DAMNIT PR #58. Status: **all of it is done**
 on PR #58: the first tier (§3), and every item of §4, which the maintainer
 chose on 2026-11-21 with shot-aligner's one-to-one time rule for item 5.
 Plan, rulings and checklist: [plan-review-automation.md](plan-review-automation.md).
+Measured on real shot days afterwards
+([plan-time-rule-real-data.md](plan-time-rule-real-data.md)): the one-to-one
+rule stays **off** for watchdog files (instrument clocks run up to two
+minutes off); the rest needs no setting.
 
 ## 1. How it works today
 

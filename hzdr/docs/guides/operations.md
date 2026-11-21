@@ -139,7 +139,11 @@ without one, and three settings decide how much waits in Review matches
   when the two are each other's only neighbour within
   `MATCH_TOLERANCE_S` (120 s) among events of its kind and instrument,
   shot-aligner's rule (`match_quality` `time_one_to_one`). Everything else
-  stays in review, with its reason shown.
+  stays in review, with its reason shown. **Off for now:** on shot-aligner's
+  real shot days it mispairs watchdog files at 90 s or less and pairs almost
+  nothing at 120 s or more, because instrument clocks run up to two minutes
+  off (`hzdr/docs/plans/plan-time-rule-real-data.md`). Measure a day with
+  `scripts/hzdr-evaluate-time-rule.py` before turning it on.
 - **`DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS=["..."]`**: event kinds that are
   never a shot (test fires); their unmatched events are acknowledged by rule
   and listed under Resolved. Removing a kind reopens them at the next build.

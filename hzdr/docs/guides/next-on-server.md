@@ -90,25 +90,34 @@ files still `MISSING` the column.
    compared with `hzdr-compare-containers.py`), then
    `DW_API_HZDR_BUILDER__CONTAINERS_ENABLED=true` and a first worker pass by
    hand.
-8. **Review matches rules (DAMNIT PR #58, ruling R-2026-11-21).** After the
-   deploy, in `~/DAMNIT-web-hzdr/api/.env`:
+8. **Review matches rules (DAMNIT PR #58, ruling R-2026-11-21).** Measured
+   on shot-aligner's real shot days
+   ([plan-time-rule-real-data.md](../plans/plan-time-rule-real-data.md)):
+   **leave `DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE` off** for now. On raw
+   instrument clocks it pairs files to the wrong shot at 90 s or less (21 to
+   56 % of its pairs), and pairs almost nothing at 120 s or more. What
+   needs no setting carries the load: the reasons, the suggestions, bulk
+   confirm and campaign suggestions. In `~/DAMNIT-web-hzdr/api/.env`:
    ```bash
-   DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true
    # once the test-fire kinds are known (look in Review matches > Unmatched):
    # DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS=["draco.test_fire"]
    ```
    Check `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE=Europe/Berlin` and
-   `CAMPAIGN_SCHEDULE` too (the `labfrog` step reports both rules and the
-   schedule). Then `sudo systemctl restart damnit-api` and rebuild, since a
-   restart builds nothing:
+   `CAMPAIGN_SCHEDULE` too (the `labfrog` step reports the schedule and both
+   rules). Restart `damnit-api` and rebuild, since a restart builds nothing:
    `cd ~/DAMNIT-web-hzdr/api && uv run --no-sync python scripts/hzdr-rebuild.py`.
-   Open Review matches: every waiting event says *why it waits*. Events the
-   rule attached show *By time, one to one* among their shot's events.
-   **At the first shot day without authority numbers,** count how many
-   events paired and how many wait as `several_shots_in_tolerance` or
-   `shot_has_other_event`. If shots come closer together than 120 s, lower
-   `DW_API_HZDR_BUILDER__MATCH_TOLERANCE_S` and rebuild. To undo, set the
-   rule back to `false` and rebuild: nothing it attached is stored.
+   Then open Review matches: every waiting event says *why it waits*.
+   **Measure more days on the server**, above all a LabFrog shot day with
+   DRACO triggers (that decides whether the rule is worth turning on for
+   triggers alone). Use shot-aligner's day index for that date:
+   ```bash
+   cd ~/DAMNIT-web-hzdr/api
+   uv run --no-sync python scripts/hzdr-evaluate-time-rule.py \
+       ~/shot-aligner/shot_aligner/index/<date>.index.json --truth matched \
+       --json ~/time-rule-<date>.json
+   ```
+   Look at `wrong` at each tolerance: any wrong pair is a silent error.
+   Put the table into the plan's results.
 
 ## 3. SciCat: clean up the duplicate datasets
 

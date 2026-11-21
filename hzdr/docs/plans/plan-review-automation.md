@@ -150,8 +150,11 @@ A box is ticked in the commit that does the work.
   `NEVER_SHOT_KINDS` once the test-fire kinds are known), restart, rebuild
   (`scripts/hzdr-rebuild.py`), then check Review matches: events now
   attached show `time_one_to_one` in their shot's events.
-- **Real data, next:** planned in [plan-time-rule-real-data.md](plan-time-rule-real-data.md)
-  (shot-aligner's indexed shot days).
+- **Real data:** measured in [plan-time-rule-real-data.md](plan-time-rule-real-data.md)
+  on shot-aligner's two committed shot days. Leave the one-to-one rule off for
+  watchdog files: it mispairs 21 to 56 % at 90 s or less and pairs 0.4 to
+  16 % at 120 s or more. Clock-offset fitting (R2) and a triggers-only rule
+  (R3) are the next decisions.
 - **Not done here, needs real data:** a run against a real shot day
   without authority numbers, to see how many events the rule pairs and
   whether the 120 s tolerance suits DRACO's shot spacing. shot-aligner's

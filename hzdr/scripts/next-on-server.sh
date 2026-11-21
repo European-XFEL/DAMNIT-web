@@ -339,9 +339,9 @@ check_review_rules() {
     fi
     read -r one_to_one kinds <<< "$rules"
     if [ "$one_to_one" = 1 ]; then
-        ok "DAMNIT one-to-one time rule is on (TIME_MATCH_ONE_TO_ONE)"
+        warn "DAMNIT one-to-one time rule is on (TIME_MATCH_ONE_TO_ONE): measured, it mispairs watchdog files; keep it only if a measured day says so (next-on-server.md item 8)"
     else
-        would "DAMNIT one-to-one time rule is off: set DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true, restart, rebuild (next-on-server.md item 8)"
+        ok "DAMNIT one-to-one time rule is off, as recommended until a measured day says otherwise (next-on-server.md item 8)"
     fi
     if [ "${kinds:-0}" -gt 0 ]; then
         ok "DAMNIT never-shot kinds: $kinds listed (NEVER_SHOT_KINDS)"

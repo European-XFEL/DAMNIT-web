@@ -67,6 +67,7 @@ python api/scripts/hzdr-hdf5-builder.py --experiment-id <id> --campaign-timezone
     --labfrog-sqlite <c>.sqlite --trigger-jsonl <triggers>.jsonl --output-nexus <c>.nxs
 python api/scripts/hzdr-container-worker.py --master <c>.nxs   # shot containers into <c's folder>/shots/ (or --output-root)
 python api/scripts/hzdr-compare-containers.py --damnit <campaign folder> --aligner <shot-aligner build>   # phase 6: diff against shot-aligner's containers
+python api/scripts/hzdr-evaluate-time-rule.py <shot-aligner>/shot_aligner/index/<date>.index.json --truth matched   # score the one-to-one time rule on a real shot day
 python api/scripts/hzdr-local-acceptance.py        # emulator events through Confirm Matches, no broker
 python api/scripts/hzdr-local-acceptance.py --real-topology   # the deployed flow rehearsed: unassigned triggers, export, schedule, multi-campaign build, a ruling
 python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hzdr-event-v1 schema + sample fixtures
@@ -300,7 +301,11 @@ one shot attaches on the number alone; `true` restores the earlier ladder,
 which attached a numbered trigger to a neighbouring LabFrog shot by time).
 `DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE` (default `false`; ruling
 R-2026-11-21) adds shot-aligner's one-to-one time rule for events without a
-shot number (`time_one_to_one`, see Match quality ranks), and
+shot number (`time_one_to_one`, see Match quality ranks); keep it off for
+watchdog files: on shot-aligner's real shot days raw instrument clocks run up
+to two minutes off and it mispairs them
+([plan-time-rule-real-data.md](hzdr/docs/plans/plan-time-rule-real-data.md),
+`api/scripts/hzdr-evaluate-time-rule.py`). And
 `DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS` (JSON list, default empty) has the
 catalog acknowledge unmatched events of those kinds by rule
 (`rule:never_shot_kinds`). Review events carry `review_reason` and, from
