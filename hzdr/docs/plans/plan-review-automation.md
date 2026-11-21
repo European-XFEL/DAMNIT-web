@@ -102,10 +102,15 @@ A box is ticked in the commit that does the work.
       the row ("Suggested: the shots before and after it that day are in
       X") and offers **Assign the N suggested** behind a second click, each
       ruling's note saying why. Tests: 1 route, 1 component
-- [ ] **Item 4, kinds that are never a shot** (builder, settings):
-      `DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS` (a JSON list of `kind`s); their
-      unmatched events are acknowledged by rule (D4) and listed under
-      Resolved; a matched event of such a kind is left alone
+- [x] **Item 4, kinds that are never a shot** (builder, settings):
+      `DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS` (JSON list) ->
+      `--never-shot-kind` (repeatable) -> `write_sources_catalog`'s
+      `_acknowledge_never_shot_kinds`, after the stored decisions: an
+      unmatched, undecided event of a listed kind is flagged acknowledged by
+      `rule:never_shot_kinds` with a note naming the kind (Resolved shows
+      who). Ambiguous events and a person's decision are left alone; nothing
+      goes into the sidecar, so removing a kind reopens its events at the
+      next build. Tests: 3
 - [ ] **Item 1, the campaign schedule** (operations): `next-on-server.sh`
       reports whether `CAMPAIGN_SCHEDULE` is set, the file exists and how old
       it is; `operations.md` says why it matters while triggers lack the

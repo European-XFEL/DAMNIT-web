@@ -500,3 +500,70 @@ def test_review_suggests_the_campaign_both_neighbours_are_in(tmp_path, monkeypat
         }
     }
     assert pilot["campaign_suggestions"] == {}
+
+
+# --- item 4: kinds that are never a shot ----------------------------------------
+
+
+def test_never_shot_kinds_are_acknowledged_by_rule_in_the_catalog(tmp_path):
+    import orjson
+
+    from damnit_api.metadata.hzdr_nexus import NEVER_SHOT_RULE, write_sources_catalog
+
+    shots, built = build(
+        [
+            trigger("test-fire", "2026-06-10T15:00:00Z", kind="draco.test_fire"),
+            trigger("real", "2026-06-10T15:30:00Z"),
+            trigger("near", "2026-06-10T12:00:10Z", kind="draco.test_fire"),
+        ],
+        [labfrog_row("a", "2026-06-10T12:00:00Z")],
+    )
+    sources_file = tmp_path / "hzdr_sources.json"
+    write_sources_catalog(
+        sources_file=sources_file,
+        source_key="hzdr-labfrog",
+        experiment_id=EXPERIMENT,
+        nexus_path=tmp_path / "c.nxs",
+        shots=shots,
+        events=built,
+        never_shot_kinds=["draco.test_fire"],
+    )
+    source = orjson.loads(sources_file.read_bytes())["sources"][0]
+    by_id = {event["event_id"]: event for event in source["review_events"]}
+    assert by_id["test-fire"]["acknowledged"] is True
+    assert by_id["test-fire"]["acknowledged_by"] == NEVER_SHOT_RULE
+    assert "draco.test_fire" in by_id["test-fire"]["acknowledged_note"]
+    # Another kind, and an ambiguous event of the listed kind, stay open.
+    assert not by_id["real"].get("acknowledged")
+    assert by_id["near"]["match_status"] == "ambiguous"
+    assert not by_id["near"].get("acknowledged")
+    assert source["match_summary"]["unmatched"] == 1
+
+
+def test_a_persons_decision_stands_over_the_rule():
+    from damnit_api.metadata.hzdr_nexus import _acknowledge_never_shot_kinds
+
+    decided = {
+        "event_id": "e1",
+        "kind": "draco.test_fire",
+        "match_status": "unmatched",
+        "acknowledged": True,
+        "acknowledged_by": "kim",
+    }
+    [kept] = _acknowledge_never_shot_kinds([decided], ["draco.test_fire"])
+    assert kept["acknowledged_by"] == "kim"
+    assert _acknowledge_never_shot_kinds([decided], []) == [decided]
+
+
+def test_the_trigger_passes_never_shot_kinds(tmp_path):
+    from damnit_api.consumer.builder_trigger import BuilderTrigger
+    from damnit_api.shared.hzdr_settings import HZDRBuilderSettings
+
+    settings = HZDRBuilderSettings(
+        enabled=True,
+        output_nexus=tmp_path / "c.nxs",
+        never_shot_kinds=["draco.test_fire", "heartbeat"],
+    )
+    command = BuilderTrigger(settings, trigger_jsonl=[]).build_command()
+    joined = " ".join(command)
+    assert "--never-shot-kind draco.test_fire --never-shot-kind heartbeat" in joined

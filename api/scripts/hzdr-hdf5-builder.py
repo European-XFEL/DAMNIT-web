@@ -278,6 +278,7 @@ def build(
             scicat=scicat,
             merge=merge_catalog,
             title=catalog_title,
+            never_shot_kinds=getattr(args, "never_shot_kind", None) or (),
         )
     return output_nexus, sources_file
 
@@ -655,6 +656,15 @@ def main() -> None:
             "two are each other's only neighbour within --match-tolerance-s in "
             "the event's stream (shot-aligner's one-to-one rule, ruling "
             "R-2026-11-21). Anything less stays in review."
+        ),
+    )
+    parser.add_argument(
+        "--never-shot-kind",
+        action="append",
+        default=[],
+        help=(
+            "An event kind that is never a shot; its unmatched events are "
+            "acknowledged by rule instead of waiting for review. Repeatable."
         ),
     )
     args = parser.parse_args()

@@ -274,6 +274,11 @@ class HZDRBuilderSettings(BaseModel):
     # (match_quality "time_one_to_one"). Anything less stays in review.
     # time_match_autoassign=True takes precedence.
     time_match_one_to_one: bool = False
+    # Event kinds that are never a shot (test fires, heartbeats): their
+    # unmatched events are acknowledged by rule ("rule:never_shot_kinds")
+    # instead of waiting in Review matches. A JSON list, e.g.
+    # ["draco.test_fire"]. Empty: off. Removing a kind reopens its events.
+    never_shot_kinds: list[str] = Field(default_factory=list)
     # LabFrog labfrog-campaign-schedule-v1 export whose windows route
     # "unassigned" events (plan W1, decision D4).
     campaign_schedule: Path | None = None

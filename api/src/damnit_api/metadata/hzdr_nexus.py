@@ -825,6 +825,46 @@ def _apply_review_decisions(
     return remaining, shots
 
 
+#: Who acknowledged an event the never-shot-kinds rule closed.
+NEVER_SHOT_RULE = "rule:never_shot_kinds"
+
+
+def _acknowledge_never_shot_kinds(
+    review_events: list[dict[str, Any]], kinds: Iterable[str]
+) -> list[dict[str, Any]]:
+    """Acknowledge, by rule, unmatched events of a kind that is never a shot.
+
+    Only events still open after the stored decisions: a person's decision
+    always stands, and an ambiguous event (it has candidates) is left to a
+    person. The flag names the rule, so the page lists the event under
+    Resolved with who decided; taking the kind out of the setting reopens it
+    at the next build (nothing is written to the review sidecar).
+    """
+    listed = {kind.strip() for kind in kinds if kind.strip()}
+    if not listed:
+        return review_events
+    closed: list[dict[str, Any]] = []
+    for event in review_events:
+        if (
+            event.get("match_status") == "unmatched"
+            and not event.get("acknowledged")
+            and event.get("kind") in listed
+        ):
+            event = {
+                **event,
+                "acknowledged": True,
+                "acknowledged_at": datetime.now(UTC).isoformat(),
+                "acknowledged_by": NEVER_SHOT_RULE,
+                "acknowledged_note": (
+                    f"Kind {event.get('kind')} is never a shot "
+                    "(DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS)"
+                ),
+                "review_level": "BASE",
+            }
+        closed.append(event)
+    return closed
+
+
 def load_normalized_events(paths: Iterable[Path]) -> list[dict[str, Any]]:
     """Load normalized events from JSON or JSONL files.
 
@@ -3532,6 +3572,7 @@ def write_sources_catalog(
     scicat: dict[str, Any] | None = None,
     merge: bool = False,
     title: str | None = None,
+    never_shot_kinds: Iterable[str] = (),
 ) -> None:
     """Write DAMNIT-web's compact source catalog from canonical shots.
 
@@ -3546,6 +3587,10 @@ def write_sources_catalog(
     builds, which share one catalog) only the entry with ``source_key`` is
     replaced and every other source is kept, under ``catalog_write_lock`` so
     two builders cannot drop each other's entry.
+
+    ``never_shot_kinds`` (``DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS``, decision
+    D4) acknowledges, by rule, the unmatched events of those kinds that no
+    person decided (``_acknowledge_never_shot_kinds``).
     """
     current_shots = [
         dict(shot)
@@ -3561,6 +3606,7 @@ def write_sources_catalog(
     review_events, current_shots = _apply_review_decisions(
         review_events, current_shots, decisions
     )
+    review_events = _acknowledge_never_shot_kinds(review_events, never_shot_kinds)
     match_summary = _build_match_summary(current_shots, review_events)
     source_metadata: dict[str, Any] = {
         "facility": "HZDR",

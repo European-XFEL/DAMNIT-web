@@ -309,6 +309,8 @@ class BuilderTrigger:
             if s.time_match_one_to_one
             else "--no-time-match-one-to-one"
         )
+        for kind in s.never_shot_kinds:
+            args += ["--never-shot-kind", kind]
         return args
 
     async def _run_subprocess(self, cmd: Sequence[str]) -> tuple[int, str]:
