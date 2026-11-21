@@ -1,8 +1,8 @@
-# e2e examples
+# Integration suite examples
 
 The `xpcs` base data (`runs.json` + `context.py`) is the demo's canonical
 example, read directly from `apps/demo/public/examples/xpcs/` by `xpcs/index.ts`.
-There is one copy, so the demo and the e2e mocks cannot drift apart; if the
+There is one copy, so the demo and the integration mocks cannot drift apart; if the
 example is ever regenerated, the assertions below break loudly instead of the
 tests quietly running on stale data.
 
