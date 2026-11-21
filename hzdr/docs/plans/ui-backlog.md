@@ -14,8 +14,10 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   context-variable input for "this shot's container" (API) plus a
   `{container}` template in `utils/hdf5.ts` (`hdf5PerShotTemplateName`).
   Before containers go live.
-- [ ] **Phone-width CI check:** an e2e at 390 px that fails on horizontal
-  scroll.
+- [x] **Phone-width CI check:** an e2e at 390 px that fails on horizontal
+  scroll. Done: `frontend/e2e/tests/app/hzdr/phone-width.spec.ts` (Home,
+  Flow monitor, Review matches, Docs, the shot table), HZDR routes mocked
+  in `frontend/e2e/support/hzdr.ts`; runs in CI's existing e2e job.
 - [ ] Trends for context columns and a second value; highlight new shots;
   saved views as chips; CSV export.
 - [ ] Reset or delete branch `claude/dazzling-noether-br3edr` on GitHub
@@ -28,6 +30,10 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [ ] Review matches (`utils/review.ts`) still loads the full sources list
   to pick the busiest campaign; it could open on the summaries and fetch
   only the chosen campaign.
+
+- [ ] The shot page's campaign strip says "No shots yet." whenever no shot
+  names a data source (`summarizeShotDataSources`), even with shots in the
+  table; it should say that no data source is known yet.
 
 ## Suggestions (agreed 2026-11-21)
 
@@ -56,5 +62,7 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   frontend can warn when it is deployed without its matching API. Done:
   `GET /config/version` (commit read once at start-up), the build's
   `VITE_DAMNIT_COMMIT`, a header badge from `sm` up.
-- [ ] **End-to-end smoke test of Home** against the local acceptance stack,
-  next to the phone-width check.
+- [x] **End-to-end smoke test of Home** against the local acceptance stack,
+  next to the phone-width check. Done, mocked rather than against the
+  acceptance stack (CI has no API): `tests/app/hzdr/home.spec.ts` checks
+  Home reads the summary route and never the full list.

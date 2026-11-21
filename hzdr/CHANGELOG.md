@@ -19,6 +19,12 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### e2e: HZDR pages at phone width, and Home's summary route
+- `frontend/e2e/tests/app/hzdr/`: Home, Flow monitor, Review matches, Docs
+  and the shot table must not scroll sideways at 390 px; Home must read
+  `source-summaries` and never the full sources list. The HZDR routes are
+  mocked in `frontend/e2e/support/hzdr.ts`; CI's e2e job runs them.
+
 ### Header: a warning when the frontend and the API are out of step
 - `GET /config/version` returns the `damnit-api` version and the checkout's
   commit when the process started. A frontend built with
