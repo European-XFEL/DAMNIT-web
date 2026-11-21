@@ -150,6 +150,8 @@ A box is ticked in the commit that does the work.
   `NEVER_SHOT_KINDS` once the test-fire kinds are known), restart, rebuild
   (`scripts/hzdr-rebuild.py`), then check Review matches: events now
   attached show `time_one_to_one` in their shot's events.
+- **Real data, next:** planned in [plan-time-rule-real-data.md](plan-time-rule-real-data.md)
+  (shot-aligner's indexed shot days).
 - **Not done here, needs real data:** a run against a real shot day
   without authority numbers, to see how many events the rule pairs and
   whether the 120 s tolerance suits DRACO's shot spacing. shot-aligner's
