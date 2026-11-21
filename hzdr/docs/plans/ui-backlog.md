@@ -32,7 +32,7 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [x] **Highlight new shots.** A quick-filter chip, "New since your last
   visit N": shots fired after the newest one this browser showed on the
   last visit to the campaign (one number per campaign in localStorage).
-  The table itself is unchanged; the page does not poll for shots.
+  The table itself is unchanged.
 - [ ] Reset or delete branch `claude/dazzling-noether-br3edr` on GitHub
   (needs the maintainer: a force-push or delete).
 - [x] shotcounter MR !1: stays open and parked (maintainer, 2026-11-21);
@@ -80,6 +80,20 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   next to the phone-width check. Done, mocked rather than against the
   acceptance stack (CI has no API): `tests/app/hzdr/home.spec.ts` checks
   Home reads the summary route and never the full list.
+
+## Next round (2026-11-21, after #57)
+
+- [x] **The shot page refreshes itself.** Every 20 s it reads the campaign
+  summary and fetches the shots again only when the count, newest shot or
+  review counts changed (`utils/new-shots.ts` `shotListChangeKey`,
+  `usePolling`); quiet, so selection and filters stay.
+- [ ] **Docs page and screenshots up to date** with Views, Download CSV,
+  New since your last visit, Compare with, the self-refresh and
+  `{container}` columns.
+- [ ] **Containers go-live checklist** in `hzdr/docs/guides/operations.md`:
+  the settings to turn on, what to check after the first build. Phase 6
+  (one campaign built by both us and shot-aligner, compared with
+  `hzdr-compare-containers.py`) needs server data: the maintainer's.
 
 ## Notes for the next session
 

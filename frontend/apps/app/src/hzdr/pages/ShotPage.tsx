@@ -75,6 +75,7 @@ import {
 } from '../utils/format'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
+import { usePolling } from '../hooks'
 import { summarizeShotDataSources } from '../utils/data-sources'
 import {
   formatShotLabel,
@@ -110,6 +111,7 @@ import {
   isNewShot,
   readLastSeenShot,
   rememberLastSeenShot,
+  shotListChangeKey,
 } from '../utils/new-shots'
 import { SavedViewChips } from '../components/SavedViewChips'
 
@@ -156,6 +158,8 @@ export function HZDRShotPage() {
   // in which the persisted view is applied (or defaults are restored) — the
   // filter/sort states still hold the previous source's values on that pass.
   const skipNextViewSave = useRef(false)
+  // The summary's shotListChangeKey the shown shots belong to (see the poll).
+  const shotListKeyRef = useRef<string>()
 
   // A view's filter, sort and columns; undefined resets to the defaults.
   // State setters only, so the identity never changes.
@@ -218,55 +222,89 @@ export function HZDRShotPage() {
     columnOrder,
   ])
 
+  // The shots and the user's context columns over them. `quiet` is the
+  // background refresh: no loading state, and a failure keeps what is shown.
+  const loadShots = useCallback(
+    (quiet = false) => {
+      if (!source_key) {
+        return Promise.resolve()
+      }
+      fetch(`/contextfile/campaign/${source_key}/me/results`)
+        .then((response) => (response.ok ? response.json() : undefined))
+        .then(setContextResults)
+        .catch(() => {
+          if (!quiet) setContextResults(undefined)
+        })
+
+      return fetch(`/metadata/hzdr/sources/${source_key}/shots`)
+        .then((response) => requireJson<HZDRShot[]>(response))
+        .then((loadedShots) => {
+          setShots(loadedShots)
+          setSelectedRowKey((currentRowKey) => {
+            if (
+              currentRowKey &&
+              loadedShots.some((shot) => getShotRowKey(shot) === currentRowKey)
+            ) {
+              return currentRowKey
+            }
+            const linked = linkedShotRef.current
+              ? loadedShots.find((shot) =>
+                  shotMatchesLink(shot, linkedShotRef.current)
+                )
+              : undefined
+            const first = linked ?? loadedShots[0]
+            return first ? getShotRowKey(first) : undefined
+          })
+          setDataState('ready')
+        })
+        .catch(() => {
+          if (!quiet) setDataState('error')
+        })
+    },
+    [source_key]
+  )
+
   const loadShotPageData = useCallback(() => {
     if (!source_key) {
       return
     }
 
     setDataState('loading')
+    shotListKeyRef.current = undefined
 
     fetch(`/metadata/hzdr/sources/${source_key}`)
       .then((response) => requireJson<HZDRSource>(response))
       .then(setSource)
       .catch(() => setSource(undefined))
 
-    fetch(`/metadata/hzdr/sources/${source_key}/shots`)
-      .then((response) => requireJson<HZDRShot[]>(response))
-      .then((loadedShots) => {
-        setShots(loadedShots)
-        setSelectedRowKey((currentRowKey) => {
-          if (
-            currentRowKey &&
-            loadedShots.some((shot) => getShotRowKey(shot) === currentRowKey)
-          ) {
-            return currentRowKey
-          }
-          const linked = linkedShotRef.current
-            ? loadedShots.find((shot) =>
-                shotMatchesLink(shot, linkedShotRef.current)
-              )
-            : undefined
-          const first = linked ?? loadedShots[0]
-          return first ? getShotRowKey(first) : undefined
-        })
-        setDataState('ready')
-      })
-      .catch(() => setDataState('error'))
-
-    fetch(sourceSummariesUrl())
-      .then((response) => requireJson<HZDRSourceSummary[]>(response))
-      .then(setAvailableSources)
-      .catch(() => setAvailableSources([]))
-
-    fetch(`/contextfile/campaign/${source_key}/me/results`)
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then(setContextResults)
-      .catch(() => setContextResults(undefined))
-  }, [source_key])
+    void loadShots()
+  }, [source_key, loadShots])
 
   useEffect(() => {
     loadShotPageData()
   }, [loadShotPageData])
+
+  // Every 20 s (while the tab is visible) read the cheap summary; fetch the
+  // shots again only when this campaign's count, newest shot or review
+  // counts changed. The first answer is the baseline for the page's load.
+  const pollSummaries = useCallback(
+    () =>
+      fetch(sourceSummariesUrl())
+        .then((response) => requireJson<HZDRSourceSummary[]>(response))
+        .then((summaries) => {
+          setAvailableSources(summaries)
+          const mine = summaries.find((summary) => summary.key === source_key)
+          if (!mine) return
+          const key = shotListChangeKey(mine)
+          const previous = shotListKeyRef.current
+          shotListKeyRef.current = key
+          if (previous !== undefined && previous !== key) {
+            return loadShots(true)
+          }
+        }),
+    [source_key, loadShots]
+  )
+  usePolling(pollSummaries, 20_000, { enabled: Boolean(source_key) })
 
   const versionStates = classifyShotVersions(shots)
   const currentShots = shots.filter((shot) =>

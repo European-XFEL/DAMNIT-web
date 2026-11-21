@@ -6,6 +6,14 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Shot table: new shots appear without a reload
+- The campaign page reads the campaign summary every 20 s while its tab is
+  visible (the same light route Home polls) and fetches the shots and your
+  context columns again only when the campaign's shot count, newest shot
+  or review counts changed. The refresh is quiet: the table, its selection,
+  filters and scroll stay as they are, and a failed refresh keeps what is
+  shown. A new shot counts in **New since your last visit**.
+
 ### Home: a light summary route instead of every shot
 - `GET /metadata/hzdr/source-summaries?since=<ISO>` returns each campaign's
   counts (shots, latest shot time, shots since `since`, decisions waiting,
