@@ -1,23 +1,7 @@
+import type { HZDRSourceSummary } from '../types'
 import { campaignTitle } from '../utils/format'
 
-/**
- * One campaign as GET /metadata/hzdr/source-summaries returns it: counts
- * only, so the 5-second Home poll does not carry every shot of every campaign.
- */
-export type HZDRSourceSummary = {
-  key: string
-  title: string
-  damnit_path: string
-  shot_count: number
-  last_shot_at: string | null
-  /** Shots fired at or after the request's `since` (local midnight). */
-  fired_since: number
-  waiting: number
-  needs_review: number
-  needs_revision: number
-  /** Shots whose fired_at is set but unreadable (older APIs: absent). */
-  unreadable_times?: number
-}
+export type { HZDRSourceSummary }
 
 export type HomeCampaignSummary = {
   key: string

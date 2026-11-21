@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   Alert,
   Grid,
@@ -20,6 +20,7 @@ import {
   sourceSummariesUrl,
   summarizeCampaign,
 } from '../components/homeCampaignSummary'
+import { usePolling } from '../hooks'
 import { requireJson } from '../utils/api'
 
 function countLine(campaigns: number, shots: number) {
@@ -34,24 +35,23 @@ export function HZDRSourceHome() {
   const [query, setQuery] = useState('')
   const [lastCampaignKey] = useState(readLastCampaign)
 
-  useEffect(() => {
-    const loadSources = () => {
+  const loadSources = useCallback(
+    () =>
       fetch(sourceSummariesUrl())
         .then((response) => requireJson<HZDRSourceSummary[]>(response))
         .then((loadedSources) => {
           setSources(loadedSources)
           setPollFailed(false)
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           console.error('Failed to load HZDR campaigns', error)
           setPollFailed(true)
-        })
-    }
-
-    loadSources()
-    const timer = window.setInterval(loadSources, 5000)
-    return () => window.clearInterval(timer)
-  }, [])
+          throw error
+        }),
+    []
+  )
+  // Every 5 s while the tab is visible; slower while the API is down.
+  usePolling(loadSources, 5000)
 
   const campaigns = useMemo(
     () =>

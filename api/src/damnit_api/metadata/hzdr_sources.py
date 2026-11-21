@@ -61,6 +61,8 @@ class HZDRSourceSummary(BaseModel):
     title: str
     damnit_path: Path
     shot_count: int = 0
+    # The highest shot number in the campaign (Flow monitor's next shot).
+    latest_shot_number: int | None = None
     # The latest shot's fired_at, exactly as the catalog records it.
     last_shot_at: str | None = None
     # Shots fired at or after the request's ``since`` (0 without one).
@@ -129,6 +131,9 @@ def summarize_source(
         title=source.title,
         damnit_path=source.damnit_path,
         shot_count=len(source.shots),
+        latest_shot_number=max(
+            (shot.shot_number for shot in source.shots), default=None
+        ),
         last_shot_at=None if latest is None else latest[1].fired_at,
         fired_since=sum(
             1 for fired, _ in timed if since is not None and fired >= since
