@@ -24,6 +24,19 @@ const SOURCE = {
   shots: [{ source_key: 'campaign-a', shot_number: 41, fired_at: '' }],
 }
 
+const SUMMARY = {
+  key: 'campaign-a',
+  title: 'HZDR canonical campaign (Campaign A)',
+  damnit_path: '/data/a',
+  shot_count: 1,
+  latest_shot_number: 41,
+  last_shot_at: null,
+  fired_since: 0,
+  waiting: 0,
+  needs_review: 0,
+  needs_revision: 0,
+}
+
 function json(body: unknown) {
   return Promise.resolve({
     ok: true,
@@ -46,8 +59,8 @@ function mockApi(liveTraffic: boolean) {
         terminology: {},
       })
     }
-    if (url === '/metadata/hzdr/sources') {
-      return json([SOURCE])
+    if (url.startsWith('/metadata/hzdr/source-summaries')) {
+      return json([SUMMARY])
     }
     if (url === '/metadata/hzdr/emulator/events') {
       return json(SOURCE)

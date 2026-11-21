@@ -74,8 +74,8 @@ describe('shot table with repeated canonical keys', () => {
         const value =
           url === `${base}/shots`
             ? shots
-            : url === '/metadata/hzdr/sources'
-              ? [source]
+            : url.startsWith('/metadata/hzdr/source-summaries')
+              ? [{ key: source.key, title: source.title, shot_count: 1 }]
               : url === base
                 ? source
                 : url.includes('/shots/')
@@ -207,8 +207,8 @@ describe('shot page quick filters and keyboard', () => {
         const value =
           url === `${base}/shots`
             ? shots
-            : url === '/metadata/hzdr/sources'
-              ? [source]
+            : url.startsWith('/metadata/hzdr/source-summaries')
+              ? [{ key: source.key, title: source.title, shot_count: 1 }]
               : url === base
                 ? source
                 : url.includes('/shots/')

@@ -31,11 +31,15 @@ import { Link, useParams, useSearchParams } from 'react-router'
 
 import { history, HomePage } from '@damnit-frontend/ui'
 
-import { rememberLastCampaign } from '../components/homeCampaignSummary'
+import {
+  rememberLastCampaign,
+  sourceSummariesUrl,
+} from '../components/homeCampaignSummary'
 import type {
   HZDRShot,
   HZDRShotDetail,
   HZDRSource,
+  HZDRSourceSummary,
   HZDRContextResults,
   HZDRSelectedCell,
   HZDRFilterOperator,
@@ -109,7 +113,9 @@ export function HZDRShotPage() {
   const linkedShotRef = useRef(linkedShot)
   const [source, setSource] = useState<HZDRSource>()
   const [shots, setShots] = useState<HZDRShot[]>([])
-  const [availableSources, setAvailableSources] = useState<HZDRSource[]>([])
+  const [availableSources, setAvailableSources] = useState<HZDRSourceSummary[]>(
+    []
+  )
   // The selected row (getShotRowKey): shot numbers repeat across days.
   const [selectedRowKey, setSelectedRowKey] = useState<string>()
   const [shotDetail, setShotDetail] = useState<HZDRShotDetail>()
@@ -222,8 +228,8 @@ export function HZDRShotPage() {
       })
       .catch(() => setDataState('error'))
 
-    fetch('/metadata/hzdr/sources')
-      .then((response) => requireJson<HZDRSource[]>(response))
+    fetch(sourceSummariesUrl())
+      .then((response) => requireJson<HZDRSourceSummary[]>(response))
       .then(setAvailableSources)
       .catch(() => setAvailableSources([]))
 
@@ -368,7 +374,7 @@ export function HZDRShotPage() {
     )
   const sourceOptions = availableSources.map((entry) => ({
     value: entry.key,
-    label: `${campaignTitle(entry.title) || entry.key} (${entry.shots.length})`,
+    label: `${campaignTitle(entry.title) || entry.key} (${entry.shot_count})`,
   }))
   const tableRef = useRef<HTMLDivElement>(null)
   const scrollRowIntoView = (rowKey: string) => {

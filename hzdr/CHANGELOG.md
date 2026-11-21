@@ -19,6 +19,13 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### Polling: paused in a hidden tab, slower while the API is down
+- Home, Flow monitor (its campaign list and, in Live, health and activity)
+  poll through one hook (`usePolling`): nothing while the tab is hidden, at
+  once on return, and a failed poll doubles the wait up to 60 s. Flow
+  monitor and the shot page's campaign switcher read the summary route too
+  (it now carries `latest_shot_number`), not every shot of every campaign.
+
 ### API: the parsed catalog is reused while the file is unchanged
 - `hzdr_sources.load_sources_file` keeps the one most recent parse of
   `hzdr_sources.json` and reuses it while the file's inode, size, mtime and

@@ -23,20 +23,29 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [ ] shotcounter MR !1: today's handoff says close it, the 2026-11-12 combo
   handoff says "parked". Maintainer to decide.
 
+## Found along the way
+
+- [ ] Review matches (`utils/review.ts`) still loads the full sources list
+  to pick the busiest campaign; it could open on the summaries and fetch
+  only the chosen campaign.
+
 ## Suggestions (agreed 2026-11-21)
 
-- [ ] **Flow monitor and ShotPage off the full list.** Flow monitor polls
+- [x] **Flow monitor and ShotPage off the full list.** Flow monitor polls
   `GET /metadata/hzdr/sources` to count shots; ShotPage fetches it only for
-  the campaign switcher. Both can read the summaries.
+  the campaign switcher. Both can read the summaries. Done; the summary
+  gained `latest_shot_number` for Flow monitor's next shot.
 - [x] **Cache the catalog in the API, modestly.** Every request parses
   `hzdr_sources.json` again. Keep the *one* most recent parse per file,
   reused while the file's size, mtime and inode stay the same; no per-request
   or per-campaign copies, no unbounded maps. Mongo is not cached.
   Done: `hzdr_sources.load_sources_file`; a file changed in the last 2 s is
   always re-read (timestamps can be too coarse to see a quick rewrite).
-- [ ] **Pause polling in a hidden tab, back off on failures.** Home and Flow
+- [x] **Pause polling in a hidden tab, back off on failures.** Home and Flow
   monitor poll every 5 s even in the background and keep retrying at 5 s
-  when the API is down.
+  when the API is down. Done: `usePolling` in `hooks.ts` (Home, Flow
+  monitor's sources and its live health/activity poll), doubling the wait
+  on a failure up to 60 s.
 - [x] **"Waiting" agrees with Review matches.** Home counts every
   `unassigned` shot; Review matches leaves out shots with a pending
   experiment ruling. The summary route subtracts them.
