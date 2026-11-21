@@ -103,7 +103,10 @@ import {
   moveColumn,
   orderColumns,
   saveShotTableView,
+  type ShotTableView,
 } from '../utils/table-view'
+import { downloadText, shotTableCsv } from '../utils/csv'
+import { SavedViewChips } from '../components/SavedViewChips'
 
 export function HZDRShotPage() {
   const { source_key } = useParams()
@@ -145,25 +148,28 @@ export function HZDRShotPage() {
   // filter/sort states still hold the previous source's values on that pass.
   const skipNextViewSave = useRef(false)
 
+  // A view's filter, sort and columns; undefined resets to the defaults.
+  // State setters only, so the identity never changes.
+  const applyTableView = useCallback((view?: ShotTableView) => {
+    setFilterColumn(view?.filterColumn ?? 'all')
+    setFilterOperator(view?.filterOperator ?? 'includes')
+    setFilterValue(view?.filterValue ?? '')
+    setSortState(view?.sortState ?? { column: 'shot_number', direction: 'asc' })
+    setHiddenTableColumns(view?.hiddenTableColumns ?? [])
+    setColumnOrder(view?.columnOrder ?? [])
+    setShowHistoricalVersions(view?.showHistoricalVersions ?? false)
+  }, [])
+
   useEffect(() => {
     if (!source_key) {
       return
     }
     skipNextViewSave.current = true
     rememberLastCampaign(source_key)
-    const savedView = loadShotTableView(source_key)
-    setFilterColumn(savedView?.filterColumn ?? 'all')
-    setFilterOperator(savedView?.filterOperator ?? 'includes')
-    setFilterValue(savedView?.filterValue ?? '')
-    setSortState(
-      savedView?.sortState ?? { column: 'shot_number', direction: 'asc' }
-    )
-    setHiddenTableColumns(savedView?.hiddenTableColumns ?? [])
-    setColumnOrder(savedView?.columnOrder ?? [])
-    setShowHistoricalVersions(savedView?.showHistoricalVersions ?? false)
+    applyTableView(loadShotTableView(source_key))
     setStatusFilter('all')
     setDayFilter('')
-  }, [source_key])
+  }, [source_key, applyTableView])
 
   useEffect(() => {
     if (!source_key) {
@@ -371,6 +377,29 @@ export function HZDRShotPage() {
         contextRowsByShot,
         shotDayLabels
       )
+    )
+  const currentTableView: ShotTableView = {
+    filterColumn,
+    filterOperator,
+    filterValue,
+    sortState,
+    hiddenTableColumns,
+    showHistoricalVersions,
+    columnOrder,
+  }
+  // The rows the table shows, in its order, with its visible columns.
+  const downloadShotsCsv = () =>
+    downloadText(
+      `${source_key ?? 'shots'}-shots.csv`,
+      shotTableCsv(
+        visibleShots,
+        orderedColumnOptions.filter((option) =>
+          visibleTableColumns.includes(option.value)
+        ),
+        contextRowsByShot,
+        shotDayLabels
+      ),
+      'text/csv;charset=utf-8'
     )
   const sourceOptions = availableSources.map((entry) => ({
     value: entry.key,
@@ -658,6 +687,13 @@ export function HZDRShotPage() {
             <Grid gutter="md">
               <Grid.Col span={{ base: 12, lg: 9 }}>
                 <Card withBorder radius={4} p="md">
+                  {source_key ? (
+                    <SavedViewChips
+                      sourceKey={source_key}
+                      currentView={currentTableView}
+                      onApply={applyTableView}
+                    />
+                  ) : null}
                   <Group gap="xs" mb="sm" wrap="wrap">
                     <Chip.Group
                       value={statusFilter}
@@ -820,6 +856,15 @@ export function HZDRShotPage() {
                       mt={4}
                     >
                       Add columns
+                    </Button>
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      mt={4}
+                      onClick={downloadShotsCsv}
+                      disabled={visibleShots.length === 0}
+                    >
+                      Download CSV
                     </Button>
                   </Group>
                 </Card>

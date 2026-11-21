@@ -20,8 +20,14 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   scroll. Done: `frontend/e2e/tests/app/hzdr/phone-width.spec.ts` (Home,
   Flow monitor, Review matches, Docs, the shot table), HZDR routes mocked
   in `frontend/e2e/support/hzdr.ts`; runs in CI's existing e2e job.
-- [ ] Trends for context columns and a second value; highlight new shots;
-  saved views as chips; CSV export.
+- [x] **Saved views as chips.** Named views (filter, sort, columns) on the
+  existing `GET/POST/DELETE .../sources/{key}/views`, as chips above the
+  quick filters; hidden where the API keeps no views (Mongo).
+- [x] **CSV export.** "Download CSV" beside Add columns: the rows the table
+  shows, in its order, visible columns, `shot_key` first; text that would
+  start a spreadsheet formula gets a leading apostrophe.
+- [ ] Trends for context columns and a second value.
+- [ ] Highlight new shots.
 - [ ] Reset or delete branch `claude/dazzling-noether-br3edr` on GitHub
   (needs the maintainer: a force-push or delete).
 - [ ] shotcounter MR !1: today's handoff says close it, the 2026-11-12 combo

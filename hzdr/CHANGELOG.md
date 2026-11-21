@@ -19,6 +19,17 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### Shot table: saved views as chips, and Download CSV
+- Above the quick filters, **Views** lists your named table views (filter,
+  sort, hidden and ordered columns) as chips: one click applies a view, the
+  current one is marked, **Save view** names the current state, x deletes.
+  They use the existing per-user `.../sources/{key}/views` store beside the
+  catalog; where it is unavailable (Mongo) the row does not show.
+- **Download CSV** (beside Add columns) saves the shots the table shows, in
+  its order and with its visible columns, `shot_key` first. Images and
+  arrays are left empty; text that would start a spreadsheet formula is
+  prefixed with an apostrophe.
+
 ### Review matches: one summary request instead of a review per campaign
 - Review matches opens on the busiest campaign from the summary route (its
   `waiting` counts as the page does, and it now carries `experiment_id` for

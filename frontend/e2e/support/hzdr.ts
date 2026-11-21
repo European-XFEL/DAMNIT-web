@@ -124,7 +124,24 @@ export async function mockHZDR(page: Page) {
         experiment_rulings: [],
       })
   )
-  await page.route('**/metadata/hzdr/views**', (route) => json(route, []))
+  await page.route(`**/metadata/hzdr/sources/${HZDR_CAMPAIGN}/views`, (route) =>
+    json(route, [
+      {
+        id: 'v1',
+        name: 'Energy first, newest shots',
+        kind: 'table',
+        state: {
+          filterColumn: 'all',
+          filterOperator: 'includes',
+          filterValue: '',
+          sortState: { column: 'laser_energy_j', direction: 'desc' },
+          hiddenTableColumns: [],
+          showHistoricalVersions: false,
+          columnOrder: [],
+        },
+      },
+    ])
+  )
   // The shot page asks for this user's context-column results; none yet.
   await page.route('**/contextfile/campaign/**', (route) =>
     json(route, { detail: 'no context file' }, 404)

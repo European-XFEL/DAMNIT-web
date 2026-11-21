@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -266,6 +267,43 @@ describe('shot page quick filters and keyboard', () => {
     expect(
       await screen.findByText('No data source is known for these shots yet.')
     ).toBeInTheDocument()
+  })
+
+  it('downloads the table as shown as CSV', async () => {
+    await renderPage()
+    await screen.findByRole('heading', { name: 'Demo campaign' })
+    let saved: Blob | undefined
+    const createObjectURL = vi.fn((blob: Blob) => {
+      saved = blob
+      return 'blob:shots'
+    })
+    // jsdom has no object URLs; stand in for them for this one click.
+    const original = {
+      create: URL.createObjectURL,
+      revoke: URL.revokeObjectURL,
+    }
+    URL.createObjectURL = createObjectURL
+    URL.revokeObjectURL = vi.fn()
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {})
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Download CSV' }))
+      expect(click).toHaveBeenCalledTimes(1)
+    } finally {
+      URL.createObjectURL = original.create
+      URL.revokeObjectURL = original.revoke
+      click.mockRestore()
+    }
+    expect(createObjectURL).toHaveBeenCalledTimes(1)
+    const text = await new Promise<string>((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.readAsText(saved!)
+    })
+    const [header, first] = text.split('\r\n')
+    expect(header).toBe('shot_key,Shot,Day,Fired at,Status,Energy,Target')
+    expect(first.startsWith('demo:20260701:000001,1,')).toBe(true)
   })
 
   it('filters by status and day chips, combined with the text filter', async () => {

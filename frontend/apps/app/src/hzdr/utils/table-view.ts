@@ -109,6 +109,14 @@ export function loadShotTableView(
   } catch {
     return undefined
   }
+  return parseShotTableView(parsed)
+}
+
+/**
+ * A ShotTableView from untrusted JSON (localStorage, a saved view's state),
+ * or undefined when it does not have the expected shape.
+ */
+export function parseShotTableView(parsed: unknown): ShotTableView | undefined {
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     return undefined
   }
