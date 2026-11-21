@@ -29,7 +29,10 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [x] **Trends for context columns and a second value.** Numeric context
   columns are trend values too; **Compare with** draws a second value over
   the same shots on its own right-hand axis (dashed, teal).
-- [ ] Highlight new shots.
+- [x] **Highlight new shots.** A quick-filter chip, "New since your last
+  visit N": shots fired after the newest one this browser showed on the
+  last visit to the campaign (one number per campaign in localStorage).
+  The table itself is unchanged; the page does not poll for shots.
 - [ ] Reset or delete branch `claude/dazzling-noether-br3edr` on GitHub
   (needs the maintainer: a force-push or delete).
 - [ ] shotcounter MR !1: today's handoff says close it, the 2026-11-12 combo

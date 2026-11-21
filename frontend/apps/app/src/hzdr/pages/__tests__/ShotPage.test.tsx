@@ -269,6 +269,34 @@ describe('shot page quick filters and keyboard', () => {
     ).toBeInTheDocument()
   })
 
+  it('offers the shots fired since your last visit as a quick filter', async () => {
+    window.localStorage.setItem(
+      'hzdr:shot-page:last-seen:demo',
+      String(Date.parse('2026-07-01T10:01:00Z'))
+    )
+    try {
+      const table = await renderPage()
+      const chip = await screen.findByRole('checkbox', {
+        name: 'New since your last visit 2',
+      })
+      fireEvent.click(chip)
+      await waitFor(() => expect(shotNumbers(table)).toEqual(['3', '4']))
+      // This visit's newest shot is remembered for the next one.
+      expect(window.localStorage.getItem('hzdr:shot-page:last-seen:demo')).toBe(
+        String(Date.parse('2026-07-02T10:03:00Z'))
+      )
+    } finally {
+      window.localStorage.clear()
+    }
+  })
+
+  it('shows no new-shots filter on a first visit', async () => {
+    window.localStorage.clear()
+    await renderPage()
+    expect(screen.queryByRole('checkbox', { name: /New since/ })).toBeNull()
+    window.localStorage.clear()
+  })
+
   it('downloads the table as shown as CSV', async () => {
     await renderPage()
     await screen.findByRole('heading', { name: 'Demo campaign' })

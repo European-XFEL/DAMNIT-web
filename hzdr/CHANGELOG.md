@@ -19,6 +19,13 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### Shot table: what is new since your last visit
+- A quick-filter chip beside the status and day chips, **New since your
+  last visit N**, shows only the shots fired after the newest one this
+  browser showed when you last opened the campaign. The mark is kept for the
+  whole visit (a reload does not clear it) and moves on for the next one.
+  Nothing on a first visit; the table itself is unchanged.
+
 ### Trends: your columns, and a second value to compare
 - Trends offers your numeric context columns beside the metadata values
   (marked "your column"; image and array columns are left out).

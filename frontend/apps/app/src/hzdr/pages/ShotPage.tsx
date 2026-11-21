@@ -106,6 +106,11 @@ import {
   type ShotTableView,
 } from '../utils/table-view'
 import { downloadText, shotTableCsv } from '../utils/csv'
+import {
+  isNewShot,
+  readLastSeenShot,
+  rememberLastSeenShot,
+} from '../utils/new-shots'
 import { SavedViewChips } from '../components/SavedViewChips'
 
 export function HZDRShotPage() {
@@ -138,6 +143,10 @@ export function HZDRShotPage() {
   // Quick filters (status and day chips): not saved with the table view.
   const [statusFilter, setStatusFilter] = useState<ShotStatusFilter>('all')
   const [dayFilter, setDayFilter] = useState('')
+  // The newest shot time the last visit showed, read once per campaign and
+  // kept for this visit, so a refresh does not clear what is new.
+  const [lastSeenShot, setLastSeenShot] = useState<number | null>(null)
+  const [newOnly, setNewOnly] = useState(false)
   // One page-level state for the shots list only; the secondary fetches
   // (source header, available sources, context results, shot detail) fail soft.
   const [dataState, setDataState] = useState<'loading' | 'ready' | 'error'>(
@@ -169,7 +178,17 @@ export function HZDRShotPage() {
     applyTableView(loadShotTableView(source_key))
     setStatusFilter('all')
     setDayFilter('')
+    setLastSeenShot(readLastSeenShot(source_key))
+    setNewOnly(false)
   }, [source_key, applyTableView])
+
+  useEffect(() => {
+    if (!source_key) return
+    rememberLastSeenShot(
+      source_key,
+      shots.filter((shot) => shot.source_key === source_key)
+    )
+  }, [source_key, shots])
 
   useEffect(() => {
     if (!source_key) {
@@ -363,11 +382,16 @@ export function HZDRShotPage() {
     dayOptions
   )
   const quickFiltered = statusFilter !== 'all' || Boolean(activeDayFilter)
+  const newShotCount = textFilteredShots.filter((shot) =>
+    isNewShot(shot, lastSeenShot)
+  ).length
+  const showNewOnly = newOnly && newShotCount > 0
   const visibleShots = textFilteredShots
     .filter(
       (shot) =>
         shotMatchesStatusFilter(shot, statusFilter) &&
-        shotMatchesDayFilter(shot, activeDayFilter, shotDayLabels)
+        shotMatchesDayFilter(shot, activeDayFilter, shotDayLabels) &&
+        (!showNewOnly || isNewShot(shot, lastSeenShot))
     )
     .sort((leftShot, rightShot) =>
       compareHZDRShotsForTableSort(
@@ -738,6 +762,18 @@ export function HZDRShotPage() {
                           </Chip>
                         ))}
                       </Chip.Group>
+                    ) : null}
+                    {newShotCount > 0 ? (
+                      <Chip
+                        size="xs"
+                        color="grape"
+                        variant="outline"
+                        checked={showNewOnly}
+                        onChange={setNewOnly}
+                        title="Shots fired after the newest one you saw on your last visit (this browser)"
+                      >
+                        New since your last visit {newShotCount}
+                      </Chip>
                     ) : null}
                   </Group>
                   <Group align="flex-end" gap="sm">
