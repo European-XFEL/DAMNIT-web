@@ -8,14 +8,25 @@ Day-to-day fixes for the deployed API, builder and frontend. Settings live in
 ```bash
 cd ~/DAMNIT-web-hzdr && git checkout main && git pull --ff-only
 cd api && uv sync --locked && sudo systemctl restart damnit-api
-cd ../frontend && pnpm install --frozen-lockfile
-VITE_DAMNIT_COMMIT=$(git rev-parse --short=12 HEAD) pnpm --filter ./apps/app build
+cd ../frontend && pnpm install --frozen-lockfile --prefer-offline
+VITE_DAMNIT_COMMIT=$(git log -1 --format=%h --abbrev=12 HEAD -- .) \
+    pnpm --filter ./apps/app exec vite build
 ```
 
-`VITE_DAMNIT_COMMIT` records the build's commit. When it differs from the
-one the API started from (`GET /config/version`), the header shows *Out of
-step with the API*: the frontend was not rebuilt, or the API not restarted,
-after a pull. A build without it shows no warning.
+The frontend needs a build only when `frontend/` changed: the command
+skips nothing by itself, but `hzdr/scripts/next-on-server.sh` builds only
+then (it records the commit in `dist/.damnit-frontend-commit`). It runs
+`vite build` alone, about a minute; CI already type-checks
+(`pnpm --filter ./apps/app build` adds `tsc -b`, or set
+`FRONTEND_TYPECHECK=1` for the script).
+
+`VITE_DAMNIT_COMMIT` records the last commit that changed `frontend/`. The
+API reports the same for its checkout as `frontend_commit`
+(`GET /config/version`, from 0.3.2; older APIs only `commit`, which is then
+compared). When they differ, the header shows *Out of step with the API*:
+the frontend was not rebuilt, or the API not restarted, after a pull that
+changed `frontend/`. A pull that changes only the API needs no rebuild. A
+build without the variable shows no warning.
 
 The system nginx (`fwkt-damnit.fz-rossendorf.de`, ports 80/443) serves the
 frontend from `/var/www/damnit-web` at the site root and proxies the API paths

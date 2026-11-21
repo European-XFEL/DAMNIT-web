@@ -12,13 +12,18 @@ afterEach(() => {
   resetAPIVersionForTests()
 })
 
-function stubAPI(commit: string | null) {
+function stubAPI(commit: string | null, frontendCommit?: string) {
   vi.stubGlobal(
     'fetch',
     vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ version: '0.3.1', commit }),
+        json: () =>
+          Promise.resolve({
+            version: '0.3.1',
+            commit,
+            ...(frontendCommit ? { frontend_commit: frontendCommit } : {}),
+          }),
       })
     )
   )
@@ -63,5 +68,21 @@ describe('VersionMismatch', () => {
     renderBadge()
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(screen.queryByTestId('version-mismatch')).toBeNull()
+  })
+
+  it('compares with the API frontend commit when it reports one', async () => {
+    // An API-only pull: the checkout moved, frontend/ did not.
+    vi.stubEnv('VITE_DAMNIT_COMMIT', 'aaaaaaaaaaaa')
+    stubAPI('cccccccccccc', 'aaaaaaaaaaaa')
+    renderBadge()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(screen.queryByTestId('version-mismatch')).toBeNull()
+    cleanup()
+    resetAPIVersionForTests()
+    // frontend/ changed and the build is older: warn, naming that commit.
+    stubAPI('cccccccccccc', 'dddddddddddd')
+    renderBadge()
+    const badge = await screen.findByTestId('version-mismatch')
+    expect(badge.getAttribute('title')).toContain('dddddddddddd')
   })
 })

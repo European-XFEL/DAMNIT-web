@@ -163,25 +163,36 @@ step_deploy() {
     step_frontend
 }
 
-# DAMNIT's frontend is a static build; it is stale when the checkout moved
-# after the last build.
+# DAMNIT's frontend is a static build. It is stale only when frontend/
+# changed since the last build: the build records the last commit that
+# changed frontend/ in dist/.damnit-frontend-commit (and as
+# VITE_DAMNIT_COMMIT, which the API reports as frontend_commit), so a pull
+# that changes only the API, the docs or the scripts builds nothing.
+# The server runs `vite build` alone: CI already type-checks (lint:tsc),
+# and tsc adds a minute or more here. FRONTEND_TYPECHECK=1 runs it too.
 step_frontend() {
-    local repo="$ROOT/DAMNIT-web-hzdr" dist built moved
-    dist="$repo/frontend/apps/app/dist/index.html"
+    local repo="$ROOT/DAMNIT-web-hzdr" dist marker wanted built build
+    dist="$repo/frontend/apps/app/dist"
+    marker="$dist/.damnit-frontend-commit"
     [ -d "$repo/frontend" ] || return
-    moved="$(head_moved "$repo")"
-    built="$(stat -c %Y "$dist" 2>/dev/null || echo 0)"
-    if [ "$built" -ge "$moved" ]; then
-        ok "DAMNIT frontend built after the last pull"
+    wanted="$(git -C "$repo" log -1 --format=%h --abbrev=12 HEAD -- frontend)"
+    built="$(cat "$marker" 2>/dev/null || true)"
+    build="vite build"
+    [ "${FRONTEND_TYPECHECK:-0}" = 1 ] && build="build"
+    if [ -n "$wanted" ] && [ "$built" = "$wanted" ] && [ -f "$dist/index.html" ]; then
+        ok "DAMNIT frontend: built from $wanted, the last change to frontend/"
     elif [ "$APPLY" -eq 0 ]; then
-        would "DAMNIT frontend: pnpm install --frozen-lockfile && pnpm --filter ./apps/app build"
+        would "DAMNIT frontend: frontend/ is at ${wanted:-?}, the build at ${built:-none}: pnpm install && pnpm --filter ./apps/app exec $build"
         return
     else
-        act "building DAMNIT's frontend"
-        # The build records its commit; the header warns when the API runs another.
-        if (cd "$repo/frontend" && pnpm install --frozen-lockfile \
-            && VITE_DAMNIT_COMMIT="$(git -C "$repo" rev-parse --short=12 HEAD)" \
-               pnpm --filter ./apps/app build); then
+        act "building DAMNIT's frontend (frontend/ at $wanted)"
+        if (cd "$repo/frontend" && pnpm install --frozen-lockfile --prefer-offline \
+            && if [ "$build" = build ]; then
+                   VITE_DAMNIT_COMMIT="$wanted" pnpm --filter ./apps/app build
+               else
+                   VITE_DAMNIT_COMMIT="$wanted" pnpm --filter ./apps/app exec vite build
+               fi); then
+            printf '%s\n' "$wanted" > "$marker"
             ok "frontend built"
         else
             fail "frontend build failed (the old build is still served)"

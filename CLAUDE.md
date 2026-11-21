@@ -641,4 +641,4 @@ Values: `none`, `number`, `string`, `boolean`, `timestamp`, `complex`, `array`, 
 
 ### API package version
 
-`damnit-api` current: **`0.3.1`** (see `api/pyproject.toml`). `GET /config/version` reports it and the checkout's commit at start-up (a frontend built with `VITE_DAMNIT_COMMIT` warns in its header when the two commits differ); bump the version when the public schema changes.
+`damnit-api` current: **`0.3.2`** (see `api/pyproject.toml`). `GET /config/version` reports it, the checkout's commit and `frontend_commit` (the last commit that changed `frontend/`) at start-up. A frontend built with `VITE_DAMNIT_COMMIT` (set by `next-on-server.sh` to that same frontend commit) warns in its header when the two differ, so an API-only pull needs no frontend rebuild. Bump the version when the public schema changes.

@@ -1,6 +1,6 @@
 [project]
 name = "damnit-api"
-version = "0.3.1"
+version = "0.3.2"
 description = ""
 authors = [{ name = "European XFEL", email = "da@xfel.eu" }]
 # Retains European XFEL's BSD-3-Clause choice (see the repository LICENSE).

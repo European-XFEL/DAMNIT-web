@@ -412,7 +412,7 @@ wheels = [
 
 [[package]]
 name = "damnit-api"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "api" }
 dependencies = [
     { name = "aiofiles" },

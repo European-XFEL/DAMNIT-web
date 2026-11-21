@@ -6,6 +6,17 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Faster deploys: the frontend is built only when it changed
+- `next-on-server.sh` rebuilds the frontend only when `frontend/` changed
+  since the last build (recorded in `dist/.damnit-frontend-commit`), and
+  runs `vite build` without `tsc -b` (CI type-checks; `FRONTEND_TYPECHECK=1`
+  restores it), with `pnpm install --prefer-offline`. A pull that changes
+  only the API, docs or scripts builds nothing.
+- `GET /config/version` adds `frontend_commit`, the last commit that changed
+  `frontend/`; the build records the same as `VITE_DAMNIT_COMMIT`, and the
+  header compares the two, so an API-only update no longer shows *Out of
+  step with the API*. damnit-api 0.3.2.
+
 ### Review matches: decisions in batches
 - **Acknowledge all N** for unmatched events from one producer and kind (a
   test series, a source that never belongs to a shot), behind a second click

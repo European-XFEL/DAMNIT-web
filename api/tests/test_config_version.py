@@ -26,6 +26,14 @@ def test_version_reports_the_running_package_and_commit():
         check=False,
     ).stdout.strip()
     assert payload["commit"] == (head or None)
+    frontend = subprocess.run(
+        ["git", "log", "-1", "--format=%h", "--abbrev=12", "HEAD", "--", ":/frontend"],  # noqa: S607
+        cwd=routers.__file__.rsplit("/", 1)[0],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    assert payload["frontend_commit"] == (frontend or None)
 
 
 def test_no_git_means_no_commit(monkeypatch):
@@ -35,3 +43,4 @@ def test_no_git_means_no_commit(monkeypatch):
 
     monkeypatch.setattr(routers.subprocess, "run", missing)
     assert routers._checkout_commit() is None
+    assert routers._frontend_commit() is None
