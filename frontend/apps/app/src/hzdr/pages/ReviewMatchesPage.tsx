@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Container,
@@ -31,6 +31,7 @@ import {
 } from '../components/ReviewMatches'
 import { sourceSummariesUrl } from '../components/homeCampaignSummary'
 import { requireJson } from '../utils/api'
+import { usePolling } from '../hooks'
 import { campaignTitle } from '../utils/format'
 import {
   assignShotExperiment,
@@ -96,18 +97,34 @@ export function ReviewMatchesPage() {
   const [pendingJump, setPendingJump] = useState<ReviewSection | null>(null)
 
   useEffect(() => {
-    fetch(sourceSummariesUrl())
-      .then((response) => requireJson<HZDRSourceSummary[]>(response))
-      .then(setSources)
-      .catch((error: Error) => {
-        setSources([])
-        setLoadError(`Could not load campaigns: ${error.message}`)
-      })
     // Campaign ids are only suggestions for assigning a shot; none is fine.
     fetchHZDRCampaigns()
       .then(setCampaigns)
       .catch(() => setCampaigns([]))
   }, [])
+
+  // The summaries, now and every 30 s while the tab is visible: the picker's
+  // counts stay current, and the open campaign reloads when its own changed
+  // (see below). Only the first failure is shown; later ones keep the page.
+  const sourcesLoaded = useRef(false)
+  const pollSources = useCallback(
+    () =>
+      fetch(sourceSummariesUrl())
+        .then((response) => requireJson<HZDRSourceSummary[]>(response))
+        .then((summaries) => {
+          sourcesLoaded.current = true
+          setSources(summaries)
+        })
+        .catch((error: Error) => {
+          if (!sourcesLoaded.current) {
+            setSources([])
+            setLoadError(`Could not load campaigns: ${error.message}`)
+          }
+          throw error
+        }),
+    []
+  )
+  usePolling(pollSources, 30_000)
 
   // How many cases wait in each catalog, for the picker and the first pick:
   // the summaries count them as this page does.
@@ -127,7 +144,33 @@ export function ReviewMatchesPage() {
     if (sources.length === 1) return sources[0].key
     return waitingCounts ? busiestSourceKey(sources, waitingCounts) : null
   }, [sources, waitingCounts])
-  const sourceKey = requested?.key ?? autoKey
+  // The first automatic pick stays: a refresh that changes the counts must
+  // not move the page to another campaign under the reader.
+  const [pinnedAutoKey, setPinnedAutoKey] = useState<string | null>(null)
+  useEffect(() => {
+    if (autoKey && !pinnedAutoKey) setPinnedAutoKey(autoKey)
+  }, [autoKey, pinnedAutoKey])
+  const sourceKey = requested?.key ?? pinnedAutoKey ?? autoKey
+
+  // Reload the open campaign's lists when its summary changed (cases
+  // waiting, shots, newest shot), but never while a decision is being saved.
+  const openSummary = sources?.find((source) => source.key === sourceKey)
+  const openSummaryKey = openSummary
+    ? [
+        openSummary.waiting,
+        openSummary.shot_count,
+        openSummary.last_shot_at ?? '',
+      ].join('|')
+    : undefined
+  const seenSummaryKey = useRef<{ source: string; key: string }>()
+  useEffect(() => {
+    if (!sourceKey || openSummaryKey === undefined || busyKey) return
+    const seen = seenSummaryKey.current
+    seenSummaryKey.current = { source: sourceKey, key: openSummaryKey }
+    if (seen?.source === sourceKey && seen.key !== openSummaryKey) {
+      setReloadToken((token) => token + 1)
+    }
+  }, [sourceKey, openSummaryKey, busyKey])
 
   useEffect(() => {
     if (!sourceKey) {

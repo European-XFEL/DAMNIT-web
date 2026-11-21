@@ -99,6 +99,9 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   Done: "Turn on the shot containers" in the runbook, phase 6 as its
   first step.
 
+- [x] **Review matches refreshes itself**: summaries every 30 s, the open
+  campaign reloaded only when its summary changed, the automatic pick
+  pinned (`ReviewMatchesPage.refresh.test.tsx`).
 - [x] **Deployment notes**: `hzdr/docs/guides/next-on-server.md` items 6
   (what to check in the web UI after a deploy) and 7 (containers, only on a
   decision, through the runbook's go-live checklist). `next-on-server.sh`

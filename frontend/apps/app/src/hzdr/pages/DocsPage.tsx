@@ -437,7 +437,9 @@ def laser_energy_mj(run, laser_energy_j=None):
                   DAMNIT never attaches an event to a shot by time alone. When
                   it is unsure, the case waits on the Review matches page. It
                   opens on the campaign with the most waiting, and says{' '}
-                  <b>All clear</b> when nothing does.
+                  <b>All clear</b> when nothing does. It checks every 30 seconds
+                  and reloads the open campaign&apos;s lists when new cases
+                  arrive; it never switches campaign by itself.
                 </Text>
                 <List size="sm" spacing={4}>
                   <List.Item>

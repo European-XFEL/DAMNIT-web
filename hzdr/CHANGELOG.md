@@ -6,6 +6,13 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-21
 
+### Review matches refreshes itself
+- The page reads the campaign summaries every 30 s while visible, so the
+  picker's counts stay current, and reloads the open campaign's lists only
+  when its waiting count, shot count or newest shot changed (never while a
+  decision is being saved). The campaign it opened on stays, even when
+  another becomes busier.
+
 ### Docs and screenshots
 - The in-app Docs page describes Views, Download CSV, New since your last
   visit, the self-refresh, Trends' Compare with and columns on a shot's
