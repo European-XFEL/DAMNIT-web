@@ -196,6 +196,74 @@ Check a build reached the catalog:
 python3 -c "import json; c=json.load(open('/home/tippey/mnt/bigdata/HPLexp/nexus/hzdr_sources.json')); s=[x for x in c['sources'] if x['key']=='Beamline_radbio_2026'][0]['shots'][0]; print(s['shot_key'], s['metadata'].get('laser'), len(s['metadata'].get('labfrog_variables', {})))"
 ```
 
+## Turn on the shot containers (go-live checklist)
+
+The container worker (one `shots/<YYYYMMDD>_<NNNNNN>.nxs` per shot, linked
+from the campaign file's root) is off by default. Columns on container
+datasets (`{container}/...`, see [Context columns](#context-columns)) work as
+soon as containers exist. To turn it on:
+
+**Before**
+
+1. **Phase 6 first.** Build one real campaign into a scratch root, run
+   shot-aligner on the same campaign, and compare:
+   `uv run --no-sync python scripts/hzdr-compare-containers.py --damnit <scratch>/<c> --aligner <shot-aligner build> --json <scratch>/compare.json`
+   (exit 0: equal apart from the documented differences; 1: a difference;
+   2: an input missing). Only go on with exit 0, or with each difference
+   understood and written down.
+2. **No shared folder.** Check that shot-aligner does not write
+   `<OUTPUT_ROOT>/<campaign>/shots/`: the worker owns that folder and moves
+   containers it does not account for to `shots/.trash`.
+3. **Raw files are reachable.** The worker reads each raw file through
+   `DW_API_METADATA__PATH_MAP`. Pick one shot's recorded path from its
+   detail page and check that `ls <mapped path>` works as the service user.
+4. **Space.** A container holds the shot's frames (gzip 4). Estimate from
+   the scratch build of step 1 (`du -sh <scratch>/<c>/shots`) times the
+   campaigns, and check `df -h` on the share.
+
+**Settings** (`api/.env`, then `sudo systemctl restart damnit-api`)
+
+```bash
+DW_API_HZDR_BUILDER__CONTAINERS_ENABLED=true
+# optional: the _unassigned bucket too (converted again once a campaign claims its shots)
+DW_API_HZDR_BUILDER__CONTAINERS_INCLUDE_UNASSIGNED=false
+# optional, phase 5: validate each build and its containers with NDS's Python
+DW_API_HZDR_BUILDER__VALIDATION_PYTHON=/home/tippey/nexus-design-studio/.venv/bin/python
+```
+
+The trigger starts the worker before each build and after each successful
+one. A restart builds nothing, so start the first pass by hand (it also
+shows any error at once):
+
+```bash
+cd ~/DAMNIT-web-hzdr/api
+uv run --no-sync python scripts/hzdr-container-worker.py \
+    --output-root /home/tippey/mnt/bigdata/HPLexp/nexus --campaign <c>
+echo $?   # 0 done; 1 a failure; 3 a build should link new containers; 4 both; 5 another worker is running
+uv run --no-sync python scripts/hzdr-rebuild.py --campaign <c>   # links them (exit 3 asks for this)
+```
+
+**After the first build**
+
+- `<c>/shots/` holds one `.nxs` per shot with an acquisition, and
+  `<c>/shots/.build-manifest.json` lists them.
+- `.hzdr-container-worker.log` beside the output has no `Traceback`, and
+  each container's `/entry/conversion_problems` is empty or names a file you
+  know is missing: `h5ls -r <c>/shots/<name>.nxs/entry/conversion_problems`.
+- The campaign file links them:
+  `h5ls <c>/<c>.nxs` lists the `<YYYYMMDD>_<NNNNNN>` entries beside `entry`.
+- A shot's detail page lists `<YYYYMMDD>_<NNNNNN>/...` datasets, and
+  **Add as column** on one makes a `{container}/...` column that fills for
+  the other shots of that instrument.
+- With validation on, `<c>/.validation.json` passes (`.hzdr-validation.log`
+  has the details).
+
+**Turn it off** by setting `CONTAINERS_ENABLED=false` and restarting: no
+worker runs any more. The builder still links every container it finds in
+place, so the existing ones stay in the campaign file. To take them out,
+move `<c>/shots/` aside (never delete the output root) and rebuild the
+campaign.
+
 ## A build that never finishes
 
 Symptom: builds fail with `Lock guard ... stayed busy for 10.0 s`, or nothing

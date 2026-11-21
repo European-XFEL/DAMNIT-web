@@ -90,10 +90,12 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [ ] **Docs page and screenshots up to date** with Views, Download CSV,
   New since your last visit, Compare with, the self-refresh and
   `{container}` columns.
-- [ ] **Containers go-live checklist** in `hzdr/docs/guides/operations.md`:
+- [x] **Containers go-live checklist** in `hzdr/docs/guides/operations.md`:
   the settings to turn on, what to check after the first build. Phase 6
   (one campaign built by both us and shot-aligner, compared with
   `hzdr-compare-containers.py`) needs server data: the maintainer's.
+  Done: "Turn on the shot containers" in the runbook, phase 6 as its
+  first step.
 
 ## Notes for the next session
 
