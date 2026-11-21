@@ -1,8 +1,15 @@
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render, screen, within } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from '@testing-library/react'
 import { MantineProvider } from '@mantine/core'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 
 import { HZDRShotPage } from '../ShotPage'
 import type { HZDRShot, HZDRSourceSummary } from '../../types'
@@ -64,6 +71,10 @@ const summary = (shots: HZDRShot[]): HZDRSourceSummary => ({
   needs_revision: 0,
 })
 
+function LocationProbe() {
+  return <output data-testid="location">{useLocation().search}</output>
+}
+
 describe('shot page refreshes itself', () => {
   it('fetches the shots again only when the summary changed', async () => {
     vi.stubGlobal(
@@ -98,7 +109,15 @@ describe('shot page refreshes itself', () => {
       <MantineProvider>
         <MemoryRouter initialEntries={['/source/demo']}>
           <Routes>
-            <Route path="/source/:source_key" element={<HZDRShotPage />} />
+            <Route
+              path="/source/:source_key"
+              element={
+                <>
+                  <HZDRShotPage />
+                  <LocationProbe />
+                </>
+              }
+            />
           </Routes>
         </MemoryRouter>
       </MantineProvider>
@@ -121,5 +140,55 @@ describe('shot page refreshes itself', () => {
     expect(shotFetches()).toBe(2)
     await act(() => polling.poll!())
     expect(shotFetches()).toBe(2)
+
+    // The notice names the arrival and selects it on click.
+    expect(screen.queryByText(/new shots? arrived/)).not.toBeNull()
+    fireEvent.click(screen.getByText('1 new shot arrived: show it'))
+    await vi.waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toContain(
+        encodeURIComponent('demo:20261121:000003')
+      )
+    )
+    expect(screen.queryByText(/new shots? arrived/)).toBeNull()
+  })
+
+  it('shows no arrival notice for the first load', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    )
+    const shots = [makeShot(1)]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              url === '/metadata/hzdr/sources/demo/shots'
+                ? shots
+                : url.startsWith('/metadata/hzdr/source-summaries')
+                  ? [summary(shots)]
+                  : { columns: [], rows: [], key: 'demo', metadata: {} }
+            ),
+        })
+      )
+    )
+    render(
+      <MantineProvider>
+        <MemoryRouter initialEntries={['/source/demo']}>
+          <Routes>
+            <Route path="/source/:source_key" element={<HZDRShotPage />} />
+          </Routes>
+        </MemoryRouter>
+      </MantineProvider>
+    )
+    await screen.findByRole('table')
+    await act(() => polling.poll!())
+    expect(screen.queryByText(/new shots? arrived/)).toBeNull()
   })
 })

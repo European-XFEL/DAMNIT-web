@@ -25,7 +25,9 @@ behaviour; the merge PR has the details.
   context columns again only when the campaign's shot count, newest shot
   or review counts changed. The refresh is quiet: the table, its selection,
   filters and scroll stay as they are, and a failed refresh keeps what is
-  shown. A new shot counts in **New since your last visit**.
+  shown. A new shot counts in **New since your last visit**, and a button
+  beside the quick filters, **N new shots arrived: show the newest**,
+  selects it (and goes away once used).
 
 ### Home: a light summary route instead of every shot
 - `GET /metadata/hzdr/source-summaries?since=<ISO>` returns each campaign's

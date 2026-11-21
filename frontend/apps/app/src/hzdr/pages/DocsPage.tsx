@@ -297,7 +297,8 @@ export function HZDRDocsPage() {
                   <List.Item>
                     <b>New shots appear by themselves</b>: the page checks the
                     campaign every 20 seconds and adds new shots without a
-                    reload; your selection and filters stay.
+                    reload; your selection and filters stay. A button,{' '}
+                    <i>N new shots arrived</i>, selects the newest of them.
                   </List.Item>
                   <List.Item>
                     <b>Views</b>: <b>Save view</b> names the current filter,

@@ -99,6 +99,8 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   Done: "Turn on the shot containers" in the runbook, phase 6 as its
   first step.
 
+- [x] **"N new shots arrived" notice** beside the quick filters after a
+  background refresh brings shots in; a click selects the newest.
 - [x] **Review matches refreshes itself**: summaries every 30 s, the open
   campaign reloaded only when its summary changed, the automatic pick
   pinned (`ReviewMatchesPage.refresh.test.tsx`).

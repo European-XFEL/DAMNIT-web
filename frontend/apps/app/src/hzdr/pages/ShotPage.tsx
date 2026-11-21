@@ -10,6 +10,7 @@ import {
   Alert,
   Anchor,
   Badge,
+  Box,
   Button,
   Card,
   Checkbox,
@@ -149,6 +150,9 @@ export function HZDRShotPage() {
   // kept for this visit, so a refresh does not clear what is new.
   const [lastSeenShot, setLastSeenShot] = useState<number | null>(null)
   const [newOnly, setNewOnly] = useState(false)
+  // Shots a background refresh brought in during this visit (row keys,
+  // oldest first), for the "N new shots arrived" notice; cleared on use.
+  const [arrivedRowKeys, setArrivedRowKeys] = useState<string[]>([])
   // One page-level state for the shots list only; the secondary fetches
   // (source header, available sources, context results, shot detail) fail soft.
   const [dataState, setDataState] = useState<'loading' | 'ready' | 'error'>(
@@ -160,6 +164,11 @@ export function HZDRShotPage() {
   const skipNextViewSave = useRef(false)
   // The summary's shotListChangeKey the shown shots belong to (see the poll).
   const shotListKeyRef = useRef<string>()
+  // The shots shown, for telling a refresh's new rows from known ones.
+  const shotsRef = useRef<HZDRShot[]>([])
+  useEffect(() => {
+    shotsRef.current = shots
+  }, [shots])
 
   // A view's filter, sort and columns; undefined resets to the defaults.
   // State setters only, so the identity never changes.
@@ -184,6 +193,7 @@ export function HZDRShotPage() {
     setDayFilter('')
     setLastSeenShot(readLastSeenShot(source_key))
     setNewOnly(false)
+    setArrivedRowKeys([])
   }, [source_key, applyTableView])
 
   useEffect(() => {
@@ -239,6 +249,15 @@ export function HZDRShotPage() {
       return fetch(`/metadata/hzdr/sources/${source_key}/shots`)
         .then((response) => requireJson<HZDRShot[]>(response))
         .then((loadedShots) => {
+          if (quiet) {
+            const known = new Set(shotsRef.current.map(getShotRowKey))
+            const arrived = loadedShots
+              .filter((shot) => !known.has(getShotRowKey(shot)))
+              .map(getShotRowKey)
+            if (arrived.length) {
+              setArrivedRowKeys((current) => [...current, ...arrived])
+            }
+          }
           setShots(loadedShots)
           setSelectedRowKey((currentRowKey) => {
             if (
@@ -450,6 +469,17 @@ export function HZDRShotPage() {
     columnOrder,
   }
   // The rows the table shows, in its order, with its visible columns.
+  // Arrived shots still in the list (a later refresh can drop one).
+  const arrivedShots = arrivedRowKeys.filter((rowKey) =>
+    shots.some((shot) => getShotRowKey(shot) === rowKey)
+  )
+  const arrivedCount = new Set(arrivedShots).size
+  const showArrivedShot = () => {
+    const newest = arrivedShots.at(-1)
+    if (newest) setSelectedRowKey(newest)
+    setArrivedRowKeys([])
+  }
+
   const downloadShotsCsv = () =>
     downloadText(
       `${source_key ?? 'shots'}-shots.csv`,
@@ -813,6 +843,22 @@ export function HZDRShotPage() {
                         New since your last visit {newShotCount}
                       </Chip>
                     ) : null}
+                    <Box aria-live="polite">
+                      {arrivedCount > 0 ? (
+                        <Button
+                          size="compact-xs"
+                          radius="xl"
+                          variant="light"
+                          color="grape"
+                          onClick={showArrivedShot}
+                          title="Select the newest shot that arrived while this page was open"
+                        >
+                          {arrivedCount === 1
+                            ? '1 new shot arrived: show it'
+                            : `${arrivedCount} new shots arrived: show the newest`}
+                        </Button>
+                      ) : null}
+                    </Box>
                   </Group>
                   <Group align="flex-end" gap="sm">
                     <Select
