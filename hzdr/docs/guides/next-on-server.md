@@ -73,6 +73,23 @@ files still `MISSING` the column.
    (`tcp://149.220.59.31:2950`) first, not LabFrog. Then the broker
    restart/replay pass (ledger `I5`) and a real watchdog event in DAMNIT's
    spool (`I6`), as in the hub's pilot runbook.
+6. **After the DAMNIT deploy, check the web UI** (DAMNIT PR #55 to #58; the
+   `deploy` step rebuilds the frontend with `VITE_DAMNIT_COMMIT` and copies
+   it to nginx). Hard-refresh (Ctrl+Shift+R), then:
+    - the header shows no *Out of step with the API* badge (it would mean
+      the API was not restarted, or the frontend not rebuilt, after the pull;
+      `curl -s 127.0.0.1:8000/config/version` gives the API's commit);
+    - Home lists the campaigns with today's counts;
+    - a campaign page shows **Views**, **Download CSV** and, on a second
+      visit, **New since your last visit**; during a shot day a new shot
+      appears in the table within about 20 s, without a reload.
+7. **Shot containers: only when you decide to turn them on.** Not a script
+   step. Follow
+   [the go-live checklist](operations.md#turn-on-the-shot-containers-go-live-checklist):
+   phase 6 first (one real campaign built by DAMNIT and by shot-aligner,
+   compared with `hzdr-compare-containers.py`), then
+   `DW_API_HZDR_BUILDER__CONTAINERS_ENABLED=true` and a first worker pass by
+   hand.
 
 ## 3. SciCat: clean up the duplicate datasets
 
