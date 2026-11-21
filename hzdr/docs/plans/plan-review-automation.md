@@ -94,11 +94,14 @@ A box is ticked in the commit that does the work.
       before the clear time cases (an event is offered once), each note
       naming the evidence (`utils/review.suggestedChoices`, one `BulkConfirm`
       component for both). Tests: 3 builder, 1 component
-- [ ] **Item 3, a campaign for an unassigned shot** (API, UI): the review
-      route suggests the campaign of the nearest shots before and after it on
-      the same local day when both are in one campaign; the page pre-fills it
-      and **Assign the N suggested** assigns them; nothing without both
-      neighbours agreeing
+- [x] **Item 3, a campaign for an unassigned shot** (API, UI): the review
+      route's `campaign_suggestions` (`hzdr_routers._campaign_suggestions`,
+      only when the source has unassigned shots): the nearest placed shot
+      before and the nearest after on the same `shot_date` both in one
+      campaign, naive times read in the campaign zone. The page pre-fills
+      the row ("Suggested: the shots before and after it that day are in
+      X") and offers **Assign the N suggested** behind a second click, each
+      ruling's note saying why. Tests: 1 route, 1 component
 - [ ] **Item 4, kinds that are never a shot** (builder, settings):
       `DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS` (a JSON list of `kind`s); their
       unmatched events are acknowledged by rule (D4) and listed under

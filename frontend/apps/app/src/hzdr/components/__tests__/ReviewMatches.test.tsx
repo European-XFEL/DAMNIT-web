@@ -572,3 +572,45 @@ describe('review reasons', () => {
     )
   })
 })
+
+describe('campaign suggestions for unassigned shots', () => {
+  it('pre-fills the suggestion and assigns the suggested ones on a second click', () => {
+    const onAssignSuggested = vi.fn()
+    const suggestedShot = makeShot({ shot_number: 1, shot_key: 'u:1' })
+    const plainShot = makeShot({ shot_number: 2, shot_key: 'u:2' })
+    withMantine(
+      <UnassignedShotsCard
+        shots={[suggestedShot, plainShot]}
+        rulings={new Map()}
+        suggestions={['Pilot_2026']}
+        campaignSuggestions={{
+          'u:1': {
+            experiment_id: 'Pilot_2026',
+            before_shot_key: 'p:1',
+            after_shot_key: 'p:2',
+          },
+        }}
+        busyKey={null}
+        onAssign={vi.fn()}
+        onAssignMany={vi.fn()}
+        onAssignSuggested={onAssignSuggested}
+      />
+    )
+    expect(
+      screen.getByRole('textbox', { name: 'Campaign for shot 1' })
+    ).toHaveValue('Pilot_2026')
+    expect(
+      screen.getByRole('textbox', { name: 'Campaign for shot 2' })
+    ).toHaveValue('')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Assign the 1 suggested' })
+    )
+    expect(onAssignSuggested).not.toHaveBeenCalled()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Yes, assign 1 as suggested' })
+    )
+    expect(onAssignSuggested).toHaveBeenCalledWith([
+      [suggestedShot, 'Pilot_2026'],
+    ])
+  })
+})

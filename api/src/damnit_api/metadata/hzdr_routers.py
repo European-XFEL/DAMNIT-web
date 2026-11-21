@@ -162,6 +162,19 @@ class HZDRExperimentRuling(BaseModel):
     review_level: str | None = None
 
 
+class HZDRCampaignSuggestion(BaseModel):
+    """A campaign for an unassigned shot: its neighbours on that day agree.
+
+    The nearest shot before it and the nearest after it on the same local
+    day, among shots placed in a campaign, are both in ``experiment_id``.
+    A suggestion pre-fills the field; a person assigns (decision D4).
+    """
+
+    experiment_id: str
+    before_shot_key: str | None
+    after_shot_key: str | None
+
+
 class HZDRReviewResponse(BaseModel):
     """Everything in one source that waits for a person.
 
@@ -180,6 +193,10 @@ class HZDRReviewResponse(BaseModel):
     # times, read in DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE as the builder
     # reads them; a browser cannot. Only gaps that are known are listed.
     candidate_gaps_s: dict[str, dict[str, float]] = Field(default_factory=dict)
+    # unassigned shot_key -> the campaign its neighbours that day agree on.
+    campaign_suggestions: dict[str, HZDRCampaignSuggestion] = Field(
+        default_factory=dict
+    )
 
 
 class HZDRConfirmMatchRequest(BaseModel):
@@ -715,7 +732,8 @@ async def update_hzdr_shot_metadata(
 @hzdr_router.get("/hzdr/sources/{source_key}/review")
 async def get_hzdr_review(source_key: str) -> HZDRReviewResponse:
     """Get what waits for a reviewer in one source, with the match summary."""
-    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    provider = HZDRSourceProvider(settings.metadata)
+    source = provider.get_source(source_key)
     if source is None:
         raise HTTPException(status_code=404, detail="HZDR source not found.")
     unassigned_shots = [
@@ -729,7 +747,59 @@ async def get_hzdr_review(source_key: str) -> HZDRReviewResponse:
             shot.shot_number for shot in unassigned_shots
         }),
         candidate_gaps_s=_candidate_gaps(source),
+        campaign_suggestions=(
+            _campaign_suggestions(unassigned_shots, provider.list_sources())
+            if unassigned_shots
+            else {}
+        ),
     )
+
+
+def _campaign_suggestions(
+    unassigned_shots: list[HZDRShot], sources: list[HZDRSource]
+) -> dict[str, HZDRCampaignSuggestion]:
+    """Suggest a campaign where an unassigned shot's neighbours agree.
+
+    Among every shot placed in a campaign on the same local day
+    (``shot_date``), the nearest before and the nearest after the
+    unassigned shot must both exist and be in one campaign. Times without a
+    zone are read in the campaign time zone, as the builder reads them.
+    """
+    timezone = settings.hzdr_builder.campaign_timezone
+    placed: dict[str, list[tuple[datetime, str, str]]] = {}
+    for source in sources:
+        experiment_id = _metadata_string(source.metadata, "experiment_id") or source.key
+        if experiment_id == UNASSIGNED_EXPERIMENT_ID:
+            continue
+        for shot in source.shots:
+            when = parse_datetime(shot.fired_at, naive_timezone=timezone)
+            if (
+                shot.experiment_id_source == "unassigned"
+                or when is None
+                or not shot.shot_date
+                or not shot.shot_key
+            ):
+                continue
+            placed.setdefault(shot.shot_date, []).append((
+                when,
+                experiment_id,
+                shot.shot_key,
+            ))
+    suggestions: dict[str, HZDRCampaignSuggestion] = {}
+    for shot in unassigned_shots:
+        when = parse_datetime(shot.fired_at, naive_timezone=timezone)
+        day = placed.get(shot.shot_date or "", [])
+        if when is None or not shot.shot_key or not day:
+            continue
+        before = max((item for item in day if item[0] < when), default=None)
+        after = min((item for item in day if item[0] > when), default=None)
+        if before and after and before[1] == after[1]:
+            suggestions[shot.shot_key] = HZDRCampaignSuggestion(
+                experiment_id=before[1],
+                before_shot_key=before[2],
+                after_shot_key=after[2],
+            )
+    return suggestions
 
 
 def _candidate_gaps(source: HZDRSource) -> dict[str, dict[str, float]]:

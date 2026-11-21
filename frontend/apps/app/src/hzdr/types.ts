@@ -289,6 +289,14 @@ export type HZDRReview = {
    * read by the API in the campaign's time zone (older APIs: absent).
    */
   candidate_gaps_s?: Record<string, Record<string, number>>
+  /** unassigned shot_key -> the campaign its neighbours that day agree on. */
+  campaign_suggestions?: Record<string, HZDRCampaignSuggestion>
+}
+
+export type HZDRCampaignSuggestion = {
+  experiment_id: string
+  before_shot_key: string | null
+  after_shot_key: string | null
 }
 
 export type CandidateGaps = Record<string, Record<string, number>>

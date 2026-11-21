@@ -19,6 +19,7 @@ import {
 
 import type {
   CandidateGaps,
+  HZDRCampaignSuggestion,
   HZDRExperimentRuling,
   HZDRMatchSummary,
   HZDRReviewEvent,
@@ -667,16 +668,21 @@ function UnassignedShotRow({
   shot,
   ruling,
   suggestions,
+  suggested,
   busy,
   onAssign,
 }: {
   shot: HZDRShot
   ruling: HZDRExperimentRuling | undefined
   suggestions: string[]
+  suggested?: HZDRCampaignSuggestion
   busy: boolean
   onAssign: (shot: HZDRShot, experimentId: string) => void
 }) {
-  const [experimentId, setExperimentId] = useState('')
+  // Pre-filled from the neighbours' campaign; a person still presses Assign.
+  const [experimentId, setExperimentId] = useState(
+    suggested?.experiment_id ?? ''
+  )
   return (
     <Table.Tr>
       <Table.Td>{shot.shot_number}</Table.Td>
@@ -709,6 +715,12 @@ function UnassignedShotRow({
             </Button>
           </Group>
         )}
+        {!ruling && suggested ? (
+          <Text size="xs" c="dimmed" mt={2}>
+            Suggested: the shots before and after it that day are in{' '}
+            {suggested.experiment_id}.
+          </Text>
+        ) : null}
       </Table.Td>
     </Table.Tr>
   )
@@ -776,20 +788,89 @@ function AssignMany({
   )
 }
 
+/** Every waiting shot with a neighbours' suggestion, assigned on a second click. */
+function AssignSuggested({
+  shots,
+  rulings,
+  campaignSuggestions,
+  busy,
+  onAssignSuggested,
+}: {
+  shots: HZDRShot[]
+  rulings: Map<number, HZDRExperimentRuling>
+  campaignSuggestions: Record<string, HZDRCampaignSuggestion>
+  busy: boolean
+  onAssignSuggested: (assignments: Array<[HZDRShot, string]>) => void
+}) {
+  const [asking, setAsking] = useState(false)
+  const assignments = shots.flatMap((shot): Array<[HZDRShot, string]> => {
+    const suggested = shot.shot_key
+      ? campaignSuggestions[shot.shot_key]
+      : undefined
+    return suggested && !rulings.has(shot.shot_number)
+      ? [[shot, suggested.experiment_id]]
+      : []
+  })
+  if (!assignments.length) return null
+  const campaigns = [...new Set(assignments.map(([, id]) => id))]
+  return (
+    <Group gap="xs" mb="sm" wrap="wrap">
+      <Text size="xs">
+        <b>{assignments.length}</b> with a suggested campaign (
+        {campaigns.join(', ')}), from the shots before and after them.
+      </Text>
+      {asking ? (
+        <>
+          <Button
+            size="compact-xs"
+            disabled={busy}
+            onClick={() => {
+              setAsking(false)
+              onAssignSuggested(assignments)
+            }}
+          >
+            Yes, assign {assignments.length} as suggested
+          </Button>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            onClick={() => setAsking(false)}
+          >
+            Cancel
+          </Button>
+        </>
+      ) : (
+        <Button
+          size="compact-xs"
+          variant="light"
+          disabled={busy}
+          onClick={() => setAsking(true)}
+        >
+          Assign the {assignments.length} suggested
+        </Button>
+      )}
+    </Group>
+  )
+}
+
 export function UnassignedShotsCard({
   shots,
   rulings,
   suggestions,
+  campaignSuggestions = {},
   busyKey,
   onAssign,
   onAssignMany,
+  onAssignSuggested,
 }: {
   shots: HZDRShot[]
   rulings: Map<number, HZDRExperimentRuling>
   suggestions: string[]
+  campaignSuggestions?: Record<string, HZDRCampaignSuggestion>
   busyKey: string | null
   onAssign: (shot: HZDRShot, experimentId: string) => void
   onAssignMany: (shots: HZDRShot[], experimentId: string) => void
+  onAssignSuggested?: (assignments: Array<[HZDRShot, string]>) => void
 }) {
   if (!shots.length) {
     return (
@@ -807,6 +888,15 @@ export function UnassignedShotsCard({
       count={shots.filter((shot) => !rulings.has(shot.shot_number)).length}
       hint="No LabFrog record and no campaign schedule placed these shots in a campaign. Assign one to the campaign it belongs to; the builder moves it there on its next run."
     >
+      {onAssignSuggested ? (
+        <AssignSuggested
+          shots={shots}
+          rulings={rulings}
+          campaignSuggestions={campaignSuggestions}
+          busy={busyKey !== null}
+          onAssignSuggested={onAssignSuggested}
+        />
+      ) : null}
       <AssignMany
         shots={shots}
         rulings={rulings}
@@ -831,6 +921,9 @@ export function UnassignedShotsCard({
                 shot={shot}
                 ruling={rulings.get(shot.shot_number)}
                 suggestions={suggestions}
+                suggested={
+                  shot.shot_key ? campaignSuggestions[shot.shot_key] : undefined
+                }
                 busy={busyKey !== null}
                 onAssign={onAssign}
               />

@@ -355,6 +355,21 @@ export function ReviewMatchesPage() {
     )
   }
 
+  const assignSuggested = (assignments: Array<[HZDRShot, string]>) => {
+    void runBatch(
+      'assign-suggested',
+      assignments,
+      ([shot, experimentId]) =>
+        assignShotExperiment(
+          shot.shot_number,
+          experimentId,
+          'Assigned as suggested: the shots before and after it that day are in this campaign.'
+        ),
+      (count) =>
+        `${count} shots assigned as suggested; they move at the next rebuild.`
+    )
+  }
+
   const assign = (shot: HZDRShot, experimentId: string) => {
     runAction(
       `assign:${shot.shot_number}`,
@@ -462,8 +477,10 @@ export function ReviewMatchesPage() {
                     rulings={rulings}
                     suggestions={suggestions}
                     busyKey={busyKey}
+                    campaignSuggestions={loaded.review.campaign_suggestions}
                     onAssign={assign}
                     onAssignMany={assignMany}
+                    onAssignSuggested={assignSuggested}
                   />
                 ) : null}
                 {waiting.total > 0 ? (

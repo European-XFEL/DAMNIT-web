@@ -429,3 +429,74 @@ def test_disagreeing_evidence_suggests_nothing():
     _set_suggestions([held, event], shots)
     # The watchdog names s7, but s7 already has cam_a's file: no suggestion.
     assert "suggested_shot_key" not in event
+
+
+# --- item 3: a campaign for an unassigned shot --------------------------------
+
+
+def test_review_suggests_the_campaign_both_neighbours_are_in(tmp_path, monkeypatch):
+    import orjson
+    from fastapi.testclient import TestClient
+
+    from damnit_api.main import create_app
+    from damnit_api.shared.settings import AuthSettings, settings
+
+    def shot(source_key, number, time, how="labfrog"):
+        return {
+            "source_key": source_key,
+            "shot_number": number,
+            "shot_date": "2026-05-05",
+            "fired_at": time,
+            "shot_key": f"{source_key}:20260505:{number:06d}",
+            "experiment_id_source": how,
+            "events": [],
+            "metadata": {},
+        }
+
+    def source(key, shots):
+        return {
+            "key": key,
+            "title": key,
+            "damnit_path": "",
+            "metadata": {"experiment_id": key},
+            "shots": shots,
+            "review_events": [],
+        }
+
+    unassigned = [
+        shot("unassigned", 1, "2026-05-05T10:05:00Z", "unassigned"),  # Pilot both sides
+        shot("unassigned", 2, "2026-05-05T10:25:00Z", "unassigned"),  # Pilot | Other
+        shot("unassigned", 3, "2026-05-05T12:00:00Z", "unassigned"),  # nothing after
+    ]
+    catalog = {
+        "sources": [
+            source(
+                "Pilot_2026",
+                [
+                    shot("Pilot_2026", 1, "2026-05-05 12:00:00"),  # naive: Berlin
+                    shot("Pilot_2026", 2, "2026-05-05T10:10:00Z"),
+                ],
+            ),
+            source("Other_2026", [shot("Other_2026", 1, "2026-05-05T10:30:00Z")]),
+            source("unassigned", unassigned),
+        ]
+    }
+    sources_file = tmp_path / "hzdr_sources.json"
+    sources_file.write_bytes(orjson.dumps(catalog))
+    monkeypatch.setattr(settings.metadata, "provider", "local")
+    monkeypatch.setattr(settings.metadata, "sources_file", sources_file)
+    monkeypatch.setattr(settings.hzdr_builder, "campaign_timezone", "Europe/Berlin")
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="disabled"))
+
+    with TestClient(create_app()) as client:
+        body = client.get("/metadata/hzdr/sources/unassigned/review").json()
+        pilot = client.get("/metadata/hzdr/sources/Pilot_2026/review").json()
+
+    assert body["campaign_suggestions"] == {
+        "unassigned:20260505:000001": {
+            "experiment_id": "Pilot_2026",
+            "before_shot_key": "Pilot_2026:20260505:000001",
+            "after_shot_key": "Pilot_2026:20260505:000002",
+        }
+    }
+    assert pilot["campaign_suggestions"] == {}
