@@ -393,6 +393,31 @@ export function timeChoiceNote(choice: TimeChoice) {
   return `Confirmed in bulk: closest in time (${formatSeconds(choice.gapS)}), every other candidate ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min or more further.`
 }
 
+/**
+ * Why an event waits, and what to do about it: one line each, as
+ * shot-aligner words its findings (hzdr_nexus.REVIEW_REASONS).
+ */
+export const REVIEW_REASON_TEXT: Record<string, string> = {
+  no_time:
+    'The event has no readable time. Check the producer; it can only be placed by hand.',
+  no_labfrog_record:
+    'No LabFrog record to pair it with and no shot number. Wait for the export, or acknowledge it if it is not a shot.',
+  no_shot_in_tolerance:
+    'No LabFrog shot within the time tolerance. Wait for the next export; if it is a test fire, acknowledge it.',
+  several_shots_in_tolerance:
+    'Several LabFrog shots are close in time. Pick the right one from the logbook.',
+  shot_has_other_event:
+    'Its nearest shot has another event of the same kind close by, or already has one. Check which event belongs to it.',
+  attribution_disagrees:
+    'The nearest shot in time is not one the watchdog named. Trust the evidence you can check.',
+  time_rule_off:
+    "This shot and this event are each other's only match in time. The one-to-one rule would attach it, but it is switched off.",
+  number_held_by_several:
+    'Its shot number is held by more than one shot. Pick the right day and record.',
+  identity_conflict:
+    'Its identity points at more than one shot. Check the event in the flow monitor.',
+}
+
 /** The page's sections; a count chip jumps to `<id>-heading`. */
 export const REVIEW_SECTIONS = {
   ambiguous: 'review-ambiguous',

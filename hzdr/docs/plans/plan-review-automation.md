@@ -74,13 +74,16 @@ A box is ticked in the commit that does the work.
       `--time-match-one-to-one`, the trigger always passes it explicitly (so
       `hzdr-rebuild.py --print` shows it), the frontend label. 12 tests in
       `test_hzdr_review_automation.py`
-- [ ] **Findings with a reason** (builder, API, UI): every review event
-      carries `review_reason`, as shot-aligner's findings do: `no_time`,
-      `no_shot_in_tolerance`, `several_shots_in_tolerance`,
-      `shot_has_other_event` (the shot's nearest event of this stream is
-      another), `time_rule_off` (one-to-one would pair it, setting off),
-      `number_held_by_several`, `attribution_candidates`. The page shows
-      each with one line of guidance
+- [x] **Findings with a reason** (builder, API, UI): every waiting event
+      carries `review_reason` (`hzdr_nexus.REVIEW_REASONS`, set by
+      `_set_review_reasons` from the same verdicts the one-to-one pass uses):
+      `no_time`, `no_labfrog_record`, `no_shot_in_tolerance`,
+      `several_shots_in_tolerance`, `shot_has_other_event`,
+      `attribution_disagrees`, `time_rule_off`, `number_held_by_several`,
+      `identity_conflict`. In the catalog's review record and
+      `HZDRReviewEvent`; the page shows "Why it waits" with one line of
+      guidance each (`REVIEW_REASON_TEXT`). Tests: 3 in
+      `test_hzdr_review_automation.py`, 1 in `ReviewMatches.test.tsx`
 - [ ] **Item 2, suggestions from non-time evidence** (builder, API, UI):
       `suggested_shot_key` + `suggestion_reason` on an ambiguous event when
       exactly one candidate is named by the watchdog's

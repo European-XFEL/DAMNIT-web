@@ -498,3 +498,25 @@ describe('LegacyReviewMatchesRedirect', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('review reasons', () => {
+  it('says why an event waits, in words', () => {
+    withMantine(
+      <UnmatchedEventsCard
+        events={[
+          makeEvent({
+            match_status: 'unmatched',
+            candidate_shot_keys: [],
+            review_reason: 'no_shot_in_tolerance',
+          }),
+        ]}
+        busyKey={null}
+        onDismiss={vi.fn()}
+        onDismissMany={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('review-reason').textContent).toContain(
+      'No LabFrog shot within the time tolerance'
+    )
+  })
+})

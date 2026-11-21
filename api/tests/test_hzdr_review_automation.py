@@ -291,3 +291,78 @@ def test_the_trigger_passes_the_setting_to_the_builder(tmp_path):
 
     assert "--no-time-match-one-to-one" in command()
     assert "--time-match-one-to-one" in command(time_match_one_to_one=True)
+
+
+# --- findings: every waiting event says why -----------------------------------
+
+
+def reason(events, event_id):
+    return next(item for item in events if item["event_id"] == event_id).get(
+        "review_reason"
+    )
+
+
+def test_each_waiting_event_names_its_reason():
+    rows = [
+        labfrog_row("a", "2026-06-10T12:00:00Z"),
+        labfrog_row("bb", "2026-06-10T12:01:00Z"),
+        labfrog_row("ccc", "2026-06-10T13:00:00Z"),
+        labfrog_row("dddd", "2026-06-10T14:00:00Z"),
+    ]
+    events = [
+        trigger("far", "2026-06-10T15:00:00Z"),
+        trigger("between", "2026-06-10T12:00:30Z"),
+        trigger("pairable", "2026-06-10T13:00:05Z"),
+        trigger("twin-1", "2026-06-10T14:00:05Z"),
+        trigger("twin-2", "2026-06-10T14:00:40Z"),
+        trigger("no-time", "not a time"),
+    ]
+    _shots, built = build([dict(event) for event in events], rows)
+    assert reason(built, "far") == "no_shot_in_tolerance"
+    assert reason(built, "between") == "several_shots_in_tolerance"
+    assert reason(built, "pairable") == "time_rule_off"
+    assert reason(built, "twin-1") == "shot_has_other_event"
+    assert reason(built, "twin-2") == "shot_has_other_event"
+    assert reason(built, "no-time") == "no_time"
+
+    # With the rule on, the pairable one attaches and has no reason.
+    _shots, built = one_to_one([dict(event) for event in events], rows)
+    assert outcome(built, "pairable")[0] == "matched"
+    assert reason(built, "pairable") is None
+
+
+def test_reasons_for_attribution_numbers_and_no_labfrog():
+    attributed = camera_file("f1", "2026-06-10T12:00:10Z")
+    attributed["metadata"]["attribution"] = {"candidates": [7]}
+    _shots, built = build(
+        [attributed],
+        [
+            labfrog_row("a", "2026-06-10T12:00:00Z", number=6),
+            labfrog_row("bb", "2026-06-10T12:10:00Z", number=7),
+        ],
+    )
+    assert reason(built, "f1") == "attribution_disagrees"
+
+    _shots, built = build(
+        [trigger("t9", "2026-06-10T12:00:10Z", shot_number=9)],
+        [
+            labfrog_row("a", "2026-06-10T11:00:00Z", number=9),
+            labfrog_row("bb", "2026-06-10T12:00:00Z", number=9),
+        ],
+    )
+    assert outcome(built, "t9")[0] == "ambiguous"
+    assert reason(built, "t9") == "number_held_by_several"
+
+    _shots, built = build([trigger("t1", "2026-06-10T12:00:10Z")], [])
+    assert reason(built, "t1") == "no_labfrog_record"
+
+
+def test_the_reason_reaches_the_catalog_review_record():
+    from damnit_api.metadata.hzdr_nexus import _review_event_api_record
+
+    _shots, built = build(
+        [trigger("t1", "2026-06-10T15:00:00Z")],
+        [labfrog_row("a", "2026-06-10T12:00:00Z")],
+    )
+    record = _review_event_api_record(next(e for e in built if e["event_id"] == "t1"))
+    assert record["review_reason"] == "no_shot_in_tolerance"

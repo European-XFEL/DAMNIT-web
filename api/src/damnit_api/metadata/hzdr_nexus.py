@@ -2149,6 +2149,17 @@ def reconcile_canonical_shots(  # noqa: C901
             labfrog_event = _labfrog_source_event(shot, experiment_id)
             normalized_events.append(labfrog_event)
             shot["events"].append(_event_api_record(labfrog_event))
+    _set_review_reasons(
+        [
+            event
+            for event in normalized_events
+            if event.get("source") != LABFROG_EVENT_SOURCE
+        ],
+        canonical,
+        has_labfrog=bool(labfrog_shots),
+        match_tolerance_s=match_tolerance_s,
+        campaign_timezone=campaign_timezone,
+    )
     return canonical, normalized_events
 
 
@@ -3669,6 +3680,7 @@ def _review_event_api_record(event: dict[str, Any]) -> dict[str, Any]:
             "match_status",
             "match_quality",
             "candidate_shot_keys",
+            "review_reason",
         )
         if event.get(key) is not None
     }
@@ -4454,14 +4466,34 @@ def _pair_time_one_to_one(
     return len(pairs)
 
 
-def _one_to_one_pairs(
+#: Why an event waits for a person, as shot-aligner names its findings.
+#: Each has one line of guidance on the Review matches page.
+REVIEW_REASONS = (
+    "no_time",
+    "no_labfrog_record",
+    "no_shot_in_tolerance",
+    "several_shots_in_tolerance",
+    "shot_has_other_event",
+    "attribution_disagrees",
+    "time_rule_off",
+    "number_held_by_several",
+    "identity_conflict",
+)
+
+
+def _one_to_one_verdicts(
     events: list[dict[str, Any]],
     shots: list[dict[str, Any]],
     *,
     match_tolerance_s: float,
     campaign_timezone: str,
-) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
-    """The (event, shot, seconds from event to shot) pairs the rule allows."""
+) -> dict[str, tuple[str, dict[str, Any] | None, float | None]]:
+    """For every unattached, unnumbered event: may it pair one to one, or why not.
+
+    Keyed by ``event_id``: ``("pair", shot, seconds from event to shot)``, or
+    a reason from ``REVIEW_REASONS`` with no shot. Numbered and attached
+    events are left out (decision D6).
+    """
     current = [
         shot
         for shot in shots
@@ -4491,27 +4523,127 @@ def _one_to_one_pairs(
     def within(left: datetime, right: datetime) -> bool:
         return abs((left - right).total_seconds()) <= match_tolerance_s
 
-    pairs: list[tuple[dict[str, Any], dict[str, Any], float]] = []
+    verdicts: dict[str, tuple[str, dict[str, Any] | None, float | None]] = {}
+    for event in events:
+        if event.get("shot_key") or _event_shot_number(event) is not None:
+            continue
+        if parse_datetime(event.get("timestamp")) is None:
+            verdicts[str(event.get("event_id"))] = ("no_time", None, None)
     for event, event_time, stream in timed_events:
         if event.get("shot_key") or _event_shot_number(event) is not None:
             continue
-        near_shots = [item for item in shot_times if within(item[1], event_time)]
-        if len(near_shots) != 1:
-            continue
-        shot, shot_time = near_shots[0]
-        rivals = [
-            other
-            for other, other_time, other_stream in timed_events
-            if other_stream == stream and within(other_time, shot_time)
-        ]
-        attributed = _attribution_candidate_keys(event, current)
-        if (
-            rivals == [event]
-            and (shot["shot_key"], stream) not in held_streams
-            and (not attributed or shot["shot_key"] in attributed)
-        ):
-            pairs.append((event, shot, (shot_time - event_time).total_seconds()))
-    return pairs
+        verdicts[str(event.get("event_id"))] = _one_to_one_verdict(
+            event,
+            event_time,
+            stream,
+            [item for item in shot_times if within(item[1], event_time)],
+            timed_events,
+            held_streams,
+            current,
+            within,
+        )
+    return verdicts
+
+
+def _one_to_one_verdict(
+    event: dict[str, Any],
+    event_time: datetime,
+    stream: tuple[str, str, str],
+    near_shots: list[tuple[dict[str, Any], datetime]],
+    timed_events: list[tuple[dict[str, Any], datetime, tuple[str, str, str]]],
+    held_streams: set[tuple[Any, tuple[str, str, str]]],
+    current: list[dict[str, Any]],
+    within: Callable[[datetime, datetime], bool],
+) -> tuple[str, dict[str, Any] | None, float | None]:
+    if not near_shots:
+        return "no_shot_in_tolerance", None, None
+    if len(near_shots) > 1:
+        return "several_shots_in_tolerance", None, None
+    shot, shot_time = near_shots[0]
+    rivals = [
+        other
+        for other, other_time, other_stream in timed_events
+        if other_stream == stream and within(other_time, shot_time)
+    ]
+    if rivals != [event] or (shot["shot_key"], stream) in held_streams:
+        return "shot_has_other_event", None, None
+    attributed = _attribution_candidate_keys(event, current)
+    if attributed and shot["shot_key"] not in attributed:
+        return "attribution_disagrees", None, None
+    return "pair", shot, (shot_time - event_time).total_seconds()
+
+
+def _one_to_one_pairs(
+    events: list[dict[str, Any]],
+    shots: list[dict[str, Any]],
+    *,
+    match_tolerance_s: float,
+    campaign_timezone: str,
+) -> list[tuple[dict[str, Any], dict[str, Any], float]]:
+    """The (event, shot, seconds from event to shot) pairs the rule allows."""
+    by_id = {str(event.get("event_id")): event for event in events}
+    return [
+        (by_id[event_id], shot, delta)
+        for event_id, (verdict, shot, delta) in _one_to_one_verdicts(
+            events,
+            shots,
+            match_tolerance_s=match_tolerance_s,
+            campaign_timezone=campaign_timezone,
+        ).items()
+        if verdict == "pair" and shot is not None and delta is not None
+    ]
+
+
+def _set_review_reasons(
+    events: list[dict[str, Any]],
+    shots: list[dict[str, Any]],
+    *,
+    has_labfrog: bool,
+    match_tolerance_s: float,
+    campaign_timezone: str,
+) -> None:
+    """Name why each event still waits (``review_reason``), shot-aligner style.
+
+    Unnumbered events get the one-to-one verdict (``time_rule_off`` where the
+    rule would have paired it but is off). A numbered event in review is
+    there because its number is held by several shots, else its identity
+    conflicts. Without LabFrog records an unnumbered event has nothing to
+    pair with (``no_labfrog_record``).
+    """
+    waiting = [
+        event
+        for event in events
+        if event.get("match_status") in {"ambiguous", "unmatched"}
+        and not event.get("shot_key")
+    ]
+    verdicts = (
+        _one_to_one_verdicts(
+            events,
+            shots,
+            match_tolerance_s=match_tolerance_s,
+            campaign_timezone=campaign_timezone,
+        )
+        if has_labfrog
+        else {}
+    )
+    for event in waiting:
+        if _event_shot_number(event) is not None:
+            number = _event_shot_number(event)
+            holders = [shot for shot in shots if _authority_number(shot) == number]
+            event["review_reason"] = (
+                "number_held_by_several" if len(holders) > 1 else "identity_conflict"
+            )
+        elif not has_labfrog:
+            event["review_reason"] = (
+                "no_time"
+                if parse_datetime(event.get("timestamp")) is None
+                else "no_labfrog_record"
+            )
+        else:
+            verdict = verdicts.get(str(event.get("event_id")), ("no_time", None, None))
+            event["review_reason"] = (
+                "time_rule_off" if verdict[0] == "pair" else verdict[0]
+            )
 
 
 def _attribution_candidate_keys(

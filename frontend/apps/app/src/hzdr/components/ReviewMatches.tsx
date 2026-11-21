@@ -27,6 +27,7 @@ import type {
 import { NOT_RECORDED, formatShotTime } from '../utils/format'
 import { formatTargetLabel } from '../utils/metadata'
 import {
+  REVIEW_REASON_TEXT,
   CLEAR_TIME_CHOICE,
   candidateGap,
   clearTimeChoices,
@@ -137,6 +138,13 @@ function EventLine({ event }: { event: HZDRReviewEvent }) {
           </>
         ) : null}
       </Text>
+      {event.review_reason ? (
+        <Text size="xs" data-testid="review-reason">
+          <b>Why it waits:</b>{' '}
+          {REVIEW_REASON_TEXT[event.review_reason] ??
+            event.review_reason.replace(/_/g, ' ')}
+        </Text>
+      ) : null}
     </Stack>
   )
 }
