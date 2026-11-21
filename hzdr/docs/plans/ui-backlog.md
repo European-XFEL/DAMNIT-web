@@ -26,7 +26,9 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [x] **CSV export.** "Download CSV" beside Add columns: the rows the table
   shows, in its order, visible columns, `shot_key` first; text that would
   start a spreadsheet formula gets a leading apostrophe.
-- [ ] Trends for context columns and a second value.
+- [x] **Trends for context columns and a second value.** Numeric context
+  columns are trend values too; **Compare with** draws a second value over
+  the same shots on its own right-hand axis (dashed, teal).
 - [ ] Highlight new shots.
 - [ ] Reset or delete branch `claude/dazzling-noether-br3edr` on GitHub
   (needs the maintainer: a force-push or delete).

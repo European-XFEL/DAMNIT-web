@@ -48,3 +48,29 @@ describe('trend points', () => {
     expect(screen.getByRole('img')).toBeInTheDocument()
   })
 })
+
+describe('a second value', () => {
+  it('draws on its own axis, skips gaps and says which line is which', () => {
+    render(
+      <MantineProvider>
+        <MetadataTrendPreview
+          values={values}
+          secondary={{
+            label: 'Gain (your column)',
+            primaryLabel: 'Laser / Pulse energy',
+            values: [100, null, 300],
+          }}
+        />
+      </MantineProvider>
+    )
+    expect(screen.getByTestId('trend-legend')).toHaveTextContent(
+      'Solid: Laser / Pulse energy (left axis)Dashed: Gain (your column) (right axis)'
+    )
+    const second = screen.getByTestId('trend-secondary')
+    const line = second.querySelector('polyline')
+    // Two points: the shot without a second value is left out.
+    expect(line?.getAttribute('points')?.trim().split(' ')).toHaveLength(2)
+    // Its own ticks, at the right.
+    expect(second.querySelectorAll('text')).toHaveLength(3)
+  })
+})

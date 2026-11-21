@@ -1337,6 +1337,8 @@ export function HZDRShotPage() {
                         selectedShot && getShotRowKey(selectedShot)
                       }
                       onSelectShot={selectRowFromTrend}
+                      contextColumns={contextResults?.columns ?? []}
+                      contextRowsByShot={contextRowsByShot}
                     />
                   </DetailsSection>
                   <DetailsSection title="Selected cell" open>

@@ -331,12 +331,33 @@ function getNumericPreviewValues(preview: unknown): number[] {
   return preview.slice(0, 64)
 }
 
+/** The right-hand axis of a second value: its ticks and its y in the plot. */
+function secondAxis(values: Array<number | null>, plotHeight: number) {
+  const finite = values.filter(
+    (value): value is number => value !== null && Number.isFinite(value)
+  )
+  if (!finite.length) return null
+  const rawMin = Math.min(...finite)
+  const rawMax = Math.max(...finite)
+  const range = rawMax - rawMin
+  const padding =
+    range === 0 ? Math.max(Math.abs(rawMax) * 0.1, 1) : range * 0.12
+  const min = rawMin - padding
+  const max = rawMax + padding
+  const span = Math.max(max - min, 1e-9)
+  return {
+    ticks: [max, (max + min) / 2, min],
+    y: (value: number) => ((max - value) / span) * plotHeight,
+  }
+}
+
 export function MetadataTrendPreview({
   values,
   title = 'Trend preview',
   xLabel = 'shot number',
   selectedRowKey,
   onSelectPoint,
+  secondary,
 }: {
   values: HZDRTrendValue[]
   title?: string
@@ -345,6 +366,15 @@ export function MetadataTrendPreview({
   selectedRowKey?: string
   /** Given, each point with a rowKey is a button that selects its shot. */
   onSelectPoint?: (rowKey: string) => void
+  /**
+   * A second value over the same shots, one entry per `values` entry (null
+   * where that shot has none), drawn on its own axis at the right.
+   */
+  secondary?: {
+    label: string
+    primaryLabel: string
+    values: Array<number | null>
+  }
 }) {
   if (!values.length) {
     return (
@@ -360,7 +390,7 @@ export function MetadataTrendPreview({
     width: 320,
     height: 180,
     left: 58,
-    right: 18,
+    right: secondary ? 58 : 18,
     top: 18,
     bottom: 36,
   }
@@ -389,6 +419,17 @@ export function MetadataTrendPreview({
     .join(' ')
   const firstShot = values[0]?.shotNumber
   const lastShot = values.at(-1)?.shotNumber
+  const second = secondary ? secondAxis(secondary.values, plotHeight) : null
+  const secondPoints = second
+    ? secondary!.values
+        .map((value, index) =>
+          value === null || !Number.isFinite(value)
+            ? null
+            : `${xForIndex(index)},${chart.top + second.y(value)}`
+        )
+        .filter((point): point is string => point !== null)
+        .join(' ')
+    : ''
 
   return (
     <Stack gap="xs">
@@ -400,6 +441,16 @@ export function MetadataTrendPreview({
           {formatTrendValue(rawMin)} to {formatTrendValue(rawMax)}
         </Text>
       </Group>
+      {secondary ? (
+        <Group gap="md" data-testid="trend-legend">
+          <Text size="xs" c="blue.7">
+            Solid: {secondary.primaryLabel} (left axis)
+          </Text>
+          <Text size="xs" c="teal.8">
+            Dashed: {secondary.label} (right axis)
+          </Text>
+        </Group>
+      ) : null}
       <svg
         viewBox={`0 0 ${chart.width} ${chart.height}`}
         width="100%"
@@ -448,6 +499,29 @@ export function MetadataTrendPreview({
             </g>
           )
         })}
+        {second ? (
+          <g data-testid="trend-secondary">
+            {second.ticks.map((tick) => (
+              <text
+                key={tick}
+                x={chart.width - chart.right + 8}
+                y={chart.top + second.y(tick) + 3}
+                textAnchor="start"
+                fontSize="10"
+                fill="var(--mantine-color-teal-8)"
+              >
+                {formatTrendValue(tick)}
+              </text>
+            ))}
+            <polyline
+              points={secondPoints}
+              fill="none"
+              stroke="var(--mantine-color-teal-6)"
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+            />
+          </g>
+        ) : null}
         <polyline
           points={points}
           fill="none"

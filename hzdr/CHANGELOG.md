@@ -19,6 +19,13 @@ behaviour; the merge PR has the details.
   shots whose `fired_at` is set but is no ISO-8601 time (a grey badge on the
   Home row) instead of skipping them silently.
 
+### Trends: your columns, and a second value to compare
+- Trends offers your numeric context columns beside the metadata values
+  (marked "your column"; image and array columns are left out).
+- **Compare with** adds a second value over the same shots, drawn dashed on
+  its own axis at the right, with a legend; a shot without the second value
+  is a gap in that line.
+
 ### Shot table: saved views as chips, and Download CSV
 - Above the quick filters, **Views** lists your named table views (filter,
   sort, hidden and ordered columns) as chips: one click applies a view, the
