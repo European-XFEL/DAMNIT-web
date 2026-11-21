@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { BrowserContext } from '@playwright/test'
 import { mapValues } from 'lodash-es'
 
 import {
@@ -51,8 +51,9 @@ type MockApiOptions = {
   appOrigin: string
 }
 
+// A context covers every page it opens, such as a link's new tab.
 export async function mockApi(
-  page: Page,
+  context: BrowserContext,
   example: Example,
   { authenticated, appOrigin }: MockApiOptions
 ): Promise<MockApi> {
@@ -80,7 +81,7 @@ export async function mockApi(
     },
     // A push carries the run's identity, so it is delivered for the proposal the
     // subscription opened (the first accessible one in a single-proposal example).
-    ...(await mockWebSocket(page, accessible[0])),
+    ...(await mockWebSocket(context, accessible[0])),
     editRuns: (runs) => {
       runData = runData.map((run) => ({
         ...run,
@@ -121,7 +122,7 @@ export async function mockApi(
 
   // Playwright tries the last-registered route first, so the routes below win.
   // Off-site requests and unmocked REST calls fail; app files fall through.
-  await page.route('**/*', (route) => {
+  await context.route('**/*', (route) => {
     const url = route.request().url()
     const { origin, pathname } = new URL(url)
     if (origin !== appOrigin) {
@@ -147,7 +148,7 @@ export async function mockApi(
 
   // Mirror the real 401 for a gone cookie: PrivateRoute reads it as isError
   // and the LoggedOutPage as logged out.
-  await page.route('**/oauth/userinfo**', (route) =>
+  await context.route('**/oauth/userinfo**', (route) =>
     authed
       ? route.fulfill({ json: example.userInfo })
       : route.fulfill({
@@ -159,7 +160,7 @@ export async function mockApi(
   // Login is a full-page navigation to a same-origin URL. Fulfil it empty so the
   // navigation completes (and the catch-all does not log it as drift); the login
   // spec asserts the request itself, not the resulting blank page.
-  await page.route('**/oauth/login**', (route) =>
+  await context.route('**/oauth/login**', (route) =>
     route.fulfill({ status: 200, body: '' })
   )
 
@@ -167,12 +168,12 @@ export async function mockApi(
   // Flip the session off so the LoggedOutPage re-fetch of userinfo 401s and the
   // "You have been logged out" branch renders, modeling the cleared session
   // cookie.
-  await page.route('**/oauth/logout**', (route) => {
+  await context.route('**/oauth/logout**', (route) => {
     authed = false
     return route.fulfill({ json: {} })
   })
 
-  await page.route('**/graphql', async (route) => {
+  await context.route('**/graphql', async (route) => {
     const { operationName, query, variables } = (route
       .request()
       .postDataJSON() ?? {}) as {
@@ -212,13 +213,13 @@ export async function mockApi(
     }
   })
 
-  await page.route('**/contextfile/content**', (route) =>
+  await context.route('**/contextfile/content**', (route) =>
     route.fulfill({
       json: { fileContent: contextContent, lastModified: contextLastModified },
     })
   )
 
-  await page.route('**/contextfile/last_modified**', (route) =>
+  await context.route('**/contextfile/last_modified**', (route) =>
     route.fulfill({ json: { lastModified: contextLastModified } })
   )
 
