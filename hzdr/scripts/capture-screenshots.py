@@ -33,10 +33,9 @@ import shutil
 import signal
 import socket
 import sqlite3
-import subprocess
+import subprocess  # noqa: S404 -- starts the local API, Vite and git
 import sys
 import time
-from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -45,12 +44,24 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from playwright.sync_api import Page
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = ROOT / "hzdr" / "docs" / "screenshots"
 RECEIPT_PATH = OUT_DIR / "capture-receipt.json"
 VIEWPORT = {"width": 1920, "height": 1080}
+# The in-app Docs page's figures: the top of a capture, 900 px wide JPEGs.
+DOCS_ASSET_DIR = ROOT / "frontend" / "apps" / "app" / "src" / "hzdr" / "assets" / "docs"
+DOCS_ASSET_WIDTH = 900
+# capture -> (Docs asset, how many capture pixels from the top it shows)
+DOCS_ASSETS = {
+    "shot-table.png": ("docs-shot-table.jpg", 1160),
+    "context-assist.png": ("docs-context-builder.jpg", 1041),
+    "link-shot-records.png": ("docs-review-matches.jpg", 828),
+    "flow-monitor.png": ("docs-flow-monitor.jpg", 960),
+}
 
 # auth mode "none" resolves every request to damnit_api.auth.models.DEV_USER,
 # whose preferred_username is the workspace slug the context routes use.
@@ -130,7 +141,7 @@ def _free_port() -> int:
 
 def _fixture_shots(campaign: Campaign) -> tuple[dict[str, Any], ...]:
     """Describe every fixture shot: identity, timing, and per-shot metadata."""
-    rng = random.Random(campaign.seed)
+    rng = random.Random(campaign.seed)  # noqa: S311 -- repeatable fixture data
     shots: list[dict[str, Any]] = []
     index = 0
     for shot_date, shot_count in campaign.shot_plan:
@@ -195,7 +206,7 @@ def _waveform(
     """Synthesize one laser diagnostic trace for a shot."""
     index = int(shot["index"])
     energy = float(shot["laser"]["pulse_energy"])
-    rng = random.Random(campaign.seed + index)
+    rng = random.Random(campaign.seed + index)  # noqa: S311 -- fixture data
     trace = []
     for sample in range(samples):
         position = sample / (samples - 1)
@@ -240,7 +251,7 @@ def _fixture_events(campaign: Campaign) -> tuple[dict[str, Any], ...]:
             "diagnostic": shot["diagnostic"],
         }
 
-        events.append({
+        events.append({  # noqa: FURB113 -- one event per producer, built in turn
             **common,
             "event_id": f"shotcounter-{experiment_id}-{shot_id}",
             "source": "Shotcounter",
@@ -516,7 +527,7 @@ def _start_process(
     cwd: Path,
     env: dict[str, str],
 ) -> subprocess.Popen[bytes]:
-    return subprocess.Popen(
+    return subprocess.Popen(  # noqa: S603 -- our own commands
         command,
         cwd=cwd,
         env=env,
@@ -534,17 +545,19 @@ def _wait_for_url(
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if process.poll() is not None:
-            raise RuntimeError(
+            message = (
                 f"Process exited with code {process.returncode} "
                 f"before {url} became ready."
             )
+            raise RuntimeError(message)
         try:
-            with urlopen(url, timeout=1) as response:
+            with urlopen(url, timeout=1) as response:  # noqa: S310 -- local http://
                 if response.status == 200:
                     return
         except (OSError, URLError):
             time.sleep(0.15)
-    raise TimeoutError(f"Timed out waiting for {url}.")
+    message = f"Timed out waiting for {url}."
+    raise TimeoutError(message)
 
 
 def _stop_process_tree(process: subprocess.Popen[bytes] | None) -> None:
@@ -553,7 +566,7 @@ def _stop_process_tree(process: subprocess.Popen[bytes] | None) -> None:
     if os.name == "nt":
         taskkill = shutil.which("taskkill")
         if taskkill:
-            subprocess.run(
+            subprocess.run(  # noqa: S603 -- our own commands
                 [taskkill, "/PID", str(process.pid), "/T", "/F"],
                 check=False,
                 stdout=subprocess.DEVNULL,
@@ -578,7 +591,9 @@ def _frontend_environment() -> dict[str, str]:
     required_major = int((ROOT / ".nvmrc").read_text().strip())
     node = shutil.which("node")
     if node:
-        version = subprocess.check_output([node, "--version"], text=True).strip()
+        version = subprocess.check_output(  # noqa: S603 -- node --version
+            [node, "--version"], text=True
+        ).strip()
         if int(version.lstrip("v").split(".")[0]) >= required_major:
             return env
 
@@ -596,16 +611,18 @@ def _frontend_environment() -> dict[str, str]:
         env["PATH"] = str(bin_dir) + os.pathsep + env.get("PATH", "")
         print(f"Using Node from {bin_dir}", flush=True)
         return env
-    raise SystemExit(
+    message = (
         f"Node >= {required_major} is required. Activate the version in .nvmrc "
         "in your shell before running the capture."
     )
+    raise SystemExit(message)
 
 
 def _frontend_command(env: dict[str, str]) -> list[str]:
     pnpm = shutil.which("pnpm", path=env.get("PATH"))
     if pnpm is None:
-        raise SystemExit("pnpm is required to start the HZDR frontend.")
+        message = "pnpm is required to start the HZDR frontend."
+        raise SystemExit(message)
     arguments = [
         pnpm,
         "--filter",
@@ -616,7 +633,8 @@ def _frontend_command(env: dict[str, str]) -> list[str]:
         return arguments
     command_shell = shutil.which("cmd")
     if command_shell is None:
-        raise SystemExit("cmd.exe is required to start pnpm on Windows.")
+        message = "cmd.exe is required to start pnpm on Windows."
+        raise SystemExit(message)
     return [command_shell, "/d", "/c", *arguments]
 
 
@@ -755,7 +773,7 @@ def _prepare_review_matches(page: Page) -> None:
     the "all clear" banner when nothing waits, appear once its review list
     and shots have arrived.
     """
-    page.get_by_text(re.compile("all clear|Ambiguous matches")).first.wait_for()
+    page.get_by_text(re.compile(r"all clear|Ambiguous matches")).first.wait_for()
 
 
 def _prepare_flow_monitor(page: Page) -> None:
@@ -831,6 +849,20 @@ SHOTS = (
 )
 
 
+def _write_docs_assets() -> None:
+    """Write the Docs page's smaller copies from the fresh captures."""
+    from PIL import Image  # an API dependency (the packs read frames with it)
+
+    for capture_name, (asset_name, top) in DOCS_ASSETS.items():
+        with Image.open(OUT_DIR / capture_name) as image:
+            cropped = image.convert("RGB").crop((0, 0, image.width, top))
+            height = round(top * DOCS_ASSET_WIDTH / image.width)
+            cropped.resize((DOCS_ASSET_WIDTH, height), Image.Resampling.LANCZOS).save(
+                DOCS_ASSET_DIR / asset_name, quality=85, optimize=True
+            )
+        print(f"wrote {DOCS_ASSET_DIR / asset_name}")
+
+
 def _write_receipt() -> None:
     receipt = {
         "schemaVersion": 1,
@@ -880,9 +912,8 @@ def capture() -> None:
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
-        raise SystemExit(
-            "Playwright is required. Run this command through `uv run`."
-        ) from exc
+        message = "Playwright is required. Run this command through `uv run`."
+        raise SystemExit(message) from exc
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     frontend_env = _frontend_environment()
@@ -902,7 +933,7 @@ def capture() -> None:
             _write_fixture_events(events_dir, campaign)
             _write_curated_campaign(curated_dir, campaign)
             _seed_context_workspace(workspace_root, campaign)
-            subprocess.run(
+            subprocess.run(  # noqa: S603 -- our own commands
                 [
                     sys.executable,
                     str(ROOT / "api" / "scripts" / "hzdr-package-emulator.py"),
@@ -970,11 +1001,12 @@ def capture() -> None:
                         headless=True, executable_path=executable or None
                     )
                 except PlaywrightError as exc:
-                    raise SystemExit(
+                    message = (
                         "Playwright Chromium is not installed. Run "
                         "`uv run playwright install chromium` "
                         "once, then retry."
-                    ) from exc
+                    )
+                    raise SystemExit(message) from exc
                 try:
                     page = browser.new_page(viewport=VIEWPORT)
                     page.on(
@@ -1021,6 +1053,7 @@ def capture() -> None:
                     browser.close()
             _write_receipt()
             print(f"wrote {RECEIPT_PATH}")
+            _write_docs_assets()
         finally:
             _stop_process_tree(frontend_process)
             _stop_process_tree(api_process)

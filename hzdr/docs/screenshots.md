@@ -23,14 +23,10 @@ To use a Chromium that is already installed instead of Playwright's download,
 set `HZDR_CHROMIUM_EXECUTABLE` to its binary.
 Server output and browser errors are printed to the terminal for troubleshooting.
 
-The in-app Docs page shows smaller copies in
-`frontend/apps/app/src/hzdr/assets/docs/` (900 px wide JPEGs of each page's
-top). They are not written by the capture; after one, refresh a copy whose
-page changed, for example the shot table:
-
-```bash
-python3 -c "from PIL import Image; Image.open('hzdr/docs/screenshots/shot-table.png').convert('RGB').crop((0, 0, 1920, 1160)).resize((900, 544), Image.LANCZOS).save('frontend/apps/app/src/hzdr/assets/docs/docs-shot-table.jpg', quality=85, optimize=True)"
-```
+The capture also writes the in-app Docs page's smaller copies to
+`frontend/apps/app/src/hzdr/assets/docs/`: the top of the shot table, Help me
+choose, Review matches and Flow monitor captures as 900 px wide JPEGs
+(`DOCS_ASSETS` in the script names each one and how much of the page it shows).
 
 ## What the fixture stack contains
 
