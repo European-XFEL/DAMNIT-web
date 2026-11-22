@@ -5,6 +5,9 @@ The mechanical part is one script, `hzdr/scripts/next-on-server.sh`. The rest
 needs a person, a decision, or a real shot; those items are listed below the
 script, in order.
 
+**Short version for a deploy:** [deploy-notes.md](deploy-notes.md), the steps
+per PR, newest first.
+
 ## 1. Get it and run it
 
 On fwkt-webapps, as `tippey` (not with sudo), once this is on DAMNIT's `main`:
