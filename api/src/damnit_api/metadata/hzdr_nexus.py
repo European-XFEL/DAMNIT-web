@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import errno
+import functools
 import hashlib
 import json
 import logging
@@ -3814,15 +3815,34 @@ def make_shot_key(experiment_id: str, shot_date: str | None, shot_number: int) -
 
 def parse_datetime(value: Any, *, naive_timezone: str = "UTC") -> datetime | None:
     """Parse common ISO timestamps and normalize naive values to UTC."""
+    if isinstance(value, str):
+        # The matcher asks for the same shot times once per event; a datetime
+        # is immutable, so the text's answer is kept (plan backfill-store).
+        return _parse_datetime_text(value, naive_timezone)
     if isinstance(value, datetime):
         parsed = value
-    elif value in (None, ""):
+    elif value is None:
         return None
     else:
         try:
             parsed = datetime.fromisoformat(str(value))
         except ValueError:
             return None
+    return _as_utc(parsed, naive_timezone)
+
+
+@functools.lru_cache(maxsize=1 << 16)
+def _parse_datetime_text(value: str, naive_timezone: str) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return _as_utc(parsed, naive_timezone)
+
+
+def _as_utc(parsed: datetime, naive_timezone: str) -> datetime:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=resolve_timezone(naive_timezone))
     return parsed.astimezone(UTC)
@@ -4722,6 +4742,8 @@ def _apply_aligner_claims(
     }
     zone = resolve_timezone(campaign_timezone)
     attached = 0
+    # Every file of one shot-aligner event has one claim, so one answer.
+    targets: dict[int, tuple[dict[str, Any] | None, str, str]] = {}
     for event in events:
         if event.get("shot_key") or _event_shot_number(event) is not None:
             continue
@@ -4733,12 +4755,14 @@ def _apply_aligner_claims(
         )
         if claim is None:
             continue
-        shot, reason, detail = _aligner_target(
-            claim,
-            shots,
-            match_tolerance_s=match_tolerance_s,
-            campaign_timezone=campaign_timezone,
-        )
+        if id(claim) not in targets:
+            targets[id(claim)] = _aligner_target(
+                claim,
+                shots,
+                match_tolerance_s=match_tolerance_s,
+                campaign_timezone=campaign_timezone,
+            )
+        shot, reason, detail = targets[id(claim)]
         where = f"shot-aligner {claim.date} {claim.event_key}"
         if shot is None:
             event["aligner_reason"] = reason

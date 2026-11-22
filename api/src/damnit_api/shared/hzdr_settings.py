@@ -294,6 +294,10 @@ class HZDRBuilderSettings(BaseModel):
     # acquisitions become file events; the bridge then attaches the confirmed
     # ones. Needs aligner_index_dir. Empty: off.
     aligner_campaigns: dict[str, list[str]] = Field(default_factory=dict)
+    # Where each shot-aligner day is stored once parsed (plan
+    # backfill-store-and-console G1, ruling R-2026-11-22f), re-read only when
+    # its index or decisions change. Unset: .aligner-cache beside the catalog.
+    aligner_cache_dir: Path | None = None
     # LabFrog labfrog-campaign-schedule-v1 export whose windows route
     # "unassigned" events (plan W1, decision D4).
     campaign_schedule: Path | None = None

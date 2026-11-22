@@ -646,3 +646,132 @@ def test_multi_campaign_mode_builds_a_backfilled_campaign_without_a_spool(tmp_pa
     catalog = json.loads((tmp_path / "nexus" / "hzdr_sources.json").read_text())
     vanlife = next(s for s in catalog["sources"] if s["key"] == VANLIFE)
     assert len(vanlife["shots"]) == 3
+
+
+# --- the stored, parsed day (plan-backfill-store-and-console G1, G3) ------------
+
+import os  # noqa: E402
+
+from damnit_api.metadata.hzdr_aligner import load_day_data, local_dates  # noqa: E402
+
+
+def _touch_later(path: Path) -> None:
+    stat = path.stat()
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+
+
+def test_a_day_is_stored_once_and_read_back_while_unchanged(tmp_path):
+    (tmp_path / "index").mkdir()
+    index_dir = _index_dir(tmp_path / "index")
+    cache = tmp_path / "cache"
+    first = load_day_data(index_dir, "2025_12_03", cache_dir=cache)
+    assert first is not None
+    assert not first.from_cache
+    assert (cache / "2025_12_03.aligner.json").is_file()
+    again = load_day_data(index_dir, "2025_12_03", cache_dir=cache)
+    assert again is not None
+    assert again.from_cache
+    # The same content, and one claim object per shot-aligner event again.
+    assert again.shots_for(VANLIFE) == first.shots_for(VANLIFE)
+    assert again.events_for(VANLIFE) == first.events_for(VANLIFE)
+    assert len({id(c) for c in again.claims.values()}) == 3
+    assert {k: c.event_key for k, c in again.claims.items()} == {
+        k: c.event_key for k, c in first.claims.items()
+    }
+
+
+@pytest.mark.parametrize(
+    "changed", ["2025_12_03.index.json", "2025_12_03.decisions.json"]
+)
+def test_a_changed_index_or_decision_is_parsed_again(tmp_path, changed):
+    (tmp_path / "index").mkdir()
+    index_dir = _index_dir(tmp_path / "index")
+    cache = tmp_path / "cache"
+    load_day_data(index_dir, "2025_12_03", cache_dir=cache)
+    # A reviewer rejects shot 2 in shot-aligner (or the index is rewritten).
+    decisions = json.loads((index_dir / "2025_12_03.decisions.json").read_text())
+    decisions["links"]["set1:2"]["action"] = "reject"
+    if changed.endswith("decisions.json"):
+        (index_dir / changed).write_text(json.dumps(decisions))
+    _touch_later(index_dir / changed)
+    day = load_day_data(index_dir, "2025_12_03", cache_dir=cache)
+    assert day is not None
+    assert not day.from_cache
+    if changed.endswith("decisions.json"):
+        confirmed = {c.event_rank: c.confirmed for c in day.claims.values()}
+        assert confirmed == {1: True, 2: False, 3: True}
+
+
+def test_a_corrupt_stored_day_is_ignored_and_rewritten(tmp_path):
+    (tmp_path / "index").mkdir()
+    index_dir = _index_dir(tmp_path / "index")
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    (cache / "2025_12_03.aligner.json").write_text('{"fingerprint": ')
+    day = load_day_data(index_dir, "2025_12_03", cache_dir=cache)
+    assert day is not None
+    assert len(day.events) == 9
+    assert load_day_data(index_dir, "2025_12_03", cache_dir=cache).from_cache
+
+
+def test_a_build_reads_only_the_dates_its_events_fall_on(tmp_path):
+    from damnit_api.metadata import hzdr_aligner
+
+    (tmp_path / "index").mkdir()
+    index_dir = _index_dir(tmp_path / "index")
+    other = json.loads((FIXTURES / "2025_12_03.index.json").read_text())
+    other["date"] = "2025_12_04"
+    (index_dir / "2025_12_04.index.json").write_text(json.dumps(other))
+    read: list[str] = []
+    real = hzdr_aligner.load_day
+
+    def spy(directory, date_folder):
+        read.append(date_folder)
+        return real(directory, date_folder)
+
+    hzdr_aligner.load_day = spy
+    try:
+        dates = local_dates(_file_events(), "Europe/Berlin")
+        assert dates == {"2025-12-03"}
+        hzdr_aligner.load_aligner_claims(index_dir, dates=dates)
+    finally:
+        hzdr_aligner.load_day = real
+    assert read == ["2025_12_03"]
+
+
+def test_a_stored_build_equals_one_without_the_store(tmp_path):
+    (tmp_path / "index").mkdir()
+    index_dir = _index_dir(tmp_path / "index")
+    cache = tmp_path / "cache"
+    plain = backfill(index_dir, VANLIFE, ["2025_12_03"], labfrog_shots=[], events=[])
+    stored = [
+        backfill(
+            index_dir,
+            VANLIFE,
+            ["2025_12_03"],
+            labfrog_shots=[],
+            events=[],
+            cache_dir=cache,
+        )
+        for _ in range(2)
+    ]
+    assert stored[0] == plain
+    assert stored[1] == plain
+
+
+def test_the_trigger_passes_the_cache_folder_only_when_set(tmp_path):
+    from damnit_api.consumer.builder_trigger import BuilderTrigger
+    from damnit_api.shared.hzdr_settings import HZDRBuilderSettings
+
+    base = {
+        "enabled": True,
+        "output_nexus": tmp_path / "c.nxs",
+        "aligner_index_dir": tmp_path,
+    }
+    plain = " ".join(
+        BuilderTrigger(HZDRBuilderSettings(**base), trigger_jsonl=[]).build_command()
+    )
+    assert "--aligner-cache-dir" not in plain
+    settings = HZDRBuilderSettings(**base, aligner_cache_dir=tmp_path / "store")
+    command = " ".join(BuilderTrigger(settings, trigger_jsonl=[]).build_command())
+    assert f"--aligner-cache-dir {tmp_path / 'store'}" in command

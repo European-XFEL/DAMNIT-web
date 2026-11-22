@@ -25,8 +25,13 @@ from damnit_api.consumer.campaign_builds import (
     stamp_campaign,
     unassigned_spool_files,
 )
+from damnit_api.metadata.hzdr_aligner import CACHE_DIRNAME as ALIGNER_CACHE_DIRNAME
 from damnit_api.metadata.hzdr_aligner import backfill as aligner_backfill
-from damnit_api.metadata.hzdr_aligner import load_aligner_claims, parse_campaign_dates
+from damnit_api.metadata.hzdr_aligner import (
+    load_aligner_claims,
+    local_dates,
+    parse_campaign_dates,
+)
 from damnit_api.metadata.hzdr_event import UNASSIGNED_EXPERIMENT_ID
 from damnit_api.metadata.hzdr_nexus import (
     discover_labfrog_data_products,
@@ -221,10 +226,19 @@ def build(
         ])
     )
     aligner_index_dir = getattr(args, "aligner_index_dir", None)
-    # plan-aligner-bridge: shot-aligner's day indexes, read fresh each build
-    # (a confirmation made there since the last build counts at once).
+    # plan-aligner-bridge: shot-aligner's day indexes, checked each build (a
+    # confirmation made there since the last build counts at once); only the
+    # dates this build's events fall on, each from its stored form while
+    # shot-aligner has not changed it (plan-backfill-store G1, G3).
     aligner_claims = (
-        load_aligner_claims(aligner_index_dir) if aligner_index_dir else None
+        load_aligner_claims(
+            aligner_index_dir,
+            dates=local_dates(events, args.campaign_timezone),
+            cache_dir=_aligner_cache_dir(args),
+            timezone=args.campaign_timezone,
+        )
+        if aligner_index_dir
+        else None
     )
     shots, normalized_events = reconcile_canonical_shots(
         events,
@@ -307,6 +321,15 @@ _SINGLE_CAMPAIGN_FLAGS = (
 )
 
 
+def _aligner_cache_dir(args: argparse.Namespace) -> Path:
+    """Where parsed shot-aligner days are stored: the flag, else beside the catalog."""
+    explicit = getattr(args, "aligner_cache_dir", None)
+    if explicit:
+        return Path(explicit)
+    anchor = args.sources_file or args.output_nexus
+    return Path(anchor).resolve().parent / ALIGNER_CACHE_DIRNAME
+
+
 def _with_aligner_backfill(
     args: argparse.Namespace,
     experiment_id: str,
@@ -333,6 +356,7 @@ def _with_aligner_backfill(
         labfrog_shots=labfrog_shots,
         events=events,
         timezone=args.campaign_timezone,
+        cache_dir=_aligner_cache_dir(args),
     )
     events.extend(added)
     print(
@@ -722,6 +746,16 @@ def main() -> None:
             "record and Count name, once date, time and values agree "
             "(aligner_confirmed); an unconfirmed one is suggested "
             "(plan-aligner-bridge)."
+        ),
+    )
+    parser.add_argument(
+        "--aligner-cache-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Where each shot-aligner day is stored once parsed, re-read only "
+            "when its index or decisions change (default: .aligner-cache "
+            "beside the catalog)."
         ),
     )
     parser.add_argument(

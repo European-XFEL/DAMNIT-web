@@ -23,8 +23,10 @@ half written) is skipped with a warning; the next build reads it again.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
@@ -267,9 +269,18 @@ def index_files(index_dir: Path) -> list[Path]:
 
 
 def load_aligner_claims(
-    index_dir: Path, *, dates: set[str] | None = None
+    index_dir: Path,
+    *,
+    dates: set[str] | None = None,
+    cache_dir: Path | None = None,
+    timezone: str = "Europe/Berlin",
 ) -> dict[FileKey, AlignerClaim]:
-    """Every day index in ``index_dir`` (only ``dates``, ISO, when given)."""
+    """The claims of every day index in ``index_dir`` (only ``dates``, ISO).
+
+    Plan backfill-store G3: a build passes the dates its events fall on, so
+    it reads those indexes alone; with ``cache_dir`` each is read from its
+    stored, parsed form while shot-aligner has not changed it (G1).
+    """
     claims: dict[FileKey, AlignerClaim] = {}
     for path in index_files(index_dir):
         if not path.name.endswith(INDEX_SUFFIX):
@@ -277,12 +288,11 @@ def load_aligner_claims(
         date_folder = path.name[: -len(INDEX_SUFFIX)]
         if dates is not None and date_folder.replace("_", "-") not in dates:
             continue
-        index = _read_json(path)
-        if index is None:
-            continue
-        decisions_path = path.with_name(date_folder + DECISIONS_SUFFIX)
-        decisions = _read_json(decisions_path) if decisions_path.is_file() else None
-        claims.update(claims_from_index(index, decisions, index_file=str(path)))
+        day = load_day_data(
+            index_dir, date_folder, cache_dir=cache_dir, timezone=timezone
+        )
+        if day is not None:
+            claims.update(day.claims)
     return claims
 
 
@@ -591,6 +601,7 @@ def backfill(
     labfrog_shots: list[dict[str, Any]],
     events: list[dict[str, Any]],
     timezone: str = "Europe/Berlin",
+    cache_dir: Path | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Shotsheet shots for the dates LabFrog has none of, and the days' files.
 
@@ -613,13 +624,14 @@ def backfill(
     shots: list[dict[str, Any]] = []
     added: list[dict[str, Any]] = []
     for date_folder in date_folders:
-        day = load_day(index_dir, date_folder)
+        day = load_day_data(
+            index_dir, date_folder, cache_dir=cache_dir, timezone=timezone
+        )
         if day is None:
             continue
-        index, _ = day
         if date_folder.replace("_", "-") not in labfrog_dates:
-            shots.extend(shotsheet_shots(index, experiment_id))
-        for event in acquisition_events(index, experiment_id, timezone=timezone):
+            shots.extend(day.shots_for(experiment_id))
+        for event in day.events_for(experiment_id):
             keys = {
                 (folder, name, date_folder)
                 for folder, name, _ in event_file_keys(event)
@@ -627,3 +639,157 @@ def backfill(
             if not keys & produced:
                 added.append(event)
     return shots, added
+
+
+# --- the stored, parsed day (plan-backfill-store-and-console G1) ----------------
+
+#: Bump when what a stored day holds changes; an older file is then re-parsed.
+CACHE_VERSION = 1
+CACHE_SUFFIX = ".aligner.json"
+CACHE_DIRNAME = ".aligner-cache"
+
+
+@dataclass
+class DayData:
+    """One day, parsed: the bridge's claims, the Shotsheet shots, the files.
+
+    The shots and events are kept without a campaign; ``shots_for`` and
+    ``events_for`` stamp one in.
+    """
+
+    claims: dict[FileKey, AlignerClaim]
+    shots: list[dict[str, Any]]
+    events: list[dict[str, Any]]
+    from_cache: bool = False
+
+    def shots_for(self, experiment_id: str) -> list[dict[str, Any]]:
+        return [
+            {**shot, "campaign": experiment_id, "experiment_id": experiment_id}
+            for shot in self.shots
+        ]
+
+    def events_for(self, experiment_id: str) -> list[dict[str, Any]]:
+        return [{**event, "experiment_id": experiment_id} for event in self.events]
+
+
+def _stat(path: Path) -> list[int] | None:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return [stat.st_size, stat.st_mtime_ns]
+
+
+def day_fingerprint(index_dir: Path, date_folder: str, timezone: str) -> dict[str, Any]:
+    """What a stored day was made from: both files' size and mtime, the zone."""
+    return {
+        "version": CACHE_VERSION,
+        "index": _stat(index_dir / f"{date_folder}{INDEX_SUFFIX}"),
+        "decisions": _stat(index_dir / f"{date_folder}{DECISIONS_SUFFIX}"),
+        "timezone": timezone,
+    }
+
+
+def _claims_to_json(claims: dict[FileKey, AlignerClaim]) -> list[dict[str, Any]]:
+    """One entry per claim object, with every file key that names it."""
+    grouped: dict[int, dict[str, Any]] = {}
+    for key, claim in claims.items():
+        entry = grouped.setdefault(
+            id(claim), {"claim": dataclasses.asdict(claim), "keys": []}
+        )
+        entry["keys"].append(list(key))
+    return list(grouped.values())
+
+
+def _claims_from_json(entries: list[dict[str, Any]]) -> dict[FileKey, AlignerClaim]:
+    claims: dict[FileKey, AlignerClaim] = {}
+    for entry in entries:
+        claim = AlignerClaim(**entry["claim"])
+        for key in entry["keys"]:
+            claims[str(key[0]), str(key[1]), str(key[2])] = claim
+    return claims
+
+
+def _read_cached(path: Path, fingerprint: dict[str, Any]) -> DayData | None:
+    data = _read_json(path) if path.is_file() else None
+    if not data or data.get("fingerprint") != fingerprint:
+        return None
+    try:
+        return DayData(
+            claims=_claims_from_json(data["claims"]),
+            shots=list(data["shots"]),
+            events=list(data["events"]),
+            from_cache=True,
+        )
+    except (KeyError, TypeError, ValueError) as error:
+        logger.warning("stored shot-aligner day %s not used: %s", path, error)
+        return None
+
+
+def _write_cached(path: Path, fingerprint: dict[str, Any], day: DayData) -> None:
+    """Write atomically (temp file, rename): a killed build leaves no half file."""
+    payload = {
+        "fingerprint": fingerprint,
+        "claims": _claims_to_json(day.claims),
+        "shots": day.shots,
+        "events": day.events,
+    }
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+        temporary.write_text(json.dumps(payload), encoding="utf-8")
+        Path(temporary).replace(path)
+    except OSError as error:  # a cache that cannot be written only costs time
+        logger.warning("shot-aligner day %s not stored: %s", path, error)
+
+
+def load_day_data(
+    index_dir: Path,
+    date_folder: str,
+    *,
+    cache_dir: Path | None = None,
+    timezone: str = "Europe/Berlin",
+) -> DayData | None:
+    """One day parsed, from ``cache_dir`` while shot-aligner has not changed it.
+
+    The stored form is used only when its fingerprint (size and mtime of the
+    index and the decisions, the zone, ``CACHE_VERSION``) matches; else the
+    index is parsed again and stored. None when the day has no index.
+    """
+    fingerprint = day_fingerprint(index_dir, date_folder, timezone)
+    if fingerprint["index"] is None:
+        logger.warning(
+            "shot-aligner has no day index for %s in %s", date_folder, index_dir
+        )
+        return None
+    cached_path = cache_dir / f"{date_folder}{CACHE_SUFFIX}" if cache_dir else None
+    if cached_path is not None:
+        cached = _read_cached(cached_path, fingerprint)
+        if cached is not None:
+            return cached
+    day = load_day(index_dir, date_folder)
+    if day is None:
+        return None
+    index, decisions = day
+    parsed = DayData(
+        claims=claims_from_index(
+            index, decisions, index_file=str(index_dir / f"{date_folder}{INDEX_SUFFIX}")
+        ),
+        shots=shotsheet_shots(index, ""),
+        events=acquisition_events(index, "", timezone=timezone),
+    )
+    if cached_path is not None:
+        _write_cached(cached_path, fingerprint, parsed)
+    return parsed
+
+
+def local_dates(events: list[dict[str, Any]], timezone: str) -> set[str]:
+    """The campaign-local dates (ISO) the events fall on (G3)."""
+    from .hzdr_nexus import parse_datetime, resolve_timezone
+
+    zone = resolve_timezone(timezone)
+    return {
+        stamp.astimezone(zone).date().isoformat()
+        for event in events
+        if (stamp := parse_datetime(event.get("timestamp"))) is not None
+    }

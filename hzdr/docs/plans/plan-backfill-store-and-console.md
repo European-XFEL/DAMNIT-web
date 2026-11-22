@@ -83,16 +83,16 @@ for every date in the folder, every campaign and every build.
       the struck item (events for days without a watchdog: made at build
       time now, so no event-model change is needed) noted in
       `plan-aligner-bridge.md`
-- [ ] **G1/G2, the cache:**
+- [x] **G1/G2, the cache:**
   - `hzdr_aligner.load_day_cached` and the fingerprint;
   - an atomic write;
   - claims kept one object per event when read back;
   - the setting, the flag and the trigger;
   - tests: a hit, a miss after the index changes, a miss after a decision,
     a corrupt cache file, and a cached build equal to an uncached one.
-- [ ] **G3, only the needed dates:** tests: a build whose events fall on one
+- [x] **G3, only the needed dates:** tests: a build whose events fall on one
       date reads that index alone.
-- [ ] **Measured:** cold and warm builds of Vanlife, before and after.
+- [x] **Measured:** cold and warm builds of Vanlife, before and after.
 - [ ] **G4, the console script:**
   - report and `--apply`, the exit codes;
   - tests: the report on the fixture (with and without a catalog, a
@@ -113,4 +113,39 @@ for every date in the folder, every campaign and every build.
 
 ## Results
 
-(filled in by the commits)
+**G1 to G3, measured on Vanlife (12-01 and 12-03, 4,242 files, 258 shots):**
+
+| Step | Before | After |
+| --- | ---: | ---: |
+| Reading both days (backfill and claims) | 0.59 s | 0.42 s the first time (it also stores them), **0.20 s** after |
+| The whole build, wall clock | 4.1 s | **3.5 to 3.8 s** |
+| The whole build under the profiler | 14.9 s | 9.1 s |
+
+The output is identical apart from the build time stamp.
+
+- **The real cost was matching, not reading.** The profile found two
+  repeats, now removed:
+  - `parse_datetime` parsed every shot's time again for every event, about
+    a million parses; a parsed time string is now kept (`lru_cache` on the
+    text: a datetime is immutable);
+  - the bridge checked each file separately, though every file of one
+    shot-aligner event has one answer; it is now checked once per event.
+    That step fell from 3.0 s to under 0.5 s in the profile.
+- **The store makes a day 2 to 3 times faster to read again,** but its file
+  is larger than the index (3.9 MB against 2.0 MB for 12-03), because the
+  file events are spelled out.
+- **G3 matters more on the server:** a build now reads only the dates its
+  events fall on, where it used to read every index in the folder for every
+  campaign.
+- **Left, noted:** the time ladder still tries every unnumbered file against
+  every shot before the bridge claims it. That is now the largest part of a
+  build, and it grows with shots × files. Skipping it for files the bridge
+  will attach is a change to the matcher's order, so it is its own plan.
+
+Tests: 7 more in `test_hzdr_aligner.py`, 35 in all:
+- a stored hit;
+- a miss after the index or a decision changes;
+- a corrupt stored file;
+- only the needed dates read;
+- a stored build equal to an unstored one;
+- the trigger flag.

@@ -324,6 +324,8 @@ class BuilderTrigger:
             args += ["--never-shot-kind", kind]
         if s.aligner_index_dir is not None:
             args += ["--aligner-index-dir", str(s.aligner_index_dir)]
+            if s.aligner_cache_dir is not None:
+                args += ["--aligner-cache-dir", str(s.aligner_cache_dir)]
             for campaign, dates in sorted(s.aligner_campaigns.items()):
                 for date in dates:
                     args += ["--aligner-campaign", f"{campaign}={date}"]
