@@ -463,6 +463,7 @@ export function ReviewMatchesPage() {
                     events={grouped.ambiguous}
                     shotsByKey={shotLookup}
                     gaps={loaded.review.candidate_gaps_s}
+                    runnerUp={loaded.review.runner_up_gaps_s}
                     busyKey={busyKey}
                     onConfirm={confirm}
                     onConfirmMany={confirmMany}

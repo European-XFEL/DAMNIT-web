@@ -109,7 +109,7 @@ enough for files on instrument clocks.
 
 - [x] Plan written first (this file), linked from `review-automation.md`
       and `plan-time-rule-real-data.md`
-- [ ] **B1, the bulk time rule:**
+- [x] **B1, the bulk time rule:**
   - API `runner_up_gaps_s`;
   - `utils/review.clearTimeChoices` uses it and skips events with an
     instrument;
@@ -160,4 +160,16 @@ enough for files on instrument clocks.
 
 ## Results
 
-(filled in by the commits)
+**B1** (`hzdr-evaluate-time-rule.py <day> --rule bulk --tolerance 120`, raw
+clocks). Under "every shot", the share the page would offer if it offered
+files. Since B1 it offers none:
+
+| Day | Guard | Offered right | Offered wrong | Not offered |
+| --- | --- | ---: | ---: | ---: |
+| 2025-12-01 (truth matched, not reviewed) | candidates (before B1) | 253 | **328** | 952 |
+| 2025-12-01 | every shot | 99 | 8 | 1,426 |
+| 2025-12-03 (reviewed) | candidates (before B1) | 909 | **583** | 217 |
+| 2025-12-03 | every shot | 19 | 0 | 1,690 |
+
+Triggers, which B1 still offers, carry the shot authority's clock; none are in
+these indexes.

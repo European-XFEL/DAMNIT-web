@@ -7,6 +7,7 @@ router stays small.  Mounted from ``main.py`` alongside ``metadata.router``;
 paths are unchanged (``/metadata/hzdr/*``).
 """
 
+import bisect
 import hashlib
 import json
 import logging
@@ -193,6 +194,11 @@ class HZDRReviewResponse(BaseModel):
     # times, read in DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE as the builder
     # reads them; a browser cannot. Only gaps that are known are listed.
     candidate_gaps_s: dict[str, dict[str, float]] = Field(default_factory=dict)
+    # Each event's gap to the nearest shot that is not its closest candidate,
+    # over every shot of the source (plan-aligner-bridge B1): since A7 a time
+    # proposal has one candidate, so the candidates alone cannot say whether
+    # another shot was close.
+    runner_up_gaps_s: dict[str, float] = Field(default_factory=dict)
     # unassigned shot_key -> the campaign its neighbours that day agree on.
     campaign_suggestions: dict[str, HZDRCampaignSuggestion] = Field(
         default_factory=dict
@@ -746,7 +752,8 @@ async def get_hzdr_review(source_key: str) -> HZDRReviewResponse:
         experiment_rulings=_pending_experiment_rulings({
             shot.shot_number for shot in unassigned_shots
         }),
-        candidate_gaps_s=_candidate_gaps(source),
+        candidate_gaps_s=(gaps := _candidate_gaps(source)),
+        runner_up_gaps_s=_runner_up_gaps(source, gaps),
         campaign_suggestions=(
             _campaign_suggestions(unassigned_shots, provider.list_sources())
             if unassigned_shots
@@ -826,6 +833,47 @@ def _candidate_gaps(source: HZDRSource) -> dict[str, dict[str, float]]:
         if row:
             gaps[event.event_id] = row
     return gaps
+
+
+def _runner_up_gaps(
+    source: HZDRSource, gaps: dict[str, dict[str, float]]
+) -> dict[str, float]:
+    """Each event's gap to the nearest shot other than its closest candidate.
+
+    Over every shot of the source with a time, not only the candidates, so a
+    bulk time choice can be refused when another shot was nearly as close
+    (plan-aligner-bridge B1). Signed like ``candidate_gaps_s``.
+    """
+    timezone = settings.hzdr_builder.campaign_timezone
+    timed = sorted(
+        (when, shot.shot_key)
+        for shot in source.shots
+        if shot.shot_key
+        and (
+            when := parse_datetime(
+                shot.labfrog_date_time or shot.fired_at, naive_timezone=timezone
+            )
+        )
+        is not None
+    )
+    times = [when for when, _ in timed]
+    runner_up: dict[str, float] = {}
+    for event in source.review_events:
+        row = gaps.get(event.event_id)
+        event_time = parse_datetime(event.timestamp)
+        if not row or event_time is None:
+            continue
+        closest = min(row, key=lambda key: abs(row[key]))
+        at = bisect.bisect_left(times, event_time)
+        # The two nearest on each side cover the nearest that is not `closest`.
+        near = [
+            (event_time - times[i]).total_seconds()
+            for i in range(max(0, at - 2), min(len(timed), at + 2))
+            if timed[i][1] != closest
+        ]
+        if near:
+            runner_up[event.event_id] = min(near, key=abs)
+    return runner_up
 
 
 def _pending_experiment_rulings(shot_numbers: set[int]) -> list[HZDRExperimentRuling]:

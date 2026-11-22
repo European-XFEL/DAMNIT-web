@@ -671,3 +671,25 @@ def test_the_evaluation_reports_spacing_and_clock_offsets():
         module.score(index, 90.0, "Europe/Berlin", truth_from="matched")["shot_files"]
         == 6
     )
+
+
+def test_the_bulk_score_tests_every_shot_not_one_candidate():
+    """plan-aligner-bridge B1: rows a minute apart, a clock 65 s fast."""
+    module = _evaluation_module()
+    index = _day_index()
+    index["shotsheet"]["rows"] = [
+        {"excel_row": 4 + n, "time_seconds": 12 * 3600 + 60 * n} for n in range(3)
+    ]
+    first = index["sets"]["set1"]["events"][0]["acquisitions"][0]["timestamp"]
+    for event in index["sets"]["set1"]["events"]:
+        rank = event["rank"]
+        row_time = first - 10 + 60 * (rank - 1)
+        event["acquisitions"] = [
+            {"key": f"cam|{rank}", "instrument": "cam", "timestamp": row_time + 65}
+        ]
+    result = module.score_bulk(index, 120.0, "Europe/Berlin")
+    # Its one candidate (the next row, 5 s away) looks clear, and is wrong for
+    # rows 1 and 2; row 3's file is 65 s past it, not within 30 s.
+    assert result["candidates"] == {"offered_wrong": 2, "not_offered": 1}
+    # The row it belongs to is 65 s away: not clear, nothing offered.
+    assert result["every_shot"] == {"not_offered": 3}

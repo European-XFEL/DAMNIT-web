@@ -380,8 +380,15 @@ describe('clearTimeChoices', () => {
       'unknown-gap': { 'c:1': 5 },
       single: { 'c:2': -20 },
     }
+    const runnerUp = {
+      clear: -300,
+      'too-far': 400,
+      'too-close-call': -100,
+      'unknown-gap': 200,
+      single: -200,
+    }
     expect(
-      clearTimeChoices(events, shots, gaps).map((choice) => [
+      clearTimeChoices(events, shots, gaps, runnerUp).map((choice) => [
         choice.event.event_id,
         choice.shotKey,
         choice.gapS,
@@ -390,6 +397,24 @@ describe('clearTimeChoices', () => {
       ['clear', 'c:1', 12],
       ['single', 'c:2', -20],
     ])
+  })
+
+  it('tests every shot, not only the one candidate (plan-aligner-bridge B1)', () => {
+    const one = [event('near-other', ['c:1']), event('no-runner-up', ['c:1'])]
+    const gaps = { 'near-other': { 'c:1': 5 }, 'no-runner-up': { 'c:1': 5 } }
+    // Another shot 60 s away: not offered. No runner-up known: not offered.
+    expect(clearTimeChoices(one, shots, gaps, { 'near-other': 60 })).toEqual([])
+    expect(clearTimeChoices(one, shots, gaps)).toEqual([])
+  })
+
+  it('never offers a file event: its clock is an instrument PC', () => {
+    const file = {
+      ...event('file', ['c:1']),
+      metadata: { instrument: { id: 'bam' } },
+    } as HZDRReviewEvent
+    expect(
+      clearTimeChoices([file], shots, { file: { 'c:1': 3 } }, { file: 900 })
+    ).toEqual([])
   })
 
   it("prefers the API's gap over the browser's", () => {

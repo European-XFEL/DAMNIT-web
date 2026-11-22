@@ -199,6 +199,7 @@ describe('AmbiguousMatchesCard clear time choices', () => {
             'exp:20260505:000002': 60,
           },
         }}
+        runnerUp={{ 'evt-clear': 400, 'evt-unclear': 60 }}
         busyKey={null}
         onConfirm={vi.fn()}
         onConfirmMany={onConfirmMany}

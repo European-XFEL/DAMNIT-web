@@ -20,6 +20,13 @@ every pair against the reviewer's link:
 - ``auxiliary_paired``: a file that belongs to no shot (alignment, synchro)
   paired anyway (also a silent error).
 
+``--rule bulk`` scores the Review matches page's clear-time bulk choice
+instead (plan-aligner-bridge B1): an ambiguous event whose closest shot is
+within 30 s and whose next nearest is 2 min or more further, judged by its
+candidates only (the page before B1) and by every shot (B1's runner-up).
+Every event here is a file, which the page since B1 never offers; the
+"every shot" line says what it would offer if it did.
+
 It reads only the index files given; no share, no network. Exit 0 always
 (it measures; it does not gate).
 """
@@ -216,6 +223,98 @@ def score(
     }
 
 
+#: The page's clear-time rule (frontend utils/review.CLEAR_TIME_CHOICE).
+BULK_WITHIN_S = 30.0
+BULK_OTHERS_FURTHER_S = 120.0
+
+
+def score_bulk(
+    index: dict[str, Any],
+    tolerance: float,
+    timezone: str,
+    *,
+    truth_from: str = "confirmed",
+    clock: str = "raw",
+) -> dict[str, Any]:
+    """Score the page's bulk time choice, by candidates and by every shot."""
+    shots = rows_as_shots(index)
+    events, truth = acquisitions_as_events(
+        index, timezone, truth_from=truth_from, clock=clock
+    )
+    canonical, built = reconcile_canonical_shots(
+        events,
+        experiment_id=EXPERIMENT,
+        source_key=EXPERIMENT,
+        labfrog_shots=shots,
+        match_tolerance_s=tolerance,
+        campaign_timezone=timezone,
+        include_trigger_only=False,
+    )
+    shot_time = {
+        shot["shot_key"]: stamp
+        for shot in canonical
+        if (
+            stamp := parse_datetime(
+                shot.get("labfrog_date_time"), naive_timezone=timezone
+            )
+        )
+    }
+    row_of_shot = {
+        shot["shot_key"]: int(shot["labfrog_record_id"])
+        for shot in canonical
+        if shot.get("labfrog_record_id")
+    }
+    counts: dict[str, Counter[str]] = {
+        "candidates": Counter(),
+        "every_shot": Counter(),
+    }
+    for item in built:
+        key = str(item.get("event_id"))
+        stamp = parse_datetime(item.get("timestamp"))
+        if key not in truth or item.get("match_status") != "ambiguous" or not stamp:
+            continue
+        candidates = [
+            shot_key
+            for shot_key in dict.fromkeys(item.get("candidate_shot_keys") or [])
+            if shot_key in shot_time
+        ]
+        for guard, pool in (("candidates", candidates), ("every_shot", shot_time)):
+            outcome = _bulk_outcome(
+                stamp, candidates, pool, shot_time, row_of_shot, truth[key]
+            )
+            counts[guard][outcome] += 1
+    return {
+        "tolerance_s": tolerance,
+        **{guard: dict(counter) for guard, counter in counts.items()},
+    }
+
+
+def _bulk_outcome(
+    stamp: datetime,
+    candidates: list[str],
+    pool: Any,
+    shot_time: dict[str, datetime],
+    row_of_shot: dict[str, int],
+    correct: int | None,
+) -> str:
+    """offered_right / offered_wrong / offered_auxiliary / not_offered."""
+    if not candidates:
+        return "not_offered"
+    gap = {
+        shot_key: abs((stamp - shot_time[shot_key]).total_seconds())
+        for shot_key in pool
+    }
+    best = min(candidates, key=gap.__getitem__)
+    others = [gap[shot_key] for shot_key in gap if shot_key != best]
+    if gap[best] > BULK_WITHIN_S or (
+        others and min(others) - gap[best] < BULK_OTHERS_FURTHER_S
+    ):
+        return "not_offered"
+    if correct is None:
+        return "offered_auxiliary"
+    return "offered_right" if row_of_shot.get(best) == correct else "offered_wrong"
+
+
 def context(
     index: dict[str, Any], timezone: str, *, truth_from: str = "confirmed"
 ) -> dict[str, Any]:
@@ -265,6 +364,18 @@ def context(
     }
 
 
+def _print_bulk(scores: list[dict[str, Any]]) -> None:
+    print(f"{'tol s':>6} {'guard':<11} {'right':>6} {'wrong':>6} {'aux':>5} {'not':>6}")
+    for row in scores:
+        for guard in ("candidates", "every_shot"):
+            got = row[guard]
+            print(
+                f"{row['tolerance_s']:>6.0f} {guard:<11} "
+                f"{got.get('offered_right', 0):>6} {got.get('offered_wrong', 0):>6} "
+                f"{got.get('offered_auxiliary', 0):>5} {got.get('not_offered', 0):>6}"
+            )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument(
@@ -287,6 +398,13 @@ def main() -> None:
         help="the instrument's time as DAMNIT gets it (default), or the "
         "aligner's corrected time (an upper bound)",
     )
+    parser.add_argument(
+        "--rule",
+        choices=("one_to_one", "bulk"),
+        default="one_to_one",
+        help="the builder's one-to-one rule (default), or the page's bulk "
+        "time choice (plan-aligner-bridge B1)",
+    )
     parser.add_argument("--json", type=Path, help="write the full report here")
     args = parser.parse_args()
     tolerances = args.tolerance or list(DEFAULT_TOLERANCES)
@@ -297,8 +415,10 @@ def main() -> None:
         day = context(index, args.timezone, truth_from=args.truth)
         day["truth"], day["clock"] = args.truth, args.clock
         day["reviewed"] = bool(index.get("statistics", {}).get("decisions"))
+        scorer = score_bulk if args.rule == "bulk" else score
+        day["rule"] = args.rule
         day["scores"] = [
-            score(index, tol, args.timezone, truth_from=args.truth, clock=args.clock)
+            scorer(index, tol, args.timezone, truth_from=args.truth, clock=args.clock)
             for tol in tolerances
         ]
         report.append(day)
@@ -311,6 +431,9 @@ def main() -> None:
             f"{spacing['min']:.0f} s, median {spacing['median']:.0f} s, "
             f"{spacing['under_120']} of {spacing['count']} under 120 s"
         )
+        if args.rule == "bulk":
+            _print_bulk(day["scores"])
+            continue
         header = f"{'tol s':>6} {'right':>6} {'wrong':>6} {'wait':>6} {'aux+':>5}"
         print(f"{header}  waiting reasons")
         for row in day["scores"]:

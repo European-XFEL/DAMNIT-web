@@ -403,3 +403,34 @@ def test_review_route_gives_candidate_gaps_in_the_campaign_timezone(
             "exp:20260505:000002": -180.0,
         }
     }
+
+
+def test_review_route_gives_the_runner_up_over_every_shot(tmp_path: Path, monkeypatch):
+    """plan-aligner-bridge B1: one candidate, but another shot was close."""
+    sources_file = write_review_fixture(tmp_path)
+    payload = orjson.loads(sources_file.read_bytes())
+    source = payload["sources"][0]
+    for shot, key, local in zip(
+        source["shots"],
+        ("exp:20260505:000001", "exp:20260505:000002"),
+        ("2026-05-05 10:15:00", "2026-05-05T10:20:00"),
+        strict=True,
+    ):
+        shot["shot_key"] = key
+        shot["labfrog_date_time"] = local
+    # As under A7: the nearest shot is the only candidate.
+    source["review_events"][0]["candidate_shot_keys"] = ["exp:20260505:000001"]
+    sources_file.write_bytes(orjson.dumps(payload))
+    monkeypatch.setattr(settings.metadata, "provider", "local")
+    monkeypatch.setattr(settings.metadata, "sources_file", sources_file)
+    monkeypatch.setattr(settings.hzdr_builder, "campaign_timezone", "Europe/Berlin")
+    monkeypatch.setattr(settings, "auth", AuthSettings(mode="disabled"))
+
+    with TestClient(create_app()) as client:
+        body = client.get(f"/metadata/hzdr/sources/{SOURCE_KEY}/review").json()
+
+    assert body["candidate_gaps_s"] == {
+        "evt-ambiguous-1": {"exp:20260505:000001": 120.0}
+    }
+    # The second shot, 3 min after the event, though it is no candidate.
+    assert body["runner_up_gaps_s"] == {"evt-ambiguous-1": -180.0}

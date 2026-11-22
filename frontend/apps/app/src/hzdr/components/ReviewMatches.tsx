@@ -19,6 +19,7 @@ import {
 
 import type {
   CandidateGaps,
+  RunnerUpGaps,
   HZDRCampaignSuggestion,
   HZDRExperimentRuling,
   HZDRMatchSummary,
@@ -437,12 +438,14 @@ function BulkSections({
   events,
   shotsByKey,
   gaps,
+  runnerUp,
   busy,
   onConfirmMany,
 }: {
   events: HZDRReviewEvent[]
   shotsByKey: Map<string, HZDRShot>
   gaps?: CandidateGaps
+  runnerUp?: RunnerUpGaps
   busy: boolean
   onConfirmMany: (choices: BulkChoice[]) => void
 }) {
@@ -451,7 +454,8 @@ function BulkSections({
   const timed = clearTimeChoices(
     events.filter((event) => !suggestedIds.has(event.event_id)),
     shotsByKey,
-    gaps
+    gaps,
+    runnerUp
   )
   return (
     <>
@@ -464,7 +468,7 @@ function BulkSections({
         onConfirmMany={onConfirmMany}
       />
       <BulkConfirm
-        intro={`one shot clearly closest in time: within ${CLEAR_TIME_CHOICE.withinS} s, and every other candidate at least ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min further away. Time alone never decides; check the list and confirm them yourself.`}
+        intro={`one shot clearly closest in time: within ${CLEAR_TIME_CHOICE.withinS} s, and every other shot at least ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min further away. Only triggers are offered: file times come from instrument clocks that run minutes off. Time alone never decides; check the list and confirm them yourself.`}
         detailHeading="Event - shot"
         choices={timed}
         shotsByKey={shotsByKey}
@@ -479,6 +483,7 @@ export function AmbiguousMatchesCard({
   events,
   shotsByKey,
   gaps,
+  runnerUp,
   busyKey,
   onConfirm,
   onConfirmMany,
@@ -486,6 +491,7 @@ export function AmbiguousMatchesCard({
   events: HZDRReviewEvent[]
   shotsByKey: Map<string, HZDRShot>
   gaps?: CandidateGaps
+  runnerUp?: RunnerUpGaps
   busyKey: string | null
   onConfirm: (event: HZDRReviewEvent, shotKey: string, note: string) => void
   onConfirmMany?: (choices: BulkChoice[]) => void
@@ -514,6 +520,7 @@ export function AmbiguousMatchesCard({
           events={events}
           shotsByKey={shotsByKey}
           gaps={gaps}
+          runnerUp={runnerUp}
           busy={busyKey !== null}
           onConfirmMany={onConfirmMany}
         />

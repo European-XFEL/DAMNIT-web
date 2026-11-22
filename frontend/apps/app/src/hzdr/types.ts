@@ -289,6 +289,11 @@ export type HZDRReview = {
    * read by the API in the campaign's time zone (older APIs: absent).
    */
   candidate_gaps_s?: Record<string, Record<string, number>>
+  /**
+   * event_id -> seconds to the nearest shot other than its closest candidate,
+   * over every shot of the source (older APIs: absent).
+   */
+  runner_up_gaps_s?: Record<string, number>
   /** unassigned shot_key -> the campaign its neighbours that day agree on. */
   campaign_suggestions?: Record<string, HZDRCampaignSuggestion>
 }
@@ -300,6 +305,8 @@ export type HZDRCampaignSuggestion = {
 }
 
 export type CandidateGaps = Record<string, Record<string, number>>
+
+export type RunnerUpGaps = Record<string, number>
 
 export type HZDRContextResults = {
   columns: {

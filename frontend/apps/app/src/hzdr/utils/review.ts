@@ -1,5 +1,6 @@
 import type {
   CandidateGaps,
+  RunnerUpGaps,
   HZDRExperimentRuling,
   HZDRReview,
   HZDRReviewEvent,
@@ -361,20 +362,38 @@ export interface TimeChoice extends BulkChoice {
   gapS: number
 }
 
+/** The instrument a file event names (`metadata.instrument.id`), or null. */
+export function eventInstrument(event: HZDRReviewEvent): string | null {
+  const instrument = (event.metadata as Record<string, unknown> | undefined)
+    ?.instrument
+  if (!instrument || typeof instrument !== 'object') return null
+  const id = (instrument as Record<string, unknown>).id
+  return typeof id === 'string' && id ? id : null
+}
+
 /**
  * Ambiguous events whose closest candidate is unmistakable: within
- * `withinS` of the event, every other candidate's gap known and at least
- * `othersFurtherS` further away, and the shot in the catalog. They are
- * offered to a person to confirm together; nothing is confirmed for them.
+ * `withinS` of the event, and the next nearest shot at least
+ * `othersFurtherS` further away. The next nearest is the nearer of the
+ * other candidates and the API's runner-up over every shot (`runnerUp`,
+ * plan-aligner-bridge B1); without a runner-up nothing is offered, since
+ * one candidate alone cannot say whether another shot was close. File
+ * events (an instrument named) are never offered: their clocks run minutes
+ * off. They are offered to a person to confirm together; nothing is
+ * confirmed for them.
  */
 export function clearTimeChoices(
   events: HZDRReviewEvent[],
   shots: Map<string, HZDRShot>,
   gaps?: CandidateGaps,
+  runnerUp?: RunnerUpGaps,
   rule = CLEAR_TIME_CHOICE
 ): TimeChoice[] {
   const choices: TimeChoice[] = []
   for (const event of events) {
+    if (eventInstrument(event)) continue
+    const runner = runnerUp?.[event.event_id]
+    if (typeof runner !== 'number') continue
     const candidates = uniqueCandidateKeys(event)
     const sized = candidates.map((shotKey) => ({
       shotKey,
@@ -382,15 +401,14 @@ export function clearTimeChoices(
     }))
     if (!sized.length || sized.some((item) => item.gap === null)) continue
     sized.sort((a, b) => Math.abs(a.gap!) - Math.abs(b.gap!))
-    const [best, next] = sized
+    const [best, ...others] = sized
     if (!shots.has(best.shotKey)) continue
     if (Math.abs(best.gap!) > rule.withinS) continue
-    if (
-      next &&
-      Math.abs(next.gap!) - Math.abs(best.gap!) < rule.othersFurtherS
-    ) {
-      continue
-    }
+    const next = Math.min(
+      Math.abs(runner),
+      ...others.map((item) => Math.abs(item.gap!))
+    )
+    if (next - Math.abs(best.gap!) < rule.othersFurtherS) continue
     const gapS = best.gap!
     choices.push({
       event,
@@ -405,7 +423,7 @@ export function clearTimeChoices(
 
 /** The note each bulk-confirmed decision carries, so its reason is on record. */
 export function timeChoiceNote(gapS: number) {
-  return `Confirmed in bulk: closest in time (${formatSeconds(gapS)}), every other candidate ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min or more further.`
+  return `Confirmed in bulk: closest in time (${formatSeconds(gapS)}), every other shot ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min or more further.`
 }
 
 /** The builder's suggestion reasons in words (hzdr_nexus.SUGGESTION_REASONS). */
