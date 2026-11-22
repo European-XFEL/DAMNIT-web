@@ -157,7 +157,9 @@ files still `MISSING` the column.
     R-2026-11-22d/e, [plan-campaign-backfill.md](../plans/plan-campaign-backfill.md)).**
     Set `DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS` to campaign -> dates,
     build and review those days' indexes in shot-aligner, then rebuild. The
-    steps are in [deploy-notes.md](deploy-notes.md) step 7. On the two
+    steps are in [deploy-notes.md](deploy-notes.md) step 7: one console
+    script, `api/scripts/hzdr-campaign-backfill.py` (a report, then
+    `--apply`). On the two
     committed days it gives 258 shots from the Shotsheets, with 12-03's 2,544
     files attached and 12-01's 1,698 waiting as suggestions until 12-01 is
     reviewed.

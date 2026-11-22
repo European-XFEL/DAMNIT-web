@@ -67,6 +67,7 @@ python api/scripts/hzdr-hdf5-builder.py --experiment-id <id> --campaign-timezone
     --labfrog-sqlite <c>.sqlite --trigger-jsonl <triggers>.jsonl --output-nexus <c>.nxs
 python api/scripts/hzdr-container-worker.py --master <c>.nxs   # shot containers into <c's folder>/shots/ (or --output-root)
 python api/scripts/hzdr-compare-containers.py --damnit <campaign folder> --aligner <shot-aligner build>   # phase 6: diff against shot-aligner's containers
+python api/scripts/hzdr-campaign-backfill.py [--apply]   # a campaign from shot-aligner's indexes: report, then index/rebuild/containers/compare
 python api/scripts/hzdr-evaluate-time-rule.py <shot-aligner>/shot_aligner/index/<date>.index.json --truth matched   # score the one-to-one time rule on a real shot day
 python api/scripts/hzdr-local-acceptance.py        # emulator events through Confirm Matches, no broker
 python api/scripts/hzdr-local-acceptance.py --real-topology   # the deployed flow rehearsed: unassigned triggers, export, schedule, multi-campaign build, a ruling
@@ -324,7 +325,9 @@ counts become shots (`shot_number` = position in the day, the Count in
 acquisitions become `shot-aligner` file events (instrument from the vendored
 catalogue by folder alias), made at build time, never spooled
 (`hzdr_aligner.backfill`); a listed campaign is built in multi-campaign mode
-without an export or spool. Review events carry `review_reason`, `aligner_detail` and,
+without an export or spool. Each parsed day is stored in `.aligner-cache/`
+beside the catalog (`ALIGNER_CACHE_DIR`), keyed by the index's and decisions'
+size and mtime, and a build reads only the dates its events fall on. Review events carry `review_reason`, `aligner_detail` and,
 from non-time evidence, `suggested_shot_key`/`suggestion_reason`; the review
 route adds `candidate_gaps_s`, `runner_up_gaps_s` (the nearest other shot
 over the whole source, which the bulk time choice needs since A7 leaves one

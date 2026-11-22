@@ -30,6 +30,24 @@ date, time and the details both record. Plan:
 - On shot-aligner's 2025-12-03 day all 2,544 shot files attach to the
   reviewed shot, with none wrong (`hzdr-evaluate-time-rule.py --rule aligner`).
 
+### One console script per campaign, and the parsed indexes stored
+Rulings R-2026-11-22f/g. Plan:
+`hzdr/docs/plans/plan-backfill-store-and-console.md`.
+- **`api/scripts/hzdr-campaign-backfill.py`:**
+  - it reports each listed date: index age, links confirmed, Shotsheet
+    rows, the stored copy, and the shots and files attached or waiting in
+    the catalog;
+  - `--apply` runs shot-aligner's `align.py index` for missing dates, the
+    rebuild, the container worker and its relink build, and with
+    `--aligner-build` the phase 6 compare.
+- **Stored days:** each parsed day goes in `.aligner-cache/<date>.aligner.json`
+  beside the catalog (`ALIGNER_CACHE_DIR`, `--aligner-cache-dir`), keyed by
+  the index's and decisions' size and mtime. A build reads only the dates
+  its events fall on.
+- **Faster matching:** `parse_datetime` keeps a parsed time string, and the
+  bridge checks each shot-aligner event once. A Vanlife build went from
+  4.1 s to 3.5-3.8 s with the same output.
+
 ### This year's campaigns from shot-aligner's Shotsheets, Vanlife first
 Rulings R-2026-11-22d/e (maintainer): this year's shot records are the
 Shotsheet rows that shot-aligner finds and links to their dates; Vanlife

@@ -711,7 +711,9 @@ def test_a_corrupt_stored_day_is_ignored_and_rewritten(tmp_path):
     day = load_day_data(index_dir, "2025_12_03", cache_dir=cache)
     assert day is not None
     assert len(day.events) == 9
-    assert load_day_data(index_dir, "2025_12_03", cache_dir=cache).from_cache
+    rewritten = load_day_data(index_dir, "2025_12_03", cache_dir=cache)
+    assert rewritten is not None
+    assert rewritten.from_cache
 
 
 def test_a_build_reads_only_the_dates_its_events_fall_on(tmp_path):

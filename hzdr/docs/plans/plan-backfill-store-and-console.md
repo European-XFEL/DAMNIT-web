@@ -93,19 +93,19 @@ for every date in the folder, every campaign and every build.
 - [x] **G3, only the needed dates:** tests: a build whose events fall on one
       date reads that index alone.
 - [x] **Measured:** cold and warm builds of Vanlife, before and after.
-- [ ] **G4, the console script:**
+- [x] **G4, the console script:**
   - report and `--apply`, the exit codes;
   - tests: the report on the fixture (with and without a catalog, a
     missing date); `--apply` with the shot-aligner, rebuild, worker and
     compare commands replaced by recorders (order, stop on failure).
-- [ ] **Run for real here:** report, then `--apply`, on Vanlife from the
+- [x] **Run for real here:** report, then `--apply`, on Vanlife from the
       committed indexes with a local `.env`-free setup (the same commands
       with paths pointed at a scratch folder).
-- [ ] **Docs:**
+- [x] **Docs:**
   - `deploy-notes.md` step 7, `next-on-server.md` item 10;
   - `operations.md`, `CLAUDE.md`, the settings template,
     `hzdr/CHANGELOG.md`.
-- [ ] **Gates:** ruff, pyright (193), pytest, the coverage map, acceptance.
+- [x] **Gates:** ruff, pyright (193), pytest, the coverage map, acceptance.
 - [ ] **GitLab:**
   - hzdr-combo `NEXT.md`;
   - the fwkt-webapps DAMNIT page;
@@ -149,3 +149,43 @@ Tests: 7 more in `test_hzdr_aligner.py`, 35 in all:
 - only the needed dates read;
 - a stored build equal to an unstored one;
 - the trigger flag.
+
+**G4, the console script, run for real here** (`--index-dir` with the
+committed indexes, `--output-root` a scratch folder).
+
+The report on all four Vanlife dates names 12-02 and 12-05 `MISSING` and
+says to build their indexes. `--apply` on 12-01 and 12-03 then ran the
+rebuild, the container worker (150 containers), and the relink build. After
+the steps:
+
+```
+campaign           date         index  reviewed  rows stored shots attached waiting
+Vanlife_12.2025    2025_12_01    12 h     0/102   108    yes   108        0    1698
+Vanlife_12.2025    2025_12_03    12 h   150/150   150    yes   150     2544       0
+Next: review 2025_12_01 in shot-aligner; confirmed days attach at the next build
+```
+
+Waiting files are counted by the day of the shot they are suggested for,
+not by the file's own time. Some instrument clocks show other days
+(shot-aligner's "files stamped 2025-12-05" finding), so counting by the
+file's time first gave 1,641 instead of 1,698.
+
+Tests: 10 in the new `test_hzdr_campaign_backfill.py`:
+- the report;
+- `--apply` in order, with the relink build;
+- a failure at each of the four steps stopping the rest;
+- the trigger's own rebuild command when run from settings;
+- a real `--apply` run that writes the containers;
+- the missing settings.
+
+**Gates:**
+- ruff is clean;
+- pyright is at 193, after fixing one optional-access error that the
+  stored-days tests had added;
+- pytest: 1,125 passed, 33 skipped;
+- local acceptance is all OK, and `--real-topology` passed.
+
+**On the server, with the deploy:** `deploy-notes.md` step 7: set
+`ALIGNER_CAMPAIGNS`, run the report, then `--apply --aligner-build <shot-aligner's
+Vanlife build>`.
+

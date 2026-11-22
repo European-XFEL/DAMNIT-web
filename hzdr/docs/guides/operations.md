@@ -179,6 +179,13 @@ without one, and four settings decide how much waits in Review matches
   The acquisitions become file events (`source` `shot-aligner`), with the
   instrument from the catalogue, unless the watchdog sent them. The bridge
   above then attaches the confirmed ones. Steps: `deploy-notes.md`, step 7.
+  `scripts/hzdr-campaign-backfill.py` reports each listed date (index, how
+  much of it is reviewed, shots, files attached and waiting). With
+  `--apply` it indexes the missing dates in shot-aligner, rebuilds, runs the
+  container worker (and the relink build), and, with `--aligner-build`,
+  compares with shot-aligner's containers. Each parsed day is stored in
+  `.aligner-cache/` beside the catalog (`ALIGNER_CACHE_DIR`) and parsed
+  again only when its index or decisions change.
 
 All five apply at the next build: restart `damnit-api` after changing
 them, then rebuild (`scripts/hzdr-rebuild.py`), since a restart builds

@@ -103,6 +103,7 @@ AREAS = (
             f"{T}/test_match_rank_docs.py",
             f"{T}/test_hzdr_review_automation.py",
             f"{T}/test_hzdr_aligner.py",
+            f"{T}/test_hzdr_campaign_backfill.py",
         ),
         watch_next=(
             "Real SciCat and PID reconciliation, which the offline suite can only "

@@ -105,37 +105,44 @@ indexes. The Shotsheet rows become the shots and the acquisitions become the
 files. The bridge then attaches what a reviewer confirmed. See
 [plan-campaign-backfill.md](../plans/plan-campaign-backfill.md).
 
-1. **Build the four day indexes** in `~/shot-aligner`. 12-01 and 12-03 may
-   already be there:
-   ```bash
-   for d in 2025_12_01 2025_12_02 2025_12_03 2025_12_05; do
-       uv run --no-sync --no-default-groups shot_aligner/scripts/align.py \
-           --site fwkt-webapps index "$d" --if-changed
-   done
-   ```
-2. **Review the days in shot-aligner.** Only 12-03 is confirmed. Until a
-   day is reviewed, its files wait in Review matches as suggestions.
-3. **In `api/.env`,** with `ALIGNER_INDEX_DIR` from step 1. The campaign must
-   also be built: in multi-campaign mode a listed campaign is built even
-   without an export or a spool.
+1. **In `api/.env`,** with `ALIGNER_INDEX_DIR` from step 1. In multi-campaign
+   mode a listed campaign is built even without an export or a spool:
    ```bash
    DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS={"Vanlife_12.2025": ["2025_12_01", "2025_12_02", "2025_12_03", "2025_12_05"]}
    ```
-4. **Restart and rebuild** (step 3 above). The `labfrog` step of
-   `next-on-server.sh` names any listed date that has no day index. A
-   rebuild by hand prints `shot-aligner backfill (Vanlife_12.2025): N
-   Shotsheet shot(s), M file event(s)`.
-5. **Check the result:**
-   - Home lists `Vanlife_12.2025`, its shots say where they came from
-     (`shotsheet`), and 12-03's 150 shots have their files.
-   - Optional, to compare containers with shot-aligner's:
-     ```bash
-     cd ~/DAMNIT-web-hzdr/api
-     uv run --no-sync python scripts/hzdr-container-worker.py --master /home/tippey/mnt/bigdata/HPLexp/nexus/Vanlife_12.2025/Vanlife_12.2025.nxs
-     uv run --no-sync python scripts/hzdr-compare-containers.py \
-         --damnit /home/tippey/mnt/bigdata/HPLexp/nexus/Vanlife_12.2025 \
-         --aligner /home/tippey/mnt/bigdata/HPLexp/Ions/nexus/<Vanlife build>
-     ```
+   Restart `damnit-api` if it was running already.
+2. **See where it stands.** This changes nothing:
+   ```bash
+   cd ~/DAMNIT-web-hzdr/api
+   uv run --no-sync python scripts/hzdr-campaign-backfill.py
+   ```
+   It prints one line per date:
+   - the age of the index, or `MISSING`;
+   - reviewed, as links confirmed out of links;
+   - Shotsheet rows, and whether DAMNIT's stored copy is current;
+   - the shots, files attached and files waiting in DAMNIT's catalog.
+
+   Then it names the next step.
+3. **Run the steps:**
+   ```bash
+   uv run --no-sync python scripts/hzdr-campaign-backfill.py --apply \
+       --aligner-build /home/tippey/mnt/bigdata/HPLexp/Ions/nexus/<Vanlife build>
+   ```
+   It runs, in order, and stops at the first failure, naming it:
+   - shot-aligner's `align.py index` for each date that has no index;
+   - the rebuild (`hzdr-rebuild.py`);
+   - the container worker, and one more build to link its containers;
+   - the compare against shot-aligner's containers (only with
+     `--aligner-build`);
+   - the report again.
+
+   Leave out `--aligner-build` to skip the compare.
+4. **Review in shot-aligner what the report says still waits.** Only 12-03
+   is confirmed so far. A confirmed day attaches at the next build, which a
+   new decision triggers by itself. Run the report again to see it.
+
+The exit status is 0 when all is well, 1 when a date has no index or a step
+failed, and 2 when the settings are missing.
 
 **To take it out:** remove `ALIGNER_CAMPAIGNS` and rebuild. The shots and
 files were made at build time from the indexes, so nothing else is stored.
