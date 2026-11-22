@@ -69,7 +69,7 @@ first, a box ticked in the commit that does the work.
     preview in the shot panel);
   - `operations.md`, `CLAUDE.md`, `hzdr/CHANGELOG.md`, the docs index.
 - [x] **Gates:** ruff, pyright (193), pytest, acceptance.
-- [ ] **GitLab notes, PR description.**
+- [x] **GitLab notes, PR description.**
 
 ## Results
 
