@@ -3,7 +3,8 @@
 What to do on the server for each change that needs a step there, newest
 first. The full checklist with background is
 [next-on-server.md](next-on-server.md); this page is the short version to
-follow at the keyboard. Run everything as `tippey`, not with sudo.
+follow at the keyboard. Run everything as `tippey`; use sudo only for
+`systemctl`.
 
 ## DAMNIT PR #57 and #58 (2026-11-22)
 
