@@ -1,4 +1,6 @@
 import type {
+  CandidateGaps,
+  RunnerUpGaps,
   HZDRExperimentRuling,
   HZDRReview,
   HZDRReviewEvent,
@@ -294,23 +296,40 @@ export function busiestSourceKey(
 }
 
 /**
+ * Seconds from a candidate shot to the event: the API's figure (read in the
+ * campaign's time zone) when it gave one, else the browser's, which needs
+ * both times to name their zone.
+ */
+export function candidateGap(
+  event: HZDRReviewEvent,
+  shotKey: string,
+  shots: Map<string, HZDRShot>,
+  gaps?: CandidateGaps
+): number | null {
+  const fromAPI = gaps?.[event.event_id]?.[shotKey]
+  if (typeof fromAPI === 'number') return fromAPI
+  const shot = shots.get(shotKey)
+  return secondsBetween(
+    shot?.labfrog_date_time ?? shot?.fired_at,
+    event.timestamp
+  )
+}
+
+/**
  * The candidate whose shot time is closest to the event's, or null when no
  * gap is known or two candidates tie. A hint for the reviewer only: it is
  * never selected or confirmed for them.
  */
 export function closestCandidateKey(
   event: HZDRReviewEvent,
-  shots: Map<string, HZDRShot>
+  shots: Map<string, HZDRShot>,
+  gaps?: CandidateGaps
 ): string | null {
   let best: string | null = null
   let bestGap = Infinity
   let tied = false
   for (const shotKey of uniqueCandidateKeys(event)) {
-    const shot = shots.get(shotKey)
-    const gap = secondsBetween(
-      shot?.labfrog_date_time ?? shot?.fired_at,
-      event.timestamp
-    )
+    const gap = candidateGap(event, shotKey, shots, gaps)
     if (gap === null) {
       continue
     }
@@ -326,6 +345,152 @@ export function closestCandidateKey(
   return tied ? null : best
 }
 
+/** How close and how clear a time-only choice must be to be offered in bulk. */
+export const CLEAR_TIME_CHOICE = { withinS: 30, othersFurtherS: 120 }
+
+/** One event and the shot a person may confirm it to in bulk, and why. */
+export interface BulkChoice {
+  event: HZDRReviewEvent
+  shotKey: string
+  /** Shown in the list: the gap, or the evidence. */
+  detail: string
+  /** Written into the decision's note. */
+  note: string
+}
+
+export interface TimeChoice extends BulkChoice {
+  gapS: number
+}
+
+/** The instrument a file event names (`metadata.instrument.id`), or null. */
+export function eventInstrument(event: HZDRReviewEvent): string | null {
+  const instrument = (event.metadata as Record<string, unknown> | undefined)
+    ?.instrument
+  if (!instrument || typeof instrument !== 'object') return null
+  const id = (instrument as Record<string, unknown>).id
+  return typeof id === 'string' && id ? id : null
+}
+
+/**
+ * Ambiguous events whose closest candidate is unmistakable: within
+ * `withinS` of the event, and the next nearest shot at least
+ * `othersFurtherS` further away. The next nearest is the nearer of the
+ * other candidates and the API's runner-up over every shot (`runnerUp`,
+ * plan-aligner-bridge B1); without a runner-up nothing is offered, since
+ * one candidate alone cannot say whether another shot was close. File
+ * events (an instrument named) are never offered: their clocks run minutes
+ * off. They are offered to a person to confirm together; nothing is
+ * confirmed for them.
+ */
+export function clearTimeChoices(
+  events: HZDRReviewEvent[],
+  shots: Map<string, HZDRShot>,
+  gaps?: CandidateGaps,
+  runnerUp?: RunnerUpGaps,
+  rule = CLEAR_TIME_CHOICE
+): TimeChoice[] {
+  const choices: TimeChoice[] = []
+  for (const event of events) {
+    if (eventInstrument(event)) continue
+    const runner = runnerUp?.[event.event_id]
+    if (typeof runner !== 'number') continue
+    const candidates = uniqueCandidateKeys(event)
+    const sized = candidates.map((shotKey) => ({
+      shotKey,
+      gap: candidateGap(event, shotKey, shots, gaps),
+    }))
+    if (!sized.length || sized.some((item) => item.gap === null)) continue
+    sized.sort((a, b) => Math.abs(a.gap!) - Math.abs(b.gap!))
+    const [best, ...others] = sized
+    if (!shots.has(best.shotKey)) continue
+    if (Math.abs(best.gap!) > rule.withinS) continue
+    const next = Math.min(
+      Math.abs(runner),
+      ...others.map((item) => Math.abs(item.gap!))
+    )
+    if (next - Math.abs(best.gap!) < rule.othersFurtherS) continue
+    const gapS = best.gap!
+    choices.push({
+      event,
+      shotKey: best.shotKey,
+      gapS,
+      detail: formatSeconds(gapS),
+      note: timeChoiceNote(gapS),
+    })
+  }
+  return choices
+}
+
+/** The note each bulk-confirmed decision carries, so its reason is on record. */
+export function timeChoiceNote(gapS: number) {
+  return `Confirmed in bulk: closest in time (${formatSeconds(gapS)}), every other shot ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min or more further.`
+}
+
+/** The builder's suggestion reasons in words (hzdr_nexus.SUGGESTION_REASONS). */
+export const SUGGESTION_TEXT: Record<string, string> = {
+  watchdog_attribution: 'the watchdog named this shot',
+  instrument_free: "the only candidate without this instrument's file yet",
+  shot_aligner:
+    'shot-aligner paired it (clock-corrected, by sequence), not yet confirmed there',
+}
+
+/**
+ * Ambiguous events with a suggestion from evidence other than time, whose
+ * shot is in the catalog: offered to a person to confirm together.
+ */
+export function suggestedChoices(
+  events: HZDRReviewEvent[],
+  shots: Map<string, HZDRShot>
+): BulkChoice[] {
+  return events.flatMap((event) => {
+    const shotKey = event.suggested_shot_key
+    if (!shotKey || !shots.has(shotKey)) return []
+    const reason = event.suggestion_reason ?? ''
+    const detail = SUGGESTION_TEXT[reason] ?? reason.replace(/_/g, ' ')
+    return [
+      {
+        event,
+        shotKey,
+        detail,
+        note: `Confirmed in bulk: suggested because ${detail}.`,
+      },
+    ]
+  })
+}
+
+/**
+ * Why an event waits, and what to do about it: one line each, as
+ * shot-aligner words its findings (hzdr_nexus.REVIEW_REASONS).
+ */
+export const REVIEW_REASON_TEXT: Record<string, string> = {
+  no_time:
+    'The event has no readable time. Check the producer; it can only be placed by hand.',
+  no_labfrog_record:
+    'No LabFrog record to pair it with and no shot number. Wait for the export, or acknowledge it if it is not a shot.',
+  no_shot_in_tolerance:
+    'No LabFrog shot within the time tolerance. Wait for the next export; if it is a test fire, acknowledge it.',
+  several_shots_in_tolerance:
+    'Several LabFrog shots are close in time. Pick the right one from the logbook.',
+  shot_has_other_event:
+    'Its nearest shot has another event of the same kind close by, or already has one. Check which event belongs to it.',
+  attribution_disagrees:
+    'The nearest shot in time is not one the watchdog named. Trust the evidence you can check.',
+  time_rule_off:
+    "This shot and this event are each other's only match in time. The one-to-one rule would attach it, but it is switched off.",
+  number_held_by_several:
+    'Its shot number is held by more than one shot. Pick the right day and record.',
+  identity_conflict:
+    'Its identity points at more than one shot. Check the event in the flow monitor.',
+  aligner_unconfirmed:
+    'shot-aligner paired this file, but nobody has confirmed the pair there yet. Confirm it here, or confirm the day in shot-aligner and it attaches at the next build.',
+  aligner_disagrees:
+    "shot-aligner's pairing and LabFrog name different shots (authority number, record or Count). Check the Shotsheet and LabFrog.",
+  aligner_check_failed:
+    "shot-aligner's shot and the LabFrog record do not agree on the date, the time or a value both record. Check which is right.",
+  aligner_no_shot:
+    'shot-aligner paired this file with a Shotsheet row that no LabFrog record matches yet. Wait for the export, or check the Count.',
+}
+
 /** The page's sections; a count chip jumps to `<id>-heading`. */
 export const REVIEW_SECTIONS = {
   ambiguous: 'review-ambiguous',
@@ -338,4 +503,54 @@ export type ReviewSection = keyof typeof REVIEW_SECTIONS
 
 export function reviewHeadingId(section: ReviewSection) {
   return `${REVIEW_SECTIONS[section]}-heading`
+}
+
+export interface UnmatchedGroup {
+  key: string
+  source: string
+  kind: string
+  events: HZDRReviewEvent[]
+}
+
+/** Unmatched events by producer and kind, the largest group first. */
+export function groupUnmatched(events: HZDRReviewEvent[]): UnmatchedGroup[] {
+  const groups = new Map<string, UnmatchedGroup>()
+  for (const event of events) {
+    const key = `${event.source}\u0000${event.kind}`
+    const group = groups.get(key) ?? {
+      key,
+      source: event.source,
+      kind: event.kind,
+      events: [],
+    }
+    group.events.push(event)
+    groups.set(key, group)
+  }
+  return [...groups.values()].sort(
+    (a, b) =>
+      b.events.length - a.events.length ||
+      a.source.localeCompare(b.source) ||
+      a.kind.localeCompare(b.kind)
+  )
+}
+
+/** A shot's campaign-local day: its shot_date, else the date of fired_at. */
+export function shotDay(shot: HZDRShot): string {
+  return shot.shot_date || (shot.fired_at ?? '').slice(0, 10) || 'unknown day'
+}
+
+/** Unassigned shots still without a ruling, by day (oldest day first). */
+export function waitingUnassignedByDay(
+  shots: HZDRShot[],
+  rulings: Map<number, HZDRExperimentRuling>
+): Array<{ day: string; shots: HZDRShot[] }> {
+  const days = new Map<string, HZDRShot[]>()
+  for (const shot of shots) {
+    if (rulings.has(shot.shot_number)) continue
+    const day = shotDay(shot)
+    days.set(day, [...(days.get(day) ?? []), shot])
+  }
+  return [...days.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, dayShots]) => ({ day, shots: dayShots }))
 }

@@ -18,15 +18,15 @@ from .settings import settings
 router = APIRouter(prefix="/config", tags=["config"])
 
 
-def _checkout_commit() -> str | None:
-    """The git commit of the checkout this code runs from, or None.
+def _git_line(*args: str) -> str | None:
+    """One line of git output in this code's checkout, or None.
 
     None for an install without a git checkout (a wheel under /opt) or
     without git on the PATH.
     """
     try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--short=12", "HEAD"],  # noqa: S607
+        result = subprocess.run(  # noqa: S603 -- fixed git arguments from this module
+            ["git", *args],  # noqa: S607
             cwd=Path(__file__).resolve().parent,
             capture_output=True,
             text=True,
@@ -36,6 +36,22 @@ def _checkout_commit() -> str | None:
     except (OSError, subprocess.SubprocessError):
         return None
     return result.stdout.strip() or None
+
+
+def _checkout_commit() -> str | None:
+    """The git commit of the checkout this code runs from, or None."""
+    return _git_line("rev-parse", "--short=12", "HEAD")
+
+
+def _frontend_commit() -> str | None:
+    """The last commit that changed ``frontend/``, or None.
+
+    A frontend build records the same commit (``VITE_DAMNIT_COMMIT``), so a
+    pull that changes only the API needs no frontend rebuild to stay in step.
+    """
+    return _git_line(
+        "log", "-1", "--format=%h", "--abbrev=12", "HEAD", "--", ":/frontend"
+    )
 
 
 def _package_version() -> str | None:
@@ -48,6 +64,7 @@ def _package_version() -> str | None:
 # Read once, when the process starts: the commit of the code that is
 # running, even after a later `git pull` that has not been restarted onto.
 _RUNNING_COMMIT = _checkout_commit()
+_RUNNING_FRONTEND_COMMIT = _frontend_commit()
 _RUNNING_VERSION = _package_version()
 
 
@@ -56,6 +73,8 @@ class VersionInfo(BaseModel):
 
     version: str | None
     commit: str | None
+    # The last commit that changed frontend/ (older APIs: absent).
+    frontend_commit: str | None = None
 
 
 class TerminologyConfig(BaseModel):
@@ -221,8 +240,12 @@ async def get_flow_activity() -> FlowActivity:
 
 @router.get("/version")
 async def get_version() -> VersionInfo:
-    """The damnit-api package version and the checkout's commit at start-up."""
-    return VersionInfo(version=_RUNNING_VERSION, commit=_RUNNING_COMMIT)
+    """The package version, the checkout's commit and its frontend's at start-up."""
+    return VersionInfo(
+        version=_RUNNING_VERSION,
+        commit=_RUNNING_COMMIT,
+        frontend_commit=_RUNNING_FRONTEND_COMMIT,
+    )
 
 
 @router.get("/runtime")

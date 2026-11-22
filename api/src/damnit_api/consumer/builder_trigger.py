@@ -31,6 +31,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ..metadata.hzdr_aligner import index_files
+
 if TYPE_CHECKING:
     from ..shared.hzdr_settings import HZDRBuilderSettings
 
@@ -153,9 +155,17 @@ class BuilderTrigger:
             return sorted(s.curated_root.glob("*/*.sqlite"))
         return [p for p in (s.labfrog_sqlite, s.labfrog_nexus) if p is not None]
 
+    def _watched_inputs(self) -> list[Path]:
+        """Exports, plus shot-aligner's day indexes and decisions when set."""
+        aligner = self._settings.aligner_index_dir
+        return [
+            *self._labfrog_exports(),
+            *(index_files(aligner) if aligner is not None else []),
+        ]
+
     def _export_signature(self) -> dict[Path, tuple[int, int]]:
         signature: dict[Path, tuple[int, int]] = {}
-        for path in self._labfrog_exports():
+        for path in self._watched_inputs():
             try:
                 stat = path.stat()
             except OSError:
@@ -187,7 +197,8 @@ class BuilderTrigger:
             last = current
             if changed:
                 logger.info(
-                    "LabFrog export changed, rebuilding: %s", ", ".join(changed)
+                    "LabFrog export or shot-aligner index changed, rebuilding: %s",
+                    ", ".join(changed),
                 )
                 self.notify()
 
@@ -304,6 +315,20 @@ class BuilderTrigger:
             if s.time_match_autoassign
             else "--no-time-match-autoassign"
         )
+        args.append(
+            "--time-match-one-to-one"
+            if s.time_match_one_to_one
+            else "--no-time-match-one-to-one"
+        )
+        for kind in s.never_shot_kinds:
+            args += ["--never-shot-kind", kind]
+        if s.aligner_index_dir is not None:
+            args += ["--aligner-index-dir", str(s.aligner_index_dir)]
+            if s.aligner_cache_dir is not None:
+                args += ["--aligner-cache-dir", str(s.aligner_cache_dir)]
+            for campaign, dates in sorted(s.aligner_campaigns.items()):
+                for date in dates:
+                    args += ["--aligner-campaign", f"{campaign}={date}"]
         return args
 
     async def _run_subprocess(self, cmd: Sequence[str]) -> tuple[int, str]:

@@ -289,7 +289,21 @@ export function HZDRDocsPage() {
                   <List.Item>
                     <b>Quick filters</b>: the <b>Needs review</b> and{' '}
                     <b>Needs revision</b> chips above the table show only those
-                    shots. For anything else use the filter row.
+                    shots, the day chips one shot day.{' '}
+                    <b>New since your last visit</b> shows the shots fired after
+                    the newest one this browser showed you last time. For
+                    anything else use the filter row.
+                  </List.Item>
+                  <List.Item>
+                    <b>New shots appear by themselves</b>: the page checks the
+                    campaign every 20 seconds and adds new shots without a
+                    reload; your selection and filters stay. A button,{' '}
+                    <i>N new shots arrived</i>, selects the newest of them.
+                  </List.Item>
+                  <List.Item>
+                    <b>Views</b>: <b>Save view</b> names the current filter,
+                    sort and columns; the view then sits as a chip above the
+                    quick filters, one click away. The x on a chip deletes it.
                   </List.Item>
                   <List.Item>
                     <b>Choose columns</b> under Columns; <b>Add columns</b> next
@@ -297,7 +311,8 @@ export function HZDRDocsPage() {
                     <Anchor href="#own-columns">Your own columns</Anchor>).{' '}
                     <b>Move a column</b> by dragging its header onto another;{' '}
                     <b>Reset order</b> puts them back. Your choice is kept per
-                    campaign in this browser.
+                    campaign in this browser. <b>Download CSV</b> saves the
+                    table as shown: its rows, order and visible columns.
                   </List.Item>
                   <List.Item>
                     <b>Sort</b> by clicking a header.
@@ -309,9 +324,11 @@ export function HZDRDocsPage() {
                     Shot detail copies a link that opens on it.
                   </List.Item>
                   <List.Item>
-                    <b>Trends</b>, at the top of the side panel: pick a value to
-                    plot it over the shots the table shows (the filters apply).
-                    Click a point to open that shot.
+                    <b>Trends</b>, at the top of the side panel: pick a value (a
+                    metadata value or one of your numeric columns) to plot it
+                    over the shots the table shows (the filters apply).{' '}
+                    <b>Compare with</b> adds a second value on its own axis at
+                    the right. Click a point to open that shot.
                   </List.Item>
                   <List.Item>
                     <b>Click a cell</b> for its value; a number opens a trend
@@ -344,7 +361,11 @@ export function HZDRDocsPage() {
                   A data product in the campaign file has a preview. Where its
                   dataset is stored the same way for every shot,{' '}
                   <b>Add as column</b> turns it into a column of your shot
-                  table.
+                  table. That includes a dataset in the shot&apos;s own
+                  container (listed as{' '}
+                  <Code style={WRAP}>&lt;YYYYMMDD&gt;_&lt;NNNNNN&gt;/...</Code>
+                  ): the column reads the same dataset from every shot&apos;s
+                  container and shows <i>Missing</i> where a shot has none.
                 </Text>
               </DocSection>
 
@@ -414,24 +435,47 @@ def laser_energy_mj(run, laser_energy_j=None):
 
               <DocSection id="review-matches">
                 <Text size="sm">
-                  DAMNIT never attaches an event to a shot by time alone. When
-                  it is unsure, the case waits on the Review matches page. It
-                  opens on the campaign with the most waiting, and says{' '}
-                  <b>All clear</b> when nothing does.
+                  DAMNIT never attaches an event to a shot by nearest time
+                  alone. Where it is switched on, an event without a shot number
+                  joins a LabFrog shot when the two are each other&apos;s only
+                  match in time (the shot aligner&apos;s one-to-one rule). When
+                  it is unsure, the case waits on the Review matches page,
+                  saying <b>why it waits</b>. It opens on the campaign with the
+                  most waiting, and says <b>All clear</b> when nothing does. It
+                  checks every 30 seconds and reloads the open campaign&apos;s
+                  lists when new cases arrive; it never switches campaign by
+                  itself.
                 </Text>
                 <List size="sm" spacing={4}>
                   <List.Item>
                     <b>Ambiguous</b>: an event fits several shots. Compare its
                     number and time with the candidates and confirm one only
-                    when the evidence fits.
+                    when the evidence fits. Where a trigger&apos;s shot is
+                    clearly closest in time (within 30 s, every other shot 2 min
+                    or more further), <b>Review the N</b> lists those cases and{' '}
+                    <b>Confirm these N</b> confirms them together; each decision
+                    notes that it was made in bulk and why. A shot marked{' '}
+                    <i>suggested</i> was picked by evidence other than time
+                    (shot-aligner paired it, the watchdog named it, or it is the
+                    only one without that instrument&apos;s file); those can be
+                    confirmed together too. Files are never offered by time:
+                    instrument clocks run minutes off. A file a reviewer
+                    confirmed in shot-aligner attaches by itself, once its
+                    shot-aligner day, the LabFrog record and the Count agree.
                   </List.Item>
                   <List.Item>
                     <b>Unmatched</b>: an event fits no shot. Acknowledge it if
-                    it is not a shot.
+                    it is not a shot. Several from one producer and kind (a test
+                    series) can be acknowledged together with{' '}
+                    <b>Acknowledge all</b>.
                   </List.Item>
                   <List.Item>
                     <b>Unassigned</b>: a shot no LabFrog record or campaign
-                    schedule placed in a campaign. Assign its campaign.
+                    schedule placed in a campaign. Assign its campaign, or use{' '}
+                    <b>Assign several</b> for every waiting shot or one
+                    day&apos;s. Where the shots before and after it that day are
+                    in one campaign, that campaign is filled in, and{' '}
+                    <b>Assign the N suggested</b> assigns all such shots.
                   </List.Item>
                 </List>
                 <Text size="sm" c="dimmed">

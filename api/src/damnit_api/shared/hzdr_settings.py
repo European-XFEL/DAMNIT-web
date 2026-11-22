@@ -267,6 +267,37 @@ class HZDRBuilderSettings(BaseModel):
     # with no LabFrog shot 1 was attached by nearest time to LabFrog shot 2.
     # True restores the pre-A7 ladder exactly.
     time_match_autoassign: bool = False
+    # Ruling R-2026-11-21 (hzdr/docs/plans/plan-review-automation.md): with
+    # this true, an event without a shot number attaches to a LabFrog shot
+    # when the two are each other's only neighbour within match_tolerance_s
+    # in the event's stream, shot-aligner's one-to-one rule
+    # (match_quality "time_one_to_one"). Anything less stays in review.
+    # time_match_autoassign=True takes precedence.
+    time_match_one_to_one: bool = False
+    # Event kinds that are never a shot (test fires, heartbeats): their
+    # unmatched events are acknowledged by rule ("rule:never_shot_kinds")
+    # instead of waiting in Review matches. A JSON list, e.g.
+    # ["draco.test_fire"]. Empty: off. Removing a kind reopens its events.
+    never_shot_kinds: list[str] = Field(default_factory=list)
+    # shot-aligner's index folder (plan-aligner-bridge; rulings
+    # R-2026-11-22a/b): its day indexes and reviewer decisions, read by every
+    # build. On fwkt-webapps: ~/shot-aligner/shot_aligner/index. A file whose
+    # shot-aligner event a reviewer confirmed attaches (aligner_confirmed)
+    # when its authority number, LabFrog record and Count name one shot and
+    # date, time and values agree; an unconfirmed one is suggested. A change
+    # in the folder is a rebuild input. Empty: off.
+    aligner_index_dir: Path | None = None
+    # Campaigns built from shot-aligner's day indexes (plan-campaign-backfill,
+    # rulings R-2026-11-22d/e): campaign -> its dates (YYYY_MM_DD), e.g.
+    # {"Vanlife_12.2025": ["2025_12_01", "2025_12_03"]}. For each date the
+    # Shotsheet rows become shots where LabFrog has none that day, and the
+    # acquisitions become file events; the bridge then attaches the confirmed
+    # ones. Needs aligner_index_dir. Empty: off.
+    aligner_campaigns: dict[str, list[str]] = Field(default_factory=dict)
+    # Where each shot-aligner day is stored once parsed (plan
+    # backfill-store-and-console G1, ruling R-2026-11-22f), re-read only when
+    # its index or decisions change. Unset: .aligner-cache beside the catalog.
+    aligner_cache_dir: Path | None = None
     # LabFrog labfrog-campaign-schedule-v1 export whose windows route
     # "unassigned" events (plan W1, decision D4).
     campaign_schedule: Path | None = None

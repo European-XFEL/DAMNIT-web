@@ -174,6 +174,65 @@ describe('AmbiguousMatchesCard', () => {
   })
 })
 
+describe('AmbiguousMatchesCard clear time choices', () => {
+  it('lists the clear cases, then confirms them on a second click', () => {
+    const onConfirmMany = vi.fn()
+    const shots = new Map(
+      [1, 2].map((n) => [
+        `exp:20260505:00000${n}`,
+        makeShot({ shot_number: n, shot_key: `exp:20260505:00000${n}` }),
+      ])
+    )
+    const clear = makeEvent({ event_id: 'evt-clear' })
+    const unclear = makeEvent({ event_id: 'evt-unclear' })
+    withMantine(
+      <AmbiguousMatchesCard
+        events={[clear, unclear]}
+        shotsByKey={shots}
+        gaps={{
+          'evt-clear': {
+            'exp:20260505:000001': -8,
+            'exp:20260505:000002': 400,
+          },
+          'evt-unclear': {
+            'exp:20260505:000001': 20,
+            'exp:20260505:000002': 60,
+          },
+        }}
+        runnerUp={{ 'evt-clear': 400, 'evt-unclear': 60 }}
+        busyKey={null}
+        onConfirm={vi.fn()}
+        onConfirmMany={onConfirmMany}
+      />
+    )
+    expect(screen.getByText(/one shot clearly closest in time/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Confirm these/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Review the 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm these 1' }))
+    expect(onConfirmMany).toHaveBeenCalledWith([
+      expect.objectContaining({
+        event: clear,
+        shotKey: 'exp:20260505:000001',
+        gapS: -8,
+        note: expect.stringContaining('closest in time'),
+      }),
+    ])
+  })
+
+  it('offers nothing in bulk when no case is clear', () => {
+    withMantine(
+      <AmbiguousMatchesCard
+        events={[makeEvent()]}
+        shotsByKey={new Map()}
+        busyKey={null}
+        onConfirm={vi.fn()}
+        onConfirmMany={vi.fn()}
+      />
+    )
+    expect(screen.queryByText(/clearly closest in time/)).toBeNull()
+  })
+})
+
 describe('UnmatchedEventsCard', () => {
   it('acknowledges an event, and disables buttons while saving', () => {
     const onDismiss = vi.fn()
@@ -187,6 +246,7 @@ describe('UnmatchedEventsCard', () => {
         events={[event]}
         busyKey={null}
         onDismiss={onDismiss}
+        onDismissMany={vi.fn()}
       />
     )
     fireEvent.click(
@@ -200,12 +260,93 @@ describe('UnmatchedEventsCard', () => {
           events={[event]}
           busyKey="dismiss:evt-unmatched-1"
           onDismiss={onDismiss}
+          onDismissMany={vi.fn()}
         />
       </MantineProvider>
     )
     expect(
       screen.getByRole('button', { name: 'Acknowledge, no shot' })
     ).toBeDisabled()
+  })
+})
+
+describe('UnmatchedEventsCard batch', () => {
+  it('acknowledges a producer and kind in one go after a second click', () => {
+    const onDismissMany = vi.fn()
+    const tests = [1, 2, 3].map((n) =>
+      makeEvent({
+        event_id: `evt-test-${n}`,
+        source: 'TestFire',
+        kind: 'draco.trigger',
+        match_status: 'unmatched',
+        candidate_shot_keys: [],
+      })
+    )
+    const single = makeEvent({
+      event_id: 'evt-other',
+      source: 'Watchdog',
+      kind: 'daq.file',
+      match_status: 'unmatched',
+      candidate_shot_keys: [],
+    })
+    withMantine(
+      <UnmatchedEventsCard
+        events={[...tests, single]}
+        busyKey={null}
+        onDismiss={vi.fn()}
+        onDismissMany={onDismissMany}
+      />
+    )
+    // Only groups of two or more get a batch button.
+    expect(
+      screen.getAllByRole('button', { name: /^Acknowledge all/ })
+    ).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge all 3' }))
+    expect(onDismissMany).not.toHaveBeenCalled()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Yes, acknowledge 3 with no shot',
+      })
+    )
+    expect(onDismissMany).toHaveBeenCalledWith(tests)
+  })
+})
+
+describe('UnassignedShotsCard batch', () => {
+  it('assigns one day of waiting shots to one campaign', () => {
+    const onAssignMany = vi.fn()
+    const dayOne = [1, 2].map((n) =>
+      makeShot({
+        shot_number: n,
+        shot_key: `u:${n}`,
+        shot_date: '2026-11-20',
+      })
+    )
+    const dayTwo = makeShot({
+      shot_number: 3,
+      shot_key: 'u:3',
+      shot_date: '2026-11-21',
+    })
+    withMantine(
+      <UnassignedShotsCard
+        shots={[...dayOne, dayTwo]}
+        rulings={new Map()}
+        suggestions={['Pilot_2026']}
+        busyKey={null}
+        onAssign={vi.fn()}
+        onAssignMany={onAssignMany}
+      />
+    )
+    expect(
+      screen.getByRole('button', { name: 'Assign 3 shots' })
+    ).toBeDisabled()
+    fireEvent.click(screen.getByRole('textbox', { name: 'Assign several' }))
+    fireEvent.click(screen.getByRole('option', { name: '2026-11-20 (2)' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'to campaign' }), {
+      target: { value: 'Pilot_2026' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Assign 2 shots' }))
+    expect(onAssignMany).toHaveBeenCalledWith(dayOne, 'Pilot_2026')
   })
 })
 
@@ -233,6 +374,7 @@ describe('UnassignedShotsCard', () => {
         suggestions={['Beamline_radbio_2026']}
         busyKey={null}
         onAssign={onAssign}
+        onAssignMany={vi.fn()}
       />
     )
 
@@ -360,5 +502,141 @@ describe('LegacyReviewMatchesRedirect', () => {
     expect(
       screen.getByText('/review-matches?source=hzdr-local')
     ).toBeInTheDocument()
+  })
+})
+
+describe('suggestions from evidence other than time', () => {
+  it('marks the suggested candidate and confirms suggestions in bulk', () => {
+    const onConfirmMany = vi.fn()
+    const shots = new Map(
+      [1, 2].map((n) => [
+        `exp:20260505:00000${n}`,
+        makeShot({ shot_number: n, shot_key: `exp:20260505:00000${n}` }),
+      ])
+    )
+    const suggested = makeEvent({
+      event_id: 'evt-suggested',
+      suggested_shot_key: 'exp:20260505:000002',
+      suggestion_reason: 'watchdog_attribution',
+    })
+    withMantine(
+      <AmbiguousMatchesCard
+        events={[suggested]}
+        shotsByKey={shots}
+        gaps={{
+          // Clear by time too, but it is offered once, as a suggestion.
+          'evt-suggested': {
+            'exp:20260505:000001': 5,
+            'exp:20260505:000002': 600,
+          },
+        }}
+        busyKey={null}
+        onConfirm={vi.fn()}
+        onConfirmMany={onConfirmMany}
+      />
+    )
+    expect(
+      screen.getByText(/suggested: the watchdog named this shot/)
+    ).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: /^Review the/ })).toHaveLength(
+      1
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Review the 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm these 1' }))
+    expect(onConfirmMany).toHaveBeenCalledWith([
+      expect.objectContaining({
+        shotKey: 'exp:20260505:000002',
+        note: 'Confirmed in bulk: suggested because the watchdog named this shot.',
+      }),
+    ])
+  })
+})
+
+describe('review reasons', () => {
+  it('says why an event waits, in words', () => {
+    withMantine(
+      <UnmatchedEventsCard
+        events={[
+          makeEvent({
+            match_status: 'unmatched',
+            candidate_shot_keys: [],
+            review_reason: 'no_shot_in_tolerance',
+          }),
+        ]}
+        busyKey={null}
+        onDismiss={vi.fn()}
+        onDismissMany={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('review-reason').textContent).toContain(
+      'No LabFrog shot within the time tolerance'
+    )
+  })
+
+  it("names shot-aligner's check that failed (plan-aligner-bridge)", () => {
+    withMantine(
+      <UnmatchedEventsCard
+        events={[
+          makeEvent({
+            match_status: 'unmatched',
+            candidate_shot_keys: [],
+            review_reason: 'aligner_check_failed',
+            aligner_detail:
+              'shot-aligner 2025-12-03 set1:2: time: LabFrog +900 s from the Shotsheet Zeit',
+          }),
+        ]}
+        busyKey={null}
+        onDismiss={vi.fn()}
+        onDismissMany={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('review-reason').textContent).toContain(
+      'do not agree on the date, the time or a value'
+    )
+    expect(screen.getByTestId('aligner-detail').textContent).toContain(
+      'set1:2: time'
+    )
+  })
+})
+
+describe('campaign suggestions for unassigned shots', () => {
+  it('pre-fills the suggestion and assigns the suggested ones on a second click', () => {
+    const onAssignSuggested = vi.fn()
+    const suggestedShot = makeShot({ shot_number: 1, shot_key: 'u:1' })
+    const plainShot = makeShot({ shot_number: 2, shot_key: 'u:2' })
+    withMantine(
+      <UnassignedShotsCard
+        shots={[suggestedShot, plainShot]}
+        rulings={new Map()}
+        suggestions={['Pilot_2026']}
+        campaignSuggestions={{
+          'u:1': {
+            experiment_id: 'Pilot_2026',
+            before_shot_key: 'p:1',
+            after_shot_key: 'p:2',
+          },
+        }}
+        busyKey={null}
+        onAssign={vi.fn()}
+        onAssignMany={vi.fn()}
+        onAssignSuggested={onAssignSuggested}
+      />
+    )
+    expect(
+      screen.getByRole('textbox', { name: 'Campaign for shot 1' })
+    ).toHaveValue('Pilot_2026')
+    expect(
+      screen.getByRole('textbox', { name: 'Campaign for shot 2' })
+    ).toHaveValue('')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Assign the 1 suggested' })
+    )
+    expect(onAssignSuggested).not.toHaveBeenCalled()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Yes, assign 1 as suggested' })
+    )
+    expect(onAssignSuggested).toHaveBeenCalledWith([
+      [suggestedShot, 'Pilot_2026'],
+    ])
   })
 })

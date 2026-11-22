@@ -32,7 +32,7 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
 - [x] **Highlight new shots.** A quick-filter chip, "New since your last
   visit N": shots fired after the newest one this browser showed on the
   last visit to the campaign (one number per campaign in localStorage).
-  The table itself is unchanged; the page does not poll for shots.
+  The table itself is unchanged.
 - [ ] Reset or delete branch `claude/dazzling-noether-br3edr` on GitHub
   (needs the maintainer: a force-push or delete).
 - [x] shotcounter MR !1: stays open and parked (maintainer, 2026-11-21);
@@ -81,7 +81,77 @@ Rule from the maintainer: clean up around the shot table, never redesign it.
   acceptance stack (CI has no API): `tests/app/hzdr/home.spec.ts` checks
   Home reads the summary route and never the full list.
 
-## Notes for the next session
+## Next round (2026-11-21, after #57)
+
+- [x] **The shot page refreshes itself.** Every 20 s it reads the campaign
+  summary and fetches the shots again only when the count, newest shot or
+  review counts changed (`utils/new-shots.ts` `shotListChangeKey`,
+  `usePolling`); quiet, so selection and filters stay.
+- [x] **Docs page and screenshots up to date** with Views, Download CSV,
+  New since your last visit, Compare with, the self-refresh and
+  `{container}` columns. Done: DocsPage text, all seven captures (the
+  shot-table capture saves a view and picks Compare with), the in-app
+  shot-table JPEG (how to refresh one: `hzdr/docs/screenshots.md`).
+- [x] **Containers go-live checklist** in `hzdr/docs/guides/operations.md`:
+  the settings to turn on, what to check after the first build. Phase 6
+  (one campaign built by both us and shot-aligner, compared with
+  `hzdr-compare-containers.py`) needs server data: the maintainer's.
+  Done: "Turn on the shot containers" in the runbook, phase 6 as its
+  first step.
+
+- [x] **"N new shots arrived" notice** beside the quick filters after a
+  background refresh brings shots in; a click selects the newest.
+- [x] **Review matches refreshes itself**: summaries every 30 s, the open
+  campaign reloaded only when its summary changed, the automatic pick
+  pinned (`ReviewMatchesPage.refresh.test.tsx`).
+- [x] **The capture writes the Docs page's images** (`DOCS_ASSETS` in
+  `hzdr/scripts/capture-screenshots.py`), so they cannot fall behind the
+  screenshots; the script is also ruff-clean under the root config now.
+- [x] **Review matches in batches**: Acknowledge all N per producer and
+  kind (second click names the count), Assign several (all waiting or one
+  day's) to one campaign. Assessment and next steps that need decisions:
+  [review-automation.md](review-automation.md).
+- [x] **Deployment notes**: `hzdr/docs/guides/next-on-server.md` items 6
+  (what to check in the web UI after a deploy) and 7 (containers, only on a
+  decision, through the runbook's go-live checklist). `next-on-server.sh`
+  needs no change: its `deploy` step already rebuilds the frontend with
+  `VITE_DAMNIT_COMMIT`.
+
+## Review automation (2026-11-21)
+
+All five options of [review-automation.md](review-automation.md) §4, chosen
+by the maintainer; plan, rulings and checklist in
+[plan-review-automation.md](plan-review-automation.md) (boxes ticked there,
+in the commit that does the work).
+
+## Next steps (after PR #58)
+
+On the server (maintainer), in order: **[deploy-notes.md](../guides/deploy-notes.md)**
+(the background is in `next-on-server.md`).
+1. Merge #58, then deploy #57 and #58 together:
+   - settings first: `ALIGNER_INDEX_DIR`, `ALIGNER_CAMPAIGNS` for Vanlife;
+     `TIME_MATCH_ONE_TO_ONE` and `CONTAINERS_ENABLED` off;
+   - then `next-on-server.sh`, look first, then `--apply`.
+2. Vanlife with `hzdr-campaign-backfill.py` (report, then `--apply
+   --aligner-build <shot-aligner's Vanlife build>`). Review 12-01, 12-02 and
+   12-05 in shot-aligner.
+3. More of this year's campaigns: one `ALIGNER_CAMPAIGNS` entry each, once
+   their days are indexed and reviewed.
+4. Measure a LabFrog day with DRACO triggers (`hzdr-evaluate-time-rule.py`):
+   it decides R3, the time rule for triggers only.
+5. Shot containers on a decision only: phase 6 first.
+6. Merge GitLab hzdr-combo !117, fwkt-webapps !106 and shot-aligner !28.
+
+Noted for later plans:
+- skip the time ladder for files the bridge will attach, which is now the
+  largest part of a build (`plan-backfill-store-and-console.md`, results);
+- R2, clock-offset fitting in DAMNIT, is not needed while shot-aligner does
+  it.
+
+For a later session (needs a decision): offer every shot in the tolerance
+as a candidate instead of only the nearest (changes what reviewers see on
+every campaign; `plan-review-automation.md`, results).
+
 
 - **e2e here:** the e2e package pins Playwright 1.64, the container's
   Chromium is 1.63's (`/opt/pw-browsers/chromium`). Run locally through a

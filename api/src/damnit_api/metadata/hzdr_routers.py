@@ -7,6 +7,7 @@ router stays small.  Mounted from ``main.py`` alongside ``metadata.router``;
 paths are unchanged (``/metadata/hzdr/*``).
 """
 
+import bisect
 import hashlib
 import json
 import logging
@@ -31,6 +32,7 @@ from .hzdr_nexus import (
     append_experiment_ruling,
     append_review_decision,
     load_experiment_ruling_records,
+    parse_datetime,
     review_sidecar_path,
     write_json_atomic,
 )
@@ -161,6 +163,19 @@ class HZDRExperimentRuling(BaseModel):
     review_level: str | None = None
 
 
+class HZDRCampaignSuggestion(BaseModel):
+    """A campaign for an unassigned shot: its neighbours on that day agree.
+
+    The nearest shot before it and the nearest after it on the same local
+    day, among shots placed in a campaign, are both in ``experiment_id``.
+    A suggestion pre-fills the field; a person assigns (decision D4).
+    """
+
+    experiment_id: str
+    before_shot_key: str | None
+    after_shot_key: str | None
+
+
 class HZDRReviewResponse(BaseModel):
     """Everything in one source that waits for a person.
 
@@ -174,6 +189,20 @@ class HZDRReviewResponse(BaseModel):
     review_events: list[HZDRReviewEvent]
     unassigned_shots: list[HZDRShot] = Field(default_factory=list)
     experiment_rulings: list[HZDRExperimentRuling] = Field(default_factory=list)
+    # event_id -> candidate shot_key -> seconds from the shot to the event
+    # (positive: the event came later). LabFrog times are naive campaign-local
+    # times, read in DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE as the builder
+    # reads them; a browser cannot. Only gaps that are known are listed.
+    candidate_gaps_s: dict[str, dict[str, float]] = Field(default_factory=dict)
+    # Each event's gap to the nearest shot that is not its closest candidate,
+    # over every shot of the source (plan-aligner-bridge B1): since A7 a time
+    # proposal has one candidate, so the candidates alone cannot say whether
+    # another shot was close.
+    runner_up_gaps_s: dict[str, float] = Field(default_factory=dict)
+    # unassigned shot_key -> the campaign its neighbours that day agree on.
+    campaign_suggestions: dict[str, HZDRCampaignSuggestion] = Field(
+        default_factory=dict
+    )
 
 
 class HZDRConfirmMatchRequest(BaseModel):
@@ -709,7 +738,8 @@ async def update_hzdr_shot_metadata(
 @hzdr_router.get("/hzdr/sources/{source_key}/review")
 async def get_hzdr_review(source_key: str) -> HZDRReviewResponse:
     """Get what waits for a reviewer in one source, with the match summary."""
-    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    provider = HZDRSourceProvider(settings.metadata)
+    source = provider.get_source(source_key)
     if source is None:
         raise HTTPException(status_code=404, detail="HZDR source not found.")
     unassigned_shots = [
@@ -722,7 +752,129 @@ async def get_hzdr_review(source_key: str) -> HZDRReviewResponse:
         experiment_rulings=_pending_experiment_rulings({
             shot.shot_number for shot in unassigned_shots
         }),
+        candidate_gaps_s=(gaps := _candidate_gaps(source)),
+        runner_up_gaps_s=_runner_up_gaps(source, gaps),
+        campaign_suggestions=(
+            _campaign_suggestions(unassigned_shots, provider.list_sources())
+            if unassigned_shots
+            else {}
+        ),
     )
+
+
+def _campaign_suggestions(
+    unassigned_shots: list[HZDRShot], sources: list[HZDRSource]
+) -> dict[str, HZDRCampaignSuggestion]:
+    """Suggest a campaign where an unassigned shot's neighbours agree.
+
+    Among every shot placed in a campaign on the same local day
+    (``shot_date``), the nearest before and the nearest after the
+    unassigned shot must both exist and be in one campaign. Times without a
+    zone are read in the campaign time zone, as the builder reads them.
+    """
+    timezone = settings.hzdr_builder.campaign_timezone
+    placed: dict[str, list[tuple[datetime, str, str]]] = {}
+    for source in sources:
+        experiment_id = _metadata_string(source.metadata, "experiment_id") or source.key
+        if experiment_id == UNASSIGNED_EXPERIMENT_ID:
+            continue
+        for shot in source.shots:
+            when = parse_datetime(shot.fired_at, naive_timezone=timezone)
+            if (
+                shot.experiment_id_source == "unassigned"
+                or when is None
+                or not shot.shot_date
+                or not shot.shot_key
+            ):
+                continue
+            placed.setdefault(shot.shot_date, []).append((
+                when,
+                experiment_id,
+                shot.shot_key,
+            ))
+    suggestions: dict[str, HZDRCampaignSuggestion] = {}
+    for shot in unassigned_shots:
+        when = parse_datetime(shot.fired_at, naive_timezone=timezone)
+        day = placed.get(shot.shot_date or "", [])
+        if when is None or not shot.shot_key or not day:
+            continue
+        before = max((item for item in day if item[0] < when), default=None)
+        after = min((item for item in day if item[0] > when), default=None)
+        if before and after and before[1] == after[1]:
+            suggestions[shot.shot_key] = HZDRCampaignSuggestion(
+                experiment_id=before[1],
+                before_shot_key=before[2],
+                after_shot_key=after[2],
+            )
+    return suggestions
+
+
+def _candidate_gaps(source: HZDRSource) -> dict[str, dict[str, float]]:
+    """Each review event's time gap to each of its candidate shots."""
+    timezone = settings.hzdr_builder.campaign_timezone
+    shots = {shot.shot_key: shot for shot in source.shots if shot.shot_key}
+    gaps: dict[str, dict[str, float]] = {}
+    for event in source.review_events:
+        event_time = parse_datetime(event.timestamp)
+        if event_time is None:
+            continue
+        row: dict[str, float] = {}
+        for shot_key in dict.fromkeys(event.candidate_shot_keys):
+            shot = shots.get(shot_key)
+            shot_time = (
+                parse_datetime(
+                    shot.labfrog_date_time or shot.fired_at, naive_timezone=timezone
+                )
+                if shot
+                else None
+            )
+            if shot_time is not None:
+                row[shot_key] = (event_time - shot_time).total_seconds()
+        if row:
+            gaps[event.event_id] = row
+    return gaps
+
+
+def _runner_up_gaps(
+    source: HZDRSource, gaps: dict[str, dict[str, float]]
+) -> dict[str, float]:
+    """Each event's gap to the nearest shot other than its closest candidate.
+
+    Over every shot of the source with a time, not only the candidates, so a
+    bulk time choice can be refused when another shot was nearly as close
+    (plan-aligner-bridge B1). Signed like ``candidate_gaps_s``.
+    """
+    timezone = settings.hzdr_builder.campaign_timezone
+    timed = sorted(
+        (when, shot.shot_key)
+        for shot in source.shots
+        if shot.shot_key
+        and (
+            when := parse_datetime(
+                shot.labfrog_date_time or shot.fired_at, naive_timezone=timezone
+            )
+        )
+        is not None
+    )
+    times = [when for when, _ in timed]
+    runner_up: dict[str, float] = {}
+    for event in source.review_events:
+        row = gaps.get(event.event_id)
+        event_time = parse_datetime(event.timestamp)
+        if not row or event_time is None:
+            continue
+        sizes = {key: abs(gap) for key, gap in row.items()}
+        closest = min(sizes, key=sizes.__getitem__)
+        at = bisect.bisect_left(times, event_time)
+        # The two nearest on each side cover the nearest that is not `closest`.
+        near = [
+            (event_time - times[i]).total_seconds()
+            for i in range(max(0, at - 2), min(len(timed), at + 2))
+            if timed[i][1] != closest
+        ]
+        if near:
+            runner_up[event.event_id] = min(near, key=abs)
+    return runner_up
 
 
 def _pending_experiment_rulings(shot_numbers: set[int]) -> list[HZDRExperimentRuling]:

@@ -1,9 +1,24 @@
 /** What GET /config/version reports about the running API. */
-export type APIVersion = { version: string | null; commit: string | null }
+export type APIVersion = {
+  version: string | null
+  commit: string | null
+  /** The last commit that changed frontend/ (older APIs: absent). */
+  frontend_commit?: string | null
+}
+
+/**
+ * The API's commit a build is compared with: the last commit that changed
+ * frontend/ when the API reports it (so an API-only pull needs no rebuild),
+ * else the checkout's commit.
+ */
+export function comparableAPICommit(api: APIVersion | null | undefined) {
+  return api?.frontend_commit || api?.commit || null
+}
 
 /**
  * The commit this frontend was built from: `VITE_DAMNIT_COMMIT` at build
- * time (`hzdr/scripts/next-on-server.sh` sets it). Empty when the build did
+ * time, the last commit that changed frontend/
+ * (`hzdr/scripts/next-on-server.sh` sets it). Empty when the build did
  * not set it, and then no mismatch is reported.
  */
 export function frontendCommit(): string {

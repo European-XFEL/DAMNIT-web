@@ -67,6 +67,9 @@ python api/scripts/hzdr-hdf5-builder.py --experiment-id <id> --campaign-timezone
     --labfrog-sqlite <c>.sqlite --trigger-jsonl <triggers>.jsonl --output-nexus <c>.nxs
 python api/scripts/hzdr-container-worker.py --master <c>.nxs   # shot containers into <c's folder>/shots/ (or --output-root)
 python api/scripts/hzdr-compare-containers.py --damnit <campaign folder> --aligner <shot-aligner build>   # phase 6: diff against shot-aligner's containers
+python api/scripts/hzdr-package-campaign.py --master <c>.nxs [--checksums] [--tar <c>.tar]   # PACKAGE.json + README + NDS verdict beside the master; copies nothing
+python api/scripts/hzdr-campaign-backfill.py [--apply]   # a campaign from shot-aligner's indexes: report, then index/rebuild/containers/compare
+python api/scripts/hzdr-evaluate-time-rule.py <shot-aligner>/shot_aligner/index/<date>.index.json --truth matched   # score the one-to-one time rule on a real shot day
 python api/scripts/hzdr-local-acceptance.py        # emulator events through Confirm Matches, no broker
 python api/scripts/hzdr-local-acceptance.py --real-topology   # the deployed flow rehearsed: unassigned triggers, export, schedule, multi-campaign build, a ruling
 python api/scripts/regen_hzdr_event_fixtures.py    # regenerate the canonical hzdr-event-v1 schema + sample fixtures
@@ -218,7 +221,9 @@ workspace. HZDR-specific UI code lives under `apps/app/src/hzdr/`:
   `DocsPage`, `PrivacyPage` (public `/privacy`, linked from the site footer;
   keep its "What we process" list in step with what the API stores), `SourceHome`
   (polls `GET /metadata/hzdr/source-summaries`, counts only, not the full
-  sources list; `components/homeCampaignSummary.ts` maps it)
+  sources list; `components/homeCampaignSummary.ts` maps it; `ShotPage`
+  polls the same route every 20 s and refetches its shots only when its
+  campaign's `shotListChangeKey` changed)
 - `components/` — `ShotTable`, `ShotDetailPanel` (`utils/shot-datasets`: only
   the selected shot's datasets, the campaign file behind a toggle),
   `ShotCampaignStrip`, `HomeCampaignList`, `ReviewMatches`, `FlowDiagram`,
@@ -252,7 +257,11 @@ redirects there) is where a person resolves what the builder will not guess:
 ambiguous events (confirm one of `candidate_shot_keys`), unmatched events
 (acknowledge), and `unassigned` shots (assign a campaign, written as an
 experiment ruling). It reads `GET .../sources/{key}/review`, which also lists
-`unassigned_shots` and their pending `experiment_rulings`.
+`unassigned_shots`, their pending `experiment_rulings` and
+`candidate_gaps_s` (each candidate's gap to the event, in the campaign's time
+zone), from which the page offers the clear-cut time cases
+(`utils/review.clearTimeChoices`) for a person to confirm in bulk, plus
+batch acknowledge and assign.
 Saved table views are persisted in `hzdr_sources.views.json` alongside
 `hzdr_sources.json` (same directory, same stem with `.views.json` suffix); the API
 manages them via `GET/POST/DELETE /metadata/hzdr/sources/{key}/views[/{id}]`; the shot table shows them as chips (`components/SavedViewChips`).
@@ -292,6 +301,43 @@ events by trigger time) and `DW_API_HZDR_BUILDER__TIME_MATCH_AUTOASSIGN`
 propose review candidates, and an authoritative `shot_number` naming exactly
 one shot attaches on the number alone; `true` restores the earlier ladder,
 which attached a numbered trigger to a neighbouring LabFrog shot by time).
+`DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE` (default `false`; ruling
+R-2026-11-21) adds shot-aligner's one-to-one time rule for events without a
+shot number (`time_one_to_one`, see Match quality ranks); keep it off for
+watchdog files: on shot-aligner's real shot days raw instrument clocks run up
+to two minutes off and it mispairs them
+([plan-time-rule-real-data.md](hzdr/docs/plans/plan-time-rule-real-data.md),
+`api/scripts/hzdr-evaluate-time-rule.py`). And
+`DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS` (JSON list, default empty) has the
+catalog acknowledge unmatched events of those kinds by rule
+(`rule:never_shot_kinds`). `DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR`
+(default empty; rulings R-2026-11-22a/b) is shot-aligner's index folder
+(`~/shot-aligner/shot_aligner/index` on fwkt-webapps): files whose
+shot-aligner event a reviewer confirmed attach as `aligner_confirmed` (see
+Match quality ranks), unconfirmed ones are suggested, and a change in the
+folder is a rebuild input; `hzdr-evaluate-time-rule.py --rule aligner`
+scores a day. `DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS` (JSON campaign -> dates
+`YYYY_MM_DD`, default empty; rulings R-2026-11-22d/e,
+[plan-campaign-backfill.md](hzdr/docs/plans/plan-campaign-backfill.md);
+`--aligner-campaign <campaign>=<date>`) builds this year's campaigns from those
+indexes: on a date LabFrog has no records of, the Shotsheet rows shot-aligner
+counts become shots (`shot_number` = position in the day, the Count in
+`labfrog_local_count`, `experiment_id_source` `shotsheet`), and the
+acquisitions become `shot-aligner` file events (instrument from the vendored
+catalogue by folder alias), made at build time, never spooled
+(`hzdr_aligner.backfill`); a listed campaign is built in multi-campaign mode
+without an export or spool. Each parsed day is stored in `.aligner-cache/`
+beside the catalog (`ALIGNER_CACHE_DIR`), keyed by the index's and decisions'
+size and mtime, and a build reads only the dates its events fall on. A
+campaign whose result equals the last published one is not rewritten
+(`.<name>.nxs.build-stamp.json` beside the master: the sha256 of the shots,
+events, laser constants, containers' manifest and the writing code;
+`--force` / `hzdr-rebuild.py --force` publishes anyway; ruling R-2026-11-22h,
+[plan-quiet-builds.md](hzdr/docs/plans/plan-quiet-builds.md)). Review events carry `review_reason`, `aligner_detail` and,
+from non-time evidence, `suggested_shot_key`/`suggestion_reason`; the review
+route adds `candidate_gaps_s`, `runner_up_gaps_s` (the nearest other shot
+over the whole source, which the bulk time choice needs since A7 leaves one
+candidate; files are never offered in bulk) and `campaign_suggestions`.
 `DW_API_HZDR_BUILDER__VALIDATION_PYTHON` (default empty: off) names a Python
 with nexus-design-studio and pynxtools (NDS's own `.venv`); set, the trigger
 runs `api/scripts/hzdr-nexus-validate.py` (campaign output phase 5) after each
@@ -575,7 +621,7 @@ for the full rationale and HELPMI cross-walk.
 
 ### NeXus bridge profile: `hzdr-canonical-shot-v7`
 
-Stamped as `damnit_bridge_profile` on HDF5 root and `/entry/shots`. Current value: `"hzdr-canonical-shot-v7"`. Version 2 added the shot-aligned `target_metadata_json` column so campaign-varying targets are not lost behind the `/entry/sample` snapshot. **Version 3 (2026-08-31)** adds `/entry/source_events/producer_instance_id`, promoted from `metadata.producer.instance_id`, so a reviewed openPMD projection rule can name the emitting PC; see [hzdr/docs/plans/openpmd-projection-plan.md](hzdr/docs/plans/openpmd-projection-plan.md). **Version 4 (2026-09-29)** adds `/entry/shots/experiment_id_source` (why the shot is in this campaign: `labfrog` / `schedule` / `ruling` / `producer` / `unassigned`, see [architecture.md](hzdr/docs/architecture.md#campaign-resolution)) and `/entry/source_events/instrument_id` (from `metadata.instrument.id`, `""` when absent). **Version 5 (2026-10-01)** adds `/entry/shots/labfrog_local_count`: LabFrog's `shots.local_count` (labfrog-sqlite-tools schema v12), the experimenters' Count from LabFrog's local-counter reset, written beside each shot as a user aid so the NeXus file can be searched by the number on the Shotsheet. It is *not* an identifier and never stands in for the shot authority's `shot_number`; the dataset's `description` attribute says so, and the name deliberately avoids a `shot_number` prefix (the shot aligner's rule G8). `-1` where LabFrog has no count (no active reset, a pre-v12 export, a LabFrog NeXus source, or a trigger-only shot). **Version 6 (2026-11-09)** adds `/entry/shots/authority_shot_number`: the shot authority's number beside each shot (maintainer: the authority belongs in the SQLite export and the NeXus file) — the LabFrog export's `authority_shot_number` for a LabFrog-backed shot (whose `shot_number` is LabFrog's own and may be typed), the events' `shot_number` for a trigger-only or event-built shot, `-1` (`missing_value`) otherwise. `read_labfrog_nexus_shots` likewise treats a negative LabFrog NeXus value as none (labfrog-sqlite-tools 0.2.5 writes `-1`). **Version 7 (2026-11-15)** moves superseded LabFrog versions out of the tables (maintainer, 2026-11-14: history reachable but not mixed in; found by the constellation emulator's E13, a typed 44 corrected to 4): a version a later one replaced (`metadata.has_newer_version`: an `archived` row, or a non-active one beside an active row of the same campaign, day and number) is no row of `/entry/shots` and its LabFrog `shotsheet.row` event no row of `/entry/source_events`; it is a row of `/entry/labfrog_history` (`NXcollection`, written by every build, empty when nothing was superseded) with `history_index`, `record_id`, `shot_number` (LabFrog's own, as typed), `authority_shot_number` (`-1` where none) and `superseded_by` (the `record_id` of the version that replaced it, from the export's `shot_version_links`, else the one active row of the same day and number, else `""`). The shot identity is unchanged from v6: a LabFrog-backed shot keeps LabFrog's own (possibly typed) number as `shot_number` and in its `shot_key`, the authority's beside it, so until the correction is exported the typed number is the shot's. The split is `hzdr_nexus.split_labfrog_history`, applied inside `write_nexus_bridge`; `reconcile_canonical_shots` and the catalog (which never listed superseded versions) are unchanged. A shot table preserved from a LabFrog NeXus file (`--labfrog-nexus`) is LabFrog's own, referred to by position, so its history rows stay there, marked by LabFrog's `has_newer_version` column; their events still leave and the history group is still written. Bump this string if the bridge table layout changes (columns added/removed from the shot or source-events groups).
+Stamped as `damnit_bridge_profile` on HDF5 root and `/entry/shots`. Current value: `"hzdr-canonical-shot-v7"`. Version 2 added the shot-aligned `target_metadata_json` column so campaign-varying targets are not lost behind the `/entry/sample` snapshot. **Version 3 (2026-08-31)** adds `/entry/source_events/producer_instance_id`, promoted from `metadata.producer.instance_id`, so a reviewed openPMD projection rule can name the emitting PC; see [hzdr/docs/plans/openpmd-projection-plan.md](hzdr/docs/plans/openpmd-projection-plan.md). **Version 4 (2026-09-29)** adds `/entry/shots/experiment_id_source` (why the shot is in this campaign: `labfrog` / `schedule` / `ruling` / `producer` / `unassigned`, and since 2026-11-22 `shotsheet` for a shot made from a Shotsheet row in shot-aligner's day index, see [architecture.md](hzdr/docs/architecture.md#campaign-resolution)) and `/entry/source_events/instrument_id` (from `metadata.instrument.id`, `""` when absent). **Version 5 (2026-10-01)** adds `/entry/shots/labfrog_local_count`: LabFrog's `shots.local_count` (labfrog-sqlite-tools schema v12), the experimenters' Count from LabFrog's local-counter reset, written beside each shot as a user aid so the NeXus file can be searched by the number on the Shotsheet. It is *not* an identifier and never stands in for the shot authority's `shot_number`; the dataset's `description` attribute says so, and the name deliberately avoids a `shot_number` prefix (the shot aligner's rule G8). `-1` where LabFrog has no count (no active reset, a pre-v12 export, a LabFrog NeXus source, or a trigger-only shot). **Version 6 (2026-11-09)** adds `/entry/shots/authority_shot_number`: the shot authority's number beside each shot (maintainer: the authority belongs in the SQLite export and the NeXus file) — the LabFrog export's `authority_shot_number` for a LabFrog-backed shot (whose `shot_number` is LabFrog's own and may be typed), the events' `shot_number` for a trigger-only or event-built shot, `-1` (`missing_value`) otherwise. `read_labfrog_nexus_shots` likewise treats a negative LabFrog NeXus value as none (labfrog-sqlite-tools 0.2.5 writes `-1`). **Version 7 (2026-11-15)** moves superseded LabFrog versions out of the tables (maintainer, 2026-11-14: history reachable but not mixed in; found by the constellation emulator's E13, a typed 44 corrected to 4): a version a later one replaced (`metadata.has_newer_version`: an `archived` row, or a non-active one beside an active row of the same campaign, day and number) is no row of `/entry/shots` and its LabFrog `shotsheet.row` event no row of `/entry/source_events`; it is a row of `/entry/labfrog_history` (`NXcollection`, written by every build, empty when nothing was superseded) with `history_index`, `record_id`, `shot_number` (LabFrog's own, as typed), `authority_shot_number` (`-1` where none) and `superseded_by` (the `record_id` of the version that replaced it, from the export's `shot_version_links`, else the one active row of the same day and number, else `""`). The shot identity is unchanged from v6: a LabFrog-backed shot keeps LabFrog's own (possibly typed) number as `shot_number` and in its `shot_key`, the authority's beside it, so until the correction is exported the typed number is the shot's. The split is `hzdr_nexus.split_labfrog_history`, applied inside `write_nexus_bridge`; `reconcile_canonical_shots` and the catalog (which never listed superseded versions) are unchanged. A shot table preserved from a LabFrog NeXus file (`--labfrog-nexus`) is LabFrog's own, referred to by position, so its history rows stay there, marked by LabFrog's `has_newer_version` column; their events still leave and the history group is still written. Bump this string if the bridge table layout changes (columns added/removed from the shot or source-events groups).
 
 **Axes.** `/entry/shots/*` is the only shot-indexed group. `/entry/source_events` is event-indexed and `/entry/data_products` is product-indexed; both carry a `shot_key` column and must be *joined*, never zipped by position. `/entry/labfrog_history` is indexed by `history_index` and has no `shot_key`: a history row is never a shot (the openPMD preflight gives it its own axis and refuses to attribute it to an iteration).
 
@@ -601,7 +647,7 @@ keep the table columns unchanged.
 
 ### Match quality ranks (ascending, `hzdr_nexus.MATCH_RANK`)
 
-`unmatched` (0) → `labfrog_only` (1) → `nearest_time` (2) → `shot_number_time_window` (3) → `exact_day_shot_number_time_window` (4) → `shot_number` (5) → `exact_day_shot_number` (6) → `event_identity` (7) → `exact_transport_position` (8) → `exact_kafka_event_id` (9)
+`unmatched` (0) → `labfrog_only` (1) → `nearest_time` (2) → `time_one_to_one` (3) → `shot_number_time_window` (4) → `exact_day_shot_number_time_window` (5) → `aligner_confirmed` (6) → `shot_number` (7) → `exact_day_shot_number` (8) → `event_identity` (9) → `exact_transport_position` (10) → `exact_kafka_event_id` (11)
 
 Higher rank wins when two matches compete for the same shot. `_match_event_ranked`
 tries them top down: the event's Kafka `event_id`, then its `topic/partition/offset`,
@@ -616,7 +662,21 @@ built from the events themselves, grouped by shot number with no LabFrog record
 reached. The three time-based ranks
 (`_TIME_BASED_MATCH_QUALITIES`) become review candidates instead of attaching
 unless `TIME_MATCH_AUTOASSIGN` is `true`, and the `shot_number` rank is used
-only while it is `false`, so opting back in restores the earlier ladder exactly. `ambiguous` is a status, not a rank
+only while it is `false`, so opting back in restores the earlier ladder exactly.
+`time_one_to_one` (ruling R-2026-11-21, `TIME_MATCH_ONE_TO_ONE`, off by
+default) is shot-aligner's rule applied after the ladder: an event without a
+shot number and a LabFrog shot that are each other's only neighbour within
+the tolerance, within the event's stream (source, kind, instrument), attach;
+`hzdr_nexus._pair_time_one_to_one`, plan
+[plan-review-automation.md](hzdr/docs/plans/plan-review-automation.md).
+`aligner_confirmed` (rulings R-2026-11-22a/b, `ALIGNER_INDEX_DIR`, off by
+default) is a file whose shot-aligner event a reviewer confirmed, mapped to
+one DAMNIT shot by the shot authority's number, the LabFrog record
+shot-aligner matched, and the Count as LabFrog's local count (all present
+must agree), then checked by date, time and the values both record
+(`hzdr_aligner.py`, `hzdr_nexus._apply_aligner_claims`, plan
+[plan-aligner-bridge.md](hzdr/docs/plans/plan-aligner-bridge.md)); an
+unconfirmed link is a suggestion (`shot_aligner`). `ambiguous` is a status, not a rank
 (`MATCH_RANK.get(q, 0)`).
 
 ### Review levels (ascending, `hzdr_nexus.REVIEW_LEVELS`)
@@ -639,4 +699,4 @@ Values: `none`, `number`, `string`, `boolean`, `timestamp`, `complex`, `array`, 
 
 ### API package version
 
-`damnit-api` current: **`0.3.1`** (see `api/pyproject.toml`). `GET /config/version` reports it and the checkout's commit at start-up (a frontend built with `VITE_DAMNIT_COMMIT` warns in its header when the two commits differ); bump the version when the public schema changes.
+`damnit-api` current: **`0.3.2`** (see `api/pyproject.toml`). `GET /config/version` reports it, the checkout's commit and `frontend_commit` (the last commit that changed `frontend/`) at start-up. A frontend built with `VITE_DAMNIT_COMMIT` (set by `next-on-server.sh` to that same frontend commit) warns in its header when the two differ, so an API-only pull needs no frontend rebuild. Bump the version when the public schema changes.

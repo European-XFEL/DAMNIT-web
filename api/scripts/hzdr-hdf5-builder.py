@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -24,6 +25,13 @@ from damnit_api.consumer.campaign_builds import (
     foreign_experiment_ids,
     stamp_campaign,
     unassigned_spool_files,
+)
+from damnit_api.metadata.hzdr_aligner import CACHE_DIRNAME as ALIGNER_CACHE_DIRNAME
+from damnit_api.metadata.hzdr_aligner import backfill as aligner_backfill
+from damnit_api.metadata.hzdr_aligner import (
+    load_aligner_claims,
+    local_dates,
+    parse_campaign_dates,
 )
 from damnit_api.metadata.hzdr_event import UNASSIGNED_EXPERIMENT_ID
 from damnit_api.metadata.hzdr_nexus import (
@@ -194,6 +202,7 @@ def build(
     experiment_id = select_experiment_id(
         args.experiment_id, events, labfrog_shots, args.labfrog_nexus
     )
+    labfrog_shots = _with_aligner_backfill(args, experiment_id, labfrog_shots, events)
     output_nexus = args.output_nexus.resolve()
     sources_file = (
         args.sources_file.resolve()
@@ -217,6 +226,21 @@ def build(
             *(getattr(args, "experiment_rulings", None) or []),
         ])
     )
+    aligner_index_dir = getattr(args, "aligner_index_dir", None)
+    # plan-aligner-bridge: shot-aligner's day indexes, checked each build (a
+    # confirmation made there since the last build counts at once); only the
+    # dates this build's events fall on, each from its stored form while
+    # shot-aligner has not changed it (plan-backfill-store G1, G3).
+    aligner_claims = (
+        load_aligner_claims(
+            aligner_index_dir,
+            dates=local_dates(events, args.campaign_timezone),
+            cache_dir=_aligner_cache_dir(args),
+            timezone=args.campaign_timezone,
+        )
+        if aligner_index_dir
+        else None
+    )
     shots, normalized_events = reconcile_canonical_shots(
         events,
         experiment_id=experiment_id,
@@ -227,6 +251,8 @@ def build(
         campaign_schedule=schedule,
         experiment_rulings=rulings,
         time_match_autoassign=getattr(args, "time_match_autoassign", False),
+        time_match_one_to_one=getattr(args, "time_match_one_to_one", False),
+        aligner_claims=aligner_claims,
         include_trigger_only=True,
         resolution_labfrog_shots=resolution_labfrog_shots,
     )
@@ -239,6 +265,25 @@ def build(
             products_by_shot.setdefault(product["shot_key"], []).append(product)
         for shot in shots:
             shot["data_products"].extend(products_by_shot.get(shot["shot_key"], []))
+
+    # plan-quiet-builds Q1: a campaign whose result is what was published last
+    # time is not rewritten on the share (nor its catalog entry or SciCat).
+    stamp_path = output_nexus.with_name(f".{output_nexus.name}.build-stamp.json")
+    digest = _result_digest(
+        args,
+        experiment_id=experiment_id,
+        shots=shots,
+        events=normalized_events,
+        output_nexus=output_nexus,
+        merge_catalog=merge_catalog,
+        catalog_title=catalog_title,
+    )
+    if not getattr(args, "force", False) and _unchanged(
+        stamp_path, digest, output_nexus, sources_file
+    ):
+        print(f"Canonical NeXus ({experiment_id}): unchanged, not rewritten")
+        args.published = False
+        return output_nexus, sources_file
 
     # Reconciliation above only reads inputs; only the publish step below
     # touches this campaign's shared output files, so that is what a second
@@ -277,8 +322,97 @@ def build(
             scicat=scicat,
             merge=merge_catalog,
             title=catalog_title,
+            never_shot_kinds=getattr(args, "never_shot_kind", None) or (),
         )
+        _write_stamp(stamp_path, digest, output_nexus)
     return output_nexus, sources_file
+
+
+#: What writes the published files: a change to any is never skipped (Q1).
+_WRITER_CODE = (
+    "src/damnit_api/metadata/hzdr_nexus.py",
+    "src/damnit_api/metadata/hzdr_sources.py",
+    "src/damnit_api/metadata/hzdr_aligner.py",
+    "src/damnit_api/metadata/hzdr_event.py",
+    "scripts/hzdr-hdf5-builder.py",
+)
+
+
+def _stat(path: Path | None) -> list[int] | None:
+    if path is None:
+        return None
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return [stat.st_size, stat.st_mtime_ns]
+
+
+def _code_digest() -> str:
+    api = Path(__file__).resolve().parents[1]
+    digest = hashlib.sha256()
+    for name in _WRITER_CODE:
+        digest.update(name.encode())
+        digest.update((api / name).read_bytes())
+    return digest.hexdigest()
+
+
+def _result_digest(
+    args: argparse.Namespace,
+    *,
+    experiment_id: str,
+    shots: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+    output_nexus: Path,
+    merge_catalog: bool,
+    catalog_title: str | None,
+) -> str:
+    """One sha256 of everything the publish would write (plan-quiet-builds Q1)."""
+    payload = {
+        "experiment_id": experiment_id,
+        "source_key": args.source_key,
+        "shots": shots,
+        "events": events,
+        "laser": _laser_config(),
+        "never_shot_kinds": sorted(getattr(args, "never_shot_kind", None) or ()),
+        "title": catalog_title,
+        "merge": merge_catalog,
+        "labfrog_nexus": _stat(args.labfrog_nexus),
+        # The containers in place, which the master links: the worker updates
+        # its manifest whenever it writes or removes one.
+        "containers": _stat(output_nexus.parent / "shots" / ".build-manifest.json"),
+        "code": _code_digest(),
+    }
+    text = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def _unchanged(
+    stamp_path: Path, digest: str, output_nexus: Path, sources_file: Path
+) -> bool:
+    """Published from this very result, and the files are still as written."""
+    try:
+        stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return (
+        isinstance(stamp, dict)
+        and stamp.get("digest") == digest
+        and stamp.get("master") == _stat(output_nexus)
+        and sources_file.is_file()
+    )
+
+
+def _write_stamp(stamp_path: Path, digest: str, output_nexus: Path) -> None:
+    try:
+        temporary = stamp_path.with_name(f"{stamp_path.name}.{os.getpid()}.tmp")
+        temporary.write_text(
+            json.dumps({"digest": digest, "master": _stat(output_nexus)}),
+            encoding="utf-8",
+        )
+        temporary.replace(stamp_path)
+    except OSError as error:  # without a stamp the next build only publishes again
+        print(f"Build stamp not written: {error}", file=sys.stderr)
 
 
 # Per-campaign inputs that --output-root derives itself; naming one as well
@@ -293,6 +427,51 @@ _SINGLE_CAMPAIGN_FLAGS = (
     ("watchdog_jsonl", "--watchdog-jsonl"),
     ("trigger_jsonl", "--trigger-jsonl"),
 )
+
+
+def _aligner_cache_dir(args: argparse.Namespace) -> Path:
+    """Where parsed shot-aligner days are stored: the flag, else beside the catalog."""
+    explicit = getattr(args, "aligner_cache_dir", None)
+    if explicit:
+        return Path(explicit)
+    anchor = args.sources_file or args.output_nexus
+    return Path(anchor).resolve().parent / ALIGNER_CACHE_DIRNAME
+
+
+def _with_aligner_backfill(
+    args: argparse.Namespace,
+    experiment_id: str,
+    labfrog_shots: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Add the campaign's Shotsheet shots and files from shot-aligner's indexes.
+
+    plan-campaign-backfill: for each date listed under this campaign
+    (``--aligner-campaign``), the Shotsheet rows become shots where LabFrog has
+    none of that date, and the day's acquisitions become file events (added to
+    ``events`` in place) unless a producer already sent them.
+    """
+    index_dir = getattr(args, "aligner_index_dir", None)
+    dates = parse_campaign_dates(getattr(args, "aligner_campaign", None)).get(
+        experiment_id, []
+    )
+    if not index_dir or not dates:
+        return labfrog_shots
+    shots, added = aligner_backfill(
+        index_dir,
+        experiment_id,
+        dates,
+        labfrog_shots=labfrog_shots,
+        events=events,
+        timezone=args.campaign_timezone,
+        cache_dir=_aligner_cache_dir(args),
+    )
+    events.extend(added)
+    print(
+        f"shot-aligner backfill ({experiment_id}): {len(shots)} Shotsheet shot(s), "
+        f"{len(added)} file event(s) from {len(dates)} date(s)"
+    )
+    return [*labfrog_shots, *shots]
 
 
 def _spool_roots(pairs: list[list[str]] | None) -> list[SpoolRoot]:
@@ -334,7 +513,15 @@ def build_all(args: argparse.Namespace) -> int:
 
     # The campaigns taking shots: their LabFrog records decide resolution step 1
     # in every build of this run.
-    active = list(dict.fromkeys([*(args.campaign or []), *sorted(spooled)]))
+    # A campaign backfilled from shot-aligner is built though it has no spool.
+    backfilled = (
+        sorted(parse_campaign_dates(getattr(args, "aligner_campaign", None)))
+        if getattr(args, "aligner_index_dir", None)
+        else []
+    )
+    active: list[str] = list(
+        dict.fromkeys([*(args.campaign or []), *backfilled, *sorted(spooled)])
+    )
     exports: dict[str, list[dict[str, Any]]] = {}
     resolution_shots: list[dict[str, Any]] = []
     for campaign in active:
@@ -394,7 +581,8 @@ def build_all(args: argparse.Namespace) -> int:
             print(f"Build failed for campaign {campaign}:", file=sys.stderr)
             traceback.print_exc()
             continue
-        print(f"Canonical NeXus ({campaign}): {output_nexus}")
+        if getattr(campaign_args, "published", True):
+            print(f"Canonical NeXus ({campaign}): {output_nexus}")
     print(f"DAMNIT source catalog: {sources_file}")
     return failures
 
@@ -645,6 +833,69 @@ def main() -> None:
             "attaches on the number alone."
         ),
     )
+    parser.add_argument(
+        "--time-match-one-to-one",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Attach an event without a shot number to a LabFrog shot when the "
+            "two are each other's only neighbour within --match-tolerance-s in "
+            "the event's stream (shot-aligner's one-to-one rule, ruling "
+            "R-2026-11-21). Anything less stays in review."
+        ),
+    )
+    parser.add_argument(
+        "--aligner-index-dir",
+        type=Path,
+        default=None,
+        help=(
+            "shot-aligner's index folder (<date>.index.json and "
+            "<date>.decisions.json). A file whose shot-aligner event a reviewer "
+            "confirmed attaches to the one shot its authority number, LabFrog "
+            "record and Count name, once date, time and values agree "
+            "(aligner_confirmed); an unconfirmed one is suggested "
+            "(plan-aligner-bridge)."
+        ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Publish even when the result equals the last published one "
+            "(plan-quiet-builds: an unchanged campaign is otherwise not rewritten)."
+        ),
+    )
+    parser.add_argument(
+        "--aligner-cache-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Where each shot-aligner day is stored once parsed, re-read only "
+            "when its index or decisions change (default: .aligner-cache "
+            "beside the catalog)."
+        ),
+    )
+    parser.add_argument(
+        "--aligner-campaign",
+        action="append",
+        default=[],
+        metavar="CAMPAIGN=YYYY_MM_DD",
+        help=(
+            "A date of a campaign to build from shot-aligner's day index "
+            "(with --aligner-index-dir): its Shotsheet rows become shots where "
+            "LabFrog has none that day, its acquisitions become file events. "
+            "Repeatable (plan-campaign-backfill)."
+        ),
+    )
+    parser.add_argument(
+        "--never-shot-kind",
+        action="append",
+        default=[],
+        help=(
+            "An event kind that is never a shot; its unmatched events are "
+            "acknowledged by rule instead of waiting for review. Repeatable."
+        ),
+    )
     args = parser.parse_args()
 
     output = args.output_root or (args.output_nexus and args.output_nexus.parent)
@@ -680,8 +931,9 @@ def main() -> None:
     if multi_only:
         parser.error(", ".join(multi_only) + " only apply with --output-root")
     output_nexus, sources_file = build(args)
-    print(f"Canonical NeXus: {output_nexus}")
-    print(f"DAMNIT source catalog: {sources_file}")
+    if getattr(args, "published", True):
+        print(f"Canonical NeXus: {output_nexus}")
+        print(f"DAMNIT source catalog: {sources_file}")
 
 
 if __name__ == "__main__":

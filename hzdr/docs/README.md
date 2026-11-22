@@ -53,6 +53,14 @@ only Phase 5 (deployment evidence) remains.
 | [Standards alignment plan](plans/alignment-implementation-plan.md) | Phased execution plan for enacting the standards alignment |
 | [Remaining work](plans/remaining-work-plan.md) | Next-steps playbook for open items with ordered recommendations |
 | [UI and API backlog](plans/ui-backlog.md) | The web UI's working list since 2026-11-21, done a couple of items at a time |
+| [Review automation](plans/review-automation.md) | How Review matches works, and what was done to make it more automatic |
+| [Review automation plan](plans/plan-review-automation.md) | Ruling R-2026-11-21: reasons, suggestions, never-shot kinds, the one-to-one time rule |
+| [Time rule on real days](plans/plan-time-rule-real-data.md) | The one-to-one rule measured on shot-aligner's shot days: kept off for watchdog files |
+| [shot-aligner bridge](plans/plan-aligner-bridge.md) | Files a reviewer confirmed in shot-aligner attach in DAMNIT; the bulk time fix |
+| [Campaigns from Shotsheets](plans/plan-campaign-backfill.md) | This year's campaigns built from shot-aligner's day indexes, Vanlife first |
+| [Stored days and the console script](plans/plan-backfill-store-and-console.md) | `hzdr-campaign-backfill.py`, and parsed shot-aligner days stored |
+| [Campaign package](plans/plan-campaign-package.md) | `hzdr-package-campaign.py`: a manifest, README and NDS's verdict beside a built campaign on bigdata |
+| [Quiet builds](plans/plan-quiet-builds.md) | An unchanged campaign is not rewritten on the share; what reads bigdata, and when |
 | [Campaign output](plans/campaign-output-plan.md) | Target end product: NeXus master plus linked per-shot containers built by the builder; shot-aligner is the interim answer and the test reference |
 | [Container writer](plans/container-writer.md) | Campaign output phase 3: how the worker turns a shot's events into `shots/<date>_<number>.nxs` outside the campaign lock |
 | [openPMD projection](plans/openpmd-projection-plan.md) | DAMNIT's slice of the multi-source openPMD companion: canonical path inventory, synthetic fixture, projection preflight |
@@ -75,6 +83,7 @@ Shipped features, kept for the design rationale and history.
 | [Protocol status](status/protocol-status.md) | Per-source / per-repo done-vs-outstanding matrix for all four data-transfer paths |
 | [Testing](status/testing.md) | Verified coverage and remaining acceptance tests |
 | [Handoff](status/handoff.md) | Short current-state snapshot for the next session |
+| [Deploy notes](guides/deploy-notes.md) | **Start here for a deploy:** the server steps per PR, newest first, at the keyboard |
 | [Next on the server](guides/next-on-server.md) | The open server work on fwkt-webapps: one script (`hzdr/scripts/next-on-server.sh`) plus what needs a person |
 
 ## Guides

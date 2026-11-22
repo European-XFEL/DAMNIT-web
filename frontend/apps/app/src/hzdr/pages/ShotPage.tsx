@@ -10,6 +10,7 @@ import {
   Alert,
   Anchor,
   Badge,
+  Box,
   Button,
   Card,
   Checkbox,
@@ -75,6 +76,7 @@ import {
 } from '../utils/format'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
+import { usePolling } from '../hooks'
 import { summarizeShotDataSources } from '../utils/data-sources'
 import {
   formatShotLabel,
@@ -110,6 +112,7 @@ import {
   isNewShot,
   readLastSeenShot,
   rememberLastSeenShot,
+  shotListChangeKey,
 } from '../utils/new-shots'
 import { SavedViewChips } from '../components/SavedViewChips'
 
@@ -147,6 +150,9 @@ export function HZDRShotPage() {
   // kept for this visit, so a refresh does not clear what is new.
   const [lastSeenShot, setLastSeenShot] = useState<number | null>(null)
   const [newOnly, setNewOnly] = useState(false)
+  // Shots a background refresh brought in during this visit (row keys,
+  // oldest first), for the "N new shots arrived" notice; cleared on use.
+  const [arrivedRowKeys, setArrivedRowKeys] = useState<string[]>([])
   // One page-level state for the shots list only; the secondary fetches
   // (source header, available sources, context results, shot detail) fail soft.
   const [dataState, setDataState] = useState<'loading' | 'ready' | 'error'>(
@@ -156,6 +162,13 @@ export function HZDRShotPage() {
   // in which the persisted view is applied (or defaults are restored) — the
   // filter/sort states still hold the previous source's values on that pass.
   const skipNextViewSave = useRef(false)
+  // The summary's shotListChangeKey the shown shots belong to (see the poll).
+  const shotListKeyRef = useRef<string>()
+  // The shots shown, for telling a refresh's new rows from known ones.
+  const shotsRef = useRef<HZDRShot[]>([])
+  useEffect(() => {
+    shotsRef.current = shots
+  }, [shots])
 
   // A view's filter, sort and columns; undefined resets to the defaults.
   // State setters only, so the identity never changes.
@@ -180,6 +193,7 @@ export function HZDRShotPage() {
     setDayFilter('')
     setLastSeenShot(readLastSeenShot(source_key))
     setNewOnly(false)
+    setArrivedRowKeys([])
   }, [source_key, applyTableView])
 
   useEffect(() => {
@@ -218,55 +232,98 @@ export function HZDRShotPage() {
     columnOrder,
   ])
 
+  // The shots and the user's context columns over them. `quiet` is the
+  // background refresh: no loading state, and a failure keeps what is shown.
+  const loadShots = useCallback(
+    (quiet = false) => {
+      if (!source_key) {
+        return Promise.resolve()
+      }
+      fetch(`/contextfile/campaign/${source_key}/me/results`)
+        .then((response) => (response.ok ? response.json() : undefined))
+        .then(setContextResults)
+        .catch(() => {
+          if (!quiet) setContextResults(undefined)
+        })
+
+      return fetch(`/metadata/hzdr/sources/${source_key}/shots`)
+        .then((response) => requireJson<HZDRShot[]>(response))
+        .then((loadedShots) => {
+          if (quiet) {
+            const known = new Set(shotsRef.current.map(getShotRowKey))
+            const arrived = loadedShots
+              .filter((shot) => !known.has(getShotRowKey(shot)))
+              .map(getShotRowKey)
+            if (arrived.length) {
+              setArrivedRowKeys((current) => [...current, ...arrived])
+            }
+          }
+          setShots(loadedShots)
+          setSelectedRowKey((currentRowKey) => {
+            if (
+              currentRowKey &&
+              loadedShots.some((shot) => getShotRowKey(shot) === currentRowKey)
+            ) {
+              return currentRowKey
+            }
+            const linked = linkedShotRef.current
+              ? loadedShots.find((shot) =>
+                  shotMatchesLink(shot, linkedShotRef.current)
+                )
+              : undefined
+            const first = linked ?? loadedShots[0]
+            return first ? getShotRowKey(first) : undefined
+          })
+          setDataState('ready')
+        })
+        .catch(() => {
+          if (!quiet) setDataState('error')
+        })
+    },
+    [source_key]
+  )
+
   const loadShotPageData = useCallback(() => {
     if (!source_key) {
       return
     }
 
     setDataState('loading')
+    shotListKeyRef.current = undefined
 
     fetch(`/metadata/hzdr/sources/${source_key}`)
       .then((response) => requireJson<HZDRSource>(response))
       .then(setSource)
       .catch(() => setSource(undefined))
 
-    fetch(`/metadata/hzdr/sources/${source_key}/shots`)
-      .then((response) => requireJson<HZDRShot[]>(response))
-      .then((loadedShots) => {
-        setShots(loadedShots)
-        setSelectedRowKey((currentRowKey) => {
-          if (
-            currentRowKey &&
-            loadedShots.some((shot) => getShotRowKey(shot) === currentRowKey)
-          ) {
-            return currentRowKey
-          }
-          const linked = linkedShotRef.current
-            ? loadedShots.find((shot) =>
-                shotMatchesLink(shot, linkedShotRef.current)
-              )
-            : undefined
-          const first = linked ?? loadedShots[0]
-          return first ? getShotRowKey(first) : undefined
-        })
-        setDataState('ready')
-      })
-      .catch(() => setDataState('error'))
-
-    fetch(sourceSummariesUrl())
-      .then((response) => requireJson<HZDRSourceSummary[]>(response))
-      .then(setAvailableSources)
-      .catch(() => setAvailableSources([]))
-
-    fetch(`/contextfile/campaign/${source_key}/me/results`)
-      .then((response) => (response.ok ? response.json() : undefined))
-      .then(setContextResults)
-      .catch(() => setContextResults(undefined))
-  }, [source_key])
+    void loadShots()
+  }, [source_key, loadShots])
 
   useEffect(() => {
     loadShotPageData()
   }, [loadShotPageData])
+
+  // Every 20 s (while the tab is visible) read the cheap summary; fetch the
+  // shots again only when this campaign's count, newest shot or review
+  // counts changed. The first answer is the baseline for the page's load.
+  const pollSummaries = useCallback(
+    () =>
+      fetch(sourceSummariesUrl())
+        .then((response) => requireJson<HZDRSourceSummary[]>(response))
+        .then((summaries) => {
+          setAvailableSources(summaries)
+          const mine = summaries.find((summary) => summary.key === source_key)
+          if (!mine) return
+          const key = shotListChangeKey(mine)
+          const previous = shotListKeyRef.current
+          shotListKeyRef.current = key
+          if (previous !== undefined && previous !== key) {
+            return loadShots(true)
+          }
+        }),
+    [source_key, loadShots]
+  )
+  usePolling(pollSummaries, 20_000, { enabled: Boolean(source_key) })
 
   const versionStates = classifyShotVersions(shots)
   const currentShots = shots.filter((shot) =>
@@ -412,6 +469,17 @@ export function HZDRShotPage() {
     columnOrder,
   }
   // The rows the table shows, in its order, with its visible columns.
+  // Arrived shots still in the list (a later refresh can drop one).
+  const arrivedShots = arrivedRowKeys.filter((rowKey) =>
+    shots.some((shot) => getShotRowKey(shot) === rowKey)
+  )
+  const arrivedCount = new Set(arrivedShots).size
+  const showArrivedShot = () => {
+    const newest = arrivedShots.at(-1)
+    if (newest) setSelectedRowKey(newest)
+    setArrivedRowKeys([])
+  }
+
   const downloadShotsCsv = () =>
     downloadText(
       `${source_key ?? 'shots'}-shots.csv`,
@@ -775,6 +843,22 @@ export function HZDRShotPage() {
                         New since your last visit {newShotCount}
                       </Chip>
                     ) : null}
+                    <Box aria-live="polite">
+                      {arrivedCount > 0 ? (
+                        <Button
+                          size="compact-xs"
+                          radius="xl"
+                          variant="light"
+                          color="grape"
+                          onClick={showArrivedShot}
+                          title="Select the newest shot that arrived while this page was open"
+                        >
+                          {arrivedCount === 1
+                            ? '1 new shot arrived: show it'
+                            : `${arrivedCount} new shots arrived: show the newest`}
+                        </Button>
+                      ) : null}
+                    </Box>
                   </Group>
                   <Group align="flex-end" gap="sm">
                     <Select

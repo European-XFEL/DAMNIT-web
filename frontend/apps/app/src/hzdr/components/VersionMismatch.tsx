@@ -4,6 +4,7 @@ import { Badge } from '@mantine/core'
 import {
   type APIVersion,
   commitsDiffer,
+  comparableAPICommit,
   frontendCommit,
   loadAPIVersion,
 } from '../utils/version'
@@ -26,14 +27,15 @@ export function VersionMismatch() {
   }, [])
 
   const built = frontendCommit()
-  if (!commitsDiffer(built, api?.commit)) return null
+  const apiCommit = comparableAPICommit(api)
+  if (!commitsDiffer(built, apiCommit)) return null
   return (
     <Badge
       color="yellow"
       variant="light"
       data-testid="version-mismatch"
       visibleFrom="sm"
-      title={`This page was built from ${built}; the API runs ${api?.commit}. Deploy both together (next-on-server.sh).`}
+      title={`This page was built from ${built}; the API's checkout has ${apiCommit}. Deploy both together (next-on-server.sh).`}
     >
       Out of step with the API
     </Badge>

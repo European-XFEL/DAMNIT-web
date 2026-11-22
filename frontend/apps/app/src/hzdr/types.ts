@@ -261,6 +261,13 @@ export type HZDRReviewEvent = {
   acknowledged_by?: string | null
   acknowledged_note?: string | null
   review_level?: string | null
+  /** Why it waits (hzdr_nexus.REVIEW_REASONS; older catalogs: absent). */
+  review_reason?: string | null
+  /** One candidate singled out by evidence other than time (never applied). */
+  suggested_shot_key?: string | null
+  suggestion_reason?: string | null
+  /** What shot-aligner's claim on the file came to (plan-aligner-bridge). */
+  aligner_detail?: string | null
 }
 
 // Mirrors the FastAPI HZDRExperimentRuling: a ruling waiting for a rebuild.
@@ -279,7 +286,29 @@ export type HZDRReview = {
   review_events: HZDRReviewEvent[]
   unassigned_shots: HZDRShot[]
   experiment_rulings: HZDRExperimentRuling[]
+  /**
+   * event_id -> candidate shot_key -> seconds from the shot to the event,
+   * read by the API in the campaign's time zone (older APIs: absent).
+   */
+  candidate_gaps_s?: Record<string, Record<string, number>>
+  /**
+   * event_id -> seconds to the nearest shot other than its closest candidate,
+   * over every shot of the source (older APIs: absent).
+   */
+  runner_up_gaps_s?: Record<string, number>
+  /** unassigned shot_key -> the campaign its neighbours that day agree on. */
+  campaign_suggestions?: Record<string, HZDRCampaignSuggestion>
 }
+
+export type HZDRCampaignSuggestion = {
+  experiment_id: string
+  before_shot_key: string | null
+  after_shot_key: string | null
+}
+
+export type CandidateGaps = Record<string, Record<string, number>>
+
+export type RunnerUpGaps = Record<string, number>
 
 export type HZDRContextResults = {
   columns: {

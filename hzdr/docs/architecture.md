@@ -114,8 +114,30 @@ they never match an event to the set's row, which is not one shot. Settings and 
 [deployment plan, Step 2b](plans/deployment-plan.md#every-campaign-at-once-output_root-recommended).
 
 Each canonical shot records the outcome in `/entry/shots/experiment_id_source`
-(bridge profile v4): `labfrog` for every LabFrog-backed shot, otherwise the
-strongest source among its events.
+(bridge profile v4): `labfrog` for every LabFrog-backed shot, `shotsheet` for
+one made from a Shotsheet row (below), otherwise the strongest source among
+its events.
+
+**Campaigns from shot-aligner (plan-campaign-backfill, rulings
+R-2026-11-22d/e).** For the dates listed under a campaign in
+`ALIGNER_CAMPAIGNS`, the builder reads shot-aligner's day index
+(`hzdr_aligner.backfill`):
+- **Shots:** on a date LabFrog has no records of, every Shotsheet row
+  shot-aligner's inclusion rule counts becomes a shot record:
+  - `shot_number` is its position in the day, sets and rows in workbook
+    order; the Count is `labfrog_local_count`;
+  - the record id is `shotsheet:<date>:<excel_row>`;
+  - `gvd`/`tod`/`elaser` are where LabFrog keeps them, the rest under
+    `shotsheet.*`;
+  - there is no authority number.
+- **Files:** every shot acquisition becomes a file event (`source`
+  `shot-aligner`, `kind` `shot-aligner.file`, no shot number, no
+  attribution). The files are under the index's `dataFolder`, and the
+  instrument comes from the vendored catalogue by folder alias. A file that
+  a producer event names on the same day keeps the producer's event.
+- **Then step 6b:** the bridge attaches them.
+
+Nothing is written to a spool, so removing the setting removes them.
 
 **Trigger-only shots (plan W6.1).** With LabFrog records present, the
 canonical shots are the union of those records and every `DRACO-Trigger` event
@@ -287,9 +309,53 @@ and fallback:
    duplicate current LabFrog rows remain.
 5. Same `shot_number` and unique nearest timestamp within tolerance.
 6. Unique nearest timestamp within tolerance.
-7. Otherwise retain the event as ambiguous or unmatched.
+   6a. With `TIME_MATCH_ONE_TO_ONE` (ruling R-2026-11-21, off by default):
+      an event **without** a shot number and a LabFrog shot that are each
+      other's only neighbour within the tolerance, within the event's *stream*
+      (same `source`, `kind` and instrument: `metadata.instrument.id`, else the
+      producer instance), attach as `time_one_to_one`. This is shot-aligner's
+      rule (`labfrog._match_by_time`: "each the other's only neighbour within
+      the tolerance; anything less is ambiguous"). Every event of the stream
+      counts as a neighbour, matched or not, so a shot never gets a second
+      event of one stream by time. A shot that already holds one is skipped,
+      and a watchdog attribution that names other candidates wins. Numbered
+      events never pair by time: a number LabFrog lacks founds its trigger-only
+      shot, as under A7. Pairs are found on a snapshot and applied together
+      (`hzdr_nexus._pair_time_one_to_one`).
+   6b. With `ALIGNER_INDEX_DIR` (rulings R-2026-11-22a/b, off by default;
+      run before 6a): a file event without a shot number is looked up in
+      shot-aligner's day indexes by (date folder, instrument folder, file
+      name) (`hzdr_aligner.py`). Its shot-aligner event's link names a
+      Shotsheet row. The DAMNIT shot is the one that every piece of evidence
+      present names:
+      - the shot authority's number (`labfrog.authority`);
+      - the LabFrog record shot-aligner matched the row to
+        (`labfrog.matches`);
+      - the row's Count as LabFrog's `local_count` that day, with a counter
+        reset told apart by time.
+
+      Then date, time (LabFrog vs the row's `Zeit`, within the tolerance),
+      and `gvd`/`tod`/`elaser` must agree. A link a reviewer confirmed (index
+      band and decisions ledger) attaches as `aligner_confirmed`, a person's
+      decision (R-2026-11-22a). An unconfirmed one is a suggestion
+      (`shot_aligner`). A failure waits as `aligner_disagrees`,
+      `aligner_check_failed` or `aligner_no_shot`, with `aligner_detail`
+      naming it. A shot never gets a second file of one stream
+      (`hzdr_nexus._apply_aligner_claims`).
+7. Otherwise retain the event as ambiguous or unmatched. Each such event
+   says why (`review_reason`: `no_time`, `no_labfrog_record`,
+   `no_shot_in_tolerance`, `several_shots_in_tolerance`,
+   `shot_has_other_event`, `attribution_disagrees`, `time_rule_off`,
+   `number_held_by_several`, `identity_conflict`, and the four `aligner_*`
+   reasons of 6b). An ambiguous event may carry a `suggested_shot_key` from
+   evidence other than time (`watchdog_attribution`, `instrument_free`,
+   `shot_aligner`), which the page preselects and a person confirms.
 
 Steps 4-6 attach only when time auto-assignment is on; by default they propose.
+Step 6a attaches only with `TIME_MATCH_ONE_TO_ONE`, and never when time
+auto-assignment is on (that restores the old ladder exactly).
+Unmatched events of a kind in `NEVER_SHOT_KINDS` are acknowledged in the
+catalog by the rule `rule:never_shot_kinds` (not stored as decisions).
 
 Archived/superseded LabFrog rows from curated exports are kept as provenance but
 are excluded from automatic matching: an `archived` row always, any other

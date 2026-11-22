@@ -4,7 +4,216 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-22
+
+### shot-aligner's decisions as DAMNIT's evidence
+Rulings R-2026-11-22a/b (maintainer): a confirmation made in shot-aligner is
+a person's decision. A Shotsheet row maps to a LabFrog record by the shot
+authority first, then the record, then the Count, and is double-checked by
+date, time and the details both record. Plan:
+`hzdr/docs/plans/plan-aligner-bridge.md`.
+- `metadata/hzdr_aligner.py` reads shot-aligner's `<date>.index.json` and
+  `<date>.decisions.json` as written; each file is found by (date folder,
+  instrument folder, file name).
+- A confirmed file attaches as `aligner_confirmed` (match rank 6; the number
+  ranks move up by one). It must pass these checks:
+  - the authority number, the LabFrog record and the Count name the same
+    shot;
+  - LabFrog's time is within 120 s of `Zeit`;
+  - `gvd`, `tod` and `elaser` agree.
+- An unconfirmed pair is suggested (`shot_aligner`). A failure waits as
+  `aligner_disagrees`, `aligner_check_failed` or `aligner_no_shot`, and
+  `aligner_detail` shows on the page.
+- `DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR` / `--aligner-index-dir`, off by
+  default. The folder is a rebuild input. `next-on-server.sh`'s `labfrog`
+  step reports it and the reviewed dates without an index.
+- On shot-aligner's 2025-12-03 day all 2,544 shot files attach to the
+  reviewed shot, with none wrong (`hzdr-evaluate-time-rule.py --rule aligner`).
+
+### A campaign packaged on bigdata, ready to hand out
+Ruling R-2026-11-22i. Plan: `hzdr/docs/plans/plan-campaign-package.md`.
+- **`api/scripts/hzdr-package-campaign.py --master <c>.nxs`** writes
+  `PACKAGE.json` (every file with its size, the counts, version, bridge
+  profile, NDS's validation verdict) and `README.md` (silx for the master,
+  h5web or myhdf5 for one container) beside the master. It copies nothing.
+- `--checksums` adds sha256 and `SHA256SUMS`, and `--tar` writes one archive.
+- A dangling container link is refused, and a failed NDS gate marks the
+  package not valid.
+- `hzdr-campaign-backfill.py --apply --package` packages each campaign
+  after its steps.
+
+### Quiet builds: an unchanged campaign is not rewritten on the share
+Ruling R-2026-11-22h ("not too much reading across apps, servers and drives").
+Plan: `hzdr/docs/plans/plan-quiet-builds.md`.
+- Every build used to rewrite every campaign's master and catalog entry on
+  bigdata. Now a campaign whose result equals the last published one prints
+  `unchanged, not rewritten` and writes nothing: no NeXus file, no catalog
+  entry, no SciCat.
+- The stamp (`.<name>.nxs.build-stamp.json`) covers the shots, events, laser
+  constants, never-shot kinds, the LabFrog NeXus source, the containers'
+  manifest and the code that writes the files.
+- `--force` and `hzdr-rebuild.py --force` publish anyway.
+- `CONTAINERS_ENABLED` stays off. The console script runs the worker on
+  request.
+
+### One console script per campaign, and the parsed indexes stored
+Rulings R-2026-11-22f/g. Plan:
+`hzdr/docs/plans/plan-backfill-store-and-console.md`.
+- **`api/scripts/hzdr-campaign-backfill.py`:**
+  - it reports each listed date: index age, links confirmed, Shotsheet
+    rows, the stored copy, and the shots and files attached or waiting in
+    the catalog;
+  - `--apply` runs shot-aligner's `align.py index` for missing dates, the
+    rebuild, the container worker and its relink build, and with
+    `--aligner-build` the phase 6 compare.
+- **Stored days:** each parsed day goes in `.aligner-cache/<date>.aligner.json`
+  beside the catalog (`ALIGNER_CACHE_DIR`, `--aligner-cache-dir`), keyed by
+  the index's and decisions' size and mtime. A build reads only the dates
+  its events fall on.
+- **A confirmation counts as shot-aligner counts it:** the decisions file
+  as it is now, while the event still has the Count it was confirmed against
+  (`matched_count`). Before, a confirmation made after the index was
+  written waited for the index to be rewritten. The report marks an index
+  older than its decisions, and `--apply` rewrites it.
+- **Day indexes are written** by shot-aligner's Write index JSON task or
+  `align.py index`, not by opening a date (the docs said so wrongly).
+- **Faster matching:** `parse_datetime` keeps a parsed time string, and the
+  bridge checks each shot-aligner event once. A Vanlife build went from
+  4.1 s to 3.5-3.8 s with the same output.
+
+### This year's campaigns from shot-aligner's Shotsheets, Vanlife first
+Rulings R-2026-11-22d/e (maintainer): this year's shot records are the
+Shotsheet rows that shot-aligner finds and links to their dates; Vanlife
+12.2025 is the test. Plan: `hzdr/docs/plans/plan-campaign-backfill.md`.
+- `DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS` (campaign -> dates) /
+  `--aligner-campaign <campaign>=<date>`.
+- **Shots:** for a date LabFrog has no records of, the counted Shotsheet
+  rows of shot-aligner's day index become shots:
+  - `shot_number` is the position in the day;
+  - the Count is in `labfrog_local_count`;
+  - values are kept, and `experiment_id_source` is `shotsheet`.
+- **Files:** the acquisitions become file events (`shot-aligner`,
+  instrument from the catalogue), made at build time and never spooled. A
+  watchdog event for the same file wins.
+- **Multi-campaign:** a listed campaign is built without an export or
+  spool.
+- **Vanlife** from the two committed indexes builds 258 shots. On 12-03 all
+  2,544 files attach. On 12-01 1,698 wait as suggestions until that day is
+  reviewed. The container worker wrote 12-03's 150 containers and the master
+  links them; their detectors fill on the server, where the raw files are.
+
+### Bulk confirm no longer offers files, and tests every shot
+Since ruling A7 a time proposal has one candidate, so the page's "every other
+candidate 2 min further" test never ran. On shot-aligner's two days it would
+have offered 328 and 583 wrong files.
+- The review route now gives each event's nearest other shot over the whole
+  source (`runner_up_gaps_s`).
+- The page offers a clear time case only when that shot is 2 min or more
+  further, and offers triggers only.
+- `hzdr-evaluate-time-rule.py --rule bulk` measures it.
+
 ## 2026-11-21
+
+### The one-to-one time rule measured on real shot days
+- `api/scripts/hzdr-evaluate-time-rule.py` scores the rule against
+  shot-aligner's day indexes: each acquisition as the watchdog event DAMNIT
+  receives (raw instrument clock), each Shotsheet row as a shot, every pair
+  checked against the reviewer's link.
+- On 2025-12-01 and 2025-12-03 (Vanlife) the rule mispairs 21 to 56 % of
+  what it pairs at 90 s or less, and pairs 0.4 to 16 % of files at 120 s or
+  more. Instrument clocks run up to about two minutes off, `Zeit` is typed to
+  the minute, and shots are a median 60 s apart on 12-03. **Leave
+  `TIME_MATCH_ONE_TO_ONE` off**; `next-on-server.md` item 8 says so and how to
+  measure a LabFrog day with triggers on the server. Results and the next
+  options (clock-offset fitting as shot-aligner does; the rule for triggers
+  only): `hzdr/docs/plans/plan-time-rule-real-data.md`.
+
+### Review matches made more automatic, the way shot-aligner does it
+Ruling R-2026-11-21 (maintainer: all options, "use how shot aligner does
+it"); plan and checklist in `hzdr/docs/plans/plan-review-automation.md`.
+- **One-to-one time rule** (`DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE`,
+  off by default, `--time-match-one-to-one`): an event without a shot number
+  attaches to a LabFrog shot when the two are each other's only neighbour
+  within the tolerance among events of its source, kind and instrument,
+  shot-aligner's `labfrog._match_by_time`. New match quality
+  `time_one_to_one` (rank 3; the ranks above move up by one). Numbered events
+  never pair by time; a watchdog attribution naming other shots wins.
+- **Why it waits**: every review event carries `review_reason`, and the page
+  shows one line of guidance for it.
+- **Suggestions from evidence other than time**: `suggested_shot_key` when
+  the watchdog's attribution names one candidate, or one candidate alone
+  lacks that instrument's file. The page badges it and confirms suggestions
+  in bulk, noting the evidence.
+- **A campaign for an unassigned shot**: `campaign_suggestions` when the
+  shots before and after it that day are in one campaign. The page pre-fills
+  it, and **Assign the N suggested** assigns them.
+- **Kinds that are never a shot** (`DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS`):
+  their unmatched events are acknowledged by rule (`rule:never_shot_kinds`)
+  in the catalog.
+- `next-on-server.sh` reports whether the campaign schedule is set and
+  current.
+- Characterization tests pin what A7 did before: of two shots in the
+  tolerance only the nearest was offered, and a tie left the event unmatched
+  with no candidate. The reasons now name both cases.
+
+### Faster deploys: the frontend is built only when it changed
+- `next-on-server.sh` rebuilds the frontend only when `frontend/` changed
+  since the last build (recorded in `dist/.damnit-frontend-commit`), and
+  runs `vite build` without `tsc -b` (CI type-checks; `FRONTEND_TYPECHECK=1`
+  restores it), with `pnpm install --prefer-offline`. A pull that changes
+  only the API, docs or scripts builds nothing.
+- `GET /config/version` adds `frontend_commit`, the last commit that changed
+  `frontend/`; the build records the same as `VITE_DAMNIT_COMMIT`, and the
+  header compares the two, so an API-only update no longer shows *Out of
+  step with the API*. damnit-api 0.3.2.
+
+### Review matches: time gaps in the campaign's zone, clear cases in bulk
+- `GET .../sources/{key}/review` adds `candidate_gaps_s` (event_id ->
+  candidate shot_key -> seconds from the shot to the event), read in
+  `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE` as the builder reads LabFrog's
+  naive local times. The browser could not, so on real LabFrog data the
+  "closest in time" highlight and the gap column were mostly empty; they now
+  use the API's figures.
+- Where one shot is clearly closest (within 30 s, every other candidate 2 min
+  or more further, all gaps known), **Review the N** lists those events and
+  **Confirm these N** confirms them together. A person still decides (ruling
+  A7); each decision's note says it was confirmed in bulk, with the gap.
+  Meant for the time until every trigger carries the shot authority's
+  number, when events match by time only.
+
+### Review matches: decisions in batches
+- **Acknowledge all N** for unmatched events from one producer and kind (a
+  test series, a source that never belongs to a shot), behind a second click
+  that names the count.
+- **Assign several**: every waiting unassigned shot, or one day's, to one
+  campaign in one go.
+- Both still record one decision per event or shot, with your name, through
+  the existing routes; a failure is reported and the rest still go. Nothing
+  about what the builder decides on its own has changed (ruling A7).
+
+### Review matches refreshes itself
+- The page reads the campaign summaries every 30 s while visible, so the
+  picker's counts stay current, and reloads the open campaign's lists only
+  when its waiting count, shot count or newest shot changed (never while a
+  decision is being saved). The campaign it opened on stays, even when
+  another becomes busier.
+
+### Docs and screenshots
+- The in-app Docs page describes Views, Download CSV, New since your last
+  visit, the self-refresh, Trends' Compare with and columns on a shot's
+  container. The screenshots are recaptured; the shot-table capture now
+  shows a saved view and a second trend value. The capture script now also
+  writes the Docs page's four smaller images, so they follow every capture.
+
+### Shot table: new shots appear without a reload
+- The campaign page reads the campaign summary every 20 s while its tab is
+  visible (the same light route Home polls) and fetches the shots and your
+  context columns again only when the campaign's shot count, newest shot
+  or review counts changed. The refresh is quiet: the table, its selection,
+  filters and scroll stay as they are, and a failed refresh keeps what is
+  shown. A new shot counts in **New since your last visit**, and a button
+  beside the quick filters, **N new shots arrived: show the newest**,
+  selects it (and goes away once used).
 
 ### Home: a light summary route instead of every shot
 - `GET /metadata/hzdr/source-summaries?since=<ISO>` returns each campaign's

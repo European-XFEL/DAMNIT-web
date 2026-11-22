@@ -163,25 +163,36 @@ step_deploy() {
     step_frontend
 }
 
-# DAMNIT's frontend is a static build; it is stale when the checkout moved
-# after the last build.
+# DAMNIT's frontend is a static build. It is stale only when frontend/
+# changed since the last build: the build records the last commit that
+# changed frontend/ in dist/.damnit-frontend-commit (and as
+# VITE_DAMNIT_COMMIT, which the API reports as frontend_commit), so a pull
+# that changes only the API, the docs or the scripts builds nothing.
+# The server runs `vite build` alone: CI already type-checks (lint:tsc),
+# and tsc adds a minute or more here. FRONTEND_TYPECHECK=1 runs it too.
 step_frontend() {
-    local repo="$ROOT/DAMNIT-web-hzdr" dist built moved
-    dist="$repo/frontend/apps/app/dist/index.html"
+    local repo="$ROOT/DAMNIT-web-hzdr" dist marker wanted built build
+    dist="$repo/frontend/apps/app/dist"
+    marker="$dist/.damnit-frontend-commit"
     [ -d "$repo/frontend" ] || return
-    moved="$(head_moved "$repo")"
-    built="$(stat -c %Y "$dist" 2>/dev/null || echo 0)"
-    if [ "$built" -ge "$moved" ]; then
-        ok "DAMNIT frontend built after the last pull"
+    wanted="$(git -C "$repo" log -1 --format=%h --abbrev=12 HEAD -- frontend)"
+    built="$(cat "$marker" 2>/dev/null || true)"
+    build="vite build"
+    [ "${FRONTEND_TYPECHECK:-0}" = 1 ] && build="build"
+    if [ -n "$wanted" ] && [ "$built" = "$wanted" ] && [ -f "$dist/index.html" ]; then
+        ok "DAMNIT frontend: built from $wanted, the last change to frontend/"
     elif [ "$APPLY" -eq 0 ]; then
-        would "DAMNIT frontend: pnpm install --frozen-lockfile && pnpm --filter ./apps/app build"
+        would "DAMNIT frontend: frontend/ is at ${wanted:-?}, the build at ${built:-none}: pnpm install && pnpm --filter ./apps/app exec $build"
         return
     else
-        act "building DAMNIT's frontend"
-        # The build records its commit; the header warns when the API runs another.
-        if (cd "$repo/frontend" && pnpm install --frozen-lockfile \
-            && VITE_DAMNIT_COMMIT="$(git -C "$repo" rev-parse --short=12 HEAD)" \
-               pnpm --filter ./apps/app build); then
+        act "building DAMNIT's frontend (frontend/ at $wanted)"
+        if (cd "$repo/frontend" && pnpm install --frozen-lockfile --prefer-offline \
+            && if [ "$build" = build ]; then
+                   VITE_DAMNIT_COMMIT="$wanted" pnpm --filter ./apps/app build
+               else
+                   VITE_DAMNIT_COMMIT="$wanted" pnpm --filter ./apps/app exec vite build
+               fi); then
+            printf '%s\n' "$wanted" > "$marker"
             ok "frontend built"
         else
             fail "frontend build failed (the old build is still served)"
@@ -309,6 +320,112 @@ step_labfrog() {
         ok "DAMNIT answers at $DAMNIT_URL/config/health (a value for DAMNIT_API_URL)"
     else
         warn "DAMNIT does not answer at $DAMNIT_URL/config/health"
+    fi
+    check_campaign_schedule
+    check_review_rules
+    check_aligner_index
+}
+
+# The two Review matches rules (ruling R-2026-11-21) are settings a person
+# turns on; say whether they are, so a deploy does not leave them off unseen.
+# Both are booleans or kind names, not secrets.
+check_review_rules() {
+    local api="$ROOT/DAMNIT-web-hzdr/api" rules one_to_one kinds
+    [ -d "$api" ] || return
+    if ! rules="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings; b = settings.hzdr_builder; print(int(b.time_match_one_to_one), len(b.never_shot_kinds))' \
+        2>/dev/null | tail -1)"; then
+        warn "DAMNIT settings could not be read to check the review rules"
+        return
+    fi
+    read -r one_to_one kinds <<< "$rules"
+    if [ "$one_to_one" = 1 ]; then
+        warn "DAMNIT one-to-one time rule is on (TIME_MATCH_ONE_TO_ONE): measured, it mispairs watchdog files; keep it only if a measured day says so (next-on-server.md item 8)"
+    else
+        ok "DAMNIT one-to-one time rule is off, as recommended until a measured day says otherwise (next-on-server.md item 8)"
+    fi
+    if [ "${kinds:-0}" -gt 0 ]; then
+        ok "DAMNIT never-shot kinds: $kinds listed (NEVER_SHOT_KINDS)"
+    else
+        ok "DAMNIT never-shot kinds: none listed (set NEVER_SHOT_KINDS once the test-fire kinds are known)"
+    fi
+}
+
+# shot-aligner's day indexes and decisions (plan-aligner-bridge): whether
+# DAMNIT reads them, and which reviewed dates have no index yet (a day counts
+# only once shot-aligner has written <date>.index.json). Paths only.
+check_aligner_index() {
+    local api="$ROOT/DAMNIT-web-hzdr/api" dir missing decided built
+    [ -d "$api" ] || return
+    if ! dir="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings; print(settings.hzdr_builder.aligner_index_dir or "")' \
+        2>/dev/null | tail -1)"; then
+        warn "DAMNIT settings could not be read to check the shot-aligner index folder"
+        return
+    fi
+    if [ -z "$dir" ]; then
+        warn "DAMNIT does not read shot-aligner's decisions (DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR not set; next-on-server.md item 9)"
+        return
+    fi
+    if [ ! -d "$dir" ]; then
+        fail "DAMNIT shot-aligner index folder is set, but $dir does not exist"
+        return
+    fi
+    decided=$(find "$dir" -maxdepth 1 -name '????_??_??.decisions.json' | wc -l)
+    built=$(find "$dir" -maxdepth 1 -name '????_??_??.index.json' | wc -l)
+    missing=$(for f in "$dir"/????_??_??.decisions.json; do
+        [ -e "$f" ] || continue
+        d=$(basename "$f" .decisions.json)
+        [ -f "$dir/$d.index.json" ] || printf '%s ' "$d"
+    done)
+    ok "DAMNIT reads shot-aligner's decisions: $built day index(es), $decided decision file(s) in $dir"
+    if [ -n "$missing" ]; then
+        warn "reviewed in shot-aligner but no day index yet (Write index JSON in the app, or align.py index <date>, or hzdr-campaign-backfill.py --apply): $missing"
+    fi
+    # Campaigns built from those indexes (ALIGNER_CAMPAIGNS): each listed date
+    # needs its index, or that day builds no shots.
+    local listed
+    listed="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings
+for c, ds in sorted(settings.hzdr_builder.aligner_campaigns.items()):
+    print(c, *ds)' 2>/dev/null)" || listed=""
+    [ -n "$listed" ] || return
+    local campaign dates d absent
+    while read -r campaign dates; do
+        absent=""
+        for d in $dates; do [ -f "$dir/$d.index.json" ] || absent="$absent $d"; done
+        if [ -n "$absent" ]; then
+            warn "DAMNIT builds $campaign from shot-aligner, but these dates have no day index:$absent"
+        else
+            ok "DAMNIT builds $campaign from shot-aligner: every listed date has its day index"
+        fi
+    done <<< "$listed"
+}
+
+# The campaign schedule routes "unassigned" events by trigger time. Until every
+# trigger carries the shot authority's number it is the only automatic
+# routing, so its absence or age is worth a line. Read through the API's own
+# settings code (api/.env); only the file's name and age are printed.
+check_campaign_schedule() {
+    local api="$ROOT/DAMNIT-web-hzdr/api" schedule hours
+    [ -d "$api" ] || return
+    if ! schedule="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings; print(settings.hzdr_builder.campaign_schedule or "")' \
+        2>/dev/null | tail -1)"; then
+        warn "DAMNIT settings could not be read to check the campaign schedule"
+        return
+    fi
+    if [ -z "$schedule" ]; then
+        warn "DAMNIT campaign schedule not set (DW_API_HZDR_BUILDER__CAMPAIGN_SCHEDULE): unassigned triggers wait in Review matches (operations.md)"
+    elif [ ! -f "$schedule" ]; then
+        fail "DAMNIT campaign schedule is set, but its file $(basename "$schedule") is missing"
+    else
+        hours=$(( ( $(date +%s) - $(stat -c %Y "$schedule") ) / 3600 ))
+        if [ "$hours" -gt 168 ]; then
+            warn "DAMNIT campaign schedule $(basename "$schedule") is ${hours} h old: is LabFrog still exporting it?"
+        else
+            ok "DAMNIT campaign schedule $(basename "$schedule"), updated ${hours} h ago"
+        fi
     fi
 }
 

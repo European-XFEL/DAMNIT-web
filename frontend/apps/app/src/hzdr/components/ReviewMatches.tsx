@@ -8,6 +8,7 @@ import {
   Card,
   Code,
   Group,
+  Select,
   Stack,
   Table,
   Text,
@@ -17,6 +18,9 @@ import {
 } from '@mantine/core'
 
 import type {
+  CandidateGaps,
+  RunnerUpGaps,
+  HZDRCampaignSuggestion,
   HZDRExperimentRuling,
   HZDRMatchSummary,
   HZDRReviewEvent,
@@ -25,12 +29,20 @@ import type {
 import { NOT_RECORDED, formatShotTime } from '../utils/format'
 import { formatTargetLabel } from '../utils/metadata'
 import {
+  REVIEW_REASON_TEXT,
+  SUGGESTION_TEXT,
+  CLEAR_TIME_CHOICE,
+  candidateGap,
+  clearTimeChoices,
+  suggestedChoices,
+  type BulkChoice,
+  groupUnmatched,
+  waitingUnassignedByDay,
   REVIEW_SECTIONS,
   closestCandidateKey,
   formatSeconds,
   reviewHeadingId,
   payloadPointer,
-  secondsBetween,
   uniqueCandidateKeys,
   type ReviewSection,
   type ShotConfirmation,
@@ -130,6 +142,18 @@ function EventLine({ event }: { event: HZDRReviewEvent }) {
           </>
         ) : null}
       </Text>
+      {event.review_reason ? (
+        <Text size="xs" data-testid="review-reason">
+          <b>Why it waits:</b>{' '}
+          {REVIEW_REASON_TEXT[event.review_reason] ??
+            event.review_reason.replace(/_/g, ' ')}
+        </Text>
+      ) : null}
+      {event.aligner_detail ? (
+        <Text size="xs" c="dimmed" data-testid="aligner-detail">
+          {event.aligner_detail}
+        </Text>
+      ) : null}
     </Stack>
   )
 }
@@ -211,17 +235,19 @@ export function ReviewAllClear({
 function AmbiguousEventItem({
   event,
   shotsByKey,
+  gaps,
   busy,
   onConfirm,
 }: {
   event: HZDRReviewEvent
   shotsByKey: Map<string, HZDRShot>
+  gaps?: CandidateGaps
   busy: boolean
   onConfirm: (event: HZDRReviewEvent, shotKey: string, note: string) => void
 }) {
   const [note, setNote] = useState('')
   const candidates = uniqueCandidateKeys(event)
-  const closest = closestCandidateKey(event, shotsByKey)
+  const closest = closestCandidateKey(event, shotsByKey, gaps)
   return (
     <Card withBorder radius={4} p="sm">
       <Stack gap="xs">
@@ -244,6 +270,7 @@ function AmbiguousEventItem({
                 const shot = shotsByKey.get(shotKey)
                 const shotTime = shot?.labfrog_date_time ?? shot?.fired_at
                 const isClosest = shotKey === closest
+                const isSuggested = shotKey === event.suggested_shot_key
                 return (
                   <Table.Tr
                     key={shotKey}
@@ -259,13 +286,25 @@ function AmbiguousEventItem({
                       <Text span size="xs" c="dimmed">
                         {shotKey}
                       </Text>
+                      {isSuggested ? (
+                        <>
+                          {' '}
+                          <Badge size="xs" variant="light" color="blue">
+                            suggested:{' '}
+                            {SUGGESTION_TEXT[event.suggestion_reason ?? ''] ??
+                              event.suggestion_reason}
+                          </Badge>
+                        </>
+                      ) : null}
                     </Table.Td>
                     <Table.Td>
                       {shot?.labfrog_local_count ?? NOT_RECORDED}
                     </Table.Td>
                     <Table.Td>{formatShotTime(shotTime)}</Table.Td>
                     <Table.Td>
-                      {formatSeconds(secondsBetween(shotTime, event.timestamp))}
+                      {formatSeconds(
+                        candidateGap(event, shotKey, shotsByKey, gaps)
+                      )}
                       {isClosest ? (
                         <>
                           {' '}
@@ -312,16 +351,155 @@ function AmbiguousEventItem({
   )
 }
 
-export function AmbiguousMatchesCard({
+/**
+ * Events a person may confirm together (the clear-cut time cases, or the
+ * builder's suggestions). Shown only when some exist; the list is opened and
+ * read before the confirm button shows.
+ */
+function BulkConfirm({
+  intro,
+  detailHeading,
+  choices,
+  shotsByKey,
+  busy,
+  onConfirmMany,
+}: {
+  intro: ReactNode
+  detailHeading: string
+  choices: BulkChoice[]
+  shotsByKey: Map<string, HZDRShot>
+  busy: boolean
+  onConfirmMany: (choices: BulkChoice[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  if (!choices.length) return null
+  return (
+    <Alert color="blue" variant="light" p="sm">
+      <Stack gap="xs">
+        <Text size="sm">
+          <b>{choices.length}</b>{' '}
+          {choices.length === 1 ? 'event has' : 'events have'} {intro}
+        </Text>
+        {open ? (
+          <>
+            <ReviewTableScroll>
+              <Table withTableBorder fz="xs" miw={420}>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Event</Table.Th>
+                    <Table.Th>Shot</Table.Th>
+                    <Table.Th>{detailHeading}</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {choices.map((choice) => (
+                    <Table.Tr key={choice.event.event_id}>
+                      <Table.Td>
+                        {choice.event.source} {choice.event.kind},{' '}
+                        {formatShotTime(choice.event.timestamp)}
+                      </Table.Td>
+                      <Table.Td>
+                        {shotsByKey.get(choice.shotKey)?.shot_number ?? '?'}{' '}
+                        <Text span size="xs" c="dimmed">
+                          {choice.shotKey}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>{choice.detail}</Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ReviewTableScroll>
+            <Group gap="xs">
+              <Button
+                size="xs"
+                disabled={busy}
+                onClick={() => {
+                  setOpen(false)
+                  onConfirmMany(choices)
+                }}
+              >
+                Confirm these {choices.length}
+              </Button>
+              <Button size="xs" variant="subtle" onClick={() => setOpen(false)}>
+                Close
+              </Button>
+            </Group>
+          </>
+        ) : (
+          <Group>
+            <Button size="xs" variant="light" onClick={() => setOpen(true)}>
+              Review the {choices.length}
+            </Button>
+          </Group>
+        )}
+      </Stack>
+    </Alert>
+  )
+}
+
+/** Suggestions first; the clear time cases among the rest. */
+function BulkSections({
   events,
   shotsByKey,
-  busyKey,
-  onConfirm,
+  gaps,
+  runnerUp,
+  busy,
+  onConfirmMany,
 }: {
   events: HZDRReviewEvent[]
   shotsByKey: Map<string, HZDRShot>
+  gaps?: CandidateGaps
+  runnerUp?: RunnerUpGaps
+  busy: boolean
+  onConfirmMany: (choices: BulkChoice[]) => void
+}) {
+  const suggested = suggestedChoices(events, shotsByKey)
+  const suggestedIds = new Set(suggested.map((choice) => choice.event.event_id))
+  const timed = clearTimeChoices(
+    events.filter((event) => !suggestedIds.has(event.event_id)),
+    shotsByKey,
+    gaps,
+    runnerUp
+  )
+  return (
+    <>
+      <BulkConfirm
+        intro="a suggested shot from evidence other than raw time: shot-aligner paired it, the watchdog named it, or it is the only candidate without this instrument's file. Check the list and confirm them yourself."
+        detailHeading="Why"
+        choices={suggested}
+        shotsByKey={shotsByKey}
+        busy={busy}
+        onConfirmMany={onConfirmMany}
+      />
+      <BulkConfirm
+        intro={`one shot clearly closest in time: within ${CLEAR_TIME_CHOICE.withinS} s, and every other shot at least ${CLEAR_TIME_CHOICE.othersFurtherS / 60} min further away. Only triggers are offered: file times come from instrument clocks that run minutes off. Time alone never decides; check the list and confirm them yourself.`}
+        detailHeading="Event - shot"
+        choices={timed}
+        shotsByKey={shotsByKey}
+        busy={busy}
+        onConfirmMany={onConfirmMany}
+      />
+    </>
+  )
+}
+
+export function AmbiguousMatchesCard({
+  events,
+  shotsByKey,
+  gaps,
+  runnerUp,
+  busyKey,
+  onConfirm,
+  onConfirmMany,
+}: {
+  events: HZDRReviewEvent[]
+  shotsByKey: Map<string, HZDRShot>
+  gaps?: CandidateGaps
+  runnerUp?: RunnerUpGaps
   busyKey: string | null
   onConfirm: (event: HZDRReviewEvent, shotKey: string, note: string) => void
+  onConfirmMany?: (choices: BulkChoice[]) => void
 }) {
   if (!events.length) {
     return (
@@ -342,11 +520,22 @@ export function AmbiguousMatchesCard({
       <Text size="sm">
         Closest in time is highlighted; time alone never decides.
       </Text>
+      {onConfirmMany ? (
+        <BulkSections
+          events={events}
+          shotsByKey={shotsByKey}
+          gaps={gaps}
+          runnerUp={runnerUp}
+          busy={busyKey !== null}
+          onConfirmMany={onConfirmMany}
+        />
+      ) : null}
       {events.map((event) => (
         <AmbiguousEventItem
           key={event.event_id}
           event={event}
           shotsByKey={shotsByKey}
+          gaps={gaps}
           busy={busyKey !== null}
           onConfirm={onConfirm}
         />
@@ -355,14 +544,83 @@ export function AmbiguousMatchesCard({
   )
 }
 
+/**
+ * One button per producer and kind with several unmatched events: a test
+ * series or a source that never belongs to a shot is acknowledged in one
+ * go, after a second click that names the count.
+ */
+function AcknowledgeGroups({
+  events,
+  busy,
+  onDismissMany,
+}: {
+  events: HZDRReviewEvent[]
+  busy: boolean
+  onDismissMany: (events: HZDRReviewEvent[]) => void
+}) {
+  const [asking, setAsking] = useState<string | null>(null)
+  const groups = groupUnmatched(events).filter(
+    (group) => group.events.length > 1
+  )
+  if (!groups.length) return null
+  return (
+    <Stack gap={6} mb="sm">
+      <Text size="xs" c="dimmed">
+        Several from one producer and kind:
+      </Text>
+      {groups.map((group) => (
+        <Group key={group.key} gap="xs" wrap="wrap">
+          <Text size="xs">
+            <b>{group.events.length}</b> from <b>{group.source}</b> (
+            <Code fz="xs">{group.kind}</Code>)
+          </Text>
+          {asking === group.key ? (
+            <>
+              <Button
+                size="compact-xs"
+                color="orange"
+                disabled={busy}
+                onClick={() => {
+                  setAsking(null)
+                  onDismissMany(group.events)
+                }}
+              >
+                Yes, acknowledge {group.events.length} with no shot
+              </Button>
+              <Button
+                size="compact-xs"
+                variant="subtle"
+                onClick={() => setAsking(null)}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              size="compact-xs"
+              variant="light"
+              disabled={busy}
+              onClick={() => setAsking(group.key)}
+            >
+              Acknowledge all {group.events.length}
+            </Button>
+          )}
+        </Group>
+      ))}
+    </Stack>
+  )
+}
+
 export function UnmatchedEventsCard({
   events,
   busyKey,
   onDismiss,
+  onDismissMany,
 }: {
   events: HZDRReviewEvent[]
   busyKey: string | null
   onDismiss: (event: HZDRReviewEvent) => void
+  onDismissMany: (events: HZDRReviewEvent[]) => void
 }) {
   if (!events.length) {
     return (
@@ -380,6 +638,11 @@ export function UnmatchedEventsCard({
       count={events.length}
       hint="Events with no shot to belong to. Leave them if a shot may still arrive; acknowledge one only when it is known not to be a shot (a test fire, a glitch). It stays on record either way."
     >
+      <AcknowledgeGroups
+        events={events}
+        busy={busyKey !== null}
+        onDismissMany={onDismissMany}
+      />
       <ReviewTableScroll>
         <Table withTableBorder fz="xs" miw={420}>
           <Table.Thead>
@@ -417,16 +680,21 @@ function UnassignedShotRow({
   shot,
   ruling,
   suggestions,
+  suggested,
   busy,
   onAssign,
 }: {
   shot: HZDRShot
   ruling: HZDRExperimentRuling | undefined
   suggestions: string[]
+  suggested?: HZDRCampaignSuggestion
   busy: boolean
   onAssign: (shot: HZDRShot, experimentId: string) => void
 }) {
-  const [experimentId, setExperimentId] = useState('')
+  // Pre-filled from the neighbours' campaign; a person still presses Assign.
+  const [experimentId, setExperimentId] = useState(
+    suggested?.experiment_id ?? ''
+  )
   return (
     <Table.Tr>
       <Table.Td>{shot.shot_number}</Table.Td>
@@ -459,8 +727,141 @@ function UnassignedShotRow({
             </Button>
           </Group>
         )}
+        {!ruling && suggested ? (
+          <Text size="xs" c="dimmed" mt={2}>
+            Suggested: the shots before and after it that day are in{' '}
+            {suggested.experiment_id}.
+          </Text>
+        ) : null}
       </Table.Td>
     </Table.Tr>
+  )
+}
+
+const ALL_DAYS = 'all'
+
+/** Assign every waiting shot, or one day's, to one campaign. */
+function AssignMany({
+  shots,
+  rulings,
+  suggestions,
+  busy,
+  onAssignMany,
+}: {
+  shots: HZDRShot[]
+  rulings: Map<number, HZDRExperimentRuling>
+  suggestions: string[]
+  busy: boolean
+  onAssignMany: (shots: HZDRShot[], experimentId: string) => void
+}) {
+  const days = waitingUnassignedByDay(shots, rulings)
+  const [day, setDay] = useState(ALL_DAYS)
+  const [experimentId, setExperimentId] = useState('')
+  const waitingCount = days.reduce((sum, item) => sum + item.shots.length, 0)
+  if (waitingCount < 2) return null
+  const chosen =
+    day === ALL_DAYS
+      ? days.flatMap((item) => item.shots)
+      : (days.find((item) => item.day === day)?.shots ?? [])
+  return (
+    <Group gap="xs" align="flex-end" wrap="wrap" mb="sm">
+      <Select
+        size="xs"
+        label="Assign several"
+        value={day}
+        onChange={(value) => setDay(value ?? ALL_DAYS)}
+        data={[
+          { value: ALL_DAYS, label: `Every waiting shot (${waitingCount})` },
+          ...days.map((item) => ({
+            value: item.day,
+            label: `${item.day} (${item.shots.length})`,
+          })),
+        ]}
+        allowDeselect={false}
+        w={220}
+      />
+      <Autocomplete
+        size="xs"
+        label="to campaign"
+        placeholder="Campaign id"
+        data={suggestions}
+        value={experimentId}
+        onChange={setExperimentId}
+        w={240}
+      />
+      <Button
+        size="xs"
+        disabled={busy || !experimentId.trim() || !chosen.length}
+        onClick={() => onAssignMany(chosen, experimentId)}
+      >
+        Assign {chosen.length} {chosen.length === 1 ? 'shot' : 'shots'}
+      </Button>
+    </Group>
+  )
+}
+
+/** Every waiting shot with a neighbours' suggestion, assigned on a second click. */
+function AssignSuggested({
+  shots,
+  rulings,
+  campaignSuggestions,
+  busy,
+  onAssignSuggested,
+}: {
+  shots: HZDRShot[]
+  rulings: Map<number, HZDRExperimentRuling>
+  campaignSuggestions: Record<string, HZDRCampaignSuggestion>
+  busy: boolean
+  onAssignSuggested: (assignments: Array<[HZDRShot, string]>) => void
+}) {
+  const [asking, setAsking] = useState(false)
+  const assignments = shots.flatMap((shot): Array<[HZDRShot, string]> => {
+    const suggested = shot.shot_key
+      ? campaignSuggestions[shot.shot_key]
+      : undefined
+    return suggested && !rulings.has(shot.shot_number)
+      ? [[shot, suggested.experiment_id]]
+      : []
+  })
+  if (!assignments.length) return null
+  const campaigns = [...new Set(assignments.map(([, id]) => id))]
+  return (
+    <Group gap="xs" mb="sm" wrap="wrap">
+      <Text size="xs">
+        <b>{assignments.length}</b> with a suggested campaign (
+        {campaigns.join(', ')}), from the shots before and after them.
+      </Text>
+      {asking ? (
+        <>
+          <Button
+            size="compact-xs"
+            disabled={busy}
+            onClick={() => {
+              setAsking(false)
+              onAssignSuggested(assignments)
+            }}
+          >
+            Yes, assign {assignments.length} as suggested
+          </Button>
+          <Button
+            size="compact-xs"
+            variant="subtle"
+            onClick={() => setAsking(false)}
+          >
+            Cancel
+          </Button>
+        </>
+      ) : (
+        <Button
+          size="compact-xs"
+          variant="light"
+          disabled={busy}
+          onClick={() => setAsking(true)}
+        >
+          Assign the {assignments.length} suggested
+        </Button>
+      )}
+    </Group>
   )
 }
 
@@ -468,14 +869,20 @@ export function UnassignedShotsCard({
   shots,
   rulings,
   suggestions,
+  campaignSuggestions = {},
   busyKey,
   onAssign,
+  onAssignMany,
+  onAssignSuggested,
 }: {
   shots: HZDRShot[]
   rulings: Map<number, HZDRExperimentRuling>
   suggestions: string[]
+  campaignSuggestions?: Record<string, HZDRCampaignSuggestion>
   busyKey: string | null
   onAssign: (shot: HZDRShot, experimentId: string) => void
+  onAssignMany: (shots: HZDRShot[], experimentId: string) => void
+  onAssignSuggested?: (assignments: Array<[HZDRShot, string]>) => void
 }) {
   if (!shots.length) {
     return (
@@ -493,6 +900,22 @@ export function UnassignedShotsCard({
       count={shots.filter((shot) => !rulings.has(shot.shot_number)).length}
       hint="No LabFrog record and no campaign schedule placed these shots in a campaign. Assign one to the campaign it belongs to; the builder moves it there on its next run."
     >
+      {onAssignSuggested ? (
+        <AssignSuggested
+          shots={shots}
+          rulings={rulings}
+          campaignSuggestions={campaignSuggestions}
+          busy={busyKey !== null}
+          onAssignSuggested={onAssignSuggested}
+        />
+      ) : null}
+      <AssignMany
+        shots={shots}
+        rulings={rulings}
+        suggestions={suggestions}
+        busy={busyKey !== null}
+        onAssignMany={onAssignMany}
+      />
       <ReviewTableScroll>
         <Table withTableBorder fz="xs" miw={520}>
           <Table.Thead>
@@ -510,6 +933,9 @@ export function UnassignedShotsCard({
                 shot={shot}
                 ruling={rulings.get(shot.shot_number)}
                 suggestions={suggestions}
+                suggested={
+                  shot.shot_key ? campaignSuggestions[shot.shot_key] : undefined
+                }
                 busy={busyKey !== null}
                 onAssign={onAssign}
               />

@@ -203,6 +203,15 @@ class HZDRReviewEvent(BaseModel):
     acknowledged_by: str | None = None
     acknowledged_note: str | None = None
     review_level: str | None = None
+    # Why it waits, one of hzdr_nexus.REVIEW_REASONS (older catalogs: absent).
+    review_reason: str | None = None
+    # One candidate singled out by evidence other than time, and which
+    # (hzdr_nexus.SUGGESTION_REASONS); shown and preselected, never applied.
+    suggested_shot_key: str | None = None
+    suggestion_reason: str | None = None
+    # What shot-aligner's claim on this file came to (plan-aligner-bridge):
+    # its day, event and row, the evidence, and the check that failed.
+    aligner_detail: str | None = None
 
 
 class HZDRSourceEvent(BaseModel):

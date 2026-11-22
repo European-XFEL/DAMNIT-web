@@ -8,14 +8,25 @@ Day-to-day fixes for the deployed API, builder and frontend. Settings live in
 ```bash
 cd ~/DAMNIT-web-hzdr && git checkout main && git pull --ff-only
 cd api && uv sync --locked && sudo systemctl restart damnit-api
-cd ../frontend && pnpm install --frozen-lockfile
-VITE_DAMNIT_COMMIT=$(git rev-parse --short=12 HEAD) pnpm --filter ./apps/app build
+cd ../frontend && pnpm install --frozen-lockfile --prefer-offline
+VITE_DAMNIT_COMMIT=$(git log -1 --format=%h --abbrev=12 HEAD -- .) \
+    pnpm --filter ./apps/app exec vite build
 ```
 
-`VITE_DAMNIT_COMMIT` records the build's commit. When it differs from the
-one the API started from (`GET /config/version`), the header shows *Out of
-step with the API*: the frontend was not rebuilt, or the API not restarted,
-after a pull. A build without it shows no warning.
+The frontend needs a build only when `frontend/` changed: the command
+skips nothing by itself, but `hzdr/scripts/next-on-server.sh` builds only
+then (it records the commit in `dist/.damnit-frontend-commit`). It runs
+`vite build` alone, about a minute; CI already type-checks
+(`pnpm --filter ./apps/app build` adds `tsc -b`, or set
+`FRONTEND_TYPECHECK=1` for the script).
+
+`VITE_DAMNIT_COMMIT` records the last commit that changed `frontend/`. The
+API reports the same for its checkout as `frontend_commit`
+(`GET /config/version`, from 0.3.2; older APIs only `commit`, which is then
+compared). When they differ, the header shows *Out of step with the API*:
+the frontend was not rebuilt, or the API not restarted, after a pull that
+changed `frontend/`. A pull that changes only the API needs no rebuild. A
+build without the variable shows no warning.
 
 The system nginx (`fwkt-damnit.fz-rossendorf.de`, ports 80/443) serves the
 frontend from `/var/www/damnit-web` at the site root and proxies the API paths
@@ -112,6 +123,128 @@ without editing the saved file. Scalar values appear as numbers or text in
 each row; campaign trends appear when selecting a numeric cell. Actual per-shot
 lineout and image previews remain in their cells.
 
+## Review matches: the campaign schedule and the automatic rules
+
+Until every trigger carries the shot authority's number, events arrive
+without one, and four settings decide how much waits in Review matches
+(plan: `hzdr/docs/plans/plan-review-automation.md`):
+
+- **`DW_API_HZDR_BUILDER__CAMPAIGN_SCHEDULE`**: LabFrog's
+  `labfrog-campaign-schedule-v1` export. It routes `unassigned` triggers to
+  a campaign by trigger time; without it every such shot waits as
+  *Unassigned*. `next-on-server.sh`'s `labfrog` step reports whether it is
+  set, whether the file exists, and how old it is (a warning after 7 days).
+- **`DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true`** (ruling
+  R-2026-11-21): an event without a shot number attaches to a LabFrog shot
+  when the two are each other's only neighbour within
+  `MATCH_TOLERANCE_S` (120 s) among events of its kind and instrument,
+  shot-aligner's rule (`match_quality` `time_one_to_one`). Everything else
+  stays in review, with its reason shown. **Off for now:** on shot-aligner's
+  real shot days it mispairs watchdog files at 90 s or less and pairs almost
+  nothing at 120 s or more, because instrument clocks run up to two minutes
+  off (`hzdr/docs/plans/plan-time-rule-real-data.md`). Measure a day with
+  `scripts/hzdr-evaluate-time-rule.py` before turning it on.
+- **`DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS=["..."]`**: event kinds that are
+  never a shot (test fires); their unmatched events are acknowledged by rule
+  and listed under Resolved. Removing a kind reopens them at the next build.
+
+- **`DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR`** (rulings R-2026-11-22a/b,
+  `hzdr/docs/plans/plan-aligner-bridge.md`): shot-aligner's index folder,
+  `~/shot-aligner/shot_aligner/index` on fwkt-webapps. A file whose
+  shot-aligner event a reviewer confirmed attaches as `aligner_confirmed`.
+  It must pass these checks:
+  - every piece of evidence present names the same DAMNIT shot: the
+    shot authority's number, the LabFrog record shot-aligner matched the row
+    to, and the row's Count as LabFrog's local count;
+  - LabFrog's time is within the tolerance of the Shotsheet's `Zeit`;
+  - `gvd`, `tod` and `elaser` agree with LabFrog.
+
+  An unconfirmed pair is a suggestion. A failed check waits, naming the
+  check. A day counts once shot-aligner has written its
+  `<date>.index.json`: the app's **Write index JSON** task for the date
+  (opening a date does not write it), or
+  `align.py --site fwkt-webapps index <date> --if-changed`. A confirmation
+  counts from the decisions file as it is now, while the event still has the
+  Count it was confirmed against (shot-aligner's `matched_count` witness). A new index or
+  decision there triggers a rebuild. The `labfrog` step lists the reviewed
+  dates without an index. Score a day with
+  `scripts/hzdr-evaluate-time-rule.py <index> --rule aligner`.
+
+- **`DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS`** (rulings R-2026-11-22d/e,
+  `hzdr/docs/plans/plan-campaign-backfill.md`): campaign -> dates
+  (`YYYY_MM_DD`) built from shot-aligner's day indexes. For a date LabFrog
+  has no records of, the Shotsheet rows that shot-aligner counts become the
+  shots:
+  - `shot_number` is the position in the day;
+  - the Count is in `labfrog_local_count`;
+  - `experiment_id_source` is `shotsheet`.
+
+  The acquisitions become file events (`source` `shot-aligner`), with the
+  instrument from the catalogue, unless the watchdog sent them. The bridge
+  above then attaches the confirmed ones. Steps: `deploy-notes.md`, step 7.
+  `scripts/hzdr-campaign-backfill.py` reports each listed date (index, how
+  much of it is reviewed, shots, files attached and waiting). With
+  `--apply` it indexes the missing dates in shot-aligner, rebuilds, runs the
+  container worker (and the relink build), and, with `--aligner-build`,
+  compares with shot-aligner's containers. Each parsed day is stored in
+  `.aligner-cache/` beside the catalog (`ALIGNER_CACHE_DIR`) and parsed
+  again only when its index or decisions change.
+
+All five apply at the next build: restart `damnit-api` after changing
+them, then rebuild (`scripts/hzdr-rebuild.py`), since a restart builds
+nothing.
+
+**Confirm clear time cases** offers triggers only (plan-aligner-bridge
+B1). It offers a trigger only when no other shot of the campaign is within
+2 min of the closest, which the API's `runner_up_gaps_s` gives. Files are
+never offered, because their instrument clocks run minutes off. On
+shot-aligner's days the earlier rule would have offered 328 and 583 wrong
+files.
+
+## What reads and writes the share, and when
+
+Ruling R-2026-11-22h, `hzdr/docs/plans/plan-quiet-builds.md`. The goal is
+little reading across apps, servers and drives.
+
+| Who | What | Where | When |
+| --- | --- | --- | --- |
+| Builder, shot-aligner days | the listed days' index and decisions | `~/shot-aligner` (local) | each build; only the dates it needs, stored in `.aligner-cache/` after the first read |
+| Trigger's watcher | size and mtime of exports and index files | curated root, local | every `LABFROG_POLL_SECONDS` |
+| Builder, publishing | the campaign's master and catalog entry | bigdata | **only when the campaign's result changed** (`.<name>.nxs.build-stamp.json`); `hzdr-rebuild.py --force` for all |
+| Container worker | one stat per raw file, contents only to rewrite a container | bigdata | with `CONTAINERS_ENABLED` (keep off), or `hzdr-campaign-backfill.py --apply` |
+| `align.py index` | the date folder | bigdata | the console script, missing or stale days only |
+| Phase 6 compare | both sides' containers | bigdata | when asked (`--aligner-build`) |
+
+A skipped campaign keeps its catalog entry, because a multi-campaign build
+replaces only its own. The stamp is the sha256 of everything the build would
+write:
+- the shots and events, laser constants and never-shot kinds;
+- the LabFrog NeXus source;
+- the containers' manifest;
+- the code that writes the files.
+
+A code update, a new event or decision, a new container or a deleted master
+each publishes again.
+
+## Packaging a campaign to hand out
+
+`scripts/hzdr-package-campaign.py --master <campaign>.nxs`
+(`hzdr/docs/plans/plan-campaign-package.md`). The campaign folder is the
+package: the master and `shots/`, with relative links. The script copies
+nothing; beside the master it writes:
+- `PACKAGE.json`: every file with its size, the counts, damnit-api version
+  and commit, and NDS's validation verdict;
+- `README.md`: how to open it. silx for the master; h5web or myhdf5 for one
+  container, since they do not follow links.
+
+Options:
+- `--checksums` adds sha256 and `SHA256SUMS`;
+- `--tar <path>` writes one archive.
+
+Both read every byte, so use them for a hand-out, not routinely. A master
+linking a missing container is refused (exit 2). If NDS's gate fails, the
+package is marked not valid (exit 1).
+
 ## A new beamtime from LabFrog's Beamtime Setup
 
 Since 2026-11-11 a campaign is prepared in LabFrog under Form Builder >
@@ -195,6 +328,74 @@ Check a build reached the catalog:
 ```bash
 python3 -c "import json; c=json.load(open('/home/tippey/mnt/bigdata/HPLexp/nexus/hzdr_sources.json')); s=[x for x in c['sources'] if x['key']=='Beamline_radbio_2026'][0]['shots'][0]; print(s['shot_key'], s['metadata'].get('laser'), len(s['metadata'].get('labfrog_variables', {})))"
 ```
+
+## Turn on the shot containers (go-live checklist)
+
+The container worker (one `shots/<YYYYMMDD>_<NNNNNN>.nxs` per shot, linked
+from the campaign file's root) is off by default. Columns on container
+datasets (`{container}/...`, see [Context columns](#context-columns)) work as
+soon as containers exist. To turn it on:
+
+**Before**
+
+1. **Phase 6 first.** Build one real campaign into a scratch root, run
+   shot-aligner on the same campaign, and compare:
+   `uv run --no-sync python scripts/hzdr-compare-containers.py --damnit <scratch>/<c> --aligner <shot-aligner build> --json <scratch>/compare.json`
+   (exit 0: equal apart from the documented differences; 1: a difference;
+   2: an input missing). Only go on with exit 0, or with each difference
+   understood and written down.
+2. **No shared folder.** Check that shot-aligner does not write
+   `<OUTPUT_ROOT>/<campaign>/shots/`: the worker owns that folder and moves
+   containers it does not account for to `shots/.trash`.
+3. **Raw files are reachable.** The worker reads each raw file through
+   `DW_API_METADATA__PATH_MAP`. Pick one shot's recorded path from its
+   detail page and check that `ls <mapped path>` works as the service user.
+4. **Space.** A container holds the shot's frames (gzip 4). Estimate from
+   the scratch build of step 1 (`du -sh <scratch>/<c>/shots`) times the
+   campaigns, and check `df -h` on the share.
+
+**Settings** (`api/.env`, then `sudo systemctl restart damnit-api`)
+
+```bash
+DW_API_HZDR_BUILDER__CONTAINERS_ENABLED=true
+# optional: the _unassigned bucket too (converted again once a campaign claims its shots)
+DW_API_HZDR_BUILDER__CONTAINERS_INCLUDE_UNASSIGNED=false
+# optional, phase 5: validate each build and its containers with NDS's Python
+DW_API_HZDR_BUILDER__VALIDATION_PYTHON=/home/tippey/nexus-design-studio/.venv/bin/python
+```
+
+The trigger starts the worker before each build and after each successful
+one. A restart builds nothing, so start the first pass by hand (it also
+shows any error at once):
+
+```bash
+cd ~/DAMNIT-web-hzdr/api
+uv run --no-sync python scripts/hzdr-container-worker.py \
+    --output-root /home/tippey/mnt/bigdata/HPLexp/nexus --campaign <c>
+echo $?   # 0 done; 1 a failure; 3 a build should link new containers; 4 both; 5 another worker is running
+uv run --no-sync python scripts/hzdr-rebuild.py --campaign <c>   # links them (exit 3 asks for this)
+```
+
+**After the first build**
+
+- `<c>/shots/` holds one `.nxs` per shot with an acquisition, and
+  `<c>/shots/.build-manifest.json` lists them.
+- `.hzdr-container-worker.log` beside the output has no `Traceback`, and
+  each container's `/entry/conversion_problems` is empty or names a file you
+  know is missing: `h5ls -r <c>/shots/<name>.nxs/entry/conversion_problems`.
+- The campaign file links them:
+  `h5ls <c>/<c>.nxs` lists the `<YYYYMMDD>_<NNNNNN>` entries beside `entry`.
+- A shot's detail page lists `<YYYYMMDD>_<NNNNNN>/...` datasets, and
+  **Add as column** on one makes a `{container}/...` column that fills for
+  the other shots of that instrument.
+- With validation on, `<c>/.validation.json` passes (`.hzdr-validation.log`
+  has the details).
+
+**Turn it off** by setting `CONTAINERS_ENABLED=false` and restarting: no
+worker runs any more. The builder still links every container it finds in
+place, so the existing ones stay in the campaign file. To take them out,
+move `<c>/shots/` aside (never delete the output root) and rebuild the
+campaign.
 
 ## A build that never finishes
 

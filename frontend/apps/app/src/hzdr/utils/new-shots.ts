@@ -42,3 +42,23 @@ export function isNewShot(shot: HZDRShot, lastSeen: number | null) {
   const ms = shotMs(shot)
   return ms !== null && ms > lastSeen
 }
+
+/**
+ * What in a campaign's summary means its shot list changed: the count, the
+ * newest shot and the review counts. Equal keys: no need to fetch the shots.
+ */
+export function shotListChangeKey(summary: {
+  shot_count: number
+  last_shot_at: string | null
+  latest_shot_number?: number | null
+  needs_review: number
+  needs_revision: number
+}) {
+  return [
+    summary.shot_count,
+    summary.last_shot_at ?? '',
+    summary.latest_shot_number ?? '',
+    summary.needs_review,
+    summary.needs_revision,
+  ].join('|')
+}

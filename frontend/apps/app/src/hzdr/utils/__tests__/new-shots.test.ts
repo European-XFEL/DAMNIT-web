@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
 import type { HZDRShot } from '../../types'
-import { isNewShot, readLastSeenShot, rememberLastSeenShot } from '../new-shots'
+import {
+  isNewShot,
+  readLastSeenShot,
+  rememberLastSeenShot,
+  shotListChangeKey,
+} from '../new-shots'
 
 const shot = (fired_at: string) =>
   ({ source_key: 'c', shot_number: 1, fired_at }) as HZDRShot
@@ -32,5 +37,28 @@ describe('new shots since the last visit', () => {
     rememberLastSeenShot('c', [shot('2026-11-20T10:00:00Z')])
     expect(readLastSeenShot('c')).toBe(Date.parse('2026-11-21T10:00:00Z'))
     expect(readLastSeenShot('other')).toBeNull()
+  })
+})
+
+describe('shot list change key', () => {
+  const base = {
+    shot_count: 2,
+    last_shot_at: '2026-11-21T10:00:00Z',
+    latest_shot_number: 2,
+    needs_review: 0,
+    needs_revision: 0,
+  }
+  it('changes with the count, the newest shot and the review counts', () => {
+    const key = shotListChangeKey(base)
+    expect(shotListChangeKey({ ...base })).toBe(key)
+    for (const change of [
+      { shot_count: 3 },
+      { last_shot_at: '2026-11-21T10:05:00Z' },
+      { latest_shot_number: 3 },
+      { needs_review: 1 },
+      { needs_revision: 1 },
+    ]) {
+      expect(shotListChangeKey({ ...base, ...change })).not.toBe(key)
+    }
   })
 })

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Container,
@@ -31,8 +31,10 @@ import {
 } from '../components/ReviewMatches'
 import { sourceSummariesUrl } from '../components/homeCampaignSummary'
 import { requireJson } from '../utils/api'
+import { usePolling } from '../hooks'
 import { campaignTitle } from '../utils/format'
 import {
+  type BulkChoice,
   assignShotExperiment,
   busiestSourceKey,
   campaignSuggestions,
@@ -96,18 +98,34 @@ export function ReviewMatchesPage() {
   const [pendingJump, setPendingJump] = useState<ReviewSection | null>(null)
 
   useEffect(() => {
-    fetch(sourceSummariesUrl())
-      .then((response) => requireJson<HZDRSourceSummary[]>(response))
-      .then(setSources)
-      .catch((error: Error) => {
-        setSources([])
-        setLoadError(`Could not load campaigns: ${error.message}`)
-      })
     // Campaign ids are only suggestions for assigning a shot; none is fine.
     fetchHZDRCampaigns()
       .then(setCampaigns)
       .catch(() => setCampaigns([]))
   }, [])
+
+  // The summaries, now and every 30 s while the tab is visible: the picker's
+  // counts stay current, and the open campaign reloads when its own changed
+  // (see below). Only the first failure is shown; later ones keep the page.
+  const sourcesLoaded = useRef(false)
+  const pollSources = useCallback(
+    () =>
+      fetch(sourceSummariesUrl())
+        .then((response) => requireJson<HZDRSourceSummary[]>(response))
+        .then((summaries) => {
+          sourcesLoaded.current = true
+          setSources(summaries)
+        })
+        .catch((error: Error) => {
+          if (!sourcesLoaded.current) {
+            setSources([])
+            setLoadError(`Could not load campaigns: ${error.message}`)
+          }
+          throw error
+        }),
+    []
+  )
+  usePolling(pollSources, 30_000)
 
   // How many cases wait in each catalog, for the picker and the first pick:
   // the summaries count them as this page does.
@@ -127,7 +145,33 @@ export function ReviewMatchesPage() {
     if (sources.length === 1) return sources[0].key
     return waitingCounts ? busiestSourceKey(sources, waitingCounts) : null
   }, [sources, waitingCounts])
-  const sourceKey = requested?.key ?? autoKey
+  // The first automatic pick stays: a refresh that changes the counts must
+  // not move the page to another campaign under the reader.
+  const [pinnedAutoKey, setPinnedAutoKey] = useState<string | null>(null)
+  useEffect(() => {
+    if (autoKey && !pinnedAutoKey) setPinnedAutoKey(autoKey)
+  }, [autoKey, pinnedAutoKey])
+  const sourceKey = requested?.key ?? pinnedAutoKey ?? autoKey
+
+  // Reload the open campaign's lists when its summary changed (cases
+  // waiting, shots, newest shot), but never while a decision is being saved.
+  const openSummary = sources?.find((source) => source.key === sourceKey)
+  const openSummaryKey = openSummary
+    ? [
+        openSummary.waiting,
+        openSummary.shot_count,
+        openSummary.last_shot_at ?? '',
+      ].join('|')
+    : undefined
+  const seenSummaryKey = useRef<{ source: string; key: string }>()
+  useEffect(() => {
+    if (!sourceKey || openSummaryKey === undefined || busyKey) return
+    const seen = seenSummaryKey.current
+    seenSummaryKey.current = { source: sourceKey, key: openSummaryKey }
+    if (seen?.source === sourceKey && seen.key !== openSummaryKey) {
+      setReloadToken((token) => token + 1)
+    }
+  }, [sourceKey, openSummaryKey, busyKey])
 
   useEffect(() => {
     if (!sourceKey) {
@@ -245,6 +289,87 @@ export function ReviewMatchesPage() {
     )
   }
 
+  // Several decisions in a row, one request each (the API takes one at a
+  // time); a failure is reported and the rest still go, then one reload.
+  const runBatch = async <T,>(
+    key: string,
+    items: T[],
+    action: (item: T) => Promise<unknown>,
+    done: (count: number) => string
+  ) => {
+    setBusyKey(key)
+    setActionError(undefined)
+    setActionMessage(undefined)
+    const failures: string[] = []
+    for (const item of items) {
+      try {
+        await action(item)
+      } catch (error) {
+        failures.push((error as Error).message)
+      }
+    }
+    const succeeded = items.length - failures.length
+    if (succeeded) setActionMessage(done(succeeded))
+    if (failures.length) {
+      setActionError(
+        `${failures.length} of ${items.length} failed: ${failures[0]}`
+      )
+    }
+    setReloadToken((token) => token + 1)
+    setBusyKey(null)
+  }
+
+  const confirmMany = (choices: BulkChoice[]) => {
+    if (!sourceKey) return
+    void runBatch(
+      'confirm-many',
+      choices,
+      (choice) =>
+        confirmReviewEvent(
+          sourceKey,
+          choice.event.event_id,
+          choice.shotKey,
+          choice.note
+        ),
+      (count) => `${count} events confirmed.`
+    )
+  }
+
+  const dismissMany = (events: HZDRReviewEvent[]) => {
+    if (!sourceKey) return
+    void runBatch(
+      'dismiss-many',
+      events,
+      (event) => dismissReviewEvent(sourceKey, event.event_id),
+      (count) => `${count} events acknowledged with no shot.`
+    )
+  }
+
+  const assignMany = (shots: HZDRShot[], experimentId: string) => {
+    void runBatch(
+      'assign-many',
+      shots,
+      (shot) => assignShotExperiment(shot.shot_number, experimentId),
+      (count) =>
+        `${count} shots assigned to ${experimentId.trim()}; they move there at the next rebuild.`
+    )
+  }
+
+  const assignSuggested = (assignments: Array<[HZDRShot, string]>) => {
+    void runBatch(
+      'assign-suggested',
+      assignments,
+      ([shot, experimentId]) =>
+        assignShotExperiment(
+          shot.shot_number,
+          experimentId,
+          'Assigned as suggested: the shots before and after it that day are in this campaign.'
+        ),
+      (count) =>
+        `${count} shots assigned as suggested; they move at the next rebuild.`
+    )
+  }
+
   const assign = (shot: HZDRShot, experimentId: string) => {
     runAction(
       `assign:${shot.shot_number}`,
@@ -337,8 +462,11 @@ export function ReviewMatchesPage() {
                   <AmbiguousMatchesCard
                     events={grouped.ambiguous}
                     shotsByKey={shotLookup}
+                    gaps={loaded.review.candidate_gaps_s}
+                    runnerUp={loaded.review.runner_up_gaps_s}
                     busyKey={busyKey}
                     onConfirm={confirm}
+                    onConfirmMany={confirmMany}
                   />
                 )}
                 {/* Shots assigned but not moved yet still show, with who
@@ -350,7 +478,10 @@ export function ReviewMatchesPage() {
                     rulings={rulings}
                     suggestions={suggestions}
                     busyKey={busyKey}
+                    campaignSuggestions={loaded.review.campaign_suggestions}
                     onAssign={assign}
+                    onAssignMany={assignMany}
+                    onAssignSuggested={assignSuggested}
                   />
                 ) : null}
                 {waiting.total > 0 ? (
@@ -358,6 +489,7 @@ export function ReviewMatchesPage() {
                     events={grouped.unmatched}
                     busyKey={busyKey}
                     onDismiss={dismiss}
+                    onDismissMany={dismissMany}
                   />
                 ) : null}
                 <ResolvedCard

@@ -547,6 +547,7 @@ def test_trigger_command_in_multi_campaign_mode(tmp_path):
         "--campaign-schedule",
         str(tmp_path / "schedule.json"),
         "--no-time-match-autoassign",
+        "--no-time-match-one-to-one",
         "--experiment-rulings",
         "x.review.jsonl",
     ]
@@ -581,6 +582,7 @@ def test_single_campaign_command_is_unchanged(tmp_path):
         "--match-tolerance-s",
         "120.0",
         "--no-time-match-autoassign",
+        "--no-time-match-one-to-one",
     ]
 
 
