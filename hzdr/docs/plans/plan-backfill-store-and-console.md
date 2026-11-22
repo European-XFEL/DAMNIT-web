@@ -106,7 +106,7 @@ for every date in the folder, every campaign and every build.
   - `operations.md`, `CLAUDE.md`, the settings template,
     `hzdr/CHANGELOG.md`.
 - [x] **Gates:** ruff, pyright (193), pytest, the coverage map, acceptance.
-- [ ] **GitLab:**
+- [x] **GitLab:**
   - hzdr-combo `NEXT.md`;
   - the fwkt-webapps DAMNIT page;
   - the PR #58 description.
