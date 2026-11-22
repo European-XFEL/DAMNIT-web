@@ -164,6 +164,16 @@ files still `MISSING` the column.
     committed days it gives 258 shots from the Shotsheets, with 12-03's 2,544
     files attached and 12-01's 1,698 waiting as suggestions until 12-01 is
     reviewed.
+11. **Quiet builds and packaging (rulings R-2026-11-22h/i).** Keep
+    `DW_API_HZDR_BUILDER__CONTAINERS_ENABLED` off: the console script runs
+    the container worker when asked. A campaign whose result has not changed
+    is not rewritten on bigdata (`unchanged, not rewritten` in the log;
+    `hzdr-rebuild.py --force` for all). Package a built campaign with
+    `api/scripts/hzdr-package-campaign.py --master <c>.nxs --validate-python
+    <nds python> --checksums`, or `hzdr-campaign-backfill.py --apply --package`
+    ([deploy-notes.md](deploy-notes.md) step 7.5;
+    [plan-quiet-builds.md](../plans/plan-quiet-builds.md),
+    [plan-campaign-package.md](../plans/plan-campaign-package.md)).
 
 ## 3. SciCat: clean up the duplicate datasets
 
