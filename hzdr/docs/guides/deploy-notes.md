@@ -46,6 +46,9 @@ bash ~/DAMNIT-web-hzdr/hzdr/scripts/next-on-server.sh --apply
 - rebuilds the campaigns;
 - runs the checks (the `labfrog` step).
 
+The **first** build after this deploy rewrites every campaign once, because
+the code that writes them changed. That is expected.
+
 **Quiet builds** ([plan-quiet-builds.md](../plans/plan-quiet-builds.md)): a
 campaign whose result has not changed is no longer rewritten on the share.
 The build log says `Canonical NeXus (<campaign>): unchanged, not rewritten`.
@@ -138,6 +141,9 @@ files. The bridge then attaches what a reviewer confirmed. See
    uv run --no-sync python scripts/hzdr-campaign-backfill.py --apply \
        --aligner-build /home/tippey/mnt/bigdata/HPLexp/Ions/nexus/<Vanlife build>
    ```
+   `<Vanlife build>` is shot-aligner's container folder for that campaign
+   (`ls /home/tippey/mnt/bigdata/HPLexp/Ions/nexus`). Leave the flag out to
+   skip the compare.
    It runs, in order, and stops at the first failure, naming it:
    - shot-aligner's `align.py index` for each date that has no index;
    - the rebuild (`hzdr-rebuild.py`);
@@ -146,7 +152,6 @@ files. The bridge then attaches what a reviewer confirmed. See
      `--aligner-build`);
    - the report again.
 
-   Leave out `--aligner-build` to skip the compare.
 4. **Review in shot-aligner what the report says still waits.** Only 12-03
    is confirmed so far. A confirmed day attaches at the next build, which a
    new decision triggers by itself. Run the report again to see it.
@@ -162,7 +167,8 @@ shot-aligner.
 
 ### 8. GitLab, after the deploy
 
-- Merge hzdr-combo !117, which records rulings R-2026-11-21 and R-2026-11-22.
+- Merge hzdr-combo !117, which records rulings R-2026-11-21 and
+  R-2026-11-22a to h.
 - Merge fwkt-webapps !106 (the DAMNIT project page).
 
 ### Not part of this deploy

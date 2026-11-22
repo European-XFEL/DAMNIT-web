@@ -38,6 +38,11 @@ collection readable, `DAMNIT_API_URL`, `BEAMTIME_RULES_DIR`), then setting up
 
 ## Open
 
+**2026-11-22:** DAMNIT PR #57 and #58 wait for a deploy. The steps are in
+[deploy notes](../guides/deploy-notes.md): the settings, `next-on-server.sh`,
+then Vanlife with `api/scripts/hzdr-campaign-backfill.py`. The older items
+below are as of 2026-11-11.
+
 The server part of this list is scripted: [Next on the server](../guides/next-on-server.md).
 
 

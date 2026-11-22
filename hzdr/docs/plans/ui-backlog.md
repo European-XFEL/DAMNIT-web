@@ -126,21 +126,27 @@ in the commit that does the work).
 
 ## Next steps (after PR #58)
 
-On the server (maintainer), in order; `hzdr/docs/guides/next-on-server.md`:
-1. Deploy #57 and #58 together: `next-on-server.sh`, look first, then
-   `--apply` (item 6 says what to check in the browser).
-2. Review rules (item 8): leave `TIME_MATCH_ONE_TO_ONE` off (measured on
-   real shot days: it mispairs watchdog files;
-   [plan-time-rule-real-data.md](plan-time-rule-real-data.md)); set
-   `NEVER_SHOT_KINDS` once the test-fire kinds are known; check
-   `CAMPAIGN_TIMEZONE` and `CAMPAIGN_SCHEDULE`; rebuild.
-3. Measure more days on the server with `hzdr-evaluate-time-rule.py`,
-   above all a LabFrog day with DRACO triggers. Then decide R2 (clock-offset
-   fitting, as shot-aligner does) and R3 (the rule for triggers only).
-4. Shot containers only on a decision: phase 6 first (item 7,
-   `operations.md` go-live checklist).
-5. Merge GitLab hzdr-combo !117 (and !116) and fwkt-webapps !106; delete or
-   reset GitHub branch `claude/dazzling-noether-br3edr`.
+On the server (maintainer), in order: **[deploy-notes.md](../guides/deploy-notes.md)**
+(the background is in `next-on-server.md`).
+1. Merge #58, then deploy #57 and #58 together:
+   - settings first: `ALIGNER_INDEX_DIR`, `ALIGNER_CAMPAIGNS` for Vanlife;
+     `TIME_MATCH_ONE_TO_ONE` and `CONTAINERS_ENABLED` off;
+   - then `next-on-server.sh`, look first, then `--apply`.
+2. Vanlife with `hzdr-campaign-backfill.py` (report, then `--apply
+   --aligner-build <shot-aligner's Vanlife build>`). Review 12-01, 12-02 and
+   12-05 in shot-aligner.
+3. More of this year's campaigns: one `ALIGNER_CAMPAIGNS` entry each, once
+   their days are indexed and reviewed.
+4. Measure a LabFrog day with DRACO triggers (`hzdr-evaluate-time-rule.py`):
+   it decides R3, the time rule for triggers only.
+5. Shot containers on a decision only: phase 6 first.
+6. Merge GitLab hzdr-combo !117 and fwkt-webapps !106.
+
+Noted for later plans:
+- skip the time ladder for files the bridge will attach, which is now the
+  largest part of a build (`plan-backfill-store-and-console.md`, results);
+- R2, clock-offset fitting in DAMNIT, is not needed while shot-aligner does
+  it.
 
 For a later session (needs a decision): offer every shot in the tolerance
 as a candidate instead of only the nearest (changes what reviewers see on
