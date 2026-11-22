@@ -28,14 +28,23 @@ const RUN_COLUMN = 1
 // tracks Glide's version.
 const CELL_TESTID_PREFIX = 'glide-cell-'
 
+// The trailing separator keeps column 1 from matching column 10.
+function columnTestIdPrefix(col: number): string {
+  return `${CELL_TESTID_PREFIX}${col}-`
+}
+
 function cellTestId({ col, row }: { col: number; row: number }): string {
-  return `${CELL_TESTID_PREFIX}${col}-${row}`
+  return `${columnTestIdPrefix(col)}${row}`
 }
 
 // Every mirrored data cell, for asserting an empty grid. Shares cellTestId's
 // single owner so the testid format stays in one place.
 export function dataCells(page: Page): Locator {
   return page.locator(`[data-testid^="${CELL_TESTID_PREFIX}"]`)
+}
+
+export function columnCells(page: Page, col: number): Locator {
+  return page.locator(`[data-testid^="${columnTestIdPrefix(col)}"]`)
 }
 
 // A single mirrored cell by its a11y column/row index (row marker 0, Run 1).
@@ -121,14 +130,6 @@ export function lastVariableOf(example: Example): string {
   return names[names.length - 1]
 }
 
-// A grouped proposal draws a second header row, which pushes every point below
-// it down. Read from the example, so hiding every grouped column leaves this
-// saying true after Glide has dropped the row: it enables the row from the
-// visible columns, not from the metadata.
-export function hasGroups(example: Example): boolean {
-  return Object.keys(example.meta.groups ?? {}).length > 0
-}
-
 // aria-colcount is the live data-column count, excluding the row-marker column.
 export async function expectVisibleColumns(page: Page, count: number) {
   await expect(page.locator('[role="grid"]')).toHaveAttribute(
@@ -143,6 +144,14 @@ export async function expectRunRows(page: Page, count: number) {
     'aria-rowcount',
     String(count + 1)
   )
+}
+
+export async function readRunRows(page: Page) {
+  const rowCount = await page
+    .locator('[role="grid"]')
+    .getAttribute('aria-rowcount')
+
+  return Number(rowCount) - 1
 }
 
 // Glide only mirrors headers within the horizontal viewport, so toHaveCount(1)
@@ -191,14 +200,10 @@ export async function clickAndExpectColumn(
 // pushes it into the strip of dead space Glide leaves beside the last column.
 export async function headerEdge(
   page: Page,
-  {
-    example,
-    col,
-    overshoot = 0,
-  }: { example: Example; col: number; overshoot?: number }
+  { col, overshoot = 0 }: { col: number; overshoot?: number }
 ): Promise<Point> {
   const box = await gridBox(page)
-  const { x, y } = headerEdgePoint(box, { col, grouped: hasGroups(example) })
+  const { x, y } = headerEdgePoint(box, { col })
   return { x: x + overshoot, y }
 }
 
@@ -209,12 +214,9 @@ export function contextMenu(page: Page): Locator {
 
 // Right-click a column title by real pointer coordinates, mirroring
 // rightClickCell.
-export async function rightClickHeader(
-  page: Page,
-  { example, col }: { example: Example; col: number }
-) {
+export async function rightClickHeader(page: Page, { col }: { col: number }) {
   const box = await gridBox(page)
-  const { x, y } = headerPoint(box, { col, grouped: hasGroups(example) })
+  const { x, y } = headerPoint(box, { col })
   await page.mouse.click(x, y, { button: 'right' })
 }
 
@@ -318,16 +320,13 @@ export async function rowDetails(page: Page, name: string): Promise<Locator> {
 // mirrored cell and pressing Glide's Shift+Space keybinding does not carry the
 // row through, so it selects whichever row Glide already had focused.
 // `row` must be within the initial vertical fold; this does not scroll it in.
-export async function selectRun(
-  page: Page,
-  { example, row }: { example: Example; row: number }
-) {
+export async function selectRun(page: Page, { row }: { row: number }) {
   // The a11y tree renders a beat after the canvas, and Glide only mirrors rows
   // in the current vertical window, so wait for the target row to exist.
   await expect(cell(page, { col: RUN_COLUMN, row })).toBeAttached()
 
   const box = await gridBox(page)
-  const { x, y } = rowMarkerPoint(box, { row, grouped: hasGroups(example) })
+  const { x, y } = rowMarkerPoint(box, { row })
   await page.mouse.click(x, y)
 }
 
@@ -363,12 +362,7 @@ export function selectedRunTab(page: Page): Locator {
 // column index (row marker is 0, Run is 1), matching selectRun.
 export async function hoverCell(
   page: Page,
-  {
-    example,
-    col,
-    row,
-    waitForContent = true,
-  }: Cell & { example: Example; waitForContent?: boolean }
+  { col, row, waitForContent = true }: Cell & { waitForContent?: boolean }
 ) {
   // The deferred table data loads after the canvas paints, so the target cell
   // can still be empty when the pointer arrives, and hovering an empty cell
@@ -379,9 +373,8 @@ export async function hoverCell(
   }
 
   const box = await gridBox(page)
-  const grouped = hasGroups(example)
-  const header = headerPoint(box, { col, grouped })
-  const cell = cellPoint(box, { col, row, grouped })
+  const header = headerPoint(box, { col })
+  const cell = cellPoint(box, { col, row })
   // Rest on the header first so the move onto the cell always reads as a hover
   // transition, then settle on the cell center for the open delay to elapse.
   await page.mouse.move(header.x, header.y)
@@ -391,12 +384,9 @@ export async function hoverCell(
 // Right-click a cell by real pointer coordinates, mirroring hoverCell. Glide's
 // context menu fires from the canvas mouse callback, so the click must land on
 // the cell center rather than going through the a11y mirror.
-export async function rightClickCell(
-  page: Page,
-  { example, col, row }: Cell & { example: Example }
-) {
+export async function rightClickCell(page: Page, { col, row }: Cell) {
   const box = await gridBox(page)
-  const { x, y } = cellPoint(box, { col, row, grouped: hasGroups(example) })
+  const { x, y } = cellPoint(box, { col, row })
   await page.mouse.click(x, y, { button: 'right' })
 }
 
@@ -405,12 +395,9 @@ export async function rightClickCell(
 // coordinates over the canvas, because onCellActivated fires from Glide's canvas
 // mouse handler: focusing the a11y mirror selects the row but never carries the
 // column through to activation.
-export async function activateCell(
-  page: Page,
-  { example, col, row }: Cell & { example: Example }
-) {
+export async function activateCell(page: Page, { col, row }: Cell) {
   const box = await gridBox(page)
-  const { x, y } = cellPoint(box, { col, row, grouped: hasGroups(example) })
+  const { x, y } = cellPoint(box, { col, row })
   await page.mouse.dblclick(x, y)
 }
 

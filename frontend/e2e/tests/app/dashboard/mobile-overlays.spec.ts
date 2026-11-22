@@ -104,7 +104,7 @@ test('the open mobile nav hides an open run behind it too', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(asideCloseButton(page)).toBeVisible()
 
   await navBurger(page).click()
@@ -120,7 +120,7 @@ test('a run open at phone size hides the table behind it', async ({
   const grid = gridCanvas(page)
 
   // Open the run
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(page.getByRole('complementary')).toBeVisible()
   await expect(grid).toBeHidden()
 
@@ -137,7 +137,7 @@ test('a run opened from the keyboard at phone size takes focus and hands it back
   const grid = gridCanvas(page)
 
   // Open the run from the keyboard
-  await selectCells(page, { example, cells: [{ col: 1, row: 0 }] })
+  await selectCells(page, { cells: [{ col: 1, row: 0 }] })
   await expect(grid).toBeFocused()
   await page.keyboard.press('Shift+Space')
   await expect(asideCloseButton(page)).toBeFocused()
@@ -155,7 +155,7 @@ test('a run opened by a click at phone size takes focus and hands it back to the
   const grid = gridCanvas(page)
 
   // Open the run with a click, after which Glide focuses its canvas
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(grid).toBeHidden()
   await expect(asideCloseButton(page)).toBeFocused()
 
@@ -170,7 +170,7 @@ test('escape closes a run opened by a click at phone size and focuses the grid',
 }) => {
   await openProposal(page, example)
   const grid = gridCanvas(page)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(grid).toBeHidden()
 
   await page.keyboard.press('Escape')
@@ -185,7 +185,7 @@ test('a run open at phone size covers the table only', async ({
   await openProposal(page, example)
   const burger = navBurger(page)
   const run = page.getByRole('complementary')
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
 
   // Another view comes out from under the run
   await burger.click()
@@ -205,7 +205,7 @@ test('a run the nav brings back at phone size leaves focus on the burger and clo
 }) => {
   await openProposal(page, example)
   const burger = navBurger(page)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await burger.click()
   await openContextFile(page)
 
