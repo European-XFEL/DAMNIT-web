@@ -140,7 +140,7 @@ On the server (maintainer), in order: **[deploy-notes.md](../guides/deploy-notes
 4. Measure a LabFrog day with DRACO triggers (`hzdr-evaluate-time-rule.py`):
    it decides R3, the time rule for triggers only.
 5. Shot containers on a decision only: phase 6 first.
-6. Merge GitLab hzdr-combo !117 and fwkt-webapps !106.
+6. Merge GitLab hzdr-combo !117, fwkt-webapps !106 and shot-aligner !28.
 
 Noted for later plans:
 - skip the time ladder for files the bridge will attach, which is now the

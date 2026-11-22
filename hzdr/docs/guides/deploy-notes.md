@@ -189,7 +189,10 @@ shot-aligner.
 
 - Merge hzdr-combo !117, which records rulings R-2026-11-21 and
   R-2026-11-22a to h.
-- Merge fwkt-webapps !106 (the DAMNIT project page).
+- Merge fwkt-webapps !106 (the DAMNIT project page, the shot-aligner page's
+  note, and getting started).
+- Merge shot-aligner !28 (docs only: DAMNIT reads its `index/` folder, and
+  opening a date does not save an index).
 
 ### Not part of this deploy
 
