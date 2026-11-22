@@ -126,6 +126,9 @@ work.
 
 ## Not in this plan
 
+**Followed by** [plan-backfill-store-and-console.md](plan-backfill-store-and-console.md):
+the parsed indexes stored, and one console script per campaign.
+
 - **Containers for Vanlife:** they need the raw files on bigdata, so they
   are written on the server: the container worker, then
   `hzdr-compare-containers.py` against shot-aligner's.

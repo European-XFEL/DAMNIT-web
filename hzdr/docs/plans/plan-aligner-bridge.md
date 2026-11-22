@@ -160,7 +160,10 @@ enough for files on instrument clocks.
 **Followed by** [plan-campaign-backfill.md](plan-campaign-backfill.md): this
 year's campaigns from shot-aligner's Shotsheets and indexes, Vanlife first.
 
-- **Days with no watchdog.** A script that turns a day index into
+- ~~**Days with no watchdog.**~~ *Superseded on 2026-11-22 by
+  [plan-campaign-backfill.md](plan-campaign-backfill.md) F4: the file events
+  are made at build time, so no event-model change is needed.* Originally: a
+  script that turns a day index into
   `hzdr-event-v1` file events, so DAMNIT has those files at all. It needs a
   new `attribution.method` value, and that changes the event model vendored
   into planet-watchdog and the shotcounter, so it is its own cross-repo
