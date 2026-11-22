@@ -119,7 +119,7 @@ work.
   - the frontend label for `shotsheet`, with vitest, lint and e2e if the
     frontend changes;
   - acceptance.
-- [ ] **GitLab:**
+- [x] **GitLab:**
   - hzdr-combo `NEXT.md` (the rulings);
   - the fwkt-webapps DAMNIT page;
   - the PR #58 description.
