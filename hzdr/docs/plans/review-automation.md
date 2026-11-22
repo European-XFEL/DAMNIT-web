@@ -7,7 +7,9 @@ Plan, rulings and checklist: [plan-review-automation.md](plan-review-automation.
 Measured on real shot days afterwards
 ([plan-time-rule-real-data.md](plan-time-rule-real-data.md)): the one-to-one
 rule stays **off** for watchdog files (instrument clocks run up to two
-minutes off); the rest needs no setting.
+minutes off); the rest needs no setting. Next:
+[plan-aligner-bridge.md](plan-aligner-bridge.md), shot-aligner's confirmed
+decisions as evidence, and a fix to the bulk time rule.
 
 ## 1. How it works today
 

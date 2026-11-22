@@ -143,6 +143,9 @@ now shows).
 
 ## What is left
 
+- **Next:** [plan-aligner-bridge.md](plan-aligner-bridge.md) reads
+  shot-aligner's confirmed decisions instead of guessing from raw clocks.
+
 - More days: the other dates' day indexes live on the server (shot-aligner
   builds `index/<date>.index.json` when a date is opened); a LabFrog day
   with DRACO triggers is the one that decides R3. The script runs there
