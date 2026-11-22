@@ -67,7 +67,7 @@ Vanlife's master, and every other campaign's, on the share.
   - `operations.md` (what reads the share, and when), `CLAUDE.md`,
     `hzdr/CHANGELOG.md`.
 - [x] **Gates:** ruff, pyright (193), pytest, acceptance.
-- [ ] **GitLab notes, PR description.**
+- [x] **GitLab notes, PR description.**
 
 ## Results
 
