@@ -125,6 +125,7 @@ class DateState:
     campaign: str
     date_folder: str
     index_age_h: float | None = None  # None: no index
+    stale: bool = False  # the decisions are newer than the index
     links: int = 0
     confirmed: int = 0
     shotsheet_shots: int = 0
@@ -188,6 +189,10 @@ def date_states(config: Config) -> list[DateState]:
             index = config.index_dir / f"{date_folder}{INDEX_SUFFIX}"
             if index.is_file():
                 state.index_age_h = (time.time() - index.stat().st_mtime) / 3600
+                ledger = config.index_dir / f"{date_folder}.decisions.json"
+                state.stale = (
+                    ledger.is_file() and ledger.stat().st_mtime > index.stat().st_mtime
+                )
                 day = load_day_data(
                     config.index_dir,
                     date_folder,
@@ -215,10 +220,11 @@ def date_states(config: Config) -> list[DateState]:
     return states
 
 
-def _age(hours: float | None) -> str:
+def _age(hours: float | None, stale: bool = False) -> str:
     if hours is None:
         return "MISSING"
-    return f"{hours:.0f} h" if hours < 48 else f"{hours / 24:.0f} d"
+    age = f"{hours:.0f} h" if hours < 48 else f"{hours / 24:.0f} d"
+    return f"{age}*" if stale else age
 
 
 def print_report(states: list[DateState], out: Callable[[str], None] = print) -> str:
@@ -230,10 +236,15 @@ def print_report(states: list[DateState], out: Callable[[str], None] = print) ->
     for s in states:
         reviewed = f"{s.confirmed}/{s.links}" if s.has_index else "-"
         out(
-            f"{s.campaign:<18} {s.date_folder:<10} {_age(s.index_age_h):>7} "
+            f"{s.campaign:<18} {s.date_folder:<10} {_age(s.index_age_h, s.stale):>7} "
             f"{reviewed:>9} {s.shotsheet_shots if s.has_index else '-':>5} "
             f"{('yes' if s.stored else 'no') if s.has_index else '-':>6} "
             f"{s.shots:>5} {s.attached:>8} {s.suggested:>7}"
+        )
+    if any(s.stale for s in states):
+        out(
+            "* decisions newer than the index: confirmations still count; "
+            "--apply rewrites the index"
         )
     step = next_step(states)
     out(f"Next: {step}")
@@ -319,9 +330,12 @@ def apply(
 
 
 def _index_missing(config: Config, states: list[DateState], run: Runner) -> bool:
-    """Step 1: shot-aligner indexes each date that has no index."""
+    """Step 1: shot-aligner writes each date's index that is missing or stale.
+
+    ``--if-changed`` keeps an index nothing it is made from has changed.
+    """
     for state in states:
-        if state.has_index:
+        if state.has_index and not state.stale:
             continue
         rc = run(
             [config.uv, "run", "--no-sync", "--no-default-groups",

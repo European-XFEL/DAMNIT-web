@@ -48,7 +48,7 @@ class AlignerClaim:
     set_name: str
     event_rank: int
     band: str  # the link's band: confirmed / high / low; "" without a link
-    confirmed: bool  # band confirmed and the ledger still says confirm
+    confirmed: bool  # a reviewer's decision stands on this pairing (link_confirmed)
     excel_row: int | None = None
     count: int | None = None
     row_time: str | None = None  # the Shotsheet's Zeit, HH:MM[:SS], local
@@ -84,15 +84,46 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _ledger_confirms(decisions: dict[str, Any] | None) -> dict[str, bool]:
-    """Ledger key -> whether its latest decision on the link is a confirm."""
-    links = (decisions or {}).get("links")
+def _ledger_links(
+    decisions: dict[str, Any] | None,
+) -> dict[str, dict[str, Any]] | None:
+    """Ledger key (``set:rank``) -> its link decision; None without a ledger."""
+    if decisions is None:
+        return None
+    links = decisions.get("links")
     if not isinstance(links, dict):
         return {}
-    return {
-        str(key): isinstance(entry, dict) and entry.get("action") == "confirm"
-        for key, entry in links.items()
-    }
+    return {str(key): entry for key, entry in links.items() if isinstance(entry, dict)}
+
+
+def link_confirmed(
+    band: str,
+    decision: dict[str, Any] | None,
+    link_count: int | None,
+    *,
+    has_ledger: bool,
+) -> bool:
+    """Whether a reviewer's decision stands on this link, as shot-aligner judges it.
+
+    shot-aligner's ``Ledger.pairing``: a decision is keyed by ``set:rank``, but
+    what was approved is a pairing. A ``confirm`` records the Count it was
+    made against (``matched_count``): it stands when the link still names that
+    Count (or it predates the witness, version 1), and not when re-aligning
+    moved the event. A ``repin`` stands when the link names the Count it
+    forced. A ``reject`` never confirms. Without a ledger, the index's band
+    says it. The ledger is read as it is now, so a confirmation made after the
+    index was written counts at once (plan backfill-store, found 2026-11-22).
+    """
+    if decision is None:
+        return band == "confirmed" and not has_ledger
+    action = decision.get("action")
+    if action == "confirm":
+        witness = _as_int(decision.get("matched_count"))
+        return witness is None or witness == link_count
+    if action == "repin":
+        forced = _as_int(decision.get("row_count"))
+        return link_count is not None and forced == link_count
+    return False
 
 
 def _rows_by_excel_row(index: dict[str, Any]) -> dict[int, dict[str, Any]]:
@@ -161,7 +192,7 @@ def claims_from_index(
     rows = _rows_by_excel_row(index)
     records = _labfrog_records_by_row(index)
     authority = _authority_by_event(index)
-    ledger = _ledger_confirms(decisions)
+    ledger = _ledger_links(decisions)
     claims: dict[FileKey, AlignerClaim] = {}
     shared: set[FileKey] = set()
     sets = index.get("sets")
@@ -225,17 +256,20 @@ def _claim(
     rows: dict[int, dict[str, Any]],
     records: dict[int, str],
     authority: dict[tuple[str, int], int],
-    ledger: dict[str, bool],
+    ledger: dict[str, dict[str, Any]] | None,
     index_file: str,
 ) -> AlignerClaim:
     excel_row = _as_int(link.get("excel_row")) if link else None
     row = rows.get(excel_row) if excel_row is not None else None
     band = str(link.get("band") or "") if link else ""
-    ledger_key = f"{set_name}:{rank}"
-    # The index records the band when it was written; the ledger is the
-    # reviewer's record. Both must still say confirmed (a later "reject" in
-    # the ledger, or no ledger entry where there is a ledger, is not).
-    confirmed = band == "confirmed" and (not ledger or ledger.get(ledger_key, False))
+    count = _as_int(row.get("count")) if isinstance(row, dict) else None
+    link_count = _as_int(link.get("row_count")) if link else None
+    confirmed = link is not None and link_confirmed(
+        band,
+        (ledger or {}).get(f"{set_name}:{rank}"),
+        count if link_count is None else link_count,
+        has_ledger=ledger is not None,
+    )
     values = row.get("values") if isinstance(row, dict) else None
     return AlignerClaim(
         date=date,
@@ -644,7 +678,7 @@ def backfill(
 # --- the stored, parsed day (plan-backfill-store-and-console G1) ----------------
 
 #: Bump when what a stored day holds changes; an older file is then re-parsed.
-CACHE_VERSION = 1
+CACHE_VERSION = 2  # 2: confirmation judged by the ledger's witness
 CACHE_SUFFIX = ".aligner.json"
 CACHE_DIRNAME = ".aligner-cache"
 

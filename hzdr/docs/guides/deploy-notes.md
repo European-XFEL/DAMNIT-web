@@ -60,10 +60,14 @@ triggers a rebuild by itself.
 
 ### 4. Make sure the reviewed days have an index
 
-A reviewed day counts only once shot-aligner has written its
-`<date>.index.json`. The `labfrog` step of `next-on-server.sh` lists the
-reviewed dates that have no index yet. To build one, open the date in
-shot-aligner, or run:
+A day counts only once shot-aligner has written its `<date>.index.json`.
+A confirmation made after that counts too, without rewriting the index, as
+long as the event still has the Count it was confirmed against. That is
+shot-aligner's own rule: it uses the decision's `matched_count` to see whether
+the pairing has moved since. The `labfrog` step of `next-on-server.sh` lists the
+reviewed dates that have no index yet. To write one, use the date's
+**Write index JSON** task in shot-aligner (opening a date does not write it),
+or run:
 
 ```bash
 cd ~/shot-aligner

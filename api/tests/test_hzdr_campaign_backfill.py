@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -31,6 +32,10 @@ def index_dir(tmp_path: Path) -> Path:
     folder.mkdir()
     for name in ("2025_12_03.index.json", "2025_12_03.decisions.json"):
         shutil.copy(FIXTURES / name, folder)
+    # The index written after the decisions, as shot-aligner writes it.
+    index = folder / "2025_12_03.index.json"
+    later = (folder / "2025_12_03.decisions.json").stat().st_mtime_ns + 1_000_000_000
+    os.utime(index, ns=(later, later))
     return folder
 
 
@@ -168,6 +173,7 @@ def test_a_real_run_builds_vanlife_and_reports_it(index_dir, tmp_path, capsys):
             "campaign": VANLIFE,
             "date_folder": "2025_12_03",
             "index_age_h": report[0]["index_age_h"],
+            "stale": False,
             "links": 3,
             "confirmed": 3,
             "shotsheet_shots": 3,
@@ -193,3 +199,21 @@ def test_without_an_index_folder_or_a_campaign_it_says_so(index_dir, monkeypatch
     monkeypatch.setattr(settings.hzdr_builder, "aligner_index_dir", None)
     assert module.main([]) == 2
     assert module.main(["--index-dir", str(index_dir)]) == 2
+
+
+def test_an_index_older_than_its_decisions_is_marked_and_rewritten(index_dir, tmp_path):
+    module = _module()
+    ledger = index_dir / "2025_12_03.decisions.json"
+    later = (index_dir / "2025_12_03.index.json").stat().st_mtime_ns + 5_000_000_000
+    os.utime(ledger, ns=(later, later))
+    config = _config(module, index_dir, tmp_path, dates=("2025_12_03",))
+    states = module.date_states(config)
+    assert states[0].stale
+    lines: list[str] = []
+    module.print_report(states, lines.append)
+    assert "*" in lines[1]
+    assert any(line.startswith("* decisions newer") for line in lines)
+    calls, run = _record()
+    assert module.apply(config, states, run=run) == 0
+    assert _names(calls)[0] == "align.py"
+    assert calls[0][0][-3:] == ["index", "2025_12_03", "--if-changed"]

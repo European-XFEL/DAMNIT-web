@@ -380,7 +380,7 @@ check_aligner_index() {
     done)
     ok "DAMNIT reads shot-aligner's decisions: $built day index(es), $decided decision file(s) in $dir"
     if [ -n "$missing" ]; then
-        warn "reviewed in shot-aligner but no day index yet (open the date, or align.py index <date>): $missing"
+        warn "reviewed in shot-aligner but no day index yet (Write index JSON in the app, or align.py index <date>, or hzdr-campaign-backfill.py --apply): $missing"
     fi
     # Campaigns built from those indexes (ALIGNER_CAMPAIGNS): each listed date
     # needs its index, or that day builds no shots.

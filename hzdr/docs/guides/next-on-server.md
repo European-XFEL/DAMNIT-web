@@ -135,8 +135,9 @@ files still `MISSING` the column.
    ```
    Restart `damnit-api` and rebuild (`hzdr-rebuild.py`, as in item 8). After
    that, a new index or a decision in that folder triggers a rebuild by itself.
-   A day counts only once its **index** is built. The app writes it when the
-   date is opened; from a shell, in `~/shot-aligner`:
+   A day counts only once its **index** is written: in the app, the date's
+   **Write index JSON** task (opening a date does not write it); from a shell,
+   in `~/shot-aligner`, or with `hzdr-campaign-backfill.py --apply`:
    ```bash
    uv run --no-sync --no-default-groups shot_aligner/scripts/align.py \
        --site fwkt-webapps index <date> --if-changed

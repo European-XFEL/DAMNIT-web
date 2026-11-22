@@ -44,6 +44,13 @@ Rulings R-2026-11-22f/g. Plan:
   beside the catalog (`ALIGNER_CACHE_DIR`, `--aligner-cache-dir`), keyed by
   the index's and decisions' size and mtime. A build reads only the dates
   its events fall on.
+- **A confirmation counts as shot-aligner counts it:** the decisions file
+  as it is now, while the event still has the Count it was confirmed against
+  (`matched_count`). Before, a confirmation made after the index was
+  written waited for the index to be rewritten. The report marks an index
+  older than its decisions, and `--apply` rewrites it.
+- **Day indexes are written** by shot-aligner's Write index JSON task or
+  `align.py index`, not by opening a date (the docs said so wrongly).
 - **Faster matching:** `parse_datetime` keeps a parsed time string, and the
   bridge checks each shot-aligner event once. A Vanlife build went from
   4.1 s to 3.5-3.8 s with the same output.

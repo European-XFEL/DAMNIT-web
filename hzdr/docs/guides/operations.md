@@ -161,8 +161,11 @@ without one, and four settings decide how much waits in Review matches
 
   An unconfirmed pair is a suggestion. A failed check waits, naming the
   check. A day counts once shot-aligner has written its
-  `<date>.index.json`: the app writes it when the date is opened, or
-  `align.py --site fwkt-webapps index <date> --if-changed`. A new index or
+  `<date>.index.json`: the app's **Write index JSON** task for the date
+  (opening a date does not write it), or
+  `align.py --site fwkt-webapps index <date> --if-changed`. A confirmation
+  counts from the decisions file as it is now, while the event still has the
+  Count it was confirmed against (shot-aligner's `matched_count` witness). A new index or
   decision there triggers a rebuild. The `labfrog` step lists the reviewed
   dates without an index. Score a day with
   `scripts/hzdr-evaluate-time-rule.py <index> --rule aligner`.

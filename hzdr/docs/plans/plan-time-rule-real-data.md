@@ -147,7 +147,8 @@ now shows).
   shot-aligner's confirmed decisions instead of guessing from raw clocks.
 
 - More days: the other dates' day indexes live on the server (shot-aligner
-  builds `index/<date>.index.json` when a date is opened); a LabFrog day
+  writes `index/<date>.index.json` with its Write index JSON task or
+  `align.py index`); a LabFrog day
   with DRACO triggers is the one that decides R3. The script runs there
   unchanged (`next-on-server.md` item 8).
 - 2025-12-01 has never been reviewed; its numbers rest on the aligner's own

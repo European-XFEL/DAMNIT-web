@@ -22,9 +22,10 @@ as before: rulings first, a box ticked in the commit that does the work.
   shot-aligner and live in that repository's `shot_aligner/index/` folder
   (`<date>.index.json`, not committed apart from two examples, and
   `<date>.decisions.json`, committed). On fwkt-webapps that is
-  `~/shot-aligner/shot_aligner/index/`: the app writes there when a date is
-  opened (`align.py --site fwkt-webapps index <date> --if-changed` does the
-  same from a shell). The nightly `laser-shot-reindex` builds the folder,
+  `~/shot-aligner/shot_aligner/index/`. The app writes there with a date's
+  **Write index JSON** task, not when a date is opened (corrected
+  2026-11-22, `shotalign/tasks.py`), and `align.py --site fwkt-webapps index
+  <date> --if-changed` does the same from a shell. The nightly `laser-shot-reindex` builds the folder,
   workbook, contents and pairing indexes, not the day indexes.
 
 ## Found while checking (2026-11-22)

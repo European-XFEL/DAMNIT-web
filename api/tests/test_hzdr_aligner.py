@@ -152,20 +152,40 @@ def test_every_shot_file_is_claimed_with_its_row_and_confirmation():
     assert not any(name == "BAM" and "synchro" in file for _, name, file in claims)
 
 
-def test_the_ledger_must_still_say_confirm():
+KEY_2 = ("2025_12_03", "BAM", "set1_2025-12-03_15h-26m-10s_2.csv")
+
+
+def test_the_ledger_decides_as_shot_aligner_does():
+    """shot-aligner's Ledger.pairing: a decision stands on the pairing it saw."""
+
+    def confirmed(change=None, *, band=None, ledger=True):
+        index, decisions = _index(), _decisions()
+        if band is not None:
+            index["sets"]["set1"]["links"][1]["band"] = band
+        if change is not None:
+            decisions["links"]["set1:2"] = change
+        claims = claims_from_index(index, decisions if ledger else None)
+        return claims[KEY_2].confirmed
+
+    assert confirmed()  # confirmed, witness Count 2, link Count 2
+    assert not confirmed({"action": "reject"})
+    # Confirmed after the index was written (band still "high"): it counts.
+    assert confirmed({"action": "confirm", "matched_count": 2}, band="high")
+    # Re-aligning moved the event to another Count: the approval does not follow.
+    assert not confirmed({"action": "confirm", "matched_count": 3})
+    # A version-1 decision has no witness: applied, as shot-aligner does.
+    assert confirmed({"action": "confirm"})
+    assert confirmed({"action": "repin", "row_count": 2})
+    assert not confirmed({"action": "repin", "row_count": 5})
+    # No ledger at all: the index's band says it.
+    assert confirmed(ledger=False)
+    assert not confirmed(band="high", ledger=False)
+
+
+def test_a_ledger_without_an_entry_for_the_link_does_not_confirm():
     decisions = _decisions()
-    decisions["links"]["set1:2"]["action"] = "reject"
-    claims = _claims(decisions=decisions)
-    assert not claims[
-        "2025_12_03", "BAM", "set1_2025-12-03_15h-26m-10s_2.csv"
-    ].confirmed
-    assert claims["2025_12_03", "BAM", "set1_2025-12-03_15h-22m-51s_1.csv"].confirmed
-    # Not confirmed by a reviewer in the index: a ledger confirm alone is not enough.
-    index = _index()
-    index["sets"]["set1"]["links"][0]["band"] = "high"
-    assert not _claims(index)[
-        "2025_12_03", "BAM", "set1_2025-12-03_15h-22m-51s_1.csv"
-    ].confirmed
+    del decisions["links"]["set1:2"]
+    assert not _claims(decisions=decisions)[KEY_2].confirmed
 
 
 def test_a_file_two_events_claim_is_nobodys():

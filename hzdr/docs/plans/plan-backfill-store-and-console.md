@@ -185,6 +185,37 @@ Tests: 10 in the new `test_hzdr_campaign_backfill.py`:
 - pytest: 1,125 passed, 33 skipped;
 - local acceptance is all OK, and `--real-topology` passed.
 
+**Found while getting it ready for the deploy (2026-11-22), and fixed:**
+
+1. **Opening a date in shot-aligner does not write its day index.** Its
+   docs list the index as "worked out when asked for and not stored". The
+   file is written by the date's **Write index JSON** task (`shotalign/tasks.py`,
+   `/api/save/<date>`) or by `align.py index`. The deploy notes, operations,
+   next-on-server, the script's warning and plan-aligner-bridge's R-2026-11-22c
+   said "open the date"; they now name the task.
+2. **A confirmation made after the index was written did not count.** The
+   bridge required the index's band *and* the decisions file to say
+   confirmed, and the band is only as new as the index. It now judges the
+   decisions file as it is, with shot-aligner's own rule (`Ledger.pairing`,
+   `hzdr_aligner.link_confirmed`):
+   - a `confirm` stands while the link still names the Count it was made
+     against (`matched_count`), or when it predates that witness;
+   - a `repin` stands when the link names the Count it forced;
+   - a `reject`, or a pairing that moved, never stands;
+   - without a decisions file, the band decides.
+
+   The stored copies are re-made (`CACHE_VERSION` 2). On 2025-12-03,
+   2,544 files are still attached and none are wrong.
+3. **An index older than its decisions** is marked `*` in the report, and
+   `--apply` rewrites it (`--if-changed`) along with the missing ones.
+
+Tests:
+- the ledger rule, case by case, and a ledger without an entry;
+- the stale index, marked and rewritten.
+
+Gates: pytest 1,127 passed, 33 skipped; pyright 193; ruff clean; acceptance
+in both modes passed.
+
 **On the server, with the deploy:** `deploy-notes.md` step 7: set
 `ALIGNER_CAMPAIGNS`, run the report, then `--apply --aligner-build <shot-aligner's
 Vanlife build>`.
