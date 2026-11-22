@@ -4,6 +4,42 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-22
+
+### shot-aligner's decisions as DAMNIT's evidence
+Rulings R-2026-11-22a/b (maintainer): a confirmation made in shot-aligner is
+a person's decision. A Shotsheet row maps to a LabFrog record by the shot
+authority first, then the record, then the Count, and is double-checked by
+date, time and the details both record. Plan:
+`hzdr/docs/plans/plan-aligner-bridge.md`.
+- `metadata/hzdr_aligner.py` reads shot-aligner's `<date>.index.json` and
+  `<date>.decisions.json` as written; each file is found by (date folder,
+  instrument folder, file name).
+- A confirmed file attaches as `aligner_confirmed` (match rank 6; the number
+  ranks move up by one). It must pass these checks:
+  - the authority number, the LabFrog record and the Count name the same
+    shot;
+  - LabFrog's time is within 120 s of `Zeit`;
+  - `gvd`, `tod` and `elaser` agree.
+- An unconfirmed pair is suggested (`shot_aligner`). A failure waits as
+  `aligner_disagrees`, `aligner_check_failed` or `aligner_no_shot`, and
+  `aligner_detail` shows on the page.
+- `DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR` / `--aligner-index-dir`, off by
+  default. The folder is a rebuild input. `next-on-server.sh`'s `labfrog`
+  step reports it and the reviewed dates without an index.
+- On shot-aligner's 2025-12-03 day all 2,544 shot files attach to the
+  reviewed shot, with none wrong (`hzdr-evaluate-time-rule.py --rule aligner`).
+
+### Bulk confirm no longer offers files, and tests every shot
+Since ruling A7 a time proposal has one candidate, so the page's "every other
+candidate 2 min further" test never ran. On shot-aligner's two days it would
+have offered 328 and 583 wrong files.
+- The review route now gives each event's nearest other shot over the whole
+  source (`runner_up_gaps_s`).
+- The page offers a clear time case only when that shot is 2 min or more
+  further, and offers triggers only.
+- `hzdr-evaluate-time-rule.py --rule bulk` measures it.
+
 ## 2026-11-21
 
 ### The one-to-one time rule measured on real shot days

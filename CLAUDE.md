@@ -308,9 +308,17 @@ to two minutes off and it mispairs them
 `api/scripts/hzdr-evaluate-time-rule.py`). And
 `DW_API_HZDR_BUILDER__NEVER_SHOT_KINDS` (JSON list, default empty) has the
 catalog acknowledge unmatched events of those kinds by rule
-(`rule:never_shot_kinds`). Review events carry `review_reason` and, from
-non-time evidence, `suggested_shot_key`/`suggestion_reason`; the review
-route adds `candidate_gaps_s` and `campaign_suggestions`.
+(`rule:never_shot_kinds`). `DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR`
+(default empty; rulings R-2026-11-22a/b) is shot-aligner's index folder
+(`~/shot-aligner/shot_aligner/index` on fwkt-webapps): files whose
+shot-aligner event a reviewer confirmed attach as `aligner_confirmed` (see
+Match quality ranks), unconfirmed ones are suggested, and a change in the
+folder is a rebuild input; `hzdr-evaluate-time-rule.py --rule aligner`
+scores a day. Review events carry `review_reason`, `aligner_detail` and,
+from non-time evidence, `suggested_shot_key`/`suggestion_reason`; the review
+route adds `candidate_gaps_s`, `runner_up_gaps_s` (the nearest other shot
+over the whole source, which the bulk time choice needs since A7 leaves one
+candidate; files are never offered in bulk) and `campaign_suggestions`.
 `DW_API_HZDR_BUILDER__VALIDATION_PYTHON` (default empty: off) names a Python
 with nexus-design-studio and pynxtools (NDS's own `.venv`); set, the trigger
 runs `api/scripts/hzdr-nexus-validate.py` (campaign output phase 5) after each

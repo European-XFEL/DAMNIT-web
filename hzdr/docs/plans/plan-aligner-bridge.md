@@ -135,14 +135,21 @@ enough for files on instrument clocks.
 - [x] **Measured:**
   - the bridge on 2025-12-03 with its LabFrog stand-in, numbers below;
   - the frontend label and the reason texts.
-- [ ] **Docs and next-on-server:**
+- [x] **Docs and next-on-server:**
   - `next-on-server.md` (set the folder; open or index the days);
   - `operations.md`, `api/.env.production.example`, `architecture.md`,
     `CLAUDE.md`, `review-automation.md`, `hzdr/CHANGELOG.md`.
-- [ ] **Gates:**
+- [x] **Gates:**
   - ruff, pyright at its 197 baseline, pytest, the coverage map;
   - vitest, lint:tsc, eslint, prettier, e2e;
   - acceptance.
+
+  Result: ruff clean, pyright 197, pytest 1,101 passed / 33 skipped
+  (`test_hzdr_aligner.py` and `hzdr_aligner.py` in the coverage map), vitest
+  326, `lint:tsc`/eslint/prettier clean, HZDR e2e 8/8,
+  `hzdr-local-acceptance.py` all OK and `--real-topology` passed.
+  `next-on-server.sh`'s new check was run by hand: set with a reviewed date
+  lacking an index, and not set.
 - [ ] **GitLab:**
   - hzdr-combo `NEXT.md` (the rulings);
   - the fwkt-webapps DAMNIT page;

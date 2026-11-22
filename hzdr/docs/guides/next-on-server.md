@@ -27,7 +27,7 @@ of steps that ended in `FAIL`.
 | `deploy` | Finds every unit that started before its checkout last moved, so it still runs the old code. On 2026-11-11 every unit but LabFrog had done so for a week. Also checks whether DAMNIT's frontend was built from the last commit that changed `frontend/` | `uv sync` with that app's flags, then `sudo systemctl restart`, then checks the unit is active. The intake restarts before the web app. Rebuilds the frontend only if `frontend/` changed (`vite build` alone, about a minute; `FRONTEND_TYPECHECK=1` adds `tsc`) |
 | `tidy` | The two untracked folders `server-report.sh` warns about (asapo's `.env`, labfrog-sqlite-tools' `retained_exports/`, both kept on purpose). The `~/2024_08_08.decisions.json.server` copy | Adds each folder to that checkout's `.git/info/exclude` (this host only, nothing committed). Moves the rulings copy to `~/archive/cleanup-<date>/` if it is byte for byte the committed file; if it differs, it reports `FAIL` and leaves both |
 | `rebuild` | Prints the auto-trigger's own builder command and checks each campaign file for `/entry/shots/authority_shot_number` (bridge v6) and `/entry/labfrog_history` (v7) | Rebuilds with that command (`api/scripts/hzdr-rebuild.py`), then checks again. `--all-campaigns` also rebuilds campaigns that are not listed in `CAMPAIGNS`, see below |
-| `labfrog` | That the LabFrog checkout is 0.10.0 or later. Which Beamtime Setup settings are in `~/labfrog/instance/*.cfg` (names only, never values), and whether DAMNIT answers `/config/health`. Whether DAMNIT's campaign schedule is set, exists and is under 7 days old (name and age only), and whether the review rules are on (`TIME_MATCH_ONE_TO_ONE`, how many `NEVER_SHOT_KINDS`) | nothing: settings are a person's call (item 2) |
+| `labfrog` | That the LabFrog checkout is 0.10.0 or later. Which Beamtime Setup settings are in `~/labfrog/instance/*.cfg` (names only, never values), and whether DAMNIT answers `/config/health`. Whether DAMNIT's campaign schedule is set, exists and is under 7 days old (name and age only), and whether the review rules are on (`TIME_MATCH_ONE_TO_ONE`, how many `NEVER_SHOT_KINDS`), and whether DAMNIT reads shot-aligner's index folder (`ALIGNER_INDEX_DIR`: how many day indexes and decision files, which reviewed dates have no index) | nothing: settings are a person's call (item 2) |
 | `report` | `poe check-shot-intake`, `server-report.sh` (`--quick` when looking only) | also writes `~/deployed-<time>.json` with `report-deployed.sh` |
 
 `--all-campaigns`: the auto-trigger names only campaigns taking shots,
@@ -118,6 +118,37 @@ files still `MISSING` the column.
    ```
    Look at `wrong` at each tolerance: any wrong pair is a silent error.
    Put the table into the plan's results.
+
+9. **shot-aligner's decisions as DAMNIT's evidence (DAMNIT PR #58,
+   rulings R-2026-11-22a/b,
+   [plan-aligner-bridge.md](../plans/plan-aligner-bridge.md)).** Until the
+   shot authority and the watchdog are everywhere, a file whose shot-aligner
+   event a reviewer confirmed attaches in DAMNIT (`aligner_confirmed`). It
+   attaches only when the authority number, the LabFrog record and the Count
+   all name the same shot, and date, time and values agree. Unconfirmed
+   pairs are suggestions. In `~/DAMNIT-web-hzdr/api/.env`:
+   ```bash
+   DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR=/home/tippey/shot-aligner/shot_aligner/index
+   ```
+   Restart `damnit-api` and rebuild (`hzdr-rebuild.py`, as in item 8). After
+   that, a new index or a decision in that folder triggers a rebuild by itself.
+   A day counts only once its **index** is built. The app writes it when the
+   date is opened; from a shell, in `~/shot-aligner`:
+   ```bash
+   uv run --no-sync --no-default-groups shot_aligner/scripts/align.py \
+       --site fwkt-webapps index <date> --if-changed
+   ```
+   The `labfrog` step names the dates that have decisions but no index.
+   **Measure** a day first: the bridge's `attached_wrong` should be 0.
+   ```bash
+   cd ~/DAMNIT-web-hzdr/api
+   uv run --no-sync python scripts/hzdr-evaluate-time-rule.py \
+       ~/shot-aligner/shot_aligner/index/<date>.index.json --rule aligner --tolerance 120
+   ```
+   **Bulk confirm changed too (B1):** "Confirm clear time cases" now offers
+   triggers only, and only when no other shot is within 2 min. On
+   shot-aligner's days the old rule would have offered 328 and 583 wrong
+   files.
 
 ## 3. SciCat: clean up the duplicate datasets
 

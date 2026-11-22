@@ -126,7 +126,7 @@ lineout and image previews remain in their cells.
 ## Review matches: the campaign schedule and the automatic rules
 
 Until every trigger carries the shot authority's number, events arrive
-without one, and three settings decide how much waits in Review matches
+without one, and four settings decide how much waits in Review matches
 (plan: `hzdr/docs/plans/plan-review-automation.md`):
 
 - **`DW_API_HZDR_BUILDER__CAMPAIGN_SCHEDULE`**: LabFrog's
@@ -148,9 +148,35 @@ without one, and three settings decide how much waits in Review matches
   never a shot (test fires); their unmatched events are acknowledged by rule
   and listed under Resolved. Removing a kind reopens them at the next build.
 
-All three apply at the next build: restart `damnit-api` after changing
+- **`DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR`** (rulings R-2026-11-22a/b,
+  `hzdr/docs/plans/plan-aligner-bridge.md`): shot-aligner's index folder,
+  `~/shot-aligner/shot_aligner/index` on fwkt-webapps. A file whose
+  shot-aligner event a reviewer confirmed attaches as `aligner_confirmed`.
+  It must pass these checks:
+  - every piece of evidence present names the same DAMNIT shot: the
+    shot authority's number, the LabFrog record shot-aligner matched the row
+    to, and the row's Count as LabFrog's local count;
+  - LabFrog's time is within the tolerance of the Shotsheet's `Zeit`;
+  - `gvd`, `tod` and `elaser` agree with LabFrog.
+
+  An unconfirmed pair is a suggestion. A failed check waits, naming the
+  check. A day counts once shot-aligner has written its
+  `<date>.index.json`: the app writes it when the date is opened, or
+  `align.py --site fwkt-webapps index <date> --if-changed`. A new index or
+  decision there triggers a rebuild. The `labfrog` step lists the reviewed
+  dates without an index. Score a day with
+  `scripts/hzdr-evaluate-time-rule.py <index> --rule aligner`.
+
+All four apply at the next build: restart `damnit-api` after changing
 them, then rebuild (`scripts/hzdr-rebuild.py`), since a restart builds
 nothing.
+
+**Confirm clear time cases** offers triggers only (plan-aligner-bridge
+B1). It offers a trigger only when no other shot of the campaign is within
+2 min of the closest, which the API's `runner_up_gaps_s` gives. Files are
+never offered, because their instrument clocks run minutes off. On
+shot-aligner's days the earlier rule would have offered 328 and 583 wrong
+files.
 
 ## A new beamtime from LabFrog's Beamtime Setup
 

@@ -323,6 +323,7 @@ step_labfrog() {
     fi
     check_campaign_schedule
     check_review_rules
+    check_aligner_index
 }
 
 # The two Review matches rules (ruling R-2026-11-21) are settings a person
@@ -347,6 +348,39 @@ check_review_rules() {
         ok "DAMNIT never-shot kinds: $kinds listed (NEVER_SHOT_KINDS)"
     else
         ok "DAMNIT never-shot kinds: none listed (set NEVER_SHOT_KINDS once the test-fire kinds are known)"
+    fi
+}
+
+# shot-aligner's day indexes and decisions (plan-aligner-bridge): whether
+# DAMNIT reads them, and which reviewed dates have no index yet (a day counts
+# only once shot-aligner has written <date>.index.json). Paths only.
+check_aligner_index() {
+    local api="$ROOT/DAMNIT-web-hzdr/api" dir missing decided built
+    [ -d "$api" ] || return
+    if ! dir="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings; print(settings.hzdr_builder.aligner_index_dir or "")' \
+        2>/dev/null | tail -1)"; then
+        warn "DAMNIT settings could not be read to check the shot-aligner index folder"
+        return
+    fi
+    if [ -z "$dir" ]; then
+        warn "DAMNIT does not read shot-aligner's decisions (DW_API_HZDR_BUILDER__ALIGNER_INDEX_DIR not set; next-on-server.md item 9)"
+        return
+    fi
+    if [ ! -d "$dir" ]; then
+        fail "DAMNIT shot-aligner index folder is set, but $dir does not exist"
+        return
+    fi
+    decided=$(find "$dir" -maxdepth 1 -name '????_??_??.decisions.json' | wc -l)
+    built=$(find "$dir" -maxdepth 1 -name '????_??_??.index.json' | wc -l)
+    missing=$(for f in "$dir"/????_??_??.decisions.json; do
+        [ -e "$f" ] || continue
+        d=$(basename "$f" .decisions.json)
+        [ -f "$dir/$d.index.json" ] || printf '%s ' "$d"
+    done)
+    ok "DAMNIT reads shot-aligner's decisions: $built day index(es), $decided decision file(s) in $dir"
+    if [ -n "$missing" ]; then
+        warn "reviewed in shot-aligner but no day index yet (open the date, or align.py index <date>): $missing"
     fi
 }
 

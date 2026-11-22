@@ -71,9 +71,11 @@ Two ways through that period:
 1. **Bulk confirm of clear cases** (done, PR #58). The API now gives each
    candidate's gap in the campaign's time zone (`candidate_gaps_s`). Before
    this, LabFrog's naive local times left the browser unable to compute any
-   gap. Where one shot is within 30 s and every other candidate is 2 min or
-   more further, the page lists those events. A person confirms them in one
-   go, each decision noting why. The decisions are stored, so they survive
+   gap. Where one shot is within 30 s and every other shot is 2 min or more
+   further, the page lists those events. Since plan-aligner-bridge B1 that is
+   judged over every shot of the campaign (`runner_up_gaps_s`: A7 leaves one
+   candidate), and only triggers are offered, never files. A person confirms
+   them in one go, each decision noting why. The decisions are stored, so they survive
    when the authority arrives.
 2. **`DW_API_HZDR_BUILDER__TIME_MATCH_AUTOASSIGN=true`** (setting only,
    reversible). This restores the earlier ladder: the builder attaches by

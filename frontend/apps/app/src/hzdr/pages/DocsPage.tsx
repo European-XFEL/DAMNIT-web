@@ -450,15 +450,18 @@ def laser_energy_mj(run, laser_energy_j=None):
                   <List.Item>
                     <b>Ambiguous</b>: an event fits several shots. Compare its
                     number and time with the candidates and confirm one only
-                    when the evidence fits. Where one shot is clearly closest in
-                    time (within 30 s, every other candidate 2 min or more
-                    further), <b>Review the N</b> lists those cases and{' '}
+                    when the evidence fits. Where a trigger&apos;s shot is
+                    clearly closest in time (within 30 s, every other shot 2 min
+                    or more further), <b>Review the N</b> lists those cases and{' '}
                     <b>Confirm these N</b> confirms them together; each decision
                     notes that it was made in bulk and why. A shot marked{' '}
-                    <i>suggested</i> was picked by evidence other than time (the
-                    watchdog named it, or it is the only one without that
-                    instrument&apos;s file); those can be confirmed together
-                    too.
+                    <i>suggested</i> was picked by evidence other than time
+                    (shot-aligner paired it, the watchdog named it, or it is the
+                    only one without that instrument&apos;s file); those can be
+                    confirmed together too. Files are never offered by time:
+                    instrument clocks run minutes off. A file a reviewer
+                    confirmed in shot-aligner attaches by itself, once its
+                    shot-aligner day, the LabFrog record and the Count agree.
                   </List.Item>
                   <List.Item>
                     <b>Unmatched</b>: an event fits no shot. Acknowledge it if

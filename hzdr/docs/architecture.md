@@ -300,14 +300,34 @@ and fallback:
       events never pair by time: a number LabFrog lacks founds its trigger-only
       shot, as under A7. Pairs are found on a snapshot and applied together
       (`hzdr_nexus._pair_time_one_to_one`).
+   6b. With `ALIGNER_INDEX_DIR` (rulings R-2026-11-22a/b, off by default;
+      run before 6a): a file event without a shot number is looked up in
+      shot-aligner's day indexes by (date folder, instrument folder, file
+      name) (`hzdr_aligner.py`). Its shot-aligner event's link names a
+      Shotsheet row. The DAMNIT shot is the one that every piece of evidence
+      present names:
+      - the shot authority's number (`labfrog.authority`);
+      - the LabFrog record shot-aligner matched the row to
+        (`labfrog.matches`);
+      - the row's Count as LabFrog's `local_count` that day, with a counter
+        reset told apart by time.
+
+      Then date, time (LabFrog vs the row's `Zeit`, within the tolerance),
+      and `gvd`/`tod`/`elaser` must agree. A link a reviewer confirmed (index
+      band and decisions ledger) attaches as `aligner_confirmed`, a person's
+      decision (R-2026-11-22a). An unconfirmed one is a suggestion
+      (`shot_aligner`). A failure waits as `aligner_disagrees`,
+      `aligner_check_failed` or `aligner_no_shot`, with `aligner_detail`
+      naming it. A shot never gets a second file of one stream
+      (`hzdr_nexus._apply_aligner_claims`).
 7. Otherwise retain the event as ambiguous or unmatched. Each such event
    says why (`review_reason`: `no_time`, `no_labfrog_record`,
    `no_shot_in_tolerance`, `several_shots_in_tolerance`,
    `shot_has_other_event`, `attribution_disagrees`, `time_rule_off`,
-   `number_held_by_several`, `identity_conflict`). An ambiguous event may
-   carry a `suggested_shot_key` from evidence other than time
-   (`watchdog_attribution`, `instrument_free`), which the page preselects
-   and a person confirms.
+   `number_held_by_several`, `identity_conflict`, and the four `aligner_*`
+   reasons of 6b). An ambiguous event may carry a `suggested_shot_key` from
+   evidence other than time (`watchdog_attribution`, `instrument_free`,
+   `shot_aligner`), which the page preselects and a person confirms.
 
 Steps 4-6 attach only when time auto-assignment is on; by default they propose.
 Step 6a attaches only with `TIME_MATCH_ONE_TO_ONE`, and never when time
