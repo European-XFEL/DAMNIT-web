@@ -152,7 +152,27 @@ files. The bridge then attaches what a reviewer confirmed. See
      `--aligner-build`);
    - the report again.
 
-4. **Review in shot-aligner what the report says still waits.** Only 12-03
+4. **Check in the browser:** open Vanlife, select a 12-03 shot, and preview
+   a camera frame from its container (the side panel lists
+   `<stem>/...` datasets). The frames are there only after the worker ran
+   with the raw files, which is step 3.
+5. **Package it** (plan-campaign-package). This writes `PACKAGE.json`,
+   `README.md` and NDS's verdict beside the master, and copies nothing:
+   ```bash
+   uv run --no-sync python scripts/hzdr-package-campaign.py \
+       --master /home/tippey/mnt/bigdata/HPLexp/nexus/Vanlife_12.2025/Vanlife_12.2025.nxs \
+       --validate-python <nds>/.venv/bin/python --checksums
+   ```
+   - The validation comes from `VALIDATION_PYTHON` in `api/.env`, or from
+     `--validate-python`. Without either the package says *not validated*.
+   - `--checksums` reads every file once and writes `SHA256SUMS`.
+   - `--tar <path>.tar` also writes one archive.
+   - `hzdr-campaign-backfill.py --apply --package` does the plain version
+     (no checksums, no archive) after its other steps.
+
+   To hand the campaign out, copy the campaign folder, or give the `.tar`.
+   Open the master with `silx view`, and one container with h5web or myhdf5.
+6. **Review in shot-aligner what the report says still waits.** Only 12-03
    is confirmed so far. A confirmed day attaches at the next build, which a
    new decision triggers by itself. Run the report again to see it.
 

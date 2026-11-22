@@ -32,7 +32,9 @@ It ends with the next step.
    when it asks to have containers linked (exit 3);
 4. with ``--aligner-build``, ``hzdr-compare-containers.py`` against
    shot-aligner's containers;
-5. the report again.
+5. with ``--package``, ``hzdr-package-campaign.py`` on each master (a
+   manifest, a README and NDS's verdict beside it);
+6. the report again.
 
 Reviewing a day and deciding which dates belong to a campaign are a
 person's job: the report names them and the script never does them.
@@ -310,6 +312,7 @@ def apply(
     states: list[DateState],
     *,
     aligner_build: Path | None = None,
+    package: bool = False,
     run: Runner = run_command,
 ) -> int:
     """The steps in order; the number of the step that failed, else 0."""
@@ -326,6 +329,12 @@ def apply(
         failed = _containers(campaign, master, rebuild, aligner_build, run)
         if failed:
             return failed
+        if package:
+            # plan-campaign-package P4: the manifest and README, NDS's verdict.
+            packager = [sys.executable, str(SCRIPTS / "hzdr-package-campaign.py")]
+            if run([*packager, "--master", str(master)], SCRIPTS.parent) != 0:
+                print(f"FAIL step 5: {campaign} was not packaged, or is not valid")
+                return 5
     return 0
 
 
@@ -445,6 +454,11 @@ def main(argv: list[str] | None = None) -> int:
         help="shot-aligner's container folder to compare with",
     )
     parser.add_argument(
+        "--package",
+        action="store_true",
+        help="with --apply: package each campaign (hzdr-package-campaign.py)",
+    )
+    parser.add_argument(
         "--shot-aligner", type=Path, default=Path.home() / "shot-aligner"
     )
     parser.add_argument("--site", default="fwkt-webapps", help="shot-aligner's --site")
@@ -478,7 +492,9 @@ def main(argv: list[str] | None = None) -> int:
     states = date_states(config)
     print_report(states)
     if args.apply:
-        failed = apply(config, states, aligner_build=args.aligner_build)
+        failed = apply(
+            config, states, aligner_build=args.aligner_build, package=args.package
+        )
         if failed:
             return 1
         print("\nAfter the steps:")

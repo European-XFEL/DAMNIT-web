@@ -67,6 +67,7 @@ python api/scripts/hzdr-hdf5-builder.py --experiment-id <id> --campaign-timezone
     --labfrog-sqlite <c>.sqlite --trigger-jsonl <triggers>.jsonl --output-nexus <c>.nxs
 python api/scripts/hzdr-container-worker.py --master <c>.nxs   # shot containers into <c's folder>/shots/ (or --output-root)
 python api/scripts/hzdr-compare-containers.py --damnit <campaign folder> --aligner <shot-aligner build>   # phase 6: diff against shot-aligner's containers
+python api/scripts/hzdr-package-campaign.py --master <c>.nxs [--checksums] [--tar <c>.tar]   # PACKAGE.json + README + NDS verdict beside the master; copies nothing
 python api/scripts/hzdr-campaign-backfill.py [--apply]   # a campaign from shot-aligner's indexes: report, then index/rebuild/containers/compare
 python api/scripts/hzdr-evaluate-time-rule.py <shot-aligner>/shot_aligner/index/<date>.index.json --truth matched   # score the one-to-one time rule on a real shot day
 python api/scripts/hzdr-local-acceptance.py        # emulator events through Confirm Matches, no broker

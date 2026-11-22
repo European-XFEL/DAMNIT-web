@@ -54,23 +54,46 @@ first, a box ticked in the commit that does the work.
 ## Checklist
 
 - [x] Plan written first (this file)
-- [ ] **P1 to P3:**
+- [x] **P1 to P3:**
   - `hzdr-package-campaign.py`;
   - tests: the manifest and README on a built fixture campaign; a dangling
     link refused; `--checksums` (`sha256sum -c` format); `--tar` (unpacked,
     the master's links resolve and h5py follows them); the validation
     outcomes (passed, failed, not run) with the gate replaced by a stub.
-- [ ] **P4:** `--package` in the console script; a test.
-- [ ] **Run for real here** on Vanlife 12-03: build, containers, package
+- [x] **P4:** `--package` in the console script; a test.
+- [x] **Run for real here** on Vanlife 12-03: build, containers, package
       with `--checksums --tar`, then open the unpacked master with h5py
       through its links.
-- [ ] **Docs:**
+- [x] **Docs:**
   - `deploy-notes.md` step 7 (package Vanlife, and check a container
     preview in the shot panel);
   - `operations.md`, `CLAUDE.md`, `hzdr/CHANGELOG.md`, the docs index.
-- [ ] **Gates:** ruff, pyright (193), pytest, acceptance.
+- [x] **Gates:** ruff, pyright (193), pytest, acceptance.
 - [ ] **GitLab notes, PR description.**
 
 ## Results
 
-(filled in by the commits)
+- **Run for real here:** Vanlife 12-03, built and with its containers
+  written by the console script, then
+  `hzdr-package-campaign.py --checksums --tar`:
+  - the package: 150 shots, 150 containers, 12.9 MB (the containers hold no
+    frames here, because the raw files are on bigdata);
+  - unpacked, `sha256sum -c SHA256SUMS` passes, and h5py follows the
+    master's link into a container;
+  - `hzdr-campaign-backfill.py --apply --package` packages after its steps
+    and exits 0.
+
+  NDS is not installed here, so the verdict was "not validated". The three
+  outcomes are tested with the gate replaced by a stub.
+- **Tests:** 6 in `test_hzdr_package_campaign.py`:
+  - the manifest and README;
+  - a dangling link refused;
+  - checksums and the tar unpacked and followed;
+  - valid, not valid and not validated.
+
+  Also 1 more in `test_hzdr_campaign_backfill.py` (`--package` as step 5).
+- **Gates:**
+  - ruff is clean;
+  - pyright is at 193;
+  - pytest: 1,141 passed, 33 skipped;
+  - local acceptance is all OK, and `--real-topology` passed.

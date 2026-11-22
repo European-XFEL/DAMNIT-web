@@ -105,6 +105,7 @@ AREAS = (
             f"{T}/test_hzdr_aligner.py",
             f"{T}/test_hzdr_campaign_backfill.py",
             f"{T}/test_hzdr_quiet_builds.py",
+            f"{T}/test_hzdr_package_campaign.py",
         ),
         watch_next=(
             "Real SciCat and PID reconciliation, which the offline suite can only "

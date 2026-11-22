@@ -226,6 +226,25 @@ write:
 A code update, a new event or decision, a new container or a deleted master
 each publishes again.
 
+## Packaging a campaign to hand out
+
+`scripts/hzdr-package-campaign.py --master <campaign>.nxs`
+(`hzdr/docs/plans/plan-campaign-package.md`). The campaign folder is the
+package: the master and `shots/`, with relative links. The script copies
+nothing; beside the master it writes:
+- `PACKAGE.json`: every file with its size, the counts, damnit-api version
+  and commit, and NDS's validation verdict;
+- `README.md`: how to open it. silx for the master; h5web or myhdf5 for one
+  container, since they do not follow links.
+
+Options:
+- `--checksums` adds sha256 and `SHA256SUMS`;
+- `--tar <path>` writes one archive.
+
+Both read every byte, so use them for a hand-out, not routinely. A master
+linking a missing container is refused (exit 2). If NDS's gate fails, the
+package is marked not valid (exit 1).
+
 ## A new beamtime from LabFrog's Beamtime Setup
 
 Since 2026-11-11 a campaign is prepared in LabFrog under Form Builder >

@@ -217,3 +217,12 @@ def test_an_index_older_than_its_decisions_is_marked_and_rewritten(index_dir, tm
     assert module.apply(config, states, run=run) == 0
     assert _names(calls)[0] == "align.py"
     assert calls[0][0][-3:] == ["index", "2025_12_03", "--if-changed"]
+
+
+def test_package_is_the_last_step_when_asked(index_dir, tmp_path):
+    module = _module()
+    config = _config(module, index_dir, tmp_path, dates=("2025_12_03",))
+    calls, run = _record({"hzdr-package-campaign.py": 1})
+    failed = module.apply(config, module.date_states(config), package=True, run=run)
+    assert _names(calls)[-1] == "hzdr-package-campaign.py"
+    assert failed == 5

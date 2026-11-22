@@ -30,6 +30,18 @@ date, time and the details both record. Plan:
 - On shot-aligner's 2025-12-03 day all 2,544 shot files attach to the
   reviewed shot, with none wrong (`hzdr-evaluate-time-rule.py --rule aligner`).
 
+### A campaign packaged on bigdata, ready to hand out
+Ruling R-2026-11-22i. Plan: `hzdr/docs/plans/plan-campaign-package.md`.
+- **`api/scripts/hzdr-package-campaign.py --master <c>.nxs`** writes
+  `PACKAGE.json` (every file with its size, the counts, version, bridge
+  profile, NDS's validation verdict) and `README.md` (silx for the master,
+  h5web or myhdf5 for one container) beside the master. It copies nothing.
+- `--checksums` adds sha256 and `SHA256SUMS`, and `--tar` writes one archive.
+- A dangling container link is refused, and a failed NDS gate marks the
+  package not valid.
+- `hzdr-campaign-backfill.py --apply --package` packages each campaign
+  after its steps.
+
 ### Quiet builds: an unchanged campaign is not rewritten on the share
 Ruling R-2026-11-22h ("not too much reading across apps, servers and drives").
 Plan: `hzdr/docs/plans/plan-quiet-builds.md`.
