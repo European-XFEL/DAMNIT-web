@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -265,6 +266,25 @@ def build(
         for shot in shots:
             shot["data_products"].extend(products_by_shot.get(shot["shot_key"], []))
 
+    # plan-quiet-builds Q1: a campaign whose result is what was published last
+    # time is not rewritten on the share (nor its catalog entry or SciCat).
+    stamp_path = output_nexus.with_name(f".{output_nexus.name}.build-stamp.json")
+    digest = _result_digest(
+        args,
+        experiment_id=experiment_id,
+        shots=shots,
+        events=normalized_events,
+        output_nexus=output_nexus,
+        merge_catalog=merge_catalog,
+        catalog_title=catalog_title,
+    )
+    if not getattr(args, "force", False) and _unchanged(
+        stamp_path, digest, output_nexus, sources_file
+    ):
+        print(f"Canonical NeXus ({experiment_id}): unchanged, not rewritten")
+        args.published = False
+        return output_nexus, sources_file
+
     # Reconciliation above only reads inputs; only the publish step below
     # touches this campaign's shared output files, so that is what a second
     # concurrent invocation must not be allowed to race on.
@@ -304,7 +324,95 @@ def build(
             title=catalog_title,
             never_shot_kinds=getattr(args, "never_shot_kind", None) or (),
         )
+        _write_stamp(stamp_path, digest, output_nexus)
     return output_nexus, sources_file
+
+
+#: What writes the published files: a change to any is never skipped (Q1).
+_WRITER_CODE = (
+    "src/damnit_api/metadata/hzdr_nexus.py",
+    "src/damnit_api/metadata/hzdr_sources.py",
+    "src/damnit_api/metadata/hzdr_aligner.py",
+    "src/damnit_api/metadata/hzdr_event.py",
+    "scripts/hzdr-hdf5-builder.py",
+)
+
+
+def _stat(path: Path | None) -> list[int] | None:
+    if path is None:
+        return None
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return [stat.st_size, stat.st_mtime_ns]
+
+
+def _code_digest() -> str:
+    api = Path(__file__).resolve().parents[1]
+    digest = hashlib.sha256()
+    for name in _WRITER_CODE:
+        digest.update(name.encode())
+        digest.update((api / name).read_bytes())
+    return digest.hexdigest()
+
+
+def _result_digest(
+    args: argparse.Namespace,
+    *,
+    experiment_id: str,
+    shots: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+    output_nexus: Path,
+    merge_catalog: bool,
+    catalog_title: str | None,
+) -> str:
+    """One sha256 of everything the publish would write (plan-quiet-builds Q1)."""
+    payload = {
+        "experiment_id": experiment_id,
+        "source_key": args.source_key,
+        "shots": shots,
+        "events": events,
+        "laser": _laser_config(),
+        "never_shot_kinds": sorted(getattr(args, "never_shot_kind", None) or ()),
+        "title": catalog_title,
+        "merge": merge_catalog,
+        "labfrog_nexus": _stat(args.labfrog_nexus),
+        # The containers in place, which the master links: the worker updates
+        # its manifest whenever it writes or removes one.
+        "containers": _stat(output_nexus.parent / "shots" / ".build-manifest.json"),
+        "code": _code_digest(),
+    }
+    text = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def _unchanged(
+    stamp_path: Path, digest: str, output_nexus: Path, sources_file: Path
+) -> bool:
+    """Published from this very result, and the files are still as written."""
+    try:
+        stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return (
+        isinstance(stamp, dict)
+        and stamp.get("digest") == digest
+        and stamp.get("master") == _stat(output_nexus)
+        and sources_file.is_file()
+    )
+
+
+def _write_stamp(stamp_path: Path, digest: str, output_nexus: Path) -> None:
+    try:
+        temporary = stamp_path.with_name(f"{stamp_path.name}.{os.getpid()}.tmp")
+        temporary.write_text(
+            json.dumps({"digest": digest, "master": _stat(output_nexus)}),
+            encoding="utf-8",
+        )
+        temporary.replace(stamp_path)
+    except OSError as error:  # without a stamp the next build only publishes again
+        print(f"Build stamp not written: {error}", file=sys.stderr)
 
 
 # Per-campaign inputs that --output-root derives itself; naming one as well
@@ -473,7 +581,8 @@ def build_all(args: argparse.Namespace) -> int:
             print(f"Build failed for campaign {campaign}:", file=sys.stderr)
             traceback.print_exc()
             continue
-        print(f"Canonical NeXus ({campaign}): {output_nexus}")
+        if getattr(campaign_args, "published", True):
+            print(f"Canonical NeXus ({campaign}): {output_nexus}")
     print(f"DAMNIT source catalog: {sources_file}")
     return failures
 
@@ -749,6 +858,14 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help=(
+            "Publish even when the result equals the last published one "
+            "(plan-quiet-builds: an unchanged campaign is otherwise not rewritten)."
+        ),
+    )
+    parser.add_argument(
         "--aligner-cache-dir",
         type=Path,
         default=None,
@@ -814,8 +931,9 @@ def main() -> None:
     if multi_only:
         parser.error(", ".join(multi_only) + " only apply with --output-root")
     output_nexus, sources_file = build(args)
-    print(f"Canonical NeXus: {output_nexus}")
-    print(f"DAMNIT source catalog: {sources_file}")
+    if getattr(args, "published", True):
+        print(f"Canonical NeXus: {output_nexus}")
+        print(f"DAMNIT source catalog: {sources_file}")
 
 
 if __name__ == "__main__":

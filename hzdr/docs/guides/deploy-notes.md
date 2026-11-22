@@ -46,6 +46,12 @@ bash ~/DAMNIT-web-hzdr/hzdr/scripts/next-on-server.sh --apply
 - rebuilds the campaigns;
 - runs the checks (the `labfrog` step).
 
+**Quiet builds** ([plan-quiet-builds.md](../plans/plan-quiet-builds.md)): a
+campaign whose result has not changed is no longer rewritten on the share.
+The build log says `Canonical NeXus (<campaign>): unchanged, not rewritten`.
+A new event for today's campaign therefore no longer rewrites Vanlife or any
+other old campaign. `hzdr-rebuild.py --force` rewrites them all anyway.
+
 ### 3. A setting changed later?
 
 A restart builds nothing, so after any later change to `api/.env`:
@@ -161,8 +167,12 @@ shot-aligner.
 
 ### Not part of this deploy
 
-- **Shot containers** (`CONTAINERS_ENABLED`): only once you decide to turn
-  them on, and campaign output phase 6 first ([next-on-server.md](next-on-server.md) item 7).
+- **Shot containers: keep `CONTAINERS_ENABLED` off.** With it on, the
+  container worker checks every raw file on bigdata before and after every
+  build, for every campaign. For this year's campaigns the console script
+  runs the worker only when you ask (`--apply`). Turning it on later is the
+  go-live checklist ([next-on-server.md](next-on-server.md) item 7, phase 6
+  first).
 - **More of this year's campaigns:** each is one more entry in
   `ALIGNER_CAMPAIGNS`, once its days are indexed and reviewed in
   shot-aligner.

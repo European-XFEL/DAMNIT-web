@@ -327,7 +327,12 @@ catalogue by folder alias), made at build time, never spooled
 (`hzdr_aligner.backfill`); a listed campaign is built in multi-campaign mode
 without an export or spool. Each parsed day is stored in `.aligner-cache/`
 beside the catalog (`ALIGNER_CACHE_DIR`), keyed by the index's and decisions'
-size and mtime, and a build reads only the dates its events fall on. Review events carry `review_reason`, `aligner_detail` and,
+size and mtime, and a build reads only the dates its events fall on. A
+campaign whose result equals the last published one is not rewritten
+(`.<name>.nxs.build-stamp.json` beside the master: the sha256 of the shots,
+events, laser constants, containers' manifest and the writing code;
+`--force` / `hzdr-rebuild.py --force` publishes anyway; ruling R-2026-11-22h,
+[plan-quiet-builds.md](hzdr/docs/plans/plan-quiet-builds.md)). Review events carry `review_reason`, `aligner_detail` and,
 from non-time evidence, `suggested_shot_key`/`suggestion_reason`; the review
 route adds `candidate_gaps_s`, `runner_up_gaps_s` (the nearest other shot
 over the whole source, which the bulk time choice needs since A7 leaves one

@@ -30,6 +30,20 @@ date, time and the details both record. Plan:
 - On shot-aligner's 2025-12-03 day all 2,544 shot files attach to the
   reviewed shot, with none wrong (`hzdr-evaluate-time-rule.py --rule aligner`).
 
+### Quiet builds: an unchanged campaign is not rewritten on the share
+Ruling R-2026-11-22h ("not too much reading across apps, servers and drives").
+Plan: `hzdr/docs/plans/plan-quiet-builds.md`.
+- Every build used to rewrite every campaign's master and catalog entry on
+  bigdata. Now a campaign whose result equals the last published one prints
+  `unchanged, not rewritten` and writes nothing: no NeXus file, no catalog
+  entry, no SciCat.
+- The stamp (`.<name>.nxs.build-stamp.json`) covers the shots, events, laser
+  constants, never-shot kinds, the LabFrog NeXus source, the containers'
+  manifest and the code that writes the files.
+- `--force` and `hzdr-rebuild.py --force` publish anyway.
+- `CONTAINERS_ENABLED` stays off. The console script runs the worker on
+  request.
+
 ### One console script per campaign, and the parsed indexes stored
 Rulings R-2026-11-22f/g. Plan:
 `hzdr/docs/plans/plan-backfill-store-and-console.md`.

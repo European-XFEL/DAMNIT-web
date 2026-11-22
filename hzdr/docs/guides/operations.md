@@ -201,6 +201,31 @@ never offered, because their instrument clocks run minutes off. On
 shot-aligner's days the earlier rule would have offered 328 and 583 wrong
 files.
 
+## What reads and writes the share, and when
+
+Ruling R-2026-11-22h, `hzdr/docs/plans/plan-quiet-builds.md`. The goal is
+little reading across apps, servers and drives.
+
+| Who | What | Where | When |
+| --- | --- | --- | --- |
+| Builder, shot-aligner days | the listed days' index and decisions | `~/shot-aligner` (local) | each build; only the dates it needs, stored in `.aligner-cache/` after the first read |
+| Trigger's watcher | size and mtime of exports and index files | curated root, local | every `LABFROG_POLL_SECONDS` |
+| Builder, publishing | the campaign's master and catalog entry | bigdata | **only when the campaign's result changed** (`.<name>.nxs.build-stamp.json`); `hzdr-rebuild.py --force` for all |
+| Container worker | one stat per raw file, contents only to rewrite a container | bigdata | with `CONTAINERS_ENABLED` (keep off), or `hzdr-campaign-backfill.py --apply` |
+| `align.py index` | the date folder | bigdata | the console script, missing or stale days only |
+| Phase 6 compare | both sides' containers | bigdata | when asked (`--aligner-build`) |
+
+A skipped campaign keeps its catalog entry, because a multi-campaign build
+replaces only its own. The stamp is the sha256 of everything the build would
+write:
+- the shots and events, laser constants and never-shot kinds;
+- the LabFrog NeXus source;
+- the containers' manifest;
+- the code that writes the files.
+
+A code update, a new event or decision, a new container or a deleted master
+each publishes again.
+
 ## A new beamtime from LabFrog's Beamtime Setup
 
 Since 2026-11-11 a campaign is prepared in LabFrog under Form Builder >

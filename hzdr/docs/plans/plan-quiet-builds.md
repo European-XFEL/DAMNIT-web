@@ -51,7 +51,7 @@ Vanlife's master, and every other campaign's, on the share.
 ## Checklist
 
 - [x] Plan written first (this file)
-- [ ] **Q1:**
+- [x] **Q1:**
   - the stamp, written after a publish, and the skip;
   - `--force` on the builder and on `hzdr-rebuild.py`, which the console
     script passes on its relink build;
@@ -60,15 +60,41 @@ Vanlife's master, and every other campaign's, on the share.
     publishes;
   - multi-campaign: one campaign skips and another publishes, and the
     catalog keeps both.
-- [ ] **Measured:** Vanlife built twice; the second does not touch the
+- [x] **Measured:** Vanlife built twice; the second does not touch the
       NeXus file (mtime unchanged).
-- [ ] **Docs:**
+- [x] **Docs:**
   - `deploy-notes.md` (keep `CONTAINERS_ENABLED` off);
   - `operations.md` (what reads the share, and when), `CLAUDE.md`,
     `hzdr/CHANGELOG.md`.
-- [ ] **Gates:** ruff, pyright (193), pytest, acceptance.
+- [x] **Gates:** ruff, pyright (193), pytest, acceptance.
 - [ ] **GitLab notes, PR description.**
 
 ## Results
 
-(filled in by the commits)
+- **Q1:** the stamp is `.<name>.nxs.build-stamp.json` beside the master,
+  holding the digest and the master's size and mtime. A skip also needs the
+  catalog file to exist.
+  - Single-campaign and multi-campaign builds both print
+    `Canonical NeXus (<campaign>): unchanged, not rewritten`, and no longer
+    print the path line for a campaign they did not write.
+  - `--force` exists on the builder and on `hzdr-rebuild.py`. The console
+    script needs no `--force`: a container the worker writes changes the
+    manifest, so the relink build publishes.
+- **Measured:** Vanlife built twice. The second build leaves the NeXus file's
+  and the catalog's mtimes unchanged.
+  - Run twice with `--apply`: the first writes 150 containers, and the
+    relink build links all 150. The second build is unchanged, and the
+    worker finds all 150 up to date without reading a file.
+  - Multi-campaign: a new trigger for another campaign rewrites that one
+    only, and Vanlife is unchanged; the catalog keeps both.
+- **Tests:** 7 in `test_hzdr_quiet_builds.py`:
+  - a second identical build skips, and `--force` publishes;
+  - a new event, a new decision, a new container manifest or a removed
+    master each publishes;
+  - a code change changes the digest;
+  - multi-campaign: one campaign skips, the other publishes.
+- **Gates:**
+  - ruff is clean;
+  - pyright is at 193;
+  - pytest: 1,134 passed, 33 skipped;
+  - local acceptance is all OK, and `--real-topology` passed.

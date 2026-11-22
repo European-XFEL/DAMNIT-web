@@ -13,6 +13,10 @@ Run from ``api/`` as the user who owns the output (on fwkt-webapps: tippey)::
     uv run --no-sync python scripts/hzdr-rebuild.py               # rebuild
     uv run --no-sync python scripts/hzdr-rebuild.py --all-exports # every export
     uv run --no-sync python scripts/hzdr-rebuild.py --check-only  # layout check only
+    uv run --no-sync python scripts/hzdr-rebuild.py --force       # rewrite all
+
+A campaign whose result equals the last published one is not rewritten
+(plan-quiet-builds); ``--force`` rewrites it anyway.
 
 ``--all-exports`` adds every campaign that has an export
 (``<CURATED_ROOT>/<c>/<c>.sqlite``). A named campaign's export may claim
@@ -109,6 +113,11 @@ def main(argv: list[str] | None = None) -> int:
         help="also build every campaign that has a LabFrog export",
     )
     parser.add_argument(
+        "--force",
+        action="store_true",
+        help="publish every campaign, even one whose result has not changed",
+    )
+    parser.add_argument(
         "--check-only",
         action="store_true",
         help="skip the build, only check the layout",
@@ -135,6 +144,8 @@ def main(argv: list[str] | None = None) -> int:
         print("--campaign/--all-exports need multi-campaign mode (OUTPUT_ROOT).")
         return 2
     cmd = _with_campaigns(cmd, extra)
+    if args.force:
+        cmd.append("--force")
 
     if not args.check_only:
         print("$ " + shlex.join(cmd), flush=True)
