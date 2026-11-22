@@ -430,6 +430,8 @@ export function timeChoiceNote(gapS: number) {
 export const SUGGESTION_TEXT: Record<string, string> = {
   watchdog_attribution: 'the watchdog named this shot',
   instrument_free: "the only candidate without this instrument's file yet",
+  shot_aligner:
+    'shot-aligner paired it (clock-corrected, by sequence), not yet confirmed there',
 }
 
 /**
@@ -479,6 +481,14 @@ export const REVIEW_REASON_TEXT: Record<string, string> = {
     'Its shot number is held by more than one shot. Pick the right day and record.',
   identity_conflict:
     'Its identity points at more than one shot. Check the event in the flow monitor.',
+  aligner_unconfirmed:
+    'shot-aligner paired this file, but nobody has confirmed the pair there yet. Confirm it here, or confirm the day in shot-aligner and it attaches at the next build.',
+  aligner_disagrees:
+    "shot-aligner's pairing and LabFrog name different shots (authority number, record or Count). Check the Shotsheet and LabFrog.",
+  aligner_check_failed:
+    "shot-aligner's shot and the LabFrog record do not agree on the date, the time or a value both record. Check which is right.",
+  aligner_no_shot:
+    'shot-aligner paired this file with a Shotsheet row that no LabFrog record matches yet. Wait for the export, or check the Count.',
 }
 
 /** The page's sections; a count chip jumps to `<id>-heading`. */

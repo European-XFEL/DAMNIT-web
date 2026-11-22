@@ -572,6 +572,31 @@ describe('review reasons', () => {
       'No LabFrog shot within the time tolerance'
     )
   })
+
+  it("names shot-aligner's check that failed (plan-aligner-bridge)", () => {
+    withMantine(
+      <UnmatchedEventsCard
+        events={[
+          makeEvent({
+            match_status: 'unmatched',
+            candidate_shot_keys: [],
+            review_reason: 'aligner_check_failed',
+            aligner_detail:
+              'shot-aligner 2025-12-03 set1:2: time: LabFrog +900 s from the Shotsheet Zeit',
+          }),
+        ]}
+        busyKey={null}
+        onDismiss={vi.fn()}
+        onDismissMany={vi.fn()}
+      />
+    )
+    expect(screen.getByTestId('review-reason').textContent).toContain(
+      'do not agree on the date, the time or a value'
+    )
+    expect(screen.getByTestId('aligner-detail').textContent).toContain(
+      'set1:2: time'
+    )
+  })
 })
 
 describe('campaign suggestions for unassigned shots', () => {

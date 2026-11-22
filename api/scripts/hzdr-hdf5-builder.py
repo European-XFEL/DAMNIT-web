@@ -25,6 +25,7 @@ from damnit_api.consumer.campaign_builds import (
     stamp_campaign,
     unassigned_spool_files,
 )
+from damnit_api.metadata.hzdr_aligner import load_aligner_claims
 from damnit_api.metadata.hzdr_event import UNASSIGNED_EXPERIMENT_ID
 from damnit_api.metadata.hzdr_nexus import (
     discover_labfrog_data_products,
@@ -217,6 +218,12 @@ def build(
             *(getattr(args, "experiment_rulings", None) or []),
         ])
     )
+    aligner_index_dir = getattr(args, "aligner_index_dir", None)
+    # plan-aligner-bridge: shot-aligner's day indexes, read fresh each build
+    # (a confirmation made there since the last build counts at once).
+    aligner_claims = (
+        load_aligner_claims(aligner_index_dir) if aligner_index_dir else None
+    )
     shots, normalized_events = reconcile_canonical_shots(
         events,
         experiment_id=experiment_id,
@@ -228,6 +235,7 @@ def build(
         experiment_rulings=rulings,
         time_match_autoassign=getattr(args, "time_match_autoassign", False),
         time_match_one_to_one=getattr(args, "time_match_one_to_one", False),
+        aligner_claims=aligner_claims,
         include_trigger_only=True,
         resolution_labfrog_shots=resolution_labfrog_shots,
     )
@@ -656,6 +664,19 @@ def main() -> None:
             "two are each other's only neighbour within --match-tolerance-s in "
             "the event's stream (shot-aligner's one-to-one rule, ruling "
             "R-2026-11-21). Anything less stays in review."
+        ),
+    )
+    parser.add_argument(
+        "--aligner-index-dir",
+        type=Path,
+        default=None,
+        help=(
+            "shot-aligner's index folder (<date>.index.json and "
+            "<date>.decisions.json). A file whose shot-aligner event a reviewer "
+            "confirmed attaches to the one shot its authority number, LabFrog "
+            "record and Count name, once date, time and values agree "
+            "(aligner_confirmed); an unconfirmed one is suggested "
+            "(plan-aligner-bridge)."
         ),
     )
     parser.add_argument(

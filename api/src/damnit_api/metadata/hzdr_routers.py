@@ -863,7 +863,8 @@ def _runner_up_gaps(
         event_time = parse_datetime(event.timestamp)
         if not row or event_time is None:
             continue
-        closest = min(row, key=lambda key: abs(row[key]))
+        sizes = {key: abs(gap) for key, gap in row.items()}
+        closest = min(sizes, key=sizes.__getitem__)
         at = bisect.bisect_left(times, event_time)
         # The two nearest on each side cover the nearest that is not `closest`.
         near = [

@@ -209,6 +209,9 @@ class HZDRReviewEvent(BaseModel):
     # (hzdr_nexus.SUGGESTION_REASONS); shown and preselected, never applied.
     suggested_shot_key: str | None = None
     suggestion_reason: str | None = None
+    # What shot-aligner's claim on this file came to (plan-aligner-bridge):
+    # its day, event and row, the evidence, and the check that failed.
+    aligner_detail: str | None = None
 
 
 class HZDRSourceEvent(BaseModel):

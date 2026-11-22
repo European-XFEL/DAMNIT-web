@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import h5py
 import numpy as np
 
+from .hzdr_aligner import AlignerClaim, FileKey, claim_for_event
 from .hzdr_event import (
     EVENT_REQUIRED_FIELDS,
     METADATA_KEY_REGISTRY,
@@ -497,14 +498,19 @@ MATCH_RANK = {
     "time_one_to_one": 3,
     "shot_number_time_window": 4,
     "exact_day_shot_number_time_window": 5,
+    # A file whose shot-aligner event a reviewer confirmed, mapped to one
+    # DAMNIT shot by authority / record / Count and checked by date, time and
+    # values (ruling R-2026-11-22a, plan-aligner-bridge). A person's decision,
+    # so above the time ranks; below the numbers, which are identity.
+    "aligner_confirmed": 6,
     # The authoritative number names exactly one shot, on another day or with
     # no event day: attached on the number alone (plan W6.2), only while the
     # time-based ranks are off, i.e. while numbers are trusted as identity.
-    "shot_number": 6,
-    "exact_day_shot_number": 7,
-    "event_identity": 8,
-    "exact_transport_position": 9,
-    "exact_kafka_event_id": 10,
+    "shot_number": 7,
+    "exact_day_shot_number": 8,
+    "event_identity": 9,
+    "exact_transport_position": 10,
+    "exact_kafka_event_id": 11,
 }
 
 
@@ -2030,6 +2036,7 @@ def reconcile_canonical_shots(  # noqa: C901
     include_trigger_only: bool = True,
     resolution_labfrog_shots: list[dict[str, Any]] | None = None,
     time_match_one_to_one: bool = False,
+    aligner_claims: dict[FileKey, AlignerClaim] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Link normalized source events to canonical shots.
 
@@ -2053,6 +2060,11 @@ def reconcile_canonical_shots(  # noqa: C901
     left the way shot-aligner does: an event without a shot number and a
     LabFrog shot that are each other's only neighbour within the tolerance,
     within the event's stream (``_pair_time_one_to_one``).
+
+    ``aligner_claims`` (``hzdr_aligner.load_aligner_claims``, plan
+    aligner-bridge) runs first among those two: a file whose shot-aligner
+    event a reviewer confirmed attaches to the one DAMNIT shot its evidence
+    names (``_apply_aligner_claims``); an unconfirmed one is suggested.
     """
     labfrog_shots = labfrog_shots or []
     trigger_only_keys: set[str] = set()
@@ -2119,6 +2131,14 @@ def reconcile_canonical_shots(  # noqa: C901
             ):
                 match["match_quality"] = quality
                 match["match_time_delta_s"] = delta
+        if aligner_claims:
+            _apply_aligner_claims(
+                normalized_events,
+                canonical,
+                aligner_claims,
+                match_tolerance_s=match_tolerance_s,
+                campaign_timezone=campaign_timezone,
+            )
         if time_match_one_to_one and not time_match_autoassign:
             _pair_time_one_to_one(
                 normalized_events,
@@ -3731,6 +3751,7 @@ def _review_event_api_record(event: dict[str, Any]) -> dict[str, Any]:
             "review_reason",
             "suggested_shot_key",
             "suggestion_reason",
+            "aligner_detail",
         )
         if event.get(key) is not None
     }
@@ -4516,6 +4537,248 @@ def _pair_time_one_to_one(
     return len(pairs)
 
 
+#: Shotsheet values LabFrog records too (plan-aligner-bridge B4): the
+#: Shotsheet column -> the path in a LabFrog-backed shot's metadata.
+ALIGNER_DETAIL_FIELDS: dict[str, tuple[str, ...]] = {
+    "gvd": ("gvd",),
+    "tod": ("tod",),
+    "elaser": ("laser", "pulse_energy"),
+}
+
+
+def _metadata_at(metadata: dict[str, Any], path: tuple[str, ...]) -> Any:
+    value: Any = metadata
+    for part in path:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(part)
+    return value
+
+
+def _values_agree(left: Any, right: Any) -> bool:
+    try:
+        a, b = float(left), float(right)
+    except (TypeError, ValueError):
+        return str(left).strip() == str(right).strip()
+    return abs(a - b) <= max(1e-9, 1e-3 * max(abs(a), abs(b)))
+
+
+def _row_datetime(claim: AlignerClaim, campaign_timezone: str) -> datetime | None:
+    """The Shotsheet row's typed time (Zeit) on the claim's day, zoned."""
+    if not claim.row_time:
+        return None
+    return parse_datetime(
+        f"{claim.date}T{claim.row_time}", naive_timezone=campaign_timezone
+    )
+
+
+def _aligner_target(
+    claim: AlignerClaim,
+    shots: list[dict[str, Any]],
+    *,
+    match_tolerance_s: float,
+    campaign_timezone: str,
+) -> tuple[dict[str, Any] | None, str, str]:
+    """The DAMNIT shot a claim names, or why none (plan-aligner-bridge B4).
+
+    Returns ``(shot, "", evidence)`` or ``(None, reason, detail)``. Evidence,
+    each where the claim has it: the shot authority's number, the LabFrog
+    record shot-aligner matched the row to, the row's Count as LabFrog's
+    local count on that date. All present must name the same shot. Then the
+    checks: date, LabFrog's time within the tolerance of the row's Zeit, and
+    the Shotsheet values LabFrog records too (``ALIGNER_DETAIL_FIELDS``).
+    """
+    current = [
+        shot
+        for shot in shots
+        if not _as_bool(shot.get("metadata", {}).get("has_newer_version"))
+    ]
+    row_time = _row_datetime(claim, campaign_timezone)
+
+    def near_row(shot: dict[str, Any]) -> bool:
+        when = parse_datetime(
+            shot.get("labfrog_date_time"), naive_timezone=campaign_timezone
+        )
+        return (
+            row_time is None
+            or when is None
+            or abs((when - row_time).total_seconds()) <= match_tolerance_s
+        )
+
+    named = _aligner_evidence(claim, current, near_row)
+    if not named:
+        return None, "aligner_no_shot", "no authority number, record or Count"
+    for evidence, found in named.items():
+        if len(found) != 1:
+            return (
+                None,
+                "aligner_no_shot",
+                f"{evidence}: {len(found) or 'no'} DAMNIT shot(s)",
+            )
+    keys = {found[0]["shot_key"] for found in named.values()}
+    if len(keys) > 1:
+        return (
+            None,
+            "aligner_disagrees",
+            ", ".join(
+                f"{evidence} -> {found[0]['shot_key']}"
+                for evidence, found in named.items()
+            ),
+        )
+    shot = next(iter(named.values()))[0]
+    failed = _aligner_check(claim, shot, row_time, match_tolerance_s, campaign_timezone)
+    if failed:
+        return None, "aligner_check_failed", failed
+    return shot, "", "+".join(named)
+
+
+def _aligner_evidence(
+    claim: AlignerClaim,
+    current: list[dict[str, Any]],
+    near_row: Callable[[dict[str, Any]], bool],
+) -> dict[str, list[dict[str, Any]]]:
+    """The shots each piece of B4 evidence names: authority, record, Count."""
+    named: dict[str, list[dict[str, Any]]] = {}
+    if claim.authority_shot_number is not None:
+        named["authority"] = [
+            shot
+            for shot in current
+            if _authority_number(shot) == claim.authority_shot_number
+        ]
+    if claim.labfrog_record_id:
+        named["record"] = [
+            shot
+            for shot in current
+            if shot.get("labfrog_record_id") == claim.labfrog_record_id
+        ]
+    if claim.count is not None:
+        by_count = [
+            shot
+            for shot in current
+            if shot.get("shot_date") == claim.date
+            and shot.get("labfrog_local_count") == claim.count
+        ]
+        if len(by_count) > 1:  # a counter reset that day: the one near the row
+            by_count = [shot for shot in by_count if near_row(shot)]
+        named["count"] = by_count
+    return named
+
+
+def _aligner_check(
+    claim: AlignerClaim,
+    shot: dict[str, Any],
+    row_time: datetime | None,
+    match_tolerance_s: float,
+    campaign_timezone: str,
+) -> str:
+    """The first B4 check the shot fails against the row, or ""."""
+    if shot.get("shot_date") and shot["shot_date"] != claim.date:
+        return f"date {shot['shot_date']} is not {claim.date}"
+    when = parse_datetime(
+        shot.get("labfrog_date_time"), naive_timezone=campaign_timezone
+    )
+    if row_time is not None and when is not None:
+        gap = (when - row_time).total_seconds()
+        if abs(gap) > match_tolerance_s:
+            return f"time: LabFrog {gap:+.0f} s from the Shotsheet's Zeit"
+    metadata = shot.get("metadata", {})
+    for column, path in ALIGNER_DETAIL_FIELDS.items():
+        row_value = claim.row_values.get(column)
+        shot_value = _metadata_at(metadata, path)
+        if row_value is None or shot_value is None or row_value == "":
+            continue
+        if not _values_agree(row_value, shot_value):
+            return f"{column}: Shotsheet {row_value}, LabFrog {shot_value}"
+    return ""
+
+
+def _apply_aligner_claims(
+    events: list[dict[str, Any]],
+    shots: list[dict[str, Any]],
+    claims: dict[FileKey, AlignerClaim],
+    *,
+    match_tolerance_s: float,
+    campaign_timezone: str,
+) -> int:
+    """Attach the files a reviewer confirmed in shot-aligner (B5).
+
+    For each event not attached yet and without a shot number (D6) whose
+    files shot-aligner has: a confirmed link that names one DAMNIT shot and
+    passes the checks attaches (``aligner_confirmed``); an unconfirmed one
+    becomes a suggestion (``shot_aligner``); a failing one waits with its
+    reason in ``aligner_reason``/``aligner_detail``. A shot never gets a
+    second event of one stream (D1). Returns how many attached.
+    """
+    held = {
+        (event.get("shot_key"), _event_stream(event))
+        for event in events
+        if event.get("shot_key")
+    }
+    zone = resolve_timezone(campaign_timezone)
+    attached = 0
+    for event in events:
+        if event.get("shot_key") or _event_shot_number(event) is not None:
+            continue
+        stamp = parse_datetime(event.get("timestamp"))
+        claim = claim_for_event(
+            event,
+            claims,
+            local_date=stamp.astimezone(zone).date().isoformat() if stamp else None,
+        )
+        if claim is None:
+            continue
+        shot, reason, detail = _aligner_target(
+            claim,
+            shots,
+            match_tolerance_s=match_tolerance_s,
+            campaign_timezone=campaign_timezone,
+        )
+        where = f"shot-aligner {claim.date} {claim.event_key}"
+        if shot is None:
+            event["aligner_reason"] = reason
+            event["aligner_detail"] = f"{where}: {detail}"
+            continue
+        stream = _event_stream(event)
+        if (shot["shot_key"], stream) in held:
+            event["aligner_reason"] = "shot_has_other_event"
+            event["aligner_detail"] = (
+                f"{where}: {shot['shot_key']} already has a file of this instrument"
+            )
+            continue
+        note = f"{where}, row {claim.excel_row} ({detail})"
+        if not claim.confirmed:
+            event["match_status"] = event["match_quality"] = "ambiguous"
+            event["candidate_shot_keys"] = list(
+                dict.fromkeys([shot["shot_key"], *event.get("candidate_shot_keys", [])])
+            )
+            event["suggested_shot_key"] = shot["shot_key"]
+            event["suggestion_reason"] = "shot_aligner"
+            event["aligner_reason"] = "aligner_unconfirmed"
+            event["aligner_detail"] = f"{note}, link {claim.band or 'unbanded'}"
+            continue
+        event["shot_key"] = shot["shot_key"]
+        event["match_quality"] = "aligner_confirmed"
+        event["match_status"] = "matched"
+        event["candidate_shot_keys"] = []
+        event["aligner_detail"] = f"{note}, confirmed by a reviewer"
+        delta = _time_delta_seconds(
+            shot.get("labfrog_date_time"),
+            event.get("timestamp"),
+            campaign_timezone=campaign_timezone,
+        )
+        event["match_time_delta_s"] = delta
+        shot["events"].append(_event_api_record(event))
+        shot["match_status"] = "matched"
+        if MATCH_RANK["aligner_confirmed"] >= MATCH_RANK.get(
+            str(shot.get("match_quality")), 0
+        ):
+            shot["match_quality"] = "aligner_confirmed"
+            shot["match_time_delta_s"] = delta
+        held.add((shot["shot_key"], stream))
+        attached += 1
+    return attached
+
+
 #: Why an event waits for a person, as shot-aligner names its findings.
 #: Each has one line of guidance on the Review matches page.
 REVIEW_REASONS = (
@@ -4528,6 +4791,11 @@ REVIEW_REASONS = (
     "time_rule_off",
     "number_held_by_several",
     "identity_conflict",
+    # plan-aligner-bridge B5: what shot-aligner's claim on the file came to.
+    "aligner_unconfirmed",
+    "aligner_disagrees",
+    "aligner_check_failed",
+    "aligner_no_shot",
 )
 
 
@@ -4646,7 +4914,7 @@ def _one_to_one_pairs(
 
 #: Evidence other than time that can single out one candidate (decision D4:
 #: a suggestion is shown and preselected, never applied).
-SUGGESTION_REASONS = ("watchdog_attribution", "instrument_free")
+SUGGESTION_REASONS = ("watchdog_attribution", "instrument_free", "shot_aligner")
 
 
 def _set_suggestions(events: list[dict[str, Any]], shots: list[dict[str, Any]]) -> None:
@@ -4671,6 +4939,8 @@ def _set_suggestions(events: list[dict[str, Any]], shots: list[dict[str, Any]]) 
     for event in events:
         if event.get("match_status") != "ambiguous" or event.get("shot_key"):
             continue
+        if event.get("suggestion_reason") == "shot_aligner":
+            continue  # plan-aligner-bridge: shot-aligner's pairing stands
         candidates = list(dict.fromkeys(event.get("candidate_shot_keys") or []))
         if len(candidates) < 2:
             continue
@@ -4730,7 +5000,9 @@ def _set_review_reasons(
         else {}
     )
     for event in waiting:
-        if _event_shot_number(event) is not None:
+        if event.get("aligner_reason"):
+            event["review_reason"] = event["aligner_reason"]
+        elif _event_shot_number(event) is not None:
             number = _event_shot_number(event)
             holders = [shot for shot in shots if _authority_number(shot) == number]
             event["review_reason"] = (

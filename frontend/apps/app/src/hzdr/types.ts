@@ -266,6 +266,8 @@ export type HZDRReviewEvent = {
   /** One candidate singled out by evidence other than time (never applied). */
   suggested_shot_key?: string | null
   suggestion_reason?: string | null
+  /** What shot-aligner's claim on the file came to (plan-aligner-bridge). */
+  aligner_detail?: string | null
 }
 
 // Mirrors the FastAPI HZDRExperimentRuling: a ruling waiting for a rebuild.

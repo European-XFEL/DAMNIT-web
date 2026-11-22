@@ -693,3 +693,25 @@ def test_the_bulk_score_tests_every_shot_not_one_candidate():
     assert result["candidates"] == {"offered_wrong": 2, "not_offered": 1}
     # The row it belongs to is 65 s away: not clear, nothing offered.
     assert result["every_shot"] == {"not_offered": 3}
+
+
+def test_the_aligner_score_attaches_what_a_reviewer_confirmed():
+    """plan-aligner-bridge: cam_b's 4 min fast clock no longer matters."""
+    module = _evaluation_module()
+    index = _day_index()
+    for n, row in enumerate(index["shotsheet"]["rows"]):
+        row.update({"set_name": "set1", "count": n + 1, "time_text": None})
+    for event in index["sets"]["set1"]["events"]:
+        for acquisition in event["acquisitions"]:
+            name = acquisition["key"].replace("|", "/") + ".png"
+            acquisition["files"] = [name]
+    result = module.score_aligner(index, None, 120.0, "Europe/Berlin")
+    assert result == {"tolerance_s": 120.0, "attached_right": 6, "waiting_reasons": {}}
+    # Unconfirmed links: suggested, never attached.
+    for link in index["sets"]["set1"]["links"]:
+        link["band"] = "high"
+    unconfirmed = module.score_aligner(
+        index, None, 120.0, "Europe/Berlin", truth_from="matched"
+    )
+    assert unconfirmed["suggested_right"] == 6
+    assert "attached_right" not in unconfirmed

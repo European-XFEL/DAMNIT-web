@@ -149,6 +149,11 @@ function EventLine({ event }: { event: HZDRReviewEvent }) {
             event.review_reason.replace(/_/g, ' ')}
         </Text>
       ) : null}
+      {event.aligner_detail ? (
+        <Text size="xs" c="dimmed" data-testid="aligner-detail">
+          {event.aligner_detail}
+        </Text>
+      ) : null}
     </Stack>
   )
 }
@@ -460,7 +465,7 @@ function BulkSections({
   return (
     <>
       <BulkConfirm
-        intro="a suggested shot from evidence other than time: the watchdog named it, or it is the only candidate without this instrument's file. Check the list and confirm them yourself."
+        intro="a suggested shot from evidence other than raw time: shot-aligner paired it, the watchdog named it, or it is the only candidate without this instrument's file. Check the list and confirm them yourself."
         detailHeading="Why"
         choices={suggested}
         shotsByKey={shotsByKey}

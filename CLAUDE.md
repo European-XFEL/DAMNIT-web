@@ -620,7 +620,7 @@ keep the table columns unchanged.
 
 ### Match quality ranks (ascending, `hzdr_nexus.MATCH_RANK`)
 
-`unmatched` (0) → `labfrog_only` (1) → `nearest_time` (2) → `time_one_to_one` (3) → `shot_number_time_window` (4) → `exact_day_shot_number_time_window` (5) → `shot_number` (6) → `exact_day_shot_number` (7) → `event_identity` (8) → `exact_transport_position` (9) → `exact_kafka_event_id` (10)
+`unmatched` (0) → `labfrog_only` (1) → `nearest_time` (2) → `time_one_to_one` (3) → `shot_number_time_window` (4) → `exact_day_shot_number_time_window` (5) → `aligner_confirmed` (6) → `shot_number` (7) → `exact_day_shot_number` (8) → `event_identity` (9) → `exact_transport_position` (10) → `exact_kafka_event_id` (11)
 
 Higher rank wins when two matches compete for the same shot. `_match_event_ranked`
 tries them top down: the event's Kafka `event_id`, then its `topic/partition/offset`,
@@ -641,7 +641,15 @@ default) is shot-aligner's rule applied after the ladder: an event without a
 shot number and a LabFrog shot that are each other's only neighbour within
 the tolerance, within the event's stream (source, kind, instrument), attach;
 `hzdr_nexus._pair_time_one_to_one`, plan
-[plan-review-automation.md](hzdr/docs/plans/plan-review-automation.md). `ambiguous` is a status, not a rank
+[plan-review-automation.md](hzdr/docs/plans/plan-review-automation.md).
+`aligner_confirmed` (rulings R-2026-11-22a/b, `ALIGNER_INDEX_DIR`, off by
+default) is a file whose shot-aligner event a reviewer confirmed, mapped to
+one DAMNIT shot by the shot authority's number, the LabFrog record
+shot-aligner matched, and the Count as LabFrog's local count (all present
+must agree), then checked by date, time and the values both record
+(`hzdr_aligner.py`, `hzdr_nexus._apply_aligner_claims`, plan
+[plan-aligner-bridge.md](hzdr/docs/plans/plan-aligner-bridge.md)); an
+unconfirmed link is a suggestion (`shot_aligner`). `ambiguous` is a status, not a rank
 (`MATCH_RANK.get(q, 0)`).
 
 ### Review levels (ascending, `hzdr_nexus.REVIEW_LEVELS`)

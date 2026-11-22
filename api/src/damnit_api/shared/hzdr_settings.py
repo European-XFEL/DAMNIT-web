@@ -279,6 +279,14 @@ class HZDRBuilderSettings(BaseModel):
     # instead of waiting in Review matches. A JSON list, e.g.
     # ["draco.test_fire"]. Empty: off. Removing a kind reopens its events.
     never_shot_kinds: list[str] = Field(default_factory=list)
+    # shot-aligner's index folder (plan-aligner-bridge; rulings
+    # R-2026-11-22a/b): its day indexes and reviewer decisions, read by every
+    # build. On fwkt-webapps: ~/shot-aligner/shot_aligner/index. A file whose
+    # shot-aligner event a reviewer confirmed attaches (aligner_confirmed)
+    # when its authority number, LabFrog record and Count name one shot and
+    # date, time and values agree; an unconfirmed one is suggested. A change
+    # in the folder is a rebuild input. Empty: off.
+    aligner_index_dir: Path | None = None
     # LabFrog labfrog-campaign-schedule-v1 export whose windows route
     # "unassigned" events (plan W1, decision D4).
     campaign_schedule: Path | None = None

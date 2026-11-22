@@ -27,6 +27,12 @@ candidates only (the page before B1) and by every shot (B1's runner-up).
 Every event here is a file, which the page since B1 never offers; the
 "every shot" line says what it would offer if it did.
 
+``--rule aligner`` scores the shot-aligner bridge (plan-aligner-bridge):
+the index's links and the ``<date>.decisions.json`` beside it, the rows as
+LabFrog records with the row's Count as LabFrog's local count. Confirmed
+files attach, the others are suggested; ``attached_wrong`` is the number
+that matters.
+
 It reads only the index files given; no share, no network. Exit 0 always
 (it measures; it does not gate).
 """
@@ -42,6 +48,7 @@ from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
+from damnit_api.metadata.hzdr_aligner import claims_from_index
 from damnit_api.metadata.hzdr_nexus import parse_datetime, reconcile_canonical_shots
 
 DEFAULT_TOLERANCES = (30.0, 60.0, 90.0, 120.0, 180.0)
@@ -77,9 +84,22 @@ def rows_as_shots(index: dict[str, Any]) -> list[dict[str, Any]]:
             "shot_number": int(row["excel_row"]),
             "shot_date": day,
             "labfrog_date_time": f"{day}T{hours:02d}:{minutes:02d}:{secs:02d}",
-            "metadata": {},
+            # LabFrog's Count and values, as LabFrog would have them from the
+            # same Shotsheet (--rule aligner; Counts restart per set).
+            **({"local_count": row["count"]} if row.get("count") is not None else {}),
+            "metadata": _row_metadata(row.get("values") or {}),
         })
     return shots
+
+
+def _row_metadata(values: dict[str, Any]) -> dict[str, Any]:
+    """The Shotsheet values LabFrog records too, in LabFrog's metadata layout."""
+    metadata: dict[str, Any] = {
+        key: values[key] for key in ("gvd", "tod") if values.get(key) is not None
+    }
+    if values.get("elaser") is not None:
+        metadata["laser"] = {"pulse_energy": values["elaser"]}
+    return metadata
 
 
 def _epoch(acquisition: dict[str, Any], timezone: str, clock: str) -> float | None:
@@ -104,7 +124,15 @@ def _watchdog_event(acquisition: dict[str, Any], when: float) -> dict[str, Any]:
         "kind": f"daq.{acquisition.get('kind') or 'file'}",
         "timestamp": _iso_utc(when),
         "transport": "kafka",
-        "payload_ref": {"path": key},
+        # The files as the watchdog names them, under the date folder, so the
+        # shot-aligner bridge can find them (--rule aligner).
+        "payload_ref": {
+            "path": key,
+            "members": [
+                {"path": f"{acquisition.get('_date_folder', '')}/{name}"}
+                for name in acquisition.get("files") or []
+            ],
+        },
         "values": None,
         "metadata": {"instrument": {"id": acquisition["instrument"]}},
     }
@@ -137,6 +165,7 @@ def acquisitions_as_events(
                 when = _epoch(acquisition, timezone, clock)
                 if when is None:
                     continue
+                acquisition = {**acquisition, "_date_folder": index.get("date")}
                 events.append(_watchdog_event(acquisition, when))
                 truth[str(acquisition["key"])] = row
     for acquisition in index.get("auxiliary", []):
@@ -315,6 +344,58 @@ def _bulk_outcome(
     return "offered_right" if row_of_shot.get(best) == correct else "offered_wrong"
 
 
+def score_aligner(
+    index: dict[str, Any],
+    decisions: dict[str, Any] | None,
+    tolerance: float,
+    timezone: str,
+    *,
+    truth_from: str = "confirmed",
+    clock: str = "raw",
+) -> dict[str, Any]:
+    """Score the shot-aligner bridge (plan-aligner-bridge): confirmed files
+    attach, unconfirmed ones are suggested; both judged against the truth."""
+    shots = rows_as_shots(index)
+    events, truth = acquisitions_as_events(
+        index, timezone, truth_from=truth_from, clock=clock
+    )
+    canonical, built = reconcile_canonical_shots(
+        events,
+        experiment_id=EXPERIMENT,
+        source_key=EXPERIMENT,
+        labfrog_shots=shots,
+        match_tolerance_s=tolerance,
+        campaign_timezone=timezone,
+        include_trigger_only=False,
+        aligner_claims=claims_from_index(index, decisions),
+    )
+    row_of_shot = {
+        shot["shot_key"]: int(shot["labfrog_record_id"])
+        for shot in canonical
+        if shot.get("labfrog_record_id")
+    }
+    counts: Counter[str] = Counter()
+    reasons: Counter[str] = Counter()
+    for item in built:
+        key = str(item.get("event_id"))
+        if key not in truth or truth[key] is None:
+            continue
+        if item.get("match_quality") == "aligner_confirmed":
+            right = row_of_shot.get(item["shot_key"]) == truth[key]
+            counts["attached_right" if right else "attached_wrong"] += 1
+        elif item.get("suggestion_reason") == "shot_aligner":
+            right = row_of_shot.get(item["suggested_shot_key"]) == truth[key]
+            counts["suggested_right" if right else "suggested_wrong"] += 1
+        else:
+            counts["waiting"] += 1
+            reasons[str(item.get("review_reason") or item.get("match_status"))] += 1
+    return {
+        "tolerance_s": tolerance,
+        **dict(counts),
+        "waiting_reasons": dict(reasons.most_common()),
+    }
+
+
 def context(
     index: dict[str, Any], timezone: str, *, truth_from: str = "confirmed"
 ) -> dict[str, Any]:
@@ -400,10 +481,11 @@ def main() -> None:
     )
     parser.add_argument(
         "--rule",
-        choices=("one_to_one", "bulk"),
+        choices=("one_to_one", "bulk", "aligner"),
         default="one_to_one",
-        help="the builder's one-to-one rule (default), or the page's bulk "
-        "time choice (plan-aligner-bridge B1)",
+        help="the builder's one-to-one rule (default), the page's bulk "
+        "time choice (plan-aligner-bridge B1), or the shot-aligner bridge, "
+        "reading <date>.decisions.json beside the index",
     )
     parser.add_argument("--json", type=Path, help="write the full report here")
     args = parser.parse_args()
@@ -415,12 +497,33 @@ def main() -> None:
         day = context(index, args.timezone, truth_from=args.truth)
         day["truth"], day["clock"] = args.truth, args.clock
         day["reviewed"] = bool(index.get("statistics", {}).get("decisions"))
-        scorer = score_bulk if args.rule == "bulk" else score
         day["rule"] = args.rule
-        day["scores"] = [
-            scorer(index, tol, args.timezone, truth_from=args.truth, clock=args.clock)
-            for tol in tolerances
-        ]
+        if args.rule == "aligner":
+            ledger = path.with_name(path.name.replace(".index.json", ".decisions.json"))
+            decisions = (
+                json.loads(ledger.read_text(encoding="utf-8"))
+                if ledger.is_file()
+                else None
+            )
+            day["scores"] = [
+                score_aligner(
+                    index,
+                    decisions,
+                    tol,
+                    args.timezone,
+                    truth_from=args.truth,
+                    clock=args.clock,
+                )
+                for tol in tolerances
+            ]
+        else:
+            scorer = score_bulk if args.rule == "bulk" else score
+            day["scores"] = [
+                scorer(
+                    index, tol, args.timezone, truth_from=args.truth, clock=args.clock
+                )
+                for tol in tolerances
+            ]
         report.append(day)
         spacing = day["row_spacing_s"]
         print(
@@ -433,6 +536,17 @@ def main() -> None:
         )
         if args.rule == "bulk":
             _print_bulk(day["scores"])
+            continue
+        if args.rule == "aligner":
+            for row in day["scores"]:
+                print(
+                    {
+                        key: value
+                        for key, value in row.items()
+                        if key != "waiting_reasons"
+                    },
+                    row["waiting_reasons"],
+                )
             continue
         header = f"{'tol s':>6} {'right':>6} {'wrong':>6} {'wait':>6} {'aux+':>5}"
         print(f"{header}  waiting reasons")

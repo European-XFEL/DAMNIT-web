@@ -65,6 +65,7 @@ AREAS = (
             f"{A}/metadata/__init__.py",
             f"{A}/metadata/hzdr_event.py",
             f"{A}/metadata/hzdr_nexus.py",
+            f"{A}/metadata/hzdr_aligner.py",
             f"{A}/metadata/hzdr_openpmd.py",
             f"{A}/shared/hzdr_paths.py",
             f"{A}/metadata/hzdr_sources.py",
@@ -101,6 +102,7 @@ AREAS = (
             f"{T}/test_hzdr_labfrog_history.py",
             f"{T}/test_match_rank_docs.py",
             f"{T}/test_hzdr_review_automation.py",
+            f"{T}/test_hzdr_aligner.py",
         ),
         watch_next=(
             "Real SciCat and PID reconciliation, which the offline suite can only "

@@ -1,0 +1,515 @@
+{
+ "$comment": "Trimmed from shot-aligner's committed shot_aligner/index/2025_12_03.index.json (tippey27/shot-aligner, commit 45e4bab): set1 events 1-3, three instruments, their links and Shotsheet rows, two auxiliary files. Test fixture for plan-aligner-bridge.",
+ "indexVersion": 2,
+ "campaign": "Vanlife 2025_12",
+ "date": "2025_12_03",
+ "dataFolder": "/home/tippey/mnt/bigdata/HPLexp/Ions/rawdata/2025/2025_12_03",
+ "sets": {
+  "set1": {
+   "name": "set1",
+   "events": [
+    {
+     "set": "set1",
+     "rank": 1,
+     "time": 1764771698.0,
+     "iso": "2025-12-03T15:21:38",
+     "span": 0.0,
+     "seq": 1,
+     "instruments": [
+      "BAM",
+      "DIF 400",
+      "DIF 515",
+      "DIF 800",
+      "FF M2 Mini 515",
+      "FF M2 Mini 800",
+      "Lanex_DIF",
+      "M1 Trans 800",
+      "M1_Spec_Fib_Cer",
+      "NF M2 Mini 800",
+      "OAP Img 400",
+      "OAP Img 515",
+      "PM Mini Trans",
+      "Reflected 515 spectrometer",
+      "Reflected 800 spectrometer",
+      "TP90 proton prof",
+      "TPS 90"
+     ],
+     "acquisitions": [
+      {
+       "key": "BAM|set1_2025-12-03_15h-22m-51s_1",
+       "instrument": "BAM",
+       "timingRole": "pre_shot",
+       "label": "set1",
+       "seq": 1,
+       "timestamp": 1764771771.0,
+       "iso": "2025-12-03T15:22:51",
+       "corrected": 1764771698.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "BAM/set1_2025-12-03_15h-22m-51s_1.csv",
+        "BAM/set1_2025-12-03_15h-22m-51s_1_original.png"
+       ]
+      },
+      {
+       "key": "Lanex_DIF|set1_2025-12-03_15h-21m-38s_1",
+       "instrument": "Lanex_DIF",
+       "timingRole": "on_shot",
+       "label": "set1",
+       "seq": 1,
+       "timestamp": 1764771698.0,
+       "iso": "2025-12-03T15:21:38",
+       "corrected": 1764771698.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "Lanex_DIF/set1_2025-12-03_15h-21m-38s_1.csv",
+        "Lanex_DIF/set1_2025-12-03_15h-21m-38s_1_original.png"
+       ]
+      },
+      {
+       "key": "TPS 90|set1_2025-12-03_15h-22m-21s_1",
+       "instrument": "TPS 90",
+       "timingRole": "on_shot",
+       "label": "set1",
+       "seq": 1,
+       "timestamp": 1764771741.0,
+       "iso": "2025-12-03T15:22:21",
+       "corrected": 1764771698.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "TPS 90/set1_2025-12-03_15h-22m-21s_1.csv",
+        "TPS 90/set1_2025-12-03_15h-22m-21s_1_original.png"
+       ]
+      }
+     ]
+    },
+    {
+     "set": "set1",
+     "rank": 2,
+     "time": 1764771897.0,
+     "iso": "2025-12-03T15:24:57",
+     "span": 0.0,
+     "seq": 2,
+     "instruments": [
+      "BAM",
+      "DIF 400",
+      "DIF 515",
+      "DIF 800",
+      "FF M2 Mini 515",
+      "FF M2 Mini 800",
+      "Lanex_DIF",
+      "M1 Trans 800",
+      "M1_Spec_Fib_Cer",
+      "NF M2 Mini 800",
+      "OAP Img 400",
+      "OAP Img 515",
+      "PM Mini Trans",
+      "Reflected 515 spectrometer",
+      "Reflected 800 spectrometer",
+      "TP90 proton prof",
+      "TPS 90"
+     ],
+     "acquisitions": [
+      {
+       "key": "BAM|set1_2025-12-03_15h-26m-10s_2",
+       "instrument": "BAM",
+       "timingRole": "pre_shot",
+       "label": "set1",
+       "seq": 2,
+       "timestamp": 1764771970.0,
+       "iso": "2025-12-03T15:26:10",
+       "corrected": 1764771897.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "BAM/set1_2025-12-03_15h-26m-10s_2.csv",
+        "BAM/set1_2025-12-03_15h-26m-10s_2_original.png"
+       ]
+      },
+      {
+       "key": "Lanex_DIF|set1_2025-12-03_15h-24m-57s_2",
+       "instrument": "Lanex_DIF",
+       "timingRole": "on_shot",
+       "label": "set1",
+       "seq": 2,
+       "timestamp": 1764771897.0,
+       "iso": "2025-12-03T15:24:57",
+       "corrected": 1764771897.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "Lanex_DIF/set1_2025-12-03_15h-24m-57s_2.csv",
+        "Lanex_DIF/set1_2025-12-03_15h-24m-57s_2_original.png"
+       ]
+      },
+      {
+       "key": "TPS 90|set1_2025-12-03_15h-25m-40s_2",
+       "instrument": "TPS 90",
+       "timingRole": "on_shot",
+       "label": "set1",
+       "seq": 2,
+       "timestamp": 1764771940.0,
+       "iso": "2025-12-03T15:25:40",
+       "corrected": 1764771897.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "TPS 90/set1_2025-12-03_15h-25m-40s_2.csv",
+        "TPS 90/set1_2025-12-03_15h-25m-40s_2_original.png"
+       ]
+      }
+     ]
+    },
+    {
+     "set": "set1",
+     "rank": 3,
+     "time": 1764771998.0,
+     "iso": "2025-12-03T15:26:38",
+     "span": 0.0,
+     "seq": 3,
+     "instruments": [
+      "BAM",
+      "DIF 400",
+      "DIF 515",
+      "DIF 800",
+      "FF M2 Mini 515",
+      "FF M2 Mini 800",
+      "Lanex_DIF",
+      "M1 Trans 800",
+      "M1_Spec_Fib_Cer",
+      "NF M2 Mini 800",
+      "OAP Img 400",
+      "OAP Img 515",
+      "PM Mini Trans",
+      "Reflected 515 spectrometer",
+      "Reflected 800 spectrometer",
+      "TP90 proton prof",
+      "TPS 90"
+     ],
+     "acquisitions": [
+      {
+       "key": "BAM|set1_2025-12-03_15h-27m-51s_3",
+       "instrument": "BAM",
+       "timingRole": "pre_shot",
+       "label": "set1",
+       "seq": 3,
+       "timestamp": 1764772071.0,
+       "iso": "2025-12-03T15:27:51",
+       "corrected": 1764771998.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "BAM/set1_2025-12-03_15h-27m-51s_3.csv",
+        "BAM/set1_2025-12-03_15h-27m-51s_3_original.png"
+       ]
+      },
+      {
+       "key": "Lanex_DIF|set1_2025-12-03_15h-26m-38s_3",
+       "instrument": "Lanex_DIF",
+       "timingRole": "on_shot",
+       "label": "set1",
+       "seq": 3,
+       "timestamp": 1764771998.0,
+       "iso": "2025-12-03T15:26:38",
+       "corrected": 1764771998.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "Lanex_DIF/set1_2025-12-03_15h-26m-38s_3.csv",
+        "Lanex_DIF/set1_2025-12-03_15h-26m-38s_3_original.png"
+       ]
+      },
+      {
+       "key": "TPS 90|set1_2025-12-03_15h-27m-21s_3",
+       "instrument": "TPS 90",
+       "timingRole": "on_shot",
+       "label": "set1",
+       "seq": 3,
+       "timestamp": 1764772041.0,
+       "iso": "2025-12-03T15:27:21",
+       "corrected": 1764771998.0,
+       "timeSource": "filename",
+       "kind": "image",
+       "files": [
+        "TPS 90/set1_2025-12-03_15h-27m-21s_3.csv",
+        "TPS 90/set1_2025-12-03_15h-27m-21s_3_original.png"
+       ]
+      }
+     ]
+    }
+   ],
+   "links": [
+    {
+     "set_name": "set1",
+     "status": "matched",
+     "event_rank": 1,
+     "row_count": 1,
+     "excel_row": 4,
+     "cost": 0.0,
+     "confidence": 1.0,
+     "band": "confirmed",
+     "reasons": [
+      "sequence and Count both 1",
+      "within 22s of Zeit 15:22:00",
+      "1 member(s) are pre-shot diagnostics: their stamps precede the laser event by design",
+      "confirmed by reviewer at 2026-09-28T10:23:13+00:00"
+     ],
+     "time_delta": -22
+    },
+    {
+     "set_name": "set1",
+     "status": "matched",
+     "event_rank": 2,
+     "row_count": 2,
+     "excel_row": 5,
+     "cost": 0.0,
+     "confidence": 1.0,
+     "band": "confirmed",
+     "reasons": [
+      "sequence and Count both 2",
+      "within 3s of Zeit 15:25:00",
+      "1 member(s) are pre-shot diagnostics: their stamps precede the laser event by design",
+      "confirmed by reviewer at 2026-09-28T10:23:13+00:00"
+     ],
+     "time_delta": -3
+    },
+    {
+     "set_name": "set1",
+     "status": "matched",
+     "event_rank": 3,
+     "row_count": 3,
+     "excel_row": 6,
+     "cost": 0.0,
+     "confidence": 1.0,
+     "band": "confirmed",
+     "reasons": [
+      "sequence and Count both 3",
+      "within 22s of Zeit 15:27:00",
+      "1 member(s) are pre-shot diagnostics: their stamps precede the laser event by design",
+      "confirmed by reviewer at 2026-09-28T10:23:13+00:00"
+     ],
+     "time_delta": -22
+    }
+   ]
+  }
+ },
+ "shotsheet": {
+  "rows": [
+   {
+    "set_name": "set1",
+    "count": 1,
+    "excel_row": 4,
+    "time_text": "15:22:00",
+    "time_seconds": 55320,
+    "values": {
+     "bam": 0,
+     "delay": 0,
+     "phase_shifter_delay": 17916.19,
+     "tfo_motor_pos": 105.996,
+     "tfo": 0,
+     "gvd": 39000,
+     "tod": 0,
+     "dosis": 0,
+     "elaser": 0,
+     "probe": "yes",
+     "target_type": 37,
+     "pm_x_position": 45.2,
+     "pm_y_position": 201,
+     "count": 1
+    },
+    "written": {
+     "elaser": 0,
+     "probe": "yes",
+     "phase_shifter_delay": 17916.19,
+     "target_type": 37,
+     "pm_x_position": 45.2,
+     "pm_y_position": 201
+    },
+    "explicit_zero": [
+     "elaser"
+    ],
+    "comments": "trigger test, probe only (shooting on outer ring), chamber light was still on",
+    "parameter_version": 2,
+    "raw": {
+     "count": "1",
+     "zeit": "15:22:00",
+     "elaser": "-",
+     "probe": "yes",
+     "phase_shifter_delay": "17916.19",
+     "target_type": "37.0",
+     "pm_x_position": "45.2",
+     "pm_y_position": "201.0",
+     "comments": "trigger test, probe only (shooting on outer ring), chamber light was still on"
+    },
+    "source_rows": {
+     "bam": 3,
+     "delay": 3,
+     "phase_shifter_delay": 4,
+     "tfo_motor_pos": 3,
+     "tfo": 3,
+     "gvd": 3,
+     "tod": 3,
+     "dosis": 3,
+     "elaser": 4,
+     "probe": 4,
+     "target_type": 4,
+     "pm_x_position": 4,
+     "pm_y_position": 4
+    },
+    "boundary_rows": [
+     3
+    ],
+    "row_kind": "shot",
+    "disposition": "recorded",
+    "counted": true,
+    "reason": "linked to a recorded event"
+   },
+   {
+    "set_name": "set1",
+    "count": 2,
+    "excel_row": 5,
+    "time_text": "15:25:00",
+    "time_seconds": 55500,
+    "values": {
+     "bam": 0,
+     "delay": 0,
+     "phase_shifter_delay": 17916.19,
+     "tfo_motor_pos": 105.996,
+     "tfo": 0,
+     "gvd": 39000,
+     "tod": 0,
+     "dosis": 0,
+     "elaser": 0,
+     "probe": "yes",
+     "target_type": 37,
+     "pm_x_position": 45.2,
+     "pm_y_position": 201,
+     "count": 2
+    },
+    "written": {
+     "elaser": 0,
+     "probe": "yes",
+     "target_type": 37
+    },
+    "explicit_zero": [
+     "elaser"
+    ],
+    "comments": "probe only, same target, different position on outer ring",
+    "parameter_version": 2,
+    "raw": {
+     "count": "2",
+     "zeit": "15:25:00",
+     "elaser": "-",
+     "probe": "yes",
+     "target_type": "37.0",
+     "comments": "probe only, same target, different position on outer ring"
+    },
+    "source_rows": {
+     "bam": 3,
+     "delay": 3,
+     "phase_shifter_delay": 4,
+     "tfo_motor_pos": 3,
+     "tfo": 3,
+     "gvd": 3,
+     "tod": 3,
+     "dosis": 3,
+     "elaser": 5,
+     "probe": 5,
+     "target_type": 5,
+     "pm_x_position": 4,
+     "pm_y_position": 4
+    },
+    "boundary_rows": [],
+    "row_kind": "shot",
+    "disposition": "recorded",
+    "counted": true,
+    "reason": "linked to a recorded event"
+   },
+   {
+    "set_name": "set1",
+    "count": 3,
+    "excel_row": 6,
+    "time_text": "15:27:00",
+    "time_seconds": 55620,
+    "values": {
+     "bam": 0,
+     "delay": 0,
+     "phase_shifter_delay": 17916.19,
+     "tfo_motor_pos": 105.996,
+     "tfo": 0,
+     "gvd": 39000,
+     "tod": 0,
+     "dosis": 0,
+     "elaser": 0.456,
+     "probe": "yes",
+     "target_type": 37,
+     "pm_x_position": 45.2,
+     "pm_y_position": 201,
+     "count": 3
+    },
+    "written": {
+     "elaser": 0.456,
+     "probe": "yes",
+     "target_type": 37
+    },
+    "explicit_zero": [],
+    "comments": "full energy front end shot, same target different position on outer ring , shutter was closed",
+    "parameter_version": 2,
+    "raw": {
+     "count": "3",
+     "zeit": "15:27:00",
+     "elaser": "0.456",
+     "probe": "yes",
+     "target_type": "37.0",
+     "comments": "full energy front end shot, same target different position on outer ring , shutter was closed"
+    },
+    "source_rows": {
+     "bam": 3,
+     "delay": 3,
+     "phase_shifter_delay": 4,
+     "tfo_motor_pos": 3,
+     "tfo": 3,
+     "gvd": 3,
+     "tod": 3,
+     "dosis": 3,
+     "elaser": 6,
+     "probe": 6,
+     "target_type": 6,
+     "pm_x_position": 4,
+     "pm_y_position": 4
+    },
+    "boundary_rows": [],
+    "row_kind": "shot",
+    "disposition": "recorded",
+    "counted": true,
+    "reason": "linked to a recorded event"
+   }
+  ]
+ },
+ "auxiliary": [
+  {
+   "instrument": "BAM",
+   "label": "synchro",
+   "seq": 1,
+   "iso": "2025-12-03T13:23:21",
+   "key": "BAM|synchro_2025-12-03_13h-23m-21s_1",
+   "files": [
+    "BAM/synchro_2025-12-03_13h-23m-21s_1.csv",
+    "BAM/synchro_2025-12-03_13h-23m-21s_1_original.png"
+   ]
+  },
+  {
+   "instrument": "BAM",
+   "label": "synchro",
+   "seq": 2,
+   "iso": "2025-12-03T13:24:45",
+   "key": "BAM|synchro_2025-12-03_13h-24m-45s_2",
+   "files": [
+    "BAM/synchro_2025-12-03_13h-24m-45s_2.csv",
+    "BAM/synchro_2025-12-03_13h-24m-45s_2_original.png"
+   ]
+  }
+ ]
+}

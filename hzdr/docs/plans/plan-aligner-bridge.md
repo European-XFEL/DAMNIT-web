@@ -117,22 +117,22 @@ enough for files on instrument clocks.
   - `hzdr-evaluate-time-rule.py --rule bulk`, run on both days, numbers
     below;
   - tests: route, utils, script.
-- [ ] **B2/B3, the reader:**
+- [x] **B2/B3, the reader:**
   - `metadata/hzdr_aligner.py`: day indexes and decisions to claims by
     file, ledger cross-check (a link counts as confirmed only when the
     ledger still says `confirm`);
   - tests on the committed 2025-12-03 index (a trimmed copy in
     `tests/fixtures/`).
-- [ ] **B4/B5, the matcher:**
+- [x] **B4/B5, the matcher:**
   - `reconcile_canonical_shots(aligner_claims=...)`;
   - `aligner_confirmed` in `MATCH_RANK`, CLAUDE.md's ladder updated;
   - the reasons and the suggestion;
   - tests for each evidence, each check, disagreement and stream.
-- [ ] **B6, settings:**
+- [x] **B6, settings:**
   - `--aligner-index-dir`, the setting and the trigger arguments;
   - the folder as a rebuild input;
   - tests.
-- [ ] **Measured:**
+- [x] **Measured:**
   - the bridge on 2025-12-03 with its LabFrog stand-in, numbers below;
   - the frontend label and the reason texts.
 - [ ] **Docs and next-on-server:**
@@ -173,3 +173,32 @@ files. Since B1 it offers none:
 
 Triggers, which B1 still offers, carry the shot authority's clock; none are in
 these indexes.
+
+**The bridge** (`hzdr-evaluate-time-rule.py <day> --rule aligner --tolerance
+120`). The Shotsheet rows stand in for LabFrog records, with the row's Count as
+LabFrog's local count; Counts restart in every set, so most days have
+several shots with one Count, told apart by time. Raw instrument clocks:
+
+| Day | Attached right | Attached wrong | Suggested right | Suggested wrong | Waiting |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 2025-12-03 (150 links, all confirmed) | **2,544** | **0** | 0 | 0 | 0 |
+| 2025-12-01 (not reviewed) | 0 | 0 | 1,698 | 0 | 0 |
+
+That is every shot file of both days, against 32 right on 12-03 for the
+one-to-one rule at the same tolerance. It measures the join, the mapping and
+the checks: the truth is shot-aligner's own links, so whether those are right
+is shot-aligner's review, which is the point of R-2026-11-22a. The details
+check agrees trivially here, since the stand-in records copy the Shotsheet;
+on the server LabFrog's own values are compared.
+
+Tests: 20 in `test_hzdr_aligner.py`:
+- the reader;
+- the evidence and each check;
+- a counter reset;
+- unconfirmed links and streams;
+- the trigger;
+- a real builder run with `--aligner-index-dir`.
+
+Also 2 script tests in `test_hzdr_review_automation.py`, and 1 component
+test.
+
