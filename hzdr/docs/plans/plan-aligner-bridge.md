@@ -157,6 +157,9 @@ enough for files on instrument clocks.
 
 ## Not in this plan (a later plan, not started)
 
+**Followed by** [plan-campaign-backfill.md](plan-campaign-backfill.md): this
+year's campaigns from shot-aligner's Shotsheets and indexes, Vanlife first.
+
 - **Days with no watchdog.** A script that turns a day index into
   `hzdr-event-v1` file events, so DAMNIT has those files at all. It needs a
   new `attribution.method` value, and that changes the event model vendored
