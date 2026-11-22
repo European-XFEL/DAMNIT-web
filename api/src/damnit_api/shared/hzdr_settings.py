@@ -287,6 +287,13 @@ class HZDRBuilderSettings(BaseModel):
     # date, time and values agree; an unconfirmed one is suggested. A change
     # in the folder is a rebuild input. Empty: off.
     aligner_index_dir: Path | None = None
+    # Campaigns built from shot-aligner's day indexes (plan-campaign-backfill,
+    # rulings R-2026-11-22d/e): campaign -> its dates (YYYY_MM_DD), e.g.
+    # {"Vanlife_12.2025": ["2025_12_01", "2025_12_03"]}. For each date the
+    # Shotsheet rows become shots where LabFrog has none that day, and the
+    # acquisitions become file events; the bridge then attaches the confirmed
+    # ones. Needs aligner_index_dir. Empty: off.
+    aligner_campaigns: dict[str, list[str]] = Field(default_factory=dict)
     # LabFrog labfrog-campaign-schedule-v1 export whose windows route
     # "unassigned" events (plan W1, decision D4).
     campaign_schedule: Path | None = None

@@ -30,6 +30,27 @@ date, time and the details both record. Plan:
 - On shot-aligner's 2025-12-03 day all 2,544 shot files attach to the
   reviewed shot, with none wrong (`hzdr-evaluate-time-rule.py --rule aligner`).
 
+### This year's campaigns from shot-aligner's Shotsheets, Vanlife first
+Rulings R-2026-11-22d/e (maintainer): this year's shot records are the
+Shotsheet rows that shot-aligner finds and links to their dates; Vanlife
+12.2025 is the test. Plan: `hzdr/docs/plans/plan-campaign-backfill.md`.
+- `DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS` (campaign -> dates) /
+  `--aligner-campaign <campaign>=<date>`.
+- **Shots:** for a date LabFrog has no records of, the counted Shotsheet
+  rows of shot-aligner's day index become shots:
+  - `shot_number` is the position in the day;
+  - the Count is in `labfrog_local_count`;
+  - values are kept, and `experiment_id_source` is `shotsheet`.
+- **Files:** the acquisitions become file events (`shot-aligner`,
+  instrument from the catalogue), made at build time and never spooled. A
+  watchdog event for the same file wins.
+- **Multi-campaign:** a listed campaign is built without an export or
+  spool.
+- **Vanlife** from the two committed indexes builds 258 shots. On 12-03 all
+  2,544 files attach. On 12-01 1,698 wait as suggestions until that day is
+  reviewed. The container worker wrote 12-03's 150 containers and the master
+  links them; their detectors fill on the server, where the raw files are.
+
 ### Bulk confirm no longer offers files, and tests every shot
 Since ruling A7 a time proposal has one candidate, so the page's "every other
 candidate 2 min further" test never ran. On shot-aligner's two days it would

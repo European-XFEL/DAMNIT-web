@@ -114,8 +114,30 @@ they never match an event to the set's row, which is not one shot. Settings and 
 [deployment plan, Step 2b](plans/deployment-plan.md#every-campaign-at-once-output_root-recommended).
 
 Each canonical shot records the outcome in `/entry/shots/experiment_id_source`
-(bridge profile v4): `labfrog` for every LabFrog-backed shot, otherwise the
-strongest source among its events.
+(bridge profile v4): `labfrog` for every LabFrog-backed shot, `shotsheet` for
+one made from a Shotsheet row (below), otherwise the strongest source among
+its events.
+
+**Campaigns from shot-aligner (plan-campaign-backfill, rulings
+R-2026-11-22d/e).** For the dates listed under a campaign in
+`ALIGNER_CAMPAIGNS`, the builder reads shot-aligner's day index
+(`hzdr_aligner.backfill`):
+- **Shots:** on a date LabFrog has no records of, every Shotsheet row
+  shot-aligner's inclusion rule counts becomes a shot record:
+  - `shot_number` is its position in the day, sets and rows in workbook
+    order; the Count is `labfrog_local_count`;
+  - the record id is `shotsheet:<date>:<excel_row>`;
+  - `gvd`/`tod`/`elaser` are where LabFrog keeps them, the rest under
+    `shotsheet.*`;
+  - there is no authority number.
+- **Files:** every shot acquisition becomes a file event (`source`
+  `shot-aligner`, `kind` `shot-aligner.file`, no shot number, no
+  attribution). The files are under the index's `dataFolder`, and the
+  instrument comes from the vendored catalogue by folder alias. A file that
+  a producer event names on the same day keeps the producer's event.
+- **Then step 6b:** the bridge attaches them.
+
+Nothing is written to a spool, so removing the setting removes them.
 
 **Trigger-only shots (plan W6.1).** With LabFrog records present, the
 canonical shots are the union of those records and every `DRACO-Trigger` event

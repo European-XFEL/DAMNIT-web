@@ -98,7 +98,52 @@ uv run --no-sync --no-default-groups shot_aligner/scripts/align.py \
 - **A bad pairing** comes from shot-aligner. Fix it there (reject or redo
   the link), and DAMNIT follows at the next build.
 
-### 7. GitLab, after the deploy
+### 7. Vanlife from shot-aligner (the first campaign of this year)
+
+DAMNIT builds a campaign LabFrog has no records of from shot-aligner's day
+indexes. The Shotsheet rows become the shots and the acquisitions become the
+files. The bridge then attaches what a reviewer confirmed. See
+[plan-campaign-backfill.md](../plans/plan-campaign-backfill.md).
+
+1. **Build the four day indexes** in `~/shot-aligner`. 12-01 and 12-03 may
+   already be there:
+   ```bash
+   for d in 2025_12_01 2025_12_02 2025_12_03 2025_12_05; do
+       uv run --no-sync --no-default-groups shot_aligner/scripts/align.py \
+           --site fwkt-webapps index "$d" --if-changed
+   done
+   ```
+2. **Review the days in shot-aligner.** Only 12-03 is confirmed. Until a
+   day is reviewed, its files wait in Review matches as suggestions.
+3. **In `api/.env`,** with `ALIGNER_INDEX_DIR` from step 1. The campaign must
+   also be built: in multi-campaign mode a listed campaign is built even
+   without an export or a spool.
+   ```bash
+   DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS={"Vanlife_12.2025": ["2025_12_01", "2025_12_02", "2025_12_03", "2025_12_05"]}
+   ```
+4. **Restart and rebuild** (step 3 above). The `labfrog` step of
+   `next-on-server.sh` names any listed date that has no day index. A
+   rebuild by hand prints `shot-aligner backfill (Vanlife_12.2025): N
+   Shotsheet shot(s), M file event(s)`.
+5. **Check the result:**
+   - Home lists `Vanlife_12.2025`, its shots say where they came from
+     (`shotsheet`), and 12-03's 150 shots have their files.
+   - Optional, to compare containers with shot-aligner's:
+     ```bash
+     cd ~/DAMNIT-web-hzdr/api
+     uv run --no-sync python scripts/hzdr-container-worker.py --master /home/tippey/mnt/bigdata/HPLexp/nexus/Vanlife_12.2025/Vanlife_12.2025.nxs
+     uv run --no-sync python scripts/hzdr-compare-containers.py \
+         --damnit /home/tippey/mnt/bigdata/HPLexp/nexus/Vanlife_12.2025 \
+         --aligner /home/tippey/mnt/bigdata/HPLexp/Ions/nexus/<Vanlife build>
+     ```
+
+**To take it out:** remove `ALIGNER_CAMPAIGNS` and rebuild. The shots and
+files were made at build time from the indexes, so nothing else is stored.
+The campaign's old NeXus file stays until it is removed by hand. Never
+delete anything else under the output root, which is shared with
+shot-aligner.
+
+### 8. GitLab, after the deploy
 
 - Merge hzdr-combo !117, which records rulings R-2026-11-21 and R-2026-11-22.
 - Merge fwkt-webapps !106 (the DAMNIT project page).
@@ -107,6 +152,6 @@ uv run --no-sync --no-default-groups shot_aligner/scripts/align.py \
 
 - **Shot containers** (`CONTAINERS_ENABLED`): only once you decide to turn
   them on, and campaign output phase 6 first ([next-on-server.md](next-on-server.md) item 7).
-- **This year's campaigns** (backfill from shot-aligner): waits on two
-  decisions, where this year's shot records come from and which campaigns
-  go first. That plan comes next.
+- **More of this year's campaigns:** each is one more entry in
+  `ALIGNER_CAMPAIGNS`, once its days are indexed and reviewed in
+  shot-aligner.

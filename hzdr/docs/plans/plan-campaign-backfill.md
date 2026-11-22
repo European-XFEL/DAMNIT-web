@@ -90,31 +90,31 @@ work.
 ## Checklist
 
 - [x] Plan written first (this file), linked from `plan-aligner-bridge.md`
-- [ ] **F1/F3, the shot list:** `hzdr_aligner.shotsheet_shots(index,
+- [x] **F1/F3, the shot list:** `hzdr_aligner.shotsheet_shots(index,
       experiment_id, timezone)`; tests on the committed fixture (placeholder
       rows, numbering across two sets, values, time)
-- [ ] **F4, the files:**
+- [x] **F4, the files:**
   - `hzdr_aligner.acquisition_events(index, experiment_id)`;
   - a catalogue lookup by folder alias;
   - tests: instrument and format, members, auxiliary left out, the
     deterministic id, a watchdog duplicate dropped.
-- [ ] **F2/F5/F6, the build:**
+- [x] **F2/F5/F6, the build:**
   - `build()` merges the shot list with LabFrog's, by date;
   - the events are added;
   - the settings, the flag and the trigger, including multi-campaign mode;
   - `experiment_id_source` `shotsheet`;
   - tests: a real builder run on the fixture, and LabFrog winning a date.
-- [ ] **Vanlife measured:** a real build of Vanlife 12-01 and 12-03 from
+- [x] **Vanlife measured:** a real build of Vanlife 12-01 and 12-03 from
       the committed indexes (the NeXus file and the catalog). Shots,
       attached, suggested and waiting; the files without a catalogue
       instrument.
-- [ ] **Docs and next-on-server:**
+- [x] **Docs and next-on-server:**
   - `deploy-notes.md` and `next-on-server.md`: set `ALIGNER_CAMPAIGNS` for
     Vanlife, build 12-02 and 12-05's indexes, rebuild, then the
     containers and the phase 6 compare;
   - `operations.md`, `architecture.md`, `CLAUDE.md`, the settings template,
     `hzdr/CHANGELOG.md`.
-- [ ] **Gates:**
+- [x] **Gates:**
   - ruff, pyright at its 197 baseline, pytest, the coverage map;
   - the frontend label for `shotsheet`, with vitest, lint and e2e if the
     frontend changes;
@@ -134,4 +134,39 @@ work.
 
 ## Results
 
-(filled in by the commits)
+**Vanlife 12.2025 from the two committed indexes** (single-campaign build,
+no LabFrog export, no events, `--aligner-campaign` for 2025_12_01 and
+2025_12_03; 4 s):
+
+| Day | Shots (Shotsheet) | Files | Attached | Waiting as suggestions |
+| --- | ---: | ---: | ---: | ---: |
+| 2025-12-03 (reviewed) | 150 | 2,544 | **2,544** (every shot has its files) | 0 |
+| 2025-12-01 (not reviewed) | 108 | 1,698 | 0 | 1,698 (`aligner_unconfirmed`) |
+
+- Every instrument folder was found in the vendored catalogue; no file is
+  without an instrument.
+- `/entry/shots/experiment_id_source` is `shotsheet` for all 258 shots.
+- The container worker accepted the events: it wrote all 150 of 12-03's
+  containers, and the rebuilt master links them all from its root. Here the
+  detectors are empty and the 12,120 recorded problems are missing raw
+  files, which are on bigdata. On the server the same run fills them, and
+  `hzdr-compare-containers.py` checks them against shot-aligner's (phase 6).
+- 12-02 and 12-05 have no index committed; they follow on the server
+  (`deploy-notes.md` step 7).
+
+**Tests:**
+- 8 more in `test_hzdr_aligner.py`, 28 in all:
+  - the shot list across two sets, with a placeholder row;
+  - the file events and an uncatalogued folder;
+  - LabFrog keeping its date, a producer keeping its file (and a file of
+    the same name on another day);
+  - strict date parsing and the trigger arguments;
+  - a real single build and a multi-campaign build with no spool.
+- **Gates:**
+  - ruff is clean;
+  - pyright is at **193**, 4 below the 197 baseline: the builder's
+    `active` list now has a type;
+  - pytest: 1,109 passed, 33 skipped;
+  - the `next-on-server.sh` check was run by hand: a listed date without an
+    index is named;
+  - no frontend change.

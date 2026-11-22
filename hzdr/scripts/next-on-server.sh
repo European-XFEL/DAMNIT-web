@@ -382,6 +382,24 @@ check_aligner_index() {
     if [ -n "$missing" ]; then
         warn "reviewed in shot-aligner but no day index yet (open the date, or align.py index <date>): $missing"
     fi
+    # Campaigns built from those indexes (ALIGNER_CAMPAIGNS): each listed date
+    # needs its index, or that day builds no shots.
+    local listed
+    listed="$(cd "$api" && "$UV" run --no-sync python -c \
+        'from damnit_api.shared.settings import settings
+for c, ds in sorted(settings.hzdr_builder.aligner_campaigns.items()):
+    print(c, *ds)' 2>/dev/null)" || listed=""
+    [ -n "$listed" ] || return
+    local campaign dates d absent
+    while read -r campaign dates; do
+        absent=""
+        for d in $dates; do [ -f "$dir/$d.index.json" ] || absent="$absent $d"; done
+        if [ -n "$absent" ]; then
+            warn "DAMNIT builds $campaign from shot-aligner, but these dates have no day index:$absent"
+        else
+            ok "DAMNIT builds $campaign from shot-aligner: every listed date has its day index"
+        fi
+    done <<< "$listed"
 }
 
 # The campaign schedule routes "unassigned" events by trigger time. Until every

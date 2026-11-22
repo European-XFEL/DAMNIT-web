@@ -153,6 +153,15 @@ files still `MISSING` the column.
    shot-aligner's days the old rule would have offered 328 and 583 wrong
    files.
 
+10. **This year's campaigns from shot-aligner, Vanlife first (rulings
+    R-2026-11-22d/e, [plan-campaign-backfill.md](../plans/plan-campaign-backfill.md)).**
+    Set `DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS` to campaign -> dates,
+    build and review those days' indexes in shot-aligner, then rebuild. The
+    steps are in [deploy-notes.md](deploy-notes.md) step 7. On the two
+    committed days it gives 258 shots from the Shotsheets, with 12-03's 2,544
+    files attached and 12-01's 1,698 waiting as suggestions until 12-01 is
+    reviewed.
+
 ## 3. SciCat: clean up the duplicate datasets
 
 Until the fix of 2026-11-11, every rebuild registered a **new SciCat

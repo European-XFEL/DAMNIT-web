@@ -167,7 +167,20 @@ without one, and four settings decide how much waits in Review matches
   dates without an index. Score a day with
   `scripts/hzdr-evaluate-time-rule.py <index> --rule aligner`.
 
-All four apply at the next build: restart `damnit-api` after changing
+- **`DW_API_HZDR_BUILDER__ALIGNER_CAMPAIGNS`** (rulings R-2026-11-22d/e,
+  `hzdr/docs/plans/plan-campaign-backfill.md`): campaign -> dates
+  (`YYYY_MM_DD`) built from shot-aligner's day indexes. For a date LabFrog
+  has no records of, the Shotsheet rows that shot-aligner counts become the
+  shots:
+  - `shot_number` is the position in the day;
+  - the Count is in `labfrog_local_count`;
+  - `experiment_id_source` is `shotsheet`.
+
+  The acquisitions become file events (`source` `shot-aligner`), with the
+  instrument from the catalogue, unless the watchdog sent them. The bridge
+  above then attaches the confirmed ones. Steps: `deploy-notes.md`, step 7.
+
+All five apply at the next build: restart `damnit-api` after changing
 them, then rebuild (`scripts/hzdr-rebuild.py`), since a restart builds
 nothing.
 

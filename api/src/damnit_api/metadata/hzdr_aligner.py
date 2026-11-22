@@ -336,3 +336,294 @@ def claim_for_event(
             if claim is not None:
                 found.add(claim)
     return found.pop() if len(found) == 1 else None
+
+
+# --- this year's campaigns (plan-campaign-backfill) ----------------------------
+
+#: experiment_id_source of a shot made from a Shotsheet row (F3).
+SHOTSHEET_SOURCE = "shotsheet"
+#: source / kind / transport of a file event made from a day index (F4).
+ALIGNER_EVENT_SOURCE = "shot-aligner"
+ALIGNER_EVENT_KIND = "shot-aligner.file"
+#: The acquisition.time_source values the metadata registry knows.
+_TIME_SOURCES = {"filename", "first_seen", "mtime", "none"}
+
+
+def parse_campaign_dates(pairs: list[str] | None) -> dict[str, list[str]]:
+    """``["<campaign>=<YYYY_MM_DD>", ...]`` -> campaign -> its dates (F6)."""
+    found: dict[str, list[str]] = {}
+    for pair in pairs or []:
+        campaign, sep, date = str(pair).partition("=")
+        date = date.strip().replace("-", "_")
+        if not sep or not campaign.strip() or not _DATE_FOLDER.match(date):
+            message = f"--aligner-campaign wants <campaign>=<YYYY_MM_DD>, not {pair!r}"
+            raise ValueError(message)
+        found.setdefault(campaign.strip(), [])
+        if date not in found[campaign.strip()]:
+            found[campaign.strip()].append(date)
+    return found
+
+
+def load_day(
+    index_dir: Path, date_folder: str
+) -> tuple[dict[str, Any], dict[str, Any] | None] | None:
+    """One day's index and decisions, or None when the index is not there."""
+    path = index_dir / f"{date_folder}{INDEX_SUFFIX}"
+    if not path.is_file():
+        logger.warning(
+            "shot-aligner has no day index for %s in %s", date_folder, index_dir
+        )
+        return None
+    index = _read_json(path)
+    if index is None:
+        return None
+    decisions_path = index_dir / f"{date_folder}{DECISIONS_SUFFIX}"
+    decisions = _read_json(decisions_path) if decisions_path.is_file() else None
+    return index, decisions
+
+
+def _row_time(date: str, row: dict[str, Any]) -> str | None:
+    """The row's Zeit on its day, naive local (LabFrog's ``date_time`` form)."""
+    seconds = _as_int(row.get("time_seconds"))
+    if seconds is None:
+        return None
+    hours, rest = divmod(seconds, 3600)
+    minutes, secs = divmod(rest, 60)
+    return f"{date}T{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def _row_metadata(row: dict[str, Any]) -> dict[str, Any]:
+    """The row's values where LabFrog would keep them, the rest under shotsheet."""
+    values = dict(row.get("values") or {})
+    metadata: dict[str, Any] = {}
+    for key in ("gvd", "tod"):
+        if values.get(key) is not None:
+            metadata[key] = values.pop(key)
+    energy = values.pop("elaser", None)
+    if energy is not None:
+        metadata["laser"] = {"pulse_energy": energy}
+    values.pop("count", None)
+    metadata["shotsheet"] = {
+        "set": row.get("set_name"),
+        "count": _as_int(row.get("count")),
+        "excel_row": _as_int(row.get("excel_row")),
+        "values": values,
+    }
+    if row.get("comments"):
+        metadata["comments"] = str(row["comments"])
+    return metadata
+
+
+def shotsheet_shots(index: dict[str, Any], experiment_id: str) -> list[dict[str, Any]]:
+    """The day's Shotsheet rows as shot records, in LabFrog's record shape (F1, F3).
+
+    Only the rows shot-aligner's inclusion rule counts. ``shot_number`` is the
+    row's position in the day (1 to N, sets and rows in workbook order); the
+    Count is kept as ``local_count``. No authority number.
+    """
+    date_folder = str(index.get("date") or "")
+    if not _DATE_FOLDER.match(date_folder):
+        return []
+    date = date_folder.replace("_", "-")
+    shotsheet = index.get("shotsheet")
+    rows = shotsheet.get("rows") if isinstance(shotsheet, dict) else None
+    counted = [
+        row
+        for row in rows or []
+        if isinstance(row, dict)
+        and row.get("counted") is True
+        and _as_int(row.get("excel_row")) is not None
+    ]
+    shots = []
+    for position, row in enumerate(counted, start=1):
+        record = {
+            "record_id": f"shotsheet:{date}:{_as_int(row.get('excel_row'))}",
+            "shot_number": position,
+            "shot_date": date,
+            "labfrog_date_time": _row_time(date, row),
+            "campaign": experiment_id,
+            "experiment_id": experiment_id,
+            "record_source": SHOTSHEET_SOURCE,
+            "metadata": _row_metadata(row),
+        }
+        count = _as_int(row.get("count"))
+        if count is not None:
+            record["local_count"] = count
+        shots.append(record)
+    return shots
+
+
+def _catalogue_by_folder() -> dict[str, dict[str, Any]]:
+    """The vendored instrument catalogue, by folder alias and name (lower case)."""
+    from .hzdr_packs import vendor
+
+    found: dict[str, dict[str, Any]] = {}
+    for instrument_id, entry in vendor.catalogue().items():
+        for name in [*(entry.get("folder_aliases") or []), entry.get("display_name")]:
+            if name:
+                found.setdefault(str(name).lower(), {**entry, "id": instrument_id})
+    return found
+
+
+def _instrument(folder: str, catalogue: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    entry = catalogue.get(folder.lower())
+    if entry is None or not entry.get("format") or entry["format"] == "unrecognised":
+        return {"id": None, "record_source": "none"}
+    instrument = {
+        "id": entry["id"],
+        "format": entry["format"],
+        "record_source": "catalogue",
+    }
+    for key in ("group", "timing_role"):
+        if entry.get(key):
+            instrument[key] = entry[key]
+    return instrument
+
+
+def _utc_iso(epoch: float) -> str:
+    from datetime import UTC, datetime
+
+    return datetime.fromtimestamp(epoch, UTC).isoformat()
+
+
+def _acquisition_epoch(
+    acquisition: dict[str, Any], event: dict[str, Any], timezone: str
+) -> float | None:
+    """The instrument's raw time; else its local ``iso``; else the event's."""
+    from .hzdr_nexus import parse_datetime
+
+    if isinstance(acquisition.get("timestamp"), (int, float)):
+        return float(acquisition["timestamp"])
+    stamp = parse_datetime(acquisition.get("iso"), naive_timezone=timezone)
+    if stamp is not None:
+        return stamp.timestamp()
+    if isinstance(event.get("time"), (int, float)):
+        return float(event["time"])
+    return None
+
+
+def acquisition_events(
+    index: dict[str, Any], experiment_id: str, *, timezone: str = "Europe/Berlin"
+) -> list[dict[str, Any]]:
+    """Every shot acquisition of the day as one ``hzdr-event-v1`` file event (F4).
+
+    The files are named under the index's ``dataFolder``; the instrument comes
+    from the vendored catalogue by folder name. No shot number and no
+    attribution: the bridge attaches them by file. Auxiliary files get none.
+    """
+    import hashlib
+
+    date_folder = str(index.get("date") or "")
+    data_folder = str(index.get("dataFolder") or "").rstrip("/")
+    if not _DATE_FOLDER.match(date_folder) or not data_folder:
+        return []
+    catalogue = _catalogue_by_folder()
+    events: list[dict[str, Any]] = []
+    for data in (index.get("sets") or {}).values():
+        for event in (data.get("events") or []) if isinstance(data, dict) else []:
+            for acquisition in event.get("acquisitions") or []:
+                files = [
+                    str(name).replace("\\", "/")
+                    for name in acquisition.get("files") or []
+                ]
+                if not files:
+                    continue
+                epoch = _acquisition_epoch(acquisition, event, timezone)
+                if epoch is None:
+                    continue
+                folder = PurePosixPath(files[0]).parts[0]
+                digest = hashlib.sha256(
+                    f"{date_folder}|{acquisition.get('key')}".encode()
+                ).hexdigest()[:24]
+                primary = next(
+                    (
+                        name
+                        for name in files
+                        if name.endswith(("_original.png", ".txt", ".tif"))
+                    ),
+                    files[0],
+                )
+                acquisition_meta: dict[str, Any] = {"time": _utc_iso(epoch)}
+                source = str(acquisition.get("timeSource") or "")
+                if source in _TIME_SOURCES:
+                    acquisition_meta["time_source"] = source
+                events.append({
+                    "schema_version": "hzdr-event-v1",
+                    "event_id": f"aligner-{digest}",
+                    "experiment_id": experiment_id,
+                    "shot_id": f"{date_folder}:{acquisition.get('key')}",
+                    "shot_number": None,
+                    "source": ALIGNER_EVENT_SOURCE,
+                    "kind": ALIGNER_EVENT_KIND,
+                    "timestamp": _utc_iso(epoch),
+                    "transport": "file",
+                    "payload_ref": {
+                        "path": f"{data_folder}/{primary}",
+                        "filename": PurePosixPath(primary).name,
+                        "members": [
+                            {
+                                "path": f"{data_folder}/{name}",
+                                "filename": PurePosixPath(name).name,
+                            }
+                            for name in files
+                        ],
+                    },
+                    "values": None,
+                    "metadata": {
+                        "instrument": _instrument(folder, catalogue),
+                        "acquisition": acquisition_meta,
+                        # Its own stream per folder, also for an uncatalogued one (D1).
+                        "producer": {"instance_id": f"shot-aligner:{folder}"},
+                        "watch": {
+                            "watch_name": folder,
+                            "watch_path": f"{data_folder}/{folder}",
+                        },
+                    },
+                })
+    return events
+
+
+def backfill(
+    index_dir: Path,
+    experiment_id: str,
+    date_folders: list[str],
+    *,
+    labfrog_shots: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+    timezone: str = "Europe/Berlin",
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Shotsheet shots for the dates LabFrog has none of, and the days' files.
+
+    F2: a date with LabFrog records keeps them. F4: a file a producer event
+    already names keeps that event. Returns (shots to add, events to add).
+    """
+    from .hzdr_nexus import parse_datetime, resolve_timezone
+
+    labfrog_dates = {str(shot.get("shot_date")) for shot in labfrog_shots}
+    zone = resolve_timezone(timezone)
+    # (folder, name, date folder) of every file a producer event names: a
+    # spectrometer's plain names repeat from day to day, so the day counts.
+    produced: set[tuple[str, str, str]] = set()
+    for event in events:
+        stamp = parse_datetime(event.get("timestamp"))
+        local = stamp.astimezone(zone).strftime("%Y_%m_%d") if stamp else ""
+        for folder, name, parts in event_file_keys(event):
+            days = [part for part in parts if _DATE_FOLDER.match(part)] or [local]
+            produced.update((folder, name, day) for day in days)
+    shots: list[dict[str, Any]] = []
+    added: list[dict[str, Any]] = []
+    for date_folder in date_folders:
+        day = load_day(index_dir, date_folder)
+        if day is None:
+            continue
+        index, _ = day
+        if date_folder.replace("_", "-") not in labfrog_dates:
+            shots.extend(shotsheet_shots(index, experiment_id))
+        for event in acquisition_events(index, experiment_id, timezone=timezone):
+            keys = {
+                (folder, name, date_folder)
+                for folder, name, _ in event_file_keys(event)
+            }
+            if not keys & produced:
+                added.append(event)
+    return shots, added

@@ -25,7 +25,8 @@ from damnit_api.consumer.campaign_builds import (
     stamp_campaign,
     unassigned_spool_files,
 )
-from damnit_api.metadata.hzdr_aligner import load_aligner_claims
+from damnit_api.metadata.hzdr_aligner import backfill as aligner_backfill
+from damnit_api.metadata.hzdr_aligner import load_aligner_claims, parse_campaign_dates
 from damnit_api.metadata.hzdr_event import UNASSIGNED_EXPERIMENT_ID
 from damnit_api.metadata.hzdr_nexus import (
     discover_labfrog_data_products,
@@ -195,6 +196,7 @@ def build(
     experiment_id = select_experiment_id(
         args.experiment_id, events, labfrog_shots, args.labfrog_nexus
     )
+    labfrog_shots = _with_aligner_backfill(args, experiment_id, labfrog_shots, events)
     output_nexus = args.output_nexus.resolve()
     sources_file = (
         args.sources_file.resolve()
@@ -305,6 +307,41 @@ _SINGLE_CAMPAIGN_FLAGS = (
 )
 
 
+def _with_aligner_backfill(
+    args: argparse.Namespace,
+    experiment_id: str,
+    labfrog_shots: list[dict[str, Any]],
+    events: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Add the campaign's Shotsheet shots and files from shot-aligner's indexes.
+
+    plan-campaign-backfill: for each date listed under this campaign
+    (``--aligner-campaign``), the Shotsheet rows become shots where LabFrog has
+    none of that date, and the day's acquisitions become file events (added to
+    ``events`` in place) unless a producer already sent them.
+    """
+    index_dir = getattr(args, "aligner_index_dir", None)
+    dates = parse_campaign_dates(getattr(args, "aligner_campaign", None)).get(
+        experiment_id, []
+    )
+    if not index_dir or not dates:
+        return labfrog_shots
+    shots, added = aligner_backfill(
+        index_dir,
+        experiment_id,
+        dates,
+        labfrog_shots=labfrog_shots,
+        events=events,
+        timezone=args.campaign_timezone,
+    )
+    events.extend(added)
+    print(
+        f"shot-aligner backfill ({experiment_id}): {len(shots)} Shotsheet shot(s), "
+        f"{len(added)} file event(s) from {len(dates)} date(s)"
+    )
+    return [*labfrog_shots, *shots]
+
+
 def _spool_roots(pairs: list[list[str]] | None) -> list[SpoolRoot]:
     return [SpoolRoot(Path(directory), filename) for directory, filename in pairs or []]
 
@@ -344,7 +381,15 @@ def build_all(args: argparse.Namespace) -> int:
 
     # The campaigns taking shots: their LabFrog records decide resolution step 1
     # in every build of this run.
-    active = list(dict.fromkeys([*(args.campaign or []), *sorted(spooled)]))
+    # A campaign backfilled from shot-aligner is built though it has no spool.
+    backfilled = (
+        sorted(parse_campaign_dates(getattr(args, "aligner_campaign", None)))
+        if getattr(args, "aligner_index_dir", None)
+        else []
+    )
+    active: list[str] = list(
+        dict.fromkeys([*(args.campaign or []), *backfilled, *sorted(spooled)])
+    )
     exports: dict[str, list[dict[str, Any]]] = {}
     resolution_shots: list[dict[str, Any]] = []
     for campaign in active:
@@ -677,6 +722,18 @@ def main() -> None:
             "record and Count name, once date, time and values agree "
             "(aligner_confirmed); an unconfirmed one is suggested "
             "(plan-aligner-bridge)."
+        ),
+    )
+    parser.add_argument(
+        "--aligner-campaign",
+        action="append",
+        default=[],
+        metavar="CAMPAIGN=YYYY_MM_DD",
+        help=(
+            "A date of a campaign to build from shot-aligner's day index "
+            "(with --aligner-index-dir): its Shotsheet rows become shots where "
+            "LabFrog has none that day, its acquisitions become file events. "
+            "Repeatable (plan-campaign-backfill)."
         ),
     )
     parser.add_argument(

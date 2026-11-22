@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import h5py
 import numpy as np
 
-from .hzdr_aligner import AlignerClaim, FileKey, claim_for_event
+from .hzdr_aligner import SHOTSHEET_SOURCE, AlignerClaim, FileKey, claim_for_event
 from .hzdr_event import (
     EVENT_REQUIRED_FIELDS,
     METADATA_KEY_REGISTRY,
@@ -1695,6 +1695,9 @@ def merge_labfrog_shots(
 # is an event that arrived already naming its campaign, which is every event a
 # producer emits today and is kept as-is rather than second-guessed.
 EXPERIMENT_ID_SOURCES = ("labfrog", "schedule", "ruling", "producer", "unassigned")
+# Not part of that chain: a shot made from a Shotsheet row in shot-aligner's
+# day index (plan-campaign-backfill F3), for a campaign LabFrog has no records
+# of. Its campaign is the one the maintainer listed the date under.
 _EXPERIMENT_ID_SOURCE_RANK = {
     source: rank for rank, source in enumerate(EXPERIMENT_ID_SOURCES)
 }
@@ -2147,7 +2150,7 @@ def reconcile_canonical_shots(  # noqa: C901
                 campaign_timezone=campaign_timezone,
             )
         for shot in canonical:
-            shot["experiment_id_source"] = "labfrog"
+            shot.setdefault("experiment_id_source", "labfrog")
         if include_trigger_only:
             # The union's number set is the authority's numbers only (R3): a
             # trigger is not absorbed by a row whose number was typed.
@@ -4216,6 +4219,9 @@ def _canonical_from_labfrog(
     superseded_by = _as_optional_string(record.get("superseded_by"))
     if superseded_by:
         canonical["labfrog_superseded_by"] = superseded_by
+    # A shot made from a Shotsheet row (plan-campaign-backfill F3) says so.
+    if record.get("record_source") == SHOTSHEET_SOURCE:
+        canonical["experiment_id_source"] = SHOTSHEET_SOURCE
     return canonical
 
 

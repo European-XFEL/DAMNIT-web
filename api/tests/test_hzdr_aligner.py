@@ -434,3 +434,215 @@ def test_the_builder_attaches_confirmed_files_from_the_index_folder(tmp_path):
         if event["source"] == "DAQ-File-Watchdog"
     ]
     assert qualities == ["aligner_confirmed"] * 9
+
+
+# --- this year's campaigns (plan-campaign-backfill) ----------------------------
+
+from damnit_api.metadata.hzdr_aligner import (  # noqa: E402
+    acquisition_events,
+    backfill,
+    parse_campaign_dates,
+    shotsheet_shots,
+)
+
+VANLIFE = "Vanlife_12.2025"
+
+
+def test_shotsheet_rows_become_shots_numbered_through_the_day():
+    index = _index()
+    rows = index["shotsheet"]["rows"]
+    # A second set restarting its Count, and a placeholder row it does not count.
+    rows.append({**rows[0], "set_name": "set2", "count": 1, "excel_row": 90})
+    rows.append({
+        **rows[0],
+        "set_name": "set2",
+        "count": 2,
+        "excel_row": 91,
+        "counted": False,
+    })
+    shots = shotsheet_shots(index, VANLIFE)
+    assert [
+        (s["shot_number"], s["local_count"], s["metadata"]["shotsheet"]["set"])
+        for s in shots
+    ] == [
+        (1, 1, "set1"),
+        (2, 2, "set1"),
+        (3, 3, "set1"),
+        (4, 1, "set2"),
+    ]
+    third = shots[2]
+    assert third["record_id"] == "shotsheet:2025-12-03:6"
+    assert third["labfrog_date_time"] == "2025-12-03T15:27:00"
+    assert third["record_source"] == "shotsheet"
+    assert third["metadata"]["laser"] == {"pulse_energy": 0.456}
+    assert third["metadata"]["gvd"] == 39000
+    assert "count" not in third["metadata"]["shotsheet"]["values"]
+    assert "authority_shot_number" not in third
+
+
+def test_acquisitions_become_file_events_the_container_worker_can_read():
+    events = acquisition_events(_index(), VANLIFE)
+    assert len(events) == 9  # 3 events x 3 instruments; auxiliary files get none
+    bam = next(
+        e for e in events if e["shot_id"].endswith("BAM|set1_2025-12-03_15h-22m-51s_1")
+    )
+    assert bam["metadata"]["instrument"] == {
+        "id": "bam",
+        "format": "camera_png_csv",
+        "record_source": "catalogue",
+        "group": bam["metadata"]["instrument"].get("group"),
+        "timing_role": bam["metadata"]["instrument"].get("timing_role"),
+    }
+    assert bam["shot_number"] is None
+    assert "attribution" not in bam["metadata"]
+    assert (
+        bam["payload_ref"]["path"]
+        == f"{DATA}/BAM/set1_2025-12-03_15h-22m-51s_1_original.png"
+    )
+    assert {m["path"] for m in bam["payload_ref"]["members"]} == {
+        f"{DATA}/BAM/set1_2025-12-03_15h-22m-51s_1.csv",
+        f"{DATA}/BAM/set1_2025-12-03_15h-22m-51s_1_original.png",
+    }
+    assert bam["metadata"]["acquisition"]["time_source"] == "filename"
+    # Deterministic: the same index gives the same ids.
+    assert [e["event_id"] for e in acquisition_events(_index(), VANLIFE)] == [
+        e["event_id"] for e in events
+    ]
+
+
+def test_an_uncatalogued_folder_gets_no_instrument_but_its_own_stream():
+    index = _index()
+    acquisition = index["sets"]["set1"]["events"][0]["acquisitions"][0]
+    acquisition["files"] = [
+        name.replace("BAM/", "Mystery cam/") for name in acquisition["files"]
+    ]
+    event = next(
+        e
+        for e in acquisition_events(index, VANLIFE)
+        if "Mystery" in e["payload_ref"]["path"]
+    )
+    assert event["metadata"]["instrument"] == {"id": None, "record_source": "none"}
+    assert event["metadata"]["producer"]["instance_id"] == "shot-aligner:Mystery cam"
+
+
+def _index_dir(tmp_path: Path) -> Path:
+    for name in ("2025_12_03.index.json", "2025_12_03.decisions.json"):
+        shutil.copy(FIXTURES / name, tmp_path)
+    return tmp_path
+
+
+def test_labfrog_keeps_its_dates_and_a_producer_keeps_its_files(tmp_path):
+    index_dir = _index_dir(tmp_path)
+    shots, events = backfill(
+        index_dir, VANLIFE, ["2025_12_03"], labfrog_shots=[], events=[]
+    )
+    assert (len(shots), len(events)) == (3, 9)
+    # LabFrog has records of that date: no Shotsheet shots, the files still come.
+    shots, events = backfill(
+        index_dir, VANLIFE, ["2025_12_03"], labfrog_shots=_shots(), events=[]
+    )
+    assert (len(shots), len(events)) == (0, 9)
+    # The watchdog sent one of the files: its event wins, the copy is dropped.
+    watchdog = _file_events()[:1]
+    _, events = backfill(
+        index_dir, VANLIFE, ["2025_12_03"], labfrog_shots=[], events=watchdog
+    )
+    assert len(events) == 8
+    # The same file name on another day is another file.
+    watchdog[0]["payload_ref"] = {
+        "path": watchdog[0]["payload_ref"]["path"].replace("2025_12_03", "2025_12_04")
+    }
+    _, events = backfill(
+        index_dir, VANLIFE, ["2025_12_03"], labfrog_shots=[], events=watchdog
+    )
+    assert len(events) == 9
+    # A date with no index is skipped, not an error.
+    assert backfill(
+        index_dir, VANLIFE, ["2025_12_05"], labfrog_shots=[], events=[]
+    ) == ([], [])
+
+
+def test_campaign_dates_are_parsed_strictly():
+    assert parse_campaign_dates([
+        f"{VANLIFE}=2025_12_01",
+        f"{VANLIFE}=2025-12-03",
+        f"{VANLIFE}=2025_12_01",
+    ]) == {VANLIFE: ["2025_12_01", "2025_12_03"]}
+    with pytest.raises(ValueError, match="<campaign>="):
+        parse_campaign_dates(["Vanlife"])
+
+
+def test_the_trigger_passes_each_campaign_date(tmp_path):
+    from damnit_api.consumer.builder_trigger import BuilderTrigger
+    from damnit_api.shared.hzdr_settings import HZDRBuilderSettings
+
+    settings = HZDRBuilderSettings(
+        enabled=True,
+        output_nexus=tmp_path / "c.nxs",
+        aligner_index_dir=tmp_path,
+        aligner_campaigns={VANLIFE: ["2025_12_01", "2025_12_03"]},
+    )
+    command = " ".join(BuilderTrigger(settings, trigger_jsonl=[]).build_command())
+    first, second = (
+        f"--aligner-campaign {VANLIFE}={d}" for d in ("2025_12_01", "2025_12_03")
+    )
+    assert f"{first} {second}" in command
+
+
+def _run_builder(*arguments: str) -> None:
+    import subprocess  # noqa: S404
+    import sys
+
+    script = Path(__file__).parents[1] / "scripts" / "hzdr-hdf5-builder.py"
+    result = subprocess.run(  # noqa: S603
+        [
+            sys.executable,
+            str(script),
+            "--campaign-timezone",
+            "Europe/Berlin",
+            *arguments,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_a_campaign_is_built_from_shotsheet_and_index_alone(tmp_path):
+    (tmp_path / "index").mkdir()
+    index_dir = _index_dir(tmp_path / "index")
+    events = tmp_path / "none.jsonl"
+    events.write_text("")
+    _run_builder(
+        "--experiment-id", VANLIFE,
+        "--events-jsonl", str(events),
+        "--output-nexus", str(tmp_path / "out" / f"{VANLIFE}.nxs"),
+        "--aligner-index-dir", str(index_dir),
+        "--aligner-campaign", f"{VANLIFE}=2025_12_03",
+    )  # fmt: skip
+    catalog = json.loads((tmp_path / "out" / "hzdr_sources.json").read_text())
+    shots = catalog["sources"][0]["shots"]
+    assert [shot["experiment_id_source"] for shot in shots] == ["shotsheet"] * 3
+    assert [len(shot["events"]) for shot in shots] == [4, 4, 4]  # 3 files + its row
+    assert {
+        event["match_quality"]
+        for shot in shots
+        for event in shot["events"]
+        if event["source"] == "shot-aligner"
+    } == {"aligner_confirmed"}
+
+
+def test_multi_campaign_mode_builds_a_backfilled_campaign_without_a_spool(tmp_path):
+    index_dir = tmp_path / "index"
+    index_dir.mkdir()
+    _index_dir(index_dir)
+    _run_builder(
+        "--output-root", str(tmp_path / "nexus"),
+        "--aligner-index-dir", str(index_dir),
+        "--aligner-campaign", f"{VANLIFE}=2025_12_03",
+    )  # fmt: skip
+    assert (tmp_path / "nexus" / VANLIFE / f"{VANLIFE}.nxs").is_file()
+    catalog = json.loads((tmp_path / "nexus" / "hzdr_sources.json").read_text())
+    vanlife = next(s for s in catalog["sources"] if s["key"] == VANLIFE)
+    assert len(vanlife["shots"]) == 3
