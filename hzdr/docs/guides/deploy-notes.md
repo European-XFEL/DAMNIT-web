@@ -6,6 +6,62 @@ first. The full checklist with background is
 follow at the keyboard. Run everything as `tippey`; use sudo only for
 `systemctl`.
 
+## Shot authority: triggers only, not the raw relay (2026-11-23)
+
+**Why.** After the 2026-11-23 deploy, `check-shot-intake` failed with
+`the listener reports zmq: invalid ... ZMQ shot details require 2 message
+parts, received 4`. The shotcounter publishes every raw message it receives
+as `Draco Relay` (4 binary parts) on the same port as its `Draco01`,
+`Draco02`, ... triggers. The shot authority subscribed with `--prefix Draco`,
+which matches both, so it passed the relay on to port 2951. LabFrog rejected
+every message, and its quarantine had 1443 relay records. Background:
+planet-watchdog `docs/SHOT_AUTHORITY.md`, section Topics.
+
+### 1. Done on the server on 2026-11-23
+
+```bash
+sudo sed -i.bak 's/--prefix Draco /--topics Draco0,Draco1 /' \
+    /etc/systemd/system/planet-watchdog-shot-authority.service
+sudo systemctl daemon-reload
+sudo systemctl restart planet-watchdog-shot-authority
+sudo systemctl restart labfrog-shot-intake
+cd ~/labfrog && uv run poe check-shot-intake    # PASS ... zmq: listening
+```
+
+After that, port 2951 was silent with no shots firing, and the old unit is
+kept as `planet-watchdog-shot-authority.service.bak`. `Draco0,Draco1` covers
+channels 01-19; add `Draco2` if the device has more.
+
+### 2. Still to do: clear the relay records from LabFrog's quarantine
+
+```bash
+cd ~/labfrog && uv run python - <<'PY'
+from labfrog import create_app
+from labfrog.db import get_db
+app = create_app()
+with app.app_context():
+    q = get_db()[app.config.get("SHOT_DETAILS_QUARANTINE_COLLECTION") or "shot_detail_quarantine"]
+    f = {"transport_ref.topic": "Draco Relay"}
+    print("relay docs:", q.count_documents(f), "of", q.count_documents({}))
+    print("deleted:", q.delete_many(f).deleted_count)
+PY
+```
+
+### 3. When the planet-watchdog and LabFrog changes are merged
+
+planet-watchdog changes the unit example, the docs and
+`deploy/check-shot-authority.sh`, which now warns while a unit still uses
+`--prefix Draco`. LabFrog's listener skips `Draco Relay` without
+quarantining it. Nothing is needed beyond the usual run:
+
+```bash
+bash ~/DAMNIT-web-hzdr/hzdr/scripts/next-on-server.sh --apply
+cd ~/planet-watchdog && bash deploy/check-shot-authority.sh   # PASS ... trigger topics only
+```
+
+`--apply` restarts the shot authority as well, because its checkout moved,
+so run it when no shots are being fired. Its numbering state is not touched.
+
 ## DAMNIT PR #57 and #58 (2026-11-22)
 
 Deploy them together, once both are merged on `main`. damnit-api becomes
