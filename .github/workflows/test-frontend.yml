@@ -57,6 +57,32 @@ jobs:
       - name: Test
         run: pnpm test
 
+  nginx:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: "frontend/package.json"
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check nginx proxy paths
+        run: pnpm check:nginx
+
   integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15
