@@ -62,6 +62,53 @@ cd ~/planet-watchdog && bash deploy/check-shot-authority.sh   # PASS ... trigger
 `--apply` restarts the shot authority as well, because its checkout moved,
 so run it when no shots are being fired. Its numbering state is not touched.
 
+### 4. Campaign schedule (done on 2026-11-23)
+
+Write the file **before** setting the variable. The other way round, the
+builder stops with `FileNotFoundError` (`Builder exited 1`) and the
+`labfrog` step reports `FAIL ... campaign schedule is set, but its file ...
+is missing`. `tippey` cannot create folders under `/data/damnit/hzdr`, so
+create this one with sudo:
+
+```bash
+sudo install -d -o tippey -g tippey /data/damnit/hzdr/exports
+cd ~/labfrog && uv run --no-sync python scripts/export_campaign_schedule.py \
+    --mediawiki --output /data/damnit/hzdr/exports/campaign-schedule.json
+# only then:
+echo 'DW_API_HZDR_BUILDER__CAMPAIGN_SCHEDULE=/data/damnit/hzdr/exports/campaign-schedule.json' \
+    >> ~/DAMNIT-web-hzdr/api/.env
+sudo systemctl restart damnit-api
+cd ~/DAMNIT-web-hzdr/api && uv run --no-sync python scripts/hzdr-rebuild.py
+```
+
+The build logs one `overlap` line per pair of wiki beamtimes that share
+days (15 on 2026-11-23). A trigger on such a day is not routed by date and
+waits in Review matches. None touches CoilsBordeaux 2026 (2026-11-09 to
+11-27). PLANET 26 and Hybrid 09.2026 overlap from 2026-08-31 to 09-19.
+
+**Nothing refreshes the file.** The `labfrog` step warns once it is 7 days
+old. Re-run the export when the wiki's beamtimes change, at the latest when
+the beamtime after CoilsBordeaux 2026 is entered.
+
+### 5. Index the days DAMNIT is waiting for (after shot-aligner is pulled)
+
+shot-aligner's offset fitting stalled on a dense day (2026_09_09). The fix
+is on shot-aligner's `main` (CHANGELOG 2026-11-23); `next-on-server.sh
+--apply` pulls it and restarts `laser-shot-aligner`. Then write the three
+indexes the `labfrog` step lists:
+
+```bash
+cd ~/shot-aligner
+for d in 2026_09_09 2025_12_02 2025_12_05; do
+  uv run --no-sync --no-default-groups shot_aligner/scripts/align.py \
+      --site fwkt-webapps index "$d" --if-changed
+done
+bash ~/DAMNIT-web-hzdr/hzdr/scripts/next-on-server.sh --step labfrog
+```
+
+A new index triggers a DAMNIT rebuild by itself. 2025_12_02 and 2025_12_05
+are Vanlife days (`ALIGNER_CAMPAIGNS`, set on 2026-11-23: 258 shots).
+
 ## DAMNIT PR #57 and #58 (2026-11-22)
 
 Deploy them together, once both are merged on `main`. damnit-api becomes
