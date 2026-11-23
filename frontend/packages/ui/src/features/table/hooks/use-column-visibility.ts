@@ -57,66 +57,63 @@ function visibilityFromTags(
 
 // A column shows when it's variable-visible AND (there's no tag filter OR it
 // passes the tag filter).
-export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
-  const configurable = configurableVariables(inputs.variableNames)
-  const fromVariables = visibilityFromVariables(configurable, inputs.visibility)
-  const fromTags = visibilityFromTags(configurable, inputs)
-
+function combineVisibility(
+  fromVariables: Record<string, boolean>,
+  fromTags: Record<string, boolean> | null
+) {
   return Object.fromEntries(
-    configurable.map((name) => [
+    Object.entries(fromVariables).map(([name, visible]) => [
       name,
-      fromVariables[name] && (fromTags == null || fromTags[name]),
+      visible && (fromTags == null || fromTags[name]),
     ])
   )
 }
 
-function useVariableNames() {
-  const { variables } = useTableMeta()
-  return useMemo(() => Object.keys(variables), [variables])
+export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
+  const configurable = configurableVariables(inputs.variableNames)
+
+  return combineVisibility(
+    visibilityFromVariables(configurable, inputs.visibility),
+    visibilityFromTags(configurable, inputs)
+  )
 }
 
 export function useColumnVisibilityFromVariables() {
-  const variableNames = useVariableNames()
+  const { variables } = useTableMeta()
   const visibility = useAppSelector(selectColumnVisibility)
 
   return useMemo(
     () =>
-      visibilityFromVariables(configurableVariables(variableNames), visibility),
-    [variableNames, visibility]
+      visibilityFromVariables(
+        configurableVariables(Object.keys(variables)),
+        visibility
+      ),
+    [variables, visibility]
   )
 }
 
 export function useColumnVisibilityFromTags() {
-  const { tags } = useTableMeta()
+  const { variables, tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
-  const variableNames = useVariableNames()
 
   return useMemo(
     () =>
-      visibilityFromTags(configurableVariables(variableNames), {
+      visibilityFromTags(configurableVariables(Object.keys(variables)), {
         tags,
         tagSelection,
       }),
-    [variableNames, tags, tagSelection]
+    [variables, tags, tagSelection]
   )
 }
 
 // Which columns the table actually shows. Named apart from the store's
 // `columnVisibility`, which is only one of its two inputs.
 export function useVisibleColumns() {
-  const variableNames = useVariableNames()
-  const visibility = useAppSelector(selectColumnVisibility)
-  const { tags } = useTableMeta()
-  const tagSelection = useAppSelector(selectTagSelection)
+  const fromVariables = useColumnVisibilityFromVariables()
+  const fromTags = useColumnVisibilityFromTags()
 
   return useMemo(
-    () =>
-      computeColumnVisibility({
-        variableNames,
-        visibility,
-        tags,
-        tagSelection,
-      }),
-    [variableNames, visibility, tags, tagSelection]
+    () => combineVisibility(fromVariables, fromTags),
+    [fromVariables, fromTags]
   )
 }
