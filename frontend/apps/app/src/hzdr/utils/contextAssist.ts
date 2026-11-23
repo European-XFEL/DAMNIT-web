@@ -60,10 +60,17 @@ const BOOKKEEPING_DATASETS = new Set([
   'record_id',
 ])
 
+/**
+ * Identifiers, keys and row indices by their name: `experiment_id`,
+ * `kafka_event_id`, `labfrog_record_id`, `shot_index`, `message_key`, ... The
+ * campaign file holds dozens; listing them one by one let most through.
+ */
+const ID_LIKE = /(^|_)(id|ids|key|keys|index|uuid)$/i
+
 /** Whether a dataset is bookkeeping by its last path segment. */
 export function isBookkeepingDataset(name: string) {
   const last = name.split('/').filter(Boolean).at(-1) ?? ''
-  return BOOKKEEPING_DATASETS.has(last)
+  return BOOKKEEPING_DATASETS.has(last) || ID_LIKE.test(last)
 }
 
 function datasetTitle(name: string) {

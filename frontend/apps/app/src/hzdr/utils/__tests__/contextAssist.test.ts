@@ -94,6 +94,33 @@ describe('datasetSuggestions', () => {
     ).toEqual(['entry/instrument/bam/image'])
   })
 
+  it('never offers an identifier, key or row index, whatever its name', () => {
+    const names = [
+      'entry/shots/experiment_id',
+      'entry/shots/kafka_event_id',
+      'entry/shots/labfrog_record_id',
+      'entry/shots/shot_index',
+      'entry/source_events/message_key',
+      'entry/data_products/product_id',
+    ]
+    const options = buildHdf5DatasetOptions(
+      [
+        ...names.map((name) => ({ name, shape: [12], dtype: 'int64' })),
+        { name: 'entry/shots/pulse_energy', shape: [12], dtype: 'float64' },
+        { name: 'entry/shots/keyhole_width', shape: [12], dtype: 'float64' },
+      ],
+      'shot'
+    )
+    const fields = datasetSuggestions(options, 'x').map((entry) => entry.field)
+    expect(
+      fields.some((field) =>
+        names.some((name) => field.endsWith(name.split('/').at(-1)!))
+      )
+    ).toBe(false)
+    expect(fields.some((field) => field.endsWith('pulse_energy'))).toBe(true)
+    expect(fields.some((field) => field.endsWith('keyhole_width'))).toBe(true)
+  })
+
   it('writes columns that skip a shot without a number, not nan', () => {
     const options = buildHdf5DatasetOptions(
       [
