@@ -499,13 +499,20 @@ async def two_proposal_db(mocker, tmp_path, request):
                 for p, r, n, v, t in variable_rows
             ],
         )
+        # `Damnit` only finds a run with a start time, and a variable's title.
         await conn.execute(
-            text("INSERT INTO run_info (proposal, run) VALUES (:proposal, :run)"),
+            text(
+                "INSERT INTO run_info (proposal, run, start_time)"
+                " VALUES (:proposal, :run, 1700000000.0)"
+            ),
             [
                 {"proposal": int(proposal), "run": 1},
                 {"proposal": int(proposal), "run": 2},
                 {"proposal": guest, "run": 1},
             ],
+        )
+        await conn.execute(
+            text("INSERT INTO variables (name, title) VALUES ('alpha', NULL)")
         )
         if active_value is not None:
             await conn.execute(
