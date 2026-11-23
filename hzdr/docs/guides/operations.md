@@ -134,6 +134,19 @@ without one, and four settings decide how much waits in Review matches
   a campaign by trigger time; without it every such shot waits as
   *Unassigned*. `next-on-server.sh`'s `labfrog` step reports whether it is
   set, whether the file exists, and how old it is (a warning after 7 days).
+  On fwkt-webapps it is `/data/damnit/hzdr/exports/campaign-schedule.json`.
+  Write the file first, then set the variable: set without its file, the
+  builder stops (`FileNotFoundError`). Nothing refreshes it, so run this again
+  whenever the wiki's beamtimes change:
+  ```bash
+  sudo install -d -o tippey -g tippey /data/damnit/hzdr/exports   # once
+  cd ~/labfrog && uv run --no-sync python scripts/export_campaign_schedule.py \
+      --mediawiki --output /data/damnit/hzdr/exports/campaign-schedule.json
+  sudo systemctl restart damnit-api
+  cd ~/DAMNIT-web-hzdr/api && uv run --no-sync python scripts/hzdr-rebuild.py
+  ```
+  Each build logs an `overlap` line for every pair of beamtimes that share
+  days; a trigger on such a day is not routed by date and waits in review.
 - **`DW_API_HZDR_BUILDER__TIME_MATCH_ONE_TO_ONE=true`** (ruling
   R-2026-11-21): an event without a shot number attaches to a LabFrog shot
   when the two are each other's only neighbour within

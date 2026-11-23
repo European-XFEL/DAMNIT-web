@@ -143,12 +143,22 @@ files still `MISSING` the column.
        --site fwkt-webapps index <date> --if-changed
    ```
    The `labfrog` step names the dates that have decisions but no index.
-   **Measure** a day first: the bridge's `attached_wrong` should be 0.
+   **Measure** a day first: the bridge's `attached_wrong` should be 0. Every
+   reviewed day at once (a day with a decisions file):
    ```bash
    cd ~/DAMNIT-web-hzdr/api
-   uv run --no-sync python scripts/hzdr-evaluate-time-rule.py \
-       ~/shot-aligner/shot_aligner/index/<date>.index.json --rule aligner --tolerance 120
+   for idx in ~/shot-aligner/shot_aligner/index/*.index.json; do
+     d=$(basename "$idx" .index.json)
+     [ -f ~/shot-aligner/shot_aligner/index/$d.decisions.json ] || continue
+     echo "== $d"
+     uv run --no-sync python scripts/hzdr-evaluate-time-rule.py "$idx" --rule aligner --tolerance 120
+   done
    ```
+   Each day prints `{'tolerance_s': 120.0, 'attached_right': N, ...}` and the
+   reasons the rest waits; `attached_wrong` appears only when it is not 0. A
+   day not reviewed attaches nothing, and a day without a Shotsheet is
+   skipped. Measured on 2026-11-23: 2025_12_03, 2026_06_18 and 2026_09_04
+   attached nothing wrongly.
    **Bulk confirm changed too (B1):** "Confirm clear time cases" now offers
    triggers only, and only when no other shot is within 2 min. On
    shot-aligner's days the old rule would have offered 328 and 583 wrong
