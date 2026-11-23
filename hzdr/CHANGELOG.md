@@ -4,6 +4,23 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-23
+
+### Context Builder: no bookkeeping suggestions, no nan
+"Help me choose" no longer offers the build's bookkeeping datasets
+(`event_id`, `event_index`, `shot_key`, `container`, ...); a generated HDF5
+column (number, image, lineout) skips a shot with no finite value instead of
+showing `nan`; the preview says "No number on this shot". Found on Vanlife,
+whose BAM had only bookkeeping until the container worker ran.
+
+### Container comparison reads an offset-less start_time as campaign time
+`hzdr-compare-containers.py` paired nothing on Vanlife 12-03 (150 DAMNIT,
+151 shot-aligner containers unpaired): shot-aligner's older containers write
+`/entry/start_time` as Berlin wall clock without an offset (15:21:38 for
+DAMNIT's 14:21:38+00:00). A bare time is now read in the campaign zone
+(`--timezone`, default `Europe/Berlin`), for pairing and for the per-pair
+check (`hzdr_compare.instant`).
+
 ## 2026-11-22
 
 ### shot-aligner's decisions as DAMNIT's evidence

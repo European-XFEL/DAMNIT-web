@@ -257,13 +257,23 @@ def _normalise(path: str, node: dict) -> dict:
     return node
 
 
-def _instant(value):
+#: A ``start_time`` written without a UTC offset is the campaign's wall clock:
+#: shot-aligner wrote it so before it added the offset (2026), and its
+#: Vanlife 12-03 containers on fwkt-webapps still read 15:21:38 for DAMNIT's
+#: 14:21:38+00:00, so no pair formed.
+CAMPAIGN_TIMEZONE = "Europe/Berlin"
+
+
+def instant(value, zone: str = CAMPAIGN_TIMEZONE):
+    """``value`` as a zone-aware datetime, a bare one read in ``zone``; else None."""
     from datetime import datetime
+    from zoneinfo import ZoneInfo
 
     try:
-        return datetime.fromisoformat(value)
+        when = datetime.fromisoformat(value)
     except (TypeError, ValueError):
         return None
+    return when if when.tzinfo is not None else when.replace(tzinfo=ZoneInfo(zone))
 
 
 @dataclass
@@ -282,7 +292,12 @@ class Comparison:
 
 
 def compare(
-    damnit: Path, aligner: Path, *, ignored=IGNORED, tolerance: float = 2.0
+    damnit: Path,
+    aligner: Path,
+    *,
+    ignored=IGNORED,
+    tolerance: float = 2.0,
+    zone: str = CAMPAIGN_TIMEZONE,
 ) -> Comparison:
     """DAMNIT's container against shot-aligner's, node by node.
 
@@ -310,7 +325,8 @@ def compare(
             continue
         a, b = _normalise(path, ours[path]), _normalise(path, theirs[path])
         if path in TIME_PATHS:
-            when_a, when_b = _instant(a.get("value")), _instant(b.get("value"))
+            when_a = instant(a.get("value"), zone)
+            when_b = instant(b.get("value"), zone)
             if (
                 when_a
                 and when_b

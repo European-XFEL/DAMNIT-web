@@ -30,12 +30,21 @@ import json
 import re
 import sys
 from collections import Counter
-from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import h5py
 
-from damnit_api.metadata.hzdr_compare import Comparison, compare, text
+from damnit_api.metadata.hzdr_compare import (
+    CAMPAIGN_TIMEZONE,
+    Comparison,
+    compare,
+    instant,
+    text,
+)
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 CANNOT_RUN = 2
 DAMNIT_CONTAINER = re.compile(r"^(?:\d{8}|unknown)_\d{6,}\.nxs$")
@@ -55,18 +64,22 @@ def _aligner_files(path: Path) -> list[Path]:
     return sorted(p for p in path.rglob("*.h5") if p.is_file())
 
 
-def _start_time(path: Path) -> datetime | None:
+def _start_time(path: Path, zone: str = CAMPAIGN_TIMEZONE) -> datetime | None:
+    """The container's ``start_time``; one without an offset is read in ``zone``."""
     try:
         with h5py.File(path, "r") as handle:
             value = handle.get("entry/start_time")
             raw = text(value[()]) if isinstance(value, h5py.Dataset) else None
-        return datetime.fromisoformat(raw) if raw else None
+        return instant(raw, zone) if raw else None
     except (OSError, ValueError, TypeError):
         return None
 
 
 def pair_by_time(
-    damnit: list[Path], aligner: list[Path], tolerance: float
+    damnit: list[Path],
+    aligner: list[Path],
+    tolerance: float,
+    zone: str = CAMPAIGN_TIMEZONE,
 ) -> tuple[list[tuple[Path, Path]], list[Path], list[Path]]:
     """Each DAMNIT container with the nearest shot-aligner one in time.
 
@@ -74,8 +87,8 @@ def pair_by_time(
     do not both claim the same partner. A container without a readable,
     zone-aware ``start_time`` stays unpaired.
     """
-    ours = {p: _start_time(p) for p in damnit}
-    theirs = {p: _start_time(p) for p in aligner}
+    ours = {p: _start_time(p, zone) for p in damnit}
+    theirs = {p: _start_time(p, zone) for p in aligner}
     candidates = []
     for a, when_a in ours.items():
         for b, when_b in theirs.items():
@@ -155,14 +168,14 @@ def _pairs(args) -> tuple[list[tuple[Path, Path]], list[Path], list[Path]] | Non
             file=sys.stderr,
         )
         return None
-    return pair_by_time(damnit, aligner, args.tolerance)
+    return pair_by_time(damnit, aligner, args.tolerance, args.timezone)
 
 
-def _compare_all(pairs, tolerance: float) -> list[dict]:
+def _compare_all(pairs, tolerance: float, zone: str = CAMPAIGN_TIMEZONE) -> list[dict]:
     results = []
     for ours, theirs in pairs:
         try:
-            comparison = compare(ours, theirs, tolerance=tolerance)
+            comparison = compare(ours, theirs, tolerance=tolerance, zone=zone)
         except OSError as error:
             print(f"{ours.name} ~ {theirs.name}: could not be read ({error})")
             results.append({
@@ -187,6 +200,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--aligner", type=Path, required=True)
     parser.add_argument("--pairs", type=Path, help="CSV of damnit,aligner paths")
     parser.add_argument("--tolerance", type=float, default=2.0, help="seconds")
+    parser.add_argument(
+        "--timezone",
+        default=CAMPAIGN_TIMEZONE,
+        help="zone of a start_time written without an offset (older shot-aligner)",
+    )
     parser.add_argument("--json", type=Path, help="write the full report here")
     parser.add_argument("--allow-unpaired", action="store_true")
     args = parser.parse_args(argv)
@@ -200,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
         return CANNOT_RUN
     pairs, unpaired_a, unpaired_b = found
 
-    results = _compare_all(pairs, args.tolerance)
+    results = _compare_all(pairs, args.tolerance, args.timezone)
     for path in unpaired_a:
         print(f"{path.name}: no shot-aligner container within {args.tolerance} s")
     for path in unpaired_b:

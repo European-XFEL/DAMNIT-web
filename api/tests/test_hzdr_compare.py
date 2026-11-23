@@ -128,6 +128,37 @@ def test_start_time_is_one_instant_within_the_tolerance(container, damnit_campai
         assert ("/entry/start_time" not in result.different) is equal, moved
 
 
+def test_a_start_time_without_an_offset_is_the_campaign_wall_clock(
+    container, damnit_campaign, tmp_path
+):
+    """Older shot-aligner containers wrote Berlin time with no offset: on
+    fwkt-webapps Vanlife 12-03 read 15:21:38 for DAMNIT's 14:21:38+00:00 and
+    no pair formed (2026-11-23)."""
+    with h5py.File(container, "r+") as handle:
+        written = handle["entry/start_time"].asstr()[()]
+    assert written.startswith("2025-12-")
+    assert written.endswith("+00:00")
+    for bare, equal in (
+        (written.replace("T14:", "T15:")[:-6], True),
+        (written[:-6], False),
+    ):
+        with h5py.File(container, "r+") as handle:
+            del handle["entry/start_time"]
+            handle["entry/start_time"] = bare
+        result = compare(container, damnit_campaign / "shots" / CONTAINER)
+        assert ("/entry/start_time" not in result.different) is equal, bare
+
+    aligner = tmp_path / "aligner"
+    aligner.mkdir()
+    old = aligner / "2025_12_03_set1_shot001.h5"
+    shutil.copy(damnit_campaign / "shots" / CONTAINER, old)
+    with h5py.File(old, "r+") as handle:
+        del handle["entry/start_time"]
+        handle["entry/start_time"] = written.replace("T14:", "T15:")[:-6]
+    paired = _cli("--damnit", str(damnit_campaign), "--aligner", str(aligner))
+    assert f"{CONTAINER} ~ {old.name}" in paired.stdout, paired.stdout + paired.stderr
+
+
 def test_folders_pair_by_start_time_and_report_the_unpaired(damnit_campaign, tmp_path):
     aligner = tmp_path / "aligner"
     aligner.mkdir()
