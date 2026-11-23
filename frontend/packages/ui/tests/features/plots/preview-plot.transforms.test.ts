@@ -37,7 +37,7 @@ const oneDimensional: PreviewValue = {
   attrs: { shape: [3] },
 }
 
-test('a 2-D preview keeps only the shape and colormap range from attrs', () => {
+test('a 2-D preview keeps only the colormap range from attrs', () => {
   // `attrs` also carries whatever the context file left on the array. Spreading
   // it whole put one run's own metadata on a plot that draws every run.
   const meta = toPlotMeta({
@@ -47,7 +47,6 @@ test('a 2-D preview keeps only the shape and colormap range from attrs', () => {
 
   expect(meta).toEqual({
     type: 'heatmap',
-    shape: [2, 2],
     colormap_range: [0, 4],
   })
 })
@@ -55,14 +54,13 @@ test('a 2-D preview keeps only the shape and colormap range from attrs', () => {
 test('a 1-D preview names its x axis from the dim and its y from the source', () => {
   expect(toPlotMeta(oneDimensional)).toEqual({
     type: 'scatter',
-    shape: [3],
     x: { name: 'pulseIndex' },
     y: { name: 'SA2_XTD1_XGM_XGM_DOOCS:output.data.intensityTD' },
   })
 })
 
 test('an image preview keeps the shape the picture is drawn at', () => {
-  // Every dtype passes `shape` through; the image is the only one drawn at it.
+  // The image is the only kind drawn at its shape, so only it keeps one.
   const meta = toPlotMeta({
     dtype: 'image',
     name: 'xpcs_saxs_plot',

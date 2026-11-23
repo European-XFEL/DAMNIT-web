@@ -28,8 +28,8 @@ export type PlotMeta = {
   z?: TraceMeta
   data?: TraceMeta
 
-  // Optional: General
-  shape?: number[]
+  // Optional: images, height then width
+  shape?: [number, number]
 
   // Optional: 2D images
   colormap_range?: [number, number]

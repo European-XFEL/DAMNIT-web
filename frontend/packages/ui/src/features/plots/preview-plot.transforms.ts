@@ -55,9 +55,14 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
     case 'array2d':
       meta.type = 'heatmap'
       break
-    case 'image':
+    case 'image': {
       meta.type = 'image'
+      const [height, width] = value.attrs?.shape ?? []
+      if (height !== undefined && width !== undefined) {
+        meta.shape = [height, width]
+      }
       break
+    }
     case 'number':
     case 'string':
     case 'boolean':
@@ -77,10 +82,9 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
   // Only the attributes the plot declares. `attrs` also carries whatever the
   // context file left on the array, and spreading it whole put a single run's
   // arbitrary metadata on a plot that draws every run.
-  const { shape, colormap_range: colormapRange } = value.attrs ?? {}
+  const colormapRange = value.attrs?.colormap_range
 
   return {
-    ...(shape ? { shape } : {}),
     ...(colormapRange ? { colormap_range: colormapRange } : {}),
     ...meta,
   }
