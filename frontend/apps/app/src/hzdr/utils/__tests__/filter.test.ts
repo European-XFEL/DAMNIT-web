@@ -106,6 +106,15 @@ describe('getShotDateKey', () => {
     expect(getShotDateKey('2026-05-15T10:30:00Z')).toBe('2026-05-15')
   })
 
+  it('uses the campaign day, not the UTC date', () => {
+    // 00:30 CET on 06-18 is 23:30 UTC on 06-17: the shot belongs to 06-18.
+    expect(getShotDateKey('2026-06-17T22:30:00Z')).toBe('2026-06-18')
+  })
+
+  it('keeps the date of a time without an offset as the campaign wall clock', () => {
+    expect(getShotDateKey('2026-06-18T00:30:00')).toBe('2026-06-18')
+  })
+
   it('returns undefined for empty string', () => {
     expect(getShotDateKey('')).toBeUndefined()
   })

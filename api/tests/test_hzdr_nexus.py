@@ -2887,3 +2887,93 @@ def test_lock_guard_other_errors_still_raise(monkeypatch, tmp_path):
             hzdr_nexus._lock_fd(fd, guard, timeout=0.05)
     finally:
         os.close(fd)
+
+
+def test_labfrog_only_shot_time_is_the_berlin_instant(tmp_path: Path):
+    """A LabFrog-only shot with a naive date_time is the Berlin instant.
+
+    Characterization for the time rule (hzdr-combo docs/architecture.md
+    § Time): a naive LabFrog time is the campaign's wall clock, never UTC.
+    Before the fix `/entry/start_time` and the SciCat range were 1 h off in
+    winter (2 h in summer) because the naive value was read as UTC.
+    """
+    from damnit_api.metadata.hzdr_scicat_summary import campaign_summary
+
+    labfrog_shots = [
+        {
+            "record_id": "naive-winter",
+            "shot_number": 1,
+            "shot_date": "2026-01-15",
+            # 10:00 Berlin in winter is 09:00 UTC.
+            "labfrog_date_time": "2026-01-15T10:00:00",
+            "metadata": {},
+        }
+    ]
+    shots, events = reconcile_canonical_shots(
+        [],
+        experiment_id="HELPMI",
+        source_key="hzdr-labfrog",
+        labfrog_shots=labfrog_shots,
+        campaign_timezone="Europe/Berlin",
+    )
+
+    # fired_at carries its offset at the source (rule 1).
+    assert shots[0]["fired_at"] == "2026-01-15T10:00:00+01:00"
+    assert events[0]["timestamp"] == "2026-01-15T10:00:00+01:00"
+
+    output = tmp_path / "canonical.nxs"
+    write_nexus_bridge(
+        output_path=output,
+        experiment_id="HELPMI",
+        shots=shots,
+        events=events,
+        campaign_timezone="Europe/Berlin",
+    )
+    with h5py.File(output, "r") as handle:
+        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v8"
+        for column in ("fired_at", "labfrog_date_time", "date_time"):
+            assert (
+                handle[f"entry/shots/{column}"].asstr()[0]
+                == "2026-01-15T10:00:00+01:00"
+            )
+        assert (
+            handle["entry/source_events/timestamp"].asstr()[0]
+            == "2026-01-15T10:00:00+01:00"
+        )
+        # 10:00 Berlin is 09:00 UTC: the Berlin instant, not 10:00 UTC.
+        assert handle["entry/start_time"][()].decode() == "2026-01-15T09:00:00+00:00"
+        assert handle["entry/end_time"][()].decode() == "2026-01-15T09:00:00+00:00"
+
+    summary = campaign_summary(
+        "HELPMI", shots, events, campaign_timezone="Europe/Berlin"
+    )
+    coverage = summary["time_coverage"]
+    assert coverage["start"] == "2026-01-15T09:00:00+00:00"
+    assert coverage["end"] == "2026-01-15T09:00:00+00:00"
+
+
+def test_bridge_writer_normalizes_legacy_fired_at(tmp_path: Path):
+    """A rebuild reads a legacy naive time as Berlin and writes an offset."""
+    shots = [
+        {
+            "shot_key": "HELPMI:20260115:000001",
+            "shot_number": 1,
+            "shot_date": "2026-01-15",
+            "fired_at": "2026-01-15T10:00:00",
+            "labfrog_date_time": "2026-01-15T10:00:00",
+            "metadata": {},
+            "events": [],
+            "data_products": [],
+        }
+    ]
+    output = tmp_path / "old.nxs"
+    write_nexus_bridge(
+        output_path=output,
+        experiment_id="HELPMI",
+        shots=shots,
+        events=[],
+        campaign_timezone="Europe/Berlin",
+    )
+    with h5py.File(output, "r") as handle:
+        assert handle["entry/start_time"][()].decode() == "2026-01-15T09:00:00+00:00"
+        assert handle["entry/shots/fired_at"].asstr()[0] == "2026-01-15T10:00:00+01:00"

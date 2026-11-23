@@ -117,21 +117,23 @@ def test_export_campaigns_need_their_sqlite(tmp_path):
 
 
 def test_check_layout_counts_files_built_before_the_current_profile(tmp_path, capsys):
-    for name, profile in (("new", 7), ("old", 5), ("v6", 6)):
+    for name, profile in (("new", 8), ("old", 5), ("v6", 6), ("v7", 7)):
         folder = tmp_path / name
         folder.mkdir()
         with h5py.File(folder / f"{name}.nxs", "w") as f:
+            f.attrs["damnit_bridge_profile"] = f"hzdr-canonical-shot-v{profile}"
             shots = f.create_group("entry/shots")
             if profile >= 6:
                 shots["authority_shot_number"] = np.array([-1, 7, 8])
             if profile >= 7:
                 f.create_group("entry/labfrog_history")
     paths = rebuild.campaign_files(tmp_path)
-    assert [p.name for p in paths] == ["new.nxs", "old.nxs", "v6.nxs"]
-    assert rebuild.check_layout(paths) == 2
+    assert [p.name for p in paths] == ["new.nxs", "old.nxs", "v6.nxs", "v7.nxs"]
+    assert rebuild.check_layout(paths) == 3
     out = capsys.readouterr().out
     assert "3 shots, 2 with a number" in out
     assert "v6.nxs: no /entry/labfrog_history (rebuild it)" in out
+    assert "v7.nxs: bridge profile hzdr-canonical-shot-v7" in out
     assert "old.nxs: no /entry/shots/authority_shot_number, /entry/labfrog_history" in (
         out
     )

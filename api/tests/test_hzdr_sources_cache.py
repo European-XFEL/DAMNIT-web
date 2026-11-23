@@ -63,8 +63,15 @@ def test_an_in_place_rewrite_with_the_same_size_and_mtime_is_read_again(tmp_path
     stat = path.stat()
     assert load_sources_file(path)[0].title == "one"
     _write(path, "two")  # same length, same inode
-    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
-    # ctime still moved, so the cached parse is not reused.
+    # Some filesystems report the same ctime for multiple operations in one
+    # clock tick. Restore mtime after the filesystem clock has advanced.
+    deadline = time.monotonic() + 1
+    while True:
+        os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+        if path.stat().st_ctime_ns != stat.st_ctime_ns:
+            break
+        assert time.monotonic() < deadline, "filesystem ctime did not advance"
+        time.sleep(0.01)
     assert load_sources_file(path)[0].title == "two"
 
 

@@ -6,6 +6,15 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-23
 
+### Bridge v8 writes offset-bearing campaign timestamps
+
+The bridge interprets old naive LabFrog and Shotsheet times in the
+configured campaign zone (Europe/Berlin by default). DAMNIT-owned shot
+timestamp fields and generated LabFrog source event times now carry
+offsets. The NeXus and SciCat bounds use the same instants, and the campaign
+day governs dashboard grouping. Run `hzdr-rebuild.py --force` after updating
+to v8 to rewrite existing output files.
+
 ### Context Builder: no bookkeeping suggestions, no nan
 "Help me choose" no longer offers the build's bookkeeping datasets
 (`event_id`, `event_index`, `shot_key`, `container`, ...); a generated HDF5

@@ -326,8 +326,10 @@ uv run --no-sync python scripts/hzdr-rebuild.py --campaign Beamline_radbio_2026
   `--all-exports` every campaign with an export; a named campaign's export may
   claim `unassigned` triggers during that build.
 - After the build it checks each `<OUTPUT_ROOT>/<c>/<c>.nxs` for
-  `/entry/shots/authority_shot_number` and `/entry/labfrog_history` and exits
-  1 if one lacks either.
+  `/entry/shots/authority_shot_number`, `/entry/labfrog_history` and the
+  current bridge profile stamp. Deploying bridge v8 requires a one-time
+  `hzdr-rebuild.py --force` so unchanged campaigns get the new timestamp
+  representation. Add `--all-exports` if historical exports are in scope.
 - `hzdr/scripts/next-on-server.sh` runs it as its `rebuild` step.
 - `DW_API_HZDR_BUILDER__CAMPAIGN_TIMEZONE=Europe/Berlin` must be set in
   `api/.env` (`--print` shows it as `--campaign-timezone`): LabFrog times are

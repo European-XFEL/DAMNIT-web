@@ -25,9 +25,9 @@ the campaigns taking shots; use it for a one-off rebuild of old campaigns.
 
 After the build (or with ``--check-only``) every campaign file under
 ``OUTPUT_ROOT`` is checked for ``/entry/shots/authority_shot_number``
-(bridge profile v6) and ``/entry/labfrog_history`` (v7). Exit status: the
-builder's, else 1 when a file lacks either, 2 when the auto-trigger is not
-configured, 0 otherwise.
+(bridge profile v6), ``/entry/labfrog_history`` (v7) and the current bridge
+profile stamp. Exit status: the builder's, else 1 when a file needs a
+rebuild, 2 when the auto-trigger is not configured, 0 otherwise.
 """
 
 from __future__ import annotations
@@ -78,6 +78,8 @@ def check_layout(paths: list[Path]) -> int:
     """Print one line per file; return how many lack the current layout."""
     import h5py
 
+    from damnit_api.metadata.hzdr_nexus import HZDR_BRIDGE_PROFILE_VERSION
+
     missing = 0
     for path in paths:
         try:
@@ -85,6 +87,14 @@ def check_layout(paths: list[Path]) -> int:
                 lacking = [name for name in (V6_DATASET, V7_GROUP) if name not in f]
                 if lacking:
                     print(f"MISSING {path}: no {', '.join(lacking)} (rebuild it)")
+                    missing += 1
+                    continue
+                profile = f.attrs.get("damnit_bridge_profile")
+                if profile != HZDR_BRIDGE_PROFILE_VERSION:
+                    print(
+                        f"STALE   {path}: bridge profile {profile or 'missing'}, "
+                        f"expected {HZDR_BRIDGE_PROFILE_VERSION} (rebuild with --force)"
+                    )
                     missing += 1
                     continue
                 values = f[V6_DATASET][()]
