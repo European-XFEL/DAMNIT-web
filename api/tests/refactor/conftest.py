@@ -14,5 +14,4 @@ from ..graphql.conftest import (  # noqa: F401
     mocked_metadata_run_identifiers,
     mocked_metadata_variable_tags,
     mocked_metadata_variables,
-    reset_caches,
 )

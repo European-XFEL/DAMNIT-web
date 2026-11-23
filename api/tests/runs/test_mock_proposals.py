@@ -1,12 +1,13 @@
-"""Serve the mock proposals that DAMNIT 0.4.0 wrote, in local mode.
+"""Read the mock proposals that DAMNIT 0.4.0 wrote, through the app in local mode.
 
 Each folder under `tests/mock/proposals/` is one mock proposal, built by
-`build_proposals.py` there from the folder's own `context.py`.
+`build_proposals.py` there from the folder's own `context.py`. The queries reach
+the real `runs.sqlite` and extracted data through the `runs` package.
 """
 
 import pytest
 
-from .conftest import NO_RUNS_DIR
+from ..conftest import NO_RUNS_DIR
 
 pytestmark = pytest.mark.asyncio
 
