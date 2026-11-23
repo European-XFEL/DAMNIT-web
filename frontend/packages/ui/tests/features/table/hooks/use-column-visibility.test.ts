@@ -15,6 +15,8 @@ const tag = (name: string, variables: string[]): Tag => ({
 const runs = (proposal: string, numbers: number[]): RunId[] =>
   numbers.map((run) => ({ proposal, run }))
 
+const MIXED_RUNS = [...runs('6996', [40]), ...runs('5397', [40])]
+
 const inputs = (
   overrides: Partial<ColumnVisibilityInputs> = {}
 ): ColumnVisibilityInputs => ({
@@ -47,6 +49,35 @@ describe('computeColumnVisibility', () => {
     expect(result).toEqual({ proposal: false, energy: true })
   })
 
+  test('the proposal column shows when a run belongs to another proposal', () => {
+    const result = computeColumnVisibility(inputs({ runs: MIXED_RUNS }))
+    expect(result).toEqual({ proposal: true, energy: true })
+  })
+
+  test.each([
+    ['006996', '6996'],
+    ['p6996', '6996'],
+    ['xpcs', 'xpcs'],
+  ])('the address proposal %s matches runs of %s', (proposal, runProposal) => {
+    const result = computeColumnVisibility(
+      inputs({
+        proposal,
+        runs: runs(runProposal, [1, 2]),
+      })
+    )
+    expect(result).toEqual({ proposal: false, energy: true })
+  })
+
+  test("the user's hidden proposal column stays hidden beside guest runs", () => {
+    const result = computeColumnVisibility(
+      inputs({
+        visibility: { proposal: false },
+        runs: MIXED_RUNS,
+      })
+    )
+    expect(result).toEqual({ proposal: false, energy: true })
+  })
+
   test('with no selected tags there is no tag filter', () => {
     const result = computeColumnVisibility(
       inputs({
@@ -67,6 +98,18 @@ describe('computeColumnVisibility', () => {
       })
     )
     expect(result).toEqual({ a: true, b: true, c: false, d: false })
+  })
+
+  test('the proposal column passes the tag filter beside guest runs', () => {
+    const result = computeColumnVisibility(
+      inputs({
+        variableNames: ['proposal', 'energy', 'x'],
+        tags: { hot: tag('hot', ['energy']) },
+        tagSelection: { hot: true },
+        runs: MIXED_RUNS,
+      })
+    )
+    expect(result).toEqual({ proposal: true, energy: true, x: false })
   })
 
   test('a hidden variable stays hidden even inside a selected tag', () => {
