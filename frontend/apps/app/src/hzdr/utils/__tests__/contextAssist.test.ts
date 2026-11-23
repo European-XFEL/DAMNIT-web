@@ -111,6 +111,58 @@ describe('datasetSuggestions', () => {
     }
   })
 
+  it('offers each camera image before any setting, named by its camera', () => {
+    // A Vanlife container: settings sort first by name, the images last.
+    const stem = '20251203_000001/Beam_alignment'
+    const options = buildHdf5DatasetOptions(
+      [
+        ...[
+          'black_level_offset',
+          'chip_size_x',
+          'chip_size_y',
+          'exposure',
+          'gain',
+          'gamma',
+          'offset_x',
+          'offset_y',
+          'pixel_size',
+        ].map((leaf) => ({
+          name: `${stem}/Beam_Alignment_Monitor/acquisition_settings/${leaf}`,
+          shape: [],
+          dtype: 'float64',
+        })),
+        {
+          name: `${stem}/Beam_Alignment_Monitor/count_time`,
+          shape: [],
+          dtype: 'float64',
+        },
+        {
+          name: `${stem}/Beam_Alignment_Monitor/data/image`,
+          shape: [480, 640],
+          dtype: 'uint16',
+        },
+        {
+          name: `${stem}/DIF_800/data/image`,
+          shape: [480, 640],
+          dtype: 'uint16',
+        },
+        { name: `${stem}/Spec/data/lineout`, shape: [2048], dtype: 'float64' },
+      ],
+      'shot'
+    )
+    const suggestions = datasetSuggestions(options, 'x')
+    expect(
+      suggestions.slice(0, 3).map((entry) => [entry.title, entry.display])
+    ).toEqual([
+      ['Beam Alignment Monitor image', 'image-preview'],
+      ['DIF 800 image', 'image-preview'],
+      ['Spec lineout', 'lineout-preview'],
+    ])
+    expect(suggestions[3].field).toBe(
+      '{container}/Beam_alignment/Beam_Alignment_Monitor/count_time'
+    )
+  })
+
   it('keeps function names unique when datasets share a name', () => {
     const options = buildHdf5DatasetOptions(
       [

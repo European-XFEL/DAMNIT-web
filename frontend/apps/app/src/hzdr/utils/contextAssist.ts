@@ -67,14 +67,49 @@ export function isBookkeepingDataset(name: string) {
 }
 
 function datasetTitle(name: string) {
-  const last =
-    name
-      .replace(/\{shot_id\}/g, 'shot')
-      .split('/')
-      .filter(Boolean)
-      .at(-1) ?? name
-  const text = last.replace(/[_-]+/g, ' ').trim()
+  const parts = name
+    .replace(/\{shot_id\}/g, 'shot')
+    .split('/')
+    .filter(Boolean)
+  const last = parts.at(-1) ?? name
+  // A container's measurement is `<detector>/data/<leaf>`: every camera's is
+  // `data/image`, so the detector names it.
+  const at = parts.lastIndexOf('data')
+  const label =
+    at > 0 && at === parts.length - 2 ? `${parts[at - 1]} ${last}` : last
+  const text = label.replace(/[_-]+/g, ' ').trim()
   return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+/** Settings and file bookkeeping inside a container: listed, never first. */
+const SECONDARY_SEGMENTS = new Set([
+  'acquisition_settings',
+  'file_metadata',
+  'conversion_problems',
+  'mapping_problems',
+])
+
+/**
+ * The order suggestions are offered in: images, then lineouts, then numbers;
+ * within each, a detector's measurement (`.../data/...`) before its settings
+ * and file information. A Vanlife container holds 613 datasets, and in name
+ * order the eight slots went to one camera's settings (2026-11-23).
+ */
+function suggestionRank(option: HZDRDatasetOption) {
+  const parts = option.name.split('/').filter(Boolean)
+  const kind = { image: 0, line: 1, scalar: 2 }[option.kind as string] ?? 3
+  const secondary = parts.some((part) => SECONDARY_SEGMENTS.has(part)) ? 1 : 0
+  const measured = parts.at(-2) === 'data' ? 0 : 1
+  return [secondary, kind, measured] as const
+}
+
+function byRank(a: HZDRDatasetOption, b: HZDRDatasetOption) {
+  const left = suggestionRank(a)
+  const right = suggestionRank(b)
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return left[index] - right[index]
+  }
+  return 0
 }
 
 /**
@@ -88,7 +123,7 @@ export function datasetSuggestions(
 ): ColumnSuggestion[] {
   const suggestions: ColumnSuggestion[] = []
   const taken = new Set<string>()
-  for (const option of options) {
+  for (const option of [...options].sort(byRank)) {
     const recipe = DATASET_DISPLAYS[option.kind]
     if (!recipe || suggestions.length >= MAX_DATASET_SUGGESTIONS) continue
     if (isBookkeepingDataset(option.name)) continue

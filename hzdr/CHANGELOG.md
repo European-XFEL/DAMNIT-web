@@ -12,6 +12,10 @@ behaviour; the merge PR has the details.
 column (number, image, lineout) skips a shot with no finite value instead of
 showing `nan`; the preview says "No number on this shot". Found on Vanlife,
 whose BAM had only bookkeeping until the container worker ran.
+Its eight dataset slots now go to images, then lineouts, then numbers, a
+detector's `data/...` before its `acquisition_settings`/`file_metadata`, and
+a container's `data/image` is titled by its detector: in name order a
+Vanlife container (613 datasets) filled them with one camera's settings.
 
 ### Container comparison reads an offset-less start_time as campaign time
 `hzdr-compare-containers.py` paired nothing on Vanlife 12-03 (150 DAMNIT,
