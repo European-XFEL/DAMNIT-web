@@ -2919,6 +2919,7 @@ def test_labfrog_only_shot_time_is_the_berlin_instant(tmp_path: Path):
 
     # fired_at carries its offset at the source (rule 1).
     assert shots[0]["fired_at"] == "2026-01-15T10:00:00+01:00"
+    assert events[0]["timestamp"] == "2026-01-15T10:00:00+01:00"
 
     output = tmp_path / "canonical.nxs"
     write_nexus_bridge(
@@ -2929,6 +2930,16 @@ def test_labfrog_only_shot_time_is_the_berlin_instant(tmp_path: Path):
         campaign_timezone="Europe/Berlin",
     )
     with h5py.File(output, "r") as handle:
+        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v8"
+        for column in ("fired_at", "labfrog_date_time", "date_time"):
+            assert (
+                handle[f"entry/shots/{column}"].asstr()[0]
+                == "2026-01-15T10:00:00+01:00"
+            )
+        assert (
+            handle["entry/source_events/timestamp"].asstr()[0]
+            == "2026-01-15T10:00:00+01:00"
+        )
         # 10:00 Berlin is 09:00 UTC: the Berlin instant, not 10:00 UTC.
         assert handle["entry/start_time"][()].decode() == "2026-01-15T09:00:00+00:00"
         assert handle["entry/end_time"][()].decode() == "2026-01-15T09:00:00+00:00"
@@ -2941,12 +2952,8 @@ def test_labfrog_only_shot_time_is_the_berlin_instant(tmp_path: Path):
     assert coverage["end"] == "2026-01-15T09:00:00+00:00"
 
 
-def test_naive_fired_at_in_an_old_campaign_file_is_read_as_berlin(tmp_path: Path):
-    """An existing campaign file with a naive fired_at is read as Berlin.
-
-    Older campaign files carry a naive `fired_at`; the bounds must still be
-    the Berlin instant (rule 2), not 1-2 h off.
-    """
+def test_bridge_writer_normalizes_legacy_fired_at(tmp_path: Path):
+    """A rebuild reads a legacy naive time as Berlin and writes an offset."""
     shots = [
         {
             "shot_key": "HELPMI:20260115:000001",
@@ -2969,3 +2976,4 @@ def test_naive_fired_at_in_an_old_campaign_file_is_read_as_berlin(tmp_path: Path
     )
     with h5py.File(output, "r") as handle:
         assert handle["entry/start_time"][()].decode() == "2026-01-15T09:00:00+00:00"
+        assert handle["entry/shots/fired_at"].asstr()[0] == "2026-01-15T10:00:00+01:00"

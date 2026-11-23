@@ -136,7 +136,7 @@ def test_before_the_correction_the_typed_number_is_the_shot_beside_the_authority
 def test_a_superseded_version_leaves_the_shot_and_event_tables(tmp_path: Path):
     """Bridge profile v7: history is reachable, not mixed in."""
     with h5py.File(build(tmp_path, corrected=True), "r") as handle:
-        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v7"
+        assert handle.attrs["damnit_bridge_profile"] == "hzdr-canonical-shot-v8"
         assert column(handle, "entry/shots/record_id") == ["one", "fixed"]
         assert column(handle, "entry/shots/shot_index") == [0, 1]
         assert column(handle, "entry/shots/shot_number") == [3, 4]
@@ -250,7 +250,7 @@ def test_the_catalog_lists_the_corrected_shot_only(tmp_path: Path):
     source = json.loads(catalog.read_text(encoding="utf-8"))["sources"][0]
 
     assert [shot["shot_number"] for shot in source["shots"]] == [3, 4]
-    assert source["metadata"]["integration_profile"] == "hzdr-canonical-shot-v7"
+    assert source["metadata"]["integration_profile"] == "hzdr-canonical-shot-v8"
 
 
 def test_a_preserved_labfrog_table_keeps_its_rows_and_loses_the_event(

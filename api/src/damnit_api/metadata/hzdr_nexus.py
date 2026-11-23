@@ -2208,9 +2208,9 @@ def reconcile_canonical_shots(  # noqa: C901
             # never UTC (rule 2). Write it with its offset so `fired_at` is
             # one format for every shot (rule 1); a naive value here used to
             # be read back as UTC, 1-2 h off.
-            shot["fired_at"] = _iso_with_offset(
-                shot["labfrog_date_time"], campaign_timezone
-            ) or str(shot["labfrog_date_time"])
+            shot["fired_at"] = (
+                _iso_with_offset(shot["labfrog_date_time"], campaign_timezone) or ""
+            )
         if not shot["events"]:
             shot["match_status"] = "labfrog-only"
             shot["match_quality"] = "labfrog_only"
@@ -2221,7 +2221,9 @@ def reconcile_canonical_shots(  # noqa: C901
         for shot in canonical:
             if shot["shot_key"] in trigger_only_keys:
                 continue  # trigger-only shot: there is no LabFrog row to cite
-            labfrog_event = _labfrog_source_event(shot, experiment_id)
+            labfrog_event = _labfrog_source_event(
+                shot, experiment_id, campaign_timezone=campaign_timezone
+            )
             normalized_events.append(labfrog_event)
             shot["events"].append(_event_api_record(labfrog_event))
     producer_events = [
@@ -2470,7 +2472,10 @@ def write_nexus_bridge(
             if 0 < existing_count < len(shots):
                 _extend_preserved_shot_table(shots_group, shots, existing_count)
             _write_shot_bridge_columns(
-                shots_group, shots, write_identity=existing_count == 0
+                shots_group,
+                shots,
+                write_identity=existing_count == 0,
+                campaign_timezone=campaign_timezone,
             )
             _write_source_payloads(entry, events)
 
@@ -2938,7 +2943,7 @@ def write_nexus_laser_group(
 # bumped to match. See hzdr/docs/nxhzdr-target-profile.md (target map) and
 # hzdr/docs/nexus-semantic-maps.md (laser/vacuum/diagnostic maps).
 HZDR_TARGET_PROFILE_VERSION = "0.10"
-HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v7"
+HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v8"
 # Bridge profile v7: superseded LabFrog versions, out of the shot table.
 LABFROG_HISTORY_GROUP = "labfrog_history"
 LABFROG_HISTORY_DESCRIPTION = (
@@ -3841,7 +3846,7 @@ def _iso_with_offset(value: Any, naive_timezone: str) -> str | None:
 
     A value that already carries an offset keeps it; a naive value is read in
     ``naive_timezone`` (the campaign zone), never UTC (rule 2). Returns None
-    when the value does not parse, so the caller can fall back to the raw text.
+    when the value does not parse.
     """
     if isinstance(value, str):
         text = value.strip()
@@ -4300,15 +4305,20 @@ def _canonical_from_labfrog(
     return canonical
 
 
-def _labfrog_source_event(shot: dict[str, Any], experiment_id: str) -> dict[str, Any]:
+def _labfrog_source_event(
+    shot: dict[str, Any], experiment_id: str, *, campaign_timezone: str
+) -> dict[str, Any]:
     record_id = shot.get("labfrog_record_id") or shot["shot_key"]
+    timestamp = _iso_with_offset(
+        shot.get("labfrog_date_time"), campaign_timezone
+    ) or _iso_with_offset(shot.get("fired_at"), campaign_timezone)
     event = {
         "experiment_id": experiment_id,
         "shot_id": f"shot-{shot['shot_number']:06d}",
         "shot_number": shot["shot_number"],
         "source": LABFROG_EVENT_SOURCE,
         "kind": LABFROG_EVENT_KIND,
-        "timestamp": shot.get("labfrog_date_time") or shot.get("fired_at") or "",
+        "timestamp": timestamp or "",
         "transport": "nexus",
         "payload_ref": {"record_id": record_id, "nexus_path": "/entry/shots"},
         # shot_status rides this row's metadata_json, so the NeXus file keeps
@@ -5501,8 +5511,16 @@ def _find_nested_shot_number(value: Any) -> int | None:  # noqa: C901
 
 
 def _write_shot_bridge_columns(
-    group: h5py.Group, shots: list[dict[str, Any]], *, write_identity: bool
+    group: h5py.Group,
+    shots: list[dict[str, Any]],
+    *,
+    write_identity: bool,
+    campaign_timezone: str,
 ) -> None:
+    labfrog_times = [
+        _iso_with_offset(shot.get("labfrog_date_time"), campaign_timezone) or ""
+        for shot in shots
+    ]
     if write_identity:
         group.attrs[SHOT_IDENTITY_ATTR] = True
         _replace_dataset(group, "shot_index", list(range(len(shots))))
@@ -5515,19 +5533,18 @@ def _write_shot_bridge_columns(
         _replace_dataset(
             group, "shot_date", [shot.get("shot_date") or "" for shot in shots]
         )
-        _replace_dataset(
-            group,
-            "date_time",
-            [shot.get("labfrog_date_time") or "" for shot in shots],
-        )
+        _replace_dataset(group, "date_time", labfrog_times)
     columns = {
         "shot_key": [shot["shot_key"] for shot in shots],
         "has_newer_version": [
             _as_bool(shot.get("metadata", {}).get("has_newer_version"))
             for shot in shots
         ],
-        "fired_at": [shot.get("fired_at") or "" for shot in shots],
-        "labfrog_date_time": [shot.get("labfrog_date_time") or "" for shot in shots],
+        "fired_at": [
+            _iso_with_offset(shot.get("fired_at"), campaign_timezone) or ""
+            for shot in shots
+        ],
+        "labfrog_date_time": labfrog_times,
         "match_status": [shot.get("match_status") or "" for shot in shots],
         "match_quality": [shot.get("match_quality") or "" for shot in shots],
         "match_time_delta_s": [
