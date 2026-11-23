@@ -607,6 +607,9 @@ importers:
       typescript:
         specifier: catalog:tooling
         version: 5.9.3
+      vitest:
+        specifier: catalog:testing
+        version: 4.1.11(@types/node@24.19.1)(@vitest/browser-playwright@4.1.11)(msw@2.12.7(@types/node@24.19.1)(typescript@5.9.3))(vite@7.3.7(@types/node@24.19.1)(sugarss@5.0.2(postcss@8.5.29)))
 
   packages/ui:
     dependencies:
