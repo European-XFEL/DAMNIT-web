@@ -170,7 +170,7 @@ describe('ColumnPreview', () => {
     expect(screen.getByLabelText('B: 1 shots')).toBeInTheDocument()
   })
 
-  it('shows a dataset’s mean in the cell and its image on double-click', () => {
+  it("shows a dataset's mean in the cell and its image on double-click", () => {
     renderPreview({
       source: 'hdf5',
       display: 'image-preview',
@@ -211,7 +211,7 @@ describe('ColumnPreview', () => {
       },
     })
     expect(screen.getByText('Trend: Charge (2 points)')).toBeInTheDocument()
-    expect(screen.getByText('Not a number')).toBeInTheDocument()
+    expect(screen.getByText('No number on this shot')).toBeInTheDocument()
   })
 
   it('says why a computed column has no preview', () => {

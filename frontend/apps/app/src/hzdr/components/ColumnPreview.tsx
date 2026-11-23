@@ -146,11 +146,23 @@ function LabelBars({
   )
 }
 
+/** A stored value that is no number: null, NaN, or Python's spelling of it. */
+function isNoNumber(value: unknown) {
+  return (
+    value === null ||
+    value === undefined ||
+    (typeof value === 'number' && !Number.isFinite(value)) ||
+    (typeof value === 'string' &&
+      /^[-+]?(nan|inf(inity)?)$/i.test(value.trim()))
+  )
+}
+
 function summaryText(preview: HZDRDatasetPreview) {
   if (preview.summary === null || preview.summary === undefined) {
-    return preview.preview_kind === 'scalar'
-      ? String(preview.preview ?? '-')
-      : 'Not a number'
+    if (preview.preview_kind !== 'scalar') return 'No number on this shot'
+    return isNoNumber(preview.preview)
+      ? 'No number on this shot'
+      : String(preview.preview)
   }
   const value = formatPreviewNumber(preview.summary)
   return preview.summary_exact === false ? `≈ ${value}` : value
@@ -175,7 +187,7 @@ function DatasetPreview({
     return (
       <Group gap="xs">
         <Loader size="xs" />
-        <Text size="xs">Reading the dataset on the example shot…</Text>
+        <Text size="xs">Reading the dataset on the example shot...</Text>
       </Group>
     )
   }
@@ -213,7 +225,7 @@ function DatasetPreview({
         <Section title="On double-click">
           <CanvasImage values={preview.preview as number[][]} />
           <Text size="xs" c="dimmed">
-            Shown reduced; the cell panel opens the shot’s own image.
+            Shown reduced; the cell panel opens the shot's own image.
           </Text>
         </Section>
       ) : null}

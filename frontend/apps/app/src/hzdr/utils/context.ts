@@ -341,7 +341,9 @@ def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-${hdf5DatasetLines}        values = handle[dataset_name][...]
+${hdf5DatasetLines}        values = np.asarray(handle[dataset_name][...], dtype=float)
+    if not np.isfinite(values).any():
+        raise Skip("No numbers recorded for this shot")
     return float(np.nanmean(values))
 `
   }
@@ -359,7 +361,9 @@ def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-${hdf5DatasetLines}        lineout = np.asarray(handle[dataset_name][...])
+${hdf5DatasetLines}        lineout = np.asarray(handle[dataset_name][...], dtype=float)
+    if not np.isfinite(lineout).any():
+        raise Skip("No numbers recorded for this shot")
     return Cell(lineout, summary="nanmean", preview=lineout)
 `
   }
@@ -377,7 +381,9 @@ def ${safeFieldName}(run, hdf5_path: "meta#hdf5_path"${hdf5ShotIdParameter}):
     if not hdf5_path:
         raise Skip("No HDF5 path for this shot")
     with h5py.File(hdf5_path, "r") as handle:
-${hdf5DatasetLines}        image = np.asarray(handle[dataset_name][...])
+${hdf5DatasetLines}        image = np.asarray(handle[dataset_name][...], dtype=float)
+    if not np.isfinite(image).any():
+        raise Skip("No numbers recorded for this shot")
     return Cell(image, summary="nanmean", preview=image[::8, ::8])
 `
   }

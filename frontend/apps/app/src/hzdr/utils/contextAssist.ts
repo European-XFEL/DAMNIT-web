@@ -37,9 +37,33 @@ const DATASET_DISPLAYS: Record<
   scalar: {
     display: 'hdf5',
     displayLabel: 'Number column',
-    displayHelp: 'Shows the stored number in each shot’s row.',
+    displayHelp: "Shows the stored number in each shot's row.",
     what: 'one number',
   },
+}
+
+/**
+ * Datasets the campaign build writes to say which event, shot or container
+ * goes with which: identifiers and counters, never a measurement. Offered as
+ * columns they read as a "lineout" of indices or a column of `nan`
+ * (Vanlife, 2026-11-23, where an instrument had nothing else yet).
+ */
+const BOOKKEEPING_DATASETS = new Set([
+  'event_id',
+  'event_ids',
+  'event_index',
+  'shot_key',
+  'shot_id',
+  'shot_number',
+  'container',
+  'source_key',
+  'record_id',
+])
+
+/** Whether a dataset is bookkeeping by its last path segment. */
+export function isBookkeepingDataset(name: string) {
+  const last = name.split('/').filter(Boolean).at(-1) ?? ''
+  return BOOKKEEPING_DATASETS.has(last)
 }
 
 function datasetTitle(name: string) {
@@ -67,6 +91,7 @@ export function datasetSuggestions(
   for (const option of options) {
     const recipe = DATASET_DISPLAYS[option.kind]
     if (!recipe || suggestions.length >= MAX_DATASET_SUGGESTIONS) continue
+    if (isBookkeepingDataset(option.name)) continue
     const title = datasetTitle(option.name)
     let fieldName = pythonNameFromTitle(title) || 'dataset'
     for (let index = 2; taken.has(fieldName); index += 1) {
@@ -177,7 +202,7 @@ const KIND_WORDS: Record<string, string> = {
 
 /**
  * A suggestion in one short line for its row: how many shots record it and
- * the range of its values ("16 of 16 shots · 0.836–0.924 nC"), or its labels;
+ * the range of its values ("16 of 16 shots · 0.836-0.924 nC"), or its labels;
  * for a dataset, what it holds on the example shot.
  */
 export function suggestionSummary(
@@ -207,7 +232,7 @@ export function suggestionSummary(
     const range =
       low === high
         ? formatPreviewNumber(low)
-        : `${formatPreviewNumber(low)}–${formatPreviewNumber(high)}`
+        : `${formatPreviewNumber(low)}\u2013${formatPreviewNumber(high)}`
     return `${recorded} · ${range}${unit}`
   }
   const count = across.labels.length

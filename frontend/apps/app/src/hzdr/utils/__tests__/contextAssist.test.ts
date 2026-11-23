@@ -61,6 +61,56 @@ describe('datasetSuggestions', () => {
     expect(suggestions[0].block).toContain('"cam/image"')
   })
 
+  it('never offers the build bookkeeping as a column', () => {
+    // Vanlife, 2026-11-23: an instrument with nothing but these offered a
+    // "lineout" of event indices and columns of nan.
+    const options = buildHdf5DatasetOptions(
+      [
+        {
+          name: 'entry/instrument/bam/event_id',
+          shape: [249],
+          dtype: 'object',
+        },
+        {
+          name: 'entry/instrument/bam/event_index',
+          shape: [249],
+          dtype: 'int64',
+        },
+        {
+          name: 'entry/instrument/bam/shot_key',
+          shape: [249],
+          dtype: 'object',
+        },
+        {
+          name: 'entry/instrument/bam/image',
+          shape: [64, 64],
+          dtype: 'uint16',
+        },
+      ],
+      'shot'
+    )
+    expect(
+      datasetSuggestions(options, 'x').map((entry) => entry.field)
+    ).toEqual(['entry/instrument/bam/image'])
+  })
+
+  it('writes columns that skip a shot without a number, not nan', () => {
+    const options = buildHdf5DatasetOptions(
+      [
+        { name: 'cam/image', shape: [64, 64], dtype: 'uint16' },
+        { name: 'spec/lineout', shape: [512], dtype: 'float64' },
+        { name: 'ict/charge', shape: [], dtype: 'float64' },
+      ],
+      'shot'
+    )
+    for (const entry of datasetSuggestions(options, 'x')) {
+      expect(entry.block).toContain('if not np.isfinite(')
+      expect(entry.block).toContain(
+        'raise Skip("No numbers recorded for this shot")'
+      )
+    }
+  })
+
   it('keeps function names unique when datasets share a name', () => {
     const options = buildHdf5DatasetOptions(
       [
@@ -161,7 +211,7 @@ describe('suggestionSummary', () => {
   it('gives the shots recorded and the range of values', () => {
     const shots = [shot('0,836', 1), shot(0.924, 2), shot(null, 3)]
     expect(suggestionSummary(suggestion(), shots)).toBe(
-      '2 of 3 shots · 0.836–0.924 nC'
+      '2 of 3 shots · 0.836\u20130.924 nC'
     )
     expect(suggestionSummary(suggestion(), [shot(2)])).toBe(
       '1 of 1 shots · 2 nC'
@@ -175,7 +225,7 @@ describe('suggestionSummary', () => {
     ).toBe('3 of 3 shots · 2 labels')
   })
 
-  it('falls back to the suggestion’s own counts, and describes datasets', () => {
+  it("falls back to the suggestion's own counts, and describes datasets", () => {
     expect(suggestionSummary(suggestion(), [])).toBe('9 of 10 shots · e.g. 1.5')
     expect(
       suggestionSummary(suggestion({ origin: 'hdf5', type: 'image' }), [])
@@ -238,7 +288,7 @@ describe('inputFormState', () => {
     datasetOptions,
   }
 
-  it('reads a recorded field or a dataset in the builder’s input format', () => {
+  it("reads a recorded field or a dataset in the builder's input format", () => {
     expect(
       inputFormState('metadata:labfrog_variables.ICT charge.value', context)
     ).toEqual({
