@@ -4,6 +4,7 @@ import {
   findLinkError,
   parsePlotAddress,
   plotAddress,
+  withoutWindowFlag,
 } from '#src/features/plots/plot-address'
 import type { PlotSpec } from '#src/types'
 
@@ -125,4 +126,12 @@ test('a link to some runs the proposal lacks is still a plot', () => {
   }
 
   expect(findLinkError(plot, proposal)).toBeUndefined()
+})
+
+test('the window flag comes off a search, and the rest stays as written', () => {
+  expect(withoutWindowFlag('?x=run&y=pulses&runs=1-3,25&window')).toBe(
+    '?x=run&y=pulses&runs=1-3,25'
+  )
+  expect(withoutWindowFlag('?window=&x=run&y=pulses')).toBe('?x=run&y=pulses')
+  expect(withoutWindowFlag('?window')).toBe('')
 })

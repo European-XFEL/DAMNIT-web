@@ -14,6 +14,7 @@
     "test": "playwright test",
     "test:site": "playwright test -c playwright.site.config.ts",
     "test:demo": "playwright test -c playwright.demo.config.ts",
+    "test:real-api": "playwright test -c playwright.real-api.config.ts",
     "setup": "playwright install chromium",
     "ui": "playwright test --ui",
     "report": "playwright show-report",

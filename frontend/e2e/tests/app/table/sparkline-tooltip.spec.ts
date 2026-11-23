@@ -26,7 +26,7 @@ test('escape keeps the sparkline tooltip closed while moving within the cell', a
   // in the same heavy pass.
   await waitForCellLoaded(page, IMAGE_CELL)
 
-  await hoverCell(page, { example, ...SPARKLINE_CELL, waitForContent: false })
+  await hoverCell(page, { ...SPARKLINE_CELL, waitForContent: false })
   await expect(value).toBeVisible()
 
   await page.keyboard.press('Escape')

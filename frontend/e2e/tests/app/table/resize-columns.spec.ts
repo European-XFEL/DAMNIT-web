@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
-import { WIDE_NUMBER, xpcsWithWideValues, type Example } from '#examples/xpcs'
+import { WIDE_NUMBER, xpcsWithWideValues } from '#examples/xpcs'
 import {
   COLUMN_WIDTH,
   WIDE_VIEWPORT,
@@ -34,7 +34,7 @@ test('dragging a header edge widens the column behind it', async ({
 
   const trains = columnOf(example, 'n_trains')
   const box = await gridBox(page)
-  const edge = await headerEdge(page, { example, col: trains })
+  const edge = await headerEdge(page, { col: trains })
   // The middle of the next column along, which a widened Trains has to swallow
   // for this point to change hands.
   const probe = { x: columnCenter(box, trains + 1), y: edge.y }
@@ -58,9 +58,9 @@ test('dragging a header edge widens the column behind it', async ({
 // what the fit added to the column's default.
 async function fitColumn(
   page: Page,
-  { example, col }: { example: Example; col: number }
+  { col }: { col: number }
 ): Promise<number> {
-  const edge = await headerEdge(page, { example, col })
+  const edge = await headerEdge(page, { col })
   const before = (await gridBox(page)).width
 
   await page.mouse.dblclick(edge.x, edge.y)
@@ -82,9 +82,9 @@ test('double-clicking a header edge fits the column to its title', async ({
 
   // The default width clips this title.
   const xgm = columnOf(example, 'xgm_intensity')
-  const edge = await headerEdge(page, { example, col: xgm })
+  const edge = await headerEdge(page, { col: xgm })
 
-  await fitColumn(page, { example, col: xgm })
+  await fitColumn(page, { col: xgm })
 
   // Ten past the old seam, clear of Glide's 5 px edge zone. XGM covers it at
   // 116 px or more; the fit gives 123, a 107 px title plus 16.
@@ -128,15 +128,15 @@ test.describe('an example whose values are wider than their titles', () => {
     // The date column, right of the number column so its fit moves no edge the
     // next one aims at
     const pulses = columnOf(example, 'n_pulses')
-    expect(
-      await fitColumn(page, { example, col: pulses })
-    ).toBeGreaterThanOrEqual(dateNeeds)
+    expect(await fitColumn(page, { col: pulses })).toBeGreaterThanOrEqual(
+      dateNeeds
+    )
 
     // The number column
     const trains = columnOf(example, 'n_trains')
-    expect(
-      await fitColumn(page, { example, col: trains })
-    ).toBeGreaterThanOrEqual(numberNeeds)
+    expect(await fitColumn(page, { col: trains })).toBeGreaterThanOrEqual(
+      numberNeeds
+    )
   })
 })
 
@@ -150,9 +150,9 @@ test('resizing one of several selected columns leaves the others alone', async (
 
   const trains = columnOf(example, 'n_trains')
   const pulses = columnOf(example, 'n_pulses')
-  const edge = await headerEdge(page, { example, col: trains })
+  const edge = await headerEdge(page, { col: trains })
 
-  await selectColumns(page, { example, cols: [trains, pulses] })
+  await selectColumns(page, { cols: [trains, pulses] })
   await expect(selectedColumnHeaders(page)).toHaveText([
     titleOf(example, 'n_trains'),
     titleOf(example, 'n_pulses'),
@@ -181,9 +181,9 @@ test('clicking a header edge without dragging leaves the other selected columns 
   const trains = columnOf(example, 'n_trains')
   const pulses = columnOf(example, 'n_pulses')
   const box = await gridBox(page)
-  const edge = await headerEdge(page, { example, col: trains })
+  const edge = await headerEdge(page, { col: trains })
 
-  await selectColumns(page, { example, cols: [trains, pulses] })
+  await selectColumns(page, { cols: [trains, pulses] })
   await waitOutDoubleClick(page)
 
   await page.mouse.click(edge.x, edge.y)
@@ -217,7 +217,6 @@ test.describe('a viewport wide enough for a fitted table', () => {
     await expect.poll(async () => (await gridBox(page)).width).toBe(before)
     await waitOutDoubleClick(page)
     const edge = await headerEdge(page, {
-      example,
       col: columnOf(example, 'n_pulses'),
     })
     await dragBy(page, { from: edge, by: { x: COLUMN_WIDTH, y: 0 } })
@@ -237,7 +236,6 @@ test('resetting from the toolbar puts every width back to the default', async ({
 
   const before = (await gridBox(page)).width
   const edge = await headerEdge(page, {
-    example,
     col: columnOf(example, 'n_trains'),
   })
 

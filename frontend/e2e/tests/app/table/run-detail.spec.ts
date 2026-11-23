@@ -12,7 +12,6 @@ import {
   activateCell,
   closeAside,
   columnOf,
-  hasGroups,
   openPopover,
   openProposal,
   highlightedRow,
@@ -28,7 +27,7 @@ test('selecting a run shows all its variables', async ({ page, example }) => {
   await expect(selectedRunTab(page)).toHaveCount(0)
 
   // The first row is run 1 in the XPCS example.
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
 
   const panel = page.getByRole('complementary')
   await expect(selectedRunTab(page)).toHaveText('Run 1')
@@ -47,7 +46,7 @@ test('a column the tag filter hides leaves the run panel too', async ({
   await openPopover(page, 'Tags')
   await rowCheckbox(page, 'Beam properties').check()
 
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
 
   const panel = page.getByRole('complementary')
   await expect(panel.getByText('XGM intensity [uJ]')).toBeVisible()
@@ -65,7 +64,7 @@ test.describe('failed cells', () => {
   }) => {
     await openProposal(page, example)
 
-    await selectRun(page, { example, row: ERROR_ROW })
+    await selectRun(page, { row: ERROR_ROW })
 
     const panel = page.getByRole('complementary')
     await expect(
@@ -88,7 +87,7 @@ test.describe('grouped variables', () => {
   }) => {
     await openProposal(page, example)
 
-    await selectRun(page, { example, row: 0 })
+    await selectRun(page, { row: 0 })
 
     const panel = page.getByRole('complementary')
     const { title } = SAMPLE_GROUP
@@ -109,11 +108,11 @@ test('selecting another run replaces the selection', async ({
   await openProposal(page, example)
 
   // Select the first run
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
   // Select the second run
-  await selectRun(page, { example, row: 1 })
+  await selectRun(page, { row: 1 })
   await expect(selectedRunTab(page)).toHaveText('Run 2')
   // Single row selection: the panel follows the run, it does not stack tabs.
   await expect(selectedRunTab(page)).toHaveCount(1)
@@ -127,7 +126,7 @@ test('closing the aside clears the run selection', async ({
 }) => {
   await openProposal(page, example)
 
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
   await expect(highlightedRow(page, { row: 0 })).toBeAttached()
 
@@ -142,7 +141,7 @@ test('closing the aside hands focus back to the grid', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
 
   await closeAside(page)
 
@@ -153,10 +152,10 @@ test('closing the aside hands focus back to the grid', async ({
 // run a user is reading.
 test('a column click keeps the selected run', async ({ page, example }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
-  await selectColumns(page, { example, cols: [2] })
+  await selectColumns(page, { cols: [2] })
 
   await expect(selectedColumnHeaders(page)).toHaveCount(1)
   await expect(selectedRunTab(page)).toHaveText('Run 1')
@@ -170,14 +169,12 @@ test('unselecting the last selected column keeps the selected run', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
-  await selectColumns(page, { example, cols: [2] })
+  await selectRun(page, { row: 0 })
+  await selectColumns(page, { cols: [2] })
   await expect(selectedColumnHeaders(page)).toHaveCount(1)
 
   const box = await gridBox(page)
-  await clickWithModifier(page, [
-    headerPoint(box, { col: 2, grouped: hasGroups(example) }),
-  ])
+  await clickWithModifier(page, [headerPoint(box, { col: 2 })])
 
   await expect(selectedColumnHeaders(page)).toHaveCount(0)
   await expect(selectedRunTab(page)).toHaveText('Run 1')
@@ -189,10 +186,10 @@ test('clicking the row marker of the selected run again clears it', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
 
   await expect(selectedRunTab(page)).toHaveCount(0)
   await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
@@ -205,11 +202,11 @@ test('clicking the row marker of the selected run clears it while a column is se
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
-  await selectColumns(page, { example, cols: [2] })
+  await selectRun(page, { row: 0 })
+  await selectColumns(page, { cols: [2] })
   await expect(selectedColumnHeaders(page)).toHaveCount(1)
 
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
 
   await expect(selectedRunTab(page)).toHaveCount(0)
   await expect(highlightedRow(page, { row: 0 })).not.toBeAttached()
@@ -221,11 +218,10 @@ test('a cell click with a run open shows that cell alone', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
   await selectCells(page, {
-    example,
     cells: [{ col: columnOf(example, 'sample_type'), row: 2 }],
   })
 
@@ -244,13 +240,11 @@ test('a modifier click on another row keeps the open run', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
   const box = await gridBox(page)
-  await clickWithModifier(page, [
-    cellPoint(box, { col: 2, row: 2, grouped: hasGroups(example) }),
-  ])
+  await clickWithModifier(page, [cellPoint(box, { col: 2, row: 2 })])
 
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 })
@@ -261,7 +255,6 @@ test('an arrow key with a run open moves the run with the cell', async ({
 }) => {
   await openProposal(page, example)
   await activateCell(page, {
-    example,
     col: columnOf(example, 'sample_type'),
     row: 0,
   })
@@ -277,7 +270,6 @@ test('an arrow key with a run open moves the run with the cell', async ({
 test('an arrow key with no run open opens none', async ({ page, example }) => {
   await openProposal(page, example)
   await selectCells(page, {
-    example,
     cells: [{ col: columnOf(example, 'sample_type'), row: 0 }],
   })
 
@@ -288,7 +280,7 @@ test('an arrow key with no run open opens none', async ({ page, example }) => {
 
 test('escape clears the selected run', async ({ page, example }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
+  await selectRun(page, { row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
   await page.keyboard.press('Escape')
@@ -302,8 +294,8 @@ test('escape clears the selected run while a column is selected', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await selectRun(page, { example, row: 0 })
-  await selectColumns(page, { example, cols: [2] })
+  await selectRun(page, { row: 0 })
+  await selectColumns(page, { cols: [2] })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
   await page.keyboard.press('Escape')
@@ -319,11 +311,11 @@ test('shift+space clears the selected run while the pointer rests on a header', 
   example,
 }) => {
   await openProposal(page, example)
-  await activateCell(page, { example, col: 2, row: 0 })
+  await activateCell(page, { col: 2, row: 0 })
   await expect(selectedRunTab(page)).toHaveText('Run 1')
 
   const box = await gridBox(page)
-  const header = headerPoint(box, { col: 2, grouped: hasGroups(example) })
+  const header = headerPoint(box, { col: 2 })
   await page.mouse.move(header.x, header.y)
   await page.keyboard.press('Shift+Space')
 

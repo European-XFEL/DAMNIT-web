@@ -5,7 +5,6 @@ import { dashboardNav } from '#support/dashboard'
 import { type Cell, cellPoint, gridBox, headerPoint } from '#support/grid'
 import {
   contextMenu,
-  hasGroups,
   rightClickCell,
   rightClickHeader,
   titleOf,
@@ -32,15 +31,11 @@ async function multiClick(page: Page, points: { x: number; y: number }[]) {
 }
 
 // The right-clicked column becomes the summary plot's Y axis.
-export async function selectColumns(
-  page: Page,
-  { example, cols }: { example: Example; cols: number[] }
-) {
+export async function selectColumns(page: Page, { cols }: { cols: number[] }) {
   const box = await gridBox(page)
-  const grouped = hasGroups(example)
   await multiClick(
     page,
-    cols.map((col) => headerPoint(box, { col, grouped }))
+    cols.map((col) => headerPoint(box, { col }))
   )
 }
 
@@ -52,36 +47,26 @@ async function waitForPlotView(page: Page) {
 
 // Right-click a header and pick "Plot: summary". Scope the click to the menu:
 // a bare "Plot" also matches the nav's "New plot" button.
-export async function openSummaryPlot(
-  page: Page,
-  { example, col }: { example: Example; col: number }
-) {
-  await rightClickHeader(page, { example, col })
+export async function openSummaryPlot(page: Page, { col }: { col: number }) {
+  await rightClickHeader(page, { col })
   await contextMenu(page).getByText('Plot: summary').click()
   await waitForPlotView(page)
 }
 
 // The cells must share one column, or the grid clears the range stack.
-export async function selectCells(
-  page: Page,
-  { example, cells }: { example: Example; cells: Cell[] }
-) {
+export async function selectCells(page: Page, { cells }: { cells: Cell[] }) {
   const box = await gridBox(page)
-  const grouped = hasGroups(example)
   await multiClick(
     page,
-    cells.map((cell) => cellPoint(box, { ...cell, grouped }))
+    cells.map((cell) => cellPoint(box, cell))
   )
 }
 
 // Right-click a cell and pick "Plot: preview". Right-clicking a cell that is not
 // already selected resets the selection to it, so build any multi-run range
 // with selectCells first, then right-click one of the selected cells.
-export async function openPreviewPlot(
-  page: Page,
-  { example, col, row }: Cell & { example: Example }
-) {
-  await rightClickCell(page, { example, col, row })
+export async function openPreviewPlot(page: Page, { col, row }: Cell) {
+  await rightClickCell(page, { col, row })
   await contextMenu(page).getByText('Plot: preview').click()
   await waitForPlotView(page)
 }

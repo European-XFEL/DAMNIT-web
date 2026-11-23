@@ -1,7 +1,7 @@
 import { type Page } from '@playwright/test'
 
 import { test, expect } from '#fixtures'
-import { numberVars, XPCS, type Example } from '#examples/xpcs'
+import { numberVars, XPCS } from '#examples/xpcs'
 import { fullMetadata } from '#mocks'
 import { gridCanvas, WIDE_VIEWPORT } from '#support/grid'
 import { columnOf, openProposal, titleOf } from '#support/table'
@@ -26,15 +26,12 @@ const yTitle = titleOf(XPCS, yVar)
 
 // Opening a summary plot switches to its view, which unmounts the table.
 // Return to the table between plots so the next header click has a canvas.
-async function openSummaryPlots(
-  page: Page,
-  { example, cols }: { example: Example; cols: number[] }
-) {
+async function openSummaryPlots(page: Page, { cols }: { cols: number[] }) {
   for (const [index, col] of cols.entries()) {
     if (index > 0) {
       await showTable(page)
     }
-    await openSummaryPlot(page, { example, col })
+    await openSummaryPlot(page, { col })
   }
 }
 
@@ -44,7 +41,7 @@ test('right-clicking a variable header and choosing "Plot: summary" plots it aga
 }) => {
   await openProposal(page, example)
 
-  await openSummaryPlot(page, { example, col: columnOf(example, xVar) })
+  await openSummaryPlot(page, { col: columnOf(example, xVar) })
 
   await expect(plotEntry(page, `${xTitle} vs. Run`)).toBeVisible()
   // Summary plots always mount a figure (their table data is never empty here),
@@ -59,11 +56,10 @@ test('selecting two variable headers plots the right-clicked one against the oth
   await openProposal(page, example)
 
   await selectColumns(page, {
-    example,
     cols: [columnOf(example, xVar), columnOf(example, yVar)],
   })
   // The right-clicked column is the Y axis, the other is X.
-  await openSummaryPlot(page, { example, col: columnOf(example, yVar) })
+  await openSummaryPlot(page, { col: columnOf(example, yVar) })
 
   await expect(plotEntry(page, `${yTitle} vs. ${xTitle}`)).toBeVisible()
   await expect(plotFigure(page)).toBeVisible()
@@ -75,7 +71,6 @@ test('closing one plot removes it and leaves the other open', async ({
 }) => {
   await openProposal(page, example)
   await openSummaryPlots(page, {
-    example,
     cols: [columnOf(example, xVar), columnOf(example, yVar)],
   })
 
@@ -95,7 +90,7 @@ test('closing the shown plot returns to the table it was opened from', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await openSummaryPlot(page, { example, col: columnOf(example, xVar) })
+  await openSummaryPlot(page, { col: columnOf(example, xVar) })
   await expect(plotFigure(page)).toBeVisible()
 
   await closePlot(page, `${xTitle} vs. Run`)
@@ -111,7 +106,7 @@ test('the camera button downloads the plot as a png', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await openSummaryPlot(page, { example, col: columnOf(example, xVar) })
+  await openSummaryPlot(page, { col: columnOf(example, xVar) })
   const figure = plotFigure(page)
   await expect(figure).toBeVisible()
 
@@ -128,7 +123,7 @@ test('a summary plot says when its newest data was computed', async ({
   example,
 }) => {
   await openProposal(page, example)
-  await openSummaryPlot(page, { example, col: columnOf(example, xVar) })
+  await openSummaryPlot(page, { col: columnOf(example, xVar) })
   const computed = statusBar(page).getByText('Computed: 14 November 2023')
 
   // The newest run sets the time

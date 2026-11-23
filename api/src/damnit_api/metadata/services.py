@@ -9,6 +9,7 @@ from anyio import Path as APath
 from sqlmodel import col, select
 
 from .. import get_logger
+from ..runs.sqlite import DAMNIT_PATH
 from ..shared.errors import ForbiddenError
 from ..shared.models import ProposalNumber
 from .models import ProposalMeta, ProposalMetaBase
@@ -123,23 +124,19 @@ async def _fetch_proposal_meta(
 
 
 async def _search_damnit_dir(path: Path) -> tuple[Path | None, list[Path]]:
-    """Search for a DAMNIT directory in common locations relative to `path`.
+    """Search for the DAMNIT directory of the proposal at `path`.
 
-    Looks for `usr/Shared/{amore,amore-online}` directories."""
-    usr_share = APath(path) / "usr" / "Shared"
+    Looks in `usr/Shared/amore` only, since runs are opened from there alone: a
+    proposal found in `usr/Shared/amore-online` would be listed and then not open."""
+    damnit_path = APath(path) / DAMNIT_PATH
+    try:
+        damnit_path = await damnit_path.resolve()
+        if await damnit_path.is_dir():
+            return Path(damnit_path), [Path(damnit_path)]
+    except PermissionError:
+        await logger.awarning(f"Permission denied when accessing {damnit_path}")
 
-    searched_paths = []
-    for dir in ("amore", "amore-online"):
-        try:
-            damnit_path = await (usr_share / dir).resolve()
-            searched_paths.append(Path(damnit_path))
-            if await damnit_path.is_dir():
-                return Path(damnit_path), searched_paths
-        except PermissionError:
-            await logger.awarning(f"Permission denied when accessing {damnit_path}")
-            continue
-
-    return None, searched_paths
+    return None, [Path(damnit_path)]
 
 
 async def _check_user_allowed(

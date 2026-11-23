@@ -44,12 +44,11 @@ test('clicking past the last column leaves the other selected columns alone', as
   const last = columnOf(example, lastVariableOf(example))
   const box = await gridBox(page)
   const edge = await headerEdge(page, {
-    example,
     col: last,
     overshoot: EDGE_OVERSHOOT,
   })
 
-  await selectColumns(page, { example, cols: [last, trains] })
+  await selectColumns(page, { cols: [last, trains] })
   await expect(selectedColumnHeaders(page)).toHaveText([
     titleOf(example, 'n_trains'),
     titleOf(example, lastVariableOf(example)),
@@ -80,12 +79,11 @@ test('dragging past the last column resizes only the column behind it', async ({
   const last = columnOf(example, lastVariableOf(example))
   const box = await gridBox(page)
   const edge = await headerEdge(page, {
-    example,
     col: last,
     overshoot: EDGE_OVERSHOOT,
   })
 
-  await selectColumns(page, { example, cols: [last, trains] })
+  await selectColumns(page, { cols: [last, trains] })
   await waitOutDoubleClick(page)
 
   await dragBy(page, { from: edge, by: { x: COLUMN_WIDTH, y: 0 } })

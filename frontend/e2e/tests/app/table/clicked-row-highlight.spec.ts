@@ -14,23 +14,14 @@ import {
   ROW_HEIGHT,
   WIDE_VIEWPORT,
 } from '#support/grid'
-import {
-  columnOf,
-  hasGroups,
-  openProposal,
-  selectedRunTab,
-} from '#support/table'
+import { columnOf, openProposal, selectedRunTab } from '#support/table'
 
 test.use({ viewport: WIDE_VIEWPORT })
 
 const WHITE = [255, 255, 255]
 
 // A point near the top-left corner of a cell, away from its text and borders.
-function cellBackground(
-  page: Page,
-  box: Box,
-  cell: Cell & { grouped: boolean }
-) {
+function cellBackground(page: Page, box: Box, cell: Cell) {
   const { x, y } = cellPoint(box, cell)
   return pixelColor(gridCanvas(page), {
     x: x - COLUMN_WIDTH / 2 + 4,
@@ -46,17 +37,16 @@ test('a clicked cell highlights its row without opening the run', async ({
 }) => {
   await openProposal(page, example)
   const box = await gridBox(page)
-  const grouped = hasGroups(example)
   const runCol = columnOf(example, 'run')
   const otherCol = columnOf(example, 'n_trains')
 
   const clickRow = (row: number) => {
-    const { x, y } = cellPoint(box, { col: runCol, row, grouped })
+    const { x, y } = cellPoint(box, { col: runCol, row })
     return page.mouse.click(x, y)
   }
 
   const backgroundOf = (row: number) =>
-    cellBackground(page, box, { col: otherCol, row, grouped })
+    cellBackground(page, box, { col: otherCol, row })
 
   await clickRow(1)
   await expect.poll(() => backgroundOf(1)).not.toEqual(WHITE)
@@ -75,9 +65,8 @@ test('the highlight survives switching to another view and back', async ({
 }) => {
   await openProposal(page, example)
   const box = await gridBox(page)
-  const grouped = hasGroups(example)
   const otherCol = columnOf(example, 'n_trains')
-  const cell = { col: otherCol, row: 1, grouped }
+  const cell = { col: otherCol, row: 1 }
   const background = () => cellBackground(page, box, cell)
 
   const { x, y } = cellPoint(box, cell)
