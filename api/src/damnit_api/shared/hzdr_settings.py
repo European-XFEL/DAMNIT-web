@@ -254,7 +254,10 @@ class HZDRBuilderSettings(BaseModel):
     campaigns: list[str] = Field(default_factory=list)
     experiment_id: str = ""
     source_key: str = "hzdr-labfrog"
-    campaign_timezone: str = "UTC"
+    # A time without an offset is the campaign's wall clock, never UTC
+    # (hzdr-combo docs/architecture.md § Time, rule 2). Europe/Berlin is the
+    # default; a deployment may name another zone but never defaults to UTC.
+    campaign_timezone: str = "Europe/Berlin"
     labfrog_nexus: Path | None = None
     labfrog_sqlite: Path | None = None
     sources_file: Path | None = None

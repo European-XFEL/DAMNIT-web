@@ -1,18 +1,45 @@
 import type { HZDRShot, HZDRTrendValue } from '../types'
 
+/**
+ * The campaign's time zone. A shot day is the campaign day, never the UTC
+ * date or the browser's zone (hzdr-combo docs/architecture.md § Time, rule 4):
+ * a shot at 00:30 CET belongs to that day.
+ */
+export const CAMPAIGN_TIMEZONE = 'Europe/Berlin'
+
+const DATE_PREFIX = /^\d{4}-\d{2}-\d{2}/
+const HAS_OFFSET = /(?:Z|[+-]\d{2}:?\d{2})$/
+
+const campaignDayFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CAMPAIGN_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+/** The date `value` falls on in the campaign zone, as `YYYY-MM-DD`. */
+function campaignDay(value: Date) {
+  // en-CA formats as YYYY-MM-DD.
+  return campaignDayFormat.format(value)
+}
+
 export function getShotDateKey(firedAt: string) {
   if (!firedAt) {
     return undefined
   }
-  const isoDate = firedAt.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
-  if (isoDate) {
-    return isoDate
+  // A time without an offset is the campaign's wall clock (rule 2), so its
+  // date prefix is already the campaign day; converting it would shift it.
+  if (!HAS_OFFSET.test(firedAt)) {
+    const isoDate = firedAt.match(DATE_PREFIX)?.[0]
+    if (isoDate) {
+      return isoDate
+    }
   }
   const date = new Date(firedAt)
   if (Number.isNaN(date.getTime())) {
     return undefined
   }
-  return date.toISOString().slice(0, 10)
+  return campaignDay(date)
 }
 
 type ShotIdentity = Pick<HZDRShot, 'shot_number' | 'fired_at'> &

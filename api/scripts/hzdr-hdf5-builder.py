@@ -299,6 +299,7 @@ def build(
             # A shared-catalog build's shots move between campaigns; see
             # write_nexus_bridge. The single-campaign build is unchanged.
             seed_from_output=not merge_catalog,
+            campaign_timezone=args.campaign_timezone,
         )
         scicat = (
             _register_scicat(
@@ -645,7 +646,12 @@ def _register_scicat(
     if settings.hzdr_scicat.endpoint == "publish":
         from damnit_api.metadata.hzdr_scicat_summary import campaign_summary
 
-        scientific_metadata = campaign_summary(experiment_id, shots, events or [])
+        scientific_metadata = campaign_summary(
+            experiment_id,
+            shots,
+            events or [],
+            campaign_timezone=settings.hzdr_builder.campaign_timezone,
+        )
     result = register_campaign_nexus(
         settings=settings.hzdr_scicat,
         nexus_path=output_nexus,
@@ -798,10 +804,11 @@ def main() -> None:
     parser.add_argument("--match-tolerance-s", type=float, default=120.0)
     parser.add_argument(
         "--campaign-timezone",
-        default="UTC",
+        default="Europe/Berlin",
         help=(
             "IANA timezone used for naive LabFrog date_time values and the "
-            "date-scoped shot identity, for example Europe/Berlin."
+            "date-scoped shot identity, for example Europe/Berlin. A naive "
+            "time is the campaign's wall clock, never UTC (rule 2)."
         ),
     )
     parser.add_argument(

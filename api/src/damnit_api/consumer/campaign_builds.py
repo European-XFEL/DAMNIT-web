@@ -202,7 +202,7 @@ def campaigns_for_unassigned(
     labfrog_shots: Iterable[dict[str, Any]],
     campaign_schedule: Iterable[Mapping[str, Any]] = (),
     experiment_rulings: Mapping[int, str] | None = None,
-    campaign_timezone: str = "UTC",
+    campaign_timezone: str = "Europe/Berlin",
 ) -> set[str]:
     """The campaigns the resolution chain routes ``unassigned`` events to.
 

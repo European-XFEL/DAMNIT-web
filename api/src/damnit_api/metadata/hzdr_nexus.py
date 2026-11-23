@@ -1871,7 +1871,7 @@ def resolve_event_experiments(
     labfrog_experiment_id: str,
     campaign_schedule: Iterable[Mapping[str, Any]] = (),
     experiment_rulings: Mapping[int, str] | None = None,
-    campaign_timezone: str = "UTC",
+    campaign_timezone: str = "Europe/Berlin",
 ) -> list[dict[str, Any]]:
     """Resolve the campaign of every ``unassigned`` event (decision D1).
 
@@ -2033,7 +2033,7 @@ def reconcile_canonical_shots(  # noqa: C901
     source_key: str,
     labfrog_shots: list[dict[str, Any]] | None = None,
     match_tolerance_s: float = 120.0,
-    campaign_timezone: str = "UTC",
+    campaign_timezone: str = "Europe/Berlin",
     campaign_schedule: Iterable[Mapping[str, Any]] = (),
     experiment_rulings: Mapping[int, str] | None = None,
     time_match_autoassign: bool = False,
@@ -2095,7 +2095,12 @@ def reconcile_canonical_shots(  # noqa: C901
 
     if labfrog_shots:
         canonical = [
-            _canonical_from_labfrog(record, experiment_id, source_key)
+            _canonical_from_labfrog(
+                record,
+                experiment_id,
+                source_key,
+                campaign_timezone=campaign_timezone,
+            )
             for record in labfrog_shots
         ]
         for event in normalized_events:
@@ -2199,7 +2204,13 @@ def reconcile_canonical_shots(  # noqa: C901
         if event_times:
             shot["fired_at"] = min(event_times).isoformat()
         elif shot.get("labfrog_date_time"):
-            shot["fired_at"] = str(shot["labfrog_date_time"])
+            # A LabFrog time without an offset is the campaign's wall clock,
+            # never UTC (rule 2). Write it with its offset so `fired_at` is
+            # one format for every shot (rule 1); a naive value here used to
+            # be read back as UTC, 1-2 h off.
+            shot["fired_at"] = _iso_with_offset(
+                shot["labfrog_date_time"], campaign_timezone
+            ) or str(shot["labfrog_date_time"])
         if not shot["events"]:
             shot["match_status"] = "labfrog-only"
             shot["match_quality"] = "labfrog_only"
@@ -2376,6 +2387,7 @@ def write_nexus_bridge(
     source_nexus: Path | None = None,
     laser_config: dict[str, Any] | None = None,
     seed_from_output: bool = True,
+    campaign_timezone: str = "Europe/Berlin",
 ) -> list[dict[str, Any]]:
     """Preserve a LabFrog NeXus file and add the DAMNIT bridge tables.
 
@@ -2444,7 +2456,9 @@ def write_nexus_bridge(
             )
             _write_labfrog_history(entry, history)
 
-            _write_campaign_time_bounds(entry, shots)
+            _write_campaign_time_bounds(
+                entry, shots, campaign_timezone=campaign_timezone
+            )
             _write_semantic_metadata_groups(entry, shots, laser_config)
 
             if existing_count > len(shots):
@@ -2557,7 +2571,12 @@ def _write_labfrog_history(entry: h5py.Group, history: list[dict[str, Any]]) -> 
     )
 
 
-def _write_campaign_time_bounds(entry: h5py.Group, shots: list[dict[str, Any]]) -> None:
+def _write_campaign_time_bounds(
+    entry: h5py.Group,
+    shots: list[dict[str, Any]],
+    *,
+    campaign_timezone: str = "Europe/Berlin",
+) -> None:
     """Write `/entry/start_time` and `/entry/end_time` (standard NXentry fields).
 
     Derived from the earliest/latest parseable shot `fired_at` (itself the
@@ -2567,10 +2586,14 @@ def _write_campaign_time_bounds(entry: h5py.Group, shots: list[dict[str, Any]]) 
     DAMNIT wrote them: an existing dataset without the `damnit_source` marker
     (e.g. from a future LabFrog projection) is preserved, mirroring the
     `_claim_damnit_group` rule for groups.
+
+    A `fired_at` without an offset (an older campaign file, or a LabFrog time
+    written before the source carried one) is read in the campaign zone, never
+    UTC (rule 2), so the bounds are the Berlin instant.
     """
     times = []
     for shot in shots:
-        parsed = parse_datetime(shot.get("fired_at"))
+        parsed = parse_datetime(shot.get("fired_at"), naive_timezone=campaign_timezone)
         if parsed is not None:
             times.append(parsed)
     if not times:
@@ -3813,6 +3836,31 @@ def make_shot_key(experiment_id: str, shot_date: str | None, shot_number: int) -
     return f"{experiment_id}:{date_token}:{shot_number:06d}"
 
 
+def _iso_with_offset(value: Any, naive_timezone: str) -> str | None:
+    """Render a time as ISO-8601 with its offset (rule 1).
+
+    A value that already carries an offset keeps it; a naive value is read in
+    ``naive_timezone`` (the campaign zone), never UTC (rule 2). Returns None
+    when the value does not parse, so the caller can fall back to the raw text.
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            # fromisoformat accepts a trailing Z since Python 3.11.
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+    elif isinstance(value, datetime):
+        parsed = value
+    else:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        parsed = parsed.replace(tzinfo=resolve_timezone(naive_timezone))
+    return parsed.isoformat()
+
+
 def parse_datetime(value: Any, *, naive_timezone: str = "UTC") -> datetime | None:
     """Parse common ISO timestamps and normalize naive values to UTC."""
     if isinstance(value, str):
@@ -4195,21 +4243,28 @@ def labfrog_shot_status(value: Any) -> str:
 
 
 def _canonical_from_labfrog(
-    record: dict[str, Any], experiment_id: str, source_key: str
+    record: dict[str, Any],
+    experiment_id: str,
+    source_key: str,
+    *,
+    campaign_timezone: str = "Europe/Berlin",
 ) -> dict[str, Any]:
     shot_number = record.get("shot_number")
     if shot_number is None:
         message = "LabFrog shot rows must contain shot_number"
         raise ValueError(message)
     shot_date = _as_optional_string(record.get("shot_date"))
+    labfrog_time = _as_optional_string(record.get("labfrog_date_time"))
     canonical: dict[str, Any] = {
         "source_key": source_key,
         "shot_number": int(shot_number),
-        "fired_at": _as_optional_string(record.get("labfrog_date_time")) or "",
+        # One format for every shot: ISO-8601 with an offset (rule 1). A
+        # LabFrog time without one is the campaign's wall clock (rule 2).
+        "fired_at": _iso_with_offset(labfrog_time, campaign_timezone) or "",
         "shot_key": make_shot_key(experiment_id, shot_date, int(shot_number)),
         "shot_date": shot_date,
         "labfrog_record_id": _as_optional_string(record.get("record_id")),
-        "labfrog_date_time": _as_optional_string(record.get("labfrog_date_time")),
+        "labfrog_date_time": labfrog_time,
         "match_status": "labfrog-only",
         "match_quality": "labfrog_only",
         "match_time_delta_s": None,

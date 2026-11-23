@@ -98,11 +98,15 @@ def _number_coverage(values: Iterable[Any]) -> dict[str, int]:
     return result
 
 
-def _time_coverage(shots: list[dict[str, Any]]) -> dict[str, Any]:
+def _time_coverage(
+    shots: list[dict[str, Any]], *, campaign_timezone: str = "Europe/Berlin"
+) -> dict[str, Any]:
     earliest = latest = None
     missing = 0
     for shot in shots:
-        parsed = parse_datetime(shot.get("fired_at"))
+        # A fired_at without an offset is the campaign's wall clock, never
+        # UTC (rule 2), so the SciCat range is the Berlin instant.
+        parsed = parse_datetime(shot.get("fired_at"), naive_timezone=campaign_timezone)
         if parsed is None:
             missing += 1
             continue
@@ -133,6 +137,8 @@ def campaign_summary(
     experiment_id: str,
     shots: list[dict[str, Any]],
     events: list[dict[str, Any]],
+    *,
+    campaign_timezone: str = "Europe/Berlin",
 ) -> dict[str, Any]:
     """Summarize only canonical fields; omit notes and per-shot/event dumps."""
     active = [
@@ -158,7 +164,7 @@ def campaign_summary(
             "source_review_required": bool(duplicate_keys),
         },
         "superseded_shot_records": len(shots) - len(active),
-        "time_coverage": _time_coverage(active),
+        "time_coverage": _time_coverage(active, campaign_timezone=campaign_timezone),
         "authority_numbers": _number_coverage(
             _shot_authority_column_value(s) for s in active
         ),
