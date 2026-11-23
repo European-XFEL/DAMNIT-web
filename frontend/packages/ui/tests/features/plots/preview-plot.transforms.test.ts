@@ -2,6 +2,7 @@ import { expect, test } from 'vitest'
 
 import { indexRunCells } from '#src/data/table/table-data.transforms'
 import {
+  describeHiddenRuns,
   describeOutdatedRuns,
   outdatedRuns,
   recordReloadedTimes,
@@ -215,5 +216,17 @@ test('several outdated runs are joined with no comma before the "and"', () => {
 test('outdated runs in a row are named as a range', () => {
   expect(describeOutdatedRuns([1, 2, 3, 5, 9])).toBe(
     'Runs 1 to 3, 5 and 9 have newer data.'
+  )
+})
+
+test('a heatmap over several runs says heatmaps show one run', () => {
+  expect(describeHiddenRuns({ kind: 'heatmap', hiddenCount: 2 })).toBe(
+    'Heatmaps show one run at a time. 2 other runs with data are not shown.'
+  )
+})
+
+test('one run left out is named in the singular', () => {
+  expect(describeHiddenRuns({ kind: 'image', hiddenCount: 1 })).toBe(
+    'Images show one run at a time. 1 other run with data is not shown.'
   )
 })

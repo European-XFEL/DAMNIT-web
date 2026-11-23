@@ -6,10 +6,15 @@ import {
 } from '@apollo/client'
 import { print } from 'graphql'
 import { render } from 'vitest-browser-react'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
+import { userEvent } from 'vitest/browser'
 
 import { previewRunFields } from '@damnit-frontend/shared/mocks'
 import { setupStore } from '#src/app/store/store'
+import {
+  ViewStatusProvider,
+  ViewStatusTarget,
+} from '#src/components/statuses/view-status'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { TABLE_META_QUERY } from '#src/data/table/table-data.queries'
 import PlotContainer from '#src/features/plots/plot-container'
@@ -20,6 +25,13 @@ import { withProviders } from '#tests/support/render'
 const PROPOSAL = '6996'
 const VARIABLE = 'xgm'
 const RUNS = [1, 2, 3]
+
+const imageFor = (run: number) => ({
+  data: `data:image/png;base64,run${run}`,
+  name: VARIABLE,
+  dtype: 'image',
+  attrs: { shape: [4, 4] },
+})
 
 const noValueFor = () => ({
   data: null,
@@ -102,14 +114,18 @@ async function renderPreview(server: ReturnType<typeof createServer>) {
   })
   const client = new ApolloClient({ cache, link: server.link })
 
+  // The status bar's items draw into its target, outside the plot.
   return render(
-    <PlotContainer
-      plot={{
-        source: 'preview',
-        variables: [VARIABLE],
-        runs: RUNS.map(String),
-      }}
-    />,
+    <ViewStatusProvider>
+      <PlotContainer
+        plot={{
+          source: 'preview',
+          variables: [VARIABLE],
+          runs: RUNS.map(String),
+        }}
+      />
+      <ViewStatusTarget />
+    </ViewStatusProvider>,
     { wrapper: withProviders({ store, client }) }
   )
 }
@@ -120,26 +136,28 @@ test('a preview whose runs all come back empty says so instead of loading', asyn
   const screen = await renderPreview(server)
 
   await expect
-    .element(screen.getByText('Unable to display the plot'))
-    .toBeVisible()
+    .element(screen.getByRole('alert', { name: 'Unable to display the plot' }))
+    .toHaveTextContent('None of its runs has data that can be plotted.')
+})
+
+test('a preview whose every run raised says it failed to load', async () => {
+  const server = createServer(imageFor, { raising: true })
+
+  const screen = await renderPreview(server)
+
   await expect
-    .element(screen.getByText('None of its runs has data that can be plotted.'))
+    .element(screen.getByRole('alert', { name: 'Unable to load the plot' }))
     .toBeVisible()
 })
 
 test('a preview that failed to load asks for its data again on Try again', async () => {
-  const server = createServer((run) => ({
-    data: `data:image/png;base64,run${run}`,
-    name: VARIABLE,
-    dtype: 'image',
-    attrs: { shape: [4, 4] },
-  }))
+  const server = createServer(imageFor)
   server.goDown()
 
   const screen = await renderPreview(server)
 
   await expect
-    .element(screen.getByText('Unable to load the plot'))
+    .element(screen.getByRole('alert', { name: 'Unable to load the plot' }))
     .toBeVisible()
 
   // The connection is back.
@@ -148,4 +166,36 @@ test('a preview that failed to load asks for its data again on Try again', async
 
   await expect.element(screen.getByRole('img')).toBeVisible()
   expect(server.previewsSent()).toBe(2)
+})
+
+test('Try again keeps its focus while the plot asks for its data again', async () => {
+  const server = createServer(imageFor)
+  server.goDown()
+
+  const screen = await renderPreview(server)
+  const tryAgain = screen.getByRole('button', { name: 'Try again' })
+  await expect.element(tryAgain).toBeVisible()
+
+  await tryAgain.click()
+
+  await vi.waitFor(() => {
+    expect(server.previewsSent()).toBe(2)
+  })
+  await expect.element(tryAgain).toHaveFocus()
+})
+
+test('an image over three runs names the one run it shows in the status bar', async () => {
+  const server = createServer(imageFor)
+
+  const screen = await renderPreview(server)
+  const item = screen.getByText('Showing: Run 1 only')
+  await expect.element(item).toBeVisible()
+
+  await userEvent.hover(item)
+
+  await expect
+    .element(screen.getByRole('tooltip'))
+    .toHaveTextContent(
+      'Images show one run at a time. 2 other runs with data are not shown.'
+    )
 })

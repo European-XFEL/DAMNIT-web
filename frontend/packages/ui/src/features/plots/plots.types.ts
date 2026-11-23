@@ -40,6 +40,8 @@ export type PlotData = {
   meta: PlotMeta
 }
 
+export type SingleRunKind = 'image' | 'heatmap'
+
 export type ChunkFailure = 'network' | 'field'
 
 // What the backend attaches to one run's value. Both named attributes describe

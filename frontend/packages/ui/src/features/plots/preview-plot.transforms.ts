@@ -1,11 +1,12 @@
 import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunCells } from '#src/data/table/table-data.types'
 
-import {
-  type PlotMeta,
-  type PlotTrace,
-  type PreviewScalar,
-  type PreviewValue,
+import type {
+  PlotMeta,
+  PlotTrace,
+  PreviewScalar,
+  PreviewValue,
+  SingleRunKind,
 } from './plots.types'
 
 // extracted_data is a JSON scalar, so `value.data` arrives as unknown and its
@@ -229,4 +230,22 @@ export function describeOutdatedRuns(runs: number[]) {
   return single
     ? `Run ${list} has newer data.`
     : `Runs ${list} have newer data.`
+}
+
+type DescribeHiddenRunsOptions = {
+  kind: SingleRunKind
+  hiddenCount: number
+}
+
+export function describeHiddenRuns({
+  kind,
+  hiddenCount,
+}: DescribeHiddenRunsOptions) {
+  const plural = kind === 'image' ? 'Images' : 'Heatmaps'
+  const left =
+    hiddenCount === 1
+      ? '1 other run with data is not shown.'
+      : `${hiddenCount} other runs with data are not shown.`
+
+  return `${plural} show one run at a time. ${left}`
 }

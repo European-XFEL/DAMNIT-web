@@ -7,6 +7,7 @@ import { ViewStatus } from '#src/components/statuses/view-status'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import ComputedItem from '#src/features/plots/components/computed-item'
 import FailedPlotAlert from '#src/features/plots/components/failed-plot-alert'
+import SingleRunItem from '#src/features/plots/components/single-run-item'
 import UnableToDisplayAlert from '#src/components/feedback/unable-to-display-alert'
 import type { PlotSpec } from '#src/types'
 
@@ -46,6 +47,7 @@ function PlotContainer({ plot }: PlotContainerProps) {
     chunks,
     markChunkFailed,
     retryFailedChunks,
+    singleRun,
     computedAt: previewComputedAt,
     outdated,
     reload,
@@ -112,16 +114,17 @@ function PlotContainer({ plot }: PlotContainerProps) {
       ) : (
         <Plot traces={traces} meta={meta} />
       )}
-      {computedAt !== null && (
-        <ViewStatus>
+      <ViewStatus>
+        {singleRun && <SingleRunItem {...singleRun} />}
+        {computedAt !== null && (
           <ComputedItem
             time={computedAt}
             outdated={outdated}
             onReload={() => void reload()}
             reloading={reloading}
           />
-        </ViewStatus>
-      )}
+        )}
+      </ViewStatus>
     </Stack>
   )
 }

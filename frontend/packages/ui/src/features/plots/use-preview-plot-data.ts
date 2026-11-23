@@ -14,7 +14,12 @@ import {
 import { indexRunCells } from '#src/data/table/table-data.transforms'
 import { reconnectCount, retryDelay } from '#src/graphql/live-updates'
 
-import type { ChunkFailure, PlotData, PreviewValue } from './plots.types'
+import type {
+  ChunkFailure,
+  PlotData,
+  PreviewValue,
+  SingleRunKind,
+} from './plots.types'
 import {
   buildPreviewQuery,
   chunkRuns,
@@ -245,11 +250,11 @@ export function usePreviewPlotData({
         : 'ready'
 
   // An image or a heatmap leaves out its other runs with data.
-  const hidden = values.length - drawn.length
+  const hiddenCount = values.length - drawn.length
+  const kind: SingleRunKind | null =
+    meta?.type === 'image' || meta?.type === 'heatmap' ? meta.type : null
   const singleRun =
-    (meta?.type === 'image' || meta?.type === 'heatmap') && hidden > 0
-      ? { kind: meta.type, run: drawn[0].run, hidden }
-      : null
+    kind && hiddenCount > 0 ? { kind, run: drawn[0].run, hiddenCount } : null
 
   const cells = indexRunCells(cellsData?.runs ?? [])
 
