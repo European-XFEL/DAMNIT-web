@@ -82,7 +82,6 @@ export default defineConfig(({ command, mode }): UserConfig => {
         // Keycloak returns to this address, which the API builds without the
         // base. Deployment redirects it in nginx.
         '/oauth/callback': { ...defaultProxyConfig },
-        [withBaseUrl('metadata')]: { ...defaultProxyConfig },
         [withBaseUrl('contextfile')]: { ...defaultProxyConfig },
       },
       https: sslConfig,
