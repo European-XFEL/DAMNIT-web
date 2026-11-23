@@ -117,14 +117,17 @@ VITE_API = "http://127.0.0.1:30200"
 
 ## Testing
 
-Tests live in `packages/ui/tests`. The file extension decides where a test
-runs, and that is the only rule to remember:
+Most tests live in `packages/ui/tests`. There the file extension decides
+where a test runs, and that is the only rule to remember:
 
 - `*.test.ts` runs in Node. Use it for pure logic (functions, reducers,
   selectors). Fast, no DOM.
 - `*.test.tsx` runs in a real browser (Chromium). Use it for anything that
   renders or touches the DOM (components, hooks). If it needs a DOM, name it
   `.tsx`.
+
+The mock API's own test lives in `packages/shared/tests`. Shared runs Vitest
+with its defaults, so every test there runs in Node, whatever its extension.
 
 Run the suite from the `frontend` folder:
 
