@@ -462,7 +462,7 @@ async def two_proposal_db(mocker, tmp_path, request):
     `find_proposal`. The addressing proposal (999999) is the active one in
     `metameta`; 888888 is a guest. Yields the addressing proposal id.
 
-    Parametrise indirectly with the `metameta` proposal value to write, or
+    Parametrize indirectly with the `metameta` proposal value to write, or
     with None to write no row at all.
     """
     proposal = "999999"
