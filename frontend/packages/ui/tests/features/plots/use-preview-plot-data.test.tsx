@@ -34,7 +34,7 @@ const spectrumFor = (run: number) => ({
   attrs: {},
 })
 
-// What the backend sends for a run with no value. A field that raised is null.
+// A field that raised comes back null instead.
 const noValueFor = () => ({
   data: null,
   name: VARIABLE,
