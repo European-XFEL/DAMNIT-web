@@ -585,6 +585,37 @@ def _evaluation_module():
     return module
 
 
+def test_evaluation_skips_an_index_without_a_shotsheet(tmp_path, monkeypatch, capsys):
+    """shot-aligner writes "shotsheet": null for a day without a paired
+    workbook; the script crashed on it (fwkt-webapps, 2024_08_08)."""
+    import json
+    import sys
+
+    module = _evaluation_module()
+    bare = tmp_path / "2024_08_08.index.json"
+    bare.write_text(json.dumps({"date": "2024_08_08", "shotsheet": None, "sets": {}}))
+    report = tmp_path / "report.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "hzdr-evaluate-time-rule.py",
+            str(bare),
+            "--rule",
+            "aligner",
+            "--json",
+            str(report),
+        ],
+    )
+
+    module.main()
+
+    assert "no Shotsheet in this index, nothing to measure" in capsys.readouterr().out
+    assert json.loads(report.read_text()) == [
+        {"index": str(bare), "skipped": "no shotsheet"}
+    ]
+
+
 def _day_index():
     """Three rows 5 min apart (Berlin); cam_a on time, cam_b's clock 4 min fast."""
     from datetime import datetime

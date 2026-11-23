@@ -494,6 +494,12 @@ def main() -> None:
     report = []
     for path in args.index:
         index = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(index.get("shotsheet"), dict):
+            # shot-aligner writes "shotsheet": null for a day no workbook was
+            # paired with (2024_08_08 on fwkt-webapps): no rows, nothing to score.
+            print(f"\n{path.name}: no Shotsheet in this index, nothing to measure")
+            report.append({"index": str(path), "skipped": "no shotsheet"})
+            continue
         day = context(index, args.timezone, truth_from=args.truth)
         day["truth"], day["clock"] = args.truth, args.clock
         day["reviewed"] = bool(index.get("statistics", {}).get("decisions"))
