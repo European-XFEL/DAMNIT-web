@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useApolloClient, useQuery, useReactiveVar } from '@apollo/client/react'
 import { useDidUpdate } from '@mantine/hooks'
 import { sortBy } from 'lodash-es'
@@ -12,9 +12,9 @@ import {
   type TableDataVariables,
 } from '#src/data/table/table-data.queries'
 import { indexRunCells } from '#src/data/table/table-data.transforms'
-import { reconnectCount } from '#src/graphql/live-updates'
+import { reconnectCount, retryDelay } from '#src/graphql/live-updates'
 
-import { type PlotData, type PreviewValue } from './plots.types'
+import type { ChunkFailure, PlotData, PreviewValue } from './plots.types'
 import {
   buildPreviewQuery,
   chunkRuns,
@@ -39,6 +39,16 @@ type UsePreviewPlotDataOptions = {
 
 const NO_DATA: PlotData = { traces: [], meta: { type: 'unsupported' } }
 const NO_RECORDED_TIMES: RecordedTimes = { key: '', times: new Map() }
+const NO_FAILED_CHUNKS: ReadonlyMap<string, ChunkFailure> = new Map()
+const NO_ATTEMPTS: ReadonlyMap<number, number> = new Map()
+
+// Loading while a chunk is out, failed once every unanswered chunk has failed
+// and nothing drew, and ready otherwise.
+export type PreviewStatus = 'loading' | 'ready' | 'failed'
+
+// A failed chunk is known by its runs, so one that gains a run is asked for
+// anew rather than read as failed.
+const chunkId = (runs: number[]) => runs.join(',')
 
 type PreviewChunkData = Record<string, PreviewValue | null>
 
@@ -55,9 +65,10 @@ function answeredRuns(data: PreviewChunkData | undefined) {
 // in progressively: each chunk that lands broadcasts to this watcher, so the
 // trace list grows instead of waiting on the whole run set. Returning `chunks`
 // is a render obligation, the way the table's wanted pages are: nothing fetches
-// until the caller renders a PreviewChunkLoader for each one. `computedAt` is
-// when the newest data it draws was computed, and `outdated` the drawn runs
-// computed again since, which `reload` fetches anew.
+// until the caller renders a PreviewChunkLoader for each one, under the chunk's
+// `key` and reporting to `markChunkFailed`. `computedAt` is when the newest
+// data it draws was computed, and `outdated` the drawn runs computed again
+// since, which `reload` fetches anew.
 export function usePreviewPlotData({
   runs,
   variable,
@@ -92,10 +103,70 @@ export function usePreviewPlotData({
     skip,
   })
 
-  const chunks = useMemo(
+  const chunkRunSets = useMemo(
     () => (enabled ? chunkRuns(stableRuns) : []),
     [enabled, stableRuns]
   )
+
+  const [failedChunks, setFailedChunks] = useState(NO_FAILED_CHUNKS)
+  // How often each chunk, by its first run, was asked for again. It is part of
+  // its loader's key, so a new attempt mounts a new loader.
+  const [attempts, setAttempts] = useState(NO_ATTEMPTS)
+
+  const markChunkFailed = useCallback(
+    (runs: number[], failure: ChunkFailure) => {
+      const id = chunkId(runs)
+      setFailedChunks((current) =>
+        current.get(id) === failure
+          ? current
+          : new Map(current).set(id, failure)
+      )
+    },
+    []
+  )
+
+  // Failed chunks clear even when none is in the plot any more, so the retry
+  // clock below stops.
+  const retryFailedChunks = useCallback(() => {
+    const retried = chunkRunSets.filter((runs) =>
+      failedChunks.has(chunkId(runs))
+    )
+    setFailedChunks(NO_FAILED_CHUNKS)
+    if (!retried.length) {
+      return
+    }
+
+    setAttempts((current) => {
+      const next = new Map(current)
+      for (const [first] of retried) {
+        next.set(first, (next.get(first) ?? 0) + 1)
+      }
+
+      return next
+    })
+  }, [chunkRunSets, failedChunks])
+
+  // Only a network failure, such as a 5xx while live updates stay up, retries
+  // on their clock. Rounds never reset: a chunk that answered keeps its data.
+  const [retryRounds, setRetryRounds] = useState(0)
+  const networkFailed = [...failedChunks.values()].includes('network')
+  useEffect(() => {
+    if (!networkFailed) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setRetryRounds((rounds) => rounds + 1)
+      retryFailedChunks()
+    }, retryDelay(retryRounds))
+
+    return () => clearTimeout(timer)
+  }, [networkFailed, retryRounds, retryFailedChunks])
+
+  const chunks = chunkRunSets.map((runs) => ({
+    key: `${runs[0]}:${attempts.get(runs[0]) ?? 0}`,
+    runs,
+  }))
 
   // The times come from the table's cells: `extracted_data` carries none. The
   // lightweight pass brings the plotted variable's cells without thumbnails.
@@ -120,9 +191,11 @@ export function usePreviewPlotData({
   })
 
   // A run computed again while live updates were down tints the plot too. The
-  // chunks are not fetched again: Reload does that.
+  // chunks that loaded are not fetched again, since Reload does that; the ones
+  // that failed are.
   const reconnects = useReactiveVar(reconnectCount)
   useDidUpdate(() => {
+    retryFailedChunks()
     if (skip) {
       return
     }
@@ -132,8 +205,8 @@ export function usePreviewPlotData({
     })
   }, [reconnects])
 
-  // A chunk still in flight leaves its runs out of the partial result, and a
-  // run the backend has no value for comes back null: neither is plotted yet.
+  // A chunk still in flight leaves its runs out of the partial result, a failed
+  // run comes back null and a run with no value has null data: none is drawn.
   const cached = Object.entries(data ?? {}).flatMap(([alias, value]) => {
     const run = runForAlias(alias)
     if (run === null || value?.data == null) {
@@ -155,6 +228,28 @@ export function usePreviewPlotData({
   // A scatter draws a line per run; an image, a heatmap or a scalar shows its
   // first run alone, so only that run is drawn and dated.
   const drawn = meta?.type === 'scatter' ? values : values.slice(0, 1)
+
+  // A null field is one that raised, and its chunk's loader reports it failed.
+  const answered = new Set(answeredRuns(data).map(({ run }) => run))
+  const unanswered = chunkRunSets.filter((runs) =>
+    runs.some((run) => !answered.has(run))
+  )
+  const unansweredFailed = unanswered.filter((runs) =>
+    failedChunks.has(chunkId(runs))
+  )
+  const status: PreviewStatus =
+    unansweredFailed.length < unanswered.length
+      ? 'loading'
+      : unansweredFailed.length && !drawn.length
+        ? 'failed'
+        : 'ready'
+
+  // An image or a heatmap leaves out its other runs with data.
+  const hidden = values.length - drawn.length
+  const singleRun =
+    (meta?.type === 'image' || meta?.type === 'heatmap') && hidden > 0
+      ? { kind: meta.type, run: drawn[0].run, hidden }
+      : null
 
   const cells = indexRunCells(cellsData?.runs ?? [])
 
@@ -255,5 +350,16 @@ export function usePreviewPlotData({
       }
     : NO_DATA
 
-  return { data: plotData, chunks, computedAt, outdated, reload, reloading }
+  return {
+    data: plotData,
+    status,
+    chunks,
+    markChunkFailed,
+    retryFailedChunks,
+    singleRun,
+    computedAt,
+    outdated,
+    reload,
+    reloading,
+  }
 }

@@ -1,12 +1,14 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQuery } from '@apollo/client/react'
 
+import type { ChunkFailure } from './plots.types'
 import { buildPreviewQuery } from './preview-chunks'
 
 type PreviewChunkLoaderProps = {
   proposal: string
   runs: number[]
   variable: string
+  onFailed: (runs: number[], failure: ChunkFailure) => void
 }
 
 // Fetches one chunk of a preview plot's runs into the Apollo cache and renders
@@ -18,10 +20,11 @@ function PreviewChunkLoader({
   proposal,
   runs,
   variable,
+  onFailed,
 }: PreviewChunkLoaderProps) {
   const query = useMemo(() => buildPreviewQuery(runs), [runs])
 
-  useQuery(query, {
+  const { error } = useQuery(query, {
     variables: { proposal, variable },
     fetchPolicy: 'cache-and-network',
     // One field per run, so a run the backend cannot read errors on its own
@@ -31,6 +34,16 @@ function PreviewChunkLoader({
     errorPolicy: 'all',
     skip: !proposal || !runs.length,
   })
+
+  // A field error writes its run as null, and that is a failure too: a run
+  // with nothing to plot comes back as a value of dtype none.
+  const failure: ChunkFailure | null =
+    error == null ? null : error.networkError ? 'network' : 'field'
+  useEffect(() => {
+    if (failure) {
+      onFailed(runs, failure)
+    }
+  }, [failure, onFailed, runs])
 
   return null
 }

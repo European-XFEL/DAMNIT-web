@@ -40,6 +40,8 @@ export type PlotData = {
   meta: PlotMeta
 }
 
+export type ChunkFailure = 'network' | 'field'
+
 // What the backend attaches to one run's value. Both named attributes describe
 // that run alone: `shape` is its own array's, and `colormap_range` its own
 // 1-99% quantiles. The rest is whatever the context file left on the array.

@@ -7,7 +7,7 @@ import {
 import { print } from 'graphql'
 import { times } from 'lodash-es'
 import { renderHook } from 'vitest-browser-react'
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, onTestFinished, test, vi } from 'vitest'
 
 import { previewRunFields } from '@damnit-frontend/shared/mocks'
 import { setupStore } from '#src/app/store/store'
@@ -31,6 +31,14 @@ const spectrumFor = (run: number) => ({
   dtype: 'array1d',
   dims: ['pulse'],
   coords: { pulse: [0, 1] },
+  attrs: {},
+})
+
+// What the backend sends for a run with no value. A field that raised is null.
+const noValueFor = () => ({
+  data: null,
+  name: VARIABLE,
+  dtype: 'none',
   attrs: {},
 })
 
@@ -217,7 +225,7 @@ describe('opening a preview', () => {
     )
 
     expect(result.current.chunks).toHaveLength(2)
-    expect(result.current.chunks[1]).toEqual([50, 51])
+    expect(result.current.chunks[1].runs).toEqual([50, 51])
   })
 
   test('a disabled preview asks for no chunks at all', async () => {
@@ -280,6 +288,99 @@ describe('opening a preview', () => {
     await vi.waitFor(() => {
       expect(server.sent).toEqual(['LightweightTableDataQuery'])
     })
+  })
+})
+
+describe('waiting for its chunks', () => {
+  test('a preview is loading until every run has answered, one with no value included', async () => {
+    const { cache, wrapper } = setup()
+
+    const { result } = await renderPreview([1, 2, 60], wrapper)
+
+    expect(result.current.status).toBe('loading')
+
+    // The first chunk lands, with no value for run 2.
+    writeChunk(cache, [1, 2], {
+      valueFor: (run) => (run === 2 ? noValueFor() : spectrumFor(run)),
+    })
+
+    await vi.waitFor(() => {
+      expect(result.current.data.traces).toHaveLength(1)
+    })
+    expect(result.current.status).toBe('loading')
+
+    // The second chunk lands.
+    writeChunk(cache, [60], { valueFor: noValueFor })
+
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.data.traces).toHaveLength(1)
+  })
+
+  test('a run whose field raised has not answered until its chunk is marked failed', async () => {
+    const { cache, wrapper } = setup()
+    writeChunk(cache, [1], { valueFor: () => null })
+
+    const { result } = await renderPreview([1], wrapper)
+    expect(result.current.status).toBe('loading')
+
+    result.current.markChunkFailed([1], 'field')
+
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('failed')
+    })
+  })
+
+  test('a preview whose every unanswered chunk failed, with nothing drawn, has failed', async () => {
+    const { cache, wrapper } = setup()
+    writeChunk(cache, [1], { valueFor: noValueFor })
+
+    const { result, act } = await renderPreview([1, 60, 120], wrapper)
+
+    // One failed chunk leaves the other still out.
+    await act(() => result.current.markChunkFailed([60], 'network'))
+
+    expect(result.current.status).toBe('loading')
+
+    // The other fails too.
+    result.current.markChunkFailed([120], 'network')
+
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('failed')
+    })
+  })
+
+  test('a preview with some runs drawn and the rest failed is ready', async () => {
+    const { cache, wrapper } = setup()
+    writeChunk(cache, [1])
+
+    const { result } = await renderPreview([1, 60], wrapper)
+
+    result.current.markChunkFailed([60], 'network')
+
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    expect(result.current.data.traces).toHaveLength(1)
+  })
+
+  test('asking again for a failed chunk gives its loader a new key and loads it again', async () => {
+    const { wrapper } = setup()
+
+    const { result } = await renderPreview([1, 60], wrapper)
+    result.current.markChunkFailed([1], 'network')
+    result.current.markChunkFailed([60], 'network')
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('failed')
+    })
+
+    result.current.retryFailedChunks()
+
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('loading')
+    })
+    expect(result.current.chunks.map(({ key }) => key)).toEqual(['1:1', '60:1'])
   })
 })
 
@@ -611,5 +712,80 @@ describe('live updates reconnecting', () => {
       ])
     })
     expect(server.previewsSent()).toBe(0)
+  })
+
+  test('a preview asks again for its failed chunks, and not for the rest', async () => {
+    const { cache, wrapper } = setup()
+    writeChunk(cache, [1])
+
+    const { result } = await renderPreview([1, 60], wrapper)
+    expect(result.current.chunks.map(({ key }) => key)).toEqual(['1:0', '60:0'])
+
+    // The second chunk fails.
+    result.current.markChunkFailed([60], 'field')
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+
+    countReconnect()
+
+    await vi.waitFor(() => {
+      expect(result.current.chunks.map(({ key }) => key)).toEqual([
+        '1:0',
+        '60:1',
+      ])
+    })
+    expect(result.current.status).toBe('loading')
+  })
+
+  test('a chunk the network failed is asked for again on its own, waiting longer each time', async () => {
+    const { cache, wrapper } = setup()
+    writeChunk(cache, [1])
+
+    const { result } = await renderPreview([1, 60], wrapper)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const keys = () => result.current.chunks.map(({ key }) => key)
+
+    // The second chunk fails, and is asked for again a second later.
+    result.current.markChunkFailed([60], 'network')
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(keys()).toEqual(['1:0', '60:1'])
+
+    // It fails again, and the next try waits two seconds.
+    result.current.markChunkFailed([60], 'network')
+    await vi.waitFor(() => {
+      expect(result.current.status).toBe('ready')
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(keys()).toEqual(['1:0', '60:1'])
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(keys()).toEqual(['1:0', '60:2'])
+  })
+
+  test('a chunk whose field raised waits for a reconnect, not the retry clock', async () => {
+    const { cache, wrapper } = setup()
+    writeChunk(cache, [1])
+
+    const { result, act } = await renderPreview([1, 60], wrapper)
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+    const keys = () => result.current.chunks.map(({ key }) => key)
+
+    // The second chunk's field raises, and the longest retry delay passes.
+    await act(() => result.current.markChunkFailed([60], 'field'))
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(keys()).toEqual(['1:0', '60:0'])
+
+    // Live updates reconnect.
+    await act(() => countReconnect())
+    expect(keys()).toEqual(['1:0', '60:1'])
   })
 })

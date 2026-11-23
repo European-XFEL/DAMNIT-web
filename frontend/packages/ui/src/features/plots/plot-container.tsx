@@ -42,6 +42,7 @@ function PlotContainer({ plot }: PlotContainerProps) {
   const {
     data: previewData,
     chunks,
+    markChunkFailed,
     computedAt: previewComputedAt,
     outdated,
     reload,
@@ -57,12 +58,13 @@ function PlotContainer({ plot }: PlotContainerProps) {
 
   return (
     <Stack align="flex-start" justify="flex-start" maw={1200}>
-      {chunks.map((chunk) => (
+      {chunks.map(({ key, runs }) => (
         <PreviewChunkLoader
-          key={chunk[0]}
+          key={key}
           proposal={proposal}
-          runs={chunk}
+          runs={runs}
           variable={plot.variables[0]}
+          onFailed={markChunkFailed}
         />
       ))}
       {!traces.length ? (
