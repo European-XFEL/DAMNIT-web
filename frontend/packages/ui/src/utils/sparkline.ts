@@ -3,13 +3,6 @@ import { bisectCenter, extent } from 'd3-array'
 // An array1d summary: the points DAMNIT stored, sorted by x.
 export type SparklineValue = { x: number[]; y: number[] }
 
-export type Box = { left: number; top: number; width: number; height: number }
-
-export type SparklineScale = {
-  x: (value: number) => number
-  y: (value: number) => number
-}
-
 // d3-scale's scaleLinear does the same, but adds 25 kB minified (10 kB
 // gzipped) to the bundle, measured with esbuild.
 const linear = (
@@ -29,8 +22,8 @@ const linear = (
  */
 export const scaleToBox = (
   sparkline: SparklineValue,
-  box: Box
-): SparklineScale => ({
+  box: { left: number; top: number; width: number; height: number }
+) => ({
   x: linear(extent(sparkline.x), { start: box.left, length: box.width }),
   y: linear(extent(sparkline.y), {
     start: box.top + box.height,
