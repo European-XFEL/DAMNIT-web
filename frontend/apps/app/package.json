@@ -29,6 +29,8 @@
     "@reduxjs/toolkit": "catalog:redux",
     "@tabler/icons-react": "catalog:components",
     "clsx": "catalog:frontend",
+    "d3-array": "catalog:frontend",
+    "d3-shape": "catalog:frontend",
     "dayjs": "catalog:frontend",
     "graphql": "catalog:graphql",
     "graphql-ws": "catalog:graphql",
