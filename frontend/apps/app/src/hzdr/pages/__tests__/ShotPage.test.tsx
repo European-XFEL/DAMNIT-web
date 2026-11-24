@@ -449,13 +449,13 @@ describe('shot page quick filters and keyboard', () => {
     expect(screen.getByText('No shots match the filter.')).toBeInTheDocument()
   })
 
-  it('puts Trends at the top of the side panel, following the filters', async () => {
+  it('shows Selected cell first and keeps Trends scoped to the filtered shots', async () => {
     const user = userEvent.setup()
     await renderPage()
     const summaries = screen
       .getAllByText(/^(Trends|Selected cell|Shot detail)$/)
       .map((node) => node.textContent)
-    expect(summaries).toEqual(['Trends', 'Selected cell', 'Shot detail'])
+    expect(summaries).toEqual(['Selected cell', 'Trends', 'Shot detail'])
     expect(screen.queryByText('Shot sets')).not.toBeInTheDocument()
     // the panel (stubbed here) gets the shots the table shows
     expect(screen.getByText('4 trend records')).toBeInTheDocument()

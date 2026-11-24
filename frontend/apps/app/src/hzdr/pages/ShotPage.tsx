@@ -1539,8 +1539,12 @@ export function HZDRShotPage() {
 
               <Grid.Col span={{ base: 12, lg: 3 }}>
                 <Stack gap="md">
-                  {/* Trends first: pick a value and see it over the shots the
-                      table shows (its filters apply). */}
+                  <DetailsSection title="Selected cell" open>
+                    <SelectedCellPanel
+                      cell={selectedCell}
+                      onCorrectMetadata={updateShotMetadata}
+                    />
+                  </DetailsSection>
                   <DetailsSection title="Trends" open>
                     <HZDRShotSetsPanel
                       shots={visibleShots}
@@ -1550,12 +1554,6 @@ export function HZDRShotPage() {
                       onSelectShot={selectRowFromTrend}
                       contextColumns={contextResults?.columns ?? []}
                       contextRowsByShot={contextRowsByShot}
-                    />
-                  </DetailsSection>
-                  <DetailsSection title="Selected cell" open>
-                    <SelectedCellPanel
-                      cell={selectedCell}
-                      onCorrectMetadata={updateShotMetadata}
                     />
                   </DetailsSection>
                   <DetailsSection title="Shot detail" open>
