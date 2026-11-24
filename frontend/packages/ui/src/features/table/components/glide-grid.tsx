@@ -39,10 +39,10 @@ import {
   getCell,
   GRID_RENDERERS,
   makeCellRenderers,
-  normalizedXAt,
   numberCell,
   textCell,
 } from '#src/features/table/utils/cells'
+import { normalizedXAt } from '#src/features/table/utils/trend-cell'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
@@ -180,17 +180,18 @@ function GlideGrid(
     }
   }
 
-  // Error-glyph colors resolved from the live theme; dark mode plugs in here.
+  // Glyph and ring colors resolved from the live theme; dark mode plugs in here.
   const renderers = useMemo(
     () =>
-      makeCellRenderers(
-        {
+      makeCellRenderers({
+        errorColors: {
           error: theme.colors.red[6],
           missing: theme.colors.gray[5],
           skipped: theme.colors.gray[5],
         },
-        DEFAULT_COLUMN_WIDTH
-      ),
+        ringColor: theme.colors.gray[7],
+        sparklineWidth: DEFAULT_COLUMN_WIDTH,
+      }),
     [theme]
   )
   // The core editor takes Glide's renderers from here, so it also takes the
@@ -294,9 +295,11 @@ function GlideGrid(
     return {
       ...cell,
       bounds: args.bounds,
+      // Glide's bounds take in the grid line right of the cell and its draw
+      // rect does not, so the card would name the point beside the ring.
       normalizedX: normalizedXAt({
         hoverX: args.localEventX,
-        width: args.bounds.width,
+        width: args.bounds.width - 1,
       }),
     }
   }

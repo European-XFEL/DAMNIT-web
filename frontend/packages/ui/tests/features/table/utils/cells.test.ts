@@ -15,9 +15,7 @@ import {
   imageCell,
   loadingCell,
   makeCellRenderers,
-  normalizedXAt,
   numberCell,
-  sparklineIndexAt,
   textCell,
   toSparkline,
 } from '#src/features/table/utils/cells'
@@ -115,26 +113,6 @@ describe('textCell', () => {
   })
 })
 
-describe('arrayCell', () => {
-  test('plots the y of the sparkline on a [min, max] y-axis', () => {
-    const cell = arrayCell({ x: [0, 5, 10], y: [3, 1, 2] })
-    expect(cell.data.values).toEqual([3, 1, 2])
-    expect(cell.data.yAxis).toEqual([1, 3])
-  })
-
-  test('is empty for a missing value', () => {
-    const cell = arrayCell(undefined)
-    expect(cell.data.values).toEqual([])
-    expect(cell.data.yAxis).toEqual([0, 0])
-  })
-
-  // Glide draws labels at 8px, so the value is shown in our tooltip instead.
-  test('keeps its hover labels blank', () => {
-    const cell = arrayCell({ x: [0, 1, 2], y: [3, 1, 2] })
-    expect(cell.data.displayValues).toEqual(['', '', ''])
-  })
-})
-
 describe('toSparkline', () => {
   test('passes an x/y sparkline through', () => {
     const sparkline = { x: [0, 5], y: [3, 1] }
@@ -144,35 +122,6 @@ describe('toSparkline', () => {
   test('is undefined for a non-sparkline value', () => {
     expect(toSparkline('float64: (3,)')).toBeUndefined()
     expect(toSparkline(null)).toBeUndefined()
-  })
-})
-
-describe('normalizedXAt', () => {
-  // A 116 px cell leaves 100 px between the 8 px pads.
-  test('measures the pointer across the content between the pads', () => {
-    expect(normalizedXAt({ hoverX: 8, width: 116 })).toBe(0)
-    expect(normalizedXAt({ hoverX: 58, width: 116 })).toBe(0.5)
-    expect(normalizedXAt({ hoverX: 108, width: 116 })).toBe(1)
-  })
-
-  test('clamps a pointer in the padding to the ends', () => {
-    expect(normalizedXAt({ hoverX: 0, width: 116 })).toBe(0)
-    expect(normalizedXAt({ hoverX: 116, width: 116 })).toBe(1)
-  })
-})
-
-describe('sparklineIndexAt', () => {
-  // Five points sit a quarter of the way apart.
-  test('picks the point nearest the crosshair', () => {
-    expect(sparklineIndexAt({ normalizedX: 0, count: 5 })).toBe(0)
-    expect(sparklineIndexAt({ normalizedX: 0.37, count: 5 })).toBe(1)
-    expect(sparklineIndexAt({ normalizedX: 0.38, count: 5 })).toBe(2)
-    expect(sparklineIndexAt({ normalizedX: 1, count: 5 })).toBe(4)
-  })
-
-  test('maps both ends of a lone value to that value', () => {
-    expect(sparklineIndexAt({ normalizedX: 0, count: 1 })).toBe(0)
-    expect(sparklineIndexAt({ normalizedX: 1, count: 1 })).toBe(0)
   })
 })
 
@@ -233,10 +182,11 @@ describe('GRID_RENDERERS', () => {
       const sparkline = arrayCell({ x: [0, 1, 2], y: [3, 1, 2] })
 
       // Glide types each custom renderer's measure as taking every custom cell.
-      const sparklineWidth = makeCellRenderers(
-        { error: 'red', missing: 'gray', skipped: 'gray' },
-        DEFAULT_COLUMN_WIDTH
-      )
+      const sparklineWidth = makeCellRenderers({
+        errorColors: { error: 'red', missing: 'gray', skipped: 'gray' },
+        ringColor: 'gray',
+        sparklineWidth: DEFAULT_COLUMN_WIDTH,
+      })
         .find(
           (renderer) => 'isMatch' in renderer && renderer.isMatch(sparkline)
         )

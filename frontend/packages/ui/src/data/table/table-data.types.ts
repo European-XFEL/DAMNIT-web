@@ -5,7 +5,7 @@ import type { CellError } from '#src/utils/cell-errors'
 export type CellValue =
   string | number | boolean | SparklineValue | null | undefined
 
-// An array1d summary, resampled so that x is evenly spaced.
+// An array1d summary: the points DAMNIT stored, sorted by x.
 export type SparklineValue = { x: number[]; y: number[] }
 
 // The table-value facet of a cell: the summary the grid renders.

@@ -6,7 +6,6 @@ import {
   type CustomRenderer,
   type GridCell,
   type ImageCell,
-  type Item,
   type LoadingCell,
   type NumberCell,
   type TextCell,
@@ -15,9 +14,7 @@ import {
 import {
   allCells,
   SparklineCell as sparklineRenderer,
-  type SparklineCellType,
 } from '@glideapps/glide-data-grid-cells'
-import { clamp } from 'lodash-es'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
@@ -33,6 +30,11 @@ import {
 import { formatDate, formatNumber } from '#src/utils/format'
 import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
+import {
+  makeTrendCellRenderer,
+  TREND_CELL_KIND,
+  type TrendCell,
+} from '#src/features/table/utils/trend-cell'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
 // error cell renderer so a no-data cell and an errored cell line up.
@@ -107,58 +109,17 @@ export const toSparkline = (value: CellValue): SparklineValue | undefined => {
   return undefined
 }
 
-// Glide pads every cell's content by 8px on each side (the default
-// cellHorizontalPadding, which our theme doesn't change).
-const CELL_PADDING_X = 8
-
-type NormalizedXAtParams = { hoverX: number; width: number }
-
-// Where the pointer is across the cell's content, from 0 at its left edge to 1
-// at its right, when the pointer is `hoverX` px into the cell.
-export const normalizedXAt = ({
-  hoverX,
-  width,
-}: NormalizedXAtParams): number => {
-  const contentWidth = width - 2 * CELL_PADDING_X
-  return clamp((hoverX - CELL_PADDING_X) / contentWidth, 0, 1)
-}
-
-type SparklineIndexAtParams = { normalizedX: number; count: number }
-
-// Index of the point Glide's crosshair is on: its sparkline spans the content.
-export const sparklineIndexAt = ({
-  normalizedX,
-  count,
-}: SparklineIndexAtParams): number => Math.round(normalizedX * (count - 1))
-
 export const arrayCell = (
   value: CellValue,
   params: Partial<BaseGridCell> = {}
-): SparklineCellType => {
-  const values = toSparkline(value)?.y ?? []
-
-  // Glide only draws the hover crosshair if displayValues is set, but it draws
-  // the labels with a hardcoded 8px font. So we pass blank labels and show the
-  // value in our own tooltip instead.
-  const data = values.length
-    ? {
-        values: values,
-        displayValues: values.map(() => ''),
-        yAxis: [Math.min(...values), Math.max(...values)] as Item,
-      }
-    : { values: [], yAxis: [0, 0] as Item }
+): TrendCell => {
+  const { x = [], y = [] } = toSparkline(value) ?? {}
 
   return {
     kind: GridCellKind.Custom,
     allowOverlay: false,
     copyData: '',
-    data: {
-      kind: 'sparkline-cell',
-      color: '#4C78A8',
-      graphKind: 'line',
-      hideAxis: true,
-      ...data,
-    },
+    data: { kind: TREND_CELL_KIND, x, y },
     ...params,
   }
 }
@@ -393,16 +354,19 @@ export const GRID_RENDERERS = AllCellRenderers.map(measureInCellFont)
   .map(withShortImageText)
   .map(withLoadedWidth)
 
-// Every renderer the grid draws with. The sparkline ships with no `measure`, so
-// a fit would land on Glide's 150px default; a sparkline has no width of its own.
-export const makeCellRenderers = (
-  colors: ErrorColors,
+type MakeCellRenderersOptions = {
+  errorColors: ErrorColors
+  ringColor: string
   sparklineWidth: number
-) => [
-  ...allCells.map((renderer) =>
-    renderer === sparklineRenderer
-      ? { ...renderer, measure: () => sparklineWidth }
-      : renderer
-  ),
-  makeErrorCellRenderer(colors),
+}
+
+// Every renderer the grid draws with, our trend in place of Glide's sparkline.
+export const makeCellRenderers = ({
+  errorColors,
+  ringColor,
+  sparklineWidth,
+}: MakeCellRenderersOptions) => [
+  ...allCells.filter((renderer) => renderer !== sparklineRenderer),
+  makeTrendCellRenderer({ ringColor, width: sparklineWidth }),
+  makeErrorCellRenderer(errorColors),
 ]
