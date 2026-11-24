@@ -3,7 +3,6 @@ import {
   type CustomCell,
   type CustomRenderer,
 } from '@glideapps/glide-data-grid'
-import { range } from 'd3-array'
 import { line } from 'd3-shape'
 import { clamp } from 'lodash-es'
 
@@ -42,6 +41,41 @@ export const normalizedXAt = ({
   return clamp((hoverX - CELL_PADDING_X) / contentWidth, 0, 1)
 }
 
+type Point = [number, number]
+
+type DrawRingOptions = { center: Point; color: string }
+
+const drawRing = (
+  ctx: CanvasRenderingContext2D,
+  { center: [ringX, ringY], color }: DrawRingOptions
+) => {
+  ctx.beginPath()
+  ctx.arc(ringX, ringY, RING_RADIUS, 0, 2 * Math.PI)
+  ctx.lineWidth = RING_WIDTH
+  ctx.strokeStyle = color
+  ctx.stroke()
+}
+
+const drawDots = (ctx: CanvasRenderingContext2D, points: Point[]) => {
+  ctx.beginPath()
+  for (const [dotX, dotY] of points) {
+    ctx.moveTo(dotX + LINE_WIDTH, dotY)
+    ctx.arc(dotX, dotY, LINE_WIDTH, 0, 2 * Math.PI)
+  }
+  ctx.fillStyle = SPARKLINE_COLOR
+  ctx.fill()
+}
+
+const drawLine = (ctx: CanvasRenderingContext2D, points: Point[]) => {
+  ctx.beginPath()
+  line().context(ctx)(points)
+  ctx.lineWidth = LINE_WIDTH
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.strokeStyle = SPARKLINE_COLOR
+  ctx.stroke()
+}
+
 type MakeSparklineCellRendererOptions = { ringColor: string; width: number }
 
 export const makeSparklineCellRenderer = ({
@@ -67,8 +101,13 @@ export const makeSparklineCellRenderer = ({
       width: rect.width - 2 * CELL_PADDING_X,
       height: rect.height - 2 * CELL_PADDING_Y,
     })
+    const points = x.map((value, index): Point => [
+      scale.x(value),
+      scale.y(y[index]),
+    ])
 
     ctx.save()
+
     // A ring on a peak reaches past the cell, and Glide repaints only the cell,
     // so the part outside would stay behind when the pointer moves on.
     ctx.beginPath()
@@ -78,36 +117,15 @@ export const makeSparklineCellRenderer = ({
     if (hoverX !== undefined) {
       const fraction = normalizedXAt({ hoverX, width: rect.width })
       const index = nearestIndexAt(x, fraction)
-      ctx.beginPath()
-      ctx.arc(scale.x(x[index]), scale.y(y[index]), RING_RADIUS, 0, 2 * Math.PI)
-      ctx.lineWidth = RING_WIDTH
-      ctx.strokeStyle = ringColor
-      ctx.stroke()
+      drawRing(ctx, { center: points[index], color: ringColor })
     }
 
-    const path = line<number>()
-      .x((index) => scale.x(x[index]))
-      .y((index) => scale.y(y[index]))
-      .context(ctx)
-    ctx.lineWidth = LINE_WIDTH
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.strokeStyle = SPARKLINE_COLOR
-    ctx.fillStyle = SPARKLINE_COLOR
-
-    ctx.beginPath()
     // Canvas strokes nothing for a path of no length, round cap or not, and
     // a sparkline at one x is one point or many samples of it.
     if (x[0] === x[x.length - 1]) {
-      for (const index of range(x.length)) {
-        const [dotX, dotY] = [scale.x(x[index]), scale.y(y[index])]
-        ctx.moveTo(dotX + LINE_WIDTH, dotY)
-        ctx.arc(dotX, dotY, LINE_WIDTH, 0, 2 * Math.PI)
-      }
-      ctx.fill()
+      drawDots(ctx, points)
     } else {
-      path(range(x.length))
-      ctx.stroke()
+      drawLine(ctx, points)
     }
 
     ctx.restore()
