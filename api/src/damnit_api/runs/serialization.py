@@ -55,6 +55,7 @@ def finite_points(arr):
 
     # Stable, so two samples at one x keep the order DAMNIT stored them in.
     order = np.argsort(x, kind="stable")
+
     return x[order], y[order]
 
 
