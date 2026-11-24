@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import numpy as np
+import plotly.graph_objects as go
 import pytest
 import xarray as xr
 from damnit.api import DataType
@@ -68,6 +69,7 @@ datasets = [
         type_hint=DataType.Dataset,
     ),
 ]
+figures = [ExtractedData(value=go.Figure(go.Scatter(y=np.random.rand(10))))]
 
 
 @pytest.mark.parametrize(
@@ -80,7 +82,7 @@ def test_get_damnit_type_valid(data):
 
 @pytest.mark.parametrize(
     "data",
-    datasets,
+    datasets + figures,
 )
 def test_get_damnit_type_unsupported(data):
     with pytest.raises(ValueError, match=NOT_SUPPORTED_MESSAGE):
