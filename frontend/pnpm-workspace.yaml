@@ -7,7 +7,6 @@ minimumReleaseAge: 10080
 catalogs:
   components:
     '@glideapps/glide-data-grid': 6.0.3
-    '@glideapps/glide-data-grid-cells': 6.0.3
     '@hello-pangea/dnd': 18.0.1
     # Held: from 7.17.6, @mantine/hooks never matches the "Escape" hotkey
     # that mantine-contextmenu closes its menu with.

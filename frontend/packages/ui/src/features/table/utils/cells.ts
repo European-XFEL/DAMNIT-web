@@ -11,10 +11,6 @@ import {
   type TextCell,
   type Theme,
 } from '@glideapps/glide-data-grid'
-import {
-  allCells,
-  SparklineCell as sparklineRenderer,
-} from '@glideapps/glide-data-grid-cells'
 
 import { DTYPES, HEAVY_DTYPES } from '#src/constants'
 import {
@@ -358,13 +354,11 @@ type MakeCellRenderersOptions = {
   sparklineWidth: number
 }
 
-// Every renderer the grid draws with, our sparkline in place of Glide's.
 export const makeCellRenderers = ({
   errorColors,
   ringColor,
   sparklineWidth,
 }: MakeCellRenderersOptions) => [
-  ...allCells.filter((renderer) => renderer !== sparklineRenderer),
   makeSparklineCellRenderer({ ringColor, width: sparklineWidth }),
   makeErrorCellRenderer(errorColors),
 ]

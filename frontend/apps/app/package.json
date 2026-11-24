@@ -20,7 +20,6 @@
     "@apollo/client": "catalog:graphql",
     "@damnit-frontend/ui": "workspace:*",
     "@glideapps/glide-data-grid": "catalog:components",
-    "@glideapps/glide-data-grid-cells": "catalog:components",
     "@hello-pangea/dnd": "catalog:components",
     "@mantine/core": "catalog:components",
     "@mantine/form": "catalog:components",
