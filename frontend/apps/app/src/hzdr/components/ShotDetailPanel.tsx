@@ -480,110 +480,6 @@ export function ShotDetailPanel({
 
       <Card withBorder radius={4} p="md">
         <Stack gap="xs">
-          <Group justify="space-between">
-            <Title order={5}>Linked source events</Title>
-            <Badge variant="light">{shot.events?.length ?? 0}</Badge>
-          </Group>
-          {shot.events?.length ? (
-            shot.events.map((event) => (
-              <Paper key={event.event_id} withBorder radius={4} p="xs">
-                <Group justify="space-between" align="flex-start">
-                  <Stack gap={2}>
-                    <Group gap="xs">
-                      <Badge variant="light">{event.source}</Badge>
-                      <Text size="sm" fw={600}>
-                        {event.kind}
-                      </Text>
-                    </Group>
-                    <Text size="xs" c="dimmed" title={event.timestamp}>
-                      {formatShotTime(event.timestamp)} /{' '}
-                      {event.transport ?? 'unknown transport'}
-                    </Text>
-                  </Stack>
-                  <Text
-                    size="xs"
-                    c="dimmed"
-                    title={event.match_quality ?? undefined}
-                  >
-                    {matchQualityLabel(event.match_quality)}
-                  </Text>
-                </Group>
-              </Paper>
-            ))
-          ) : (
-            <Text size="sm" c="dimmed">
-              No source events are linked to this canonical shot.
-            </Text>
-          )}
-        </Stack>
-      </Card>
-
-      <Card withBorder radius={4} p="md">
-        <Stack gap="xs">
-          <Group justify="space-between">
-            <Title order={5}>Data products</Title>
-            <Badge variant="light">{dataProducts.length}</Badge>
-          </Group>
-          {dataProducts.length ? (
-            dataProducts.map((product, index) => (
-              <Paper
-                key={product.product_id ?? `${product.source}-${index}`}
-                withBorder
-                radius={4}
-                p="xs"
-              >
-                <Stack gap={4}>
-                  <Group
-                    justify="space-between"
-                    align="flex-start"
-                    wrap="nowrap"
-                  >
-                    <Stack gap={2} style={{ minWidth: 0 }}>
-                      <Group gap="xs">
-                        <Badge variant="light">{product.source}</Badge>
-                        <Text size="sm" fw={600}>
-                          {product.preview_kind ?? product.kind}
-                        </Text>
-                        {product.reachable != null && (
-                          <Badge
-                            size="xs"
-                            variant="light"
-                            color={product.reachable ? 'teal' : 'red'}
-                          >
-                            {product.reachable ? 'on disk' : 'missing'}
-                          </Badge>
-                        )}
-                      </Group>
-                      <Text size="xs" style={{ overflowWrap: 'anywhere' }}>
-                        {product.dataset_name ?? product.path ?? NOT_RECORDED}
-                      </Text>
-                    </Stack>
-                    <Text size="xs" c="dimmed" ta="right">
-                      {product.dtype ?? ''}
-                      {product.shape.length
-                        ? ` [${product.shape.join(', ')}]`
-                        : ''}
-                      {product.units ? ` ${product.units}` : ''}
-                    </Text>
-                  </Group>
-                  <ShotProductPreview
-                    sourceKey={campaign}
-                    shot={shot}
-                    product={product}
-                  />
-                </Stack>
-              </Paper>
-            ))
-          ) : (
-            <Text size="sm" c="dimmed">
-              No data products are registered for this shot.
-            </Text>
-          )}
-        </Stack>
-      </Card>
-
-      <Card withBorder radius={4} p="md">
-        <Stack gap="xs">
           <Title order={5}>HDF5 datasets</Title>
           {detail?.hdf5_error ? (
             <Text size="sm" c="red">
@@ -604,6 +500,109 @@ export function ShotDetailPanel({
             />
           ) : null}
         </Stack>
+      </Card>
+
+      <Card withBorder radius={4} p="md">
+        <DetailsSection
+          title="Linked source events"
+          count={shot.events?.length ?? 0}
+        >
+          <Stack gap="xs">
+            {shot.events?.length ? (
+              shot.events.map((event) => (
+                <Paper key={event.event_id} withBorder radius={4} p="xs">
+                  <Group justify="space-between" align="flex-start">
+                    <Stack gap={2}>
+                      <Group gap="xs">
+                        <Badge variant="light">{event.source}</Badge>
+                        <Text size="sm" fw={600}>
+                          {event.kind}
+                        </Text>
+                      </Group>
+                      <Text size="xs" c="dimmed" title={event.timestamp}>
+                        {formatShotTime(event.timestamp)} /{' '}
+                        {event.transport ?? 'unknown transport'}
+                      </Text>
+                    </Stack>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      title={event.match_quality ?? undefined}
+                    >
+                      {matchQualityLabel(event.match_quality)}
+                    </Text>
+                  </Group>
+                </Paper>
+              ))
+            ) : (
+              <Text size="sm" c="dimmed">
+                No source events are linked to this canonical shot.
+              </Text>
+            )}
+          </Stack>
+        </DetailsSection>
+      </Card>
+
+      <Card withBorder radius={4} p="md">
+        <DetailsSection title="Data products" count={dataProducts.length}>
+          <Stack gap="xs">
+            {dataProducts.length ? (
+              dataProducts.map((product, index) => (
+                <Paper
+                  key={product.product_id ?? `${product.source}-${index}`}
+                  withBorder
+                  radius={4}
+                  p="xs"
+                >
+                  <Stack gap={4}>
+                    <Group
+                      justify="space-between"
+                      align="flex-start"
+                      wrap="nowrap"
+                    >
+                      <Stack gap={2} style={{ minWidth: 0 }}>
+                        <Group gap="xs">
+                          <Badge variant="light">{product.source}</Badge>
+                          <Text size="sm" fw={600}>
+                            {product.preview_kind ?? product.kind}
+                          </Text>
+                          {product.reachable != null && (
+                            <Badge
+                              size="xs"
+                              variant="light"
+                              color={product.reachable ? 'teal' : 'red'}
+                            >
+                              {product.reachable ? 'on disk' : 'missing'}
+                            </Badge>
+                          )}
+                        </Group>
+                        <Text size="xs" style={{ overflowWrap: 'anywhere' }}>
+                          {product.dataset_name ?? product.path ?? NOT_RECORDED}
+                        </Text>
+                      </Stack>
+                      <Text size="xs" c="dimmed" ta="right">
+                        {product.dtype ?? ''}
+                        {product.shape.length
+                          ? ` [${product.shape.join(', ')}]`
+                          : ''}
+                        {product.units ? ` ${product.units}` : ''}
+                      </Text>
+                    </Group>
+                    <ShotProductPreview
+                      sourceKey={campaign}
+                      shot={shot}
+                      product={product}
+                    />
+                  </Stack>
+                </Paper>
+              ))
+            ) : (
+              <Text size="sm" c="dimmed">
+                No data products are registered for this shot.
+              </Text>
+            )}
+          </Stack>
+        </DetailsSection>
       </Card>
 
       <MetadataCard shot={shot} onCorrectMetadata={onCorrectMetadata} />

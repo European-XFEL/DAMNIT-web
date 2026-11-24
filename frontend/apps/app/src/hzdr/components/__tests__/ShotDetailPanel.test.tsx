@@ -219,7 +219,28 @@ describe('ShotDetailPanel link', () => {
 })
 
 describe('ShotDetailPanel data products', () => {
-  it('links Add as column for a per-shot dataset, with the shot', () => {
+  it('shows HDF5 datasets above the collapsed events and products', async () => {
+    const user = userEvent.setup()
+    renderPanel()
+
+    const datasets = screen.getByRole('heading', { name: 'HDF5 datasets' })
+    const events = screen.getByText('Linked source events')
+    const products = screen.getByText('Data products')
+
+    for (const section of [events, products]) {
+      expect(datasets.compareDocumentPosition(section)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING
+      )
+      expect(section.closest('details')).not.toHaveAttribute('open')
+      await user.click(section)
+      expect(section.closest('details')).toHaveAttribute('open')
+      await user.click(section)
+      expect(section.closest('details')).not.toHaveAttribute('open')
+    }
+  })
+
+  it('links Add as column for a per-shot dataset, with the shot', async () => {
+    const user = userEvent.setup()
     const perShot = 'fixtures/by_shot/shot-000007/images/camera_raw'
     renderPanel(vi.fn(), {
       ...shot,
@@ -236,6 +257,7 @@ describe('ShotDetailPanel data products', () => {
         },
       ],
     })
+    await user.click(screen.getByText('Data products'))
     const link = screen.getByRole('link', { name: 'Add as column' })
     const url = new URL(link.getAttribute('href')!, 'http://x')
     expect(url.pathname).toBe(`/source/${CAMPAIGN}/context-builder`)
@@ -262,6 +284,7 @@ describe('ShotDetailPanel data products', () => {
     )
     vi.stubGlobal('fetch', fetchMock)
     renderPanel()
+    await user.click(screen.getByText('Data products'))
     const products = screen
       .getByText('Data products')
       .closest('.mantine-Card-root') as HTMLElement

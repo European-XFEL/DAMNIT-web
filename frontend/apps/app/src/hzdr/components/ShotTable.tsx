@@ -42,7 +42,8 @@ export function DetailsSection({
   title,
   children,
   open = false,
-}: PropsWithChildren<{ title: string; open?: boolean }>) {
+  count,
+}: PropsWithChildren<{ title: string; open?: boolean; count?: number }>) {
   return (
     <details open={open}>
       <summary
@@ -53,6 +54,11 @@ export function DetailsSection({
         }}
       >
         {title}
+        {count !== undefined && (
+          <Badge component="span" variant="light" ml="xs">
+            {count}
+          </Badge>
+        )}
       </summary>
       {children}
     </details>

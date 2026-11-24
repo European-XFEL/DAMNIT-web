@@ -15,7 +15,8 @@ requests on the event loop.
 The shot table displays context column headers as soon as the context loads
 and fills their values in batches. The Context Builder's inline previews
 use smaller images and plots. The shot page shows the selected cell above
-trends and shot detail.
+trends and shot detail. Shot detail places HDF5 datasets above the collapsed
+linked source events and data products.
 
 ### Context Builder samples campaign shots and keeps previews in the list
 
