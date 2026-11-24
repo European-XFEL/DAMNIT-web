@@ -295,11 +295,13 @@ function GlideGrid(
     return {
       ...cell,
       bounds: args.bounds,
-      // Glide's bounds take in the grid line right of the cell and its draw
-      // rect does not, so the card would name the point beside the ring.
+      // The draw's rect is the column's width; Glide's bounds add the grid line.
       normalizedX: normalizedXAt({
         hoverX: args.localEventX,
-        width: args.bounds.width - 1,
+        width: gridColumns[args.location[0]].width,
+        padding:
+          gridTheme.cellHorizontalPadding ??
+          getDefaultTheme().cellHorizontalPadding,
       }),
     }
   }

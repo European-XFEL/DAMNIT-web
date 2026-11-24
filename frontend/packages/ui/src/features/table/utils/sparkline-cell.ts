@@ -18,27 +18,23 @@ const LINE_WIDTH = 1
 const RING_RADIUS = 3
 const RING_WIDTH = 0.75
 
-// Glide pads every cell's content by 8px on each side (the default
-// cellHorizontalPadding, which our theme doesn't change).
-const CELL_PADDING_X = 8
-const CELL_PADDING_Y = 3
-
 export type SparklineCellProps = SparklineValue & {
   readonly kind: typeof SPARKLINE_CELL_KIND
 }
 
 export type SparklineCell = CustomCell<SparklineCellProps>
 
-type NormalizedXAtParams = { hoverX: number; width: number }
+type NormalizedXAtParams = { hoverX: number; width: number; padding: number }
 
 // Where the pointer is across the cell's content, from 0 at its left edge to 1
 // at its right, when the pointer is `hoverX` px into the cell.
 export const normalizedXAt = ({
   hoverX,
   width,
+  padding,
 }: NormalizedXAtParams): number => {
-  const contentWidth = width - 2 * CELL_PADDING_X
-  return clamp((hoverX - CELL_PADDING_X) / contentWidth, 0, 1)
+  const contentWidth = width - 2 * padding
+  return clamp((hoverX - padding) / contentWidth, 0, 1)
 }
 
 type Point = [number, number]
@@ -89,17 +85,19 @@ export const makeSparklineCellRenderer = ({
   needsHoverPosition: true,
   // A sparkline has no width of its own, so a fit would land on Glide's 150px.
   measure: () => width,
-  draw: ({ ctx, rect, hoverX }, cell) => {
+  draw: ({ ctx, rect, theme, hoverX }, cell) => {
     const { x, y } = cell.data
     if (x.length === 0) {
       return
     }
 
+    const paddingX = theme.cellHorizontalPadding
+    const paddingY = theme.cellVerticalPadding
     const scale = scaleToBox(cell.data, {
-      left: rect.x + CELL_PADDING_X,
-      top: rect.y + CELL_PADDING_Y,
-      width: rect.width - 2 * CELL_PADDING_X,
-      height: rect.height - 2 * CELL_PADDING_Y,
+      left: rect.x + paddingX,
+      top: rect.y + paddingY,
+      width: rect.width - 2 * paddingX,
+      height: rect.height - 2 * paddingY,
     })
     const points = x.map((value, index): Point => [
       scale.x(value),
@@ -115,7 +113,11 @@ export const makeSparklineCellRenderer = ({
     ctx.clip()
 
     if (hoverX !== undefined) {
-      const fraction = normalizedXAt({ hoverX, width: rect.width })
+      const fraction = normalizedXAt({
+        hoverX,
+        width: rect.width,
+        padding: paddingX,
+      })
       const index = nearestIndexAt(x, fraction)
       drawRing(ctx, { center: points[index], color: ringColor })
     }
