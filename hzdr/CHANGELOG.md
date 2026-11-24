@@ -6,6 +6,12 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-24
 
+### Slow context columns leave shot loading responsive
+
+The shot table evaluates its active context in a worker, with one evaluation
+at a time. Slow HDF5 reads can no longer hold up shot records and other API
+requests on the event loop.
+
 ### Context Builder samples campaign shots and keeps previews in the list
 
 Context Builder uses up to 32 shots for suggested columns, the example shot

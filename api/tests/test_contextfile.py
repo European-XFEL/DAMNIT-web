@@ -1,6 +1,8 @@
 import asyncio
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 
 import pytest
 from fastapi.testclient import TestClient
@@ -150,7 +152,7 @@ def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
 
 
 def test_user_campaign_context_results_run_against_hzdr_shots(tmp_path, monkeypatch):
-    """Saved HZDR context variables produce table values for visible shots."""
+    """Saved columns produce table values without blocking other requests."""
     sources_file = tmp_path / "hzdr_sources.json"
     sources_file.write_text(
         """
@@ -180,6 +182,16 @@ def test_user_campaign_context_results_run_against_hzdr_shots(tmp_path, monkeypa
     monkeypatch.setattr(settings.context_workspace, "write_enabled", True)
     monkeypatch.setattr(settings.metadata, "provider", "local")
     monkeypatch.setattr(settings.metadata, "sources_file", sources_file)
+    started = Event()
+    resume = Event()
+    call_context_variable = routers._call_context_variable
+
+    def slow_context_variable(variable, shot):
+        started.set()
+        assert resume.wait(timeout=10)
+        return call_context_variable(variable, shot)
+
+    monkeypatch.setattr(routers, "_call_context_variable", slow_context_variable)
     app = create_app()
 
     with TestClient(app) as local_client:
@@ -198,7 +210,17 @@ def laser_energy(run):
             },
         )
 
-        response = local_client.get("/contextfile/campaign/hzdr-example/me/results")
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = executor.submit(
+                local_client.get, "/contextfile/campaign/hzdr-example/me/results"
+            )
+            try:
+                assert started.wait(timeout=5)
+                version = executor.submit(local_client.get, "/config/version")
+                assert version.result(timeout=3).status_code == 200
+            finally:
+                resume.set()
+            response = results.result(timeout=5)
 
     assert response.status_code == 200
     payload = response.json()

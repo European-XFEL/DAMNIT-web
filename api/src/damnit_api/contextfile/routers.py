@@ -7,6 +7,7 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
+from anyio import CapacityLimiter, to_thread
 from anyio import Path as APath
 from fastapi import APIRouter, HTTPException
 
@@ -22,6 +23,8 @@ from .suggested import suggested_context
 router = APIRouter(prefix="/contextfile")
 
 SLUG_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]+")
+# Context evaluation temporarily installs the damnit_ctx module globally.
+_CONTEXT_EVALUATIONS = CapacityLimiter(1)
 
 
 async def get_proposal_info(proposal_num: str):  # noqa: RUF029
@@ -172,13 +175,28 @@ async def get_campaign_context_results(
     """Run this user's active context file against HZDR source shots."""
     context_path = _campaign_context_path(campaign, user, "context.py")
     _ensure_context_file(context_path, campaign, user)
+    # Read the saved source before yielding to keep the snapshot consistent with
+    # writes in the API. The slow catalog/HDF5 work runs in a worker thread.
+    context_content = context_path.read_text(encoding="utf-8")
+    return await to_thread.run_sync(
+        _evaluate_campaign_context,
+        campaign,
+        context_path,
+        context_content,
+        limiter=_CONTEXT_EVALUATIONS,
+    )
+
+
+def _evaluate_campaign_context(
+    campaign: str, context_path: Path, context_content: str
+) -> dict:
     provider = HZDRSourceProvider(settings.metadata)
     source = provider.get_source(campaign)
     if source is None:
         raise HTTPException(status_code=404, detail="Unknown HZDR source")
     # Context code opens hdf5_path itself, so hand it the path this host reads.
     shots = [provider.with_local_paths(shot) for shot in source.shots]
-    return _run_hzdr_context_file(context_path, shots)
+    return _run_hzdr_context_file(context_path, shots, context_content=context_content)
 
 
 async def _write_campaign_context(
@@ -287,12 +305,16 @@ class ContextCell:
         self.preview = preview
 
 
-def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
+def _run_hzdr_context_file(
+    context_path: Path, shots: list[HZDRShot], *, context_content: str | None = None
+) -> dict:
     """Execute context variables and return shot-indexed table values."""
     # Legacy generated functions query by shot_number. Keep those lookups local
     # to the record being evaluated: numbers repeat across days and versions.
     evaluation_shots = list(shots)
-    variables = _load_context_variables(context_path, evaluation_shots)
+    variables = _load_context_variables(
+        context_path, evaluation_shots, context_content=context_content
+    )
     rows = []
     for shot in shots:
         evaluation_shots[:] = [shot]
@@ -332,8 +354,12 @@ def _run_hzdr_context_file(context_path: Path, shots: list[HZDRShot]) -> dict:
     }
 
 
-def _load_context_variables(context_path: Path, shots: list[HZDRShot]):
+def _load_context_variables(
+    context_path: Path, shots: list[HZDRShot], *, context_content: str | None = None
+):
     """Load @Variable functions from a user context file."""
+    if context_content is None:
+        context_content = context_path.read_text(encoding="utf-8")
     module = types.ModuleType("damnit_ctx")
 
     def variable_decorator(*decorator_args, **decorator_kwargs):
@@ -365,11 +391,7 @@ def _load_context_variables(context_path: Path, shots: list[HZDRShot]):
     _add_common_context_globals(namespace)
     try:
         exec(  # noqa: S102 - context previews intentionally execute user code.
-            compile(
-                context_path.read_text(encoding="utf-8"),
-                str(context_path),
-                "exec",
-            ),
+            compile(context_content, str(context_path), "exec"),
             namespace,
         )
     finally:
