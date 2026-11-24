@@ -106,10 +106,10 @@ export const makeSparklineCellRenderer = ({
 
     ctx.save()
 
-    // A ring on a peak reaches past the cell, and Glide repaints only the cell,
-    // so the part outside would stay behind when the pointer moves on.
+    // A ring on a peak reaches past the cell. Glide repaints a hovered cell from
+    // inside its top and left grid lines, so ink on them would stay behind.
     ctx.beginPath()
-    ctx.rect(rect.x, rect.y, rect.width, rect.height)
+    ctx.rect(rect.x + 1, rect.y + 1, rect.width - 1, rect.height - 1)
     ctx.clip()
 
     if (hoverX !== undefined) {
