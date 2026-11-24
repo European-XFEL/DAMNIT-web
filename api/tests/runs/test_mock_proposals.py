@@ -134,7 +134,7 @@ async def test_each_type_of_value_arrives_with_its_dtype(local_client):
         "trace": "array1d",
         "pulse_energy": "array1d",
         "detector_image": "image",
-        "trace_plot": "image",
+        "trace_matplotlib": "image",
         "trace_plotly": "number",
     }
 
@@ -168,7 +168,7 @@ async def test_tags_come_from_the_context_file(local_client):
 
     variables_by_tag = {name: sorted(tag["variables"]) for name, tag in tags.items()}
     assert variables_by_tag == {
-        "Analysis": ["amplitude", "fit", "trace_plot", "trace_plotly"],
+        "Analysis": ["amplitude", "fit", "trace_matplotlib", "trace_plotly"],
         "Beam": ["attenuator", "beam_on", "transmission"],
         "Detector": ["detector_image"],
         "Run details": ["n_trains", "sample_name"],
