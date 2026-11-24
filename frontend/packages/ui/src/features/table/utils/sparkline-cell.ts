@@ -7,10 +7,14 @@ import { range } from 'd3-array'
 import { line } from 'd3-shape'
 import { clamp } from 'lodash-es'
 
-import { nearestIndexAt, scaleToBox, type Trend } from '#src/utils/sparkline'
+import {
+  nearestIndexAt,
+  scaleToBox,
+  type SparklineValue,
+} from '#src/utils/sparkline'
 
-export const TREND_CELL_KIND = 'trend-cell'
-const TREND_COLOR = '#4C78A8'
+export const SPARKLINE_CELL_KIND = 'sparkline-cell'
+const SPARKLINE_COLOR = '#4C78A8'
 const LINE_WIDTH = 1
 const RING_RADIUS = 3
 const RING_WIDTH = 0.75
@@ -20,9 +24,11 @@ const RING_WIDTH = 0.75
 const CELL_PADDING_X = 8
 const CELL_PADDING_Y = 3
 
-export type TrendCellProps = Trend & { readonly kind: typeof TREND_CELL_KIND }
+export type SparklineCellProps = SparklineValue & {
+  readonly kind: typeof SPARKLINE_CELL_KIND
+}
 
-export type TrendCell = CustomCell<TrendCellProps>
+export type SparklineCell = CustomCell<SparklineCellProps>
 
 type NormalizedXAtParams = { hoverX: number; width: number }
 
@@ -36,18 +42,18 @@ export const normalizedXAt = ({
   return clamp((hoverX - CELL_PADDING_X) / contentWidth, 0, 1)
 }
 
-type MakeTrendCellRendererOptions = { ringColor: string; width: number }
+type MakeSparklineCellRendererOptions = { ringColor: string; width: number }
 
-export const makeTrendCellRenderer = ({
+export const makeSparklineCellRenderer = ({
   ringColor,
   width,
-}: MakeTrendCellRendererOptions): CustomRenderer<TrendCell> => ({
+}: MakeSparklineCellRendererOptions): CustomRenderer<SparklineCell> => ({
   kind: GridCellKind.Custom,
-  isMatch: (cell: CustomCell): cell is TrendCell =>
-    (cell.data as Partial<TrendCellProps>).kind === TREND_CELL_KIND,
+  isMatch: (cell: CustomCell): cell is SparklineCell =>
+    (cell.data as Partial<SparklineCellProps>).kind === SPARKLINE_CELL_KIND,
   needsHover: true,
   needsHoverPosition: true,
-  // A trend has no width of its own, so a fit would land on Glide's 150px.
+  // A sparkline has no width of its own, so a fit would land on Glide's 150px.
   measure: () => width,
   draw: ({ ctx, rect, hoverX }, cell) => {
     const { x, y } = cell.data
@@ -86,12 +92,12 @@ export const makeTrendCellRenderer = ({
     ctx.lineWidth = LINE_WIDTH
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-    ctx.strokeStyle = TREND_COLOR
-    ctx.fillStyle = TREND_COLOR
+    ctx.strokeStyle = SPARKLINE_COLOR
+    ctx.fillStyle = SPARKLINE_COLOR
 
     ctx.beginPath()
     // Canvas strokes nothing for a path of no length, round cap or not, and
-    // a trend at one x is one point or many samples of it.
+    // a sparkline at one x is one point or many samples of it.
     if (x[0] === x[x.length - 1]) {
       for (const index of range(x.length)) {
         const [dotX, dotY] = [scale.x(x[index]), scale.y(y[index])]

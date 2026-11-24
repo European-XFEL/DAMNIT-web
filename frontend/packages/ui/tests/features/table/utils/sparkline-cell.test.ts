@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 
-import { normalizedXAt } from '#src/features/table/utils/trend-cell'
+import { normalizedXAt } from '#src/features/table/utils/sparkline-cell'
 
 describe('normalizedXAt', () => {
   // A 116 px cell leaves 100 px between the 8 px pads.

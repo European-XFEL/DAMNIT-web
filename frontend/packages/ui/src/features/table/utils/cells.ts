@@ -23,18 +23,16 @@ import {
   type CellError,
   type ErrorKind,
 } from '#src/utils/cell-errors'
-import {
-  type CellValue,
-  type SparklineValue,
-} from '#src/data/table/table-data.types'
+import type { CellValue } from '#src/data/table/table-data.types'
+import type { SparklineValue } from '#src/utils/sparkline'
 import { formatDate, formatNumber } from '#src/utils/format'
 import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import {
-  makeTrendCellRenderer,
-  TREND_CELL_KIND,
-  type TrendCell,
-} from '#src/features/table/utils/trend-cell'
+  makeSparklineCellRenderer,
+  SPARKLINE_CELL_KIND,
+  type SparklineCell,
+} from '#src/features/table/utils/sparkline-cell'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
 // error cell renderer so a no-data cell and an errored cell line up.
@@ -112,14 +110,14 @@ export const toSparkline = (value: CellValue): SparklineValue | undefined => {
 export const arrayCell = (
   value: CellValue,
   params: Partial<BaseGridCell> = {}
-): TrendCell => {
+): SparklineCell => {
   const { x = [], y = [] } = toSparkline(value) ?? {}
 
   return {
     kind: GridCellKind.Custom,
     allowOverlay: false,
     copyData: '',
-    data: { kind: TREND_CELL_KIND, x, y },
+    data: { kind: SPARKLINE_CELL_KIND, x, y },
     ...params,
   }
 }
@@ -360,13 +358,13 @@ type MakeCellRenderersOptions = {
   sparklineWidth: number
 }
 
-// Every renderer the grid draws with, our trend in place of Glide's sparkline.
+// Every renderer the grid draws with, our sparkline in place of Glide's.
 export const makeCellRenderers = ({
   errorColors,
   ringColor,
   sparklineWidth,
 }: MakeCellRenderersOptions) => [
   ...allCells.filter((renderer) => renderer !== sparklineRenderer),
-  makeTrendCellRenderer({ ringColor, width: sparklineWidth }),
+  makeSparklineCellRenderer({ ringColor, width: sparklineWidth }),
   makeErrorCellRenderer(errorColors),
 ]

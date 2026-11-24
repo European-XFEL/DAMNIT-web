@@ -1,10 +1,11 @@
 import { bisectCenter, extent } from 'd3-array'
 
-export type Trend = { x: readonly number[]; y: readonly number[] }
+// An array1d summary: the points DAMNIT stored, sorted by x.
+export type SparklineValue = { x: number[]; y: number[] }
 
 export type Box = { left: number; top: number; width: number; height: number }
 
-export type TrendScale = {
+export type SparklineScale = {
   x: (value: number) => number
   y: (value: number) => number
 }
@@ -23,12 +24,15 @@ const linear = (
 }
 
 /**
- * Maps a trend's x and y extents onto the box, with y growing upwards. A
+ * Maps a sparkline's x and y extents onto the box, with y growing upwards. A
  * constant x or y sits in the middle of the box.
  */
-export const scaleToBox = (trend: Trend, box: Box): TrendScale => ({
-  x: linear(extent(trend.x), { start: box.left, length: box.width }),
-  y: linear(extent(trend.y), {
+export const scaleToBox = (
+  sparkline: SparklineValue,
+  box: Box
+): SparklineScale => ({
+  x: linear(extent(sparkline.x), { start: box.left, length: box.width }),
+  y: linear(extent(sparkline.y), {
     start: box.top + box.height,
     length: -box.height,
   }),
@@ -36,7 +40,7 @@ export const scaleToBox = (trend: Trend, box: Box): TrendScale => ({
 
 /**
  * The index of the stored point nearest to a pointer `fraction` of the way
- * across the trend's x extent, which `x` holds sorted.
+ * across the sparkline's x extent, which `x` holds sorted.
  */
 export const nearestIndexAt = (
   x: readonly number[],

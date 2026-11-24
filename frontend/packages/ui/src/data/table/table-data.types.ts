@@ -1,12 +1,10 @@
 import type { CellError } from '#src/utils/cell-errors'
+import type { SparklineValue } from '#src/utils/sparkline'
 
 // `boolean` has no renderer of its own and falls back to text, but the API's
 // `Any` scalar does emit one, so leaving it out would only hide it.
 export type CellValue =
   string | number | boolean | SparklineValue | null | undefined
-
-// An array1d summary: the points DAMNIT stored, sorted by x.
-export type SparklineValue = { x: number[]; y: number[] }
 
 // The table-value facet of a cell: the summary the grid renders.
 export type CellSummary = {
