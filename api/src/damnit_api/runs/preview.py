@@ -101,8 +101,6 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
                 if isinstance(data, int | float | np.integer | np.floating):
                     return DamnitType.NUMBER
                 raise ValueError(NOT_SUPPORTED_MESSAGE)
-            if data.ndim == 3 and data.shape[-1] in (3, 4):
-                return DamnitType.IMAGE
         case DataType.Dataset | DataType.PlotlyFigure:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 
@@ -114,6 +112,8 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
             return DamnitType.ARRAY_1D
         case 2:
             return DamnitType.ARRAY_2D
+        case 3 if type_hint is None and data.shape[-1] in (3, 4):
+            return DamnitType.IMAGE
         case _:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 
