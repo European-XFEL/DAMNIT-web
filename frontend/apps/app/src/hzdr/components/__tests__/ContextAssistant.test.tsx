@@ -83,7 +83,7 @@ describe('ContextAssistant', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Tick all shown' }))
     await user.click(screen.getByRole('checkbox', { name: 'Tick Value 1' }))
     const add = screen.getByRole('button', {
-      name: `Add ${FIRST_SUGGESTIONS - 1} columns`,
+      name: `Add ${FIRST_SUGGESTIONS - 1} columns to context.py`,
     })
     await user.click(add)
     expect(onAddMany).toHaveBeenCalledWith(

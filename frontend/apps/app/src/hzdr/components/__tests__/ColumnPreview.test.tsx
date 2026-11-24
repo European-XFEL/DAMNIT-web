@@ -99,7 +99,7 @@ describe('column preview helpers', () => {
     })
   })
 
-  it('collects a field across the campaign', () => {
+  it('collects a field across the sample', () => {
     const charge = campaignValues(shots, 'labfrog_variables.charge.value')
     expect(charge.recorded).toBe(3)
     expect(charge.total).toBe(4)
@@ -139,7 +139,7 @@ describe('ColumnPreview', () => {
     expect(screen.getByText('1.5 nC')).toBeInTheDocument()
     expect(screen.getByText('Shot 1')).toBeInTheDocument()
     expect(
-      screen.getByText('Across the campaign: 3 of 4 shots')
+      screen.getByText('Across the sample: 3 of 4 shots')
     ).toBeInTheDocument()
     expect(screen.getByText('Trend: Charge (2 points)')).toBeInTheDocument()
   })

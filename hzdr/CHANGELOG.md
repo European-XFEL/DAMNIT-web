@@ -4,6 +4,19 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-24
+
+### Context Builder samples campaign shots and keeps previews in the list
+
+Context Builder uses up to 32 shots for suggested columns, the example shot
+picker and metadata previews. Links to a specific shot include that shot.
+The suggestions request times out after 15 seconds. Selecting a row opens
+its preview below it, and add buttons name the file they save to. The
+confirmation explains how to use a column saved in a variant.
+Add preserves existing columns and checks for unsaved edits and intervening
+changes to the file. After adding to `context.py`, **Show added columns**
+opens the shot table with those columns beside the shot number.
+
 ## 2026-11-23
 
 ### Bridge v8 writes offset-bearing campaign timestamps

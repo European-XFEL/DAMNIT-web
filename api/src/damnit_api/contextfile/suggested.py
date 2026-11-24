@@ -282,8 +282,8 @@ def suggested_context(campaign: str, shots: Iterable[HZDRShot]) -> str:
         lines += [
             "",
             "",
-            "# This campaign's records hold no value that varies from shot to",
-            "# shot yet; add your own @Variable here.",
+            "# No value varied across the sampled records; add your own",
+            "# @Variable here.",
         ]
     for column in columns:
         parameter, expression = labfrog_argument(column["name"])

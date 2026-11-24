@@ -118,41 +118,43 @@ function setup({
         json: () => Promise.resolve({ fileContent, path: url }),
       })
     }
-    const value =
-      url === `${base}/shots`
-        ? shots
-        : url === base
-          ? { key: 'radbio', title: 'HZDR canonical campaign (Radbio)' }
-          : url.includes('/datasets/')
-            ? {
-                name: 'cam/image',
-                dtype: 'uint16',
-                shape: [64, 64],
-                preview: [
-                  [0, 1],
-                  [1, 0],
-                ],
-                preview_kind: 'image',
-                summary: 42,
-                summary_exact: true,
-              }
-            : url.endsWith('/assist')
-              ? { campaign: 'radbio', suggestions }
-              : url.endsWith('/files')
-                ? [{ name: 'context.py', active: true }]
-                : url.includes('/shots/')
-                  ? {
-                      shot: shots[0],
-                      hdf5_datasets: [
-                        {
-                          name: 'cam/image',
-                          shape: [64, 64],
-                          dtype: 'uint16',
-                        },
-                      ],
-                      hdf5_exists: true,
-                    }
-                  : { fileContent }
+    const value = url.startsWith(`${base}?sample_shots=true`)
+      ? { key: 'radbio', title: 'HZDR canonical campaign (Radbio)', shots }
+      : url.includes('/datasets/')
+        ? {
+            name: 'cam/image',
+            dtype: 'uint16',
+            shape: [64, 64],
+            preview: [
+              [0, 1],
+              [1, 0],
+            ],
+            preview_kind: 'image',
+            summary: 42,
+            summary_exact: true,
+          }
+        : url.endsWith('/assist')
+          ? { campaign: 'radbio', suggestions }
+          : url.endsWith('/files')
+            ? [
+                { name: 'context.py', active: true },
+                { name: 'draft.py', active: false },
+              ]
+            : url.includes('/shots/')
+              ? {
+                  shot: shots[0],
+                  hdf5_datasets: [
+                    {
+                      name: 'cam/image',
+                      shape: [64, 64],
+                      dtype: 'uint16',
+                    },
+                  ],
+                  hdf5_exists: true,
+                }
+              : url.endsWith('/draft.py')
+                ? { fileContent: '# Draft context\n' }
+                : { fileContent }
     return Promise.resolve({ ok: true, json: () => Promise.resolve(value) })
   })
   vi.stubGlobal('fetch', fetchMock)
@@ -197,7 +199,7 @@ afterEach(() => {
   Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
 })
 
-/** A wide screen: the selected suggestion is previewed in the right column. */
+/** Simulate a desktop viewport. */
 function wideScreen() {
   window.matchMedia = ((query: string) => ({
     ...originalMatchMedia(query),
@@ -208,7 +210,7 @@ function wideScreen() {
 const card = (title: string) =>
   screen.findByRole('article', { name: `Suggestion: ${title}` })
 
-/** Select a row: on a narrow screen its preview opens under it. */
+/** Select a row to open its preview. */
 async function openCard(
   user: ReturnType<typeof userEvent.setup>,
   title: string
@@ -257,7 +259,7 @@ describe('Context Builder "Help me choose"', () => {
     const { saved } = setup()
     const charge = await openCard(user, 'ICT charge (nC)')
     await user.click(
-      within(charge).getByRole('button', { name: 'Add this column' })
+      within(charge).getByRole('button', { name: 'Add to context.py' })
     )
     await waitFor(() => expect(saved[`${filesBase}/context.py`]).toBeDefined())
     const content = saved[`${filesBase}/context.py`]
@@ -282,16 +284,20 @@ describe('Context Builder "Help me choose"', () => {
     const user = userEvent.setup()
     const { puts } = setup()
     await card('ICT charge (nC)')
-    const add = screen.getByRole('button', { name: 'Add ticked columns' })
+    const add = screen.getByRole('button', {
+      name: 'Add ticked columns to context.py',
+    })
     expect(add).toBeDisabled()
     await user.click(
       screen.getByRole('checkbox', { name: 'Tick ICT charge (nC)' })
     )
     await user.click(screen.getByRole('checkbox', { name: 'Tick Shot group' }))
-    await user.click(screen.getByRole('button', { name: 'Add 2 columns' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Add 2 columns to context.py' })
+    )
     await waitFor(() =>
       expect(status()).toContain(
-        'Added 2 columns to context.py: ICT charge (nC), Shot group.'
+        'Added 2 columns to context.py: ICT charge (nC), Shot group. Existing columns kept.'
       )
     )
     expect(puts).toHaveLength(1)
@@ -312,6 +318,75 @@ describe('Context Builder "Help me choose"', () => {
       ).not.toBeInTheDocument()
     )
     expect(screen.getByText(/2 already in context.py/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Show added columns' })
+    ).toHaveAttribute(
+      'href',
+      '/source/radbio?added_column=ict_charge&added_column=shot_group'
+    )
+  })
+
+  it('keeps an existing column with the same function name and links to the renamed addition', async () => {
+    const user = userEvent.setup()
+    const original = existingFile.replace(
+      '@Variable(title="Existing")\ndef existing',
+      '@Variable\ndef ict_charge'
+    )
+    const { saved } = setup({ fileContent: original })
+    const charge = await openCard(user, 'ICT charge (nC)')
+    await user.click(
+      within(charge).getByRole('button', { name: 'Add to context.py' })
+    )
+    expect(
+      await screen.findByRole('link', { name: 'Show added columns' })
+    ).toHaveAttribute('href', '/source/radbio?added_column=ict_charge_2')
+    expect(saved[`${filesBase}/context.py`]).toContain(
+      '@Variable\ndef ict_charge(run):\n    return 1'
+    )
+    expect(saved[`${filesBase}/context.py`]).toContain('def ict_charge_2(')
+  })
+
+  it('preserves saved columns when the manual editor has unsaved changes', async () => {
+    const user = userEvent.setup()
+    const { puts } = setup()
+    await user.click(screen.getByText('Manual context editor', { exact: true }))
+    await user.clear(
+      screen.getByRole('textbox', { name: 'Context file contents' })
+    )
+    const charge = await openCard(user, 'ICT charge (nC)')
+    await user.click(
+      within(charge).getByRole('button', { name: 'Add to context.py' })
+    )
+    expect(status()).toContain(
+      'Save your manual edits or reload to discard them before adding columns.'
+    )
+    expect(puts).toHaveLength(0)
+  })
+
+  it('saves into the selected variant and explains how to use it in the shot table', async () => {
+    const user = userEvent.setup()
+    const { saved } = setup()
+    await user.click(
+      await screen.findByRole('textbox', { name: 'Context file' })
+    )
+    await user.click(await screen.findByRole('option', { name: 'draft.py' }))
+    const charge = await openCard(user, 'ICT charge (nC)')
+    await user.click(
+      await within(charge).findByRole('button', { name: 'Add to draft.py' })
+    )
+    await waitFor(() =>
+      expect(status()).toContain(
+        'Added “ICT charge (nC)” to draft.py. Existing columns kept in draft.py. “Make draft.py active” applies the entire variant to the shot table.'
+      )
+    )
+    expect(Object.keys(saved)).toEqual([`${filesBase}/draft.py`])
+    expect(saved[`${filesBase}/draft.py`]).toContain('# Draft context')
+    expect(
+      screen.queryByRole('link', { name: 'Show added columns' })
+    ).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Make draft.py active' })
+    ).toBeEnabled()
   })
 
   it('says nothing was added when the save fails, and keeps the ticks', async () => {
@@ -322,7 +397,9 @@ describe('Context Builder "Help me choose"', () => {
       screen.getByRole('checkbox', { name: 'Tick ICT charge (nC)' })
     )
     await user.click(screen.getByRole('checkbox', { name: 'Tick Shot group' }))
-    await user.click(screen.getByRole('button', { name: 'Add 2 columns' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Add 2 columns to context.py' })
+    )
     await waitFor(() =>
       expect(status()).toContain(
         'Save failed: none of the 2 columns was added to context.py.'
@@ -380,7 +457,7 @@ describe('Context Builder "Help me choose"', () => {
     const charge = await openCard(user, 'ICT charge (nC)')
     expect(within(charge).getByText('1.5 nC')).toBeInTheDocument()
     expect(
-      within(charge).getByText('Across the campaign: 2 of 2 shots')
+      within(charge).getByText('Across the sample: 2 of 2 shots')
     ).toBeInTheDocument()
 
     const image = await openCard(user, 'Image')
@@ -393,27 +470,26 @@ describe('Context Builder "Help me choose"', () => {
     )
   })
 
-  it('previews the selected suggestion in the right column on wide screens', async () => {
+  it('keeps each preview inside its suggestion row on wide screens', async () => {
     wideScreen()
     const user = userEvent.setup()
     setup()
-    const charge = await card('ICT charge (nC)')
-    // The first suggestion is previewed until another is picked, beside the
-    // list rather than inside it.
-    const first = await screen.findByRole('region', {
+    const charge = await openCard(user, 'ICT charge (nC)')
+    const first = within(charge).getByRole('region', {
       name: 'Preview of ICT charge (nC)',
     })
-    expect(charge).not.toContainElement(first)
     expect(within(first).getByText('1.5 nC')).toBeInTheDocument()
-    const group = await card('Shot group')
-    await user.click(within(group).getByRole('button', { name: 'Shot group' }))
-    const second = screen.getByRole('region', { name: 'Preview of Shot group' })
-    expect(group).not.toContainElement(second)
+    const group = await openCard(user, 'Shot group')
+    const second = within(group).getByRole('region', {
+      name: 'Preview of Shot group',
+    })
     expect(
       screen.queryByRole('region', { name: 'Preview of ICT charge (nC)' })
     ).not.toBeInTheDocument()
     await user.click(within(second).getByRole('button', { name: 'Show code' }))
     expect(within(second).getByText(/def shot_group/)).toBeInTheDocument()
+    await openCard(user, 'Shot group')
+    expect(second).not.toBeInTheDocument()
   })
 
   it('customises a suggestion in the builder form', async () => {
@@ -468,7 +544,7 @@ describe('Context Builder existing columns', () => {
     expect(puts[0].indexOf('def second')).toBeLessThan(
       puts[0].indexOf('def first')
     )
-    expect(status()).toContain('Moved first')
+    await waitFor(() => expect(status()).toContain('Moved first'))
     const items = await screen.findAllByRole('listitem')
     expect(items.map((item) => item.getAttribute('aria-label'))).toEqual([
       'Column: Second',
@@ -536,7 +612,7 @@ describe('Context Builder existing columns', () => {
 describe('Context Builder deep link (?add=)', () => {
   it('opens the builder with an HDF5 dataset chosen', async () => {
     const { fetchMock } = setup({
-      url: '/source/radbio/context-builder?add=hdf5:cam/image',
+      url: `/source/radbio/context-builder?add=hdf5:cam/image&shot=${encodeURIComponent(shots[1].shot_key)}`,
     })
     expect(
       await screen.findByRole('textbox', { name: 'Column title' })
@@ -547,9 +623,13 @@ describe('Context Builder deep link (?add=)', () => {
     expect(
       screen.getByRole('textbox', { name: 'What should this column do?' })
     ).toHaveValue('Image with reduced preview')
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${base}?sample_shots=true&example_shot=${encodeURIComponent(shots[1].shot_key)}`,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    )
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/datasets/cam/image')
+        `${base}/shots/2/datasets/cam/image?${new URLSearchParams({ shot_key: shots[1].shot_key })}`
       )
     )
   })

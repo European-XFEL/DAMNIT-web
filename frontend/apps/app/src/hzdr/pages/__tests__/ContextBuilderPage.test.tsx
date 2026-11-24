@@ -70,21 +70,19 @@ describe('ContextBuilderPage example shots', () => {
       const base = '/metadata/hzdr/sources/radbio'
       const fetchMock = vi.fn((url: string) => {
         const value =
-          url === `${base}/shots`
-            ? shots
-            : url === base
-              ? { key: 'radbio', title: 'Radbio' }
-              : url.endsWith('/files')
-                ? []
-                : url.includes('/shots/')
-                  ? {
-                      shot: shots[0],
-                      hdf5_datasets: [
-                        { name: 'signal', shape: [2], dtype: 'float64' },
-                      ],
-                      hdf5_exists: true,
-                    }
-                  : { fileContent: '' }
+          url === `${base}?sample_shots=true`
+            ? { key: 'radbio', title: 'Radbio', shots }
+            : url.endsWith('/files')
+              ? []
+              : url.includes('/shots/')
+                ? {
+                    shot: shots[0],
+                    hdf5_datasets: [
+                      { name: 'signal', shape: [2], dtype: 'float64' },
+                    ],
+                    hdf5_exists: true,
+                  }
+                : { fileContent: '' }
         return Promise.resolve({ ok: true, json: () => Promise.resolve(value) })
       })
       vi.stubGlobal('fetch', fetchMock)

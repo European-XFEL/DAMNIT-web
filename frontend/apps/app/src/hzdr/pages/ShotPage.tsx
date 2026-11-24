@@ -397,14 +397,39 @@ export function HZDRShotPage() {
     tableColumnOptions.map((option) => option.value),
     columnOrder
   )
+  const requestedColumns = new Set(
+    searchParams.getAll('added_column').map((name) => `context:${name}`)
+  )
+  const addedColumns = orderedTableColumns.filter((column) =>
+    requestedColumns.has(column)
+  )
+  const clearAddedColumns = () => {
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params)
+        next.delete('added_column')
+        return next
+      },
+      { replace: true }
+    )
+  }
   const orderedColumnOptions = orderedTableColumns.map((value) =>
     tableColumnOptions.find((option) => option.value === value)!
   )
   const visibleTableColumns = orderedTableColumns.filter(
-    (column) => !hiddenTableColumns.includes(column)
+    (column) =>
+      !hiddenTableColumns.includes(column) && !requestedColumns.has(column)
   )
-  const moveTableColumn = (from: string, to: string) =>
+  if (addedColumns.length) {
+    const shotNumberIndex = visibleTableColumns.indexOf('shot_number')
+    const shotNumber =
+      shotNumberIndex < 0 ? [] : visibleTableColumns.splice(shotNumberIndex, 1)
+    visibleTableColumns.unshift(...shotNumber, ...addedColumns)
+  }
+  const moveTableColumn = (from: string, to: string) => {
+    if (addedColumns.length) clearAddedColumns()
     setColumnOrder(moveColumn(orderedTableColumns, from, to))
+  }
   const isTableColumnVisible = (column: string) =>
     visibleTableColumns.includes(column)
   const visibleContextColumns =
@@ -933,10 +958,14 @@ export function HZDRShotPage() {
                         <Checkbox.Group
                           value={visibleTableColumns}
                           onChange={(selectedColumns) => {
+                            if (addedColumns.length) clearAddedColumns()
                             const nextHiddenColumns = tableColumnOptions
                               .map((option) => option.value)
                               .filter(
-                                (column) => !selectedColumns.includes(column)
+                                (column) =>
+                                  !selectedColumns.includes(column) ||
+                                  (requestedColumns.has(column) &&
+                                    hiddenTableColumns.includes(column))
                               )
                             setHiddenTableColumns(nextHiddenColumns)
                           }}
@@ -959,7 +988,10 @@ export function HZDRShotPage() {
                               <Button
                                 size="compact-xs"
                                 variant="subtle"
-                                onClick={() => setColumnOrder([])}
+                                onClick={() => {
+                                  if (addedColumns.length) clearAddedColumns()
+                                  setColumnOrder([])
+                                }}
                               >
                                 Reset order
                               </Button>
@@ -988,6 +1020,20 @@ export function HZDRShotPage() {
                     </Button>
                   </Group>
                 </Card>
+                {addedColumns.length ? (
+                  <Group justify="space-between" gap="xs">
+                    <Text size="sm">
+                      Added columns are shown at the start of the table.
+                    </Text>
+                    <Button
+                      variant="subtle"
+                      size="xs"
+                      onClick={clearAddedColumns}
+                    >
+                      Restore column layout
+                    </Button>
+                  </Group>
+                ) : null}
                 <Card withBorder radius={4} p={0}>
                   {dataState === 'error' ? (
                     <Alert color="red" title="Shots unavailable" m="md">

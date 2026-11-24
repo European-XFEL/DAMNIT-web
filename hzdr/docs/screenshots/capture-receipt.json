@@ -1,13 +1,13 @@
 {
-  "capturedAtUtc": "2026-11-21T19:20:57.619436+00:00",
+  "capturedAtUtc": "2026-11-24T09:03:28.310751+00:00",
   "files": {
-    "context-assist.png": "57e27317a245884afcf2e8ec6125fb6fdb3df2147808de7f2014d66df63756db",
-    "context-builder.png": "80560b315b56047fb05051e08ff6744d16bab03142de5e2482b0b7e7350ef044",
-    "docs.png": "b1dbc1fd10d8cac8c3136ffb1f1bf4f323e0258271493ffc10d4a145338db7a3",
-    "flow-monitor.png": "cdb3571602897b216102b7196fd922a41235c105cd5c320b8af284445a848a53",
-    "home.png": "ab9f6e4eb64a03df6b23abc98c1c501af94136dd45271fd691e2b1f157efa5f6",
-    "link-shot-records.png": "428800075fbaafd5f778aeb8036f3ddb1492d46b9e49f819126da753e0959237",
-    "shot-table.png": "8424c927e0cc4edac72a9558f271d1d0ce849c5567a2714fdaf49eb39c4fdb2e"
+    "context-assist.png": "b0b3d2f9c4f56400c2a930c6b64786fab53092f7a1f065c037b2440bbbc5a95f",
+    "context-builder.png": "affd93cebbeb10643344dafb9b0bcacbacd891170b82cdeeab825f3a7e1f5e7a",
+    "docs.png": "e2d766a16346d9375d440ccd75fddbb739a37aaec245d855b6590479b981fc94",
+    "flow-monitor.png": "11f7b2c5fb2439fe22cb8b88eb56a518eaca211386e6c55c677918c82266381e",
+    "home.png": "dbccb99fb94e1f81ee852017ea948a424c460dcf8c1f3d00f843c38f99ad2c08",
+    "link-shot-records.png": "df6cffa6c501fa351b6c989d7da695a4727e185e7c4dfb2d5c843bbf39add5e5",
+    "shot-table.png": "3164257cfd615b639e75c208579fa008ed448076194fabd84e875027fa44e679"
   },
   "schemaVersion": 1
 }

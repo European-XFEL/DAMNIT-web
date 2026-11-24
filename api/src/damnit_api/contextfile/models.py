@@ -35,6 +35,7 @@ class CampaignContextFile(ContextFile):
 
 class ContextFileUpdate(BaseModel):
     fileContent: str  # noqa: N815
+    expectedFileContent: str | None = None  # noqa: N815
 
 
 class ContextFileEntry(BaseModel):

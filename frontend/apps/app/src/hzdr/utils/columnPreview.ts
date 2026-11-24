@@ -48,7 +48,7 @@ export function cellValue(
     : { state: 'number', value: number }
 }
 
-/** A field's values across the campaign, for the "Across the campaign" view. */
+/** A field's values across the provided shots. */
 export function campaignValues(shots: HZDRShot[], field: string) {
   const numbers: HZDRTrendValue[] = []
   const labels = new Map<string, number>()

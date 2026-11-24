@@ -250,7 +250,7 @@ function DatasetPreview({
 
 /**
  * What a column will show, before it is added: the example shot's cell, what
- * a double-click opens, and the values across the campaign. Used by the
+ * a double-click opens, and the values across the shot sample. Used by the
  * builder and by each suggestion of "Help me choose".
  */
 export function ColumnPreview({
@@ -336,7 +336,7 @@ function MetadataPreview({
           ) : null}
         </Section>
         <Section
-          title={`Across the campaign: ${across.recorded} of ${across.total} shots`}
+          title={`Across the sample: ${across.recorded} of ${across.total} shots`}
         >
           {!across.recorded ? (
             <Text size="sm" c="dimmed">

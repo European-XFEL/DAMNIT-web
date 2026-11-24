@@ -14,6 +14,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 
 import { HZDRShotPage } from '../ShotPage'
 import type { HZDRShot } from '../../types'
+import { saveShotTableView } from '../../utils/table-view'
 
 vi.mock('@damnit-frontend/ui', () => ({
   HomePage: ({ main }: { main: ReactNode }) => main,
@@ -186,7 +187,10 @@ describe('shot page quick filters and keyboard', () => {
     return <output data-testid="location">{location.search}</output>
   }
 
-  async function renderPage(entry = '/source/demo') {
+  async function renderPage(
+    entry = '/source/demo',
+    contextColumns: { name: string; title: string }[] = []
+  ) {
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -214,7 +218,7 @@ describe('shot page quick filters and keyboard', () => {
                 ? source
                 : url.includes('/shots/')
                   ? { shot: shots[0], hdf5_datasets: [], hdf5_exists: false }
-                  : { columns: [], rows: [] }
+                  : { columns: contextColumns, rows: [] }
         return Promise.resolve({ ok: true, json: () => Promise.resolve(value) })
       })
     )
@@ -241,6 +245,47 @@ describe('shot page quick filters and keyboard', () => {
     )
     return table
   }
+
+  it('shows linked additions alongside existing columns and restores the saved layout', async () => {
+    const user = userEvent.setup()
+    saveShotTableView('demo', {
+      filterColumn: 'all',
+      filterOperator: 'includes',
+      filterValue: '',
+      sortState: { column: 'shot_number', direction: 'asc' },
+      showHistoricalVersions: false,
+      hiddenTableColumns: ['context:previously_hidden'],
+      columnOrder: ['context:existing', 'shot_number'],
+    })
+    const table = await renderPage(
+      '/source/demo?added_column=previously_hidden&added_column=new_column',
+      [
+        { name: 'existing', title: 'Existing column' },
+        { name: 'previously_hidden', title: 'Restored column' },
+        { name: 'new_column', title: 'New column' },
+      ]
+    )
+    const headers = () =>
+      within(table)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.querySelector('button')?.title)
+    const restore = await screen.findByRole('button', {
+      name: 'Restore column layout',
+    })
+    expect(headers().slice(0, 4)).toEqual([
+      'Sort by Shot',
+      'Sort by Restored column',
+      'Sort by New column',
+      'Sort by Existing column',
+    ])
+    await user.click(restore)
+    await waitFor(() => expect(headers()[0]).toBe('Sort by Existing column'))
+    expect(headers()).toContain('Sort by New column')
+    expect(headers()).not.toContain('Sort by Restored column')
+    expect(screen.getByTestId('location').textContent).not.toContain(
+      'added_column'
+    )
+  })
 
   const shotNumbers = (table: HTMLElement) =>
     within(table)

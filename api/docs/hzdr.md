@@ -182,10 +182,10 @@ Select any table cell to inspect it in the right panel.
 
 Open a campaign, then choose **Add columns** beside the table's Columns control.
 
-It opens on **Help me choose**: suggested columns from what the campaign's
-shots record (`GET /contextfile/campaign/{campaign}/assist`), each with the
-reason it was picked and what the column will do; tick several and **Add N
-columns**, or add, ignore or customise one. `?add=hdf5:<dataset>` or
+It opens on **Help me choose**, with suggested columns based on a sample
+of up to 32 campaign shots (`GET /contextfile/campaign/{campaign}/assist`).
+Select a row for its preview or tick several to save them to the named
+context file in one operation. `?add=hdf5:<dataset>` or
 `?add=metadata:<path>` on the page's URL opens the builder with that data
 chosen. **Build a column myself** is the builder below.
 

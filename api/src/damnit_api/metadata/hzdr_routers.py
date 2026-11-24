@@ -47,6 +47,7 @@ from .hzdr_sources import (
     HZDRSourceProvider,
     HZDRSourceSummary,
     HZDRWikiInfo,
+    sample_context_shots,
     summarize_source,
 )
 from .labfrog_sqlite import (
@@ -286,9 +287,16 @@ async def list_hzdr_campaign_shots(
 
 
 @hzdr_router.get("/hzdr/sources/{source_key}")
-async def get_hzdr_source(source_key: str) -> HZDRSource | None:
-    """Get one HZDR source from the active local metadata provider."""
-    return HZDRSourceProvider(settings.metadata).get_source(source_key)
+def get_hzdr_source(
+    source_key: str, sample_shots: bool = False, example_shot: str | None = None
+) -> HZDRSource | None:
+    """Get a source, optionally with just the Context Builder's shot sample."""
+    source = HZDRSourceProvider(settings.metadata).get_source(source_key)
+    if source is None or not sample_shots:
+        return source
+    return source.model_copy(
+        update={"shots": sample_context_shots(source.shots, example_shot)}
+    )
 
 
 @hzdr_router.get("/hzdr/sources/{source_key}/producer-status")
@@ -645,7 +653,7 @@ async def list_hzdr_shots(source_key: str) -> list[HZDRShot]:
 
 
 @hzdr_router.get("/hzdr/sources/{source_key}/shots/by-key/{shot_key}")
-async def get_hzdr_shot_detail_by_key(
+def get_hzdr_shot_detail_by_key(
     source_key: str, shot_key: str
 ) -> HZDRShotDetail | None:
     """Get one date-scoped shot with basic HDF5 structure metadata."""
@@ -655,9 +663,7 @@ async def get_hzdr_shot_detail_by_key(
 
 
 @hzdr_router.get("/hzdr/sources/{source_key}/shots/{shot_number}")
-async def get_hzdr_shot_detail(
-    source_key: str, shot_number: int
-) -> HZDRShotDetail | None:
+def get_hzdr_shot_detail(source_key: str, shot_number: int) -> HZDRShotDetail | None:
     """Get one shot with basic HDF5 structure metadata."""
     return HZDRSourceProvider(settings.metadata).get_shot_detail(
         source_key, shot_number
@@ -667,7 +673,7 @@ async def get_hzdr_shot_detail(
 @hzdr_router.get(
     "/hzdr/sources/{source_key}/shots/{shot_number}/datasets/{dataset_name:path}"
 )
-async def preview_hzdr_dataset(
+def preview_hzdr_dataset(
     source_key: str,
     shot_number: int,
     dataset_name: str,

@@ -54,11 +54,11 @@ describe('Context Builder across campaigns', () => {
       }
       const value = url.endsWith('/assist')
         ? { suggestions: [suggestion('b')] }
-        : url.endsWith('/shots') || url.endsWith('/files')
+        : url.endsWith('/files')
           ? []
           : url.includes('/contextfile/')
             ? { fileContent: '' }
-            : { key: 'x', title: 'x' }
+            : { key: 'x', title: 'x', shots: [] }
       return Promise.resolve({ ok: true, json: () => Promise.resolve(value) })
     })
     vi.stubGlobal('fetch', fetchMock)

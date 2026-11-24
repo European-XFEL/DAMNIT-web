@@ -29,7 +29,7 @@ const ORIGIN_COLORS: Record<ColumnSuggestion['origin'], string> = {
   hdf5: 'violet',
 }
 
-/** The column a suggestion would add, on the example shot and the campaign. */
+/** The column a suggestion would add, on the example shot and the sample. */
 function SuggestionPreview({
   suggestion,
   sourceKey,
@@ -68,8 +68,7 @@ function SuggestionPreview({
 
 /**
  * One suggestion in full: why, what the column does, its preview, and the
- * single-column actions. Shown in the right column on wide screens and under
- * its row on narrow ones.
+ * single-column actions. Shown directly under the selected row.
  */
 export function SuggestionDetail({
   suggestion,
@@ -77,6 +76,7 @@ export function SuggestionDetail({
   sourceKey,
   exampleShot,
   shots,
+  destination,
   onAdd,
   onIgnore,
   onCustomise,
@@ -86,6 +86,7 @@ export function SuggestionDetail({
   sourceKey?: string
   exampleShot?: HZDRShot
   shots: HZDRShot[]
+  destination: string
   onAdd: (suggestion: ColumnSuggestion) => void
   onIgnore: (suggestion: ColumnSuggestion) => void
   onCustomise: (suggestion: ColumnSuggestion) => void
@@ -98,6 +99,7 @@ export function SuggestionDetail({
       p="sm"
       component="section"
       aria-label={`Preview of ${suggestion.title}`}
+      style={{ overflowWrap: 'anywhere' }}
     >
       <Stack gap={6}>
         <Group justify="space-between" align="flex-start" wrap="nowrap">
@@ -145,7 +147,7 @@ export function SuggestionDetail({
             onClick={() => onAdd(suggestion)}
             disabled={busy}
           >
-            Add this column
+            Add to {destination}
           </Button>
           <Button
             size="xs"
@@ -289,7 +291,7 @@ export function ContextAssistant({
   onAddMany: (suggestions: ColumnSuggestion[]) => void
   onIgnoreMany: (suggestions: ColumnSuggestion[]) => void
   onRestoreIgnored: () => void
-  /** Shown under the selected row (narrow screens). */
+  /** Shown under the selected row. */
   selectedDetail?: ReactNode
   shots?: HZDRShot[]
 }) {
@@ -349,15 +351,19 @@ export function ContextAssistant({
             Suggested columns
           </Text>
           <Text size="xs" c="dimmed">
-            Picked from what this campaign’s shots record. Tick the ones you
-            want and add them to {destination} in one go, or select one to
-            preview it first.
+            Picked from a sample of this campaign’s shots. Tick several to add
+            them together, or select a row to preview it.
+          </Text>
+          <Text size="xs" fw={600}>
+            {destination === 'context.py'
+              ? 'Adds to context.py and keeps the existing shot table columns.'
+              : `Adds to ${destination} and keeps its existing columns.`}
           </Text>
         </Stack>
         {loading ? (
           <Group gap="xs">
             <Loader size="xs" />
-            <Text size="xs">Looking through the campaign’s records…</Text>
+            <Text size="xs">Checking the shot sample…</Text>
           </Group>
         ) : null}
         {error ? (
@@ -365,11 +371,11 @@ export function ContextAssistant({
             {error}
           </Text>
         ) : null}
-        {!loading && !suggestions.length ? (
+        {!loading && !error && !suggestions.length ? (
           <Text size="sm">
             {addedCount || ignoredCount
               ? 'Nothing left to suggest: every suggestion is in your context file or ignored.'
-              : 'Nothing to suggest yet: no recorded value varies from shot to shot. Use “Build a column myself” instead.'}
+              : 'No varying values found in the shot sample. Use “Build a column myself” to choose a field.'}
           </Text>
         ) : null}
         {suggestions.length ? (
@@ -389,8 +395,8 @@ export function ContextAssistant({
                 onClick={() => onAddMany(ticked)}
               >
                 {ticked.length
-                  ? `Add ${ticked.length} column${ticked.length === 1 ? '' : 's'}`
-                  : 'Add ticked columns'}
+                  ? `Add ${ticked.length} column${ticked.length === 1 ? '' : 's'} to ${destination}`
+                  : `Add ticked columns to ${destination}`}
               </Button>
               <Button
                 size="xs"

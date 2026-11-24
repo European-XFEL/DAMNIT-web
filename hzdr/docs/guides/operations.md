@@ -63,9 +63,11 @@ without a rebuild, using their shot dates. After a campaign rebuild the exported
 
 ## Context columns
 
-Context builder opens on **Help me choose**: ranked suggestions for the
-campaign (`GET /contextfile/campaign/{campaign}/assist`), each with why it was
-picked, a few example values and what the column will do. LabFrog values that
+Context builder opens on **Help me choose**. It ranks suggestions from up to
+32 shots spread across the campaign catalog
+(`GET /contextfile/campaign/{campaign}/assist`). The example shot picker and
+metadata previews use a sample of the same size. A link to a specific shot
+includes that shot in the picker. LabFrog values that
 vary come first (the starter's picks marked **Top pick**), then registered
 metadata keys whose values are numbers that vary, with their canonical unit
 (and the trigger's ADC value; never the record namespaces `acquisition`,
@@ -74,12 +76,14 @@ example shot's HDF5 images, lineouts and scalars. A column's function name
 never takes a Python keyword or builtin, or a name the file uses (`np`,
 `Skip`, ...): `class` becomes `class_column`. A LabFrog name with a dot in it
 is read by name from `meta#labfrog_variables`, since `meta#` paths split on
-dots. Each suggestion is a row with a checkbox; tick several and **Add N
-columns** appends their `@Variable` blocks to the destination file in one
-save (nothing is added when the save fails), or **Ignore ticked**. Selecting
-a row shows its preview, reason and single **Add this column** / **Ignore
-this suggestion** / **Customise** / **Show code** in the right column (under
-the row on narrow screens). Ignoring hides a suggestion in this browser only
+dots. Tick several suggestions and choose **Add N columns to …** to append
+their `@Variable` blocks to the named file in one operation. Existing
+columns are kept. After saving to the active `context.py`, **Show added
+columns** opens the shot table with the new columns beside the shot number
+for that visit. **Make … active** applies an entire variant to the shot
+table. Selecting a suggestion opens
+its preview, reason and actions directly below its row. Ignoring hides a
+suggestion in this browser only
 (localStorage, per campaign; **Show ignored suggestions again** brings them
 back); **Customise** opens it in the builder. The file's existing columns are
 a list with Edit, Move up/down and Delete (confirmed in the page). A link

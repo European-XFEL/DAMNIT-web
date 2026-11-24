@@ -122,6 +122,32 @@ def test_user_campaign_context_can_be_created_and_saved(tmp_path, monkeypatch):
             save_response.json()["fileContent"] == "from damnit_ctx import Variable\n"
         )
 
+        stale_save = local_client.put(
+            "/contextfile/campaign/hzdr-example/me/files/context.py",
+            json={
+                "fileContent": "stale context with additions",
+                "expectedFileContent": payload["fileContent"],
+            },
+        )
+        assert stale_save.status_code == 409
+        assert (
+            local_client.get("/contextfile/campaign/hzdr-example/me").json()[
+                "fileContent"
+            ]
+            == save_response.json()["fileContent"]
+        )
+        current_content = save_response.json()["fileContent"]
+        added_content = current_content + "\n@Variable\ndef added(run):\n    return 1\n"
+        added_save = local_client.put(
+            "/contextfile/campaign/hzdr-example/me/files/context.py",
+            json={
+                "fileContent": added_content,
+                "expectedFileContent": current_content,
+            },
+        )
+        assert added_save.status_code == 200
+        assert added_save.json()["fileContent"] == added_content
+
 
 def test_user_campaign_context_results_run_against_hzdr_shots(tmp_path, monkeypatch):
     """Saved HZDR context variables produce table values for visible shots."""

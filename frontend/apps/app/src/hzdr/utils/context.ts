@@ -118,12 +118,14 @@ export function parseContextVariableBlocks(
     return []
   }
   const matches = [
-    ...content.matchAll(/@Variable\(([\s\S]*?)\)\s*\ndef\s+([A-Za-z_]\w*)/g),
+    ...content.matchAll(
+      /@Variable(?:\(([\s\S]*?)\))?\s*\ndef\s+([A-Za-z_]\w*)/g
+    ),
   ]
   return matches.map((match, index) => {
     const start = match.index ?? 0
     const end = matches[index + 1]?.index ?? content.length
-    const titleMatch = match[1].match(/title\s*=\s*["']([^"']+)["']/)
+    const titleMatch = match[1]?.match(/title\s*=\s*["']([^"']+)["']/)
     const name = match[2]
     return {
       id: name,

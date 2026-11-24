@@ -415,6 +415,28 @@ def _plain_number_dtype(dtype) -> bool:
     return dtype.fields is None and dtype.subdtype is None and dtype.kind in "biuf"
 
 
+CONTEXT_SHOT_SAMPLE_SIZE = 32
+
+
+def sample_context_shots(
+    shots: list[HZDRShot], example_shot: str | None = None
+) -> list[HZDRShot]:
+    """Pick evenly spaced catalog records, including a requested example."""
+    if len(shots) <= CONTEXT_SHOT_SAMPLE_SIZE:
+        return shots
+
+    last = CONTEXT_SHOT_SAMPLE_SIZE - 1
+    indices = {index * (len(shots) - 1) // last for index in range(last + 1)}
+    if example_shot is not None:
+        for index, shot in enumerate(shots):
+            if shot.shot_key == example_shot or str(shot.shot_number) == example_shot:
+                if index not in indices:
+                    indices.remove(len(shots) - 1)
+                    indices.add(index)
+                break
+    return [shots[index] for index in sorted(indices)]
+
+
 class HZDRSourceProvider:
     """Load HZDR source metadata from the configured local provider."""
 

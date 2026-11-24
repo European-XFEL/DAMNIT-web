@@ -721,8 +721,7 @@ def _prepare_context_assist(page: Page) -> None:
     Waits for the suggestion rows and for the "Show more" button that appears
     once the example shot's dataset suggestions have joined them (the capture
     campaign has more than the first page), ticks three rows so the "Add N
-    columns" bar is live, and waits for the first row's preview, which the
-    right column shows on a wide screen.
+    columns" bar is live, then opens the first row's preview.
     """
     _open_details_section(page, "Target and example shot")
     page.get_by_text("Suggested columns").first.wait_for()
@@ -730,7 +729,9 @@ def _prepare_context_assist(page: Page) -> None:
     ticks = page.get_by_role("checkbox", name=re.compile(r"^Tick (?!all shown)"))
     for index in range(3):
         ticks.nth(index).check()
-    page.get_by_text("Across the campaign").first.wait_for()
+    row = page.get_by_role("article", name=re.compile(r"^Suggestion:")).first
+    row.get_by_role("button").first.click()
+    row.get_by_role("region", name=re.compile(r"^Preview of ")).wait_for()
 
 
 def _prepare_context_builder(page: Page) -> None:

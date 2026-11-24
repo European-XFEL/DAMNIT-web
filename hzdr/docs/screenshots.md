@@ -83,14 +83,13 @@ datasets as a tree).
 ## Context builder: Help me choose
 
 `/source/{source_key}/context-builder` as it opens: the campaign's suggested
-columns as tickable rows (how many shots record each and the range it spans).
-The capture ticks three, so **Add 3 columns** is live. The selected row's
-detail sits in the right column: why it was picked, example values, what the
-column will do, its preview (the example shot's cell and the campaign trend)
-and **Add this column**, **Ignore this suggestion**, **Customise** and **Show
-code**; below it, the file's existing columns with Edit, Move and Delete. The
-first six rows show; the rest are behind **Show more**, which in this capture
-holds the example shot's HDF5 image, lineout and scalar suggestions.
+columns as tickable rows with counts and ranges from the shot sample.
+The capture ticks three, so **Add 3 columns to context.py** is active. The
+selected row expands to show its reason, example values, preview and actions,
+including **Add to context.py**, **Ignore this suggestion**, **Customise**
+and **Show code**. The context file controls and existing columns sit to the
+right on desktop. **Show more** reveals suggestions beyond the first six,
+including more HDF5 datasets from the example shot.
 
 ![Context builder, Help me choose](screenshots/context-assist.png)
 

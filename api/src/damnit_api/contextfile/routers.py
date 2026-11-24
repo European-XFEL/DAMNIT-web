@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException
 from ..auth.dependencies import OAuthUserInfo
 from ..metadata.hzdr_event import LEGACY_KEY_MAP
 from ..metadata.hzdr_nexus import shot_container_name
-from ..metadata.hzdr_sources import HZDRShot, HZDRSourceProvider
+from ..metadata.hzdr_sources import HZDRShot, HZDRSourceProvider, sample_context_shots
 from ..shared.settings import settings
 from . import models
 from .assist import column_suggestions
@@ -132,7 +132,7 @@ async def save_campaign_context_file(
 
 
 @router.get("/campaign/{campaign}/suggested")
-async def get_suggested_campaign_context(
+def get_suggested_campaign_context(
     campaign: str,
     user: OAuthUserInfo,
 ) -> dict[str, str]:
@@ -143,16 +143,16 @@ async def get_suggested_campaign_context(
     """
     return {
         "campaign": campaign,
-        "fileContent": suggested_context(campaign, _campaign_shots(campaign)),
+        "fileContent": suggested_context(campaign, _campaign_shot_sample(campaign)),
     }
 
 
 @router.get("/campaign/{campaign}/assist")
-async def get_campaign_column_suggestions(
+def get_campaign_column_suggestions(
     campaign: str,
     user: OAuthUserInfo,
 ) -> dict[str, Any]:
-    """Context Builder's "Help me": every column worth offering, best first.
+    """Context Builder's "Help me": rank columns from a small shot sample.
 
     Each suggestion says why it was picked and what the column will do, and
     carries a self-contained ``@Variable`` block. Nothing is written; the
@@ -160,7 +160,7 @@ async def get_campaign_column_suggestions(
     """
     return {
         "campaign": campaign,
-        "suggestions": column_suggestions(_campaign_shots(campaign)),
+        "suggestions": column_suggestions(_campaign_shot_sample(campaign)),
     }
 
 
@@ -188,6 +188,13 @@ async def _write_campaign_context(
     context_path,
 ) -> models.CampaignContextFile:
     """Write a context file and return the refreshed file model."""
+    if payload.expectedFileContent is not None and (
+        not context_path.exists()
+        or context_path.read_text(encoding="utf-8") != payload.expectedFileContent
+    ):
+        raise HTTPException(
+            status_code=409, detail="Context file changed since loading"
+        )
     context_path.parent.mkdir(parents=True, exist_ok=True)
     context_path.write_text(payload.fileContent, encoding="utf-8")
     models.ModifiedTime.from_file.cache_clear()
@@ -258,12 +265,13 @@ def _starter_context(campaign: str, user: OAuthUserInfo) -> str:
     A few columns from what the campaign's LabFrog records hold (see
     ``suggested.py``); none when the campaign is unknown or has no such value.
     """
-    return suggested_context(campaign, _campaign_shots(campaign))
+    return suggested_context(campaign, _campaign_shot_sample(campaign))
 
 
-def _campaign_shots(campaign: str) -> list[HZDRShot]:
-    source = HZDRSourceProvider(settings.metadata).get_source(campaign)
-    return list(source.shots) if source is not None else []
+def _campaign_shot_sample(campaign: str) -> list[HZDRShot]:
+    return sample_context_shots(
+        HZDRSourceProvider(settings.metadata).list_shots(campaign)
+    )
 
 
 class ContextSkip(Exception):  # noqa: N818

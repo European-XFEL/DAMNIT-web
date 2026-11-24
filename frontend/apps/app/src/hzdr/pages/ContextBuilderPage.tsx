@@ -19,11 +19,9 @@ import {
   Textarea,
   TextInput,
   Title,
-  useMantineTheme,
 } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { IconRefresh } from '@tabler/icons-react'
-import { useParams, useSearchParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 
 import { HomePage } from '@damnit-frontend/ui'
 
@@ -211,6 +209,11 @@ export function ContextBuilderPage() {
   )
   const [generatedDraft, setGeneratedDraft] = useState('')
   const [saveStatus, setSaveStatus] = useState('')
+  const [addedColumns, setAddedColumns] = useState<{
+    campaign: string
+    message: string
+    names: string[]
+  }>()
   const [selectedColumnId, setSelectedColumnId] = useState<string | null>(null)
   const [generatedEditorCompact, setGeneratedEditorCompact] = useState(true)
   const [mode, setMode] = useState<BuilderMode>('help')
@@ -221,11 +224,13 @@ export function ContextBuilderPage() {
   const [suggestionsError, setSuggestionsError] = useState('')
   const [ignoredSuggestionIds, setIgnoredSuggestionIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [loadingVariant, setLoadingVariant] = useState(false)
+  const contextBusy = saving || loadingVariant
   const [selectedSuggestionId, setSelectedSuggestionId] = useState<
     string | null
   >(null)
   const [checkedSuggestionIds, setCheckedSuggestionIds] = useState<string[]>([])
-  const [shotsLoaded, setShotsLoaded] = useState(false)
+  const [loadedSamplePath, setLoadedSamplePath] = useState<string>()
   const [shotDetailLoadedPath, setShotDetailLoadedPath] = useState<string>()
   const [deepLinkNote, setDeepLinkNote] = useState('')
   const [searchParams] = useSearchParams()
@@ -234,28 +239,27 @@ export function ContextBuilderPage() {
   const addInput = searchParams.get('add')
   const addShot = searchParams.get('shot')
   const handledAddRef = useRef<string | null>(null)
-  const appliedShotRef = useRef<string | null>(null)
-  const theme = useMantineTheme()
-  const wide = useMediaQuery(`(min-width: ${theme.breakpoints.lg})`) ?? false
+
+  const sampleQuery = new URLSearchParams({ sample_shots: 'true' })
+  if (addShot) sampleQuery.set('example_shot', addShot)
+  const samplePath = source_key
+    ? `/metadata/hzdr/sources/${source_key}?${sampleQuery}`
+    : undefined
+  const shotsLoaded = !!samplePath && loadedSamplePath === samplePath
 
   useEffect(() => {
-    if (!source_key) {
-      return
-    }
-    fetch(`/metadata/hzdr/sources/${source_key}`)
-      .then((response) => requireJson<HZDRSource>(response))
-      .then(setSource)
-      .catch(() => setSaveStatus('Could not load source metadata.'))
-    fetch(`/metadata/hzdr/sources/${source_key}/shots`)
-      .then((response) => requireJson<unknown>(response))
-      .then((loadedShots) => {
-        if (!Array.isArray(loadedShots)) {
-          throw new Error('Shots response was not a list')
+    if (!samplePath) return
+    let active = true
+    fetch(samplePath, { signal: AbortSignal.timeout(15_000) })
+      .then((response) => requireJson<HZDRSource | null>(response))
+      .then((loadedSource) => {
+        if (!active) return
+        if (!loadedSource || !Array.isArray(loadedSource.shots)) {
+          throw new Error('Source response did not contain a shot sample')
         }
-        const nextShots = loadedShots as HZDRShot[]
+        setSource(loadedSource)
+        const nextShots = loadedSource.shots
         setShots(nextShots)
-        // A deep link's shot (&shot=) stays the example shot even when the
-        // shots load again (a second load would otherwise reset it to the first).
         const linked = addShot
           ? nextShots.findIndex(
               (shot) =>
@@ -265,8 +269,25 @@ export function ContextBuilderPage() {
           : -1
         setSelectedShotIndex(nextShots.length ? Math.max(linked, 0) : undefined)
       })
-      .catch(() => setSaveStatus('Could not load source shots.'))
-      .finally(() => setShotsLoaded(true))
+      .catch(() => {
+        if (!active) return
+        setSource(undefined)
+        setShots([])
+        setSelectedShotIndex(undefined)
+        setSaveStatus('Could not load the campaign shot sample.')
+      })
+      .finally(() => {
+        if (active) setLoadedSamplePath(samplePath)
+      })
+    return () => {
+      active = false
+    }
+  }, [addShot, samplePath])
+
+  useEffect(() => {
+    if (!source_key) {
+      return
+    }
     fetch(`/contextfile/campaign/${source_key}/me`)
       .then((response) => requireJson<CampaignContextFile>(response))
       .then((loadedContext: CampaignContextFile) => {
@@ -282,7 +303,7 @@ export function ContextBuilderPage() {
         )
       })
       .catch(() => setContextFiles([]))
-  }, [addShot, source_key])
+  }, [source_key])
 
   // Suggestions for this campaign only: a late answer for the campaign the
   // page showed before is dropped, so Add never writes its blocks here.
@@ -295,7 +316,9 @@ export function ContextBuilderPage() {
     setServerSuggestions([])
     setSuggestionsLoading(true)
     setSuggestionsError('')
-    fetch(`/contextfile/campaign/${source_key}/assist`)
+    fetch(`/contextfile/campaign/${source_key}/assist`, {
+      signal: AbortSignal.timeout(15_000),
+    })
       .then((response) =>
         requireJson<{ suggestions?: ColumnSuggestion[] }>(response)
       )
@@ -322,7 +345,9 @@ export function ContextBuilderPage() {
   // Select a row rather than a shot number: numbers may repeat across days,
   // and older catalogs may not include canonical shot keys.
   const selectedShot =
-    selectedShotIndex === undefined ? undefined : shots[selectedShotIndex]
+    shotsLoaded && selectedShotIndex !== undefined
+      ? shots[selectedShotIndex]
+      : undefined
   const shotDetailPath =
     source_key && selectedShot
       ? `/metadata/hzdr/sources/${source_key}/shots/${
@@ -437,7 +462,10 @@ export function ContextBuilderPage() {
   const recipeHelp = getContextRecipeOptionHelp(fieldKind, contextScope)
   const canBuildColumn = selectedInputs.length > 0
   const canSaveGeneratedColumn =
-    canBuildColumn && Boolean(extractPythonFunctionName(generatedDraft))
+    !contextBusy &&
+    !!contextFile &&
+    canBuildColumn &&
+    Boolean(extractPythonFunctionName(generatedDraft))
   const contextVariables = useMemo(
     () => parseContextVariableBlocks(contextContent),
     [contextContent]
@@ -497,19 +525,12 @@ export function ContextBuilderPage() {
     serverSuggestions,
     shotDatasetSuggestions,
   ])
-  // On wide screens the right column always previews one suggestion: the
-  // one picked, else the first. On narrow ones it opens under its row.
-  const selectedSuggestion =
-    openSuggestions.find(
-      (suggestion) => suggestion.id === selectedSuggestionId
-    ) ?? (wide ? openSuggestions[0] : undefined)
-  const selectSuggestion = useCallback(
-    (id: string) =>
-      setSelectedSuggestionId((current) =>
-        !wide && current === id ? null : id
-      ),
-    [wide]
+  const selectedSuggestion = openSuggestions.find(
+    (suggestion) => suggestion.id === selectedSuggestionId
   )
+  const selectSuggestion = useCallback((id: string) => {
+    setSelectedSuggestionId((current) => (current === id ? null : id))
+  }, [])
   const showMongoFields = fieldKind === 'mongo-filter'
   const showFunctionFields = fieldKind === 'function'
   const actionCanUseMultipleInputs = fieldKind === 'function'
@@ -609,39 +630,86 @@ export function ContextBuilderPage() {
     selectedInputs,
   ])
 
-  // Append one @Variable block (imports first) to the destination file and
-  // save it: the builder's "Add to context" and the assistant's "Add this
-  // column" both go through here.
-  const appendBlockToContext = (draft: string, savedMessage: string) => {
-    if (!source_key || !contextFile) {
-      return
+  const canAppendColumns = () => {
+    if (!contextFile || contextBusy) return false
+    if (contextContent !== contextFile.fileContent) {
+      setSaveStatus(
+        'Save your manual edits or reload to discard them before adding columns.'
+      )
+      return false
     }
-    const { imports, body } = splitPythonImportBlock(draft)
-    if (!extractPythonFunctionName(body)) {
-      setSaveStatus('Generated variable needs a valid Python function name.')
-      return
-    }
-    setSaveStatus('Saving...')
+    return true
+  }
+
+  const saveAddedColumns = (
+    fileContent: string,
+    savedMessage: string,
+    failureMessage: string,
+    onSaved?: () => void
+  ) => {
+    if (!source_key) return
+    const activeFile = selectedContextFile === 'context.py'
+    const message = activeFile
+      ? `${savedMessage} Existing columns kept.`
+      : `${savedMessage} Existing columns kept in ${selectedContextFile}. “Make ${selectedContextFile} active” applies the entire variant to the shot table.`
+    setAddedColumns(undefined)
+    setSaveStatus('Adding columns…')
     setSaving(true)
-    const uniqueBody = makeContextVariableBlockUnique(body, contextVariables)
-    const contextWithImports = mergeImportsAtTop(contextContent, imports)
-    const fileContent = `${contextWithImports.trimEnd()}\n\n${uniqueBody.trimEnd()}\n`
     fetch(
       `/contextfile/campaign/${source_key}/me/files/${selectedContextFile}`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileContent }),
+        body: JSON.stringify({
+          fileContent,
+          expectedFileContent: contextContent,
+        }),
       }
     )
-      .then((response) => requireJson<CampaignContextFile>(response))
-      .then((savedContext: CampaignContextFile) => {
-        setContextFile(savedContext)
-        setContextContent(savedContext.fileContent ?? '')
-        setSaveStatus(savedMessage)
+      .then((response) => {
+        if (response.status === 409) {
+          setSaveStatus(
+            'The context file has changed. Reload the page before adding columns.'
+          )
+          return
+        }
+        return requireJson<CampaignContextFile>(response)
       })
-      .catch(() => setSaveStatus('Save failed'))
+      .then((savedContext) => {
+        if (!savedContext) return
+        setContextFile(savedContext)
+        setContextContent(savedContext.fileContent)
+        setSaveStatus(message)
+        if (activeFile) {
+          const existing = new Set(
+            contextVariables.map((column) => column.name)
+          )
+          const names = parseContextVariableBlocks(savedContext.fileContent)
+            .map((column) => column.name)
+            .filter((name) => !existing.has(name))
+          setAddedColumns({ campaign: source_key, message, names })
+        }
+        onSaved?.()
+      })
+      .catch(() => setSaveStatus(failureMessage))
       .finally(() => setSaving(false))
+  }
+
+  const appendBlockToContext = (draft: string, savedMessage: string) => {
+    if (!canAppendColumns()) return
+    const { imports, body } = splitPythonImportBlock(draft)
+    if (!extractPythonFunctionName(body)) {
+      setSaveStatus('Generated variable needs a valid Python function name.')
+      return
+    }
+    const uniqueBody = makeContextVariableBlockUnique(body, contextVariables)
+    const contextWithImports = mergeImportsAtTop(contextContent, imports)
+    const fileContent = `${contextWithImports.trimEnd()}\n\n${uniqueBody.trimEnd()}\n`
+    saveAddedColumns(
+      fileContent,
+      savedMessage,
+      `Could not add the column to ${selectedContextFile}.`
+    )
   }
 
   const appendToContext = () => {
@@ -649,7 +717,10 @@ export function ContextBuilderPage() {
       setSaveStatus('Choose data before adding a column.')
       return
     }
-    appendBlockToContext(generatedDraft, `Saved to ${selectedContextFile}`)
+    appendBlockToContext(
+      generatedDraft,
+      `Added column to ${selectedContextFile}.`
+    )
   }
 
   const addSuggestion = (suggestion: ColumnSuggestion) => {
@@ -662,9 +733,7 @@ export function ContextBuilderPage() {
   // All ticked suggestions in one save: the file is written once, so a
   // failure adds none of them.
   const addSuggestions = (picked: ColumnSuggestion[]) => {
-    if (!source_key || !contextFile || !picked.length) {
-      return
-    }
+    if (!picked.length || !canAppendColumns()) return
     const { fileContent, added, skipped } = appendSuggestionBlocks(
       contextContent,
       picked
@@ -678,35 +747,17 @@ export function ContextBuilderPage() {
     }
     const columns = `${added.length} column${added.length === 1 ? '' : 's'}`
     const addedIds = new Set(added.map((suggestion) => suggestion.id))
-    setSaveStatus(`Adding ${columns}...`)
-    setSaving(true)
-    fetch(
-      `/contextfile/campaign/${source_key}/me/files/${selectedContextFile}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileContent }),
-      }
-    )
-      .then((response) => requireJson<CampaignContextFile>(response))
-      .then((savedContext: CampaignContextFile) => {
-        setContextFile(savedContext)
-        setContextContent(savedContext.fileContent ?? '')
+    saveAddedColumns(
+      fileContent,
+      `Added ${columns} to ${selectedContextFile}: ${added
+        .map((suggestion) => suggestion.title)
+        .join(', ')}.${skippedNote}`,
+      `Save failed: none of the ${columns} was added to ${selectedContextFile}.`,
+      () =>
         setCheckedSuggestionIds((current) =>
           current.filter((id) => !addedIds.has(id))
         )
-        setSaveStatus(
-          `Added ${columns} to ${selectedContextFile}: ${added
-            .map((suggestion) => suggestion.title)
-            .join(', ')}.${skippedNote}`
-        )
-      })
-      .catch(() =>
-        setSaveStatus(
-          `Save failed: none of the ${columns} was added to ${selectedContextFile}.`
-        )
-      )
-      .finally(() => setSaving(false))
+    )
   }
 
   const updateIgnoredSuggestions = (ids: string[]) => {
@@ -752,19 +803,6 @@ export function ContextBuilderPage() {
     )
   }
 
-  // A deep link's example shot first, so its datasets are the ones offered.
-  useEffect(() => {
-    if (!addShot || !shotsLoaded || appliedShotRef.current === addShot) {
-      return
-    }
-    appliedShotRef.current = addShot
-    const index = shots.findIndex(
-      (shot) =>
-        shot.shot_key === addShot || String(shot.shot_number) === addShot
-    )
-    if (index >= 0) setSelectedShotIndex(index)
-  }, [addShot, shots, shotsLoaded])
-
   const deepLinkMetadataKeys = useMemo(
     () =>
       addInput?.startsWith('metadata:')
@@ -777,9 +815,6 @@ export function ContextBuilderPage() {
   // are known, open the builder with that input, or say it was not found.
   useEffect(() => {
     if (!addInput || handledAddRef.current === addInput || !shotsLoaded) {
-      return
-    }
-    if (addShot && appliedShotRef.current !== addShot) {
       return
     }
     if (
@@ -807,7 +842,6 @@ export function ContextBuilderPage() {
     )
   }, [
     addInput,
-    addShot,
     deepLinkMetadataKeys,
     loadIntoBuilder,
     shotDatasetOptions,
@@ -1012,25 +1046,33 @@ export function ContextBuilderPage() {
       .then((suggested) => {
         setContextContent(suggested.fileContent)
         setSaveStatus(
-          "Loaded suggested columns from this campaign's LabFrog records. Review, then save."
+          'Loaded suggested columns from the LabFrog shot sample. Review, then save.'
         )
       })
       .catch(() => setSaveStatus('Could not load suggested columns'))
   }
 
   const loadContextVariant = (fileName: string | null) => {
-    if (!source_key || !fileName) {
+    if (
+      !source_key ||
+      !fileName ||
+      contextBusy ||
+      fileName === selectedContextFile
+    ) {
       return
     }
-    setSelectedContextFile(fileName)
+    setLoadingVariant(true)
+    setSaveStatus(`Loading ${fileName}…`)
     fetch(`/contextfile/campaign/${source_key}/me/files/${fileName}`)
       .then((response) => requireJson<CampaignContextFile>(response))
       .then((loadedContext: CampaignContextFile) => {
         setContextFile(loadedContext)
         setContextContent(loadedContext.fileContent ?? '')
+        setSelectedContextFile(fileName)
         setSaveStatus(`Loaded ${fileName}`)
       })
       .catch(() => setSaveStatus(`Could not load ${fileName}`))
+      .finally(() => setLoadingVariant(false))
   }
 
   const saveAsContext = () => {
@@ -1151,14 +1193,24 @@ export function ContextBuilderPage() {
     }
   }
   const campaignName = campaignTitle(source?.title) || source_key
+  const addedColumnsUrl =
+    addedColumns &&
+    addedColumns.campaign === source_key &&
+    addedColumns.message === saveStatus &&
+    addedColumns.names.length
+      ? `/source/${source_key}?${new URLSearchParams(
+          addedColumns.names.map((name) => ['added_column', name])
+        )}`
+      : undefined
   const suggestionDetail = selectedSuggestion ? (
     <SuggestionDetail
       key={selectedSuggestion.id}
       suggestion={selectedSuggestion}
-      busy={saving || !contextFile}
+      busy={contextBusy || !contextFile}
       sourceKey={source_key}
       exampleShot={selectedShot}
       shots={shots}
+      destination={selectedContextFile}
       onAdd={addSuggestion}
       onIgnore={ignoreSuggestion}
       onCustomise={customiseSuggestion}
@@ -1184,11 +1236,11 @@ export function ContextBuilderPage() {
                 href={`/source/${source_key}`}
                 variant="light"
               >
-                Back to shots
+                Open shot table
               </Button>
             </Group>
             <Grid gutter="md">
-              <Grid.Col span={{ base: 12, lg: 5 }}>
+              <Grid.Col span={{ base: 12, lg: mode === 'help' ? 6 : 5 }}>
                 <Card withBorder radius={4} p="md">
                   <Stack gap="md">
                     {deepLinkNote ? (
@@ -1232,6 +1284,7 @@ export function ContextBuilderPage() {
                         />
                         <Select
                           label="Example shot"
+                          description="Choose from the campaign shot sample."
                           searchable
                           value={selectedShotIndex?.toString() ?? null}
                           onChange={(value) =>
@@ -1252,9 +1305,21 @@ export function ContextBuilderPage() {
                       p="sm"
                       bg="var(--mantine-color-gray-0)"
                     >
-                      <Text size="sm" c="dimmed" role="status">
-                        {saveStatus || contextFile?.path || '-'}
-                      </Text>
+                      <Group justify="space-between" gap="xs">
+                        <Text size="sm" c="dimmed" role="status">
+                          {saveStatus || contextFile?.path || '-'}
+                        </Text>
+                        {addedColumnsUrl ? (
+                          <Button
+                            component={Link}
+                            to={addedColumnsUrl}
+                            size="xs"
+                            variant="light"
+                          >
+                            Show added columns
+                          </Button>
+                        ) : null}
+                      </Group>
                     </Paper>
                     {mode === 'help' ? (
                       <ContextAssistant
@@ -1262,7 +1327,7 @@ export function ContextBuilderPage() {
                         loading={suggestionsLoading}
                         error={suggestionsError}
                         destination={selectedContextFile}
-                        busy={saving || !contextFile}
+                        busy={contextBusy || !contextFile}
                         ignoredCount={ignoredOpenCount}
                         addedCount={inContextCount}
                         selectedId={selectedSuggestion?.id ?? null}
@@ -1272,7 +1337,7 @@ export function ContextBuilderPage() {
                         onAddMany={addSuggestions}
                         onIgnoreMany={ignoreSuggestions}
                         onRestoreIgnored={() => updateIgnoredSuggestions([])}
-                        selectedDetail={wide ? undefined : suggestionDetail}
+                        selectedDetail={suggestionDetail}
                         shots={shots}
                       />
                     ) : null}
@@ -1281,7 +1346,7 @@ export function ContextBuilderPage() {
                         <ContextBuilderPanel
                           tone="indigo"
                           title="1. Choose data"
-                          description="Fields are grouped by source. Counts show how many shots contain each field."
+                          description="Fields are grouped by source. Counts refer to the shot sample."
                         >
                           {actionCanUseMultipleInputs ? (
                             <Checkbox
@@ -1533,29 +1598,8 @@ export function ContextBuilderPage() {
                   </Stack>
                 </Card>
               </Grid.Col>
-              <Grid.Col span={{ base: 12, lg: 7 }}>
+              <Grid.Col span={{ base: 12, lg: mode === 'help' ? 6 : 7 }}>
                 <Stack gap="sm">
-                  {mode === 'help' && wide ? (
-                    <div
-                      style={{
-                        position: 'sticky',
-                        top: 'calc(var(--app-shell-header-offset, 0rem) + var(--mantine-spacing-md))',
-                        zIndex: 2,
-                        maxHeight:
-                          'calc(100vh - var(--app-shell-header-offset, 0rem) - var(--app-shell-footer-offset, 0rem) - 2 * var(--mantine-spacing-md))',
-                        overflowY: 'auto',
-                        background: 'var(--mantine-color-body)',
-                      }}
-                    >
-                      {suggestionDetail ?? (
-                        <Paper withBorder radius={4} p="sm">
-                          <Text size="sm" c="dimmed">
-                            Select a suggestion to preview it here.
-                          </Text>
-                        </Paper>
-                      )}
-                    </div>
-                  ) : null}
                   <ContextBuilderPanel
                     tone="gray"
                     title="Context file and existing columns"
@@ -1571,7 +1615,7 @@ export function ContextBuilderPage() {
                             onClick={appendToContext}
                             disabled={!canSaveGeneratedColumn}
                           >
-                            Add to context
+                            Add column to {selectedContextFile}
                           </Button>
                         ) : null}
                         {mode === 'build' && selectedContextVariable ? (
@@ -1583,7 +1627,10 @@ export function ContextBuilderPage() {
                             Replace {selectedContextVariable.title}
                           </Button>
                         ) : null}
-                        <Button onClick={saveManualContext}>
+                        <Button
+                          onClick={saveManualContext}
+                          disabled={contextBusy}
+                        >
                           Save {selectedContextFile}
                         </Button>
                         <Button
@@ -1601,6 +1648,7 @@ export function ContextBuilderPage() {
                         description="The shot table uses the active file, context.py."
                         value={selectedContextFile}
                         onChange={loadContextVariant}
+                        disabled={contextBusy}
                         data={contextFiles.map((entry) => ({
                           value: entry.name,
                           label: entry.active
@@ -1614,6 +1662,7 @@ export function ContextBuilderPage() {
                         <Button
                           variant="light"
                           onClick={makeContextActive}
+                          disabled={contextBusy}
                           title="Write this variant (as shown in the editor) to context.py, keeping the current context.py as context_previous.py."
                         >
                           Make {selectedContextFile} active
@@ -1644,7 +1693,7 @@ export function ContextBuilderPage() {
                     <>
                       <ContextBuilderDisclosure
                         title="Preview"
-                        description="What this column will show for the example shot, and across the campaign. It follows your choices as you make them."
+                        description="What this column will show for the example shot, and across the shot sample. It follows your choices as you make them."
                         summary={contextRecipeLabel(fieldKind)}
                         open
                       >
@@ -1711,7 +1760,10 @@ export function ContextBuilderPage() {
                       >
                         Load suggested columns
                       </Button>
-                      <Button onClick={saveManualContext}>
+                      <Button
+                        onClick={saveManualContext}
+                        disabled={contextBusy}
+                      >
                         Save {selectedContextFile}
                       </Button>
                     </Group>
@@ -1728,6 +1780,7 @@ export function ContextBuilderPage() {
                       </Button>
                     </SimpleGrid>
                     <Textarea
+                      aria-label="Context file contents"
                       value={contextContent}
                       onChange={(event) =>
                         setContextContent(event.currentTarget.value)

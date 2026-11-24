@@ -387,22 +387,23 @@ def laser_energy_mj(run, laser_energy_j=None):
                 </Code>
                 <Text size="sm">
                   <b>Help me choose</b> (where Add columns opens) lists what is
-                  worth a column: values this campaign&apos;s shots record that
-                  change from shot to shot, and the example shot&apos;s HDF5
-                  images, lineouts and numbers. Each suggestion says why it was
-                  picked and what the column will do. Tick the ones you want and
-                  press <b>Add N columns</b> to save them to your context file
-                  in one go. <b>Ignore this suggestion</b> hides one in this
-                  browser; <b>Customise</b> opens it in the builder first.
+                  worth a column: values that vary in a sample of up to 32
+                  campaign shots, and the example shot&apos;s HDF5 images,
+                  lineouts and numbers. Each suggestion says why it was picked
+                  and what the column will do. Tick the ones you want and press{' '}
+                  <b>Add N columns</b> to append them to your context file.
+                  After adding to the active file, <b>Show added columns</b>{' '}
+                  opens the shot table with those columns at the start.{' '}
+                  <b>Ignore this suggestion</b> hides one in this browser.{' '}
+                  <b>Customise</b> opens it in the builder first.
                 </Text>
                 <Text size="sm">
-                  The preview in the right-hand column shows a column before you
-                  add it: the example shot&apos;s cell as the table will show
-                  it, the image or curve a double-click opens, and the value
-                  across the campaign. Below it, your existing columns are
-                  listed: move them up or down, or delete one.{' '}
-                  <b>Build a column myself</b> is the full builder; its preview
-                  follows your choices as you make them.
+                  Select a suggestion to open its preview directly below its
+                  row. It shows the example shot&apos;s cell, the image or curve
+                  a double-click opens, and the values across the shot sample.
+                  You can move or delete existing columns in the context file
+                  panel. <b>Build a column myself</b> is the full builder; its
+                  preview follows your choices as you make them.
                 </Text>
                 <DocFigure
                   src={contextBuilderShot}

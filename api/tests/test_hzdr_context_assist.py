@@ -131,11 +131,11 @@ def test_endpoint_lists_the_suggestions(tmp_path, monkeypatch):
                     "shots": [
                         {
                             "source_key": "radbio",
-                            "shot_number": shot.shot_number,
+                            "shot_number": index + 1,
                             "fired_at": "2026-05-05T10:00:00Z",
                             "metadata": shot.metadata,
                         }
-                        for shot in shots
+                        for index, shot in enumerate(shots * 7)
                     ],
                 }
             ]
@@ -151,12 +151,27 @@ def test_endpoint_lists_the_suggestions(tmp_path, monkeypatch):
         client.get("/oauth/login?redirect_uri=/home", follow_redirects=False)
         response = client.get("/contextfile/campaign/radbio/assist")
         unknown = client.get("/contextfile/campaign/nope/assist")
+        source_url = "/metadata/hzdr/sources/radbio"
+        sample = client.get(source_url, params={"sample_shots": True}).json()
+        linked_sample = client.get(
+            source_url, params={"sample_shots": True, "example_shot": "2"}
+        ).json()
+        full_source = client.get(source_url).json()
 
     assert response.status_code == 200
-    ids = [s["id"] for s in response.json()["suggestions"]]
+    suggestions = response.json()["suggestions"]
+    ids = [s["id"] for s in suggestions]
     assert "labfrog:ICT integrated charge" in ids
     assert "metadata:laser.pulse_duration" in ids
+    assert {s["total"] for s in suggestions} == {32}
     assert unknown.json()["suggestions"] == []
+    sample_numbers = [shot["shot_number"] for shot in sample["shots"]]
+    assert len(set(sample_numbers)) == 32
+    assert (sample_numbers[0], sample_numbers[-1]) == (1, 70)
+    assert 2 not in sample_numbers
+    assert len(linked_sample["shots"]) == 32
+    assert any(shot["shot_number"] == 2 for shot in linked_sample["shots"])
+    assert len(full_source["shots"]) == 70
 
 
 #: LabFrog names a campaign really could hold, each one a past way to break a
