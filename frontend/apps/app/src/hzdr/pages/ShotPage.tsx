@@ -159,8 +159,8 @@ export function HZDRShotPage() {
     'loading'
   )
   // Set by the view-loading effect so the save effect skips the render pass
-  // in which the persisted view is applied (or defaults are restored) — the
-  // filter/sort states still hold the previous source's values on that pass.
+  // in which the persisted view is applied (or defaults are restored).
+  // The filter/sort states still hold the previous source's values on that pass.
   const skipNextViewSave = useRef(false)
   // The summary's shotListChangeKey the shown shots belong to (see the poll).
   const shotListKeyRef = useRef<string>()
@@ -341,16 +341,16 @@ export function HZDRShotPage() {
   useEffect(() => {
     if (!selectedShotLink) return
     linkedShotRef.current = selectedShotLink
+    if (linkedShot === selectedShotLink) return
     setSearchParams(
       (params) => {
-        if (params.get('shot') === selectedShotLink) return params
         const next = new URLSearchParams(params)
         next.set('shot', selectedShotLink)
         return next
       },
       { replace: true }
     )
-  }, [selectedShotLink, setSearchParams])
+  }, [linkedShot, selectedShotLink, setSearchParams])
 
   useEffect(() => {
     const selected = selectedShot
@@ -408,6 +408,8 @@ export function HZDRShotPage() {
       (params) => {
         const next = new URLSearchParams(params)
         next.delete('added_column')
+        // Restore may run before the selected-shot effect has updated the URL.
+        if (selectedShotLink) next.set('shot', selectedShotLink)
         return next
       },
       { replace: true }
@@ -1108,7 +1110,7 @@ export function HZDRShotPage() {
                                 <Group justify="center" gap="xs" py="md">
                                   <Loader size="sm" />
                                   <Text size="sm" c="dimmed">
-                                    Loading shots…
+                                    Loading shots&hellip;
                                   </Text>
                                 </Group>
                               </Table.Td>

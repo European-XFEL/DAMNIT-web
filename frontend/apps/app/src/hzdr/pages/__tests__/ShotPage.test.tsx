@@ -282,9 +282,11 @@ describe('shot page quick filters and keyboard', () => {
     await waitFor(() => expect(headers()[0]).toBe('Sort by Existing column'))
     expect(headers()).toContain('Sort by New column')
     expect(headers()).not.toContain('Sort by Restored column')
-    expect(screen.getByTestId('location').textContent).not.toContain(
-      'added_column'
+    const query = new URLSearchParams(
+      screen.getByTestId('location').textContent ?? ''
     )
+    expect(query.has('added_column')).toBe(false)
+    expect(query.get('shot')).toBe(shots[0].shot_key)
   })
 
   const shotNumbers = (table: HTMLElement) =>
