@@ -200,9 +200,11 @@ export function MiniImagePreview({
 export function CanvasImage({
   values,
   maxWidth = 320,
+  maxHeight,
 }: {
   values: number[][]
   maxWidth?: number
+  maxHeight?: number
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const height = values.length
@@ -256,7 +258,10 @@ export function CanvasImage({
       style={{
         display: 'block',
         width: '100%',
-        maxWidth,
+        maxWidth:
+          maxHeight && height
+            ? Math.min(maxWidth, (maxHeight * width) / height)
+            : maxWidth,
         aspectRatio: `${width || 1} / ${height || 1}`,
         imageRendering: 'pixelated',
         border: '1px solid var(--mantine-color-gray-4)',
@@ -358,10 +363,12 @@ export function MetadataTrendPreview({
   selectedRowKey,
   onSelectPoint,
   secondary,
+  height = 240,
 }: {
   values: HZDRTrendValue[]
   title?: string
   xLabel?: string
+  height?: number
   /** The shot to mark on the curve (the table's selected shot). */
   selectedRowKey?: string
   /** Given, each point with a rowKey is a button that selects its shot. */
@@ -454,7 +461,7 @@ export function MetadataTrendPreview({
       <svg
         viewBox={`0 0 ${chart.width} ${chart.height}`}
         width="100%"
-        height="240"
+        height={height}
         role={onSelectPoint ? 'group' : 'img'}
         aria-label={
           onSelectPoint ? `${title}: click a point to open its shot` : undefined

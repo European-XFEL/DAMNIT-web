@@ -49,6 +49,7 @@ function SuggestionPreview({
   )
   return (
     <ColumnPreview
+      compact
       title={suggestion.title}
       exampleShot={exampleShot}
       shots={shots}

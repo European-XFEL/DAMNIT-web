@@ -12,6 +12,10 @@ The shot table evaluates its active context in a worker, with one evaluation
 at a time. Slow HDF5 reads can no longer hold up shot records and other API
 requests on the event loop.
 
+The shot table displays context column headers as soon as the context loads
+and fills their values in batches. The Context Builder's inline previews
+use smaller images and plots.
+
 ### Context Builder samples campaign shots and keeps previews in the list
 
 Context Builder uses up to 32 shots for suggested columns, the example shot

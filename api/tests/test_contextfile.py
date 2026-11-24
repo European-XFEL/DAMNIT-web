@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -222,11 +223,23 @@ def laser_energy(run):
                 resume.set()
             response = results.result(timeout=5)
 
+        streamed = local_client.get(
+            "/contextfile/campaign/hzdr-example/me/results",
+            headers={"accept": "application/x-ndjson"},
+        )
+
     assert response.status_code == 200
     payload = response.json()
     assert payload["columns"] == [{"name": "laser_energy", "title": "Laser energy"}]
     assert payload["rows"][0]["values"]["laser_energy"] == pytest.approx(12.5)
     assert "shot_key" in payload["rows"][0]
+    assert streamed.status_code == 200
+    assert streamed.headers["x-accel-buffering"] == "no"
+    assert [json.loads(line) for line in streamed.text.splitlines() if line] == [
+        {"columns": payload["columns"]},
+        {"rows": payload["rows"]},
+        {"complete": True},
+    ]
 
 
 def test_context_results_tolerate_removed_common_imports(tmp_path, monkeypatch):

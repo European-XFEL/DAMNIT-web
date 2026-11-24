@@ -76,6 +76,7 @@ import {
 } from '../utils/format'
 import { getNestedMetadataValue, formatTargetLabel } from '../utils/metadata'
 import { requireJson } from '../utils/api'
+import { fetchContextResults } from '../utils/contextResults'
 import { usePolling } from '../hooks'
 import { summarizeShotDataSources } from '../utils/data-sources'
 import {
@@ -131,6 +132,10 @@ export function HZDRShotPage() {
   const [selectedRowKey, setSelectedRowKey] = useState<string>()
   const [shotDetail, setShotDetail] = useState<HZDRShotDetail>()
   const [contextResults, setContextResults] = useState<HZDRContextResults>()
+  const [contextStatus, setContextStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('idle')
+  const contextRequest = useRef<AbortController>()
   const [filterColumn, setFilterColumn] = useState('all')
   const [filterOperator, setFilterOperator] =
     useState<HZDRFilterOperator>('includes')
@@ -232,6 +237,40 @@ export function HZDRShotPage() {
     columnOrder,
   ])
 
+  const loadContext = useCallback(
+    (quiet = false) => {
+      if (!source_key || (quiet && contextRequest.current)) return
+      contextRequest.current?.abort()
+      const controller = new AbortController()
+      contextRequest.current = controller
+      setContextStatus('loading')
+      void fetchContextResults(source_key, controller.signal, (results) => {
+        if (!controller.signal.aborted) setContextResults(results)
+      })
+        .then(() => {
+          if (!controller.signal.aborted) setContextStatus('idle')
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) setContextStatus('error')
+        })
+        .finally(() => {
+          if (contextRequest.current === controller) {
+            contextRequest.current = undefined
+          }
+        })
+    },
+    [source_key]
+  )
+
+  useEffect(() => {
+    setContextResults(undefined)
+    setContextStatus('idle')
+    return () => {
+      contextRequest.current?.abort()
+      contextRequest.current = undefined
+    }
+  }, [source_key])
+
   // The shots and the user's context columns over them. `quiet` is the
   // background refresh: no loading state, and a failure keeps what is shown.
   const loadShots = useCallback(
@@ -239,12 +278,7 @@ export function HZDRShotPage() {
       if (!source_key) {
         return Promise.resolve()
       }
-      fetch(`/contextfile/campaign/${source_key}/me/results`)
-        .then((response) => (response.ok ? response.json() : undefined))
-        .then(setContextResults)
-        .catch(() => {
-          if (!quiet) setContextResults(undefined)
-        })
+      loadContext(quiet)
 
       return fetch(`/metadata/hzdr/sources/${source_key}/shots`)
         .then((response) => requireJson<HZDRShot[]>(response))
@@ -280,7 +314,7 @@ export function HZDRShotPage() {
           if (!quiet) setDataState('error')
         })
     },
-    [source_key]
+    [loadContext, source_key]
   )
 
   const loadShotPageData = useCallback(() => {
@@ -721,10 +755,7 @@ export function HZDRShotPage() {
             ),
           }
         })
-        fetch(`/contextfile/campaign/${source_key}/me/results`)
-          .then((response) => (response.ok ? response.json() : undefined))
-          .then(setContextResults)
-          .catch(() => undefined)
+        loadContext()
       })
       .catch(() => {
         setSelectedCell((currentCell) =>
@@ -1035,6 +1066,17 @@ export function HZDRShotPage() {
                       Restore column layout
                     </Button>
                   </Group>
+                ) : null}
+                {contextStatus !== 'idle' ? (
+                  <Text
+                    size="sm"
+                    c={contextStatus === 'error' ? 'red' : 'dimmed'}
+                    role="status"
+                  >
+                    {contextStatus === 'loading'
+                      ? 'Calculating context columns...'
+                      : 'Some context results could not load. Use Refresh context to try again.'}
+                  </Text>
                 ) : null}
                 <Card withBorder radius={4} p={0}>
                   {dataState === 'error' ? (
@@ -1387,16 +1429,12 @@ export function HZDRShotPage() {
                                         const row = contextRowsByShot.get(
                                           getShotRowKey(shot)
                                         )
+                                        const pending =
+                                          !row && contextStatus === 'loading'
                                         const error = row?.errors[column.name]
                                         const value = row?.values[column.name]
                                         const preview =
                                           row?.previews?.[column.name]
-                                        const trendValues =
-                                          isScalarContextValue(value, preview)
-                                            ? buildContextTrendValues(
-                                                column.name
-                                              )
-                                            : undefined
                                         const cell = (
                                           <Table.Td
                                             key={column.name}
@@ -1404,11 +1442,21 @@ export function HZDRShotPage() {
                                           >
                                             <button
                                               type="button"
+                                              disabled={pending}
                                               onClick={(event) => {
                                                 event.stopPropagation()
                                                 setSelectedRowKey(
                                                   getShotRowKey(shot)
                                                 )
+                                                const trendValues =
+                                                  isScalarContextValue(
+                                                    value,
+                                                    preview
+                                                  )
+                                                    ? buildContextTrendValues(
+                                                        column.name
+                                                      )
+                                                    : undefined
                                                 setSelectedCell({
                                                   shotNumber: shot.shot_number,
                                                   rowKey: getShotRowKey(shot),
@@ -1425,7 +1473,11 @@ export function HZDRShotPage() {
                                               }}
                                               style={cellButtonStyle}
                                             >
-                                              {error ? (
+                                              {pending ? (
+                                                <Text size="xs" c="dimmed">
+                                                  Pending
+                                                </Text>
+                                              ) : error ? (
                                                 isMissingContextValueError(
                                                   error
                                                 ) ? (
@@ -1477,17 +1529,8 @@ export function HZDRShotPage() {
                   <Button
                     size="xs"
                     variant="subtle"
-                    onClick={() => {
-                      if (!source_key) {
-                        return
-                      }
-                      fetch(`/contextfile/campaign/${source_key}/me/results`)
-                        .then((response) =>
-                          response.ok ? response.json() : undefined
-                        )
-                        .then(setContextResults)
-                        .catch(() => undefined)
-                    }}
+                    disabled={contextStatus === 'loading'}
+                    onClick={() => loadContext()}
                   >
                     Refresh context
                   </Button>

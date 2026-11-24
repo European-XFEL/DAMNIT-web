@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -189,7 +190,8 @@ describe('shot page quick filters and keyboard', () => {
 
   async function renderPage(
     entry = '/source/demo',
-    contextColumns: { name: string; title: string }[] = []
+    contextColumns: { name: string; title: string }[] = [],
+    contextResponse?: Response
   ) {
     vi.stubGlobal(
       'ResizeObserver',
@@ -209,6 +211,9 @@ describe('shot page quick filters and keyboard', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string) => {
+        if (url.endsWith('/me/results') && contextResponse) {
+          return Promise.resolve(contextResponse)
+        }
         const value =
           url === `${base}/shots`
             ? shots
@@ -245,6 +250,51 @@ describe('shot page quick filters and keyboard', () => {
     )
     return table
   }
+
+  it('shows calculated columns while values are still arriving', async () => {
+    let stream!: ReadableStreamDefaultController<Uint8Array>
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        stream = controller
+      },
+    })
+    const response = new Response(body, {
+      headers: { 'content-type': 'application/x-ndjson' },
+    })
+    const table = await renderPage('/source/demo', [], response)
+    const send = (message: object) =>
+      stream.enqueue(new TextEncoder().encode(`${JSON.stringify(message)}\n`))
+    await act(async () => {
+      send({ columns: [{ name: 'energy', title: 'Recorded energy' }] })
+    })
+    expect(
+      await within(table).findByTitle('Sort by Recorded energy')
+    ).toBeInTheDocument()
+    expect(within(table).getAllByText('Pending')).toHaveLength(shots.length)
+    await act(async () => {
+      send({
+        rows: [
+          {
+            shot_number: shots[0].shot_number,
+            shot_key: shots[0].shot_key,
+            values: { energy: 12.5 },
+            errors: {},
+          },
+        ],
+      })
+    })
+    expect(await within(table).findByText('12.500')).toBeInTheDocument()
+    expect(
+      screen.getByText('Calculating context columns...')
+    ).toBeInTheDocument()
+    await act(async () => {
+      send({ complete: true })
+      stream.close()
+    })
+    await waitFor(() =>
+      expect(screen.queryByText('Calculating context columns...')).toBeNull()
+    )
+  })
 
   it('shows linked additions alongside existing columns and restores the saved layout', async () => {
     const user = userEvent.setup()

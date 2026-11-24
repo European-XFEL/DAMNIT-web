@@ -178,10 +178,12 @@ function DatasetPreview({
   input,
   shotLabel,
   title,
+  compact,
 }: {
   input: Extract<ColumnPreviewInput, { source: 'hdf5' }>
   shotLabel: string
   title: string
+  compact: boolean
 }) {
   if (input.loading) {
     return (
@@ -223,7 +225,11 @@ function DatasetPreview({
       </Section>
       {opensAs === 'image' && input.display !== 'hdf5' ? (
         <Section title="On double-click">
-          <CanvasImage values={preview.preview as number[][]} />
+          <CanvasImage
+            values={preview.preview as number[][]}
+            maxWidth={compact ? 160 : undefined}
+            maxHeight={compact ? 144 : undefined}
+          />
           <Text size="xs" c="dimmed">
             Shown reduced; the cell panel opens the shot's own image.
           </Text>
@@ -241,6 +247,7 @@ function DatasetPreview({
             )}
             title={title}
             xLabel="sample"
+            height={compact ? 132 : undefined}
           />
         </Section>
       ) : null}
@@ -258,11 +265,13 @@ export function ColumnPreview({
   input,
   exampleShot,
   shots,
+  compact = false,
 }: {
   title: string
   input: ColumnPreviewInput
   exampleShot?: HZDRShot
   shots: HZDRShot[]
+  compact?: boolean
 }) {
   const shotLabel = exampleShot ? `Shot ${exampleShot.shot_number}` : '-'
 
@@ -279,7 +288,12 @@ export function ColumnPreview({
   if (input.source === 'hdf5') {
     return (
       <Paper withBorder radius={4} p="sm">
-        <DatasetPreview input={input} shotLabel={shotLabel} title={title} />
+        <DatasetPreview
+          input={input}
+          shotLabel={shotLabel}
+          title={title}
+          compact={compact}
+        />
       </Paper>
     )
   }
@@ -291,6 +305,7 @@ export function ColumnPreview({
       exampleShot={exampleShot}
       shots={shots}
       shotLabel={shotLabel}
+      compact={compact}
     />
   )
 }
@@ -301,12 +316,14 @@ function MetadataPreview({
   exampleShot,
   shots,
   shotLabel,
+  compact,
 }: {
   title: string
   input: Extract<ColumnPreviewInput, { source: 'metadata' }>
   exampleShot?: HZDRShot
   shots: HZDRShot[]
   shotLabel: string
+  compact: boolean
 }) {
   // Every shot is read once per campaign and field, not on each render.
   const across = useMemo(
@@ -347,6 +364,7 @@ function MetadataPreview({
               values={across.numbers}
               title={title}
               xLabel="shot"
+              height={compact ? 132 : undefined}
             />
           ) : (
             <LabelBars labels={across.labels} recorded={across.recorded} />

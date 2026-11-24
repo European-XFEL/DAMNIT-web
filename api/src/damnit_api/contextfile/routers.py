@@ -1,15 +1,27 @@
 import inspect
+import json
 import re
 import sys
 import types
 from collections import UserDict
+from collections.abc import AsyncIterator, Iterator
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-from anyio import CapacityLimiter, to_thread
+from anyio import (
+    BrokenResourceError,
+    CapacityLimiter,
+    EndOfStream,
+    create_memory_object_stream,
+    create_task_group,
+    from_thread,
+    move_on_after,
+    to_thread,
+)
 from anyio import Path as APath
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from ..auth.dependencies import OAuthUserInfo
 from ..metadata.hzdr_event import LEGACY_KEY_MAP
@@ -25,6 +37,7 @@ router = APIRouter(prefix="/contextfile")
 SLUG_PATTERN = re.compile(r"[^a-zA-Z0-9_.-]+")
 # Context evaluation temporarily installs the damnit_ctx module globally.
 _CONTEXT_EVALUATIONS = CapacityLimiter(1)
+_RESULTS_STREAM = "application/x-ndjson"
 
 
 async def get_proposal_info(proposal_num: str):  # noqa: RUF029
@@ -167,17 +180,24 @@ def get_campaign_column_suggestions(
     }
 
 
-@router.get("/campaign/{campaign}/me/results")
+@router.get("/campaign/{campaign}/me/results", response_model=None)
 async def get_campaign_context_results(
     campaign: str,
     user: OAuthUserInfo,
-) -> dict:
+    request: Request,
+) -> dict | StreamingResponse:
     """Run this user's active context file against HZDR source shots."""
     context_path = _campaign_context_path(campaign, user, "context.py")
     _ensure_context_file(context_path, campaign, user)
     # Read the saved source before yielding to keep the snapshot consistent with
     # writes in the API. The slow catalog/HDF5 work runs in a worker thread.
     context_content = context_path.read_text(encoding="utf-8")
+    if _RESULTS_STREAM in request.headers.get("accept", ""):
+        return StreamingResponse(
+            _stream_campaign_context(campaign, context_path, context_content),
+            media_type=_RESULTS_STREAM,
+            headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store"},
+        )
     return await to_thread.run_sync(
         _evaluate_campaign_context,
         campaign,
@@ -187,16 +207,77 @@ async def get_campaign_context_results(
     )
 
 
-def _evaluate_campaign_context(
-    campaign: str, context_path: Path, context_content: str
-) -> dict:
+def _context_shots(campaign: str) -> list[HZDRShot]:
     provider = HZDRSourceProvider(settings.metadata)
     source = provider.get_source(campaign)
     if source is None:
         raise HTTPException(status_code=404, detail="Unknown HZDR source")
     # Context code opens hdf5_path itself, so hand it the path this host reads.
-    shots = [provider.with_local_paths(shot) for shot in source.shots]
-    return _run_hzdr_context_file(context_path, shots, context_content=context_content)
+    return [provider.with_local_paths(shot) for shot in source.shots]
+
+
+def _evaluate_campaign_context(
+    campaign: str, context_path: Path, context_content: str
+) -> dict:
+    return _run_hzdr_context_file(
+        context_path, _context_shots(campaign), context_content=context_content
+    )
+
+
+async def _stream_campaign_context(
+    campaign: str, context_path: Path, context_content: str
+) -> AsyncIterator[str]:
+    """Publish columns first and keep the response alive during slow reads."""
+    send, receive = create_memory_object_stream[str](2)
+
+    def evaluate() -> None:
+        for message in _context_messages(campaign, context_path, context_content):
+            from_thread.run(send.send, json.dumps(message) + "\n")
+
+    async def produce() -> None:
+        async with send:
+            try:
+                await to_thread.run_sync(evaluate, limiter=_CONTEXT_EVALUATIONS)
+            except BrokenResourceError:
+                return
+            except Exception:
+                with suppress(BrokenResourceError):
+                    await send.send(
+                        '{"error":"Could not calculate context columns."}\n'
+                    )
+
+    async with receive, create_task_group() as tasks:
+        tasks.start_soon(produce)
+        try:
+            while True:
+                line = "\n"
+                try:
+                    with move_on_after(5):
+                        line = await receive.receive()
+                except EndOfStream:
+                    break
+                yield line
+        finally:
+            tasks.cancel_scope.cancel()
+
+
+def _context_messages(
+    campaign: str, context_path: Path, context_content: str
+) -> Iterator[dict]:
+    columns, rows = _context_evaluation(
+        context_path, _context_shots(campaign), context_content
+    )
+    yield {"columns": columns}
+    batch = []
+    for row in rows:
+        from_thread.check_cancelled()
+        batch.append(row)
+        if len(batch) == 12:
+            yield {"rows": batch}
+            batch = []
+    if batch:
+        yield {"rows": batch}
+    yield {"complete": True}
 
 
 async def _write_campaign_context(
@@ -309,13 +390,29 @@ def _run_hzdr_context_file(
     context_path: Path, shots: list[HZDRShot], *, context_content: str | None = None
 ) -> dict:
     """Execute context variables and return shot-indexed table values."""
+    columns, rows = _context_evaluation(context_path, shots, context_content)
+    return {"columns": columns, "rows": list(rows)}
+
+
+def _context_evaluation(
+    context_path: Path, shots: list[HZDRShot], context_content: str | None
+) -> tuple[list[dict[str, str]], Iterator[dict]]:
     # Legacy generated functions query by shot_number. Keep those lookups local
     # to the record being evaluated: numbers repeat across days and versions.
     evaluation_shots = list(shots)
     variables = _load_context_variables(
         context_path, evaluation_shots, context_content=context_content
     )
-    rows = []
+    columns = [
+        {"name": name, "title": getattr(variable, "_damnit_title", name)}
+        for name, variable in variables.items()
+    ]
+    return columns, _context_rows(shots, evaluation_shots, variables)
+
+
+def _context_rows(
+    shots: list[HZDRShot], evaluation_shots: list[HZDRShot], variables: dict
+) -> Iterator[dict]:
     for shot in shots:
         evaluation_shots[:] = [shot]
         values = {}
@@ -334,24 +431,14 @@ def _run_hzdr_context_file(
             except Exception as exc:
                 values[name] = None
                 errors[name] = f"{type(exc).__name__}: {exc}"
-        rows.append({
+        yield {
             "shot_number": shot.shot_number,
             "shot_key": shot.shot_key,
             "labfrog_record_id": shot.labfrog_record_id,
             "values": values,
             "errors": errors,
             "previews": previews,
-        })
-    return {
-        "columns": [
-            {
-                "name": name,
-                "title": getattr(variable, "_damnit_title", name),
-            }
-            for name, variable in variables.items()
-        ],
-        "rows": rows,
-    }
+        }
 
 
 def _load_context_variables(
