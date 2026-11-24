@@ -135,6 +135,7 @@ async def test_each_type_of_value_arrives_with_its_dtype(local_client):
         "pulse_energy": "array1d",
         "detector_image": "image",
         "trace_plot": "image",
+        "trace_plotly": "number",
     }
 
 
@@ -167,7 +168,7 @@ async def test_tags_come_from_the_context_file(local_client):
 
     variables_by_tag = {name: sorted(tag["variables"]) for name, tag in tags.items()}
     assert variables_by_tag == {
-        "Analysis": ["amplitude", "fit", "trace_plot"],
+        "Analysis": ["amplitude", "fit", "trace_plot", "trace_plotly"],
         "Beam": ["attenuator", "beam_on", "transmission"],
         "Detector": ["detector_image"],
         "Run details": ["n_trains", "sample_name"],
@@ -201,6 +202,14 @@ async def test_a_dataarray_keeps_its_dimension_and_train_ids_through_damnit(
     array = data["extracted_data"]
     assert array["dims"] == ["trainId"]
     assert array["coords"]["trainId"] == list(range(1_001_000, 1_001_100))
+
+
+async def test_a_plotly_figure_preview_comes_back_with_no_data(local_client):
+    data = await post_query(local_client, extracted_data_query("trace_plotly"))
+
+    preview = data["extracted_data"]
+    assert preview["dtype"] == "none"
+    assert preview["data"] is None
 
 
 @pytest.mark.parametrize("damnit_dir", [NO_RUNS_DIR], ids=["no runs"])
