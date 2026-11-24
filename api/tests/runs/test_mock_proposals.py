@@ -37,21 +37,15 @@ RUNS_QUERY = f"""
     }}
 """
 
-DETECTOR_IMAGE_QUERY = f"""
-    query {{
-      extracted_data(
-        database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "detector_image"
-      )
-    }}
-"""
 
-PULSE_ENERGY_QUERY = f"""
-    query {{
-      extracted_data(
-        database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "pulse_energy"
-      )
-    }}
-"""
+def extracted_data_query(variable):
+    return f"""
+        query {{
+          extracted_data(
+            database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "{variable}"
+          )
+        }}
+    """
 
 
 async def post_query(client, query):
@@ -190,7 +184,7 @@ async def test_tags_come_from_the_context_file(local_client):
 
 
 async def test_detector_image_extracted_data_is_16_rows_of_24(local_client):
-    data = await post_query(local_client, DETECTOR_IMAGE_QUERY)
+    data = await post_query(local_client, extracted_data_query("detector_image"))
 
     image = data["extracted_data"]
     assert image["dtype"] == "array2d"
@@ -202,7 +196,7 @@ async def test_detector_image_extracted_data_is_16_rows_of_24(local_client):
 async def test_a_dataarray_keeps_its_dimension_and_train_ids_through_damnit(
     local_client,
 ):
-    data = await post_query(local_client, PULSE_ENERGY_QUERY)
+    data = await post_query(local_client, extracted_data_query("pulse_energy"))
 
     array = data["extracted_data"]
     assert array["dims"] == ["trainId"]
