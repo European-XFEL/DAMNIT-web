@@ -69,8 +69,8 @@ def pulse_energy(run, run_number: "meta#run_number"):
 
 
 # A small figure: DAMNIT stores a figure as uncompressed RGBA pixels
-@Variable(title="Trace plot", tags="Analysis")
-def trace_plot(run, run_number: "meta#run_number"):
+@Variable(title="Trace plot (matplotlib)", tags="Analysis")
+def trace_matplotlib(run, run_number: "meta#run_number"):
     figure = Figure(figsize=(2, 1.5), dpi=50)
     figure.add_subplot().plot(noise(run_number, 200))
     return figure
