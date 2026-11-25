@@ -42,7 +42,7 @@ import {
   numberCell,
   textCell,
 } from '#src/features/table/utils/cells'
-import { normalizedXAt } from '#src/utils/sparkline'
+import { pointerInContent } from '#src/utils/sparkline'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
@@ -300,8 +300,7 @@ function GlideGrid(
     return {
       ...cell,
       bounds: args.bounds,
-      normalizedX: normalizedXAt({ hoverX: args.localEventX, width, padding }),
-      contentWidth: width - 2 * padding,
+      ...pointerInContent({ hoverX: args.localEventX, width, padding }),
     }
   }
 

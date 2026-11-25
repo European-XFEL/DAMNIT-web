@@ -60,17 +60,20 @@ export const pointsInBox = (sparkline: SparklineValue, box: Box): Point[] => {
 // x, one point or many samples of it, is drawn as dots.
 export const isAtOneX = ({ x }: SparklineValue) => x[0] === x.at(-1)
 
-type NormalizedXAtParams = { hoverX: number; width: number; padding: number }
+type PointerInContentParams = { hoverX: number; width: number; padding: number }
 
 // Where the pointer is across the box's content, from 0 at its left edge to 1
 // at its right, when the pointer is `hoverX` px into the box.
-export const normalizedXAt = ({
+export const pointerInContent = ({
   hoverX,
   width,
   padding,
-}: NormalizedXAtParams): number => {
+}: PointerInContentParams): HoveredIndexAtParams => {
   const contentWidth = width - 2 * padding
-  return clamp((hoverX - padding) / contentWidth, 0, 1)
+  return {
+    normalizedX: clamp((hoverX - padding) / contentWidth, 0, 1),
+    contentWidth,
+  }
 }
 
 const valueAt = ({ x, y }: SparklineValue, at: number) => {

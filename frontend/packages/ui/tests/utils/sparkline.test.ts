@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   hoveredIndexAt,
   isAtOneX,
-  normalizedXAt,
+  pointerInContent,
   pointsInBox,
 } from '#src/utils/sparkline'
 
@@ -80,16 +80,19 @@ describe('isAtOneX', () => {
   })
 })
 
-describe('normalizedXAt', () => {
+describe('pointerInContent', () => {
+  const at = (hoverX: number) =>
+    pointerInContent({ hoverX, width: 116, padding: 8 })
+
   // A 116 px cell leaves 100 px between the 8 px pads.
   test('measures the pointer across the content between the pads', () => {
-    expect(normalizedXAt({ hoverX: 8, width: 116, padding: 8 })).toBe(0)
-    expect(normalizedXAt({ hoverX: 58, width: 116, padding: 8 })).toBe(0.5)
-    expect(normalizedXAt({ hoverX: 108, width: 116, padding: 8 })).toBe(1)
+    expect(at(8)).toEqual({ normalizedX: 0, contentWidth: 100 })
+    expect(at(58)).toEqual({ normalizedX: 0.5, contentWidth: 100 })
+    expect(at(108)).toEqual({ normalizedX: 1, contentWidth: 100 })
   })
 
   test('clamps a pointer in the padding to the ends', () => {
-    expect(normalizedXAt({ hoverX: 0, width: 116, padding: 8 })).toBe(0)
-    expect(normalizedXAt({ hoverX: 116, width: 116, padding: 8 })).toBe(1)
+    expect(at(0).normalizedX).toBe(0)
+    expect(at(116).normalizedX).toBe(1)
   })
 })

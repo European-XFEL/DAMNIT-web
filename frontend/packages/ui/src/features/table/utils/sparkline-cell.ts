@@ -12,7 +12,7 @@ import {
   SPARKLINE_COLOR,
   hoveredIndexAt,
   isAtOneX,
-  normalizedXAt,
+  pointerInContent,
   pointsInBox,
   type Point,
   type SparklineValue,
@@ -96,12 +96,12 @@ export const makeSparklineCellRenderer = ({
     ctx.clip()
 
     if (hoverX !== undefined) {
-      const normalizedX = normalizedXAt({
+      const pointer = pointerInContent({
         hoverX,
         width: rect.width,
         padding: paddingX,
       })
-      const index = hoveredIndexAt(cell.data, { normalizedX, contentWidth })
+      const index = hoveredIndexAt(cell.data, pointer)
       drawRing(ctx, { center: points[index], color: ringColor })
     }
 

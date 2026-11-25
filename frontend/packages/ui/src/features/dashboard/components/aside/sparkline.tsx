@@ -12,7 +12,7 @@ import {
   SPARKLINE_COLOR,
   hoveredIndexAt,
   isAtOneX,
-  normalizedXAt,
+  pointerInContent,
   pointsInBox,
   type SparklineValue,
 } from '#src/utils/sparkline'
@@ -67,12 +67,8 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
     const box = event.currentTarget
     const offsetX = event.clientX - box.getBoundingClientRect().left
-    const normalizedX = normalizedXAt({
-      hoverX: offsetX,
-      width,
-      padding: INSET,
-    })
-    const index = hoveredIndexAt({ x, y }, { normalizedX, contentWidth })
+    const pointer = pointerInContent({ hoverX: offsetX, width, padding: INSET })
+    const index = hoveredIndexAt({ x, y }, pointer)
     if (index === hovered) {
       return
     }
