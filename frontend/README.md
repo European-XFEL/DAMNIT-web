@@ -137,6 +137,25 @@ via `#tests/support/...`.
 The mocked suite is called `integration` in its folder, its script and its CI
 check. Here that word means the app against a mocked API.
 
+### Which level a new test takes
+
+A new test takes the first of these levels that can show its behavior:
+
+1. `*.test.ts`: logic with no DOM.
+2. `*.test.tsx`: one component or hook, with the store, the Apollo cache or a
+   memory router when it reads them. A grid ref is faked.
+3. A mocked spec: anything that needs the drawn grid, the app's route table,
+   the HTTP or websocket client, or a whole page.
+4. An e2e spec: one per workflow, to show that the API's real answers reach
+   the page.
+
+Only the app has a mocked suite. A site or demo test that needs a page is an
+e2e spec in that app's suite.
+
+The grid is tested only through Playwright, for two reasons. Its drivers send
+Playwright's mouse events. Vitest draws in fallback fonts, so a column width
+measured there is not the one users see.
+
 Before the first Playwright run, install Chromium with
 `pnpm playwright:install`. `pnpm e2e:app` also needs the API installed once.
 For that install, how the app's two suites run and the integration suite's
