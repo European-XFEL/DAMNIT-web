@@ -5,7 +5,7 @@ import cx from 'clsx'
 import { line } from 'd3-shape'
 import { clamp } from 'lodash-es'
 
-import { SparklinePoint } from '#src/features/table/components/tooltips/sparkline-point'
+import { SparklinePoint } from '#src/components/tooltips/sparkline-point'
 import {
   LINE_WIDTH,
   RING_RADIUS,

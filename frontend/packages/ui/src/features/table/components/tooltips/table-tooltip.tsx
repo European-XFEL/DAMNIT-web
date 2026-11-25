@@ -15,10 +15,10 @@ import {
 } from 'react-laag'
 
 import CellErrorCard from '#src/components/feedback/cell-error-card'
+import { SparklinePoint } from '#src/components/tooltips/sparkline-point'
 import { type CellError } from '#src/utils/cell-errors'
 import { assertNever } from '#src/utils/asserts'
 
-import { SparklinePoint } from './sparkline-point'
 import classes from './table-tooltip.module.css'
 
 // react-laag's Arrow type lists two props @types/react 18.3 dropped, while its
