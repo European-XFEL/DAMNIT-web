@@ -29,7 +29,7 @@ scrollbar. Drop the patch once that is fixed.
 The patch only recognises scrollbars that take layout space. Overlay scrollbars
 sit over the client box, so a press on one looks exactly like a press on a cell
 and still gets through. Covered by
-`e2e/tests/app/table/scrollbar-drag.spec.ts`.
+`apps/app/tests/integration/table/scrollbar-drag.spec.ts`.
 
 ### A resize past the last column never says which column was grabbed
 
@@ -48,7 +48,7 @@ The press has somewhere to land because the grid is sized to its columns plus
 the width of a scrollbar (`data-editor.tsx`, `idealWidth`), whether or not one is
 drawn, leaving a strip of dead space beside the last column. Headless Chromium
 hides scrollbars, which makes that width zero and the strip disappear, so
-`e2e/tests/app/table/resize-past-last-column.spec.ts` turns them back on with
+`apps/app/tests/integration/table/resize-past-last-column.spec.ts` turns them back on with
 `ignoreDefaultArgs: ['--hide-scrollbars']`.
 
 Still present on upstream `main`, and not yet reported there.
@@ -75,7 +75,7 @@ horizontally:
 
 A predicate that only names sticky columns never shows either, since sticky
 columns keep their position. Covered by
-`e2e/tests/app/table/grid-lines-after-scroll.spec.ts`, apart from
+`apps/app/tests/integration/table/grid-lines-after-scroll.spec.ts`, apart from
 `drawExtraRowThemes`, which the table never reaches: no column sets its own
 `bgCell`.
 
@@ -123,4 +123,4 @@ The exported image still draws its text in a system font, because an SVG
 drawn as an image cannot load the page's web fonts.
 
 Still present on upstream `master`, and not yet reported there. Covered by the
-camera button test in `e2e/tests/app/plots/summary-plot.spec.ts`.
+camera button test in `apps/app/tests/integration/plots/summary-plot.spec.ts`.

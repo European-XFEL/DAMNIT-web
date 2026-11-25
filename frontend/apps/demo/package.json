@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "imports": {
+    "#tests/*": "./tests/*.ts"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -44,6 +47,8 @@
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
+    "@damnit-frontend/testing": "workspace:*",
+    "@playwright/test": "catalog:testing",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",

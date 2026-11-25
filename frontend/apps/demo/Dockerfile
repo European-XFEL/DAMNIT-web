@@ -20,6 +20,7 @@ COPY ${APP_DIR}/package.json ${APP_DIR}/
 COPY packages/ui/package.json packages/ui/
 COPY packages/shared/package.json packages/shared/
 COPY packages/config/package.json packages/config/
+COPY packages/testing/package.json packages/testing/
 
 # Install workspace dependencies
 RUN pnpm install --recursive --frozen-lockfile
