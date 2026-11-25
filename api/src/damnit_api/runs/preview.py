@@ -22,7 +22,7 @@ def get_preview_data(proposal, run_id, variable):
     try:
         var_data = Damnit(path)[*run_id, variable]
     except KeyError:
-        return standardize(None, name=variable, dtype=DamnitType.NONE.value)
+        return empty_preview(variable)
 
     data = var_data.preview_data(data_fallback=False)
     if data is not None:
@@ -50,7 +50,7 @@ def get_preview_data(proposal, run_id, variable):
     try:
         dtype = get_damnit_type(data, type_hint=type_hint)
     except ValueError:
-        return standardize(None, name=variable, dtype=DamnitType.NONE.value)
+        return empty_preview(variable)
 
     attrs = None
     match dtype:
@@ -248,3 +248,7 @@ def standardize(data, *, name="default", dtype=None, attrs=None):
         result["dtype"] = dtype
 
     return result
+
+
+def empty_preview(name):
+    return standardize(None, name=name, dtype=DamnitType.NONE.value)
