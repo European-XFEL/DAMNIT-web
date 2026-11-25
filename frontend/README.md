@@ -120,19 +120,20 @@ VITE_API = "http://127.0.0.1:30200"
 The frontend has five levels of tests, told apart by what is real in each.
 Run every command from the `frontend` folder.
 
-| Level                  | What is real                                                                     | Where it lives                               | Command                          | CI check               |
-| ---------------------- | -------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------- | ---------------------- |
-| `*.test.ts`            | Logic in Node, with no DOM                                                       | `packages/ui/tests`, `packages/shared/tests` | `pnpm test:node`                 | `unit`                 |
-| `*.test.tsx`           | Components with the store and the Apollo cache, in Chromium, with no app started | `packages/ui/tests`                          | `pnpm test:browser`              | `unit`                 |
-| Mocked spec            | The whole app in Chromium; the test answers every request                        | `apps/app/tests/integration`                 | `pnpm integration`               | `integration`          |
-| App e2e spec           | The app's production build against the real API; the test answers nothing        | `apps/app/tests/e2e`                         | `pnpm e2e:app`                   | `e2e-app`              |
-| Site and demo e2e spec | Each app's production build; the test answers nothing                            | `apps/site/tests/e2e`, `apps/demo/tests/e2e` | `pnpm e2e:site`, `pnpm e2e:demo` | `e2e-site`, `e2e-demo` |
+| Level                  | What is real                                                                     | Where it lives                               | Command                                    | CI check               |
+| ---------------------- | -------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------ | ---------------------- |
+| `*.test.ts`            | Logic in Node, with no DOM                                                       | `packages/ui/tests`, `packages/shared/tests` | `pnpm test:unit:node`                      | `unit`                 |
+| `*.test.tsx`           | Components with the store and the Apollo cache, in Chromium, with no app started | `packages/ui/tests`                          | `pnpm test:unit:browser`                   | `unit`                 |
+| Mocked spec            | The whole app in Chromium; the test answers every request                        | `apps/app/tests/integration`                 | `pnpm test:integration`                    | `integration`          |
+| App e2e spec           | The app's production build against the real API; the test answers nothing        | `apps/app/tests/e2e`                         | `pnpm test:e2e:app`                        | `e2e-app`              |
+| Site and demo e2e spec | Each app's production build; the test answers nothing                            | `apps/site/tests/e2e`, `apps/demo/tests/e2e` | `pnpm test:e2e:site`, `pnpm test:e2e:demo` | `e2e-site`, `e2e-demo` |
 
-`pnpm test` runs both Vitest levels, and the `unit` check runs it in CI. The
-mock API's own test lives in `packages/shared/tests`. Shared runs Vitest with
-its defaults, so every test there runs in Node, whatever its extension. Shared
-test helpers (the render wrapper, the Node setup) live in
-`packages/ui/tests/support` and are imported via `#tests/support/...`.
+`pnpm test:unit`, or `pnpm test` for short, runs both Vitest levels, and the
+`unit` check runs it in CI. The mock API's own test lives in
+`packages/shared/tests`. Shared runs Vitest with its defaults, so every test
+there runs in Node, whatever its extension. Shared test helpers (the render
+wrapper, the Node setup) live in `packages/ui/tests/support` and are imported
+via `#tests/support/...`.
 
 The mocked suite is called `integration` in its folder, its script and its CI
 check. Here that word means the app against a mocked API.
@@ -157,7 +158,7 @@ Playwright's mouse events. Vitest draws in fallback fonts, so a column width
 measured there is not the one users see.
 
 Before the first Playwright run, install Chromium with
-`pnpm playwright:install`. `pnpm e2e:app` also needs the API installed once.
+`pnpm playwright:install`. `pnpm test:e2e:app` also needs the API installed once.
 For that install, how the app's two suites run and the integration suite's
 layout, see [`apps/app/tests/README.md`](apps/app/tests/README.md). For the
 drivers every suite shares, see [`packages/testing/README.md`](packages/testing/README.md).
