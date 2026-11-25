@@ -212,6 +212,19 @@ async def test_a_plotly_figure_preview_comes_back_with_no_data(local_client):
     assert preview["data"] is None
 
 
+async def test_an_array_over_the_size_limit_comes_back_with_no_data(
+    local_client, monkeypatch
+):
+    monkeypatch.setattr("damnit_api.runs.preview.PREVIEW_LIMIT_BYTES", 2000)
+
+    image = await post_query(local_client, extracted_data_query("detector_image"))
+    array = await post_query(local_client, extracted_data_query("pulse_energy"))
+
+    assert image["extracted_data"]["dtype"] == "none"
+    assert image["extracted_data"]["data"] is None
+    assert array["extracted_data"]["dims"] == ["trainId"]
+
+
 @pytest.mark.parametrize("damnit_dir", [NO_RUNS_DIR], ids=["no runs"])
 async def test_a_proposal_with_no_runs_lists_its_variables_and_no_runs(local_client):
     metadata = (await post_query(local_client, METADATA_QUERY))["metadata"]
