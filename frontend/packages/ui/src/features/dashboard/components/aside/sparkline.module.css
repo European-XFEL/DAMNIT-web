@@ -1,0 +1,33 @@
+/* Its svg is drawn at the width this box measures, so the svg must not
+   size the box, or the box could never measure smaller. */
+.box {
+  position: relative;
+  contain: inline-size;
+}
+
+.svg {
+  display: block;
+}
+
+.anchor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+}
+
+/* The table's card: Mantine's tooltip turns light in the dark scheme. */
+.card {
+  --tooltip-bg: light-dark(
+    var(--mantine-color-gray-9),
+    var(--mantine-color-dark-5)
+  );
+  --tooltip-color: var(--mantine-color-white);
+  --tooltip-radius: 4px;
+
+  padding: 4px 8px;
+  box-shadow:
+    0 0 0 1px var(--floating-border-color),
+    var(--mantine-shadow-md);
+}
