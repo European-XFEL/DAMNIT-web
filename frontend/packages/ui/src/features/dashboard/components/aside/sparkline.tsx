@@ -22,10 +22,10 @@ import classes from './sparkline.module.css'
 // otherwise cut.
 const INSET = 4
 
-// An 11 px square turned on its corner pokes out 8 px, the table card's arrow.
-// Mantine adds half the square to the offset, so 2 px more puts its tip on the box.
+// An 11 px square turned on its corner pokes out 8 px, the table card's arrow,
+// so a 7.5 px gap puts its tip on the box.
 const ARROW_SIZE = 11
-const ARROW_OFFSET = 2
+const CARD_OFFSET = { mainAxis: 7.5 }
 
 type SparklineProps = SparklineValue & {
   label: string
@@ -133,7 +133,7 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
           position="top"
           withArrow
           arrowSize={ARROW_SIZE}
-          offset={ARROW_OFFSET}
+          offset={CARD_OFFSET}
           transitionProps={{ duration: 0 }}
           positionDependencies={[ring[0]]}
           classNames={{ tooltip: classes.card }}
