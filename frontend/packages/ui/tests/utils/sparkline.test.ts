@@ -15,6 +15,39 @@ describe('hoveredIndexAt', () => {
     expect(hoveredIndexAt(wide, { normalizedX: 0, contentWidth })).toBe(0)
     expect(hoveredIndexAt(wide, { normalizedX: 1, contentWidth })).toBe(5)
   })
+
+  test('picks a spike less than a pixel from its neighbors', () => {
+    const spike = { x: [0, 40.1, 40.45, 40.8, 100], y: [1, 1, 8, 1, 1] }
+
+    expect(hoveredIndexAt(spike, { normalizedX: 0.4, contentWidth })).toBe(2)
+  })
+
+  test('picks a spike just after a long fall from a far point', () => {
+    const fall = { x: [0, 40.1, 40.45, 40.8, 100], y: [20, 1, 8, 1, 1] }
+
+    expect(hoveredIndexAt(fall, { normalizedX: 0.4, contentWidth })).toBe(2)
+    expect(
+      hoveredIndexAt(fall, { normalizedX: 34 / 84, contentWidth: 84 })
+    ).toBe(2)
+  })
+
+  test('picks the far end of a stack of samples at one x', () => {
+    const stack = { x: [1, 2, 2, 2, 3], y: [0, 5, 9, -4, 1] }
+
+    expect(hoveredIndexAt(stack, { normalizedX: 0.5, contentWidth })).toBe(2)
+  })
+
+  test('picks the sample furthest from the mean when every x is the same', () => {
+    const column = { x: [2, 2, 2], y: [5, 9, -4] }
+
+    expect(hoveredIndexAt(column, { normalizedX: 0.5, contentWidth })).toBe(2)
+  })
+
+  test('breaks a tie toward the point nearer the pointer', () => {
+    const flat = { x: [0, 49.7, 50.2, 100], y: [1, 1, 1, 1] }
+
+    expect(hoveredIndexAt(flat, { normalizedX: 0.5, contentWidth })).toBe(2)
+  })
 })
 
 describe('scaleToBox', () => {
