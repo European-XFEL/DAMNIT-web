@@ -6,6 +6,10 @@ behaviour; the merge PR has the details.
 
 ## 2026-11-24
 
+Released as **hzdr-v0.3.2**: the HZDR fork's root package, frontend and damnit-api all
+read 0.3.2. The API was already 0.3.2 (for `frontend_commit`); the root and frontend
+follow it, so one number names the release.
+
 ### Slow context columns leave shot loading responsive
 
 The shot table evaluates its active context in a worker, with one evaluation
