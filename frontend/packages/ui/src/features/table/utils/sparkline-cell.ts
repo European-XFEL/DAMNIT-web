@@ -4,7 +4,6 @@ import {
   type CustomRenderer,
 } from '@glideapps/glide-data-grid'
 import { line } from 'd3-shape'
-import { clamp } from 'lodash-es'
 
 import {
   LINE_WIDTH,
@@ -12,7 +11,10 @@ import {
   RING_WIDTH,
   SPARKLINE_COLOR,
   hoveredIndexAt,
-  scaleToBox,
+  isAtOneX,
+  normalizedXAt,
+  pointsInBox,
+  type Point,
   type SparklineValue,
 } from '#src/utils/sparkline'
 
@@ -23,21 +25,6 @@ export type SparklineCellProps = SparklineValue & {
 }
 
 export type SparklineCell = CustomCell<SparklineCellProps>
-
-type NormalizedXAtParams = { hoverX: number; width: number; padding: number }
-
-// Where the pointer is across the cell's content, from 0 at its left edge to 1
-// at its right, when the pointer is `hoverX` px into the cell.
-export const normalizedXAt = ({
-  hoverX,
-  width,
-  padding,
-}: NormalizedXAtParams): number => {
-  const contentWidth = width - 2 * padding
-  return clamp((hoverX - padding) / contentWidth, 0, 1)
-}
-
-type Point = [number, number]
 
 type DrawRingOptions = { center: Point; color: string }
 
@@ -86,24 +73,19 @@ export const makeSparklineCellRenderer = ({
   // A sparkline has no width of its own, so a fit would land on Glide's 150px.
   measure: () => width,
   draw: ({ ctx, rect, theme, hoverX }, cell) => {
-    const { x, y } = cell.data
-    if (x.length === 0) {
+    if (cell.data.x.length === 0) {
       return
     }
 
     const paddingX = theme.cellHorizontalPadding
     const paddingY = theme.cellVerticalPadding
     const contentWidth = rect.width - 2 * paddingX
-    const scale = scaleToBox(cell.data, {
+    const points = pointsInBox(cell.data, {
       left: rect.x + paddingX,
       top: rect.y + paddingY,
       width: contentWidth,
       height: rect.height - 2 * paddingY,
     })
-    const points = x.map((value, index): Point => [
-      scale.x(value),
-      scale.y(y[index]),
-    ])
 
     ctx.save()
 
@@ -123,9 +105,7 @@ export const makeSparklineCellRenderer = ({
       drawRing(ctx, { center: points[index], color: ringColor })
     }
 
-    // Canvas strokes nothing for a path of no length, round cap or not, and
-    // a sparkline at one x is one point or many samples of it.
-    if (x[0] === x[x.length - 1]) {
+    if (isAtOneX(cell.data)) {
       drawDots(ctx, points)
     } else {
       drawLine(ctx, points)

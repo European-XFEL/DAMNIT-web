@@ -1,9 +1,8 @@
-import { useState, type PointerEvent, type RefObject } from 'react'
+import { useMemo, useState, type PointerEvent, type RefObject } from 'react'
 import { Tooltip } from '@mantine/core'
 import { useElementSize } from '@mantine/hooks'
 import cx from 'clsx'
 import { line } from 'd3-shape'
-import { clamp } from 'lodash-es'
 
 import { SparklinePoint } from '#src/components/tooltips/sparkline-point'
 import {
@@ -12,7 +11,9 @@ import {
   RING_WIDTH,
   SPARKLINE_COLOR,
   hoveredIndexAt,
-  scaleToBox,
+  isAtOneX,
+  normalizedXAt,
+  pointsInBox,
   type SparklineValue,
 } from '#src/utils/sparkline'
 
@@ -32,8 +33,6 @@ type SparklineProps = SparklineValue & {
   className?: string
 }
 
-type Point = [number, number]
-
 // Drawn in the box's own px, never through a scaled viewBox, which would
 // stretch the ring and the stroke with the line.
 function Sparkline({ x, y, label, className }: SparklineProps) {
@@ -49,25 +48,30 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
   const hovered = hover?.x === x ? hover.index : null
 
   const contentWidth = width - 2 * INSET
-  const scale = scaleToBox(
-    { x, y },
-    {
-      left: INSET,
-      top: INSET,
-      width: contentWidth,
-      height: height - 2 * INSET,
-    }
-  )
-  const points = x.map((value, index): Point => [
-    scale.x(value),
-    scale.y(y[index]),
-  ])
+  // A hover moves only the ring, and the points and the path take about 130 ms
+  // to build at the 240,000 points a dense run sends.
+  const { points, path } = useMemo(() => {
+    const inBox = pointsInBox(
+      { x, y },
+      {
+        left: INSET,
+        top: INSET,
+        width: contentWidth,
+        height: height - 2 * INSET,
+      }
+    )
+    return { points: inBox, path: line()(inBox) ?? undefined }
+  }, [x, y, contentWidth, height])
   const ring = hovered != null ? points[hovered] : undefined
 
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
     const box = event.currentTarget
     const offsetX = event.clientX - box.getBoundingClientRect().left
-    const normalizedX = clamp((offsetX - INSET) / contentWidth, 0, 1)
+    const normalizedX = normalizedXAt({
+      hoverX: offsetX,
+      width,
+      padding: INSET,
+    })
     const index = hoveredIndexAt({ x, y }, { normalizedX, contentWidth })
     if (index === hovered) {
       return
@@ -100,9 +104,7 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
               strokeWidth={RING_WIDTH}
             />
           )}
-          {/* A path of no length strokes nothing, round cap or not, and a
-              sparkline at one x is one point or many samples of it. */}
-          {x[0] === x.at(-1) ? (
+          {isAtOneX({ x, y }) ? (
             points.map(([dotX, dotY], index) => (
               <circle
                 key={index}
@@ -114,7 +116,7 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
             ))
           ) : (
             <path
-              d={line()(points) ?? undefined}
+              d={path}
               fill="none"
               stroke={SPARKLINE_COLOR}
               strokeWidth={LINE_WIDTH}

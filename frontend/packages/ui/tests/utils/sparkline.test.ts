@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest'
 
-import { hoveredIndexAt, scaleToBox } from '#src/utils/sparkline'
+import {
+  hoveredIndexAt,
+  isAtOneX,
+  normalizedXAt,
+  pointsInBox,
+} from '#src/utils/sparkline'
 
 describe('hoveredIndexAt', () => {
   const wide = { x: [0, 1, 2, 10, 11, 12], y: [0, 0, 0, 0, 0, 0] }
@@ -50,19 +55,41 @@ describe('hoveredIndexAt', () => {
   })
 })
 
-describe('scaleToBox', () => {
+describe('pointsInBox', () => {
   const box = { left: 8, top: 3, width: 100, height: 30 }
 
   test('puts the lowest y at the bottom and the highest at the top', () => {
-    const scale = scaleToBox({ x: [0, 4], y: [-1, 1] }, box)
-
-    expect([scale.x(0), scale.y(-1)]).toEqual([8, 33])
-    expect([scale.x(4), scale.y(1)]).toEqual([108, 3])
+    expect(pointsInBox({ x: [0, 4], y: [-1, 1] }, box)).toEqual([
+      [8, 33],
+      [108, 3],
+    ])
   })
 
   test('puts a single point in the center of the box', () => {
-    const scale = scaleToBox({ x: [3], y: [7] }, box)
+    expect(pointsInBox({ x: [3], y: [7] }, box)).toEqual([[58, 18]])
+  })
+})
 
-    expect([scale.x(3), scale.y(7)]).toEqual([58, 18])
+describe('isAtOneX', () => {
+  test.each([
+    { x: [3], dots: true },
+    { x: [3, 3, 3], dots: true },
+    { x: [0, 1, 2], dots: false },
+  ])('a sparkline at x $x draws dots: $dots', ({ x, dots }) => {
+    expect(isAtOneX({ x, y: x })).toBe(dots)
+  })
+})
+
+describe('normalizedXAt', () => {
+  // A 116 px cell leaves 100 px between the 8 px pads.
+  test('measures the pointer across the content between the pads', () => {
+    expect(normalizedXAt({ hoverX: 8, width: 116, padding: 8 })).toBe(0)
+    expect(normalizedXAt({ hoverX: 58, width: 116, padding: 8 })).toBe(0.5)
+    expect(normalizedXAt({ hoverX: 108, width: 116, padding: 8 })).toBe(1)
+  })
+
+  test('clamps a pointer in the padding to the ends', () => {
+    expect(normalizedXAt({ hoverX: 0, width: 116, padding: 8 })).toBe(0)
+    expect(normalizedXAt({ hoverX: 116, width: 116, padding: 8 })).toBe(1)
   })
 })

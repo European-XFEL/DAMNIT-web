@@ -42,7 +42,7 @@ import {
   numberCell,
   textCell,
 } from '#src/features/table/utils/cells'
-import { normalizedXAt } from '#src/features/table/utils/sparkline-cell'
+import { normalizedXAt } from '#src/utils/sparkline'
 import { getColumnTitle, getGroupTitle } from '#src/data/table/column-title'
 import { leftBorder } from '#src/features/table/utils/column-lines'
 import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'

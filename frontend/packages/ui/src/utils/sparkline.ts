@@ -9,7 +9,7 @@ import {
   mean,
   range,
 } from 'd3-array'
-import { constant } from 'lodash-es'
+import { clamp, constant } from 'lodash-es'
 
 export const SPARKLINE_COLOR = '#4C78A8'
 export const LINE_WIDTH = 1
@@ -18,6 +18,10 @@ export const RING_WIDTH = 0.75
 
 // An array1d summary: the points DAMNIT stored, sorted by x.
 export type SparklineValue = { x: number[]; y: number[] }
+
+export type Point = [number, number]
+
+type Box = { left: number; top: number; width: number; height: number }
 
 // d3-scale's scaleLinear does the same, but adds 25 kB minified (10 kB
 // gzipped) to the bundle, measured with esbuild.
@@ -36,16 +40,38 @@ const linear = (
  * Maps a sparkline's x and y extents onto the box, with y growing upwards. A
  * constant x or y sits in the middle of the box.
  */
-export const scaleToBox = (
-  sparkline: SparklineValue,
-  box: { left: number; top: number; width: number; height: number }
-) => ({
+const scaleToBox = (sparkline: SparklineValue, box: Box) => ({
   x: linear(extent(sparkline.x), { start: box.left, length: box.width }),
   y: linear(extent(sparkline.y), {
     start: box.top + box.height,
     length: -box.height,
   }),
 })
+
+export const pointsInBox = (sparkline: SparklineValue, box: Box): Point[] => {
+  const scale = scaleToBox(sparkline, box)
+  return sparkline.x.map((value, index) => [
+    scale.x(value),
+    scale.y(sparkline.y[index]),
+  ])
+}
+
+// A path of no length strokes nothing, round cap or not, so a sparkline at one
+// x, one point or many samples of it, is drawn as dots.
+export const isAtOneX = ({ x }: SparklineValue) => x[0] === x.at(-1)
+
+type NormalizedXAtParams = { hoverX: number; width: number; padding: number }
+
+// Where the pointer is across the box's content, from 0 at its left edge to 1
+// at its right, when the pointer is `hoverX` px into the box.
+export const normalizedXAt = ({
+  hoverX,
+  width,
+  padding,
+}: NormalizedXAtParams): number => {
+  const contentWidth = width - 2 * padding
+  return clamp((hoverX - padding) / contentWidth, 0, 1)
+}
 
 const valueAt = ({ x, y }: SparklineValue, at: number) => {
   const next = bisectRight(x, at)
