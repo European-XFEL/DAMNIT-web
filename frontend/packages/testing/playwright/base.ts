@@ -7,6 +7,7 @@ export const isCI = !!process.env.CI
 export const baseConfig = {
   fullyParallel: true,
   forbidOnly: isCI,
+  failOnFlakyTests: isCI,
   retries: isCI ? 2 : 0,
   reporter: 'list',
   use: {
