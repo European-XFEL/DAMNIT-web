@@ -1,6 +1,6 @@
 [project]
 name = "DAMNIT-web"
-version = "0.3.1"
+version = "0.3.2"
 description = "Monorepo for serving DAMNIT data over the web"
 authors = [{ name = "European XFEL", email = "da@xfel.eu" }]
 # Declares what LICENSE already states. The HZDR fork retains European XFEL's
