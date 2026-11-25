@@ -78,7 +78,9 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
 
   return (
     <div ref={boxRef} className={cx(classes.box, className)}>
-      {width > 0 && (
+      {/* While the panel opens, the box can be narrower than its insets,
+          which would draw the line mirrored. */}
+      {contentWidth > 0 && (
         <svg
           role="img"
           aria-label={label}
