@@ -11,8 +11,15 @@ import { columnOf } from '#tests/integration/support/example'
 
 // Registered after the fixture's routes, so Playwright's last-wins order sees
 // the page fetches first.
-async function refuseWhileDown(page: Page, operation: string) {
-  const server = { down: true, askedPages: new Set<number>() }
+async function refuseWhileDown(
+  page: Page,
+  { operation, failureReport }: { operation: string; failureReport: RegExp }
+) {
+  const server = {
+    down: true,
+    askedPages: new Set<number>(),
+    failedPages: new Set<number>(),
+  }
   await page.route('**/graphql', (route) => {
     const request = route.request()
     if (operationNameOf(request) !== operation || !server.down) {
@@ -26,31 +33,27 @@ async function refuseWhileDown(page: Page, operation: string) {
     return route.abort('failed')
   })
 
-  return server
-}
-
-// The pages the hook has given up on, once RetryLink has spent its tries.
-function watchFailedPages(page: Page, report: RegExp) {
-  const failedPages = new Set<number>()
   page.on('console', (message) => {
-    const failed = report.exec(message.text())
+    const failed = failureReport.exec(message.text())
     if (failed) {
-      failedPages.add(Number(failed[1]))
+      server.failedPages.add(Number(failed[1]))
     }
   })
 
-  return failedPages
+  return server
 }
 
 // Page 1 holds runs 1 to 10 and page 2 the rest, so a spec waits until the hook
 // has given up on every page in view. The grid's first window brings page 2.
-async function waitForEveryPageToFail(
-  server: { askedPages: Set<number> },
+async function waitForEveryPageToFail(server: {
+  askedPages: Set<number>
   failedPages: Set<number>
-) {
+}) {
   const everyPageFailed = () =>
     server.askedPages.has(2) &&
-    [...server.askedPages].every((pageNumber) => failedPages.has(pageNumber))
+    [...server.askedPages].every((pageNumber) =>
+      server.failedPages.has(pageNumber)
+    )
   await expect.poll(everyPageFailed, { timeout: 15_000 }).toBe(true)
 }
 
@@ -62,12 +65,14 @@ test('rows that failed to load fill in once the server answers, with no scroll',
   page,
   example,
 }) => {
-  const server = await refuseWhileDown(page, 'LightweightTableDataQuery')
-  const failedPages = watchFailedPages(page, /^Page (\d+) failed to load/)
+  const server = await refuseWhileDown(page, {
+    operation: 'LightweightTableDataQuery',
+    failureReport: /^Page (\d+) failed to load/,
+  })
 
   await page.goto(`proposal/${example.proposalMetadata[0].number}`)
   await expect(gridCanvas(page)).toBeVisible()
-  await waitForEveryPageToFail(server, failedPages)
+  await waitForEveryPageToFail(server)
   const trains = cell(page, { col: columnOf(example, 'n_trains'), row: 0 })
   await expect(trains).toBeEmpty()
 
@@ -81,12 +86,14 @@ test('the run count names the runs that failed to load, and Try again fills them
   page,
   example,
 }) => {
-  const server = await refuseWhileDown(page, 'LightweightTableDataQuery')
-  const failedPages = watchFailedPages(page, /^Page (\d+) failed to load/)
+  const server = await refuseWhileDown(page, {
+    operation: 'LightweightTableDataQuery',
+    failureReport: /^Page (\d+) failed to load/,
+  })
 
   // Every page in view fails, and the run count says so once.
   await page.goto(`proposal/${example.proposalMetadata[0].number}`)
-  await waitForEveryPageToFail(server, failedPages)
+  await waitForEveryPageToFail(server)
   const tinted = runCount(page, /^13 runs\. Some runs didn't load\. Try again$/)
   await expect(tinted).toBeVisible()
   await expect(
@@ -124,14 +131,13 @@ test('the run count says which values failed when only the heavy values did', as
   page,
   example,
 }) => {
-  const server = await refuseWhileDown(page, 'DeferredTableDataQuery')
-  const failedPages = watchFailedPages(
-    page,
-    /^Heavy values for page (\d+) failed to load/
-  )
+  const server = await refuseWhileDown(page, {
+    operation: 'DeferredTableDataQuery',
+    failureReport: /^Heavy values for page (\d+) failed to load/,
+  })
 
   await page.goto(`proposal/${example.proposalMetadata[0].number}`)
-  await waitForEveryPageToFail(server, failedPages)
+  await waitForEveryPageToFail(server)
 
   await expect(
     runCount(page, /^13 runs\. Some values didn't load\. Try again$/)
