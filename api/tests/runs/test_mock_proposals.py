@@ -1,12 +1,13 @@
-"""Serve the mock proposals that DAMNIT 0.4.0 wrote, in local mode.
+"""Read the mock proposals that DAMNIT 0.4.0 wrote, through the app in local mode.
 
 Each folder under `tests/mock/proposals/` is one mock proposal, built by
-`build_proposals.py` there from the folder's own `context.py`.
+`build_proposals.py` there from the folder's own `context.py`. The queries reach
+the real `runs.sqlite` and extracted data through the `runs` package.
 """
 
 import pytest
 
-from .conftest import NO_RUNS_DIR
+from ..conftest import NO_RUNS_DIR
 
 pytestmark = pytest.mark.asyncio
 
@@ -40,6 +41,14 @@ DETECTOR_IMAGE_QUERY = f"""
     query {{
       extracted_data(
         database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "detector_image"
+      )
+    }}
+"""
+
+PULSE_ENERGY_QUERY = f"""
+    query {{
+      extracted_data(
+        database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "pulse_energy"
       )
     }}
 """
@@ -129,6 +138,7 @@ async def test_each_type_of_value_arrives_with_its_dtype(local_client):
         "beam_on": "number",
         "amplitude": "string",
         "trace": "array1d",
+        "pulse_energy": "array1d",
         "detector_image": "image",
         "trace_plot": "image",
     }
@@ -168,7 +178,14 @@ async def test_tags_come_from_the_context_file(local_client):
         "Detector": ["detector_image"],
         "Run details": ["n_trains", "sample_name"],
         "Sample": ["sample_x.position", "sample_y.position"],
-        "(Untagged)": ["added_at", "proposal", "run", "start_time", "trace"],
+        "(Untagged)": [
+            "added_at",
+            "proposal",
+            "pulse_energy",
+            "run",
+            "start_time",
+            "trace",
+        ],
     }
 
 
@@ -180,6 +197,16 @@ async def test_detector_image_extracted_data_is_16_rows_of_24(local_client):
     assert image["dims"] == ["y", "x"]
     assert len(image["data"]) == 16
     assert {len(row) for row in image["data"]} == {24}
+
+
+async def test_a_dataarray_keeps_its_dimension_and_train_ids_through_damnit(
+    local_client,
+):
+    data = await post_query(local_client, PULSE_ENERGY_QUERY)
+
+    array = data["extracted_data"]
+    assert array["dims"] == ["trainId"]
+    assert array["coords"]["trainId"] == list(range(1_001_000, 1_001_100))
 
 
 @pytest.mark.parametrize("damnit_dir", [NO_RUNS_DIR], ids=["no runs"])

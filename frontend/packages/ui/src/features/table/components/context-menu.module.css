@@ -1,0 +1,27 @@
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding-right: 4px;
+
+  & > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* The item's tint, the library's gray.4 at 25%, moves to the row so it spans
+     the button column. The library sets it inline, out of the row's reach. */
+  &:hover {
+    background: alpha(var(--mantine-color-gray-4), 0.25);
+  }
+
+  & :global(.mantine-contextmenu-item-button):hover {
+    background: none;
+  }
+}
+
+/* Its icon centers on the plot icon's. */
+.newWindow {
+  flex: none;
+  margin-top: 4px;
+}

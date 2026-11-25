@@ -4,11 +4,9 @@ import pytest
 import strawberry
 from strawberry.schema.config import StrawberryConfig
 
-from damnit_api.graphql import subscriptions
 from damnit_api.graphql.directives import lightweight
-from damnit_api.graphql.metadata import fetch_metadata
 from damnit_api.graphql.queries import Query
-from damnit_api.graphql.subscriptions import Subscription, poll_proposal
+from damnit_api.graphql.subscriptions import Subscription
 from damnit_api.runs.types import SCALAR_MAP, Cell
 
 from .const import (
@@ -17,14 +15,6 @@ from .const import (
     EXAMPLE_VARIABLES,
     RUN_IDENTIFIERS,
 )
-
-
-@pytest.fixture(autouse=True)
-def reset_caches():
-    fetch_metadata.cache_clear()
-    poll_proposal.cache_clear()
-    subscriptions._last_seen_timestamp.clear()
-    return
 
 
 @pytest.fixture(autouse=True)

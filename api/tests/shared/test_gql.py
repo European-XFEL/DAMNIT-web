@@ -1,10 +1,6 @@
-from pathlib import Path
-
 import httpx
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlmodel import SQLModel
 from starlette.websockets import WebSocketDisconnect
 
 import damnit_api._db
@@ -12,14 +8,13 @@ from damnit_api._mymdc.clients import MyMdCClientMock
 from damnit_api._mymdc.ports import MyMdCPort
 from damnit_api.auth.models import OAuthUserInfo
 from damnit_api.main import create_app
-from damnit_api.metadata import models  # noqa: F401 - registers the tables
 from damnit_api.shared.settings import settings
+
+from ..conftest import MYMDC_CASSETTE
 
 # Each TestClient runs the app in a loop of its own, so the MyMdC port's
 # alru_caches, bound to an earlier loop, warn as they reset.
 pytestmark = pytest.mark.filterwarnings("ignore::async_lru.AlruCacheLoopResetWarning")
-
-MYMDC_CASSETTE = Path(__file__).parent.parent / "mock" / "mymdc" / "mymdc.yaml"
 
 USER = OAuthUserInfo(
     email="e2e-tester@example.org",
@@ -28,16 +23,6 @@ USER = OAuthUserInfo(
     name="E2e Tester",
     preferred_username="e2etester",
 )
-
-
-@pytest.fixture
-def fresh_app_db(monkeypatch, tmp_path):
-    """The app opens an empty database of its own, not the dev `dw_api.sqlite`."""
-    db_path = tmp_path / "dw_api.sqlite"
-    SQLModel.metadata.create_all(create_engine(f"sqlite:///{db_path}"))
-    monkeypatch.setattr(settings, "db_path", db_path)
-    monkeypatch.setattr(damnit_api._db, "__ENGINE", None)
-    monkeypatch.setattr(damnit_api._db, "__SESSION_LOCAL", None)
 
 
 @pytest.fixture
@@ -51,7 +36,7 @@ def mymdc_down(mocker):
 
 
 @pytest.fixture
-def app(monkeypatch, fresh_app_db):
+def app(monkeypatch, _fresh_app_db):
     async def noop_bootstrap(_settings):
         pass
 
