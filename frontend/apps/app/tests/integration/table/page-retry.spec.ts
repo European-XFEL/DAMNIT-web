@@ -19,6 +19,7 @@ async function refuseWhileDown(
     down: true,
     askedPages: new Set<number>(),
     failedPages: new Set<number>(),
+    tryingPages: new Set<number>(),
   }
   await page.route('**/graphql', (route) => {
     const request = route.request()
@@ -29,14 +30,18 @@ async function refuseWhileDown(
     const { variables } = request.postDataJSON() as {
       variables?: { page?: number }
     }
-    server.askedPages.add(variables?.page ?? 1)
+    const pageNumber = variables?.page ?? 1
+    server.askedPages.add(pageNumber)
+    server.tryingPages.add(pageNumber)
     return route.abort('failed')
   })
 
   page.on('console', (message) => {
     const failed = failureReport.exec(message.text())
     if (failed) {
-      server.failedPages.add(Number(failed[1]))
+      const pageNumber = Number(failed[1])
+      server.failedPages.add(pageNumber)
+      server.tryingPages.delete(pageNumber)
     }
   })
 
@@ -54,7 +59,9 @@ async function waitForEveryPageToFail(server: {
     [...server.askedPages].every((pageNumber) =>
       server.failedPages.has(pageNumber)
     )
-  await expect.poll(everyPageFailed, { timeout: 15_000 }).toBe(true)
+  await expect
+    .poll(everyPageFailed, { timeout: 15_000, intervals: [50] })
+    .toBe(true)
 }
 
 function runCount(page: Page, name: RegExp) {
@@ -86,6 +93,7 @@ test('the run count names the runs that failed to load, and Try again fills them
   page,
   example,
 }) => {
+  await page.clock.install()
   const server = await refuseWhileDown(page, {
     operation: 'LightweightTableDataQuery',
     failureReport: /^Page (\d+) failed to load/,
@@ -108,19 +116,35 @@ test('the run count names the runs that failed to load, and Try again fills them
     "Some runs didn't load Runs 1 to 13. Trying again"
   )
 
-  // The server comes back, and the user presses Try again, which ignores a
-  // press while a try is out.
+  // A press during a try does nothing. The jump fires the clock's due try, and
+  // the loop steps every try to failure, so only the press reaches the server.
+  const now = await page.evaluate(() => Date.now())
+  // The page's time moves on while this call travels, so pause a second ahead.
+  await page.clock.pauseAt(now + 1000)
+  await expect
+    .poll(
+      async () => {
+        if (server.tryingPages.size > 0) {
+          // RetryLink's wait between attempts, so each step fires one.
+          await page.clock.runFor(1000)
+        }
+        return server.tryingPages.size
+      },
+      { timeout: 15_000, intervals: [50] }
+    )
+    .toBe(0)
   server.down = false
-  const tryAgain = statusBar(page).getByRole('button', {
-    name: 'Try again',
-    exact: true,
-  })
+  const answered = page.waitForRequest(
+    (request) => operationNameOf(request) === 'LightweightTableDataQuery'
+  )
+  await statusBar(page)
+    .getByRole('button', { name: 'Try again', exact: true })
+    .click()
+  await answered
+
+  await page.clock.resume()
   const trains = cell(page, { col: columnOf(example, 'n_trains'), row: 0 })
-  await expect(async () => {
-    await tinted.hover({ timeout: 500 })
-    await tryAgain.click({ timeout: 500 })
-    await expect(trains).not.toBeEmpty({ timeout: 1000 })
-  }).toPass({ timeout: 10_000 })
+  await expect(trains).not.toBeEmpty()
 
   // The tint goes with the failure.
   await expect(runCount(page, /^13 runs/)).toHaveCount(0)
