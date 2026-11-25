@@ -264,10 +264,14 @@ test('new points under the pointer close the card on the old ones', async () => 
   const screen = await openRun({ client, activeVariable: 'trend' })
   const sparkline = screen.getByRole('img', { name: 'Trend' })
   await expect.element(sparkline).toBeVisible()
+
+  // Hover the last point. A locator gives no size, so the width is read from
+  // the drawing's node.
   const { width } = sparkline.element().getBoundingClientRect()
   await sparkline.hover({ position: { x: width - 1, y: 33 } })
   await expect.element(screen.getByText('y: 10')).toBeVisible()
 
+  // New data arrives under the pointer.
   writeRun(client, [
     ...RUN_6,
     { name: 'trend', value: { x: [0, 1], y: [5, 6] }, dtype: 'array1d' },
