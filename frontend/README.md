@@ -117,28 +117,31 @@ VITE_API = "http://127.0.0.1:30200"
 
 ## Testing
 
-Most tests live in `packages/ui/tests`. There the file extension decides
-where a test runs, and that is the only rule to remember:
+The frontend has five levels of tests, told apart by what is real in each.
+Run every command from the `frontend` folder.
 
-- `*.test.ts` runs in Node. Use it for pure logic (functions, reducers,
-  selectors). Fast, no DOM.
-- `*.test.tsx` runs in a real browser (Chromium). Use it for anything that
-  renders or touches the DOM (components, hooks). If it needs a DOM, name it
-  `.tsx`.
+| Level                  | What is real                                                                     | Where it lives                               | Command                          | CI check               |
+| ---------------------- | -------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------- | ---------------------- |
+| `*.test.ts`            | Logic in Node, with no DOM                                                       | `packages/ui/tests`, `packages/shared/tests` | `pnpm test:node`                 | `test`                 |
+| `*.test.tsx`           | Components with the store and the Apollo cache, in Chromium, with no app started | `packages/ui/tests`                          | `pnpm test:browser`              | `test`                 |
+| Mocked spec            | The whole app in Chromium; the test answers every request                        | `apps/app/tests/integration`                 | `pnpm integration`               | `integration`          |
+| App e2e spec           | The app's production build against the real API; the test answers nothing        | `apps/app/tests/e2e`                         | `pnpm e2e:app`                   | `e2e-app`              |
+| Site and demo e2e spec | Each app's production build; the test answers nothing                            | `apps/site/tests/e2e`, `apps/demo/tests/e2e` | `pnpm e2e:site`, `pnpm e2e:demo` | `e2e-site`, `e2e-demo` |
 
-The mock API's own test lives in `packages/shared/tests`. Shared runs Vitest
-with its defaults, so every test there runs in Node, whatever its extension.
+`pnpm test` runs both Vitest levels. The mock API's own test lives in
+`packages/shared/tests`. Shared runs Vitest with its defaults, so every test
+there runs in Node, whatever its extension. Shared test helpers (the render
+wrapper, the Node setup) live in `packages/ui/tests/support` and are imported
+via `#tests/support/...`.
 
-Run the suite from the `frontend` folder:
+The mocked suite is called `integration` in its folder, its script and its CI
+check. Here that word means the app against a mocked API.
 
-```sh
-pnpm test           # everything
-pnpm test:node      # just the Node logic tests
-pnpm test:browser   # just the browser tests
-```
-
-Shared test helpers (the render wrapper, the Node setup) live in
-`packages/ui/tests/support` and are imported via `#tests/support/...`.
+Before the first Playwright run, install Chromium with
+`pnpm playwright:install`. `pnpm e2e:app` also needs the API installed once.
+For that install, how the app's two suites run and the integration suite's
+layout, see [`apps/app/tests/README.md`](apps/app/tests/README.md). For the
+drivers every suite shares, see [`packages/testing/README.md`](packages/testing/README.md).
 
 ## Deployment
 
