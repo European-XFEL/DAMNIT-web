@@ -11,6 +11,11 @@ import {
 } from 'd3-array'
 import { constant } from 'lodash-es'
 
+export const SPARKLINE_COLOR = '#4C78A8'
+export const LINE_WIDTH = 1
+export const RING_RADIUS = 3
+export const RING_WIDTH = 0.75
+
 // An array1d summary: the points DAMNIT stored, sorted by x.
 export type SparklineValue = { x: number[]; y: number[] }
 

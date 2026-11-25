@@ -7,16 +7,16 @@ import { line } from 'd3-shape'
 import { clamp } from 'lodash-es'
 
 import {
+  LINE_WIDTH,
+  RING_RADIUS,
+  RING_WIDTH,
+  SPARKLINE_COLOR,
   hoveredIndexAt,
   scaleToBox,
   type SparklineValue,
 } from '#src/utils/sparkline'
 
 export const SPARKLINE_CELL_KIND = 'sparkline-cell'
-const SPARKLINE_COLOR = '#4C78A8'
-const LINE_WIDTH = 1
-const RING_RADIUS = 3
-const RING_WIDTH = 0.75
 
 export type SparklineCellProps = SparklineValue & {
   readonly kind: typeof SPARKLINE_CELL_KIND
