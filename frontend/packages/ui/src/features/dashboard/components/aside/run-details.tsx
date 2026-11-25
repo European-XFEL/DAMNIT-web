@@ -7,6 +7,7 @@ import SectionHeading, {
 } from '#src/components/headings/section-heading'
 import { DTYPES } from '#src/constants'
 import type { RunId } from '#src/data/table/table-data.types'
+import { toSparkline } from '#src/features/table/utils/cells'
 import { FONT_SIZE_DATA } from '#src/styles/fonts'
 import { formatDate } from '#src/utils/format'
 import {
@@ -17,6 +18,7 @@ import {
 
 import classes from './run-details.module.css'
 import type { RunEntry } from './run-entries'
+import Sparkline from './sparkline'
 import { useRunEntries } from './use-run-entries'
 
 // One line box for the title and either kind of value, so every row keeps the
@@ -34,13 +36,14 @@ function EntryValue({ entry }: EntryValueProps) {
   if (entry.state === 'blank') {
     return <DataText muted>No value</DataText>
   }
-  // The panel draws no curve, so an array reads No preview however far its
-  // value has got.
-  if (entry.dtype === DTYPES.array1d) {
-    return <DataText muted>No preview</DataText>
-  }
+  // A sparkline's height is known before it loads, so its skeleton keeps the
+  // rows below from moving when it arrives.
   if (entry.state === 'loading') {
-    return <Skeleton mt={4} h={12} w={120} radius="sm" />
+    return entry.dtype === DTYPES.array1d ? (
+      <Skeleton className={classes.sparkline} radius="sm" />
+    ) : (
+      <Skeleton mt={4} h={12} w={120} radius="sm" />
+    )
   }
 
   const { value, dtype } = entry
@@ -53,6 +56,18 @@ function EntryValue({ entry }: EntryValueProps) {
           alt={entry.title}
         />
       )
+    case DTYPES.array1d: {
+      const sparkline = toSparkline(value)
+      return sparkline ? (
+        <Sparkline
+          {...sparkline}
+          label={entry.title}
+          className={classes.sparkline}
+        />
+      ) : (
+        <DataText>{String(value)}</DataText>
+      )
+    }
     case DTYPES.number:
       return <MonoValue>{String(value)}</MonoValue>
     case DTYPES.timestamp:
@@ -96,11 +111,19 @@ function MonoValue({ children }: MonoValueProps) {
   )
 }
 
-// An image, or the skeleton standing in for one, needs the panel's width.
+// An image or a sparkline, or the skeleton standing in for one, needs the
+// panel's width, and sits under its title as it does with its variable open.
 function isStacked(entry: RunEntry) {
+  if (entry.state === 'loading') {
+    return entry.dtype === DTYPES.image || entry.dtype === DTYPES.array1d
+  }
+  if (entry.state !== 'value') {
+    return false
+  }
+
   return (
-    (entry.state === 'value' || entry.state === 'loading') &&
-    entry.dtype === DTYPES.image
+    entry.dtype === DTYPES.image ||
+    (entry.dtype === DTYPES.array1d && toSparkline(entry.value) != null)
   )
 }
 

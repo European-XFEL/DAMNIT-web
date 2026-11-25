@@ -1,6 +1,7 @@
 import { createRef } from 'react'
+import type { ApolloClient } from '@apollo/client'
 import { render } from 'vitest-browser-react'
-import { beforeEach, expect, test } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
 
 import { setupStore, type AppStore } from '#src/app/store/store'
 import { RUN_FRAGMENT } from '#src/data/table/table-data.queries'
@@ -58,10 +59,8 @@ const RUN_6: CellFixture[] = [
   { name: 'scan_type', value: 'dscan', dtype: 'string' },
 ]
 
-// The panel reads the run from the cache, so the run is written there first
-// and the link answers only the metadata.
-function runClient(cells: CellFixture[]) {
-  const client = metadataClient(METADATA)
+// As the run's subscription writes it.
+function writeRun(client: ApolloClient<object>, cells: CellFixture[]) {
   client.cache.writeFragment({
     fragment: RUN_FRAGMENT,
     data: {
@@ -79,6 +78,13 @@ function runClient(cells: CellFixture[]) {
       ),
     },
   })
+}
+
+// The panel reads the run from the cache, so the run is written there first
+// and the link answers only the metadata.
+function runClient(cells: CellFixture[]) {
+  const client = metadataClient(METADATA)
+  writeRun(client, cells)
   return client
 }
 
@@ -96,14 +102,19 @@ beforeEach(() => {
 function openRun({
   cells = RUN_6,
   activeVariable,
-}: { cells?: CellFixture[]; activeVariable?: string } = {}) {
+  client = runClient(cells),
+}: {
+  cells?: CellFixture[]
+  activeVariable?: string
+  client?: ApolloClient<object>
+} = {}) {
   if (activeVariable != null) {
     store.dispatch(
       cellActivated({ proposal: PROPOSAL, run: RUN, variable: activeVariable })
     )
   }
   return render(<DashboardAside viewRef={createRef()} onTable />, {
-    wrapper: withProviders({ store, client: runClient(cells) }),
+    wrapper: withProviders({ store, client }),
   })
 }
 
@@ -190,20 +201,80 @@ test('a value with no renderer of its own prints as the grid prints it', async (
   await expect.element(screen.getByText('true', { exact: true })).toBeVisible()
 })
 
-test('an array still held back reads No preview', async () => {
+test('a sparkline draws its points as a line', async () => {
+  const screen = await openRun({
+    cells: [
+      ...RUN_6,
+      {
+        name: 'trend',
+        value: { x: [0, 1, 2], y: [1, 3, 2] },
+        dtype: 'array1d',
+      },
+    ],
+  })
+
+  const sparkline = screen.getByRole('img', { name: 'Trend' })
+  await expect.element(sparkline).toBeVisible()
+  // A path has no role, so it is read from the drawing's node.
+  const path = sparkline.element().querySelector('path')
+  expect(path?.getAttribute('d')).toMatch(/^M[\d.]+,[\d.]+L/)
+})
+
+test('a sparkline still loading draws the skeleton', async () => {
   const screen = await openRun({
     cells: [...RUN_6, { name: 'trend', value: null, dtype: 'array1d' }],
   })
 
-  await expect.element(screen.getByText('No preview')).toBeVisible()
+  const title = screen.getByText('Trend', { exact: true })
+  await expect.element(title).toBeVisible()
+  // A skeleton has no role or text, so it is found by Mantine's class, in the
+  // row the title heads.
+  const row = title.element().parentElement
+  await vi.waitFor(() =>
+    expect(row?.querySelector('.mantine-Skeleton-root')).not.toBeNull()
+  )
 })
 
-test('an array that has arrived reads No preview too', async () => {
+// Ten thousand points put several in the pointer's pixel, so the spike there
+// is not the point nearest the pointer.
+test("hovering the open sparkline shows the x and y of the spike in the pointer's pixel", async () => {
+  const x = Array.from({ length: 10_000 }, (_, index) => index)
+  const y = x.map((value) => (value === 5003 ? 10 : 0))
   const screen = await openRun({
-    cells: [...RUN_6, { name: 'trend', value: [1, 2, 3], dtype: 'array1d' }],
+    cells: [...RUN_6, { name: 'trend', value: { x, y }, dtype: 'array1d' }],
+    activeVariable: 'trend',
   })
 
-  await expect.element(screen.getByText('No preview')).toBeVisible()
+  await screen.getByRole('img', { name: 'Trend' }).hover()
+
+  await expect.element(screen.getByText('x: 5003')).toBeVisible()
+  await expect.element(screen.getByText('y: 10')).toBeVisible()
+})
+
+// The card pointed at the last of five points, which the new sparkline lacks.
+test('new points under the pointer close the card on the old ones', async () => {
+  const client = runClient([
+    ...RUN_6,
+    {
+      name: 'trend',
+      value: { x: [0, 1, 2, 3, 4], y: [0, 0, 0, 0, 10] },
+      dtype: 'array1d',
+    },
+  ])
+  const screen = await openRun({ client, activeVariable: 'trend' })
+  const sparkline = screen.getByRole('img', { name: 'Trend' })
+  await expect.element(sparkline).toBeVisible()
+  const { width } = sparkline.element().getBoundingClientRect()
+  await sparkline.hover({ position: { x: width - 1, y: 33 } })
+  await expect.element(screen.getByText('y: 10')).toBeVisible()
+
+  writeRun(client, [
+    ...RUN_6,
+    { name: 'trend', value: { x: [0, 1], y: [5, 6] }, dtype: 'array1d' },
+  ])
+
+  await expect.element(screen.getByText('y: 10')).not.toBeInTheDocument()
+  await expect.element(screen.getByRole('img', { name: 'Trend' })).toBeVisible()
 })
 
 test('a thumbnail is named for its variable', async () => {
