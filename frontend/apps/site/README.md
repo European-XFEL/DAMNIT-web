@@ -1,6 +1,6 @@
 # DAMNIT Frontend - Site App
 
-This site is a small React + Vite application with a focus on simple static pages (e.g., hero, about).  
+This site is a small React + Vite application with a focus on simple static pages (e.g., hero, about).
 Keeping it separate from the main application allows it to be deployed independently, updated faster (e.g., for documentation), and hosted on external services such as GitHub Pages.
 
 ## Prerequisites
@@ -47,3 +47,18 @@ pnpm run build
 ```bash
 pnpm run preview
 ```
+
+## Tests
+
+`tests/e2e/` holds the Playwright suite for the site's production build. From
+the `frontend/` root:
+
+```bash
+pnpm playwright:install   # once: install the Chromium browser
+pnpm e2e:site
+```
+
+It builds the site first, which takes about a minute, and then serves it with
+`vite preview` on 6174 at `/`. Nothing is intercepted, so a change in the
+shared `packages/ui` that breaks the site fails a check. The shared
+drivers are described in `packages/testing/README.md`.

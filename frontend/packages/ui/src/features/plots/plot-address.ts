@@ -82,10 +82,6 @@ export function parsePlotAddress(
   return { plot: { source, variables: [x, y], runs } }
 }
 
-export function withWindowFlag(search: string) {
-  return search ? `${search}&${WINDOW_FLAG}` : `?${WINDOW_FLAG}`
-}
-
 // The other parts stay as written, so the runs keep their readable commas.
 export function withoutWindowFlag(search: string) {
   const parts = search

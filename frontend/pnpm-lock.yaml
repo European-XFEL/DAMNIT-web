@@ -301,6 +301,18 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@damnit-frontend/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@damnit-frontend/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+      '@playwright/test':
+        specifier: catalog:testing
+        version: 1.64.0
+      '@types/lodash-es':
+        specifier: catalog:types
+        version: 4.17.12
       '@types/node':
         specifier: catalog:types
         version: 24.19.1
@@ -425,6 +437,12 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@damnit-frontend/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+      '@playwright/test':
+        specifier: catalog:testing
+        version: 1.64.0
       '@types/node':
         specifier: catalog:types
         version: 24.19.1
@@ -477,6 +495,12 @@ importers:
       '@damnit-frontend/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@damnit-frontend/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+      '@playwright/test':
+        specifier: catalog:testing
+        version: 1.64.0
       '@types/node':
         specifier: catalog:types
         version: 24.19.1
@@ -504,42 +528,6 @@ importers:
       vite:
         specifier: catalog:tooling
         version: 7.3.7(@types/node@24.19.1)(sugarss@5.0.2(postcss@8.5.29))
-
-  e2e:
-    devDependencies:
-      '@damnit-frontend/config':
-        specifier: workspace:*
-        version: link:../packages/config
-      '@damnit-frontend/shared':
-        specifier: workspace:*
-        version: link:../packages/shared
-      '@playwright/test':
-        specifier: catalog:testing
-        version: 1.64.0
-      '@types/lodash-es':
-        specifier: catalog:types
-        version: 4.17.12
-      '@types/node':
-        specifier: catalog:types
-        version: 24.19.1
-      eslint:
-        specifier: catalog:linting
-        version: 9.39.5
-      globals:
-        specifier: catalog:linting
-        version: 16.5.0
-      graphql:
-        specifier: catalog:graphql
-        version: 16.14.2
-      lodash-es:
-        specifier: catalog:frontend
-        version: 4.18.1
-      prettier:
-        specifier: catalog:linting
-        version: 3.9.9
-      typescript:
-        specifier: catalog:tooling
-        version: 5.9.3
 
   packages/config:
     dependencies:
@@ -610,6 +598,27 @@ importers:
       vitest:
         specifier: catalog:testing
         version: 4.1.11(@types/node@24.19.1)(@vitest/browser-playwright@4.1.11)(msw@2.12.7(@types/node@24.19.1)(typescript@5.9.3))(vite@7.3.7(@types/node@24.19.1)(sugarss@5.0.2(postcss@8.5.29)))
+
+  packages/testing:
+    devDependencies:
+      '@damnit-frontend/config':
+        specifier: workspace:*
+        version: link:../config
+      '@playwright/test':
+        specifier: catalog:testing
+        version: 1.64.0
+      '@types/node':
+        specifier: catalog:types
+        version: 24.19.1
+      eslint:
+        specifier: catalog:linting
+        version: 9.39.5
+      prettier:
+        specifier: catalog:linting
+        version: 3.9.9
+      typescript:
+        specifier: catalog:tooling
+        version: 5.9.3
 
   packages/ui:
     dependencies:

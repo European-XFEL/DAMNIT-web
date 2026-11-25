@@ -1,0 +1,17 @@
+import { test, expect } from '@damnit-frontend/testing/playwright/production'
+import {
+  selectedRunTab,
+  selectRun,
+} from '@damnit-frontend/testing/playwright/table'
+import { openMockProposal, RUNS } from '#tests/e2e/support/real-api'
+
+test('selecting a run shows its values in the run panel', async ({ page }) => {
+  await openMockProposal(page)
+
+  await selectRun(page, { row: RUNS.indexOf(3) })
+
+  const panel = page.getByRole('complementary')
+  await expect(selectedRunTab(page)).toHaveText('Run 3')
+  await expect(panel.getByText('Sample 003')).toBeVisible()
+  await expect(panel.getByText('103', { exact: true })).toBeVisible()
+})

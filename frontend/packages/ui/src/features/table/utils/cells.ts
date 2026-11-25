@@ -32,6 +32,7 @@ import {
 } from '#src/data/table/table-data.types'
 import { formatDate, formatNumber } from '#src/utils/format'
 import { FONT_FAMILY_MONO, FONT_SIZES } from '#src/styles/fonts'
+import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 
 // Width of the small skeleton/error box, shared by loadingCell and the
 // error cell renderer so a no-data cell and an errored cell line up.
@@ -284,16 +285,25 @@ export const makeErrorCellRenderer = (
   }
 }
 
+type FitLoadingCell = LoadingCell & { fitWidth?: number }
+
 export const loadingCell = (
   _: CellValue,
-  params: Partial<BaseGridCell> = {}
-): LoadingCell => {
+  params: Partial<BaseGridCell> & Pick<FitLoadingCell, 'fitWidth'> = {}
+): FitLoadingCell => {
   return {
     kind: GridCellKind.Loading,
     allowOverlay: false,
     skeletonWidth: SKELETON_BOX_WIDTH,
     ...params,
   }
+}
+
+// Glide's 50 px per image, one per DAMNIT value, and the sparkline width
+// `glide-grid.tsx` hands `makeCellRenderers`.
+const LOADED_WIDTHS: Partial<Record<string, number>> = {
+  [DTYPES.image]: 50,
+  [DTYPES.array1d]: DEFAULT_COLUMN_WIDTH,
 }
 
 type CellFactory = (value: CellValue, params: Partial<BaseGridCell>) => GridCell
@@ -329,7 +339,9 @@ export const getCell = ({
   // has no value for and nothing is coming, so it draws as empty rather than
   // loading forever. This is `isHeavySummaryBlank` with the null already
   // established, kept inline because the grid re-asks on every redraw.
-  return HEAVY_DTYPES.has(dtype) ? loadingCell(value, options) : textCell('')
+  return HEAVY_DTYPES.has(dtype)
+    ? loadingCell(value, { ...options, fitWidth: LOADED_WIDTHS[dtype] })
+    : textCell('')
 }
 
 type GlideRenderer = (typeof AllCellRenderers)[number]
@@ -367,10 +379,19 @@ const withShortImageText = (renderer: GlideRenderer): GlideRenderer =>
       }
     : renderer
 
-// Glide's own renderers, each measuring in the font its cell is drawn in, and
-// an image read out to screen readers as a word rather than its data.
-export const GRID_RENDERERS =
-  AllCellRenderers.map(measureInCellFont).map(withShortImageText)
+// Glide measures every loading cell as 120 px, so one gray box would set the
+// column's fit. It counts as the value it stands in for, or 0 when unknown.
+const withLoadedWidth = (renderer: GlideRenderer): GlideRenderer =>
+  renderer.kind === GridCellKind.Loading
+    ? {
+        ...renderer,
+        measure: (_ctx, cell) => (cell as FitLoadingCell).fitWidth ?? 0,
+      }
+    : renderer
+
+export const GRID_RENDERERS = AllCellRenderers.map(measureInCellFont)
+  .map(withShortImageText)
+  .map(withLoadedWidth)
 
 // Every renderer the grid draws with. The sparkline ships with no `measure`, so
 // a fit would land on Glide's 150px default; a sparkline has no width of its own.
