@@ -228,6 +228,7 @@ DAMNIT_CLASS_PATH = "damnit_api.runs.preview.Damnit"
 
 def mock_damnit_class(mocker, *, data, type_hint):
     mocker.patch("damnit_api.runs.preview.get_damnit_path", return_value="/mock/path")
+    mocker.patch("damnit_api.runs.preview.read_raw_size", return_value=data.nbytes)
     mock_variable = mocker.Mock(
         preview_data=mocker.Mock(return_value=None),
         type_hint=mocker.Mock(return_value=type_hint),

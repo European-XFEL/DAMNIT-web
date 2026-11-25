@@ -1,15 +1,20 @@
 import io
 
+import h5py
 import numpy as np
 import xarray as xr
 from damnit.api import Damnit, DataType
 from PIL import Image
 
+from .. import get_logger
 from ..shared.const import DamnitType
 from ..utils import b64image
 from .sqlite import get_damnit_path
 
 NOT_SUPPORTED_MESSAGE = "Not supported."
+PREVIEW_LIMIT_BYTES = 256 * 1024**2
+
+logger = get_logger()
 
 
 def get_preview_data(proposal, run_id, variable):
@@ -28,6 +33,18 @@ def get_preview_data(proposal, run_id, variable):
     if data is not None:
         type_hint = None
     else:
+        raw_size = read_raw_size(var_data)
+        if raw_size > PREVIEW_LIMIT_BYTES:
+            logger.warning(
+                "Preview refused: array too large",
+                proposal=proposal,
+                run_id=run_id,
+                variable=variable,
+                raw_bytes=raw_size,
+                limit_bytes=PREVIEW_LIMIT_BYTES,
+            )
+            return empty_preview(variable)
+
         data = var_data.read()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
         type_hint = (
             var_data.type_hint()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
@@ -65,6 +82,23 @@ def get_preview_data(proposal, run_id, variable):
             data = get_png(data)
 
     return standardize(data, name=variable, dtype=dtype.value, attrs=attrs)
+
+
+def read_raw_size(var_data):
+    """Return the size in bytes of a variable's datasets, from the HDF5 headers.
+
+    The size is shape times itemsize, so it reads no data and ignores compression.
+    """
+    with h5py.File(var_data.file) as f:
+        group = f.get(var_data.name)
+
+        # User-editable variables live in the database, summary-only ones in .reduced
+        if not isinstance(group, h5py.Group):
+            return 0
+
+        return sum(
+            obj.nbytes for obj in group.values() if isinstance(obj, h5py.Dataset)
+        )
 
 
 def get_png(data):
