@@ -209,6 +209,22 @@ test('a failed array leaves the list', () => {
   expect(namesOf(blocks)).not.toContain('trend')
 })
 
+test('a sparkline with no points is blank', () => {
+  const sparkline = cell({
+    name: 'trend',
+    value: { x: [], y: [] },
+    dtype: 'array1d',
+  })
+  const variables = [...VARIABLES, TREND]
+  const cells = [...RUN_6, sparkline]
+
+  const listed = entriesOf({ variables, cells })
+  const open = entriesOf({ variables, cells, activeVariable: 'trend' })
+
+  expect(namesOf(listed)).not.toContain('trend')
+  expect(itemsOf(open)).toMatchObject([{ name: 'trend', state: 'blank' }])
+})
+
 test('the active variable is listed alone, in its group', () => {
   const blocks = entriesOf({ activeVariable: 'sample.x' })
 
