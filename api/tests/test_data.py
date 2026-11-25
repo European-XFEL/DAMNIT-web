@@ -302,6 +302,18 @@ def test_get_preview_data_image(mocker):
     assert actual["attrs"] == {"shape": list(data.shape[:2])}
 
 
+def test_get_preview_data_refuses_a_dataset_without_reading_it(mocker):
+    data = xr.Dataset({"energy": ("trainId", np.random.rand(4))})
+
+    damnit = mock_damnit_class(mocker, data=data, type_hint=DataType.Dataset)
+    actual = get_preview_data(proposal=1234, run_id=(None, 1), variable="some_dataset")
+
+    assert actual["dtype"] == DamnitType.NONE.value
+    assert actual["data"] is None
+    # Reading the whole value is the cost, and the result looks the same with it
+    damnit.return_value.__getitem__.return_value.read.assert_not_called()
+
+
 # -----------------------------------------------------------------------------
 # helpers
 

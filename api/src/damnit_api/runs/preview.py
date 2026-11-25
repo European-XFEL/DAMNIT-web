@@ -13,11 +13,17 @@ from .sqlite import get_damnit_path
 
 NOT_SUPPORTED_MESSAGE = "Not supported."
 PREVIEW_LIMIT_BYTES = 256 * 1024**2
+UNSUPPORTED_TYPE_HINTS = {
+    DataType.DataFrame,
+    DataType.Dataset,
+    DataType.PlotlyFigure,
+    DataType.Series,
+}
 
 logger = get_logger()
 
 
-def get_preview_data(proposal, run_id, variable):
+def get_preview_data(proposal, run_id, variable):  # noqa: C901
     """Return the preview of one run's variable in `proposal`'s database.
 
     `run_id` is a `(proposal, run)` pair; a proposal of None reads the
@@ -33,6 +39,12 @@ def get_preview_data(proposal, run_id, variable):
     if data is not None:
         type_hint = None
     else:
+        type_hint = (
+            var_data.type_hint()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
+        )
+        if type_hint in UNSUPPORTED_TYPE_HINTS:
+            return empty_preview(variable)
+
         raw_size = read_raw_size(var_data)
         if raw_size > PREVIEW_LIMIT_BYTES:
             logger.warning(
@@ -46,9 +58,6 @@ def get_preview_data(proposal, run_id, variable):
             return empty_preview(variable)
 
         data = var_data.read()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-        type_hint = (
-            var_data.type_hint()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
-        )
 
     match type(data):
         case np.ndarray:
