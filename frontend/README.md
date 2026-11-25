@@ -122,17 +122,17 @@ Run every command from the `frontend` folder.
 
 | Level                  | What is real                                                                     | Where it lives                               | Command                          | CI check               |
 | ---------------------- | -------------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------- | ---------------------- |
-| `*.test.ts`            | Logic in Node, with no DOM                                                       | `packages/ui/tests`, `packages/shared/tests` | `pnpm test:node`                 | `test`                 |
-| `*.test.tsx`           | Components with the store and the Apollo cache, in Chromium, with no app started | `packages/ui/tests`                          | `pnpm test:browser`              | `test`                 |
+| `*.test.ts`            | Logic in Node, with no DOM                                                       | `packages/ui/tests`, `packages/shared/tests` | `pnpm test:node`                 | `unit`                 |
+| `*.test.tsx`           | Components with the store and the Apollo cache, in Chromium, with no app started | `packages/ui/tests`                          | `pnpm test:browser`              | `unit`                 |
 | Mocked spec            | The whole app in Chromium; the test answers every request                        | `apps/app/tests/integration`                 | `pnpm integration`               | `integration`          |
 | App e2e spec           | The app's production build against the real API; the test answers nothing        | `apps/app/tests/e2e`                         | `pnpm e2e:app`                   | `e2e-app`              |
 | Site and demo e2e spec | Each app's production build; the test answers nothing                            | `apps/site/tests/e2e`, `apps/demo/tests/e2e` | `pnpm e2e:site`, `pnpm e2e:demo` | `e2e-site`, `e2e-demo` |
 
-`pnpm test` runs both Vitest levels. The mock API's own test lives in
-`packages/shared/tests`. Shared runs Vitest with its defaults, so every test
-there runs in Node, whatever its extension. Shared test helpers (the render
-wrapper, the Node setup) live in `packages/ui/tests/support` and are imported
-via `#tests/support/...`.
+`pnpm test` runs both Vitest levels, and the `unit` check runs it in CI. The
+mock API's own test lives in `packages/shared/tests`. Shared runs Vitest with
+its defaults, so every test there runs in Node, whatever its extension. Shared
+test helpers (the render wrapper, the Node setup) live in
+`packages/ui/tests/support` and are imported via `#tests/support/...`.
 
 The mocked suite is called `integration` in its folder, its script and its CI
 check. Here that word means the app against a mocked API.
