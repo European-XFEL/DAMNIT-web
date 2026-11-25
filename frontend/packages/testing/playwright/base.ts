@@ -11,6 +11,6 @@ export const baseConfig = {
   retries: isCI ? 2 : 0,
   reporter: 'list',
   use: {
-    trace: 'on-first-retry',
+    trace: 'retain-on-first-failure',
   },
 } satisfies PlaywrightTestConfig
