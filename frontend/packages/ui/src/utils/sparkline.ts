@@ -1,4 +1,15 @@
-import { bisectCenter, extent } from 'd3-array'
+import {
+  ascending,
+  bisectCenter,
+  bisectLeft,
+  bisectRight,
+  descending,
+  extent,
+  greatest,
+  mean,
+  range,
+} from 'd3-array'
+import { constant } from 'lodash-es'
 
 // An array1d summary: the points DAMNIT stored, sorted by x.
 export type SparklineValue = { x: number[]; y: number[] }
@@ -31,14 +42,61 @@ export const scaleToBox = (
   }),
 })
 
+const valueAt = ({ x, y }: SparklineValue, at: number) => {
+  const next = bisectRight(x, at)
+  if (next === 0) {
+    return y[0]
+  }
+  if (next === x.length) {
+    return y[x.length - 1]
+  }
+
+  const previous = next - 1
+  const slope = (y[next] - y[previous]) / (x[next] - x[previous])
+
+  return y[previous] + slope * (at - x[previous])
+}
+
+export type HoveredIndexAtParams = { normalizedX: number; contentWidth: number }
+
 /**
- * The index of the stored point nearest to a pointer `fraction` of the way
- * across the sparkline's x extent, which `x` holds sorted.
+ * The index of the stored point to ring with the pointer `normalizedX` of the
+ * way across a sparkline drawn `contentWidth` px wide. It picks the point
+ * within half a pixel of the pointer that lies furthest from the baseline. The
+ * baseline is the straight line between the sparkline's y a pixel left of the
+ * pointer and a pixel right of it. That point is the tip of the stroke the
+ * sparkline draws across the pointer's pixel. A sparkline at one x measures
+ * from the window's mean y instead. A tie goes to the point nearer the
+ * pointer, and an empty window to the nearest point.
  */
-export const nearestIndexAt = (
-  x: readonly number[],
-  fraction: number
+export const hoveredIndexAt = (
+  sparkline: SparklineValue,
+  { normalizedX, contentWidth }: HoveredIndexAtParams
 ): number => {
+  const { x, y } = sparkline
   const [min = 0, max = 0] = extent(x)
-  return bisectCenter(x, min + fraction * (max - min))
+  const target = min + normalizedX * (max - min)
+  const halfPixel = (0.5 * (max - min)) / contentWidth
+  const lo = bisectLeft(x, target - halfPixel)
+  const hi = bisectRight(x, target + halfPixel)
+  if (lo >= hi) {
+    return bisectCenter(x, target)
+  }
+
+  const from = target - 2 * halfPixel
+  const to = target + 2 * halfPixel
+  const start = valueAt(sparkline, from)
+  const slope = (valueAt(sparkline, to) - start) / (to - from)
+  const baselineAt =
+    min === max
+      ? constant(mean(y.slice(lo, hi)) ?? 0)
+      : (at: number) => start + slope * (at - from)
+  const distance = (i: number) => Math.abs(y[i] - baselineAt(x[i]))
+
+  return greatest(
+    range(lo, hi),
+    (a, b) =>
+      ascending(distance(a), distance(b)) ||
+      descending(Math.abs(x[a] - target), Math.abs(x[b] - target))
+  ) as number
 }

@@ -292,17 +292,16 @@ function GlideGrid(
       return undefined
     }
 
+    // The draw's rect is the column's width; Glide's bounds add the grid line.
+    const width = gridColumns[args.location[0]].width
+    const padding =
+      gridTheme.cellHorizontalPadding ?? getDefaultTheme().cellHorizontalPadding
+
     return {
       ...cell,
       bounds: args.bounds,
-      // The draw's rect is the column's width; Glide's bounds add the grid line.
-      normalizedX: normalizedXAt({
-        hoverX: args.localEventX,
-        width: gridColumns[args.location[0]].width,
-        padding:
-          gridTheme.cellHorizontalPadding ??
-          getDefaultTheme().cellHorizontalPadding,
-      }),
+      normalizedX: normalizedXAt({ hoverX: args.localEventX, width, padding }),
+      contentWidth: width - 2 * padding,
     }
   }
 

@@ -63,13 +63,18 @@ function Table({ onPlot, plotWindowLink }: TableProps) {
     gridRef.current?.resetColumnWidths()
   }, [])
 
-  const resolveTooltip: ResolveTooltip = ({ run, variable, normalizedX }) => {
+  const resolveTooltip: ResolveTooltip = ({
+    run,
+    variable,
+    normalizedX,
+    contentWidth,
+  }) => {
     const cell = cellsByKey.get(runKey(run))?.get(variable)
     if (!cell) {
       return undefined
     }
 
-    return cellTooltip(cell, { normalizedX })
+    return cellTooltip(cell, { normalizedX, contentWidth })
   }
   const {
     onCellHovered,

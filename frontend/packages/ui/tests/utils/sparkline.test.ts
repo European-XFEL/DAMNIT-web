@@ -1,18 +1,19 @@
 import { describe, expect, test } from 'vitest'
 
-import { nearestIndexAt, scaleToBox } from '#src/utils/sparkline'
+import { hoveredIndexAt, scaleToBox } from '#src/utils/sparkline'
 
-describe('nearestIndexAt', () => {
-  const x = [0, 1, 2, 10, 11, 12]
+describe('hoveredIndexAt', () => {
+  const wide = { x: [0, 1, 2, 10, 11, 12], y: [0, 0, 0, 0, 0, 0] }
+  const contentWidth = 100
 
   test('picks the nearer point across a wide x step', () => {
-    expect(nearestIndexAt(x, 5 / 12)).toBe(2)
-    expect(nearestIndexAt(x, 7 / 12)).toBe(3)
+    expect(hoveredIndexAt(wide, { normalizedX: 5 / 12, contentWidth })).toBe(2)
+    expect(hoveredIndexAt(wide, { normalizedX: 7 / 12, contentWidth })).toBe(3)
   })
 
   test('picks the end points at the ends of the cell', () => {
-    expect(nearestIndexAt(x, 0)).toBe(0)
-    expect(nearestIndexAt(x, 1)).toBe(5)
+    expect(hoveredIndexAt(wide, { normalizedX: 0, contentWidth })).toBe(0)
+    expect(hoveredIndexAt(wide, { normalizedX: 1, contentWidth })).toBe(5)
   })
 })
 

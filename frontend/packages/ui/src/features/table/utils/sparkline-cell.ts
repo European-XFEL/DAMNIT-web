@@ -7,7 +7,7 @@ import { line } from 'd3-shape'
 import { clamp } from 'lodash-es'
 
 import {
-  nearestIndexAt,
+  hoveredIndexAt,
   scaleToBox,
   type SparklineValue,
 } from '#src/utils/sparkline'
@@ -93,10 +93,11 @@ export const makeSparklineCellRenderer = ({
 
     const paddingX = theme.cellHorizontalPadding
     const paddingY = theme.cellVerticalPadding
+    const contentWidth = rect.width - 2 * paddingX
     const scale = scaleToBox(cell.data, {
       left: rect.x + paddingX,
       top: rect.y + paddingY,
-      width: rect.width - 2 * paddingX,
+      width: contentWidth,
       height: rect.height - 2 * paddingY,
     })
     const points = x.map((value, index): Point => [
@@ -113,12 +114,12 @@ export const makeSparklineCellRenderer = ({
     ctx.clip()
 
     if (hoverX !== undefined) {
-      const fraction = normalizedXAt({
+      const normalizedX = normalizedXAt({
         hoverX,
         width: rect.width,
         padding: paddingX,
       })
-      const index = nearestIndexAt(x, fraction)
+      const index = hoveredIndexAt(cell.data, { normalizedX, contentWidth })
       drawRing(ctx, { center: points[index], color: ringColor })
     }
 
