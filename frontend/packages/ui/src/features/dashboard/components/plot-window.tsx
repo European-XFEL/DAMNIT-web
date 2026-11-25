@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router'
+import type { MouseEvent, ReactNode } from 'react'
+import { Link, useHref, useLocation, useNavigate } from 'react-router'
 import { ActionIcon, AppShell, VisuallyHidden, rem } from '@mantine/core'
 import { IconLayoutDashboard } from '@tabler/icons-react'
 
@@ -7,7 +7,12 @@ import Logo from '#src/components/headers/logo'
 import StatusBar from '#src/components/statuses/status-bar'
 import { ViewStatusProvider } from '#src/components/statuses/view-status'
 import { useIsMobile } from '#src/features/dashboard/hooks/use-is-mobile'
+import {
+  askOpenerToShow,
+  raiseOpener,
+} from '#src/features/dashboard/utils/opener-messages'
 import { withoutWindowFlag } from '#src/features/plots/plot-address'
+import { isPlainClick, isPopup } from '#src/utils/popup'
 
 import classes from './plot-window.module.css'
 import HeaderButton from './header-button'
@@ -33,12 +38,42 @@ type OpenInDashboardProps = {
 function OpenInDashboard({ compact }: OpenInDashboardProps) {
   const { pathname, search } = useLocation()
   const to = { pathname, search: withoutWindowFlag(search) }
+  const href = useHref(to)
+  const navigate = useNavigate()
+
+  const showInDashboard = async (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!isPlainClick(event)) {
+      return
+    }
+
+    event.preventDefault()
+    if (await askOpenerToShow(to)) {
+      raiseOpener()
+      window.close()
+      return
+    }
+
+    if (window.open(href, '_blank')) {
+      window.close()
+      return
+    }
+
+    // A blocked tab leaves the click to the router, as a link in a tab.
+    void navigate(to)
+  }
+
+  // A window opened as a tab keeps the plain link, which turns it into the
+  // dashboard in place.
+  const onClick = isPopup()
+    ? (event: MouseEvent<HTMLAnchorElement>) => void showInDashboard(event)
+    : undefined
 
   if (compact) {
     return (
       <ActionIcon
         component={Link}
         to={to}
+        onClick={onClick}
         variant="subtle"
         color="gray"
         size="sm"
@@ -53,7 +88,7 @@ function OpenInDashboard({ compact }: OpenInDashboardProps) {
   }
 
   return (
-    <HeaderButton to={to} icon={IconLayoutDashboard}>
+    <HeaderButton to={to} onClick={onClick} icon={IconLayoutDashboard}>
       Open in dashboard
     </HeaderButton>
   )

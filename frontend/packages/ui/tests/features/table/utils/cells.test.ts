@@ -1,6 +1,7 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, onTestFinished, test, vi } from 'vitest'
 import {
   GridCellKind,
+  type GridCell,
   type ImageCell,
   type TextCell,
 } from '@glideapps/glide-data-grid'
@@ -12,12 +13,15 @@ import {
   getCell,
   GRID_RENDERERS,
   imageCell,
+  loadingCell,
+  makeCellRenderers,
   normalizedXAt,
   numberCell,
   sparklineIndexAt,
   textCell,
   toSparkline,
 } from '#src/features/table/utils/cells'
+import { DEFAULT_COLUMN_WIDTH } from '#src/features/table/utils/column-widths'
 import { DTYPES } from '#src/constants'
 
 describe('getCell', () => {
@@ -196,6 +200,55 @@ describe('GRID_RENDERERS', () => {
 
   test('reads an image cell with no image as nothing', () => {
     expect(screenReaderText(imageCell(42))).toBe('')
+  })
+
+  describe('a loading cell', () => {
+    // measureInCellFont saves and restores the canvas around every measure.
+    const canvas = { save() {}, restore() {} } as CanvasRenderingContext2D
+    const measureAs = (kind: GridCellKind, cell: GridCell) =>
+      GRID_RENDERERS.find((renderer) => renderer.kind === kind)?.measure?.(
+        canvas,
+        cell,
+        {} as never
+      )
+    const loadingWidth = (cell: GridCell) =>
+      measureAs(GridCellKind.Loading, cell)
+    const loadingCellFor = (dtype: string) =>
+      getCell({ value: undefined, dtype, options: {} })
+
+    test('measures as wide as the image it stands in for', () => {
+      const image = imageCell('http://x/y.png')
+      const imageWidth = measureAs(GridCellKind.Image, image)
+
+      expect(imageWidth).toBeGreaterThan(0)
+      expect(loadingWidth(loadingCellFor(DTYPES.image))).toBe(imageWidth)
+    })
+
+    test('measures as wide as the sparkline it stands in for', () => {
+      // The error renderer draws its glyphs into a DOM Image, which node lacks.
+      vi.stubGlobal('Image', class {})
+      onTestFinished(() => {
+        vi.unstubAllGlobals()
+      })
+      const sparkline = arrayCell({ x: [0, 1, 2], y: [3, 1, 2] })
+
+      // Glide types each custom renderer's measure as taking every custom cell.
+      const sparklineWidth = makeCellRenderers(
+        { error: 'red', missing: 'gray', skipped: 'gray' },
+        DEFAULT_COLUMN_WIDTH
+      )
+        .find(
+          (renderer) => 'isMatch' in renderer && renderer.isMatch(sparkline)
+        )
+        ?.measure?.(canvas, sparkline as never, {} as never)
+
+      expect(sparklineWidth).toBeGreaterThan(0)
+      expect(loadingWidth(loadingCellFor(DTYPES.array1d))).toBe(sparklineWidth)
+    })
+
+    test('measures 0 when the value it stands in for is unknown', () => {
+      expect(loadingWidth(loadingCell(''))).toBe(0)
+    })
   })
 })
 
