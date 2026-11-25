@@ -1,5 +1,7 @@
 import asyncio
 
+import h5py
+import numpy as np
 import pytest
 import pytest_asyncio
 from damnit.backend.db import DamnitDB
@@ -467,7 +469,7 @@ async def two_proposal_db(mocker, tmp_path, request):
     `find_proposal`. The addressing proposal (999999) is the active one in
     `metameta`; 888888 is a guest. Yields the addressing proposal id.
 
-    Parametrise indirectly with the `metameta` proposal value to write, or
+    Parametrize indirectly with the `metameta` proposal value to write, or
     with None to write no row at all.
     """
     proposal = "999999"
@@ -504,13 +506,20 @@ async def two_proposal_db(mocker, tmp_path, request):
                 for p, r, n, v, t in variable_rows
             ],
         )
+        # `Damnit` only finds a run with a start time, and a variable's title.
         await conn.execute(
-            text("INSERT INTO run_info (proposal, run) VALUES (:proposal, :run)"),
+            text(
+                "INSERT INTO run_info (proposal, run, start_time)"
+                " VALUES (:proposal, :run, 1700000000.0)"
+            ),
             [
                 {"proposal": int(proposal), "run": 1},
                 {"proposal": int(proposal), "run": 2},
                 {"proposal": guest, "run": 1},
             ],
+        )
+        await conn.execute(
+            text("INSERT INTO variables (name, title) VALUES ('alpha', NULL)")
         )
         if active_value is not None:
             await conn.execute(
@@ -615,6 +624,55 @@ async def test_runs_query_with_ids_tells_apart_a_guest_run_with_the_same_number(
     runs = result.data["runs"]
     assert [(r["proposal"], r["run"]) for r in runs] == [("888888", 1)]
     assert runs[0]["cells"] == [{"name": "alpha", "summary": {"value": "guest_a1"}}]
+
+
+@pytest.fixture
+def two_proposal_files(two_proposal_db, tmp_path):
+    """`two_proposal_db` with an HDF5 file for each run 1, as DAMNIT writes
+    them: the active run's `alpha` has 3 points and the guest run's 5.
+    """
+    damnit_dir = tmp_path / "proposal" / DAMNIT_PATH
+    (damnit_dir / "extracted_data").mkdir()
+    for proposal, points in [(two_proposal_db, 3), ("888888", 5)]:
+        path = damnit_dir / "extracted_data" / f"p{proposal}_r1.h5"
+        with h5py.File(path, "w") as f:
+            f.create_dataset("alpha/data", data=np.arange(points, dtype=float))
+            f.create_dataset(".reduced/alpha", data=float(points))
+
+    return two_proposal_db
+
+
+EXTRACTED_DATA_QUERY = """
+    query ($proposal: String, $id: RunIdInput, $run: Int) {
+      extracted_data(
+        database: { proposal: $proposal }, id: $id, run: $run, variable: "alpha"
+      )
+    }
+"""
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_with_id_reads_the_guest_runs_own_file(
+    graphql_schema, two_proposal_files
+):
+    # The guest's run 1
+    result = await graphql_schema.execute(
+        EXTRACTED_DATA_QUERY,
+        variable_values={
+            "proposal": two_proposal_files,
+            "id": {"proposal": "888888", "run": 1},
+        },
+    )
+    assert result.errors is None
+    assert len(result.data["extracted_data"]["data"]) == 5
+
+    # The active proposal's run 1
+    result = await graphql_schema.execute(
+        EXTRACTED_DATA_QUERY,
+        variable_values={"proposal": two_proposal_files, "run": 1},
+    )
+    assert result.errors is None
+    assert len(result.data["extracted_data"]["data"]) == 3
 
 
 # -----------------------------------------------------------------------------
@@ -806,6 +864,40 @@ async def test_extracted_data_waits_for_a_read_on_the_same_database(
 
     assert result.errors is None
     assert steps == ["enter", "leave", "preview"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "arguments",
+    [{"run": 1, "id": {"proposal": "888888", "run": 1}}, {}],
+    ids=["both", "neither"],
+)
+async def test_extracted_data_takes_either_run_or_id(
+    graphql_schema, real_damnit_db, arguments
+):
+    result = await graphql_schema.execute(
+        EXTRACTED_DATA_QUERY,
+        variable_values={"proposal": real_damnit_db, **arguments},
+    )
+
+    assert result.errors is not None
+    assert result.errors[0].message == "Send either `run` or `id`."
+
+
+@pytest.mark.asyncio
+async def test_extracted_data_refuses_an_id_with_proposal_0(
+    graphql_schema, two_proposal_files
+):
+    result = await graphql_schema.execute(
+        EXTRACTED_DATA_QUERY,
+        variable_values={
+            "proposal": two_proposal_files,
+            "id": {"proposal": "0", "run": 1},
+        },
+    )
+
+    assert result.errors is not None
+    assert result.errors[0].message == "`id.proposal` must be a positive number."
 
 
 # -----------------------------------------------------------------------------

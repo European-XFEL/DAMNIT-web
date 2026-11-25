@@ -1,0 +1,9 @@
+{
+  "extends": "./node.json",
+  "compilerOptions": {
+    // Specs and drivers run in node, but page.evaluate bodies run in the
+    // browser and need to name DOM types.
+    "lib": ["ES2023", "DOM"],
+    "types": ["node", "@playwright/test"]
+  }
+}

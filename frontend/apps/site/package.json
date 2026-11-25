@@ -20,6 +20,8 @@
   },
   "devDependencies": {
     "@damnit-frontend/config": "workspace:*",
+    "@damnit-frontend/testing": "workspace:*",
+    "@playwright/test": "catalog:testing",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",

@@ -1,0 +1,127 @@
+import { expect, type Locator, type Page } from '@playwright/test'
+
+import { dashboardNav } from './dashboard'
+import { type Cell, cellPoint, gridBox, headerPoint } from './grid'
+import { contextMenu, rightClickCell, rightClickHeader } from './table'
+
+// Glide reads Cmd on macOS and Ctrl elsewhere; ControlOrMeta lets Playwright
+// send the modifier the current platform expects, so this works on every host.
+export async function clickWithModifier(
+  page: Page,
+  points: { x: number; y: number }[]
+) {
+  await page.keyboard.down('ControlOrMeta')
+  for (const point of points) {
+    await page.mouse.click(point.x, point.y)
+  }
+  await page.keyboard.up('ControlOrMeta')
+}
+
+// Click the first point, then modifier-click the rest to build a multi-select.
+async function multiClick(page: Page, points: { x: number; y: number }[]) {
+  const [first, ...rest] = points
+  await page.mouse.click(first.x, first.y)
+  await clickWithModifier(page, rest)
+}
+
+// The right-clicked column becomes the summary plot's Y axis.
+export async function selectColumns(page: Page, { cols }: { cols: number[] }) {
+  const box = await gridBox(page)
+  await multiClick(
+    page,
+    cols.map((col) => headerPoint(box, { col }))
+  )
+}
+
+// The address moves to the plot once its code has arrived, and a click
+// elsewhere before then drops the plot, so wait for the move.
+export async function waitForPlotView(page: Page) {
+  await expect(page).toHaveURL(/\/plots\/(summary|preview)\?/)
+}
+
+// Right-click a header and pick "Plot: summary". Scope the click to the menu:
+// a bare "Plot" also matches the nav's "New plot" button.
+export async function openSummaryPlot(page: Page, { col }: { col: number }) {
+  await rightClickHeader(page, { col })
+  await contextMenu(page).getByText('Plot: summary').click()
+  await waitForPlotView(page)
+}
+
+// The cells must share one column, or the grid clears the range stack.
+export async function selectCells(page: Page, { cells }: { cells: Cell[] }) {
+  const box = await gridBox(page)
+  await multiClick(
+    page,
+    cells.map((cell) => cellPoint(box, cell))
+  )
+}
+
+// Right-click a cell and pick "Plot: preview". Right-clicking a cell that is not
+// already selected resets the selection to it, so build any multi-run range
+// with selectCells first, then right-click one of the selected cells.
+export async function openPreviewPlot(page: Page, { col, row }: Cell) {
+  await rightClickCell(page, { col, row })
+  await contextMenu(page).getByText('Plot: preview').click()
+  await waitForPlotView(page)
+}
+
+// The nav's "New plot" dialog. Returns the dialog locator so callers scope
+// field interactions to it.
+export async function openPlotDialog(page: Page): Promise<Locator> {
+  await dashboardNav(page).getByRole('button', { name: 'New plot' }).click()
+  const dialog = page.getByRole('dialog', { name: 'New plot' })
+  await expect(dialog).toBeVisible()
+  return dialog
+}
+
+// Pick a variable in one of the dialog's fields (Y axis, X axis, Variable):
+// type its title to filter the options, then click the match.
+export async function chooseVariable(
+  dialog: Locator,
+  { label, title }: { label: string; title: string }
+) {
+  const input = dialog.getByLabel(label)
+  await input.click()
+  await input.fill(title)
+  // The options open in a portal outside the dialog.
+  await dialog.page().getByRole('option', { name: title }).click()
+}
+
+// Submit the dialog. Exact match keeps it off any other "Plot" in the dialog.
+export async function submitPlot(dialog: Locator) {
+  await dialog.getByRole('button', { name: 'Plot', exact: true }).click()
+}
+
+// One row per open plot, under the nav's Plots header.
+export function plotEntries(page: Page): Locator {
+  return dashboardNav(page)
+    .getByRole('list', { name: 'Plots' })
+    .getByRole('listitem')
+}
+
+// A plot's entry names it, then its kind and its runs. Anchoring on the name
+// and its comma keeps it off a longer name and off the row's close mark.
+function entryName(name: string) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^${escaped},`)
+}
+
+export function plotEntry(page: Page, name: string): Locator {
+  return plotEntries(page).getByRole('link', { name: entryName(name) })
+}
+
+// Each row has its own mark, shown only on hover or focus. A hidden button is
+// not in the accessibility tree, so hover the row first.
+export async function closePlot(page: Page, name: string) {
+  const entry = plotEntries(page).filter({
+    has: page.getByRole('link', { name: entryName(name) }),
+  })
+  await entry.hover()
+  await entry.getByRole('button', { name: /^Close / }).click()
+}
+
+// plotly.js tags its graph div with the js-plotly-plot class. react-plotly.js
+// drops the data-testid we pass, so match the class, not a test id.
+export function plotFigure(page: Page): Locator {
+  return page.locator('.js-plotly-plot')
+}
