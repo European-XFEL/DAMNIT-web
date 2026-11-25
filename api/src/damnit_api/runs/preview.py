@@ -12,10 +12,15 @@ from .sqlite import get_damnit_path
 NOT_SUPPORTED_MESSAGE = "Not supported."
 
 
-def get_preview_data(proposal, run, variable):
+def get_preview_data(proposal, run_id, variable):
+    """Return the preview of one run's variable in `proposal`'s database.
+
+    `run_id` is a `(proposal, run)` pair; a proposal of None reads the
+    database's active proposal.
+    """
     path = get_damnit_path(str(proposal))
     try:
-        var_data = Damnit(path)[run, variable]
+        var_data = Damnit(path)[*run_id, variable]
     except KeyError:
         return standardize(None, name=variable, dtype=DamnitType.NONE.value)
 

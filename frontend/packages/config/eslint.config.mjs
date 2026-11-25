@@ -46,9 +46,9 @@ export default defineConfig(
           noWarnOnMultipleProjects: true,
           project: [
             path.join(frontendRoot, 'apps/*/tsconfig.json'),
+            path.join(frontendRoot, 'apps/*/tsconfig.test.json'),
             path.join(frontendRoot, 'packages/*/tsconfig.json'),
             path.join(frontendRoot, 'packages/*/tsconfig.test.json'),
-            path.join(frontendRoot, 'e2e/tsconfig.json'),
           ],
         }),
       ],

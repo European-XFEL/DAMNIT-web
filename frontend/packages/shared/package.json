@@ -10,7 +10,9 @@
   "scripts": {
     "lint:eslint": "eslint . --max-warnings 0",
     "lint:prettier": "prettier --check --cache --ignore-path ../../.prettierignore .",
-    "lint:tsc": "tsc -b --noEmit"
+    "lint:tsc": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:node": "vitest run"
   },
   "peerDependencies": {
     "graphql": "catalog:graphql",
@@ -23,6 +25,7 @@
     "graphql": "catalog:graphql",
     "lodash-es": "catalog:frontend",
     "prettier": "catalog:linting",
-    "typescript": "catalog:tooling"
+    "typescript": "catalog:tooling",
+    "vitest": "catalog:testing"
   }
 }

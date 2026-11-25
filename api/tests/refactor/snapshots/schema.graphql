@@ -77,7 +77,7 @@ type Query {
   get_user: User!
   runs(database: DatabaseInput!, page: Int! = 1, per_page: Int! = 10, ids: [RunIdInput!] = null): [DamnitRun!]!
   metadata(database: DatabaseInput!): TableMeta!
-  extracted_data(database: DatabaseInput!, run: Int!, variable: String!): JSON
+  extracted_data(database: DatabaseInput!, variable: String!, run: Int = null, id: RunIdInput = null): JSON
   proposal_metadata(proposal_numbers: [Int!]!): [ProposalMeta!]
 }
 

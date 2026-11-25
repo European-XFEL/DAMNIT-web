@@ -1,0 +1,92 @@
+import { sortBy, uniq } from 'lodash-es'
+
+import { previewRunFields } from '@damnit-frontend/shared/mocks'
+import { test, expect } from '#tests/integration/fixtures'
+import { WIDE_VIEWPORT } from '@damnit-frontend/testing/playwright/grid'
+import { operationNameOf } from '@damnit-frontend/testing/playwright/table'
+import { openProposal, titleOf } from '#tests/integration/support/example'
+import {
+  chooseVariable,
+  openPlotDialog,
+  plotFigure,
+  plotEntry,
+  submitPlot,
+} from '@damnit-frontend/testing/playwright/plots'
+
+test.use({ viewport: WIDE_VIEWPORT })
+
+test('submitting with no variable shows a validation error and keeps the dialog open', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  const dialog = await openPlotDialog(page)
+
+  await submitPlot(dialog)
+
+  await expect(
+    dialog.getByText('Choose a variable', { exact: true })
+  ).toBeVisible()
+  await expect(dialog).toBeVisible()
+  // The submit was blocked, not just flagged: no figure was plotted.
+  await expect(plotFigure(page)).toHaveCount(0)
+})
+
+test('choosing a Y variable plots a summary against Run', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  const dialog = await openPlotDialog(page)
+
+  // X defaults to Run, so choosing only Y plots the variable against the run.
+  await chooseVariable(dialog, {
+    label: 'Y axis',
+    title: titleOf(example, 'n_trains'),
+  })
+  await submitPlot(dialog)
+
+  await expect(
+    plotEntry(page, `${titleOf(example, 'n_trains')} vs. Run`)
+  ).toBeVisible()
+  await expect(plotFigure(page)).toBeVisible()
+})
+
+test('plotting a preview for runs "7,9" fetches only runs 7 and 9, not the range', async ({
+  page,
+  example,
+}) => {
+  await openProposal(page, example)
+  const dialog = await openPlotDialog(page)
+
+  // A preview inlines its runs into the document, so read them back from it.
+  const requestedRuns: number[] = []
+  page.on('request', (request) => {
+    if (!request.url().includes('/graphql')) {
+      return
+    }
+    if (operationNameOf(request) !== 'PreviewDataQuery') {
+      return
+    }
+    const { query } = request.postDataJSON() as { query?: string }
+    if (query) {
+      requestedRuns.push(...previewRunFields(query).map((field) => field.run))
+    }
+  })
+
+  // Preview swaps the axes for one Variable field and asks for runs; the
+  // dialog is the only path to an arbitrary run set.
+  await dialog.getByText('Preview', { exact: true }).click()
+  await chooseVariable(dialog, {
+    label: 'Variable',
+    title: titleOf(example, 'xgm_intensity'),
+  })
+  await dialog.getByRole('textbox', { name: 'Runs' }).fill('7,9')
+  await submitPlot(dialog)
+
+  const entry = plotEntry(page, titleOf(example, 'xgm_intensity'))
+  await expect(entry).toBeVisible()
+  await expect(entry).toContainText('2 runs, 7-9')
+  await expect(plotFigure(page)).toBeVisible()
+  expect(sortBy(uniq(requestedRuns))).toEqual([7, 9])
+})

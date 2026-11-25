@@ -14,6 +14,7 @@ import {
 import DashboardNavbar from '#src/features/dashboard/components/navbar/dashboard-navbar'
 import { type DashboardUser } from '#src/features/dashboard/types/dashboard.types'
 import { useIsPlotWindow } from '#src/features/dashboard/hooks/use-is-plot-window'
+import { useTakePlotFromPopup } from '#src/features/dashboard/hooks/use-take-plot-from-popup'
 
 import classes from './dashboard-shell.module.css'
 import DashboardBody from './dashboard-body'
@@ -48,6 +49,7 @@ function DashboardWindow({
   const navCollapsed = useAppSelector(selectNavCollapsed)
   const mobileNavOpened = useAppSelector(selectMobileNavOpened)
   const navRef = useRef<HTMLElement>(null)
+  const takenWhileHidden = useTakePlotFromPopup()
 
   // Opening the mobile nav focuses the view on show; closing it hands focus back
   // to the Burger, which useFocusReturn records before that focus moves.
@@ -90,7 +92,7 @@ function DashboardWindow({
           aria-busy={loading || undefined}
         >
           <VisuallyHidden component="h1">{heading}</VisuallyHidden>
-          <PageTitle heading={heading} />
+          <PageTitle heading={heading} marked={takenWhileHidden} />
           {/* The run sits below the band, which names the page whatever is
               open beside the view. */}
           <DashboardBody main={main} pending={pending} />
