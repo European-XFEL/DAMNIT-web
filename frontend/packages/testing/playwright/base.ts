@@ -8,7 +8,7 @@ export const baseConfig = {
   fullyParallel: true,
   forbidOnly: isCI,
   failOnFlakyTests: isCI,
-  retries: isCI ? 2 : 0,
+  retries: isCI ? 1 : 0,
   reporter: 'list',
   use: {
     trace: 'retain-on-first-failure',
