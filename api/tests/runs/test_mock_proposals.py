@@ -133,7 +133,9 @@ async def test_each_type_of_value_arrives_with_its_dtype(local_client):
         "amplitude": "string",
         "trace": "array1d",
         "pulse_energy": "array1d",
+        "long_trace": "array1d",
         "detector_image": "image",
+        "narrow_heatmap": "image",
         "trace_matplotlib": "image",
         "trace_plotly": "number",
     }
@@ -170,11 +172,12 @@ async def test_tags_come_from_the_context_file(local_client):
     assert variables_by_tag == {
         "Analysis": ["amplitude", "fit", "trace_matplotlib", "trace_plotly"],
         "Beam": ["attenuator", "beam_on", "transmission"],
-        "Detector": ["detector_image"],
+        "Detector": ["detector_image", "narrow_heatmap"],
         "Run details": ["n_trains", "sample_name"],
         "Sample": ["sample_x.position", "sample_y.position"],
         "(Untagged)": [
             "added_at",
+            "long_trace",
             "proposal",
             "pulse_energy",
             "run",
@@ -202,6 +205,23 @@ async def test_a_dataarray_keeps_its_dimension_and_train_ids_through_damnit(
     array = data["extracted_data"]
     assert array["dims"] == ["trainId"]
     assert array["coords"]["trainId"] == list(range(1_001_000, 1_001_100))
+
+
+async def test_a_narrow_heatmap_has_only_its_long_axis_capped(local_client):
+    data = await post_query(local_client, extracted_data_query("narrow_heatmap"))
+
+    heatmap = data["extracted_data"]
+    assert heatmap["dtype"] == "array2d"
+    assert heatmap["attrs"]["shape"] == [1000, 20]
+
+
+async def test_a_long_trace_is_capped_and_keeps_its_spike(local_client):
+    data = await post_query(local_client, extracted_data_query("long_trace"))
+
+    trace = data["extracted_data"]
+    assert trace["dtype"] == "array1d"
+    assert len(trace["data"]) == 10_001
+    assert max(trace["data"]) == pytest.approx(50.0)
 
 
 async def test_a_plotly_figure_preview_comes_back_with_no_data(local_client):

@@ -68,6 +68,22 @@ def pulse_energy(run, run_number: "meta#run_number"):
     return xr.DataArray(energy, dims="trainId", coords={"trainId": train_ids})
 
 
+# Over the preview's 10,000 points, with a spike on an index its even picks skip
+@Variable(title="Long trace")
+def long_trace(run, run_number: "meta#run_number"):
+    values = noise(run_number, 12_000).astype(np.float32)
+    values[3] = 50.0
+    return values
+
+
+# Under a twentieth as wide as it is tall, which the preview once left uncapped.
+# Smooth, since DAMNIT stores a thumbnail of it, and one of noise is 100 kB.
+@Variable(title="Narrow heatmap", tags="Detector")
+def narrow_heatmap(run, run_number: "meta#run_number"):
+    rows = np.sin(np.arange(1_200) / 50 + run_number)
+    return np.add.outer(rows, np.linspace(0, 1, 20)).astype(np.float32)
+
+
 # A small figure: DAMNIT stores a figure as uncompressed RGBA pixels
 @Variable(title="Trace plot (matplotlib)", tags="Analysis")
 def trace_matplotlib(run, run_number: "meta#run_number"):
