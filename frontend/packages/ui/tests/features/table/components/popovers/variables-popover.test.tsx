@@ -6,10 +6,9 @@ import { render } from 'vitest-browser-react'
 import { beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest'
 
 import { setupStore, type AppStore } from '#src/app/store/store'
-import { TABLE_META_QUERY } from '#src/data/table/table-data.queries'
 import { VariablesPopover } from '#src/features/table/components/popovers/variables-popover'
 import { setColumnVisibility } from '#src/features/table/stores/table.slice'
-import { metadataClient } from '#tests/support/apollo'
+import { metadataClient, writeMetadata } from '#tests/support/apollo'
 import { withProviders } from '#tests/support/render'
 
 const PROPOSAL = '900405'
@@ -861,10 +860,10 @@ describe('hiding columns', () => {
     await expect.element(screen.getByText('1 hidden')).toBeVisible()
 
     // A push brings in another proposal's run
-    client.cache.writeQuery({
-      query: TABLE_META_QUERY,
-      variables: { proposal: PROPOSAL },
-      data: { metadata: { ...METADATA, runs: [ownRun, guestRun] } },
+    writeMetadata(client.cache, {
+      ...METADATA,
+      proposal: PROPOSAL,
+      runs: [ownRun, guestRun],
     })
     await expect.element(checkbox(screen, 'Proposal')).toBeChecked()
     await expect.element(screen.getByText('1 hidden')).not.toBeInTheDocument()
@@ -931,16 +930,11 @@ describe("opening a column's tags", () => {
     handle(screen, 'Trains').element().focus()
     await userEvent.keyboard('{Space}')
     const { scan_type: _deleted, ...variables } = METADATA.variables
-    client.cache.writeQuery({
-      query: TABLE_META_QUERY,
-      variables: { proposal: PROPOSAL },
-      data: {
-        metadata: {
-          ...METADATA,
-          variables,
-          tags: { position: METADATA.tags.position },
-        },
-      },
+    writeMetadata(client.cache, {
+      ...METADATA,
+      proposal: PROPOSAL,
+      variables,
+      tags: { position: METADATA.tags.position },
     })
     await new Promise((resolve) => setTimeout(resolve, 100))
     await expect
