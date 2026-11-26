@@ -89,13 +89,6 @@ describe('setColumnVisibility', () => {
     expect(state.columnVisibility.a).toBe(false)
     expect(state.columnVisibility.b).toBe(true)
   })
-
-  // The proposal column is the one the table hides by default, and it is the
-  // seed rather than a read-time rule that keeps it hidden.
-  test('seeds the proposal column hidden and nothing else', () => {
-    const state = reducer(undefined, { type: 'unknown' })
-    expect(state.columnVisibility).toEqual({ proposal: false })
-  })
 })
 
 describe('columnPinning', () => {

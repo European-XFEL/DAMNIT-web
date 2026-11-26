@@ -271,15 +271,35 @@ class Query:
         self,
         info: Info,
         database: DatabaseInput,
-        run: int,
         variable: str,
+        run: int | None = None,
+        id: RunIdInput | None = None,
     ) -> JSON | None:  # FIX: # pyright: ignore[reportInvalidTypeForm]
+        """Return the preview of one run's variable.
+
+        `run` alone means the database's active proposal; `id` names a guest
+        run by its own proposal. Send exactly one of them.
+        """
+        if (run is None) == (id is None):
+            msg = "Send either `run` or `id`."
+            raise ValueError(msg)
+
+        run_id = (None, run)
+        if id is not None:
+            # A guest run's file is named for its own proposal. `int` keeps a
+            # string such as "../.." out of that file name.
+            run_id = (int(id.proposal), id.run)
+            # DAMNIT reads a proposal of 0 as the active one.
+            if run_id[0] <= 0:
+                msg = "`id.proposal` must be a positive number."
+                raise ValueError(msg)
+
         await _ensure_damnit_path(info, database.proposal)
         async with get_lock(database.proposal):
             # TODO: Convert to Strawberry type
             # and make it analogous to Cell; e.g. `data`
             return get_preview_data(  # FIX: # pyright: ignore[reportReturnType]
                 proposal=database.proposal,
-                run=run,
+                run_id=run_id,
                 variable=variable,
             )

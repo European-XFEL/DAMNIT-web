@@ -242,7 +242,7 @@ def test_get_preview_data_ndarray(mocker):
     data = np.random.rand(4)
 
     mock_damnit_class(mocker, data=data, type_hint=None)
-    actual = get_preview_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(proposal=1234, run_id=(None, 1), variable=name)
 
     assert actual == {
         "name": name,
@@ -264,7 +264,7 @@ def test_get_preview_data_dataarray(mocker):
     )
 
     mock_damnit_class(mocker, data=data, type_hint=DataType.DataArray)
-    actual = get_preview_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(proposal=1234, run_id=(None, 1), variable=name)
 
     assert actual["name"] == name
     assert actual["dtype"] == dtype.value
@@ -279,7 +279,7 @@ def test_get_preview_data_downsamples_a_large_bool_array_as_numbers(mocker):
     data = np.arange(20_000) % 2 == 0
 
     mock_damnit_class(mocker, data=data, type_hint=None)
-    actual = get_preview_data(proposal=1234, run=1, variable="some_mask")
+    actual = get_preview_data(proposal=1234, run_id=(None, 1), variable="some_mask")
 
     assert actual["dtype"] == DamnitType.ARRAY_1D.value
     assert len(actual["data"]) == 10_000
@@ -291,7 +291,7 @@ def test_get_preview_data_image(mocker):
     data = np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8)
 
     mock_damnit_class(mocker, data=data, type_hint=DataType.Image)
-    actual = get_preview_data(proposal=1234, run=1, variable=name)
+    actual = get_preview_data(proposal=1234, run_id=(None, 1), variable=name)
 
     assert actual["name"] == name
     assert actual["dtype"] == dtype.value

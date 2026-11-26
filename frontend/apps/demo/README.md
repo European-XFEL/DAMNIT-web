@@ -71,3 +71,18 @@ export default defineConfig([
   },
 ])
 ```
+
+## Tests
+
+`tests/e2e/` holds the Playwright suite for the demo's production build. From
+the `frontend/` root:
+
+```bash
+pnpm playwright:install   # once: install the Chromium browser
+pnpm test:e2e:demo
+```
+
+It builds the demo first, which takes about a minute, and then serves it with
+`vite preview` on 6175 at `/demo/`, as it is deployed. Nothing is intercepted, so a change in the
+shared `packages/ui` that breaks the demo fails a check. The demo answers from its own MSW mocks. The shared
+drivers are described in `packages/testing/README.md`.
