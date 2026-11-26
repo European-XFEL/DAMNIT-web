@@ -57,8 +57,9 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
       height: height - 2 * INSET,
     }
     const inBox = pointsInBox({ x, y }, content)
+    const path = isAtOneX(x) ? undefined : (line()(inBox) ?? undefined)
 
-    return { content, points: inBox, path: line()(inBox) ?? undefined }
+    return { content, points: inBox, path }
   }, [x, y, width, height])
   const ring = hovered != null ? points[hovered] : undefined
 
