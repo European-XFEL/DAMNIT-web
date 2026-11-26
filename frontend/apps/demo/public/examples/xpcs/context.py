@@ -37,6 +37,8 @@ def n_pulses(run):
 
 @Variable(title="XGM intensity [uJ]", summary="mean")
 def xgm_intensity(run):
+    """Pulse energy measured by the XTD1 XGM.
+    Averaged over every pulse of every train."""
     return XGM(run).pulse_energy().mean("trainId")
 
 

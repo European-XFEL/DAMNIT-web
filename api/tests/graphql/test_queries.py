@@ -7,7 +7,12 @@ import pytest_asyncio
 from damnit.backend.db import DamnitDB
 from sqlalchemy import text
 
-from damnit_api.runs.sqlite import DAMNIT_PATH, DatabaseSessionManager, get_session
+from damnit_api.runs.sqlite import (
+    DAMNIT_PATH,
+    DatabaseSessionManager,
+    async_variables,
+    get_session,
+)
 from damnit_api.runs.types import DamnitRun
 
 from .const import (
@@ -790,6 +795,37 @@ async def test_metadata_query_lists_no_variables_for_a_tag_nothing_carries(
 
     assert result.errors is None
     assert result.data["metadata"]["tags"]["XGM"]["variables"] == []
+
+
+@pytest.mark.asyncio
+async def test_variables_trim_a_description_to_its_text_and_drop_a_blank_one(
+    real_damnit_db,
+):
+    proposal = real_damnit_db
+    descriptions = {
+        "alpha": "\nGet the LPD geometry offset\n  from a dict for different runs.\n\n",
+        "beta": None,
+        "gamma": "  \n",
+    }
+    async with get_session(proposal) as session:
+        await session.execute(
+            text(
+                "INSERT INTO variables (name, description) VALUES (:name, :description)"
+            ),
+            [
+                {"name": name, "description": description}
+                for name, description in descriptions.items()
+            ],
+        )
+        await session.commit()
+
+    variables = await async_variables(proposal)
+
+    assert variables["alpha"]["description"] == (
+        "Get the LPD geometry offset\n  from a dict for different runs."
+    )
+    assert "description" not in variables["beta"]
+    assert "description" not in variables["gamma"]
 
 
 # -----------------------------------------------------------------------------
