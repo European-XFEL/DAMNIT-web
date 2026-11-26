@@ -300,7 +300,10 @@ function GlideGrid(
     return {
       ...cell,
       bounds: args.bounds,
-      ...pointerInContent({ hoverX: args.localEventX, width, padding }),
+      ...pointerInContent(args.localEventX, {
+        left: padding,
+        width: width - 2 * padding,
+      }),
     }
   }
 

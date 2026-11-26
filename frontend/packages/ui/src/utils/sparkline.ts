@@ -62,21 +62,13 @@ export const pointsInBox = (sparkline: SparklineValue, box: Box): Point[] => {
 // x, one point or many samples of it, is drawn as dots.
 export const isAtOneX = (x: number[]) => x[0] === x.at(-1)
 
-type PointerInContentParams = { hoverX: number; width: number; padding: number }
-
-// Where the pointer is across the box's content, from 0 at its left edge to 1
-// at its right, when the pointer is `hoverX` px into the box.
-export const pointerInContent = ({
-  hoverX,
-  width,
-  padding,
-}: PointerInContentParams): HoveredIndexAtParams => {
-  const contentWidth = width - 2 * padding
-  return {
-    normalizedX: clamp((hoverX - padding) / contentWidth, 0, 1),
-    contentWidth,
-  }
-}
+export const pointerInContent = (
+  pointerX: number,
+  { left, width }: Pick<Box, 'left' | 'width'>
+): HoveredIndexAtParams => ({
+  normalizedX: clamp((pointerX - left) / width, 0, 1),
+  contentWidth: width,
+})
 
 const valueAt = ({ x, y }: SparklineValue, at: number) => {
   const next = bisectRight(x, at)

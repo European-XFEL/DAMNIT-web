@@ -79,13 +79,13 @@ export const makeSparklineCellRenderer = ({
 
     const paddingX = theme.cellHorizontalPadding
     const paddingY = theme.cellVerticalPadding
-    const contentWidth = rect.width - 2 * paddingX
-    const points = pointsInBox(cell.data, {
+    const content = {
       left: rect.x + paddingX,
       top: rect.y + paddingY,
-      width: contentWidth,
+      width: rect.width - 2 * paddingX,
       height: rect.height - 2 * paddingY,
-    })
+    }
+    const points = pointsInBox(cell.data, content)
 
     ctx.save()
 
@@ -96,11 +96,7 @@ export const makeSparklineCellRenderer = ({
     ctx.clip()
 
     if (hoverX !== undefined) {
-      const pointer = pointerInContent({
-        hoverX,
-        width: rect.width,
-        padding: paddingX,
-      })
+      const pointer = pointerInContent(rect.x + hoverX, content)
       const index = hoveredIndexAt(cell.data, pointer)
       drawRing(ctx, { center: points[index], color: ringColor })
     }

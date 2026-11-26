@@ -47,27 +47,25 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
   )
   const hovered = hover?.x === x ? hover.index : null
 
-  const contentWidth = width - 2 * INSET
   // A hover moves only the ring, and the points and the path take about 130 ms
   // to build at the 240,000 points a dense run sends.
-  const { points, path } = useMemo(() => {
-    const inBox = pointsInBox(
-      { x, y },
-      {
-        left: INSET,
-        top: INSET,
-        width: contentWidth,
-        height: height - 2 * INSET,
-      }
-    )
-    return { points: inBox, path: line()(inBox) ?? undefined }
-  }, [x, y, contentWidth, height])
+  const { content, points, path } = useMemo(() => {
+    const content = {
+      left: INSET,
+      top: INSET,
+      width: width - 2 * INSET,
+      height: height - 2 * INSET,
+    }
+    const inBox = pointsInBox({ x, y }, content)
+
+    return { content, points: inBox, path: line()(inBox) ?? undefined }
+  }, [x, y, width, height])
   const ring = hovered != null ? points[hovered] : undefined
 
   const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
     const box = event.currentTarget
     const offsetX = event.clientX - box.getBoundingClientRect().left
-    const pointer = pointerInContent({ hoverX: offsetX, width, padding: INSET })
+    const pointer = pointerInContent(offsetX, content)
     const index = hoveredIndexAt({ x, y }, pointer)
     if (index === hovered) {
       return
@@ -80,7 +78,7 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
     <div ref={boxRef} className={cx(classes.box, className)}>
       {/* While the panel opens, the box can be narrower than its insets,
           which would draw the line mirrored. */}
-      {contentWidth > 0 && (
+      {content.width > 0 && (
         <svg
           role="img"
           aria-label={label}

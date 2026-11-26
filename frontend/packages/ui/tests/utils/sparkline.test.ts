@@ -81,18 +81,26 @@ describe('isAtOneX', () => {
 })
 
 describe('pointerInContent', () => {
-  const at = (hoverX: number) =>
-    pointerInContent({ hoverX, width: 116, padding: 8 })
+  // A 116 px cell leaves 100 px between its 8 px pads.
+  const content = { left: 8, width: 100 }
 
-  // A 116 px cell leaves 100 px between the 8 px pads.
   test('measures the pointer across the content between the pads', () => {
-    expect(at(8)).toEqual({ normalizedX: 0, contentWidth: 100 })
-    expect(at(58)).toEqual({ normalizedX: 0.5, contentWidth: 100 })
-    expect(at(108)).toEqual({ normalizedX: 1, contentWidth: 100 })
+    expect(pointerInContent(8, content)).toEqual({
+      normalizedX: 0,
+      contentWidth: 100,
+    })
+    expect(pointerInContent(58, content)).toEqual({
+      normalizedX: 0.5,
+      contentWidth: 100,
+    })
+    expect(pointerInContent(108, content)).toEqual({
+      normalizedX: 1,
+      contentWidth: 100,
+    })
   })
 
   test('clamps a pointer in the padding to the ends', () => {
-    expect(at(0).normalizedX).toBe(0)
-    expect(at(116).normalizedX).toBe(1)
+    expect(pointerInContent(0, content).normalizedX).toBe(0)
+    expect(pointerInContent(116, content).normalizedX).toBe(1)
   })
 })
