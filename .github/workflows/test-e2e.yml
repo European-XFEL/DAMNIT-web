@@ -1,4 +1,4 @@
-name: Test e2e app
+name: Test E2E
 
 on:
   push:
@@ -8,14 +8,14 @@ on:
       - "api/**"
       - "pyproject.toml"
       - "uv.lock"
-      - ".github/workflows/test-e2e-app.yml"
+      - ".github/workflows/test-e2e.yml"
   pull_request:
     paths:
       - "frontend/**"
       - "api/**"
       - "pyproject.toml"
       - "uv.lock"
-      - ".github/workflows/test-e2e-app.yml"
+      - ".github/workflows/test-e2e.yml"
 
 permissions:
   contents: read
@@ -25,9 +25,16 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  e2e-app:
+  e2e:
+    name: e2e-${{ matrix.suite }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    strategy:
+      # A red suite must not cancel the others, so each check reports on its own.
+      fail-fast: false
+      matrix:
+        suite: [app, site, demo]
 
     defaults:
       run:
@@ -52,6 +59,7 @@ jobs:
         run: pnpm --filter @damnit-frontend/testing exec playwright install --with-deps --only-shell chromium
 
       - name: Install uv
+        if: matrix.suite == 'app'
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
@@ -60,18 +68,20 @@ jobs:
 
       # The API, and DAMNIT itself for the live spec to extract a run with.
       - name: Sync API dependencies
+        if: matrix.suite == 'app'
         working-directory: .
         run: uv sync --locked --all-packages --group damnit-backend --no-default-groups
 
-      # No build step: the suite's web server builds the app on every run.
+      # No build step: the suite's web server builds its app on every run.
       - name: e2e
-        run: pnpm e2e:app
+        run: pnpm test:e2e:${{ matrix.suite }}
 
-      # always() and ignore for the same reasons as in test-frontend.yml.
+      # always() and ignore for the same reasons as the integration job in
+      # test-frontend.yml.
       - name: Upload traces
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-traces-e2e-app
-          path: frontend/apps/app/test-results/e2e/
+          name: playwright-traces-e2e-${{ matrix.suite }}
+          path: frontend/apps/${{ matrix.suite }}/test-results/
           if-no-files-found: ignore

@@ -1,19 +1,21 @@
 import { useMemo } from 'react'
 
-import type { Tag } from '#src/data/table/table-data.types'
+import type { RunId, Tag } from '#src/data/table/table-data.types'
 import { useTableMeta } from '#src/data/table/use-table-meta'
-import { NONCONFIGURABLE_VARIABLES } from '#src/constants'
+import { NONCONFIGURABLE_VARIABLES, VARIABLES } from '#src/constants'
 import {
   selectColumnVisibility,
   selectTagSelection,
 } from '#src/features/table/stores/table.selectors'
 import { useAppSelector } from '#src/app/store/hooks'
 
-type ColumnVisibilityInputs = {
+export type ColumnVisibilityInputs = {
   variableNames: string[]
   visibility: Record<string, boolean | undefined>
   tags: Record<string, Tag>
   tagSelection: Record<string, boolean>
+  runs: RunId[]
+  proposal: string
 }
 
 // Columns the user can't hide (added_at, run) never appear here.
@@ -23,19 +25,39 @@ function configurableVariables(variableNames: string[]) {
   )
 }
 
-// The visibility map for the configurable columns. A column the user has not
-// touched shows, so only an explicit false hides one.
+// Runs carry 6996 where the address may read 006996 or p6996.
+function proposalKey(proposal: string) {
+  return proposal.replace(/^p?0*/, '')
+}
+
+function holdsGuestRuns(runs: RunId[], proposal: string) {
+  const opened = proposalKey(proposal)
+
+  return runs.some((run) => run.proposal !== opened)
+}
+
+// A column the user has not touched shows, except Proposal while every run is
+// the opened proposal's own.
 function visibilityFromVariables(
   configurable: string[],
-  visibility: ColumnVisibilityInputs['visibility']
+  {
+    visibility,
+    runs,
+    proposal,
+  }: Pick<ColumnVisibilityInputs, 'visibility' | 'runs' | 'proposal'>
 ) {
+  const showsProposal = holdsGuestRuns(runs, proposal)
+
   return Object.fromEntries(
-    configurable.map((name) => [name, visibility[name] ?? true])
+    configurable.map((name) => [
+      name,
+      visibility[name] ?? (name !== VARIABLES.proposal || showsProposal),
+    ])
   )
 }
 
-// With no selected tags there's no tag filter (null). Otherwise a variable
-// passes only if it belongs to at least one selected tag.
+// With no selected tags there's no tag filter (null). Proposal always passes:
+// like run, it tells apart runs that share a number.
 function visibilityFromTags(
   configurable: string[],
   { tags, tagSelection }: Pick<ColumnVisibilityInputs, 'tags' | 'tagSelection'>
@@ -51,72 +73,74 @@ function visibilityFromTags(
   }
 
   return Object.fromEntries(
-    configurable.map((name) => [name, taggedVariables.has(name)])
+    configurable.map((name) => [
+      name,
+      name === VARIABLES.proposal || taggedVariables.has(name),
+    ])
   )
 }
 
 // A column shows when it's variable-visible AND (there's no tag filter OR it
 // passes the tag filter).
-export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
-  const configurable = configurableVariables(inputs.variableNames)
-  const fromVariables = visibilityFromVariables(configurable, inputs.visibility)
-  const fromTags = visibilityFromTags(configurable, inputs)
-
+function combineVisibility(
+  fromVariables: Record<string, boolean>,
+  fromTags: Record<string, boolean> | null
+) {
   return Object.fromEntries(
-    configurable.map((name) => [
+    Object.entries(fromVariables).map(([name, visible]) => [
       name,
-      fromVariables[name] && (fromTags == null || fromTags[name]),
+      visible && (fromTags == null || fromTags[name]),
     ])
   )
 }
 
-function useVariableNames() {
-  const { variables } = useTableMeta()
-  return useMemo(() => Object.keys(variables), [variables])
+export function computeColumnVisibility(inputs: ColumnVisibilityInputs) {
+  const configurable = configurableVariables(inputs.variableNames)
+
+  return combineVisibility(
+    visibilityFromVariables(configurable, inputs),
+    visibilityFromTags(configurable, inputs)
+  )
 }
 
 export function useColumnVisibilityFromVariables() {
-  const variableNames = useVariableNames()
+  const { variables, runs } = useTableMeta()
+  const proposal = useAppSelector((state) => state.metadata.proposal.value)
   const visibility = useAppSelector(selectColumnVisibility)
 
   return useMemo(
     () =>
-      visibilityFromVariables(configurableVariables(variableNames), visibility),
-    [variableNames, visibility]
+      visibilityFromVariables(configurableVariables(Object.keys(variables)), {
+        visibility,
+        runs,
+        proposal,
+      }),
+    [variables, visibility, runs, proposal]
   )
 }
 
 export function useColumnVisibilityFromTags() {
-  const { tags } = useTableMeta()
+  const { variables, tags } = useTableMeta()
   const tagSelection = useAppSelector(selectTagSelection)
-  const variableNames = useVariableNames()
 
   return useMemo(
     () =>
-      visibilityFromTags(configurableVariables(variableNames), {
+      visibilityFromTags(configurableVariables(Object.keys(variables)), {
         tags,
         tagSelection,
       }),
-    [variableNames, tags, tagSelection]
+    [variables, tags, tagSelection]
   )
 }
 
 // Which columns the table actually shows. Named apart from the store's
 // `columnVisibility`, which is only one of its two inputs.
 export function useVisibleColumns() {
-  const variableNames = useVariableNames()
-  const visibility = useAppSelector(selectColumnVisibility)
-  const { tags } = useTableMeta()
-  const tagSelection = useAppSelector(selectTagSelection)
+  const fromVariables = useColumnVisibilityFromVariables()
+  const fromTags = useColumnVisibilityFromTags()
 
   return useMemo(
-    () =>
-      computeColumnVisibility({
-        variableNames,
-        visibility,
-        tags,
-        tagSelection,
-      }),
-    [variableNames, visibility, tags, tagSelection]
+    () => combineVisibility(fromVariables, fromTags),
+    [fromVariables, fromTags]
   )
 }

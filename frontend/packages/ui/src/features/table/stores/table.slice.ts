@@ -43,9 +43,9 @@ type TableViewState = {
 type TableState = TanstackState & TableViewState
 
 const initialState: TableState = {
-  // A column shows unless it is listed false, so only the ones the table leaves
-  // out of its default view are seeded.
-  columnVisibility: { [VARIABLES.proposal]: false },
+  // Only the user's own choices. An untouched column's default comes from the
+  // metadata, in use-column-visibility.ts.
+  columnVisibility: {},
   // The user's own column order, empty until they set one: the table follows
   // the order the server sends until then. Variable names only, never groups.
   columnOrder: [],

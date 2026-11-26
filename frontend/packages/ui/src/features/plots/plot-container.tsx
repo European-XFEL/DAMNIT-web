@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Code, Image, Skeleton, Stack, Text } from '@mantine/core'
 import cx from 'clsx'
 
@@ -6,6 +6,8 @@ import { useAppSelector } from '#src/app/store/hooks'
 import { ViewStatus } from '#src/components/statuses/view-status'
 import { useTableMeta } from '#src/data/table/use-table-meta'
 import ComputedItem from '#src/features/plots/components/computed-item'
+import FailedPlotAlert from '#src/features/plots/components/failed-plot-alert'
+import SingleRunItem from '#src/features/plots/components/single-run-item'
 import UnableToDisplayAlert from '#src/components/feedback/unable-to-display-alert'
 import type { PlotSpec } from '#src/types'
 
@@ -41,7 +43,11 @@ function PlotContainer({ plot }: PlotContainerProps) {
     })
   const {
     data: previewData,
+    status,
     chunks,
+    markChunkFailed,
+    retryFailedChunks,
+    singleRun,
     computedAt: previewComputedAt,
     outdated,
     reload,
@@ -55,18 +61,36 @@ function PlotContainer({ plot }: PlotContainerProps) {
   const { traces, meta } = summaryData ?? previewData
   const computedAt = summaryComputedAt ?? previewComputedAt
 
+  // A retry keeps the failed alert up until its data draws or fails again, so
+  // the view does not flicker and Try again keeps its focus.
+  const [showsFailed, setShowsFailed] = useState(false)
+  if (status === 'failed' && !showsFailed) {
+    setShowsFailed(true)
+  }
+  if (status === 'ready' && showsFailed) {
+    setShowsFailed(false)
+  }
+  const retrying = showsFailed && status === 'loading'
+
   return (
     <Stack align="flex-start" justify="flex-start" maw={1200}>
-      {chunks.map((chunk) => (
+      {chunks.map(({ key, runs }) => (
         <PreviewChunkLoader
-          key={chunk[0]}
+          key={key}
           proposal={proposal}
-          runs={chunk}
+          runs={runs}
           variable={plot.variables[0]}
+          onFailed={markChunkFailed}
         />
       ))}
-      {!traces.length ? (
+      {!traces.length && showsFailed ? (
+        <FailedPlotAlert retrying={retrying} onRetry={retryFailedChunks} />
+      ) : !traces.length && status === 'loading' ? (
         <Skeleton className={cx(classes.frame, classes.wide)} radius="xl" />
+      ) : !traces.length ? (
+        <UnableToDisplayAlert title="Unable to display the plot">
+          <Text size="sm">None of its runs has data that can be plotted.</Text>
+        </UnableToDisplayAlert>
       ) : meta.type === 'image' ? (
         <Image
           src={traces[0].data?.value}
@@ -90,16 +114,17 @@ function PlotContainer({ plot }: PlotContainerProps) {
       ) : (
         <Plot traces={traces} meta={meta} />
       )}
-      {computedAt !== null && (
-        <ViewStatus>
+      <ViewStatus>
+        {singleRun && <SingleRunItem {...singleRun} />}
+        {computedAt !== null && (
           <ComputedItem
             time={computedAt}
             outdated={outdated}
             onReload={() => void reload()}
             reloading={reloading}
           />
-        </ViewStatus>
-      )}
+        )}
+      </ViewStatus>
     </Stack>
   )
 }

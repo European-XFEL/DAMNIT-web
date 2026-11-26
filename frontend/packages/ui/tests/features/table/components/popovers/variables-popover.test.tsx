@@ -850,6 +850,26 @@ describe('hiding columns', () => {
     await expect.element(checkbox(screen, 'Sample/X [mm]')).not.toBeChecked()
   })
 
+  test('the proposal column turns on when a guest run arrives', async () => {
+    const ownRun = { __typename: 'RunId', proposal: PROPOSAL, run: 130 }
+    const guestRun = { __typename: 'RunId', proposal: '900485', run: 608 }
+    client = metadataClient({ ...METADATA, runs: [ownRun] })
+    const screen = await openPopover()
+
+    // Every run is the opened proposal's, so Proposal starts hidden
+    await expect.element(checkbox(screen, 'Proposal')).not.toBeChecked()
+    await expect.element(screen.getByText('1 hidden')).toBeVisible()
+
+    // A push brings in another proposal's run
+    client.cache.writeQuery({
+      query: TABLE_META_QUERY,
+      variables: { proposal: PROPOSAL },
+      data: { metadata: { ...METADATA, runs: [ownRun, guestRun] } },
+    })
+    await expect.element(checkbox(screen, 'Proposal')).toBeChecked()
+    await expect.element(screen.getByText('1 hidden')).not.toBeInTheDocument()
+  })
+
   test("a group's link offers to show every member while one is hidden", async () => {
     store.dispatch(setColumnVisibility({ 'sample.x': false }))
     const screen = await openPopover()
