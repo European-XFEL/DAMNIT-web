@@ -128,6 +128,7 @@ export function useSummaryPlotData({
     }
     const meta: PlotMeta = {
       type: 'scatter',
+      mode: 'markers',
       x: { name: xName },
       y: { name: yName },
     }

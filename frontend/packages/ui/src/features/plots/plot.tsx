@@ -39,7 +39,7 @@ type Plot = {
  * -----------------------------
  */
 
-const scatterPlot = ({ traces }: PlotData): Plot => {
+const scatterPlot = ({ traces, meta }: PlotData): Plot => {
   const plotData = traces.reduce<Plotly.ScatterData[]>((acc, trace) => {
     if (trace.x?.value == null || trace.y?.value == null) {
       return acc
@@ -48,7 +48,8 @@ const scatterPlot = ({ traces }: PlotData): Plot => {
       x: trace.x.value as number[],
       y: trace.y.value as number[],
       name: trace.y?.name,
-      mode: 'markers',
+      // With no mode, Plotly draws a line, and adds markers under 20 points.
+      mode: meta.mode,
       type: 'scatter',
     }
     acc.push(plotTrace as Plotly.ScatterData)
