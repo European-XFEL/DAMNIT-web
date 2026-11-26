@@ -354,18 +354,38 @@ def test_get_preview_data_downsamples_a_large_bool_array_as_numbers(mocker):
     assert len(actual["data"]) == 10_001
 
 
-def test_get_preview_data_image(mocker):
+@pytest.mark.parametrize(
+    ("wrap", "type_hint"),
+    [(np.asarray, DataType.Image), (xr.DataArray, None)],
+    ids=["an image-typed array", "an untyped DataArray"],
+)
+def test_get_preview_data_image(mocker, wrap, type_hint):
     name = "some_image"
     dtype = DamnitType.IMAGE  # a colour array is rendered to a PNG string
-    data = np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8)
+    data = wrap(np.random.randint(0, 256, (2, 3, 4), dtype=np.uint8))
 
-    mock_damnit_class(mocker, data=data, type_hint=DataType.Image)
+    mock_damnit_class(mocker, data=data, type_hint=type_hint)
     actual = get_preview_data(proposal=1234, run_id=(None, 1), variable=name)
 
     assert actual["name"] == name
     assert actual["dtype"] == dtype.value
     assert isinstance(actual["data"], str)
     assert actual["attrs"] == {"shape": list(data.shape[:2])}
+
+
+@pytest.mark.parametrize(
+    "data",
+    ["not an image", np.arange(10, dtype=np.uint8), np.random.rand(2, 3, 3)],
+    ids=["a string", "a 1-D array", "a float RGB-shaped array"],
+)
+def test_get_preview_data_shows_an_image_typed_value_that_is_not_rgb_as_unsupported(
+    mocker, data
+):
+    mock_damnit_class(mocker, data=data, type_hint=DataType.Image)
+    actual = get_preview_data(proposal=1234, run_id=(None, 1), variable="some_image")
+
+    assert actual["dtype"] == DamnitType.NONE.value
+    assert actual["data"] is None
 
 
 # -----------------------------------------------------------------------------
