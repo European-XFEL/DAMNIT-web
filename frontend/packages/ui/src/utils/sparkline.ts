@@ -23,6 +23,8 @@ export type Point = [number, number]
 
 type Box = { left: number; top: number; width: number; height: number }
 
+export type HoveredIndexAtParams = { normalizedX: number; contentWidth: number }
+
 // d3-scale's scaleLinear does the same, but adds 25 kB minified (10 kB
 // gzipped) to the bundle, measured with esbuild.
 const linear = (
@@ -90,8 +92,6 @@ const valueAt = ({ x, y }: SparklineValue, at: number) => {
 
   return y[previous] + slope * (at - x[previous])
 }
-
-export type HoveredIndexAtParams = { normalizedX: number; contentWidth: number }
 
 /**
  * The index of the stored point to ring with the pointer `normalizedX` of the
