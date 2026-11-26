@@ -14,6 +14,7 @@
     "test": "pnpm -r test",
     "test:node": "pnpm -r test:node",
     "test:browser": "pnpm -r test:browser",
+    "check:nginx": "bash nginx/check.sh",
     "integration": "pnpm --filter @damnit-frontend/app exec playwright test -c playwright.integration.config.ts",
     "integration:ui": "pnpm --filter @damnit-frontend/app exec playwright test -c playwright.integration.config.ts --ui",
     "integration:report": "pnpm --filter @damnit-frontend/app exec playwright show-report",
