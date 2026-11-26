@@ -7,9 +7,10 @@ export const isCI = !!process.env.CI
 export const baseConfig = {
   fullyParallel: true,
   forbidOnly: isCI,
-  retries: isCI ? 2 : 0,
+  failOnFlakyTests: isCI,
+  retries: isCI ? 1 : 0,
   reporter: 'list',
   use: {
-    trace: 'on-first-retry',
+    trace: 'retain-on-first-failure',
   },
 } satisfies PlaywrightTestConfig
