@@ -86,10 +86,19 @@ test('with the dashboard closed, the popup opens the plot in a new dashboard tab
   const popup = await openPlotPopup(page, { context, example })
   await page.close()
 
+  // With no opener to ask, the popup can close before the click returns, and
+  // the wait for its close event checks that it closed.
   const [dashboard] = await Promise.all([
     context.waitForEvent('page'),
     popup.waitForEvent('close'),
-    popup.getByRole('link', { name: 'Open in dashboard' }).click(),
+    popup
+      .getByRole('link', { name: 'Open in dashboard' })
+      .click()
+      .catch((error: unknown) => {
+        if (!popup.isClosed()) {
+          throw error
+        }
+      }),
   ])
   await expect(dashboard).toHaveURL(dashboardUrl)
   await expect(dashboardNav(dashboard)).toBeVisible()
