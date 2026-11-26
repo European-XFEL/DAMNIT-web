@@ -7,6 +7,7 @@ import { FONT_FAMILY_SANS, FONT_SIZES } from '#src/styles/fonts'
 
 import classes from './plot.module.css'
 import { type PlotData, type PlotMeta } from './plots.types'
+import { loneValueMarkerSizes } from './utils'
 
 // Tick labels and axis titles are supporting text, so both take the small
 // sizes, with the titles one step above the ticks.
@@ -44,12 +45,17 @@ const scatterPlot = ({ traces, meta }: PlotData): Plot => {
     if (trace.x?.value == null || trace.y?.value == null) {
       return acc
     }
+
+    // With no mode, Plotly draws a line, and adds markers under 20 points.
+    const loneSizes =
+      meta.mode === undefined ? loneValueMarkerSizes(trace.y.value) : null
     const plotTrace = {
       x: trace.x.value as number[],
       y: trace.y.value as number[],
       name: trace.y?.name,
-      // With no mode, Plotly draws a line, and adds markers under 20 points.
-      mode: meta.mode,
+      ...(loneSizes
+        ? { mode: 'lines+markers', marker: { size: loneSizes } }
+        : { mode: meta.mode }),
       type: 'scatter',
     }
     acc.push(plotTrace as Plotly.ScatterData)
