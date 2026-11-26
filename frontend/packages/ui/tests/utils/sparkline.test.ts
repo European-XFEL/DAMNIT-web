@@ -76,7 +76,7 @@ describe('isAtOneX', () => {
     { x: [3, 3, 3], dots: true },
     { x: [0, 1, 2], dots: false },
   ])('a sparkline at x $x draws dots: $dots', ({ x, dots }) => {
-    expect(isAtOneX({ x, y: x })).toBe(dots)
+    expect(isAtOneX(x)).toBe(dots)
   })
 })
 

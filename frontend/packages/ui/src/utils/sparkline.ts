@@ -58,7 +58,7 @@ export const pointsInBox = (sparkline: SparklineValue, box: Box): Point[] => {
 
 // A path of no length strokes nothing, round cap or not, so a sparkline at one
 // x, one point or many samples of it, is drawn as dots.
-export const isAtOneX = ({ x }: SparklineValue) => x[0] === x.at(-1)
+export const isAtOneX = (x: number[]) => x[0] === x.at(-1)
 
 type PointerInContentParams = { hoverX: number; width: number; padding: number }
 

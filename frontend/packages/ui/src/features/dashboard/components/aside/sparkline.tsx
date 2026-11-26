@@ -100,7 +100,7 @@ function Sparkline({ x, y, label, className }: SparklineProps) {
               strokeWidth={RING_WIDTH}
             />
           )}
-          {isAtOneX({ x, y }) ? (
+          {isAtOneX(x) ? (
             points.map(([dotX, dotY], index) => (
               <circle
                 key={index}

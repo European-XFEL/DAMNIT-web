@@ -105,7 +105,7 @@ export const makeSparklineCellRenderer = ({
       drawRing(ctx, { center: points[index], color: ringColor })
     }
 
-    if (isAtOneX(cell.data)) {
+    if (isAtOneX(cell.data.x)) {
       drawDots(ctx, points)
     } else {
       drawLine(ctx, points)
