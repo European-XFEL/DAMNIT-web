@@ -1,11 +1,12 @@
 import { runKey } from '#src/data/table/table-data.transforms'
 import type { RunCells } from '#src/data/table/table-data.types'
 
-import {
-  type PlotMeta,
-  type PlotTrace,
-  type PreviewScalar,
-  type PreviewValue,
+import type {
+  PlotMeta,
+  PlotTrace,
+  PreviewScalar,
+  PreviewValue,
+  SingleRunKind,
 } from './plots.types'
 
 // extracted_data is a JSON scalar, so `value.data` arrives as unknown and its
@@ -54,9 +55,14 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
     case 'array2d':
       meta.type = 'heatmap'
       break
-    case 'image':
+    case 'image': {
       meta.type = 'image'
+      const [height, width] = value.attrs?.shape ?? []
+      if (height !== undefined && width !== undefined) {
+        meta.shape = [height, width]
+      }
       break
+    }
     case 'number':
     case 'string':
     case 'boolean':
@@ -76,10 +82,9 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
   // Only the attributes the plot declares. `attrs` also carries whatever the
   // context file left on the array, and spreading it whole put a single run's
   // arbitrary metadata on a plot that draws every run.
-  const { shape, colormap_range: colormapRange } = value.attrs ?? {}
+  const colormapRange = value.attrs?.colormap_range
 
   return {
-    ...(shape ? { shape } : {}),
     ...(colormapRange ? { colormap_range: colormapRange } : {}),
     ...meta,
   }
@@ -229,4 +234,22 @@ export function describeOutdatedRuns(runs: number[]) {
   return single
     ? `Run ${list} has newer data.`
     : `Runs ${list} have newer data.`
+}
+
+type DescribeHiddenRunsOptions = {
+  kind: SingleRunKind
+  hiddenCount: number
+}
+
+export function describeHiddenRuns({
+  kind,
+  hiddenCount,
+}: DescribeHiddenRunsOptions) {
+  const plural = kind === 'image' ? 'Images' : 'Heatmaps'
+  const left =
+    hiddenCount === 1
+      ? '1 other run with data is not shown.'
+      : `${hiddenCount} other runs with data are not shown.`
+
+  return `${plural} show one run at a time. ${left}`
 }

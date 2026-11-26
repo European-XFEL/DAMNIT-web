@@ -28,8 +28,8 @@ export type PlotMeta = {
   z?: TraceMeta
   data?: TraceMeta
 
-  // Optional: General
-  shape?: number[]
+  // Optional: images, height then width
+  shape?: [number, number]
 
   // Optional: 2D images
   colormap_range?: [number, number]
@@ -39,6 +39,10 @@ export type PlotData = {
   traces: PlotTrace[]
   meta: PlotMeta
 }
+
+export type SingleRunKind = 'image' | 'heatmap'
+
+export type ChunkFailure = 'network' | 'field'
 
 // What the backend attaches to one run's value. Both named attributes describe
 // that run alone: `shape` is its own array's, and `colormap_range` its own
