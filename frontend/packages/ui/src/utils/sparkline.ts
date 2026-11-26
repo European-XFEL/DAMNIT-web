@@ -52,6 +52,7 @@ const scaleToBox = (sparkline: SparklineValue, box: Box) => ({
 
 export const pointsInBox = (sparkline: SparklineValue, box: Box): Point[] => {
   const scale = scaleToBox(sparkline, box)
+
   return sparkline.x.map((value, index) => [
     scale.x(value),
     scale.y(sparkline.y[index]),
