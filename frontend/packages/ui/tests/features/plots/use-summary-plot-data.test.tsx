@@ -178,7 +178,7 @@ test('falls back to the variable name when it has left the context file', async 
   const { result } = await renderSummary(runIdsFor([1]), wrapper)
 
   // The plot outlives the variable it charts, so an axis with no metadata
-  // behind it is labelled by name rather than left blank.
+  // behind it is labeled by name rather than left blank.
   expect(result.current.data!.meta.x?.name).toBe('Photon energy')
   expect(result.current.data!.meta.y?.name).toBe('intensity')
 })
