@@ -284,7 +284,7 @@ def test_get_preview_data_downsamples_a_large_bool_array_as_numbers(mocker):
     actual = get_preview_data(proposal=1234, run_id=(None, 1), variable="some_mask")
 
     assert actual["dtype"] == DamnitType.ARRAY_1D.value
-    assert len(actual["data"]) == 10_000
+    assert len(actual["data"]) == 10_001
 
 
 def test_get_preview_data_image(mocker):

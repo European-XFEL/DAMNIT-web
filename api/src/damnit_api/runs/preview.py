@@ -43,7 +43,7 @@ def get_preview_data(proposal, run_id, variable):
                 drop=True  # FIX: # pyright: ignore[reportCallIssue]
             )
 
-    # Masks come back as bool arrays, from read() as well, and interp needs numbers
+    # Masks come back as bool arrays, from read() as well, and plot as 0 and 1
     if isinstance(data, np.ndarray | xr.DataArray) and data.dtype == bool:
         data = data.astype(np.uint8)
 
@@ -163,49 +163,59 @@ def fill_coords(array):
     return array
 
 
-def downsample(
-    data_array,
-    *,
-    max_bins_1d: int = 10_000,
-    max_bins_2d: int = 1_000,
-    min_ratio_2d: float = 0.05,
-):
+def downsample(data_array, *, max_points_1d: int = 10_000, max_points_2d: int = 1_000):
+    """Keep evenly spaced points on each axis longer than its cap.
+
+    The points keep their own coordinates. A capped 1-D array also keeps its
+    finite minimum and maximum, so it can hold up to two points past its cap.
+    """
     match data_array.ndim:
         case 1:
-            bins = [min(max_bins_1d, data_array.size)]
-
-            # Skip downsampling if the size is small
-            if bins[0] == data_array.size:
+            if data_array.size <= max_points_1d:
                 return data_array
+
+            picks = np.union1d(
+                even_indices(data_array.size, max_points_1d),
+                extreme_indices(data_array.values),
+            )
+            return data_array[picks]
         case 2:
-            Ny, Nx = data_array.shape  # noqa: N806
+            picked = data_array.isel({
+                dim: even_indices(size, max_points_2d)
+                for dim, size in data_array.sizes.items()
+                if size > max_points_2d
+            })
 
-            # Skip downsampling if the sizes are small
-            if max(Ny, Nx) <= max_bins_2d:
-                return data_array
-
-            # Skip downsampling if the ratio is small
-            ratio = min(Ny, Nx) / max(Ny, Nx)
-            if ratio < min_ratio_2d:
-                return data_array
-
-            denom = max(Nx, Ny)
-            factor = max_bins_2d / denom
-            bins = [max(1, int(Ny * factor)), max(1, int(Nx * factor))]
+            # Plotly needs sorted heatmap axes, and isel keeps the order rows came in.
+            # Sorting copies the array, so sort only the axes that need it.
+            unsorted = [
+                dim
+                for dim in picked.dims
+                if not picked.indexes[dim].is_monotonic_increasing
+            ]
+            return picked.sortby(unsorted) if unsorted else picked
         case _:
             message = "Downsampling is only supported for 1D or 2D arrays"
             raise RuntimeError(message)
 
-    coords = {
-        d: np.linspace(
-            np.nanmin(data_array.coords[d]),
-            np.nanmax(data_array.coords[d]),
-            num=b,
-        )
-        for d, b in zip(data_array.dims, bins, strict=True)
-    }
 
-    return data_array.interp(**coords, method="linear")
+def even_indices(size, count):
+    """Return `count` evenly spaced indices from 0 to `size - 1`."""
+    return np.linspace(0, size - 1, count).round().astype(int)
+
+
+def extreme_indices(values):
+    """Return the indices of the finite minimum and maximum, if there are any."""
+    extremes = np.array([values.argmin(), values.argmax()])
+    if np.isfinite(values[extremes]).all():
+        return extremes
+
+    # A NaN or an infinity took a pick. Only such a trace pays for a filtered copy.
+    finite = np.where(np.isfinite(values), values, np.nan)
+    try:
+        return np.array([np.nanargmin(finite), np.nanargmax(finite)])
+    except ValueError:  # no finite reading at all
+        return np.array([], dtype=int)
 
 
 def with_attributes(array):
