@@ -1,3 +1,7 @@
 # pnpm copies npm's deprecation notices into its lockfile, and a notice may
 # hold any character, so the character check skips it.
 frontend/pnpm-lock.yaml -check-characters
+
+# Two branches that each add a line under [Unreleased] would conflict on a
+# plain merge, so git keeps both sides' lines here instead.
+CHANGELOG.md merge=union
