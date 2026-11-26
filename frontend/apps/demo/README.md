@@ -79,7 +79,7 @@ the `frontend/` root:
 
 ```bash
 pnpm playwright:install   # once: install the Chromium browser
-pnpm e2e:demo
+pnpm test:e2e:demo
 ```
 
 It builds the demo first, which takes about a minute, and then serves it with

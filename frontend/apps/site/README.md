@@ -55,7 +55,7 @@ the `frontend/` root:
 
 ```bash
 pnpm playwright:install   # once: install the Chromium browser
-pnpm e2e:site
+pnpm test:e2e:site
 ```
 
 It builds the site first, which takes about a minute, and then serves it with
