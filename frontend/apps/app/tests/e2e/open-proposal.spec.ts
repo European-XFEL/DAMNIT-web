@@ -1,5 +1,9 @@
 import type { Page } from '@playwright/test'
 
+import {
+  canScroll,
+  gridScroller,
+} from '@damnit-frontend/testing/playwright/grid'
 import { test, expect } from '@damnit-frontend/testing/playwright/production'
 import {
   columnCells,
@@ -37,7 +41,14 @@ test('a proposal opens on every run DAMNIT extracted, their values and its group
   ])
 
   // A grouped column's header drops the group's title, which the group row
-  // above it shows instead.
-  const titles = await columnTitles(page)
-  expect(titles.filter((title) => title === 'Position [mm]')).toHaveLength(2)
+  // above it shows instead. The group comes last, so scroll it into the mirror.
+  await expect.poll(() => canScroll(page, 'horizontal')).toBe(true)
+  await gridScroller(page).evaluate((element) => {
+    element.scrollLeft = element.scrollWidth
+  })
+  await expect
+    .poll(async () =>
+      (await columnTitles(page)).filter((title) => title === 'Position [mm]')
+    )
+    .toHaveLength(2)
 })
