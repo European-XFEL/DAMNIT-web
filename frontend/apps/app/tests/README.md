@@ -18,10 +18,10 @@ From the `frontend/` root:
 
 ```
 pnpm playwright:install   # once: install the Chromium browser
-pnpm integration          # run the integration suite
-pnpm integration:ui       # run it in Playwright's watch UI
-pnpm e2e:app              # run the e2e suite (see below for its one-time setup)
-pnpm e2e:report           # open the report of the last run made with --reporter=html
+pnpm test:integration     # run the integration suite
+pnpm test:integration:ui  # run it in Playwright's watch UI
+pnpm test:e2e:app         # run the e2e suite (see below for its one-time setup)
+pnpm test:e2e:report      # open the report of the last run made with --reporter=html
 ```
 
 The integration suite starts the app on a dedicated port (6173), from

@@ -74,7 +74,7 @@ jobs:
 
       # No build step: the suite's web server builds its app on every run.
       - name: e2e
-        run: pnpm e2e:${{ matrix.suite }}
+        run: pnpm test:e2e:${{ matrix.suite }}
 
       # always() and ignore for the same reasons as the integration job in
       # test-frontend.yml.

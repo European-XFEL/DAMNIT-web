@@ -117,28 +117,51 @@ VITE_API = "http://127.0.0.1:30200"
 
 ## Testing
 
-Most tests live in `packages/ui/tests`. There the file extension decides
-where a test runs, and that is the only rule to remember:
+The frontend has five levels of tests, told apart by what is real in each.
+Run every command from the `frontend` folder.
 
-- `*.test.ts` runs in Node. Use it for pure logic (functions, reducers,
-  selectors). Fast, no DOM.
-- `*.test.tsx` runs in a real browser (Chromium). Use it for anything that
-  renders or touches the DOM (components, hooks). If it needs a DOM, name it
-  `.tsx`.
+| Level                  | What is real                                                                     | Where it lives                               | Command                                    | CI check               |
+| ---------------------- | -------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------ | ---------------------- |
+| `*.test.ts`            | Logic in Node, with no DOM                                                       | `packages/ui/tests`, `packages/shared/tests` | `pnpm test:unit:node`                      | `unit`                 |
+| `*.test.tsx`           | Components with the store and the Apollo cache, in Chromium, with no app started | `packages/ui/tests`                          | `pnpm test:unit:browser`                   | `unit`                 |
+| Mocked spec            | The whole app in Chromium; the test answers every request                        | `apps/app/tests/integration`                 | `pnpm test:integration`                    | `integration`          |
+| App e2e spec           | The app's production build against the real API; the test answers nothing        | `apps/app/tests/e2e`                         | `pnpm test:e2e:app`                        | `e2e-app`              |
+| Site and demo e2e spec | Each app's production build; the test answers nothing                            | `apps/site/tests/e2e`, `apps/demo/tests/e2e` | `pnpm test:e2e:site`, `pnpm test:e2e:demo` | `e2e-site`, `e2e-demo` |
 
-The mock API's own test lives in `packages/shared/tests`. Shared runs Vitest
-with its defaults, so every test there runs in Node, whatever its extension.
+`pnpm test:unit`, or `pnpm test` for short, runs both Vitest levels, and the
+`unit` check runs it in CI. The mock API's own test lives in
+`packages/shared/tests`. Shared runs Vitest with its defaults, so every test
+there runs in Node, whatever its extension. Shared test helpers (the render
+wrapper, the Node setup) live in `packages/ui/tests/support` and are imported
+via `#tests/support/...`.
 
-Run the suite from the `frontend` folder:
+The mocked suite is called `integration` in its folder, its script and its CI
+check. Here that word means the app against a mocked API.
 
-```sh
-pnpm test           # everything
-pnpm test:node      # just the Node logic tests
-pnpm test:browser   # just the browser tests
-```
+### Which level a new test takes
 
-Shared test helpers (the render wrapper, the Node setup) live in
-`packages/ui/tests/support` and are imported via `#tests/support/...`.
+A new test takes the first of these levels that can show its behavior:
+
+1. `*.test.ts`: logic with no DOM.
+2. `*.test.tsx`: one component or hook, with the store, the Apollo cache or a
+   memory router when it reads them. A grid ref is faked.
+3. A mocked spec: anything that needs the drawn grid, the app's route table,
+   the HTTP or websocket client, or a whole page.
+4. An e2e spec: one per workflow, to show that the API's real answers reach
+   the page.
+
+Only the app has a mocked suite. A site or demo test that needs a page is an
+e2e spec in that app's suite.
+
+The grid is tested only through Playwright, for two reasons. Its drivers send
+Playwright's mouse events. Vitest draws in fallback fonts, so a column width
+measured there is not the one users see.
+
+Before the first Playwright run, install Chromium with
+`pnpm playwright:install`. `pnpm test:e2e:app` also needs the API installed once.
+For that install, how the app's two suites run and the integration suite's
+layout, see [`apps/app/tests/README.md`](apps/app/tests/README.md). For the
+drivers every suite shares, see [`packages/testing/README.md`](packages/testing/README.md).
 
 ## Deployment
 
