@@ -30,6 +30,7 @@ The format follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/
 - Variable visibility set in the Variables popover, no longer on a settings page.
 - Variables popover search highlights matches instead of filtering.
 - New plot dialog in a new order, with its variables grouped.
+- 1D preview plots drawn as lines.
 - Closing a tab returns to the previous tab.
 - Run tab title reads `Run 12`.
 - Every cycle expanded in the proposal list.
