@@ -9,6 +9,7 @@ from numpy.testing import assert_array_equal
 
 from damnit_api.runs.preview import (
     NOT_SUPPORTED_MESSAGE,
+    downsample,
     get_damnit_type,
     get_preview_data,
     standardize,
@@ -172,6 +173,72 @@ def test_to_dataarray_2d_dataarray_with_coords():
 def test_to_data_array_unsupported(data):
     with pytest.raises(ValueError, match=NOT_SUPPORTED_MESSAGE):
         to_dataarray(data.value)
+
+
+# -----------------------------------------------------------------------------
+# downsample
+
+
+def test_downsample_caps_only_the_long_axis_of_a_narrow_array():
+    data = xr.DataArray(
+        np.random.rand(1_200, 20),
+        dims=["y", "x"],
+        coords={"y": np.arange(1_200) * 0.5 + 100, "x": np.arange(20)},
+    )
+
+    actual = downsample(data)
+
+    assert actual.shape == (1_000, 20)
+    # Picked points, not interpolated ones: each sits on an original coordinate
+    assert actual.equals(data.sel(y=actual.coords["y"]))
+
+
+def test_downsample_sorts_the_axes_of_a_heatmap_whose_rows_came_out_of_order():
+    rows = np.concatenate([np.arange(600, 1_200), np.arange(600)])
+    data = xr.DataArray(
+        np.random.rand(1_200, 20),
+        dims=["y", "x"],
+        coords={"y": rows, "x": np.arange(20)},
+    )
+
+    actual = downsample(data)
+
+    assert np.all(np.diff(actual.coords["y"]) > 0)
+    assert actual.equals(data.sel(y=actual.coords["y"]))
+
+
+def test_downsample_keeps_the_minimum_and_maximum_of_a_long_1d_array():
+    data = np.zeros(12_000)
+    data[3] = 5.0  # 3 and 9 fall between the evenly spaced picks
+    data[9] = -2.0
+
+    actual = downsample(to_dataarray(data))
+
+    assert actual.size == 10_002
+    assert actual.max() == pytest.approx(5.0)
+    assert actual.min() == pytest.approx(-2.0)
+
+
+def test_downsample_keeps_the_finite_extremes_of_a_trace_with_infinite_readings():
+    data = np.zeros(12_000)
+    data[3] = 5.0
+    data[9] = -2.0
+    data[21] = np.inf  # The preview sends an infinity as null
+    data[27] = -np.inf
+
+    actual = downsample(to_dataarray(data)).values
+
+    finite = actual[np.isfinite(actual)]
+    assert finite.max() == pytest.approx(5.0)
+    assert finite.min() == pytest.approx(-2.0)
+
+
+def test_downsample_keeps_only_the_even_picks_of_a_trace_with_no_finite_reading():
+    data = np.full(12_000, np.nan)
+
+    actual = downsample(to_dataarray(data))
+
+    assert actual.size == 10_000
 
 
 # -----------------------------------------------------------------------------
