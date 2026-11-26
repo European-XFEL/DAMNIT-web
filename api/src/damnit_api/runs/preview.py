@@ -68,7 +68,7 @@ def get_preview_data(proposal, run_id, variable):
 
 
 def get_png(data):
-    image_obj = Image.fromarray(data)
+    image_obj = Image.fromarray(np.asarray(data))
 
     with io.BytesIO() as buffer:
         image_obj.save(buffer, format="PNG")
@@ -89,7 +89,9 @@ def get_array(data):
 def get_damnit_type(data, *, type_hint=None):  # noqa: C901
     match type_hint:
         case DataType.Image:
-            return DamnitType.IMAGE
+            if is_rgb(data):
+                return DamnitType.IMAGE
+            raise ValueError(NOT_SUPPORTED_MESSAGE)
         case DataType.Timestamp:
             return DamnitType.TIMESTAMP
         case None:
@@ -112,10 +114,23 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
             return DamnitType.ARRAY_1D
         case 2:
             return DamnitType.ARRAY_2D
-        case 3 if type_hint is None and data.shape[-1] in (3, 4):
+        case 3 if type_hint is None and is_rgb(data):
             return DamnitType.IMAGE
         case _:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
+
+
+def is_rgb(data):
+    """Return whether `data` is a uint8 RGB or RGBA array, (H, W, 3) or (H, W, 4).
+
+    PIL writes only uint8 color arrays as PNG.
+    """
+    return (
+        isinstance(data, xr.DataArray | np.ndarray)
+        and data.ndim == 3
+        and data.shape[-1] in (3, 4)
+        and data.dtype == np.uint8
+    )
 
 
 # -----------------------------------------------------------------
