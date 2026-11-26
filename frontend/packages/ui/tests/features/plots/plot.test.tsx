@@ -52,3 +52,18 @@ test.each([
     )
   }
 )
+
+test('a line of 20 or more points draws a marker at each lone value', async () => {
+  const readings = new Map([
+    [10, 0.5],
+    [50, 0.7],
+    [120, 0.2],
+  ])
+  const container = await renderPulsePlot(
+    // The API sends NaN as null, which the trace's type leaves out.
+    pulses.map((i) => readings.get(i) ?? null) as number[],
+    { type: 'scatter' }
+  )
+
+  expect(container.querySelectorAll('.scatterlayer .point')).toHaveLength(3)
+})

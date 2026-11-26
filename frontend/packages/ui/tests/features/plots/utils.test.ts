@@ -3,6 +3,7 @@ import { expect, test } from 'vitest'
 
 import {
   formatRunSelection,
+  loneValueMarkerSizes,
   parseRunSelection,
   plotName,
   plotRunIds,
@@ -137,4 +138,24 @@ test("a plot's runs leave out a guest proposal's run of the same number", () => 
   expect(
     plotRunIds(allRuns, { proposal: '6996', selection: ['2', '3'] })
   ).toEqual([{ proposal: '6996', run: 2 }])
+})
+
+test('a line of 20 or more points marks only its lone values', () => {
+  const y = [5, null, 1, 2, ...times(15, () => null), 7]
+
+  expect(loneValueMarkerSizes(y)).toEqual([
+    6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6,
+  ])
+})
+
+test('a line with no lone value keeps the default look', () => {
+  const y = [1, 2, null, ...times(17, (index) => index)]
+
+  expect(loneValueMarkerSizes(y)).toBeNull()
+})
+
+test('a line under 20 points keeps the default look, which marks every point', () => {
+  const y = [5, null, ...times(17, (index) => index)]
+
+  expect(loneValueMarkerSizes(y)).toBeNull()
 })
