@@ -63,6 +63,11 @@
   overflow-wrap: anywhere;
 }
 
+/* Three of the list's 22 px lines, in the list and with its variable open. */
+.sparkline {
+  height: 66px;
+}
+
 /* Thumbnails are stored at 300 px on their long side, so they draw pixel for
    pixel and are only ever scaled down. */
 .image {

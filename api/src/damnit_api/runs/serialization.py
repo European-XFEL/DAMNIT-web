@@ -44,34 +44,19 @@ def to_complex_string(z, symbol="j"):
     return f"{fmt(real)}{sign}{imag_part}"
 
 
-def resample_array(arr):
-    # Cast arrays to float (same as PyQt implementation)
+def finite_points(arr):
+    """The finite points of a 2xN trend as x and y arrays, sorted by x."""
     x = np.asarray(arr[0], dtype=np.float64)
     y = np.asarray(arr[1], dtype=np.float64)
 
-    # Drop not finite values (same as PyQt implementation)
     finite = np.isfinite(x) & np.isfinite(y)
     x = x[finite]
     y = y[finite]
 
-    # Order by x-axis
-    order = np.argsort(x)
-    x = x[order]
-    y = y[order]
+    # Stable, so two samples at one x keep the order DAMNIT stored them in.
+    order = np.argsort(x, kind="stable")
 
-    # Remove duplicates, just in case
-    x, unique_idx = np.unique(x, return_index=True)
-    y = y[unique_idx]
-
-    # Return immediately if there's only less than 2 elements
-    if x.size < 2:
-        return x, y
-
-    # Build evenly-spaced x-axis (maybe using `size` is not the best)
-    x_even = np.linspace(x[0], x[-1], x.size)
-
-    # Build evenly-spaced y-axis
-    return x_even, np.interp(x_even, x, y)
+    return x[order], y[order]
 
 
 def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
@@ -113,7 +98,7 @@ def serialize(value, *, dtype=DamnitType.STRING):  # noqa: C901
                     value = f"{arr.dtype}: {arr.shape}"
                     dtype = DamnitType.STRING
                 else:
-                    x, y = resample_array(arr)
+                    x, y = finite_points(arr)
                     value = {"x": x, "y": y}
 
     return value, dtype

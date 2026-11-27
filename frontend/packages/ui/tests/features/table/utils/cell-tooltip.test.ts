@@ -5,7 +5,7 @@ import { serverCell } from '#tests/support/cells'
 
 const RUN = { database: '900485', proposal: '900485', run: 12 }
 const IMAGE = 'data:image/png;base64,iVBORw0KGgo='
-const MIDDLE = { normalizedX: 0.5 }
+const MIDDLE = { normalizedX: 0.5, contentWidth: 100 }
 
 describe('cellTooltip', () => {
   test('shows an error before the value', () => {
@@ -46,15 +46,17 @@ describe('cellTooltip', () => {
     expect(cellTooltip(cell, MIDDLE)).toBeUndefined()
   })
 
-  // Four points sit a third of the way apart, so 0.37 is nearest the second.
-  test('shows the sparkline point under the pointer', () => {
+  // The pointer 0.37 of the way across 0.1 to 0.8 is at x 0.359.
+  test('shows the stored point nearest the pointer', () => {
     const g2 = { x: [0.1, 0.2, 0.4, 0.8], y: [1.3, 1.21, 1.08, 1.02] }
     const cell = serverCell({ ...RUN, name: 'g2', value: g2, dtype: 'array1d' })
 
-    expect(cellTooltip(cell, { normalizedX: 0.37 })).toEqual({
+    const pointer = { normalizedX: 0.37, contentWidth: 100 }
+
+    expect(cellTooltip(cell, pointer)).toEqual({
       kind: 'sparkline',
-      x: 0.2,
-      y: 1.21,
+      x: 0.4,
+      y: 1.08,
     })
   })
 

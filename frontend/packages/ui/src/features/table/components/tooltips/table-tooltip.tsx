@@ -15,9 +15,11 @@ import {
 } from 'react-laag'
 
 import CellErrorCard from '#src/components/feedback/cell-error-card'
+import { SparklinePoint } from '#src/components/tooltips/sparkline-point'
 import { type CellError } from '#src/utils/cell-errors'
 import { assertNever } from '#src/utils/asserts'
-import { formatNumber } from '#src/utils/format'
+
+import classes from './table-tooltip.module.css'
 
 // react-laag's Arrow type lists two props @types/react 18.3 dropped, while its
 // ArrowProps is built from the installed @types/react.
@@ -66,9 +68,8 @@ function renderBody(target: CellTooltip) {
       )
     case 'sparkline':
       return (
-        <Box px={8} py={4} c="white" ff="monospace" fz="xs">
-          <div>x: {formatNumber(target.x)}</div>
-          <div>y: {formatNumber(target.y)}</div>
+        <Box px={8} py={4} c="white">
+          <SparklinePoint x={target.x} y={target.y} />
         </Box>
       )
     default:
@@ -108,6 +109,7 @@ export function TableTooltip({
     >
       <Arrow
         {...arrowProps}
+        className={classes.arrow}
         backgroundColor={surface}
         borderWidth={0}
         size={arrowSize}

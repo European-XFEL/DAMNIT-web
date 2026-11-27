@@ -3,6 +3,7 @@ import type {
   RunId,
   TableMeta,
 } from '#src/data/table/table-data.types'
+import type { HoveredIndexAtParams } from '#src/utils/sparkline'
 
 export type Scroll = {
   x: number
@@ -55,9 +56,9 @@ export type CellId = {
   variable: string
 }
 
-// The cell under the pointer, with its box in viewport pixels. `normalizedX` is
-// 0 at the left edge of the cell's content and 1 at its right edge.
-export type HoveredCell = CellId & { bounds: Rectangle; normalizedX: number }
+// The cell under the pointer, with its box in viewport pixels, and where the
+// pointer is across the cell's content.
+export type HoveredCell = CellId & { bounds: Rectangle } & HoveredIndexAtParams
 
 export type CellMenuArgs = CellId & {
   selectedRuns: RunId[]

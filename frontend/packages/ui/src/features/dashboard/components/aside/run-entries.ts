@@ -8,6 +8,7 @@ import type {
   Variable,
 } from '#src/data/table/table-data.types'
 import { buildVariableBlocks } from '#src/data/table/variable-blocks'
+import { toSparkline } from '#src/features/table/utils/cells'
 import type { CellError } from '#src/utils/cell-errors'
 import type { VariableBlock, VariableItem } from '#src/utils/variable-blocks'
 
@@ -27,6 +28,10 @@ type RunEntriesOptions = {
   activeVariable: string | null
 }
 
+// The API drops every NaN point, so a sparkline of NaNs arrives with none.
+const isEmptySparkline = (value: CellValue) =>
+  toSparkline(value)?.x.length === 0
+
 // A run with no cell for a variable is one DAMNIT has no value for, which the
 // grid draws as empty too.
 function cellState(cell: Cell | undefined): CellState {
@@ -41,7 +46,11 @@ function cellState(cell: Cell | undefined): CellState {
   }
 
   const { value, dtype } = cell.summary
-  return value == null ? { state: 'blank' } : { state: 'value', value, dtype }
+  if (value == null || isEmptySparkline(value)) {
+    return { state: 'blank' }
+  }
+
+  return { state: 'value', value, dtype }
 }
 
 // The grid's row as blocks, less what has no value to show. With an active

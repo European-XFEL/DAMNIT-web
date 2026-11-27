@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from damnit_api.runs.serialization import (
-    resample_array,
+    finite_points,
     serialize,
     to_complex_string,
 )
@@ -62,34 +62,37 @@ def test_complex_string_custom_symbol():
 
 
 # -----------------------------------------------------------------------------
-# Test resample_array
+# Test finite_points
 
 
-def test_resample_array_orders_by_x():
+def test_finite_points_orders_by_x():
     arr = np.array([[3, 1, 2], [30, 10, 20]], dtype=np.float64)
-    x, y = resample_array(arr)
-    assert (x[0], x[-1]) == (1, 3)
-    assert (y[0], y[-1]) == (10, 30)
+    x, y = finite_points(arr)
+    np.testing.assert_array_equal(x, [1, 2, 3])
+    np.testing.assert_array_equal(y, [10, 20, 30])
 
 
-def test_resample_array_evenly_spaces_x():
-    arr = np.array([[0, 1, 4], [0, 10, 40]], dtype=np.float64)
-    x, y = resample_array(arr)
-    np.testing.assert_array_equal(x, [0, 2, 4])
-    np.testing.assert_array_equal(y, [0, 20, 40])
+def test_finite_points_keeps_peaks_at_their_stored_x():
+    arr = np.array([[0, 0.5, 3, 3.2, 7], [1, 9, 2, -4, 1]], dtype=np.float64)
+    x, y = finite_points(arr)
+    np.testing.assert_array_equal(x, [0, 0.5, 3, 3.2, 7])
+    np.testing.assert_array_equal(y, [1, 9, 2, -4, 1])
 
 
-def test_resample_array_drops_non_finite():
+def test_finite_points_drops_non_finite():
     arr = np.array([[1, 2, 3, 4], [10, np.nan, np.inf, 40]], dtype=np.float64)
-    x, y = resample_array(arr)
-    assert np.all(np.isfinite(x))
-    assert np.all(np.isfinite(y))
+    x, y = finite_points(arr)
+    np.testing.assert_array_equal(x, [1, 4])
+    np.testing.assert_array_equal(y, [10, 40])
 
 
-def test_resample_array_removes_duplicates():
-    arr = np.array([[1, 1, 2, 3], [10, 20, 30, 40]], dtype=np.float64)
-    x, y = resample_array(arr)
-    assert len(x) == len(y) == 3
+# numpy's default sort reorders samples of one x once there are a few dozen.
+def test_finite_points_keeps_each_sample_of_a_repeated_x_in_stored_order():
+    x_stored = np.r_[np.full(40, 2.0), 1.0]
+    y_stored = np.r_[np.arange(40.0), -1.0]
+    x, y = finite_points(np.array([x_stored, y_stored]))
+    np.testing.assert_array_equal(x, np.r_[1.0, np.full(40, 2.0)])
+    np.testing.assert_array_equal(y, np.r_[-1.0, np.arange(40.0)])
 
 
 # -----------------------------------------------------------------------------

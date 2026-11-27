@@ -1,0 +1,9 @@
+/* The arrow's svg is twice as deep as the triangle it draws, so its empty half
+   lies on the trigger. Only the triangle takes the pointer, as the card. */
+.arrow {
+  pointer-events: none;
+
+  & path {
+    pointer-events: visiblePainted;
+  }
+}
