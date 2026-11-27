@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import numpy as np
+import plotly.graph_objects as go
 import pytest
 import xarray as xr
 from damnit.api import DataType
@@ -68,6 +69,7 @@ datasets = [
         type_hint=DataType.Dataset,
     ),
 ]
+figures = [ExtractedData(value=go.Figure(go.Scatter(y=np.random.rand(10))))]
 
 
 @pytest.mark.parametrize(
@@ -80,7 +82,7 @@ def test_get_damnit_type_valid(data):
 
 @pytest.mark.parametrize(
     "data",
-    datasets,
+    datasets + figures,
 )
 def test_get_damnit_type_unsupported(data):
     with pytest.raises(ValueError, match=NOT_SUPPORTED_MESSAGE):
@@ -226,6 +228,7 @@ DAMNIT_CLASS_PATH = "damnit_api.runs.preview.Damnit"
 
 def mock_damnit_class(mocker, *, data, type_hint):
     mocker.patch("damnit_api.runs.preview.get_damnit_path", return_value="/mock/path")
+    mocker.patch("damnit_api.runs.preview.read_raw_size", return_value=data.nbytes)
     mock_variable = mocker.Mock(
         preview_data=mocker.Mock(return_value=None),
         type_hint=mocker.Mock(return_value=type_hint),
@@ -297,6 +300,18 @@ def test_get_preview_data_image(mocker):
     assert actual["dtype"] == dtype.value
     assert isinstance(actual["data"], str)
     assert actual["attrs"] == {"shape": list(data.shape[:2])}
+
+
+def test_get_preview_data_refuses_a_dataset_without_reading_it(mocker):
+    data = xr.Dataset({"energy": ("trainId", np.random.rand(4))})
+
+    damnit = mock_damnit_class(mocker, data=data, type_hint=DataType.Dataset)
+    actual = get_preview_data(proposal=1234, run_id=(None, 1), variable="some_dataset")
+
+    assert actual["dtype"] == DamnitType.NONE.value
+    assert actual["data"] is None
+    # Reading the whole value is the cost, and the result looks the same with it
+    damnit.return_value.__getitem__.return_value.read.assert_not_called()
 
 
 # -----------------------------------------------------------------------------

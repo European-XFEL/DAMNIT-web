@@ -5,8 +5,9 @@ failure on run 2. `build_proposals.py` runs it on mock runs.
 """
 
 import numpy as np
+import plotly.graph_objects as go
 import xarray as xr
-from damnit_ctx import Group, Variable
+from damnit_ctx import Cell, Group, Variable
 from extra_data import SourceNameError
 from matplotlib.figure import Figure
 
@@ -68,11 +69,18 @@ def pulse_energy(run, run_number: "meta#run_number"):
 
 
 # A small figure: DAMNIT stores a figure as uncompressed RGBA pixels
-@Variable(title="Trace plot", tags="Analysis")
-def trace_plot(run, run_number: "meta#run_number"):
+@Variable(title="Trace plot (matplotlib)", tags="Analysis")
+def trace_matplotlib(run, run_number: "meta#run_number"):
     figure = Figure(figsize=(2, 1.5), dpi=50)
     figure.add_subplot().plot(noise(run_number, 200))
     return figure
+
+
+# Its own summary: without one, DAMNIT renders the figure with Chrome
+@Variable(title="Trace with Plotly preview", tags="Analysis")
+def trace_plotly(run, run_number: "meta#run_number"):
+    values = noise(run_number, 200)
+    return Cell(values, summary="mean", preview=go.Figure(go.Scatter(y=values)))
 
 
 # -----------------------------------------------------------------------------

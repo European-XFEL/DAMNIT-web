@@ -11,7 +11,7 @@ test("hovering a figure's thumbnail shows the figure enlarged", async ({
   await openMockProposal(page)
 
   await hoverCell(page, {
-    col: await columnOfTitle(page, 'Trace plot'),
+    col: await columnOfTitle(page, 'Trace plot (matplotlib)'),
     row: 0,
   })
 

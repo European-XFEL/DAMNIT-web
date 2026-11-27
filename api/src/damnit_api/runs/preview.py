@@ -1,18 +1,29 @@
 import io
 
+import h5py
 import numpy as np
 import xarray as xr
 from damnit.api import Damnit, DataType
 from PIL import Image
 
+from .. import get_logger
 from ..shared.const import DamnitType
 from ..utils import b64image
 from .sqlite import get_damnit_path
 
 NOT_SUPPORTED_MESSAGE = "Not supported."
+PREVIEW_LIMIT_BYTES = 256 * 1024**2
+UNSUPPORTED_TYPE_HINTS = {
+    DataType.DataFrame,
+    DataType.Dataset,
+    DataType.PlotlyFigure,
+    DataType.Series,
+}
+
+logger = get_logger()
 
 
-def get_preview_data(proposal, run_id, variable):
+def get_preview_data(proposal, run_id, variable):  # noqa: C901
     """Return the preview of one run's variable in `proposal`'s database.
 
     `run_id` is a `(proposal, run)` pair; a proposal of None reads the
@@ -22,16 +33,31 @@ def get_preview_data(proposal, run_id, variable):
     try:
         var_data = Damnit(path)[*run_id, variable]
     except KeyError:
-        return standardize(None, name=variable, dtype=DamnitType.NONE.value)
+        return empty_preview(variable)
 
     data = var_data.preview_data(data_fallback=False)
     if data is not None:
         type_hint = None
     else:
-        data = var_data.read()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
         type_hint = (
             var_data.type_hint()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
         )
+        if type_hint in UNSUPPORTED_TYPE_HINTS:
+            return empty_preview(variable)
+
+        raw_size = read_raw_size(var_data)
+        if raw_size > PREVIEW_LIMIT_BYTES:
+            logger.warning(
+                "Preview refused: array too large",
+                proposal=proposal,
+                run_id=run_id,
+                variable=variable,
+                raw_bytes=raw_size,
+                limit_bytes=PREVIEW_LIMIT_BYTES,
+            )
+            return empty_preview(variable)
+
+        data = var_data.read()  # FIX: # pyright: ignore[reportAttributeAccessIssue]
 
     match type(data):
         case np.ndarray:
@@ -50,7 +76,7 @@ def get_preview_data(proposal, run_id, variable):
     try:
         dtype = get_damnit_type(data, type_hint=type_hint)
     except ValueError:
-        return standardize(None, name=variable, dtype=DamnitType.NONE.value)
+        return empty_preview(variable)
 
     attrs = None
     match dtype:
@@ -65,6 +91,23 @@ def get_preview_data(proposal, run_id, variable):
             data = get_png(data)
 
     return standardize(data, name=variable, dtype=dtype.value, attrs=attrs)
+
+
+def read_raw_size(var_data):
+    """Return the size in bytes of a variable's datasets, from the HDF5 headers.
+
+    The size is shape times itemsize, so it reads no data and ignores compression.
+    """
+    with h5py.File(var_data.file) as f:
+        group = f.get(var_data.name)
+
+        # User-editable variables live in the database, summary-only ones in .reduced
+        if not isinstance(group, h5py.Group):
+            return 0
+
+        return sum(
+            obj.nbytes for obj in group.values() if isinstance(obj, h5py.Dataset)
+        )
 
 
 def get_png(data):
@@ -101,8 +144,6 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
                 if isinstance(data, int | float | np.integer | np.floating):
                     return DamnitType.NUMBER
                 raise ValueError(NOT_SUPPORTED_MESSAGE)
-            if data.ndim == 3 and data.shape[-1] in (3, 4):
-                return DamnitType.IMAGE
         case DataType.Dataset | DataType.PlotlyFigure:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 
@@ -114,6 +155,8 @@ def get_damnit_type(data, *, type_hint=None):  # noqa: C901
             return DamnitType.ARRAY_1D
         case 2:
             return DamnitType.ARRAY_2D
+        case 3 if type_hint is None and data.shape[-1] in (3, 4):
+            return DamnitType.IMAGE
         case _:
             raise ValueError(NOT_SUPPORTED_MESSAGE)
 
@@ -248,3 +291,7 @@ def standardize(data, *, name="default", dtype=None, attrs=None):
         result["dtype"] = dtype
 
     return result
+
+
+def empty_preview(name):
+    return standardize(None, name=name, dtype=DamnitType.NONE.value)

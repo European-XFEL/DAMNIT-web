@@ -37,21 +37,15 @@ RUNS_QUERY = f"""
     }}
 """
 
-DETECTOR_IMAGE_QUERY = f"""
-    query {{
-      extracted_data(
-        database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "detector_image"
-      )
-    }}
-"""
 
-PULSE_ENERGY_QUERY = f"""
-    query {{
-      extracted_data(
-        database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "pulse_energy"
-      )
-    }}
-"""
+def extracted_data_query(variable):
+    return f"""
+        query {{
+          extracted_data(
+            database: {{proposal: "{PROPOSAL}"}}, run: 1, variable: "{variable}"
+          )
+        }}
+    """
 
 
 async def post_query(client, query):
@@ -140,7 +134,8 @@ async def test_each_type_of_value_arrives_with_its_dtype(local_client):
         "trace": "array1d",
         "pulse_energy": "array1d",
         "detector_image": "image",
-        "trace_plot": "image",
+        "trace_matplotlib": "image",
+        "trace_plotly": "number",
     }
 
 
@@ -173,7 +168,7 @@ async def test_tags_come_from_the_context_file(local_client):
 
     variables_by_tag = {name: sorted(tag["variables"]) for name, tag in tags.items()}
     assert variables_by_tag == {
-        "Analysis": ["amplitude", "fit", "trace_plot"],
+        "Analysis": ["amplitude", "fit", "trace_matplotlib", "trace_plotly"],
         "Beam": ["attenuator", "beam_on", "transmission"],
         "Detector": ["detector_image"],
         "Run details": ["n_trains", "sample_name"],
@@ -190,7 +185,7 @@ async def test_tags_come_from_the_context_file(local_client):
 
 
 async def test_detector_image_extracted_data_is_16_rows_of_24(local_client):
-    data = await post_query(local_client, DETECTOR_IMAGE_QUERY)
+    data = await post_query(local_client, extracted_data_query("detector_image"))
 
     image = data["extracted_data"]
     assert image["dtype"] == "array2d"
@@ -202,11 +197,32 @@ async def test_detector_image_extracted_data_is_16_rows_of_24(local_client):
 async def test_a_dataarray_keeps_its_dimension_and_train_ids_through_damnit(
     local_client,
 ):
-    data = await post_query(local_client, PULSE_ENERGY_QUERY)
+    data = await post_query(local_client, extracted_data_query("pulse_energy"))
 
     array = data["extracted_data"]
     assert array["dims"] == ["trainId"]
     assert array["coords"]["trainId"] == list(range(1_001_000, 1_001_100))
+
+
+async def test_a_plotly_figure_preview_comes_back_with_no_data(local_client):
+    data = await post_query(local_client, extracted_data_query("trace_plotly"))
+
+    preview = data["extracted_data"]
+    assert preview["dtype"] == "none"
+    assert preview["data"] is None
+
+
+async def test_an_array_over_the_size_limit_comes_back_with_no_data(
+    local_client, monkeypatch
+):
+    monkeypatch.setattr("damnit_api.runs.preview.PREVIEW_LIMIT_BYTES", 2000)
+
+    image = await post_query(local_client, extracted_data_query("detector_image"))
+    array = await post_query(local_client, extracted_data_query("pulse_energy"))
+
+    assert image["extracted_data"]["dtype"] == "none"
+    assert image["extracted_data"]["data"] is None
+    assert array["extracted_data"]["dims"] == ["trainId"]
 
 
 @pytest.mark.parametrize("damnit_dir", [NO_RUNS_DIR], ids=["no runs"])
