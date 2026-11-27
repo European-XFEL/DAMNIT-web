@@ -57,26 +57,27 @@ The subentry is written only when a campaign has a probe delay (`probe.delay`). 
 
 They join `METADATA_KEY_REGISTRY` only when this draft is agreed, together with the NDS laser profile rows and the daq-watchdog (formerly planet-watchdog) revendor that the key-registry topic requires.
 
-## 4. Open: the event identifier
+## 4. The event identifier (ruled 2026-11-27)
 
 The schema says an event's identifier is issued once, at the source, by a named issuer. At HZDR that is the shot authority's number.
 
 DAMNIT's `/entry/shots/shot_number` is not always that number. For a LabFrog-backed shot it is LabFrog's own, possibly typed. The authority's number is beside it in `authority_shot_number` (bridge table v6), which is `-1` where a shot has none.
 
-The draft links `events/identifier` to `authority_shot_number`. That leaves a decision about shots without an authority number. The options are:
-1. leave them out of the subentry's event list;
-2. give them a second issuer (for example `@issuer = "LabFrog record"` with the `record_id`), which needs a per-event issuer;
-3. refuse to write the subentry until every shot has an authority number.
+**Ruling R-2026-11-27a (maintainer):** "Shots without a number should be in an ambiguous section or something, not thrown out." So:
+- **`events`** holds the shots the authority numbered, with `identifier` = their `authority_shot_number` and `@issuer = "HZDR DRACO shot authority"`. No other number is ever given as an identifier.
+- **`events_unidentified`** (`NXcollection`) holds every shot without one: `shot_key`, `record_id`, `fired_at`, `status` and `reason` ("no authority number"). It is written only when there is such a shot. It is named *unidentified* rather than *ambiguous* because in DAMNIT "ambiguous" already means an event waiting for review in Review matches.
+- Every shot of the campaign is in exactly one of the two. A shot moves from `events_unidentified` to `events` once a later export or event gives it an authority number.
+- Both are written as datasets, with `shot_key` on each row to join back to `/entry/shots`. `events` cannot be soft links to the `/entry/shots` columns, because those columns also hold the `-1` rows.
 
-Option 1 is the simplest and keeps the identifier honest. It needs a maintainer ruling.
+This replaces the three options of the first draft. Leaving such shots out was the recommendation then; it would have dropped shots.
 
 ## 5. What putting it in force would take
 
-1. A maintainer ruling on section 4, and on the new keys in section 3.
+1. A maintainer ruling on the new keys in section 3 (section 4 was ruled on 2026-11-27).
 2. **Writer** (`api/src/damnit_api/metadata/hzdr_nexus.py`):
    - `write_nexus_laser_group()` writes `spot_size`, `polarization_label` and `temporal_contrast`;
    - the target writer writes `target_type`;
-   - a new `write_pump_probe_subentry()`, called from `write_nexus_bridge()` only when `probe.delay` is present, writes the links and the probe and sync datasets.
+   - a new `write_pump_probe_subentry()`, called from `write_nexus_bridge()` only when `probe.delay` is present, writes the links and the probe and sync datasets, and splits the shots into `events` and `events_unidentified` (section 4).
 3. **Registry:** the new keys in `METADATA_KEY_REGISTRY` and the CLAUDE.md table, the NDS facility profile rows, and the revendor in daq-watchdog (formerly planet-watchdog).
 4. **Definitions:**
    - copy the draft over `hzdr/nxdl/NXhzdr_target.nxdl.xml`;
@@ -86,6 +87,7 @@ Option 1 is the simplest and keeps the identifier honest. It needs a maintainer 
 5. **Tests:**
    - a campaign without `probe.delay` writes exactly the v0.10 layout plus the Part A fields;
    - a campaign with it writes a subentry that `examples.py`-style checks and pynxtools accept;
+   - a campaign with shots both with and without an authority number puts every shot in exactly one of `events` and `events_unidentified`, with no `-1` in `events/identifier`;
    - an emulator case with a probe delay.
 6. **Bridge table:** no change. `/entry/shots` keeps its columns, so the bridge profile string stays `hzdr-canonical-shot-v8`.
 

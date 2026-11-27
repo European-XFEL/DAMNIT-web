@@ -513,11 +513,23 @@
         </field>
         <group type="NXdata" name="events">
           <doc>
-            identifier: soft link to /entry/shots/authority_shot_number,
-            @issuer="HZDR DRACO shot authority". time: soft link to
-            /entry/shots/fired_at. status: the LabFrog shot_status per shot.
-            OPEN: authority_shot_number is -1 where a shot has no authority number;
-            such shots cannot carry this identifier (see the draft, section 4).
+            The shots the shot authority numbered, one row each, in /entry/shots order.
+            identifier: their authority_shot_number, @issuer="HZDR DRACO shot
+            authority". time: their fired_at. status: their LabFrog shot_status.
+            Written as datasets, not as links to the /entry/shots columns, because
+            those columns also hold the shots without an authority number (-1).
+            shot_key joins each row back to /entry/shots. Ruling R-2026-11-27a.
+          </doc>
+        </group>
+        <group type="NXcollection" name="events_unidentified" optional="true">
+          <doc>
+            The shots without an authority number (authority_shot_number = -1): kept
+            here, never dropped, and never given an identifier the authority did not
+            issue (ruling R-2026-11-27a). One row each, in /entry/shots order:
+            shot_key, record_id (the LabFrog record, "" where none), fired_at,
+            status (LabFrog shot_status) and reason ("no authority number"). Written
+            only when there is such a shot. A shot moves to events once a later
+            export or event gives it an authority number.
           </doc>
         </group>
         <group type="NXinstrument" name="instrument">
