@@ -1,5 +1,7 @@
 # Handoff: implementing NXhzdr_target v0.11
 
+**Done 2026-11-27** on branch `feat/nxhzdr-target-v0.11`: see [plan-nxhzdr-target-v0.11-implementation.md](plan-nxhzdr-target-v0.11-implementation.md). The record became a root entry, `/pump_probe` (D0). The cross-repo list below is still open.
+
 Written 2026-11-27 for the next session. **Start here**, then read the plan,
 [nxhzdr-target-v0.11-draft.md](nxhzdr-target-v0.11-draft.md) (DAMNIT PR #62;
 both rulings made). Nothing of the implementation is written yet: the session

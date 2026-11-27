@@ -2477,6 +2477,13 @@ def write_nexus_bridge(
                 write_identity=existing_count == 0,
                 campaign_timezone=campaign_timezone,
             )
+            # Profile v0.11: only for a campaign with probe.delay.
+            write_pump_probe_entry(
+                handle,
+                shots,
+                experiment_id=experiment_id,
+                campaign_timezone=campaign_timezone,
+            )
             _write_source_payloads(entry, events)
 
             products = [
@@ -2650,6 +2657,436 @@ def _write_semantic_metadata_groups(
         write_nexus_vacuum_group(entry, vacuum)
 
     write_nexus_diagnostic_groups(entry, shots)
+
+
+# Profile v0.11 Part B: /pump_probe, the campaign as a DAPHNE4NFDI laser
+# pump-probe record (schema in HZDR_combo, combo/planning/papers/daphne-laser/
+# schema/): a second NXentry at the file's root, beside /entry, so a validator
+# checks it against its own definition (pynxtools does not switch definitions
+# at an NXsubentry). Decisions D0-D10 of hzdr/docs/plans/
+# plan-nxhzdr-target-v0.11-implementation.md.
+PUMP_PROBE_GROUP = "pump_probe"
+PUMP_PROBE_SITE_DEFINITION = "NXlaser_pump_probe_hzdr_draco"
+PUMP_PROBE_CORE_DEFINITION = "NXlaser_pump_probe"
+PUMP_PROBE_EVENT_ISSUER = "HZDR DRACO shot authority"
+PUMP_PROBE_UNIDENTIFIED_REASON = "no authority number"
+_PUMP_PROBE_ROOT = f"/{PUMP_PROBE_GROUP}/instrument"
+# NXsource/probe from probe.type (D6): a laser probe is optical, as the main
+# entry already labels the DRACO laser. Any other type has no derived kind.
+_PROBE_KIND_BY_TYPE = {
+    "optical laser": "visible light",
+    "laser": "visible light",
+    "uv laser": "ultraviolet",
+}
+# NXlaser_pump_probe's polarization_label enumeration; other registry labels
+# (circular_left, horizontal, ...) stay in the main entry only (D10).
+_PUMP_PROBE_POLARIZATION_LABELS = frozenset({
+    "p",
+    "s",
+    "circular left",
+    "circular right",
+})
+
+
+def _shot_value(shot: Mapping[str, Any], namespace: str, key: str) -> Any:
+    metadata = shot.get("metadata")
+    block = metadata.get(namespace) if isinstance(metadata, dict) else None
+    return block.get(key) if isinstance(block, dict) else None
+
+
+def _campaign_constant(shots: list[dict[str, Any]], namespace: str, key: str) -> Any:
+    """The first shot's `metadata.<namespace>.<key>`; one warning if one differs."""
+    chosen: Any = None
+    for shot in shots:
+        value = _shot_value(shot, namespace, key)
+        if value is None:
+            continue
+        if chosen is None:
+            chosen = value
+        elif value != chosen:
+            logger.warning(
+                "Shot %s has %s.%s = %r, the campaign's first is %r; "
+                "/%s uses the first.",
+                shot.get("shot_key"),
+                namespace,
+                key,
+                value,
+                chosen,
+                PUMP_PROBE_GROUP,
+            )
+            break
+    return chosen
+
+
+_PP_LASER = "instrument/laser"
+_PP_BEAM = "instrument/laser/beam"
+
+
+def write_pump_probe_entry(
+    handle: h5py.File,
+    shots: list[dict[str, Any]],
+    *,
+    experiment_id: str,
+    campaign_timezone: str = "Europe/Berlin",
+) -> str | None:
+    """Write `/pump_probe` (`NXentry`); return the definition it declares.
+
+    Only for a campaign with `probe.delay` on some shot, and only when every
+    item the core `NXlaser_pump_probe` requires can be filled; otherwise None,
+    with one warning naming what is missing (D2). It declares the HZDR site
+    definition when that one's items are all there too, else the core (D1).
+    Written after the laser, sample, time bounds and shot columns, which it
+    links to rather than copies. A previous build's record is always removed
+    first, so a campaign that lost its delay loses it.
+
+    Shots the shot authority numbered are `events` rows (identifier = their
+    authority number); every other shot is an `events_unidentified` row, so
+    each shot of the campaign is in exactly one (ruling R-2026-11-27a).
+    """
+    if PUMP_PROBE_GROUP in handle:
+        del handle[PUMP_PROBE_GROUP]
+    entry = cast("h5py.Group", handle["entry"])
+    if not any(_shot_value(shot, "probe", "delay") is not None for shot in shots):
+        return None
+    inputs = _PumpProbeInputs(shots, campaign_timezone)
+    missing = inputs.missing_core(entry)
+    if missing:
+        logger.warning(
+            "Campaign %s has probe.delay but no /%s entry: missing %s",
+            experiment_id,
+            PUMP_PROBE_GROUP,
+            ", ".join(missing),
+        )
+        return None
+    site_missing = inputs.missing_site(entry)
+    definition = (
+        PUMP_PROBE_CORE_DEFINITION if site_missing else PUMP_PROBE_SITE_DEFINITION
+    )
+    if site_missing:
+        logger.warning(
+            "Campaign %s: /%s declares %s, not %s: missing %s",
+            experiment_id,
+            PUMP_PROBE_GROUP,
+            PUMP_PROBE_CORE_DEFINITION,
+            PUMP_PROBE_SITE_DEFINITION,
+            ", ".join(site_missing),
+        )
+
+    group = handle.create_group(PUMP_PROBE_GROUP)
+    group.attrs["NX_class"] = "NXentry"
+    group.attrs["default"] = "events"
+    group.attrs["damnit_source"] = PUMP_PROBE_GROUP
+    group.create_dataset("definition", data=definition)
+    _write_pump_probe_header(group, entry, experiment_id)
+    events = _write_pump_probe_events(group, inputs, experiment_id)
+    instrument = group.create_group("instrument")
+    instrument.attrs["NX_class"] = "NXinstrument"
+    _write_pump_probe_sources(instrument, entry, inputs)
+    _write_pump_probe_beams(instrument, entry, inputs)
+    _nexus_link(
+        events, "pulse_delay", handle, f"{_PUMP_PROBE_ROOT}/beam_probe/pulse_delay"
+    )
+    _write_pump_probe_synchronization(instrument, inputs, experiment_id)
+    if inputs.unidentified:
+        _write_unidentified_events(
+            group, inputs.unidentified, campaign_timezone=campaign_timezone
+        )
+    return definition
+
+
+class _PumpProbeInputs:
+    """What `/pump_probe` is written from: the split shots and the constants."""
+
+    def __init__(self, shots: list[dict[str, Any]], campaign_timezone: str) -> None:
+        self.numbered = [
+            (shot, number)
+            for shot in shots
+            if (number := _shot_authority_column_value(shot)) >= 0
+        ]
+        self.unidentified = [
+            shot for shot in shots if _shot_authority_column_value(shot) < 0
+        ]
+        self.probe = {
+            "source": _campaign_constant(shots, "probe", "source"),
+            "type": _campaign_constant(shots, "probe", "type"),
+            "wavelength": _campaign_constant(shots, "probe", "wavelength"),
+        }
+        self.sync = {
+            "scheme": _campaign_constant(shots, "sync", "scheme"),
+            "delay_mechanism": _campaign_constant(shots, "sync", "delay_mechanism"),
+            "time_zero": _campaign_constant(shots, "sync", "time_zero"),
+            "time_zero_method": _campaign_constant(shots, "sync", "time_zero_method"),
+            "time_zero_date": _campaign_constant(shots, "sync", "time_zero_date"),
+        }
+        kind = self.probe["type"]
+        self.probe_kind = (
+            None
+            if kind is None
+            else _PROBE_KIND_BY_TYPE.get(str(kind).strip().casefold())
+        )
+        self.times = [
+            _iso_with_offset(shot.get("fired_at"), campaign_timezone)
+            for shot, _ in self.numbered
+        ]
+
+    def missing_core(self, entry: h5py.Group) -> list[str]:
+        """The items the core `NXlaser_pump_probe` requires that cannot be filled."""
+        laser, beam = _PP_LASER, _PP_BEAM
+        kind = self.probe["type"]
+        required = {
+            "/entry/start_time": "start_time" in entry,
+            "a shot with an authority number": bool(self.numbered),
+            f"/entry/{laser}/name (laser.system)": f"{laser}/name" in entry,
+            f"/entry/{laser}/pulse_energy": f"{laser}/pulse_energy" in entry,
+            f"/entry/{beam}/pulse_duration": f"{beam}/pulse_duration" in entry,
+            f"/entry/{beam}/incident_wavelength": f"{beam}/incident_wavelength"
+            in entry,
+            "probe.source": self.probe["source"] is not None,
+            "probe.type": kind is not None,
+            f"a probe kind for probe.type {kind!r}": (
+                kind is None or self.probe_kind is not None
+            ),
+            "sync.scheme": self.sync["scheme"] is not None,
+            "sync.delay_mechanism": self.sync["delay_mechanism"] is not None,
+            "/entry/sample/name": "sample/name" in entry,
+        }
+        return [item for item, present in required.items() if not present]
+
+    def missing_site(self, entry: h5py.Group) -> list[str]:
+        """The items only the HZDR site definition adds that cannot be filled."""
+        site = {
+            "/entry/experiment_identifier": "experiment_identifier" in entry,
+            "events/time on every numbered shot": all(self.times),
+            f"/entry/{_PP_LASER}/frequency (laser.repetition_rate)": (
+                f"{_PP_LASER}/frequency" in entry
+            ),
+            f"/entry/{_PP_BEAM}/spot_size (both beam waists)": (
+                f"{_PP_BEAM}/spot_size" in entry
+            ),
+        }
+        return [item for item, present in site.items() if not present]
+
+
+def _write_pump_probe_header(
+    group: h5py.Group, entry: h5py.Group, experiment_id: str
+) -> None:
+    """`title`, the time bounds, `experiment_identifier` and `sample` (D8)."""
+    if "title" in entry:
+        _nexus_link(group, "title", entry, "title")
+    else:
+        group.create_dataset("title", data=f"{experiment_id}: laser pump-probe record")
+    for name in ("start_time", "end_time", "experiment_identifier"):
+        if name in entry:
+            _nexus_link(group, name, entry, name)
+    # A group of its own, not a link to /entry/sample: that one's `type`
+    # holds the HZDR target classes, which the base NXsample enumeration
+    # refuses. target_type carries them here (the site definition's name).
+    sample = group.create_group("sample")
+    sample.attrs["NX_class"] = "NXsample"
+    for name in ("name", "description", "target_type"):
+        if f"sample/{name}" in entry:
+            _nexus_link(sample, name, entry, f"sample/{name}")
+
+
+def _write_pump_probe_events(
+    group: h5py.Group, inputs: _PumpProbeInputs, experiment_id: str
+) -> h5py.Group:
+    """`events`: one row per shot the authority numbered (D3, D4)."""
+    string = h5py.string_dtype(encoding="utf-8")
+    numbered = inputs.numbered
+    events = group.create_group("events")
+    events.attrs["NX_class"] = "NXdata"
+    events.attrs["signal"] = "pulse_delay"
+    events.attrs["axes"] = "identifier"
+    identifier = events.create_dataset(
+        "identifier", data=np.asarray([n for _, n in numbered], dtype=np.int64)
+    )
+    identifier.attrs["issuer"] = PUMP_PROBE_EVENT_ISSUER
+    events.create_dataset(
+        "shot_key", data=[shot["shot_key"] for shot, _ in numbered], dtype=string
+    )
+    if all(inputs.times):
+        events.create_dataset("time", data=inputs.times, dtype=string)
+    events.create_dataset(
+        "status",
+        data=[
+            labfrog_shot_status(shot.get("metadata", {}).get("shot_status"))
+            for shot, _ in numbered
+        ],
+        dtype=string,
+    )
+    amplification = [
+        _shot_value(shot, "laser", "amplification_state") for shot, _ in numbered
+    ]
+    if all(value is not None for value in amplification):
+        events.create_dataset(
+            "amplification_state",
+            data=[str(value).strip().casefold() for value in amplification],
+            dtype=string,
+        )
+    elif any(value is not None for value in amplification):
+        logger.warning(
+            "Campaign %s: events/amplification_state left out, not every "
+            "numbered shot has laser.amplification_state",
+            experiment_id,
+        )
+    return events
+
+
+def _write_pump_probe_sources(
+    instrument: h5py.Group, entry: h5py.Group, inputs: _PumpProbeInputs
+) -> None:
+    """`source_pump` (links into the laser group) and `source_probe` (D6, D7)."""
+    source_pump = instrument.create_group("source_pump")
+    source_pump.attrs["NX_class"] = "NXsource"
+    for name in ("name", "type", "probe", "frequency"):
+        if f"{_PP_LASER}/{name}" in entry:
+            _nexus_link(source_pump, name, entry, f"{_PP_LASER}/{name}")
+    source_pump.create_dataset("associated_beam", data=f"{_PUMP_PROBE_ROOT}/beam_pump")
+
+    source_probe = instrument.create_group("source_probe")
+    source_probe.attrs["NX_class"] = "NXsource"
+    source_probe.create_dataset("name", data=str(inputs.probe["source"]))
+    source_probe.create_dataset("type", data=str(inputs.probe["type"]))
+    source_probe.create_dataset("probe", data=str(inputs.probe_kind))
+    source_probe.create_dataset(
+        "previous_source", data=f"{_PUMP_PROBE_ROOT}/source_pump"
+    )
+    source_probe.create_dataset(
+        "associated_beam", data=f"{_PUMP_PROBE_ROOT}/beam_probe"
+    )
+
+
+def _write_pump_probe_beams(
+    instrument: h5py.Group, entry: h5py.Group, inputs: _PumpProbeInputs
+) -> None:
+    """`beam_pump` (links into the laser beam, D10) and `beam_probe` (D4)."""
+    beam_pump = instrument.create_group("beam_pump")
+    beam_pump.attrs["NX_class"] = "NXbeam"
+    beam_pump.create_dataset(
+        "associated_source", data=f"{_PUMP_PROBE_ROOT}/source_pump"
+    )
+    _nexus_link(beam_pump, "pulse_energy", entry, f"{_PP_LASER}/pulse_energy")
+    for name in (
+        "pulse_duration",
+        "incident_wavelength",
+        "spot_size",
+        "temporal_contrast",
+    ):
+        if f"{_PP_BEAM}/{name}" in entry:
+            _nexus_link(beam_pump, name, entry, f"{_PP_BEAM}/{name}")
+    label = entry.get(f"{_PP_BEAM}/polarization_label")
+    if (
+        isinstance(label, h5py.Dataset)
+        and label.asstr()[()] in _PUMP_PROBE_POLARIZATION_LABELS
+    ):
+        _nexus_link(
+            beam_pump, "polarization_label", entry, f"{_PP_BEAM}/polarization_label"
+        )
+
+    beam_probe = instrument.create_group("beam_probe")
+    beam_probe.attrs["NX_class"] = "NXbeam"
+    beam_probe.create_dataset(
+        "associated_source", data=f"{_PUMP_PROBE_ROOT}/source_probe"
+    )
+    _write_optional_numeric_dataset(
+        beam_probe,
+        "incident_wavelength",
+        inputs.probe["wavelength"],
+        unit_key="probe.wavelength",
+    )
+    numbered = inputs.numbered
+    delay = beam_probe.create_dataset(
+        "pulse_delay", data=_per_event_floats(numbered, "probe", "delay")
+    )
+    delay.attrs["units"] = METADATA_KEY_REGISTRY["probe.delay"]
+    delay.attrs["reference_beam"] = f"{_PUMP_PROBE_ROOT}/beam_pump"
+    delay.attrs["synchronization"] = f"{_PUMP_PROBE_ROOT}/synchronization"
+    if any(_shot_value(shot, "probe", "delay_set") is not None for shot, _ in numbered):
+        delay_set = beam_probe.create_dataset(
+            "pulse_delay_set", data=_per_event_floats(numbered, "probe", "delay_set")
+        )
+        delay_set.attrs["units"] = METADATA_KEY_REGISTRY["probe.delay_set"]
+
+
+def _write_pump_probe_synchronization(
+    instrument: h5py.Group, inputs: _PumpProbeInputs, experiment_id: str
+) -> None:
+    """`synchronization`; `time_zero` only with its method and date (D9)."""
+    sync = inputs.sync
+    synchronization = instrument.create_group("synchronization")
+    synchronization.attrs["NX_class"] = "NXsynchronization"
+    synchronization.create_dataset("scheme", data=str(sync["scheme"]))
+    synchronization.create_dataset("delay_mechanism", data=str(sync["delay_mechanism"]))
+    time_zero = _as_optional_float(sync["time_zero"])
+    if time_zero is None:
+        return
+    if sync["time_zero_method"] is None or sync["time_zero_date"] is None:
+        logger.warning(
+            "Campaign %s: synchronization/time_zero left out, it needs "
+            "sync.time_zero_method and sync.time_zero_date",
+            experiment_id,
+        )
+        return
+    dataset = synchronization.create_dataset("time_zero", data=time_zero)
+    dataset.attrs["units"] = METADATA_KEY_REGISTRY["sync.time_zero"]
+    dataset.attrs["method"] = str(sync["time_zero_method"])
+    dataset.attrs["determined_at"] = str(sync["time_zero_date"])
+
+
+def _nexus_link(group: h5py.Group, name: str, base: h5py.Group, path: str) -> None:
+    """A NeXus link from `group/name` to `path` (absolute, or relative to `base`).
+
+    The linked object carries `@target`, its own absolute path, which is how
+    NeXus (and pynxtools) tells a link from a copy.
+    """
+    target = path if path.startswith("/") else f"{base.name}/{path}"
+    base.file[target].attrs["target"] = target
+    group[name] = h5py.SoftLink(target)
+
+
+def _per_event_floats(
+    numbered: list[tuple[dict[str, Any], int]], namespace: str, key: str
+) -> np.ndarray:
+    return np.asarray(
+        [
+            np.nan
+            if (value := _as_optional_float(_shot_value(shot, namespace, key))) is None
+            else value
+            for shot, _ in numbered
+        ],
+        dtype=np.float64,
+    )
+
+
+def _write_unidentified_events(
+    group: h5py.Group, shots: list[dict[str, Any]], *, campaign_timezone: str
+) -> None:
+    """`events_unidentified`: the shots without an authority number (R-2026-11-27a)."""
+    string = h5py.string_dtype(encoding="utf-8")
+    unidentified = group.create_group("events_unidentified")
+    unidentified.attrs["NX_class"] = "NXcollection"
+    unidentified.attrs["description"] = (
+        "Shots of this campaign the shot authority gave no number, in "
+        "/entry/shots order: kept here, never given an identifier the "
+        "authority did not issue. Join /entry/shots on shot_key. A shot "
+        "moves to events once a later export or event gives it a number."
+    )
+    columns = {
+        "shot_key": [shot["shot_key"] for shot in shots],
+        "record_id": [shot.get("labfrog_record_id") or "" for shot in shots],
+        "fired_at": [
+            _iso_with_offset(shot.get("fired_at"), campaign_timezone) or ""
+            for shot in shots
+        ],
+        "status": [
+            labfrog_shot_status(shot.get("metadata", {}).get("shot_status"))
+            for shot in shots
+        ],
+        "reason": [PUMP_PROBE_UNIDENTIFIED_REASON for _ in shots],
+    }
+    for name, values in columns.items():
+        unidentified.create_dataset(name, data=values, dtype=string)
 
 
 def _stage_bridge_temp_file(
@@ -2932,6 +3369,54 @@ def write_nexus_laser_group(
         unit_key="laser.contrast_ratio",
         source=source_of("contrast_ratio"),
     )
+    _write_pump_probe_beam_conventions(beam, laser, source_of)
+
+
+# Profile v0.11 Part A: NXlaser_pump_probe's names for what v0.10 already
+# records, written beside the v0.10 fields (none is removed or renamed).
+SPOT_SIZE_DEFINITION = "1/e^2 intensity radius"
+
+
+def _write_pump_probe_beam_conventions(
+    beam: h5py.Group,
+    laser: dict[str, Any],
+    source_of: Callable[[str], str | None],
+) -> None:
+    """Write `spot_size`, `polarization_label` and `temporal_contrast` (v0.11).
+
+    `spot_size` needs both waists and `temporal_contrast` both the ratio and
+    the time it was measured at (`laser.contrast_time`, ps before the peak,
+    so the axis value is its negative); without them only the v0.10 fields
+    stand. A config-filled input marks the new field `damnit_source="config"`.
+    """
+    for name in ("spot_size", "polarization_label", "temporal_contrast"):
+        if name in beam:
+            del beam[name]
+    waist_x = _as_optional_float(laser.get("beam_waist_x"))
+    waist_y = _as_optional_float(laser.get("beam_waist_y"))
+    if waist_x is not None and waist_y is not None:
+        spot = beam.create_dataset("spot_size", data=np.asarray([waist_x, waist_y]))
+        spot.attrs["units"] = METADATA_KEY_REGISTRY["laser.beam_waist_x"]
+        spot.attrs["definition"] = SPOT_SIZE_DEFINITION
+        source = source_of("beam_waist_x") or source_of("beam_waist_y")
+        if source is not None:
+            spot.attrs["damnit_source"] = source
+    _write_optional_string_dataset(
+        beam,
+        "polarization_label",
+        laser.get("polarization"),
+        source=source_of("polarization"),
+    )
+    ratio = _as_optional_float(laser.get("contrast_ratio"))
+    contrast_time = _as_optional_float(laser.get("contrast_time"))
+    if ratio is not None and contrast_time is not None:
+        contrast = beam.create_group("temporal_contrast")
+        contrast.attrs["NX_class"] = "NXdata"
+        contrast.attrs["signal"] = "intensity_ratio"
+        contrast.attrs["axes"] = "time"
+        contrast.create_dataset("intensity_ratio", data=np.asarray([ratio]))
+        axis = contrast.create_dataset("time", data=np.asarray([-contrast_time]))
+        axis.attrs["units"] = METADATA_KEY_REGISTRY["laser.contrast_time"]
 
 
 # HZDR-local NXhzdr_target profile version. Bump on any semantic-map change
@@ -2942,7 +3427,7 @@ def write_nexus_laser_group(
 # damnit_nxdl_version enumeration in hzdr/nxdl/NXhzdr_target.nxdl.xml must be
 # bumped to match. See hzdr/docs/nxhzdr-target-profile.md (target map) and
 # hzdr/docs/nexus-semantic-maps.md (laser/vacuum/diagnostic maps).
-HZDR_TARGET_PROFILE_VERSION = "0.10"
+HZDR_TARGET_PROFILE_VERSION = "0.11"
 HZDR_BRIDGE_PROFILE_VERSION = "hzdr-canonical-shot-v8"
 # Bridge profile v7: superseded LabFrog versions, out of the shot table.
 LABFROG_HISTORY_GROUP = "labfrog_history"
@@ -3238,6 +3723,9 @@ def write_nexus_sample(entry_group: h5py.Group, target: Any) -> None:
     # Ontology-required classification (target-ontology.md section 3 enum);
     # standard NXsample field name, HZDR enum values. Profile v0.5.
     _write_optional_string_dataset(sample, "type", target.get("type"))
+    # Profile v0.11: the same class under the HZDR site definition's name, so
+    # NXsample/type can return to its NeXus meaning in v1.0.
+    _write_optional_string_dataset(sample, "target_type", target.get("type"))
     material = target.get("material")
     _write_optional_string_dataset(sample, "material", material)
     if material is not None and _is_chemical_formula(str(material)):

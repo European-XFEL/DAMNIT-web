@@ -4,6 +4,42 @@ Notable changes to the HZDR fork of DAMNIT-web. Newest first. Upstream
 (European-XFEL/DAMNIT-web) changes are summarised only where they reach HZDR
 behaviour; the merge PR has the details.
 
+## 2026-11-27
+
+### NXhzdr_target v0.11: the DAPHNE4NFDI laser pump-probe schema
+
+Campaign files follow the DAPHNE4NFDI laser pump-probe schema without breaking
+anything v0.10 wrote:
+
+- **Every campaign file** has the schema's field names beside the v0.10
+  fields:
+  - `instrument/laser/beam/spot_size` (both beam waists, with their
+    definition);
+  - `polarization_label`;
+  - `temporal_contrast` (with the new key `laser.contrast_time`);
+  - `sample/target_type`.
+- **A campaign with a probe delay** (`metadata.probe.delay`) also has a
+  second entry at the file's root, `/pump_probe`:
+  - it declares `NXlaser_pump_probe_hzdr_draco`;
+  - it is written only when the campaign has everything the schema requires,
+    and the build log names what is missing otherwise;
+  - shots without a number from the shot authority are listed in
+    `events_unidentified`, never dropped (ruling R-2026-11-27a).
+- **Twelve keys** were added to the registry for this (R-2026-11-27b):
+  `laser.contrast_time`, `laser.amplification_state`, and the `probe.*` and
+  `sync.*` keys. No producer sends them yet.
+- **The definitions** are in `hzdr/nxdl/`: the schema's core
+  `NXlaser_pump_probe`, the base class `NXsynchronization` and the HZDR site
+  definition `NXlaser_pump_probe_hzdr_draco`.
+- **The validation gate** checks `/pump_probe` against its own definition.
+  pynxtools cannot check an enumeration on a per-shot string array, so the
+  gate checks `events/status` itself.
+
+The bridge profile stays `hzdr-canonical-shot-v8`.
+
+**Deploying:** the code changed, so the next build publishes each campaign
+once, quiet builds included. That build applies v0.11. No setting changes.
+
 ## 2026-11-24
 
 Released as **hzdr-v0.3.2**: the HZDR fork's root package, frontend and damnit-api all

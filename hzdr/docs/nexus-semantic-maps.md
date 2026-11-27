@@ -83,6 +83,9 @@ from the more common sibling placement; see
 | `laser.beam_pos_x` / `beam_pos_y` | `beam_position_x` / `beam_position_y`, `@units` | mm | **Profile extension** — no standard `NXbeam` field |
 | `laser.beam_waist_x` / `beam_waist_y` | `beam_waist_x_1e2_radius` / `beam_waist_y_1e2_radius`, `@units` | um | Facility meaning is the focal-spot radius at 1/e² intensity, normally symmetric for DRACO (about 1.5–2.25 um radius from a 3–4.5 um diameter). The explicit HZDR profile fields are not interchangeable with generic `NXbeam.extent`; writer and NXDL implement them since profile v0.9. |
 | `laser.contrast_ratio` | `contrast_ratio`, `@units` | — (dimensionless) | **Profile extension** — no standard `NXbeam` field |
+| `laser.beam_waist_x` + `beam_waist_y` | `spot_size` = [x, y], `@units`, `@definition = "1/e^2 intensity radius"` | um | Since v0.11, beside the two v0.10 fields: one field carrying its definition, as `NXlaser_pump_probe` proposes for `NXbeam`. Only when both waists are present |
+| `laser.polarization` | `polarization_label` | — (string) | Since v0.11: the same label under `NXlaser_pump_probe`'s name; `incident_polarization` keeps it too |
+| `laser.contrast_ratio` + `laser.contrast_time` | `temporal_contrast` (`NXdata`, `@signal = "intensity_ratio"`, `@axes = "time"`): `intensity_ratio` = [ratio], `time` = [−contrast_time] | — / ps | Since v0.11. `laser.contrast_time` is how long before the peak the ratio was measured. Only when both keys are present; a bare ratio stays in `contrast_ratio` alone |
 
 These meanings were signed for the Semantic Test Baseline on 2026-07-23.
 DRACO commonly operates with p-polarization at oblique incidence (often about
@@ -217,14 +220,47 @@ refreshed on every rebuild as the campaign grows. The datasets carry
 written by a future LabFrog projection) is preserved, mirroring the group
 claim rule in §4.
 
-## 6. Certification
+## 6. The laser pump-probe entry (`/pump_probe`, since v0.11)
+
+Writer: `write_pump_probe_entry()`. Written only for a campaign with
+`probe.delay` on some shot. It is a second `NXentry` at the file's root,
+beside `/entry`, conforming to the DAPHNE4NFDI laser pump-probe schema: it
+declares `NXlaser_pump_probe_hzdr_draco`, or the core `NXlaser_pump_probe`
+when only an item the site definition adds is missing. When an item the core
+requires is missing it is not written, and the build log says which. It is a
+root entry rather than an `NXsubentry` of `/entry` because pynxtools checks a
+subentry's contents against the parent's definition, which would fail every
+such file. Most of it is NeXus links (with `@target`) into `/entry`.
+
+| Schema item (under `/pump_probe`) | From |
+| --- | --- |
+| `title`, `start_time`, `end_time`, `experiment_identifier` | links to `/entry` (`title` written when `/entry` has none) |
+| `events/identifier`, `@issuer = "HZDR DRACO shot authority"` | the shots with an authority number (`/entry/shots/authority_shot_number` ≥ 0), in `/entry/shots` order; `shot_key` on each row joins back |
+| `events/time`, `status`, `amplification_state` | `fired_at`; LabFrog `shot_status`; `laser.amplification_state` (only when every numbered shot has one) |
+| `events_unidentified` (`NXcollection`) | every other shot: `shot_key`, `record_id`, `fired_at`, `status`, `reason` (ruling R-2026-11-27a) |
+| `instrument/source_pump`, `beam_pump` | links to the laser group and its beam (`name`, `type`, `probe`, `frequency`, `pulse_energy`, `pulse_duration`, `incident_wavelength`, `spot_size`, `temporal_contrast`, and `polarization_label` when it is one of `p`, `s`, `circular left`, `circular right`) |
+| `instrument/source_probe` | `probe.source`, `probe.type`; `probe` derived from the type (`UV Laser` → `ultraviolet`, `Optical Laser`/`Laser` → `visible light`) |
+| `instrument/beam_probe` | `probe.wavelength` (nm); `pulse_delay`, `pulse_delay_set` per event from `probe.delay`, `probe.delay_set` (ps, `NaN` where a shot has none) |
+| `instrument/synchronization` | `sync.scheme`, `sync.delay_mechanism`; `time_zero` (ps) with `@method`, `@determined_at` only when all three keys are present |
+| `sample` | links to `/entry/sample`'s `name`, `description`, `target_type` (not `type`: its HZDR classes are not the base `NXsample/type` values) |
+
+Campaign constants (`probe.source`, `probe.type`, `probe.wavelength`,
+`sync.*`) come from the first shot that has them, with one warning when a
+later one differs. The decisions behind each row are in
+[plans/plan-nxhzdr-target-v0.11-implementation.md](plans/plan-nxhzdr-target-v0.11-implementation.md).
+
+## 7. Certification
 
 `nds validate <file.nxs> --pynxtools --definitions hzdr/nxdl` certifies a
 bridge file against the `NXhzdr_target` application definition declared in
 `/entry/definition`. Since v0.6 that covers every group in this document; all
 content fields are optional (the writer skips absent metadata), so
 certification checks structure, enumerations, and the profile marker
-attributes rather than presence.
+attributes rather than presence. Since v0.11 the `/pump_probe` entry (§6) is
+certified against its own definition; the definitions are in `hzdr/nxdl/`
+too. pynxtools cannot check an enumeration on a per-event string array
+(`events/status`), so the validation gate checks those values itself and
+has pynxtools check the rest of the entry on a copy without them.
 
 ## Status
 
@@ -238,4 +274,5 @@ attributes rather than presence.
 | `diagnostic.*` registry governance (keys + linter warning) | ✅ 2026-07-18 |
 | `start_time` / `end_time` entry fields | ✅ 2026-07-18 (profile v0.6) |
 | NXDL coverage of all groups above | ✅ 2026-07-18 (profile v0.6) |
+| Schema conventions (`spot_size`, `polarization_label`, `temporal_contrast`, `target_type`) and the `/pump_probe` entry | ✅ 2026-11-27 (profile v0.11) |
 | Semantic map doc for these namespaces | ✅ this doc (2026-07-18) |

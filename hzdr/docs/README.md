@@ -59,8 +59,9 @@ only Phase 5 (deployment evidence) remains.
 | [shot-aligner bridge](plans/plan-aligner-bridge.md) | Files a reviewer confirmed in shot-aligner attach in DAMNIT; the bulk time fix |
 | [Campaigns from Shotsheets](plans/plan-campaign-backfill.md) | This year's campaigns built from shot-aligner's day indexes, Vanlife first |
 | [Stored days and the console script](plans/plan-backfill-store-and-console.md) | `hzdr-campaign-backfill.py`, and parsed shot-aligner days stored |
-| [NXhzdr_target v0.11 implementation handoff](plans/handoff-nxhzdr-target-v0.11-implementation.md) | Start here to implement the draft: where the code is, the schema's required items the plan misses, the checklist and the cross-repo MRs |
-| [NXhzdr_target next-version draft](plans/nxhzdr-target-v0.11-draft.md) | Proposed, not in force: additive fields and a `pump_probe` subentry aligned with the DAPHNE4NFDI laser pump–probe schema; one ruling open |
+| [NXhzdr_target v0.11 implementation handoff](plans/handoff-nxhzdr-target-v0.11-implementation.md) | Done: the notes the implementation started from; the cross-repo MRs it lists are still open |
+| [NXhzdr_target v0.11 implementation plan](plans/plan-nxhzdr-target-v0.11-implementation.md) | In force 2026-11-27: the decisions taken in putting v0.11 in force (the `/pump_probe` root entry, the required items, the gate's enum recheck) |
+| [NXhzdr_target v0.11 draft](plans/nxhzdr-target-v0.11-draft.md) | The agreed proposal: additive fields and the laser pump-probe record aligned with the DAPHNE4NFDI schema; in force since 2026-11-27 |
 | [Campaign package](plans/plan-campaign-package.md) | `hzdr-package-campaign.py`: a manifest, README and NDS's verdict beside a built campaign on bigdata |
 | [Quiet builds](plans/plan-quiet-builds.md) | An unchanged campaign is not rewritten on the share; what reads bigdata, and when |
 | [Campaign output](plans/campaign-output-plan.md) | Target end product: NeXus master plus linked per-shot containers built by the builder; shot-aligner is the interim answer and the test reference |

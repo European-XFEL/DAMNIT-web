@@ -262,3 +262,63 @@ def test_an_unreadable_master_fails_its_campaign_not_the_run(tmp_path):
     result = _gate("--output-root", str(tmp_path), "--no-write")
     assert result.returncode == 1
     assert result.stdout.count("could not be checked") == 2
+
+
+@pytest.fixture(scope="module")
+def pump_probe_master(tmp_path_factory) -> Path:
+    """A v0.11 campaign with a probe delay: /entry beside the /pump_probe entry."""
+    from .test_hzdr_nexus_pump_probe import _build, _shot
+
+    out = tmp_path_factory.mktemp("pump_probe")
+    return _build(
+        out,
+        [
+            _shot(1, authority=101),
+            _shot(2, authority=None),
+            _shot(3, authority=103, delay=10.0),
+        ],
+    )
+
+
+@needs_nds
+def test_the_pump_probe_entry_is_checked_against_its_own_definition(
+    pump_probe_master,
+):
+    """/entry stays valid; /pump_probe is rechecked around pynxtools' enum-array bug."""
+    result = _gate("--master", str(pump_probe_master), "--no-write", "--json")
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout[result.stdout.index("[") :])[0]
+    entries = {e["entry"]: e for e in report["result"]["entries"]}
+    assert entries["entry"]["valid"] is True
+    assert entries["pump_probe"]["definition"] == "NXlaser_pump_probe_hzdr_draco"
+    assert entries["pump_probe"]["valid"] is True
+    assert report["result"]["errors"] == []
+    rechecked = report["result"]["rechecked"]["pump_probe"]
+    assert rechecked["findings"] == []
+    assert "/pump_probe/events/status" in rechecked["enum_arrays_checked_by_gate"]
+    assert report["summary"]["entries_rechecked"] == 1
+
+
+@needs_nds
+def test_an_off_enum_status_fails_the_gate(pump_probe_master, tmp_path):
+    bad = tmp_path / "bad.nxs"
+    bad.write_bytes(pump_probe_master.read_bytes())
+    with h5py.File(bad, "r+") as handle:
+        del handle["pump_probe/events/status"]
+        handle["pump_probe/events"].create_dataset(
+            "status", data=["shot", "exploded"], dtype=h5py.string_dtype()
+        )
+    result = _gate("--master", str(bad), "--no-write")
+    assert result.returncode == 1
+    assert "'exploded' at /pump_probe/events/status" in result.stdout
+
+
+@needs_nds
+def test_a_new_pump_probe_finding_fails_the_gate(pump_probe_master, tmp_path):
+    bad = tmp_path / "bad.nxs"
+    bad.write_bytes(pump_probe_master.read_bytes())
+    with h5py.File(bad, "r+") as handle:
+        del handle["pump_probe/instrument/synchronization/scheme"]
+    result = _gate("--master", str(bad), "--no-write")
+    assert result.returncode == 1
+    assert "/pump_probe is not valid against" in result.stdout

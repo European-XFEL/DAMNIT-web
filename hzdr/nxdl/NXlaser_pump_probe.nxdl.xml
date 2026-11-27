@@ -1,0 +1,638 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-stylesheet type="text/xsl" href="nxdlformat.xsl"?>
+<!--
+DRAFT v0.2 for discussion in the DAPHNE4NFDI laser pump-probe use case (HZDR,
+Kiel University, European XFEL), open to any laser facility. Not part of the
+NeXus standard and not yet proposed to the NIAC. Written 2026-11-26 against
+NeXus definitions main at 3b20fbc (NXDL v2026.01). Rationale, modules and site
+mappings: ../SCHEMA.md. A readable YAML copy (nyaml) is in yaml/.
+
+Terms marked PROPOSED do not exist in NeXus yet. Terms marked FROM NXmpes come
+from that application definition, not from the base classes. Everything else
+is an existing NeXus term.
+SPDX-License-Identifier: CC0-1.0
+-->
+<definition xmlns="http://definition.nexusformat.org/nxdl/3.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" category="application" type="group" name="NXlaser_pump_probe" extends="NXobject" xsi:schemaLocation="http://definition.nexusformat.org/nxdl/3.1 ../nxdl.xsd">
+    <symbols>
+        <doc>
+            Symbols used for array dimensions.
+        </doc>
+        <symbol name="nE">
+            <doc>
+                Number of recorded events. An event is one pump pulse and the probe
+                measurement that belongs to it: a laser shot at a high-power laser, one
+                pump-probe pair at a beamline, one pulse in a pulse train at a
+                free-electron laser. Every per-event array in the entry has this length
+                and the order of ``/ENTRY/events/identifier``.
+            </doc>
+        </symbol>
+        <symbol name="nC">
+            <doc>
+                Number of points in a temporal-contrast trace.
+            </doc>
+        </symbol>
+    </symbols>
+    <doc>
+        Laser pump, any probe: the part of a pump-probe experiment that laser
+        facilities, synchrotron beamlines with a laser and free-electron lasers
+        have in common.
+
+        A laser pulse (the pump) excites a sample, and a probe pulse (X-rays,
+        light, electrons or ions) measures it a set time later. This definition
+        records the two beams, the delay between them, what that delay is held
+        against, and the identity of each event. It does not describe the probe
+        measurement itself (diffraction, reflectivity, spectroscopy, imaging):
+        that belongs to the technique's own application definition in the same
+        entry, or to the facility's detector groups.
+
+        **Core and modules.** Only the core is required. Everything else is
+        optional and belongs to one module, named at the start of its
+        description, so that each facility uses the modules that fit its
+        experiments:
+
+        * MODULE high-intensity: relativistic and laser-plasma experiments
+          (temporal contrast, focal spot, peak intensity, a0, amplification state,
+          laser-driven secondary sources, destroyed targets).
+        * MODULE accelerator-probe: probes from a storage ring or free-electron
+          laser (bunch pattern, RF locking, arrival-time correction, pulses inside
+          trains, gated detectors).
+        * MODULE high-repetition: kHz to MHz pumping (pump-on/pump-off events,
+          pulse picking, readbacks on their own clock).
+        * MODULE surfaces: grazing incidence on surfaces and interfaces (fluence
+          per footprint, incidence geometry, samples with persistent identifiers).
+        * MODULE long-pulse: nanosecond and shaped pulses, for example shock
+          compression (the temporal pulse shape).
+        * MODULE simulation: links to particle-in-cell or other simulations.
+        * MODULE provenance: the diagnostic and laser-chain metadata of the HELPMI
+          Devices, Detectors and Components library (technical, procedural and
+          access metadata), as in the PHELIX and POLARIS example files.
+
+        A facility that needs some of these always, or needs more, writes a short
+        definition that extends this one and makes those items required (see the
+        site definitions next to this file). Anyone else uses this definition as
+        it is.
+
+        **Layouts.** Both common layouts are valid: one entry per campaign with
+        per-event arrays of length nE, or one entry per event with nE = 1.
+
+        **Conventions.**
+
+        * The pump defines time zero. ``pulse_delay`` is stored on the probe beam
+          with ``@reference_beam`` pointing to the pump beam, and is positive when
+          the probe reaches the interaction point after the pump.
+        * Fields hold readback values; target values use the reserved ``_set``
+          suffix and uncertainties the ``_errors`` suffix.
+        * A value that held for the whole entry is a scalar. A value that changed
+          from event to event is an array of length nE, in the order of
+          ``/ENTRY/events/identifier``. Values sampled on their own clock go in
+          ``NXlog`` groups.
+        * Beam quantities are given at the interaction point unless the beam
+          group's ``distance`` or ``depends_on`` says otherwise.
+    </doc>
+    <group type="NXentry">
+        <field name="definition">
+            <doc>
+                Official NeXus NXDL schema to which this subentry conforms.
+            </doc>
+            <enumeration>
+                <item value="NXlaser_pump_probe"/>
+            </enumeration>
+        </field>
+        <field name="title"/>
+        <field name="start_time" type="NX_DATE_TIME">
+            <doc>
+                Start of the first event. ISO 8601 with an explicit time zone.
+            </doc>
+        </field>
+        <field name="end_time" type="NX_DATE_TIME" recommended="true"/>
+        <field name="experiment_identifier" recommended="true">
+            <doc>
+                The campaign, beamtime or proposal this entry belongs to, as the facility
+                names it.
+            </doc>
+        </field>
+        <group name="events" type="NXdata">
+            <doc>
+                The event list. Its ``identifier`` is the axis every per-event array in
+                the entry refers to. Per-event readbacks (pump energy, delay, lock state)
+                are linked here as auxiliary signals, not copied.
+
+                PROPOSED: NeXus has per-pulse identifiers only for neutron event data and
+                atom-probe pulses. This group gives a pump-probe event one identity, issued
+                once, at the source.
+            </doc>
+            <attribute name="axes">
+                <enumeration>
+                    <item value="identifier"/>
+                </enumeration>
+            </attribute>
+            <field name="identifier">
+                <doc>
+                    The identity of each event as its issuer assigned it: the shot number
+                    from a shot authority, a pulse-train identifier, a bunch or frame
+                    number. A number or a string, unique within the issuer.
+                </doc>
+                <dimensions rank="1">
+                    <dim index="1" value="nE"/>
+                </dimensions>
+                <attribute name="issuer">
+                    <doc>
+                        Who assigned the identifier, for example "HZDR DRACO shot authority"
+                        or "European XFEL timing system (train ID)". Identifiers from
+                        different issuers are never compared.
+                    </doc>
+                </attribute>
+            </field>
+            <field name="time" type="NX_DATE_TIME" recommended="true">
+                <doc>
+                    When each event happened, as the issuer recorded it. ISO 8601 with an
+                    explicit time zone.
+                </doc>
+                <dimensions rank="1">
+                    <dim index="1" value="nE"/>
+                </dimensions>
+            </field>
+            <field name="status" recommended="true">
+                <doc>
+                    What kind of event it was. An analysis normally keeps only ``shot``.
+                    The values are LabFrog's shot statuses.
+                </doc>
+                <dimensions rank="1">
+                    <dim index="1" value="nE"/>
+                </dimensions>
+                <enumeration open="true">
+                    <item value="shot"/>
+                    <item value="misfire"/>
+                    <item value="test"/>
+                    <item value="dark"/>
+                    <item value="calibration"/>
+                </enumeration>
+            </field>
+            <field name="sub_index" type="NX_INT" optional="true">
+                <doc>
+                    MODULE accelerator-probe. Position of the event inside the issuer's
+                    unit, when one identifier covers several events, for example the pulse
+                    index inside a pulse train.
+                </doc>
+                <dimensions rank="1">
+                    <dim index="1" value="nE"/>
+                </dimensions>
+            </field>
+            <field name="pump_state" optional="true">
+                <doc>
+                    MODULE high-repetition. Whether the pump reached the sample in this
+                    event. Unpumped events are the reference that pumped events are
+                    compared with. (Not "on"/"off": YAML reads those as booleans.)
+                </doc>
+                <dimensions rank="1">
+                    <dim index="1" value="nE"/>
+                </dimensions>
+                <enumeration>
+                    <item value="pumped"/>
+                    <item value="unpumped"/>
+                </enumeration>
+            </field>
+            <field name="amplification_state" optional="true">
+                <doc>
+                    MODULE high-intensity. PROPOSED. How far the pump laser was amplified
+                    for this event. Alignment and diagnostic shots at reduced energy are
+                    common, and the HELPMI library asks for laser data to be kept "even if
+                    not fully-amplified".
+                </doc>
+                <dimensions rank="1">
+                    <dim index="1" value="nE"/>
+                </dimensions>
+                <enumeration open="true">
+                    <item value="full"/>
+                    <item value="reduced"/>
+                    <item value="unamplified"/>
+                </enumeration>
+            </field>
+        </group>
+        <group type="NXinstrument">
+            <group name="source_pump" type="NXsource">
+                <doc>
+                    The laser that generates the pump beam.
+                </doc>
+                <field name="name"/>
+                <field name="type">
+                    <enumeration open="true">
+                        <item value="Optical Laser"/>
+                        <item value="UV Laser"/>
+                        <item value="Laser"/>
+                    </enumeration>
+                </field>
+                <field name="probe" recommended="true">
+                    <enumeration>
+                        <item value="visible light"/>
+                        <item value="ultraviolet"/>
+                    </enumeration>
+                </field>
+                <field name="frequency" type="NX_FLOAT" units="NX_FREQUENCY" recommended="true">
+                    <doc>
+                        Repetition rate of the pump at the sample, after any pulse picking.
+                        Single-shot lasers give the shot rate they ran at.
+                    </doc>
+                </field>
+                <field name="associated_beam" type="NX_CHAR">
+                    <doc>
+                        Path to the pump beam, ``/ENTRY/INSTRUMENT/beam_pump``. FROM NXmpes:
+                        this field is not in the NXsource base class; the NXmpes application
+                        definition introduced it, and this definition reuses it unchanged.
+                        Moving it (and ``associated_source``) into the base classes would let
+                        any definition pair a source with its beam.
+                    </doc>
+                </field>
+                <group name="pulse_shape" type="NXdata" optional="true">
+                    <doc>
+                        MODULE long-pulse. The temporal shape of the delivered pulse
+                        (``NXsource/pulse_shape``), for shaped nanosecond pulses.
+                    </doc>
+                </group>
+                <group type="NXfabrication" recommended="true">
+                    <doc>
+                        Manufacturer and model of the laser.
+                    </doc>
+                </group>
+            </group>
+            <group name="source_probe" type="NXsource">
+                <doc>
+                    The source of the probe: a storage ring, a free-electron laser, the same
+                    laser (an optical probe split from the pump), or a laser-driven secondary
+                    source.
+                </doc>
+                <field name="name"/>
+                <field name="type">
+                    <doc>
+                        PROPOSED enumeration items for laser-driven secondary sources (the
+                        list is open, so they are valid now): "Laser Plasma X-ray Source",
+                        "Laser Plasma Ion Source", "Laser Plasma Electron Source".
+                    </doc>
+                </field>
+                <field name="probe"/>
+                <field name="frequency" type="NX_FLOAT" units="NX_FREQUENCY" recommended="true"/>
+                <field name="associated_beam" type="NX_CHAR">
+                    <doc>
+                        Path to the probe beam, ``/ENTRY/INSTRUMENT/beam_probe``. FROM NXmpes,
+                        as for ``source_pump``.
+                    </doc>
+                </field>
+                <field name="previous_source" type="NX_CHAR" optional="true">
+                    <doc>
+                        MODULE high-intensity. For a secondary source driven by a laser, the
+                        path to that laser's NXsource; for an optical probe split from the
+                        pump laser, the path to ``source_pump``. A chain of sources (a laser
+                        driving a mediator target that emits the probe) is a chain of
+                        ``previous_source`` links.
+                    </doc>
+                </field>
+                <field name="mode" optional="true">
+                    <doc>
+                        MODULE accelerator-probe. Storage-ring operating mode.
+                    </doc>
+                </field>
+                <field name="number_of_bunches" type="NX_INT" optional="true">
+                    <doc>
+                        MODULE accelerator-probe.
+                    </doc>
+                </field>
+                <field name="bunch_distance" type="NX_FLOAT" units="NX_TIME" optional="true">
+                    <doc>
+                        MODULE accelerator-probe. Time between bunches; it sets the step of a
+                        delay changed by bunch selection.
+                    </doc>
+                </field>
+                <field name="bunch_length" type="NX_FLOAT" units="NX_TIME" optional="true">
+                    <doc>
+                        MODULE accelerator-probe.
+                    </doc>
+                </field>
+            </group>
+            <group name="beam_pump" type="NXbeam">
+                <doc>
+                    The pump beam at the interaction point. It defines time zero.
+                </doc>
+                <field name="associated_source" type="NX_CHAR">
+                    <doc>
+                        Path to ``source_pump``. FROM NXmpes: not in the NXbeam base class.
+                    </doc>
+                </field>
+                <field name="incident_wavelength" type="NX_FLOAT" units="NX_WAVELENGTH">
+                    <doc>
+                        Central wavelength of the pump.
+                    </doc>
+                </field>
+                <field name="pulse_energy" type="NX_FLOAT" units="NX_ENERGY">
+                    <doc>
+                        Pump energy per pulse at the interaction point: an array of length nE
+                        when it is measured per event.
+                    </doc>
+                </field>
+                <field name="pulse_duration" type="NX_FLOAT" units="NX_TIME">
+                    <doc>
+                        Intensity full width at half maximum, as NXbeam defines it. A
+                        duration measured or simulated in another convention is converted
+                        before it is written here.
+                    </doc>
+                </field>
+                <field name="incident_polarization_stokes" type="NX_NUMBER" units="NX_ANY" recommended="true">
+                    <doc>
+                        Stokes vector in the NeXus frame, as NXbeam defines it. A label such
+                        as p or s depends on the sample's plane of incidence and is not a
+                        substitute; write it in ``polarization_label`` as well if it is what
+                        the scientists use.
+                    </doc>
+                </field>
+                <field name="polarization_label" optional="true">
+                    <doc>
+                        PROPOSED. Polarization relative to the plane of incidence on the
+                        sample.
+                    </doc>
+                    <enumeration open="true">
+                        <item value="p"/>
+                        <item value="s"/>
+                        <item value="circular left"/>
+                        <item value="circular right"/>
+                    </enumeration>
+                </field>
+                <field name="spot_size" type="NX_FLOAT" units="NX_LENGTH" optional="true">
+                    <doc>
+                        MODULE high-intensity. PROPOSED. Size of the focal spot along the two
+                        axes of the beam's reference frame. NXbeam/extent is a rectangular full
+                        width at half maximum and is not the same quantity as a Gaussian
+                        waist, so this field carries its definition.
+                    </doc>
+                    <dimensions rank="1">
+                        <dim index="1" value="2"/>
+                    </dimensions>
+                    <attribute name="definition">
+                        <enumeration>
+                            <item value="1/e^2 intensity radius"/>
+                            <item value="1/e^2 intensity diameter"/>
+                            <item value="FWHM diameter"/>
+                            <item value="second-moment diameter (ISO 11146)"/>
+                        </enumeration>
+                    </attribute>
+                </field>
+                <field name="peak_intensity" type="NX_FLOAT" units="NX_ANY" optional="true">
+                    <doc>
+                        MODULE high-intensity. PROPOSED. Peak intensity at focus, for example
+                        in W/cm^2. A derived value; the attribute says how it was derived.
+                    </doc>
+                    <attribute name="derivation"/>
+                </field>
+                <field name="normalized_vector_potential" type="NX_FLOAT" units="NX_DIMENSIONLESS" optional="true">
+                    <doc>
+                        MODULE high-intensity. PROPOSED. Peak normalized vector potential a0,
+                        the quantity particle-in-cell inputs (PICMI) use for relativistic
+                        lasers. Derived; the attribute says how.
+                    </doc>
+                    <attribute name="derivation"/>
+                </field>
+                <group name="temporal_contrast" type="NXdata" optional="true">
+                    <doc>
+                        MODULE high-intensity. PROPOSED. Intensity of the pulse's leading edge
+                        relative to its peak, as a function of time before the peak. A
+                        contrast is only meaningful with the time it refers to, so it is
+                        stored as a trace (or as single points with their times), never as one
+                        bare ratio.
+                    </doc>
+                    <attribute name="signal">
+                        <enumeration>
+                            <item value="intensity_ratio"/>
+                        </enumeration>
+                    </attribute>
+                    <attribute name="axes">
+                        <enumeration>
+                            <item value="time"/>
+                        </enumeration>
+                    </attribute>
+                    <field name="intensity_ratio" type="NX_FLOAT" units="NX_DIMENSIONLESS">
+                        <dimensions rank="1">
+                            <dim index="1" value="nC"/>
+                        </dimensions>
+                    </field>
+                    <field name="time" type="NX_FLOAT" units="NX_TIME">
+                        <doc>
+                            Time relative to the peak; negative before it.
+                        </doc>
+                        <dimensions rank="1">
+                            <dim index="1" value="nC"/>
+                        </dimensions>
+                    </field>
+                    <field name="method" recommended="true">
+                        <doc>
+                            For example "third-order cross-correlation".
+                        </doc>
+                    </field>
+                    <field name="measured_at" type="NX_DATE_TIME" recommended="true"/>
+                </group>
+                <field name="fluence" type="NX_FLOAT" units="NX_ANY" optional="true">
+                    <doc>
+                        MODULE surfaces. Fluence at the sample.
+                    </doc>
+                    <attribute name="definition">
+                        <doc>
+                            PROPOSED. Which area the energy is divided by: the beam's
+                            cross-section, or its footprint on the sample surface. They
+                            differ by the sine of the grazing angle and are often confused at
+                            grazing incidence.
+                        </doc>
+                        <enumeration>
+                            <item value="beam cross-section"/>
+                            <item value="sample footprint"/>
+                        </enumeration>
+                    </attribute>
+                </field>
+                <field name="depends_on" type="NX_CHAR" optional="true">
+                    <doc>
+                        MODULE surfaces. The pump's direction and incidence on the sample,
+                        through NXtransformations.
+                    </doc>
+                </field>
+            </group>
+            <group name="beam_probe" type="NXbeam">
+                <doc>
+                    The probe beam at the interaction point.
+                </doc>
+                <field name="associated_source" type="NX_CHAR">
+                    <doc>
+                        Path to ``source_probe``. FROM NXmpes, as for ``beam_pump``.
+                    </doc>
+                </field>
+                <field name="incident_energy" type="NX_FLOAT" units="NX_ENERGY" recommended="true">
+                    <doc>
+                        Photon or particle energy of the probe. For an optical probe,
+                        ``incident_wavelength`` instead.
+                    </doc>
+                </field>
+                <field name="incident_wavelength" type="NX_FLOAT" units="NX_WAVELENGTH" optional="true"/>
+                <field name="pulse_duration" type="NX_FLOAT" units="NX_TIME" recommended="true">
+                    <doc>
+                        Together with the pump duration and the jitter, this bounds the time
+                        resolution.
+                    </doc>
+                </field>
+                <field name="extent" type="NX_FLOAT" units="NX_LENGTH" recommended="true">
+                    <doc>
+                        Probe size at the sample, for checking that the pump covers the probed
+                        area.
+                    </doc>
+                </field>
+                <field name="focusing" optional="true">
+                    <doc>
+                        PROPOSED. Whether the probe is collimated, converging or diverging at
+                        the sample (an item of the HELPMI optical probe beam).
+                    </doc>
+                    <enumeration>
+                        <item value="collimated"/>
+                        <item value="converging"/>
+                        <item value="diverging"/>
+                    </enumeration>
+                </field>
+                <field name="chirp_type" optional="true">
+                    <doc>
+                        Whether an optical probe is transform-limited or chirped at the sample
+                        (``NXbeam/chirp_type``; HELPMI asks for it).
+                    </doc>
+                </field>
+                <field name="pulse_delay" type="NX_FLOAT" units="NX_TIME">
+                    <doc>
+                        Delay of the probe after the pump at the interaction point: positive
+                        when the probe arrives later. The best value available; when an
+                        arrival-time correction has been applied, the uncorrected readback is
+                        kept through ``@variant``. An array of length nE when it changes from
+                        event to event.
+                    </doc>
+                    <attribute name="reference_beam">
+                        <doc>
+                            PROPOSED. Path to the beam the delay is measured from: this entry's
+                            ``/ENTRY/INSTRUMENT/beam_pump``, e.g. ``/entry/instrument/beam_pump``.
+                            Not an enumeration, because a validator compares an enumeration with
+                            the literal value, and no file path is the template.
+                        </doc>
+                    </attribute>
+                    <attribute name="synchronization">
+                        <doc>
+                            PROPOSED. Path to the NXsynchronization group that makes this delay
+                            valid.
+                        </doc>
+                    </attribute>
+                    <attribute name="variant" optional="true"/>
+                </field>
+                <field name="pulse_delay_set" type="NX_FLOAT" units="NX_TIME" recommended="true">
+                    <doc>
+                        The delay that was asked for. Differs from ``pulse_delay`` by the
+                        readback error and any correction.
+                    </doc>
+                </field>
+                <field name="pulse_delay_errors" type="NX_FLOAT" units="NX_TIME" optional="true"/>
+            </group>
+            <group name="synchronization" type="NXsynchronization">
+                <doc>
+                    What the delay is held against. PROPOSED base class; see
+                    NXsynchronization.nxdl.xml.
+                </doc>
+                <field name="scheme"/>
+                <field name="delay_mechanism"/>
+                <field name="reference" recommended="true"/>
+                <field name="time_zero" type="NX_FLOAT" units="NX_TIME" recommended="true">
+                    <attribute name="method"/>
+                    <attribute name="determined_at" type="NX_DATE_TIME"/>
+                </field>
+                <field name="timing_jitter" type="NX_FLOAT" units="NX_TIME" recommended="true"/>
+                <field name="locked" type="NX_BOOLEAN" optional="true">
+                    <doc>
+                        MODULE accelerator-probe.
+                    </doc>
+                </field>
+                <field name="reference_frequency" type="NX_FLOAT" units="NX_FREQUENCY" optional="true">
+                    <doc>
+                        MODULE accelerator-probe.
+                    </doc>
+                </field>
+                <field name="frequency_ratio" type="NX_NUMBER" units="NX_DIMENSIONLESS" optional="true">
+                    <doc>
+                        MODULE accelerator-probe.
+                    </doc>
+                </field>
+                <field name="arrival_time_correction" type="NX_FLOAT" units="NX_TIME" optional="true">
+                    <doc>
+                        MODULE accelerator-probe.
+                    </doc>
+                </field>
+                <group type="NXlog" optional="true">
+                    <doc>
+                        MODULE high-repetition. Readbacks on their own clock, for example the
+                        lock state or the PLL phase error over time.
+                    </doc>
+                </group>
+            </group>
+            <group type="NXdetector" optional="true">
+                <doc>
+                    Detectors. The technique's own definition says what they hold; this
+                    definition adds only timing and provenance.
+                </doc>
+                <field name="trigger_delay_time_set" type="NX_FLOAT" units="NX_TIME" optional="true">
+                    <doc>
+                        MODULE accelerator-probe. The gate of a detector that selects one probe
+                        pulse per pump pulse.
+                    </doc>
+                </field>
+                <field name="trigger_delay_time" type="NX_FLOAT" units="NX_TIME" optional="true"/>
+                <group name="technical_metadata" type="NXparameters" optional="true">
+                    <doc>
+                        MODULE provenance. The device as built: manufacturer, model, serial
+                        number, calibration and its date (HELPMI DDC category A).
+                    </doc>
+                </group>
+                <group name="procedural_metadata" type="NXparameters" optional="true">
+                    <doc>
+                        MODULE provenance. The device as used: location, exposure, gain,
+                        trigger, gate, filters, and the date of the last zero-delay image
+                        (HELPMI DDC category B).
+                    </doc>
+                </group>
+                <group name="security_metadata" type="NXparameters" optional="true">
+                    <doc>
+                        MODULE provenance. Access conditions: which of the device's metadata
+                        may be published (HELPMI DDC category C). Laser quality-assurance data
+                        are often kept internal.
+                    </doc>
+                </group>
+            </group>
+        </group>
+        <group type="NXsample">
+            <field name="name"/>
+            <field name="description" recommended="true"/>
+            <field name="identifier" optional="true">
+                <doc>
+                    MODULE surfaces. PROPOSED. A persistent identifier for a sample that
+                    survives the measurement, for example an IGSN. A target destroyed by each
+                    shot (MODULE high-intensity) is described instead (``name``,
+                    ``description``) and its position per event recorded in an NXpositioner.
+                </doc>
+                <attribute name="scheme">
+                    <doc>
+                        For example "IGSN" or "local".
+                    </doc>
+                </attribute>
+            </field>
+            <group type="NXpositioner" optional="true">
+                <doc>
+                    MODULE high-intensity. The target position for each event, when each shot
+                    uses a fresh spot of the target.
+                </doc>
+            </group>
+        </group>
+        <group name="simulation_links" type="NXcollection" optional="true">
+            <doc>
+                MODULE simulation. Links to simulations run for this entry, one NXnote per
+                link, following HZDR's metadata.simulation link object: the openPMD series,
+                the matched iteration, the code and its version. Simulation data are
+                referenced, never copied.
+            </doc>
+            <group type="NXnote"/>
+        </group>
+    </group>
+</definition>

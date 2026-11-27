@@ -343,7 +343,8 @@ with nexus-design-studio and pynxtools (NDS's own `.venv`); set, the trigger
 runs `api/scripts/hzdr-nexus-validate.py` (campaign output phase 5) after each
 container worker (not after one that asked for a relink or converted
 nothing, `BUSY_EXIT`), or after the build without containers, one run at a
-time: the master against NXhzdr_target and its container links, the
+time: the master against NXhzdr_target and its container links (and a
+`/pump_probe` root entry against its own definition, since v0.11), the
 containers structurally and their definition subentries (known mapping gaps
 reported, anything new gating), in `<campaign folder>/.validation.json` and
 `.hzdr-validation.log`; exit 1 fails the gate, exit 2 means it could not run.
@@ -575,6 +576,19 @@ for audit and review. The same decision round (D1) registered
 `experiment_id: "unassigned"` as the sentinel a producer sends when it does not
 know the campaign (`UNASSIGNED_EXPERIMENT_ID`); see
 [hzdr/docs/architecture.md](hzdr/docs/architecture.md#campaign-resolution).
+**Since 2026-11-27** (NXhzdr_target v0.11, ruling R-2026-11-27b: "keys look OK
+for now"; change class `additive-metadata`) twelve laser pump-probe keys are
+registered ahead of any producer: `laser.contrast_time` and
+`laser.amplification_state`, and the new `probe.*` and `sync.*` namespaces.
+`laser.contrast_time` is how long before the peak `laser.contrast_ratio` was
+measured, and the two give the beam's `temporal_contrast`; `probe.delay` and
+`probe.delay_set` are positive when the probe arrives after the pump. `probe.delay` on any shot makes the build write the
+`/pump_probe` root entry, which conforms to the DAPHNE4NFDI laser pump-probe
+schema ([nexus-semantic-maps.md §6](hzdr/docs/nexus-semantic-maps.md)).
+`probe.type` is free text, but only `Optical Laser`, `Laser` and `UV Laser`
+give the entry a probe kind. The enums in `METADATA_KEY_VALUES` are the
+schema's own (NXsynchronization's for `sync.*`), so a matching label
+certifies as written.
 
 | Namespace | Key | Canonical unit |
 | --- | --- | --- |
@@ -591,6 +605,15 @@ know the campaign (`UNASSIGNED_EXPERIMENT_ID`); see
 | `laser.*` | `polarization` | — (string enum: `LASER_POLARIZATION_VALUES`) |
 | `laser.*` | `contrast_ratio` | — (dimensionless) |
 | `laser.*` | `system` | — (string) |
+| `laser.*` | `contrast_time` | ps |
+| `laser.*` | `amplification_state` | — (string enum: `full`, `reduced`, `unamplified`) |
+| `probe.*` | `source` / `type` | — (string) |
+| `probe.*` | `wavelength` | nm |
+| `probe.*` | `delay` / `delay_set` | ps |
+| `sync.*` | `scheme` | — (string enum: `common oscillator`, `rf locked`, `trigger only`, `measured per event`) |
+| `sync.*` | `delay_mechanism` | — (string enum: `optical delay line`, `electronic phase shift`, `bunch selection`, `pulse picking`, `trigger delay`) |
+| `sync.*` | `time_zero` | ps |
+| `sync.*` | `time_zero_method` / `time_zero_date` | — (string; ISO-8601 date) |
 | `vacuum.*` | `chamber_pressure` | mbar |
 | `vacuum.*` | `pre_shot_pressure` | mbar |
 | `vacuum.*` | `rga_dominant_species` | — (string) |

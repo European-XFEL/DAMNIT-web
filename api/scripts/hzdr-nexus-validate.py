@@ -18,6 +18,11 @@ not depend on it) and imports nothing from ``damnit_api``. For each campaign:
   NDS's structural check (NX classes, a top-level NXentry), and pynxtools on
   every ``NXsubentry`` that declares a ``definition`` (the mapping rows'
   claims, ``NXoptical_spectroscopy`` for the Irr8 spectrometers).
+* **other root entries** that declare a definition (NXhzdr_target v0.11's
+  ``/pump_probe`` laser pump-probe record) -- pynxtools against that
+  definition, like ``/entry``; every finding gates. Where pynxtools raises on
+  a per-event enumerated string array (``ENUM_ARRAY_CRASH``), the gate checks
+  those values itself and has pynxtools check the rest on a copy.
 
 Exit 0: passed. Exit 1 (the gate): a structural error in the master or a
 container, the master's entry not valid against its definition, a dangling
@@ -46,6 +51,7 @@ import os
 import re
 import sys
 import tempfile
+import xml.etree.ElementTree as ET  # noqa: S405 -- our own NXDL files
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -77,6 +83,19 @@ KNOWN_SUBENTRY_GAPS: dict[str, tuple[re.Pattern[str], ...]] = {
         )
     ),
 }
+
+# pynxtools' is_valid_enum_hdf compares a whole 1-D string array with an
+# enumeration and raises, which ends its check of the entry there. NXhzdr_target
+# v0.11's /pump_probe entry has such arrays (events/status, one value per shot).
+# A pynxtools bug, not the file's: the gate checks those arrays' values against
+# the NXDL enumeration itself and has pynxtools check the rest of the entry on a
+# copy without them (Validator.recheck_without_enum_arrays). Never lets a
+# finding through: anything else still gates.
+ENUM_ARRAY_CRASH = re.compile(
+    r"pynxtools raised while validating /\S+ against '\w+': The truth "
+    r"value of an array with more than one element is ambiguous"
+)
+NXDL_NS = "{http://definition.nexusformat.org/nxdl/3.1}"
 
 
 class _Capture(logging.Handler):
@@ -160,6 +179,7 @@ class Validator:
         nds = importlib.import_module("nexus_design_studio.core.validator")
 
         self._nds = nds
+        self._definitions = definitions
         self._tmp = None
         self.extra = frozenset()
         if definitions is not None:
@@ -198,13 +218,114 @@ class Validator:
                 "no root entry declares a definition to validate against "
                 f"({pynx.note or 'pynxtools checked nothing'})"
             )
+        result["rechecked"] = {}
         for entry in pynx.entries:
-            if not entry.valid:
-                result["errors"].append(
-                    f"/{entry.entry} is not valid against {entry.definition}"
+            if entry.valid:
+                continue
+            own = [
+                message
+                for message in (
+                    *result["findings"]["required_missing"],
+                    *result["findings"]["other"],
                 )
+                if f"/{entry.entry}" in message
+            ]
+            # pynxtools stopped at a per-event enumerated array (ENUM_ARRAY_CRASH)
+            # and checked nothing after it: check the entry again without them.
+            if own and all(ENUM_ARRAY_CRASH.search(m) for m in own):
+                findings, fields = self.recheck_without_enum_arrays(
+                    path, entry.entry, entry.definition
+                )
+                result["rechecked"][entry.entry] = {
+                    "definition": entry.definition,
+                    "enum_arrays_checked_by_gate": fields,
+                    "findings": findings,
+                }
+                if not findings:
+                    entry_report = next(
+                        e for e in result["entries"] if e["entry"] == entry.entry
+                    )
+                    entry_report["valid"] = True
+                    continue
+                result["errors"] += [f"/{entry.entry}: {m}" for m in findings]
+            result["errors"].append(
+                f"/{entry.entry} is not valid against {entry.definition}"
+            )
         result["errors"] += _dangling_links(path)
         return result
+
+    def recheck_without_enum_arrays(
+        self, path: Path, entry: str, definition: str
+    ) -> tuple[list[str], list[str]]:
+        """Findings for ``/<entry>`` with its enumerated string arrays checked here.
+
+        On a temporary copy, every 1-D string array under the entry whose NXDL
+        field has an enumeration is checked against it value by value and then
+        removed; pynxtools checks the rest, and its "required ... hasn't been
+        supplied" for exactly those removed fields is dropped. Returns the
+        findings and the fields checked here.
+        """
+        enumerations = _nxdl_enumerations(self._definitions, definition)
+        findings: list[str] = []
+        removed: list[str] = []
+        with tempfile.TemporaryDirectory(prefix="hzdr-recheck-") as tmp:
+            copy = Path(tmp) / path.name
+            copy.write_bytes(path.read_bytes())
+            with h5py.File(copy, "r+") as handle:
+                arrays = []
+                root = handle[entry]
+                if not isinstance(root, h5py.Group):
+                    return [f"/{entry} is not a group"], []
+                root.visititems(
+                    lambda _name, node: (
+                        arrays.append(node)
+                        if isinstance(node, h5py.Dataset)
+                        and node.ndim == 1
+                        and node.shape[0] > 1
+                        and node.dtype.kind in {"O", "S", "U"}
+                        else None
+                    )
+                )
+                for dataset in arrays:
+                    parent = dataset.parent
+                    keys = (
+                        parent.name.rsplit("/", 1)[-1],
+                        _text(parent.attrs.get("NX_class", "")),
+                    )
+                    field = dataset.name.rsplit("/", 1)[-1]
+                    allowed = next(
+                        (
+                            enumerations[key, field]
+                            for key in keys
+                            if (key, field) in enumerations
+                        ),
+                        None,
+                    )
+                    if allowed is None:
+                        continue
+                    values = [_text(v) for v in dataset[...]]
+                    findings += [
+                        f"The value {value!r} at {dataset.name} should be one of "
+                        f"the following: {sorted(allowed)}."
+                        for value in dict.fromkeys(values)
+                        if value not in allowed
+                    ]
+                    removed.append(dataset.name)
+                    del handle[dataset.name]
+            with _captured() as messages, h5py.File(copy, "r") as handle:
+                try:
+                    self._against(definition, handle[entry], str(copy), False)
+                except Exception as error:
+                    messages.append(f"pynxtools raised: {error}")
+            skipped = {
+                f"The required field {name} hasn't been supplied." for name in removed
+            }
+            findings += [
+                m
+                for m in dict.fromkeys(messages)
+                if m not in skipped and "has no documentation" not in m
+            ]
+        return findings, removed
 
     def container(self, path: Path) -> dict:
         result = self.structural(path)
@@ -236,6 +357,37 @@ class Validator:
                 }
                 result["errors"] += [f"/entry/{name}: {m}" for m in unexpected]
         return result
+
+
+def _nxdl_enumerations(
+    definitions: Path | None, name: str
+) -> dict[tuple[str, str], frozenset[str]]:
+    """(group name or class, field name) -> enumeration, along ``extends``.
+
+    Read from the ``*.nxdl.xml`` files in ``definitions``; a definition that
+    extends another overrides its enumerations.
+    """
+    if definitions is None:
+        return {}
+    roots = {}
+    for nxdl in definitions.glob("*.nxdl.xml"):
+        root = ET.parse(nxdl).getroot()  # noqa: S314 -- our own NXDL files
+        roots[root.get("name")] = root
+    chain = []
+    while name in roots and name not in chain:
+        chain.append(name)
+        name = roots[name].get("extends")
+    enumerations: dict[tuple[str, str], frozenset[str]] = {}
+    for definition in reversed(chain):
+        for group in roots[definition].iter(f"{NXDL_NS}group"):
+            key = group.get("name") or group.get("type") or ""
+            for field in group.findall(f"{NXDL_NS}field"):
+                items = field.findall(f"{NXDL_NS}enumeration/{NXDL_NS}item")
+                if items:
+                    enumerations[key, field.get("name") or ""] = frozenset(
+                        item.get("value") or "" for item in items
+                    )
+    return enumerations
 
 
 def _dangling_links(master: Path) -> list[str]:
@@ -330,6 +482,7 @@ def _summary(report: dict, *, strict: bool) -> dict:
         "container_warnings": sum(len(c["warnings"]) for c in containers),
         "subentries": len(subentries),
         "subentries_certified": len(subentries) - uncertified,
+        "entries_rechecked": len(master.get("rechecked", {})),
         "strict_subentries": strict,
     }
 
@@ -342,6 +495,12 @@ def _line(report: dict) -> str:
         f"{s['containers']} container(s), {s['container_errors']} error(s), "
         f"{s['container_warnings']} warning(s); subentries "
         f"{s['subentries_certified']}/{s['subentries']} certified"
+        + (
+            f"; {s['entries_rechecked']} entr(y/ies) rechecked without "
+            "pynxtools' enum arrays"
+            if s.get("entries_rechecked")
+            else ""
+        )
     )
 
 

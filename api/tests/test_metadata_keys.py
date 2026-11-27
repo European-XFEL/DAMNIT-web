@@ -246,6 +246,9 @@ class TestRegistryWriterCoverage:
                 rf'\b{re.escape(namespace)}\.get\(\s*"{re.escape(bare_key)}"',
                 rf'\.get\(\s*"{re.escape(registry_key)}"',
                 rf'f"{re.escape(namespace)}\.\{{',
+                # _shot_value / _campaign_constant / _per_event_floats
+                # (NXhzdr_target v0.11's /pump_probe entry): "ns", "key".
+                rf'"{re.escape(namespace)}",\s*"{re.escape(bare_key)}"',
             )
             if not any(re.search(pattern, source) for pattern in patterns):
                 uncovered.append(registry_key)

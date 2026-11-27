@@ -1,6 +1,6 @@
 # `NXhzdr_target` v0.11: draft
 
-**Status: draft, 2026-11-26; both rulings made 2026-11-27 (R-2026-11-27a, section 4; R-2026-11-27b, the keys in section 3). Not in force until the implementation below.** The writer constant, `hzdr/docs/nxhzdr-target-profile.md` and `hzdr/nxdl/NXhzdr_target.nxdl.xml` all stay at v0.10 until this draft is agreed and bumped under the [versioning rule](../nxhzdr-target-profile.md#4-versioning-rule). The draft definition is [drafts/NXhzdr_target-v0.11-draft.nxdl.xml](drafts/NXhzdr_target-v0.11-draft.nxdl.xml). It lives outside `hzdr/nxdl/` on purpose: the meta-repo checker overlays everything in `hzdr/nxdl/` when it certifies a campaign file.
+**Status: in force since 2026-11-27** (rulings R-2026-11-27a, section 4, and R-2026-11-27b, the keys in section 3). The implementation and the decisions it took on what this draft left open are in [plan-nxhzdr-target-v0.11-implementation.md](plan-nxhzdr-target-v0.11-implementation.md). The draft definition that sat in `plans/drafts/` is now `hzdr/nxdl/NXhzdr_target.nxdl.xml`, beside the schema's `NXlaser_pump_probe`, `NXsynchronization` and `NXlaser_pump_probe_hzdr_draco`; the draft file is in the history of PR #62. The text below is the proposal as agreed, with one change (ruling R-2026-11-27c): the `pump_probe` record is a second root entry, `/pump_probe`, not an `NXsubentry` of `/entry`, because pynxtools checks a subentry against the parent's definition (implementation plan D0).
 
 ## 1. Why
 
@@ -96,6 +96,6 @@ The next session starts from [handoff-nxhzdr-target-v0.11-implementation.md](han
 
 ## 6. How this draft was checked
 
-- `drafts/NXhzdr_target-v0.11-draft.nxdl.xml` and the live v0.10 file both validate against `nxdl.xsd` from nexusformat/definitions `3b20fbc`.
+- The draft definition (then `drafts/NXhzdr_target-v0.11-draft.nxdl.xml`) and the live v0.10 file both validate against `nxdl.xsd` from nexusformat/definitions `3b20fbc`.
 - The draft differs from v0.10 only by additions (89 lines) and the version enumeration (0.10 → 0.11).
 - The live profile and writer were not touched, and the alignment checker's ontology group was run afterwards (see the PR).

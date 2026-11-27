@@ -1,6 +1,6 @@
-# `NXhzdr_target` Profile — v0.10
+# `NXhzdr_target` Profile — v0.11
 
-Updated: 2026-07-27
+Updated: 2026-11-27
 
 The versioned definition of the HZDR-local `NXhzdr_target` profile: the
 semantic map from `metadata.target.*` to the `/entry/sample` NeXus group, and
@@ -89,6 +89,7 @@ decomposition into plasma source, medium/target, diagnostics, and resources
 | --- | --- | --- | --- | --- |
 | `name` | `name` (dataset) | — (string) | — | Standard `NXsample.name` |
 | `type` | `type` (dataset) | — (string enum, target-ontology.md §3) | Target type | Standard `NXsample.type` **field name**; HZDR enum values (`foil`/`gas_jet`/`cluster`/`liquid`/`structured`/`other`), not the upstream sample/can/buffer vocabulary |
+| `type` | `target_type` (dataset) | — (same enum) | Target type | **Profile extension** (since v0.11): the same value under the name the DAPHNE4NFDI HZDR site definition `NXlaser_pump_probe_hzdr_draco` uses, so `type` can return to its NeXus meaning in v1.0 |
 | `material` | `material` (dataset) | — (string) | Material | **Profile extension** — free text; no standard `NXsample` field |
 | `material` (only when it parses as a formula) | `chemical_formula` (dataset) | — (string) | Material | Standard `NXsample.chemical_formula` |
 | `thickness` | `thickness` (dataset), `@units` | nm | Thickness | Standard `NXsample.thickness` |
@@ -149,7 +150,7 @@ Stamped on the `/entry/sample` group by `write_nexus_sample()`:
 | --- | --- | --- | --- |
 | `NX_class` | `"NXsample"` | always | Compatibility class — permanent (decision closed 2026-07-18, §6) |
 | `damnit_nx_class` | `"NXhzdr_target"` | always | Marks the group as following this profile |
-| `damnit_nxdl_version` | `HZDR_TARGET_PROFILE_VERSION` (currently `"0.10"`) | always | Must match this document's version and the NXDL enumeration (§4) |
+| `damnit_nxdl_version` | `HZDR_TARGET_PROFILE_VERSION` (currently `"0.11"`) | always | Must match this document's version and the NXDL enumeration (§4) |
 | `damnit_provenance` | `"wiki"` \| `"manual"` | if `provenance` present | Curated vs. hand-entered target |
 | `target_ref` | string (URL or stable id) | if `wiki_ref` present | Link back to the MediaWiki target record |
 | `gas_species` | string (e.g. `"Ar"`, `"N2"`, `"He"`) | if `gas_species` present | Gas-jet / cluster species |
@@ -181,14 +182,29 @@ and every registered current-version mention across the docs; its `run --fix`
 mode rewrites the mechanical mirrors after a bump. Non-semantic
 edits to this document (wording, typo fixes) do not require a bump.
 
-Current version: **0.10** (fixed laser-system constants filled from deployment
-config and marked `damnit_source="config"`, 2026-07-27).
-
-A draft of the next version, aligned with the DAPHNE4NFDI laser pump–probe
-schema, is proposed but not in force:
-[plans/nxhzdr-target-v0.11-draft.md](plans/nxhzdr-target-v0.11-draft.md).
+Current version: **0.11** (aligned with the DAPHNE4NFDI laser pump–probe
+schema, 2026-11-27).
 
 History:
+
+- **0.11** (2026-11-27): aligned with the DAPHNE4NFDI laser pump–probe
+  schema (`NXlaser_pump_probe` and the HZDR site definition
+  `NXlaser_pump_probe_hzdr_draco`, now beside this definition in
+  `hzdr/nxdl/` with the base class `NXsynchronization`) without breaking any
+  v0.10 path. **Part A, always:** the schema's names beside the v0.10 fields:
+  `beam/spot_size` (both waists, `@definition = "1/e^2 intensity radius"`),
+  `beam/polarization_label`, `beam/temporal_contrast` (with the new key
+  `laser.contrast_time`) and `sample/target_type` (§2). **Part B, only for a
+  campaign with `probe.delay`:** a second root entry, `/pump_probe`, certified
+  against the site definition (or the core when a site-only item is missing);
+  shots without an authority number go to `events_unidentified`, never
+  dropped (ruling R-2026-11-27a). Twelve registry keys were added for it
+  (ruling R-2026-11-27b). The draft placed the record as an `NXsubentry` of
+  `/entry`; it is a root entry because pynxtools checks a subentry against
+  the parent's definition. Proposal:
+  [plans/nxhzdr-target-v0.11-draft.md](plans/nxhzdr-target-v0.11-draft.md);
+  decisions: [plans/plan-nxhzdr-target-v0.11-implementation.md](plans/plan-nxhzdr-target-v0.11-implementation.md);
+  laser and entry maps: [nexus-semantic-maps.md §2.2 and §6](nexus-semantic-maps.md).
 
 - **0.10** (2026-07-27): the four laser fields no producer sends —
   `laser.system`, `laser.wavelength`, `laser.repetition_rate`,
@@ -272,7 +288,7 @@ The former beam-waist label mismatch is resolved in v0.9. Facility-signed
 `beam_waist_x_1e2_radius` and `beam_waist_y_1e2_radius` datasets; generic
 `NXbeam.extent` semantics are not used.
 
-No other deviations are tracked in v0.10.
+No other deviations are tracked in v0.11.
 
 ## 6. Future work
 

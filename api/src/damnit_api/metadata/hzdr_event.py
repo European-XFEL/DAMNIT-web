@@ -219,6 +219,28 @@ METADATA_KEY_REGISTRY: dict[str, str | None] = {
     "laser.polarization": None,
     "laser.contrast_ratio": None,
     "laser.system": None,
+    # Laser pump-probe keys (registered 2026-11-27 with NXhzdr_target v0.11,
+    # ruling R-2026-11-27b: "keys look OK for now"; change class
+    # additive-metadata). Registered ahead of any producer; renaming one after
+    # a producer emits it is a breaking change. They feed Part A's
+    # temporal_contrast and the /pump_probe root entry (conforming to the
+    # DAPHNE4NFDI NXlaser_pump_probe schema), which is written only for a
+    # campaign with probe.delay. laser.contrast_time is how long before the
+    # peak contrast_ratio was measured; probe.delay is positive when the probe
+    # arrives after the pump. See hzdr/docs/plans/
+    # plan-nxhzdr-target-v0.11-implementation.md.
+    "laser.contrast_time": "ps",
+    "laser.amplification_state": None,
+    "probe.source": None,
+    "probe.type": None,
+    "probe.wavelength": "nm",
+    "probe.delay": "ps",
+    "probe.delay_set": "ps",
+    "sync.scheme": None,
+    "sync.delay_mechanism": None,
+    "sync.time_zero": "ps",
+    "sync.time_zero_method": None,
+    "sync.time_zero_date": None,
     "vacuum.chamber_pressure": "mbar",
     "vacuum.pre_shot_pressure": "mbar",
     "vacuum.rga_dominant_species": None,
@@ -360,6 +382,22 @@ METADATA_KEY_VALUES: dict[str, frozenset[str]] = {
         "unregistered",
     }),
     "acquisition.time_source": frozenset({"filename", "first_seen", "mtime", "none"}),
+    # NXhzdr_target v0.11 (2026-11-27): the NXlaser_pump_probe and
+    # NXsynchronization enumerations, so a matching label certifies as is.
+    "laser.amplification_state": frozenset({"full", "reduced", "unamplified"}),
+    "sync.scheme": frozenset({
+        "common oscillator",
+        "rf locked",
+        "trigger only",
+        "measured per event",
+    }),
+    "sync.delay_mechanism": frozenset({
+        "optical delay line",
+        "electronic phase shift",
+        "bunch selection",
+        "pulse picking",
+        "trigger delay",
+    }),
 }
 
 

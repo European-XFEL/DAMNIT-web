@@ -25,6 +25,17 @@
     <doc>
       HZDR laser-target campaign profile (NXhzdr_target).
 
+      Since v0.11 (2026-11-27) the profile is aligned with the DAPHNE4NFDI laser
+      pump-probe schema (NXlaser_pump_probe and its HZDR site definition
+      NXlaser_pump_probe_hzdr_draco, both in this directory) without breaking any
+      v0.10 path. Proposal and decisions: hzdr/docs/plans/nxhzdr-target-v0.11-draft.md
+      and hzdr/docs/plans/plan-nxhzdr-target-v0.11-implementation.md. A campaign
+      with a probe delay (metadata.probe.delay) also has a second entry at the
+      file's root, /pump_probe, which declares NXlaser_pump_probe_hzdr_draco (or
+      the core NXlaser_pump_probe when an item only the site requires is
+      missing) and is certified against that definition, not this one. It links
+      into this entry for what v0.10 already records.
+
       STANDARDS STATUS: this is a LOCAL, FACILITY-DEFINED application
       definition owned by HZDR. It is NOT part of the NeXus standard and has
       not been submitted to, reviewed by, or accepted by the NeXus
@@ -247,6 +258,40 @@
                 standard NXbeam field).
               </doc>
             </field>
+            <field name="spot_size" type="NX_FLOAT" units="NX_LENGTH" optional="true">
+              <doc>
+                NEW in 0.11. [beam_waist_x_1e2_radius, beam_waist_y_1e2_radius] as one
+                two-element field carrying its definition, as NXlaser_pump_probe
+                proposes for NXbeam. Written beside the two v0.10 fields, which stay.
+              </doc>
+              <dimensions rank="1">
+                <dim index="1" value="2"/>
+              </dimensions>
+              <attribute name="definition">
+                <enumeration>
+                  <item value="1/e^2 intensity radius"/>
+                </enumeration>
+              </attribute>
+            </field>
+            <field name="polarization_label" optional="true">
+              <doc>
+                NEW in 0.11. The polarization label relative to the plane of incidence
+                (p, s, ...), the same value as incident_polarization, under the name
+                NXlaser_pump_probe proposes. incident_polarization keeps the label in
+                v0.11 for compatibility; moving it to a Stokes vector is left to v1.0.
+              </doc>
+            </field>
+            <group type="NXdata" name="temporal_contrast" optional="true">
+              <doc>
+                NEW in 0.11. The contrast with the time it refers to: intensity_ratio =
+                [laser.contrast_ratio], time = [-laser.contrast_time] (proposed key, ps
+                before the peak). Written only when both keys are present; a bare
+                contrast_ratio stays in the v0.10 field alone.
+              </doc>
+              <field name="intensity_ratio" type="NX_FLOAT" units="NX_DIMENSIONLESS"/>
+              <field name="time" type="NX_FLOAT" units="NX_TIME"/>
+              <field name="method" optional="true"/>
+            </group>
           </group>
           <group type="NXdata" name="shot_series" optional="true">
             <doc>
@@ -308,7 +353,7 @@
             HZDR_TARGET_PROFILE_VERSION and the profile document version.
           </doc>
           <enumeration>
-            <item value="0.10"></item>
+            <item value="0.11"></item>
           </enumeration>
         </attribute>
         <attribute name="damnit_provenance" optional="true">
@@ -413,6 +458,14 @@
           <doc>
             Free-text notes (standard NXsample field; source key
             metadata.target.notes).
+          </doc>
+        </field>
+        <field name="target_type" optional="true">
+          <doc>
+            NEW in 0.11. The HZDR target class (foil, gas_jet, cluster, liquid,
+            structured, other), the same value as type, under the name the HZDR site
+            definition uses so that NXsample/type can return to its NeXus meaning in
+            v1.0.
           </doc>
         </field>
         <group type="NXenvironment" name="environment" optional="true">

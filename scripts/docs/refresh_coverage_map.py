@@ -79,6 +79,7 @@ AREAS = (
         tests=(
             f"{T}/test_hzdr_nexus.py",
             f"{T}/test_hzdr_nexus_sample.py",
+            f"{T}/test_hzdr_nexus_pump_probe.py",
             f"{T}/test_hzdr_openpmd_preflight.py",
             f"{T}/test_hzdr_event.py",
             f"{T}/test_hzdr_sources.py",

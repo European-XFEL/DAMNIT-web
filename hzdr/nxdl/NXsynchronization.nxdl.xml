@@ -1,0 +1,193 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-stylesheet type="text/xsl" href="nxdlformat.xsl"?>
+<!--
+DRAFT for discussion in the DAPHNE4NFDI laser pump-probe use case (HZDR, Kiel
+University, European XFEL). Not part of the NeXus standard and not yet proposed
+to the NIAC. Written 2026-11-26 against NeXus definitions main at 3b20fbc
+(NXDL v2026.01). Rationale and site mappings: ../SCHEMA.md.
+SPDX-License-Identifier: CC0-1.0
+-->
+<definition xmlns="http://definition.nexusformat.org/nxdl/3.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" category="base" type="group" name="NXsynchronization" extends="NXcomponent" xsi:schemaLocation="http://definition.nexusformat.org/nxdl/3.1 ../nxdl.xsd">
+    <symbols>
+        <doc>
+            Symbols used for array dimensions.
+        </doc>
+        <symbol name="nE">
+            <doc>
+                Number of recorded events (laser shots, pump pulses or pump-probe pairs).
+                Every per-event array in this group has this length and the order of the
+                event list of the entry it belongs to.
+            </doc>
+        </symbol>
+    </symbols>
+    <doc>
+        How two or more pulsed beams are held in a known time relation, and how well
+        that relation held while data were taken.
+
+        Pump-probe experiments set the delay between a pump and a probe pulse. The
+        delay itself is recorded where NeXus already puts it,
+        ``NXbeam/pulse_delay`` (readback) and ``NXbeam/pulse_delay_set`` (target),
+        on the probe beam, with ``@reference_beam`` pointing to the pump beam. This
+        group records what the delay is measured against and what makes it valid:
+        the synchronization scheme, the reference clock, the lock state per event,
+        the jitter, the mechanism that sets the delay, and the calibration of time
+        zero.
+
+        A delay value is only meaningful together with the time zero it was
+        calibrated against. Writers should therefore store the delay device's own
+        coordinate (for example an ``NXpositioner`` for an optical delay line) and
+        derive ``pulse_delay`` from it and ``time_zero``. When time zero is
+        recalibrated, ``pulse_delay`` can be rewritten, keeping the earlier values
+        as a variant (see the NeXus rule on variants).
+    </doc>
+    <field name="scheme">
+        <doc>
+            How the time relation between the beams is established.
+
+            * ``common oscillator``: pump and probe are derived from one laser, for
+              example by splitting the beam; the delay is a difference in path length.
+            * ``rf locked``: a laser oscillator is phase-locked to the radio-frequency
+              master clock of an accelerator or storage ring.
+            * ``trigger only``: the sources are triggered from a common timing system
+              without phase locking; the jitter is set by the trigger electronics.
+            * ``measured per event``: the relation is not controlled tightly enough,
+              and the arrival time of each event is measured instead (see
+              ``arrival_time_correction``).
+        </doc>
+        <enumeration open="true">
+            <item value="common oscillator"/>
+            <item value="rf locked"/>
+            <item value="trigger only"/>
+            <item value="measured per event"/>
+        </enumeration>
+    </field>
+    <field name="reference">
+        <doc>
+            Name of the reference the timing is held against, for example
+            "PETRA III RF master clock" or "DRACO front-end oscillator".
+        </doc>
+    </field>
+    <field name="reference_frequency" type="NX_FLOAT" units="NX_FREQUENCY">
+        <doc>
+            Frequency of the reference, for example 499.6655 MHz for the PETRA III
+            master clock.
+        </doc>
+    </field>
+    <field name="frequency_ratio" type="NX_NUMBER" units="NX_DIMENSIONLESS">
+        <doc>
+            Ratio of the locked frequency to ``reference_frequency``, for example 1/6
+            when the laser oscillator is locked to the sixth subharmonic.
+        </doc>
+    </field>
+    <field name="locked" type="NX_BOOLEAN">
+        <doc>
+            Whether the synchronization was locked. A scalar when it held for the whole
+            entry; an array of length nE when it is known per event. An event recorded
+            while unlocked has no valid delay.
+        </doc>
+    </field>
+    <field name="timing_jitter" type="NX_FLOAT" units="NX_TIME">
+        <doc>
+            Root-mean-square timing jitter between the pump and the probe at the
+            interaction point, as characterized. A scalar for a characterization, or an
+            array of length nE when it is measured per event.
+        </doc>
+        <attribute name="method">
+            <doc>
+                How the jitter was determined, for example "phase-noise measurement of
+                the PLL" or "spread of a cross-correlation".
+            </doc>
+        </attribute>
+    </field>
+    <field name="delay_mechanism">
+        <doc>
+            What sets the delay. More than one value when coarse and fine settings are
+            combined (for example ``bunch selection`` for steps of one bunch spacing and
+            ``electronic phase shift`` within one spacing).
+        </doc>
+        <enumeration open="true">
+            <item value="optical delay line"/>
+            <item value="electronic phase shift"/>
+            <item value="bunch selection"/>
+            <item value="pulse picking"/>
+            <item value="trigger delay"/>
+        </enumeration>
+    </field>
+    <field name="delay_range" type="NX_FLOAT" units="NX_TIME">
+        <doc>
+            Smallest and largest delay the mechanism can set.
+        </doc>
+        <dimensions rank="1">
+            <dim index="1" value="2"/>
+        </dimensions>
+    </field>
+    <field name="delay_resolution" type="NX_FLOAT" units="NX_TIME">
+        <doc>
+            Smallest delay step the mechanism can set.
+        </doc>
+    </field>
+    <field name="time_zero" type="NX_FLOAT" units="NX_TIME">
+        <doc>
+            The delay-device setting at which pump and probe coincide at the
+            interaction point, in the device's time coordinate. ``pulse_delay`` is the
+            device readback minus this value.
+        </doc>
+        <attribute name="method">
+            <doc>
+                How time zero was found, for example "cross-correlation in a nonlinear
+                crystal", "onset of the Debye-Waller intensity drop in Bi", or "onset of
+                transient reflectivity".
+            </doc>
+        </attribute>
+        <attribute name="determined_at" type="NX_DATE_TIME">
+            <doc>
+                When this time-zero calibration was made.
+            </doc>
+        </attribute>
+    </field>
+    <field name="time_zero_errors" type="NX_FLOAT" units="NX_TIME">
+        <doc>
+            Uncertainty of ``time_zero``.
+        </doc>
+    </field>
+    <field name="arrival_time_correction" type="NX_FLOAT" units="NX_TIME">
+        <doc>
+            Per-event correction to the delay from an arrival-time measurement (a timing
+            tool, a bunch arrival monitor or a pulse arrival monitor). The corrected
+            delay of event i is the readback delay plus this value.
+        </doc>
+        <dimensions rank="1">
+            <dim index="1" value="nE"/>
+        </dimensions>
+        <attribute name="source">
+            <doc>
+                Path to the group that holds the arrival-time measurement.
+            </doc>
+        </attribute>
+    </field>
+    <group type="NXphase_lock_loop">
+        <doc>
+            Details of a phase-locked loop used for ``rf locked`` synchronization.
+            NXphase_lock_loop is a contributed definition written for AFM; its
+            reference frequency, phase error and hardware fields apply unchanged.
+        </doc>
+    </group>
+    <group type="NXfabrication">
+        <doc>
+            Hardware of the synchronization and delay chain, for example the PLL
+            electronics or a direct digital synthesizer used as phase shifter.
+        </doc>
+    </group>
+    <group type="NXpositioner">
+        <doc>
+            The delay device in its own coordinate, for example the position of an
+            optical delay line or the phase setting of a phase shifter.
+        </doc>
+    </group>
+    <group type="NXlog">
+        <doc>
+            Readbacks sampled independently of the events, for example the lock state
+            or the PLL phase error over time.
+        </doc>
+    </group>
+</definition>
