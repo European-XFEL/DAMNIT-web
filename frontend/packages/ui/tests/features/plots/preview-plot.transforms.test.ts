@@ -53,7 +53,7 @@ test('a 2-D preview keeps only the colormap range from attrs', () => {
 
 test('a 1-D preview names its x axis from the dim and its y from the source', () => {
   expect(toPlotMeta(oneDimensional)).toEqual({
-    type: 'scatter',
+    type: 'line',
     x: { name: 'pulseIndex' },
     y: { name: 'SA2_XTD1_XGM_XGM_DOOCS:output.data.intensityTD' },
   })

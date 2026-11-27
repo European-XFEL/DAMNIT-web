@@ -50,7 +50,7 @@ export function toPlotMeta(value: PreviewValue): PlotMeta {
     case 'array1d':
       meta.x = { name: value.dims[0] }
       meta.y = { name: value.name }
-      meta.type = 'scatter'
+      meta.type = 'line'
       break
     case 'array2d':
       meta.type = 'heatmap'

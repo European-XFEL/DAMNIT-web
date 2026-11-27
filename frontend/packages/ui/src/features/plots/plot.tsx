@@ -6,7 +6,8 @@ import { clamp } from 'lodash-es'
 import { FONT_FAMILY_SANS, FONT_SIZES } from '#src/styles/fonts'
 
 import classes from './plot.module.css'
-import { type PlotData, type PlotMeta } from './plots.types'
+import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
+import { loneValueMarkerSizes } from './utils'
 
 // Tick labels and axis titles are supporting text, so both take the small
 // sizes, with the titles one step above the ticks.
@@ -35,28 +36,30 @@ type Plot = {
 
 /*
  * -----------------------------
- *   Scatter Plot
+ *   Scatter and Line Plots
  * -----------------------------
  */
 
-const scatterPlot = ({ traces }: PlotData): Plot => {
-  const plotData = traces.reduce<Plotly.ScatterData[]>((acc, trace) => {
-    if (trace.x?.value == null || trace.y?.value == null) {
-      return acc
-    }
-    const plotTrace = {
-      x: trace.x.value as number[],
-      y: trace.y.value as number[],
-      name: trace.y?.name,
-      mode: 'markers',
-      type: 'scatter',
-    }
-    acc.push(plotTrace as Plotly.ScatterData)
-    return acc
-  }, [])
+const xyTraces = (traces: PlotTrace[]) =>
+  traces.flatMap(({ x, y }) =>
+    x?.value == null || y?.value == null
+      ? []
+      : [{ x: x.value, y: y.value, name: y.name, type: 'scatter' as const }]
+  )
 
-  return { data: plotData as Plotly.Data[] }
-}
+const scatterPlot = ({ traces }: PlotData): Plot => ({
+  data: xyTraces(traces).map((trace) => ({ ...trace, mode: 'markers' })),
+})
+
+// With no mode, Plotly draws a line, and adds markers under 20 points.
+const linePlot = ({ traces }: PlotData): Plot => ({
+  data: xyTraces(traces).map((trace) => {
+    const loneSizes = loneValueMarkerSizes(trace.y)
+    return loneSizes
+      ? { ...trace, mode: 'lines+markers', marker: { size: loneSizes } }
+      : trace
+  }),
+})
 
 /*
  * -----------------------------
@@ -108,6 +111,7 @@ const heatmapPlot = ({ traces, meta }: PlotData): Plot => {
 
 const PLOTS = {
   scatter: scatterPlot,
+  line: linePlot,
   heatmap: heatmapPlot,
 }
 

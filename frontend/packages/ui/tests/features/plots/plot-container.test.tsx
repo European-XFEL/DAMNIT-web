@@ -16,10 +16,10 @@ import {
   ViewStatusTarget,
 } from '#src/components/statuses/view-status'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
-import { TABLE_META_QUERY } from '#src/data/table/table-data.queries'
 import PlotContainer from '#src/features/plots/plot-container'
 import { PREVIEW_DATA_QUERY_NAME } from '#src/graphql/operation-names'
 import { typePolicies } from '#src/graphql/type-policies'
+import { writeMetadata } from '#tests/support/apollo'
 import { withProviders } from '#tests/support/render'
 
 const PROPOSAL = '6996'
@@ -100,17 +100,10 @@ async function renderPreview(server: ReturnType<typeof createServer>) {
   store.dispatch(setProposalPending(PROPOSAL))
 
   const cache = new InMemoryCache({ typePolicies })
-  cache.writeQuery({
-    query: TABLE_META_QUERY,
-    variables: { proposal: PROPOSAL },
-    data: {
-      metadata: {
-        runs: RUNS.map((run) => ({ proposal: PROPOSAL, run })),
-        variables: {},
-        tags: {},
-        groups: {},
-      },
-    },
+  writeMetadata(cache, {
+    proposal: PROPOSAL,
+    runs: RUNS.map((run) => ({ proposal: PROPOSAL, run })),
+    variables: {},
   })
   const client = new ApolloClient({ cache, link: server.link })
 

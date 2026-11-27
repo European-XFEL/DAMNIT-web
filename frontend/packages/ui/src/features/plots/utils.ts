@@ -113,3 +113,24 @@ export function plotRunIds(
     (run) => run.proposal === proposal && wanted.has(String(run.run))
   )
 }
+
+const MARKER_SIZE = 6 // Plotly's default
+// From this length on, Plotly's default draws a trace as a bare line.
+const PLOTLY_POINTS_LINES_ONLY = 20
+
+// A line draws a segment of one point as nothing, so a finite value with no
+// finite neighbor vanishes. Null keeps Plotly's default look.
+export function loneValueMarkerSizes(y: readonly (number | null)[]) {
+  if (y.length < PLOTLY_POINTS_LINES_ONLY) {
+    return null
+  }
+
+  const finiteAt = (index: number) => Number.isFinite(y[index])
+  const sizes = y.map((_, index) =>
+    finiteAt(index) && !finiteAt(index - 1) && !finiteAt(index + 1)
+      ? MARKER_SIZE
+      : 0
+  )
+
+  return sizes.includes(MARKER_SIZE) ? sizes : null
+}

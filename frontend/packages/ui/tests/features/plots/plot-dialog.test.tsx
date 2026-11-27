@@ -4,8 +4,8 @@ import { userEvent } from 'vitest/browser'
 
 import { setupStore } from '#src/app/store/store'
 import { setProposalPending } from '#src/data/metadata/metadata.slice'
-import { TABLE_META_QUERY } from '#src/data/table/table-data.queries'
 import PlotDialog from '#src/features/plots/plot-dialog'
+import { writeMetadata } from '#tests/support/apollo'
 import { currentUrl, renderInDashboard } from '#tests/support/dashboard-router'
 
 const PROPOSAL = '6996'
@@ -17,19 +17,12 @@ async function renderDialog() {
   store.dispatch(setProposalPending(PROPOSAL))
 
   const cache = new InMemoryCache()
-  cache.writeQuery({
-    query: TABLE_META_QUERY,
-    variables: { proposal: PROPOSAL },
-    data: {
-      metadata: {
-        runs: [],
-        variables: {
-          run: { name: 'run', title: 'Run', tags: [] },
-          energy: { name: 'energy', title: 'Energy', tags: [] },
-        },
-        tags: {},
-        groups: {},
-      },
+  writeMetadata(cache, {
+    proposal: PROPOSAL,
+    runs: [],
+    variables: {
+      run: { name: 'run', title: 'Run', tags: [] },
+      energy: { name: 'energy', title: 'Energy', tags: [] },
     },
   })
   const client = new ApolloClient({ cache, link: new ApolloLink(() => null) })

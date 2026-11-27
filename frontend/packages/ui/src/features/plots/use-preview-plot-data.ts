@@ -230,9 +230,9 @@ export function usePreviewPlotData({
   // question for whoever wants the colours to hold still.
   const meta = values.length ? toPlotMeta(values[0].value) : null
 
-  // A scatter draws a line per run; an image, a heatmap or a scalar shows its
-  // first run alone, so only that run is drawn and dated.
-  const drawn = meta?.type === 'scatter' ? values : values.slice(0, 1)
+  // A line plot draws a line per run; an image, a heatmap or a scalar shows
+  // its first run alone, so only that run is drawn and dated.
+  const drawn = meta?.type === 'line' ? values : values.slice(0, 1)
 
   // A null field is one that raised, and its chunk's loader reports it failed.
   const answered = new Set(answeredRuns(data).map(({ run }) => run))

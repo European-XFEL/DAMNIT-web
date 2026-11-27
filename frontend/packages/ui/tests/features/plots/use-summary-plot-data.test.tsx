@@ -13,7 +13,6 @@ import { ALL_RUNS_PAGE_SIZE } from '#src/features/plots/runs-truncation'
 import {
   RUN_FRAGMENT,
   TABLE_DATA_QUERY,
-  TABLE_META_QUERY,
 } from '#src/data/table/table-data.queries'
 import {
   cellsByName,
@@ -24,6 +23,7 @@ import { setProposalPending } from '#src/data/metadata/metadata.slice'
 import { useSummaryPlotData } from '#src/features/plots/use-summary-plot-data'
 import { countReconnect } from '#src/graphql/live-updates'
 import { typePolicies } from '#src/graphql/type-policies'
+import { writeMetadata } from '#tests/support/apollo'
 import { serverCell } from '#tests/support/cells'
 import { withProviders } from '#tests/support/render'
 
@@ -87,17 +87,10 @@ function setup(
   store.dispatch(setProposalPending(PROPOSAL))
 
   const cache = new InMemoryCache({ typePolicies })
-  cache.writeQuery({
-    query: TABLE_META_QUERY,
-    variables: { proposal: PROPOSAL },
-    data: {
-      metadata: {
-        runs: runs.map(({ proposal, run }) => ({ proposal, run })),
-        variables,
-        tags: {},
-        groups: {},
-      },
-    },
+  writeMetadata(cache, {
+    proposal: PROPOSAL,
+    runs: runs.map(({ proposal, run }) => ({ proposal, run })),
+    variables,
   })
   writeRuns(cache, runs)
 
@@ -146,6 +139,7 @@ test('charts a point per run from the values in the cache', async () => {
   expect(trace.y?.value).toEqual([10, 20, 30])
   expect(trace.x?.name).toBe('Photon energy')
   expect(trace.y?.name).toBe('Beam intensity')
+  expect(result.current.data!.meta.type).toBe('scatter')
 })
 
 test('charts only the runs whose plotted variables are all numbers', async () => {
@@ -177,7 +171,7 @@ test('falls back to the variable name when it has left the context file', async 
   const { result } = await renderSummary(runIdsFor([1]), wrapper)
 
   // The plot outlives the variable it charts, so an axis with no metadata
-  // behind it is labelled by name rather than left blank.
+  // behind it is labeled by name rather than left blank.
   expect(result.current.data!.meta.x?.name).toBe('Photon energy')
   expect(result.current.data!.meta.y?.name).toBe('intensity')
 })
