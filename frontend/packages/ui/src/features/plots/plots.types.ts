@@ -21,7 +21,6 @@ type TraceMeta = {
 
 export type PlotMeta = {
   type: string
-  mode?: 'markers'
 
   // Traces
   x?: TraceMeta

@@ -139,7 +139,7 @@ test('charts a point per run from the values in the cache', async () => {
   expect(trace.y?.value).toEqual([10, 20, 30])
   expect(trace.x?.name).toBe('Photon energy')
   expect(trace.y?.name).toBe('Beam intensity')
-  expect(result.current.data!.meta.mode).toBe('markers')
+  expect(result.current.data!.meta.type).toBe('scatter')
 })
 
 test('charts only the runs whose plotted variables are all numbers', async () => {

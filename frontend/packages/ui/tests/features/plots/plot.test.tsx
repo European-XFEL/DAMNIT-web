@@ -29,29 +29,21 @@ async function renderPulsePlot(y: number[], meta: PlotMeta) {
 }
 
 test.each([
-  { meta: { type: 'scatter' }, drawn: 'a line', lines: 1, points: 0 },
-  {
-    meta: { type: 'scatter', mode: 'markers' },
-    drawn: 'markers only',
-    lines: 0,
-    points: 200,
-  },
-] as const)(
-  'a scatter plot of $meta draws $drawn',
-  async ({ meta, lines, points }) => {
-    const container = await renderPulsePlot(
-      pulses.map((i) => Math.sin(i / 10)),
-      meta
-    )
+  { type: 'line', drawn: 'a line', lines: 1, points: 0 },
+  { type: 'scatter', drawn: 'markers only', lines: 0, points: 200 },
+] as const)('a $type plot draws $drawn', async ({ type, lines, points }) => {
+  const container = await renderPulsePlot(
+    pulses.map((i) => Math.sin(i / 10)),
+    { type }
+  )
 
-    expect(container.querySelectorAll('.scatterlayer .js-line')).toHaveLength(
-      lines
-    )
-    expect(container.querySelectorAll('.scatterlayer .point')).toHaveLength(
-      points
-    )
-  }
-)
+  expect(container.querySelectorAll('.scatterlayer .js-line')).toHaveLength(
+    lines
+  )
+  expect(container.querySelectorAll('.scatterlayer .point')).toHaveLength(
+    points
+  )
+})
 
 test('a line of 20 or more points draws a marker at each lone value', async () => {
   const readings = new Map([
@@ -62,7 +54,7 @@ test('a line of 20 or more points draws a marker at each lone value', async () =
   const container = await renderPulsePlot(
     // The API sends NaN as null, which the trace's type leaves out.
     pulses.map((i) => readings.get(i) ?? null) as number[],
-    { type: 'scatter' }
+    { type: 'line' }
   )
 
   expect(container.querySelectorAll('.scatterlayer .point')).toHaveLength(3)

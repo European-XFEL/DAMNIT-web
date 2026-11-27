@@ -6,7 +6,7 @@ import { clamp } from 'lodash-es'
 import { FONT_FAMILY_SANS, FONT_SIZES } from '#src/styles/fonts'
 
 import classes from './plot.module.css'
-import { type PlotData, type PlotMeta } from './plots.types'
+import type { PlotData, PlotMeta, PlotTrace } from './plots.types'
 import { loneValueMarkerSizes } from './utils'
 
 // Tick labels and axis titles are supporting text, so both take the small
@@ -36,34 +36,30 @@ type Plot = {
 
 /*
  * -----------------------------
- *   Scatter Plot
+ *   Scatter and Line Plots
  * -----------------------------
  */
 
-const scatterPlot = ({ traces, meta }: PlotData): Plot => {
-  const plotData = traces.reduce<Plotly.ScatterData[]>((acc, trace) => {
-    if (trace.x?.value == null || trace.y?.value == null) {
-      return acc
-    }
+const xyTraces = (traces: PlotTrace[]) =>
+  traces.flatMap(({ x, y }) =>
+    x?.value == null || y?.value == null
+      ? []
+      : [{ x: x.value, y: y.value, name: y.name, type: 'scatter' as const }]
+  )
 
-    // With no mode, Plotly draws a line, and adds markers under 20 points.
-    const loneSizes =
-      meta.mode === undefined ? loneValueMarkerSizes(trace.y.value) : null
-    const plotTrace = {
-      x: trace.x.value as number[],
-      y: trace.y.value as number[],
-      name: trace.y?.name,
-      ...(loneSizes
-        ? { mode: 'lines+markers', marker: { size: loneSizes } }
-        : { mode: meta.mode }),
-      type: 'scatter',
-    }
-    acc.push(plotTrace as Plotly.ScatterData)
-    return acc
-  }, [])
+const scatterPlot = ({ traces }: PlotData): Plot => ({
+  data: xyTraces(traces).map((trace) => ({ ...trace, mode: 'markers' })),
+})
 
-  return { data: plotData as Plotly.Data[] }
-}
+// With no mode, Plotly draws a line, and adds markers under 20 points.
+const linePlot = ({ traces }: PlotData): Plot => ({
+  data: xyTraces(traces).map((trace) => {
+    const loneSizes = loneValueMarkerSizes(trace.y)
+    return loneSizes
+      ? { ...trace, mode: 'lines+markers', marker: { size: loneSizes } }
+      : trace
+  }),
+})
 
 /*
  * -----------------------------
@@ -115,6 +111,7 @@ const heatmapPlot = ({ traces, meta }: PlotData): Plot => {
 
 const PLOTS = {
   scatter: scatterPlot,
+  line: linePlot,
   heatmap: heatmapPlot,
 }
 

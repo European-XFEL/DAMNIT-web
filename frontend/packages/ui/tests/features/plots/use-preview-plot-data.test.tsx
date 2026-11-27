@@ -190,7 +190,7 @@ describe('opening a preview', () => {
     // land instead of staying blank until the whole run set is home.
     expect(result.current.data.traces).toHaveLength(2)
     expect(result.current.data.traces[0].y?.name).toBe('Run 1')
-    expect(result.current.data.meta.type).toBe('scatter')
+    expect(result.current.data.meta.type).toBe('line')
 
     // The second chunk lands.
     writeChunk(cache, [3, 4])
