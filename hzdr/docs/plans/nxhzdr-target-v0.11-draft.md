@@ -73,6 +73,9 @@ This replaces the three options of the first draft. Leaving such shots out was t
 
 ## 5. What putting it in force would take
 
+The next session starts from [handoff-nxhzdr-target-v0.11-implementation.md](handoff-nxhzdr-target-v0.11-implementation.md). It adds the items the core `NXlaser_pump_probe` requires that the list below does not name.
+
+
 1. ~~Rulings on section 4 and on the keys in section 3.~~ Both made on 2026-11-27 (R-2026-11-27a and R-2026-11-27b).
 2. **Writer** (`api/src/damnit_api/metadata/hzdr_nexus.py`):
    - `write_nexus_laser_group()` writes `spot_size`, `polarization_label` and `temporal_contrast`;

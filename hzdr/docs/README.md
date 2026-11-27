@@ -59,6 +59,7 @@ only Phase 5 (deployment evidence) remains.
 | [shot-aligner bridge](plans/plan-aligner-bridge.md) | Files a reviewer confirmed in shot-aligner attach in DAMNIT; the bulk time fix |
 | [Campaigns from Shotsheets](plans/plan-campaign-backfill.md) | This year's campaigns built from shot-aligner's day indexes, Vanlife first |
 | [Stored days and the console script](plans/plan-backfill-store-and-console.md) | `hzdr-campaign-backfill.py`, and parsed shot-aligner days stored |
+| [NXhzdr_target v0.11 implementation handoff](plans/handoff-nxhzdr-target-v0.11-implementation.md) | Start here to implement the draft: where the code is, the schema's required items the plan misses, the checklist and the cross-repo MRs |
 | [NXhzdr_target next-version draft](plans/nxhzdr-target-v0.11-draft.md) | Proposed, not in force: additive fields and a `pump_probe` subentry aligned with the DAPHNE4NFDI laser pump–probe schema; one ruling open |
 | [Campaign package](plans/plan-campaign-package.md) | `hzdr-package-campaign.py`: a manifest, README and NDS's verdict beside a built campaign on bigdata |
 | [Quiet builds](plans/plan-quiet-builds.md) | An unchanged campaign is not rewritten on the share; what reads bigdata, and when |
