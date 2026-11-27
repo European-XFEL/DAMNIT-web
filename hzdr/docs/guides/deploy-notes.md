@@ -6,6 +6,32 @@ first. The full checklist with background is
 follow at the keyboard. Run everything as `tippey`; use sudo only for
 `systemctl`.
 
+## Bridge v8: rebuild the campaigns not in use (PR #59, 2026-11-23)
+
+PR #59 (2026-11-23) publishes offset-bearing campaign timestamps under
+bridge profile **v8**. The auto-trigger rebuilds only the campaigns taking
+shots, so the first build after that deploy moved CoilsBordeaux 2026,
+DataMgmtDemo and Vanlife 12.2025 to v8. Five older campaign files are still
+at v7: `ALBUS-2S_08.2025`, `Beamline_radbio_2026`, `NONE`,
+`Solenoid_Beamline_Tests_01.2025` and `XFEL_Jets_2023`
+(hzdr-combo `SERVER-NEXT-STEPS.md`, 2026-11-23 21:15 rollout).
+
+1. **Rebuild every campaign that has an export.** The writing code changed,
+   so quiet builds rewrite each of them once:
+   ```bash
+   cd ~/DAMNIT-web-hzdr/api
+   uv run --no-sync python scripts/hzdr-rebuild.py --all-exports
+   ```
+   Several minutes per campaign on the share.
+2. **Check the files:**
+   ```bash
+   uv run --no-sync python scripts/hzdr-rebuild.py --check-only
+   ```
+   Every line should read `PASS`. A file still flagged was not rebuilt:
+   run that campaign with `--campaign <id>`, or `--force` for all.
+3. **Record it:** paste the `--check-only` output into hzdr-combo
+   `SERVER-NEXT-STEPS.md`. That closes the campaign-file check.
+
 ## Shot authority: triggers only, not the raw relay (2026-11-23)
 
 **Why.** After the 2026-11-23 deploy, `check-shot-intake` failed with
