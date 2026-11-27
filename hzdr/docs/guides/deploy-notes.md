@@ -6,7 +6,7 @@ first. The full checklist with background is
 follow at the keyboard. Run everything as `tippey`; use sudo only for
 `systemctl`.
 
-## Bridge v8: rebuild the campaigns not in use (PR #59, open)
+## Bridge v8: rebuild the campaigns not in use (PR #59, 2026-11-23)
 
 PR #59 (2026-11-23) publishes offset-bearing campaign timestamps under
 bridge profile **v8**. The auto-trigger rebuilds only the campaigns taking
