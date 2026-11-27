@@ -9,7 +9,7 @@ The DAPHNE4NFDI laser pump–probe use case (HZDR, Kiel University, European XFE
 - optional modules;
 - one site definition per facility, built from that facility's marks.
 
-HZDR's is `NXlaser_pump_probe_hzdr_draco`. The schema, its explorer and its partner pack are in HZDR_combo, `combo/planning/papers/daphne-laser/schema/` (hzdr-combo MR !145).
+HZDR's is `NXlaser_pump_probe_hzdr_draco`. The schema, its explorer and its partner pack are in HZDR_combo, `combo/planning/papers/daphne-laser/schema/` (hzdr-combo MR !149, which merged !145 with the other paper MRs on 2026-11-27).
 
 v0.11 brings DAMNIT's campaign files in line with that schema without breaking anything v0.10 writes:
 - **A. Always:** add the schema's conventions beside the v0.10 fields. Nothing is removed or renamed.
@@ -55,7 +55,7 @@ The subentry is written only when a campaign has a probe delay (`probe.delay`). 
 - `sync.scheme`, `sync.delay_mechanism`
 - `sync.time_zero` (ps), `sync.time_zero_method`, `sync.time_zero_date`
 
-They join `METADATA_KEY_REGISTRY` only when this draft is agreed, together with the NDS laser profile rows and the planet-watchdog revendor that the key-registry topic requires.
+They join `METADATA_KEY_REGISTRY` only when this draft is agreed, together with the NDS laser profile rows and the daq-watchdog (formerly planet-watchdog) revendor that the key-registry topic requires.
 
 ## 4. Open: the event identifier
 
@@ -77,7 +77,7 @@ Option 1 is the simplest and keeps the identifier honest. It needs a maintainer 
    - `write_nexus_laser_group()` writes `spot_size`, `polarization_label` and `temporal_contrast`;
    - the target writer writes `target_type`;
    - a new `write_pump_probe_subentry()`, called from `write_nexus_bridge()` only when `probe.delay` is present, writes the links and the probe and sync datasets.
-3. **Registry:** the new keys in `METADATA_KEY_REGISTRY` and the CLAUDE.md table, the NDS facility profile rows, and the revendor in planet-watchdog.
+3. **Registry:** the new keys in `METADATA_KEY_REGISTRY` and the CLAUDE.md table, the NDS facility profile rows, and the revendor in daq-watchdog (formerly planet-watchdog).
 4. **Definitions:**
    - copy the draft over `hzdr/nxdl/NXhzdr_target.nxdl.xml`;
    - add `NXlaser_pump_probe.nxdl.xml`, `NXsynchronization.nxdl.xml` and `NXlaser_pump_probe_hzdr_draco.nxdl.xml` to `hzdr/nxdl/`, so that `nds validate --pynxtools` can certify the subentry;

@@ -184,6 +184,10 @@ edits to this document (wording, typo fixes) do not require a bump.
 Current version: **0.10** (fixed laser-system constants filled from deployment
 config and marked `damnit_source="config"`, 2026-07-27).
 
+A draft of the next version, aligned with the DAPHNE4NFDI laser pump–probe
+schema, is proposed but not in force:
+[plans/nxhzdr-target-v0.11-draft.md](plans/nxhzdr-target-v0.11-draft.md).
+
 History:
 
 - **0.10** (2026-07-27): the four laser fields no producer sends —
