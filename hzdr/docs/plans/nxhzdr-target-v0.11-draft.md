@@ -1,6 +1,6 @@
 # `NXhzdr_target` v0.11: draft
 
-**Status: draft, 2026-11-26. Not in force.** The writer constant, `hzdr/docs/nxhzdr-target-profile.md` and `hzdr/nxdl/NXhzdr_target.nxdl.xml` all stay at v0.10 until this draft is agreed and bumped under the [versioning rule](../nxhzdr-target-profile.md#4-versioning-rule). The draft definition is [drafts/NXhzdr_target-v0.11-draft.nxdl.xml](drafts/NXhzdr_target-v0.11-draft.nxdl.xml). It lives outside `hzdr/nxdl/` on purpose: the meta-repo checker overlays everything in `hzdr/nxdl/` when it certifies a campaign file.
+**Status: draft, 2026-11-26; both rulings made 2026-11-27 (R-2026-11-27a, section 4; R-2026-11-27b, the keys in section 3). Not in force until the implementation below.** The writer constant, `hzdr/docs/nxhzdr-target-profile.md` and `hzdr/nxdl/NXhzdr_target.nxdl.xml` all stay at v0.10 until this draft is agreed and bumped under the [versioning rule](../nxhzdr-target-profile.md#4-versioning-rule). The draft definition is [drafts/NXhzdr_target-v0.11-draft.nxdl.xml](drafts/NXhzdr_target-v0.11-draft.nxdl.xml). It lives outside `hzdr/nxdl/` on purpose: the meta-repo checker overlays everything in `hzdr/nxdl/` when it certifies a campaign file.
 
 ## 1. Why
 
@@ -47,7 +47,7 @@ The subentry is written only when a campaign has a probe delay (`probe.delay`). 
 | `synchronization/time_zero` `@method` `@determined_at` | per campaign | **new** `sync.time_zero` (ps), `sync.time_zero_method`, `sync.time_zero_date` |
 | `sample` | soft link to `/entry/sample` | v0.10 sample group |
 
-**New registry keys.** These are proposed, and none is registered:
+**New registry keys.** Accepted for now (ruling R-2026-11-27b, maintainer: "keys look OK for now"), and not registered yet:
 - `laser.contrast_time` (ps)
 - `laser.amplification_state`
 - `probe.source`, `probe.type`, `probe.wavelength` (nm)
@@ -55,7 +55,7 @@ The subentry is written only when a campaign has a probe delay (`probe.delay`). 
 - `sync.scheme`, `sync.delay_mechanism`
 - `sync.time_zero` (ps), `sync.time_zero_method`, `sync.time_zero_date`
 
-They join `METADATA_KEY_REGISTRY` only when this draft is agreed, together with the NDS laser profile rows and the daq-watchdog (formerly planet-watchdog) revendor that the key-registry topic requires.
+"For now": they may still change until the implementation registers them; once a producer emits one, renaming it is a breaking change, as for every registry key. They join `METADATA_KEY_REGISTRY` with the implementation, together with the NDS laser profile rows and the daq-watchdog (formerly planet-watchdog) revendor that the key-registry topic requires.
 
 ## 4. The event identifier (ruled 2026-11-27)
 
@@ -73,7 +73,7 @@ This replaces the three options of the first draft. Leaving such shots out was t
 
 ## 5. What putting it in force would take
 
-1. A maintainer ruling on the new keys in section 3 (section 4 was ruled on 2026-11-27).
+1. ~~Rulings on section 4 and on the keys in section 3.~~ Both made on 2026-11-27 (R-2026-11-27a and R-2026-11-27b).
 2. **Writer** (`api/src/damnit_api/metadata/hzdr_nexus.py`):
    - `write_nexus_laser_group()` writes `spot_size`, `polarization_label` and `temporal_contrast`;
    - the target writer writes `target_type`;
